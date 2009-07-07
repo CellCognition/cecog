@@ -23,10 +23,14 @@ import unittest
 import os
 
 #------------------------------------------------------------------------------
+# extension module imports:
+#
+from pyvigra import (PIXEL_TYPECODES,
+                     UInt16Image2d, 
+                     Image2d)
+#------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog.core import ccore
-from cecog.core.image import PIXEL_TYPECODES
 from cecog.core.imagecontainer import (DIMENSION_NAME_POSITION,
                                        DIMENSION_NAME_TIME,
                                        DIMENSION_NAME_CHANNEL,
@@ -192,7 +196,7 @@ class Token1(TokenTestCase):
     TIMES = (1,2,3,4,5,6,7,8,9,10)
     CHANNELS = ('gfp', 'rfp')
     ZSLICES = (1,)   
-    IMAGE_TYPE = ccore.ImageUInt8
+    IMAGE_TYPE = Image2d
     PIXEL_TYPE = PIXEL_TYPECODES.UINT8
     
 class Token2(TokenTestCase):
@@ -202,7 +206,7 @@ class Token2(TokenTestCase):
     TIMES = (1,2,3,4,5,6,7,8,9,10)
     CHANNELS = ('gfp', 'rfp')
     ZSLICES = (1,)
-    IMAGE_TYPE = ccore.ImageUInt8
+    IMAGE_TYPE = Image2d
     PIXEL_TYPE = PIXEL_TYPECODES.UINT8
     
 class Token3(TokenTestCase):
@@ -212,7 +216,7 @@ class Token3(TokenTestCase):
     TIMES = (1,2,3,4,5,6,7,8,9,10)
     CHANNELS = ('gfp', 'rfp')
     ZSLICES = (1,)
-    IMAGE_TYPE = ccore.ImageUInt8
+    IMAGE_TYPE = Image2d
     PIXEL_TYPE = PIXEL_TYPECODES.UINT8
 
 class Token4(TokenTestCase):
@@ -222,7 +226,7 @@ class Token4(TokenTestCase):
     TIMES = (1,2,3,4,5,6,7,8,9,10)
     CHANNELS = ('gfp', 'rfp')
     ZSLICES = (1,)
-    IMAGE_TYPE = ccore.ImageUInt8
+    IMAGE_TYPE = Image2d
     PIXEL_TYPE = PIXEL_TYPECODES.UINT8
 
 class Token5(TokenTestCase):
@@ -232,7 +236,7 @@ class Token5(TokenTestCase):
     TIMES = (1,2,3,4,5,6,7,8,9,10)
     CHANNELS = ('gfp', 'rfp')
     ZSLICES = (1,)
-    IMAGE_TYPE = ccore.ImageUInt16
+    IMAGE_TYPE = UInt16Image2d
     PIXEL_TYPE = PIXEL_TYPECODES.UINT16
 
 class Token6(TokenTestCase):
@@ -242,7 +246,7 @@ class Token6(TokenTestCase):
     TIMES = (1,2,3,4,5,6,7,8,9,10)
     CHANNELS = ('1Rhod', '2EGFP')
     ZSLICES = (1,2,3,4,5)
-    IMAGE_TYPE = ccore.ImageUInt16
+    IMAGE_TYPE = UInt16Image2d
     PIXEL_TYPE = PIXEL_TYPECODES.UINT16
     
     WIDTH = 672

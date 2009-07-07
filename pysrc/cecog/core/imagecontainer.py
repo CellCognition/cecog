@@ -30,11 +30,11 @@ from pdk.fileutils import collect_files
 from pdk.iterator import unique
 from pdk.ordereddict import OrderedDict
 
+from pyvigra import (read_image,
+                     ImageImportInfo)
 #------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog.core import ccore
-from cecog.core.image import read_image 
 
 #------------------------------------------------------------------------------
 # constants:
@@ -209,8 +209,8 @@ class FileTokenImporter(object):
             
             if not has_xy:
                 has_xy = True
-                info = ccore.ImageImportInfo(os.path.join(self.path, 
-                                                          item['filename']))
+                info = ImageImportInfo(os.path.join(self.path, 
+                                                    item['filename']))
                 self.meta_data.dim_x = info.width
                 self.meta_data.dim_y = info.height
                 self.meta_data.pixel_type = info.pixel_type
@@ -260,7 +260,7 @@ class FileTokenImporter(object):
             zslice = None
         filename_rel = self.dimension_lookup[position][frame][channel][zslice]
         filename_abs = os.path.join(self.path, filename_rel)
-        image = read_image(filename_abs, self.meta_data.pixel_type, index)
+        image = read_image(filename_abs, index)
         return image
 
 
