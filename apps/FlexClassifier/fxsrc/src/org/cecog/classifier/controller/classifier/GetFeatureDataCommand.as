@@ -1,4 +1,4 @@
-package org.cecog.classifier.controller
+package org.cecog.classifier.controller.classifier
 {
     import mx.collections.ArrayCollection;
     import mx.controls.Alert;

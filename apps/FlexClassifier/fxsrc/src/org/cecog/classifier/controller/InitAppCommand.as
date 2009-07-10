@@ -14,14 +14,10 @@ package org.cecog.classifier.controller
             facade.registerProxy(new ImageObjectProxy());
 
             var app:Classifier = notification.getBody() as Classifier;
-            //facade.registerMediator(new ClassifierMediator(app.classifierPanel, app.classesPanel));
-            //facade.registerMediator(new ClassMediator(app.classesPanel));
-            //facade.registerMediator(new FeatureMediator(app.featurePanel));
 
-            //facade.registerMediator(new SampleMediator(app.featurePanel));
-
-            facade.registerMediator(new ExperimentMediator(app.experimentPanel));
+            //facade.registerMediator(new ExperimentMediator(app.experimentPanel));
             facade.registerMediator(new ClassificationMediator(app.classificationPanel));
+            //facade.registerMediator(new AnalysisMediator(app.analysisPanel));
         }
 
     }

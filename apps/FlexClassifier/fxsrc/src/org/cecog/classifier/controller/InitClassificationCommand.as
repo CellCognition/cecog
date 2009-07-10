@@ -23,6 +23,5 @@ package org.cecog.classifier.controller
             facade.registerMediator(new FeatureMediator(panel.featurePanel));
 
         }
-
     }
 }

@@ -17,12 +17,13 @@
             public static const UPDATE_CLASSIFIER:String = "UPDATE_CLASSIFIER";
             public static const GET_CLASSES_ALL:String = 'GET_CLASSES_ALL';
 
+            //public var currentClassifierName:String;
 
             [Bindable]
             public var classifierInfos:ArrayCollection;
 
             [Bindable]
-            public var currentClassifierName:String;
+            public var currentClassifierName:String = '';
 
             private var __facade:ClassifierFacade = ClassifierFacade.getInstance();
 
@@ -33,7 +34,17 @@
 
         ]]>
     </mx:Script>
-    <mx:Accordion id="accordion" top="30" bottom="10" left="10" right="10" alpha="1.0">
+    <mx:TabNavigator
+        id="tabNavigator" right="0" top="30" left="0" bottom="0"
+        creationPolicy="all" backgroundAlpha="0.6" paddingTop="0">
+            <omcvc:About id="aboutPanel" label="About" width="100%" height="100%"/>
+            <omcvc:ClassifiersPanel id="classifierPanel" label="Classifiers" width="100%" height="100%"/>
+            <omcvc:ClassesPanel id="classesPanel" label="Samples" width="100%" height="100%"/>
+            <omcvc:FeaturePanel id="featurePanel" label="Features" width="100%" height="100%"/>
+    </mx:TabNavigator>
+    <mx:Text textAlign="right" right="10" top="15" id="txtClassifierName" text="Current classifier: {currentClassifierName}" fontWeight="bold" fontSize="12" color="#FFFFFF"/>
+
+<!--    <mx:Accordion id="accordion" top="30" bottom="30" left="10" right="10" alpha="1.0">
         <mx:headerRenderer>
             <mx:Component>
                 <mx:Button styleName="accHeader"/>
@@ -43,13 +54,11 @@
         <omcvc:ClassifiersPanel id="classifierPanel" label="Classifiers" width="100%" height="100%" backgroundAlpha="0.0"/>
         <omcvc:ClassesPanel id="classesPanel" label="Samples" width="100%" height="100%" backgroundAlpha="0.0"/>
         <omcvc:FeaturePanel id="featurePanel" label="Features" width="100%" height="100%" backgroundAlpha="0.0"/>
-        <mx:Canvas label="Training" width="100%" height="100%" alpha="0.0">
-        </mx:Canvas>
     </mx:Accordion>
     <mx:HBox top="10" left="10" right="10" horizontalAlign="right" verticalAlign="middle" height="21">
         <mx:Text text="Current Classifier:" textAlign="right"/>
         <mx:Text text="{currentClassifierName}" fontWeight="bold" id="txtClassifierName" textAlign="right" fontFamily="Verdana"/>
     </mx:HBox>
-
+-->
 
 </mx:Canvas>

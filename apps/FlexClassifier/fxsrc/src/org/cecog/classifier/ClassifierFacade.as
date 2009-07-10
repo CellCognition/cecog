@@ -1,6 +1,9 @@
 package org.cecog.classifier
 {
     import org.cecog.classifier.controller.*;
+    import org.cecog.classifier.controller.analysis.*;
+    import org.cecog.classifier.controller.classifier.*;
+    import org.cecog.classifier.controller.experiment.*;
     import org.cecog.classifier.model.vo.ClassifierVO;
     import org.puremvc.as3.interfaces.IFacade;
     import org.puremvc.as3.patterns.facade.Facade;
@@ -21,6 +24,10 @@ package org.cecog.classifier
         public static const GET_EXPERIMENT_BY_NAME:String = "GET_EXPERIMENT_BY_NAME";
         public static const GET_IMAGEVIEW_BY_SELECTION:String = "GET_IMAGEVIEW_BY_SELECTION";
         public static const DETECT_OBJECTS:String = "DETECT_OBJECTS";
+
+        public static const START_ANALYSIS:String = "START_ANALYSIS";
+        public static const LOOKUP_SERVER_PATH:String = "LOOKUP_SERVER_PATH";
+
 
         [Bindable]
         public var currentClassifierVO:ClassifierVO = null;
@@ -51,6 +58,9 @@ package org.cecog.classifier
             registerCommand(GET_EXPERIMENT_BY_NAME, GetExperimentByNameCommand);
             registerCommand(GET_IMAGEVIEW_BY_SELECTION, GetImageViewBySelectionCommand);
             registerCommand(DETECT_OBJECTS, DetectObjectsCommand);
+
+            registerCommand(START_ANALYSIS, StartAnalysisCommand);
+            registerCommand(LOOKUP_SERVER_PATH, LookupServerPathCommand);
         }
 
     }

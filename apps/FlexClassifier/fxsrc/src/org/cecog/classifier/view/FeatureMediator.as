@@ -45,6 +45,7 @@ package org.cecog.classifier.view
 
             // initialize view data:
             panel.featureInfos = __featureInfoProxy.featureInfos;
+            panel.classInfos = __classProxy.classInfos;
 
         }
 

@@ -1,4 +1,4 @@
-package org.cecog.classifier.controller
+package org.cecog.classifier.controller.experiment
 {
     import mx.controls.Alert;
     import mx.rpc.IResponder;

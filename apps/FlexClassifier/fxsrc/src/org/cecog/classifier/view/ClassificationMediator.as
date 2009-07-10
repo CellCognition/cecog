@@ -13,7 +13,7 @@ package org.cecog.classifier.view
         public function ClassificationMediator(viewComponent:Object)
         {
             super(NAME, viewComponent);
-            panel.accordion.addEventListener(IndexChangedEvent.CHANGE, onChildChange);
+            panel.tabNavigator.addEventListener(IndexChangedEvent.CHANGE, onChildChange);
         }
 
         private function get panel(): ClassificationPanel

@@ -8,7 +8,6 @@
 
     <mx:Script>
         <![CDATA[
-            import flexlib.controls.ImageMap;
             import mx.collections.ArrayCollection;
             import mx.events.ItemClickEvent;
 
@@ -19,6 +18,9 @@
 
             [Bindable]
             public var sampleInfos:ArrayCollection;
+
+            [Bindable]
+            public var outlineAlpha:int = 1;
 
         ]]>
     </mx:Script>
@@ -49,10 +51,7 @@
         paddingBottom="5" paddingTop="5" paddingRight="5" paddingLeft="5">
         <mx:itemRenderer>
             <mx:Component>
-                <mx:Image source="{data.url}" scaleContent="false"
-                    toolTip="{data.path}"
-                    horizontalAlign="center" verticalAlign="middle">
-                </mx:Image>
+                <cm:SampleImage outlineAlpha="{data.alpha}"/>
             </mx:Component>
         </mx:itemRenderer>
      </mx:TileList>

@@ -20,6 +20,9 @@
             [Bindable]
             public var featureData:ArrayCollection;
 
+            [Bindable]
+            public var classInfos:ArrayCollection;
+
         ]]>
     </mx:Script>
 
@@ -37,8 +40,34 @@
 
     <mx:HRule x="10" y="118" width="220"/>
 
-    <mx:PlotChart id="plotChart" showDataTips="true" selectionMode="multiple" right="10" left="243" top="10" bottom="10" alpha="0.9" visible="false"/>
-    <mx:AreaChart id="barChart" showDataTips="true" selectionMode="multiple" right="10" left="243" top="10" bottom="10" alpha="0.9" visible="false" type="overlaid"/>
-    <mx:Legend id="plotLegend" right="10" top="10" borderStyle="solid" alpha="1.0" backgroundColor="#FFFFFF" backgroundAlpha="1.0" visible="false"/>
+    <mx:Canvas backgroundColor="#FFFFFF" backgroundAlpha="0.9" left="265" right="10" top="10" bottom="10" visible="true">
+        <mx:PlotChart id="plotChart" showDataTips="true" selectionMode="multiple" alpha="1.0" visible="false" height="100%" width="100%" x="0" y="0"/>
+        <mx:AreaChart id="barChart" showDataTips="true" selectionMode="multiple" alpha="0.9" visible="false" type="overlaid" width="100%" x="0" height="100%" y="0"/>
+        <mx:Legend id="plotLegend" right="10" top="10" borderStyle="solid" alpha="1.0" backgroundColor="#FFFFFF" backgroundAlpha="1.0" visible="false"/>
+    </mx:Canvas>
+
+    <mx:DataGrid x="10" y="430"
+        id="classesSelectGrid" verticalAlign="bottom"
+        dataProvider="{classInfos}" color="#000000" alternatingItemColors="[#FFFFFF,#DDDDDD]" width="220">
+        <mx:columns>
+            <mx:DataGridColumn headerText="Label" dataField="label">
+                <mx:itemRenderer>
+                    <mx:Component>
+                        <mx:CheckBox selected="true"/>
+                    </mx:Component>
+                </mx:itemRenderer>
+            </mx:DataGridColumn>
+            <mx:DataGridColumn headerText="Color" width="50">
+                <mx:itemRenderer>
+                    <mx:Component>
+                    <mx:HBox horizontalAlign="center" verticalAlign="top">
+                        <mx:Box backgroundColor="{data.color}" width="15" height="15"/>
+                    </mx:HBox>
+                    </mx:Component>
+                </mx:itemRenderer>
+            </mx:DataGridColumn>
+            <mx:DataGridColumn headerText="Name" dataField="name"/>
+        </mx:columns>
+    </mx:DataGrid>
 
 </mx:Canvas>

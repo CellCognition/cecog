@@ -23,15 +23,16 @@
     </mx:Script>
     <mx:DataGrid
         id="classifiersGrid"
+        sortableColumns="true"
         dataProvider="{classifierInfos}"
         width="417" color="#000000"
         alternatingItemColors="[#FFFFFF,#DDDDDD]"
-        themeColor="#0066FF" bottom="48" top="10" left="10">
+        themeColor="#0066FF" bottom="10" top="10" left="10">
         <mx:columns>
             <mx:DataGridColumn headerText="Name" dataField="name"/>
         </mx:columns>
     </mx:DataGrid>
-    <mx:Button label="Update" click="dispatchEvent(new Event(UPDATE_CLASSIFIERS, true))" x="10" bottom="10"/>
+    <mx:Button label="Update" click="dispatchEvent(new Event(UPDATE_CLASSIFIERS, true))" x="444" bottom="10"/>
     <mx:DataGrid id="classifierInfoGrid"
         selectable="false" verticalAlign="bottom" visible="false"
         dataProvider="{classInfos}" color="#000000" alternatingItemColors="[#FFFFFF,#DDDDDD]" width="365" height="262" x="444" y="35">

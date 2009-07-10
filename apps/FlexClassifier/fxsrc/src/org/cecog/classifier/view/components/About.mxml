@@ -5,5 +5,7 @@
         width="100%" height="100%"
         color="#000000" themeColor="#0066FF">
     <mx:Image source="@Embed('assets/cellcognition7_small1.png')" horizontalCenter="0" verticalCenter="-55"/>
-
+    <mx:TextArea textAlign="center" fontWeight="bold" width="219" verticalCenter="84" horizontalCenter="0" backgroundAlpha="0.0" borderStyle="none">
+        <mx:text><![CDATA[ETH Zurich, Gerlich Labwritten by Michael Held 2009]]></mx:text>
+    </mx:TextArea>
 </mx:Canvas>

@@ -4,6 +4,7 @@ package org.cecog.classifier.service
     {
         public var classifierService:ClassifierDelegate;
         public var experimentService:ExperimentDelegate;
+        public var analysisService:AnalysisDelegate;
 
         private static var __instance : ServiceLocator;
 
@@ -13,6 +14,7 @@ package org.cecog.classifier.service
                 throw new Error("Singleton already instantiated");
             classifierService = new ClassifierDelegate();
             experimentService = new ExperimentDelegate();
+            analysisService = new AnalysisDelegate();
         }
 
         public static function getInstance(): ServiceLocator
