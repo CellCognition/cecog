@@ -1,7 +1,7 @@
 package org.cecog.classifier
 {
     import org.cecog.classifier.controller.*;
-    import org.cecog.classifier.controller.analysis.*;
+    //import org.cecog.classifier.controller.analysis.*;
     import org.cecog.classifier.controller.classifier.*;
     import org.cecog.classifier.controller.experiment.*;
     import org.cecog.classifier.model.vo.ClassifierVO;
