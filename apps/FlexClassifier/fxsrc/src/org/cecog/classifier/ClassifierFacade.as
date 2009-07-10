@@ -59,8 +59,8 @@ package org.cecog.classifier
             registerCommand(GET_IMAGEVIEW_BY_SELECTION, GetImageViewBySelectionCommand);
             registerCommand(DETECT_OBJECTS, DetectObjectsCommand);
 
-            registerCommand(START_ANALYSIS, StartAnalysisCommand);
-            registerCommand(LOOKUP_SERVER_PATH, LookupServerPathCommand);
+            //registerCommand(START_ANALYSIS, StartAnalysisCommand);
+            //registerCommand(LOOKUP_SERVER_PATH, LookupServerPathCommand);
         }
 
     }

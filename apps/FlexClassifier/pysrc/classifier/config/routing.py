@@ -21,5 +21,5 @@ def make_map():
     # CUSTOM ROUTES HERE
 
     map.connect('/gateway', controller='gateway')
-
+    map.connect('/uploader', controller='uploader')
     return map

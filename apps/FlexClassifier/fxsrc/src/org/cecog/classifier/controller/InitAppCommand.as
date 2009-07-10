@@ -13,7 +13,7 @@ package org.cecog.classifier.controller
             facade.registerProxy(new ExperimentProxy());
             facade.registerProxy(new ImageObjectProxy());
 
-            var app:Classifier = notification.getBody() as Classifier;
+            var app:FlexClassifier = notification.getBody() as FlexClassifier;
 
             //facade.registerMediator(new ExperimentMediator(app.experimentPanel));
             facade.registerMediator(new ClassificationMediator(app.classificationPanel));

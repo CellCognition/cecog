@@ -23,13 +23,15 @@ __source__ = "$URL::                                                           $
 from classifier.lib.helpers import WSGIGateway
 from classifier.services.classifierservice import ClassifierService
 from classifier.services.experimentservice import ExperimentService
+from classifier.services.analysisservice import AnalysisService
 
 #------------------------------------------------------------------------------
 #
 
 services = {
     'ClassifierService' : ClassifierService('/Volumes/Data1T/Classifiers'),
-    'ExperimentService' : ExperimentService('/Volumes/RAID5-2/Flex'),
+    'AnalysisService'   : AnalysisService(),
+    #'ExperimentService' : ExperimentService('/Volumes/RAID5-2/Flex'),
 }
 
 GatewayController = WSGIGateway(services)

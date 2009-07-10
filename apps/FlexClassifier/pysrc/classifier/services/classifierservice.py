@@ -18,6 +18,7 @@ import logging, \
        random, \
        time, \
        sys
+import cPickle as pickle
 
 #------------------------------------------------------------------------------
 # extension modules:
@@ -176,8 +177,16 @@ class Sample(object):
         self.name = path
         self.features = None
         self.coords = None
+        #self._get_coords()
 
-
+    def _get_coords(self):
+        path_img = self.path
+        path_msk = path_img.replace('__img', '__msk')
+        container = ccore.SingleObjectContainer(path_img, path_msk)
+        self.coords = ",".join(map(str,
+                                   flatten(container.getCrackCoordinates(1))))
+        print path_img
+        print "  ", self.coords
 
 
 class ClassifierService(object):
