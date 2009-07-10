@@ -1,0 +1,3 @@
+include classifier/config/deployment.ini_tmpl
+recursive-include classifier/public *
+recursive-include classifier/templates *

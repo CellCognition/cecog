@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas
+        xmlns:mx="http://www.adobe.com/2006/mxml"
+        xmlns:omcvc="org.cecog.classifier.view.components.*"
+        width="100%" height="100%"
+        color="#000000" themeColor="#0066FF">
+
+    <mx:Script>
+        <![CDATA[
+            import mx.collections.ArrayCollection;
+            import mx.events.ItemClickEvent;
+            public static const UPDATE_CLASSIFIERS:String = 'UPDATE_CLASSIFIERS';
+            public static const GET_CLASSES_ALL:String = 'GET_CLASSES_ALL';
+
+            [Bindable]
+            public var classifierInfos:ArrayCollection;
+
+            [Bindable]
+            public var classInfos:ArrayCollection;
+
+        ]]>
+
+    </mx:Script>
+    <mx:DataGrid
+        id="classifiersGrid"
+        dataProvider="{classifierInfos}"
+        width="417" color="#000000"
+        alternatingItemColors="[#FFFFFF,#DDDDDD]"
+        themeColor="#0066FF" bottom="48" top="10" left="10">
+        <mx:columns>
+            <mx:DataGridColumn headerText="Name" dataField="name"/>
+        </mx:columns>
+    </mx:DataGrid>
+    <mx:Button label="Update" click="dispatchEvent(new Event(UPDATE_CLASSIFIERS, true))" x="10" bottom="10"/>
+    <mx:DataGrid id="classifierInfoGrid"
+        selectable="false" verticalAlign="bottom" visible="false"
+        dataProvider="{classInfos}" color="#000000" alternatingItemColors="[#FFFFFF,#DDDDDD]" width="365" height="262" x="444" y="35">
+        <mx:columns>
+            <mx:DataGridColumn headerText="Label" width="50" dataField="label"/>
+            <mx:DataGridColumn headerText="Color" width="50">
+                <mx:itemRenderer>
+                    <mx:Component>
+                    <mx:HBox horizontalAlign="center" verticalAlign="top">
+                        <mx:Box backgroundColor="{data.color}" width="15" height="15"/>
+                    </mx:HBox>
+                    </mx:Component>
+                </mx:itemRenderer>
+            </mx:DataGridColumn>
+            <mx:DataGridColumn headerText="Name" dataField="name"/>
+            <mx:DataGridColumn headerText="Samples" dataField="samples" width="80"/>
+        </mx:columns>
+    </mx:DataGrid>
+    <mx:Text id="classifierInfoText" x="444" y="13" fontWeight="bold"/>
+
+</mx:Canvas>

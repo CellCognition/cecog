@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas
+        xmlns:mx="http://www.adobe.com/2006/mxml"
+        xmlns:cm="org.cecog.classifier.view.components.*"
+        width="100%" height="100%"
+        color="#000000" themeColor="#0066FF" xmlns:ns1="flexlib.containers.*">
+
+    <mx:Script>
+        <![CDATA[
+            import mx.controls.CheckBox;
+            import mx.collections.ArrayCollection;
+            import mx.events.ItemClickEvent;
+            import flash.events.Event;
+
+            public static const CHANGE_FEATURE_SELECTION:String = 'CHANGE_FEATURE_SELECTION';
+
+            [Bindable]
+            public var featureInfos:ArrayCollection;
+
+            [Bindable]
+            public var featureData:ArrayCollection;
+
+        ]]>
+    </mx:Script>
+
+    <mx:Text x="10" y="10" text="Feature 1"/>
+    <mx:CheckBox id="check1" x="12" y="33" selected="true" click="dispatchEvent(event)"/>
+    <mx:ComboBox id="feature1" top="31" width="193" dataProvider="{featureInfos}" height="22" left="37" labelField="name"
+        change="dispatchEvent(new Event(CHANGE_FEATURE_SELECTION));"/>
+
+    <mx:HRule x="10" y="59" width="220"/>
+
+    <mx:Text x="10" y="69" text="Feature 2"/>
+    <mx:CheckBox id="check2" x="12" y="92" selected="false" click="dispatchEvent(event)"/>
+    <mx:ComboBox id="feature2" top="90" width="193" dataProvider="{featureInfos}" height="22" left="37" labelField="name" enabled="false"
+        change="dispatchEvent(new Event(CHANGE_FEATURE_SELECTION));"/>
+
+    <mx:HRule x="10" y="118" width="220"/>
+
+    <mx:PlotChart id="plotChart" showDataTips="true" selectionMode="multiple" right="10" left="243" top="10" bottom="10" alpha="0.9" visible="false"/>
+    <mx:AreaChart id="barChart" showDataTips="true" selectionMode="multiple" right="10" left="243" top="10" bottom="10" alpha="0.9" visible="false" type="overlaid"/>
+    <mx:Legend id="plotLegend" right="10" top="10" borderStyle="solid" alpha="1.0" backgroundColor="#FFFFFF" backgroundAlpha="1.0" visible="false"/>
+
+</mx:Canvas>

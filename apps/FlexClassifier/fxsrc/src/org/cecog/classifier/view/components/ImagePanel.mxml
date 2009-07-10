@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas
+        xmlns:mx="http://www.adobe.com/2006/mxml"
+        xmlns:cm="org.cecog.classifier.view.components.*"
+        width="100%" height="100%"
+        color="#000000" themeColor="#0066FF" xmlns:ns1="flexlib.containers.*" xmlns:ns2="flexlib.controls.*">
+
+    <mx:Script>
+        <![CDATA[
+            import mx.collections.ArrayCollection;
+            import mx.events.ItemClickEvent;
+
+            public static const GET_FEATURE_DATA:String = 'GET_FEATURE_DATA';
+
+            [Bindable]
+            public var featureInfos:ArrayCollection;
+
+            [Bindable]
+            public var featureData:ArrayCollection;
+
+        ]]>
+    </mx:Script>
+    <mx:DataGrid x="10" y="10" width="250">
+        <mx:columns>
+            <mx:DataGridColumn headerText="Experiment" dataField="col1"/>
+        </mx:columns>
+    </mx:DataGrid>
+    <mx:Panel id="metaDataPanel" x="10" y="164" width="250" height="253" layout="absolute" title="MetaData">
+        <mx:Label x="10" y="10" text="Width"/>
+    </mx:Panel>
+
+    <ns2:VSlider x="383" y="204"/>
+    <ns2:HSlider x="461" y="94"/>
+    <ns2:ImageMap x="461" y="181" width="364" height="215"/>
+    <ns2:HSlider x="461" y="472"/>
+
+
+
+</mx:Canvas>
