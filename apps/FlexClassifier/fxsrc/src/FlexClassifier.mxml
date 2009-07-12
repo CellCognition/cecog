@@ -7,7 +7,7 @@
         backgroundGradientColors="[#2B378D, #A0BEFB]"
         layout="absolute"
         creationComplete="run()"
-        xmlns:ns1="flexlib.containers.*" xmlns:ns2="flexlib.controls.sliderClasses.*">
+        xmlns:ns1="flexlib.containers.*" xmlns:ns2="flexlib.controls.sliderClasses.*" viewSourceURL="srcview/index.html">
     <mx:Script>
         <![CDATA[
             import org.puremvc.as3.patterns.observer.Notification;
