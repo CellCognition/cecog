@@ -26,8 +26,7 @@ import os
 # extension module imports:
 #
 from pyvigra import (PIXEL_TYPECODES,
-                     UInt16Image2d, 
-                     Image2d)
+                     _pyvigra)
 #------------------------------------------------------------------------------
 # cecog imports:
 #
@@ -35,8 +34,9 @@ from cecog.core.imagecontainer import (DIMENSION_NAME_POSITION,
                                        DIMENSION_NAME_TIME,
                                        DIMENSION_NAME_CHANNEL,
                                        DIMENSION_NAME_ZSLICE,
-                                       FileTokenImporter,
                                        ImageContainer)
+from cecog.importer.filetoken import (FileTokenImporter,
+                                      MetaMorphTokenImporter)
 from cecog.util.token import (Token,
                               TokenHandler)
 
@@ -84,7 +84,7 @@ class TestCase(unittest.TestCase):
             self.assertEqual(meta_image.channel, info[2])
             self.assertEqual(meta_image.zslice, info[3])
 
-    def test_iteratior2(self):
+    def test_iterator2(self):
         # some pylint error? image_container is callable
         # pylint: disable-msg=E1102  
         
@@ -109,7 +109,7 @@ class TestCase(unittest.TestCase):
                 self.assertEqual(self.WIDTH, meta_image.width)
                 self.assertEqual(self.HEIGHT, meta_image.height)
                 
-    def test_iteratior3(self):
+    def test_iterator3(self):
         # some pylint error? image_container is callable
         # pylint: disable-msg=E1102  
         
@@ -156,11 +156,19 @@ class TestCase(unittest.TestCase):
             # meta_image should have no image data yet!
             self.assertEqual(meta_image._img, None)
 
-    def _test_images(self):
+    def test_images(self):
         # accesses all raw image data (time consuming!)
         for meta_image in self.image_container.iterator():
             self.assertTrue(isinstance(meta_image.image, self.IMAGE_TYPE))
+            break
 
+
+class MetaMorphTokenTestCase(TestCase):
+
+    def setUp(self):
+        path = os.path.join(DEMO_DATA_PATH, self.EXPERIMENT_NAME)
+        self.image_container = ImageContainer(MetaMorphTokenImporter(path))
+        
 class TokenTestCase(TestCase):
    
     TOKEN_P = Token('P', type_code='i', length='+', prefix='', 
@@ -185,58 +193,55 @@ class TokenTestCase(TestCase):
         
         self.image_container = ImageContainer(importer)
 
-    def tearDown(self):
-        pass
-
     
-class Token1(TokenTestCase):
+class Token1(MetaMorphTokenTestCase):
     
     EXPERIMENT_NAME = 'H2b_aTub_exp911'
     POSITIONS = (37,38)
     TIMES = (1,2,3,4,5,6,7,8,9,10)
     CHANNELS = ('gfp', 'rfp')
     ZSLICES = (1,)   
-    IMAGE_TYPE = Image2d
+    IMAGE_TYPE = _pyvigra.UInt8Image2d
     PIXEL_TYPE = PIXEL_TYPECODES.UINT8
     
-class Token2(TokenTestCase):
+class Token2(MetaMorphTokenTestCase):
     
     EXPERIMENT_NAME = 'H2b_GalT_exp835'
     POSITIONS = (55,56)
     TIMES = (1,2,3,4,5,6,7,8,9,10)
     CHANNELS = ('gfp', 'rfp')
     ZSLICES = (1,)
-    IMAGE_TYPE = Image2d
+    IMAGE_TYPE = _pyvigra.UInt8Image2d
     PIXEL_TYPE = PIXEL_TYPECODES.UINT8
     
-class Token3(TokenTestCase):
+class Token3(MetaMorphTokenTestCase):
     
     EXPERIMENT_NAME = 'H2b_Ibb_exp757'
     POSITIONS = (1,2)
     TIMES = (1,2,3,4,5,6,7,8,9,10)
     CHANNELS = ('gfp', 'rfp')
     ZSLICES = (1,)
-    IMAGE_TYPE = Image2d
+    IMAGE_TYPE = _pyvigra.UInt8Image2d
     PIXEL_TYPE = PIXEL_TYPECODES.UINT8
 
-class Token4(TokenTestCase):
+class Token4(MetaMorphTokenTestCase):
     
     EXPERIMENT_NAME = 'H2b_Pds1_exp547'
     POSITIONS = (1,2)
     TIMES = (1,2,3,4,5,6,7,8,9,10)
     CHANNELS = ('gfp', 'rfp')
     ZSLICES = (1,)
-    IMAGE_TYPE = Image2d
+    IMAGE_TYPE = _pyvigra.UInt8Image2d
     PIXEL_TYPE = PIXEL_TYPECODES.UINT8
 
-class Token5(TokenTestCase):
+class Token5(MetaMorphTokenTestCase):
     
     EXPERIMENT_NAME = 'H2b_PCNA_16bit'
     POSITIONS = (1,2)
     TIMES = (1,2,3,4,5,6,7,8,9,10)
     CHANNELS = ('gfp', 'rfp')
     ZSLICES = (1,)
-    IMAGE_TYPE = UInt16Image2d
+    IMAGE_TYPE = _pyvigra.UInt16Image2d
     PIXEL_TYPE = PIXEL_TYPECODES.UINT16
 
 class Token6(TokenTestCase):
@@ -246,7 +251,7 @@ class Token6(TokenTestCase):
     TIMES = (1,2,3,4,5,6,7,8,9,10)
     CHANNELS = ('1Rhod', '2EGFP')
     ZSLICES = (1,2,3,4,5)
-    IMAGE_TYPE = UInt16Image2d
+    IMAGE_TYPE = _pyvigra.UInt16Image2d
     PIXEL_TYPE = PIXEL_TYPECODES.UINT16
     
     WIDTH = 672
