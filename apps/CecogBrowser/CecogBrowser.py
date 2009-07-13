@@ -34,7 +34,7 @@ from PyQt4.Qt import *
 
 #from pdk.phenes import *
 from pdk.ordereddict import OrderedDict
-from mito.colors import makeColors
+from mito.colors import make_colors
 #------------------------------------------------------------------------------
 # cecog imports:
 #
@@ -173,11 +173,11 @@ ImageViewer {
 }
 
 MainWindow QFrame {
-    background-image: url(:/background_carbon);
-/*
     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
                                 stop: 0 #424242, stop: 0.4 #222222,
                                 stop: 0.5 #282828, stop: 1.0 #111111);
+/*
+    background-image: url(':background_carbon');
 */
     color: white;
 }
@@ -266,7 +266,7 @@ class ImageViewer(QFrame):
         self._home_pos = None
         
     def make_color_range(self, color):
-        colors = makeColors([(0,0,0), (color.red()/255.,
+        colors = make_colors([(0,0,0), (color.red()/255.,
                                        color.green()/255.,
                                        color.blue()/255.)], 256, False)
         colors = [QColor(r*255, g*255, b*255) for r,g,b in colors]
@@ -416,13 +416,13 @@ class ColorBox(QComboBox):
         icon = QIcon(pixmap)
         if user:
             index = self._base_count+self._user_count
-            self.insertItem(index, icon, '', color)
+            self.insertItem(index, icon, '', QVariant(color))
             if self._user_count == 0:
                 self.insertSeparator(index+1)
             self._user_count += 1
         else:
             index = None
-            self.addItem(icon, '', color)
+            self.addItem(icon, '', QVariant(color))
         return index
     
     def get_current(self):
@@ -472,7 +472,7 @@ class ColorBox(QComboBox):
                     self.setCurrentIndex(self.current)
                 self.hidePopup()
                 if old != self.current:
-                    self.self.colorSelected.emit(self.get_current())
+                    self.colorSelected.emit(self.get_current())
         else:
             ev.ignore()
             
@@ -980,7 +980,7 @@ class MainWindow(QMainWindow):
 #
 
 if __name__ == "__main__":
-
+    from pdk.platform import on_windows
     app = QApplication(sys.argv)
     app.setStyleSheet(STYLESHEET_CARBON)
     main = MainWindow()
