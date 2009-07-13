@@ -53,6 +53,141 @@ from cecog.core.imagecontainer import (ImageContainer,
 # constants:
 #
 
+DEFAULT_COLORS = [QColor(255,0,0), QColor(0,255,0), QColor(0,0,255), 
+                  QColor(0,0,0), QColor(255,255,255)]
+
+STYLESHEET_NATIVE_MODIFIED = \
+"""
+QToolBox::tab {
+     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                 stop: 0 #E1E1E1, stop: 0.4 #DDDDDD,
+                                 stop: 0.5 #D8D8D8, stop: 1.0 #D3D3D3);
+     border: 1px solid darkgrey;
+     border-radius: 4px;
+     color: #333333;
+     padding-left: 5px;
+}
+
+QToolBox::tab:selected {
+     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                 stop: 0 #F2F2F2, stop: 0.4 #DDDDDD,
+                                 stop: 0.5 #D8D8D8, stop: 1.0 #999999);
+     font: bold;
+     color: #000000;
+}
+
+StyledFrame {
+     background: #DDDDDD;
+     border: 1px solid darkgrey;
+     border-radius: 4px;
+     padding: 0px;
+     margin: 0px;
+ }
+
+PositionFrame {
+     background: #DDDDDD;
+     border: 1px solid darkgrey;
+     border-radius: 4px;
+     padding: 0px;
+     margin: 0px;
+ }
+
+ImageViewer {
+     background: #000000;
+     border: 0;
+}
+"""
+
+STYLESHEET_CARBON = \
+"""
+
+QToolBox::tab {
+     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                 stop: 0 #313131, stop: 0.4 #222222,
+                                 stop: 0.5 #282828, stop: 1.0 #232323);
+     border: 1px solid #999999;
+     border-radius: 4px;
+     color: #CCCCCC;
+     padding-left: 5px;
+}
+
+QToolBox::tab:selected {
+     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                 stop: 0 #424242, stop: 0.4 #222222,
+                                 stop: 0.5 #282828, stop: 1.0 #111111);
+     font: bold;
+     color: #FFFFFF;
+}
+
+QComboBox {
+    border: 1px solid darkgray;
+    border-radius: 3px;
+    padding: 1px 1px 1px 20px;
+    margin: 1px;
+    alignment: center;
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #313131, stop: 0.4 #222222,
+                                stop: 0.5 #282828, stop: 1.0 #232323);
+    icon-size: 50px;
+    selection-background-color: #444444;
+    color: white;
+}
+ 
+QComboBox::drop-down {
+    width: 20px;
+    border-left-width: 1px;
+    border-left-color: darkgray;
+    border-left-style: solid;
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+    background: #222222;
+}
+
+QComboBox QAbstractItemView {
+    border: 1px solid darkgray;
+    background: #222222;
+    spacing: 0;
+} 
+
+QToolBox {
+    background: transparent;
+}
+
+StyledFrame {
+    border: 1px solid darkgrey;
+    border-radius: 4px;
+    padding: 0px;
+    margin: 0px;
+ }
+
+PositionFrame {
+    border: 1px solid darkgrey;
+    border-radius: 4px;
+    padding: 0px;
+    margin: 0px;
+ }
+
+ImageViewer {
+    background: #000000;
+    border: 0;     
+}
+
+MainWindow QFrame {
+    background-image: url(:/background_carbon);
+/*
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #424242, stop: 0.4 #222222,
+                                stop: 0.5 #282828, stop: 1.0 #111111);
+*/
+    color: white;
+}
+
+QStatusBar {
+    background-color: #333333;
+    color: white;
+}
+
+"""
 
 #------------------------------------------------------------------------------
 # classes:
@@ -144,44 +279,6 @@ class ImageViewer(QFrame):
             self._qimage.setColor(idx, col.rgb())
         self.label.setPixmap(QPixmap.fromImage(self._qimage))
 
-    def keyPressEvent(self, ev):
-        if ev.key() == self.MOVE_KEY and not self._move_on:
-            self._move_on = True
-            self.setCursor(Qt.OpenHandCursor)
-        
-    def keyReleaseEvent(self, ev):
-        if ev.key() == self.MOVE_KEY and self._move_on:
-            self._move_on = False
-            self.setCursor(Qt.ArrowCursor)
-
-    def enterEvent(self, ev):
-        self.setFocus()
-
-    def mouseMoveEvent(self, ev):
-        if self._click_on:
-            geom = self.label.geometry()
-            size = self.size()
-            point = ev.pos() - self._home_pos
-            if point.x() >= 0: point.setX(0) 
-            if point.y() >= 0: point.setY(0)
-            if size.width()-point.x() > geom.width():
-                point.setX(size.width() - geom.width())
-            if size.height()-point.y() > geom.height():
-                point.setY(size.height() - geom.height())
-            print point, geom, size
-            self.label.move(point)
-            
-    def mousePressEvent(self, ev):
-        if self._move_on and not self._click_on:
-            self._click_on = True
-            self.setCursor(Qt.ClosedHandCursor)
-            self._home_pos = ev.pos() - self.label.pos()
-
-    def mouseReleaseEvent(self, ev):
-        if self._move_on and self._click_on:
-            self._click_on = False
-            self._home_pos = None
-            self.setCursor(Qt.OpenHandCursor)
         
     def from_numpy(self, data):
         self._qimage = numpy_to_qimage(data, self.colors)
@@ -221,24 +318,92 @@ class ImageViewer(QFrame):
         self.label.move((screen.width()-size.width())/2,
                         (screen.height()-size.height())/2)
 
+    # protected method overload
+
+    def keyPressEvent(self, ev):
+        if ev.key() == self.MOVE_KEY and not self._move_on:
+            self._move_on = True
+            self.setCursor(Qt.OpenHandCursor)
+        
+    def keyReleaseEvent(self, ev):
+        if ev.key() == self.MOVE_KEY and self._move_on:
+            self._move_on = False
+            self.setCursor(Qt.ArrowCursor)
+
+    def enterEvent(self, ev):
+        self.setFocus()
+    
+    def mouseMoveEvent(self, ev):
+        if self._click_on:
+            geom = self.label.geometry()
+            size = self.size()
+            point = ev.pos() - self._home_pos
+            if point.x() >= 0: point.setX(0) 
+            if point.y() >= 0: point.setY(0)
+            if size.width()-point.x() > geom.width():
+                point.setX(size.width() - geom.width())
+            if size.height()-point.y() > geom.height():
+                point.setY(size.height() - geom.height())
+            #print point, geom, size
+            self.label.move(point)
+            
+    def mousePressEvent(self, ev):
+        if self._move_on and not self._click_on:
+            self._click_on = True
+            self.setCursor(Qt.ClosedHandCursor)
+            self._home_pos = ev.pos() - self.label.pos()
+
+    def mouseReleaseEvent(self, ev):
+        if self._move_on and self._click_on:
+            self._click_on = False
+            self._home_pos = None
+            self.setCursor(Qt.OpenHandCursor)
+            
+    def resizeEvent(self, ev):
+        super(ImageViewer, self).resizeEvent(ev)
+        geom = self.label.geometry()
+        size = ev.size()
+        point = QPoint(geom.x(), geom.y())
+        move = False
+        if size.width() > geom.width() + geom.x():
+            point.setX(size.width() - geom.width())
+            move = True
+        if size.height() > geom.height() + geom.y():
+            point.setY(size.height() - geom.height())
+            move = True
+        if move:
+            self.label.move(point)
+        
+
 
 class ColorBox(QComboBox):
     
     COLOR_SIZE = (50, 10)
     colorSelected = pyqtSignal('QColor')
     
-    def __init__(self, parent, colors):
+    def __init__(self, parent, color, colors):
         super(ColorBox, self).__init__(parent)
         self.setIconSize(QSize(*self.COLOR_SIZE))
         self._popup_shown = False
         self._base_count = len(colors) + 1
         self._user_count = 0
         self._highlight_index = None  
-        for color in colors:
-            self.add_color(color)
-        
+
+        for col in colors:
+            self.add_color(col)
+            
         self.insertSeparator(self.maxCount())
         self.insertItem(self.maxCount(), 'more...')
+
+        #print "moo", color, colors
+        #print color in colors
+        rgb_values = map(lambda c: c.rgb(), colors)
+        if color.rgb() in rgb_values:
+            self.setCurrentIndex(rgb_values.index(color.rgb()))
+        else:
+            index = self.add_color(color, user=True)
+            self.setCurrentIndex(index)
+        
         self.connect(self, SIGNAL('activated(int)'), self.on_activated)
         self.connect(self, SIGNAL('highlighted(int)'), self.on_highlighted)       
         self.current = self.currentIndex()
@@ -252,6 +417,9 @@ class ColorBox(QComboBox):
         if user:
             index = self._base_count+self._user_count
             self.insertItem(index, icon, '', color)
+            if self._user_count == 0:
+                self.insertSeparator(index+1)
+            self._user_count += 1
         else:
             index = None
             self.addItem(icon, '', color)
@@ -267,9 +435,6 @@ class ColorBox(QComboBox):
             if dialog.exec_():
                 color = dialog.selectedColor()
                 self.current = self.add_color(color, user=True)
-                if self._user_count == 0:
-                    self.insertSeparator(self.current+1)
-                self._user_count += 1
                 self.colorSelected.emit(self.get_current())
             self.setCurrentIndex(self.current)
         elif self.current != self.currentIndex():
@@ -282,9 +447,9 @@ class ColorBox(QComboBox):
     # protected method overload
         
     def showPopup(self):
+        super(ColorBox, self).showPopup()
         self.grabKeyboard()
         self._popup_shown = True
-        super(ColorBox, self).showPopup()
                 
     def hidePopup(self):
         self.releaseKeyboard()
@@ -353,45 +518,97 @@ class MetaDataFrame(StyledFrame):
         self.width_label.setText(str(meta_data.dim_x))
         
             
+#class ChannelFrame(StyledFrame):
+#    
+#    def __init__(self, parent, viewer, default_colors):
+#        super(ChannelFrame, self).__init__(parent)
+#        self.viewer = viewer
+#        self.layout = QVBoxLayout()
+#        self.layout.setAlignment(Qt.AlignTop|Qt.AlignHCenter)
+#        self.setLayout(self.layout)        
+#        self.default_colors = default_colors 
+#
+#    def set_channels(self, channels):
+#        self.layout.removeWidget()
+#        for name, color in channels:
+#            self.add_channel(name, self.default_colors)
+#
+#        line = QFrame(self)
+#        line.setFrameShape(QFrame.HLine)
+#        self.layout.addWidget(line)
+#        self.add_channel('gfp', colors)
+#
+#    def _add_color_box(self, channel, colors):
+#        frame = QFrame(self)
+#        frame.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, 
+#                                        QSizePolicy.Minimum))
+#        layout = QVBoxLayout()
+#        layout.setMargin(0)
+#        label = QLabel(channel, frame)
+#        box = ColorBox(frame, colors)
+#        box.colorSelected.connect(self.on_test)
+#        layout.addWidget(label)
+#        layout.addWidget(box)
+#        frame.setLayout(layout)
+#        self.layout.addWidget(frame)
+#
+#        
+#    def on_test(self, color):
+#        print color
+#        self.viewer.update_color(color)
+#                
+#    def on_button_pressed(self):
+#        self.test = QFrame(self, Qt.Tool)
+#        #self.test.set
+#        #geom = self.button.geometry()
+#        #self.test.setGeometry(geom.x()+geom.width(),geom.y()+geom.height(),50,50)
+#        self.test.show()
+#        
+#    def on_button_released(self):
+#        self.test.hide()
+        
 class ChannelFrame(StyledFrame):
     
-    def __init__(self, parent, viewer):
+    def __init__(self, parent, viewer, default_colors):
         super(ChannelFrame, self).__init__(parent)
-        #self.setTitle('Channels')
         self.viewer = viewer
         self.layout = QVBoxLayout()
-        self.layout.setAlignment(Qt.AlignTop)
-        #self.setSizePolicy(QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding))
-        
-        colors = [QColor(255,0,0), QColor(0,255,0), QColor(0,0,255), 
-                  QColor(0,0,0), QColor(255,255,255)]
-        
-        self.add_channel('rfp', colors)
-        line = QFrame(self)
-        line.setFrameShape(QFrame.HLine)
-        self.layout.addWidget(line)
-        self.add_channel('gfp', colors)
-        
-        self.setLayout(self.layout)
+        self.layout.setAlignment(Qt.AlignTop|Qt.AlignHCenter)
+        self.setLayout(self.layout)        
+        self.default_colors = default_colors
+        self._widgets = [] 
 
-    def add_channel(self, channel, colors):
+    def clear(self):
+        # this looks more like hack :-(
+        for widget in self._widgets:
+            self.layout.removeWidget(widget)
+            widget.deleteLater()
+        self._widgets = []
+    
+    def set_channels(self, channels):
+        self.clear()
+        for idx, (name, color) in enumerate(channels):
+            if idx > 0:
+                line = QFrame(self)
+                line.setFrameShape(QFrame.HLine)
+                self.layout.addWidget(line)
+                self._widgets.append(line)
+            self._add_color_box(name, color, self.default_colors)
+
+    def _add_color_box(self, name, color, colors):
         frame = QFrame(self)
-        frame.setSizePolicy(QSizePolicy(QSizePolicy.Minimum))
-        #frame.setContentsMargins(0,0,0,0)
+        frame.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, 
+                                        QSizePolicy.Minimum))
         layout = QVBoxLayout()
-        layout.setContentsMargins(0,0,0,0)
-        #layout.setSizeConstraint(QLayout.SetMinimumSize)
-        label = QLabel(channel, frame)
-        box = ColorBox(frame, colors)
-        box.setFixedWidth(120)
+        layout.setMargin(0)
+        label = QLabel(name, frame)
+        box = ColorBox(frame, color, colors)
         box.colorSelected.connect(self.on_test)
         layout.addWidget(label)
         layout.addWidget(box)
-        layout.setSpacing(0)
         frame.setLayout(layout)
         self.layout.addWidget(frame)
-        frame.show()
-
+        self._widgets.append(frame)
         
     def on_test(self, color):
         print color
@@ -405,8 +622,8 @@ class ChannelFrame(StyledFrame):
         self.test.show()
         
     def on_button_released(self):
-        self.test.hide()
-        
+        self.test.hide()        
+
         
 class PositionFrame(QListWidget):
         
@@ -417,12 +634,6 @@ class PositionFrame(QListWidget):
             self.addItem(item)
             if idx == 0:
                 self.setCurrentItem(item)
-    
-#    def focusInEvent(self, ev):
-#        self.grabKeyboard()
-#
-#    def focusOutEvent(self, ev):
-#        self.releaseKeyboard()
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -467,41 +678,47 @@ class MainWindow(QMainWindow):
                                        shortcut=QKeySequence.SelectNextLine,
                                        slot=self._on_shortcut_down)
         act_fullscreen = self.create_action('Fullscreen', 
-                                            shortcut=QKeySequence(Qt.Key_F),
+                                            shortcut=QKeySequence(QKeySequence.Find),
                                             slot=self._on_shortcut_fullscreen)
+        act_stylesheet = self.create_action('Use carbon style',
+                                            shortcut=QKeySequence(QKeySequence.New),
+                                            slot=self._on_shortcut_stylesheet,
+                                            signal='triggered(bool)',
+                                            checkable=True,
+                                            checked=True)
         view_menu = self.menuBar().addMenu('&View')
         self.add_actions(view_menu, (act_prev_t, act_next_t, None,
                                      act_prev_z, act_next_z, None,
-                                     act_fullscreen,))
+                                     act_fullscreen, None,
+                                     act_stylesheet))
 
-
-#        dock = QDockWidget(self)
-#        dock.setFeatures(QDockWidget.DockWidgetFloatable|
-#                         QDockWidget.DockWidgetMovable)
-#        dock.setAllowedAreas(Qt.RightDockWidgetArea)   
-#        self.addDockWidget(Qt.RightDockWidgetArea, dock)
-#        
         self.statusbar = QStatusBar(self)
         self.setStatusBar(self.statusbar)
-#        statusbar.showMessage('hello')
-
+        
         self.image_container = None
         self.meta_image = None
         
-        self.setSizePolicy(QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding))
+        self.setSizePolicy(QSizePolicy(QSizePolicy.MinimumExpanding, 
+                                       QSizePolicy.MinimumExpanding))
         self.layout = QGridLayout()
         
         dummy_frame = QFrame(self.frame)
-        dummy_frame.setSizePolicy(QSizePolicy(QSizePolicy.Expanding|QSizePolicy.Maximum, QSizePolicy.Expanding|QSizePolicy.Maximum))
+        dummy_frame.setSizePolicy(
+            QSizePolicy(QSizePolicy.Expanding|QSizePolicy.Maximum, 
+                        QSizePolicy.Expanding|QSizePolicy.Maximum))
+        dummy_frame.setStyleSheet("background-color: #000000;" 
+                                  "margin: 0; border: 0;")
         layout = QGridLayout()
         layout.setAlignment(Qt.AlignHCenter|Qt.AlignVCenter)
         layout.setContentsMargins(0, 0, 0, 0)
-        dummy_frame.setLayout(layout)
-        dummy_frame.setStyleSheet("background-color: #000000; margin: 0;")
         self.viewer = ImageViewer(dummy_frame)
-        self.viewer.setSizePolicy(QSizePolicy(QSizePolicy.Expanding|QSizePolicy.Maximum, QSizePolicy.Expanding|QSizePolicy.Maximum))
-        self.viewer.setStyleSheet("background-color: #000000;")
+        self.viewer.setSizePolicy(
+            QSizePolicy(QSizePolicy.Expanding, 
+                        QSizePolicy.Expanding))
+        self.viewer.setStyleSheet("background-color: #000000;"
+                                  "margin: 0; border: 0;")
         layout.addWidget(self.viewer, 0, 0)
+        dummy_frame.setLayout(layout)
                 
         self.slider_t = QSlider(Qt.Horizontal, self.frame)
         self.slider_t.setRange(0, 0)
@@ -509,9 +726,11 @@ class MainWindow(QMainWindow):
         self.slider_t.setTickPosition(QSlider.TicksBelow)
         self.slider_t.setTickInterval(1)
         self.slider_t.setFocusPolicy(Qt.StrongFocus)
-        self.slider_t.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.slider_t.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, 
+                                                QSizePolicy.Minimum))
         self.slider_t.hide()
-        self.slider_t.setToolTip('press Shift+Left/Right to always scroll along time')
+        self.slider_t.setToolTip('press Shift+Left/Right for '
+                                 'scrolling along time')
         self.connect(self.slider_t, SIGNAL('valueChanged(int)'), 
                      self.on_slider_t_valueChanged)
         
@@ -522,24 +741,21 @@ class MainWindow(QMainWindow):
         self.slider_z.setTickPosition(QSlider.TicksLeft)
         self.slider_z.setTickInterval(1)
         self.slider_z.setFocusPolicy(Qt.StrongFocus)
-        self.slider_z.setSizePolicy(QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding))
-        self.slider_z.setToolTip('press Shift+Up/Down to always scroll along zslices')
+        self.slider_z.setSizePolicy(QSizePolicy(QSizePolicy.Minimum, 
+                                                QSizePolicy.Expanding))
+        self.slider_z.setToolTip('press Shift+Up/Down for scrolling '
+                                 'along zslices')
 
         self.connect(self.slider_z, SIGNAL('valueChanged(int)'), 
                      self.on_slider_z_valueChanged)
-
-#        self.slider_c = QSlider(Qt.Vertical, self.frame)
-#        self.slider_c.setRange(0, 0)
-#        self.slider_c.setTracking(True)
-#        self.connect(self.slider_c, SIGNAL('valueChanged(int)'), 
-#                     self.on_slider_c_valueChanged)
 
 
         self.toolbox = QToolBox(self.frame)
         
         self.metadata_frame = MetaDataFrame(self.toolbox)
         self.position_frame = PositionFrame(self.toolbox)
-        self.channel_frame = ChannelFrame(self.toolbox, self.viewer)
+        self.channel_frame = ChannelFrame(self.toolbox, self.viewer,
+                                          DEFAULT_COLORS)
         
         self.position_frame.setFocusPolicy(Qt.StrongFocus)
         
@@ -550,29 +766,17 @@ class MainWindow(QMainWindow):
         self.toolbox.addItem(self.metadata_frame, 'MetaData')
         self.toolbox.addItem(self.position_frame, 'Positions')
         self.toolbox.addItem(self.channel_frame, 'Channels')
-        #self.toolbox.addItem(self.channel_bar, 'View')
-        self.toolbox.setSizePolicy(QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding))
-        self.toolbox.setMaximumWidth(150)
+        self.toolbox.setSizePolicy(QSizePolicy(QSizePolicy.Minimum, 
+                                               QSizePolicy.Expanding))
+        self.toolbox.setMaximumWidth(140)
+        self.toolbox.setCurrentIndex(2)
 
         self.layout.addWidget(dummy_frame, 0, 1)
         self.layout.addWidget(self.slider_t, 1, 1)
         self.layout.addWidget(self.slider_z, 0, 0)
         self.layout.addWidget(self.toolbox, 0, 2)
         self.frame.setLayout(self.layout)
-        self.viewer.show()
-
-#        shortcut = QShortcut(QKeySequence.SelectPreviousChar, self)
-#        self.connect(shortcut, SIGNAL('activated()'), self._on_shortcut_left)
-#        shortcut = QShortcut(QKeySequence.SelectNextChar, self)
-#        self.connect(shortcut, SIGNAL('activated()'), self._on_shortcut_right)
-#        shortcut = QShortcut(QKeySequence.SelectPreviousLine, self)
-#        self.connect(shortcut, SIGNAL('activated()'), self._on_shortcut_up)
-#        shortcut = QShortcut(QKeySequence.SelectNextLine, self)
-#        self.connect(shortcut, SIGNAL('activated()'), self._on_shortcut_down)
-#        shortcut = QShortcut(Qt.Key_F, self)
-#        self.connect(shortcut, SIGNAL('activated()'), 
-#                     self._on_shortcut_fullscreen)
-        
+               
     def _on_shortcut_left(self):
         self.slider_t.setValue(self.slider_t.value()-1)
         
@@ -594,8 +798,15 @@ class MainWindow(QMainWindow):
             self.showFullScreen()
             self.viewer.center()
 
+    def _on_shortcut_stylesheet(self, state):
+        if state:
+            qApp.setStyleSheet(STYLESHEET_CARBON)
+        else:
+            qApp.setStyleSheet(STYLESHEET_NATIVE_MODIFIED)
+
     def create_action(self, text, slot=None, shortcut=None, icon=None,
-                      tooltip=None, checkable=None, signal='triggered()'):
+                      tooltip=None, checkable=None, signal='triggered()',
+                      checked=False):
         action = QAction(text, self)
         if icon is not None:
             action.setIcon(QIcon(':/%s.png' % icon))
@@ -608,6 +819,7 @@ class MainWindow(QMainWindow):
             self.connect(action, SIGNAL(signal), slot)
         if checkable is not None:
             action.setCheckable(True)
+        action.setChecked(checked)
         return action
 
     def add_actions(self, target, actions):
@@ -721,12 +933,9 @@ class MainWindow(QMainWindow):
             self.slider_z.show()
         else:
             self.slider_z.hide()
-            
-        #self.channel_bar.show()
-            
-        self.layout.update()
-#        channels_int = range(meta_data.dim_c)
-#        self.slider_c.setRange(channels_int[0],channels_int[-1])
+
+        self.channel_frame.set_channels([(c,QColor(255,255,0))
+                                          for c in meta_data.channels])
         
         position = meta_data.positions[0]
         time = meta_data.times[0]
@@ -735,7 +944,9 @@ class MainWindow(QMainWindow):
         self.meta_image = self.image_container.get_meta_image(position, time, 
                                                               channel, zslice)
         self._update_image()
+        self.viewer.show()
         self.viewer.center()
+        self.layout.update()
         
     def _on_info(self):
         widget = QDialog(self)
@@ -770,55 +981,8 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
 
-    style = \
-"""
-QToolBox::tab {
-     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                 stop: 0 #E1E1E1, stop: 0.4 #DDDDDD,
-                                 stop: 0.5 #D8D8D8, stop: 1.0 #D3D3D3);
-     border: 1px solid darkgrey;
-     border-radius: 4px;
-     color: #333333;
-     padding-left: 5px;
-}
-
- QToolBox::tab:selected {
-     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                 stop: 0 #F2F2F2, stop: 0.4 #DDDDDD,
-                                 stop: 0.5 #D8D8D8, stop: 1.0 #999999);
-     font: bold;
-     color: #000000;
-}
-
-QToolBox {
-}
-
-StyledFrame {
-     background: #DDDDDD;
-     border: 1px solid darkgrey;
-     border-radius: 4px;
-     padding: 0px;
-     margin: 0px;
- }
-
-PositionFrame {
-     background: #DDDDDD;
-     border: 1px solid darkgrey;
-     border-radius: 4px;
-     padding: 0px;
-     margin: 0px;
- }
-
-ImageViewer {
-     background: #000000;
-}
-
-ColorIcon {
-     border: 1px solid darkgrey;
-}
-"""
     app = QApplication(sys.argv)
-    app.setStyleSheet(style)
+    app.setStyleSheet(STYLESHEET_CARBON)
     main = MainWindow()
     main.raise_()
     sys.exit(app.exec_())

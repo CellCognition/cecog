@@ -37,13 +37,16 @@ DATA_FILES = []
 OPTIONS = {'argv_emulation': True,
            'includes': ['sip'],
            'packages': ['pyvigra'],
+           'resources': [],
            'iconfile': 'resources/cecog_browser_icon.icns', 
            }
 
 # delete target folder before execution of py2app 
 base_path = 'dist/CecogBrowser.app' 
-if os.path.isdir(base_path):
-    shutil.rmtree(base_path)
+
+for path in ['dist', 'build']:
+    if os.path.isdir(path):
+        shutil.rmtree(path)
 
 setup(
     app=APP,
