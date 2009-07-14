@@ -1,0 +1,23 @@
+
+                          The CellCognition Project
+                  Copyright (c) 2006 - 2009 Michael Held
+                   Gerlich Lab, ETH Zurich, Switzerland
+
+           CellCognition is distributed under the LGPL License.
+                     See trunk/LICENSE.txt for details.
+               See trunk/AUTHORS.txt for author contributions.
+
+
+    CellCognition is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Lesser General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    CellCognition is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public License
+    along with CellCognition. If not, see <http://www.gnu.org/licenses/>.
+
