@@ -5,7 +5,7 @@
 
            CellCognition is distributed under the LGPL License.
                      See trunk/LICENSE.txt for details.
-               See trunk/AUTHORS.txt for author contributions.
+              See trunk/AUTHORS.txt for author contributions.
 """
 # many thanks for inspiration to F. Oliver Gathmann from the pyVIGRA project
 
@@ -14,9 +14,6 @@ import copy
 import glob
 import os
 import sys
-import shutil
-
-import pyvigra
 
 from distutils.sysconfig import (get_config_vars,
                                  get_python_inc)
@@ -31,6 +28,7 @@ from setuptools import setup
 
 DEFAULT_VIGRA_VERSION = 'vigra1.6.0'
 DEFAULT_BOOST_VERSION = 'boost_1_39_0'
+DEFAULT_PYVIGRA_VERSION = 'pyvigra'
 
 #
 # Utility functions.
@@ -132,8 +130,23 @@ else:
     python_library_dirs = set([get_config_vars()['LIBDEST']])
 
 
-pyvigra_root_dir = pyvigra.__path__[0]
-pyvigra_library_dirs = set([pyvigra_root_dir])
+pyvigra_root_dir = parser.get('build_ext', 'pyvigra_dir')
+if pyvigra_root_dir == '':
+    # Try with default VIGRA version prepended by <HOME>/src directory.
+    pyvigra_root_dir = prefix_home(os.path.join('src', DEFAULT_PYVIGRA_VERSION))
+pyvigra_source_dir = os.path.join(pyvigra_root_dir, 'csrc', 'src')
+pyvigra_pysource_dir = os.path.join(pyvigra_root_dir, 'pysrc', 'pyvigra')
+pyvigra_include_dirs = set([pyvigra_source_dir,
+                            os.path.join(pyvigra_root_dir, 'csrc', 'include')])
+pyvigra_library_dirs = set([pyvigra_pysource_dir,
+                            get_lib_dir('tiff_library_dir', parser),
+                            ])
+pyvigra_libraries = set(['boost_python',
+                         get_lib('tiff_lib', parser, 'tiff'),
+                         ])
+pyvigra_include_dirs.union(
+                           get_include_dirs('tiff_include_dir', parser)
+                           )
 
 
 # Prepare VIGRA library.
@@ -144,7 +157,7 @@ if vigra_root_dir == '':
 vigra_source_dir = os.path.join(vigra_root_dir, 'src', 'impex')
 vigra_include_dirs = set([vigra_source_dir,
                           os.path.join(vigra_root_dir, 'include')])
-
+vigra_define_macros = set()
 
 # Prepare boost_python library.
 boost_root_dir = parser.get('build_ext', 'boost_dir')
@@ -174,14 +187,19 @@ else:
 cecog_root_dir = 'csrc'
 cecog_source_dir = os.path.join(cecog_root_dir, 'src')
 cecog_python_source_dir = os.path.join(cecog_source_dir, 'python')
-cecog_sources = glob.glob(os.path.join(cecog_python_source_dir, 'cecog*.cxx'))
-cecog_libraries = set(['vigraimpex', 'boost_python'])
+cecog_sources = glob.glob(os.path.join(cecog_source_dir, '*.cxx')) +\
+                glob.glob(os.path.join(cecog_python_source_dir, 'cecog*.cxx'))
+cecog_libraries = pyvigra_libraries.copy()
 cecog_include_dirs = python_include_dirs.union(
                         vigra_include_dirs).union(
                             boost_include_dirs).union(
-                                [os.path.join(cecog_root_dir, 'include')])
-cecog_define_macros =  parse_defines(parser.get('build_ext',
-                                                'cecog_define'))
+                                pyvigra_include_dirs).union(
+                                    [os.path.join(cecog_root_dir, 'include')])
+cecog_define_macros = parse_defines(parser.get('build_ext',
+                                               'cecog_define')).union(
+                           [('DEBUG', '1'),
+                            ('BOOST_PYTHON_DYNAMIC_LIB', 1)])
+
 if on_posix():
     cecog_library_dirs = pyvigra_library_dirs.copy()
     cecog_extra_link_args = set()
@@ -190,14 +208,14 @@ else:
     #                vigra_library_dirs.copy().union(python_library_dirs)
 #    pyvigra_libraries.add('kernel32')
     cecog_extra_link_args = set(['/SUBSYSTEM:CONSOLE',
-                                '/NODEFAULTLIB:"libc"',
+                                 '/NODEFAULTLIB:"libc"',
                                 ])
-    cecog_define_macros.update(set([('BOOST_ALL_DYN_LINK', '1'),
+#    cecog_define_macros.update(set([('BOOST_ALL_DYN_LINK', '1'),
 #                                     ('BOOST_PYTHON_SOURCE', '1'),
-                                     ('BOOST_AUTO_LINK_NOMANGLE', '1'),
-                                     ('_CRT_SECURE_NO_DEPRECATE', '1')
-                                     ]))
-cecog_lib = Library('cecog.ccore.ccore',
+#                                     ('BOOST_AUTO_LINK_NOMANGLE', '1'),
+#                                     ('_CRT_SECURE_NO_DEPRECATE', '1')
+#                                     ]))
+cecog_lib = Library('cecog.ccore.cecog',
                     sources=cecog_sources,
                     libraries=list(cecog_libraries),
                     include_dirs=list(cecog_include_dirs),
@@ -208,15 +226,16 @@ cecog_lib = Library('cecog.ccore.ccore',
 
 # Prepare _pyvigra extension.
 cecog_ext_sources = [os.path.join(cecog_python_source_dir, '_cecog.cxx')]
-cecog_ext_libraries = set(['ccore'])
+cecog_ext_libraries = set(['cecog'])
 cecog_ext_include_dirs = cecog_include_dirs.copy()
 cecog_ext_library_dirs = cecog_library_dirs.copy()
 cecog_ext_extra_link_args = cecog_extra_link_args.copy()
-cecog_ext_macros = [('BOOST_ALL_DYN_LINK', '1'),
+cecog_ext_macros = set()
+#cecog_ext_macros = [('BOOST_ALL_DYN_LINK', '1'),
 #                      ('BOOST_PYTHON_SOURCE', '1'),
-                    ('BOOST_AUTO_LINK_NOMANGLE', '1'),
-                    ('_CRT_SECURE_NO_DEPRECATE', '1')
-                    ]
+#                    ('BOOST_AUTO_LINK_NOMANGLE', '1'),
+#                    ('_CRT_SECURE_NO_DEPRECATE', '1')
+#                    ]
 cecog_ext = Extension('cecog.ccore._cecog',
                       cecog_ext_sources,
                       libraries=list(cecog_ext_libraries),
@@ -226,12 +245,10 @@ cecog_ext = Extension('cecog.ccore._cecog',
                       define_macros=list(cecog_ext_macros)
                       )
 
-
-
 class cecog_build_ext(build_ext):
-    pass
     user_options = build_ext.user_options[:]
     user_options.extend([
+        ('pyvigra-dir', None, 'pyVIGRA distribution root (trunk) directory'),
         ('vigra-dir', None, 'VIGRA distribution root directory'),
         ('vigra-define', None, 'macro definitions for VIGRA'),
         ('boost-dir', None, 'boost distribution root directory'),
@@ -239,20 +256,32 @@ class cecog_build_ext(build_ext):
         ('tiff-include-dir', None, 'TIFF include dir'),
         ('tiff-library-dir', None, 'TIFF library dir'),
         ('tiff-lib', None, 'TIFF library name'),
-        ('cecog-define', None, 'macro definitions for pyVIGRA'),
+        ('cecog-define', None, 'macro definitions for cecog'),
+        ('cecog-copy-libs', None, 'path to copy extra libs to'),
         ])
 
     def initialize_options(self):
         # valid initialization function pylint: disable-msg=W0201
         build_ext.initialize_options(self)
+        self.pyvigra_dir = None
         self.vigra_dir = None
         self.vigra_define = None
         self.boost_dir = None
         self.boost_define = None
+        self.jpeg_include_dir = None
+        self.jpeg_library_dir = None
+        self.jpeg_lib = None
+        self.png_include_dir = None
+        self.png_library_dir = None
+        self.png_lib = None
         self.tiff_include_dir = None
         self.tiff_library_dir = None
         self.tiff_lib = None
+        self.fft_include_dir = None
+        self.fft_library_dir = None
+        self.fft_lib = None
         self.cecog_define = None
+        self.cecog_copy_libs = None
         # pylint: enable-msg=W0201
 
 
@@ -345,18 +374,13 @@ options['cmdclass'] = dict(build_ext=cecog_build_ext)
 # Run setup.
 setup(**options)
 
+import shutil
+dest = parser.get('build_ext', 'cecog_copy_libs')
+if dest != '':
+    target = 'pysrc/cecog/ccore'
+    for name in os.listdir(target):
+        if os.path.splitext(name)[1] == '.dylib':
+            name_path = os.path.join(target, name)
+            print "Copy %s -> %s" % (name_path, dest)
+            shutil.copy(name_path, dest)
 
-#if on_posix():
-
-#print cecog_ext.name
-for lib_name in cecog_lib.libraries:
-    for lib_dir in cecog_lib.library_dirs:
-        filename = 'lib%s.dylib' % lib_name
-        filepath = os.path.join(lib_dir, filename)
-        dest = os.path.join(pkginfo.package_dir[''],
-                            os.path.join(*cecog_ext.name.split('.')[:-1]),
-                            filename)
-        if (os.path.isfile(filepath) and
-            not os.path.islink(dest) and
-            not os.path.isfile(dest)):
-            os.symlink(filepath, dest)

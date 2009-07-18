@@ -13,11 +13,13 @@
 from distutils.command.build_ext import build_ext as _du_build_ext
 try:
     # Attempt to use Pyrex for building extensions, if available
+    # pylint: disable-msg=F0401
     from Pyrex.Distutils.build_ext import build_ext as _build_ext
 except ImportError:
     _build_ext = _du_build_ext
 
 import os, sys
+import subprocess
 from distutils.file_util import copy_file
 from setuptools.extension import Library
 from distutils.ccompiler import new_compiler
@@ -27,12 +29,13 @@ from distutils.sysconfig import _config_vars
 from distutils import log
 from distutils.errors import *
 
+
 have_rtld = False
 use_stubs = False
 libtype = 'shared'
 
 if sys.platform == "darwin":
-    use_stubs = True
+    use_stubs = False
 elif os.name != 'nt':
     try:
         from dl import RTLD_NOW
@@ -45,9 +48,6 @@ def if_dl(s):
     if have_rtld:
         return s
     return ''
-
-
-
 
 
 
@@ -78,6 +78,10 @@ class build_ext(_build_ext):
                 src_filename, dest_filename, verbose=self.verbose,
                 dry_run=self.dry_run
             )
+            # library symlinks for the source dir
+            if isinstance(ext, Library):
+                self.provide_dependent_libraries(ext, package_dir)
+
             if ext._needs_stub:
                 self.write_stub(package_dir or os.curdir, ext, True)
 
@@ -100,7 +104,7 @@ class build_ext(_build_ext):
             return self.shlib_compiler.library_filename(fn,libtype)
         elif use_stubs and ext._links_to_dynamic:
             d,fn = os.path.split(filename)
-            return os.path.join(d,'dl-'+fn)
+            return os.path.join(d,fn)
         else:
             return filename
 
@@ -175,6 +179,20 @@ class build_ext(_build_ext):
         compiler.link_shared_object = link_shared_object.__get__(compiler)
 
 
+    def provide_dependent_libraries(self, ext, dest_dir=None):
+        # hacky solution to provide ext libraries vis symlinks
+        if dest_dir is None:
+            dest_dir = os.path.join(self.build_lib,
+                                    os.path.split(ext._file_name)[0])
+        for lib_name in ext.libraries:
+            for lib_dir in ext.library_dirs:
+                filename = 'lib%s.dylib' % lib_name
+                filepath = os.path.join(lib_dir, filename)
+                dest = os.path.join(dest_dir, filename)
+                if (os.path.isfile(filepath) and
+                    not os.path.islink(dest) and
+                    not os.path.isfile(dest)):
+                    os.symlink(filepath, dest)
 
     def get_export_symbols(self, ext):
         if isinstance(ext,Library):
@@ -187,6 +205,10 @@ class build_ext(_build_ext):
             if isinstance(ext,Library):
                 self.compiler = self.shlib_compiler
             _build_ext.build_extension(self,ext)
+
+            # library symlinks for the build directory
+            if isinstance(ext,Library):
+                self.provide_dependent_libraries(ext)
             if ext._needs_stub:
                 self.write_stub(
                     self.get_finalized_command('build_py').build_lib, ext
@@ -228,53 +250,41 @@ class build_ext(_build_ext):
             if idx+1 < len(output_path):
                 if output_path[idx+1] != ext_modname_parts[idx]:
                     break
-        ext_modname_parts = ext_modname_parts[idx:]
-        stub_file = os.path.join(output_dir, *ext_modname_parts)+'.py'
+        ext_modname_parts = ext_modname_parts[idx:-1] +\
+                            ["load%s.py" % ext_modname_parts[-1]]
+        stub_file = os.path.join(output_dir, *ext_modname_parts)
         if os.path.exists(stub_file) and not self.dry_run:
             os.unlink(stub_file)
         if not self.dry_run:
             f = open(stub_file,'w')
             lines = [
-                "def __bootstrap__():",
-                "    global __bootstrap__, __file__, __loader__",
-                "    import sys, os, pkg_resources, imp"+if_dl(", dl"),
-                "    __file__ = pkg_resources.resource_filename(__name__,%r)"
-                    % os.path.basename(ext._file_name),
-                "    del __bootstrap__",
-                "    if '__loader__' in globals():",
-                "        del __loader__",
-                if_dl("    old_flags = sys.getdlopenflags()"),
-                "    old_dir = os.getcwd()",
-                "    try:",
-                "        os.chdir(os.path.dirname(__file__))",
-                if_dl("        sys.setdlopenflags(dl.RTLD_NOW)"),
-                "        imp.load_dynamic(__name__,os.path.basename(__file__))",
-                "    finally:",
-                if_dl("        sys.setdlopenflags(old_flags)"),
-                "        os.chdir(old_dir)",
-                "__bootstrap__()",
-                "" # terminal \n
-            ]
+                     "import os",
+                     "print __file__",
+                     "old_dir = os.getcwd()",
+                     "os.chdir(os.path.dirname(__file__))",
+                     "from %s import *" % ext._full_name.split('.')[-1],
+                     "os.chdir(old_dir)",
+                     ]
             f.write('\n'.join(lines))
             f.close()
             # import, read exported symbols, and write them into __all__.
-            ext_dir = os.path.dirname(stub_file)
-            ext_modname = ext_modname_parts[-1]
-            sys.path.insert(0, ext_dir)
-            mod = __import__(ext_modname)
-            f = open(stub_file,'w')
-            predefined_names = ['__builtins__', '__name__', '__doc__']
-            all_names = [name for name in dir(mod)
-                         if not name in predefined_names]
-            all_name_string = '[%s]' % ',\n'.join(['"%s"' % name
-                                                   for name in all_names])
-            all_line = '__all__ = %s' % all_name_string
-            lines.insert(0, all_line)
-            lines.append('from %s import (%s)' %
-                         (ext_modname, ',\n'.join(all_names)))
-            f.write('\n'.join(lines))
-            f.close()
-            del sys.path[0]
+#            ext_dir, ext_name = os.path.split(os.path.dirname(stub_file))
+#            ext_modname = "%s.%s" % (ext_name, ext_modname_parts[-1])
+#            sys.path.insert(0, ext_dir)
+#            mod = __import__(ext_modname)
+#            f = open(stub_file,'w')
+#            predefined_names = ['__builtins__', '__name__', '__doc__']
+#            all_names = [name for name in dir(mod)
+#                         if not name in predefined_names]
+#            all_name_string = '[%s]' % ',\n'.join(['"%s"' % name
+#                                                   for name in all_names])
+#            all_line = '__all__ = %s' % all_name_string
+#            lines.insert(0, all_line)
+#            lines.append('from %s import (%s)' %
+#                         (ext_modname, ',\n'.join(all_names)))
+#            f.write('\n'.join(lines))
+#            f.close()
+#            del sys.path[0]
         if compile:
             from distutils.util import byte_compile
             byte_compile([stub_file], optimize=0,
@@ -285,7 +295,7 @@ class build_ext(_build_ext):
                              force=True, dry_run=self.dry_run)
 
 
-if use_stubs or os.name=='nt':
+if sys.platform=='darwin' or os.name=='nt':
     # Build shared libraries
     #
     def link_shared_object(self, objects, output_libname, output_dir=None,
@@ -309,6 +319,12 @@ if use_stubs or os.name=='nt':
             errorcode = os.system(cmd)
             if errorcode:
                 raise DistutilsExecError("command failed: %s" % cmd)
+
+            import shutil
+            dest = "/Users/miheld/lib"
+            log.info("Copy %s -> %s" % (output_libname, dest))
+            shutil.copy(output_libname, dest)
+
 
 else:
     # Build static libraries everywhere else
