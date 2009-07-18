@@ -10,6 +10,11 @@
 
 *******************************************************************************/
 
+// Author(s): Michael Held
+// $Date$
+// $Rev$
+// $URL: https://svn.cellcognition.org/mito/trunk/include/mito/reader/wrap_lsm#$
+
 #ifndef CECOG_HXX
 #define CECOG_HXX
 

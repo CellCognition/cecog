@@ -16,32 +16,23 @@
 // $URL: https://svn.cellcognition.org/mito/trunk/include/mito/reader/wrap_lsm#$
 
 #include <boost/python.hpp>
+#include <boost/python/overloads.hpp>
+#include <boost/python/args.hpp>
 
-#include "vigra/stdimage.hxx"
-#include "vigra/basicimage.hxx"
-#include "vigra/basicimageview.hxx"
-#include "pyvigra/converters.hxx"
-
-#include "cecog/python/cecog.hxx"
+#include "cecog/python/renderer.hxx"
 
 using namespace boost::python;
+using namespace cecog::python;
 
-// forward declarations:
-void wrap_renderer();
-//void wrap_lsmreader();
+void wrap_renderer()
+{
+  def("make_image_overlay", pyMakeImageOverlay1<vigra::UInt8>,
+      args("images", "colors", "alphas"),
+      "Creates an overlay image from a list of UInt8 images and a list of RGB colors."
+      );
+  def("make_image_overlay", pyMakeImageOverlay2<vigra::UInt8>,
+      args("images", "colors"),
+      "Creates an overlay image from a list of UInt8 images and a list of RGB colors."
+      );
 
-namespace cecog {
-  namespace python {
-
-    void wrap_cecog()
-    {
-
-      vigra::python::PySequenceToArrayVector< vigra::RGBValue<vigra::UInt8> >();
-      wrap_renderer();
-      //wrap_lsmreader();
-
-    }
-
-  } // namespace python
-
-} // namespace cecog
+}
