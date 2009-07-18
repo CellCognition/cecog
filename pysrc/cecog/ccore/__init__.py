@@ -16,6 +16,4 @@ __source__ = '$URL::                                                          $'
 #------------------------------------------------------------------------------
 # cecog C++ extension import:
 #
-
-# pylint: disable-msg=W0401,W0622
-from _cecog import *
+from _cecog import * # pylint: disable-msg=W0401,W0622

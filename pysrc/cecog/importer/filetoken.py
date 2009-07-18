@@ -15,7 +15,10 @@ __revision__ = '$Rev$'
 __source__ = '$URL::                                                          $'
 
 __all__ = ['FileTokenImporter',
-           'MetaMorphTokenImporter',]
+           'MetaMorphTokenImporter',
+           'SimpleTokenImporter',
+           'ZeissLifeTokenImporter',
+           ]
 
 #------------------------------------------------------------------------------
 # standard library imports:
@@ -33,7 +36,7 @@ from pyvigra import (read_image,
 #------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog.util.token import (Token, 
+from cecog.util.token import (Token,
                               TokenHandler)
 from cecog.core.imagecontainer import (MetaData,
                                        DIMENSION_NAME_POSITION,
@@ -60,11 +63,11 @@ class FileTokenImporter(object):
 
     EXTENSIONS = ['.tif', '.png', '.png']
     IGNORE_PREFIXES = ['.']
-    
+
     MULTIIMAGE_IGNORE = 'ignore'
     MULTIIMAGE_USE_ZSLICE = 'zslice'
 
-    def __init__(self, path, token_handler, 
+    def __init__(self, path, token_handler,
                  extensions=None, ignore_prefixes=None, multi_image=None):
         self.path = os.path.normpath(path)
         self.extensions = self.EXTENSIONS if extensions is None \
@@ -80,9 +83,9 @@ class FileTokenImporter(object):
         self.meta_data.setup()
         #print self.meta_data
         #print self.dimension_lookup
-        
-    def _build_token_list(self):                
-        file_list = collect_files(self.path, self.extensions, absolute=True, 
+
+    def _build_token_list(self):
+        file_list = collect_files(self.path, self.extensions, absolute=True,
                                   follow=False, recursive=True,
                                   ignore_case=True, force_python=True)
 
@@ -106,18 +109,18 @@ class FileTokenImporter(object):
         times = []
         channels = []
         zslices = []
-        
+
         for item in token_list:
-            
+
             if not has_xy:
                 has_xy = True
-                info = ImageImportInfo(os.path.join(self.path, 
+                info = ImageImportInfo(os.path.join(self.path,
                                                     item['filename']))
                 self.meta_data.dim_x = info.width
                 self.meta_data.dim_y = info.height
                 self.meta_data.pixel_type = info.pixel_type
                 self.has_multi_images = info.images > 1
-                
+
             position = item[DIMENSION_NAME_POSITION]
             if not position in lookup:
                 lookup[position] = {}
@@ -131,10 +134,10 @@ class FileTokenImporter(object):
             if not zslice in lookup[position][time][channel]:
                 lookup[position][time][channel][zslice] = item['filename']
 
-            self.meta_data.append_absolute_time(position, 
-                                                time, 
+            self.meta_data.append_absolute_time(position,
+                                                time,
                                                 item['timestamp'])
-            
+
             if (self.has_multi_images and
                 self.multi_image == self.MULTIIMAGE_USE_ZSLICE):
                 if not zslice is None:
@@ -147,7 +150,7 @@ class FileTokenImporter(object):
             positions.append(position)
             times.append(time)
             channels.append(channel)
-            
+
         self.meta_data.positions = tuple(sorted(unique(positions)))
         self.meta_data.times = tuple(sorted(unique(times)))
         self.meta_data.channels = tuple(sorted(unique(channels)))
@@ -156,14 +159,14 @@ class FileTokenImporter(object):
 
     def get_image(self, position, frame, channel, zslice):
         index = 0
-        if (self.has_multi_images and  
+        if (self.has_multi_images and
             self.multi_image == self.MULTIIMAGE_USE_ZSLICE):
             index = zslice - 1
             zslice = None
         #print position, frame, channel, zslice, index
         filename_rel = self.dimension_lookup[position][frame][channel][zslice]
         filename_abs = os.path.join(self.path, filename_rel)
-        image = read_image(filename_abs, index)
+        image = read_image(filename_abs, image_index=index)
         return image
 
 
@@ -181,48 +184,48 @@ class SimpleTokenImporter(FileTokenImporter):
         simple_token.register_token(self.TOKEN_T)
         simple_token.register_token(self.TOKEN_C)
         simple_token.register_token(self.TOKEN_Z)
-    
-        super(SimpleTokenImporter, 
+
+        super(SimpleTokenImporter,
               self).__init__(path, simple_token,
-                             extensions=extensions, 
-                             ignore_prefixes=ignore_prefixes, 
+                             extensions=extensions,
+                             ignore_prefixes=ignore_prefixes,
                              multi_image=multi_image)
 
 class MetaMorphTokenImporter(SimpleTokenImporter):
-    
-    TOKEN_P = Token('P', type_code='i', length='+', prefix='', 
+
+    TOKEN_P = Token('P', type_code='i', length='+', prefix='',
                     name=DIMENSION_NAME_POSITION)
-    TOKEN_T = Token('T', type_code='i', length='+', prefix='', 
+    TOKEN_T = Token('T', type_code='i', length='+', prefix='',
                     name=DIMENSION_NAME_TIME)
-    TOKEN_C = Token('C', type_code='c', length='+', prefix='', 
+    TOKEN_C = Token('C', type_code='c', length='+', prefix='',
                     name=DIMENSION_NAME_CHANNEL)
-    TOKEN_Z = Token('Z', type_code='i', length='+', prefix='', 
+    TOKEN_Z = Token('Z', type_code='i', length='+', prefix='',
                     name=DIMENSION_NAME_ZSLICE)
 
     def __init__(self, path, separator='_',
                  extensions=None, ignore_prefixes=None, multi_image=None):
-        super(MetaMorphTokenImporter, 
-              self).__init__(path, separator=separator, 
-                             extensions=extensions, 
-                             ignore_prefixes=ignore_prefixes, 
+        super(MetaMorphTokenImporter,
+              self).__init__(path, separator=separator,
+                             extensions=extensions,
+                             ignore_prefixes=ignore_prefixes,
                              multi_image=multi_image)
 
 class ZeissLifeTokenImporter(SimpleTokenImporter):
 
-    TOKEN_P = Token('s', type_code='i', length='+', prefix='', 
+    TOKEN_P = Token('s', type_code='i', length='+', prefix='',
                     name=DIMENSION_NAME_POSITION)
-    TOKEN_T = Token('t', type_code='i', length='+', prefix='', 
+    TOKEN_T = Token('t', type_code='i', length='+', prefix='',
                     name=DIMENSION_NAME_TIME)
-    TOKEN_C = Token('w', type_code='c', length='+', prefix='', 
+    TOKEN_C = Token('w', type_code='c', length='+', prefix='',
                     name=DIMENSION_NAME_CHANNEL)
-    TOKEN_Z = Token('Z', type_code='i', length='+', prefix='', 
+    TOKEN_Z = Token('Z', type_code='i', length='+', prefix='',
                     name=DIMENSION_NAME_ZSLICE)
 
     def __init__(self, path, separator='_',
-                 extensions=None, ignore_prefixes=None, 
+                 extensions=None, ignore_prefixes=None,
                  multi_image=None):
-        super(ZeissLifeTokenImporter, 
-              self).__init__(path, separator=separator, 
-                             extensions=extensions, 
-                             ignore_prefixes=ignore_prefixes, 
+        super(ZeissLifeTokenImporter,
+              self).__init__(path, separator=separator,
+                             extensions=extensions,
+                             ignore_prefixes=ignore_prefixes,
                              multi_image=multi_image)

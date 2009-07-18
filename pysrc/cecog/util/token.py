@@ -14,7 +14,10 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL::                                                          $'
 
-__all__ = []
+__all__ = ['Token',
+           'TokenHandler',
+           'TokenTemplate',
+           ]
 
 #------------------------------------------------------------------------------
 # standard library imports:
@@ -47,8 +50,8 @@ import string
 #
 
 class Token(object):
-    
-    def __init__(self, identifier, type_code='c', length='+', prefix='', 
+
+    def __init__(self, identifier, type_code='c', length='+', prefix='',
                  name=None):
         format_length = length if length.isdigit() else '0'
         regex_length = '{%s}' % length if length.isdigit() else '%s' % length
@@ -63,8 +66,8 @@ class Token(object):
         self.name = identifier if name is None else name
         self.identifier = identifier
         self.format = format_string % (prefix, format_length)
-        self.regex = re.compile(regex_string % (self.identifier, 
-                                                self.name, 
+        self.regex = re.compile(regex_string % (self.identifier,
+                                                self.name,
                                                 regex_length))
         self.type = data_type
 
@@ -102,7 +105,7 @@ class TokenHandler(object):
                     result = token.type(result.group(1))
                     break
         return result
-    
+
     def search_all(self, text):
         result = {}
         for name in self._token.iterkeys():
@@ -160,25 +163,25 @@ class TokenTemplate(TokenHandler):
 if __name__ == "__main__":
 
     foo = TokenTemplate()
-    
+
     foo.register_token(Token('P', type_code='i', length='4', prefix='0'))
     foo.register_token(Token('T', type_code='i', length='5', prefix='0'))
     foo.register_token(Token('O', type_code='i', length='4', prefix='0'))
     foo.register_token(Token('C', type_code='c', length='+', prefix=''))
     foo.register_token(Token('R', type_code='c', length='+', prefix=''))
     foo.register_token(Token('F', type_code='c', length='+', prefix=''))
-    
+
     print foo
-    
-    foo.register_template('EVENT_FOLDER', 
+
+    foo.register_template('EVENT_FOLDER',
                          '${P}_${T}_${O}')
-    foo.register_template('FEATURE_FILE', 
+    foo.register_template('FEATURE_FILE',
                           '${prefix}__${P}__${T}__${O}__${C}__${R}\.${ext}')
-    foo.register_template('FEATURE_PLOT', 
+    foo.register_template('FEATURE_PLOT',
                           '${T}__${O}__${C}__${R}__${F}.${ext}')
-    foo.register_template('PLOT_TITLE', 
+    foo.register_template('PLOT_TITLE',
                           '${C} ${R} ${feature}')
-    foo.register_template('PLOT_FILE', 
+    foo.register_template('PLOT_FILE',
                           '${prefix}__${P}__${T}__${O}__${C}__${R}\.${ext}')
 
     print foo
