@@ -204,8 +204,8 @@ if on_posix():
     cecog_library_dirs = pyvigra_library_dirs.copy()
     cecog_extra_link_args = set()
 else:
-    #cecog_library_dirs = \
-    #                vigra_library_dirs.copy().union(python_library_dirs)
+    cecog_library_dirs = \
+                    pyvigra_library_dirs.copy().union(python_library_dirs)
 #    pyvigra_libraries.add('kernel32')
     cecog_extra_link_args = set(['/SUBSYSTEM:CONSOLE',
                                  '/NODEFAULTLIB:"libc"',
@@ -294,7 +294,8 @@ if on_windows():
     class MSVCExpressCompiler(msvccompiler.MSVCCompiler):
         def initialize(self):
             msvccompiler.MSVCCompiler.initialize(self)
-            self.compile_options = ['/nologo', '/O2', '/MD', '/W1',
+            self.compile_options = ['/nologo', '/O2', '/Ot', '/Ob2', '/arch:SSE2',
+                                    '/MD', '/W1',
                                     '/EHsc' , '/DNDEBUG', '/bigobj',
                                     '/Gy', '/GF', '/FD', '/Zm400']
             self.compile_options_debug = ['/nologo', '/Od', '/MDd',
