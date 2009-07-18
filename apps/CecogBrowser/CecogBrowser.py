@@ -81,6 +81,10 @@ StyledDialog {
 }
 
 StyledFrame {
+     background: #000000;
+}
+
+StyledSideFrame {
      background: #DDDDDD;
      border: 1px solid darkgrey;
      border-radius: 4px;
@@ -129,7 +133,7 @@ QToolBox::tab:selected {
      color: #FFFFFF;
 }
 
-QComboBox {
+StyledComboBox {
     border: 1px solid darkgray;
     border-radius: 3px;
     padding: 1px 1px 1px 20px;
@@ -143,7 +147,7 @@ QComboBox {
     color: white;
 }
 
-QComboBox::drop-down {
+StyledComboBox::drop-down {
     width: 20px;
     border-left-width: 1px;
     border-left-color: darkgray;
@@ -153,7 +157,7 @@ QComboBox::drop-down {
     background: #222222;
 }
 
-QComboBox QAbstractItemView {
+StyledComboBox QAbstractItemView {
     border: 1px solid darkgray;
     background: #222222;
     spacing: 0;
@@ -261,20 +265,21 @@ def numpy_to_qimage(data, colors=None):
             qimage.setColor(idx, col.rgb())
     return qimage
 
-def make_colors(pattern, n = 10):
-    n = int(n)
-    steps = len(pattern)-1
-    part = (n-1) / steps
-    resL = []
-    for i in range(steps):
-        if (i == steps-1):
-            part += (n-1) % steps
-        stepL = [float(x[1] - x[0]) / part
-                 for x in zip(pattern[i], pattern[i+1])]
-        resL += [[abs(p[0]+p[1]*c) for p in zip(pattern[i], stepL)]
-                 for c in range(part)]
-    resL.append(pattern[-1])
-    return resL
+
+class StyledLabel(QLabel):
+    pass
+
+class StyledFrame(QFrame):
+    pass
+
+class StyledDialog(QDialog):
+    pass
+
+class StyledSideFrame(QFrame):
+    pass
+
+class StyledComboBox(QComboBox):
+    pass
 
 
 class CoordinateHolder(object):
@@ -284,7 +289,7 @@ class CoordinateHolder(object):
     zslice = None
 
 
-class ImageViewer(QFrame):
+class ImageViewer(StyledFrame):
 
     MOVE_KEY = Qt.Key_Space
 
@@ -361,8 +366,8 @@ class ImageViewer(QFrame):
     def center(self):
         screen = self.geometry()
         size = self.label.geometry()
-        self.label.move((screen.width()-screen.x()-size.width()-size.x())/2,
-                        (screen.height()-screen.y()-size.height()-size.y())/2)
+        self.label.move((screen.width()-size.width())/2,
+                        (screen.height()-size.height())/2)
         self.update()
 
     # protected method overload
@@ -422,20 +427,7 @@ class ImageViewer(QFrame):
             self.label.move(point)
 
 
-class StyledLabel(QLabel):
-    pass
-
-class StyledFrame(QFrame):
-    pass
-
-class StyledDialog(QDialog):
-    pass
-
-class StyledSideFrame(QFrame):
-    pass
-
-
-class ColorBox(QComboBox):
+class ColorBox(StyledComboBox):
 
     COLOR_SIZE = (50, 10)
     colorSelected = pyqtSignal('str', 'QColor')
@@ -752,7 +744,7 @@ class MainWindow(QMainWindow):
                                        QSizePolicy.MinimumExpanding))
         self.layout = QGridLayout()
 
-        dummy_frame = QFrame(self.frame)
+        dummy_frame = StyledFrame(self.frame)
         dummy_frame.setSizePolicy(
             QSizePolicy(QSizePolicy.Expanding|QSizePolicy.Maximum,
                         QSizePolicy.Expanding|QSizePolicy.Maximum))
@@ -773,7 +765,7 @@ class MainWindow(QMainWindow):
         # do some alpha-blending here
         pixmap = QPixmap(qimage.size())
         pixmap.fill(QColor(*(160,)*3))
-        qimage.setAlphaChannel(QImage(pixmap))
+        qimage.setAlphaChannel(pixmap.toImage())
         self.viewer.from_qimage(qimage)
 
         layout.addWidget(self.viewer, 0, 0)
