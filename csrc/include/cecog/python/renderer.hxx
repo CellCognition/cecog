@@ -97,6 +97,36 @@ namespace cecog
       cecog::makeImageOverlay(imageVector, colorVector, *res);
       return res;
     }
+
+    template <class T>
+    std::auto_ptr< vigra::BasicImage< vigra::RGBValue<T> > >
+    pyApplyBlending(list & images, list & alphas)
+    {
+      if (len(images) <= 0)
+      {
+        PyErr_SetString(PyExc_IndexError,
+          "List of images must contain at least one image.");
+        throw_error_already_set();
+      }
+      if (len(images) != len(alphas))
+      {
+        PyErr_SetString(PyExc_AssertionError,
+          "List of images and colors must have same size.");
+        throw_error_already_set();
+      }
+
+      typedef vigra::BasicImage< vigra::RGBValue<T> > RGBImage2d;
+      typedef vigra::ArrayVector< RGBImage2d > ImageVector;
+      ImageVector imageVector = extract<ImageVector>(images)();
+
+      typedef vigra::ArrayVector< float > FloatVector;
+      FloatVector alphaVector = extract<FloatVector>(alphas)();
+
+      std::auto_ptr<RGBImage2d> res(new RGBImage2d(imageVector[0].size()));
+      cecog::applyBlending(imageVector, alphaVector, *res);
+      return res;
+    }
+
   }
 }
 

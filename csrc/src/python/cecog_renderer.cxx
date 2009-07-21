@@ -30,9 +30,14 @@ void wrap_renderer()
       args("images", "colors", "alphas"),
       "Creates an overlay image from a list of UInt8 images and a list of RGB colors."
       );
+
   def("make_image_overlay", pyMakeImageOverlay2<vigra::UInt8>,
       args("images", "colors"),
       "Creates an overlay image from a list of UInt8 images and a list of RGB colors."
       );
 
+  def("apply_blending", pyApplyBlending<vigra::UInt8>,
+      args("images", "alphas"),
+      "Combines a list of RGB images and alpha values to one RGB image by maximum-blending."
+      );
 }

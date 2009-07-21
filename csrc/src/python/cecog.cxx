@@ -15,31 +15,18 @@
 // $Rev$
 // $URL: https://svn.cellcognition.org/mito/trunk/include/mito/reader/wrap_lsm#$
 
-#include <boost/python.hpp>
-
-#include "vigra/stdimage.hxx"
-#include "vigra/basicimage.hxx"
-#include "vigra/basicimageview.hxx"
-#include "pyvigra/converters.hxx"
-
-#include "cecog/python/cecog.hxx"
-
-using namespace boost::python;
 
 // forward declarations:
 void wrap_renderer();
-//void wrap_lsmreader();
+void wrap_lut();
 
 namespace cecog {
   namespace python {
 
     void wrap_cecog()
     {
-
-      vigra::python::PySequenceToArrayVector< vigra::RGBValue<vigra::UInt8> >();
       wrap_renderer();
-      //wrap_lsmreader();
-
+      wrap_lut();
     }
 
   } // namespace python

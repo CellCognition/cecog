@@ -102,6 +102,32 @@ namespace cecog
     }
   }
 
+  /**
+   * Creates a new RGB image from a list of scalar images, a list of colors
+   * (RGB values) and a list of alpha values by maximum-intensity blending.
+   */
+  template <class T>
+  inline void
+  applyBlending(
+    vigra::ArrayVector< vigra::BasicImage< vigra::RGBValue<T> > > const & imageVector,
+    vigra::ArrayVector< float > const & alphaVector,
+    vigra::BasicImage< vigra::RGBValue<T> > & rgb_image)
+  {
+    for (unsigned int c=0; c < imageVector.size(); c++)
+    {
+      float alpha = alphaVector[c];
+      // we could probably also do a combineTwoImages here
+      typename vigra::BasicImage<vigra::RGBValue<T> >::const_iterator it_image = imageVector[c].begin();
+      typename vigra::BasicImage<vigra::RGBValue<T> >::iterator it_rgb = rgb_image.begin();
+      for (; it_image != imageVector[c].end() && it_rgb != rgb_image.end();
+           it_image++, it_rgb++)
+        // loop over r,g,b: do the RGB-blending
+        for (int m=0; m < 3; m++)
+          // do a max-blending with any value already assigned to this pixel
+          (*it_rgb)[m] = std::max((*it_rgb)[m], static_cast<vigra::UInt8>((*it_image)[m] * alpha));
+    }
+  }
+
 }
 
 #endif /* CECOG_RENDERER_HXX_ */
