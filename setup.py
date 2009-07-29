@@ -144,7 +144,7 @@ pyvigra_library_dirs = set([pyvigra_pysource_dir,
 pyvigra_libraries = set(['boost_python',
                          get_lib('tiff_lib', parser, 'tiff'),
                          ])
-pyvigra_include_dirs.union(
+pyvigra_include_dirs.update(
                            get_include_dirs('tiff_include_dir', parser)
                            )
 

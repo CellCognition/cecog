@@ -176,6 +176,7 @@ class build_ext(_build_ext):
             compiler.set_link_objects(self.link_objects)
 
         # hack so distutils' build_extension() builds a library instead
+        # pylint: disable-msg=E1101
         compiler.link_shared_object = link_shared_object.__get__(compiler)
 
 
@@ -319,11 +320,6 @@ if sys.platform=='darwin' or os.name=='nt':
             errorcode = os.system(cmd)
             if errorcode:
                 raise DistutilsExecError("command failed: %s" % cmd)
-
-            import shutil
-            dest = "/Users/miheld/lib"
-            log.info("Copy %s -> %s" % (output_libname, dest))
-            shutil.copy(output_libname, dest)
 
 
 else:
