@@ -29,18 +29,29 @@
 
 namespace cecog
 {
+  static int LUT_SIZE = 768;
   typedef vigra::UInt8RGBImage::value_type UInt8RGBValue;
   typedef vigra::ArrayVector< UInt8RGBValue > LutType;
 
-  void readLut(std::string filename, LutType & lut)
+  int readLut(std::string filename, LutType & lut)
   {
-    char mem[768];
     std::ifstream file(filename.c_str(), std::ios::in | std::ios::binary);
-    file.seekg(32);
-    file.read(mem, 768);
-    file.close();
-    for (int i=0; i < 256; i++)
-      lut.push_back(UInt8RGBValue(mem[i], mem[i+256], mem[i+512]));
+    file.seekg(0, std::ios_base::end);
+    int length = file.tellg();
+    if (length >= LUT_SIZE)
+    {
+      file.seekg(0, std::ios_base::beg);
+      char mem[LUT_SIZE];
+      // set file pointer to the last 768 bytes!
+      file.seekg(length-LUT_SIZE);
+      file.read(mem, LUT_SIZE);
+      file.close();
+      for (int i=0; i < 256; i++)
+        lut.push_back(UInt8RGBValue(mem[i], mem[i+256], mem[i+512]));
+      return 0;
+    }
+    else
+      return -1;
   }
 
   class LutFunctor

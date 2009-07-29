@@ -18,6 +18,8 @@
 #ifndef CECOG_PYTHON_LUT_HXX_
 #define CECOG_PYTHON_LUT_HXX_
 
+#include "Python.h"
+
 #include <boost/python.hpp>
 #include <boost/python/list.hpp>
 
@@ -37,7 +39,13 @@ namespace cecog
     pyReadLut(std::string const & filename)
     {
       cecog::LutType lut;
-      cecog::readLut(filename, lut);
+      int errCode = cecog::readLut(filename, lut);
+      if (errCode)
+      {
+        std::string msg = "Could not read LUT file '" + filename + "'.";
+        PyErr_SetString(PyExc_IOError, msg.c_str());
+        throw_error_already_set();
+      }
       list lst;
       for (cecog::LutType::iterator it=lut.begin(); it != lut.end(); ++it)
         lst.append(*it);
