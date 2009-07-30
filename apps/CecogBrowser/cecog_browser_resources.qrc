@@ -3,5 +3,7 @@
         <file alias="cecog_browser_icon" >resources/cecog_browser_icon_128x128.png</file>
         <file alias="background_carbon" >resources/background_carbon.png</file>
         <file alias="cecog_logo_small_black" >resources/cellcognition7_black_background.png</file>
+        <file alias="qss_carbon" >resources/carbon.qss</file>
+        <file alias="qss_native" >resources/native.qss</file>
     </qresource>
 </RCC>

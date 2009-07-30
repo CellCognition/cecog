@@ -33,7 +33,7 @@ from PyQt4.Qt import *
 #
 from cecog.gui.util import (STYLESHEET_CARBON,
                             )
-from cecog.gui.widgets.mainwindow import MainWindow
+from cecog.gui.widgets.mainwindow import BrowserMainWindow
 
 #------------------------------------------------------------------------------
 # constants:
@@ -56,6 +56,6 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyleSheet(STYLESHEET_CARBON)
     app.setWindowIcon(QIcon(':cecog_browser_icon'))
-    main = MainWindow()
+    main = BrowserMainWindow()
     main.raise_()
     sys.exit(app.exec_())

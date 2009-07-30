@@ -17,6 +17,7 @@ __all__ = ['DEFAULT_COLORS',
            'STYLESHEET_CARBON',
            'STYLESHEET_NATIVE_MODIFIED',
            'CoordinateHolder',
+           'StyledButton',
            'StyledComboBox',
            'StyledDialog',
            'StyledFrame',
@@ -111,14 +112,36 @@ MainWindow {
     color: white;
 }
 
+QTabBar::tab {
+     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                 stop: 0 #313131, stop: 0.4 #222222,
+                                 stop: 0.5 #282828, stop: 1.0 #232323);
+     border: 1px solid #999999;
+     border-radius: 4px;
+     color: #999999;
+     padding: 2px;
+     margin: 2px;
+     min-width: 9ex;
+     font: bold;
+}
+
+QTabBar::tab:selected {
+     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                 stop: 0 #424242, stop: 0.4 #222222,
+                                 stop: 0.5 #282828, stop: 1.0 #111111);
+     color: #FFFFFF;
+     margin: 0px;
+}
+
 QToolBox::tab {
      background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
                                  stop: 0 #313131, stop: 0.4 #222222,
                                  stop: 0.5 #282828, stop: 1.0 #232323);
      border: 1px solid #999999;
      border-radius: 4px;
-     color: #CCCCCC;
+     color: #999999;
      padding-left: 5px;
+     margin: 2px;
 }
 
 QToolBox::tab:selected {
@@ -127,6 +150,7 @@ QToolBox::tab:selected {
                                  stop: 0.5 #282828, stop: 1.0 #111111);
      font: bold;
      color: #FFFFFF;
+     margin: 0px;
 }
 
 StyledComboBox {
@@ -183,6 +207,18 @@ StyledLabel {
     color: white;
 }
 
+StyledButton {
+    color: white;
+    border: 1px solid darkgray;
+    border-radius: 3px;
+    /*padding: 1px 1px 1px 20px;*/
+    margin: 1px;
+    alignment: center;
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #313131, stop: 0.4 #222222,
+                                stop: 0.5 #282828, stop: 1.0 #232323);
+}
+
 StyledDialog {
      background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
                                  stop: 0 #323232, stop: 0.3 #222222,
@@ -196,8 +232,7 @@ StyledSideFrame {
     padding: 0px;
     margin: 0px;
     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                stop: 0 #424242, stop: 0.4 #222222,
-                                stop: 0.5 #282828, stop: 1.0 #111111);
+                                stop: 0 #424242, stop: 1.0 #111111);
     color: white;
 }
 
@@ -281,6 +316,12 @@ class StyledSideFrame(QFrame):
     pass
 
 class StyledComboBox(QComboBox):
+    pass
+
+class StyledTabWidget(QTabWidget):
+    pass
+
+class StyledButton(QPushButton):
     pass
 
 class CoordinateHolder(object):

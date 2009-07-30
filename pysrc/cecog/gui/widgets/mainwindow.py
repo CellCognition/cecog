@@ -39,6 +39,7 @@ from cecog.core.imagecontainer import (ImageContainer,
                                        )
 
 from cecog.gui.util import (StyledFrame,
+                            StyledTabWidget,
                             DEFAULT_COLORS,
                             STYLESHEET_CARBON,
                             STYLESHEET_NATIVE_MODIFIED,
@@ -51,6 +52,7 @@ from cecog.gui.widgets.positionframe import PositionFrame
 from cecog.gui.widgets.metadataframe import MetaDataFrame
 from cecog.gui.widgets.channelframe import ChannelFrame
 from cecog.gui.widgets.displayframe import DisplayFrame
+from cecog.gui.widgets.maskframe import MaskFrame
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -66,21 +68,19 @@ from cecog.gui.widgets.displayframe import DisplayFrame
 # classes:
 #
 
+class ViewerFrame(StyledFrame):
+
+    def __init__(self, parent):
+        StyledFrame.__init__(self, parent)
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
         QMainWindow.__init__(self)
         self.setBackgroundRole(QPalette.Dark)
 
-        self.setGeometry(0, 0, 1000, 700)
-        self.setWindowTitle('CecogBrowser')
-
         self.frame = QFrame(self)
         self.setCentralWidget(self.frame)
-
-        self.center()
-        self.show()
-        self.raise_()
 
         action_about = self.create_action('&About', slot=self._on_about)
         action_quit = self.create_action('&Quit', slot=self._on_quit)
@@ -190,7 +190,17 @@ class MainWindow(QMainWindow):
         self.connect(self.slider_z, SIGNAL('valueChanged(int)'),
                      self.on_slider_z_valueChanged)
 
+        self.layout.addWidget(dummy_frame, 0, 1)
+        self.layout.addWidget(self.slider_t, 1, 1)
+        self.layout.addWidget(self.slider_z, 0, 0)
+        self.frame.setLayout(self.layout)
 
+    def _finalize_init(self):
+        self.center()
+        self.show()
+        self.raise_()
+
+    def _add_toolbox(self):
         self.toolbox = QToolBox(self.frame)
 
         self.metadata_frame = MetaDataFrame(self.toolbox)
@@ -212,14 +222,10 @@ class MainWindow(QMainWindow):
 
         self.toolbox.setSizePolicy(QSizePolicy(QSizePolicy.Minimum,
                                                QSizePolicy.Expanding))
-        self.toolbox.setMaximumWidth(140)
+        #self.toolbox.setMaximumWidth(140)
         #self.toolbox.setCurrentIndex(2)
+        #self.layout.addWidget(self.toolbox, 0, 2)
 
-        self.layout.addWidget(dummy_frame, 0, 1)
-        self.layout.addWidget(self.slider_t, 1, 1)
-        self.layout.addWidget(self.slider_z, 0, 0)
-        self.layout.addWidget(self.toolbox, 0, 2)
-        self.frame.setLayout(self.layout)
 
     def _on_shortcut_left(self):
         self.slider_t.setValue(self.slider_t.value()-1)
@@ -432,6 +438,54 @@ class MainWindow(QMainWindow):
 
         widget.setLayout(layout)
         widget.show()
+
+
+class BrowserMainWindow(MainWindow):
+
+    def __init__(self):
+        super(BrowserMainWindow, self).__init__()
+
+        self.setGeometry(0, 0, 1000, 700)
+        self.setWindowTitle('CecogBrowser')
+
+        self._add_toolbox()
+        self.toolbox.setMaximumWidth(140)
+        self.layout.addWidget(self.toolbox, 0, 2, 2, 1)
+
+        self._finalize_init()
+
+
+class AnalyzerMainWindow(MainWindow):
+
+    def __init__(self):
+        super(AnalyzerMainWindow, self).__init__()
+
+        self.setGeometry(0, 0, 1000, 700)
+        self.setWindowTitle('CecogAnalyzer')
+
+        self._add_toolbox()
+        #self.toolbox.setMaximumWidth(140)
+        #self.layout.addWidget(self.toolbox, 0, 2)
+
+
+        self.tabwidget = StyledTabWidget(self.frame)
+        self.tabwidget.setUsesScrollButtons(True)
+        self.tabwidget.addTab(self.toolbox, 'General')
+
+        self.tabwidget.addTab(StyledFrame(self.frame), 'Channels')
+
+        self.mask_frame = MaskFrame(self.tabwidget)
+        self.tabwidget.addTab(self.mask_frame, 'Masks')
+
+        self.tabwidget.addTab(StyledFrame(self.frame), 'Features')
+        self.tabwidget.addTab(StyledFrame(self.frame), 'Classification')
+
+
+        self.tabwidget.setMaximumWidth(400)
+        self.layout.addWidget(self.tabwidget, 0, 2, 2, 1)
+
+        self._finalize_init()
+
 
 #-------------------------------------------------------------------------------
 # main:
