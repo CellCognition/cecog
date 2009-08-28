@@ -15,6 +15,14 @@
 // $Rev$
 // $URL: https://svn.cellcognition.org/mito/trunk/include/mito/reader/wrap_lsm#$
 
+#include <boost/python.hpp>
+
+#include "vigra/stdimage.hxx"
+#include "vigra/basicimage.hxx"
+#include "vigra/basicimageview.hxx"
+#include "pyvigra/converters.hxx"
+
+#include "cecog/python/cecog.hxx"
 
 // forward declarations:
 void wrap_renderer();

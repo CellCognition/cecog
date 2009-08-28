@@ -29,7 +29,7 @@
 
 namespace cecog
 {
-  static int LUT_SIZE = 768;
+  const static int LUT_SIZE = 768;
   typedef vigra::UInt8RGBImage::value_type UInt8RGBValue;
   typedef vigra::ArrayVector< UInt8RGBValue > LutType;
 

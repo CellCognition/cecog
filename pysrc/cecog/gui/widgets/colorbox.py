@@ -72,8 +72,10 @@ class ColorBox(StyledComboBox):
             self.add_color(col)
 
         self.insertSeparator(self.count())
-        self.insertItem(self.count(), self.TEXT_MORE, self.TEXT_MORE)
-        self.insertItem(self.count(), self.TEXT_LUT, self.TEXT_LUT)
+        self.insertItem(self.count(), self.TEXT_MORE,
+                        QVariant(self.TEXT_MORE))
+        self.insertItem(self.count(), self.TEXT_LUT,
+                        QVariant(self.TEXT_LUT))
 
         #print "moo", color, colors
         #print color in colors
@@ -106,13 +108,13 @@ class ColorBox(StyledComboBox):
         icon = QIcon(pixmap)
         if user:
             index = self._base_count+self._user_count
-            self.insertItem(index, icon, '', color)
+            self.insertItem(index, icon, '', QVariant(color))
             if self._user_count == 0:
                 self.insertSeparator(index+1)
             self._user_count += 1
         else:
             index = self.count()
-            self.insertItem(index, icon, '', color)
+            self.insertItem(index, icon, '', QVariant(color))
         self._luts[index] = lut
         return index
 
