@@ -198,7 +198,7 @@ class MetaMorphTokenImporter(SimpleTokenImporter):
     TOKEN_T = Token('T', type_code='i', length='+', prefix='',
                     name=DIMENSION_NAME_TIME)
     TOKEN_C = Token('C', type_code='c', length='+', prefix='',
-                    name=DIMENSION_NAME_CHANNEL)
+                    name=DIMENSION_NAME_CHANNEL, regex_type='\D')
     TOKEN_Z = Token('Z', type_code='i', length='+', prefix='',
                     name=DIMENSION_NAME_ZSLICE)
 

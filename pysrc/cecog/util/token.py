@@ -52,16 +52,20 @@ import string
 class Token(object):
 
     def __init__(self, identifier, type_code='c', length='+', prefix='',
-                 name=None):
+                 name=None, regex_type=None):
         format_length = length if length.isdigit() else '0'
         regex_length = '{%s}' % length if length.isdigit() else '%s' % length
         if type_code == 'i':
             format_string = '%%%s%sd'
-            regex_string = "%s(?P<%s>\d%s)"
+            if regex_type is None:
+                regex_type = '\d'
+            regex_string = "%%s(?P<%%s>%s%%s)" % regex_type
             data_type = int
         else:
             format_string = '%%%s%ss'
-            regex_string = "%s(?P<%s>.%s)"
+            if regex_type is None:
+                regex_type = '.'
+            regex_string = "%%s(?P<%%s>%s%%s)" % regex_type
             data_type = str
         self.name = identifier if name is None else name
         self.identifier = identifier
