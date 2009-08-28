@@ -45,9 +45,9 @@ from cecog.ccore import make_image_overlay
 class TestCase(unittest.TestCase):
 
     def setUp(self):
-        self.img_r = read_image('lena_R.tif')
-        self.img_g = read_image('lena_G.tif')
-        self.img_b = read_image('lena_B.tif')
+        self.img_r = read_image('swisscow_R.png')
+        self.img_g = read_image('swisscow_G.png')
+        self.img_b = read_image('swisscow_B.png')
 
     def _check_alpha(self, alpha):
         col_r = (255,0,0)
