@@ -49,10 +49,15 @@ from cecog.util.color import hex_to_rgb
 
 from cecog.gui.widgets.imageviewer import ImageViewer
 from cecog.gui.widgets.positionframe import PositionFrame
+#from cecog.gui.widgets.timestampframe import TimestampFrame
 from cecog.gui.widgets.metadataframe import MetaDataFrame
-from cecog.gui.widgets.channelframe import ChannelFrame
+from cecog.gui.widgets.channelframe import (ChannelFrame,
+                                            ChannelFrameBrowser,
+                                            )
 from cecog.gui.widgets.displayframe import DisplayFrame
 from cecog.gui.widgets.maskframe import MaskFrame
+
+from cecog.core.workflow import workflow_manager
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -200,13 +205,11 @@ class MainWindow(QMainWindow):
         self.show()
         self.raise_()
 
-    def _add_toolbox(self):
+    def _add_toolbox(self, show_channels=True):
         self.toolbox = QToolBox(self.frame)
 
         self.metadata_frame = MetaDataFrame(self.toolbox)
         self.position_frame = PositionFrame(self.toolbox)
-        self.channel_frame = ChannelFrame(self.toolbox, self.viewer,
-                                          DEFAULT_COLORS)
         self.view_frame = DisplayFrame(self.toolbox, self.viewer)
 
         self.position_frame.setFocusPolicy(Qt.StrongFocus)
@@ -217,7 +220,10 @@ class MainWindow(QMainWindow):
 
         self.toolbox.addItem(self.metadata_frame, 'MetaData')
         self.toolbox.addItem(self.position_frame, 'Positions')
-        self.toolbox.addItem(self.channel_frame, 'Channels')
+        if show_channels:
+            self.channel_frame = ChannelFrameBrowser(self.toolbox, self.viewer,
+                                                     DEFAULT_COLORS)
+            self.toolbox.addItem(self.channel_frame, 'Channels')
         self.toolbox.addItem(self.view_frame, 'Display')
 
         self.toolbox.setSizePolicy(QSizePolicy(QSizePolicy.Minimum,
@@ -377,6 +383,9 @@ class MainWindow(QMainWindow):
 
     def _load(self, path):
         self.image_container = ImageContainer(MetaMorphTokenImporter(path))
+
+        workflow_manager.set_image_container(self.image_container)
+
         meta_data = self.image_container.meta_data
         print meta_data
 
@@ -397,14 +406,14 @@ class MainWindow(QMainWindow):
         else:
             self.slider_z.hide()
 
-        COLOR_MAPPING = {'rfp' : '#FF0000',
-                         'gfp' : '#00FF00'}
+        #COLOR_MAPPING = {'rfp' : '#FF0000',
+        #                 'gfp' : '#00FF00'}
 
-        self.channel_frame.set_channels([(c,
-                                          QColor(*hex_to_rgb(COLOR_MAPPING[c])))
-                                         for c in meta_data.channels])
-        self.viewer.set_channels([(c, hex_to_rgb(COLOR_MAPPING[c]))
-                                  for c in meta_data.channels])
+        #self.channel_frame.set_channels([(c,
+        #                                  QColor(*hex_to_rgb(COLOR_MAPPING[c])))
+        #                                 for c in meta_data.channels])
+        #self.viewer.set_channels([(c, hex_to_rgb(COLOR_MAPPING[c]))
+        #                          for c in meta_data.channels])
 
         self.current_coordinates = CoordinateHolder()
         self.current_coordinates.position = meta_data.positions[0]
@@ -463,7 +472,7 @@ class AnalyzerMainWindow(MainWindow):
         self.setGeometry(0, 0, 1000, 700)
         self.setWindowTitle('CecogAnalyzer')
 
-        self._add_toolbox()
+        self._add_toolbox(show_channels=False)
         #self.toolbox.setMaximumWidth(140)
         #self.layout.addWidget(self.toolbox, 0, 2)
 
@@ -472,7 +481,8 @@ class AnalyzerMainWindow(MainWindow):
         self.tabwidget.setUsesScrollButtons(True)
         self.tabwidget.addTab(self.toolbox, 'General')
 
-        self.tabwidget.addTab(StyledFrame(self.frame), 'Channels')
+        self.channel_frame = ChannelFrame(self.tabwidget)
+        self.tabwidget.addTab(self.channel_frame, 'Channels')
 
         self.mask_frame = MaskFrame(self.tabwidget)
         self.tabwidget.addTab(self.mask_frame, 'Masks')

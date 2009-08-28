@@ -27,6 +27,7 @@ __all__ = []
 # cecog imports:
 #
 
+
 #-------------------------------------------------------------------------------
 # constants:
 #
@@ -41,4 +42,19 @@ __all__ = []
 # classes:
 #
 
+class Entity(object):
+
+    def __init__(self, name, manager):
+        self.name = name
+        self._manager = manager
+
+    def update(self):
+        self._manager.update()
+
+    def __call__(self, plugin, data):
+        pass
+
+#-------------------------------------------------------------------------------
+# main:
+#
 

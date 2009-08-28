@@ -229,3 +229,8 @@ class ZeissLifeTokenImporter(SimpleTokenImporter):
                              extensions=extensions,
                              ignore_prefixes=ignore_prefixes,
                              multi_image=multi_image)
+
+class LsmImporter(object):
+
+    def __init__(self):
+        pass

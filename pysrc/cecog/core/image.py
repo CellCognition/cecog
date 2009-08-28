@@ -23,8 +23,8 @@ __all__ = []
 #------------------------------------------------------------------------------
 # extension module imports:
 #
-from cecog.core import ccore
- 
+#from cecog.core.ccore import PIXEL_TYPECODES
+import pyvigra
 #------------------------------------------------------------------------------
 # cecog imports:
 #

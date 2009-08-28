@@ -19,8 +19,6 @@ __all__ = ['ColorBox',
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
-import sys
-import os
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -36,6 +34,7 @@ from cecog.gui.util import StyledComboBox
 from cecog.ccore import (read_lut,
                          lut_from_single_color,
                          )
+from cecog.util.color import hex_to_rgb
 
 #-------------------------------------------------------------------------------
 # constants:

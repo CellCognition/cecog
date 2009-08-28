@@ -42,6 +42,7 @@ from cecog.ccore import (apply_lut,
                          apply_blending,
                          lut_from_single_color,
                          )
+from cecog.core.workflow import workflow_manager, ImageViewerRenderer
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -80,7 +81,8 @@ class ImageViewer(StyledFrame):
         self._click_on = False
         self._home_pos = None
 
-        self.channel_mapping = {}
+        self._renderer = ImageViewerRenderer(self)
+        workflow_manager.register_renderer(self._renderer)
 
     def set_channels(self, channels):
         for name, rgb_tuple in channels:
@@ -91,16 +93,20 @@ class ImageViewer(StyledFrame):
         self.channel_mapping[name] = (lut, alpha)
         self._update_view()
 
-    def _update_view(self):
+    def update_view(self):
 #        rgb_image = make_image_overlay([items[1] for items in self.channel_list],
 #                                       [self.channel_mapping[items[0]]
 #                                        for items in self.channel_list])
-        rgb_image = apply_blending([apply_lut(image,
-                                              self.channel_mapping[channel][0])
-                                    for channel, image in self.channel_list],
-                                   [self.channel_mapping[channel][1]
-                                    for channel, image in self.channel_list])
-        self.from_pyvigra(rgb_image)
+
+        workflow_manager.process_experiment_channels(self.channel_list)
+        #rgb_image = workflow_manager.get_render_result()
+
+#        rgb_image = apply_blending([apply_lut(image,
+#                                              self.channel_mapping[channel][0])
+#                                    for channel, image in self.channel_list],
+#                                   [self.channel_mapping[channel][1]
+#                                    for channel, image in self.channel_list])
+        #self.from_pyvigra(rgb_image)
         #self.from_pyvigra(self.channel_list[0][1])
 
 
@@ -126,7 +132,7 @@ class ImageViewer(StyledFrame):
 
     def from_channel_list(self, channel_list):
         self.channel_list = channel_list
-        self._update_view()
+        self.update_view()
 
     def _on_move(self, data):
         pos, color = data

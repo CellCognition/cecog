@@ -55,12 +55,13 @@ class ColorFrame(StyledFrame):
 
     colorSelected = pyqtSignal('str', 'list', 'float')
 
-    def __init__(self, parent, name, color, colors):
+    def __init__(self, parent, name, color, colors, show_label=True):
         super(ColorFrame, self).__init__(parent)
         self.layout = QGridLayout()
         self.layout.setContentsMargins(0, 0, 0, 0)
 
-        self._label = StyledLabel(name, self)
+        if show_label:
+            self._label = StyledLabel(name, self)
         self._box = ColorBox(self, color, colors)
 
         self._alpha_slider = QSlider(Qt.Horizontal, self)
@@ -74,9 +75,13 @@ class ColorFrame(StyledFrame):
         self.connect(self._alpha_slider, SIGNAL('valueChanged(int)'),
                      self.on_alpha_changed)
 
-        self.layout.addWidget(self._label, 0, 0)
-        self.layout.addWidget(self._box, 1, 0)
-        self.layout.addWidget(self._alpha_slider, 2, 0)
+        if show_label:
+            self.layout.addWidget(self._label, 0, 0)
+            self.layout.addWidget(self._box, 1, 0)
+            self.layout.addWidget(self._alpha_slider, 2, 0)
+        else:
+            self.layout.addWidget(self._box, 0, 0)
+            self.layout.addWidget(self._alpha_slider, 1, 0)
         self.setLayout(self.layout)
 
         self._name = name

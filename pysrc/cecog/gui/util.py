@@ -50,8 +50,12 @@ from PyQt4.Qt import *
 # constants:
 #
 
-DEFAULT_COLORS = [QColor(255,0,0), QColor(0,255,0), QColor(0,0,255),
-                  QColor(0,0,0), QColor(255,255,255)]
+DEFAULT_COLORS = ['#FF0000',
+                  '#00FF00',
+                  '#0000FF',
+                  '#000000',
+                  '#FFFFFF',
+                  ]
 
 STYLESHEET_NATIVE_MODIFIED = \
 """
@@ -209,14 +213,26 @@ StyledLabel {
 
 StyledButton {
     color: white;
-    border: 1px solid darkgray;
+    border: 1px solid gray;
     border-radius: 3px;
-    /*padding: 1px 1px 1px 20px;*/
+    padding: 2px 5px 2px 5px;
     margin: 1px;
     alignment: center;
     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #424242, stop: 0.4 #222222,
+                                stop: 0.5 #282828, stop: 1.0 #232323);
+}
+
+StyledButton:pressed {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
                                 stop: 0 #313131, stop: 0.4 #222222,
                                 stop: 0.5 #282828, stop: 1.0 #232323);
+    margin: 2px;
+}
+
+StyledButton:disabled {
+    color: #888888;
+    border: 1px solid #888888;
 }
 
 StyledDialog {
@@ -266,24 +282,25 @@ QStatusBar {
 
 
 def numpy_to_qimage(data, colors=None):
-    h, w = data.shape[:2]
+    w, h = data.shape[:2]
     print data.shape, data.ndim
     if data.dtype == numpy.uint8:
         if data.ndim == 2:
-            shape = (h, numpy.ceil(w / 4.) * 4)
+            shape = (numpy.ceil(w / 4.) * 4, h)
             if shape != data.shape:
                 image = numpy.zeros(shape, numpy.uint8, 'C')
-                image[:,:w] = data
+                image[:w,:] = data
             else:
                 image = data
             format = QImage.Format_Indexed8
             #colors = [QColor(i,i,i) for i in range(256)]
         elif data.ndim == 3:
-            shape = (h, int(numpy.ceil(w / 4.) * 4), data.shape[2])
-            if data.shape[2] == 3:
+            c = data.shape[2]
+            shape = (int(numpy.ceil(w / 4.) * 4), h, c)
+            if c == 3:
                 if shape != data.shape:
                     image = numpy.zeros(shape, numpy.uint8, 'C')
-                    image[:,:w,:] = data[:,:,:]
+                    image[:w,:,:] = data[:,:,:]
                     print data
                     print image
                 else:

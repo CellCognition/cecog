@@ -53,6 +53,17 @@ class Primary(PluginWidget):
 
     NAME = 'primary segmentation'
 
+    lat_window_size = Int(0, label='LatWindowSize')
+    lat_limit = Int(0, label='LatLimit')
+    do_shape_watershed = Boolean(False, label='DoShapeWatershed', tooltip='Hello World!')
+    gauss_size_shape = Int(0, label='GaussSizeShape')
+    maxima_size_shape = Int(0, label='GaussSizeShape')
+
+
+    def __call__(self, channels, masks):
+        pass
+
+
 #
 #class PrimarySegmentation(_Segmentation):
 #

@@ -1,5 +1,11 @@
 """
-Dynamic widget generation of pdk.PhenoType s
+                          The CellCognition Project
+                  Copyright (c) 2006 - 2009 Michael Held
+                   Gerlich Lab, ETH Zurich, Switzerland
+
+           CellCognition is distributed under the LGPL License.
+                     See trunk/LICENSE.txt for details.
+               See trunk/AUTHORS.txt for author contributions.
 """
 
 __docformat__ = "epytext"
@@ -8,7 +14,10 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL::                                                          $'
 
-__all__ = []
+__all__ = ['PhenoDialog',
+           'PhenoFrame',
+           'PhenoStyledSideFrame',
+           ]
 
 #------------------------------------------------------------------------------
 # standard library imports:
@@ -20,12 +29,18 @@ import os
 #------------------------------------------------------------------------------
 # extension module imports:
 #
-from PyQt4 import QtCore, QtGui
+from PyQt4.QtGui import *
+from PyQt4.QtCore import *
+from PyQt4.Qt import *
 
 #------------------------------------------------------------------------------
 # pdk imports:
 #
 from pdk.phenes import *
+
+from cecog.gui.util import (StyledFrame,
+                            StyledSideFrame,
+                            )
 
 #------------------------------------------------------------------------------
 # constants:
@@ -65,8 +80,9 @@ class _PhenoWidget(object):
         self._display_phenes()
 
     def _display_phenes(self):
-        layout = QtGui.QGridLayout()
+        layout = QGridLayout()
 
+        print self.phenotype
         for idx, (name, phene) in \
             enumerate(self.phenotype.get_phenes().iteritems()):
             if phene.label is None:
@@ -76,20 +92,20 @@ class _PhenoWidget(object):
             row = idx
 
             # label
-            widget = QtGui.QLabel(label, self)
-            widget.setAlignment(QtCore.Qt.AlignRight|
-                                QtCore.Qt.AlignTrailing|
-                                QtCore.Qt.AlignVCenter)
+            widget = QLabel(label, self)
+            widget.setAlignment(Qt.AlignRight|
+                                Qt.AlignTrailing|
+                                Qt.AlignVCenter)
             layout.addWidget(widget, row, 0)
 
             # the value-widgets
             value = getattr(self.phenotype, name)
             if isinstance(phene, Int) or isinstance(phene, Float):
                 if isinstance(phene, Int):
-                    widget_cls = QtGui.QSpinBox
+                    widget_cls = QSpinBox
                     signal = 'valueChanged(int)'
                 else:
-                    widget_cls = QtGui.QDoubleSpinBox
+                    widget_cls = QDoubleSpinBox
                     signal = 'valueChanged(double)'
                 widget = widget_cls(self)
                 if not phene.min_value is None:
@@ -99,44 +115,44 @@ class _PhenoWidget(object):
                 widget.setValue(value)
                 shedule = lambda x: lambda y: self._setValue(x, y)
                 self.connect(widget,
-                             QtCore.SIGNAL(signal),
+                             SIGNAL(signal),
                              shedule(name))
             elif isinstance(phene, Boolean):
-                widget = QtGui.QCheckBox(self)
+                widget = QCheckBox(self)
                 widget.setTristate(False)
                 if value is None:
                     widget.setCheckState(0)
                 else:
-                    widget.setCheckState(QtCore.Qt.Checked if value
-                                         else QtCore.Qt.Unchecked)
+                    widget.setCheckState(Qt.Checked if value
+                                         else Qt.Unchecked)
                 shedule = lambda x: lambda y: self._setState(x, y)
                 self.connect(widget,
-                             QtCore.SIGNAL('stateChanged(int)'),
+                             SIGNAL('stateChanged(int)'),
                              shedule(name))
             elif isinstance(phene, String):
-                widget = QtGui.QLineEdit(self)
+                widget = QLineEdit(self)
                 widget.setText(value)
                 widget.setReadOnly(phene.is_immutable)
                 #widget.setInputMask('000.000.000.000;_')
                 if not phene.max_length is None:
                     widget.setMaxLength(phene.max_length)
                 if not phene.mask is None:
-                    regexp = QtCore.QRegExp(phene.mask.pattern)
-                    regexp.setPatternSyntax(QtCore.QRegExp.RegExp2)
-                    widget.setValidator(QtGui.QRegExpValidator(regexp,
-                                                               widget))
+                    regexp = QRegExp(phene.mask.pattern)
+                    regexp.setPatternSyntax(QRegExp.RegExp2)
+                    widget.setValidator(QRegExpValidator(regexp,
+                                                         widget))
                 shedule = lambda x,y: lambda z: self._setText(x, y, z)
                 self.connect(widget,
-                             QtCore.SIGNAL('textEdited(QString)'),
+                             SIGNAL('textEdited(QString)'),
                              shedule(widget, name))
             elif isinstance(phene, List):
-                widget = QtGui.QComboBox(self)
+                widget = QComboBox(self)
                 widget.addItems(value)
             else:
-                widget = QtGui.QLineEdit(str(value), self)
+                widget = QLineEdit(str(value), self)
                 shedule = lambda x: lambda y: self._setValue(x, y)
                 self.connect(widget,
-                             QtCore.SIGNAL('textEdited(QString)'),
+                             SIGNAL('textEdited(QString)'),
                              shedule(name))
 
             # tooltip
@@ -146,30 +162,30 @@ class _PhenoWidget(object):
 
             # more help: doc dialog button
             if not phene.doc is None:
-                widget = QtGui.QToolButton(self)
-                widget.setIcon(QtGui.QIcon(IMAGE_QUESTIONMARK))
+                widget = QToolButton(self)
+                widget.setIcon(QIcon(IMAGE_QUESTIONMARK))
                 shedule = lambda x: lambda: self._showDoc(x)
                 self.connect(widget,
-                             QtCore.SIGNAL('clicked()'),
+                             SIGNAL('clicked()'),
                              shedule(phene.doc))
                 layout.addWidget(widget, row, 2)
 
-        layout.setAlignment(QtCore.Qt.AlignCenter|
-                            QtCore.Qt.AlignVCenter)
+        layout.setAlignment(Qt.AlignCenter|
+                            Qt.AlignVCenter)
         self.setLayout(layout)
         self.show()
 
     def _showDoc(self, doc):
-        widget = QtGui.QMessageBox().information(self, 'Help', doc)
+        widget = QMessageBox().information(self, 'Help', doc)
 
     def _setValue(self, name, value):
         setattr(self.phenotype, name, value)
         print getattr(self.phenotype, name)
 
     def _setState(self, name, state):
-        if state == QtCore.Qt.Checked:
+        if state == Qt.Checked:
             value = True
-        elif state == QtCore.Qt.Unchecked:
+        elif state == Qt.Unchecked:
             value = False
         else:
             value = None
@@ -186,19 +202,28 @@ class _PhenoWidget(object):
             print "wrong value '%s', keep '%s'" %\
                   (value, getattr(self.phenotype, name))
             pal = widget.palette()
-            pal.setColor(QtGui.QPalette.Base, QtGui.QColor(255,40,40))
+            pal.setColor(QPalette.Base, QColor(255,40,40))
             widget.setPalette(pal)
             widget.update()
 
-class PhenoFrame(QtGui.QFrame, _PhenoWidget):
 
-    def __init__(self, parent, phenotype):
-        QtGui.QFrame.__init__(self, parent)
+class PhenoFrame(QFrame, _PhenoWidget):
+
+    def __init__(self, phenotype, parent):
+        QFrame.__init__(self, parent)
         _PhenoWidget.__init__(self, phenotype)
 
-class PhenoDialog(QtGui.QDialog, _PhenoWidget):
 
-    def __init__(self, parent, phenotype):
-        QtGui.QDialog.__init__(self, parent)
+class PhenoDialog(QDialog, _PhenoWidget):
+
+    def __init__(self, phenotype, parent):
+        QDialog.__init__(self, parent)
+        _PhenoWidget.__init__(self, phenotype)
+
+
+class PhenoStyledSideFrame(StyledSideFrame, _PhenoWidget):
+
+    def __init__(self, phenotype, parent):
+        StyledSideFrame.__init__(self, parent)
         _PhenoWidget.__init__(self, phenotype)
 
