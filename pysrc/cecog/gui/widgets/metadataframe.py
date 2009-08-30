@@ -60,12 +60,12 @@ class MetaDataFrame(StyledSideFrame):
 
         self.layout = QGridLayout()
         self.layout.setAlignment(Qt.AlignTop|Qt.AlignCenter)
-        self.layout.addWidget(StyledLabel('Positions:', self), 0, 0)
-        self.layout.addWidget(StyledLabel('Time:', self), 1, 0)
-        self.layout.addWidget(StyledLabel('Channels:', self), 2, 0)
-        self.layout.addWidget(StyledLabel('ZSlices:', self), 3, 0)
-        self.layout.addWidget(StyledLabel('Height:', self), 4, 0)
-        self.layout.addWidget(StyledLabel('Width:', self), 5, 0)
+        self.layout.addWidget(StyledLabel('Positions:', self), 0, 0, Qt.AlignRight)
+        self.layout.addWidget(StyledLabel('Time:', self), 1, 0, Qt.AlignRight)
+        self.layout.addWidget(StyledLabel('Channels:', self), 2, 0, Qt.AlignRight)
+        self.layout.addWidget(StyledLabel('ZSlices:', self), 3, 0, Qt.AlignRight)
+        self.layout.addWidget(StyledLabel('Height:', self), 4, 0, Qt.AlignRight)
+        self.layout.addWidget(StyledLabel('Width:', self), 5, 0, Qt.AlignRight)
 
         self.positions_label = StyledLabel(self)
         self.times_label = StyledLabel(self)
@@ -83,6 +83,7 @@ class MetaDataFrame(StyledSideFrame):
 
         self.btn_export1 = StyledButton('Export Absolute Timestamps', self)
         self.btn_export1.setEnabled(False)
+        #self.btn_export1.setFlat(True)
         self.btn_export2 = StyledButton('Export Relative Timestamps', self)
         self.btn_export2.setEnabled(False)
         self.connect(self.btn_export1, SIGNAL('clicked()'),

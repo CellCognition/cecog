@@ -32,7 +32,9 @@ from PyQt4.Qt import *
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog.gui.util import StyledSideFrame
+from cecog.gui.util import (StyledSideFrame,
+                            StyledButton,
+                            StyledLabel)
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -55,9 +57,10 @@ class DisplayFrame(StyledSideFrame):
         self._viewer = viewer
 
         self.layout = QGridLayout()
+        self.layout.setAlignment(Qt.AlignTop)
 
-        self.button_fit = QPushButton('Fit', self)
-        self.button_orig = QPushButton('100', self)
+        self.button_fit = StyledButton('Fit', self)
+        self.button_orig = StyledButton('100', self)
 
         self.connect(self.button_fit, SIGNAL('clicked()'),
                      self.on_button_fit)
@@ -71,19 +74,21 @@ class DisplayFrame(StyledSideFrame):
         self.slider_zoom.setTickPosition(QSlider.TicksBelow)
         self.slider_zoom.setTickInterval(1)
         self.slider_zoom.setFocusPolicy(Qt.StrongFocus)
-        self.slider_zoom.setSizePolicy(QSizePolicy(QSizePolicy.Expanding,
-                                                   QSizePolicy.Minimum))
+        #self.slider_zoom.setSizePolicy(QSizePolicy(QSizePolicy.Expanding,
+        #                                           QSizePolicy.Minimum))
         self.connect(self.slider_zoom, SIGNAL('valueChanged(int)'),
                      self.on_slider_zoom)
-
-        self.layout.addWidget(self.button_fit, 0, 0)
-        self.layout.addWidget(self.button_orig, 0, 1)
-        self.layout.addWidget(self.slider_zoom, 1, 0, 1, 2)
+        self.label_zoom = StyledLabel('Zoom: 100%', self)
+        self.layout.addWidget(self.button_fit, 0, 0, 1, 2)
+        self.layout.addWidget(self.button_orig, 0, 2, 1, 2)
+        self.layout.addWidget(self.label_zoom, 1, 0, Qt.AlignRight)
+        self.layout.addWidget(self.slider_zoom, 1, 1, 1, 3)
 
         self.setLayout(self.layout)
 
     def on_slider_zoom(self, value):
         self._viewer.scale_to_value(value / 100.)
+        self.label_zoom.setText('Zoom: %s%%' % value)
 
     def on_button_fit(self):
         self.slider_zoom.setValue(self._viewer.scale_to_fit() * 100)

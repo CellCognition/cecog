@@ -116,7 +116,18 @@ MainWindow {
     color: white;
 }
 
-QTabBar::tab {
+StyledTabWidget {
+    background: transparent;
+    border: 0;
+}
+
+StyledTabWidget::pane {
+    background: transparent;
+    border: 0;
+    margin-top: 3px;
+}
+
+StyledTabWidget QTabBar::tab {
      background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
                                  stop: 0 #313131, stop: 0.4 #222222,
                                  stop: 0.5 #282828, stop: 1.0 #232323);
@@ -124,17 +135,25 @@ QTabBar::tab {
      border-radius: 4px;
      color: #999999;
      padding: 2px;
-     margin: 2px;
-     min-width: 9ex;
-     font: bold;
+     min-width: 8ex;
+     /*font: bold;*/
+     margin: 0px;
 }
 
-QTabBar::tab:selected {
+StyledTabWidget QTabBar::tab:selected, QTabBar::tab:hover {
      background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
                                  stop: 0 #424242, stop: 0.4 #222222,
                                  stop: 0.5 #282828, stop: 1.0 #111111);
      color: #FFFFFF;
-     margin: 0px;
+}
+
+StyledTabWidget QTabBar::tab:!selected {
+    margin: 1px;
+}
+
+QToolBox {
+    background: transparent;
+    border: 0;
 }
 
 QToolBox::tab {
@@ -145,16 +164,19 @@ QToolBox::tab {
      border-radius: 4px;
      color: #999999;
      padding-left: 5px;
-     margin: 2px;
 }
 
-QToolBox::tab:selected {
+QToolBox::tab:selected, QToolBox::tab:hover {
      background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
                                  stop: 0 #424242, stop: 0.4 #222222,
                                  stop: 0.5 #282828, stop: 1.0 #111111);
      font: bold;
-     color: #FFFFFF;
+     color: white;
      margin: 0px;
+}
+
+QToolBox::tab:!selected {
+    margin: 2px;
 }
 
 StyledComboBox {
@@ -187,14 +209,10 @@ StyledComboBox QAbstractItemView {
     spacing: 0;
 }
 
-QToolBox {
-    background: transparent;
-}
-
 QSlider {
-    color: blue;
+    color: white;
 }
-
+/*
 QSlider::groove {
     color: white;
 }
@@ -202,9 +220,11 @@ QSlider::groove {
 QSlider::handle {
     color: white;
 }
+*/
 
 StyledFrame {
     color: white;
+    border: 0;
 }
 
 StyledLabel {
@@ -231,8 +251,8 @@ StyledButton:pressed {
 }
 
 StyledButton:disabled {
-    color: #888888;
-    border: 1px solid #888888;
+    border: 1px solid darkgray;
+    color: #000000;
 }
 
 StyledDialog {

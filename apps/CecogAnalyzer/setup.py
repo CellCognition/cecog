@@ -13,7 +13,7 @@ import os
 import sys
 from pdk.fileutils import safe_mkdirs, collect_files
 
-main_script = 'CecogBrowser.py'
+main_script = 'CecogAnalyzer.py'
 
 def tempsyspath(path):
     def decorate(f):
@@ -62,7 +62,7 @@ elif sys.platform == 'win32':
     import py2exe # pylint: disable-msg=F0401,W0611
     OPTIONS = {'windows': [{'script': main_script,
                            'icon_resources': \
-                               [(1, r'resources\cecog_browser_icon.ico')],
+                               [(1, r'..\CecogBrowser\resources\cecog_browser_icon.ico')],
                            }]
                }
     DATA_FILES = []#r'resources\cecog_browser_icon2.ico']
