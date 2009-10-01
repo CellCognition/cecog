@@ -59,15 +59,23 @@ class GuiPluginManagerMixin:
     @classmethod
     def create_widget(cls, plugin_item, parent):
         frame = QSplitter(Qt.Vertical, parent)
+        plugin, entity = plugin_item.plugin, plugin_item.entity
 
-        if not plugin_item.plugin is None:
+        if not plugin is None:
             scroll_area = QScrollArea(frame)
-            plugin_frame = PhenoFrame(plugin_item.plugin, scroll_area)
+            plugin_frame = PhenoFrame(plugin, scroll_area)
             #plugin_frame.setBackgroundRole(QPalette.Dark)
             scroll_area.setWidget(plugin_frame)
+        else:
+            plugin_frame = None
 
-        display = cls.DISPLAY_CLASS(plugin_item.entity, frame)
-        frame.addWidget(display)
+
+        display_frame = cls.DISPLAY_CLASS(entity, frame)
+        entity.register_display(display_frame)
+
+        frame.addWidget(display_frame)
+        #frame.plugin_frame = plugin_frame
+        #frame.display_frame = display_frame
         return frame
 
     def register_gui_handler(self, gui_handler):
@@ -114,9 +122,9 @@ class ActionSelectorFrame(StyledFrame):
     def add_plugin(self, name):
         manager = workflow_manager.get_manager(self._manager_name)
         name, plugin_item = manager.activate(name)
-        plugin_widget = manager.create_widget(plugin_item,
-                                              self.list_widget)
-        idx = self.list_widget.addItem(plugin_widget, name)
+        widget = manager.create_widget(plugin_item,
+                                       self.list_widget)
+        idx = self.list_widget.addItem(widget, name)
         self.list_widget.setCurrentIndex(idx)
 
 

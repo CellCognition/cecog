@@ -47,12 +47,16 @@ class Entity(object):
     def __init__(self, name, manager):
         self.name = name
         self._manager = manager
+        self._display = None
 
     def update(self):
         self._manager.update()
 
     def __call__(self, plugin, data):
         pass
+
+    def register_display(self, display):
+        self._display = display
 
 #-------------------------------------------------------------------------------
 # main:

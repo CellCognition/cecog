@@ -27,6 +27,8 @@
 // forward declarations:
 void wrap_renderer();
 void wrap_lut();
+void wrap_transforms();
+//void wrap_lsmreader();
 
 namespace cecog {
   namespace python {
@@ -35,6 +37,8 @@ namespace cecog {
     {
       wrap_renderer();
       wrap_lut();
+      wrap_transforms();
+      //wrap_lsmreader();
     }
 
   } // namespace python

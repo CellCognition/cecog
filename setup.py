@@ -148,19 +148,29 @@ pyvigra_include_dirs.update(
                            get_include_dirs('tiff_include_dir', parser)
                            )
 
+parser_pyvigra = ConfigParser.ConfigParser()
+parser_pyvigra.read(os.path.join(pyvigra_root_dir, 'setup.cfg'))
+
+# Check for numpy.
+for flag in parser_pyvigra.get('build_ext', 'pyvigra_define').split(','):
+    if flag == 'PYVIGRA_HAS_NUMPY':
+        import numpy
+        numpy_include_dir = numpy.lib.get_include()
+        python_include_dirs.add(numpy_include_dir)
 
 # Prepare VIGRA library.
-vigra_root_dir = parser.get('build_ext', 'vigra_dir')
+vigra_root_dir = parser_pyvigra.get('build_ext', 'vigra_dir')
 if vigra_root_dir == '':
     # Try with default VIGRA version prepended by <HOME>/src directory.
     vigra_root_dir = prefix_home(os.path.join('src', DEFAULT_VIGRA_VERSION))
 vigra_source_dir = os.path.join(vigra_root_dir, 'src', 'impex')
 vigra_include_dirs = set([vigra_source_dir,
                           os.path.join(vigra_root_dir, 'include')])
-vigra_define_macros = set()
+vigra_define_macros = parse_defines(parser_pyvigra.get('build_ext', 'vigra_define'))
+print vigra_define_macros
 
 # Prepare boost_python library.
-boost_root_dir = parser.get('build_ext', 'boost_dir')
+boost_root_dir = parser_pyvigra.get('build_ext', 'boost_dir')
 if boost_root_dir == '':
     # Try with default boost version prepended by <HOME>/src directory.
     boost_root_dir = prefix_home(os.path.join('src', DEFAULT_BOOST_VERSION))
@@ -169,7 +179,7 @@ if on_posix():
     boost_library_dirs = set()
 else:
     boost_library_dirs = python_library_dirs
-boost_define_macros =  parse_defines(parser.get('build_ext', 'boost_define'))
+boost_define_macros =  parse_defines(parser_pyvigra.get('build_ext', 'boost_define'))
 if on_posix():
     boost_extra_link_args = set()
 else:
@@ -197,8 +207,11 @@ cecog_include_dirs = python_include_dirs.union(
                                     [os.path.join(cecog_root_dir, 'include')])
 cecog_define_macros = parse_defines(parser.get('build_ext',
                                                'cecog_define')).union(
-                           [('DEBUG', '1'),
-                            ('BOOST_PYTHON_DYNAMIC_LIB', 1)])
+                           parse_defines(parser_pyvigra.get('build_ext',
+                                                            'pyvigra_define'))).union(
+                               vigra_define_macros).union(
+                                   [('DEBUG', '1'),
+                                    ('BOOST_PYTHON_DYNAMIC_LIB', 1)])
 
 if on_posix():
     cecog_library_dirs = pyvigra_library_dirs.copy()

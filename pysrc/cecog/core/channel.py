@@ -71,8 +71,8 @@ class _Channel(Entity):
             if manager_id == CHANNEL_MANAGER:
                 for channel_id, image in items:
                     if channel_id == self.name:
-                        return apply_lut(image, self.lut), self.alpha
-
+                        new_image = self._display.update(image)
+                        return apply_lut(new_image, self.lut), self.alpha
 
 class ExperimentChannel(_Channel):
     pass
@@ -89,6 +89,7 @@ class ChannelManager(PluginManager):
 
     def set_experiment_channels(self, channels):
         #self._channels = channels
+        print channels
         for channel_name in channels:
             entity_options = {'hex_color' :
                               DEFAULT_CHANNEL_MAPPING[channel_name],

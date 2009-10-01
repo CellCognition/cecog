@@ -29,6 +29,9 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
+import numpy
+import pyvigra
+
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
@@ -45,6 +48,8 @@ from cecog.gui.plugin import (ActionSelectorFrame,
 from cecog.util.color import hex_to_rgb
 from cecog.core.workflow import CHANNEL_MANAGER
 from cecog.core.channel import ChannelManager
+from cecog.ccore import (protected_linear_range_mapping,
+                         )
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -100,6 +105,64 @@ class ChannelFrameBrowser(StyledSideFrame):
         self.viewer.update_lut_by_name(name, lut, alpha)
 
 
+class HistogramFrame(QFrame):
+
+    SIZE = (250, 100)
+    BINS = 256
+
+    def __init__(self, parent):
+        super(HistogramFrame, self).__init__(parent)
+        self.layout = QGridLayout()
+
+        self._histogram_label = QLabel(self)
+        self._histogram_label.setStyleSheet("border: 1px solid #999999;")
+        histogram_image = QPixmap(*self.SIZE)
+        histogram_image.fill(Qt.transparent)
+        self._histogram_label.setPixmap(histogram_image)
+
+        self._xmin = StyledLabel(self)
+        self._xmax = StyledLabel(self)
+        self._ymin = StyledLabel(self)
+        self._ymax = StyledLabel(self)
+        self.layout.addWidget(self._histogram_label, 0, 1, 2, 2, Qt.AlignRight)
+        self.layout.addWidget(self._ymin, 1, 0, Qt.AlignBottom|Qt.AlignRight)
+        self.layout.addWidget(self._ymax, 0, 0, Qt.AlignTop|Qt.AlignRight)
+        self.layout.addWidget(self._xmin, 2, 1, Qt.AlignLeft)
+        self.layout.addWidget(self._xmax, 2, 2, Qt.AlignRight)
+        self.setLayout(self.layout)
+
+    def update_by_image(self, image):
+        width, height = self.SIZE
+        array = image.to_array()
+        histogram, bin_edges = numpy.histogram(array,
+                                               bins=self.BINS, normed=True)
+        ymax_value = numpy.max(histogram)
+        xmin_value = numpy.min(array)
+        xmax_value = numpy.max(array)
+        print xmin_value, xmax_value
+        #print max_value
+        #print bin_edges, len(bin_edges)
+        histogram = histogram / float(ymax_value) * height
+        #print histogram, len(histogram)
+        histogram_image = QPixmap(*self.SIZE)
+        histogram_image.fill(Qt.transparent)
+        painter = QPainter(histogram_image)
+        color = QColor('white')
+        ratio = float(width) / self.BINS
+        for idx, value in enumerate(histogram):
+            w = bin_edges[idx+1] - bin_edges[idx]
+            rect = QRectF(bin_edges[idx]*ratio, height-value, w*ratio, value)
+            painter.fillRect(rect, color)
+        painter.end()
+        self._histogram_label.setPixmap(histogram_image)
+        self._ymin.setText(str(0))
+        self._ymax.setText('%.1f%%' % (ymax_value * 100.))
+        self._xmin.setText(str(xmin_value))
+        self._xmax.setText(str(xmax_value))
+
+        return xmin_value, xmax_value
+
+
 class ChannelDisplay(StyledSideFrame):
 
     #colorSelected = pyqtSignal('str', 'list', 'float')
@@ -126,9 +189,27 @@ class ChannelDisplay(StyledSideFrame):
         self.connect(self._alpha_slider, SIGNAL('valueChanged(int)'),
                      self.on_alpha_changed)
 
+        self._histogram_frame = HistogramFrame(self)
+
+        self._min_spin = QSpinBox(self)
+        self._max_spin = QSpinBox(self)
+        self._min_spin.setMinimum(-1000)
+        self._min_spin.setMaximum(+1000)
+        self._max_spin.setMinimum(-1000)
+        self._max_spin.setMaximum(+1000)
+        self.connect(self._min_spin, SIGNAL('valueChanged(int)'),
+                     self._on_min_intensity_changed)
+        self.connect(self._max_spin, SIGNAL('valueChanged(int)'),
+                     self._on_max_intensity_changed)
+        self._has_min = False
+        self._has_max = False
+
         self.layout.addWidget(self._box, 0, 0, 1, 6)
         self.layout.addWidget(StyledLabel('alpha:', self), 1, 0, Qt.AlignRight)
         self.layout.addWidget(self._alpha_slider, 1, 1, 1, 5)
+        self.layout.addWidget(self._histogram_frame, 2, 0, 1, 6, Qt.AlignCenter)
+        self.layout.addWidget(self._min_spin, 3, 0, 1, 2, Qt.AlignCenter)
+        self.layout.addWidget(self._max_spin, 3, 2, 1, 2, Qt.AlignCenter)
         self.setLayout(self.layout)
 
         #self._name = name
@@ -150,6 +231,29 @@ class ChannelDisplay(StyledSideFrame):
         self._channel.alpha = value / 100.
         self._channel.update()
 
+    def update(self, image):
+        #new_image = image
+        minv, maxv = self._histogram_frame.update_by_image(image)
+        if not self._has_min:
+            self._min_spin.setValue(minv)
+            self._has_min = True
+        elif self._min_spin.value() >= minv:
+            minv = self._min_spin.value()
+        if not self._has_max:
+            self._max_spin.setValue(maxv)
+            self._has_max = True
+        elif self._max_spin.value() <= maxv:
+            maxv = self._max_spin.value()
+        new_image = protected_linear_range_mapping(image, int(minv), int(maxv),
+                                                   0, 255)
+        return new_image
+
+    def _on_min_intensity_changed(self, value):
+        #if value >= self._max_spin.value():
+        self._channel.update()
+
+    def _on_max_intensity_changed(self, value):
+        self._channel.update()
 
 class ChannelFrame(ActionSelectorFrame):
 

@@ -145,10 +145,11 @@ StyledTabWidget QTabBar::tab:selected, QTabBar::tab:hover {
                                  stop: 0 #424242, stop: 0.4 #222222,
                                  stop: 0.5 #282828, stop: 1.0 #111111);
      color: #FFFFFF;
+     border: 1px solid #FFFFFF;
 }
 
 StyledTabWidget QTabBar::tab:!selected {
-    margin: 1px;
+    margin: 2px;
 }
 
 QToolBox {
@@ -164,15 +165,15 @@ QToolBox::tab {
      border-radius: 4px;
      color: #999999;
      padding-left: 5px;
+     margin: 0px;
 }
 
 QToolBox::tab:selected, QToolBox::tab:hover {
      background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
                                  stop: 0 #424242, stop: 0.4 #222222,
                                  stop: 0.5 #282828, stop: 1.0 #111111);
-     font: bold;
      color: white;
-     margin: 0px;
+     border: 1px solid #FFFFFF;
 }
 
 QToolBox::tab:!selected {

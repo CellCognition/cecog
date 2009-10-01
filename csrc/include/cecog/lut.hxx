@@ -26,11 +26,12 @@
 #include "vigra/basicimage.hxx"
 #include "vigra/array_vector.hxx"
 #include "vigra/transformimage.hxx"
+#include "vigra/rgbvalue.hxx"
 
 namespace cecog
 {
   const static int LUT_SIZE = 768;
-  typedef vigra::UInt8RGBImage::value_type UInt8RGBValue;
+  typedef vigra::RGBValue< vigra::UInt8 > UInt8RGBValue;
   typedef vigra::ArrayVector< UInt8RGBValue > LutType;
 
   int readLut(std::string filename, LutType & lut)

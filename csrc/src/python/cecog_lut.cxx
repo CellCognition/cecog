@@ -17,7 +17,6 @@
 
 #include <boost/python.hpp>
 #include <boost/python/overloads.hpp>
-#include <boost/python/register_ptr_to_python.hpp>
 
 #include "cecog/python/lut.hxx"
 
