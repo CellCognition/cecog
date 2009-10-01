@@ -130,7 +130,7 @@ class MetaDataFrame(StyledSideFrame):
                 else:
                     ts = self.meta_data.get_timestamp_relative(p, t)
                 timestamps.append(ts)
-            f.write('%s\n' % sep.join(['%e' % v for v in timestamps]))
+            f.write('%s\n' % sep.join(['%.3f' % v for v in timestamps]))
         f.close()
 
     def update_metadata(self, meta_data):
