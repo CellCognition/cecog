@@ -56,13 +56,13 @@ if sys.platform == 'darwin':
                      'packages': ['pyvigra', 'cecog'],
                      'resources': [],
                      'optimize': 2,
-                     'iconfile': 'resources/cecog_browser_icon.icns',
+                     'iconfile': 'resources/cecog_analyzer_icon.icns',
                     }
 elif sys.platform == 'win32':
     import py2exe # pylint: disable-msg=F0401,W0611
     OPTIONS = {'windows': [{'script': main_script,
                            'icon_resources': \
-                               [(1, r'..\CecogBrowser\resources\cecog_browser_icon.ico')],
+                               [(1, r'resources\cecog_analyzer_icon.ico')],
                            }]
                }
     DATA_FILES = []#r'resources\cecog_browser_icon2.ico']

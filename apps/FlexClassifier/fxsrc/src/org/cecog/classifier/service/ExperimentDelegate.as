@@ -13,7 +13,7 @@ package org.cecog.classifier.service
         public function ExperimentDelegate()
         {
             __service = new RemoteObject("ExperimentService");
-            __service.endpoint = "http://bcgerlich08:5000/gateway";
+            __service.endpoint = "http://bcute:5000/gateway";
             __service.showBusyCursor = true;
             __service.concurrency = "last";
         }
