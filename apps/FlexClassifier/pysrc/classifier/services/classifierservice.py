@@ -67,6 +67,13 @@ class Classifier(object):
             self._oLearner = BaseLearner(strEnvPath=self.path)
             try:
                 self._oLearner.importFromArff()
+                try:
+                    self._oLearner.importSampleNames()
+                except IOError:
+                    has_samples = False
+                else:
+                    has_samples = True
+                #print has_samples
             except IOError:
                 pass
             else:
@@ -75,15 +82,20 @@ class Classifier(object):
                 for iLabel in self._oLearner.lstClassLabels:
                     strName = self._oLearner.dctClassNames[iLabel]
                     strHexColor = self._oLearner.dctHexColors[strName]
-                    oClass = Class(strName, iLabel,
-                                   len(self._oLearner.dctFeatureData[strName]),
-                                   hexToFlexColor(strHexColor))
-                    oClass.oClassifier = self
-                    dctFeatures = {}
-                    for iIdx, strFeatureName in enumerate(self._oLearner.lstFeatureNames):
-                        dctFeatures[strFeatureName] = list(self._oLearner.dctFeatureData[strName][:,iIdx])
-                    oClass.features = dctFeatures
-                    self.dctClassInfos[strName] = oClass
+                    if strName in self._oLearner.dctFeatureData:
+                        oClass = Class(strName, iLabel,
+                                       len(self._oLearner.dctFeatureData[strName]),
+                                       hexToFlexColor(strHexColor))
+                        oClass.oClassifier = self
+                        dctFeatures = {}
+                        for iIdx, strFeatureName in enumerate(self._oLearner.lstFeatureNames):
+                            dctFeatures[strFeatureName] = list(self._oLearner.dctFeatureData[strName][:,iIdx])
+                        oClass.features = dctFeatures
+                        if has_samples:
+                            oClass.sample_names = [Sample(os.path.join(self._oLearner.dctEnvPaths['samples'], strName, filename))
+                                                   for filename in self._oLearner.dctSampleNames[strName]]
+                            #print strName,self._oLearner.dctSampleNames[strName]
+                        self.dctClassInfos[strName] = oClass
                 self.isInitialized = True
 
                 for strFeatureName in self._oLearner.lstFeatureNames:
@@ -110,28 +122,29 @@ class Classifier(object):
         self._loadInfos()
         strPathSamples = os.path.join(self._oLearner.dctEnvPaths['samples'],
                                       className)
-        #print len(self._oLearner.lstFeatureNames), len()
-        dctImagePairs = OrderedDict()
-        for strName, oMatch in collectFilesByRegex(strPathSamples, '(?P<prefix>.+?)__(?P<type>(img)|(msk)).+?', ['.png', '.jpg']):
-            strPrefix = oMatch.group('prefix')
-            strType = oMatch.group('type')
-            if not strPrefix in dctImagePairs:
-                dctImagePairs[strPrefix] = {}
-            dctImagePairs[strPrefix][strType] = strName
-
         lstResults = []
-        iIdx = 0
-        for dctPair in dctImagePairs.values():
-            #oContainer = ccore.SingleObjectContainer(dctPair['img'], dctPair['msk'])
-            #strCoords = ",".join(map(str,flatten(oContainer.getCrackCoordinates(1))))
-            #print dctPair['img'], dctPair['msk']
-            #dctFeatures = {}
-            #for iF, strFeatureName in enumerate(self._oLearner.lstFeatureNames):
-            #    dctFeatures[strFeatureName] = self._oLearner.dctFeatureData[className][iIdx][iF]
-            oSample = Sample(dctPair['img'])
-            lstResults.append(oSample)
-            iIdx += 1
-            #break
+        if os.path.isdir(strPathSamples):
+            #print len(self._oLearner.lstFeatureNames), len()
+            dctImagePairs = OrderedDict()
+            for strName, oMatch in collectFilesByRegex(strPathSamples, '(?P<prefix>.+?)__(?P<type>(img)|(msk)).+?', ['.png', '.jpg']):
+                strPrefix = oMatch.group('prefix')
+                strType = oMatch.group('type')
+                if not strPrefix in dctImagePairs:
+                    dctImagePairs[strPrefix] = {}
+                dctImagePairs[strPrefix][strType] = strName
+
+            iIdx = 0
+            for dctPair in dctImagePairs.values():
+                #oContainer = ccore.SingleObjectContainer(dctPair['img'], dctPair['msk'])
+                #strCoords = ",".join(map(str,flatten(oContainer.getCrackCoordinates(1))))
+                #print dctPair['img'], dctPair['msk']
+                #dctFeatures = {}
+                #for iF, strFeatureName in enumerate(self._oLearner.lstFeatureNames):
+                #    dctFeatures[strFeatureName] = self._oLearner.dctFeatureData[className][iIdx][iF]
+                oSample = Sample(dctPair['img'])
+                lstResults.append(oSample)
+                iIdx += 1
+                #break
         return lstResults
 
     def getFeatureData(self, featureNames):
@@ -146,7 +159,8 @@ class Classifier(object):
         elif len(featureNames) == 2:
             for strClassName, oClass in self.dctClassInfos.iteritems():
                 iSize = len(oClass.features.values()[0])
-                lstData = [dict([(strFeatureName, oClass.features[strFeatureName][iIdx]) for strFeatureName in featureNames])
+                lstData = [dict([(strFeatureName, oClass.features[strFeatureName][iIdx])
+                                 for strFeatureName in featureNames])
                            for iIdx in range(iSize)]
                 lstFeatureData.append(lstData)
         #print lstFeatureData
@@ -161,6 +175,7 @@ class Class(object):
         self.samples = samples
         self.color = color
         self.features = None
+        self.sample_names = None
 
 
 class Feature(object):
@@ -174,6 +189,7 @@ class Sample(object):
     def __init__(self, path=None):
         self.path = path
         self.url = '/site_media'+path
+        #self.url = 'file://'+path
         self.name = path
         self.features = None
         self.coords = None
@@ -237,6 +253,6 @@ class ClassifierService(object):
 DOMAIN_NS = 'org.cecog'
 META_DATA = ['amf3']
 register_class(Classifier, DOMAIN_NS+'.Classifier', metadata=META_DATA, attrs=['name', 'path'])
-register_class(Class, DOMAIN_NS+'.Class', metadata=META_DATA, attrs=['name', 'label', 'color', 'samples'])
+register_class(Class, DOMAIN_NS+'.Class', metadata=META_DATA, attrs=['name', 'label', 'color', 'samples', 'sample_names'])
 register_class(Feature, DOMAIN_NS+'.Feature', metadata=META_DATA, attrs=['name'])
 register_class(Sample, DOMAIN_NS+'.Sample', metadata=META_DATA, attrs=['name', 'path', 'url', 'features', 'coords'])
