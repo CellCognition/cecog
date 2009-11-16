@@ -13,7 +13,11 @@ from cecog.gui.dynamicwidget import (visualize_phenotype,
 
 if __name__ == "__main__":
 
-    class Test(PhenoType):
+    class _Test(PhenoType):
+        
+        x = Float(1.0)
+
+    class Test(_Test):
 
         b = Float(1.0, label='mooo123', tooltip='This is very cool!',
                   doc='some text',
