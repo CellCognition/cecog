@@ -17,20 +17,22 @@ package org.cecog.classifier.model.vo
         public var bmp:Bitmap;
         public var img:Image;
         public var alpha:int = 1;
+        public var color:uint;
+        public var class_name:String;
 
         public var map:Array;
-
-        public function SampleVO()
-        {
-            this.map = new Array();
-            if (this.coords != null)
-            {
-                var a:area = new area();
-                //a.alt = 'moo';
-                a.shape = 'POLY';
-                a.coords = this.coords;
-                this.map.push(a);
-            }
-       }
+//
+//        public function SampleVO(path:String, url:String, coords:String)
+//        {
+//            this.map = new Array();
+//            if (this.coords != null)
+//            {
+//                var a:area = new area();
+//                //a.alt = 'moo';
+//                a.shape = 'POLY';
+//                a.coords = this.coords;//'0,0,10,0,10,10,0,10';
+//                this.map.push(a);
+//            }
+//       }
     }
 }

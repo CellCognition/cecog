@@ -8,10 +8,11 @@ package org.cecog.classifier.model.vo
         public var name:String;
         public var label:int;
         public var samples:int;
-        //public var samples:ArrayCollection;
+        public var sample_names:Array;
         public var color:uint;
         public var oClassifier:ClassifierVO;
         public var features:Array;
+        public var selected:Boolean = true;
 
 //        public function ClassVO(name:String, label:int, samples:int, color:uint)
 //        {

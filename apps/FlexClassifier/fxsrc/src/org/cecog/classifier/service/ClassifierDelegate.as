@@ -13,8 +13,8 @@ package org.cecog.classifier.service
         public function ClassifierDelegate()
         {
             __service = new RemoteObject("ClassifierService");
-            __service.endpoint = "http://bcute:5000/gateway";
-            //__service.endpoint = "http://cellcognition.org:5000/gateway";
+            __service.endpoint = "http://127.0.0.1:5000/gateway";
+            //__service.endpoint = "http://cellcognition.org:8080/gateway";
             __service.showBusyCursor = true;
             __service.concurrency = "last";
         }

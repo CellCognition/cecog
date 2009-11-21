@@ -4,13 +4,15 @@
         xmlns:cm="org.cecog.classifier.view.components.*"
         width="100%" height="100%"
         color="#000000" themeColor="#0066FF" xmlns:ns1="flexlib.containers.*">
+<!--        creationComplete="applyCustomDataTips()"
+-->
 
     <mx:Script>
         <![CDATA[
-            import mx.controls.CheckBox;
             import mx.collections.ArrayCollection;
-            import mx.events.ItemClickEvent;
-            import flash.events.Event;
+            import mx.controls.CheckBox;
+
+            import org.cecog.util.MyDataTip;
 
             public static const CHANGE_FEATURE_SELECTION:String = 'CHANGE_FEATURE_SELECTION';
 
@@ -23,40 +25,36 @@
             [Bindable]
             public var classInfos:ArrayCollection;
 
+            [Bindable]
+            public var sampleInfos:ArrayCollection = new ArrayCollection();
+
+
+            private function applyCustomDataTips() : void
+            {
+                plotChart.setStyle("dataTipRenderer", MyDataTip);
+            }
+
         ]]>
     </mx:Script>
 
     <mx:Text x="10" y="10" text="Feature 1"/>
-    <mx:CheckBox id="check1" x="12" y="33" selected="true" click="dispatchEvent(event)"/>
-    <mx:ComboBox id="feature1" top="31" width="193" dataProvider="{featureInfos}" height="22" left="37" labelField="name"
-        change="dispatchEvent(new Event(CHANGE_FEATURE_SELECTION));"/>
+    <mx:CheckBox id="check1" x="12" y="33" selected="true" click="dispatchEvent(event)" fillAlphas="[0.8, 1.0, 0.8, 0.8]" fillColors="[#FFFFFF, #FFFFFF]"/>
+    <mx:ComboBox id="feature1" top="31" width="220" dataProvider="{featureInfos}" height="22" left="37" labelField="name"
+        change="dispatchEvent(new Event(CHANGE_FEATURE_SELECTION));" rowCount="20" fillAlphas="[0.8, 1.0, 0.8, 0.8]" fillColors="[#FFFFFF, #FFFFFF]"/>
 
-    <mx:HRule x="10" y="59" width="220"/>
+    <mx:HRule x="10" y="59" width="247"/>
 
     <mx:Text x="10" y="69" text="Feature 2"/>
-    <mx:CheckBox id="check2" x="12" y="92" selected="false" click="dispatchEvent(event)"/>
-    <mx:ComboBox id="feature2" top="90" width="193" dataProvider="{featureInfos}" height="22" left="37" labelField="name" enabled="false"
-        change="dispatchEvent(new Event(CHANGE_FEATURE_SELECTION));"/>
+    <mx:CheckBox id="check2" x="12" y="92" selected="true" click="dispatchEvent(event)" fillAlphas="[0.8, 0.8, 0.8, 0.8]" fillColors="[#FFFFFF, #FFFFFF]"/>
+    <mx:ComboBox id="feature2" top="90" width="220" dataProvider="{featureInfos}" height="22" left="37" labelField="name" enabled="false"
+        change="dispatchEvent(new Event(CHANGE_FEATURE_SELECTION));" rowCount="20" fillAlphas="[0.8, 1.0, 0.8, 0.8]" fillColors="[#FFFFFF, #FFFFFF]"/>
 
-    <mx:HRule x="10" y="118" width="220"/>
+    <mx:HRule x="10" y="118" width="247"/>
 
-    <mx:Canvas backgroundColor="#FFFFFF" backgroundAlpha="0.9" left="265" right="10" top="10" bottom="10" visible="true">
-        <mx:PlotChart id="plotChart" showDataTips="true" selectionMode="multiple" alpha="1.0" visible="false" height="100%" width="100%" x="0" y="0"/>
-        <mx:AreaChart id="barChart" showDataTips="true" selectionMode="multiple" alpha="0.9" visible="false" type="overlaid" width="100%" x="0" height="100%" y="0"/>
-        <mx:Legend id="plotLegend" right="10" top="10" borderStyle="solid" alpha="1.0" backgroundColor="#FFFFFF" backgroundAlpha="1.0" visible="false"/>
-    </mx:Canvas>
-
-    <mx:DataGrid x="10" y="430"
-        id="classesSelectGrid" verticalAlign="bottom"
-        dataProvider="{classInfos}" color="#000000" alternatingItemColors="[#FFFFFF,#DDDDDD]" width="220">
+    <mx:DataGrid x="10"
+        id="classesSelectGrid" verticalAlign="middle" click="dispatchEvent(new Event(CHANGE_FEATURE_SELECTION));"
+        dataProvider="{classInfos}" color="#000000" alternatingItemColors="[#FFFFFF,#DDDDDD]" width="247" bottom="140" top="128" textAlign="center">
         <mx:columns>
-            <mx:DataGridColumn headerText="Label" dataField="label">
-                <mx:itemRenderer>
-                    <mx:Component>
-                        <mx:CheckBox selected="true"/>
-                    </mx:Component>
-                </mx:itemRenderer>
-            </mx:DataGridColumn>
             <mx:DataGridColumn headerText="Color" width="50">
                 <mx:itemRenderer>
                     <mx:Component>
@@ -67,7 +65,48 @@
                 </mx:itemRenderer>
             </mx:DataGridColumn>
             <mx:DataGridColumn headerText="Name" dataField="name"/>
+            <mx:DataGridColumn headerText="Show" width="50">
+                <mx:itemRenderer>
+                    <mx:Component>
+                        <mx:HBox horizontalAlign="center">
+                            <mx:CheckBox selected="{data.selected}" click="data.selected=!data.selected"/>
+                        </mx:HBox>
+                    </mx:Component>
+                </mx:itemRenderer>
+            </mx:DataGridColumn>
         </mx:columns>
     </mx:DataGrid>
+    <mx:Button x="11" label="Select All" width="119" bottom="110" id="btn_select_all" fillAlphas="[0.8, 0.8, 0.8, 0.8]"/>
+    <mx:Button x="138" label="Select None" width="119" bottom="110" id="btn_select_none" fillAlphas="[0.8, 0.8, 0.8, 0.8]"/>
+
+    <mx:VDividedBox liveDragging="true" left="265" right="10" top="10" bottom="10">
+        <mx:Canvas backgroundColor="#FFFFFF" backgroundAlpha="0.9"
+                   height="90%" width="100%" visible="true">
+            <mx:PlotChart id="plotChart" showDataTips="{showDataTips.selected}" selectionMode="multiple" alpha="1.0" visible="true" height="100%" width="100%" x="0" y="0"/>
+            <mx:AreaChart id="barChart" showDataTips="{showDataTips.selected}" selectionMode="multiple" alpha="0.9" visible="false" type="overlaid" width="100%" x="0" height="100%" y="0"/>
+            <mx:Legend id="plotLegend" right="10" top="10" borderStyle="solid" alpha="1.0" backgroundColor="#FFFFFF" backgroundAlpha="1.0" visible="false"/>
+        </mx:Canvas>
+
+        <mx:TileList id="sampleGrid"
+                     dataProvider="{sampleInfos}" backgroundColor="#000000"
+                     showScrollTips="true"
+                     height="10%" width="100%">
+            <mx:itemRenderer>
+                <mx:Component>
+                    <cm:SampleImage2/>
+                </mx:Component>
+            </mx:itemRenderer>
+        </mx:TileList>
+    </mx:VDividedBox>
+    <mx:CheckBox label="Show MouseOver " textAlign="left" id="mouseOverSamples" bottom="10" height="22" left="10" selected="true"/>
+    <mx:CheckBox label="Show DataTips" textAlign="left" id="showDataTips" bottom="10" selected="false" left="151"/>
+    <mx:HSlider id="scaleSlider" allowTrackClick="true" liveDragging="true"
+        minimum="0.1" maximum="4.0" value="1.0" showDataTip="false" bottom="61" left="55"/>
+    <mx:Text text="Image Zoom" fontWeight="bold" bottom="83" left="10"/>
+    <mx:Text text="Data Points" fontWeight="bold" bottom="33" left="10"/>
+    <mx:HRule x="10" width="247" height="8" bottom="31"/>
+    <mx:Button id="scaleButton" label="1:1" width="41" fontSize="9" cornerRadius="2" bottom="58" left="10"/>
+    <mx:HRule x="10" width="247" height="8" bottom="81"/>
+    <mx:Text fontWeight="normal" bottom="59" left="217" width="49" id="scaleText" text="100%" fontStyle="normal"/>
 
 </mx:Canvas>

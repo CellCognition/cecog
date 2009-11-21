@@ -32,10 +32,10 @@
             <mx:DataGridColumn headerText="Name" dataField="name"/>
         </mx:columns>
     </mx:DataGrid>
-    <mx:Button label="Update" click="dispatchEvent(new Event(UPDATE_CLASSIFIERS, true))" x="444" bottom="10"/>
+    <mx:Button label="Update" click="dispatchEvent(new Event(UPDATE_CLASSIFIERS, true))" bottom="10" left="444"/>
     <mx:DataGrid id="classifierInfoGrid"
-        selectable="false" verticalAlign="bottom" visible="false"
-        dataProvider="{classInfos}" color="#000000" alternatingItemColors="[#FFFFFF,#DDDDDD]" width="365" height="262" x="444" y="35">
+        selectable="false" verticalAlign="bottom" visible="true"
+        dataProvider="{classInfos}" color="#000000" alternatingItemColors="[#FFFFFF,#DDDDDD]" width="401" x="444" bottom="89" top="35">
         <mx:columns>
             <mx:DataGridColumn headerText="Label" width="50" dataField="label"/>
             <mx:DataGridColumn headerText="Color" width="50">
@@ -51,6 +51,6 @@
             <mx:DataGridColumn headerText="Samples" dataField="samples" width="80"/>
         </mx:columns>
     </mx:DataGrid>
-    <mx:Text id="classifierInfoText" x="444" y="13" fontWeight="bold"/>
+    <mx:Text id="classifierInfoText" x="444" fontWeight="bold" top="13"/>
 
 </mx:Canvas>

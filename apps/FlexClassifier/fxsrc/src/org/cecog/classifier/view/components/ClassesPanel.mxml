@@ -34,12 +34,19 @@
             <mx:DataGridColumn headerText="Color" width="50">
                 <mx:itemRenderer>
                     <mx:Component>
+                        <mx:HBox horizontalAlign="center" verticalAlign="top">
+                            <mx:Box backgroundColor="{data.color}" width="15" height="15"/>
+                        </mx:HBox>
+                    </mx:Component>
+                </mx:itemRenderer>
+<!--                <mx:itemRenderer>
+                    <mx:Component>
                         <mx:HBox horizontalAlign="center">
                             <mx:ColorPicker width="18" height="18" selectedColor="{data.color}"/>
                         </mx:HBox>
                     </mx:Component>
                 </mx:itemRenderer>
-            </mx:DataGridColumn>
+-->            </mx:DataGridColumn>
 
             <mx:DataGridColumn headerText="Name" dataField="name"/>
             <mx:DataGridColumn headerText="Samples" dataField="samples" width="80"/>
@@ -51,7 +58,7 @@
         paddingBottom="5" paddingTop="5" paddingRight="5" paddingLeft="5">
         <mx:itemRenderer>
             <mx:Component>
-                <cm:SampleImage outlineAlpha="{data.alpha}"/>
+                <cm:SampleImage outlineAlpha="1.0"/>
             </mx:Component>
         </mx:itemRenderer>
      </mx:TileList>

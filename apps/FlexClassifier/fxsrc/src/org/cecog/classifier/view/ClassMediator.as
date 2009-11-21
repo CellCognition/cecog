@@ -2,6 +2,7 @@ package org.cecog.classifier.view
 {
     import flash.events.Event;
     import flash.events.MouseEvent;
+    import flexlib.controls.area;
 
     import mx.controls.SWFLoader;
     import mx.events.ItemClickEvent;
@@ -78,10 +79,22 @@ package org.cecog.classifier.view
             //classesPanel.sampleImages = new ArrayCollection();
             for each (var sample:SampleVO in __sampleInfoProxy.sampleInfos)
             {
-                //var img:SWFLoader = new SWFLoader();
-                var img:SWFLoader = new SWFLoader();
-                img.addEventListener(Event.COMPLETE, onComplete);
-                img.load(sample.url);
+//                var img:SWFLoader = new SWFLoader();
+//                img.addEventListener(Event.COMPLETE, onComplete);
+//                img.load(sample.url);
+//                //for each (var sample:SampleVO in sampleInfos)
+//                //{
+                    if (sample.coords != null)
+                    {
+                        sample.map = new Array();
+                        var a:area = new area();
+                        a.shape = 'POLY';
+                        a.coords = sample.coords;
+                        sample.map.push(a);
+                    }
+                //}
+                //sampleInfoProxy.sampleInfos.source = sampleInfos;
+
                 //var data:BitmapData = Bitmap(img.content
                 //sample.bmp = Bitmap(img.content);
 

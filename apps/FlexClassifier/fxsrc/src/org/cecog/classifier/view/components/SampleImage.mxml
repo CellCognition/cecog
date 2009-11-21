@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ImageMap xmlns="flexlib.controls.*" xmlns:mx="http://www.adobe.com/2006/mxml"
     source="{data.url}" scaleContent="false"
-    toolTip="{data.path}" map="{data.map}"
-    horizontalAlign="center" verticalAlign="middle">
+    toolTip="{data.path}" map="{data.map}">
 </ImageMap>
+<!--<mx:Image xmlns="flexlib.controls.*" xmlns:mx="http://www.adobe.com/2006/mxml"
+          source="{data.url}" scaleContent="false"
+          toolTip="{data.path}"
+          horizontalCenter="true" verticalCenter="true">
+</mx:Image>
+-->

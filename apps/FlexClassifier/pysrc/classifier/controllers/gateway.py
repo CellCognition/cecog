@@ -29,7 +29,7 @@ from classifier.services.classifierservice import ClassifierService
 #
 
 services = {
-    'ClassifierService' : ClassifierService('/Volumes/Data1T/Classifiers'),
+    'ClassifierService' : ClassifierService('/Users/miheld/data/Classifiers'),
     #'AnalysisService'   : AnalysisService(),
     #'ExperimentService' : ExperimentService('/Volumes/RAID5-2/Flex'),
 }

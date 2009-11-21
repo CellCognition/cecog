@@ -3,12 +3,14 @@ package org.cecog.classifier.controller.classifier
     import mx.controls.Alert;
     import mx.rpc.IResponder;
     import mx.rpc.events.FaultEvent;
+    import flexlib.controls.area;
 
-    import org.cecog.classifier.view.ClassMediator;
     import org.cecog.classifier.model.SampleInfoProxy;
     import org.cecog.classifier.model.vo.ClassVO;
+    import org.cecog.classifier.model.vo.SampleVO;
     import org.cecog.classifier.service.ClassifierDelegate;
     import org.cecog.classifier.service.ServiceLocator;
+    import org.cecog.classifier.view.ClassMediator;
     import org.puremvc.as3.interfaces.ICommand;
     import org.puremvc.as3.interfaces.INotification;
     import org.puremvc.as3.patterns.command.SimpleCommand;

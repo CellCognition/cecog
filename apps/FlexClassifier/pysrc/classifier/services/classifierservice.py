@@ -188,12 +188,12 @@ class Sample(object):
 
     def __init__(self, path=None):
         self.path = path
-        self.url = '/site_media'+path
-        #self.url = 'file://'+path
-        self.name = path
-        self.features = None
-        self.coords = None
-        #self._get_coords()
+        #self.url = '/site_media'+path
+        self.url = 'file://'+path
+        #self.name = path
+        #self.features = None
+        #self.coords = None
+        self._get_coords()
 
     def _get_coords(self):
         path_img = self.path
@@ -255,4 +255,4 @@ META_DATA = ['amf3']
 register_class(Classifier, DOMAIN_NS+'.Classifier', metadata=META_DATA, attrs=['name', 'path'])
 register_class(Class, DOMAIN_NS+'.Class', metadata=META_DATA, attrs=['name', 'label', 'color', 'samples', 'sample_names'])
 register_class(Feature, DOMAIN_NS+'.Feature', metadata=META_DATA, attrs=['name'])
-register_class(Sample, DOMAIN_NS+'.Sample', metadata=META_DATA, attrs=['name', 'path', 'url', 'features', 'coords'])
+register_class(Sample, DOMAIN_NS+'.Sample', metadata=META_DATA, attrs=['path', 'url', 'coords'])
