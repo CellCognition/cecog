@@ -21,8 +21,13 @@ class OrderedDict(dict):
     def __copy__(self):
         return self.copy()
 
-    def __deepcopy__(self):
-        return self.deepcopy()
+    def __deepcopy__(self, memo):
+        dup = OrderedDict()
+        for k, v in self.iteritems():
+            k2 = copy.deepcopy(k, memo)
+            v2 = copy.deepcopy(v, memo)
+            dup[k2] = v2
+        return dup
 
     def __setitem__(self, key, value):
         if key not in self:
@@ -73,11 +78,23 @@ class OrderedDict(dict):
             result[copy.deepcopy(key)] = copy.deepcopy(value)
         return result
 
-    def update(self, items):
-        for key, _ in items:
-            if key not in self:
-                self.__keysList.append(key)
-        super(OrderedDict, self).update(items)
+    def update(self, *args, **options):
+        if len(args) == 1:
+            items = args[0]
+            if isinstance(items, (list, tuple)):
+                keys = [key[0] for key in items]
+            else:
+                keys = items.keys()
+            for key in keys:
+                if key not in self:
+                    self.__keysList.append(key)
+            super(OrderedDict, self).update(items)
+        else:
+            for key in options:
+                if key not in self:
+                    self.__keysList.append(key)
+            super(OrderedDict, self).update(**options)
+
 
     def fromkeys(self, seq, value=None):
         result = OrderedDict()
@@ -108,3 +125,13 @@ class OrderedDict(dict):
         # keep same paramater names as list.sort pylint: disable-msg=W0622
         self.__keysList.sort(cmp, key, reverse)
 
+    def getat(self, index):
+        key = self.__keysList[index]
+        return self.__getitem__(key)
+
+    def insertat(self, index, key, value):
+        self.__keysList.insert(index, key)
+        self.__setitem__(key, value)
+
+    def index(self, key):
+        return self.__keysList.index(key)
