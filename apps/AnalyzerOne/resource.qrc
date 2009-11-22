@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/" >
+        <file alias="cecog_analyzer_icon" >resources/cecog_analyzer_icon_128x128.png</file>
+        <file alias="question_mark" >resources/question_mark.png</file>
+        <file alias="cecog_logo_small_black" >resources/cellcognition7_black_background.png</file>
+        <file>help/general.html</file>
+        <file alias="cecog_logo_w145" >resources/cellcognition7_white_w145.png</file>
+    </qresource>
+</RCC>
