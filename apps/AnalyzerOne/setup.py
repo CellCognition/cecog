@@ -59,7 +59,7 @@ if sys.platform == 'darwin':
     DATA_FILES = []
     SYSTEM = 'py2app'
     EXTRA_OPTIONS = {'argv_emulation': True,
-                     'includes': ['sip'],
+                     'includes': ['sip',],# 'netCDF4_utils', 'netcdftime'],
                      'excludes': ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
                                   'PyQt4.QtOpenGL', 'PyQt4.QtScript',
                                   'PyQt4.QtSql', 'PyQt4.QtTest',
@@ -67,9 +67,11 @@ if sys.platform == 'darwin':
                                   'PyQt4.phonon',
                                   'scipy',
                                   ],
-                     #'dylib_excludes': ['R.framework',],
-                     'packages': ['mito'],
-                     'resources': [],
+                     'dylib_excludes': ['R.framework',],
+                     #'frameworks': ['R.framework',],
+                     #'strip' : False,
+                     'packages': ['cecog',],
+                     'resources': ['naming_schemes.conf'],
                      'optimize': 2,
                      'compressed': True,
                      'iconfile': 'resources/cecog_analyzer_icon.icns',
@@ -90,7 +92,7 @@ elif sys.platform == 'win32':
                                   'pywin.dialogs', 'pywin.dialogs.list',
                                   'Tkconstants', 'Tkinter', 'tcl',
                                   ],
-                     'packages': ['pyvigra',],
+                     'packages': ['cecog',],
                      'optimize': 2,
                      'compressed': True,
                      'bundle_files': 1,
@@ -146,7 +148,6 @@ if sys.platform == 'darwin':
         filename = os.path.split(filepath)[1]
         if not filename in ['site.py', '__init__.py'] and os.path.isfile(filepath):
             os.remove(filepath)
-    shutil.rmtree(os.path.join(target, 'mito/commonanalysis/settings'), ignore_errors=True)
 
 
 elif sys.platform == 'win32':

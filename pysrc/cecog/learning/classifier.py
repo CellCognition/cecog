@@ -82,7 +82,7 @@ class BaseClassifier(OptionManager):
 
 class LibSvmClassifier(BaseClassifier):
 
-    OPTIONS = {"strSvmPrefix"  : Option("all_features.libsvm", doc="Prefix for libSVM .model and .range files."),
+    OPTIONS = {"strSvmPrefix"  : Option("features", doc="Prefix for libSVM .model and .range files."),
                "hasZeroInsert" : Option(True),
                #"clsWriter"   : Option(LibSvmWriter, doc="Writer class to write feature data, e.g. in sparse libSVM format."),
                }

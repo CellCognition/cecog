@@ -48,12 +48,6 @@ from pdk.ordereddict import OrderedDict
 #------------------------------------------------------------------------------
 # functions:
 #
-#                    oReader = CellCounterReader(strSampleFilename, fScale=self.oSettings.iBinningFactor)
-#                    self.lstSampleReader.append(oReader)
-#                    iP = oReader.getPosition()
-#                    if not iP in self.dctSamplePositions:
-#                        self.dctSamplePositions[iP] = []
-#                    self.dctSamplePositions[iP].extend(oReader.getTimePoints())
 
 #------------------------------------------------------------------------------
 # classes:
@@ -162,7 +156,7 @@ class CellCounterReader(OrderedDict):
         oRe = re.compile("P(?P<P>.+?)[_|\.]")
         oSearch = oRe.search(strFilename)
         if not oSearch is None:
-            return int(oSearch.group('P'))
+            return oSearch.group('P')
         else:
             raise ValueError("No position found in filename '%s'." %\
                              self.strFilename)

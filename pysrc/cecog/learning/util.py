@@ -270,7 +270,7 @@ class TsvWriter(WriterBase):
 
 class ArffWriter(WriterBase):
 
-    def __init__(self, strFilename, lstFeatureNames, dctClassLabels, dctHexColors=None):
+    def __init__(self, strFilename, lstFeatureNames, dctClassLabels, dctHexColors=None, hasZeroInsert=False):
         super(ArffWriter, self).__init__(strFilename, lstFeatureNames, dctClassLabels)
         self.writeLine("@RELATION MitoClassifier")
         self.writeLine()
@@ -295,6 +295,11 @@ class ArffWriter(WriterBase):
                                      for x in lstClassNames])
                            )
         self.writeLine()
+
+        self.writeLine('%%HAS-ZERO-INSERTED-IN-FEATURE-VECTOR %d' %
+                       1 if hasZeroInsert else 0)
+        self.writeLine()
+
         self.writeLine("@DATA")
 
     @classmethod

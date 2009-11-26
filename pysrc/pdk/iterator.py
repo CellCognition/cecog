@@ -185,7 +185,7 @@ def is_subset(list1,list2):
     @param list2:
     @type list2:
     """
-    return set(list1).is_subset(set(list2))
+    return set(list1).issubset(set(list2))
 
 
 def flatten(seq):

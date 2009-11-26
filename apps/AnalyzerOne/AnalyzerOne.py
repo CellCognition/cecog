@@ -24,9 +24,9 @@ import os
 import types
 import pprint
 import logging
-import StringIO
 import traceback
 import copy
+import time
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -37,6 +37,9 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
+#import netCDF4
+
+
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
@@ -45,6 +48,9 @@ from cecog.extensions.ConfigParser import RawConfigParser
 from cecog.reader import PIXEL_TYPES
 from cecog.analyzer.core import AnalyzerCore
 from cecog import ccore
+from cecog.learning.learning import CommonObjectLearner, CommonClassPredictor
+from cecog.util import hexToRgb
+
 import resource
 
 #-------------------------------------------------------------------------------
@@ -72,6 +78,7 @@ TRACKING_METHODS = ['ClassificationCellTracker',]
 CONTROL_1 = 'CONTROL_1'
 CONTROL_2 = 'CONTROL_2'
 
+R_LIBRARIES = ['hwriter', 'RColorBrewer', 'igraph']
 
 #-------------------------------------------------------------------------------
 # functions:
@@ -116,6 +123,7 @@ def numpy_to_qimage(data, colors=None):
 class AnalyzerMainWindow(QMainWindow):
 
     TITLE = 'AnalyzerOne'
+
 
     def __init__(self):
         QMainWindow.__init__(self)
@@ -185,11 +193,13 @@ class AnalyzerMainWindow(QMainWindow):
         self._settings_filename = None
         self._settings = ConfigSettings() #ConfigParser.RawConfigParser()
 
+        self._tab_lookup = OrderedDict()
         self._tabs = [GeneralFrame(self._settings, self._pages),
                       ObjectDetectionFrame(self._settings, self._pages),
                       ClassificationFrame(self._settings, self._pages),
                       TrackingFrame(self._settings, self._pages),
-                      OutputFrame(self._settings, self._pages),
+                      ErrorCorrectionFrame(self._settings, self._pages),
+                      #OutputFrame(self._settings, self._pages),
                       ProcessingFrame(self._settings, self._pages),
                       ]
         widths = []
@@ -228,6 +238,58 @@ class AnalyzerMainWindow(QMainWindow):
         self.center()
         self.raise_()
 
+
+    def closeEvent(self, event):
+        print "close"
+        QMainWindow.closeEvent(self, event)
+        qApp.quit()
+
+    def test_r_import(self):
+        try:
+            import rpy2.robjects as robjects
+            import rpy2.rinterface as rinterface
+            import rpy2.robjects.numpy2ri
+
+            x = robjects.r['pi']
+            v = robjects.FloatVector([1.1, 2.2, 3.3, 4.4, 5.5, 6.6])
+            m = robjects.r['matrix'](v, nrow = 2)
+            has_R_version = True
+            version = '%s.%s' % (robjects.r['version'][5][0],
+                                 robjects.r['version'][6][0])
+        except:
+            has_R_version = False
+            msg = 'R installation not found.\n\n'\
+                  'To use HMM error correction or plotting functions '\
+                  'R >= Version 2.9 must be installed together with these.'\
+                  'packages:\n'
+            msg += ', '.join(R_LIBRARIES)
+            msg += '\n\nSee http://www.r-project.org\n\n'
+            msg += traceback.format_exc(1)
+            QMessageBox.warning(self, 'R installation not found', msg)
+
+
+        if has_R_version:
+            missing_libs = []
+            buffer = []
+            rinterface.setWriteConsole(lambda x: buffer.append(x))
+            for lib_name in R_LIBRARIES:
+                try:
+                    robjects.r['library'](lib_name)
+                except:
+                    missing_libs.append(lib_name)
+            rinterface.setWriteConsole(None)
+            if len(missing_libs) > 0:
+                msg = 'Missing R package(s)\n\n'
+                msg += ', '.join(missing_libs)
+                msg += '\n\nSee http://www.r-project.org\n\n'
+                msg += '\n'.join(buffer)
+
+                QMessageBox.warning(self, 'Missing R libraries', msg)
+                qApp.valid_R_version = False
+            else:
+                qApp.valid_R_version = True
+
+
     def _add_page(self, widget):
         button = QListWidgetItem(self._selection)
         button.setIcon(QIcon(widget.ICON))
@@ -243,7 +305,25 @@ class AnalyzerMainWindow(QMainWindow):
 #
 #        self._pages.addWidget(scroll_area)
         self._pages.addWidget(widget)
+        widget.toggle_tabs.connect(self._on_toggle_tabs)
+        self._tab_lookup[widget.get_name()] = (button, widget)
         return widget.size()
+
+    def _on_toggle_tabs(self, name):
+        '''
+        toggle ItemIsEnabled flag for all list items but name
+        '''
+        for name2 in self._tab_lookup:
+            if name2 != name:
+                item, widget = self._tab_lookup[name2]
+                flags = item.flags()
+                # check flag (and)
+                if flags & Qt.ItemIsEnabled:
+                    # remove flag (nand)
+                    item.setFlags(flags & ~Qt.ItemIsEnabled)
+                else:
+                    # set flag (or)
+                    item.setFlags(flags | Qt.ItemIsEnabled)
 
     def _on_change_page(self, current, previous):
         if not current:
@@ -304,21 +384,26 @@ class AnalyzerMainWindow(QMainWindow):
     def _on_about(self):
         print "about"
         dialog = QDialog(self)
-        dialog.setBackgroundRole(QPalette.Dark)
-        dialog.setStyleSheet('background: #000000')
-        dialog.setWindowTitle('About CellCognition AnalyzerOne')
+        #dialog.setBackgroundRole(QPalette.Dark)
+        dialog.setStyleSheet('background: #000000; '
+                             'background-image: url(:cecog_about)')
+        dialog.setWindowTitle('About')
+        dialog.setFixedSize(400,300)
         layout = QGridLayout()
-        layout.setContentsMargins(50,50,50,50)
-        image = QImage(':cecog_logo_small_black')
-        label1 = QLabel(dialog)
-        label1.setPixmap(QPixmap.fromImage(image))
-        layout.addWidget(label1, 0, 0)
+        layout.setContentsMargins(0,0,0,0)
+        #image = QImage(':cecog_splash')
+        #label1 = QLabel(dialog)
+        #label1.setStyleSheet('background-image: url(:cecog_splash)')
+        #label1.setPixmap(QPixmap.fromImage(image))
+        #layout.addWidget(label1, 0, 0)
         label2 = QLabel(dialog)
+        label2.setStyleSheet('background: transparent;')
         label2.setAlignment(Qt.AlignCenter)
         label2.setText('CellCognition AnalyzerOne\n'
                        'Copyright (c) 2006 - 2009 by Michael Held\n'
                        'Gerlich Lab, ETH Zurich, Switzerland')
         label3 = QLabel(dialog)
+        label3.setStyleSheet('background: transparent;')
         label3.setTextFormat(Qt.AutoText)
         label3.setOpenExternalLinks(True)
         label3.setAlignment(Qt.AlignCenter)
@@ -326,11 +411,11 @@ class AnalyzerMainWindow(QMainWindow):
         #palette.link = QBrush(QColor(200,200,200))
         #label3.setPalette(palette)
         label3.setText('<style>a { color: green; } a:visited { color: green; }</style>'
-                       '<a href="http://www.cellcognition.org">www.cellcognition.org</a>')
+                       '<a href="http://www.cellcognition.org">www.cellcognition.org</a><br><br>')
         layout.addWidget(label2, 1, 0)
         layout.addWidget(label3, 2, 0)
         layout.setAlignment(Qt.AlignCenter|
-                            Qt.AlignVCenter)
+                            Qt.AlignBottom)
         dialog.setLayout(layout)
         dialog.show()
 
@@ -377,17 +462,15 @@ class AnalyzerMainWindow(QMainWindow):
         return filename
 
 
-class AnalzyerThread(QThread):
+class _ProcessingThread(QThread):
 
     stage_info = pyqtSignal(dict)
-    image_ready = pyqtSignal(ccore.ImageRGB, str, str)
     analyzer_error = pyqtSignal(str)
 
     def __init__(self, parent, settings):
         QThread.__init__(self, parent)
         self._settings = settings
         self._abort = False
-        self._renderer = None
         self._mutex = QMutex()
         self._stage_info = {'text': '',
                             'progress': 0,
@@ -403,8 +486,7 @@ class AnalzyerThread(QThread):
 
     def run(self):
         try:
-            analyzer = AnalyzerCore(self._settings)
-            analyzer.processPositions(self)
+            self._run()
         except:
             msg = traceback.format_exc()
             msg2 = traceback.format_exc(5)
@@ -412,14 +494,6 @@ class AnalzyerThread(QThread):
             logger.error(msg)
             self.analyzer_error.emit(msg2)
             raise
-
-    def set_renderer(self, name):
-        self._mutex.lock()
-        self._renderer = name
-        self._mutex.unlock()
-
-    def get_renderer(self):
-        return self._renderer
 
     def set_abort(self):
         self._mutex.lock()
@@ -430,15 +504,321 @@ class AnalzyerThread(QThread):
         abort = self._abort
         return abort
 
+    def set_stage_info(self, info):
+        self._mutex.lock()
+        self.stage_info.emit(info)
+        self._mutex.unlock()
+
+
+class AnalzyerThread(_ProcessingThread):
+
+    image_ready = pyqtSignal(ccore.ImageRGB, str, str)
+
+    def __init__(self, parent, settings):
+        _ProcessingThread.__init__(self, parent, settings)
+        self._renderer = None
+
+    def _run(self):
+        analyzer = AnalyzerCore(self._settings)
+        analyzer.processPositions(self)
+
+    def set_renderer(self, name):
+        self._mutex.lock()
+        self._renderer = name
+        self._mutex.unlock()
+
+    def get_renderer(self):
+        return self._renderer
+
     def set_image(self, image_rgb, info, filename=''):
         self._mutex.lock()
         self.image_ready.emit(image_rgb, info, filename)
         self._mutex.unlock()
 
-    def set_stage_info(self, info):
-        self._mutex.lock()
-        self.stage_info.emit(info)
-        self._mutex.unlock()
+
+class ClassifierResultFrame(QGroupBox):
+
+    LABEL_ACC = 'Accuracy: %.1f%%'
+    LABEL_C = 'log2(C) = %.1f'
+    LABEL_G = 'log2(g) = %.1f'
+
+    def __init__(self, parent, channel, settings):
+        QGroupBox.__init__(self, parent)
+
+        self._channel = channel
+        self._settings = settings
+
+        layout = QGridLayout(self)
+
+        self._button = QPushButton('Load', self)
+        self.connect(self._button, SIGNAL('clicked()'), self._on_load)
+        layout.addWidget(self._button, 0, 2)
+
+        self._label_acc = QLabel(self.LABEL_ACC % float('NAN'), self)
+        layout.addWidget(self._label_acc, 2, 2)
+        self._label_c = QLabel(self.LABEL_C % float('NAN'), self)
+        layout.addWidget(self._label_c, 3, 2)
+        self._label_g = QLabel(self.LABEL_G % float('NAN'), self)
+        layout.addWidget(self._label_g, 4, 2)
+
+        #label = QLabel('Confusion matrix', self)
+        #layout.addWidget(label, 0, 0)
+        self._table_conf = QTableWidget(self)
+        self._table_conf.setEditTriggers(QTableWidget.NoEditTriggers)
+        self._table_conf.setSelectionMode(QTableWidget.NoSelection)
+
+        self._table_conf.setSizePolicy(QSizePolicy(QSizePolicy.Expanding|QSizePolicy.Maximum,
+                                              QSizePolicy.Expanding|QSizePolicy.Maximum))
+        layout.addWidget(self._table_conf, 0, 0, 5, 1)
+
+        self._table_info = QTableWidget(self)
+        self._table_info.setEditTriggers(QTableWidget.NoEditTriggers)
+        self._table_info.setSelectionMode(QTableWidget.NoSelection)
+        self._table_info.setSizePolicy(QSizePolicy(QSizePolicy.Fixed,
+                                                   QSizePolicy.Expanding|QSizePolicy.Maximum))
+        layout.addWidget(self._table_info, 0, 1, 5, 1)
+        layout.addItem(QSpacerItem(1, 1,
+                                   QSizePolicy.Fixed,
+                                   QSizePolicy.MinimumExpanding), 1, 2)
+#        layout.addItem(QSpacerItem(1, 1,
+#                                   QSizePolicy.MinimumExpanding,
+#                                   QSizePolicy.MinimumExpanding), 0, 3, 4, 1)
+
+
+        self._has_data = False
+
+    def clear(self):
+        self._table_conf.clear()
+        self._table_info.clear()
+        self._has_data = False
+
+    def _on_load(self):
+        self.load_classifier(check=True)
+
+    def load_classifier(self, check=True):
+
+        _resolve = lambda x,y: self._settings.get(x, '%s_%s' % (self._channel, y))
+        classifier_infos = {'strEnvPath' : _resolve('Classification', 'classification_envpath'),
+                            'strModelPrefix' : _resolve('Classification', 'classification_prefix'),
+                            'strChannelId' : _resolve('ObjectDetection', 'channelid'),
+                            'strRegionId' : _resolve('Classification', 'classification_regionname'),
+                            }
+        self._learner = CommonClassPredictor(dctCollectSamples=classifier_infos,
+                                             strEnvPath=classifier_infos['strEnvPath'],
+                                             strModelPrefix=classifier_infos['strModelPrefix'])
+
+        result = self._learner.check()
+        if check:
+            b = lambda x: 'Yes.' if x else 'No.'
+            msg = 'Results for classifier in path: %s\n\n' % result['path_env']
+            msg += 'Found class definition: %s\n' % b(result['has_definition'])
+            msg += 'Found annotations: %s\n' % b(result['has_path_annotations'])
+            msg += 'Can you pick new samples? %s\n\n' % b(self.is_pick_samples())
+            msg += 'Found ARFF file: %s\n' % b(result['has_arff'])
+            msg += 'Can you train a classifier? %s\n\n' % b(self.is_train_classifier())
+            msg += 'Found SVM model: %s\n' % b(result['has_model'])
+            msg += 'Found SVM range: %s\n' % b(result['has_range'])
+            msg += 'Can you apply the classifier to images? %s\n\n' % b(self.is_apply_classifier())
+            msg += 'Found samples: %s\n' % b(result['has_path_samples'])
+            msg += 'Samples are just for visualization and annotation control.'
+
+            widget = QMessageBox().information(self,
+                                               "Classifier inspection results",
+                                               msg)
+
+        if result['has_arff']:
+            self._learner.importFromArff()
+
+        if result['has_conf']:
+            c, g, accuracy, conf = self._learner.importConfusion()
+            self._set_info(c, g, accuracy)
+            self._init_conf_table(conf)
+            self._update_conf_table(conf)
+
+        self._set_info_table()
+
+    def msg_pick_samples(self):
+        result = self._learner.check()
+        msg = 'Sample picking is not possible. You need to provide a class definition '\
+              'file and annotation files.\n\nMissing components:\n'
+        if not result['has_path_annotations']:
+            msg += "- Annotation path '%s' not found.\n" % result['path_annotations']
+        if not result['has_definition']:
+            msg += "- Class definition file '%s' not found.\n" % result['definition']
+        return msg
+
+    def is_pick_samples(self):
+        result = self._learner.check()
+        return result['has_path_annotations'] and result['has_definition']
+
+    def msg_train_classifier(self):
+        result = self._learner.check()
+        msg = 'Classifier training is not possible. You need to pick samples first.\n\n'\
+              'Missing components:\n'
+        if not result['has_arff']:
+            msg += "- Feature file '%s' not found.\n" % result['arff']
+        return msg
+
+    def is_train_classifier(self):
+        result = self._learner.check()
+        return result['has_arff']
+
+    def msg_apply_classifier(self):
+        result = self._learner.check()
+        msg = 'Classifier model not found. You need to train a classifier first.\n\n'\
+              'Missing components:\n'
+        if not result['has_model']:
+            msg += "- SVM model file '%s' not found.\n" % result['model']
+        if not result['has_range']:
+            msg += "- SVM range file '%s' not found.\n" % result['range']
+        return msg
+
+    def is_apply_classifier(self):
+        result = self._learner.check()
+        return result['has_model'] and result['has_range']
+
+    def _set_info_table(self):
+        rows = len(self._learner.lstClassLabels)
+        self._table_info.clear()
+        self._table_info.setColumnCount(3)
+        self._table_info.setRowCount(rows)
+        self._table_info.setHorizontalHeaderLabels(['Name', 'Samples', 'Color'])
+        self._table_info.setVerticalHeaderLabels([str(self._learner.nl2l[r])
+                                                  for r in range(rows)])
+        self._table_info.setColumnWidth(1, 20)
+        for r in range(rows):
+            self._table_info.setRowHeight(r, 20)
+            label = self._learner.nl2l[r]
+            name = self._learner.dctClassNames[label]
+            samples = self._learner.names2samples[name]
+            self._table_info.setItem(r, 0, QTableWidgetItem(name))
+            self._table_info.setItem(r, 1, QTableWidgetItem(str(samples)))
+            item = QTableWidgetItem(' ')
+            item.setBackground(QBrush(QColor(*hexToRgb(self._learner.dctHexColors[name]))))
+            self._table_info.setItem(r, 2, item)
+        self._table_info.resizeColumnsToContents()
+
+    def _init_conf_table(self, conf):
+        rows, cols = conf.shape
+        self._table_conf.clear()
+        self._table_conf.setColumnCount(cols)
+        self._table_conf.setRowCount(rows)
+        for c in range(cols):
+            self._table_conf.setColumnWidth(c, 20)
+            label = self._learner.nl2l[c]
+            name = self._learner.dctClassNames[label]
+            item = QTableWidgetItem(str(label))
+            item.setToolTip('%d : %s' % (label, name))
+            #item.setForeground(QBrush(QColor(*hexToRgb(names2cols[name]))))
+            self._table_conf.setHorizontalHeaderItem(c, item)
+        for r in range(rows):
+            self._table_conf.setRowHeight(r, 20)
+            label = self._learner.nl2l[r]
+            name = self._learner.dctClassNames[label]
+            item = QTableWidgetItem(str(label))
+            item.setToolTip('%d : %s' % (label, name))
+            #item.setForeground(QBrush(QColor(*hexToRgb(names2cols[name]))))
+            self._table_conf.setVerticalHeaderItem(r, item)
+
+    def _update_conf_table(self, conf):
+        rows, cols = conf.shape
+        conf_norm = conf.swapaxes(0,1) / numpy.array(numpy.sum(conf, 1), numpy.float)
+        conf_norm = conf_norm.swapaxes(0,1)
+        self._table_conf.clearContents()
+        for r in range(rows):
+            for c in range(cols):
+                item = QTableWidgetItem()
+                item.setToolTip('%d samples, %.2f%%' % (conf[r,c], conf_norm[r,c]*100.))
+                col = int(255 * (1 - conf_norm[r,c]))
+                item.setBackground(QBrush(QColor(col, col, col)))
+                self._table_conf.setItem(r, c, item)
+
+    def _set_info(self, c, g, accuracy):
+        self._label_acc.setText(self.LABEL_ACC % (accuracy*100.))
+        self._label_c.setText(self.LABEL_C % c)
+        self._label_g.setText(self.LABEL_G % g)
+
+    def on_conf_result(self, c, g, accuracy, conf):
+        print "moo", c, g
+        self._set_info(c, g, accuracy)
+
+        if not self._has_data:
+            self._has_data = True
+            self._init_conf_table(conf)
+            self._set_info_table()
+        self._update_conf_table(conf)
+
+
+class TrainingThread(_ProcessingThread):
+
+    conf_result = pyqtSignal(float, float, float, numpy.ndarray)
+
+    def __init__(self, parent, settings, learner):
+        _ProcessingThread.__init__(self, parent, settings)
+        self._learner = learner
+
+    def _run(self):
+        print "training"
+
+        c_begin, c_end, c_step = -5,  15, 2
+        c_info = c_begin, c_end, c_step
+
+        g_begin, g_end, g_step = -15, 3, 2
+        g_info = g_begin, g_end, g_step
+
+        stage_info = {'stage': 0,
+                      'text': '',
+                      'min': 0,
+                      'max': 1,
+                      'progress': 0,
+                      }
+        self.set_stage_info(stage_info)
+
+        i = 0
+        best_accuracy = 0
+        best_c = None
+        best_g = None
+        best_conf = None
+        is_abort = False
+        for n,c,g,validation,labels in self._learner.iterGridSearchSVM(c_info=c_info,
+                                                                       g_info=g_info):
+            stage_info.update({'min': 1,
+                               'max': n,
+                               'progress': i+1,
+                               })
+            self.set_stage_info(stage_info)
+            i += 1
+            #print i,n
+
+            accuracy = numpy.sum(labels == validation) / float(len(labels))
+            if accuracy > best_accuracy:
+                best_accuracy = accuracy
+                best_c = c
+                best_g = g
+                #print best_accuracy, best_c, best_g
+
+                k = len(self._learner.l2nl)
+                conf = numpy.zeros((k, k))
+                for l, v in zip(labels, validation):
+                    l2 = self._learner.l2nl[l]
+                    v2 = self._learner.l2nl[v]
+                    conf[l2,v2] += 1
+                best_conf = conf
+
+                self.conf_result.emit(c, g, accuracy, conf)
+            time.sleep(.3)
+
+            if self.get_abort():
+                is_abort = True
+                break
+
+        # overwrite only if grid-search was not aborted by the user
+        if not is_abort:
+            self.conf_result.emit(best_c, best_g, best_accuracy, best_conf)
+            self._learner.train(2**best_c, 2**best_g)
+            self._learner.exportConfusion(best_c, best_g, best_accuracy,
+                                          best_conf)
+            self._learner.exportRanges()
 
 
 class LogWindow(QFrame):
@@ -475,7 +855,6 @@ class GuiLogHandler(QObject, logging.Handler):
 
     def __init__(self, parent):
         self._mutex = QMutex()
-        #self._history = StringIO.StringIO()
         QObject.__init__(self, parent)
         logging.Handler.__init__(self)#, strm=self._history)
 
@@ -586,7 +965,7 @@ class ListTrait(GuiTrait):
     DATATYPE = list
 
     def convert(self, value):
-        print value
+        #print value
         if type(value) == self.DATATYPE:
             return value
         else:
@@ -617,7 +996,7 @@ class SelectionTrait(ListTrait):
         return value
 
     def set_value(self, widget, value):
-        print value, self.list_data
+        #print value, self.list_data
         widget.setCurrentIndex(self.index(value))
 
 
@@ -631,7 +1010,7 @@ class MultiSelectionTrait(SelectionTrait):
             widget.setCurrentItem(w_listitem[0], QItemSelectionModel.Select)
 
     def convert(self, value):
-        print "MOO", value
+        #print "MOO", value
         if type(value) == self.DATATYPE:
             return value
         else:
@@ -662,12 +1041,15 @@ class DictTrait(ListTrait):
 class InputWidgetMixin(object):
 
     SECTION = None
-    WIDTH = 3
 
     def __init__(self, settings):
         self._registry = {}
         self._settings = settings
         self._settings.register_section(self.SECTION)
+        self._extra_columns = 0
+
+    def get_name(self):
+        return self.SECTION
 
     def add_group(self, name, trait, items, layout="grid"):
         frame = self._get_frame(self._tab_name)
@@ -701,7 +1083,7 @@ class InputWidgetMixin(object):
                 if len(info) >= 4:
                     alignment = info[3]
                 self.add_input(name2, trait2, parent=w_group, grid=grid, alignment=alignment)
-            frame_layout.addWidget(w_group, frame._input_cnt, 1, 1, self.WIDTH)
+            frame_layout.addWidget(w_group, frame._input_cnt, 1, 1, 1)
             if not trait is None:
                 handler = lambda x : w_group.setEnabled(w_input.isChecked())
                 self.connect(w_input, SIGNAL('toggled(bool)'), handler)
@@ -726,7 +1108,7 @@ class InputWidgetMixin(object):
         w_label.setText('<style>a { color: black; text-decoration: none;}</style>'
                         '<a href="%s">%s</a>' % (link, label))
         self.connect(w_label, SIGNAL('linkActivated(const QString&)'),
-                     self._on_label_clicked)
+                     self._on_show_help)
         w_label.setSizePolicy(QSizePolicy(QSizePolicy.Fixed,
                                           QSizePolicy.Fixed))
         w_label.setToolTip('Click on the label for help.')
@@ -807,7 +1189,7 @@ class InputWidgetMixin(object):
             w_input.setMaximumHeight(100)
             w_input.setSelectionMode(QListWidget.ExtendedSelection)
             w_input.setSizePolicy(policy_fixed)
-            print "moo1", value
+            #print "moo1", value
             #value = trait.convert(value)
             #print "moo2", value
             for item in trait.list_data:
@@ -853,6 +1235,7 @@ class InputWidgetMixin(object):
 
         if not w_button is None:
             w_button.setSizePolicy(policy_fixed)
+            self._extra_columns = 1
 
 #        if not trait.doc is None:
 #            w_doc = QPushButton(parent)
@@ -872,12 +1255,12 @@ class InputWidgetMixin(object):
 
             if grid is None:
                 layout.addWidget(w_label, parent._input_cnt, 0, Qt.AlignRight)
-                if not w_doc is None:
-                    layout.addWidget(w_doc, parent._input_cnt, 1)
+                #if not w_doc is None:
+                #    layout.addWidget(w_doc, parent._input_cnt, 1)
 
-                layout.addWidget(w_input, parent._input_cnt, 1, 1, self.WIDTH)
+                layout.addWidget(w_input, parent._input_cnt, 1)
                 if not w_button is None:
-                    layout.addWidget(w_button, parent._input_cnt, 2+self.WIDTH)
+                    layout.addWidget(w_button, parent._input_cnt, 2)
             else:
                 layout.addWidget(w_label, grid[0], grid[1]*3, Qt.AlignRight)
                 if alignment is None:
@@ -900,17 +1283,17 @@ class InputWidgetMixin(object):
     def update_input(self):
         #if self._settings.has_section(self.SECTION):
         for name, value in self._settings.items(self.SECTION):
-            print self.SECTION, name, name in self._registry
+            #print self.SECTION, name, name in self._registry
             if name in self._registry:
                 w_input = self._registry[name]
                 trait = self._settings.get_trait(self.SECTION, name)
-                print '    ', name, value
+                #print '    ', name, value
                 trait.set_value(w_input, value)
 
 #        else:
 #            self._settings.add_section(self.SECTION)
 
-    def _on_label_clicked(self, link):
+    def _on_show_help(self, link):
         print self.SECTION, link
 
         if not hasattr(qApp, 'cecog_help_dialog'):
@@ -935,6 +1318,9 @@ class InputWidgetMixin(object):
             html_text = s.readAll()
             f.close()
             w_text.insertHtml(html_text)
+        else:
+            w_text.insertHtml("Sorry but the file '%s' was not found." %\
+                               file_name)
         dialog.show()
         dialog.raise_()
 
@@ -962,7 +1348,7 @@ class InputWidgetMixin(object):
             if os.path.isdir(path):
                 dialog.setDirectory(path)
             if dialog.exec_():
-                print dialog.selectedFiles()[0]
+                #print dialog.selectedFiles()[0]
                 path = str(dialog.selectedFiles()[0])
                 self._registry[name].setText(path)
                 self.set_value(name, path)
@@ -1002,10 +1388,13 @@ class ProcessorMixin(object):
 
 
     def __init__(self):
-        self._image_dialog = None
+        qApp._image_dialog = None
         self._is_running = False
+        self._current_process = None
         self._image_combo = None
         self._stage_infos = {}
+
+        self._control_buttons = OrderedDict()
 
         #frame = self._get_frame()
 #        frame = self._control
@@ -1033,34 +1422,77 @@ class ProcessorMixin(object):
 #        self._is_running = False
 #        self._image_combo = None
 
+    def register_process(self, name):
+        pass
+
+    def register_control_button(self, name, cls, labels):
+        self._control_buttons[name] = {'labels' : labels,
+                                       'widget' : None,
+                                       'cls'    : cls,
+                                       }
 
     def _init_control(self):
-        layout = QGridLayout(self._control)
+        layout = QHBoxLayout(self._control)
+        layout.setContentsMargins(0,0,0,0)
 
         self._progress_label0 = QLabel(self._control)
-        self._progress_label0.setText('Status info')
-        layout.addWidget(self._progress_label0, 0, 0)
+        self._progress_label0.setText('')
+        layout.addWidget(self._progress_label0)
 
         self._progress0 = QProgressBar(self._control)
-        layout.addWidget(self._progress0, 0, 1)
+        layout.addWidget(self._progress0)
 
         self._show_image = QCheckBox('Show images', self._control)
         self._show_image.setChecked(True)
-        layout.addWidget(self._show_image, 0, 2)
+        layout.addWidget(self._show_image)
 
-        self._run_button = QPushButton('', self._control)
-        layout.addWidget(self._run_button, 0, 3)
-        self.connect(self._run_button, SIGNAL('clicked()'), self._on_run_analyer)
+        for i, name in enumerate(self._control_buttons):
+            w_button = QPushButton('', self._control)
+            layout.addWidget(w_button)
+            handler = lambda x: lambda : self._on_run_analyer(x)
+            self.connect(w_button, SIGNAL('clicked()'), handler(name))
+            self._control_buttons[name]['widget'] = w_button
 
-        self.connect(self._tab, SIGNAL('currentChanged(int)'), self._on_tab_changed)
-        self._on_tab_changed(0)
+        help_button = QToolButton(self._control)
+        help_button.setIcon(QIcon(':question_mark'))
+        handler = lambda x: lambda : self._on_show_help(x)
+        self.connect(help_button, SIGNAL('clicked()'), handler('control-panel'))
+        layout.addWidget(help_button)
+
+        if not self.TABS is None:
+            self.connect(self._tab, SIGNAL('currentChanged(int)'), self._on_tab_changed)
+            self._on_tab_changed(0)
+        else:
+            for name in self._control_buttons:
+                self._set_control_button_text(name=name)
 
     def _on_tab_changed(self, idx):
         names = ['primary', 'secondary']
         self._tab_name = names[idx]
-        self._run_button.setText(self.RUN_BUTTON_TEXT1 % self._tab_name)
+        for name in self._control_buttons:
+            self._set_control_button_text(name=name)
 
-    def _on_run_analyer(self):
+    def _set_control_button_text(self, name=None, idx=0):
+        if name is None:
+            name = self._current_process
+        w_button = self._control_buttons[name]['widget']
+        try:
+            text = self._control_buttons[name]['labels'][idx] % self._tab_name
+        except:
+            text = self._control_buttons[name]['labels'][idx]
+        w_button.setText(text)
+
+
+    def _toggle_control_buttons(self, name=None):
+        if name is None:
+            name = self._current_process
+        for name2 in self._control_buttons:
+            if name != name2:
+                w_button = self._control_buttons[name2]['widget']
+                w_button.setEnabled(not w_button.isEnabled())
+
+
+    def _on_run_analyer(self, name):
 
         #self._handler = GuiLogHandler(self)
 
@@ -1076,7 +1508,95 @@ class ProcessorMixin(object):
         #log_window.setCurrentFont(QFont('Courier', 12))
         #layout.addWidget(log_window, 0, 0, 1, 2)
 
+
         if not self._is_running:
+
+            cls = self._control_buttons[name]['cls']
+
+            is_valid = True
+
+            if isinstance(self, ClassificationFrame):
+                result_frame = self._get_result_frame(self._tab_name)
+                result_frame.load_classifier(check=False)
+                learner = result_frame._learner
+
+                if name == self.PROCESS_PICKING:
+                    if not result_frame.is_pick_samples():
+                        is_valid = False
+                        QMessageBox.information(self, '', result_frame.msg_pick_samples())
+                    elif result_frame.is_train_classifier():
+                        msg = 'Samples already picked.\n\n'\
+                              'Do you want to pick samples again and overwrite previous results?'
+                        if QMessageBox.question(self, '', msg, QMessageBox.Yes|QMessageBox.No) != QMessageBox.Yes:
+                            is_valid = False
+
+                elif name == self.PROCESS_TRAINING:
+                    if not result_frame.is_train_classifier():
+                        is_valid = False
+                        QMessageBox.information(self, '', result_frame.msg_train_classifier())
+                    elif result_frame.is_apply_classifier():
+                        msg = 'Classifier already trained.\n\n'\
+                              'Do you want to train the classifier again?'
+                        if QMessageBox.question(self, '', msg, QMessageBox.Yes|QMessageBox.No) != QMessageBox.Yes:
+                            is_valid = False
+
+                elif name == self.PROCESS_TESTING and not result_frame.is_apply_classifier():
+                    is_valid = False
+                    QMessageBox.information(self, '', result_frame.msg_apply_classifier())
+
+
+            if is_valid:
+                self._current_process = name
+                qApp._image_dialog = None
+                self.parent().main_window._log_window.clear()
+
+                self._is_running = True
+                self._stage_infos = {}
+
+                self._toggle_tabs(False)
+                # disable all section button of the main widget
+                self.toggle_tabs.emit(self.get_name())
+
+                self._set_control_button_text(idx=1)
+                self._toggle_control_buttons()
+
+                if cls is AnalzyerThread:
+
+                    self._current_settings = self._get_modified_settings(name)
+                    self._analyzer = cls(self, self._current_settings)
+
+                    rendering = self._current_settings.get('General', 'rendering').keys()
+                    rendering += self._current_settings.get('General', 'rendering_class').keys()
+                    if len(rendering) > 0:
+                        self._analyzer.set_renderer(rendering[0])
+                    self._analyzer.image_ready.connect(self._on_update_image)
+
+                elif cls is TrainingThread:
+                    self._current_settings = copy.deepcopy(self._settings)
+
+                    self._analyzer = cls(self, self._current_settings,
+                                         result_frame._learner)
+                    self._analyzer.setTerminationEnabled(True)
+
+                    self._analyzer.conf_result.connect(result_frame.on_conf_result,
+                                                       Qt.QueuedConnection)
+
+                self.connect(self._analyzer, SIGNAL('finished()'),
+                             self._on_thread_finished)
+                self._analyzer.stage_info.connect(self._on_update_stage_info,
+                                                  Qt.QueuedConnection)
+                self._analyzer.analyzer_error.connect(self._on_analyzer_error,
+                                                      Qt.QueuedConnection)
+
+                self._analyzer.start(QThread.IdlePriority)
+
+        else:
+            self.setCursor(Qt.BusyCursor)
+            self._analyzer.set_abort()
+            #self._analyzer.terminate()
+            self._analyzer.wait()
+            self.setCursor(Qt.ArrowCursor)
+
 
 #            if (not self._image_dialog is None and
 #                self._show_image.isChecked()):
@@ -1084,16 +1604,7 @@ class ProcessorMixin(object):
 #                self._image_dialog.show()
 #                self._image_dialog.raise_()
 
-            self._image_dialog = None
-            self.parent().main_window._log_window.clear()
 
-            self._current_settings = self._get_modified_settings()
-            self._analyzer = AnalzyerThread(self, self._current_settings)
-
-            self._is_running = True
-            self._stage_infos = {}
-
-            self._toggle_tabs(False)
 
         #layout.addWidget(QLabel('Rendering', self._analyzer_dialog), 1, 0)
         #layout.addWidget(combo, 1, 1)
@@ -1112,29 +1623,7 @@ class ProcessorMixin(object):
 #        layout.addWidget(self._analyzer_progress1, 4, 0, 1, 2)
 #        layout.addWidget(self._analyzer_label1, 5, 0, 1, 2)
 
-            self._run_button.setText(self.RUN_BUTTON_TEXT2 % self._tab_name)
 
-            self._analyzer.analyzer_error.connect(self._on_analyzer_error)
-
-            self.connect(self._analyzer, SIGNAL('finished()'),
-                         self._on_thread_finished)
-
-            rendering = self._current_settings.get('Output', 'rendering').keys()
-            rendering += self._current_settings.get('Output', 'rendering_class').keys()
-            if len(rendering) > 0:
-                self._analyzer.set_renderer(rendering[0])
-
-            self._analyzer.stage_info.connect(self._on_update_stage_info)
-            self._analyzer.image_ready.connect(self._on_update_image)
-
-            #self._analyzer.setTerminationEnabled(True)
-            self._analyzer.start(QThread.IdlePriority)
-
-        else:
-            self.setCursor(Qt.BusyCursor)
-            self._analyzer.set_abort()
-            self._analyzer.wait()
-            self.setCursor(Qt.ArrowCursor)
 
     def _toggle_tabs(self, state):
         if not self.TABS is None:
@@ -1156,20 +1645,29 @@ class ProcessorMixin(object):
         self._is_running = False
         #logger = logging.getLogger()
         #logger.removeHandler(self._handler)
-        self._run_button.setText(self.RUN_BUTTON_TEXT1 % self._tab_name)
+        self._set_control_button_text(idx=0)
+        self._toggle_control_buttons()
         self._toggle_tabs(True)
+        # enable all section button of the main widget
+        self.toggle_tabs.emit(self.get_name())
+        self._current_process = None
 
     def _on_update_stage_info(self, info):
         if self.CONTROL == CONTROL_1:
-            #print info
-            self._stage_infos[info['stage']] = info
-            if len(self._stage_infos) > 1:
-                total = self._stage_infos[1]['max']*self._stage_infos[2]['max']
-                current = (self._stage_infos[1]['progress']-1)*self._stage_infos[2]['max']+self._stage_infos[2]['progress']
-                self._progress0.setRange(1, total)
-                self._progress0.setValue(current)
+            if info['stage'] == 0:
+                self._progress0.setRange(info['min'], info['max'])
+                self._progress0.setValue(info['progress'])
                 #info = self._stage_infos[2]
-                self._progress_label0.setText('Processing %.1f%%' % (current*100.0/total))
+                self._progress_label0.setText('%3.1f%%' % (info['progress']*100.0/info['max']))
+            else:
+                self._stage_infos[info['stage']] = info
+                if len(self._stage_infos) > 1:
+                    total = self._stage_infos[1]['max']*self._stage_infos[2]['max']
+                    current = (self._stage_infos[1]['progress']-1)*self._stage_infos[2]['max']+self._stage_infos[2]['progress']
+                    self._progress0.setRange(1, total)
+                    self._progress0.setValue(current)
+                    #info = self._stage_infos[2]
+                    self._progress_label0.setText('%.1f%%' % (current*100.0/total))
         elif self.CONTROL == CONTROL_2:
             if info['stage'] == 1:
                 if 'progress' in info:
@@ -1197,21 +1695,23 @@ class ProcessorMixin(object):
             if image_rgb.width % 4 != 0:
                 image_rgb = ccore.subImage(image_rgb, ccore.Diff2D(0,0), ccore.Diff2D(image_rgb.width - (image_rgb.width % 4), image_rgb.height))
             qimage = numpy_to_qimage(image_rgb.toArray(copy=False))
-            qimage = qimage.scaled(800, 800, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            if self._image_dialog is None:
-                self._image_dialog = QFrame()
+            #qimage = qimage.scaled(800, 800, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            if qApp._image_dialog is None:
+                qApp._image_dialog = QFrame()
                 #self._image_dialog.setScaledContents(True)
                 #self._image_dialog.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
-                layout = QVBoxLayout(self._image_dialog)
+                layout = QVBoxLayout(qApp._image_dialog)
                 layout.setContentsMargins(5,5,5,5)
 #                self._graphics = QGraphicsScene()
 #                self._graphics_pixmap = self._graphics.addPixmap(QPixmap.fromImage(qimage))
 #                view = QGraphicsView(self._graphics, self._image_dialog)
 #                view.setViewportUpdateMode(QGraphicsView.MinimalViewportUpdate)
-                size = self._image_dialog.size()
-                self._graphics = ImageDisplay(self._image_dialog,
-                                              size.height()/float(size.width()))
+                #size = qimage.size()
+                ratio = qimage.height()/float(qimage.width())
+                self._graphics = ImageDisplay(qApp._image_dialog, ratio)
                 self._graphics.setScaledContents(True)
+                self._graphics.resize(800, 800*ratio)
+                self._graphics.setMinimumSize(QSize(100,100))
                 policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
                 policy.setHeightForWidth(True)
                 self._graphics.setSizePolicy(policy)
@@ -1222,27 +1722,27 @@ class ProcessorMixin(object):
                 #self._image_dialog.setMaximumSize(size)
                 #self.connect(self._image_dialog, SIGNAL('hide()'),
                 #             self._on_close_image_window)
-                rendering = self._current_settings.get('Output', 'rendering').keys()
-                rendering += self._current_settings.get('Output', 'rendering_class').keys()
+                rendering = self._current_settings.get('General', 'rendering').keys()
+                rendering += self._current_settings.get('General', 'rendering_class').keys()
                 if len(rendering) > 1:
-                    self._image_combo = QComboBox(self._image_dialog)
+                    self._image_combo = QComboBox(qApp._image_dialog)
                     layout.addWidget(self._image_combo, 5, 2)
                     self.connect(self._image_combo, SIGNAL('currentIndexChanged(const QString &)'),
                                  self._on_render_changed)
                     for name in sorted(rendering):
                         self._image_combo.addItem(str(name))
                 layout.addStretch()
-                self._image_dialog.setGeometry(50, 50, size.width(), size.height())
+                qApp._image_dialog.setGeometry(50, 50, 800, 800*ratio)
                 #view.fitInView(self._graphics.sceneRect(), Qt.KeepAspectRatio)
 
-                self._image_dialog.show()
+                qApp._image_dialog.show()
             #else:
             #    self._graphics_pixmap.setPixmap(QPixmap.fromImage(qimage))
             self._graphics.setPixmap(QPixmap.fromImage(qimage))
-            self._image_dialog.setWindowTitle(info)
-            self._image_dialog.setToolTip(filename)
-            if not self._image_dialog.isVisible():
-                self._image_dialog.show()
+            qApp._image_dialog.setWindowTitle(info)
+            qApp._image_dialog.setToolTip(filename)
+            if not qApp._image_dialog.isVisible():
+                qApp._image_dialog.show()
 
 
 class InputFrame(QFrame, InputWidgetMixin):
@@ -1251,14 +1751,14 @@ class InputFrame(QFrame, InputWidgetMixin):
     TABS = None
     CONTROL = CONTROL_1
 
+    toggle_tabs = pyqtSignal(str)
+
     def __init__(self, settings, parent):
         QFrame.__init__(self, parent)
         self._tab_lookup = {}
         self._tab_name = None
 
         self._control = QFrame(self)
-        self._control.setSizePolicy(QSizePolicy(QSizePolicy.Expanding,
-                                                QSizePolicy.Minimum))
         layout = QVBoxLayout(self)
 
 #        scroll_area = QScrollArea(self)
@@ -1299,7 +1799,7 @@ class InputFrame(QFrame, InputWidgetMixin):
     def _get_frame(self, name=None):
         if name is None:
             if len(self._tab_lookup) > 0:
-                frame = self._tab_lookup.values()[0][1]
+                frame = self._tab_lookup[self._tab_name][1]
             else:
                 frame = self._frame
         else:
@@ -1324,8 +1824,9 @@ class InputFrame(QFrame, InputWidgetMixin):
         frame = self._get_frame(name=self._tab_name)
         line = QFrame(frame)
         line.setFrameShape(QFrame.HLine)
-        frame.layout().addWidget(line, frame._input_cnt, 0, 1, self.WIDTH+1)
+        frame.layout().addWidget(line, frame._input_cnt, 0, 1, 2)
         frame._input_cnt += 1
+
 
 class ConfigSettings(RawConfigParser):
 
@@ -1334,7 +1835,10 @@ class ConfigSettings(RawConfigParser):
         self._registry = OrderedDict()
         self._current_section = None
         self.naming_schemes = RawConfigParser({}, OrderedDict)
-        self.naming_schemes.read('/Users/miheld/src/cecog_svn/trunk/apps/AnalyzerOne/resources/naming_schemes.conf')
+        filename = 'naming_schemes.conf'
+        if not os.path.isfile(filename):
+            raise IOError("Naming scheme file '%s' not found." % filename)
+        self.naming_schemes.read(filename)
 
     def set_section(self, section):
         if self.has_section(section):
@@ -1396,7 +1900,6 @@ class GeneralFrame(InputFrame):
                        StringTrait('', 1000, label='Output folder',
                                    widget_info=StringTrait.STRING_PATH))
 
-        #self.add_input("namingSchemePath", "Path to naming schemes", "abc...", "string")
         naming_schemes = settings.naming_schemes.sections()
         self.add_input("namingScheme",
                        SelectionTrait(naming_schemes[0], naming_schemes,
@@ -1427,7 +1930,30 @@ class GeneralFrame(InputFrame):
                             StringTrait('98', 5,
                                         label='Image output compresion'))
 
+
         self.add_expanding_spacer()
+
+        self.register_trait('rendering',
+                            DictTrait({}, label='Rendering',
+                                      tooltip='abc...'))
+        self.register_trait('rendering_discwrite',
+                       BooleanTrait(True, label='Write images to disc',
+                                    tooltip='abc...'))
+        self.register_trait('rendering_class',
+                       DictTrait({}, label='Rendering class',
+                                 tooltip='abc...'))
+        self.register_trait('rendering_class_discwrite',
+                       BooleanTrait(True, label='Write images to disc',
+                                    tooltip='abc...'))
+
+
+        self.register_trait('primary_featureExtraction_exportFeatureNames',
+                            ListTrait([], label='Primary channel',
+                                      tooltip='abc...'))
+        self.register_trait('secondary_featureExtraction_exportFeatureNames',
+                            ListTrait([], label='Secondary channel',
+                                      tooltip='abc...'))
+
 
         layout = QHBoxLayout(self._control)
         btn1 = QPushButton('Load settings...', self._control)
@@ -1442,18 +1968,25 @@ class GeneralFrame(InputFrame):
         self.connect(btn2, SIGNAL('clicked()'), self.parent().main_window._on_file_save)
         self.connect(btn3, SIGNAL('clicked()'), self.parent().main_window._on_file_save_as)
 
+        help_button = QToolButton(self._control)
+        help_button.setIcon(QIcon(':question_mark'))
+        handler = lambda x: lambda : self._on_show_help(x)
+        self.connect(help_button, SIGNAL('clicked()'), handler('control-panel'))
+        layout.addWidget(help_button)
 
 
 class ObjectDetectionFrame(InputFrame, ProcessorMixin):
 
     SECTION = 'ObjectDetection'
     TABS = ['PrimaryChannel', 'SecondaryChannel']
-    RUN_BUTTON_TEXT1 = 'Detect %s objects'
-    RUN_BUTTON_TEXT2 = 'Stop %s detection'
 
     def __init__(self, settings, parent):
         InputFrame.__init__(self, settings, parent)
         ProcessorMixin.__init__(self)
+
+        self.register_control_button('detect',
+                                     AnalzyerThread,
+                                     ('Detect %s objects', 'Stop %s detection'))
 
         self.set_tab_name('PrimaryChannel')
 
@@ -1613,7 +2146,7 @@ class ObjectDetectionFrame(InputFrame, ProcessorMixin):
 
         self._init_control()
 
-    def _get_modified_settings(self):
+    def _get_modified_settings(self, name):
         settings = copy.deepcopy(self._settings)
 
         settings.set_section('ObjectDetection')
@@ -1630,14 +2163,17 @@ class ObjectDetectionFrame(InputFrame, ProcessorMixin):
         settings.set2('secondary_simplefeatures_shape', False)
         settings.set_section('Tracking')
         settings.set2('tracking', False)
-        settings.set('Output', 'rendering_class', {})
+        settings.set_section('General')
+        settings.set2('rendering_class', {})
+        settings.set2('rendering_discwrite', True)
+        settings.set2('rendering_class_discwrite', True)
 
         if self._tab.currentIndex() == 0:
             settings.set('ObjectDetection', 'secondary_processChannel', False)
-            settings.set('Output', 'rendering', {'primary_contours': {prim_id: {'raw': ('#FFFFFF', 1.0), 'contours': {'primary': ('#FF0000', 1, False)}}}})
+            settings.set('General', 'rendering', {'primary_contours': {prim_id: {'raw': ('#FFFFFF', 1.0), 'contours': {'primary': ('#FF0000', 1, False)}}}})
         else:
             settings.set('ObjectDetection', 'secondary_processChannel', True)
-            settings.set('Output', 'rendering', {'secondary_contours': {sec_id: {'raw': ('#FFFFFF', 1.0), 'contours': {sec_regions[0]: ('#FF0000', 1, False)}}}})
+            settings.set('General', 'rendering', {'secondary_contours': {sec_id: {'raw': ('#FFFFFF', 1.0), 'contours': {sec_regions[0]: ('#FF0000', 1, False)}}}})
 
         return settings
 
@@ -1646,14 +2182,24 @@ class ClassificationFrame(InputFrame, ProcessorMixin):
 
     SECTION = 'Classification'
     TABS = ['PrimaryChannel', 'SecondaryChannel']
-    RUN_BUTTON_TEXT1 = 'Pick %s samples'
-    RUN_BUTTON_TEXT2 = 'Stop %s picking'
-    RUN2_BUTTON_TEXT1 = 'Train %s classifier'
-    RUN2_BUTTON_TEXT2 = 'Stop %s training'
+    PROCESS_PICKING = 'PROCESS_PICKING'
+    PROCESS_TRAINING = 'PROCESS_TRAINING'
+    PROCESS_TESTING = 'PROCESS_TESTING'
 
     def __init__(self, settings, parent):
         InputFrame.__init__(self, settings, parent)
         ProcessorMixin.__init__(self)
+        self._result_frames = {}
+
+        self.register_control_button(self.PROCESS_PICKING,
+                                     AnalzyerThread,
+                                     ('Pick %s samples', 'Stop %s picking'))
+        self.register_control_button(self.PROCESS_TRAINING,
+                                     TrainingThread,
+                                     ('Train classifier', 'Stop training'))
+        self.register_control_button(self.PROCESS_TESTING,
+                                     AnalzyerThread,
+                                     ('Test classifier', 'Stop testing'))
 
         self.set_tab_name('PrimaryChannel')
 
@@ -1699,7 +2245,11 @@ class ClassificationFrame(InputFrame, ProcessorMixin):
                                            REGION_NAMES_PRIMARY,
                                            label='Region name'))
 
-        self.add_expanding_spacer()
+        self.add_line()
+
+        self._add_result_frame('primary')
+        #self.add_expanding_spacer()
+
 
         self.set_tab_name('SecondaryChannel')
 
@@ -1748,87 +2298,115 @@ class ClassificationFrame(InputFrame, ProcessorMixin):
         self.register_trait('collectsamples', BooleanTrait(False))
         self.register_trait('collectsamples_prefix', StringTrait('',100))
 
-        self.add_expanding_spacer()
+        self.add_line()
+
+        self._add_result_frame('secondary')
+        #self.add_expanding_spacer()
 
         self._init_control()
 
-    def _get_modified_settings(self):
+    def _get_modified_settings(self, name):
         settings = copy.deepcopy(self._settings)
-
+        settings.set('General', 'positions', '')
         settings.set_section('ObjectDetection')
         prim_id = settings.get2('primary_channelid')
         sec_id = settings.get2('secondary_channelid')
         sec_regions = settings.get2('secondary_regions')
         settings.set_section('Classification')
+        settings.set2('collectsamples', False)
         settings.set2('primary_classification', False)
-        settings.set2('secondary_classification', False)
-        settings.set2('collectsamples', True)
         settings.set2('secondary_classification', False)
         settings.set_section('Tracking')
         settings.set2('tracking', False)
-        settings.set('Output', 'rendering_class', {})
+        settings.set('General', 'rendering', {})
+        settings.set('General', 'rendering_class', {})
 
         if self._tab.currentIndex() == 0:
             settings.set_section('Classification')
-            settings.set2('primary_featureExtraction', True)
-            settings.set2('secondary_featureExtraction', False)
+            settings.set2('secondary_simplefeatures_texture', False)
+            settings.set2('secondary_simplefeatures_shape', False)
             settings.set2('collectsamples_prefix', 'primary')
             settings.set('ObjectDetection', 'secondary_processChannel', False)
-            settings.set('Output', 'rendering', {'primary_contours': {prim_id: {'raw': ('#FFFFFF', 1.0), 'contours': {'primary': ('#FF0000', 1, False)}}}})
+
+            if name == self.PROCESS_TESTING:
+                settings.set2('primary_classification', True)
+                settings.set('General', 'rendering_class', {'primary_classification': {prim_id: {'raw': ('#FFFFFF', 1.0),
+                                                                                                'contours': {'primary': ('class_label', 1, False)}}}})
+            else:
+                settings.set2('collectsamples', True)
+
         else:
             settings.set_section('Classification')
-            settings.set2('primary_featureExtraction', False)
-            settings.set2('secondary_featureExtraction', True)
+            settings.set2('primary_simplefeatures_texture', False)
+            settings.set2('primary_simplefeatures_shape', False)
             settings.set2('collectsamples_prefix', 'secondary')
             settings.set('ObjectDetection', 'secondary_processChannel', True)
-            settings.set('Output', 'rendering', {'secondary_contours': {sec_id: {'raw': ('#FFFFFF', 1.0), 'contours': {sec_regions[0]: ('#FF0000', 1, False)}}}})
+            sec_region = settings.get2('secondary_classification_regionname')
+            if name == self.PROCESS_TESTING:
+                settings.set2('secondary_classification', True)
+                settings.set('General', 'rendering_class', {'secondary_classification': {sec_id: {'raw': ('#FFFFFF', 1.0),
+                                                                                                 'contours': {sec_region: ('class_label', 1, False)}}}})
+            else:
+                settings.set2('collectsamples', True)
 
         return settings
 
+    def _add_result_frame(self, name):
+        frame = self._get_frame()
+        result_frame = ClassifierResultFrame(frame, name, self._settings)
+        #self._result_frame.setSizePolicy(QSizePolicy(QSizePolicy.Expanding|QSizePolicy.Maximum,
+        #                                             QSizePolicy.Expanding|QSizePolicy.Maximum))
+        self._result_frames[name] = result_frame
+        frame.layout().addWidget(result_frame, frame._input_cnt, 0, 1, 2)
+        frame._input_cnt += 1
 
-class TrackingFrame(InputFrame):
+    def _get_result_frame(self, name):
+        return self._result_frames[name]
+
+
+class TrackingFrame(InputFrame, ProcessorMixin):
 
     SECTION = 'Tracking'
 
     def __init__(self, settings, parent):
-        super(TrackingFrame, self).__init__(settings, parent)
+        InputFrame.__init__(self, settings, parent)
+        ProcessorMixin.__init__(self)
+
+        self.register_control_button('track',
+                                     AnalzyerThread,
+                                     ('Test tracking', 'Stop tracking'))
 
         self.add_group('tracking',
-                       BooleanTrait(False, label='Apply tracking',
-                                    tooltip='abc...'),
+                       BooleanTrait(False, label='Apply tracking'),
                        [('tracking_maxObjectDistance',
-                        IntTrait(0, 0, 4000, label='Max object x-y distance',
-                                 tooltip='abc...')),
+                        IntTrait(0, 0, 4000, label='Max object x-y distance')),
                         ('tracking_maxTrackingGap',
-                         IntTrait(0, 0, 4000, label='Max timepoint gap',
-                                  tooltip='abc...')),
+                         IntTrait(0, 0, 4000, label='Max timepoint gap')),
                         ('tracking_maxSplitObjects',
-                         IntTrait(0, 0, 4000, label='Max split events',
-                                  tooltip='abc...')),
+                         IntTrait(0, 0, 4000, label='Max split events')),
                         ], layout='flow')
 
 
         self.add_line()
 
         self.add_input('tracking_labelTransitions',
-                        StringTrait('', 200, label='Class transition motif(s)',
-                                    tooltip='abc...'))
+                        StringTrait('', 200, label='Class transition motif(s)'))
 
         self.add_group('tracking_synchronize_trajectories',
                        BooleanTrait(True, label='Synchronize trajectories'),
                        [
                         ('tracking_backwardRange',
-                         IntTrait(0, 0, 4000, label='Timepoints pre-transition',
-                                  tooltip='abc...'), (0,0,1,1)),
+                         IntTrait(0, 0, 4000, label='Timepoints pre-transition'),
+                         (0,0,1,1)),
                         ('tracking_forwardRange',
-                         IntTrait(0, 0, 4000, label='Timepoints post-transition',
-                                  tooltip='abc...'), (0,1,1,1)),
+                         IntTrait(0, 0, 4000, label='Timepoints post-transition'),
+                         (0,1,1,1)),
                         ('tracking_backwardLabels',
-                         StringTrait('', 200, label='Class filter pre-transition',
-                                     tooltip='abc...'), (1,0,1,1)),
+                         StringTrait('', 200, label='Class filter pre-transition'),
+                         (1,0,1,1)),
                         ('tracking_forwardLabels',
-                         StringTrait('', 200, label='Class filter post-transition',
-                                     tooltip='abc...'), (1,1,1,1)),
+                         StringTrait('', 200, label='Class filter post-transition'),
+                         (1,1,1,1)),
 #                        ('tracking_backwardCheck',
 #                         IntTrait(0, 0, 4000, label='Backward check',
 #                                  tooltip='abc...'), (1,0,1,1)),
@@ -1838,11 +2416,9 @@ class TrackingFrame(InputFrame):
                         ])
 
         self.register_trait('tracking_forwardRange_min',
-                            BooleanTrait(False, label='Min.',
-                                         tooltip='abc...'))
+                            BooleanTrait(False, label='Min.'))
         self.register_trait('tracking_backwardRange_min',
-                            BooleanTrait(False, label='Min.',
-                                         tooltip='abc...'))
+                            BooleanTrait(False, label='Min.'))
 
 
 #        self.add_group('tracking_event_tracjectory',
@@ -1860,13 +2436,20 @@ class TrackingFrame(InputFrame):
         self.add_line()
 
         self.add_group('tracking_exportTrackFeatures',
-                       BooleanTrait(False, label='Export tracks',
-                                    tooltip='abc...'),
+                       BooleanTrait(False, label='Export tracks'),
                        [('tracking_compressionTrackFeatures',
                          SelectionTrait(COMPRESSION_FORMATS[0], COMPRESSION_FORMATS,
-                                        label='Compression',
-                                        tooltip='abc...'))
-                       ])
+                                        label='Compression'))
+                       ], layout='flow')
+
+
+        self.add_group('tracking_visualization',
+                       BooleanTrait(False, label='Visualization'),
+                       [('tracking_visualize_track_length',
+                         IntTrait(5, -1, 10000,
+                                  label='Track length'))
+                       ], layout='flow')
+
 #        self.add_group('tracking_exportFlatFeatures',
 #                       BooleanTrait(False, label='Export flat',
 #                                    tooltip='abc...'),
@@ -1884,6 +2467,62 @@ class TrackingFrame(InputFrame):
         self.register_trait('tracking_maxOutDegree',
                        IntTrait(0, 0, 4000, label='Max out-degree',
                                 tooltip='abc...'))
+
+        self._init_control()
+
+    def _get_modified_settings(self, name):
+        settings = copy.deepcopy(self._settings)
+
+        settings.set_section('ObjectDetection')
+        prim_id = settings.get2('primary_channelid')
+        sec_id = settings.get2('secondary_channelid')
+        sec_regions = settings.get2('secondary_regions')
+        settings.set2('secondary_processChannel', False)
+        settings.set_section('Classification')
+        settings.set2('collectsamples', False)
+        settings.set2('primary_classification', False)
+        settings.set2('secondary_classification', False)
+        settings.set_section('Tracking')
+        settings.set2('tracking', True)
+        settings.set2('tracking_visualization', True)
+        settings.set_section('General')
+        settings.set2('rendering_class', {})
+        settings.set2('rendering', {})
+        settings.set2('rendering_discwrite', True)
+        settings.set2('rendering_class_discwrite', True)
+        settings.set_section('Classification')
+#        if settings.get2('primary_classification'):
+#            settings.set2('secondary_simplefeatures_texture', False)
+#            settings.set2('secondary_simplefeatures_shape', False)
+#            settings.set('General', 'rendering_class', {'primary_tracking': {prim_id: {'raw': ('#FFFFFF', 1.0),
+#                                                                                      'contours': {'primary': ('class_label', 1, False)}}}})
+#        elif settings.get2('secondary_classification') and settings.get('ObjectDetection', 'secondary_processChannel'):
+#            settings.set2('primary_simplefeatures_texture', False)
+#            settings.set2('primary_simplefeatures_shape', False)
+#            settings.set('General', 'rendering_class', {'primary_tracking2': {prim_id: {'raw': ('#FFFFFF', 1.0)},
+#                                                                             sec_id:  {'contours': {sec_regions[0]: ('class_label', 1, False)}}}})
+#        else:
+        settings.set2('primary_simplefeatures_texture', False)
+        settings.set2('primary_simplefeatures_shape', False)
+        settings.set2('secondary_simplefeatures_texture', False)
+        settings.set2('secondary_simplefeatures_shape', False)
+        settings.set('General', 'rendering', {'primary_tracking': {prim_id: {'raw': ('#FFFFFF', 1.0),
+                                                                            'contours': {'primary': ('#FF0000', 1, False)}}}})
+        return settings
+
+class ErrorCorrectionFrame(InputFrame):
+
+    SECTION = 'ErrorCorrection'
+
+    def __init__(self, settings, parent):
+        super(ErrorCorrectionFrame, self).__init__(settings, parent)
+
+        self.add_input('path_to_R',
+                       StringTrait('', 1000, label='Path to R binary',
+                                   widget_info=StringTrait.STRING_PATH))
+
+        self.add_input('tracking_labelTransitions',
+                        StringTrait('', 200, label='Class transition motif(s)'))
 
 class OutputFrame(InputFrame):
 
@@ -1977,12 +2616,20 @@ class FarmingFrame(InputFrame):
 #
 
 if __name__ == "__main__":
+    import time
 
     app = QApplication(sys.argv)
+
+    splash = QSplashScreen(QPixmap(':cecog_splash'))
+    splash.show()
+    splash.raise_()
+    time.sleep(1)
+    app.processEvents()
     #app.setStyleSheet(STYLESHEET_CARBON)
     app.setWindowIcon(QIcon(':cecog_analyzer_icon'))
     main = AnalyzerMainWindow()
     main.raise_()
+    #main.test_r_import()
 
     #filename = '/Users/miheld/src/mito_svn/trunk/mito/analyzer_mitocheck_settings.conf'
     #filename = '/Users/miheld/src/mito_svn/trunk/mito/_analyzer_test_settings.conf'
@@ -1990,5 +2637,6 @@ if __name__ == "__main__":
     if os.path.isfile(filename):
         main.read_settings(filename)
     #main._on_run_analyer()
+    splash.finish(main)
 
     sys.exit(app.exec_())

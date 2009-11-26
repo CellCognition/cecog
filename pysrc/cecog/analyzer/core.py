@@ -326,16 +326,21 @@ class PositionAnalyzer(object):
 #            elif self.oSettings.get2('tracking_event_no_constraint'):
 #                clsCellTracker = PlotCellTracker
 
-            oCellTracker = clsCellTracker(oTimeHolder=oTimeHolder,
+            self.oCellTracker = clsCellTracker(oTimeHolder=oTimeHolder,
                                           oMetaData=self.oMetaData,
                                           P=self.P,
                                           origP=self.origP,
                                           strPathOut=strPathOutPositionTracking,
                                           **tracker_options)
+
+            primary_channel_id = self.channel_mapping[self.PRIMARY_CHANNEL]
+            self.oCellTracker.initTrackingAtTimepoint(primary_channel_id, 'primary')
+
         else:
-            oCellTracker = None
+            self.oCellTracker = None
 
         oCellAnalyzer = CellAnalyzer(oTimeHolder=oTimeHolder,
+                                     oCellTracker=self.oCellTracker,
                                      P = self.P,
                                      bCreateImages = True,#self.oSettings.bCreateImages,
                                      iBinningFactor = self.oSettings.get('General', 'binningFactor'),
@@ -346,29 +351,30 @@ class PositionAnalyzer(object):
             #if self.oSettings.get('Classification', self._resolve_name(channel, 'featureextraction')):
             region_features = {}
             for region in self.oSettings.get('ObjectDetection', self._resolve_name(channel, 'regions')):
-                region_features[region] = self.oSettings.get('Output', self._resolve_name(channel, 'featureextraction_exportfeaturenames'))
+                region_features[region] = self.oSettings.get('General', self._resolve_name(channel, 'featureextraction_exportfeaturenames'))
             self.export_features[channel_id] = region_features
 
 
         iNumberImages = self._analyzePosition(oCellAnalyzer)
 
+
         self.oSettings.set_section('Tracking')
-        if self.oSettings.get2('tracking') and iNumberImages > 0:
+        if self.oSettings.get2('tracking_synchronize_trajectories') and iNumberImages > 0:
 
             stage_info = {'stage': 2,
                           'text': 'Tracking',
                           'min': 1,
                           'max': 3,
                           }
-            if not self._qthread is None:
-                if self._qthread.get_abort():
-                    return 0
-            stage_info.update({'progress' : 1,
-                               'meta': 'Track objects...',})
-            self._qthread.set_stage_info(stage_info)
-
-            primary_channel_id = self.channel_mapping[self.PRIMARY_CHANNEL]
-            oCellTracker.trackObjects(primary_channel_id, 'primary')
+#            if not self._qthread is None:
+#                if self._qthread.get_abort():
+#                    return 0
+#            stage_info.update({'progress' : 1,
+#                               'meta': 'Track objects...',})
+#            self._qthread.set_stage_info(stage_info)
+#
+#            primary_channel_id = self.channel_mapping[self.PRIMARY_CHANNEL]
+#            oCellTracker.trackObjects(primary_channel_id, 'primary')
 
             # analyze trajectories
             #oCellTracker.exportGraph(os.path.join(self.strPathOutPosition, "graph.dot"))
@@ -377,23 +383,23 @@ class PositionAnalyzer(object):
             if not self._qthread is None:
                 if self._qthread.get_abort():
                     return 0
-            stage_info.update({'progress' : 2,
+            stage_info.update({'progress' : 1,
                                'meta': 'Find events...',})
             self._qthread.set_stage_info(stage_info)
 
-            oCellTracker.initVisitor()
+            self.oCellTracker.initVisitor()
             self._oLogger.debug("--- visitor ok")
 
 
             if not self._qthread is None:
                 if self._qthread.get_abort():
                     return 0
-            stage_info.update({'progress' : 3,
+            stage_info.update({'progress' : 2,
                                'meta': 'Analyze/export events...',})
             self._qthread.set_stage_info(stage_info)
 
-            oCellTracker.analyze(self.export_features,
-                                 channelId=primary_channel_id)
+            self.oCellTracker.analyze(self.export_features,
+                                      channelId=primary_channel_id)
             self._oLogger.debug("--- visitor analysis ok")
 
 #            if self.oSettings.bDoObjectCutting:
@@ -513,7 +519,7 @@ class PositionAnalyzer(object):
         #self._oLogger.info("* position %d ok, %s" % (self.P, oStopWatchPos.stopInterval().format(msec=True)))
 
         if iNumberImages > 0:
-            oInterval = oStopWatchPos.stopInterval() / iNumberImages
+            oInterval = oStopWatchPos.stop_interval() / iNumberImages
             self._oLogger.info("* %d image sets analyzed, %s / image set" %
                                (iNumberImages, oInterval.format(msec=True)))
 
@@ -579,6 +585,8 @@ class PositionAnalyzer(object):
                                    'meta': 'Frame %d' % iT,
                                    })
                 self._qthread.set_stage_info(stage_info)
+                # FIXME: give the GUI a moment to recover
+                time.sleep(.2)
 
             oCellAnalyzer.initTimepoint(iT)
             # loop over the channels
@@ -603,11 +611,11 @@ class PositionAnalyzer(object):
                 if self.oSettings.get('Classification',
                                       self._resolve_name(channel_section,
                                                          'simplefeatures_shape')):
-                    lstFeatureCategories.append(FEATURE_CATEGORIES_SHAPE)
+                    lstFeatureCategories += FEATURE_CATEGORIES_SHAPE
                 if self.oSettings.get('Classification',
                                       self._resolve_name(channel_section,
                                                          'simplefeatures_shape')):
-                    lstFeatureCategories.append(FEATURE_CATEGORIES_TEXTURE)
+                    lstFeatureCategories += FEATURE_CATEGORIES_TEXTURE
                 dctFeatureParameters = {}
                 for name in lstFeatureCategories[:]:
                     if 'haralick' in name:
@@ -724,15 +732,28 @@ class PositionAnalyzer(object):
                     self.oObjectLearner.setFeatureNames(oCellAnalyzer.getChannel(channel_id).lstFeatureNames)
 
                 else:
+
+                    images = []
+                    if self.oSettings.get('Tracking', 'tracking'):
+                        self.oCellTracker.trackAtTimepoint(iT)
+
+                        if self.oSettings.get('Tracking', 'tracking_visualization'):
+                            size = oCellAnalyzer.getImageSize(self.channel_mapping[self.PRIMARY_CHANNEL])
+                            img_conn, img_split = self.oCellTracker.visualizeTracks(iT, size, self.oSettings.get('Tracking', 'tracking_visualize_track_length'))
+                            images += [(img_conn, '#FFFF00', 1.0),
+                                       (img_split, '#00FF00', 1.0),
+                                       ]
+
                     for channel_id, infos in self.classifier_infos.iteritems():
                         oCellAnalyzer.classifyObjects(infos['predictor'])
 
                         if True: #self.oSettings.bCreateImages:
-                            self.oSettings.set_section('Output')
+                            self.oSettings.set_section('General')
                             for strType, dctRenderInfo in self.oSettings.get2('rendering_class').iteritems():
                                 strPathOutImages = os.path.join(self.strPathOutPositionImages, strType)
                                 img_rgb, filename = oCellAnalyzer.render(strPathOutImages, dctRenderInfo=dctRenderInfo,
-                                                                         writeToDisc=self.oSettings.get2('rendering_class_discwrite'))
+                                                                         writeToDisc=self.oSettings.get2('rendering_class_discwrite'),
+                                                                         images=images)
                                 #print strType, self._qthread.get_renderer(), self.oSettings.get('Rendering', 'rendering_class')
 
                                 if not self._qthread is None and not img_rgb is None:
@@ -742,11 +763,12 @@ class PositionAnalyzer(object):
                                                                 filename)
 
                     if True: #self.oSettings.bCreateImages:
-                        self.oSettings.set_section('Output')
+                        self.oSettings.set_section('General')
                         for strType, dctRenderInfo in self.oSettings.get2('rendering').iteritems():
                             strPathOutImages = os.path.join(self.strPathOutPositionImages, strType)
                             img_rgb, filename = oCellAnalyzer.render(strPathOutImages, dctRenderInfo=dctRenderInfo,
-                                                                     writeToDisc=self.oSettings.get2('rendering_discwrite'))
+                                                                     writeToDisc=self.oSettings.get2('rendering_discwrite'),
+                                                                     images=images)
                             if not self._qthread is None and not img_rgb is None:
                                 #print strType, self._qthread.get_renderer(), self.oSettings.get('Rendering', 'rendering')
                                 if self._qthread.get_renderer() == strType:
@@ -858,6 +880,10 @@ class AnalyzerCore(object):
                                                'strColor'     : row[2]}
                 classifier_infos['dctLabels'] = class_definition
             self.oObjectLearner = CommonObjectLearner(dctCollectSamples=classifier_infos)
+
+            # FIXME: if the resulting .ARFF file is trained directly from
+            # Python SVM (instead of easy.py) NO leading ID needs to be inserted
+            self.oObjectLearner.hasZeroInsert = False
 
             strAnnotationsPath = self.oObjectLearner.dctEnvPaths['annotations']
             for strFilename in os.listdir(strAnnotationsPath):
@@ -1156,7 +1182,7 @@ class AnalyzerCore(object):
 
                         iNumberImageSets = sum(lstJobOutput)
                         if iNumberImageSets > 0:
-                            strTimePerImageSet = (self.oStopWatch.stopInterval() / float(iNumberImageSets)).format(msec=True)
+                            strTimePerImageSet = (self.oStopWatch.stop_interval() / float(iNumberImageSets)).format(msec=True)
                         else:
                             strTimePerImageSet = 'NaN'
 
@@ -1164,9 +1190,9 @@ class AnalyzerCore(object):
                         strMsg +=  "Job '%s' finished successfully via PyFarm!\n\n" % self.oJobGuid
                         strMsg += "Settings: '%s'\n" % self.oSettings.strFilename
                         strMsg += "Analyzed: %d image sets\n" % iNumberImageSets
-                        strMsg += "Start:    %s\n" % time.ctime(self.oStopWatch.getStartTime())
-                        strMsg += "Stop:     %s\n" % time.ctime(self.oStopWatch.getStopTime())
-                        strMsg += "Duration: %s\n" % self.oStopWatch.stopInterval()
+                        strMsg += "Start:    %s\n" % time.ctime(self.oStopWatch.get_start_time())
+                        strMsg += "Stop:     %s\n" % time.ctime(self.oStopWatch.get_stopt_time())
+                        strMsg += "Duration: %s\n" % self.oStopWatch.stop_interval()
     #                    strMsg += "Average:  %s / image set\n" % strTimePerImageSet
                         strMsg += "\n*** THIS IS AN AUTOMATIC EMAIL. DO NOT REPLY. ***\n"
                     else:

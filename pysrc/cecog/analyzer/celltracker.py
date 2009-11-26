@@ -351,6 +351,25 @@ class CellTracker(OptionManager):
                     if iT > iStart:
                         self._connectTimePoints(iT)
 
+    def initTrackingAtTimepoint(self, strChannelId, strRegionName):
+        self._channelId = strChannelId
+        self._regionName = strRegionName
+        self._oGraph = Graph()
+        self._dctTimePoints = OrderedDict()
+
+    def trackAtTimepoint(self, iT):
+        oChannel = self._dctTimeChannels[iT][self._channelId]
+        self.lstFeatureNames = oChannel.lstFeatureNames
+        oObjectHolder = oChannel._dctRegions[self._regionName]
+        for iObjId, oImageObject in oObjectHolder.iteritems():
+            strNodeId = self.getNodeIdFromComponents(iT, iObjId)
+            self._oGraph.add_node(strNodeId, oImageObject)
+            if not iT in self._dctTimePoints:
+                self._dctTimePoints[iT] = []
+            self._dctTimePoints[iT].append(iObjId)
+        if len(self._dctTimePoints) > 1:
+            self._connectTimePoints(iT)
+
     def _getClosestPreviousT(self, iT):
         iResultT = None
         iTries = 0
@@ -364,8 +383,6 @@ class CellTracker(OptionManager):
         return iResultT
 
     def _connectTimePoints(self, iT):
-        dctMerges = {}
-        dctNodeP = {}
 
         fMaxObjectDistance = self.getOption('fMaxObjectDistance')
         fMaxObjectDistanceSquared = float(fMaxObjectDistance * fMaxObjectDistance)
@@ -462,6 +479,48 @@ class CellTracker(OptionManager):
 
         return bReturnSuccess
 
+    def visualizeTracks(self, iT, size, n=5, thick=True):
+        img_conn = ccore.Image(*size)
+        img_split = ccore.Image(*size)
+        min_T = self.getValidTimeLimits()[0]
+        if n < 0 or iT-n+1 < min_T:
+            current = min_T
+            n = iT-current+1
+        else:
+            current = iT-n+1
+
+        for i in range(n):
+            col = int(255.*(i+1)/n)
+            if col > 255:
+                col = 255
+            if current in self._dctTimePoints:
+                previous = self._getClosestPreviousT(current)
+                if not previous is None:
+                    for objIdP in self._dctTimePoints[previous]:
+                        nodeIdP = self.getNodeIdFromComponents(previous, objIdP)
+                        objP = self._oGraph.node_data(nodeIdP)
+
+                        if self._oGraph.out_degree(nodeIdP) > 1:
+                            img = img_split
+                        else:
+                            img = img_conn
+
+                        for edgeId in self._oGraph.out_arcs(nodeIdP):
+                            nodeIdC = self._oGraph.tail(edgeId)
+                            objC = self._oGraph.node_data(nodeIdC)
+
+                            x1 = objP.oCenterAbs[0]
+                            y1 = objP.oCenterAbs[1]
+                            x2 = objC.oCenterAbs[0]
+                            y2 = objC.oCenterAbs[1]
+                            if (x1 == x2 and y1 == y2):
+                                x1 += 1
+                            ccore.drawLine(ccore.Diff2D(x1, y1),
+                                           ccore.Diff2D(x2, y2),
+                                           img, col,
+                                           thick=thick)
+            current += 1
+        return img_conn, img_split
 
     @staticmethod
     def getNodeIdFromComponents(iT, iObjectId):

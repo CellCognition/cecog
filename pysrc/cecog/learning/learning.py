@@ -32,7 +32,9 @@ import sys, \
 # extension module imports:
 #
 
-from numpy import asarray, array, zeros
+import numpy
+import svm
+
 
 from pdk.options import Option
 from pdk.optionmanagers import OptionManager
@@ -40,7 +42,7 @@ from pdk.optionmanagers import OptionManager
 #from pdk.containers.tableio import exportTable
 from pdk.ordereddict import OrderedDict
 from pdk.fileutils import safe_mkdirs
-from pdk.iterator import unique
+from pdk.iterator import unique, flatten
 from pdk.map import dict_append_list
 from pdk.attributemanagers import (get_attribute_values,
                                    set_attribute_values)
@@ -75,8 +77,8 @@ class BaseLearner(LoggerMixin, OptionManager):
 
     OPTIONS = {"strEnvPath" :          Option(".", callback="_onEnvPath"),
                "lstClassDefinitions" : Option([], callback="_onDefineClasses"),
-               "strArffFileName" :     Option("all_features.arff"),
-               "strSparseFileName" :   Option("all_features.sparse"),
+               "strArffFileName" :     Option("features.arff"),
+               "strSparseFileName" :   Option("features.sparse"),
                "filename_sampleids" :  Option("sample_ids.tsv"),
                "filename_pickle" :     Option("learner.pkl"),
                #"clsClassifier":        Option(None),
@@ -128,12 +130,32 @@ class BaseLearner(LoggerMixin, OptionManager):
     def lstHexColors(self):
         return [self.dctHexColors[x] for x in self.lstClassNames]
 
+    @property
+    def names2samples(self):
+        return dict([(k,len(v)) for k,v in self.dctFeatureData.iteritems()])
+
+
+    @property
+    def l2nl(self):
+        '''
+        convert a label into a new label
+        (new labels are continuous from 0..number of classes
+        '''
+        return dict([(l,i) for i,l in enumerate(self.lstClassLabels)])
+
+    @property
+    def nl2l(self):
+        '''
+        convert a new label into the original label
+        '''
+        return dict([(i,l) for i,l in enumerate(self.lstClassLabels)])
+
+
     #def getFeaturesByName(self, featureName):
 
 
     def initEnv(self):
         strEnvPath = self.getOption('strEnvPath')
-        self.isDir(strEnvPath, bCreate=True)
         for strName, strPath in self.dctEnvPaths.iteritems():
             safe_mkdirs(strPath)
 
@@ -165,6 +187,24 @@ class BaseLearner(LoggerMixin, OptionManager):
 
     def getPath(self, strName):
         return self.dctEnvPaths[strName]
+
+    def exportRanges(self, strFilePath=None, strFileName=None):
+        if strFileName is None:
+            strFileName = os.path.splitext(self.getOption('strArffFileName'))[0]
+            strFileName += '.range'
+        if strFilePath is None:
+            strFilePath = self.dctEnvPaths['data']
+
+        all_features = numpy.asarray(flatten(self.dctFeatureData.values()))
+        features_min = numpy.min(all_features, 0)
+        features_max = numpy.max(all_features, 0)
+
+        f = file(os.path.join(strFilePath, strFileName), 'w')
+        f.write('x\n')
+        f.write('-1 1\n')
+        for idx, (m1, m2) in enumerate(zip(features_min, features_max)):
+            f.write('%d %f %f\n' % (idx+1, m1, m2))
+        f.close()
 
     def importFromArff(self, strFilePath=None, strFileName=None):
         if strFileName is None:
@@ -198,6 +238,31 @@ class BaseLearner(LoggerMixin, OptionManager):
                     self.dctSampleNames[class_name] = []
             self.dctSampleNames[class_name].append(file_name)
         f.close()
+
+    def check(self):
+        filename = os.path.splitext(self.getOption('strArffFileName'))[0]
+        result = {'path_env' : self.getOption('strEnvPath'),
+                  'path_data' : self.dctEnvPaths['data'],
+                  'path_samples' : self.dctEnvPaths['samples'],
+                  'path_annotations' : self.dctEnvPaths['annotations'],
+                  'model' : os.path.join(self.dctEnvPaths['data'], '%s.model' % filename),
+                  'range' : os.path.join(self.dctEnvPaths['data'], '%s.range' % filename),
+                  'conf' : os.path.join(self.dctEnvPaths['data'], '%s.confusion.txt' % filename),
+                  'arff' : os.path.join(self.dctEnvPaths['data'], self.getOption('strArffFileName')),
+                  'definition' : os.path.join(self.getOption('strEnvPath'), 'class_definition.tsv'),
+                  }
+        result.update({'has_path_data' : os.path.isdir(self.dctEnvPaths['data']),
+                       'has_path_samples' : os.path.isdir(self.dctEnvPaths['samples']),
+                       'has_path_annotations' : os.path.isdir(self.dctEnvPaths['annotations']),
+                       'has_model' : os.path.isfile(os.path.join(self.dctEnvPaths['data'], '%s.model' % filename)),
+                       'has_range' : os.path.isfile(os.path.join(self.dctEnvPaths['data'], '%s.range' % filename)),
+                       'has_conf' : os.path.isfile(os.path.join(self.dctEnvPaths['data'], '%s.confusion.txt' % filename)),
+                       'has_arff' : os.path.isfile(os.path.join(self.dctEnvPaths['data'], self.getOption('strArffFileName'))),
+                       'has_definition' : os.path.isfile(os.path.join(self.getOption('strEnvPath'), 'class_definition.tsv')),
+                       }
+                      )
+        return result
+
 
     def exportToArff(self, strFilePath=None, strFileName=None):
         if strFileName is None:
@@ -423,7 +488,7 @@ class ClassPredictor(BaseLearner):
 
     def loadClassifier(self):
         if self.getOption('strModelPrefix') is None:
-            strModelPrefix = self.getOption('strSparseFileName')
+            strModelPrefix = os.path.splitext(self.getOption('strSparseFileName'))[0]
         else:
             strModelPrefix = self.getOption('strModelPrefix')
 
@@ -438,6 +503,164 @@ class ClassPredictor(BaseLearner):
         lstRequiredFeatureData = [aFeatureData[dctNameLookup[x]] for x in self.lstFeatureNames]
         #lstRequiredFeatureData = aFeatureData
         return self.oClassifier(lstRequiredFeatureData)
+
+    def getData(self, normalize=True):
+        labels = []
+        samples = []
+        for name, data in self.dctFeatureData.iteritems():
+            label = self.dctClassLabels[name]
+            labels += [label] * len(data)
+            samples += data.tolist()
+        labels = numpy.asarray(labels)
+        samples = numpy.asarray(samples)
+        if normalize:
+            lo = numpy.amin(samples, 0)
+            hi = numpy.amax(samples, 0)
+            # scale between -1 and +1
+            samples = 2.0 * (samples - lo) / (hi - lo) - 1.0
+        return labels, samples
+
+    def train(self, c, g, probability=1, compensation=True,
+              path=None, filename=None):
+        if filename is None:
+            filename = os.path.splitext(self.getOption('strArffFileName'))[0]
+            filename += '.model'
+        if path is None:
+            path = self.dctEnvPaths['data']
+        param = svm.svm_parameter(kernel_type=svm.RBF,
+                                  C=c, gamma=g,
+                                  probability=probability)
+        labels, samples = self.getData(normalize=True)
+        if compensation:
+            weight, weight_label = self._calculateCompensation(labels)
+            param.weight = weight
+            param.weight_label = weight_label
+            param.nr_weight = len(weight)
+
+        problem = svm.svm_problem(labels, samples)
+        model = svm.svm_model(problem, param)
+        model.save(os.path.join(path, filename))
+
+    def exportConfusion(self, c, g, accuracy, conf, path=None, filename=None):
+        if filename is None:
+            filename = os.path.splitext(self.getOption('strArffFileName'))[0]
+            filename += '.confusion.txt'
+        if path is None:
+            path = self.dctEnvPaths['data']
+        f = file(os.path.join(path, filename), 'w')
+        f.write('log2(C) = %f\n' % c)
+        f.write('log2(g) = %f\n' % g)
+        f.write('accuracy = %f\n' % accuracy)
+        f.write('\n')
+        rows, cols = conf.shape
+        f.write('confusion matrix (absolute)\n')
+        f.write('%s\n' % '\t'.join([''] + ['%d' % self.nl2l[nl]
+                                           for nl in range(cols)]))
+        for r in range(rows):
+            f.write('%s\n' % '\t'.join([str(self.nl2l[r])] + [str(conf[r,c])
+                                                         for c in range(cols)]))
+        f.write('\n')
+        f.write('confusion matrix (relative)\n')
+        conf_norm = conf.swapaxes(0,1) / numpy.array(numpy.sum(conf, 1), numpy.float)
+        conf_norm = conf_norm.swapaxes(0,1)
+        f.write('%s\n' % '\t'.join([''] + [str(self.nl2l[nl])
+                                           for nl in range(cols)]))
+        for r in range(rows):
+            f.write('%s\n' % '\t'.join([str(self.nl2l[r])] + [str(conf_norm[r,c])
+                                                         for c in range(cols)]))
+        f.close()
+
+
+    def importConfusion(self, path=None, filename=None):
+        if filename is None:
+            filename = os.path.splitext(self.getOption('strArffFileName'))[0]
+            filename += '.confusion.txt'
+        if path is None:
+            path = self.dctEnvPaths['data']
+        f = file(os.path.join(path, filename), 'Ur')
+        c = float(f.readline().split('=')[1].strip())
+        g = float(f.readline().split('=')[1].strip())
+        accuracy = float(f.readline().split('=')[1].strip())
+        f.readline()
+        f.readline()
+        f.readline()
+        conf = []
+        for line in f:
+            line = line.strip()
+            if len(line) == 0:
+                break
+            #print line
+            items = map(int, map(float, line.split('\t')[1:]))
+            #print items
+            conf.append(items)
+        conf = numpy.asarray(conf)
+        return c, g, accuracy, conf
+
+    def _calculateCompensation(self, labels):
+        ulabels = numpy.unique(labels)
+        count = numpy.bincount(labels)[ulabels]
+        #weight = float(len(labels)) / count
+        weight = (float(len(labels)) - count) / count
+        weight_label = ulabels
+        #print count
+        #print ulabels
+        #print weight
+        #print weight_label
+        #print len(labels)
+        #print weight * count
+        #print sum(weight * count)
+        return weight, weight_label
+
+    def iterGridSearchSVM(self, c_info=None, g_info=None, fold=5,
+                          probability=0, compensation=True):
+        swap = lambda a,b: (b,a)
+        if not c_info is None and len(c_info) >= 3:
+            c_begin, c_end, c_step = c_info[:3]
+        else:
+            c_begin, c_end, c_step = -5,  15, 2
+        if c_end < c_begin:
+            c_begin, c_end = swap(c_begin, c_end)
+        c_step = abs(c_step)
+
+        if not g_info is None and len(g_info) >= 3:
+            g_begin, g_end, g_step = g_info[:3]
+        else:
+            g_begin, g_end, g_step = -15, 3, 2
+        if g_end < g_begin:
+            g_begin, g_end = swap(g_begin, g_end)
+        g_step = abs(g_step)
+
+        labels, samples = self.getData(normalize=True)
+        problem = svm.svm_problem(labels, samples)
+
+        if compensation:
+            weight, weight_label = self._calculateCompensation(labels)
+
+        n = (c_end - c_begin) / c_step + 1
+        n *= (g_end - g_begin) / g_step + 1
+
+        c = c_begin
+        while c <= c_end:
+            g = g_begin
+            while g <= g_end:
+
+                param = svm.svm_parameter(kernel_type = svm.RBF,
+                                          C=2**c, gamma=2**g,
+                                          probability=probability)
+                if compensation:
+                    param.weight = weight
+                    param.weight_label = weight_label
+                    param.nr_weight = len(weight)
+
+                validation = svm.cross_validation(problem, param, fold)
+                validation = map(int, validation)
+
+                yield n,c,g,validation,labels
+
+                g += g_step
+            c += c_step
+
+
 
     def crossValidation(self, c=None, g=None, probability=1):
         #print self.dctFeatureData
@@ -505,7 +728,7 @@ class ClassPredictor(BaseLearner):
 
         print self.dctClassLabels
         print self.dctClassNames
-        aCrossVote = zeros([max(unique(self.dctClassLabels.values()))]*2)
+        aCrossVote = numpy.zeros([max(unique(self.dctClassLabels.values()))]*2)
         for iTrueLabel, iTestLabel in zip(lstLabels, lstTargets):
 
             #strTrueName = self.dctClassNames[iTrueLabel]
@@ -561,7 +784,7 @@ class ClassPredictor(BaseLearner):
                 lstLabels.append(iClassLabel)
                 lstPattern.append(self.oClassifier.normalize(aSample))
 
-        aPattern = asarray(lstPattern)
+        aPattern = numpy.asarray(lstPattern)
         oCluster = r.kmeans(aPattern, len(self.dctClassLabels), nstart=25)
 
         print oCluster

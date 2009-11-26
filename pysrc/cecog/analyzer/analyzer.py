@@ -761,10 +761,16 @@ class CellAnalyzer(PropertyManager):
                              is_mandatory=True,
                              doc=''),
 
+
              oTimeHolder =
                  InstanceProperty(None,
                                   TimeHolder,
                                   doc="Instance of TimeHolder.",
+                                  is_mandatory=True),
+             oCellTracker =
+                 InstanceProperty(None,
+                                  CellTracker,
+                                  doc="Instance of CellTracker.",
                                   is_mandatory=True),
             )
 
@@ -800,10 +806,8 @@ class CellAnalyzer(PropertyManager):
             oChannel.applyZSelection()
 #            oChannel.applyBinning(self.iBinningFactor)
             oResult = oChannel.applySegmentation(oPrimaryChannel)
-            #print "toll1"
 
             oChannel.applyFeatures()
-            #print "toll2"
 
             if oPrimaryChannel is None:
                 if oResult:
@@ -836,9 +840,18 @@ class CellAnalyzer(PropertyManager):
                                                          'P%s_T%05d.tif' % (self.P, self._iT)),
                                             compression)
 
+    def getImageSize(self, strChannelId):
+        oChannel = self._dctChannels[strChannelId]
+        w = oChannel.oMetaImage.iWidth
+        h = oChannel.oMetaImage.iHeight
+        return (w,h)
+
     def render(self, strPathOut, dctRenderInfo=None,
-               strFileSuffix='.jpg', strCompression='98', writeToDisc=True):
+               strFileSuffix='.jpg', strCompression='98', writeToDisc=True,
+               images=None):
         lstImages = []
+        if not images is None:
+            lstImages += images
 
         if dctRenderInfo is None:
             for strChannelId, oChannel in self._dctChannels.iteritems():

@@ -808,7 +808,8 @@ def create_image_container(path, naming_scheme, positions):
                                                     strRegexPosition = naming_scheme['regex_position'],
                                                     strRegexTime = naming_scheme['regex_time'],
                                                     strRegexChannel = naming_scheme['regex_channel'],
-                                                    strRegexZSlice = naming_scheme['regex_zslice'])
+                                                    strRegexZSlice = naming_scheme['regex_zslice'],
+                                                    hasContinuousFrames = False if naming_scheme['continuous_frames'] == '0' else True)
 
         return image_container
 
