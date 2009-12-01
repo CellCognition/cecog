@@ -15,8 +15,8 @@ __revision__ = '$Rev$'
 __source__ = '$URL:: $'
 
 
-import ez_setup
-ez_setup.use_setuptools()
+#import ez_setup
+#ez_setup.use_setuptools()
 
 from setuptools import setup
 import shutil

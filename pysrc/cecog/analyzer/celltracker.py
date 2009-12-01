@@ -1,38 +1,30 @@
 """
-                          The CellCognition Project
-                  Copyright (c) 2006 - 2009 Michael Held
-                   Gerlich Lab, ETH Zurich, Switzerland
-                            www.cellcognition.org
+                           The CellCognition Project
+                     Copyright (c) 2006 - 2009 Michael Held
+                      Gerlich Lab, ETH Zurich, Switzerland
+                              www.cellcognition.org
 
-           CellCognition is distributed under the LGPL License.
-                     See trunk/LICENSE.txt for details.
-               See trunk/AUTHORS.txt for author contributions.
+              CellCognition is distributed under the LGPL License.
+                        See trunk/LICENSE.txt for details.
+                 See trunk/AUTHORS.txt for author contributions.
 """
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
 __revision__ = '$Rev$'
-__source__ = '$URL:: $'
+__source__ = '$URL$'
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # standard library imports:
 #
-import sys, \
-       os, \
-       math, \
-       copy ,\
-       pprint, \
-       shelve, \
+import os, \
        subprocess, \
        logging, \
-       traceback ,\
-       fpformat, \
        itertools, \
        re
+from types import ListType, FloatType
 
-from types import ListType, DictType, TupleType, StringType, IntType, FloatType
-
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # extension module imports:
 #
 from numpy import array, average
@@ -43,26 +35,26 @@ from pdk.optionmanagers import OptionManager
 #                                    exportTable)
 #from pdk.containers.tablefactories import newTable
 from pdk.ordereddict import OrderedDict
+from pdk.map import dict_append_list
 from pdk.fileutils import safe_mkdirs, collect_files
 from pdk.iterator import unique, flatten, all_equal
 from pdk.attributemanagers import (get_slot_values,
                                    set_slot_values)
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # cecog module imports:
 #
 from cecog.extensions.graphLib import Graph
-from cecog.util import LoggerMixin
-from cecog.plotter import RPlotter
+from cecog.util import write_table
 from cecog import ccore
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # constants:
 #
 
 DEBUG = False
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # functions:
 #
 
@@ -70,7 +62,8 @@ def printd(str):
     if DEBUG:
         print str
 
-#------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
 # classes:
 #
 
@@ -214,7 +207,7 @@ class DotWriter(object):
 class CellTracker(OptionManager):
 
     OPTIONS = {"oMetaData"                  : Option(None),
-               "iP"                         : Option(None),
+               "P"                          : Option(None),
                "origP"                      : Option(None),
                "strPathOut"                 : Option(None),
                "fMaxObjectDistance"         : Option(None),
@@ -236,7 +229,7 @@ class CellTracker(OptionManager):
     def __init__(self, **dctOptions):
         super(CellTracker, self).__init__(**dctOptions)
         self.oMetaData = self.getOption('oMetaData')
-        self.iP = self.getOption('iP')
+        self.P = self.getOption('P')
         self.origP = self.getOption('origP')
         #print "mooooo", self.iP
         self.strPathOut = self.getOption('strPathOut')
@@ -260,7 +253,7 @@ class CellTracker(OptionManager):
         set_slot_values(self, state)
         # FIXME:
         self.oMetaData = self.getOption('oMetaData')
-        self.iP = self.getOption('iP')
+        self.P = self.getOption('P')
         self.origP = self.getOption('origP')
         self.strPathOut = self.getOption('strPathOut')
         self._dctTimeChannels = self.getOption('oTimeHolder')
@@ -364,17 +357,16 @@ class CellTracker(OptionManager):
         for iObjId, oImageObject in oObjectHolder.iteritems():
             strNodeId = self.getNodeIdFromComponents(iT, iObjId)
             self._oGraph.add_node(strNodeId, oImageObject)
-            if not iT in self._dctTimePoints:
-                self._dctTimePoints[iT] = []
-            self._dctTimePoints[iT].append(iObjId)
-        if len(self._dctTimePoints) > 1:
-            self._connectTimePoints(iT)
+            dict_append_list(self._dctTimePoints, iT, iObjId)
+        #if len(self._dctTimePoints) > 1:
+        self._connectTimePoints(iT)
 
     def _getClosestPreviousT(self, iT):
         iResultT = None
         iTries = 0
         iMaxGap = self.getOption('iMaxTrackingGap')
-        while iResultT is None and iTries < iMaxGap and iT > 1:
+        start = self.getValidTimeLimits()[0]
+        while iResultT is None and iTries < iMaxGap and iT > start:
             iT -= 1
             if iT in self._dctTimePoints:
                 iResultT = iT
@@ -384,8 +376,7 @@ class CellTracker(OptionManager):
 
     def _connectTimePoints(self, iT):
 
-        fMaxObjectDistance = self.getOption('fMaxObjectDistance')
-        fMaxObjectDistanceSquared = float(fMaxObjectDistance * fMaxObjectDistance)
+        fMaxObjectDistanceSquared = float(self.getOption('fMaxObjectDistance')) ** 2
         iMaxSplitObjects = self.getOption('iMaxSplitObjects')
 
         bReturnSuccess = False
@@ -396,6 +387,8 @@ class CellTracker(OptionManager):
 
         if not iPreviousT is None:
             bReturnSuccess = True
+            dctMerges = {}
+            dctSplits = {}
 
             # for all nodes in this layer
             for iObjIdP in self._dctTimePoints[iPreviousT]:
@@ -418,28 +411,24 @@ class CellTracker(OptionManager):
                     # sort ascending by distance (first tuple element)
                     lstNearest.sort(key=lambda x: x[0])
 
-                    #iDist, strNodeIdC = lstNearest[0]
-
-                    # here we do the split of objects: every nearest candidate (or filtered ones)
-                    # from the previous is linked with the current node
-
-                    # filter edges by label!
-                    #obj_prev = self.node_data(node_id_prev)
-                    #if (obj_prev.iLabel not in [60] and obj.iLabel not in [60]):
-                    #    self.add_edge(node_id_prev, node_id)
-
-                    # remember all previous nodes with an edge (currently taken)
-                    #dctNodeP[strNodeIdC] = True
-
                     # take only a certain number as merge candidates (the N closest)
-
                     for dist, strNodeIdC in lstNearest[:iMaxSplitObjects]:
-                        oGraph.add_edge(strNodeIdP, strNodeIdC)
+                        dict_append_list(dctMerges, strNodeIdC,
+                                         (dist, strNodeIdP))
+                        dict_append_list(dctSplits, strNodeIdP,
+                                         (dist, strNodeIdC))
 
-                        # build a reverse map
-#                        if strNodeIdP not in dctMerges:
-#                            dctMerges[strNodeIdP] = []
-#                        dctMerges[strNodeIdP].append((iDist, strNodeIdP))
+            # prevent split and merge for one node at the same time
+            for id_c in dctMerges:
+                nodes = dctMerges[id_c]
+                if len(nodes) == 1:
+                    oGraph.add_edge(nodes[0][1], id_c)
+                else:
+                    for dist, id_p in nodes:
+                        if len(dctSplits[id_p]) == 1:
+                            oGraph.add_edge(id_p, id_c)
+
+
 
             if self.getOption('bVisualize'):
 
@@ -479,7 +468,7 @@ class CellTracker(OptionManager):
 
         return bReturnSuccess
 
-    def visualizeTracks(self, iT, size, n=5, thick=True):
+    def visualizeTracks(self, iT, size, n=5, thick=True, radius=3):
         img_conn = ccore.Image(*size)
         img_split = ccore.Image(*size)
         min_T = self.getValidTimeLimits()[0]
@@ -489,6 +478,7 @@ class CellTracker(OptionManager):
         else:
             current = iT-n+1
 
+        found = False
         for i in range(n):
             col = int(255.*(i+1)/n)
             if col > 255:
@@ -496,6 +486,7 @@ class CellTracker(OptionManager):
             if current in self._dctTimePoints:
                 previous = self._getClosestPreviousT(current)
                 if not previous is None:
+                    found = True
                     for objIdP in self._dctTimePoints[previous]:
                         nodeIdP = self.getNodeIdFromComponents(previous, objIdP)
                         objP = self._oGraph.node_data(nodeIdP)
@@ -508,18 +499,21 @@ class CellTracker(OptionManager):
                         for edgeId in self._oGraph.out_arcs(nodeIdP):
                             nodeIdC = self._oGraph.tail(edgeId)
                             objC = self._oGraph.node_data(nodeIdC)
-
-                            x1 = objP.oCenterAbs[0]
-                            y1 = objP.oCenterAbs[1]
-                            x2 = objC.oCenterAbs[0]
-                            y2 = objC.oCenterAbs[1]
-                            if (x1 == x2 and y1 == y2):
-                                x1 += 1
-                            ccore.drawLine(ccore.Diff2D(x1, y1),
-                                           ccore.Diff2D(x2, y2),
+                            ccore.drawLine(ccore.Diff2D(*objP.oCenterAbs),
+                                           ccore.Diff2D(*objC.oCenterAbs),
                                            img, col,
                                            thick=thick)
+                            ccore.drawFilledCircle(ccore.Diff2D(*objC.oCenterAbs),
+                                                   radius, img_conn, col)
             current += 1
+
+        if not found:
+            for objId in self._dctTimePoints[iT]:
+                nodeId = self.getNodeIdFromComponents(iT, objId)
+                obj = self._oGraph.node_data(nodeId)
+                ccore.drawFilledCircle(ccore.Diff2D(*obj.oCenterAbs),
+                                       radius, img_conn, col)
+
         return img_conn, img_split
 
     @staticmethod
@@ -914,7 +908,7 @@ class PlotCellTracker(CellTracker):
                                     strCompression = ''
                                 else:
                                     strCompression = '.%s' % self.getOption('featureCompression')
-                                strFilename = self._formatFilename('C%s__R%s.tsv%s' %\
+                                strFilename = self._formatFilename('C%s__R%s.txt%s' %\
                                                                    (strChannelId, strRegionId, strCompression),
                                                                    nodeId=strStartId, prefix='features')
                                 self.exportChannelData(dctEventData,
@@ -933,7 +927,7 @@ class PlotCellTracker(CellTracker):
                             strCompression = ''
                         else:
                             strCompression = '.%s' % self.getOption('flatFeatureCompression')
-                        strFilename = self._formatFilename('C%s__R%s.tsv%s' % (strChannelId, strRegionId, strCompression),
+                        strFilename = self._formatFilename('C%s__R%s.txt%s' % (strChannelId, strRegionId, strCompression),
                                                            prefix='_flat_features')
                         self.exportChannelDataFlat(strFilename,
                                                    strChannelId,
@@ -1018,8 +1012,7 @@ class PlotCellTracker(CellTracker):
             lstHeaderTypes.append('b')
             iSplitT, iObjId = self.getComponentsFromNodeId(dctEventData['splitId'])
 
-        oTable = newTable(lstHeaderNames,
-                          typeCodes=lstHeaderTypes)
+        table = []
 
         # zip nodes with same time together
         for tplNodes in zip(*dctEventData['tracks']):
@@ -1052,35 +1045,32 @@ class PlotCellTracker(CellTracker):
                     lstFeatureNames = oRegion.getFeatureNames()
                     #print "moo123", lstFeatureNames
 
-                lstFeatureColumns = []
-                lstFeatureTypes = []
-
-                lstFeatureColumns += [self.OBJID_COLUMN_PATTERN % strChild
-                                      for strChild in lstChildIds]
-                lstFeatureTypes += ['i'] * len(lstChildIds)
+                lstHeaderNames += [self.OBJID_COLUMN_PATTERN % strChild
+                                   for strChild in lstChildIds]
+                #lstFeatureTypes += ['i'] * len(lstChildIds)
 
                 if self.getOption('bHasClassificationData'):
-                    lstFeatureColumns += [self.CLASS_COLUMN_PATTERN % (strChild, x)
-                                          for strChild in lstChildIds
-                                          for x in ['name', 'label', 'probability']]
-                    lstFeatureTypes += ['c', 'i', 'c'] * len(lstChildIds)
+                    lstHeaderNames += [self.CLASS_COLUMN_PATTERN % (strChild, x)
+                                       for strChild in lstChildIds
+                                       for x in ['name', 'label', 'probability']]
+                    #lstFeatureTypes += ['c', 'i', 'c'] * len(lstChildIds)
 
-                lstFeatureColumns += [self.FEATURE_COLUMN_PATTERN % (strChild, strFeatureName)
-                                      for strChild in lstChildIds
-                                      for strFeatureName in lstFeatureNames]
-                lstFeatureTypes += ['f'] * (len(lstFeatureNames) * len(lstChildIds))
+                lstHeaderNames += [self.FEATURE_COLUMN_PATTERN % (strChild, strFeatureName)
+                                   for strChild in lstChildIds
+                                   for strFeatureName in lstFeatureNames]
+                #lstFeatureTypes += ['f'] * (len(lstFeatureNames) * len(lstChildIds))
 
                 tracking_features = ['center_x','center_y',
                                      'upperleft_x', 'upperleft_y',
                                      'lowerright_x', 'lowerright_y']
-                lstFeatureColumns += [self.TRACKING_COLUMN_PATTERN % (strChild, strFeatureName)
-                                      for strChild in lstChildIds
-                                      for strFeatureName in tracking_features]
-                lstFeatureTypes += ['i'] * (len(tracking_features) * len(lstChildIds))
+                lstHeaderNames += [self.TRACKING_COLUMN_PATTERN % (strChild, strFeatureName)
+                                   for strChild in lstChildIds
+                                   for strFeatureName in tracking_features]
+                #lstFeatureTypes += ['i'] * (len(tracking_features) * len(lstChildIds))
 
-                for strColumnName, strTypeCode in zip(lstFeatureColumns,
-                                                      lstFeatureTypes):
-                    oTable.appendColumn(strColumnName, typeCode=strTypeCode)
+#                for strColumnName, strTypeCode in zip(lstFeatureColumns,
+#                                                      lstFeatureTypes):
+#                    oTable.appendColumn(strColumnName, typeCode=strTypeCode)
 
                 #print lstFeatureColumns
                 #print lstFeatureTypes
@@ -1120,16 +1110,9 @@ class PlotCellTracker(CellTracker):
                     dctData[self.TRACKING_COLUMN_PATTERN % (lstChildIds[iIdx], 'lowerright_y')] = oObj.oRoi.lowerRight[1]
 
             #print dctData
-            oTable.append(dctData)
+            table.append(dctData)
 
-        #print "write table", strFilename
-        exportTable(oTable,
-                    strFilename,
-                    writeRowLabels=False,
-                    fieldDelimiter='\t',
-                    typeFormatting={FloatType: lambda x: "%E" % x},
-                    detectCompression=True,
-                    stringDelimiter='')
+        write_table(strFilename, lstHeaderNames, table)
 
 
     def _forwardVisitor(self, strNodeId, dctResults, dctEdges, iLevel=0, strStartId=None):
@@ -1247,8 +1230,8 @@ class PlotCellTracker(CellTracker):
     def _formatFilename(self, strSuffix, nodeId=None, prefix=None, subPath=None):
         lstParts = []
         if not prefix is None:
-           lstParts.append(prefix)
-        lstParts.append('P%s' % self.iP)
+            lstParts.append(prefix)
+        lstParts.append('P%s' % self.P)
         if not nodeId is None:
             items = self.getComponentsFromNodeId(nodeId)
             frame, obj_id = items[:2]

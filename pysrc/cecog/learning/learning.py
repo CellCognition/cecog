@@ -1,34 +1,28 @@
 """
-The Mito-Imaging Project
-Copyright (c) 2005-2006 Michael Held
+                           The CellCognition Project
+                     Copyright (c) 2006 - 2009 Michael Held
+                      Gerlich Lab, ETH Zurich, Switzerland
+                              www.cellcognition.org
 
-Basic classes to define a training set, extract features from object-files and
-run cross-validations tests
+              CellCognition is distributed under the LGPL License.
+                        See trunk/LICENSE.txt for details.
+                 See trunk/AUTHORS.txt for author contributions.
 """
 
-__author__ =   'Michael Held'
-__date__ =     '$Date$'
+__author__ = 'Michael Held'
+__date__ = '$Date$'
 __revision__ = '$Rev$'
-__source__ =   '$URL$'
+__source__ = '$URL$'
 
-
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # standard library imports:
 #
 
-import sys, \
-       os, \
+import os, \
        re, \
-       math, \
-       copy, \
-       shelve, \
-       random, \
-       time, \
-       subprocess, \
-       pprint, \
-       logging
+       csv
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # extension module imports:
 #
 
@@ -42,13 +36,12 @@ from pdk.optionmanagers import OptionManager
 #from pdk.containers.tableio import exportTable
 from pdk.ordereddict import OrderedDict
 from pdk.fileutils import safe_mkdirs
-from pdk.iterator import unique, flatten
+from pdk.iterator import flatten
 from pdk.map import dict_append_list
 from pdk.attributemanagers import (get_attribute_values,
                                    set_attribute_values)
 
-
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # cecog module imports:
 #
 from cecog.learning.util import SparseWriter, ArffWriter, ArffReader
@@ -57,21 +50,20 @@ from cecog.util import rgbToHex, LoggerMixin
 from cecog.ccore import SingleObjectContainer
 
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # constants:
 #
 
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # functions:
 #
 
 
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # classes:
 #
-
 
 class BaseLearner(LoggerMixin, OptionManager):
 
@@ -79,9 +71,8 @@ class BaseLearner(LoggerMixin, OptionManager):
                "lstClassDefinitions" : Option([], callback="_onDefineClasses"),
                "strArffFileName" :     Option("features.arff"),
                "strSparseFileName" :   Option("features.sparse"),
-               "filename_sampleids" :  Option("sample_ids.tsv"),
+               "strDefinitionFileName" :   Option("class_definition.txt"),
                "filename_pickle" :     Option("learner.pkl"),
-               #"clsClassifier":        Option(None),
               }
 
     __attributes__ = ['dctFeatureData',
@@ -95,7 +86,6 @@ class BaseLearner(LoggerMixin, OptionManager):
 
     def __init__(self, **options):
         self.dctFeatureData = OrderedDict()
-        self.dctSampleData = OrderedDict()
         self.dctClassNames = {}
         self.dctClassLabels = {}
         self.lstFeatureNames = None
@@ -132,7 +122,8 @@ class BaseLearner(LoggerMixin, OptionManager):
 
     @property
     def names2samples(self):
-        return dict([(k,len(v)) for k,v in self.dctFeatureData.iteritems()])
+        return dict([(n, len(self.dctFeatureData.get(n, [])))
+                     for n in self.lstClassNames])
 
 
     @property
@@ -155,7 +146,7 @@ class BaseLearner(LoggerMixin, OptionManager):
 
 
     def initEnv(self):
-        strEnvPath = self.getOption('strEnvPath')
+        #strEnvPath = self.getOption('strEnvPath')
         for strName, strPath in self.dctEnvPaths.iteritems():
             safe_mkdirs(strPath)
 
@@ -187,6 +178,22 @@ class BaseLearner(LoggerMixin, OptionManager):
 
     def getPath(self, strName):
         return self.dctEnvPaths[strName]
+
+    def loadDefinition(self, path=None, filename=None):
+        if filename is None:
+            filename = self.getOption('strDefinitionFileName')
+        if path is None:
+            path = self.getOption('strEnvPath')
+        f = open(os.path.join(path, filename), "r")
+        reader = csv.reader(f, delimiter='\t', quoting=csv.QUOTE_NONE)
+        for row in reader:
+            label = int(row[0])
+            name = row[1]
+            color = row[2]
+            self.dctClassNames[label] = name
+            self.dctClassLabels[name] = label
+            self.dctHexColors[name] = color
+        f.close()
 
     def exportRanges(self, strFilePath=None, strFileName=None):
         if strFileName is None:
@@ -223,22 +230,6 @@ class BaseLearner(LoggerMixin, OptionManager):
         #print self.dctClassNames
         #print self.dctFeatureData.keys()
 
-    def importSampleNames(self, strFilePath=None, strFileName=None):
-        if strFileName is None:
-            strFileName = os.path.splitext(self.getOption('strArffFileName'))[0]
-            strFileName = '%s.sample_names.tsv' % strFileName
-        if strFilePath is None:
-            strFilePath = self.dctEnvPaths['data']
-        f = file(os.path.join(strFilePath, strFileName), 'r')
-        self.dctSampleNames = {}
-        for line in f:
-            class_name, file_name = line.strip().split('\t')
-            if class_name in self.dctClassLabels:
-                if not class_name in self.dctSampleNames:
-                    self.dctSampleNames[class_name] = []
-            self.dctSampleNames[class_name].append(file_name)
-        f.close()
-
     def check(self):
         filename = os.path.splitext(self.getOption('strArffFileName'))[0]
         result = {'path_env' : self.getOption('strEnvPath'),
@@ -249,7 +240,7 @@ class BaseLearner(LoggerMixin, OptionManager):
                   'range' : os.path.join(self.dctEnvPaths['data'], '%s.range' % filename),
                   'conf' : os.path.join(self.dctEnvPaths['data'], '%s.confusion.txt' % filename),
                   'arff' : os.path.join(self.dctEnvPaths['data'], self.getOption('strArffFileName')),
-                  'definition' : os.path.join(self.getOption('strEnvPath'), 'class_definition.tsv'),
+                  'definition' : os.path.join(self.getOption('strEnvPath'), self.getOption('strDefinitionFileName')),
                   }
         result.update({'has_path_data' : os.path.isdir(self.dctEnvPaths['data']),
                        'has_path_samples' : os.path.isdir(self.dctEnvPaths['samples']),
@@ -258,7 +249,7 @@ class BaseLearner(LoggerMixin, OptionManager):
                        'has_range' : os.path.isfile(os.path.join(self.dctEnvPaths['data'], '%s.range' % filename)),
                        'has_conf' : os.path.isfile(os.path.join(self.dctEnvPaths['data'], '%s.confusion.txt' % filename)),
                        'has_arff' : os.path.isfile(os.path.join(self.dctEnvPaths['data'], self.getOption('strArffFileName'))),
-                       'has_definition' : os.path.isfile(os.path.join(self.getOption('strEnvPath'), 'class_definition.tsv')),
+                       'has_definition' : os.path.isfile(os.path.join(self.getOption('strEnvPath'), self.getOption('strDefinitionFileName'))),
                        }
                       )
         return result
@@ -289,70 +280,38 @@ class BaseLearner(LoggerMixin, OptionManager):
         oWriter.writeAllFeatureData(self.dctFeatureData)
         oWriter.close()
 
-    def exportSampleIds(self, strFilePath=None, strFileName=None):
+    def importSampleNames(self, strFilePath=None, strFileName=None):
         if strFileName is None:
-            strFileName = self.getOption('filename_sampleids')
+            strFileName = os.path.splitext(self.getOption('strArffFileName'))[0]
+            strFileName = '%s.samples.txt' % strFileName
+        if strFilePath is None:
+            strFilePath = self.dctEnvPaths['data']
+        f = file(os.path.join(strFilePath, strFileName), 'r')
+        self.dctSampleNames = {}
+        for line in f:
+            class_name, file_name = line.strip().split('\t')
+            if class_name in self.dctClassLabels:
+                if not class_name in self.dctSampleNames:
+                    self.dctSampleNames[class_name] = []
+            self.dctSampleNames[class_name].append(file_name)
+        f.close()
+
+    def exportSampleNames(self, strFilePath=None, strFileName=None):
+        if strFileName is None:
+            strFileName = os.path.splitext(self.getOption('strArffFileName'))[0]
+            strFileName = '%s.samples.txt' % strFileName
         if strFilePath is None:
             strFilePath = self.dctEnvPaths['data']
         f = file(os.path.join(strFilePath, strFileName), 'w')
-        for k, v in self.dctSampleData.iteritems():
-            for sample_id in v:
-                f.write('%s\n' % sample_id)
+        for class_name, samples in self.dctSampleNames.iteritems():
+            for sample_name in samples:
+                f.write('%s\t%s\n' % (class_name, sample_name))
         f.close()
 
     def export(self):
         self.exportToArff()
         self.exportToSparse()
-        self.exportSampleIds()
-
-class CommonMixin(OptionManager):
-
-    OPTIONS = {'dctCollectSamples' : Option(None),
-               }
-
-    __attributes__ = ['strChannelId',
-                      'strRegionId',
-                      ]
-
-    def __init__(self, *args, **options):
-
-        super(CommonMixin, self).__init__(*args, **options)
-
-        dctCollectSamples = self.getOption('dctCollectSamples')
-        self.strChannelId = dctCollectSamples['strChannelId']
-        self.strRegionId = dctCollectSamples['strRegionId']
-
-        self.setOption('strEnvPath', dctCollectSamples['strEnvPath'])
-        #BaseLearner(self).initEnv()
-
-    def initCommon(self):
-        BaseLearner.initEnv(self)
-        dctCollectSamples = self.getOption('dctCollectSamples')
-
-        for iClassLabel, dctAnnotations in dctCollectSamples['dctLabels'].iteritems():
-            strClassName = dctAnnotations['strClassName']
-            self.dctClassNames[iClassLabel] = strClassName
-            self.dctClassLabels[strClassName] = iClassLabel
-            self.dctHexColors[strClassName] = dctAnnotations['strColor']
-
-
-class CommonObjectLearner(BaseLearner, CommonMixin):
-
-    def __init__(self, **options):
-        super(CommonObjectLearner, self).__init__(**options)
-        self.initCommon()
-
-    def setFeatureNames(self, lstFeatureNames):
-        if self.lstFeatureNames is None:
-            self.lstFeatureNames = lstFeatureNames
-        assert self.lstFeatureNames == lstFeatureNames
-
-    def applyObjects(self, lstImageObjects):
-        for oObj in lstImageObjects:
-            self.dctImageObjects[oObj.sample_id] = oObj
-            strClassName = self.dctClassNames[oObj.iLabel]
-            dict_append_list(self.dctFeatureData, strClassName, oObj.aFeatures)
-            dict_append_list(self.dctSampleData, strClassName, oObj.sample_id)
+        self.exportSampleNames()
 
 
 
@@ -475,7 +434,7 @@ class ClassPredictor(BaseLearner):
 
     OPTIONS = {"clsClassifier" :  Option(LibSvmClassifier,
                                          doc="", autoInitialize=False),
-               "strModelPrefix" : Option(None),
+               "strModelPrefix" : Option('features'),
               }
 
     __attributes__ = ['oClassifier']
@@ -662,310 +621,59 @@ class ClassPredictor(BaseLearner):
 
 
 
-    def crossValidation(self, c=None, g=None, probability=1):
-        #print self.dctFeatureData
-        #print self.oClassifier.oSvmModel.model
-        #print dir(self.oClassifier.oSvmModel.svm_type)
-        #print dir(self.oClassifier.oSvmModel.model)
-        #sys.exit(0)
+class CommonMixin(OptionManager):
 
-        import svm
-        oSvmParam = svm.svm_parameter(kernel_type = svm.RBF, C=c, gamma=g,
-                                      probability=probability)
+    OPTIONS = {'dctCollectSamples' : Option(None),
+               }
 
-        dctLabelMapping = dict(zip(self.dctClassNames, self.dctClassNames))
+    __attributes__ = ['strChannelId',
+                      'strRegionId',
+                      ]
 
-#        dctLabelMapping = {1 : 1,
-#                           2 : 2,
-#                           3 : 3,
-#                           4 : 4,
-#                           5 : 5,
-#                           6 : 6,
-#                           }
+    def __init__(self, *args, **options):
 
-#        dctLabelMapping = {1 : 1,
-#                           2 : 2,
-#                           3 : 3,
-#                           4 : 3,
-#                           5 : 1,
-#                           6 : 1,
-#                           7 : 4,
-#                           }
+        super(CommonMixin, self).__init__(*args, **options)
 
-#        for iLabelC, iLabelN in dctLabelMapping.iteritems():
-#            strName = self.dctClassNames[iLabelC]
-#            self.dctClassLabels[strName] = iLabelN
+        dctCollectSamples = self.getOption('dctCollectSamples')
+        self.strChannelId = dctCollectSamples['strChannelId']
+        self.strRegionId = dctCollectSamples['strRegionId']
 
-        lstPattern = []
-        lstLabels = []
-        for strClassName, lstSamples in self.dctFeatureData.iteritems():
-            iClassLabel = self.dctClassLabels[strClassName]
-            for aSample in lstSamples:
-                lstLabels.append(iClassLabel)
-                lstPattern.append([0]+list(self.oClassifier.normalize(aSample)))
+        self.setOption('strEnvPath', dctCollectSamples['strEnvPath'])
+        BaseLearner.initEnv(self)
 
-        bDoAsymetryCompensation = False
-        weight_label, weight = [], []
-        if bDoAsymetryCompensation:
-            for label in unique(self.dctClassLabels.values()):
-                positiveCount = lstLabels.count(label)
-                negativeCount = len(lstLabels) - positiveCount
-                weight.append(float(negativeCount)/float(positiveCount))
-                weight_label.append(label)
-            oSvmParam.weight = weight
-            oSvmParam.weight_label = weight_label
-            oSvmParam.nr_weight = len(weight)
-
-        oSvmProblem = svm.svm_problem(lstLabels, lstPattern)
-        lstTargets = map(int, svm.cross_validation(oSvmProblem, oSvmParam, 5))
-
-        iAccurateVote = 0
-        dctCrossVote = {}
-
-        for iLabelC, iLabelN in dctLabelMapping.iteritems():
-            strName = self.dctClassNames[iLabelC]
-            self.dctClassLabels[strName] = iLabelN
-
-        print self.dctClassLabels
-        print self.dctClassNames
-        aCrossVote = numpy.zeros([max(unique(self.dctClassLabels.values()))]*2)
-        for iTrueLabel, iTestLabel in zip(lstLabels, lstTargets):
-
-            #strTrueName = self.dctClassNames[iTrueLabel]
-            #strTestName = self.dctClassNames[iTestLabel]
-
-            iTrueLabel = dctLabelMapping[iTrueLabel]
-            iTestLabel = dctLabelMapping[iTestLabel]
-
-            aCrossVote[iTrueLabel-1,iTestLabel-1] += 1
-
-            if iTrueLabel == iTestLabel:
-                iAccurateVote += 1
-
-
-        fAccuracy = iAccurateVote / float(len(lstLabels))
-
-        # normalize the confusion matrix to the sum of row-counts
-        aCrossVoteNorm = (aCrossVote.swapaxes(0,1) / aCrossVote.sum(axis=1)).swapaxes(0,1)
-
-        if bDoAsymetryCompensation:
-            print "Asymetry compensation:"
-            print zip(weight_label, weight), len(weight)
-        #print dctCrossVote
-        print iAccurateVote, fAccuracy
-        print aCrossVote
-        print aCrossVoteNorm
-        print aCrossVote.sum(axis=1)
-        print [lstLabels.count(x) for x in sorted(self.dctClassLabels.values())]
-
-        self._exportCrossValidation(aCrossVote,
-                                    os.path.join(self.getPath('data'), 'cross-validation.tsv'))
-        self._exportCrossValidation(aCrossVoteNorm,
-                                    os.path.join(self.getPath('data'), 'cross-validation-normalized.tsv'))
-
-        oModel = svm.svm_model(oSvmProblem, oSvmParam)
-        oModel.save(os.path.join(self.getPath('data'), 'all_features_CVoptimized.sparse.model'))
-
-
-    def _exportCrossValidation(self, aData, strFilename):
-        lstNames = [self.dctClassNames[x] for x in sorted(unique(self.dctClassLabels.values()))]
-        oTable = newTable(lstNames, rowLabels=lstNames, data=aData)
-        exportTable(oTable, strFilename, fieldDelimiter="\t", stringDelimiter="")
-
-
-    def test(self):
-        from rpy import r
-
-        lstPattern = []
-        lstLabels = []
-        for strClassName, lstSamples in self.dctFeatureData.iteritems():
-            iClassLabel = self.dctClassLabels[strClassName]
-            for aSample in lstSamples:
-                lstLabels.append(iClassLabel)
-                lstPattern.append(self.oClassifier.normalize(aSample))
-
-        aPattern = numpy.asarray(lstPattern)
-        oCluster = r.kmeans(aPattern, len(self.dctClassLabels), nstart=25)
-
-        print oCluster
-        print zip(lstLabels, oCluster['cluster'])
-
-        oPca = r.prcomp(aPattern, scale=True)
-        print oPca
+#    def initCommon(self):
+#        BaseLearner.initEnv(self)
+#        dctCollectSamples = self.getOption('dctCollectSamples')
+#
+#        for iClassLabel, dctAnnotations in dctCollectSamples['dctLabels'].iteritems():
+#            strClassName = dctAnnotations['strClassName']
+#            self.dctClassNames[iClassLabel] = strClassName
+#            self.dctClassLabels[strClassName] = iClassLabel
+#            self.dctHexColors[strClassName] = dctAnnotations['strColor']
 
 
 class CommonClassPredictor(ClassPredictor, CommonMixin):
 
     def __init__(self, **options):
         super(CommonClassPredictor, self).__init__(**options)
+
+class CommonObjectLearner(BaseLearner, CommonMixin):
+
+    def __init__(self, **options):
+        super(CommonObjectLearner, self).__init__(**options)
         #self.initCommon()
 
+    def setFeatureNames(self, lstFeatureNames):
+        if self.lstFeatureNames is None:
+            self.lstFeatureNames = lstFeatureNames
+        assert self.lstFeatureNames == lstFeatureNames
 
-
-class ObjectTeacherBase(object):
-
-    DEFAULT_ARFF_FILENAME = 'all_features.arff'
-
-    def __init__(self, clsLearner):
-        self.dctFeatureData = {}
-        self.dctClassNames = {}
-        self.dctClassLabels = {}
-        self.lstFeatureNames = None
-        self.clsLearner = clsLearner
-        self.dctHexColors = {}
-
-
-    def writeFile(self, strFilename, clsWriter=None, lstFeatureNames=None):
-
-        if clsWriter is None:
-            clsWriter = self.clsLearner.clsWriter
-        if lstFeatureNames is None:
-            lstFeatureNames = self.lstFeatureNames
-        writer = clsWriter(strFilename, lstFeatureNames, self.dctClassLabels)
-        writer.writeAllFeatureData(self.dctFeatureData)
-        writer.close()
-
-
-    def loadArffData(self, strFilename):
-        oReader = ArffReader(strFilename)
-        self.dctFeatureData = oReader.dctFeatureData
-        self.dctClassNames = oReader.dctClassNames
-        self.dctClassLabels = oReader.dctClassLabels
-        self.lstFeatureNames = oReader.lstFeatureNames
-        self.dctHexColors = oReader.dctHexColors
-        print self.dctClassLabels
-        print self.dctClassNames
-        print self.dctFeatureData.keys()
-        #oReader.close()
-
-    def writeArffData(self, strFilename):
-        oWriter = ArffWriter(strFilename,
-                             self.lstFeatureNames,
-                             self.dctClassLabels,
-                             dctHexColors=self.dctHexColors)
-        oWriter.writeAllFeatureData(self.dctFeatureData)
-        oWriter.close()
-
-
-    def loadSVMModel(self, strModelFilename, strRangeFilename):
-        pass
+    def applyObjects(self, lstImageObjects):
+        for oObj in lstImageObjects:
+            self.dctImageObjects[oObj.sample_id] = oObj
+            strClassName = self.dctClassNames[oObj.iLabel]
+            dict_append_list(self.dctFeatureData, strClassName, oObj.aFeatures)
+            dict_append_list(self.dctSampleNames, strClassName, oObj.sample_id)
 
 
 
-    def writeShelve(self, strFilename):
-        oShelve = shelve.open(strFilename, flag="c")
-        oShelve["class_names"] = self.dctClassNames
-        for strClassName, lstFeature in self.dctFeatureData.iteritems():
-            oShelve[strClassName] = lstFeature
-        oShelve.close()
-
-
-    def cross_validation(self,
-                         strTrainingFilename,
-                         strTestingFilename,
-                         strConfusionFilename,
-                         lstFeatureNames=None,
-                         iFold=5):
-        if lstFeatureNames is None:
-            lstFeatureNames = self.lstFeatureNames
-
-        logging.info("\n *** Cross Validation Testing ***\n")
-        logging.info("   * Learner: '%s'" % self.clsLearner.__name__)
-        logging.info("   * Folds:", iFold)
-        logging.info("   * Files: '%s', '%s'" % (strTrainingFilename,
-                                                 strTestingFilename))
-        logging.info("   * Features: count %d, %s" % (len(lstFeatureNames),
-                                                      lstFeatureNames))
-        logging.info("   * Objects: %d" % sum([len(x)
-                                               for x in self.dctFeatureData.values()]))
-        logging.info("")
-        self.clsLearner.cross_validation(strTrainingFilename,
-                                         strTestingFilename,
-                                         strConfusionFilename,
-                                         self.dctFeatureData,
-                                         lstFeatureNames,
-                                         n_fold=iFold,
-                                         dctClassLabels=self.dctClassLabels,
-                                         dctClassNames=self.dctClassNames)
-
-    def check(self, bDoFilter=False):
-
-        dctCheck = {}
-        for iClassLabel in self.dctFeatureData:
-            lstClassFeatures = self.dctFeatureData[iClassLabel]
-            lstRemoveFeatures = []
-            for dctFeatureValues in lstClassFeatures:
-                for strFeatureName, fFeatureValue in dctFeatureValues.iteritems():
-                    #print name, value, str(value).isdigit()
-                    if str(fFeatureValue) in ["nan", "inf", "-inf"]:
-                        if not dctFeatureValues in lstRemoveFeatures:
-                            lstRemoveFeatures.append(dctFeatureValues)
-                        iNameIndex = self.lstFeatureNames.index(strFeatureName)
-                        if not iNameIndex in checkD:
-                            dctCheck[iNameIndex] = {'name': strFeatureName,
-                                                    'classes': {}
-                                                    }
-                        if not iClassLabel in dctCheck[iNameIndex]['classes']:
-                            dctCheck[iNameIndex]['classes'][iClassLabel] = 0
-                        dctCheck[iNameIndex]['classes'][iClassLabel] += 1
-
-            if bDoFilter and len(lstRemoveFeatures) > 0:
-                for remove in removeL:
-                    featureLD.remove(remove)
-
-        pp = pprint.PrettyPrinter(indent=4)
-        pp.pprint(dctCheck)
-
-
-
-
-
-#------------------------------------------------------------------------------
-# main:
-#
-
-
-if __name__ ==  "__main__":
-
-    logging.basicConfig(level=logging.INFO, stream=sys.stdout, format='%(message)s')
-
-    #oC = ClassPredictor(strEnvPath='/Volumes/Data1T/Classifiers/exp435_gfp_GalT_2')
-
-    #oC = ClassPredictor(strEnvPath='/Volumes/Data1T/Classifiers/exp687_rfp_H2B_Taxol')
-    #oC = ClassPredictor(strEnvPath='/Volumes/Data1T/Classifiers/FRET_10xMD_Claudia_H2BYFP_3')
-    #oC = ClassPredictor(strEnvPath='/Volumes/Data1T/Classifiers/H2B_20x_MD_Katja_exp911')
-    #oC = ClassPredictor(strEnvPath='/Volumes/Data1T/Classifiers/Tub_20x_MD_exp911')
-    #oC = ClassPredictor(strEnvPath='/Volumes/Data1T/Classifiers/H2b_IBB_MD_20x')
-    #oC = ClassPredictor(strEnvPath='/Volumes/Data1T/Classifiers/GalT_10x_MD_exp835')
-
-#    oC = ClassPredictor(strEnvPath='/Volumes/Data1T/Classifiers/PCNA_10x_Plastic_50ms_StoM')
-#    oC = ClassPredictor(strEnvPath='/Volumes/Data1T/Classifiers/exp435_gfp_GalT')
-#    oC = ClassPredictor(strEnvPath='/Volumes/Data1T/Classifiers/exp464_gfp_PCNA')
-#    oC.importFromArff()
-#    oC.crossValidation()
-
-#    oC = ClassPredictor(strEnvPath='/Volumes/Data1T/Classifiers/H2b_10x_MD_exp757')
-#    oC.importFromArff()
-#    oC.crossValidation(c=128.0, g=0.03125)
-
-    oC = ClassPredictor(strEnvPath='/Volumes/Data1T/Classifiers/H2b_20x_MD_exp911_DG')
-    oC.importFromArff()
-    oC.crossValidation(c=2048.0, g=0.0078125)
-
-#    oC = ClassPredictor(strEnvPath='/Volumes/Data1T/Classifiers/GalT_10x_MD_exp835')
-#    oC.importFromArff()
-#    oC.crossValidation(c=32.0, g=0.0078125)
-
-#    oC = ClassPredictor(strEnvPath='/Volumes/Data1T/Classifiers/H2b_10x_MD_exp835_GalT')
-#    oC.importFromArff()
-#    oC.crossValidation(c=32.0, g=0.03125)
-
-#    oC = ClassPredictor(strEnvPath='/Volumes/Data1T/Classifiers/H2b_20x_MD_exp550_DG')
-#    oC.importFromArff()
-#    oC.crossValidation(c=128.0, g=0.0078125)
-
-
-
-#    oC = ClassPredictor(strEnvPath='/Volumes/Data1T/Classifiers/Tub_20x_MD_exp911_DG')
-#    oC.importFromArff()
-#    oC.crossValidation(c=2048.0, g=0.0001220703125)

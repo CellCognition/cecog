@@ -1,20 +1,20 @@
 """
-                          The CellCognition Project
-                  Copyright (c) 2006 - 2009 Michael Held
-                   Gerlich Lab, ETH Zurich, Switzerland
-                            www.cellcognition.org
+                           The CellCognition Project
+                     Copyright (c) 2006 - 2009 Michael Held
+                      Gerlich Lab, ETH Zurich, Switzerland
+                              www.cellcognition.org
 
-           CellCognition is distributed under the LGPL License.
-                     See trunk/LICENSE.txt for details.
-               See trunk/AUTHORS.txt for author contributions.
+              CellCognition is distributed under the LGPL License.
+                        See trunk/LICENSE.txt for details.
+                 See trunk/AUTHORS.txt for author contributions.
 """
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
 __revision__ = '$Rev$'
-__source__ = '$URL:: $'
+__source__ = '$URL$'
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # standard library imports:
 #
 
@@ -31,7 +31,7 @@ import sys, \
 from exceptions import IOError, ValueError
 import cPickle as pickle
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # extension module imports:
 #
 
@@ -55,16 +55,16 @@ from pdk.properties import (BooleanProperty,
 from pdk.attributemanagers import (get_attribute_values,
                                    set_attribute_values)
 from pdk.attributes import Attribute
-from pdk.map import dict_values
+from pdk.map import dict_values, dict_append_list
 from pdk.fileutils import safe_mkdirs
-from pdk.iterator import unique
+from pdk.iterator import unique, flatten
 from pdk.ordereddict import OrderedDict
 from pdk.errors import NotImplementedMethodError
 #from pdk.containers.tableio import (importTable,
 #                                    exportTable)
 #from pdk.containers.tablefactories import newTable
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # cecog module imports:
 #
 
@@ -77,15 +77,15 @@ from cecog.segmentation.strategies import (PrimarySegmentation,
 from cecog.learning.learning import ClassPredictor
 
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # constants:
 #
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # functions:
 #
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # classes:
 #
 
@@ -947,98 +947,122 @@ class CellAnalyzer(PropertyManager):
 
         strChannelId = oLearner.strChannelId
         strRegionId = oLearner.strRegionId
-        oChannel = self._dctChannels[strChannelId]
-        oRegion = oChannel.getRegion(strRegionId)
-        oContainer = oChannel.getContainer(strRegionId)
-        dctLabels = {}
         img_rgb = None
 
         self._oLogger.debug('* collecting samples...')
 
-        for oReader in lstReader:
-            lstCoordinates = None
-            if (byTime and P == oReader.getPosition() and self._iT in oReader):
-                lstCoordinates = oReader[self._iT]
-            elif (not byTime and P in oReader):
-                lstCoordinates = oReader[P]
-            #print "moo", P, oReader.getPosition(), byTime, self._iT in oReader
-            #print lstCoordinates, byTime, self.P, oReader.keys()
+        bSuccess = True
+        lstChannels = self._dctChannels.values()
+        lstChannels.sort()
+        oPrimaryChannel = None
+        for oChannel2 in lstChannels:
 
-            if not lstCoordinates is None:
-                lstObjects = []
-                dctSelectedObjectIds = {}
-                #print self.iP, self._iT, lstCoordinates
-                for dctData in lstCoordinates:
-                    iLabel = dctData['iClassLabel']
-                    if (iLabel in oLearner.dctClassNames and
-                        dctData['iPosX'] >= 0 and
-                        dctData['iPosX'] < oContainer.width and
-                        dctData['iPosY'] >= 0 and
-                        dctData['iPosY'] < oContainer.height):
-                        oObj1 = ImageObject()
-                        oObj1.oCenterAbs = (dctData['iPosX'], dctData['iPosY'])
-                        lstSqDists = []
-                        for iObjId, oObj2 in oRegion.iteritems():
-                            fSqDist = oObj1.squaredMagnitude(oObj2)
-                            lstSqDists.append((iObjId, fSqDist))
-                        lstSqDists.sort(lambda a,b: cmp(a[1], b[1]))
-                        iObjId = lstSqDists[0][0]
-                        oObj = oRegion[iObjId]
-                        oObj.iLabel = iLabel
-                        oObj.strClassName = oLearner.dctClassNames[iLabel]
-                        oObj.strHexColor = oLearner.dctHexColors[oObj.strClassName]
-                        lstObjects.append(oObj)
-                        if not iLabel in dctLabels:
-                            dctLabels[iLabel] = []
-                        dctLabels[iLabel].append(iObjId)
-                        dctSelectedObjectIds[iObjId] = 1
+            oChannel2.applyZSelection()
+            oResult = oChannel2.applySegmentation(oPrimaryChannel)
 
-                    #print iObjId, oObj.iLabel, oObj.aFeatures
+            if oPrimaryChannel is None:
+                if oResult:
+                    assert oChannel2.RANK == 1
+                    oPrimaryChannel = oChannel2
+                else:
+                    bSuccess = False
+                    break
 
+        if bSuccess:
 
-                for oObj in lstObjects:
-                    #print oObj.iId
-                    if (oObj.oRoi.upperLeft[0] >= 0 and
-                        oObj.oRoi.upperLeft[1] >= 0 and
-                        oObj.oRoi.lowerRight[0] < oContainer.width and
-                        oObj.oRoi.lowerRight[1] < oContainer.height):
-                        iCenterX, iCenterY = oObj.oCenterAbs
+            oChannel = self._dctChannels[strChannelId]
+            oContainer = oChannel.getContainer(strRegionId)
+            objects = oContainer.getObjects()
+
+            object_lookup = {}
+            for oReader in lstReader:
+                lstCoordinates = None
+                if (byTime and P == oReader.getPosition() and self._iT in oReader):
+                    lstCoordinates = oReader[self._iT]
+                elif (not byTime and P in oReader):
+                    lstCoordinates = oReader[P]
+                #print "moo", P, oReader.getPosition(), byTime, self._iT in oReader
+                #print lstCoordinates, byTime, self.P, oReader.keys()
+
+                if not lstCoordinates is None:
+                    #print self.iP, self._iT, lstCoordinates
+                    for dctData in lstCoordinates:
+                        label = dctData['iClassLabel']
+                        if (label in oLearner.dctClassNames and
+                            dctData['iPosX'] >= 0 and
+                            dctData['iPosX'] < oContainer.width and
+                            dctData['iPosY'] >= 0 and
+                            dctData['iPosY'] < oContainer.height):
+                            center1 = ccore.Diff2D(dctData['iPosX'],
+                                                   dctData['iPosY'])
+                            dists = []
+                            for obj_id, obj in objects.iteritems():
+                                diff = obj.oCenterAbs - center1
+                                dist_sq = diff.squaredMagnitude()
+                                # limit to 30 pixel radius
+                                if dist_sq < 900:
+                                    dists.append((obj_id, dist_sq))
+                            if len(dists) > 0:
+                                dists.sort(lambda a,b: cmp(a[1], b[1]))
+                                obj_id = dists[0][0]
+                                dict_append_list(object_lookup, label, obj_id)
+
+            object_ids = set(flatten(object_lookup.values()))
+            objects_del = set(objects.keys()) - object_ids
+            for obj_id in objects_del:
+                oContainer.delObject(obj_id)
+
+            oChannel.applyFeatures()
+            region = oChannel.getRegion(strRegionId)
+
+            learner_objects = []
+            for label, object_ids in object_lookup.iteritems():
+                class_name = oLearner.dctClassNames[label]
+                hex_color = oLearner.dctHexColors[class_name]
+                for obj_id in object_ids:
+                    obj = region[obj_id]
+                    obj.iLabel = label
+                    obj.strClassName = class_name
+                    obj.strHexColor = hex_color
+
+                    if (obj.oRoi.upperLeft[0] >= 0 and
+                        obj.oRoi.upperLeft[1] >= 0 and
+                        obj.oRoi.lowerRight[0] < oContainer.width and
+                        obj.oRoi.lowerRight[1] < oContainer.height):
+                        iCenterX, iCenterY = obj.oCenterAbs
 
                         strPathOutLabel = os.path.join(oLearner.dctEnvPaths['samples'],
-                                                       oLearner.dctClassNames[oObj.iLabel])
+                                                       oLearner.dctClassNames[label])
                         safe_mkdirs(strPathOutLabel)
 
                         strFilenameBase = 'P%s_T%05d_X%04d_Y%04d' % (self.P, self._iT, iCenterX, iCenterY)
 
-                        oObj.sample_id = strFilenameBase
+                        obj.sample_id = strFilenameBase
+                        learner_objects.append(obj)
 
                         strFilenameImg = os.path.join(strPathOutLabel, '%s__img.png' % strFilenameBase)
                         strFilenameMsk = os.path.join(strPathOutLabel, '%s__msk.png' % strFilenameBase)
                         #print strFilenameImg, strFilenameMsk
-                        oContainer.exportObject(oObj.iId,
+                        oContainer.exportObject(obj_id,
                                                 strFilenameImg,
                                                 strFilenameMsk)
-                    #print "what?"
 
-                oLearner.applyObjects(lstObjects)
+                oContainer.markObjects(list(object_ids),
+                                       ccore.RGBValue(*hexToRgb(hex_color)), False, True)
 
+            if len(learner_objects) > 0:
+                oLearner.applyObjects(learner_objects)
+                # we dont want to apply None for feature names
+                oLearner.setFeatureNames(oChannel.lstFeatureNames)
 
-                lstObjIds = oRegion.keys()
-                for iObjId in lstObjIds:
-                    if not iObjId in dctSelectedObjectIds:
-                        del oRegion[iObjId]
-
-                for iLabel, lstObjIds in dctLabels.iteritems():
-                    strClassName = oLearner.dctClassNames[iLabel]
-                    strColor = oLearner.dctHexColors[strClassName]
-                    oContainer.markObjects(lstObjIds, ccore.RGBValue(*hexToRgb(strColor)), False, True)
-                strPathOut = os.path.join(oLearner.dctEnvPaths['controls'])
-                safe_mkdirs(strPathOut)
-                oContainer.exportRGB(os.path.join(strPathOut,
-                                                  "P%s_T%05d_C%s_R%s.jpg" %\
-                                                   (self.P, self._iT, oLearner.strChannelId, oLearner.strRegionId)),
-                                    '90')
-                img_rgb = oContainer.img_rgb
+            strPathOut = os.path.join(oLearner.dctEnvPaths['controls'])
+            safe_mkdirs(strPathOut)
+            oContainer.exportRGB(os.path.join(strPathOut,
+                                              "P%s_T%05d_C%s_R%s.jpg" %\
+                                               (self.P, self._iT, oLearner.strChannelId, oLearner.strRegionId)),
+                                '90')
+            img_rgb = oContainer.img_rgb
+            # endif bSuccess
         return img_rgb
 
 

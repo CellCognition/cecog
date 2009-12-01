@@ -1,29 +1,30 @@
 """
-The Mito-Imaging Project
-Copyright (c) 2005-2008 Michael Held
+                           The CellCognition Project
+                     Copyright (c) 2006 - 2009 Michael Held
+                      Gerlich Lab, ETH Zurich, Switzerland
+                              www.cellcognition.org
 
-Cutting objects from an image by object-id and exporting to img/msk pair.
+              CellCognition is distributed under the LGPL License.
+                        See trunk/LICENSE.txt for details.
+                 See trunk/AUTHORS.txt for author contributions.
 """
 
-__author__ =   'Michael Held'
-__date__ =     '$Date$'
+__author__ = 'Michael Held'
+__date__ = '$Date$'
 __revision__ = '$Rev$'
-__source__ =   '$URL$'
+__source__ = '$URL$'
 
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # standard library imports:
 #
 
-import sys, \
-       os, \
+import os, \
        re, \
-       math, \
-       copy, \
        logging
 from xml.dom.minidom import parse
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # extension module imports:
 #
 
@@ -36,20 +37,20 @@ from pdk.optionmanagers import OptionManager
 from pdk.ordereddict import OrderedDict
 
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # cecog module imports:
 #
 
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # constants:
 #
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # functions:
 #
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # classes:
 #
 

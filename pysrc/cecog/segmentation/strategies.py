@@ -1,31 +1,28 @@
 """
-                          The CellCognition Project
-                  Copyright (c) 2006 - 2009 Michael Held
-                   Gerlich Lab, ETH Zurich, Switzerland
-                            www.cellcognition.org
+                           The CellCognition Project
+                     Copyright (c) 2006 - 2009 Michael Held
+                      Gerlich Lab, ETH Zurich, Switzerland
+                              www.cellcognition.org
 
-           CellCognition is distributed under the LGPL License.
-                     See trunk/LICENSE.txt for details.
-               See trunk/AUTHORS.txt for author contributions.
+              CellCognition is distributed under the LGPL License.
+                        See trunk/LICENSE.txt for details.
+                 See trunk/AUTHORS.txt for author contributions.
 """
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
 __revision__ = '$Rev$'
-__source__ = '$URL:: $'
+__source__ = '$URL$'
 
-
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # standard library imports:
 #
 import os, \
        logging
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # extension module imports:
 #
-
-import numpy
 
 from pdk.propertymanagers import PropertyManager
 from pdk.properties import (BooleanProperty,
@@ -37,11 +34,12 @@ from pdk.properties import (BooleanProperty,
                             Property)
 from pdk.attributes import Attribute
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # cecog module imports:
 #
 from cecog import ccore
-#------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
 # functions:
 #
 
@@ -56,7 +54,7 @@ def convertImageMinMax(imgIn, maxValue=255.0):
     convertOffset = -minV
     return ccore.linearTransform(imgIn, convertRatio, convertOffset)
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # classes:
 #
 

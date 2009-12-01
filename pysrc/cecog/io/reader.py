@@ -1,36 +1,33 @@
 """
-                          The CellCognition Project
-                  Copyright (c) 2006 - 2009 Michael Held
-                   Gerlich Lab, ETH Zurich, Switzerland
-                            www.cellcognition.org
+                           The CellCognition Project
+                     Copyright (c) 2006 - 2009 Michael Held
+                      Gerlich Lab, ETH Zurich, Switzerland
+                              www.cellcognition.org
 
-           CellCognition is distributed under the LGPL License.
-                     See trunk/LICENSE.txt for details.
-               See trunk/AUTHORS.txt for author contributions.
+              CellCognition is distributed under the LGPL License.
+                        See trunk/LICENSE.txt for details.
+                 See trunk/AUTHORS.txt for author contributions.
 """
-from pdk.fileutils import collect_files
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
 __revision__ = '$Rev$'
-__source__ = '$URL:: $'
+__source__ = '$URL$'
 
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # standard library imports:
 #
 import os, \
        exceptions, \
        re, \
        pprint, \
-       weakref, \
        cPickle as pickle, \
-       logging, \
-       sys
+       logging
 
 from types import ListType, TupleType
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # extension module imports:
 #
 from numpy import asarray, mean, std
@@ -47,15 +44,15 @@ from pdk.attributes import Attribute
 from pdk.attributemanagers import (get_slot_values,
                                    set_slot_values)
 from pdk.ordereddict import OrderedDict
+from pdk.fileutils import collect_files
 
-#------------------------------------------------------------------------------
-# mito imports:
+#-------------------------------------------------------------------------------
+# cecog imports:
 #
 from cecog import ccore
-from cecog.util import LoggerMixin
 from cecog.util import rgbToHex
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # constants:
 #
 IMAGECONTAINER_FILENAME = 'ImageContainer.pkl'
@@ -63,7 +60,7 @@ UINT8 = 'UINT8'
 UINT16 = 'UINT16'
 PIXEL_TYPES = [UINT8, UINT16]
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # classes:
 #
 
@@ -770,7 +767,7 @@ class ImageContainerSubdirStack(ImageContainerStack):
                 self.lstNameTags.append(dctNameTags)
 
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # functions:
 #
 
@@ -828,7 +825,7 @@ def dump_image_container(path, image_container):
     pickle.dump(image_container, f, 1)
     f.close()
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # main:
 #
 

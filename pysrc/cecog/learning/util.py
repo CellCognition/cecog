@@ -1,46 +1,38 @@
 """
-                          The CellCognition Project
-                  Copyright (c) 2006 - 2009 Michael Held
-                   Gerlich Lab, ETH Zurich, Switzerland
-                            www.cellcognition.org
+                           The CellCognition Project
+                     Copyright (c) 2006 - 2009 Michael Held
+                      Gerlich Lab, ETH Zurich, Switzerland
+                              www.cellcognition.org
 
-           CellCognition is distributed under the LGPL License.
-                     See trunk/LICENSE.txt for details.
-               See trunk/AUTHORS.txt for author contributions.
+              CellCognition is distributed under the LGPL License.
+                        See trunk/LICENSE.txt for details.
+                 See trunk/AUTHORS.txt for author contributions.
 """
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
 __revision__ = '$Rev$'
-__source__ = '$URL:: $'
+__source__ = '$URL$'
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # standard library imports:
 #
 
-import sys, \
-       os, \
-       re, \
-       fpformat
-
 from numpy import asarray
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # cecog module imports:
 #
 
-import cecog.learning as ml
-
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # constants:
 #
 
-
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # functions:
 #
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # classes:
 #
 
@@ -58,7 +50,8 @@ class Normalizer(object):
         self.lstScale = []
         for strLine in oFile:
             lstLine = strLine.rstrip().split(" ")
-            self.lstScale.append((int(lstLine[0])-1, float(lstLine[1]), float(lstLine[2])))
+            self.lstScale.append((int(lstLine[0])-1, float(lstLine[1]),
+                                  float(lstLine[2])))
         oFile.close()
 
     def scale(self, lstValues):
@@ -138,7 +131,8 @@ class ArffReader(object):
                             strFeatureName = lstToken[1]
                             strDataType = lstToken[2].lower()
                             self.lstFeatureNames.append(strFeatureName)
-                            self.dctDataTypes[strFeatureName] = self.DCT_DATA_TYPES[strDataType]
+                            self.dctDataTypes[strFeatureName] = \
+                                self.DCT_DATA_TYPES[strDataType]
 
                     elif first == '%class-labels':
                         if lstToken[1][0] == '{':
@@ -172,7 +166,8 @@ class ArffReader(object):
                     assert strClassName in setClassNames
                     assert len(lstItems) == len(self.lstFeatureNames)
                     lstFeatureData = []
-                    for strFeatureName, item in zip(self.lstFeatureNames, lstItems):
+                    for strFeatureName, item in zip(self.lstFeatureNames,
+                                                    lstItems):
                         if self.dctDataTypes[strFeatureName] == str:
                             value = self._convert_string(item)
                         else:
@@ -183,7 +178,8 @@ class ArffReader(object):
                     self.dctFeatureData[strClassName].append(lstFeatureData)
 
         for strClassName in self.dctFeatureData:
-            self.dctFeatureData[strClassName] = asarray(self.dctFeatureData[strClassName], 'O')
+            self.dctFeatureData[strClassName] = \
+                asarray(self.dctFeatureData[strClassName], 'O')
 
         for iClassLabel, strClassName in zip(lstClassLabels, lstClassNames):
             self.dctClassLabels[strClassName] = iClassLabel
@@ -214,7 +210,8 @@ class WriterBase(object):
         raise NotImplementedError("This is an abstract method!")
 
     def buildLine(self, strClassName, lstObjectFeatures):
-        return self.buildLineStatic(strClassName, lstObjectFeatures, self.dctClassLabels)
+        return self.buildLineStatic(strClassName, lstObjectFeatures,
+                                    self.dctClassLabels)
 
     def writeLine(self, strLine=""):
         self.oFile.write(strLine+"\n")
@@ -239,13 +236,15 @@ class WriterBase(object):
 class SparseWriter(WriterBase):
 
     def __init__(self, strFilename, lstFeatureNames, dctClassLabels):
-        super(SparseWriter, self).__init__(strFilename, lstFeatureNames, dctClassLabels)
+        super(SparseWriter, self).__init__(strFilename, lstFeatureNames,
+                                           dctClassLabels)
 
     @classmethod
     def buildLineStatic(cls, strClassName, lstObjectFeatures, dctClassLabels):
         strLine = " ".join(["%d" % dctClassLabels[strClassName]] +
                            ["%d:%s" % (iIdx+1, cls._convert(fObjectFeature))
-                            for iIdx, fObjectFeature in enumerate(lstObjectFeatures)]
+                            for iIdx, fObjectFeature in
+                            enumerate(lstObjectFeatures)]
                            )
         return strLine
 
@@ -254,8 +253,10 @@ class SparseWriter(WriterBase):
 class TsvWriter(WriterBase):
 
     def __init__(self, strFilename, lstFeatureNames, dctClassLabels):
-        super(TsvWriter, self).__init__(strFilename, lstFeatureNames, dctClassLabels)
-        self.writeLine("\t".join(["Class Name", "Class Label"] + self.lstFeatureNames))
+        super(TsvWriter, self).__init__(strFilename, lstFeatureNames,
+                                        dctClassLabels)
+        self.writeLine("\t".join(["Class Name", "Class Label"] +
+                                 self.lstFeatureNames))
 
     @classmethod
     def buildLineStatic(cls, strClassName, lstObjectFeatures, dctClassLabels):
@@ -270,8 +271,10 @@ class TsvWriter(WriterBase):
 
 class ArffWriter(WriterBase):
 
-    def __init__(self, strFilename, lstFeatureNames, dctClassLabels, dctHexColors=None, hasZeroInsert=False):
-        super(ArffWriter, self).__init__(strFilename, lstFeatureNames, dctClassLabels)
+    def __init__(self, strFilename, lstFeatureNames, dctClassLabels,
+                 dctHexColors=None, hasZeroInsert=False):
+        super(ArffWriter, self).__init__(strFilename, lstFeatureNames,
+                                         dctClassLabels)
         self.writeLine("@RELATION MitoClassifier")
         self.writeLine()
         for strFeatureName in self.lstFeatureNames:
@@ -297,7 +300,7 @@ class ArffWriter(WriterBase):
         self.writeLine()
 
         self.writeLine('%%HAS-ZERO-INSERTED-IN-FEATURE-VECTOR %d' %
-                       1 if hasZeroInsert else 0)
+                       (1 if hasZeroInsert else 0))
         self.writeLine()
 
         self.writeLine("@DATA")
