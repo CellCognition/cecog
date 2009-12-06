@@ -14,6 +14,7 @@
 
 library(hwriter)
 library(igraph)
+library(Cairo)
 
 read.screen <- function(dir,filenameLayout,regionName,graph,fuseClasses=NULL)
 {
@@ -333,29 +334,33 @@ plot.transition.graph <- function(hmm, loops=FALSE,type=NULL,filename=NULL,weigh
         #E(g)$color[max.w] <- redcol[w.col[max.w]]
         #V(g)$size <- 80 * c(0, w.K) + 15
     }
+    #par(family = 'sans')
     V(g)$size <- 25
     E(g)$width <- 2
     V(g)$label.font <- 2
     V(g)$label.cex <- 2
     V(g)$label.color <- 'black'
+    #V(g)$loop.angle <- -pi
+
     if (type=="PNG")
     {
 #        CairoPNG(filename, bg='transparent')
         png(filename, bg='transparent')
-        plot(g)
+        plot(g, vertex.label.family="Helvetica")
         dev.off()
     } else
     if (type=="PS")
     {
+        #postscript(filename, bg='transparent')
         CairoPS(filename, bg='transparent')
-        plot(g)
+        plot(g, vertex.label.family="Helvetica")
         dev.off()
     } else
     {
         if (type=="PDF")
         {
-            CairoPDF(filename, bg='transparent')
-            plot(g)
+            pdf(filename, bg='transparent')
+            plot(g, vertex.label.family="Helvetica")
             dev.off()
         } else
             plot(g)
@@ -449,6 +454,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
                              indices=NULL,
                              realign=NULL,
                              realign_onset=NULL,
+                             realign_truncate=0,
                              features=NULL,
                              writeDecode=TRUE,
                              groupByOligoId=FALSE,
@@ -600,11 +606,11 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             # write PNG and PDF
             plot.transition.graph(hmm[[i]], type="PNG", filename=paste(outdir_region,"/graph_loop_",i,".png",sep=""), loops=TRUE, weights=TRUE)
             #plotTransitionGraph(hmm[[i]], type="PDF", filename=paste(outdir,"/graph_loop_",i,".pdf",sep=""), loops=TRUE, weights=TRUE)
-            #plot.transition.graph(hmm[[i]], type="PS",  filename=paste(outdir,"/graph_loop_",i,".ps",sep=""), loops=TRUE, weights=TRUE)
+            plot.transition.graph(hmm[[i]], type="PS",  filename=paste(outdir_region,"/graph_loop_",i,".ps",sep=""), loops=TRUE, weights=TRUE)
 
             plot.transition.graph(hmm[[i]], type="PNG", filename=paste(outdir_region,"/graph_",i,".png",sep=""), loops=FALSE, weights=TRUE)
             #plotTransitionGraph(hmm[[i]], type="PDF", filename=paste(outdir,"/graph_",i,".pdf",sep=""), loops=FALSE, weights=TRUE)
-            #plot.transition.graph(hmm[[i]], type="PS",  filename=paste(outdir,"/graph_",i,".ps",sep=""), loops=FALSE, weights=TRUE)
+            plot.transition.graph(hmm[[i]], type="PS",  filename=paste(outdir_region,"/graph_",i,".ps",sep=""), loops=FALSE, weights=TRUE)
 
 
             # write HTML
@@ -629,11 +635,11 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             print(T)
             #I3 <- rep(FALSE, sum(I))
 
-      if (is.null(realign))
+          if (is.null(realign))
               onsets <- apply(sq, 1, subsearch, c(1,1,1,1,1,1,1,2,2,2))
           else
           {
-        print("realign")
+            print("realign")
             print(sum(I))
             print(length(realign))
           }
@@ -662,7 +668,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
                I[I2[k]] <- FALSE
              realign.starts.nofilter <- append(realign.starts.nofilter, s)
             }
-            T <- T - 105
+            T <- T - realign_truncate
 #            print(dim(nsq))
 #            print(T)
             I2 <- seq(1,length(I))[I]

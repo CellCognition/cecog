@@ -21,7 +21,8 @@ import os, \
        subprocess, \
        logging, \
        itertools, \
-       re
+       re, \
+       shutil
 from types import ListType, FloatType
 
 #-------------------------------------------------------------------------------
@@ -876,9 +877,13 @@ class PlotCellTracker(CellTracker):
         return dctBoundingBoxes
 
 
-    def analyze(self, dctChannels, channelId=None):
+    def analyze(self, dctChannels, channelId=None, clear_path=False):
         #print self.lstChromatinFeatureNames
         #print self.lstSecondaryFeatureNames
+        if clear_path:
+            shutil.rmtree(self.strPathOut, True)
+            safe_mkdirs(self.strPathOut)
+
         for strRootId, dctTrackResults in self.dctVisitorData.iteritems():
 
             self.oLogger.debug("* root %s, candidates %s" % (strRootId, dctTrackResults.keys()))

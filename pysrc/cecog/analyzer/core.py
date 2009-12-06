@@ -191,13 +191,13 @@ class PositionAnalyzer(object):
 
         if self.oSettings.get('Classification', 'collectsamples'):
             # disable tracking!
-            self.oSettings.set('Tracking', 'tracking', False)
+            self.oSettings.set('Processing', 'tracking', False)
             self.lstAnalysisFrames = dctSamplePositions[self.origP]
 
 
         self.oSettings.set_section('ObjectDetection')
         self.channel_mapping = {self.PRIMARY_CHANNEL : self.oSettings.get2('primary_channelid')}
-        if self.oSettings.get2('secondary_processchannel'):
+        if self.oSettings.get('Processing', 'secondary_processchannel'):
             self.channel_mapping[self.SECONDARY_CHANNEL] = self.oSettings.get2('secondary_channelid')
 
         self.channel_mapping_reversed = dict([(v,k) for k,v in self.channel_mapping.iteritems()])
@@ -209,10 +209,11 @@ class PositionAnalyzer(object):
         for channel in [self.PRIMARY_CHANNEL, self.SECONDARY_CHANNEL]:
             process_channel = channel in self.channel_mapping
 
-            self.oSettings.set_section('Classification')
+            self.oSettings.set_section('Processing')
             if (process_channel and
                 self.oSettings.get2(self._resolve_name(channel, 'classification'))):
                 channel_id = self.channel_mapping[channel]
+                self.oSettings.set_section('Classification')
                 classifier_infos = {'strEnvPath' : mapDirectory(self.oSettings.get2(self._resolve_name(channel, 'classification_envpath'))),
                                     'strChannelId' : channel_id,
                                     'strRegionId' : self.oSettings.get2(self._resolve_name(channel, 'classification_regionname')),
@@ -264,7 +265,7 @@ class PositionAnalyzer(object):
 
         self.oSettings.set_section('Tracking')
         # structure and logic to handle object trajectories
-        if self.oSettings.get2('tracking'):
+        if self.oSettings.get('Processing', 'tracking'):
             strPathOutPositionTracking = os.path.join(self.strPathOutPosition,
                                                       '_tracking')
 
@@ -300,9 +301,9 @@ class PositionAnalyzer(object):
                                     'iMaxInDegree'         : self.oSettings.get2('tracking_maxindegree'),
                                     'iMaxOutDegree'        : self.oSettings.get2('tracking_maxoutdegree'),
 
-                                    'lstLabelTransitions'  : transitions,
-                                    'lstBackwardLabels'    : map(int, self.oSettings.get2('tracking_backwardlabels').split(',')),
-                                    'lstForwardLabels'     : map(int, self.oSettings.get2('tracking_forwardlabels').split(',')),
+                                    'lstLabelTransitions'  : [],
+                                    'lstBackwardLabels'    : [],
+                                    'lstForwardLabels'     : [],
                                     })
 
             if self.oSettings.get2('tracking_synchronize_trajectories'):
@@ -314,6 +315,10 @@ class PositionAnalyzer(object):
 
                                         'bBackwardRangeMin'    : self.oSettings.get2('tracking_backwardrange_min'),
                                         'bForwardRangeMin'     : self.oSettings.get2('tracking_forwardrange_min'),
+
+                                        'lstLabelTransitions'  : transitions,
+                                        'lstBackwardLabels'    : map(int, self.oSettings.get2('tracking_backwardlabels').split(',')),
+                                        'lstForwardLabels'     : map(int, self.oSettings.get2('tracking_forwardlabels').split(',')),
                                         })
 
 #            elif self.oSettings.get2('tracking_event_tracjectory'):
@@ -357,7 +362,7 @@ class PositionAnalyzer(object):
 
 
         self.oSettings.set_section('Tracking')
-        if (self.oSettings.get2('tracking') and
+        if (self.oSettings.get('Processing', 'tracking') and
             self.oSettings.get2('tracking_synchronize_trajectories') and
             iNumberImages > 0):
 
@@ -398,8 +403,10 @@ class PositionAnalyzer(object):
                                'meta': 'Analyze/export events...',})
             #self._qthread.set_stage_info(stage_info)
 
+            # clear the _tracking path
             self.oCellTracker.analyze(self.export_features,
-                                      channelId=primary_channel_id)
+                                      channelId=primary_channel_id,
+                                      clear_path=True)
             self._oLogger.debug("--- visitor analysis ok")
 
 #            if self.oSettings.bDoObjectCutting:
@@ -645,6 +652,13 @@ class PositionAnalyzer(object):
                         bPostProcessing = True
                     strPostprocessingConditions = ' and '.join(lstPostprocessingConditions)
 
+                    if self.oSettings.get2('primary_lat2'):
+                        iLatWindowSize2 = self.oSettings.get2('primary_latwindowsize2')
+                        iLatLimit2 = self.oSettings.get2('primary_latlimit2')
+                    else:
+                        iLatWindowSize2 = None
+                        iLatLimit2 = None
+
                     params = dict(oZSliceOrProjection = self.oSettings.get2('primary_zsliceorprojection'),
                                   channelRegistration=channel_registration,
                                   fNormalizeMin = self.oSettings.get2('primary_normalizemin'),
@@ -652,8 +666,8 @@ class PositionAnalyzer(object):
                                   iMedianRadius = self.oSettings.get2('primary_medianradius'),
                                   iLatWindowSize = self.oSettings.get2('primary_latwindowsize'),
                                   iLatLimit = self.oSettings.get2('primary_latlimit'),
-                                  #iLatWindowSize2 = self.oSettings.get2(''),
-                                  #iLatLimit2 = self.oSettings.get2(''),
+                                  iLatWindowSize2 = iLatWindowSize2,
+                                  iLatLimit2 = iLatLimit2,
                                   bDoShapeWatershed = self.oSettings.get2('primary_shapewatershed'),
                                   iGaussSizeShape = self.oSettings.get2('primary_shapewatershed_gausssize'),
                                   iMaximaSizeShape = self.oSettings.get2('primary_shapewatershed_maximasize'),
@@ -727,7 +741,7 @@ class PositionAnalyzer(object):
                 iNumberImages += 1
 
                 images = []
-                if self.oSettings.get('Tracking', 'tracking'):
+                if self.oSettings.get('Processing', 'tracking'):
                     self.oCellTracker.trackAtTimepoint(iT)
 
                     if self.oSettings.get('Tracking', 'tracking_visualization'):
@@ -943,8 +957,8 @@ class AnalyzerCore(object):
     def _openImageContainer(self):
         self.oSettings.set_section('General')
         self.lstPositions = self.oSettings.get2('positions')
-        print self.lstPositions, type(self.lstPositions)
-        if self.lstPositions == '':
+        #print self.lstPositions, type(self.lstPositions)
+        if self.lstPositions == '' or not self.oSettings.get2('constrain_positions'):
             self.lstPositions = None
         else:
             self.lstPositions = self.lstPositions.split(',')
@@ -1016,12 +1030,16 @@ class AnalyzerCore(object):
         # define range of frames to do analysis within
         lstFrames = range(1, self.oMetaData.iDimT+1)
 
-        frames_begin = self.oSettings.get2('frameRange_begin')
-        if frames_begin <= 0 or frames_begin > lstFrames[-1]:
-            frames_begin = lstFrames[0]
+        if self.oSettings.get2('frameRange'):
+            frames_begin = self.oSettings.get2('frameRange_begin')
+            if frames_begin <= 0 or frames_begin > lstFrames[-1]:
+                frames_begin = lstFrames[0]
 
-        frames_end = self.oSettings.get2('frameRange_end')
-        if frames_end <= 0 or frames_end > lstFrames[-1] or frames_begin > frames_end:
+            frames_end = self.oSettings.get2('frameRange_end')
+            if frames_end <= 0 or frames_end > lstFrames[-1] or frames_begin > frames_end:
+                frames_end = lstFrames[-1]
+        else:
+            frames_begin = lstFrames[0]
             frames_end = lstFrames[-1]
 
         self.tplFrameRange = (frames_begin, frames_end)

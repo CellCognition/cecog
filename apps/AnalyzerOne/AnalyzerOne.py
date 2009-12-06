@@ -1,18 +1,18 @@
 """
-                          The CellCognition Project
-                  Copyright (c) 2006 - 2009 Michael Held
-                   Gerlich Lab, ETH Zurich, Switzerland
-                            www.cellcognition.org
+                           The CellCognition Project
+                     Copyright (c) 2006 - 2009 Michael Held
+                      Gerlich Lab, ETH Zurich, Switzerland
+                              www.cellcognition.org
 
-            CellCognition is distributed under the LGPL License.
-                     See trunk/LICENSE.txt for details.
-               See trunk/AUTHORS.txt for author contributions.
+              CellCognition is distributed under the LGPL License.
+                        See trunk/LICENSE.txt for details.
+                 See trunk/AUTHORS.txt for author contributions.
 """
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
 __revision__ = '$Rev$'
-__source__ = '$URL:$'
+__source__ = '$URL$'
 
 #-------------------------------------------------------------------------------
 # standard library imports:
@@ -51,7 +51,7 @@ from cecog.reader import PIXEL_TYPES
 from cecog.analyzer.core import AnalyzerCore
 from cecog import ccore
 from cecog.learning.learning import CommonObjectLearner, CommonClassPredictor
-from cecog.util import hexToRgb
+from cecog.util import hexToRgb, write_table
 
 import resource
 
@@ -74,6 +74,11 @@ FEATURE_CATEGORIES = ['roisize',
                       ]
 REGION_NAMES_PRIMARY = ['primary']
 REGION_NAMES_SECONDARY = ['inside', 'outside', 'expanded']
+SECONDARY_COLORS = {'inside' : '#FFFF00',
+                    'outside' : '#00FF00',
+                    'expanded': '#00FFFF',
+                    }
+
 COMPRESSION_FORMATS = ['raw', 'bz2', 'gz']
 TRACKING_METHODS = ['ClassificationCellTracker',]
 
@@ -259,15 +264,19 @@ class AnalyzerMainWindow(QMainWindow):
         layout.addWidget(w_logo, 1, 0, Qt.AlignBottom|Qt.AlignHCenter)
         layout.addWidget(self._pages, 0, 1, 2, 1)
 
-        self._handler = GuiLogHandler(self)
-        self._log_window = LogWindow(self._handler)
+        qApp._log_handler = GuiLogHandler(self)
+        qApp._log_window = LogWindow(qApp._log_handler)
+        qApp._log_window.setGeometry(50,50,600,300)
 
         logger = logging.getLogger()
-        self._handler.setLevel(logging.INFO)
+        qApp._log_handler.setLevel(logging.INFO)
         formatter = logging.Formatter('%(asctime)s %(levelname)-6s %(message)s')
-        self._handler.setFormatter(formatter)
+        qApp._log_handler.setFormatter(formatter)
         #logger.addHandler(self._handler)
         logger.setLevel(logging.DEBUG)
+
+        qApp._image_dialog = None
+        qApp._graphics = None
 
         self.setGeometry(0, 0, 1000, 700)
         self.setMinimumSize(QSize(700,600))
@@ -555,6 +564,15 @@ class HmmThread(_ProcessingThread):
         _ProcessingThread.__init__(self, parent, settings)
         self._learner_dict = learner_dict
 
+        qApp._log_window.show()
+        qApp._log_window.raise_()
+        logger = logging.getLogger()
+        logger.addHandler(qApp._log_handler)
+
+    def __del__(self):
+        logger = logging.getLogger()
+        logger.removeHandler(qApp._log_handler)
+
     @classmethod
     def test_executable(cls, filename):
         filename = filename.strip()
@@ -579,7 +597,8 @@ class HmmThread(_ProcessingThread):
         cmd = 'R32'
         #import tempfile
         #filename_out = os.path.join(tempfile.gettempdir(), 'cecog_error_correction.txt')
-        wd = '/Users/miheld/src/cecog_svn/trunk/rsrc/hmm'
+        wd = 'rsrc/hmm'
+        wd = os.path.abspath(wd)
 
         f = file(os.path.join(wd, 'run_hmm.R'), 'r')
         lines = f.readlines()
@@ -587,19 +606,31 @@ class HmmThread(_ProcessingThread):
 
         self._settings.set_section('ErrorCorrection')
 
+        path_analyzed = os.path.join(self._settings.get('General', 'pathout'), 'analyzed')
+        path_out_hmm = os.path.join(self._settings.get('General', 'pathout'), 'hmm')
+        safe_mkdirs(path_out_hmm)
+
+        region_name_primary = self._settings.get('Classification', 'primary_classification_regionname')
+        region_name_secondary = self._settings.get('Classification', 'secondary_classification_regionname')
+
+        if self._settings.get2('position_labels'):
+            mapping_file = self._settings.get2('mappingfile')
+        else:
+            mapping_file = self._generate_mapping(wd, path_out_hmm, path_analyzed)
+
+        #print self._learner_dict, self._settings.get('Processing', 'primary_errorcorrection'), self._settings.get('Processing', 'primary_errorcorrection')
+
         for i in range(len(lines)):
             line2 = lines[i].strip()
             if line2 == '#WORKING_DIR':
                 lines[i] = "WORKING_DIR = '%s'\n" % wd
             elif line2 == '#FILENAME_MAPPING':
-                lines[i] = "FILENAME_MAPPING = '%s'\n" % self._settings.get2('mappingfile')
+                lines[i] = "FILENAME_MAPPING = '%s'\n" % mapping_file
             elif line2 == '#PATH_INPUT':
-                path_out = os.path.join(self._settings.get('General', 'pathout'), 'analyzed')
+                path_out = path_analyzed
                 lines[i] = "PATH_INPUT = '%s'\n" % path_out
             elif line2 == '#PATH_OUTPUT':
-                path_out = os.path.join(self._settings.get('General', 'pathout'), 'hmm')
-                safe_mkdirs(path_out)
-                lines[i] = "PATH_OUTPUT = '%s'\n" % path_out
+                lines[i] = "PATH_OUTPUT = '%s'\n" % path_out_hmm
             elif line2 == '#GROUP_BY_GENE':
                 lines[i] = "GROUP_BY_GENE = %s\n" % str(self._settings.get2('groupby_genesymbol')).upper()
             elif line2 == '#GROUP_BY_OLIGOID':
@@ -609,15 +640,21 @@ class HmmThread(_ProcessingThread):
             elif line2 == '#MAX_TIME':
                 lines[i] = "MAX_TIME = %s\n" % self._settings.get2('max_time')
 
-            if 'primary' in self._learner_dict:
+            if 'primary' in self._learner_dict and self._settings.get('Processing', 'primary_errorcorrection'):
+
+                if self._settings.get2('constrain_graph'):
+                    primary_graph = self._settings.get2('primary_graph')
+                else:
+                    primary_graph = self._generate_graph('primary', wd, path_out_hmm, region_name_primary)
+
                 if line2 == '#FILENAME_GRAPH_P':
-                    lines[i] = "FILENAME_GRAPH_P = '%s'\n" % self._settings.get2('primary_graph')
+                    lines[i] = "FILENAME_GRAPH_P = '%s'\n" % primary_graph
                 elif line2 == '#CLASS_COLORS_P':
                     learner = self._learner_dict['primary']
                     colors = ",".join(["'%s'" % learner.dctHexColors[x] for x in learner.lstClassNames])
                     lines[i] = "CLASS_COLORS_P = c(%s)\n" % colors
                 elif line2 == '#REGION_NAME_P':
-                    lines[i] = "REGION_NAME_P = '%s'\n" % self._settings.get('Classification', 'primary_classification_regionname')
+                    lines[i] = "REGION_NAME_P = '%s'\n" % region_name_primary
                 elif line2 == '#SORT_CLASSES_P':
                     primary_sort = self._settings.get2('primary_sort')
                     if primary_sort == '':
@@ -625,15 +662,20 @@ class HmmThread(_ProcessingThread):
                     else:
                         lines[i] = "SORT_CLASSES_P = c(%s)\n" % primary_sort
 
-            if 'secondary' in self._learner_dict:
+            if 'secondary' in self._learner_dict and self._settings.get('Processing', 'secondary_errorcorrection'):
+                if self._settings.get2('constrain_graph'):
+                    secondary_graph = self._settings.get2('secondary_graph')
+                else:
+                    secondary_graph = self._generate_graph('secondary', wd, path_out_hmm, region_name_secondary)
+
                 if line2 == '#FILENAME_GRAPH_S':
-                    lines[i] = "FILENAME_GRAPH_S = '%s'\n" % self._settings.get2('secondary_graph')
+                    lines[i] = "FILENAME_GRAPH_S = '%s'\n" % secondary_graph
                 elif line2 == '#CLASS_COLORS_S':
                     learner = self._learner_dict['secondary']
                     colors = ",".join(["'%s'" % learner.dctHexColors[x] for x in learner.lstClassNames])
                     lines[i] = "CLASS_COLORS_S = c(%s)\n" % colors
                 elif line2 == '#REGION_NAME_S':
-                    lines[i] = "REGION_NAME_S = '%s'\n" % self._settings.get('Classification', 'secondary_classification_regionname')
+                    lines[i] = "REGION_NAME_S = '%s'\n" % region_name_secondary
                 elif line2 == '#SORT_CLASSES_S':
                     secondary_sort = self._settings.get2('secondary_sort')
                     if secondary_sort == '':
@@ -641,42 +683,99 @@ class HmmThread(_ProcessingThread):
                     else:
                         lines[i] = "SORT_CLASSES_S = c(%s)\n" % secondary_sort
 
-        input = file('moo.R', 'w')
+        input_filename = os.path.join(path_out_hmm, 'cecog_hmm_input.R')
+        input = file(input_filename, 'w')
         input.writelines(lines)
         input.close()
-        input = file('moo.R', 'r')
 
-        p = subprocess.Popen([cmd, '--slave', '--no-save'],
-                             cwd=wd,
-                             stdin=input,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-#        p = subprocess.Popen([cmd, '--slave', 'CMD', 'BATCH', 'run_hmm.R'],
-#                             cwd=wd,
-#                             stdin=subprocess.PIPE,
-#                             stdout=subprocess.PIPE,
-#                             stderr=subprocess.PIPE)
-        code = None
-        while not self.get_abort() and code is None:
-            code = p.poll()
-            time.sleep(.3)
+        info = {'min' : 0,
+                'max' : 0,
+                'stage': 0,
+                'progress': 0}
+        self.set_stage_info(info)
 
-            #print p.stdout.readlines()
-            #print 'moo'
+        self._process = QProcess()
+        self._process.setStandardInputFile(input_filename)
+        self._process.setWorkingDirectory(wd)
+        self._process.start(cmd, ['--slave', '--no-save'])
+        self.connect(self._process, SIGNAL('finished ( int )'),
+                     self._on_finished)
+        self.connect(self._process, SIGNAL('readyReadStandardOutput()'),
+                     self._on_stdout)
+        self.connect(self._process, SIGNAL('readyReadStandardError()'),
+                     self._on_stderr)
 
-        #if self.get_abort():
-        #    os.kill(p.pid)
-
-        #filename_out
-        input.close()
-        print ''.join(p.stdout.readlines())
-        err = p.stderr.readlines()
-        print ''.join(err)
-        if len(err) > 0:
-           self.analyzer_error.emit('\n'.join(err), 1)
+        self._process.waitForFinished()
 
 
+    def _generate_graph(self, channel, wd, hmm_path, region_name):
+        f_in = file(os.path.join(wd, 'graph_template.txt'), 'rU')
+        filename_out = os.path.join(hmm_path, 'graph_%s.txt' % region_name)
+        f_out = file(filename_out, 'w')
+        learner = self._learner_dict[channel]
+        for line in f_in:
+            line2 = line.strip()
+            if line2 in ['#numberOfClasses', '#numberOfHiddenStates']:
+                f_out.write('%d\n' % len(learner.lstClassNames))
+            elif line2 == '#startNodes':
+                f_out.write('%s\n' % '  '.join(map(str, learner.lstClassLabels)))
+            elif line2 == '#transitionGraph':
+                f_out.write('%s -> %s\n' %
+                            (','.join(map(str, learner.lstClassLabels)),
+                             ','.join(map(str, learner.lstClassLabels))))
+            elif line2 == '#hiddenNodeToClassificationNode':
+                for label in learner.lstClassLabels:
+                    f_out.write('%s\n' % '  '.join(map(str, [label]*2)))
+            else:
+                f_out.write(line)
+        f_in.close()
+        f_out.close()
+        return filename_out
 
+    def _generate_mapping(self, wd, hmm_path, path_analyzed):
+        filename_out = os.path.join(hmm_path, 'layout.txt')
+        rows = []
+        positions = None
+        if self._settings.get('General', 'constrain_positions'):
+            positions = self._settings.get('General', 'positions')
+        if positions is None or positions == '':
+            positions = [x for x in os.listdir(path_analyzed)
+                         if os.path.isdir(os.path.join(path_analyzed, x)) and
+                         x[0] != '_']
+        else:
+            positions = positions.split(',')
+        for pos in positions:
+            rows.append({'Position': pos, 'OligoID':'', 'GeneSymbol':'', 'Group':''})
+        header_names = ['Position', 'OligoID', 'GeneSymbol', 'Group']
+        write_table(filename_out, header_names, rows, sep='\t')
+        return filename_out
+
+    def _on_finished(self, code):
+        print 'finished', code
+        progress = 1 if code == 0 else None
+        info = {'min' : 0,
+                'max' : 1,
+                'stage': 0,
+                'progress': progress}
+        self.set_stage_info(info)
+
+    def _on_stdout(self):
+        self._process.setReadChannel(QProcess.StandardOutput)
+        msg = str(self._process.readLine()).rstrip()
+        #print msg
+        logger = logging.getLogger()
+        logger.info(msg)
+
+    def _on_stderr(self):
+        self._process.setReadChannel(QProcess.StandardError)
+        #print str(self._process.readLine()).rstrip()
+        msg = ''.join(list(self._process.readAll()))
+        self.analyzer_error.emit(msg, 0)
+
+    def set_abort(self):
+        _ProcessingThread.set_abort(self)
+        if self._abort:
+            self._process.kill()
 
 class AnalzyerThread(_ProcessingThread):
 
@@ -780,8 +879,8 @@ class ClassifierResultFrame(QGroupBox):
 
         result = self._learner.check()
         if check:
-            b = lambda x: 'Yes.' if x else 'No.'
-            msg = 'Results for classifier in path: %s\n\n' % result['path_env']
+            b = lambda x: 'Yes' if x else 'No'
+            msg =  'Classifier path: %s\n' % result['path_env']
             msg += 'Found class definition: %s\n' % b(result['has_definition'])
             msg += 'Found annotations: %s\n' % b(result['has_path_annotations'])
             msg += 'Can you pick new samples? %s\n\n' % b(self.is_pick_samples())
@@ -791,12 +890,11 @@ class ClassifierResultFrame(QGroupBox):
             msg += 'Found SVM range: %s\n' % b(result['has_range'])
             msg += 'Can you apply the classifier to images? %s\n\n' % b(self.is_apply_classifier())
             msg += 'Found samples: %s\n' % b(result['has_path_samples'])
-            msg += 'Samples are just for visualization and annotation control.'
+            msg += 'Sample images are only used for visualization and annotation control at the moment.'
 
-            widget = QMessageBox().information(self,
-                                               "Classifier inspection results",
-                                               msg)
-
+            widget = information(self, 'Classifier inspection results',
+                                 'Classifier inspection results',
+                                 info=msg)
 
         if result['has_arff']:
             self._learner.importFromArff()
@@ -1611,7 +1709,6 @@ class ProcessorMixin(object):
 
 
     def __init__(self):
-        qApp._image_dialog = None
         self._is_running = False
         self._is_abort = False
         self._has_error = True
@@ -1725,22 +1822,6 @@ class ProcessorMixin(object):
 
 
     def _on_process_start(self, name):
-
-        #self._handler = GuiLogHandler(self)
-
-        #self._analyzer_dialog = QDialog(self)
-        #self._analyzer_dialog.setWindowTitle('Analyzer log window')
-        #self._analyzer_dialog.setMinimumWidth(900)
-        #layout = QGridLayout(self._analyzer_dialog)
-        #layout.setContentsMargins(50,50,50,50)
-        #log_window = LogWindow(self._analyzer_dialog, self._handler)
-        #format = QTextCharFormat()
-        #format.setFontFixedPitch(True)
-        #log_window.setCurrentCharFormat(format)
-        #log_window.setCurrentFont(QFont('Courier', 12))
-        #layout.addWidget(log_window, 0, 0, 1, 2)
-
-
         if not self._is_running:
 
             cls = self._control_buttons[name]['cls']
@@ -1799,8 +1880,8 @@ class ProcessorMixin(object):
 
             if is_valid:
                 self._current_process = name
-                qApp._image_dialog = None
-                self.parent().main_window._log_window.clear()
+                #qApp._image_dialog = None
+                qApp._log_window.clear()
 
                 self._is_running = True
                 self._stage_infos = {}
@@ -1819,9 +1900,27 @@ class ProcessorMixin(object):
 
                     rendering = self._current_settings.get('General', 'rendering').keys()
                     rendering += self._current_settings.get('General', 'rendering_class').keys()
+                    rendering.sort()
+                    if hasattr(qApp, '_image_combo'):
+                        qApp._image_combo.clear()
+                        if len(rendering) > 1:
+                            for name in rendering:
+                                qApp._image_combo.addItem(str(name))
+                            qApp._image_combo.show()
+                        else:
+                            qApp._image_combo.hide()
+
                     if len(rendering) > 0:
                         self._analyzer.set_renderer(rendering[0])
                     self._analyzer.image_ready.connect(self._on_update_image)
+
+                    print qApp._image_dialog
+                    if not qApp._image_dialog is None:
+                        pix = qApp._graphics.pixmap()
+                        pix.fill()
+                        qApp._graphics.setPixmap(pix)
+                        qApp._image_dialog.raise_()
+
 
                 elif cls is TrainingThread:
                     self._current_settings = copy.deepcopy(self._settings)
@@ -1834,13 +1933,13 @@ class ProcessorMixin(object):
                                                        Qt.QueuedConnection)
 
                 elif cls is HmmThread:
-                    self._current_settings = copy.deepcopy(self._settings)
+                    self._current_settings = self._get_modified_settings(name)
 
                     # FIXME: classifier handling needs revision!!!
                     learner_dict = {}
                     for kind in ['primary', 'secondary']:
                         _resolve = lambda x,y: self._settings.get(x, '%s_%s' % (kind, y))
-                        if _resolve('Classification', 'classification'):
+                        if _resolve('Processing', 'classification'):
                             classifier_infos = {'strEnvPath' : _resolve('Classification', 'classification_envpath'),
                                                 'strChannelId' : _resolve('ObjectDetection', 'channelid'),
                                                 'strRegionId' : _resolve('Classification', 'classification_regionname'),
@@ -1872,7 +1971,7 @@ class ProcessorMixin(object):
 
 #            if (not self._image_dialog is None and
 #                self._show_image.isChecked()):
-#                self._graphics_pixmap.pixmap().fill(Qt.black)
+#                qApp._graphics_pixmap.pixmap().fill(Qt.black)
 #                self._image_dialog.show()
 #                self._image_dialog.raise_()
 
@@ -1944,6 +2043,8 @@ class ProcessorMixin(object):
                     information(self, '', 'Tracking successfully finished.')
                 elif self._current_process == self.PROCESS_SYNCING:
                     information(self, '', 'Syncing successfully finished.')
+            elif isinstance(self, ErrorCorrectionFrame):
+                information(self, '', 'Error correction successfully finished.')
 
         self._current_process = None
 
@@ -1957,19 +2058,23 @@ class ProcessorMixin(object):
             self.setCursor(Qt.ArrowCursor)
 
     def _on_update_stage_info(self, info):
-        print info
+        #print info
         if self.CONTROL == CONTROL_1:
             if info['stage'] == 0:
                 self._progress0.setRange(info['min'], info['max'])
-                self._progress0.setValue(info['progress'])
-                #info = self._stage_infos[2]
-                self._progress_label0.setText('%3.1f%%' % (info['progress']*100.0/info['max']))
+                if not info['progress'] is None:
+                    self._progress0.setValue(info['progress'])
+                    if info['max'] != 0:
+                        self._progress_label0.setText('%3.1f%%' %\
+                                                      (info['progress']*100.0/info['max']))
+                else:
+                    self._progress_label0.setText('')
             else:
                 self._stage_infos[info['stage']] = info
                 if len(self._stage_infos) > 1:
                     total = self._stage_infos[1]['max']*self._stage_infos[2]['max']
                     current = (self._stage_infos[1]['progress']-1)*self._stage_infos[2]['max']+self._stage_infos[2]['progress']
-                    print current, total
+                    #print current, total
                     self._progress0.setRange(0, total)
                     self._progress0.setValue(current)
                     #info = self._stage_infos[2]
@@ -2011,20 +2116,20 @@ class ProcessorMixin(object):
                 #self._image_dialog.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
                 layout = QVBoxLayout(qApp._image_dialog)
                 layout.setContentsMargins(5,5,5,5)
-#                self._graphics = QGraphicsScene()
-#                self._graphics_pixmap = self._graphics.addPixmap(QPixmap.fromImage(qimage))
-#                view = QGraphicsView(self._graphics, self._image_dialog)
+#                qApp._graphics = QGraphicsScene()
+#                qApp._graphics_pixmap = qApp._graphics.addPixmap(QPixmap.fromImage(qimage))
+#                view = QGraphicsView(qApp._graphics, self._image_dialog)
 #                view.setViewportUpdateMode(QGraphicsView.MinimalViewportUpdate)
                 #size = qimage.size()
                 ratio = qimage.height()/float(qimage.width())
-                self._graphics = ImageDisplay(qApp._image_dialog, ratio)
-                self._graphics.setScaledContents(True)
-                self._graphics.resize(800, 800*ratio)
-                self._graphics.setMinimumSize(QSize(100,100))
+                qApp._graphics = ImageDisplay(qApp._image_dialog, ratio)
+                qApp._graphics.setScaledContents(True)
+                qApp._graphics.resize(800, 800*ratio)
+                qApp._graphics.setMinimumSize(QSize(100,100))
                 policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
                 policy.setHeightForWidth(True)
-                self._graphics.setSizePolicy(policy)
-                layout.addWidget(self._graphics)
+                qApp._graphics.setSizePolicy(policy)
+                layout.addWidget(qApp._graphics)
                 #self._image_dialog.resize(qimage.size())
                 #self._image_dialog.setMinimumSize(QSize(100,100))
                 #size = self._image_dialog.size()
@@ -2033,25 +2138,32 @@ class ProcessorMixin(object):
                 #             self._on_close_image_window)
                 rendering = self._current_settings.get('General', 'rendering').keys()
                 rendering += self._current_settings.get('General', 'rendering_class').keys()
+                qApp._image_combo = QComboBox(qApp._image_dialog)
+                qApp._image_combo.setSizePolicy(QSizePolicy(QSizePolicy.Fixed,
+                                                            QSizePolicy.Fixed))
+                layout.addWidget(qApp._image_combo)
+                self.connect(qApp._image_combo, SIGNAL('currentIndexChanged(const QString &)'),
+                             self._on_render_changed)
+                for name in sorted(rendering):
+                    qApp._image_combo.addItem(str(name))
                 if len(rendering) > 1:
-                    self._image_combo = QComboBox(qApp._image_dialog)
-                    layout.addWidget(self._image_combo, 5, 2)
-                    self.connect(self._image_combo, SIGNAL('currentIndexChanged(const QString &)'),
-                                 self._on_render_changed)
-                    for name in sorted(rendering):
-                        self._image_combo.addItem(str(name))
+                    qApp._image_combo.show()
+                else:
+                    qApp._image_combo.hide()
                 layout.addStretch()
                 qApp._image_dialog.setGeometry(50, 50, 800, 800*ratio)
-                #view.fitInView(self._graphics.sceneRect(), Qt.KeepAspectRatio)
+                #view.fitInView(qApp._graphics.sceneRect(), Qt.KeepAspectRatio)
 
                 qApp._image_dialog.show()
+                qApp._image_dialog.raise_()
             #else:
-            #    self._graphics_pixmap.setPixmap(QPixmap.fromImage(qimage))
-            self._graphics.setPixmap(QPixmap.fromImage(qimage))
+            #    qApp._graphics_pixmap.setPixmap(QPixmap.fromImage(qimage))
+            qApp._graphics.setPixmap(QPixmap.fromImage(qimage))
             qApp._image_dialog.setWindowTitle(info)
             qApp._image_dialog.setToolTip(filename)
             if not qApp._image_dialog.isVisible():
                 qApp._image_dialog.show()
+                qApp._image_dialog.raise_()
 
 
 class InputFrame(QFrame, InputWidgetMixin):
@@ -2214,18 +2326,26 @@ class GeneralFrame(InputFrame):
                        SelectionTrait(naming_schemes[0], naming_schemes,
                                       label="Naming scheme"))
 
-        self.add_input('positions',
-                       StringTrait('', 1000, label='Positions',
+        self.add_line()
+
+        self.add_group('constrain_positions',
+                       BooleanTrait(False, label='Constrain positions'),
+                       [('positions',
+                        StringTrait('', 1000, label='Positions',
                                    mask='(\w+,)*\w+'))
+                       ])
 
         self.add_input('redoFailedOnly',
                        BooleanTrait(True, label='Skip processed positions'))
 
-        self.add_group('Timepoint range', None,
+        self.add_line()
+
+        self.add_group('frameRange',
+                       BooleanTrait(False, label='Constrain timepoints'),
                        [('frameRange_begin',
-                         IntTrait(0, 0, 10000, label='Begin')),
+                         IntTrait(1, 1, 10000, label='Begin')),
                         ('frameRange_end',
-                         IntTrait(0, 0, 1000, label='End'))
+                         IntTrait(1, 1, 1000, label='End'))
                         ], layout='flow')
 
         self.add_input('frameIncrement',
@@ -2313,19 +2433,25 @@ class ObjectDetectionFrame(InputFrame, ProcessorMixin):
                         IntTrait(255, -2**16, 2**16, label='Max.')),
                         ], layout='flow')
         self.add_line()
+        self.add_input('primary_medianRadius',
+                       IntTrait(2, 0, 1000, label='Median radius'))
+
         self.add_group('Local adaptive threshold', None,
-                       [('primary_medianRadius',
-                         IntTrait(2, 0, 1000, label='Median radius'),
-                         (0,0,1,1)),
-                        ('primary_latWindowSize',
+                       [('primary_latWindowSize',
                          IntTrait(20, 1, 1000, label='Window size'),
-                         (0,1,1,1)),
+                         (1,0,1,1)),
                         ('primary_latLimit',
                          IntTrait(1, 0, 255, label='Min. contrast'),
-                         (1,0,1,1)),
-                        ('primary_emptyImageMax',
-                         IntTrait(90, 0, 255, label='Empty frame threshold'),
                          (1,1,1,1)),
+                        ])
+        self.add_group('primary_lat2',
+                       BooleanTrait(False, label='Local adaptive threshold 2'),
+                       [('primary_latWindowSize2',
+                         IntTrait(20, 1, 1000, label='Window size'),
+                         (0,0,1,1)),
+                        ('primary_latLimit2',
+                         IntTrait(1, 0, 255, label='Min. contrast'),
+                         (0,1,1,1)),
                         ])
 
 
@@ -2402,14 +2528,14 @@ class ObjectDetectionFrame(InputFrame, ProcessorMixin):
                          IntTrait(1, 0, 10000, label='Min. seed distance'))
         self.register_trait('primary_intensityWatershed_minMergeSize',
                          IntTrait(1, 0, 10000, label='Object size threshold'))
+        self.register_trait('primary_emptyImageMax',
+                         IntTrait(90, 0, 255, label='Empty frame threshold'))
 
         self.add_expanding_spacer()
 
 
         self.set_tab_name('SecondaryChannel')
 
-        self.add_input('secondary_processChannel',
-                       BooleanTrait(False, label='Process channel'))
         self.add_input('secondary_channelId',
                        StringTrait('rfp', 100, label='Secondary channel ID'))
 #        self.add_input('zSliceOrProjection',
@@ -2439,13 +2565,17 @@ class ObjectDetectionFrame(InputFrame, ProcessorMixin):
         self.add_group('Region definition', None,
                        [('secondary_regions',
                          MultiSelectionTrait([], REGION_NAMES_SECONDARY,
-                                             label='Regions'), (0,0,3,1)),
+                                             label='Regions'),
+                         (0,0,3,1)),
                         ('secondary_regions_expansionsize',
-                         IntTrait(0, 0, 4000, label='Expansion'), (0,1,1,1)),
+                         IntTrait(0, 0, 4000, label='Expansion size'),
+                         (0,1,1,1)),
                         ('secondary_regions_expansionseparationsize',
-                         IntTrait(0, 0, 4000, label='Exp. spacer'), (0,2,1,1)),
+                         IntTrait(0, 0, 4000, label='Expansion spacer'),
+                         (1,1,1,1)),
                         ('secondary_regions_shrinkingseparationsize',
-                         IntTrait(0, 0, 4000, label='Shrinking'), (1,1,1,1)),
+                         IntTrait(0, 0, 4000, label='Shrinking size'),
+                         (2,1,1,1)),
                         ])
 
         self.register_trait('secondary_zSliceOrProjection',
@@ -2463,26 +2593,26 @@ class ObjectDetectionFrame(InputFrame, ProcessorMixin):
         prim_id = settings.get2('primary_channelid')
         sec_id = settings.get2('secondary_channelid')
         sec_regions = settings.get2('secondary_regions')
-        settings.set_section('Classification')
-        settings.set2('collectsamples', False)
+        settings.set_section('Processing')
+        settings.set2('secondary_processChannel', False)
         settings.set2('primary_classification', False)
         settings.set2('secondary_classification', False)
+        settings.set2('tracking', False)
+        settings.set_section('Classification')
+        settings.set2('collectsamples', False)
         settings.set2('primary_simplefeatures_texture', False)
         settings.set2('primary_simplefeatures_shape', False)
         settings.set2('secondary_simplefeatures_texture', False)
         settings.set2('secondary_simplefeatures_shape', False)
-        settings.set_section('Tracking')
-        settings.set2('tracking', False)
         settings.set_section('General')
         settings.set2('rendering_class', {})
         settings.set2('rendering_discwrite', True)
         settings.set2('rendering_class_discwrite', True)
 
         if self._tab.currentIndex() == 0:
-            settings.set('ObjectDetection', 'secondary_processChannel', False)
             settings.set('General', 'rendering', {'primary_contours': {prim_id: {'raw': ('#FFFFFF', 1.0), 'contours': {'primary': ('#FF0000', 1, False)}}}})
         else:
-            settings.set('ObjectDetection', 'secondary_processChannel', True)
+            settings.set('Processing', 'secondary_processChannel', True)
             settings.set('General', 'rendering', {'secondary_contours': {sec_id: {'raw': ('#FFFFFF', 1.0), 'contours': {sec_regions[0]: ('#FF0000', 1, False)}}}})
 
         return settings
@@ -2513,13 +2643,10 @@ class ClassificationFrame(InputFrame, ProcessorMixin):
 
         self.set_tab_name('PrimaryChannel')
 
-        self.add_group('Feature extraction', None,
-                       [
-                        ('primary_simplefeatures_texture',
-                         BooleanTrait(True, label='Texture features')),
-                        ('primary_simplefeatures_shape',
-                         BooleanTrait(True, label='Shape features')),
-                        ], layout='flow')
+        self.add_input('primary_classification_envPath',
+                       StringTrait('', 1000, label='Classifier folder',
+                                   tooltip='abc...',
+                                   widget_info=StringTrait.STRING_PATH))
 
 #        self.add_group('primary_featureExtraction',
 #                       BooleanTrait(False, label='Apply feature extraction',
@@ -2533,19 +2660,19 @@ class ClassificationFrame(InputFrame, ProcessorMixin):
 #                                   tooltip='abc...')),
 #                        ])
         self.add_line()
+        self.add_group('Feature extraction', None,
+                       [
+                        ('primary_simplefeatures_texture',
+                         BooleanTrait(True, label='Texture features')),
+                        ('primary_simplefeatures_shape',
+                         BooleanTrait(True, label='Shape features')),
+                        ], layout='flow')
 
-        self.add_input('primary_classification',
-                       BooleanTrait(False, label='Apply classification',
-                                    tooltip='Predict object during analysis.'))
 #        self.add_input('primary_classification_regionName',
 #                       SelectionTrait(REGION_NAMES_PRIMARY[0],
 #                                      REGION_NAMES_PRIMARY,
 #                                      label='Region name',
 #                                      tooltip='abc...'))
-        self.add_input('primary_classification_envPath',
-                       StringTrait('', 1000, label='Classifier path',
-                                   tooltip='abc...',
-                                   widget_info=StringTrait.STRING_PATH))
 #        self.add_input('primary_classification_labels',
 #                         ListTrait([], label='Class labels',
 #                                   tooltip='abc...'))
@@ -2563,6 +2690,16 @@ class ClassificationFrame(InputFrame, ProcessorMixin):
 
         self.set_tab_name('SecondaryChannel')
 
+        self.add_input('secondary_classification_envPath',
+                       StringTrait('', 1000, label='Classifier folder',
+                                   tooltip='abc...',
+                                   widget_info=StringTrait.STRING_PATH))
+
+        self.add_line()
+
+#                        ('secondary_classification_collectSamples',
+#                         BooleanTrait(False, label='Collect samples',
+#                                      tooltip='abc...')),
         self.add_group('Feature extraction', None,
                        [
                         ('secondary_simplefeatures_texture',
@@ -2578,23 +2715,11 @@ class ClassificationFrame(InputFrame, ProcessorMixin):
 #                                   tooltip='abc...')),
                         ], layout='flow')
 
-        self.add_line()
-
-#                        ('secondary_classification_collectSamples',
-#                         BooleanTrait(False, label='Collect samples',
-#                                      tooltip='abc...')),
-        self.add_input('secondary_classification',
-                       BooleanTrait(False, label='Apply classification',
-                                    tooltip='abc...'))
         self.add_input('secondary_classification_regionName',
                        SelectionTrait(REGION_NAMES_SECONDARY[0],
                                       REGION_NAMES_SECONDARY,
                                       label='Region name',
                                       tooltip='abc...'))
-        self.add_input('secondary_classification_envPath',
-                       StringTrait('', 1000, label='Classifier path',
-                                   tooltip='abc...',
-                                   widget_info=StringTrait.STRING_PATH))
 #                        ('secondary_classification_prefix',
 #                         StringTrait('', 50, label='Name prefix',
 #                                     tooltip='abc...')),
@@ -2607,6 +2732,10 @@ class ClassificationFrame(InputFrame, ProcessorMixin):
 
         self.register_trait('collectsamples', BooleanTrait(False))
         self.register_trait('collectsamples_prefix', StringTrait('',100))
+        self.register_trait('primary_classification_annotationFileExt',
+                            StringTrait('.xml', 50, label='Annotation ext.'))
+        self.register_trait('secondary_classification_annotationFileExt',
+                            StringTrait('.xml', 50, label='Annotation ext.'))
 
         self.add_line()
 
@@ -2621,12 +2750,12 @@ class ClassificationFrame(InputFrame, ProcessorMixin):
         prim_id = settings.get2('primary_channelid')
         sec_id = settings.get2('secondary_channelid')
         #sec_regions = settings.get2('secondary_regions')
-        settings.set_section('Classification')
-        settings.set2('collectsamples', False)
+        settings.set_section('Processing')
         settings.set2('primary_classification', False)
         settings.set2('secondary_classification', False)
-        settings.set_section('Tracking')
         settings.set2('tracking', False)
+        settings.set_section('Classification')
+        settings.set2('collectsamples', False)
         settings.set('General', 'rendering', {})
         settings.set('General', 'rendering_class', {})
 
@@ -2635,10 +2764,10 @@ class ClassificationFrame(InputFrame, ProcessorMixin):
             settings.set2('secondary_simplefeatures_texture', False)
             settings.set2('secondary_simplefeatures_shape', False)
             settings.set2('collectsamples_prefix', 'primary')
-            settings.set('ObjectDetection', 'secondary_processChannel', False)
+            settings.set('Processing', 'secondary_processChannel', False)
 
             if name == self.PROCESS_TESTING:
-                settings.set2('primary_classification', True)
+                settings.set('Processing', 'primary_classification', True)
                 settings.set('General', 'rendering_class', {'primary_classification': {prim_id: {'raw': ('#FFFFFF', 1.0),
                                                                                                  'contours': {'primary': ('class_label', 1, False)}}}})
             else:
@@ -2654,9 +2783,9 @@ class ClassificationFrame(InputFrame, ProcessorMixin):
             settings.set2('primary_simplefeatures_shape', False)
             settings.set2('collectsamples_prefix', 'secondary')
             settings.set('ObjectDetection', 'secondary_regions', [sec_region])
-            settings.set('ObjectDetection', 'secondary_processChannel', True)
+            settings.set('Processing', 'secondary_processChannel', True)
             if name == self.PROCESS_TESTING:
-                settings.set2('secondary_classification', True)
+                settings.set('Processing', 'secondary_classification', True)
                 settings.set('General', 'rendering_class', {'secondary_classification': {sec_id: {'raw': ('#FFFFFF', 1.0),
                                                                                                   'contours': {sec_region: ('class_label', 1, False)}}}})
             else:
@@ -2695,48 +2824,50 @@ class TrackingFrame(InputFrame, ProcessorMixin):
                                      ('Test tracking', 'Stop tracking'))
         self.register_control_button(self.PROCESS_SYNCING,
                                      AnalzyerThread,
-                                     ('Test sync', 'Stop syncing'))
+                                     ('Apply motif selection', 'Stop motif selection'))
 
-        self.add_group('tracking',
-                       BooleanTrait(False, label='Apply tracking'),
+        self.add_group('Tracking', None,
                        [('tracking_maxObjectDistance',
-                        IntTrait(0, 0, 4000, label='Max object x-y distance')),
+                        IntTrait(0, 0, 4000, label='Max object x-y distance'),
+                        (0,0,1,1)),
                         ('tracking_maxTrackingGap',
-                         IntTrait(0, 0, 4000, label='Max timepoint gap')),
+                         IntTrait(0, 0, 4000, label='Max timepoint gap'),
+                         (0,1,1,1)),
                         ('tracking_maxSplitObjects',
-                         IntTrait(0, 0, 4000, label='Max split events')),
-                        ], layout='flow')
+                         IntTrait(0, 0, 4000, label='Max split events'),
+                         (1,0,1,1)),
+                        ])
 
 
         self.add_line()
 
-        self.add_input('tracking_labelTransitions',
-                        StringTrait('', 200, label='Class transition motif(s)',
-                                    mask='(\(\d+,\d+\),)*\(\d+,\d+\)'))
-
         self.add_group('tracking_synchronize_trajectories',
-                       BooleanTrait(True, label='Synchronize trajectories'),
+                       BooleanTrait(True, label='Motif selection'),
                        [
+                        ('tracking_labelTransitions',
+                        StringTrait('', 200, label='Class transition motif(s)',
+                                    mask='(\(\d+,\d+\),)*\(\d+,\d+\)'),
+                         (0,0,1,4)),
                         ('tracking_backwardRange',
-                         IntTrait(0, 0, 4000, label='Timepoints pre-transition'),
-                         (0,0,1,1)),
-                        ('tracking_forwardRange',
-                         IntTrait(0, 0, 4000, label='Timepoints post-transition'),
-                         (0,1,1,1)),
-                        ('tracking_backwardLabels',
-                         StringTrait('', 200, label='Class filter pre-transition',
-                                     mask='(\d+,)*\d+'),
+                         IntTrait(0, -1, 4000, label='Timepoints [pre]'),
                          (1,0,1,1)),
-                        ('tracking_forwardLabels',
-                         StringTrait('', 200, label='Class filter post-transition',
-                                     mask='(\d+,)*\d+'),
+                        ('tracking_forwardRange',
+                         IntTrait(0, -1, 4000, label='Timepoints [post]'),
                          (1,1,1,1)),
-                        ('tracking_backwardCheck',
-                         IntTrait(2, 0, 4000, label='Filter length pre-transition'),
+                        ('tracking_backwardLabels',
+                         StringTrait('', 200, label='Class filter [pre]',
+                                     mask='(\d+,)*\d+'),
                          (2,0,1,1)),
-                        ('tracking_forwardCheck',
-                         IntTrait(2, 0, 4000, label='Filter length post-transition'),
+                        ('tracking_forwardLabels',
+                         StringTrait('', 200, label='Class filter [post]',
+                                     mask='(\d+,)*\d+'),
                          (2,1,1,1)),
+                        ('tracking_backwardCheck',
+                         IntTrait(2, 0, 4000, label='Filter timepoints [pre]'),
+                         (3,0,1,1)),
+                        ('tracking_forwardCheck',
+                         IntTrait(2, 0, 4000, label='Filter timepoints [post]'),
+                         (3,1,1,1)),
                         ])
 
         self.register_trait('tracking_forwardRange_min',
@@ -2759,19 +2890,19 @@ class TrackingFrame(InputFrame, ProcessorMixin):
 
         self.add_line()
 
-        self.add_group('tracking_exportTrackFeatures',
-                       BooleanTrait(False, label='Export tracks'),
-                       [('tracking_compressionTrackFeatures',
-                         SelectionTrait(COMPRESSION_FORMATS[0], COMPRESSION_FORMATS,
-                                        label='Compression'))
-                       ], layout='flow')
+#        self.add_group('tracking_exportTrackFeatures',
+#                       BooleanTrait(False, label='Export tracks'),
+#                       [('tracking_compressionTrackFeatures',
+#                         SelectionTrait(COMPRESSION_FORMATS[0], COMPRESSION_FORMATS,
+#                                        label='Compression'))
+#                       ], layout='flow')
 
 
         self.add_group('tracking_visualization',
                        BooleanTrait(False, label='Visualization'),
                        [('tracking_visualize_track_length',
                          IntTrait(5, -1, 10000,
-                                  label='Track length')),
+                                  label='Max. timepoints')),
                         ('tracking_visualize_show_labels',
                          BooleanTrait(False, label='Show object IDs'))
                        ], layout='flow')
@@ -2793,6 +2924,11 @@ class TrackingFrame(InputFrame, ProcessorMixin):
         self.register_trait('tracking_maxOutDegree',
                        IntTrait(0, 0, 4000, label='Max out-degree',
                                 tooltip='abc...'))
+        self.register_trait('tracking_exportTrackFeatures',
+                            BooleanTrait(True, label='Export tracks'))
+        self.register_trait('tracking_compressionTrackFeatures',
+                             SelectionTrait(COMPRESSION_FORMATS[0], COMPRESSION_FORMATS,
+                                            label='Compression'))
 
         self._init_control()
 
@@ -2803,8 +2939,8 @@ class TrackingFrame(InputFrame, ProcessorMixin):
         prim_id = settings.get2('primary_channelid')
         sec_id = settings.get2('secondary_channelid')
         sec_regions = settings.get2('secondary_regions')
+        settings.set('Processing', 'tracking', True)
         settings.set_section('Tracking')
-        settings.set2('tracking', True)
         settings.set2('tracking_visualization', True)
         settings.set2('tracking_synchronize_trajectories', False)
         show_ids = settings.get2('tracking_visualize_show_labels')
@@ -2831,14 +2967,14 @@ class TrackingFrame(InputFrame, ProcessorMixin):
             settings.set2('primary_simplefeatures_shape', False)
             settings.set2('secondary_simplefeatures_texture', False)
             settings.set2('secondary_simplefeatures_shape', False)
-            settings.set2('primary_classification', False)
-            settings.set2('secondary_classification', False)
-            settings.set('ObjectDetection', 'secondary_processChannel', False)
+            settings.set('Processing', 'primary_classification', False)
+            settings.set('Processing', 'secondary_classification', False)
+            settings.set('Processing', 'secondary_processChannel', False)
             settings.set('General', 'rendering', {'primary_tracking': {prim_id: {'raw': ('#FFFFFF', 1.0),
                                                                                 'contours': {'primary': ('#FF0000', 1, show_ids)}}}})
         else:
             settings.set('Tracking', 'tracking_synchronize_trajectories', True)
-            settings.set2('primary_classification', True)
+            settings.set('Processing', 'primary_classification', True)
             settings.set('General', 'rendering_class', {'primary_syncing': {prim_id: {'raw': ('#FFFFFF', 1.0),
                                                                                       'contours': [('primary', 'class_label', 1, False),
                                                                                                    ('primary', '#000000', 1, show_ids)]}}})
@@ -2859,56 +2995,65 @@ class ErrorCorrectionFrame(InputFrame, ProcessorMixin):
                                      HmmThread,
                                      ('Correct errors', 'Stop correction'))
 
-        self.add_input('errorcorrection',
-                       BooleanTrait(False, label='Apply error correction'))
-
         self.add_input('filename_to_R',
                        StringTrait('', 1000, label='R-project executable',
                                    widget_info=StringTrait.STRING_FILE))
 
-        self.add_input('mappingfile',
-                       StringTrait('', 1000, label='Mapping file',
-                                   widget_info=StringTrait.STRING_FILE))
+        self.add_line()
 
-        self.add_group('Primary channel', None,
+        self.add_group('constrain_graph',
+                       BooleanTrait(True, label='Constrain graph'),
                        [('primary_graph',
-                         StringTrait('', 1000, label='Graph file',
+                         StringTrait('', 1000, label='Primary file',
                                      widget_info=StringTrait.STRING_FILE)),
-                        ('primary_sort',
-                         StringTrait('', 1000, label='Class order',
-                                     mask='(\d+,)*\d+')),
-                        ])
-        self.add_group('Secondary channel', None,
-                       [('secondary_graph',
-                         StringTrait('', 1000, label='Graph file',
+                        ('secondary_graph',
+                         StringTrait('', 1000, label='Secondary file',
                                      widget_info=StringTrait.STRING_FILE)),
-                        ('secondary_sort',
-                         StringTrait('', 1000, label='Class order',
-                                     mask='(\d+,)*\d+')),
                         ])
 
+        self.add_group('position_labels',
+                       BooleanTrait(False, label='Position labels'),
+                       [('mappingfile',
+                         StringTrait('', 1000, label='File',
+                                     widget_info=StringTrait.STRING_FILE)),
+                        ])
         self.add_group('Group by', None,
                        [('groupby_oligoid',
-                         BooleanTrait(True, label='Oligo ID',
+                         BooleanTrait(False, label='Oligo ID',
                                       widget_info=BooleanTrait.RADIOBUTTON)),
                         ('groupby_genesymbol',
                          BooleanTrait(False, label='Gene symbol',
                                       widget_info=BooleanTrait.RADIOBUTTON)),
                         ('groupby_position',
-                         BooleanTrait(False, label='Position',
+                         BooleanTrait(True, label='Position',
                                       widget_info=BooleanTrait.RADIOBUTTON)),
                         ], layout='flow')
 
-        self.add_input('timelapse',
-                        FloatTrait(1, 0, 2000, digits=2,
-                                   label='Time-lapse [min]'))
-        self.add_input('max_time',
-                        FloatTrait(100, 1, 2000, digits=2,
-                                   label='Max. time in plot [min]'))
+        self.add_line()
+
+        self.add_group('Plot parameter', None,
+                       [('timelapse',
+                         FloatTrait(1, 0, 2000, digits=2,
+                                    label='Time-lapse [min]')),
+                        ('max_time',
+                         FloatTrait(100, 1, 2000, digits=2,
+                                    label='Max. time in plot [min]')),
+                        ], layout='flow')
+
+        self.register_trait('primary_sort',
+                            StringTrait('NULL', 100))
+        self.register_trait('secondary_sort',
+                            StringTrait('NULL', 100))
 
         self.add_expanding_spacer()
 
         self._init_control(has_images=False)
+
+    def _get_modified_settings(self, name):
+        settings = ProcessorMixin._get_modified_settings(self, name)
+        #settings.set('Processing', 'primary_errorcorrection', True)
+        #settings.set('Processing', 'secondary_errorcorrection', True)
+        return settings
 
 
 class OutputFrame(InputFrame):
@@ -2945,20 +3090,80 @@ class OutputFrame(InputFrame):
         self.add_expanding_spacer()
 
 
-class ProcessingFrame(InputFrame):
+
+class ProcessingFrame(InputFrame, ProcessorMixin):
 
     SECTION = 'Processing'
 
     def __init__(self, settings, parent):
-        super(ProcessingFrame, self).__init__(settings, parent)
+        InputFrame.__init__(self, settings, parent)
+        ProcessorMixin.__init__(self)
 
-        frame = self._get_frame()
-        layout = frame.layout()
+        self.register_control_button('process',
+                                     AnalzyerThread,
+                                     ('Start processing', 'Stop processing'))
 
-        #log_window.setMaximumBlockCount(10)
-        #log_window.setCenterOnScroll(True)
-        #layout.addWidget(self._log_window, 0, 0, 1, 3)
 
+        self.add_group('Primary channel', None,
+                       [('primary_classification',
+                         BooleanTrait(False, label='Classification'),
+                         (1,0,1,1)),
+                        ('tracking',
+                         BooleanTrait(False, label='Tracking'),
+                         (3,0,1,1)),
+                        ('primary_errorcorrection',
+                         BooleanTrait(False, label='Error correction'),
+                         (4,0,1,1))
+                        ])
+
+        self.add_group('secondary_processChannel',
+                        BooleanTrait(False, label='Secondary channel'),
+                       [('secondary_classification',
+                         BooleanTrait(False, label='Classification'),
+                         (2,0,1,1)),
+                        ('secondary_errorcorrection',
+                         BooleanTrait(False, label='Error correction'),
+                         (4,0,1,1))
+                        ])
+
+        #self.add_line()
+
+        self.add_expanding_spacer()
+
+        self._init_control()
+
+    def _get_modified_settings(self, name):
+        settings = copy.deepcopy(self._settings)
+
+        settings.set('General', 'rendering', {})
+        settings.set('General', 'rendering_class', {})
+
+        settings.set_section('ObjectDetection')
+        prim_id = settings.get2('primary_channelid')
+        sec_id = settings.get2('secondary_channelid')
+        sec_regions = settings.get2('secondary_regions')
+        settings.set_section('Classification')
+        sec_region = settings.get2('secondary_classification_regionname')
+        settings.set_section('Tracking')
+        show_ids = settings.get2('tracking_visualize_show_labels')
+
+
+        settings.get('General', 'rendering').update({'primary_contours': {prim_id: {'raw': ('#FFFFFF', 1.0),
+                                                                                    'contours': {'primary': ('#FF0000', 1, False)}}}})
+
+        if settings.get('Processing', 'primary_classification'):
+            settings.get('General', 'rendering_class').update({'primary_classification': {prim_id: {'raw': ('#FFFFFF', 1.0),
+                                                                                          'contours': [('primary', 'class_label', 1, False)]}}})
+        if settings.get('Processing', 'secondary_processChannel'):
+            settings.get('General', 'rendering').update({'secondary_contours': {sec_id: {'raw': ('#FFFFFF', 1.0),
+                                                                                         'contours': [(x, SECONDARY_COLORS[x] , 1, False)
+                                                                                                      for x in sec_regions]
+                                                                                                      }}})
+            if settings.get('Processing', 'secondary_classification'):
+                settings.get('General', 'rendering_class').update({'secondary_classification': {sec_id: {'raw': ('#FFFFFF', 1.0),
+                                                                                                'contours': [(sec_region, 'class_label', 1, False)]}}})
+
+        return settings
 
 
 class ImageDisplay(QLabel):
