@@ -587,7 +587,7 @@ class ImageContainerStack(_ImageContainer):
 
         self.lstNameTags.sort(cmp=self._sort)
 
-        print self.lstNameTags[:20]
+        #print self.lstNameTags[:20]
 
         if self.bHasP:
             self.oMetaData.setP = sorted(set([dctNameTags['P'] for dctNameTags in self.lstNameTags]))
@@ -795,7 +795,8 @@ def create_image_container(path, naming_scheme, positions):
 
         sub_dir_filenames = {}
         for pos, sub_dir in sub_dirs.iteritems():
-            filenames = collect_files(os.path.join(path, sub_dir), ['.tif'])
+            filenames = collect_files(os.path.join(path, sub_dir), ['.tif'],
+                                      absolute=True, recursive=True)
             sub_dir_filenames[pos] = (sub_dir, filenames)
 
         image_container = ImageContainerSubdirStack(path,
