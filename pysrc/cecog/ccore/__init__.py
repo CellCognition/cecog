@@ -19,14 +19,14 @@ __source__ = '$URL$'
 from _cecog import *
 
 import os
+import sys
 
-strFontBasePath = os.path.realpath(os.path.join(__path__[0], "resources"))
+#if sys.platform == 'win32':
+path = os.path.realpath('resources')
+#else:
+#    path = os.path.realpath(os.path.join(__path__[0], 'resources'))
 
-# set font filename and path relative to the location of this package (must be a realpath for C++)
-Config.strFontFilepath = os.path.join(strFontBasePath, "font12.png")
-
+# set font filename and path relative to the location of this package
+# (must be a realpath for C++)
+Config.strFontFilepath = os.path.join(path, 'font12.png')
 assert os.path.isfile(Config.strFontFilepath)
-
-oFont12 = Font(os.path.join(strFontBasePath, "font12.png"))
-oFont14 = Font(os.path.join(strFontBasePath, "font14.png"))
-oFont16 = Font(os.path.join(strFontBasePath, "font16.png"))
