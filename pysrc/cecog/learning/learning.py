@@ -477,6 +477,8 @@ class ClassPredictor(BaseLearner):
             hi = numpy.amax(samples, 0)
             # scale between -1 and +1
             samples = 2.0 * (samples - lo) / (hi - lo) - 1.0
+        # FIXME: stupid libSVM conversions
+        samples = [map(float, items) for items in samples]
         return labels, samples
 
     def train(self, c, g, probability=1, compensation=True,
@@ -560,7 +562,7 @@ class ClassPredictor(BaseLearner):
         count = numpy.bincount(labels)[ulabels]
         #weight = float(len(labels)) / count
         weight = (float(len(labels)) - count) / count
-        weight_label = ulabels
+        weight_label = map(int, ulabels)
         #print count
         #print ulabels
         #print weight
