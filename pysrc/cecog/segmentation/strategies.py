@@ -33,6 +33,7 @@ from pdk.properties import (BooleanProperty,
                             TupleProperty,
                             Property)
 from pdk.attributes import Attribute
+from pdk.datetimeutils import StopWatch
 
 #-------------------------------------------------------------------------------
 # cecog module imports:
@@ -250,6 +251,7 @@ class PrimarySegmentation(_Segmentation):
         super(PrimarySegmentation, self).__init__(**dctOptions)
 
     def __call__(self, oMetaImage):
+        stopwatch1 = StopWatch()
         _Segmentation.__call__(self, oMetaImage)
 
         #print "moo123"
@@ -289,8 +291,9 @@ class PrimarySegmentation(_Segmentation):
 
         imgPrefiltered = ccore.discMedian(imgXY,
                                           self.iMedianRadius)
-        self._oLogger.debug("         --- median ok")
+        self._oLogger.debug("         --- median ok, %s" % stopwatch1.current_interval())
 
+        stopwatch2 = StopWatch()
         #print self.bDebugMode, self.strPathOutDebug
         if self.bDebugMode:
             ccore.writeImage(imgPrefiltered,
@@ -301,16 +304,18 @@ class PrimarySegmentation(_Segmentation):
         imgBin = ccore.windowAverageThreshold(imgPrefiltered,
                                               self.iLatWindowSize,
                                               self.iLatLimit)
-        self._oLogger.debug("         --- local threshold ok")
+        self._oLogger.debug("         --- local threshold ok, %s" % stopwatch2.current_interval())
 
+        stopwatch3 = StopWatch()
         #self._oLogger.debug("         --- local threshold2 %s %s" % (self.iLatWindowSize2, )
         if not self.iLatWindowSize2 is None and not self.iLatLimit2 is None:
             imgBin2 = ccore.windowAverageThreshold(imgPrefiltered,
                                                    self.iLatWindowSize2,
                                                    self.iLatLimit2)
-            self._oLogger.debug("         --- local threshold2 ok")
             imgBin = ccore.projectImage([imgBin, imgBin2], ccore.ProjectionType.MaxProjection)
+            self._oLogger.debug("         --- local threshold2 ok, %s" % stopwatch3.current_interval())
 
+        stopwatch4 = StopWatch()
         if self.bDebugMode:
             strPathOutDebug = self.strPathOutDebug
             ccore.writeImage(imgBin,
@@ -345,8 +350,9 @@ class PrimarySegmentation(_Segmentation):
                                               self.iMaximaSizeIntensity,
                                               self.iMinMergeSize)
 
-        self._oLogger.debug("         --- segmentation ok")
+        self._oLogger.debug("         --- segmentation ok, %s" % stopwatch4.current_interval())
 
+        stopwatch5 = StopWatch()
         if self.bSpeedup:
             iWidth, iHeight = oMetaImage.iWidth, oMetaImage.iHeight
             imgTmpBin = ccore.Image(iWidth, iHeight)
@@ -359,8 +365,9 @@ class PrimarySegmentation(_Segmentation):
                                               imgBin,
                                               self.bRemoveBorderObjects)
 
-        self._oLogger.debug("         --- container ok")
+        self._oLogger.debug("         --- container ok, %s" % stopwatch5.current_interval())
 
+        stopwatch6 = StopWatch()
         # post-processing
         #print self.bPostProcessing, self.lstPostprocessingFeatureCategories
         if self.bPostProcessing:
@@ -382,6 +389,7 @@ class PrimarySegmentation(_Segmentation):
                     lstRejectedObjectIds.append(iObjectId)
                 else:
                     lstGoodObjectIds.append(iObjectId)
+            self._oLogger.debug("         --- post-processing ok, %s" % stopwatch6.current_interval())
         else:
             lstGoodObjectIds = oContainer.getObjects().keys()
             lstRejectedObjectIds = []
