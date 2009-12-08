@@ -366,7 +366,7 @@ class PropertyManager(DeclarationCollector):
             raise ValueError('trying to initialize undefined properties (%s)'
                              % initProperties.keys())
 
-        super(PropertyManager, self).__init__(self)
+        super(PropertyManager, self).__init__()
 
     #
     # magic methods:

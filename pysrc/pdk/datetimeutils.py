@@ -228,6 +228,9 @@ class TimeInterval(object):
     # magic methods:
     #
 
+    def __repr__(self):
+        return self._time_interval
+
     def __str__(self):
         return self.format(msec=True)
 

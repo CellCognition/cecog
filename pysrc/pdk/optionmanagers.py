@@ -199,7 +199,7 @@ class OptionManager(OptionDeclarationCollector):
             self.__class__.getOptionDeclarationContainerName()
         self.__dctOptions = deepcopy(getattr(self, strOptionContainerName, {}))
         self.processOptions(options, destructive=True)
-        super(OptionManager, self).__init__(*args, **options)
+        super(OptionManager, self).__init__()
         self.initializeOptions(autoInitializeOnly=True)
 
     #
