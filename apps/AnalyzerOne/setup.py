@@ -25,7 +25,6 @@ import sys
 from pdk.fileutils import safe_mkdirs, collect_files
 
 main_script = 'AnalyzerOne.py'
-base_path = 'dist/AnalyzerOne.app'
 
 def tempsyspath(path):
     def decorate(f):
@@ -54,48 +53,51 @@ for path in ['dist', 'build']:
         shutil.rmtree(path)
 
 APP = [main_script]
+INCLUDES = ['sip',] # 'netCDF4_utils', 'netcdftime']
+EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
+            'PyQt4.QtOpenGL', 'PyQt4.QtScript',
+            'PyQt4.QtSql', 'PyQt4.QtTest',
+            'PyQt4.QtWebKit', 'PyQt4.QtXml',
+            'PyQt4.phonon',
+            'scipy', 'rpy',
+            'Tkconstants', 'Tkinter', 'tcl',
+            ]
+
 if sys.platform == 'darwin':
     OPTIONS = {'app' : APP}
-    DATA_FILES = ['rsrc']
     SYSTEM = 'py2app'
+    DATA_FILES = []
     EXTRA_OPTIONS = {'argv_emulation': True,
-                     'includes': ['sip',],# 'netCDF4_utils', 'netcdftime'],
-                     'excludes': ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
-                                  'PyQt4.QtOpenGL', 'PyQt4.QtScript',
-                                  'PyQt4.QtSql', 'PyQt4.QtTest',
-                                  'PyQt4.QtWebKit', 'PyQt4.QtXml',
-                                  'PyQt4.phonon',
-                                  'scipy',
-                                  ],
+                     'includes': INCLUDES,
+                     'excludes': EXCLUDES,
                      'dylib_excludes': ['R.framework',],
                      #'frameworks': ['R.framework',],
                      #'strip' : False,
                      'packages': ['cecog',],
-                     'resources': ['naming_schemes.conf'],
+                     'resources': [],
                      'optimize': 2,
                      'compressed': True,
                      'iconfile': 'resources/cecog_analyzer_icon.icns',
                     }
 elif sys.platform == 'win32':
     import py2exe # pylint: disable-msg=F0401,W0611
+    #FILENAME_ZIP = 'resources/AnalyzerOne.zip'
+    FILENAME_ZIP = 'AnalyzerOne.exe'
     OPTIONS = {'windows': [{'script': main_script,
-                           'icon_resources': \
+                            'icon_resources': \
                                [(1, r'resources\cecog_analyzer_icon.ico')],
-                           }]
+                           }],
+               'zipfile' : None,
                }
-    DATA_FILES = []#r'resources\cecog_browser_icon2.ico']
     SYSTEM = 'py2exe'
-    EXTRA_OPTIONS = {'includes': ['sip',],
-                     'excludes': ['pydoc',
-                                  'pywin', 'pywin.debugger',
-                                  'pywin.debugger.dbgcon',
-                                  'pywin.dialogs', 'pywin.dialogs.list',
-                                  'Tkconstants', 'Tkinter', 'tcl',
-                                  ],
+    DATA_FILES = []
+    EXTRA_OPTIONS = {'includes': INCLUDES,
+                     'excludes': EXCLUDES,
                      'packages': ['cecog',],
                      'optimize': 2,
                      'compressed': True,
                      'bundle_files': 1,
+                     'ascii': True,
                      #'xref': True,
                     }
 
@@ -124,6 +126,8 @@ setup(
 
 if sys.platform == 'darwin':
 
+    base_path = 'dist/AnalyzerOne.app'
+
     # for unknown reasons the pyconfig.h is needed but not included
 #    target_path = os.path.join(base_path, 'Contents/Resources/include/python2.6')
 #    safe_mkdirs(target_path)
@@ -148,19 +152,46 @@ if sys.platform == 'darwin':
         filename = os.path.split(filepath)[1]
         if not filename in ['site.py', '__init__.py'] and os.path.isfile(filepath):
             os.remove(filepath)
+    filenames = ['graph_template.txt',
+                 'hmm.R',
+                 'hmm_report.R',
+                 'run_hmm.R',
+                 ]
+    target = os.path.join(base_path, 'Contents/Resources/resources/rsrc/hmm')
+    safe_mkdirs(target)
+    for filename in filenames:
+        shutil.copy(os.path.join('../../rsrc/hmm', filename), target)
+    shutil.copy('../../pysrc/cecog/ccore/resources/font12.png',
+                os.path.join(base_path, 'Contents/Resources/resources'))
+    shutil.copy('resources/naming_schemes.conf',
+                os.path.join(base_path, 'Contents/Resources/resources'))
+    shutil.rmtree(os.path.join(base_path,
+                               'Contents/Resources/lib/python2.5/cecog/ccore/resources'))
 
 
 elif sys.platform == 'win32':
     import zipfile
-    lib_filename = r'dist\library.zip'
+    lib_filename = os.path.join('dist', FILENAME_ZIP)
     zfile = zipfile.PyZipFile(lib_filename, 'a')
     vc_path = r'C:\Program Files\Microsoft Visual Studio 9.0\VC\redist\x86\Microsoft.VC90.CRT'
     filenames = [r'C:\Source\Lib\libfftw3-3.dll',
-                 os.path.join(vc_path, 'msvcm90.dll'),
-                 os.path.join(vc_path, 'msvcp90.dll'),
-                 os.path.join(vc_path, 'msvcr90.dll'),]
+                 #os.path.join(vc_path, 'msvcm90.dll'),
+                 #os.path.join(vc_path, 'msvcp90.dll'),
+                 #os.path.join(vc_path, 'msvcr90.dll'),
+                 ]
     for filename in filenames:
         print "adding '%s' to '%s'" % (filename, lib_filename)
         zfile.write(filename, os.path.split(filename)[1])
     zfile.close()
+    filenames = ['graph_template.txt',
+                 'hmm.R',
+                 'hmm_report.R',
+                 'run_hmm.R',
+                 ]
+    target = 'dist/resources/rsrc/hmm'
+    safe_mkdirs(target)
+    for filename in filenames:
+        shutil.copy(os.path.join('../../rsrc/hmm', filename), target)
+    shutil.copy('../../pysrc/cecog/ccore/resources/font12.png', 'dist/resources')
+    shutil.copy('resources/naming_schemes.conf', 'dist/resources')
 
