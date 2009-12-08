@@ -39,6 +39,7 @@ from PyQt4.Qt import *
 
 from pdk.ordereddict import OrderedDict
 from pdk.fileutils import safe_mkdirs
+from pdk.datetimeutils import TimeInterval
 
 #import netCDF4
 
@@ -47,7 +48,7 @@ from pdk.fileutils import safe_mkdirs
 # cecog imports:
 #
 from cecog.extensions.ConfigParser import RawConfigParser
-from cecog.reader import PIXEL_TYPES
+from cecog.io.reader import PIXEL_TYPES
 from cecog.analyzer.core import AnalyzerCore
 from cecog import ccore
 from cecog.learning.learning import CommonObjectLearner, CommonClassPredictor
@@ -158,6 +159,8 @@ def warning(parent, title, text, info=None, detail=None):
                    buttons=QMessageBox.Ok,
                    icon=QMessageBox.Warning)
 
+def status(msg, timeout=0):
+    qApp._statusbar.showMessage(msg, timeout)
 
 #-------------------------------------------------------------------------------
 # classes:
@@ -209,7 +212,10 @@ class AnalyzerMainWindow(QMainWindow):
         self.add_actions(menu_window, (action_log,
                                        ))
 
-        menu_help = self.menuBar().addMenu('&Help')
+        #menu_help = self.menuBar().addMenu('&Help')
+
+        qApp._statusbar = QStatusBar(self)
+        self.setStatusBar(qApp._statusbar)
 
 
         self._selection = QListWidget(central_widget)
@@ -241,7 +247,7 @@ class AnalyzerMainWindow(QMainWindow):
                       ClassificationFrame(self._settings, self._pages),
                       TrackingFrame(self._settings, self._pages),
                       ErrorCorrectionFrame(self._settings, self._pages),
-                      #OutputFrame(self._settings, self._pages),
+                      OutputFrame(self._settings, self._pages),
                       ProcessingFrame(self._settings, self._pages),
                       ]
         widths = []
@@ -269,16 +275,16 @@ class AnalyzerMainWindow(QMainWindow):
         qApp._log_window.setGeometry(50,50,600,300)
 
         logger = logging.getLogger()
-        qApp._log_handler.setLevel(logging.INFO)
+        qApp._log_handler.setLevel(logging.NOTSET)
         formatter = logging.Formatter('%(asctime)s %(levelname)-6s %(message)s')
         qApp._log_handler.setFormatter(formatter)
         #logger.addHandler(self._handler)
-        logger.setLevel(logging.DEBUG)
+        logger.setLevel(logging.NOTSET)
 
         qApp._image_dialog = None
         qApp._graphics = None
 
-        self.setGeometry(0, 0, 1000, 700)
+        self.setGeometry(0, 0, 1100, 750)
         self.setMinimumSize(QSize(700,600))
         self.show()
         self.center()
@@ -414,6 +420,7 @@ class AnalyzerMainWindow(QMainWindow):
         self.setWindowTitle('%s - %s' % (self.TITLE, filename))
         for widget in self._tabs:
             widget.update_input()
+        status('Settings successfully loaded.')
 
     def write_settings(self, filename):
         try:
@@ -427,6 +434,7 @@ class AnalyzerMainWindow(QMainWindow):
 #            self._settings_filename = filename
 #            QMessageBox().information(self, "Save settings file",
 #                "Settings successfully saved as '%s'." % filename)
+        status('Settings successfully saved.')
 
     def _on_about(self):
         print "about"
@@ -495,7 +503,10 @@ class AnalyzerMainWindow(QMainWindow):
             self.write_settings(filename)
 
     def _on_show_log_window(self):
-        self._log_window.show()
+        logger = logging.getLogger()
+        logger.addHandler(qApp._log_handler)
+        qApp._log_window.show()
+        qApp._log_window.raise_()
 
     def __get_save_as_filename(self):
         #QFileDialog.getSaveFileName(self, )
@@ -527,9 +538,9 @@ class _ProcessingThread(QThread):
     def __del__(self):
         #self._mutex.lock()
         self._abort = True
+        self._mutex.unlock()
         self.stop()
         self.wait()
-        self._mutex.unlock()
 
     def run(self):
         try:
@@ -579,26 +590,26 @@ class HmmThread(_ProcessingThread):
         if filename != '':
             cmd = filename
         else:
-            cmd = 'R'
-        p = subprocess.Popen([cmd, '--version'],
-                             stdin=subprocess.PIPE,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-        try:
-            p.wait()
-        except:
-            pass
-        err = p.stderr.readlines()
-        print err
-        print p.stdout.readlines()
-        return ''.join(err)
+            cmd = 'R32'
+        #process = QProcess()
+        #process.setWorkingDirectory(wd)
+        #process.start(cmd, ['--version'])
+        #process.waitForFinished()
+
+        return ''
 
     def _run(self):
-        cmd = 'R32'
+        filename = self._settings.get('ErrorCorrection', 'filename_to_R').strip()
+        if filename != '':
+            cmd = filename
+        else:
+            cmd = 'R32'
+
         #import tempfile
         #filename_out = os.path.join(tempfile.gettempdir(), 'cecog_error_correction.txt')
-        wd = 'rsrc/hmm'
+        wd = 'resources/rsrc/hmm'
         wd = os.path.abspath(wd)
+        print wd
 
         f = file(os.path.join(wd, 'run_hmm.R'), 'r')
         lines = f.readlines()
@@ -606,8 +617,10 @@ class HmmThread(_ProcessingThread):
 
         self._settings.set_section('ErrorCorrection')
 
-        path_analyzed = os.path.join(self._settings.get('General', 'pathout'), 'analyzed')
-        path_out_hmm = os.path.join(self._settings.get('General', 'pathout'), 'hmm')
+        # R on windows works better with '/' then '\'
+        self._join = lambda *x: '/'.join(x)
+        path_analyzed = self._join(self._settings.get('General', 'pathout'), 'analyzed')
+        path_out_hmm = self._join(self._settings.get('General', 'pathout'), 'hmm')
         safe_mkdirs(path_out_hmm)
 
         region_name_primary = self._settings.get('Classification', 'primary_classification_regionname')
@@ -710,7 +723,7 @@ class HmmThread(_ProcessingThread):
 
     def _generate_graph(self, channel, wd, hmm_path, region_name):
         f_in = file(os.path.join(wd, 'graph_template.txt'), 'rU')
-        filename_out = os.path.join(hmm_path, 'graph_%s.txt' % region_name)
+        filename_out = self._join(hmm_path, 'graph_%s.txt' % region_name)
         f_out = file(filename_out, 'w')
         learner = self._learner_dict[channel]
         for line in f_in:
@@ -733,7 +746,7 @@ class HmmThread(_ProcessingThread):
         return filename_out
 
     def _generate_mapping(self, wd, hmm_path, path_analyzed):
-        filename_out = os.path.join(hmm_path, 'layout.txt')
+        filename_out = self._join(hmm_path, 'layout.txt')
         rows = []
         positions = None
         if self._settings.get('General', 'constrain_positions'):
@@ -1055,7 +1068,7 @@ class TrainingThread(_ProcessingThread):
         self.set_stage_info(stage_info)
 
         i = 0
-        best_accuracy = 0
+        best_accuracy = -1
         best_c = None
         best_g = None
         best_conf = None
@@ -1068,14 +1081,13 @@ class TrainingThread(_ProcessingThread):
                                })
             self.set_stage_info(stage_info)
             i += 1
-            #print i,n
-
+            #print i,n,len(labels)
             accuracy = numpy.sum(labels == validation) / float(len(labels))
             if accuracy > best_accuracy:
                 best_accuracy = accuracy
                 best_c = c
                 best_g = g
-                #print best_accuracy, best_c, best_g
+                #print 'BEST: ', best_accuracy, best_c, best_g
 
                 k = len(self._learner.l2nl)
                 conf = numpy.zeros((k, k))
@@ -1103,26 +1115,48 @@ class TrainingThread(_ProcessingThread):
 
 class LogWindow(QFrame):
 
+    LEVELS = {'DEBUG' : logging.DEBUG,
+              'INFO'  : logging.INFO,
+              'WARN'  : logging.WARNING,
+              'ERROR' : logging.ERROR}
+
     def __init__(self, handler):
         QFrame.__init__(self)
-        self._mutex = QMutex()
-        layout = QVBoxLayout(self)
+        self.setWindowTitle('Log window')
+
+        self._handler = handler
+        self._handler.message_received.connect(self._on_message_received)
+
+        layout = QGridLayout(self)
+        layout.setContentsMargins(5,5,5,5)
         self._log_widget = QPlainTextEdit(self)
         format = QTextCharFormat()
         format.setFontFixedPitch(True)
         format.setFontPointSize(11)
         self._log_widget.setCurrentCharFormat(format)
-        layout.addWidget(self._log_widget)
+        layout.addWidget(self._log_widget, 0, 0, 1, 4)
+        layout.setColumnStretch(0,2)
+        layout.setColumnStretch(3,2)
+
+        layout.addWidget(QLabel('Log level', self), 1, 0, Qt.AlignRight)
+        combo = QComboBox(self)
+        layout.addWidget(combo, 1, 1, Qt.AlignLeft)
+        self.connect(combo, SIGNAL('currentIndexChanged(const QString &)'),
+                     self._on_level_changed)
+        for name in sorted(self.LEVELS, key=lambda x: self.LEVELS[x]):
+            combo.addItem(name)
+
         self._msg_buffer = []
 
-        self._handler = handler
-        self._handler.message_received.connect(self._on_message_received)
 
     def _on_message_received(self, msg):
         self._msg_buffer.append(str(msg))
         if self.isVisible():
             self._log_widget.appendPlainText('\n'.join(self._msg_buffer))
-            self._msg_buffer = []
+        self._msg_buffer = []
+
+    def _on_level_changed(self, name):
+        self._handler.setLevel(self.LEVELS[str(name)])
 
     def clear(self):
         self._msg_buffer = []
@@ -1715,6 +1749,7 @@ class ProcessorMixin(object):
         self._current_process = None
         self._image_combo = None
         self._stage_infos = {}
+        self._process_items = None
 
         self._control_buttons = OrderedDict()
 
@@ -1765,6 +1800,7 @@ class ProcessorMixin(object):
         layout.addWidget(self._progress_label0)
 
         self._progress0 = QProgressBar(self._control)
+        self._progress0.setTextVisible(False)
         layout.addWidget(self._progress0)
 
         if has_images:
@@ -1821,10 +1857,19 @@ class ProcessorMixin(object):
                 w_button.setEnabled(not w_button.isEnabled())
 
 
-    def _on_process_start(self, name):
-        if not self._is_running:
+    def _on_process_start(self, name, start_again=False):
+        if not self._is_running or start_again:
 
-            cls = self._control_buttons[name]['cls']
+            if self._process_items is None:
+                cls = self._control_buttons[name]['cls']
+                if type(cls) == types.ListType:
+                    self._process_items = cls
+                    self._current_process_item = 0
+                    cls = cls[0]
+                else:
+                    self._process_items = None
+            else:
+                cls = self._process_items[self._current_process_item]
 
             is_valid = True
             self._is_abort = False
@@ -1858,7 +1903,7 @@ class ProcessorMixin(object):
                     result_frame.msg_apply_classifier(self)
 
 
-            elif isinstance(self, ErrorCorrectionFrame):
+            elif cls is HmmThread:
 
                 err = HmmThread.test_executable(self._settings.get('ErrorCorrection', 'filename_to_R'))
                 if len(err) > 0:
@@ -1881,17 +1926,19 @@ class ProcessorMixin(object):
             if is_valid:
                 self._current_process = name
                 #qApp._image_dialog = None
-                qApp._log_window.clear()
 
-                self._is_running = True
-                self._stage_infos = {}
+                if not start_again:
+                    qApp._log_window.clear()
 
-                self._toggle_tabs(False)
-                # disable all section button of the main widget
-                self.toggle_tabs.emit(self.get_name())
+                    self._is_running = True
+                    self._stage_infos = {}
 
-                self._set_control_button_text(idx=1)
-                self._toggle_control_buttons()
+                    self._toggle_tabs(False)
+                    # disable all section button of the main widget
+                    self.toggle_tabs.emit(self.get_name())
+
+                    self._set_control_button_text(idx=1)
+                    self._toggle_control_buttons()
 
                 if cls is AnalzyerThread:
 
@@ -1959,6 +2006,7 @@ class ProcessorMixin(object):
                                                       Qt.QueuedConnection)
 
                 self._analyzer.start(QThread.IdlePriority)
+                status('Process started...')
 
         else:
             self.setCursor(Qt.BusyCursor)
@@ -2018,35 +2066,53 @@ class ProcessorMixin(object):
         msgbox.exec_()
 
     def _on_process_finished(self):
-        self._is_running = False
-        #logger = logging.getLogger()
-        #logger.removeHandler(self._handler)
-        self._set_control_button_text(idx=0)
-        self._toggle_control_buttons()
-        self._toggle_tabs(True)
-        # enable all section button of the main widget
-        self.toggle_tabs.emit(self.get_name())
-        if not self._is_abort and not self._has_error:
-            if isinstance(self, ObjectDetectionFrame):
-                information(self, '', 'Object detection successfully finished.')
-            elif isinstance(self, ClassificationFrame):
-                if self._current_process == self.PROCESS_PICKING:
-                    information(self, '', 'Samples successfully picked.')
-                    result_frame = self._get_result_frame(self._tab_name)
-                    result_frame.load_classifier(check=False)
-                elif self._current_process == self.PROCESS_TRAINING:
-                    information(self, '', 'Classifier successfully trained.')
-                elif self._current_process == self.PROCESS_TESTING:
-                    information(self, '', 'Testing successfully finished.')
-            elif isinstance(self, TrackingFrame):
-                if self._current_process == self.PROCESS_TRACKING:
-                    information(self, '', 'Tracking successfully finished.')
-                elif self._current_process == self.PROCESS_SYNCING:
-                    information(self, '', 'Syncing successfully finished.')
-            elif isinstance(self, ErrorCorrectionFrame):
-                information(self, '', 'Error correction successfully finished.')
 
-        self._current_process = None
+        if (not self._process_items is None and
+            self._current_process_item+1 < len(self._process_items) and
+            not self._is_abort and
+            not self._has_error):
+            self._current_process_item += 1
+            self._on_process_start(self._current_process, start_again=True)
+        else:
+            self._is_running = False
+            #logger = logging.getLogger()
+            #logger.removeHandler(self._handler)
+            self._set_control_button_text(idx=0)
+            self._toggle_control_buttons()
+            self._toggle_tabs(True)
+            # enable all section button of the main widget
+            self.toggle_tabs.emit(self.get_name())
+            if not self._is_abort and not self._has_error:
+                if isinstance(self, ObjectDetectionFrame):
+                    msg = 'Object detection successfully finished.'
+                elif isinstance(self, ClassificationFrame):
+                    if self._current_process == self.PROCESS_PICKING:
+                        msg = 'Samples successfully picked.'
+                        result_frame = self._get_result_frame(self._tab_name)
+                        result_frame.load_classifier(check=False)
+                    elif self._current_process == self.PROCESS_TRAINING:
+                        msg = 'Classifier successfully trained.'
+                    elif self._current_process == self.PROCESS_TESTING:
+                        msg = 'Testing successfully finished.'
+                elif isinstance(self, TrackingFrame):
+                    if self._current_process == self.PROCESS_TRACKING:
+                        msg = 'Tracking successfully finished.'
+                    elif self._current_process == self.PROCESS_SYNCING:
+                        msg = 'Syncing successfully finished.'
+                elif isinstance(self, ErrorCorrectionFrame):
+                    msg = 'Error correction successfully finished.'
+                elif isinstance(self, ProcessingFrame):
+                    msg = 'Processing successfully finished.'
+
+                information(self, 'Process finished', msg)
+                status(msg)
+            else:
+                if self._is_abort:
+                    status('Process aborted by user.')
+                elif self._has_error:
+                    status('Process aborted by error.')
+
+            self._current_process = None
 
     def _on_esc_pressed(self):
         print 'ESC'
@@ -2074,11 +2140,26 @@ class ProcessorMixin(object):
                 if len(self._stage_infos) > 1:
                     total = self._stage_infos[1]['max']*self._stage_infos[2]['max']
                     current = (self._stage_infos[1]['progress']-1)*self._stage_infos[2]['max']+self._stage_infos[2]['progress']
-                    #print current, total
+                    print current, total
                     self._progress0.setRange(0, total)
                     self._progress0.setValue(current)
                     #info = self._stage_infos[2]
                     self._progress_label0.setText('%.1f%%' % (current*100.0/total))
+                    sep = '   |   '
+                    msg = 'Image processing:   %s%s%s' % (self._stage_infos[1]['text'],
+                                                          sep,
+                                                          self._stage_infos[2]['text'])
+                    if current > 1:
+                        interval = info['interval']
+                        self._intervals.append(interval.get_interval())
+                        estimate = TimeInterval(numpy.average(self._intervals) * float(total-current))
+                        msg += '%s%.1fs / T%s%s remaining' % (sep,
+                                                              interval.get_interval(),
+                                                              sep,
+                                                              estimate.format())
+                    else:
+                        self._intervals = []
+                    status(msg)
         elif self.CONTROL == CONTROL_2:
             if info['stage'] == 1:
                 if 'progress' in info:
@@ -2111,7 +2192,7 @@ class ProcessorMixin(object):
             if qApp._image_dialog is None:
                 qApp._image_dialog = QFrame()
                 shortcut = QShortcut(QKeySequence(Qt.Key_Escape), qApp._image_dialog)
-                self.connect(shortcut, SIGNAL('activated()'), self._on_esc_pressed)
+                qApp._image_dialog.connect(shortcut, SIGNAL('activated()'), self._on_esc_pressed)
                 #self._image_dialog.setScaledContents(True)
                 #self._image_dialog.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
                 layout = QVBoxLayout(qApp._image_dialog)
@@ -2256,7 +2337,7 @@ class ConfigSettings(RawConfigParser):
         self._registry = OrderedDict()
         self._current_section = None
         self.naming_schemes = RawConfigParser({}, OrderedDict)
-        filename = 'naming_schemes.conf'
+        filename = os.path.join('resources', 'naming_schemes.conf')
         if not os.path.isfile(filename):
             raise IOError("Naming scheme file '%s' not found." % filename)
         self.naming_schemes.read(filename)
@@ -2370,12 +2451,12 @@ class GeneralFrame(InputFrame):
 
         self.register_trait('rendering',
                             DictTrait({}, label='Rendering'))
-        self.register_trait('rendering_discwrite',
-                       BooleanTrait(True, label='Write images to disc'))
+#        self.register_trait('rendering_discwrite',
+#                       BooleanTrait(True, label='Write images to disc'))
         self.register_trait('rendering_class',
                        DictTrait({}, label='Rendering class'))
-        self.register_trait('rendering_class_discwrite',
-                       BooleanTrait(True, label='Write images to disc'))
+#        self.register_trait('rendering_class_discwrite',
+#                       BooleanTrait(True, label='Write images to disc'))
 
 
         self.register_trait('primary_featureExtraction_exportFeatureNames',
@@ -2606,8 +2687,8 @@ class ObjectDetectionFrame(InputFrame, ProcessorMixin):
         settings.set2('secondary_simplefeatures_shape', False)
         settings.set_section('General')
         settings.set2('rendering_class', {})
-        settings.set2('rendering_discwrite', True)
-        settings.set2('rendering_class_discwrite', True)
+        #settings.set2('rendering_discwrite', True)
+        #settings.set2('rendering_class_discwrite', True)
 
         if self._tab.currentIndex() == 0:
             settings.set('General', 'rendering', {'primary_contours': {prim_id: {'raw': ('#FFFFFF', 1.0), 'contours': {'primary': ('#FF0000', 1, False)}}}})
@@ -2941,14 +3022,14 @@ class TrackingFrame(InputFrame, ProcessorMixin):
         sec_regions = settings.get2('secondary_regions')
         settings.set('Processing', 'tracking', True)
         settings.set_section('Tracking')
-        settings.set2('tracking_visualization', True)
+#        settings.set2('tracking_visualization', True)
         settings.set2('tracking_synchronize_trajectories', False)
         show_ids = settings.get2('tracking_visualize_show_labels')
         settings.set_section('General')
         settings.set2('rendering_class', {})
         settings.set2('rendering', {})
-        settings.set2('rendering_discwrite', True)
-        settings.set2('rendering_class_discwrite', True)
+        #settings.set2('rendering_discwrite', True)
+        #settings.set2('rendering_class_discwrite', True)
         settings.set_section('Classification')
         settings.set2('collectsamples', False)
 #        if settings.get2('primary_classification'):
@@ -3049,12 +3130,6 @@ class ErrorCorrectionFrame(InputFrame, ProcessorMixin):
 
         self._init_control(has_images=False)
 
-    def _get_modified_settings(self, name):
-        settings = ProcessorMixin._get_modified_settings(self, name)
-        #settings.set('Processing', 'primary_errorcorrection', True)
-        #settings.set('Processing', 'secondary_errorcorrection', True)
-        return settings
-
 
 class OutputFrame(InputFrame):
 
@@ -3063,29 +3138,42 @@ class OutputFrame(InputFrame):
     def __init__(self, settings, parent):
         super(OutputFrame, self).__init__(settings, parent)
 
-        self.add_input('rendering',
-                       DictTrait({}, label='Rendering',
-                                 tooltip='abc...'))
-        self.add_input('rendering_discwrite',
-                       BooleanTrait(True, label='Write images to disc',
-                                    tooltip='abc...'))
-        self.add_input('rendering_class',
-                       DictTrait({}, label='Rendering class',
-                                 tooltip='abc...'))
-        self.add_input('rendering_class_discwrite',
-                       BooleanTrait(True, label='Write images to disc',
-                                    tooltip='abc...'))
-
-
-        self.add_group('Filter feature values', None,
+        self.add_group('Write results to disc', None,
                        [
-                        ('primary_featureExtraction_exportFeatureNames',
-                         ListTrait([], label='Primary channel',
-                                   tooltip='abc...')),
-                        ('secondary_featureExtraction_exportFeatureNames',
-                         ListTrait([], label='Secondary channel',
-                                   tooltip='abc...')),
-                        ], layout='flow')
+                        ('rendering_labels_discwrite',
+                         BooleanTrait(False, label='Label images'),
+                         (0,0,1,1)),
+                        ('rendering_contours_discwrite',
+                         BooleanTrait(False, label='Contour images'),
+                         (1,0,1,1)),
+                        ('rendering_class_discwrite',
+                         BooleanTrait(False, label='Classification images'),
+                         (2,0,1,1)),
+                        ])
+
+#        self.add_input('rendering',
+#                       DictTrait({}, label='Rendering',
+#                                 tooltip='abc...'))
+#        self.add_input('rendering_discwrite',
+#                       BooleanTrait(True, label='Write images to disc',
+#                                    tooltip='abc...'))
+#        self.add_input('rendering_class',
+#                       DictTrait({}, label='Rendering class',
+#                                 tooltip='abc...'))
+#        self.add_input('rendering_class_discwrite',
+#                       BooleanTrait(True, label='Write images to disc',
+#                                    tooltip='abc...'))
+#
+#
+#        self.add_group('Filter feature values', None,
+#                       [
+#                        ('primary_featureExtraction_exportFeatureNames',
+#                         ListTrait([], label='Primary channel',
+#                                   tooltip='abc...')),
+#                        ('secondary_featureExtraction_exportFeatureNames',
+#                         ListTrait([], label='Secondary channel',
+#                                   tooltip='abc...')),
+#                        ], layout='flow')
 
         self.add_expanding_spacer()
 
@@ -3100,7 +3188,8 @@ class ProcessingFrame(InputFrame, ProcessorMixin):
         ProcessorMixin.__init__(self)
 
         self.register_control_button('process',
-                                     AnalzyerThread,
+                                     [AnalzyerThread,
+                                      HmmThread],
                                      ('Start processing', 'Stop processing'))
 
 
@@ -3209,6 +3298,10 @@ class FarmingFrame(InputFrame):
 
 if __name__ == "__main__":
     import time
+    import sys
+    safe_mkdirs('log')
+    sys.stdout = file('log/cecog_analyzerone_stdout.log', 'w')
+    sys.stderr = file('log/cecog_analyzerone_stderr.log', 'w')
 
     app = QApplication(sys.argv)
 
@@ -3227,6 +3320,10 @@ if __name__ == "__main__":
     filename = '/Users/miheld/data/CellCognition/demo_data/H2bTub20x_settings.conf'
     if os.path.isfile(filename):
         main.read_settings(filename)
+    else:
+        filename = r'Y:\data\CellCognition\demo_data\H2bTub20x_settings_WinXP.conf'
+        if os.path.isfile(filename):
+            main.read_settings(filename)
     splash.finish(main)
 
     sys.exit(app.exec_())

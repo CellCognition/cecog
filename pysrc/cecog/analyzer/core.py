@@ -553,8 +553,10 @@ class PositionAnalyzer(object):
         else:
             strPathOutPositionDebug = ""
 
-        create_images = self.oSettings.get('General', 'createImages')
-        if create_images:
+
+        if (self.oSettings.get('Output', 'rendering_labels_discwrite') or
+            self.oSettings.get('Output', 'rendering_contours_discwrite') or
+            self.oSettings.get('Output', 'rendering_class_discwrite')):
             bMkdirsOk = safe_mkdirs(self.strPathOutPositionImages)
             self._oLogger.info("strPathOutPositionImages '%s', ok: %s" % (self.strPathOutPositionImages,
                                                                           bMkdirsOk))
@@ -567,13 +569,14 @@ class PositionAnalyzer(object):
 #            oPersistenz = None
 
         stage_info = {'stage': 2,
-                      'text': 'Image processing',
                       'min': 1,
                       'max': len(self.lstAnalysisFrames),
                       }
 
         iNumberImages = 0
         iLastFrame = self.lstAnalysisFrames[-1]
+
+        stopwatch = StopWatch()
 
         # - loop over a sub-space with fixed position 'P' and reduced time and
         #   channel axis (in case more channels or time-points exist)
@@ -589,11 +592,14 @@ class PositionAnalyzer(object):
                     return 0
 
                 stage_info.update({'progress': self.lstAnalysisFrames.index(iT)+1,
-                                   'meta': 'Frame %d' % iT,
+                                   'text': 'T %d (%d/%d)' % (iT, self.lstAnalysisFrames.index(iT)+1, len(self.lstAnalysisFrames)),
+                                   'interval': stopwatch.current_interval(),
                                    })
                 self._qthread.set_stage_info(stage_info)
                 # FIXME: give the GUI a moment to recover
                 time.sleep(.2)
+
+            stopwatch.reset()
 
             oCellAnalyzer.initTimepoint(iT)
             # loop over the channels
@@ -719,7 +725,6 @@ class PositionAnalyzer(object):
 
             #self._oLogger.info("  timestamp: %.2f sec" % (self.oMetaData.dctTimestamps[P][iFrame]))
 
-            oStopWatch = StopWatch()
 
             if self.oSettings.get('Classification', 'collectsamples'):
                 img_rgb = oCellAnalyzer.collectObjects(self.origP,
@@ -751,44 +756,43 @@ class PositionAnalyzer(object):
                                    (img_split, '#00FFFF', 1.0),
                                    ]
 
-                for channel_id, infos in self.classifier_infos.iteritems():
+                for infos in self.classifier_infos.itervalues():
                     oCellAnalyzer.classifyObjects(infos['predictor'])
 
 
-                if True: #self.oSettings.bCreateImages:
-                    self.oSettings.set_section('General')
-                    for strType, dctRenderInfo in self.oSettings.get2('rendering_class').iteritems():
-                        strPathOutImages = os.path.join(self.strPathOutPositionImages, strType)
-                        img_rgb, filename = oCellAnalyzer.render(strPathOutImages, dctRenderInfo=dctRenderInfo,
-                                                                 writeToDisc=self.oSettings.get2('rendering_class_discwrite'),
-                                                                 images=images)
-                        #print strType, self._qthread.get_renderer(), self.oSettings.get('Rendering', 'rendering_class')
+                self.oSettings.set_section('General')
+                for strType, dctRenderInfo in self.oSettings.get2('rendering_class').iteritems():
+                    strPathOutImages = os.path.join(self.strPathOutPositionImages, strType)
+                    img_rgb, filename = oCellAnalyzer.render(strPathOutImages, dctRenderInfo=dctRenderInfo,
+                                                             writeToDisc=self.oSettings.get('Output', 'rendering_class_discwrite'),
+                                                             images=images)
+                    #print strType, self._qthread.get_renderer(), self.oSettings.get('Rendering', 'rendering_class')
 
-                        if not self._qthread is None and not img_rgb is None:
-                            if self._qthread.get_renderer() == strType:
-                                self._qthread.set_image(img_rgb,
-                                                        'P %s - T %05d' % (self.origP, iT),
-                                                        filename)
+                    if not self._qthread is None and not img_rgb is None:
+                        if self._qthread.get_renderer() == strType:
+                            self._qthread.set_image(img_rgb,
+                                                    'P %s - T %05d' % (self.origP, iT),
+                                                    filename)
 
-                if True: #self.oSettings.bCreateImages:
-                    self.oSettings.set_section('General')
-                    for strType, dctRenderInfo in self.oSettings.get2('rendering').iteritems():
-                        strPathOutImages = os.path.join(self.strPathOutPositionImages, strType)
-                        img_rgb, filename = oCellAnalyzer.render(strPathOutImages, dctRenderInfo=dctRenderInfo,
-                                                                 writeToDisc=self.oSettings.get2('rendering_discwrite'),
-                                                                 images=images)
-                        if not self._qthread is None and not img_rgb is None:
-                            #print strType, self._qthread.get_renderer(), self.oSettings.get('Rendering', 'rendering')
-                            if self._qthread.get_renderer() == strType:
-                                self._qthread.set_image(img_rgb,
-                                                        'P %s - T %05d' % (self.origP, iT),
-                                                        filename)
+                self.oSettings.set_section('General')
+                for strType, dctRenderInfo in self.oSettings.get2('rendering').iteritems():
+                    strPathOutImages = os.path.join(self.strPathOutPositionImages, strType)
+                    img_rgb, filename = oCellAnalyzer.render(strPathOutImages, dctRenderInfo=dctRenderInfo,
+                                                             writeToDisc=self.oSettings.get('Output', 'rendering_contours_discwrite'),
+                                                             images=images)
+                    if not self._qthread is None and not img_rgb is None:
+                        #print strType, self._qthread.get_renderer(), self.oSettings.get('Rendering', 'rendering')
+                        if self._qthread.get_renderer() == strType:
+                            self._qthread.set_image(img_rgb,
+                                                    'P %s - T %05d' % (self.origP, iT),
+                                                    filename)
 
+                if self.oSettings.get('Output', 'rendering_labels_discwrite'):
                     strPathOutImages = os.path.join(self.strPathOutPositionImages, '_labels')
                     safe_mkdirs(strPathOutImages)
                     oCellAnalyzer.exportLabelImages(strPathOutImages)
 
-            self._oLogger.info("* duration: %s" % oStopWatch.current_interval().format(msec=True))
+            self._oLogger.info("* duration: %s" % stopwatch.current_interval().format(msec=True))
 
             oCellAnalyzer.purge(features=self.export_features)
 
@@ -809,10 +813,6 @@ def analyzePosition(*tplArgs, **dctOptions):
 
 class AnalyzerCore(object):
 
-    EMAIL_SENDER = 'analyzer@cellcognition.org'
-    EMAIL_SERVER = 'mail.cellcognition.org'
-    EMAIL_SERVER_LOGIN = ('analyzer@cellcognition.org', 'ana_3866')
-
     def __init__(self, settings):
 
         #self.guid = newGuid()
@@ -820,7 +820,7 @@ class AnalyzerCore(object):
 
         self.oSettings = settings
         #self.plate = plate
-        self._oLogger = logging.getLogger('Main')
+        self._oLogger = logging.getLogger(self.__class__.__name__)
 
         #self._oClient = oClient
 
@@ -1134,7 +1134,7 @@ class AnalyzerCore(object):
                         return 0
 
                     stage_info.update({'progress': idx+1,
-                                       'text': 'Position %s' % tplArgs[0],
+                                       'text': 'P %s (%d/%d)' % (tplArgs[0], idx+1, len(lstJobInputs)),
                                        })
                     qthread.set_stage_info(stage_info)
 
@@ -1201,111 +1201,4 @@ class AnalyzerCore(object):
                                         infos['numberPendingItems']))
 
             time.sleep(30)
-
-
-#-------------------------------------------------------------------------------
-# main:
-#
-
-if __name__ ==  "__main__":
-
-    from pdk.settings import prepareSystemSettings
-    from pdk.cmdlinehandlers import (getCommandLineOptionValue,
-                                     processCommandLine,
-                                     registerClassCommandLineOptions,
-                                     registerCommandLineOptions)
-    #from pdk.farming.launcher import ClientLauncher
-
-    oLogger = logging.getLogger()
-    oHandler = logging.StreamHandler(sys.stdout)
-    oHandler.setLevel(logging.DEBUG)
-    oFormatter = logging.Formatter('%(asctime)s %(levelname)-6s %(message)s')
-    oHandler.setFormatter(oFormatter)
-    oLogger.addHandler(oHandler)
-    oLogger.setLevel(logging.DEBUG)
-
-    oLogger.info("*************************************")
-    oLogger.info("*** Gerlich Lab - Common Analysis ***")
-    oLogger.info("*************************************")
-
-    registerCommandLineOptions(("s:", "settings=", None, "absolute path (including filename) of settings file"),
-                               ("i:", "input=", None, "absolute path to image data (optional)"),
-                               ("o:", "output=", None, "absolute path to analysis results (optional)"),
-                               )
-    registerClassCommandLineOptions(ClientLauncher)
-    prepareSystemSettings('core')
-    tplArgs, oOptions = processCommandLine()
-
-    strPathSettings     = oOptions.settings
-    strPathIn           = oOptions.input
-    strPathOut          = oOptions.output
-
-    # read the settings data from file
-    oSettings = Settings(os.path.abspath(strPathSettings), dctGlobals=globals())
-
-    if oSettings.bUsePyFarm:
-        # launch the PyFarm client
-        oLogger.info("Launching client ...")
-        oClient = launchClient()
-
-        oLogger = logging.getLogger()
-        oHandler = logging.StreamHandler(sys.stdout)
-        oHandler.setLevel(logging.DEBUG)
-        oFormatter = logging.Formatter('%(asctime)s %(levelname)-6s %(message)s')
-        oHandler.setFormatter(oFormatter)
-        oLogger.addHandler(oHandler)
-        oLogger.setLevel(logging.DEBUG)
-
-        # make sure that the client is shut down when the applications quits
-        registerExitHandler(closeClient,
-                            args=(weakref.proxy(oClient),),
-                            handleExitSignals=True,
-                            handleSystemExit=True
-                            )
-        oLogger.info("PyFarm Client successfully launched with GUID '%s'", oClient.guid)
-    else:
-        oClient = None
-
-    # take input and output directories from settings file
-
-    if strPathIn is None:
-        strPathIn  = oSettings.strPathIn
-    if strPathOut is None:
-        strPathOut = oSettings.strPathOut
-
-
-    # create output path
-    safe_mkdirs(strPathOut)
-
-    oPlate = oSettings.clsPlate()
-#    if oSettings.bQualityControl or oSettings.bUsePlateInformation:
-    if oSettings.bUsePlateInformation:
-        strPlateFilename = resolveMappingFile(strPathOut)
-        logging.info("Read plate mapping from '%s'" % strPlateFilename)
-        oPlateMapper = oSettings.clsPlateMapper(strPlateFilename)
-        oPlate.importMapping(oPlateMapper)
-
-
-    # FIXME: we should have a factory here, determining the kind of class needed
-    clsTimeseriesAnalyzer = CommonAnalysis
-
-    if not oSettings.lstPositions is None:
-        lstPositions = []
-        for oPos in oSettings.lstPositions:
-            if type(oPos) == types.TupleType:
-                strKey, strValue = oPos
-                lstPos = oPlate.selectPositions(strKey, strValue)
-                lstPositions.extend(lstPos)
-            else:
-                lstPositions.append(oPos)
-        oSettings.lstPositions = map(int, sorted(unique(lstPositions)))
-        logging.info("Analyzing Positions: %d %s" % \
-                     (len(oSettings.lstPositions), oSettings.lstPositions))
-
-    oTimeseriesAnalyzer = clsTimeseriesAnalyzer(strPathIn,
-                                                strPathOut,
-                                                oSettings,
-                                                oPlate,
-                                                oClient)
-    oTimeseriesAnalyzer.processPositions()
 
