@@ -344,9 +344,9 @@ plot.transition.graph <- function(hmm, loops=FALSE,type=NULL,filename=NULL,weigh
 
     if (type=="PNG")
     {
-#        CairoPNG(filename, bg='transparent')
-        png(filename, bg='transparent')
-        plot(g, vertex.label.family="Helvetica")
+        CairoPNG(filename, bg='transparent')
+        #png(filename, bg='transparent')
+        plot(g)
         dev.off()
     } else
     if (type=="PS")
@@ -520,7 +520,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
         }
         print(pos.names)
         sortedIndex <- sort(pos.names, index.return=TRUE, method="shell")$ix
-        print(sortedIndex)
+        #print(sortedIndex)
         #break
     }
 
@@ -606,11 +606,11 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             # write PNG and PDF
             plot.transition.graph(hmm[[i]], type="PNG", filename=paste(outdir_region,"/graph_loop_",i,".png",sep=""), loops=TRUE, weights=TRUE)
             #plotTransitionGraph(hmm[[i]], type="PDF", filename=paste(outdir,"/graph_loop_",i,".pdf",sep=""), loops=TRUE, weights=TRUE)
-            plot.transition.graph(hmm[[i]], type="PS",  filename=paste(outdir_region,"/graph_loop_",i,".ps",sep=""), loops=TRUE, weights=TRUE)
+#            plot.transition.graph(hmm[[i]], type="PS",  filename=paste(outdir_region,"/graph_loop_",i,".ps",sep=""), loops=TRUE, weights=TRUE)
 
             plot.transition.graph(hmm[[i]], type="PNG", filename=paste(outdir_region,"/graph_",i,".png",sep=""), loops=FALSE, weights=TRUE)
             #plotTransitionGraph(hmm[[i]], type="PDF", filename=paste(outdir,"/graph_",i,".pdf",sep=""), loops=FALSE, weights=TRUE)
-            plot.transition.graph(hmm[[i]], type="PS",  filename=paste(outdir_region,"/graph_",i,".ps",sep=""), loops=FALSE, weights=TRUE)
+            #plot.transition.graph(hmm[[i]], type="PS",  filename=paste(outdir_region,"/graph_",i,".ps",sep=""), loops=FALSE, weights=TRUE)
 
 
             # write HTML
@@ -631,17 +631,17 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
           realign.starts.nofilter <- rep(0,0)
           if (!is.null(realign_onset))
           {
-            print(dim(sq))
-            print(T)
+            #print(dim(sq))
+            #print(T)
             #I3 <- rep(FALSE, sum(I))
 
           if (is.null(realign))
               onsets <- apply(sq, 1, subsearch, c(1,1,1,1,1,1,1,2,2,2))
           else
           {
-            print("realign")
-            print(sum(I))
-            print(length(realign))
+            #print("realign")
+            #print(sum(I))
+            #print(length(realign))
           }
 
             I2 <- seq(1,length(I))[I]
@@ -682,12 +682,11 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
               } else
                 I[I2[k]] <- FALSE
         realign.starts <- realign.starts[check]
-            print(dim(sq))
-            print(length(I))
-            print(sum(I))
-            print(length(realign.starts))
+            #print(dim(sq))
+            #print(length(I))
+            #print(sum(I))
+            #print(length(realign.starts))
             N.gene <- dim(sq)[1]
-            print("moo")
             }
             else
                 realign.starts <- rep(0, N.gene)
@@ -750,7 +749,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
                         row.names=FALSE, col.names=c("Trajectory", "Realign"))
 
 
-            png(paste(outdir_region,"/",fn[i,1],sep=""), width=1000, height=1000, bg='transparent')
+            CairoPNG(paste(outdir_region,"/",fn[i,1],sep=""), width=1000, height=1000, bg='transparent')
             #CairoPS(paste(outdir,"/",fn[i,2],sep=""), width=15, height=15, bg='transparent')
             #layout(matrix(c(1,2), 2, 1), heights=c(10,10))
             #par(mar=c(1,1,0,0))
@@ -801,13 +800,13 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             #print(paste('  sd:',sd(v, na.rm=TRUE)))
             #print(paste('size:',length(v)))
 
-            png(paste(outdir_region,"/",fn.b[i,1],sep=""), width=400, height=400)
+            CairoPNG(paste(outdir_region,"/",fn.b[i,1],sep=""), width=400, height=400)
             boxplot(as.data.frame(t(counts.time), optional=TRUE), col=class.colors.hmm, ylim=c(0,max_time),
                     xlab="class", ylab="time [min]")
             title(plot_title)
             dev.off()
 
-            png(paste(outdir_region,"/",fn.b[i,2],sep=""), width=400, height=400)
+            CairoPNG(paste(outdir_region,"/",fn.b[i,2],sep=""), width=400, height=400)
             barplot(apply(counts.time, 1, mean, na.rm=TRUE), col=class.colors.hmm, ylim=c(0,max_time),
                     xlab="class", ylab="time [min]")
             title(plot_title)
@@ -819,16 +818,10 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
     #        Single.Sequence <- matrix(0, nr=1, nc=T)
     #        Single.Sequence[1,] <- apply(counts, 2, which.max)
 
-            png(paste(outdir_region,"/",fn.raw[i,1],sep=""), width=1000, height=1000, bg='transparent')
+            CairoPNG(paste(outdir_region,"/",fn.raw[i,1],sep=""), width=1000, height=1000, bg='transparent')
             #CairoPS(paste(outdir,"/",fn.raw[i,2],sep=""), width=15, height=15, bg='transparent')
             par(mar=c(0,0,0,0))
-            #print("moo1")
-            #print(dim(Sequence.Raw[I,]))
-            #print(dim(Sequence.Raw[I,][I.indices,]))
-            #print(length(I.sort))
             sq <- Sequence.Raw[I,][I.indices,][I.sort,]
-            print(sq)
-            #print("moo2")
             image(t(sq), col=class.colors,
                   zlim=c(1,K), xaxt="n", yaxt="n")
             box()
@@ -837,7 +830,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
 
             if (!is.null(features))
             {
-                png(paste(outdir_region,"/",fn.f[i,1],sep=""), width=1000, height=1000, bg='transparent')
+                CairoPNG(paste(outdir_region,"/",fn.f[i,1],sep=""), width=1000, height=1000, bg='transparent')
                 par(mar=c(0,0,0,0))
                 #limit = 1.2
                 #limit = 255
@@ -850,7 +843,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
                 #axis(1, seq(T))
                 dev.off()
 
-                png(paste(outdir_region,"/",fn.f[i,2],sep=""), width=1000, height=1000)
+                CairoPNG(paste(outdir_region,"/",fn.f[i,2],sep=""), width=1000, height=1000)
                 par(mar=c(5,4,1,1), cex=2)
                 sq <- sq[,20:60]
                 T <- dim(sq)[2]
@@ -891,7 +884,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
 
 #        plotTransitionGraph(graph, type="PS", filename=paste(outdir,"/graph_prior.ps",sep=""),loops=FALSE,weights=FALSE)
     plot.transition.graph(graph, type="PNG", filename=paste(outdir_region,"/graph_prior.png",sep=""),loops=FALSE,weights=FALSE)
-#        plotTransitionGraph(graph, type="PS", filename=paste(outdir,"/graph_prior_loop.ps",sep=""),loops=TRUE,weights=FALSE)
+#    plotTransitionGraph(graph, type="PS", filename=paste(outdir,"/graph_prior_loop.ps",sep=""),loops=TRUE,weights=FALSE)
     plot.transition.graph(graph, type="PNG", filename=paste(outdir_region,"/graph_prior_loop.png",sep=""),loops=TRUE,weights=FALSE)
 #        #plotTransitionGraph(graph, type="PDF", filename=paste(outdir,"/graph_prior.pdf",sep=""),loops=FALSE,weights=FALSE)
     hwrite("Prior Selected Graph Structure",p,heading=3)

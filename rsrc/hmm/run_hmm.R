@@ -18,9 +18,6 @@ FILENAME_GRAPH_S = NULL
 SORT_CLASSES_P = NULL
 SORT_CLASSES_S = NULL
 
-#WORKING_DIR
-#print(getwd())
-#setwd(WORKING_DIR)
 source('hmm.R')
 source('hmm_report.R')
 
