@@ -597,7 +597,7 @@ class PositionAnalyzer(object):
                                    })
                 self._qthread.set_stage_info(stage_info)
                 # FIXME: give the GUI a moment to recover
-                time.sleep(.2)
+                time.sleep(.1)
 
             stopwatch.reset()
 
@@ -745,6 +745,9 @@ class PositionAnalyzer(object):
             elif oCellAnalyzer.process():
                 iNumberImages += 1
 
+                if not self._qthread:
+                    time.sleep(.1)
+
                 images = []
                 if self.oSettings.get('Processing', 'tracking'):
                     self.oCellTracker.trackAtTimepoint(iT)
@@ -769,10 +772,11 @@ class PositionAnalyzer(object):
                     #print strType, self._qthread.get_renderer(), self.oSettings.get('Rendering', 'rendering_class')
 
                     if not self._qthread is None and not img_rgb is None:
-                        if self._qthread.get_renderer() == strType:
-                            self._qthread.set_image(img_rgb,
-                                                    'P %s - T %05d' % (self.origP, iT),
-                                                    filename)
+                        self._qthread.set_image(strType,
+                                                img_rgb,
+                                                'P %s - T %05d' % (self.origP, iT),
+                                                filename)
+                        time.sleep(.05)
 
                 self.oSettings.set_section('General')
                 for strType, dctRenderInfo in self.oSettings.get2('rendering').iteritems():
@@ -782,10 +786,11 @@ class PositionAnalyzer(object):
                                                              images=images)
                     if not self._qthread is None and not img_rgb is None:
                         #print strType, self._qthread.get_renderer(), self.oSettings.get('Rendering', 'rendering')
-                        if self._qthread.get_renderer() == strType:
-                            self._qthread.set_image(img_rgb,
-                                                    'P %s - T %05d' % (self.origP, iT),
-                                                    filename)
+                        self._qthread.set_image(strType,
+                                                img_rgb,
+                                                'P %s - T %05d' % (self.origP, iT),
+                                                filename)
+                        time.sleep(.05)
 
                 if self.oSettings.get('Output', 'rendering_labels_discwrite'):
                     strPathOutImages = os.path.join(self.strPathOutPositionImages, '_labels')

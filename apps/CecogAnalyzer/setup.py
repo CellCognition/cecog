@@ -24,7 +24,7 @@ import os
 import sys
 from pdk.fileutils import safe_mkdirs, collect_files
 
-main_script = 'AnalyzerOne.py'
+main_script = 'CecogAnalyzer.py'
 
 def tempsyspath(path):
     def decorate(f):
@@ -81,8 +81,8 @@ if sys.platform == 'darwin':
                     }
 elif sys.platform == 'win32':
     import py2exe # pylint: disable-msg=F0401,W0611
-    #FILENAME_ZIP = 'resources/AnalyzerOne.zip'
-    FILENAME_ZIP = 'AnalyzerOne.exe'
+    #FILENAME_ZIP = 'resources/CecogAnalyzer.zip'
+    FILENAME_ZIP = 'CecogAnalyzer.exe'
     OPTIONS = {'windows': [{'script': main_script,
                             'icon_resources': \
                                [(1, r'resources\cecog_analyzer_icon.ico')],
@@ -126,7 +126,7 @@ setup(
 
 if sys.platform == 'darwin':
 
-    base_path = 'dist/AnalyzerOne.app'
+    base_path = 'dist/CecogAnalyzer.app'
 
     # for unknown reasons the pyconfig.h is needed but not included
 #    target_path = os.path.join(base_path, 'Contents/Resources/include/python2.6')
@@ -157,16 +157,13 @@ if sys.platform == 'darwin':
                  'hmm_report.R',
                  'run_hmm.R',
                  ]
-    target = os.path.join(base_path, 'Contents/Resources/resources/rsrc/hmm')
+    resource_path = os.path.join(base_path, 'Contents/Resources/resources')
+    target = os.path.join(resource_path, 'rsrc/hmm')
     safe_mkdirs(target)
     for filename in filenames:
         shutil.copy(os.path.join('../../rsrc/hmm', filename), target)
-    shutil.copy('../../pysrc/cecog/ccore/resources/font12.png',
-                os.path.join(base_path, 'Contents/Resources/resources'))
-    shutil.copy('resources/naming_schemes.conf',
-                os.path.join(base_path, 'Contents/Resources/resources'))
-    shutil.rmtree(os.path.join(base_path,
-                               'Contents/Resources/lib/python2.5/cecog/ccore/resources'))
+    shutil.copy('resources/font12.png', resource_path)
+    shutil.copy('resources/naming_schemes.conf', resource_path)
 
 
 elif sys.platform == 'win32':
@@ -192,6 +189,6 @@ elif sys.platform == 'win32':
     safe_mkdirs(target)
     for filename in filenames:
         shutil.copy(os.path.join('../../rsrc/hmm', filename), target)
-    shutil.copy('../../pysrc/cecog/ccore/resources/font12.png', 'dist/resources')
+    shutil.copy('resources/font12.png', 'dist/resources')
     shutil.copy('resources/naming_schemes.conf', 'dist/resources')
 

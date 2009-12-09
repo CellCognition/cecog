@@ -162,6 +162,10 @@ def warning(parent, title, text, info=None, detail=None):
 def status(msg, timeout=0):
     qApp._statusbar.showMessage(msg, timeout)
 
+def convert_package_path(path):
+    return os.path.normpath(os.path.join(app._package_dir, path))
+
+
 #-------------------------------------------------------------------------------
 # classes:
 #
@@ -169,6 +173,8 @@ class AnalyzerMainWindow(QMainWindow):
 
     TITLE = 'CecogAnalyzer'
 
+    NAME_FILTERS = ['Settings files (*.conf)',
+                    'All files (*.*)']
 
     def __init__(self):
         QMainWindow.__init__(self)
@@ -442,7 +448,7 @@ class AnalyzerMainWindow(QMainWindow):
         #dialog.setBackgroundRole(QPalette.Dark)
         dialog.setStyleSheet('background: #000000; '
                              'background-image: url(:cecog_about)')
-        dialog.setWindowTitle('About')
+        dialog.setWindowTitle('About CecogAnalyzer')
         dialog.setFixedSize(400,300)
         layout = QGridLayout()
         layout.setContentsMargins(0,0,0,0)
@@ -454,9 +460,10 @@ class AnalyzerMainWindow(QMainWindow):
         label2 = QLabel(dialog)
         label2.setStyleSheet('background: transparent;')
         label2.setAlignment(Qt.AlignCenter)
-        label2.setText('CellCognition Analyzer\n'
-                       'Copyright (c) 2006 - 2009 by Michael Held\n'
-                       'Gerlich Lab, ETH Zurich, Switzerland')
+        label2.setText('CecogAnalyzer\n\n'
+                       'Copyright (c) 2006 - 2009\n'
+                       'Michael Held & Daniel Gerlich\n'
+                       'ETH Zurich, Switzerland')
         label3 = QLabel(dialog)
         label3.setStyleSheet('background: transparent;')
         label3.setTextFormat(Qt.AutoText)
@@ -466,7 +473,7 @@ class AnalyzerMainWindow(QMainWindow):
         #palette.link = QBrush(QColor(200,200,200))
         #label3.setPalette(palette)
         label3.setText('<style>a { color: green; } a:visited { color: green; }</style>'
-                       '<a href="http://www.cellcognition.org">www.cellcognition.org</a><br><br>')
+                       '<a href="http://www.cellcognition.org">www.cellcognition.org</a><br>')
         layout.addWidget(label2, 1, 0)
         layout.addWidget(label3, 2, 0)
         layout.setAlignment(Qt.AlignCenter|
@@ -485,9 +492,13 @@ class AnalyzerMainWindow(QMainWindow):
         dialog = QFileDialog(self)
         dialog.setFileMode(QFileDialog.ExistingFile)
         dialog.setAcceptMode(QFileDialog.AcceptOpen)
+        dialog.setNameFilters(self.NAME_FILTERS)
+        filename = convert_package_path(self._settings_filename)
+        if os.path.isfile(filename):
+            dialog.setDirectory(os.path.dirname(filename))
         if dialog.exec_():
             filename = str(dialog.selectedFiles()[0])
-            print filename
+            #print filename
             self.read_settings(filename)
 
     def _on_file_save(self):
@@ -509,14 +520,23 @@ class AnalyzerMainWindow(QMainWindow):
         qApp._log_window.raise_()
 
     def __get_save_as_filename(self):
-        #QFileDialog.getSaveFileName(self, )
-        filename = None
         dialog = QFileDialog(self)
         dialog.setFileMode(QFileDialog.AnyFile)
+        dialog.setNameFilters(self.NAME_FILTERS)
         dialog.setAcceptMode(QFileDialog.AcceptSave)
+        filename = convert_package_path(self._settings_filename)
+        if os.path.isfile(filename):
+            # FIXME: Qt4 has a bug with setting a path and saving a file:
+            # the file is save one dir higher then selected
+            # this line should read:
+            # dialog.setDirectory(os.path.dirname(filename))
+            # this version does not stably give the path for MacOSX
+            dialog.setDirectory(filename)
+        filename = None
         if dialog.exec_():
             filename = str(dialog.selectedFiles()[0])
             self.setWindowTitle('%s - %s' % (self.TITLE, filename))
+            #print map(str, dialog.selectedFiles())
         return filename
 
 
@@ -571,45 +591,41 @@ class _ProcessingThread(QThread):
 
 class HmmThread(_ProcessingThread):
 
+    DEFAULT_CMD_MAC = 'R32'
+    DEFAULT_CMD_WIN = r'C:\Program Files\R\bin\R.exe'
+
     def __init__(self, parent, settings, learner_dict):
         _ProcessingThread.__init__(self, parent, settings)
         self._learner_dict = learner_dict
 
         qApp._log_window.show()
         qApp._log_window.raise_()
-        logger = logging.getLogger()
-        logger.addHandler(qApp._log_handler)
-
-    def __del__(self):
-        logger = logging.getLogger()
-        logger.removeHandler(qApp._log_handler)
 
     @classmethod
-    def test_executable(cls, filename):
+    def get_cmd(cls, filename):
         filename = filename.strip()
         if filename != '':
             cmd = filename
+        elif sys.platform == 'darwin':
+            cmd = cls.DEFAULT_CMD_MAC
         else:
-            cmd = 'R32'
-        #process = QProcess()
-        #process.setWorkingDirectory(wd)
-        #process.start(cmd, ['--version'])
-        #process.waitForFinished()
+            cmd = cls.DEFAULT_CMD_WIN
+        return cmd
 
-        return ''
+    @classmethod
+    def test_executable(cls, filename):
+        cmd = cls.get_cmd(filename)
+        process = QProcess()
+        process.start(cmd, ['--version'])
+        process.waitForFinished()
+        return process.exitCode() == QProcess.NormalExit, cmd
 
     def _run(self):
-        filename = self._settings.get('ErrorCorrection', 'filename_to_R').strip()
-        if filename != '':
-            cmd = filename
-        else:
-            cmd = 'R32'
+        filename = self._settings.get('ErrorCorrection', 'filename_to_R')
+        cmd = self.get_cmd(filename)
 
-        #import tempfile
-        #filename_out = os.path.join(tempfile.gettempdir(), 'cecog_error_correction.txt')
         wd = 'resources/rsrc/hmm'
         wd = os.path.abspath(wd)
-        print wd
 
         f = file(os.path.join(wd, 'run_hmm.R'), 'r')
         lines = f.readlines()
@@ -630,8 +646,6 @@ class HmmThread(_ProcessingThread):
             mapping_file = self._settings.get2('mappingfile')
         else:
             mapping_file = self._generate_mapping(wd, path_out_hmm, path_analyzed)
-
-        #print self._learner_dict, self._settings.get('Processing', 'primary_errorcorrection'), self._settings.get('Processing', 'primary_errorcorrection')
 
         for i in range(len(lines)):
             line2 = lines[i].strip()
@@ -781,7 +795,6 @@ class HmmThread(_ProcessingThread):
 
     def _on_stderr(self):
         self._process.setReadChannel(QProcess.StandardError)
-        #print str(self._process.readLine()).rstrip()
         msg = ''.join(list(self._process.readAll()))
         self.analyzer_error.emit(msg, 0)
 
@@ -790,6 +803,7 @@ class HmmThread(_ProcessingThread):
         if self._abort:
             self._process.kill()
 
+
 class AnalzyerThread(_ProcessingThread):
 
     image_ready = pyqtSignal(ccore.ImageRGB, str, str)
@@ -797,6 +811,7 @@ class AnalzyerThread(_ProcessingThread):
     def __init__(self, parent, settings):
         _ProcessingThread.__init__(self, parent, settings)
         self._renderer = None
+        self._buffer = {}
 
     def _run(self):
         analyzer = AnalyzerCore(self._settings)
@@ -805,15 +820,22 @@ class AnalzyerThread(_ProcessingThread):
     def set_renderer(self, name):
         self._mutex.lock()
         self._renderer = name
+        self._emit(name)
         self._mutex.unlock()
 
     def get_renderer(self):
         return self._renderer
 
-    def set_image(self, image_rgb, info, filename=''):
+    def set_image(self, name, image_rgb, info, filename=''):
         self._mutex.lock()
-        self.image_ready.emit(image_rgb, info, filename)
+        self._buffer[name] = (image_rgb, info, filename)
+        if name == self._renderer:
+            self._emit(name)
         self._mutex.unlock()
+
+    def _emit(self, name):
+        if name in self._buffer:
+            self.image_ready.emit(*self._buffer[name])
 
 
 class ClassifierResultFrame(QGroupBox):
@@ -883,7 +905,9 @@ class ClassifierResultFrame(QGroupBox):
     def load_classifier(self, check=True):
 
         _resolve = lambda x,y: self._settings.get(x, '%s_%s' % (self._channel, y))
-        classifier_infos = {'strEnvPath' : _resolve('Classification', 'classification_envpath'),
+        env_path = convert_package_path(_resolve('Classification',
+                                                 'classification_envpath'))
+        classifier_infos = {'strEnvPath' : env_path,
                             #'strModelPrefix' : _resolve('Classification', 'classification_prefix'),
                             'strChannelId' : _resolve('ObjectDetection', 'channelid'),
                             'strRegionId' : _resolve('Classification', 'classification_regionname'),
@@ -1148,6 +1172,15 @@ class LogWindow(QFrame):
 
         self._msg_buffer = []
 
+    def hideEvent(self, event):
+        logger = logging.getLogger()
+        logger.removeHandler(self._handler)
+        QFrame.hideEvent(self, event)
+
+    def showEvent(self, event):
+        logger = logging.getLogger()
+        logger.addHandler(self._handler)
+        QFrame.showEvent(self, event)
 
     def _on_message_received(self, msg):
         self._msg_buffer.append(str(msg))
@@ -1692,18 +1725,21 @@ class InputWidgetMixin(object):
     def _on_browse_name(self, name, mode):
         # FIXME: signals are send during init were registry is not set yet
         if name in self._registry:
-            path = str(self._registry[name].text())
             dialog = QFileDialog(self)
+            input = convert_package_path(str(self._registry[name].text()))
             if mode == StringTrait.STRING_FILE:
                 dialog.setFileMode(QFileDialog.ExistingFile)
                 dialog.setAcceptMode(QFileDialog.AcceptOpen)
+                path = os.path.dirname(input)
             else:
                 dialog.setFileMode(QFileDialog.DirectoryOnly)
                 dialog.setAcceptMode(QFileDialog.AcceptOpen)
+                path = input
+
             if os.path.isdir(path):
                 dialog.setDirectory(path)
+
             if dialog.exec_():
-                #print dialog.selectedFiles()[0]
                 path = str(dialog.selectedFiles()[0])
                 self._registry[name].setText(path)
                 self.set_value(name, path)
@@ -1829,7 +1865,22 @@ class ProcessorMixin(object):
                 self._set_control_button_text(name=name)
 
     def _get_modified_settings(self, name):
-        return copy.deepcopy(self._settings)
+        settings = copy.deepcopy(self._settings)
+
+        # try to resolve the paths relative to the package dir
+        # (only in case of an relative path given)
+        settings.convert_package_path('General', 'pathin')
+        settings.convert_package_path('General', 'pathout')
+
+        settings.convert_package_path('Classification', 'primary_classification_envpath')
+        settings.convert_package_path('Classification', 'secondary_classification_envpath')
+        print settings.get('Classification', 'secondary_classification_envpath')
+
+        settings.convert_package_path('ErrorCorrection', 'primary_graph')
+        settings.convert_package_path('ErrorCorrection', 'secondary_graph')
+        settings.convert_package_path('ErrorCorrection', 'mappingfile')
+        return settings
+
 
     def _on_tab_changed(self, idx):
         names = ['primary', 'secondary']
@@ -1905,22 +1956,13 @@ class ProcessorMixin(object):
 
             elif cls is HmmThread:
 
-                err = HmmThread.test_executable(self._settings.get('ErrorCorrection', 'filename_to_R'))
-                if len(err) > 0:
-                    QMessageBox.critical(self, '', err)
-
-#                if self._settings.get('Classification', 'primary_classification'):
-#                    result_frame = self._get_result_frame('primary')
-#                    result_frame.load_classifier(check=False)
-#                    learner = result_frame._learner
-#                    if not result_frame.is_apply_classifier():
-#                        is_valid = False
-#                        QMessageBox.information(self, '', result_frame.msg_apply_classifier())
-#
-#                    if is_valid:
-#                        filename = self._settings.get('ErrorCorrection', 'primary_graph')
-
-
+                success, cmd = HmmThread.test_executable(self._settings.get('ErrorCorrection', 'filename_to_R'))
+                if not success:
+                    critical(self, 'Error running R', 'Error running R',
+                             "The R command line program '%s' could not be executed.\n\n"\
+                             "Make sure that the R-project is installed.\n\n"\
+                             "See README.txt for details." % cmd)
+                    is_valid = False
 
 
             if is_valid:
@@ -1961,11 +2003,11 @@ class ProcessorMixin(object):
                         self._analyzer.set_renderer(rendering[0])
                     self._analyzer.image_ready.connect(self._on_update_image)
 
-                    print qApp._image_dialog
+                    # clear the image display and raise the window
                     if not qApp._image_dialog is None:
                         pix = qApp._graphics.pixmap()
-                        pix.fill()
-                        qApp._graphics.setPixmap(pix)
+                        pix2 = QPixmap(pix.size())
+                        qApp._graphics.setPixmap(pix2)
                         qApp._image_dialog.raise_()
 
 
@@ -1986,8 +2028,9 @@ class ProcessorMixin(object):
                     learner_dict = {}
                     for kind in ['primary', 'secondary']:
                         _resolve = lambda x,y: self._settings.get(x, '%s_%s' % (kind, y))
+                        env_path = convert_package_path(_resolve('Classification', 'classification_envpath'))
                         if _resolve('Processing', 'classification'):
-                            classifier_infos = {'strEnvPath' : _resolve('Classification', 'classification_envpath'),
+                            classifier_infos = {'strEnvPath' : env_path,
                                                 'strChannelId' : _resolve('ObjectDetection', 'channelid'),
                                                 'strRegionId' : _resolve('Classification', 'classification_regionname'),
                                                 }
@@ -2017,33 +2060,6 @@ class ProcessorMixin(object):
             self.setCursor(Qt.ArrowCursor)
 
 
-#            if (not self._image_dialog is None and
-#                self._show_image.isChecked()):
-#                qApp._graphics_pixmap.pixmap().fill(Qt.black)
-#                self._image_dialog.show()
-#                self._image_dialog.raise_()
-
-
-
-        #layout.addWidget(QLabel('Rendering', self._analyzer_dialog), 1, 0)
-        #layout.addWidget(combo, 1, 1)
-
-        #btn = QPushButton('Stop analyzer', self._analyzer_dialog)
-        #self._analyzer_dialog.connect(btn, SIGNAL('clicked()'), self._on_stop_analyzer)
-        #layout.addWidget(btn, 6, 0, 1, 2)
-
-#        self._analyzer_progress2 = QProgressBar(self._analyzer_dialog)
-#        self._analyzer_label2 = QLabel(self._analyzer_dialog)
-#        layout.addWidget(self._analyzer_progress2, 2, 0, 1, 2)
-#        layout.addWidget(self._analyzer_label2, 3, 0, 1, 2)
-#
-#        self._analyzer_progress1 = QProgressBar(self._analyzer_dialog)
-#        self._analyzer_label1 = QLabel(self._analyzer_dialog)
-#        layout.addWidget(self._analyzer_progress1, 4, 0, 1, 2)
-#        layout.addWidget(self._analyzer_label1, 5, 0, 1, 2)
-
-
-
     def _toggle_tabs(self, state):
         if not self.TABS is None:
             for i in range(self._tab.count()):
@@ -2051,7 +2067,11 @@ class ProcessorMixin(object):
                     self._tab.setTabEnabled(i, state)
 
     def _on_render_changed(self, name):
-        self._analyzer.set_renderer(str(name))
+        #FIXME: proper sub-classing needed
+        try:
+            self._analyzer.set_renderer(str(name))
+        except AttributeError:
+            pass
 
     def _on_error(self, msg, type=0):
         self._has_error = True
@@ -2093,14 +2113,14 @@ class ProcessorMixin(object):
                     elif self._current_process == self.PROCESS_TRAINING:
                         msg = 'Classifier successfully trained.'
                     elif self._current_process == self.PROCESS_TESTING:
-                        msg = 'Testing successfully finished.'
+                        msg = 'Classifier testing successfully finished.'
                 elif isinstance(self, TrackingFrame):
                     if self._current_process == self.PROCESS_TRACKING:
                         msg = 'Tracking successfully finished.'
                     elif self._current_process == self.PROCESS_SYNCING:
-                        msg = 'Syncing successfully finished.'
+                        msg = 'Motif selection successfully finished.'
                 elif isinstance(self, ErrorCorrectionFrame):
-                    msg = 'Error correction successfully finished.'
+                    msg = 'HMM error correction successfully finished.'
                 elif isinstance(self, ProcessingFrame):
                     msg = 'Processing successfully finished.'
 
@@ -2113,6 +2133,7 @@ class ProcessorMixin(object):
                     status('Process aborted by error.')
 
             self._current_process = None
+            self._process_items = None
 
     def _on_esc_pressed(self):
         print 'ESC'
@@ -2196,7 +2217,7 @@ class ProcessorMixin(object):
                 #self._image_dialog.setScaledContents(True)
                 #self._image_dialog.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
                 layout = QVBoxLayout(qApp._image_dialog)
-                layout.setContentsMargins(5,5,5,5)
+                layout.setContentsMargins(0,0,0,0)
 #                qApp._graphics = QGraphicsScene()
 #                qApp._graphics_pixmap = qApp._graphics.addPixmap(QPixmap.fromImage(qimage))
 #                view = QGraphicsView(qApp._graphics, self._image_dialog)
@@ -2219,10 +2240,15 @@ class ProcessorMixin(object):
                 #             self._on_close_image_window)
                 rendering = self._current_settings.get('General', 'rendering').keys()
                 rendering += self._current_settings.get('General', 'rendering_class').keys()
-                qApp._image_combo = QComboBox(qApp._image_dialog)
+                dummy = QFrame(qApp._image_dialog)
+                dymmy_layout = QHBoxLayout(dummy)
+                dymmy_layout.setContentsMargins(5,5,5,5)
+                qApp._image_combo = QComboBox(dummy)
                 qApp._image_combo.setSizePolicy(QSizePolicy(QSizePolicy.Fixed,
                                                             QSizePolicy.Fixed))
-                layout.addWidget(qApp._image_combo)
+                dymmy_layout.addStretch()
+                dymmy_layout.addWidget(qApp._image_combo)
+                dymmy_layout.addStretch()
                 self.connect(qApp._image_combo, SIGNAL('currentIndexChanged(const QString &)'),
                              self._on_render_changed)
                 for name in sorted(rendering):
@@ -2231,6 +2257,7 @@ class ProcessorMixin(object):
                     qApp._image_combo.show()
                 else:
                     qApp._image_combo.hide()
+                layout.addWidget(dummy)
                 layout.addStretch()
                 qApp._image_dialog.setGeometry(50, 50, 800, 800*ratio)
                 #view.fitInView(qApp._graphics.sceneRect(), Qt.KeepAspectRatio)
@@ -2382,10 +2409,11 @@ class ConfigSettings(RawConfigParser):
         for section, options in self._registry.iteritems():
             for option in options:
                 value = self.get_value(section, option)
-                #trait = self.get_trait(section, option)
-                #print section, option, value,
-                #print 'MOOOOOOOOOOOOOO', trait.convert(value), type(trait.convert(value))
                 self.set(section, option, value)
+
+    def convert_package_path(self, section, option):
+        path = convert_package_path(self.get(section, option))
+        self.set(section, option, path)
 
 
 class GeneralFrame(InputFrame):
@@ -2668,7 +2696,7 @@ class ObjectDetectionFrame(InputFrame, ProcessorMixin):
         self._init_control()
 
     def _get_modified_settings(self, name):
-        settings = copy.deepcopy(self._settings)
+        settings = ProcessorMixin._get_modified_settings(self, name)
 
         settings.set_section('ObjectDetection')
         prim_id = settings.get2('primary_channelid')
@@ -2826,7 +2854,8 @@ class ClassificationFrame(InputFrame, ProcessorMixin):
         self._init_control()
 
     def _get_modified_settings(self, name):
-        settings = copy.deepcopy(self._settings)
+        settings = ProcessorMixin._get_modified_settings(self, name)
+
         settings.set_section('ObjectDetection')
         prim_id = settings.get2('primary_channelid')
         sec_id = settings.get2('secondary_channelid')
@@ -3014,12 +3043,11 @@ class TrackingFrame(InputFrame, ProcessorMixin):
         self._init_control()
 
     def _get_modified_settings(self, name):
-        settings = copy.deepcopy(self._settings)
+        settings = ProcessorMixin._get_modified_settings(self, name)
 
         settings.set_section('ObjectDetection')
         prim_id = settings.get2('primary_channelid')
         sec_id = settings.get2('secondary_channelid')
-        sec_regions = settings.get2('secondary_regions')
         settings.set('Processing', 'tracking', True)
         settings.set_section('Tracking')
 #        settings.set2('tracking_visualization', True)
@@ -3032,17 +3060,8 @@ class TrackingFrame(InputFrame, ProcessorMixin):
         #settings.set2('rendering_class_discwrite', True)
         settings.set_section('Classification')
         settings.set2('collectsamples', False)
-#        if settings.get2('primary_classification'):
-#            settings.set2('secondary_simplefeatures_texture', False)
-#            settings.set2('secondary_simplefeatures_shape', False)
-#            settings.set('General', 'rendering_class', {'primary_tracking': {prim_id: {'raw': ('#FFFFFF', 1.0),
-#                                                                                      'contours': {'primary': ('class_label', 1, False)}}}})
-#        elif settings.get2('secondary_classification') and settings.get('ObjectDetection', 'secondary_processChannel'):
-#            settings.set2('primary_simplefeatures_texture', False)
-#            settings.set2('primary_simplefeatures_shape', False)
-#            settings.set('General', 'rendering_class', {'primary_tracking2': {prim_id: {'raw': ('#FFFFFF', 1.0)},
-#                                                                             sec_id:  {'contours': {sec_regions[0]: ('class_label', 1, False)}}}})
-#        else:
+        sec_region = settings.get2('secondary_classification_regionname')
+
         if name == self.PROCESS_TRACKING:
             settings.set2('primary_simplefeatures_texture', False)
             settings.set2('primary_simplefeatures_shape', False)
@@ -3052,13 +3071,17 @@ class TrackingFrame(InputFrame, ProcessorMixin):
             settings.set('Processing', 'secondary_classification', False)
             settings.set('Processing', 'secondary_processChannel', False)
             settings.set('General', 'rendering', {'primary_tracking': {prim_id: {'raw': ('#FFFFFF', 1.0),
-                                                                                'contours': {'primary': ('#FF0000', 1, show_ids)}}}})
+                                                                                 'contours': {'primary': ('#FF0000', 1, show_ids)}}}})
         else:
             settings.set('Tracking', 'tracking_synchronize_trajectories', True)
             settings.set('Processing', 'primary_classification', True)
-            settings.set('General', 'rendering_class', {'primary_syncing': {prim_id: {'raw': ('#FFFFFF', 1.0),
-                                                                                      'contours': [('primary', 'class_label', 1, False),
-                                                                                                   ('primary', '#000000', 1, show_ids)]}}})
+            settings.set('General', 'rendering_class', {'primary_motif': {prim_id: {'raw': ('#FFFFFF', 1.0),
+                                                                                    'contours': [('primary', 'class_label', 1, False),
+                                                                                                  ('primary', '#000000', 1, show_ids)]}},
+                                                        'secondary_motif': {sec_id: {'raw': ('#FFFFFF', 1.0),
+                                                                                     'contours': [(sec_region, 'class_label', 1, False),
+                                                                                                  (sec_region, '#000000', 1, show_ids)]}}
+                                                                                                  })
 
         return settings
 
@@ -3222,7 +3245,7 @@ class ProcessingFrame(InputFrame, ProcessorMixin):
         self._init_control()
 
     def _get_modified_settings(self, name):
-        settings = copy.deepcopy(self._settings)
+        settings = ProcessorMixin._get_modified_settings(self, name)
 
         settings.set('General', 'rendering', {})
         settings.set('General', 'rendering_class', {})
@@ -3297,13 +3320,24 @@ class FarmingFrame(InputFrame):
 #
 
 if __name__ == "__main__":
-    import time
-    import sys
     safe_mkdirs('log')
-    sys.stdout = file('log/cecog_analyzer_stdout.log', 'w')
-    sys.stderr = file('log/cecog_analyzer_stderr.log', 'w')
+    #sys.stdout = file('log/cecog_analyzer_stdout.log', 'w')
+    #sys.stderr = file('log/cecog_analyzer_stderr.log', 'w')
 
     app = QApplication(sys.argv)
+
+    working_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
+    program_name = os.path.split(sys.argv[0])[1]
+
+    if sys.platform == 'darwin':
+        idx = working_dir.find('/CecogAnalyzer.app/Contents/Resources')
+        package_dir = working_dir[idx]
+        print package_dir
+        package_dir = '/Users/miheld/Desktop/CecogPackage'
+        print package_dir
+    else:
+        package_dir = working_dir
+    app._package_dir = package_dir
 
     splash = QSplashScreen(QPixmap(':cecog_splash'))
     splash.show()
@@ -3313,17 +3347,17 @@ if __name__ == "__main__":
     app.processEvents()
     main = AnalyzerMainWindow()
     main.raise_()
-    #main.test_r_import()
 
-    #filename = '/Users/miheld/src/mito_svn/trunk/mito/analyzer_mitocheck_settings.conf'
-    #filename = '/Users/miheld/src/mito_svn/trunk/mito/_analyzer_test_settings.conf'
-    filename = '/Users/miheld/data/CellCognition/demo_data/H2bTub20x_settings.conf'
+#    filename = '/Users/miheld/data/CellCognition/demo_data/H2bTub20x_settings.conf'
+    filename = os.path.join(package_dir,
+                            'Data/Cecog_settings/demo_settings.conf')
     if os.path.isfile(filename):
         main.read_settings(filename)
-    else:
-        filename = r'Y:\data\CellCognition\demo_data\H2bTub20x_settings_WinXP.conf'
-        if os.path.isfile(filename):
-            main.read_settings(filename)
-    splash.finish(main)
 
+#    else:
+#        filename = r'Y:\data\CellCognition\demo_data\H2bTub20x_settings_WinXP.conf'
+#        if os.path.isfile(filename):
+#            main.read_settings(filename)
+
+    splash.finish(main)
     sys.exit(app.exec_())
