@@ -7,7 +7,7 @@ available to Controllers. This module is available to both as 'h'.
 # from webhelpers.html.tags import checkbox, password
 
 from pyamf.remoting.gateway.wsgi import WSGIGateway as _WSGIGateway
-from pdk.util.imageutils import rgbToHex, hexToRgb
+from cecog.util import rgbToHex, hexToRgb
 
 def hexToFlexColor(color):
     return eval(rgbToHex(*hexToRgb(color), **{'prefix':'0x'}))

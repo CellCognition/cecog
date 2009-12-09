@@ -27,17 +27,12 @@ import numpy
 
 from pyamf import register_class
 
-from mito.learning.learning import BaseLearner
-from mito import ccore
-from mito.settings import Settings
-from mito.analyzer.analyzer import *
-from mito.analyzer.celltracker import *
-from mito.experiment.plate import *
+from cecog.learning.learning import BaseLearner
+from cecog import ccore
 
-from pdk.containers.ordereddict import OrderedDict
-from pdk.util.imageutils import rgbToHex, hexToRgb
-from pdk.util.fileutils import collectFilesByRegex
-from pdk.util.iterator import flatten
+from pdk.ordereddict import OrderedDict
+from pdk.fileutils import collect_files_by_regex
+from pdk.iterator import flatten
 
 #-------------------------------------------------------------------------------
 # classifier modules:
@@ -125,7 +120,7 @@ class Classifier(object):
         if os.path.isdir(strPathSamples):
             #print len(self._oLearner.lstFeatureNames), len()
             dctImagePairs = OrderedDict()
-            for strName, oMatch in collectFilesByRegex(strPathSamples, '(?P<prefix>.+?)__(?P<type>(img)|(msk)).+?', ['.png', '.jpg']):
+            for strName, oMatch in collect_files_by_regex(strPathSamples, '(?P<prefix>.+?)__(?P<type>(img)|(msk)).+?', ['.png', '.jpg']):
                 strPrefix = oMatch.group('prefix')
                 strType = oMatch.group('type')
                 if not strPrefix in dctImagePairs:
