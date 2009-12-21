@@ -10,42 +10,77 @@
 
 --------------------------------------------------------------------------------
 
-The CecogAnalyzer package comes with batteries included: it contains a small
-set of raw images (5 timepoints of H2b-aTubulin) and two classifiers to test
-the software without haze.
+The CecogAnalyzer package comes with batteries included.
 
-The package contains a sub-folder 'Data' with
+It contains
 
- - Cecog_settings
-   |- demo_settings.conf      - the settings file which is loaded on startup
-   |- graph_primary.txt       - an example for a graph definition file (H2b)
-   |- graph_secondary.txt     - an example for a graph definition file (Tubulin)
-   |- position_labels.txt     - position labels such as OligoID or GeneSymbol
+    * a small set of raw images (10 timepoints of H2b-aTubulin)
+    * the two classifiers for H2b and aTubulin to test classification
+    * a pre-configured settings file which is loaded on start-up.
 
- - Classifier                 - the class definition and sample annotations to
-   |- aTubulin                  pick samples with the larger data set, feature
-   |- H2b                       and SVM models to test (or train) the classifier
+You can
 
- - Demo_data                  - the input folder of the raw images
-
- - Demo_output                - the output folder where results are written to
+    * test Object Detection of the primary (H2b) and secondary (aTubulin)
+      channels
+    * retrain and test the classifier for H2b and aTubulin in Classification
+    * test the tracking and select events in Tracking (only six tracks are found
+      within the 10 frames)
+    * for Error correction you need to install the R-project (see below)
 
 
-*** Motif selection & error correction ***
+Package data
+************
 
-To perform motif selection and error correction more timepoints are needed than
-the package contains. Larger data sets can be found online at
-http://www.cellcognition.org
+The package contains a sub-folder Data with
+
+    * Cecog_settings
+          o demo_settings.conf, the settings file which is loaded on startup
+          o graph_primary.txt, an example for a graph definition file (H2b)
+          o graph_secondary.txt, an example for a graph definition file
+            (Tubulin)
+          o position_labels.txt, position labels such as OligoID or GeneSymbol
+
+    * Classifier
+          o the class definition and sample annotations to pick samples with the
+            larger data set, feature and SVM models to test (or train) the H2b
+            and aTubulin classifiers
+
+    * Demo_data
+          o the input folder of the raw images
+
+    * Demo_output
+          o the output folder where results are written to
+
+Note
+With the included raw images picking of classifier samples is not possible since
+not all necessary positions/timepoints are included.
+Please download the larger H2b-Tubulin data.
 
 
-*** R-project dependency ***
+Motif selection & error correction
+**********************************
+
+With the included data and settings only six mitotic events with four frames
+duration are selected.
+
+To perform motif selection and error correction as presented in our paper more
+timepoints are needed than the package contains. Larger data sets can be found
+online at downloads.
+
+You also might want to increase the length of the selected tracks, especially
+after the pro-prometa onset. Increase therefore the values in
+Tracking -> Timepoints [post] and Timepoints [pre].
+
+
+R-project dependency
+********************
 
 Error correction requires the installation of the statistics project R.
-See http://stat.ethz.ch/CRAN/
+See http://r-project.org
 
-The R-packages 'hwriter', 'igraph' and 'Cairo' are needed as well.
-These packages can be installed via the R's 'Package Installer' or by running
-following commands from the R command line:
+The R-packages hwriter, igraph and Cairo are needed as well. These packages can
+be installed via the R's Package Installer or by running following commands from
+the R command line:
 
 install.packages('hwriter')
 install.packages('igraph')
@@ -54,10 +89,14 @@ install.packages('Cairo')
 The R executable which needs to be specified is NOT the R-GUI and should be
 found automatically for MacOSX and Windows. Otherwise try
 
-MacOS:
+MacOSX
+
 /Library/Frameworks/R.framework/Versions/Current/Resources/bin/R32
+
 or
+
 /Library/Frameworks/R.framework/Versions/Current/Resources/bin/R
 
-Windows:
-C:\Program Files\R\bin\R.exe
+Windows
+
+C:\Program Files\R\R-2.10.0\bin\R.exe
