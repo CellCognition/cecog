@@ -46,8 +46,7 @@ from pdk.optionmanagers import OptionManager
 #from pdk.idgenerators import newGuid
 #from pdk.messaging import registerSlot
 from pdk.datetimeutils import StopWatch
-from pdk.map import (dict_subset,
-                     dict_append_list, dict_except)
+from pdk.map import dict_append_list
 from pdk.iterator import (unique,
                           difference,
                           is_subset)
@@ -186,8 +185,8 @@ class PositionAnalyzer(object):
         bMkdirsOk = safe_mkdirs(self.strPathOutPosition)
         self._oLogger.info("strPathOutPosition '%s', ok: %s" % (self.strPathOutPosition, bMkdirsOk))
 
-        self.strPathOutPositionImages = os.path.join(self.strPathOutPosition, "_images")
-        self.strPathOutPositionDebug = os.path.join(self.strPathOutPosition, "_debug")
+        self.strPathOutPositionImages = os.path.join(self.strPathOutPosition, "images")
+        self.strPathOutPositionDebug = os.path.join(self.strPathOutPosition, "debug")
 
         if self.oSettings.get('Classification', 'collectsamples'):
             # disable tracking!
@@ -261,24 +260,25 @@ class PositionAnalyzer(object):
 #            oQualityControl.initPosition(self.P, self.origP)
 
 
+        strPathOutPositionStats = os.path.join(self.strPathOutPosition,
+                                               'statistics')
+        bMkdirsOk = safe_mkdirs(strPathOutPositionStats)
+        self._oLogger.info("strPathOutPositionStats '%s', ok: %s, cleared: %s" %\
+                           (strPathOutPositionStats,
+                            bMkdirsOk,
+                            'DISABLED FOR NOW'))
+                            #self.oSettings.bClearTrackingPath))
+
         oTimeHolder = TimeHolder(channels=self.tplChannelIds)
 
         self.oSettings.set_section('Tracking')
         # structure and logic to handle object trajectories
         if self.oSettings.get('Processing', 'tracking'):
-            strPathOutPositionTracking = os.path.join(self.strPathOutPosition,
-                                                      '_tracking')
 
             # clear the tracking data
             #if self.oSettings.bClearTrackingPath and os.path.isdir(strPathOutPositionTracking):
             #    shutil.rmtree(strPathOutPositionTracking)
 
-            bMkdirsOk = safe_mkdirs(strPathOutPositionTracking)
-            self._oLogger.info("strPathOutPositionTracking '%s', ok: %s, cleared: %s" %\
-                               (strPathOutPositionTracking,
-                                bMkdirsOk,
-                                'DISABLED FOR NOW'))
-                                #self.oSettings.bClearTrackingPath))
 
             tracker_options = {'fMaxObjectDistance'      : self.oSettings.get2('tracking_maxobjectdistance'),
                                'iMaxSplitObjects'        : self.oSettings.get2('tracking_maxsplitobjects'),
@@ -306,7 +306,7 @@ class PositionAnalyzer(object):
                                     'lstForwardLabels'     : [],
                                     })
 
-            if self.oSettings.get2('tracking_synchronize_trajectories'):
+            if self.oSettings.get('Processing', 'tracking_synchronize_trajectories'):
                 tracker_options.update({'iBackwardCheck'       : self.oSettings.get2('tracking_backwardCheck'),
                                         'iForwardCheck'        : self.oSettings.get2('tracking_forwardCheck'),
 
@@ -333,7 +333,7 @@ class PositionAnalyzer(object):
                                           oMetaData=self.oMetaData,
                                           P=self.P,
                                           origP=self.origP,
-                                          strPathOut=strPathOutPositionTracking,
+                                          strPathOut=strPathOutPositionStats,
                                           **tracker_options)
 
             primary_channel_id = self.channel_mapping[self.PRIMARY_CHANNEL]
@@ -360,54 +360,78 @@ class PositionAnalyzer(object):
 
         iNumberImages = self._analyzePosition(oCellAnalyzer)
 
+        if iNumberImages > 0:
 
-        self.oSettings.set_section('Tracking')
-        if (self.oSettings.get('Processing', 'tracking') and
-            self.oSettings.get2('tracking_synchronize_trajectories') and
-            iNumberImages > 0):
+            if self.oSettings.get('Output', 'export_object_counts'):
+                filename = os.path.join(strPathOutPositionStats, 'P%s__object_counts.txt' % self.P)
 
-            stage_info = {'stage': 2,
-                          'text': 'Tracking',
-                          'min': 1,
-                          'max': 3,
-                          }
-#            if not self._qthread is None:
-#                if self._qthread.get_abort():
-#                    return 0
-#            stage_info.update({'progress' : 1,
-#                               'meta': 'Track objects...',})
-#            self._qthread.set_stage_info(stage_info)
-#
-#            primary_channel_id = self.channel_mapping[self.PRIMARY_CHANNEL]
-#            oCellTracker.trackObjects(primary_channel_id, 'primary')
+                channel_id = self.channel_mapping[self.PRIMARY_CHANNEL]
+                if channel_id in self.classifier_infos:
+                    infos = self.classifier_infos[channel_id]
+                    prim_info = (infos['strRegionId'], infos['predictor'].lstClassNames)
+                else:
+                    # at least the total count for primary is always exported
+                    prim_info = ('primary', [])
 
-            # analyze trajectories
-            #oCellTracker.exportGraph(os.path.join(self.strPathOutPosition, "graph.dot"))
+                sec_info = None
+                if self.SECONDARY_CHANNEL in self.channel_mapping:
+                    channel_id = self.channel_mapping[self.SECONDARY_CHANNEL]
+                    if channel_id in self.classifier_infos:
+                        infos = self.classifier_infos[channel_id]
+                        sec_info = (infos['strRegionId'], infos['predictor'].lstClassNames)
 
+                oTimeHolder.extportObjectCounts(filename, self.P, self.oMetaData,
+                                                prim_info, sec_info)
 
-            if not self._qthread is None:
-                if self._qthread.get_abort():
-                    return 0
-            stage_info.update({'progress' : 1,
-                               'meta': 'Find events...',})
-            #self._qthread.set_stage_info(stage_info)
+            if self.oSettings.get('Output', 'export_object_details'):
+                filename = os.path.join(strPathOutPositionStats, 'P%s__object_details.txt' % self.P)
 
-            self.oCellTracker.initVisitor()
-            self._oLogger.debug("--- visitor ok")
+                oTimeHolder.extportObjectDetails(filename, self.P)
 
 
-            if not self._qthread is None:
-                if self._qthread.get_abort():
-                    return 0
-            stage_info.update({'progress' : 2,
-                               'meta': 'Analyze/export events...',})
-            #self._qthread.set_stage_info(stage_info)
+            self.oSettings.set_section('Tracking')
+            if self.oSettings.get('Processing', 'tracking'):
 
-            # clear the _tracking path
-            self.oCellTracker.analyze(self.export_features,
-                                      channelId=primary_channel_id,
-                                      clear_path=True)
-            self._oLogger.debug("--- visitor analysis ok")
+                stage_info = {'stage': 0,
+                              'meta': 'Motif selection:',
+                              'text': 'find events...',
+                              'min': 0,
+                              'max': 0,
+                              'progress': 0,
+                              }
+                if not self._qthread is None:
+                    if self._qthread.get_abort():
+                        return 0
+                self._qthread.set_stage_info(stage_info)
+
+                self.oCellTracker.initVisitor()
+                self._oLogger.debug("--- visitor ok")
+
+                if self.oSettings.get('Processing', 'tracking_synchronize_trajectories'):
+
+                    if not self._qthread is None:
+                        if self._qthread.get_abort():
+                            return 0
+                    stage_info.update({'text' : 'export events...'})
+                    self._qthread.set_stage_info(stage_info)
+
+                    # clear the _tracking path
+                    self.oCellTracker.analyze(self.export_features,
+                                              channelId=primary_channel_id,
+                                              clear_path=True)
+                    self._oLogger.debug("--- visitor analysis ok")
+
+
+                if self.oSettings.get('Output', 'export_track_data'):
+                    self.oCellTracker.exportFullTracks()
+
+                if not self._qthread is None:
+                    if self._qthread.get_abort():
+                        return 0
+                stage_info.update({'max' : 1,
+                                   'progress' : 1})
+                self._qthread.set_stage_info(stage_info)
+
 
 #            if self.oSettings.bDoObjectCutting:
 #
@@ -571,6 +595,8 @@ class PositionAnalyzer(object):
         stage_info = {'stage': 2,
                       'min': 1,
                       'max': len(self.lstAnalysisFrames),
+                      'meta' : 'Image processing:',
+                      'item_name': 'timepoint',
                       }
 
         iNumberImages = 0
@@ -736,7 +762,8 @@ class PositionAnalyzer(object):
                     iNumberImages += 1
                     if not self._qthread is None:
                         #if self._qthread.get_renderer() == strType:
-                        self._qthread.set_image(img_rgb,
+                        self._qthread.set_image(None,
+                                                img_rgb,
                                                 'P %s - T %05d' % (self.origP, iT))
 
                     #channel_id = self.oObjectLearner.strChannelId
@@ -752,9 +779,12 @@ class PositionAnalyzer(object):
                 if self.oSettings.get('Processing', 'tracking'):
                     self.oCellTracker.trackAtTimepoint(iT)
 
-                    if self.oSettings.get('Tracking', 'tracking_visualization'):
+                    self.oSettings.set_section('Tracking')
+                    if self.oSettings.get2('tracking_visualization'):
                         size = oCellAnalyzer.getImageSize(self.channel_mapping[self.PRIMARY_CHANNEL])
-                        img_conn, img_split = self.oCellTracker.visualizeTracks(iT, size, self.oSettings.get('Tracking', 'tracking_visualize_track_length'))
+                        img_conn, img_split = self.oCellTracker.visualizeTracks(iT, size,
+                                                                                n=self.oSettings.get2('tracking_visualize_track_length'),
+                                                                                radius=self.oSettings.get2('tracking_centroid_radius'))
                         images += [(img_conn, '#FFFF00', 1.0),
                                    (img_split, '#00FFFF', 1.0),
                                    ]

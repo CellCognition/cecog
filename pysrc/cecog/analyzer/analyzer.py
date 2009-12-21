@@ -216,6 +216,9 @@ class ObjectHolder(dict):
     def getFeatureNames(self):
         return self._lstFeatureNames[:]
 
+    def hasFeatureName(self, name):
+        return name in self._dctNamesIdx
+
     def getFeaturesByNames(self, iObjId, lstFeatureNames):
         if lstFeatureNames is None:
             lstFeatureNames = self._lstFeatureNames
@@ -388,12 +391,14 @@ class _Channel(PropertyManager):
             # reduce features per region and object to given list
             for regionName in self.getRegionNames():
                 region = self.getRegion(regionName)
+                channelFeatures2 = [x for x in channelFeatures
+                                    if region.hasFeatureName(x)]
                 for objId in region:
                     try:
-                        region[objId].aFeatures = region.getFeaturesByNames(objId, channelFeatures)
+                        region[objId].aFeatures = region.getFeaturesByNames(objId, channelFeatures2)
                     except KeyError:
                         pass
-                region.setFeatureNames(channelFeatures)
+                region.setFeatureNames(channelFeatures2)
 
 
     def appendZSlice(self, oMetaImage):
@@ -745,8 +750,134 @@ class TimeHolder(OrderedDict):
     def applyChannel(self, oChannel):
         iT = self._iCurrentT
         if not iT in self:
-            self[iT] = {}
+            self[iT] = OrderedDict()
         self[iT][oChannel.strChannelId] = oChannel
+        self[iT].sort(key = lambda x: self[iT][x])
+
+    def extportObjectCounts(self, filename, P, metadata, prim_info=None, sec_info=None, sep='\t'):
+        f = file(filename, 'w')
+        has_header = False
+
+        for frame, channels in self.iteritems():
+            #channels.sort(key = lambda x: channels[x])
+
+            line1 = []
+            line2 = []
+            line3 = []
+            line4 = []
+            items = []
+
+            prefix = [frame, metadata.getTimestamp(P, frame)]
+            prefix_names = ['frame', 'time']
+
+            for channel in channels.values():
+                if channel.NAME == 'Primary' and not prim_info is None:
+                    region_info = prim_info
+                elif channel.NAME == 'Secondary' and not sec_info is None:
+                    region_info = sec_info
+                else:
+                    region_info = None
+
+                if not region_info is None:
+                    region_name, class_names = region_info
+                    region = channel.getRegion(region_name)
+                    total = len(region)
+                    if not has_header:
+                        keys = ['total'] + class_names
+                        line4 += keys
+                        line3 += ['total'] + ['class']*len(class_names)
+                        line1 += [channel.NAME.upper()] * len(keys)
+                        line2 += [region_name] * len(keys)
+                    count = dict([(x, 0) for x in class_names])
+                    # in case just total counts are needed
+                    if len(class_names) > 0:
+                        for obj in region.values():
+                            count[obj.strClassName] += 1
+                    items += [total] + [count[x] for x in class_names]
+
+            if not has_header:
+                has_header = True
+                prefix_str = [''] * len(prefix)
+                f.write('%s\n' % sep.join(prefix_str + line1))
+                f.write('%s\n' % sep.join(prefix_str + line2))
+                f.write('%s\n' % sep.join(prefix_str + line3))
+                f.write('%s\n' % sep.join(prefix_names + line4))
+
+            f.write('%s\n' % sep.join(map(str, prefix + items)))
+
+        f.close()
+
+
+    def extportObjectDetails(self, filename, P, sep='\t'):
+        f = file(filename, 'w')
+
+        feature_lookup = OrderedDict()
+        feature_lookup['mean'] = 'n2_avg'
+        feature_lookup['sd'] = 'n2_stddev'
+        feature_lookup['size'] = 'roisize'
+
+        has_header = False
+        line1 = []
+        line2 = []
+        line3 = []
+
+        for frame, channels in self.iteritems():
+
+            items = []
+
+            prim_region = channels.values()[0].getRegion('primary')
+
+            for obj_id in prim_region:
+
+                prefix = [frame, obj_id]
+                prefix_names = ['frame', 'objID']
+                items = []
+
+                for channel in channels.values():
+
+                    for region_id in channel.getRegionNames():
+
+                        region = channel.getRegion(region_id)
+                        if obj_id in region:
+                            #FIXME:
+                            feature_lookup2 = feature_lookup.copy()
+                            for k,v in feature_lookup2.iteritems():
+                                if not region.hasFeatureName(v):
+                                    del feature_lookup2[k]
+
+                            if not has_header:
+                                keys = ['classLabel', 'className']
+                                if channel.NAME == 'Primary':
+                                    keys += ['centerX', 'centerY']
+                                keys += feature_lookup2.keys()
+                                line1 += [channel.NAME.upper()] * len(keys)
+                                line2 += [region_id] * len(keys)
+                                line3 += keys
+
+                            obj = region[obj_id]
+                            #print feature_lookup2.keys(), feature_lookup2.values()
+                            #fn = region.getFeatureNames()
+                            #print zip(fn, obj.aFeatures)
+                            features = region.getFeaturesByNames(obj_id, feature_lookup2.values())
+                            values = [x if not x is None else '' for x in [obj.iLabel, obj.strClassName]]
+                            if channel.NAME == 'Primary':
+                                values += [obj.oCenterAbs[0], obj.oCenterAbs[1]]
+                            values += list(features)
+                            items.extend(values)
+
+                if not has_header:
+                    has_header = True
+                    prefix_str = [''] * len(prefix)
+                    line1 = prefix_str + line1
+                    line2 = prefix_str + line2
+                    line3 = prefix_names + line3
+                    f.write('%s\n' % sep.join(line1))
+                    f.write('%s\n' % sep.join(line2))
+                    f.write('%s\n' % sep.join(line3))
+
+                f.write('%s\n' % sep.join(map(str, prefix + items)))
+
+        f.close()
 
 
 class CellAnalyzer(PropertyManager):
@@ -1019,6 +1150,7 @@ class CellAnalyzer(PropertyManager):
             for label, object_ids in object_lookup.iteritems():
                 class_name = oLearner.dctClassNames[label]
                 hex_color = oLearner.dctHexColors[class_name]
+                rgb_value = ccore.RGBValue(*hexToRgb(hex_color))
                 for obj_id in object_ids:
                     obj = region[obj_id]
                     obj.iLabel = label
@@ -1047,8 +1179,12 @@ class CellAnalyzer(PropertyManager):
                                                 strFilenameImg,
                                                 strFilenameMsk)
 
-                oContainer.markObjects(list(object_ids),
-                                       ccore.RGBValue(*hexToRgb(hex_color)), False, True)
+                        oContainer.markObjects([obj_id], rgb_value, False, True)
+
+                        #print obj_id, obj.oCenterAbs, iCenterX, iCenterY
+                        ccore.drawFilledCircle(ccore.Diff2D(iCenterX, iCenterY),
+                                               3, oContainer.img_rgb, rgb_value)
+
 
             if len(learner_objects) > 0:
                 oLearner.applyObjects(learner_objects)

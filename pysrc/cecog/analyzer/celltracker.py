@@ -621,7 +621,9 @@ class CellTracker(OptionManager):
 
         dctVisitedNodes = {}
         for strStartId in lstStartIds:
-            self.dctVisitorData[strStartId] = {}
+            self.dctVisitorData[strStartId] = {'_current': 0,
+                                               '_full'   : [[]],
+                                               }
             self.oLogger.debug("root ID %s" % strStartId)
             self._forwardVisitor(strStartId, self.dctVisitorData[strStartId], dctVisitedNodes)
 
@@ -876,53 +878,63 @@ class PlotCellTracker(CellTracker):
             dctBoundingBoxes[strStartId] = lstTimeData
         return dctBoundingBoxes
 
+    def exportFullTracks(self):
+        strPathOut = os.path.join(self.strPathOut, 'full')
+        if clear_path:
+            shutil.rmtree(strPathOut, True)
+            safe_mkdirs(strPathOut)
+
+
 
     def analyze(self, dctChannels, channelId=None, clear_path=False):
         #print self.lstChromatinFeatureNames
         #print self.lstSecondaryFeatureNames
+
+        strPathOut = os.path.join(self.strPathOut, 'events')
         if clear_path:
-            shutil.rmtree(self.strPathOut, True)
-            safe_mkdirs(self.strPathOut)
+            shutil.rmtree(strPathOut, True)
+            safe_mkdirs(strPathOut)
 
         for strRootId, dctTrackResults in self.dctVisitorData.iteritems():
 
             self.oLogger.debug("* root %s, candidates %s" % (strRootId, dctTrackResults.keys()))
 
-            if self.getOption("bExportRootGraph"):
-                self.exportSubGraph(self._formatFilename("graph.dot", nodeId=strRootId, prefix="root_", subPath='_graphs'),
-                                    strRootId,
-                                    bRunDot=self.getOption("bRenderRootGraph"),
-                                    channelId=channelId)
-
+#            if self.getOption("bExportRootGraph"):
+#                self.exportSubGraph(self._formatFilename("graph.dot", nodeId=strRootId, prefix="root_", subPath='_graphs'),
+#                                    strRootId,
+#                                    bRunDot=self.getOption("bRenderRootGraph"),
+#                                    channelId=channelId)
 
             for strStartId, dctEventData in dctTrackResults.iteritems():
 
-                if self.getOption("bExportSubGraph"):
-                    self.exportSubGraph(self._formatFilename("graph.dot", strStartId, subPath='_graphs'),
-                                        strStartId,
-                                        iMaxLevel=dctEventData['maxLength'],
-                                        bRunDot=self.getOption("bRenderSubGraph"),
-                                        channelId=channelId)
+                if strStartId[0] != '_':
 
-                if self.getOption("bExportTrackFeatures"):
-                    for strChannelId, dctRegions in dctChannels.iteritems():
-                        if strChannelId in self._dctTimeChannels.channels:
-                            for strRegionId, lstFeatureNames in dctRegions.iteritems():
+    #                if self.getOption("bExportSubGraph"):
+    #                    self.exportSubGraph(self._formatFilename("graph.dot", strStartId, subPath='_graphs'),
+    #                                        strStartId,
+    #                                        iMaxLevel=dctEventData['maxLength'],
+    #                                        bRunDot=self.getOption("bRenderSubGraph"),
+    #                                        channelId=channelId)
 
-                                if self.getOption('featureCompression') is None:
-                                    strCompression = ''
-                                else:
-                                    strCompression = '.%s' % self.getOption('featureCompression')
-                                strFilename = self._formatFilename('C%s__R%s.txt%s' %\
-                                                                   (strChannelId, strRegionId, strCompression),
-                                                                   nodeId=strStartId, prefix='features')
-                                self.exportChannelData(dctEventData,
-                                                       strFilename,
-                                                       strChannelId,
-                                                       strRegionId,
-                                                       lstFeatureNames)
+                    if self.getOption("bExportTrackFeatures"):
+                        for strChannelId, dctRegions in dctChannels.iteritems():
+                            if strChannelId in self._dctTimeChannels.channels:
+                                for strRegionId, lstFeatureNames in dctRegions.iteritems():
 
-                self.oLogger.debug("* root %s ok" % strRootId)
+                                    if self.getOption('featureCompression') is None:
+                                        strCompression = ''
+                                    else:
+                                        strCompression = '.%s' % self.getOption('featureCompression')
+                                    strFilename = self._formatFilename('C%s__R%s' % (strChannelId, strRegionId),
+                                                                       nodeId=strStartId, prefix='features', subPath='events',
+                                                                       ext='.txt%s' % strCompression)
+                                    self.exportChannelData(dctEventData,
+                                                           strFilename,
+                                                           strChannelId,
+                                                           strRegionId,
+                                                           lstFeatureNames)
+
+                    self.oLogger.debug("* root %s ok" % strStartId)
 
         if self.getOption("bExportFlatFeatures"):
             for strChannelId, dctRegions in dctChannels.iteritems():
@@ -932,8 +944,9 @@ class PlotCellTracker(CellTracker):
                             strCompression = ''
                         else:
                             strCompression = '.%s' % self.getOption('flatFeatureCompression')
-                        strFilename = self._formatFilename('C%s__R%s.txt%s' % (strChannelId, strRegionId, strCompression),
-                                                           prefix='_flat_features')
+                        strFilename = self._formatFilename('C%s__R%s' % (strChannelId, strRegionId),
+                                                            nodeId=strStartId, prefix='_flat_features', subPath='events',
+                                                            ext='.txt%s' % strCompression)
                         self.exportChannelDataFlat(strFilename,
                                                    strChannelId,
                                                    strRegionId,
@@ -1232,7 +1245,7 @@ class PlotCellTracker(CellTracker):
 #                        oPlotter.close()
 
 
-    def _formatFilename(self, strSuffix, nodeId=None, prefix=None, subPath=None):
+    def _formatFilename(self, strSuffix=None, nodeId=None, prefix=None, subPath=None, branchId=None, ext='.txt'):
         lstParts = []
         if not prefix is None:
             lstParts.append(prefix)
@@ -1240,22 +1253,26 @@ class PlotCellTracker(CellTracker):
         if not nodeId is None:
             items = self.getComponentsFromNodeId(nodeId)
             frame, obj_id = items[:2]
-            if len(items) == 3:
-                branch_id = items[2]
+            if not branchId is None:
+                branch_id = branchId
             else:
-                branch_id = 1
+                if len(items) == 3:
+                    branch_id = items[2]
+                else:
+                    branch_id = 1
             lstParts += ['T%05d' % frame,
                          'O%04d' % obj_id,
                          'B%02d' % branch_id,
                          ]
-        lstParts.append(strSuffix)
+        if not strSuffix is None:
+            lstParts.append(strSuffix)
         strParts = '__'.join(lstParts)
         if not subPath is None:
             strPathOut = os.path.join(self.strPathOut, subPath)
             safe_mkdirs(strPathOut)
         else:
             strPathOut = self.strPathOut
-        return os.path.join(strPathOut, strParts)
+        return os.path.join(strPathOut, strParts) + ext
 
 
 
@@ -1703,11 +1720,21 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                     #print dctResults[strStartId]
                     self.oLogger.debug("  %s - valid candidate" % strStartId)
 
+        # record the full trajectory in a liniearized way
+        base = dctResults['_current']
+        dctResults['_full'][base].append(strNodeId)
+        depth = len(dctResults['_full'][base])
+
         #self.oLogger.debug("moo %s" % self.out_arcs(strNodeId))
-        for strOutEdgeId in oGraph.out_arcs(strNodeId):
+        for idx, strOutEdgeId in enumerate(oGraph.out_arcs(strNodeId)):
             strTailId = oGraph.tail(strOutEdgeId)
             if not strTailId in dctVisitedNodes:
                 dctVisitedNodes[strTailId] = True
+
+                # make a copy of the list for the new branch
+                if idx > 0:
+                    dctResults['_full'].append(dctResults['_full'][base][:depth])
+                    dctResults['_current'] += idx
                 self._forwardVisitor(strTailId, dctResults, dctVisitedNodes, iLevel=iLevel+1)
 
 #    @staticmethod
@@ -1723,4 +1750,82 @@ class ClassificationCellTracker2(ClassificationCellTracker):
         else:
             branch_id = items[2]
             return frame, obj_id, branch_id
+
+    def exportFullTracks(self, sep='\t'):
+
+        strPathOut = os.path.join(self.strPathOut, 'full')
+        shutil.rmtree(strPathOut, True)
+        safe_mkdirs(strPathOut)
+
+        feature_lookup = OrderedDict()
+        feature_lookup['mean'] = 'n2_avg'
+        feature_lookup['sd'] = 'n2_stddev'
+        feature_lookup['size'] = 'roisize'
+
+        for start_id, data in self.dctVisitorData.iteritems():
+
+            for idx, track in enumerate(data['_full']):
+
+                has_header = False
+                line1 = []
+                line2 = []
+                line3 = []
+
+                filename = self._formatFilename(nodeId=start_id, subPath='full', branchId=idx+1)
+                f = file(filename, 'w')
+
+                for node_id in track:
+                    frame, obj_id = self.getComponentsFromNodeId(node_id)
+
+                    prefix = [frame, self.oMetaData.getTimestamp(self.origP, frame), obj_id]
+                    prefix_names = ['frame', 'time', 'objID']
+                    items = []
+
+                    for channel in self._dctTimeChannels[frame].values():
+                        for region_id in channel.getRegionNames():
+
+                            region = channel.getRegion(region_id)
+
+                            if obj_id in region:
+                                #FIXME:
+                                feature_lookup2 = feature_lookup.copy()
+                                for k,v in feature_lookup2.iteritems():
+                                    if not region.hasFeatureName(v):
+                                        del feature_lookup2[k]
+
+                                if not has_header:
+                                    keys = ['classLabel', 'className']
+                                    if channel.NAME == 'Primary':
+                                        keys += ['centerX', 'centerY']
+                                    keys += feature_lookup2.keys()
+                                    line1 += [channel.NAME.upper()] * len(keys)
+                                    line2 += [region_id] * len(keys)
+                                    line3 += keys
+
+                                obj = region[obj_id]
+                                #print feature_lookup2.keys(), feature_lookup2.values()
+                                #fn = region.getFeatureNames()
+                                #print zip(fn, obj.aFeatures)
+                                features = region.getFeaturesByNames(obj_id, feature_lookup2.values())
+                                values = [x if not x is None else '' for x in [obj.iLabel, obj.strClassName]]
+                                if channel.NAME == 'Primary':
+                                    values += [obj.oCenterAbs[0], obj.oCenterAbs[1]]
+                                values += list(features)
+                                items.extend(values)
+
+
+                    if not has_header:
+                        has_header = True
+                        prefix_str = [''] * len(prefix)
+                        line1 = prefix_str + line1
+                        line2 = prefix_str + line2
+                        line3 = prefix_names + line3
+                        f.write('%s\n' % sep.join(line1))
+                        f.write('%s\n' % sep.join(line2))
+                        f.write('%s\n' % sep.join(line3))
+
+                    f.write('%s\n' % sep.join(map(str, prefix + items)))
+
+                f.close()
+
 

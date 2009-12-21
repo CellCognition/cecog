@@ -478,7 +478,10 @@ class ClassPredictor(BaseLearner):
             # scale between -1 and +1
             samples = 2.0 * (samples - lo) / (hi - lo) - 1.0
         # FIXME: stupid libSVM conversions
-        samples = [map(float, items) for items in samples]
+        samples = [dict([(i+1, float(v))
+                         for i,v in enumerate(items)
+                         if not numpy.isnan(v)])
+                   for items in samples]
         return labels, samples
 
     def train(self, c, g, probability=1, compensation=True,
@@ -573,7 +576,7 @@ class ClassPredictor(BaseLearner):
         return weight, weight_label
 
     def iterGridSearchSVM(self, c_info=None, g_info=None, fold=5,
-                          probability=0, compensation=True):
+                          probability=0, compensation=False):
         swap = lambda a,b: (b,a)
         if not c_info is None and len(c_info) >= 3:
             c_begin, c_end, c_step = c_info[:3]
@@ -592,6 +595,7 @@ class ClassPredictor(BaseLearner):
         g_step = abs(g_step)
 
         labels, samples = self.getData(normalize=True)
+        print len(labels), len(samples)
         problem = svm.svm_problem(labels, samples)
 
         if compensation:
@@ -606,7 +610,7 @@ class ClassPredictor(BaseLearner):
             while g <= g_end:
 
                 param = svm.svm_parameter(kernel_type = svm.RBF,
-                                          C=2**c, gamma=2**g,
+                                          C=2.**c, gamma=2.**g,
                                           probability=probability)
                 if compensation:
                     param.weight = weight
@@ -616,6 +620,7 @@ class ClassPredictor(BaseLearner):
                 validation = svm.cross_validation(problem, param, fold)
                 validation = map(int, validation)
 
+                print n,c,g
                 yield n,c,g,validation,labels
 
                 g += g_step
