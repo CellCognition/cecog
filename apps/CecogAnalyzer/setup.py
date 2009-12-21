@@ -97,7 +97,7 @@ elif sys.platform == 'win32':
                      'optimize': 2,
                      'compressed': True,
                      'bundle_files': 1,
-                     'ascii': True,
+                     #'ascii': True,
                      #'xref': True,
                     }
 
