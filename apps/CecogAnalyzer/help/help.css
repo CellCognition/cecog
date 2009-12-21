@@ -1,0 +1,36 @@
+a {
+  color: black;
+  text-decoration: none;
+}
+
+a:link {
+}
+
+a:visited {
+}
+
+a:hover {
+  color: black;
+  text-decoration: underline;
+}
+
+hr {
+  color: gray;
+  size: 1px;
+  width: 100%;
+}
+
+td {
+  text-align: center;
+}
+
+td.footer {
+  font-size: 9pt;
+  color: gray;
+}
+
+a.footer {
+  text-align: center;
+  color: gray;
+  text-decoration: none;
+}
