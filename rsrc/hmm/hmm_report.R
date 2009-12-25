@@ -38,7 +38,8 @@ read.screen <- function(dir,filenameLayout,regionName,graph,fuseClasses=NULL)
         #    str.pos <- sprintf("%04d", screen$layout[i, pos.name])
         #else
         str.pos = pos
-        path = paste(dir, str.pos, "_tracking", sep="/")
+        spath = paste(str.pos, "statistics", "events", sep="/")
+        path = paste(dir, spath, sep="/")
         print(paste(str.pos, path,file.exists(path)))
         if (file.exists(path))
         {
@@ -46,8 +47,8 @@ read.screen <- function(dir,filenameLayout,regionName,graph,fuseClasses=NULL)
             if (length(filename) > 0)
             {
                 name <- filename
-                tracking <- paste(str.pos,"_tracking",sep="/")
-                filename <- paste(str.pos,"_tracking",filename,sep="/")
+                tracking <- spath
+                filename <- paste(spath, filename, sep="/")
                 screen$nrOfCells <- screen$nrOfCells + length(filename)
                 position <- rep(str.pos,length(filename))
                 gene <- rep(screen$layout$GeneSymbol[i],length(filename))
@@ -463,7 +464,8 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
                              timelapse=1.0,
                              max_time=120,
                              feature_range=c(0,1.2),
-                             feature_filter_range=NULL)
+                             feature_filter_range=NULL,
+                             hmm_em_steps=1)
 {
     if (!file.exists(outdir))
         dir.create(outdir)
@@ -564,7 +566,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
 
             print(paste("Generate HMM:", gene.name, " Pos:", pos.name, " Group:", i, " Samples:", N.gene))
 
-            hmm[[i]] <- hmm.learn(prob[I,,], graph)
+            hmm[[i]] <- hmm.learn(prob[I,,], graph, hmm_em_steps)
 
             if (visualizeDecode)
             {
@@ -606,7 +608,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             # write PNG and PDF
             plot.transition.graph(hmm[[i]], type="PNG", filename=paste(outdir_region,"/graph_loop_",i,".png",sep=""), loops=TRUE, weights=TRUE)
             #plotTransitionGraph(hmm[[i]], type="PDF", filename=paste(outdir,"/graph_loop_",i,".pdf",sep=""), loops=TRUE, weights=TRUE)
-#            plot.transition.graph(hmm[[i]], type="PS",  filename=paste(outdir_region,"/graph_loop_",i,".ps",sep=""), loops=TRUE, weights=TRUE)
+            plot.transition.graph(hmm[[i]], type="PS",  filename=paste(outdir_region,"/graph_loop_",i,".ps",sep=""), loops=TRUE, weights=TRUE)
 
             plot.transition.graph(hmm[[i]], type="PNG", filename=paste(outdir_region,"/graph_",i,".png",sep=""), loops=FALSE, weights=TRUE)
             #plotTransitionGraph(hmm[[i]], type="PDF", filename=paste(outdir,"/graph_",i,".pdf",sep=""), loops=FALSE, weights=TRUE)
@@ -627,68 +629,63 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
 
 #            sq <- Sequence[I,seq(1,T)]
             sq <- Sequence[I,]
+            sq.raw <- Sequence.Raw[I,]
 
           realign.starts.nofilter <- rep(0,0)
-          if (!is.null(realign_onset))
-          {
+          if (!is.null(realign_onset)) {
             #print(dim(sq))
             #print(T)
             #I3 <- rep(FALSE, sum(I))
 
-          if (is.null(realign))
-              onsets <- apply(sq, 1, subsearch, c(1,1,1,1,1,1,1,2,2,2))
-          else
-          {
-            #print("realign")
-            #print(sum(I))
-            #print(length(realign))
-          }
+              if (is.null(realign))
+                  onsets <- apply(sq, 1, subsearch, c(1,1,1,1,1,1,1,2,2,2))
 
-            I2 <- seq(1,length(I))[I]
-            nsq <- matrix(0, nc=T, nr=0)
-            realign.starts <- rep(0,0)
-            center <- 10
-            for (k in 1:length(I2))
-            {
-        if (is.null(realign))
-                s <- center - onsets[k][[1]][1]
-              else
-                s <- realign[k]
+                I2 <- seq(1,length(I))[I]
+                nsq <- matrix(0, nc=T, nr=0)
+                nsq.raw <- matrix(0, nc=T, nr=0)
+                realign.starts <- rep(0,0)
+                center <- 10
+                for (k in 1:length(I2)) {
+                    if (is.null(realign))
+                        s <- center - onsets[k][[1]][1]
+                    else
+                        s <- realign[k]
 
-              if (!is.na(s))
-              {
-                line <- rep(0,T)
-                if (s < 0)
-                  line[1:(T+s)] <- sq[k,(1-s):T]
-                else
-                  line[(s+1):T] <- sq[k,1:(T-s)]
-               nsq <- rbind(nsq, line)
-               realign.starts <- append(realign.starts, s)
-              } else
-               I[I2[k]] <- FALSE
-             realign.starts.nofilter <- append(realign.starts.nofilter, s)
-            }
-            T <- T - realign_truncate
-#            print(dim(nsq))
-#            print(T)
-            I2 <- seq(1,length(I))[I]
-            check <- rep(0,0)
-            sq <- matrix(0, nc=T, nr=0)
-            for (k in 1:(dim(nsq)[1]))
-              if (nsq[k,T] != 0)
-              {
-                sq <- rbind(sq, nsq[k,1:T])
-                check <- append(check, k)
-              } else
-                I[I2[k]] <- FALSE
-        realign.starts <- realign.starts[check]
-            #print(dim(sq))
-            #print(length(I))
-            #print(sum(I))
-            #print(length(realign.starts))
-            N.gene <- dim(sq)[1]
-            }
-            else
+                    if (!is.na(s)) {
+                        line <- rep(0,T)
+                        line.raw <- rep(0,T)
+                        if (s < 0) {
+                          line[1:(T+s)] <- sq[k,(1-s):T]
+                          line.raw[1:(T+s)] <- sq.raw[k,(1-s):T]
+                        } else {
+                          line[(s+1):T] <- sq[k,1:(T-s)]
+                          line.raw[(s+1):T] <- sq.raw[k,1:(T-s)]
+                        }
+                        nsq <- rbind(nsq, line)
+                        nsq.raw <- rbind(nsq.raw, line.raw)
+                        realign.starts <- append(realign.starts, s)
+                    } else
+                        I[I2[k]] <- FALSE
+                    realign.starts.nofilter <- append(realign.starts.nofilter, s)
+                }
+                T <- T - realign_truncate
+    #            print(dim(nsq))
+    #            print(T)
+                I2 <- seq(1,length(I))[I]
+                check <- rep(0,0)
+                sq <- matrix(0, nc=T, nr=0)
+                sq.raw <- matrix(0, nc=T, nr=0)
+                for (k in 1:(dim(nsq)[1])) {
+                    if (nsq[k,T] != 0) {
+                        sq <- rbind(sq, nsq[k,1:T])
+                        sq.raw <- rbind(sq.raw, nsq.raw[k,1:T])
+                        check <- append(check, k)
+                    } else
+                        I[I2[k]] <- FALSE
+                }
+                realign.starts <- realign.starts[check]
+                N.gene <- dim(sq)[1]
+            } else
                 realign.starts <- rep(0, N.gene)
 
             if (is.null(indices))
@@ -697,6 +694,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             {
                 I.indices <- indices
                 sq <- sq[I.indices,]
+                sq.raw  <- sq.raw[I.indices,]
                 N.gene <- dim(sq)[1]
             }
             I.sort <- rep(TRUE, N.gene)
@@ -821,9 +819,8 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             CairoPNG(paste(outdir_region,"/",fn.raw[i,1],sep=""), width=1000, height=1000, bg='transparent')
             #CairoPS(paste(outdir,"/",fn.raw[i,2],sep=""), width=15, height=15, bg='transparent')
             par(mar=c(0,0,0,0))
-            sq <- Sequence.Raw[I,][I.indices,][I.sort,]
-            image(t(sq), col=class.colors,
-                  zlim=c(1,K), xaxt="n", yaxt="n")
+            sq <- sq.raw[I.sort,]
+            image(t(sq), col=class.colors, zlim=c(1,K), xaxt="n", yaxt="n")
             box()
             #axis(1, seq(T))
             dev.off()

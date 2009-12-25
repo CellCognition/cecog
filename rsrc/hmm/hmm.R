@@ -36,6 +36,7 @@ hmm.summarize <- function(prob, post) {
       hmm$e <- hmm$e + P
     }
   }
+  #print(hmm$e)
   return(hmm)
 }
 
@@ -95,6 +96,7 @@ hmm.normalize <- function(hmm, graph) {
   }
 
   hmm$graph <- graph
+  print(hmm$e)
 
   return(hmm)
 }
@@ -151,11 +153,16 @@ hmm.decode <- function(prob,hmm) {
     P <- matrix(0,nr=T,nc=K)
     bp <- matrix(0,nr=T,nc=K)
     P2 <- matrix(0,nr=K,nc=K)
-    P[1,] <- hmm$start * E[1,]
+    #P[1,] <- hmm$start * E[1,]
+    P[1,] <- hmm$start * prob[i,1,]
     for (t in 2:T) {
       for (p in 1:K) {
-        P2[p,] <- P[t-1,p] * hmm$trans[p,] * E[t,]
-      }
+        #P2[p,] <- P[t-1,p] * hmm$trans[p,] * E[t,]
+        P2[p,] <- P[t-1,p] * hmm$trans[p,] * prob[i,t,]
+        #print(paste(t, p, sep=" "))
+        #print(E[t,])
+        #print(prob[i,t,])
+    }
       for (q in 1:K) {
         P[t,q] <- max(P2[,q])
         bp[t,q] <- which.max(P2[,q])
@@ -180,7 +187,7 @@ hmm.post.init <- function(prob,graph) {
   return(post)
 }
 
-hmm.learn <- function(prob, graph, steps = 5) {
+hmm.learn <- function(prob, graph, steps = 1) {
   post <- hmm.post.init(prob,graph)
   for (i in 1:steps) {
     hmm <- hmm.summarize(prob,post)
