@@ -646,6 +646,29 @@ class PositionAnalyzer(object):
                 else:
                     channel_registration = (registration_x, registration_y)
 
+                if self.oSettings.get2(self._resolve_name(channel_section,
+                                                          'zslice_selection')):
+                    projection_info = self.oSettings.get2(self._resolve_name(
+                                                            channel_section,
+                                                            'zslice_selection_slice'))
+                else:
+                    assert self.oSettings.get2(self._resolve_name(channel_section,
+                                                          'zslice_projection'))
+                    method = self.oSettings.get2(self._resolve_name(
+                                                   channel_section,
+                                                   'zslice_projection_method'))
+                    begin = self.oSettings.get2(self._resolve_name(
+                                                   channel_section,
+                                                   'zslice_projection_begin'))
+                    end = self.oSettings.get2(self._resolve_name(
+                                                   channel_section,
+                                                   'zslice_projection_end'))
+                    step = self.oSettings.get2(self._resolve_name(
+                                                   channel_section,
+                                                   'zslice_projection_step'))
+                    projection_info = (method, begin, end, step)
+
+
                 lstFeatureCategories = []
                 if self.oSettings.get('Classification',
                                       self._resolve_name(channel_section,
@@ -691,7 +714,7 @@ class PositionAnalyzer(object):
                         iLatWindowSize2 = None
                         iLatLimit2 = None
 
-                    params = dict(oZSliceOrProjection = self.oSettings.get2('primary_zsliceorprojection'),
+                    params = dict(oZSliceOrProjection = projection_info,
                                   channelRegistration=channel_registration,
                                   fNormalizeMin = self.oSettings.get2('primary_normalizemin'),
                                   fNormalizeMax = self.oSettings.get2('primary_normalizemax'),
@@ -718,7 +741,7 @@ class PositionAnalyzer(object):
                                   dctFeatureParameters = dctFeatureParameters,
                                   )
                 elif channel_section == self.SECONDARY_CHANNEL:
-                    params = dict(oZSliceOrProjection = self.oSettings.get2('secondary_zsliceorprojection'),
+                    params = dict(oZSliceOrProjection = projection_info,
                                   channelRegistration=channel_registration,
                                   fNormalizeMin = self.oSettings.get2('secondary_normalizemin'),
                                   fNormalizeMax = self.oSettings.get2('secondary_normalizemax'),
@@ -1038,7 +1061,7 @@ class AnalyzerCore(object):
             strPathFinished = os.path.join(self.strPathOutLog, '_finished')
             setFound = set()
             if os.path.isdir(strPathFinished):
-                for strFilePath in collect_files(strPathFinished, ['.txt'], absolute=True, force_oswalk=True):
+                for strFilePath in collect_files(strPathFinished, ['.txt'], absolute=True, force_python=True):
                     strFilename = os.path.split(strFilePath)[1]
                     P = strFilename.split('__')[1]
                     if P in self.oMetaData.setP:
@@ -1067,11 +1090,11 @@ class AnalyzerCore(object):
 
         if self.oSettings.get2('frameRange'):
             frames_begin = self.oSettings.get2('frameRange_begin')
-            if frames_begin <= 0 or frames_begin > lstFrames[-1]:
+            if frames_begin < lstFrames[0] or frames_begin > lstFrames[-1]:
                 frames_begin = lstFrames[0]
 
             frames_end = self.oSettings.get2('frameRange_end')
-            if frames_end <= 0 or frames_end > lstFrames[-1] or frames_begin > frames_end:
+            if frames_end < 0 or frames_end > lstFrames[-1] or frames_begin > frames_end:
                 frames_end = lstFrames[-1]
         else:
             frames_begin = lstFrames[0]

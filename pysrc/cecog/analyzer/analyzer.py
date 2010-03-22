@@ -405,21 +405,24 @@ class _Channel(PropertyManager):
         self._lstZSlices.append(oMetaImage)
 
     def applyZSelection(self):
-        if self.oZSliceOrProjection in ['max', 'min', 'mean']:
-            lstZImages = [img.imgXY for img in self._lstZSlices]
-            if self.oZSliceOrProjection == "max":
-                self._oLogger.debug("* applying Max Z-Projection to stack of %d images..." % len(lstZImages))
-                imgXYProj = ccore.projectImage(lstZImages, ccore.ProjectionType.MaxProjection)
-            elif self.oZSliceOrProjection == "min":
-                self._oLogger.debug("* applying Min Z-Projection to stack of %d images..." % len(lstZImages))
-                imgXYProj = ccore.projectImage(lstZImages, ccore.ProjectionType.MinProjection)
-            elif self.oZSliceOrProjection == "mean":
-                self._oLogger.debug("* applying Mean Z-Projection to stack of %d images..." % len(lstZImages))
-                imgXYProj = ccore.projectImage(lstZImages, ccore.ProjectionType.MeanProjection)
+        if type(self.oZSliceOrProjection) == types.TupleType:
+            method, zbegin, zend, zstep = self.oZSliceOrProjection
+            images = [img.imgXY for img in self._lstZSlices][(zbegin-1):zend:zstep]
+
+            if method == "maximum":
+                method_const = ccore.ProjectionType.MaxProjection
+            elif method == "minimum":
+                method_const = ccore.ProjectionType.MinProjection
+            elif method == "mean":
+                method_const = ccore.ProjectionType.MeanProjection
+
+            self._oLogger.debug("* applying %s Z-Projection to stack of %d images..." % (method, len(images)))
+            img_proj = ccore.projectImage(images, method_const)
+
 
             # overwrite the first MetaImage found with the projected image data
             oMetaImage = self._lstZSlices[0]
-            oMetaImage.imgXY = imgXYProj
+            oMetaImage.imgXY = img_proj
         else:
             self.oZSliceOrProjection = int(self.oZSliceOrProjection)
             self._oLogger.debug("* selecting z-slice %d..." % self.oZSliceOrProjection)

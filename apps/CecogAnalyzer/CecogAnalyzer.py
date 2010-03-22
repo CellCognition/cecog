@@ -13,7 +13,7 @@ __author__ = 'Michael Held'
 __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
-__version__ = '1.0.3'
+__version__ = '1.0.4'
 
 #-------------------------------------------------------------------------------
 # standard library imports:
@@ -49,10 +49,14 @@ from pdk.datetimeutils import TimeInterval, StopWatch
 # cecog imports:
 #
 from cecog.extensions.ConfigParser import RawConfigParser
+#from ConfigParser import RawConfigParser
 from cecog.io.reader import PIXEL_TYPES
 from cecog.analyzer.core import AnalyzerCore
 from cecog import ccore
-from cecog.learning.learning import CommonObjectLearner, CommonClassPredictor
+from cecog.learning.learning import (CommonObjectLearner,
+                                     CommonClassPredictor,
+                                     ConfusionMatrix,
+                                     )
 from cecog.util import hexToRgb, write_table
 
 import resource
@@ -80,6 +84,7 @@ SECONDARY_COLORS = {'inside' : '#FFFF00',
                     'outside' : '#00FF00',
                     'expanded': '#00FFFF',
                     }
+ZSLICE_PROJECTION_METHODS = ['maximum', 'minimum', 'mean']
 
 COMPRESSION_FORMATS = ['raw', 'bz2', 'gz']
 TRACKING_METHODS = ['ClassificationCellTracker',]
@@ -232,6 +237,8 @@ def on_anchor_clicked(link):
     if slink.find('qrc:/') == 0:
         slink = slink.replace('qrc:/', '')
         show_html(slink, header='_header', footer='_footer')
+    elif slink.find('#') == 0:
+        qApp.cecog_help_wtext.scrollToAnchor(slink[1:])
     else:
         QDesktopServices.openUrl(link)
 
@@ -920,7 +927,7 @@ class AnalzyerThread(_ProcessingThread):
 class ClassifierResultFrame(QGroupBox):
 
     LABEL_FEATURES = '#Features: %d'
-    LABEL_ACC = 'Accuracy: %.1f%%'
+    LABEL_ACC = 'Accuracy (per sample): %.1f%%'
     LABEL_C = 'Log2(C) = %.1f'
     LABEL_G = 'Log2(g) = %.1f'
 
@@ -930,46 +937,56 @@ class ClassifierResultFrame(QGroupBox):
         self._channel = channel
         self._settings = settings
 
-        layout = QGridLayout(self)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(5, 5, 5, 5)
 
-        self._button = QPushButton('Load', self)
-        self.connect(self._button, SIGNAL('clicked()'), self._on_load)
-        layout.addWidget(self._button, 1, 2)
+        #self._button = QPushButton('Load', self)
+        #self.connect(self._button, SIGNAL('clicked()'), self._on_load)
+        #layout.addWidget(self._button, 1, 2)
 
-        self._label_features = QLabel(self.LABEL_FEATURES % 0, self)
-        layout.addWidget(self._label_features, 3, 2)
-        self._label_acc = QLabel(self.LABEL_ACC % float('NAN'), self)
-        layout.addWidget(self._label_acc, 4, 2)
-        self._label_c = QLabel(self.LABEL_C % float('NAN'), self)
-        layout.addWidget(self._label_c, 5, 2)
-        self._label_g = QLabel(self.LABEL_G % float('NAN'), self)
-        layout.addWidget(self._label_g, 6, 2)
+        splitter = QSplitter(Qt.Horizontal, self)
+        splitter.setSizePolicy(QSizePolicy(QSizePolicy.Expanding|QSizePolicy.Maximum,
+                                           QSizePolicy.Expanding|QSizePolicy.Maximum))
+        splitter.setStretchFactor(0, 2)
+        layout.addWidget(splitter)
 
-        label = QLabel('Confusion matrix', self)
-        layout.addWidget(label, 0, 1, Qt.AlignBottom)
-        self._table_conf = QTableWidget(self)
-        self._table_conf.setEditTriggers(QTableWidget.NoEditTriggers)
-        self._table_conf.setSelectionMode(QTableWidget.NoSelection)
-
-        self._table_conf.setSizePolicy(QSizePolicy(QSizePolicy.Expanding|QSizePolicy.Maximum,
-                                              QSizePolicy.Expanding|QSizePolicy.Maximum))
-        layout.addWidget(self._table_conf, 1, 1, 6, 1)
-
-        label = QLabel('Class & annotation info', self)
-        layout.addWidget(label, 0, 0, Qt.AlignBottom)
-        self._table_info = QTableWidget(self)
+        frame_info = QFrame()
+        layout_info = QVBoxLayout(frame_info)
+        label = QLabel('Class & annotation info', frame_info)
+        layout_info.addWidget(label)
+        self._table_info = QTableWidget(frame_info)
         self._table_info.setEditTriggers(QTableWidget.NoEditTriggers)
         self._table_info.setSelectionMode(QTableWidget.NoSelection)
-        self._table_info.setSizePolicy(QSizePolicy(QSizePolicy.Fixed,
+        self._table_info.setSizePolicy(QSizePolicy(QSizePolicy.Expanding|QSizePolicy.Maximum,
                                                    QSizePolicy.Expanding|QSizePolicy.Maximum))
-        layout.addWidget(self._table_info, 1, 0, 6, 1)
-        layout.addItem(QSpacerItem(1, 1,
-                                   QSizePolicy.Fixed,
-                                   QSizePolicy.MinimumExpanding), 2, 2)
-#        layout.addItem(QSpacerItem(1, 1,
-#                                   QSizePolicy.MinimumExpanding,
-#                                   QSizePolicy.MinimumExpanding), 0, 3, 4, 1)
+        layout_info.addWidget(self._table_info)
+        splitter.addWidget(frame_info)
 
+
+        frame_conf = QFrame()
+        layout_conf = QVBoxLayout(frame_conf)
+        label = QLabel('Confusion matrix', frame_conf)
+        layout_conf.addWidget(label)
+        self._table_conf = QTableWidget(frame_conf)
+        self._table_conf.setEditTriggers(QTableWidget.NoEditTriggers)
+        self._table_conf.setSelectionMode(QTableWidget.NoSelection)
+        self._table_conf.setSizePolicy(QSizePolicy(QSizePolicy.Expanding|QSizePolicy.Maximum,
+                                                   QSizePolicy.Expanding|QSizePolicy.Maximum))
+        layout_conf.addWidget(self._table_conf)
+        splitter.addWidget(frame_conf)
+
+
+        desc = QFrame(self)
+        layout_desc = QHBoxLayout(desc)
+        self._label_acc = QLabel(self.LABEL_ACC % float('NAN'), desc)
+        layout_desc.addWidget(self._label_acc, Qt.AlignLeft)
+        self._label_features = QLabel(self.LABEL_FEATURES % 0, desc)
+        layout_desc.addWidget(self._label_features, Qt.AlignLeft)
+        self._label_c = QLabel(self.LABEL_C % float('NAN'), desc)
+        layout_desc.addWidget(self._label_c, Qt.AlignLeft)
+        self._label_g = QLabel(self.LABEL_G % float('NAN'), desc)
+        layout_desc.addWidget(self._label_g, Qt.AlignLeft)
+        layout.addWidget(desc)
 
         self._has_data = False
 
@@ -978,7 +995,7 @@ class ClassifierResultFrame(QGroupBox):
         self._table_info.clear()
         self._has_data = False
 
-    def _on_load(self):
+    def on_load(self):
         self.load_classifier(check=True)
 
     def load_classifier(self, check=True):
@@ -1008,9 +1025,8 @@ class ClassifierResultFrame(QGroupBox):
             msg += 'Found samples: %s\n' % b(result['has_path_samples'])
             msg += 'Sample images are only used for visualization and annotation control at the moment.'
 
-            widget = information(self, 'Classifier inspection results',
-                                 'Classifier inspection results',
-                                 info=msg)
+            txt = '%s classifier inspection results' % self._channel
+            widget = information(self, txt, txt, info=msg)
 
         if result['has_arff']:
             self._learner.importFromArff()
@@ -1026,8 +1042,9 @@ class ClassifierResultFrame(QGroupBox):
             self._set_info(c, g, accuracy)
             self._init_conf_table(conf)
             self._update_conf_table(conf)
-
-        self._set_info_table()
+        else:
+            conf = None
+        self._set_info_table(conf)
 
     def msg_pick_samples(self, parent):
         result = self._learner.check()
@@ -1073,15 +1090,28 @@ class ClassifierResultFrame(QGroupBox):
         result = self._learner.check()
         return result['has_model'] and result['has_range']
 
-    def _set_info_table(self):
+    def _set_info_table(self, conf):
         rows = len(self._learner.lstClassLabels)
         self._table_info.clear()
-        self._table_info.setColumnCount(3)
-        self._table_info.setRowCount(rows)
-        self._table_info.setHorizontalHeaderLabels(['Name', 'Samples', 'Color'])
-        self._table_info.setVerticalHeaderLabels([str(self._learner.nl2l[r])
-                                                  for r in range(rows)])
+        names_horizontal = [('Name', 'class name'),
+                            ('Samples', 'class samples'),
+                            ('Color', 'class color'),
+                            ('AC%', 'class accuracy in %'),
+                            ('SE%', 'class sensitivity in %'),
+                            ('SP%', 'class specificity in %'),
+                            ('PPV%', 'class positive predictive value in %'),
+                            ('NPV%', 'class negative predictive value in %'),
+                            ]
+        names_vertical = [str(self._learner.nl2l[r]) for r in range(rows)] + ['','#']
+        self._table_info.setColumnCount(len(names_horizontal))
+        self._table_info.setRowCount(len(names_vertical))
+        self._table_info.setVerticalHeaderLabels(names_vertical)
         self._table_info.setColumnWidth(1, 20)
+        for c, (name, info) in enumerate(names_horizontal):
+            item = QTableWidgetItem(name)
+            item.setToolTip(info)
+            self._table_info.setHorizontalHeaderItem(c, item)
+        r = 0
         for r in range(rows):
             self._table_info.setRowHeight(r, 20)
             label = self._learner.nl2l[r]
@@ -1092,10 +1122,65 @@ class ClassifierResultFrame(QGroupBox):
             item = QTableWidgetItem(' ')
             item.setBackground(QBrush(QColor(*hexToRgb(self._learner.dctHexColors[name]))))
             self._table_info.setItem(r, 2, item)
+
+            if not conf is None:
+                item = QTableWidgetItem('%.1f' % (conf.ac[r] * 100.))
+                item.setToolTip('"%s" accuracy' %  name)
+                self._table_info.setItem(r, 3, item)
+
+                item = QTableWidgetItem('%.1f' % (conf.se[r] * 100.))
+                item.setToolTip('"%s" sensitivity' %  name)
+                self._table_info.setItem(r, 4, item)
+
+                item = QTableWidgetItem('%.1f' % (conf.sp[r] * 100.))
+                item.setToolTip('"%s" specificity' %  name)
+                self._table_info.setItem(r, 5, item)
+
+                item = QTableWidgetItem('%.1f' % (conf.ppv[r] * 100.))
+                item.setToolTip('"%s" positive predictive value' %  name)
+                self._table_info.setItem(r, 6, item)
+
+                item = QTableWidgetItem('%.1f' % (conf.npv[r] * 100.))
+                item.setToolTip('"%s" negative predictive value' %  name)
+                self._table_info.setItem(r, 7, item)
+
+        if not conf is None:
+            self._table_info.setRowHeight(r+1, 20)
+            r += 2
+            self._table_info.setRowHeight(r, 20)
+            name = "overal"
+            samples = sum(self._learner.names2samples.values())
+            self._table_info.setItem(r, 0, QTableWidgetItem(name))
+            self._table_info.setItem(r, 1, QTableWidgetItem(str(samples)))
+            item = QTableWidgetItem(' ')
+            item.setBackground(QBrush(QColor(*hexToRgb('#FFFFFF'))))
+            self._table_info.setItem(r, 2, item)
+
+            item = QTableWidgetItem('%.1f' % (conf.av_ac * 100.))
+            item.setToolTip('%s per class accuracy' %  name)
+            self._table_info.setItem(r, 3, item)
+
+            item = QTableWidgetItem('%.1f' % (conf.av_se * 100.))
+            item.setToolTip('%s per class sensitivity' %  name)
+            self._table_info.setItem(r, 4, item)
+
+            item = QTableWidgetItem('%.1f' % (conf.av_sp * 100.))
+            item.setToolTip('%s per class specificity' %  name)
+            self._table_info.setItem(r, 5, item)
+
+            item = QTableWidgetItem('%.1f' % (conf.av_ppv * 100.))
+            item.setToolTip('%s per class positive predictive value' %  name)
+            self._table_info.setItem(r, 6, item)
+
+            item = QTableWidgetItem('%.1f' % (conf.av_npv * 100.))
+            item.setToolTip('%s per class negative predictive value' %  name)
+            self._table_info.setItem(r, 7, item)
+
         self._table_info.resizeColumnsToContents()
 
     def _init_conf_table(self, conf):
-        rows, cols = conf.shape
+        conf_array = conf.conf
+        rows, cols = conf_array.shape
         self._table_conf.clear()
         self._table_conf.setColumnCount(cols)
         self._table_conf.setRowCount(rows)
@@ -1117,14 +1202,15 @@ class ClassifierResultFrame(QGroupBox):
             self._table_conf.setVerticalHeaderItem(r, item)
 
     def _update_conf_table(self, conf):
-        rows, cols = conf.shape
-        conf_norm = conf.swapaxes(0,1) / numpy.array(numpy.sum(conf, 1), numpy.float)
+        conf_array = conf.conf
+        rows, cols = conf_array.shape
+        conf_norm = conf_array.swapaxes(0,1) / numpy.array(numpy.sum(conf_array, 1), numpy.float)
         conf_norm = conf_norm.swapaxes(0,1)
         self._table_conf.clearContents()
         for r in range(rows):
             for c in range(cols):
                 item = QTableWidgetItem()
-                item.setToolTip('%d samples, %.2f%%' % (conf[r,c], conf_norm[r,c]*100.))
+                item.setToolTip('%d samples' % conf_array[r,c])
                 col = int(255 * (1 - conf_norm[r,c]))
                 item.setBackground(QBrush(QColor(col, col, col)))
                 self._table_conf.setItem(r, c, item)
@@ -1134,20 +1220,20 @@ class ClassifierResultFrame(QGroupBox):
         self._label_c.setText(self.LABEL_C % c)
         self._label_g.setText(self.LABEL_G % g)
 
-    def on_conf_result(self, c, g, accuracy, conf):
+    def on_conf_result(self, c, g, conf):
         print "moo", c, g
-        self._set_info(c, g, accuracy)
+        self._set_info(c, g, conf.ac_sample)
 
         if not self._has_data:
             self._has_data = True
             self._init_conf_table(conf)
-            self._set_info_table()
+        self._set_info_table(conf)
         self._update_conf_table(conf)
 
 
 class TrainingThread(_ProcessingThread):
 
-    conf_result = pyqtSignal(float, float, float, numpy.ndarray)
+    conf_result = pyqtSignal(float, float, ConfusionMatrix)
 
     def __init__(self, parent, settings, learner):
         _ProcessingThread.__init__(self, parent, settings)
@@ -1156,6 +1242,7 @@ class TrainingThread(_ProcessingThread):
     def _run(self):
         print "training"
 
+        # log2 settings (range and step size) for C and gamma
         c_begin, c_end, c_step = -5,  15, 2
         c_info = c_begin, c_end, c_step
 
@@ -1174,39 +1261,31 @@ class TrainingThread(_ProcessingThread):
 
         i = 0
         best_accuracy = -1
-        best_c = None
-        best_g = None
+        best_log2c = None
+        best_log2g = None
         best_conf = None
         is_abort = False
         stopwatch = StopWatch()
-        for n,c,g,validation,labels in self._learner.iterGridSearchSVM(c_info=c_info,
-                                                                       g_info=g_info):
+        for info in self._learner.iterGridSearchSVM(c_info=c_info,
+                                                    g_info=g_info):
+            n, log2c, log2g, conf = info
             stage_info.update({'min': 1,
                                'max': n,
                                'progress': i+1,
-                               'text': 'log2(C)=%d, log2(g)=%d' % (c,g),
+                               'text': 'log2(C)=%d, log2(g)=%d' % \
+                               (log2c, log2g),
                                'interval': stopwatch.current_interval(),
                                })
             self.set_stage_info(stage_info)
             stopwatch.reset()
             i += 1
-            #print i,n,len(labels)
-            accuracy = numpy.sum(labels == validation) / float(len(labels))
+            accuracy = conf.ac_sample
             if accuracy > best_accuracy:
                 best_accuracy = accuracy
-                best_c = c
-                best_g = g
-                #print 'BEST: ', best_accuracy, best_c, best_g
-
-                k = len(self._learner.l2nl)
-                conf = numpy.zeros((k, k))
-                for l, v in zip(labels, validation):
-                    l2 = self._learner.l2nl[l]
-                    v2 = self._learner.l2nl[v]
-                    conf[l2,v2] += 1
+                best_log2c = log2c
+                best_log2g = log2g
                 best_conf = conf
-
-                self.conf_result.emit(c, g, accuracy, conf)
+                self.conf_result.emit(log2c, log2g, conf)
             time.sleep(.3)
 
             if self.get_abort():
@@ -1215,11 +1294,14 @@ class TrainingThread(_ProcessingThread):
 
         # overwrite only if grid-search was not aborted by the user
         if not is_abort:
-            self.conf_result.emit(best_c, best_g, best_accuracy, best_conf)
-            self._learner.train(2**best_c, 2**best_g)
-            self._learner.exportConfusion(best_c, best_g, best_accuracy,
-                                          best_conf)
+            #self.conf_result.emit(best_c, best_g, best_accuracy, best_conf)
+            self._learner.train(2**best_log2c, 2**best_log2g)
+            self._learner.exportConfusion(best_log2c, best_log2g, best_conf)
             self._learner.exportRanges()
+            # FIXME: in case the meta-data (colors, names, zero-insert) changed
+            #        the ARFF file has to be written again
+            #        -> better store meta-data outside ARFF
+            self._learner.exportToArff()
 
 
 class LogWindow(QFrame):
@@ -1513,9 +1595,13 @@ class InputWidgetMixin(object):
         self._settings = settings
         self._settings.register_section(self.SECTION)
         self._extra_columns = 0
+        self._final_handlers = {}
 
     def get_name(self):
         return self.SECTION if self.NAME is None else self.NAME
+
+    def add_handler(self, name, function):
+        self._final_handlers[name] = function
 
     def add_group(self, name, trait, items, layout="grid"):
         frame = self._get_frame(self._tab_name)
@@ -1804,6 +1890,10 @@ class InputWidgetMixin(object):
                 self._registry[name].setText(path)
                 self.set_value(name, path)
 
+                # call final handler
+                if name in self._final_handlers:
+                    self._final_handlers[name]()
+
     def _on_current_index(self, name, index):
         # FIXME: signals are send during init were registry is not set yet
         if name in self._registry:
@@ -2000,7 +2090,7 @@ class ProcessorMixin(object):
 
             if isinstance(self, ClassificationFrame):
                 result_frame = self._get_result_frame(self._tab_name)
-                result_frame.load_classifier(check=False)
+                #result_frame.load_classifier(check=False)
                 learner = result_frame._learner
 
                 if name == self.PROCESS_PICKING:
@@ -2224,6 +2314,7 @@ class ProcessorMixin(object):
 
     def _on_update_stage_info(self, info):
         sep = '   |   '
+        info = dict([(str(k), v) for k,v in info.iteritems()])
         #print info
         if self.CONTROL == CONTROL_1:
             if info['stage'] == 0:
@@ -2390,11 +2481,11 @@ class InputFrame(QFrame, InputWidgetMixin):
         self._control = QFrame(self)
         layout = QVBoxLayout(self)
 
-#        scroll_area = QScrollArea(self)
-#        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-#        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-#        scroll_area.setWidgetResizable(True)
-#        scroll_area.setFrameShape(QFrame.NoFrame)
+        scroll_area = QScrollArea(self)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QFrame.NoFrame)
 
         if not self.TABS is None:
             self._tab = QTabWidget(self)
@@ -2406,18 +2497,18 @@ class InputFrame(QFrame, InputWidgetMixin):
                 QGridLayout(frame)
                 idx = self._tab.addTab(frame, name)
                 self._tab_lookup[name] = (idx, frame)
-            #scroll_area.setWidget(self._tab)
-            layout.addWidget(self._tab)
+            scroll_area.setWidget(self._tab)
+            #layout.addWidget(self._tab)
         else:
             self._frame = QFrame(self)
             self._frame._input_cnt = 0
             QGridLayout(self._frame)
             #self._frame.setSizePolicy(QSizePolicy(QSizePolicy.Expanding|QSizePolicy.Maximum,
             #                                    QSizePolicy.Expanding))
-            #scroll_area.setWidget(self._frame)
-            layout.addWidget(self._frame)
+            scroll_area.setWidget(self._frame)
+            #layout.addWidget(self._frame)
 
-        #layout.addWidget(scroll_area)
+        layout.addWidget(scroll_area)
         layout.addWidget(self._control)
 
         InputWidgetMixin.__init__(self, settings)
@@ -2552,9 +2643,9 @@ class GeneralFrame(InputFrame):
         self.add_group('frameRange',
                        BooleanTrait(False, label='Constrain timepoints'),
                        [('frameRange_begin',
-                         IntTrait(1, 1, 10000, label='Begin')),
+                         IntTrait(1, 0, 10000, label='Begin')),
                         ('frameRange_end',
-                         IntTrait(1, 1, 1000, label='End'))
+                         IntTrait(1, 0, 1000, label='End'))
                         ], layout='flow')
 
         self.add_input('frameIncrement',
@@ -2642,6 +2733,30 @@ class ObjectDetectionFrame(InputFrame, ProcessorMixin):
                         IntTrait(255, -2**16, 2**16, label='Max.')),
                         ], layout='flow')
         self.add_line()
+
+        self.add_group('primary_zslice_selection',
+                       BooleanTrait(True, label='Z-slice selection',
+                                    widget_info=BooleanTrait.RADIOBUTTON),
+                       [('primary_zslice_selection_slice',
+                        IntTrait(1, 1, 1000, label='Slice')),
+                        ], layout='flow')
+        self.add_group('primary_zslice_projection',
+                       BooleanTrait(False, label='Z-slice projection',
+                                    widget_info=BooleanTrait.RADIOBUTTON),
+                       [('primary_zslice_projection_method',
+                         SelectionTrait(ZSLICE_PROJECTION_METHODS[0],
+                                        ZSLICE_PROJECTION_METHODS,
+                                        label='Method')),
+                        ('primary_zslice_projection_begin',
+                         IntTrait(1, 1, 1000, label='Begin')),
+                        ('primary_zslice_projection_end',
+                         IntTrait(1, 1, 1000, label='End')),
+                        ('primary_zslice_projection_step',
+                         IntTrait(1, 1, 1000, label='Step')),
+                        ], layout='flow')
+
+        self.add_line()
+
         self.add_input('primary_medianRadius',
                        IntTrait(2, 0, 1000, label='Median radius'))
 
@@ -2757,6 +2872,7 @@ class ObjectDetectionFrame(InputFrame, ProcessorMixin):
                         ('secondary_normalizeMax',
                         IntTrait(255, -2**16, 2**16, label='Max.')),
                         ], layout='flow')
+
         self.add_group('Channel registration', None,
                        [('secondary_channelRegistration_x',
                          IntTrait(0, -99999, 99999,
@@ -2769,6 +2885,29 @@ class ObjectDetectionFrame(InputFrame, ProcessorMixin):
 #        self.add_input('medianRadius',
 #                       IntTrait(2, 0, 1000, label='Median radius',
 #                                tooltip='abc...'))
+        self.add_line()
+
+        self.add_group('secondary_zslice_selection',
+                       BooleanTrait(True, label='Z-slice selection',
+                                    widget_info=BooleanTrait.RADIOBUTTON),
+                       [('secondary_zslice_selection_slice',
+                        IntTrait(1, 1, 1000, label='Slice')),
+                        ], layout='flow')
+        self.add_group('secondary_zslice_projection',
+                       BooleanTrait(False, label='Z-slice projection',
+                                    widget_info=BooleanTrait.RADIOBUTTON),
+                       [('secondary_zslice_projection_method',
+                         SelectionTrait(ZSLICE_PROJECTION_METHODS[0],
+                                        ZSLICE_PROJECTION_METHODS,
+                                        label='Method')),
+                        ('secondary_zslice_projection_begin',
+                         IntTrait(1, 1, 1000, label='Begin')),
+                        ('secondary_zslice_projection_end',
+                         IntTrait(1, 1, 1000, label='End')),
+                        ('secondary_zslice_projection_step',
+                         IntTrait(1, 1, 1000, label='Step')),
+                        ], layout='flow')
+
         self.add_line()
 
         self.add_group('Region definition', None,
@@ -2897,7 +3036,10 @@ class ClassificationFrame(InputFrame, ProcessorMixin):
 
         self.add_line()
 
-        self._add_result_frame('primary')
+        frame_results = self._add_result_frame('primary')
+        self.add_handler('primary_classification_envpath',
+                         frame_results.on_load)
+
         #self.add_expanding_spacer()
 
 
@@ -2952,7 +3094,9 @@ class ClassificationFrame(InputFrame, ProcessorMixin):
 
         self.add_line()
 
-        self._add_result_frame('secondary')
+        frame_results = self._add_result_frame('secondary')
+        self.add_handler('secondary_classification_envpath',
+                         frame_results.on_load)
         #self.add_expanding_spacer()
 
         self._init_control()
@@ -3024,6 +3168,7 @@ class ClassificationFrame(InputFrame, ProcessorMixin):
         self._result_frames[name] = result_frame
         frame.layout().addWidget(result_frame, frame._input_cnt, 0, 1, 2)
         frame._input_cnt += 1
+        return result_frame
 
     def _get_result_frame(self, name):
         return self._result_frames[name]
