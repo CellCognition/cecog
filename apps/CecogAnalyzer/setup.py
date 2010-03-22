@@ -146,7 +146,7 @@ if sys.platform == 'darwin':
 
 
     ## delete ALL .py files from lib (and use .pyc/.pyo instead)
-    target = os.path.join(base_path, 'Contents/Resources/lib/python2.5/')
+    target = os.path.join(base_path, 'Contents/Resources/lib/python2.6/')
     for filepath in collect_files(target, ['.py'],
                                   absolute=True, recursive=True):
         filename = os.path.split(filepath)[1]
