@@ -20,7 +20,8 @@ __source__ = '$URL$'
 
 import os, \
        re, \
-       csv
+       csv, \
+       copy
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -47,7 +48,7 @@ from pdk.attributemanagers import (get_attribute_values,
 from cecog.learning.util import SparseWriter, ArffWriter, ArffReader
 from cecog.learning.classifier import LibSvmClassifier
 from cecog.util import rgbToHex, LoggerMixin
-from cecog.ccore import SingleObjectContainer
+#from cecog.ccore import SingleObjectContainer
 
 
 #-------------------------------------------------------------------------------
@@ -103,6 +104,29 @@ class BaseLearner(LoggerMixin, OptionManager):
 
     def __setstate__(self, state):
         set_attribute_values(self, state)
+
+    def mergeClasses(self, info, mapping):
+        newl = copy.deepcopy(self)
+
+        newl.dctClassNames = {}
+        newl.dctClassLabels = {}
+        newl.dctHexColors = {}
+        for label, name, color in info:
+            newl.dctClassNames[label] = name
+            newl.dctClassLabels[name] = label
+            newl.dctHexColors[name] = color
+        data = OrderedDict()
+        for new_label, label_list in mapping.iteritems():
+            new_name = newl.dctClassNames[new_label]
+            if not new_name in data:
+                data[new_name] = []
+            for old_label in label_list:
+                old_name = self.dctClassNames[old_label]
+                data[new_name].extend(self.dctFeatureData[old_name])
+        for name in data:
+            data[name] = numpy.asarray(data[name])
+        newl.dctFeatureData = data
+        return newl
 
     @property
     def lstClassNames(self):
@@ -261,10 +285,12 @@ class BaseLearner(LoggerMixin, OptionManager):
         if strFilePath is None:
             strFilePath = self.dctEnvPaths['data']
 
+        print self.hasZeroInsert
         oWriter = ArffWriter(os.path.join(strFilePath, strFileName),
                              self.lstFeatureNames,
                              self.dctClassLabels,
-                             dctHexColors=self.dctHexColors)
+                             dctHexColors=self.dctHexColors,
+                             hasZeroInsert=self.hasZeroInsert)
         oWriter.writeAllFeatureData(self.dctFeatureData)
         oWriter.close()
 
@@ -459,7 +485,8 @@ class ClassPredictor(BaseLearner):
 
     def predict(self, aFeatureData, lstFeatureNames):
         dctNameLookup = dict([(name,i) for i,name in enumerate(lstFeatureNames)])
-        lstRequiredFeatureData = [aFeatureData[dctNameLookup[x]] for x in self.lstFeatureNames]
+        lstRequiredFeatureData = [aFeatureData[dctNameLookup[x]]
+                                  for x in self.lstFeatureNames]
         #lstRequiredFeatureData = aFeatureData
         return self.oClassifier(lstRequiredFeatureData)
 
@@ -478,13 +505,14 @@ class ClassPredictor(BaseLearner):
             # scale between -1 and +1
             samples = 2.0 * (samples - lo) / (hi - lo) - 1.0
         # FIXME: stupid libSVM conversions
+        #labels = map(int, labels)
         samples = [dict([(i+1, float(v))
                          for i,v in enumerate(items)
                          if not numpy.isnan(v)])
                    for items in samples]
         return labels, samples
 
-    def train(self, c, g, probability=1, compensation=True,
+    def train(self, c, g, probability=True, compensation=True,
               path=None, filename=None):
         if filename is None:
             filename = os.path.splitext(self.getOption('strArffFileName'))[0]
@@ -493,8 +521,14 @@ class ClassPredictor(BaseLearner):
             path = self.dctEnvPaths['data']
         param = svm.svm_parameter(kernel_type=svm.RBF,
                                   C=c, gamma=g,
-                                  probability=probability)
+                                  probability=1 if probability else 0)
+
         labels, samples = self.getData(normalize=True)
+        # because we train the SVM with dict we need to redefine the zero-insert
+        self.hasZeroInsert = True
+        if not self.oClassifier is None:
+            self.oClassifier.setOption('hasZeroInsert', True)
+
         if compensation:
             weight, weight_label = self._calculateCompensation(labels)
             param.weight = weight
@@ -505,33 +539,36 @@ class ClassPredictor(BaseLearner):
         model = svm.svm_model(problem, param)
         model.save(os.path.join(path, filename))
 
-    def exportConfusion(self, c, g, accuracy, conf, path=None, filename=None):
+    def exportConfusion(self, log2c, log2g, conf, path=None, filename=None):
         if filename is None:
             filename = os.path.splitext(self.getOption('strArffFileName'))[0]
             filename += '.confusion.txt'
         if path is None:
             path = self.dctEnvPaths['data']
         f = file(os.path.join(path, filename), 'w')
-        f.write('log2(C) = %f\n' % c)
-        f.write('log2(g) = %f\n' % g)
-        f.write('accuracy = %f\n' % accuracy)
+        f.write('log2(C) = %f\n' % log2c)
+        f.write('log2(g) = %f\n' % log2g)
+        f.write('accuracy = %f\n' % conf.ac_sample)
         f.write('\n')
-        rows, cols = conf.shape
+        conf_array = conf.conf
+        rows, cols = conf_array.shape
         f.write('confusion matrix (absolute)\n')
         f.write('%s\n' % '\t'.join([''] + ['%d' % self.nl2l[nl]
                                            for nl in range(cols)]))
         for r in range(rows):
-            f.write('%s\n' % '\t'.join([str(self.nl2l[r])] + [str(conf[r,c])
-                                                         for c in range(cols)]))
-        f.write('\n')
-        f.write('confusion matrix (relative)\n')
-        conf_norm = conf.swapaxes(0,1) / numpy.array(numpy.sum(conf, 1), numpy.float)
-        conf_norm = conf_norm.swapaxes(0,1)
-        f.write('%s\n' % '\t'.join([''] + [str(self.nl2l[nl])
-                                           for nl in range(cols)]))
-        for r in range(rows):
-            f.write('%s\n' % '\t'.join([str(self.nl2l[r])] + [str(conf_norm[r,c])
-                                                         for c in range(cols)]))
+            f.write('%s\n' % '\t'.join([str(self.nl2l[r])] +
+                                       [str(conf_array[r,c])
+                                        for c in range(cols)]))
+#        f.write('\n')
+#        f.write('confusion matrix (relative)\n')
+#        conf_norm = conf.swapaxes(0,1) / numpy.array(numpy.sum(conf, 1),
+#                                                     numpy.float)
+#        conf_norm = conf_norm.swapaxes(0,1)
+#        f.write('%s\n' % '\t'.join([''] + [str(self.nl2l[nl])
+#                                           for nl in range(cols)]))
+#        for r in range(rows):
+#            f.write('%s\n' % '\t'.join([str(self.nl2l[r])] + [str(conf_norm[r,c])
+#                                                         for c in range(cols)]))
         f.close()
 
 
@@ -542,13 +579,14 @@ class ClassPredictor(BaseLearner):
         if path is None:
             path = self.dctEnvPaths['data']
         f = file(os.path.join(path, filename), 'Ur')
-        c = float(f.readline().split('=')[1].strip())
-        g = float(f.readline().split('=')[1].strip())
-        accuracy = float(f.readline().split('=')[1].strip())
+        log2c = float(f.readline().split('=')[1].strip())
+        log2g = float(f.readline().split('=')[1].strip())
+        #accuracy = float(f.readline().split('=')[1].strip())
         f.readline()
         f.readline()
         f.readline()
-        conf = []
+        f.readline()
+        conf_array = []
         for line in f:
             line = line.strip()
             if len(line) == 0:
@@ -556,9 +594,9 @@ class ClassPredictor(BaseLearner):
             #print line
             items = map(int, map(float, line.split('\t')[1:]))
             #print items
-            conf.append(items)
-        conf = numpy.asarray(conf)
-        return c, g, accuracy, conf
+            conf_array.append(items)
+        conf = ConfusionMatrix(numpy.asarray(conf_array))
+        return log2c, log2g, conf
 
     def _calculateCompensation(self, labels):
         ulabels = numpy.unique(labels)
@@ -575,8 +613,24 @@ class ClassPredictor(BaseLearner):
         #print sum(weight * count)
         return weight, weight_label
 
+    def crossValidation(self, fold=5, probability=0, compensation=True):
+        best_accuracy = 0
+        best_c = None
+        best_g = None
+        best_conf = None
+        n = None
+        for n,c,g,conf in self.iterGridSearchSVM(fold=5, probability=0,
+                                                 compensation=True):
+            accuracy = conf.ac_sample
+            if accuracy > best_accuracy:
+                best_accuracy = accuracy
+                best_c = c
+                best_g = g
+                best_conf = conf
+        return n, best_c, best_g, best_conf
+
     def iterGridSearchSVM(self, c_info=None, g_info=None, fold=5,
-                          probability=0, compensation=False):
+                          probability=0, compensation=True):
         swap = lambda a,b: (b,a)
         if not c_info is None and len(c_info) >= 3:
             c_begin, c_end, c_step = c_info[:3]
@@ -595,7 +649,7 @@ class ClassPredictor(BaseLearner):
         g_step = abs(g_step)
 
         labels, samples = self.getData(normalize=True)
-        print len(labels), len(samples)
+        #print len(labels), len(samples)
         problem = svm.svm_problem(labels, samples)
 
         if compensation:
@@ -617,15 +671,151 @@ class ClassPredictor(BaseLearner):
                     param.weight_label = weight_label
                     param.nr_weight = len(weight)
 
-                validation = svm.cross_validation(problem, param, fold)
-                validation = map(int, validation)
+                predictions = svm.cross_validation(problem, param, fold)
+                predictions = map(int, predictions)
 
-                print n,c,g
-                yield n,c,g,validation,labels
+                #print n,c,g
+                conf = ConfusionMatrix.from_lists(labels, predictions,
+                                                  self.l2nl)
+                yield n,c,g,conf
 
                 g += g_step
             c += c_step
 
+
+
+class ConfusionMatrix(object):
+    '''
+    Simple holder to store a confusion matrix and to store and compute
+    associated values.
+    '''
+
+    def __init__(self, conf):
+        '''
+        @param conf: squared matrix with manual annotations (gold-standard)
+          along the rows and predicted values along the columns
+        @type conf: numpy array
+        '''
+        assert conf.ndim == 2
+        assert conf.shape[0] == conf.shape[1]
+        self.conf = conf
+
+        # true-positives
+        self.tp = numpy.diag(self.conf)
+        # false-positives
+        self.fp = numpy.sum(self.conf, axis=0) - self.tp
+        # false-negatives
+        self.fn = numpy.sum(self.conf, axis=1) - self.tp
+        # true-negatives
+        self.tn = numpy.sum(self.conf) - self.tp - self.fn - self.fp
+
+        # sensitivity
+        self.se = self.tp / numpy.asarray(self.tp + self.fn, numpy.float)
+        # specificity
+        self.sp = self.tn / numpy.asarray(self.tn + self.fp, numpy.float)
+        # accuracy
+        self.ac = (self.tp + self.tn) / \
+                  numpy.asarray(self.tp + self.tn + self.fp + self.fn,
+                                numpy.float)
+        # positive prediction value
+        self.ppv = self.tp / numpy.asarray(self.tp + self.fp, numpy.float)
+        # negative prediction value
+        self.npv = self.tn / numpy.asarray(self.tn + self.fn, numpy.float)
+        # samples
+        self.sa = self.tp + self.fn
+
+        # average values weighted by sample number
+        nan = -numpy.isnan(self.se)
+        self.wav_se = numpy.average(self.se[nan], weights=self.sa[nan])
+        nan = -numpy.isnan(self.sp)
+        self.wav_sp = numpy.average(self.sp[nan], weights=self.sa[nan])
+        nan = -numpy.isnan(self.ppv)
+        self.wav_ppv = numpy.average(self.ppv[nan], weights=self.sa[nan])
+        nan = -numpy.isnan(self.npv)
+        self.wav_npv = numpy.average(self.npv[nan], weights=self.sa[nan])
+        nan = -numpy.isnan(self.ac)
+        self.wav_ac = numpy.average(self.ac[nan], weights=self.sa[nan])
+
+        # average values (not weighted by sample number)
+        self.av_se = numpy.average(self.se[-numpy.isnan(self.se)])
+        self.av_sp = numpy.average(self.sp[-numpy.isnan(self.sp)])
+        self.av_ppv = numpy.average(self.ppv[-numpy.isnan(self.ppv)])
+        self.av_npv = numpy.average(self.npv[-numpy.isnan(self.npv)])
+        self.av_ac = numpy.average(self.ac[-numpy.isnan(self.ac)])
+
+        # average accuracy per class
+        self.ac_class = self.av_ac
+
+        # accuracy per item (true-positives divided by all decisions)
+        self.ac_sample = numpy.sum(self.tp) / numpy.sum(self.sa,
+                                                        dtype=numpy.float)
+
+
+    def export(self, filename, sep='\t', mapping=None):
+        f = file(filename, 'w')
+
+        #data = self.ac.copy()
+        overall = numpy.asarray([numpy.sum(self.sa),
+                                 self.av_ac, self.av_se, self.av_sp,
+                                 self.av_ppv, self.av_npv])
+        woverall = numpy.asarray([numpy.sum(self.sa),
+                                  self.wav_ac, self.wav_se, self.wav_sp,
+                                  self.wav_ppv, self.wav_npv])
+        data = numpy.vstack((self.sa,
+                             self.ac, self.se, self.sp,
+                             self.ppv, self.npv))
+        data2 = data.swapaxes(0,1)
+        f.write('%s\n' % sep.join(['Class', 'Samples',
+                                   'AC', 'SE', 'SP', 'PPV', 'NPV']))
+        for idx, items in enumerate(data2):
+            c = idx if mapping is None else mapping[idx]
+            f.write('%s\n' % sep.join(map(str, [c]+list(items))))
+        f.write('%s\n' % sep.join(map(str, ['overall']+list(overall))))
+        f.write('%s\n' % sep.join(map(str, ['woverall']+list(woverall))))
+        f.write('\nAccuracy per sample%s%.2f\n' % (sep, self.ac_sample*100.))
+        f.close()
+
+    @classmethod
+    def from_pairs(cls, pairs, mapping):
+        '''
+        Constructs a ConfusionMatrix object from a list of pairs of the form
+        (true label, predicted label).
+        Requires a mapping from original labels to new labels in a way that new
+        labels are ordered from 0 to k, for k labels
+
+        @param pairs: list of pairs (tuples) in the form
+          (true label, predicted label)
+        @type pairs: sequence
+        @param mapping: mapping of original to new labels
+        @type mapping: dict
+
+        @return: ConfusionMatrix
+        '''
+        k = len(mapping)
+        conf = numpy.zeros((k, k))
+        for l, v in pairs:
+            l2 = mapping[int(l)]
+            v2 = mapping[int(v)]
+            conf[l2,v2] += 1
+        return cls(conf)
+
+    @classmethod
+    def from_lists(cls, labels, predictions, mapping):
+        '''
+        Constructs a ConfusionMatrix object from two lists of labels.
+        Requires a mapping from original labels to new labels in a way that new
+        labels are ordered from 0 to k, for k labels
+
+        @param labels: true labels (gold-standard)
+        @type labels: sequence
+        @param predictions: predicted labels
+        @type predictions: sequence
+        @param mapping: mapping of original to new labels
+        @type mapping: dict
+
+        @return: ConfusionMatrix
+        '''
+        return cls.from_pairs(zip(labels, predictions), mapping)
 
 
 class CommonMixin(OptionManager):
@@ -682,5 +872,9 @@ class CommonObjectLearner(BaseLearner, CommonMixin):
             dict_append_list(self.dctFeatureData, strClassName, oObj.aFeatures)
             dict_append_list(self.dctSampleNames, strClassName, oObj.sample_id)
 
+if __name__ ==  "__main__":
 
-
+    learner = ClassPredictor(strEnvPath='/Users/miheld/data/Classifiers/H2b_20x_MD_exp911_DG')
+    learner.importFromArff()
+    c, g, conf = learner.importConfusion()
+    #learner.statsFromConfusion(conf)
