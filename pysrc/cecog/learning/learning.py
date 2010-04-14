@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2009 Michael Held
+                     Copyright (c) 2006 - 2010 Michael Held
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -47,7 +47,7 @@ from pdk.attributemanagers import (get_attribute_values,
 #
 from cecog.learning.util import SparseWriter, ArffWriter, ArffReader
 from cecog.learning.classifier import LibSvmClassifier
-from cecog.util import rgbToHex, LoggerMixin
+from cecog.util.util import rgbToHex, LoggerMixin
 #from cecog.ccore import SingleObjectContainer
 
 
@@ -513,7 +513,7 @@ class ClassPredictor(BaseLearner):
         return labels, samples
 
     def train(self, c, g, probability=True, compensation=True,
-              path=None, filename=None):
+              path=None, filename=None, save=True):
         if filename is None:
             filename = os.path.splitext(self.getOption('strArffFileName'))[0]
             filename += '.model'
@@ -537,7 +537,9 @@ class ClassPredictor(BaseLearner):
 
         problem = svm.svm_problem(labels, samples)
         model = svm.svm_model(problem, param)
-        model.save(os.path.join(path, filename))
+        if save:
+            model.save(os.path.join(path, filename))
+        return problem, model
 
     def exportConfusion(self, log2c, log2g, conf, path=None, filename=None):
         if filename is None:
@@ -613,24 +615,27 @@ class ClassPredictor(BaseLearner):
         #print sum(weight * count)
         return weight, weight_label
 
-    def crossValidation(self, fold=5, probability=0, compensation=True):
+    def gridSearch(self, fold=5, c_info=None, g_info=None,
+                   probability=False, compensation=True):
         best_accuracy = 0
-        best_c = None
-        best_g = None
+        best_l2c = None
+        best_l2g = None
         best_conf = None
         n = None
-        for n,c,g,conf in self.iterGridSearchSVM(fold=5, probability=0,
-                                                 compensation=True):
+        for n,l2c,l2g,conf in self.iterGridSearchSVM(c_info=c_info, g_info=g_info,
+                                                     fold=fold,
+                                                     probability=probability,
+                                                     compensation=compensation):
             accuracy = conf.ac_sample
             if accuracy > best_accuracy:
                 best_accuracy = accuracy
-                best_c = c
-                best_g = g
+                best_l2c = l2c
+                best_l2g = l2g
                 best_conf = conf
-        return n, best_c, best_g, best_conf
+        return n, best_l2c, best_l2g, best_conf
 
     def iterGridSearchSVM(self, c_info=None, g_info=None, fold=5,
-                          probability=0, compensation=True):
+                          probability=False, compensation=True):
         swap = lambda a,b: (b,a)
         if not c_info is None and len(c_info) >= 3:
             c_begin, c_end, c_step = c_info[:3]
@@ -658,14 +663,14 @@ class ClassPredictor(BaseLearner):
         n = (c_end - c_begin) / c_step + 1
         n *= (g_end - g_begin) / g_step + 1
 
-        c = c_begin
-        while c <= c_end:
-            g = g_begin
-            while g <= g_end:
+        l2c = c_begin
+        while l2c <= c_end:
+            l2g = g_begin
+            while l2g <= g_end:
 
-                param = svm.svm_parameter(kernel_type = svm.RBF,
-                                          C=2.**c, gamma=2.**g,
-                                          probability=probability)
+                param = svm.svm_parameter(kernel_type=svm.RBF,
+                                          C=2.**l2c, gamma=2.**l2g,
+                                          probability=1 if probability else 0)
                 if compensation:
                     param.weight = weight
                     param.weight_label = weight_label
@@ -677,10 +682,10 @@ class ClassPredictor(BaseLearner):
                 #print n,c,g
                 conf = ConfusionMatrix.from_lists(labels, predictions,
                                                   self.l2nl)
-                yield n,c,g,conf
+                yield n,l2c,l2g,conf
 
-                g += g_step
-            c += c_step
+                l2g += g_step
+            l2c += c_step
 
 
 
@@ -711,30 +716,37 @@ class ConfusionMatrix(object):
 
         # sensitivity
         self.se = self.tp / numpy.asarray(self.tp + self.fn, numpy.float)
+        self.sensitivity = self.se
+
         # specificity
         self.sp = self.tn / numpy.asarray(self.tn + self.fp, numpy.float)
+        self.specificity = self.sp
+
         # accuracy
         self.ac = (self.tp + self.tn) / \
                   numpy.asarray(self.tp + self.tn + self.fp + self.fn,
                                 numpy.float)
-        # positive prediction value
+
+        # positive prediction value (also precision)
         self.ppv = self.tp / numpy.asarray(self.tp + self.fp, numpy.float)
+        self.precision = self.ppv
+
         # negative prediction value
         self.npv = self.tn / numpy.asarray(self.tn + self.fn, numpy.float)
         # samples
-        self.sa = self.tp + self.fn
+        self.samples = self.tp + self.fn
 
         # average values weighted by sample number
         nan = -numpy.isnan(self.se)
-        self.wav_se = numpy.average(self.se[nan], weights=self.sa[nan])
+        self.wav_se = numpy.average(self.se[nan], weights=self.samples[nan])
         nan = -numpy.isnan(self.sp)
-        self.wav_sp = numpy.average(self.sp[nan], weights=self.sa[nan])
+        self.wav_sp = numpy.average(self.sp[nan], weights=self.samples[nan])
         nan = -numpy.isnan(self.ppv)
-        self.wav_ppv = numpy.average(self.ppv[nan], weights=self.sa[nan])
+        self.wav_ppv = numpy.average(self.ppv[nan], weights=self.samples[nan])
         nan = -numpy.isnan(self.npv)
-        self.wav_npv = numpy.average(self.npv[nan], weights=self.sa[nan])
+        self.wav_npv = numpy.average(self.npv[nan], weights=self.samples[nan])
         nan = -numpy.isnan(self.ac)
-        self.wav_ac = numpy.average(self.ac[nan], weights=self.sa[nan])
+        self.wav_ac = numpy.average(self.ac[nan], weights=self.samples[nan])
 
         # average values (not weighted by sample number)
         self.av_se = numpy.average(self.se[-numpy.isnan(self.se)])
@@ -747,7 +759,7 @@ class ConfusionMatrix(object):
         self.ac_class = self.av_ac
 
         # accuracy per item (true-positives divided by all decisions)
-        self.ac_sample = numpy.sum(self.tp) / numpy.sum(self.sa,
+        self.ac_sample = numpy.sum(self.tp) / numpy.sum(self.samples,
                                                         dtype=numpy.float)
 
 
@@ -755,13 +767,13 @@ class ConfusionMatrix(object):
         f = file(filename, 'w')
 
         #data = self.ac.copy()
-        overall = numpy.asarray([numpy.sum(self.sa),
+        overall = numpy.asarray([numpy.sum(self.samples),
                                  self.av_ac, self.av_se, self.av_sp,
                                  self.av_ppv, self.av_npv])
-        woverall = numpy.asarray([numpy.sum(self.sa),
+        woverall = numpy.asarray([numpy.sum(self.samples),
                                   self.wav_ac, self.wav_se, self.wav_sp,
                                   self.wav_ppv, self.wav_npv])
-        data = numpy.vstack((self.sa,
+        data = numpy.vstack((self.samples,
                              self.ac, self.se, self.sp,
                              self.ppv, self.npv))
         data2 = data.swapaxes(0,1)
@@ -781,7 +793,7 @@ class ConfusionMatrix(object):
         Constructs a ConfusionMatrix object from a list of pairs of the form
         (true label, predicted label).
         Requires a mapping from original labels to new labels in a way that new
-        labels are ordered from 0 to k, for k labels
+        labels are ordered from 0 to k-1, for k classes
 
         @param pairs: list of pairs (tuples) in the form
           (true label, predicted label)
@@ -804,7 +816,7 @@ class ConfusionMatrix(object):
         '''
         Constructs a ConfusionMatrix object from two lists of labels.
         Requires a mapping from original labels to new labels in a way that new
-        labels are ordered from 0 to k, for k labels
+        labels are ordered from 0 to k-1, for k classes
 
         @param labels: true labels (gold-standard)
         @type labels: sequence
@@ -816,6 +828,14 @@ class ConfusionMatrix(object):
         @return: ConfusionMatrix
         '''
         return cls.from_pairs(zip(labels, predictions), mapping)
+
+
+
+class ConfusionMatrix2(ConfusionMatrix):
+
+    def __init__(self, conf):
+        #super(ConfusionMatrix2, self).__init__(conf)
+        pass
 
 
 class CommonMixin(OptionManager):

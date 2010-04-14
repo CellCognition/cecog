@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2009 Michael Held
+                     Copyright (c) 2006 - 2010 Michael Held
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -46,7 +46,7 @@ from pdk.attributemanagers import (get_slot_values,
 # cecog module imports:
 #
 from cecog.extensions.graphLib import Graph
-from cecog.util import write_table
+from cecog.util.util import write_table
 from cecog import ccore
 
 #-------------------------------------------------------------------------------

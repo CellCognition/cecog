@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2009 Michael Held
+                     Copyright (c) 2006 - 2010 Michael Held
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -50,7 +50,7 @@ from pdk.fileutils import collect_files
 # cecog imports:
 #
 from cecog import ccore
-from cecog.util import rgbToHex
+from cecog.util.util import rgbToHex
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -378,6 +378,7 @@ class _ImageContainer(OptionManager):
     def getNameTokens(self, strName, dctNameTags=None):
         if dctNameTags is None:
             dctNameTags = {}
+        strName = os.path.split(strName)[1]
         oTokenSearch = self.oTokenRe.search(strName)
         if oTokenSearch is not None:
             strTokens = oTokenSearch.group('Token')
@@ -549,6 +550,135 @@ class ImageContainerLsm(_ImageContainer):
 
 
 
+class ImageContainerDescriptionFile(_ImageContainer):
+
+    __slots__ = ['bHasMultiImages']
+
+    def __init__(self, strPath, **dctOptions):
+        super(ImageContainerStack, self).__init__(strPath, **dctOptions)
+
+        dscr_filename = os.path.join(strPath, '_%s.txt' % os.path.split(strPath)[1])
+
+
+
+        # filter by position - again - since they might be encoded in the
+        # filename only
+        lstPositions = self.getOption('lstPositions')
+        self.lstNameTags = [dctNameTags for dctNameTags in self.lstNameTags
+                            if lstPositions is None or dctNameTags['P'] in lstPositions
+                            ]
+
+        self.lstNameTags.sort(cmp=self._sort)
+
+        #print self.bHasT, self.getOption('strRegexTime')
+        #print self.lstNameTags[:20]
+
+        if self.bHasP:
+            self.oMetaData.setP = sorted(set([dctNameTags['P'] for dctNameTags in self.lstNameTags]))
+        else:
+            self.oMetaData.setP = set([1])
+
+        if self.bHasT:
+            # find minimum time-points for break-during-acquisition experiments
+
+            if not self.getOption('hasContinuousFrames'):
+                # replace the T information by a continuous count starting from 1
+                all_times = sorted(set([dctNameTags['T'] for dctNameTags in self.lstNameTags]))
+                times_lookup = dict([(t, idx+1) for idx, t in enumerate(all_times)])
+                for idx in range(len(self.lstNameTags)):
+                    #print self.lstNameTags[idx]['T'], times_lookup[self.lstNameTags[idx]['T']]
+                    self.lstNameTags[idx]['T'] = times_lookup[self.lstNameTags[idx]['T']]
+
+            if self.bHasP:
+                lstT = []
+                for P in self.oMetaData.setP:
+                    lstTNew = [dctNameTags['T'] for dctNameTags in self.lstNameTags
+                               if dctNameTags['P'] == P
+                               ]
+                    if len(lstT) == 0 or len(lstTNew) < len(lstT):
+                        lstT = lstTNew[:]
+            else:
+                lstT = [dctNameTags['T'] for dctNameTags in self.lstNameTags]
+            self.oMetaData.setT = sorted(set(lstT))
+        else:
+            self.oMetaData.setT = set([1])
+
+        if self.bHasC:
+            #print self.dctReverseChannelMapping
+            #print self.lstNameTags
+            #print self.dctReverseChannelMapping
+            #print [dctNameTags
+            #       for dctNameTags in self.lstNameTags
+            #       if dctNameTags['C'] == '1']
+            self.oMetaData.setC = sorted(set([dctNameTags['C']
+                                              for dctNameTags in self.lstNameTags]))
+        else:
+            self.oMetaData.setC = set(['1'])
+
+        if self.bHasZ:
+            self.oMetaData.setZ = sorted(set([dctNameTags['Z'] for dctNameTags in self.lstNameTags]))
+        else:
+            self.oMetaData.setZ = set([1])
+
+        #print self.oMetaData.setT
+
+        self.oMetaData.iDimP = len(self.oMetaData.setP)
+        self.oMetaData.iDimT = len(self.oMetaData.setT)
+        self.oMetaData.iDimC = len(self.oMetaData.setC)
+        self.oMetaData.iDimZ = len(self.oMetaData.setZ)
+
+
+        self.dctNamesByDimensions = {}
+        for dctNameTags in self.lstNameTags:
+            #print dctNameTags
+
+            P = dctNameTags['P']
+            iT = dctNameTags['T']
+            iZ = dctNameTags['Z']
+
+            strChannelId = dctNameTags['C']
+            #strMarker = self.dctReverseChannelMapping[strChannelId]
+
+            if P not in self.dctNamesByDimensions:
+                self.dctNamesByDimensions[P] = {}
+
+            if iT not in self.dctNamesByDimensions[P]:
+                self.dctNamesByDimensions[P][iT] = {}
+
+#            # assign time-stamp information to every timepoint for every position
+#            if iP not in dctBaseTimes:
+#                self.oMetaData.dctTimestamps[iP] = {}
+#                dctBaseTimes[iP] = dctNameTags['mtime']
+#            # store raw timestamps
+#            self.oMetaData.dctTimestamps[iP][iT] = dctNameTags['mtime'] - dctBaseTimes[iP]
+
+            self.oMetaData.appendAbsoluteTime(P, iT, dctNameTags['mtime'])
+
+            if strChannelId not in self.dctNamesByDimensions[P][iT]:
+                self.dctNamesByDimensions[P][iT][strChannelId] = {}
+
+            if iZ not in self.dctNamesByDimensions[P][iT][strChannelId]:
+                self.dctNamesByDimensions[P][iT][strChannelId][iZ] = dctNameTags['name']
+
+        self.oMetaData.setup()
+
+        #FIXME: read first image beforehand
+        #print self.lstNameTags
+        if len(self.lstNameTags) > 0:
+            imgInfo = ccore.ImageImportInfo(self.lstNameTags[0]['name'])
+            self.oMetaData.iDimX = imgInfo.width
+            self.oMetaData.iDimY = imgInfo.height
+            self.oMetaData.pixelType = imgInfo.pixel_type
+            self.setOption('strPixelFormat', imgInfo.pixel_type)
+            #print imgInfo.pixel_type
+            if imgInfo.images > 1:
+                self.oMetaData.iDimZ = imgInfo.images
+                self.bHasMultiImages = True
+        else:
+            raise IOError("No valid files found to analyze in '%s'." % self.strPath)
+
+
+
 class ImageContainerStack(_ImageContainer):
 
     OPTIONS = {'strRegexToken'    : Option(None),
@@ -587,6 +717,7 @@ class ImageContainerStack(_ImageContainer):
 
         self.lstNameTags.sort(cmp=self._sort)
 
+        #print self.bHasT, self.getOption('strRegexTime')
         #print self.lstNameTags[:20]
 
         if self.bHasP:
@@ -695,34 +826,34 @@ class ImageContainerStack(_ImageContainer):
 
 
     def getXYImage(self, P, T, C, Z, strFormat=UINT8):
-        try:
-            # check for backwards compatibility
-            if hasattr(self, 'bHasMultiImages') and self.bHasMultiImages:
-                imageIndex = Z
-                Z = 1
-            else:
-                imageIndex = -1
-            strPathImage = self.dctNamesByDimensions[P][T][C][Z]
-        except KeyError:
-            if strFormat == UINT8:
-                return ccore.Image(self.oMetaData.iDimX, self.oMetaData.iDimY)
-            elif strFormat == UINT16:
-                return ccore.ImageInt16(self.oMetaData.iDimX, self.oMetaData.iDimY)
-            else:
-                raise ValueError("Unknown image pixel format: '%s'" % strFormat)
+#        try:
+        # check for backwards compatibility
+        if hasattr(self, 'bHasMultiImages') and self.bHasMultiImages:
+            imageIndex = Z
+            Z = 1
         else:
-            if not self._oPathMappingFunction is None:
-                strPathImage = self._oPathMappingFunction(strPathImage)
-            if strFormat == UINT8:
-                imgXY = ccore.readImage(strPathImage, imageIndex)
-                logging.debug('read UINT8 image')
-                return imgXY
-            elif strFormat == UINT16:
-                imgXY = ccore.readImageUInt16(strPathImage, imageIndex)
-                logging.debug('read UINT16 image')
-                return imgXY
-            else:
-                raise ValueError("Unknown image pixel format: '%s'" % strFormat)
+            imageIndex = -1
+        strPathImage = self.dctNamesByDimensions[P][T][C][Z]
+#        except KeyError:
+#            if strFormat == UINT8:
+#                return ccore.Image(self.oMetaData.iDimX, self.oMetaData.iDimY)
+#            elif strFormat == UINT16:
+#                return ccore.ImageInt16(self.oMetaData.iDimX, self.oMetaData.iDimY)
+#            else:
+#                raise ValueError("Unknown image pixel format: '%s'" % strFormat)
+#        else:
+        if not self._oPathMappingFunction is None:
+            strPathImage = self._oPathMappingFunction(strPathImage)
+        if strFormat == UINT8:
+            imgXY = ccore.readImage(strPathImage, imageIndex)
+            logging.debug('read UINT8 image')
+            return imgXY
+        elif strFormat == UINT16:
+            imgXY = ccore.readImageUInt16(strPathImage, imageIndex)
+            logging.debug('read UINT16 image')
+            return imgXY
+        else:
+            raise ValueError("Unknown image pixel format: '%s'" % strFormat)
 
     def getImageNDByFrame(self, iFrame):
         pass

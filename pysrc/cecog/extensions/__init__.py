@@ -1,6 +1,6 @@
 """
                           The CellCognition Project
-                  Copyright (c) 2006 - 2009 Michael Held
+                  Copyright (c) 2006 - 2010 Michael Held
                    Gerlich Lab, ETH Zurich, Switzerland
                             www.cellcognition.org
 
