@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2009 Michael Held
+                     Copyright (c) 2006 - 2010 Michael Held
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -416,12 +416,22 @@ class SecondarySegmentation(_Segmentation):
     NAME = 'SecondarySeg'
 
     PROPERTIES = \
-      dict(iExpansionSize =
+      dict(iExpansionSizeExpanded =
                IntProperty(None, is_mandatory=True),
-           iExpansionSeparationSize =
+
+           iShrinkingSizeInside =
                IntProperty(None, is_mandatory=True),
-           iShrinkingSeparationSize =
+
+           iExpansionSizeOutside =
                IntProperty(None, is_mandatory=True),
+           iExpansionSeparationSizeOutside =
+               IntProperty(None, is_mandatory=True),
+
+           iShrinkingSizeRim =
+               IntProperty(None, is_mandatory=True),
+           iExpansionSizeRim =
+               IntProperty(None, is_mandatory=True),
+
            fExpansionCostThreshold =
                IntProperty(None, is_mandatory=True),
            lstAreaSelection =
@@ -452,63 +462,88 @@ class SecondarySegmentation(_Segmentation):
         dctContainers = {}
         iLabelNumber = oContainer.img_labels.getMinmax()[1]+1
 
-        if ('expanded' in self.lstAreaSelection or
-            'outside' in self.lstAreaSelection):
-            if self.iExpansionSize > 0:
-                imgLabelsOutA = ccore.seededRegionExpansion(imgPrefiltered,
+        # expanded - in case expansion size == 0 original regions are taken
+        if 'expanded' in self.lstAreaSelection:
+            if self.iExpansionSizeExpanded > 0:
+                imgLabelsOut = ccore.seededRegionExpansion(imgPrefiltered,
+                                                           oContainer.img_labels,
+                                                           ccore.SrgType.KeepContours,
+                                                           iLabelNumber,
+                                                           self.fExpansionCostThreshold,
+                                                           self.iExpansionSizeExpanded,
+                                                           0
+                                                           )
+                self._oLogger.debug("         --- seededRegionExpansion ok")
+            else:
+                imgLabelsOut = oContainer.img_labels
+            dctContainers['expanded'] =\
+                ccore.ImageMaskContainer(imgXY, imgLabelsOut, False)
+            self._oLogger.debug("         --- expanded container ok")
+
+        # inside - in case shrinking size == 0 original regions are taken
+        if 'inside' in self.lstAreaSelection:
+            if self.iShrinkingSizeInside > 0:
+                imgLabelsOut = ccore.seededRegionShrinking(imgPrefiltered,
+                                                           oContainer.img_labels,
+                                                           iLabelNumber,
+                                                           self.iShrinkingSizeInside
+                                                           )
+                self._oLogger.debug("         --- seededRegionShrinking ok")
+            else:
+                imgLabelsOut = oContainer.img_labels
+            dctContainers['inside'] =\
+                ccore.ImageMaskContainer(imgXY, imgLabelsOut, False)
+            self._oLogger.debug("         --- inside container ok")
+
+        # outside - expansion size > 0 AND expansion > separation size needed,
+        # otherwise area is 0
+        if ('outside' in self.lstAreaSelection
+             and self.iExpansionSizeOutside > 0
+             and self.iExpansionSizeOutside > self.iExpansionSeparationSizeOutside):
+            imgLabelsOut = ccore.seededRegionExpansion(imgPrefiltered,
+                                                       oContainer.img_labels,
+                                                       ccore.SrgType.KeepContours,
+                                                       iLabelNumber,
+                                                       self.fExpansionCostThreshold,
+                                                       self.iExpansionSizeOutside,
+                                                       self.iExpansionSeparationSizeOutside,
+                                                       )
+            imgLabelsOut = ccore.substractImages(imgLabelsOut, oContainer.img_labels)
+            dctContainers['outside'] =\
+                ccore.ImageMaskContainer(imgXY, imgLabelsOut, False)
+            self._oLogger.debug("         --- outside container ok")
+
+        # rim - one value > 0 needed, otherwise area is 0
+        if ('rim' in self.lstAreaSelection and
+            (self.iExpansionSizeRim > 0 or self.iShrinkingSizeRim > 0)):
+            if self.iShrinkingSizeRim > 0:
+                imgLabelsOutA = ccore.seededRegionShrinking(imgPrefiltered,
                                                             oContainer.img_labels,
+                                                            iLabelNumber,
+                                                            self.iShrinkingSizeRim
+                                                            )
+            else:
+                imgLabelsOutA = oContainer.img_labels
+            if self.iExpansionSizeRim > 0:
+                imgLabelsOutB = ccore.seededRegionExpansion(imgPrefiltered,
+                                                            imgLabelsOutB,
                                                             ccore.SrgType.KeepContours,
                                                             iLabelNumber,
                                                             self.fExpansionCostThreshold,
-                                                            self.iExpansionSize,
-                                                            self.iExpansionSeparationSize
+                                                            self.iExpansionSizeRim,
+                                                            0
                                                             )
-                self._oLogger.debug("         --- seededRegionExpansion ok")
-            else:
-                imgLabelsOutA = oContainer.img_labels
-            dctContainers['expanded'] =\
-                ccore.ImageMaskContainer(imgXY, imgLabelsOutA, False)
-            self._oLogger.debug("         --- expanded container ok")
-
-        if ('inside' in self.lstAreaSelection or
-            'rim' in self.lstAreaSelection):
-            if self.iShrinkingSeparationSize > 0:
-                imgLabelsOutB = ccore.seededRegionShrinking(imgPrefiltered,
-                                                            oContainer.img_labels,
-                                                            iLabelNumber,
-                                                            self.iShrinkingSeparationSize
-                                                            )
-                self._oLogger.debug("         --- seededRegionShrinking ok")
             else:
                 imgLabelsOutB = oContainer.img_labels
-            dctContainers['inside'] =\
-                ccore.ImageMaskContainer(imgXY, imgLabelsOutB, False)
-            self._oLogger.debug("         --- inside container ok")
-
-        if 'outside' in self.lstAreaSelection:
-            imgLabelsOutC = ccore.substractImages(imgLabelsOutA, oContainer.img_labels)
-            dctContainers['outside'] =\
-                ccore.ImageMaskContainer(imgXY, imgLabelsOutC, False)
-            self._oLogger.debug("         --- outside container ok")
-
-        if 'rim' in self.lstAreaSelection:
-            imgLabelsOutD = ccore.seededRegionExpansion(imgPrefiltered,
-                                                        imgLabelsOutB,
-                                                        ccore.SrgType.KeepContours,
-                                                        iLabelNumber,
-                                                        self.fExpansionCostThreshold,
-                                                        self.iExpansionSize,
-                                                        self.iExpansionSeparationSize
-                                                        )
-            self._oLogger.debug("         --- seededRegionExpansion ok")
+            imgLabelsOut = ccore.substractImages(imgLabelsOutB, imgLabelsOutA)
             dctContainers['rim'] =\
-                ccore.ImageMaskContainer(imgXY, imgLabelsOutD, False)
+                ccore.ImageMaskContainer(imgXY, imgLabelsOut, False)
             self._oLogger.debug("         --- rim container ok")
 
-        if 'expanded' in dctContainers and not 'expanded' in self.lstAreaSelection:
-            del dctContainers['expanded']
-        if 'inside' in dctContainers and not 'inside' in self.lstAreaSelection:
-            del dctContainers['inside']
+#        if 'expanded' in dctContainers and not 'expanded' in self.lstAreaSelection:
+#            del dctContainers['expanded']
+#        if 'inside' in dctContainers and not 'inside' in self.lstAreaSelection:
+#            del dctContainers['inside']
 
         return dctContainers
 

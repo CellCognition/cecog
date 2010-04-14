@@ -51,13 +51,13 @@ from pdk.datetimeutils import TimeInterval, StopWatch
 from cecog.extensions.ConfigParser import RawConfigParser
 #from ConfigParser import RawConfigParser
 from cecog.io.reader import PIXEL_TYPES
-from cecog.analyzer.core import AnalyzerCore
+from cecog.analyzer.core import AnalyzerCore, SECONDARY_REGIONS
 from cecog import ccore
 from cecog.learning.learning import (CommonObjectLearner,
                                      CommonClassPredictor,
                                      ConfusionMatrix,
                                      )
-from cecog.util import hexToRgb, write_table
+from cecog.util.util import hexToRgb, write_table
 
 import resource
 
@@ -79,12 +79,12 @@ FEATURE_CATEGORIES = ['roisize',
                       'moments',
                       ]
 REGION_NAMES_PRIMARY = ['primary']
-REGION_NAMES_SECONDARY = ['inside', 'outside', 'expanded']
+REGION_NAMES_SECONDARY = ['expanded', 'inside', 'outside', 'rim']
 SECONDARY_COLORS = {'inside' : '#FFFF00',
                     'outside' : '#00FF00',
                     'expanded': '#00FFFF',
                     }
-ZSLICE_PROJECTION_METHODS = ['maximum', 'minimum', 'mean']
+ZSLICE_PROJECTION_METHODS = ['maximum', 'average']
 
 COMPRESSION_FORMATS = ['raw', 'bz2', 'gz']
 TRACKING_METHODS = ['ClassificationCellTracker',]
@@ -93,6 +93,8 @@ CONTROL_1 = 'CONTROL_1'
 CONTROL_2 = 'CONTROL_2'
 
 R_LIBRARIES = ['hwriter', 'RColorBrewer', 'igraph']
+
+QRC_TOKEN = 'qrc:/'
 
 #-------------------------------------------------------------------------------
 # functions:
@@ -186,7 +188,7 @@ def show_html(name, link='_top', title=None, header=None, footer=None):
         dialog = QFrame()
         if title is None:
             title = name
-        dialog.setWindowTitle('CecogAnalyzer Help - %s' % title)
+        dialog.setWindowTitle('CecogAnalyzer Help')
         layout = QVBoxLayout(dialog)
         layout.setContentsMargins(0, 0, 0, 0)
         w_text = QTextBrowser(dialog)
@@ -195,7 +197,7 @@ def show_html(name, link='_top', title=None, header=None, footer=None):
         w_text.connect(w_text, SIGNAL('anchorClicked ( const QUrl & )'),
                        on_anchor_clicked)
         layout.addWidget(w_text)
-        dialog.setMinimumSize(QSize(800,600))
+        dialog.setMinimumSize(QSize(900,600))
         qApp.cecog_help_dialog = dialog
         qApp.cecog_help_wtext = w_text
     else:
@@ -227,16 +229,19 @@ def show_html(name, link='_top', title=None, header=None, footer=None):
         if not link is None:
             w_text.scrollToAnchor(link)
     else:
-        w_text.setHtml("Sorry but help for '%s' was not found." % name)
+        w_text.setHtml("We are sorry, but help for '%s' was not found." % name)
     dialog.show()
     dialog.raise_()
 
 
 def on_anchor_clicked(link):
     slink = str(link.toString())
-    if slink.find('qrc:/') == 0:
-        slink = slink.replace('qrc:/', '')
-        show_html(slink, header='_header', footer='_footer')
+    if slink.find(QRC_TOKEN) == 0:
+        items = slink.split('#')
+        show_html(items[0].replace(QRC_TOKEN, ''),
+                  header='_header', footer='_footer')
+        if len(items) > 1:
+            qApp.cecog_help_wtext.scrollToAnchor(items[1][1:])
     elif slink.find('#') == 0:
         qApp.cecog_help_wtext.scrollToAnchor(slink[1:])
     else:
@@ -927,7 +932,7 @@ class AnalzyerThread(_ProcessingThread):
 class ClassifierResultFrame(QGroupBox):
 
     LABEL_FEATURES = '#Features: %d'
-    LABEL_ACC = 'Accuracy (per sample): %.1f%%'
+    LABEL_ACC = 'Overall accuracy: %.1f%%'
     LABEL_C = 'Log2(C) = %.1f'
     LABEL_G = 'Log2(g) = %.1f'
 
@@ -1038,8 +1043,8 @@ class ClassifierResultFrame(QGroupBox):
             self._set_info_table()
 
         if result['has_conf']:
-            c, g, accuracy, conf = self._learner.importConfusion()
-            self._set_info(c, g, accuracy)
+            c, g, conf = self._learner.importConfusion()
+            self._set_info(c, g, conf)
             self._init_conf_table(conf)
             self._update_conf_table(conf)
         else:
@@ -1096,11 +1101,13 @@ class ClassifierResultFrame(QGroupBox):
         names_horizontal = [('Name', 'class name'),
                             ('Samples', 'class samples'),
                             ('Color', 'class color'),
-                            ('AC%', 'class accuracy in %'),
+                            ('PR%', 'class precision in %'),
                             ('SE%', 'class sensitivity in %'),
-                            ('SP%', 'class specificity in %'),
-                            ('PPV%', 'class positive predictive value in %'),
-                            ('NPV%', 'class negative predictive value in %'),
+#                            ('AC%', 'class accuracy in %'),
+#                            ('SE%', 'class sensitivity in %'),
+#                            ('SP%', 'class specificity in %'),
+#                            ('PPV%', 'class positive predictive value in %'),
+#                            ('NPV%', 'class negative predictive value in %'),
                             ]
         names_vertical = [str(self._learner.nl2l[r]) for r in range(rows)] + ['','#']
         self._table_info.setColumnCount(len(names_horizontal))
@@ -1124,25 +1131,33 @@ class ClassifierResultFrame(QGroupBox):
             self._table_info.setItem(r, 2, item)
 
             if not conf is None:
-                item = QTableWidgetItem('%.1f' % (conf.ac[r] * 100.))
-                item.setToolTip('"%s" accuracy' %  name)
+                item = QTableWidgetItem('%.1f' % (conf.ppv[r] * 100.))
+                item.setToolTip('"%s" precision' %  name)
                 self._table_info.setItem(r, 3, item)
 
                 item = QTableWidgetItem('%.1f' % (conf.se[r] * 100.))
                 item.setToolTip('"%s" sensitivity' %  name)
                 self._table_info.setItem(r, 4, item)
 
-                item = QTableWidgetItem('%.1f' % (conf.sp[r] * 100.))
-                item.setToolTip('"%s" specificity' %  name)
-                self._table_info.setItem(r, 5, item)
-
-                item = QTableWidgetItem('%.1f' % (conf.ppv[r] * 100.))
-                item.setToolTip('"%s" positive predictive value' %  name)
-                self._table_info.setItem(r, 6, item)
-
-                item = QTableWidgetItem('%.1f' % (conf.npv[r] * 100.))
-                item.setToolTip('"%s" negative predictive value' %  name)
-                self._table_info.setItem(r, 7, item)
+#                item = QTableWidgetItem('%.1f' % (conf.ac[r] * 100.))
+#                item.setToolTip('"%s" accuracy' %  name)
+#                self._table_info.setItem(r, 3, item)
+#
+#                item = QTableWidgetItem('%.1f' % (conf.se[r] * 100.))
+#                item.setToolTip('"%s" sensitivity' %  name)
+#                self._table_info.setItem(r, 4, item)
+#
+#                item = QTableWidgetItem('%.1f' % (conf.sp[r] * 100.))
+#                item.setToolTip('"%s" specificity' %  name)
+#                self._table_info.setItem(r, 5, item)
+#
+#                item = QTableWidgetItem('%.1f' % (conf.ppv[r] * 100.))
+#                item.setToolTip('"%s" positive predictive value' %  name)
+#                self._table_info.setItem(r, 6, item)
+#
+#                item = QTableWidgetItem('%.1f' % (conf.npv[r] * 100.))
+#                item.setToolTip('"%s" negative predictive value' %  name)
+#                self._table_info.setItem(r, 7, item)
 
         if not conf is None:
             self._table_info.setRowHeight(r+1, 20)
@@ -1156,25 +1171,33 @@ class ClassifierResultFrame(QGroupBox):
             item.setBackground(QBrush(QColor(*hexToRgb('#FFFFFF'))))
             self._table_info.setItem(r, 2, item)
 
-            item = QTableWidgetItem('%.1f' % (conf.av_ac * 100.))
-            item.setToolTip('%s per class accuracy' %  name)
+            item = QTableWidgetItem('%.1f' % (conf.wav_ppv * 100.))
+            item.setToolTip('%s per class precision' %  name)
             self._table_info.setItem(r, 3, item)
 
-            item = QTableWidgetItem('%.1f' % (conf.av_se * 100.))
+            item = QTableWidgetItem('%.1f' % (conf.wav_se * 100.))
             item.setToolTip('%s per class sensitivity' %  name)
             self._table_info.setItem(r, 4, item)
 
-            item = QTableWidgetItem('%.1f' % (conf.av_sp * 100.))
-            item.setToolTip('%s per class specificity' %  name)
-            self._table_info.setItem(r, 5, item)
-
-            item = QTableWidgetItem('%.1f' % (conf.av_ppv * 100.))
-            item.setToolTip('%s per class positive predictive value' %  name)
-            self._table_info.setItem(r, 6, item)
-
-            item = QTableWidgetItem('%.1f' % (conf.av_npv * 100.))
-            item.setToolTip('%s per class negative predictive value' %  name)
-            self._table_info.setItem(r, 7, item)
+#            item = QTableWidgetItem('%.1f' % (conf.av_ac * 100.))
+#            item.setToolTip('%s per class accuracy' %  name)
+#            self._table_info.setItem(r, 3, item)
+#
+#            item = QTableWidgetItem('%.1f' % (conf.av_se * 100.))
+#            item.setToolTip('%s per class sensitivity' %  name)
+#            self._table_info.setItem(r, 4, item)
+#
+#            item = QTableWidgetItem('%.1f' % (conf.av_sp * 100.))
+#            item.setToolTip('%s per class specificity' %  name)
+#            self._table_info.setItem(r, 5, item)
+#
+#            item = QTableWidgetItem('%.1f' % (conf.av_ppv * 100.))
+#            item.setToolTip('%s per class positive predictive value' %  name)
+#            self._table_info.setItem(r, 6, item)
+#
+#            item = QTableWidgetItem('%.1f' % (conf.av_npv * 100.))
+#            item.setToolTip('%s per class negative predictive value' %  name)
+#            self._table_info.setItem(r, 7, item)
 
         self._table_info.resizeColumnsToContents()
 
@@ -1215,8 +1238,8 @@ class ClassifierResultFrame(QGroupBox):
                 item.setBackground(QBrush(QColor(col, col, col)))
                 self._table_conf.setItem(r, c, item)
 
-    def _set_info(self, c, g, accuracy):
-        self._label_acc.setText(self.LABEL_ACC % (accuracy*100.))
+    def _set_info(self, c, g, conf):
+        self._label_acc.setText(self.LABEL_ACC % (conf.ac_sample*100.))
         self._label_c.setText(self.LABEL_C % c)
         self._label_g.setText(self.LABEL_G % g)
 
@@ -1603,7 +1626,7 @@ class InputWidgetMixin(object):
     def add_handler(self, name, function):
         self._final_handlers[name] = function
 
-    def add_group(self, name, trait, items, layout="grid"):
+    def add_group(self, name, trait, items, layout="grid", link=None):
         frame = self._get_frame(self._tab_name)
         frame_layout = frame.layout()
 
@@ -1611,7 +1634,7 @@ class InputWidgetMixin(object):
             name = name.lower()
             w_input = self.add_input(name, trait)
         else:
-            w_input = self._create_label(frame, name)
+            w_input = self._create_label(frame, name, link=link)
             frame_layout.addWidget(w_input, frame._input_cnt, 0, Qt.AlignRight|Qt.AlignTop)
 
         if len(items) > 0:
@@ -1630,11 +1653,18 @@ class InputWidgetMixin(object):
                 name2, trait2 = info[:2]
                 grid = None
                 alignment = None
-                if len(info) >= 3:
+                # add a line
+                if trait2 is None:
+                    line = QFrame(w_group)
+                    line.setFrameShape(QFrame.HLine)
                     grid = info[2]
-                if len(info) >= 4:
-                    alignment = info[3]
-                self.add_input(name2, trait2, parent=w_group, grid=grid, alignment=alignment)
+                    w_group.layout().addWidget(line, *grid)
+                else:
+                    if len(info) >= 3:
+                        grid = info[2]
+                    if len(info) >= 4:
+                        alignment = info[3]
+                    self.add_input(name2, trait2, parent=w_group, grid=grid, alignment=alignment)
             frame_layout.addWidget(w_group, frame._input_cnt, 1, 1, 1)
             if not trait is None:
                 handler = lambda x : w_group.setEnabled(w_input.isChecked())
@@ -2483,7 +2513,7 @@ class InputFrame(QFrame, InputWidgetMixin):
 
         scroll_area = QScrollArea(self)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QFrame.NoFrame)
 
@@ -2547,6 +2577,12 @@ class InputFrame(QFrame, InputWidgetMixin):
         frame.layout().addWidget(line, frame._input_cnt, 0, 1, 2)
         frame._input_cnt += 1
 
+    def add_pixmap(self, pixmap, align=Qt.AlignLeft):
+        frame = self._get_frame(name=self._tab_name)
+        label = QLabel(frame)
+        label.setPixmap(pixmap)
+        frame.layout().addWidget(label, frame._input_cnt, 0, 1, 2, align)
+        frame._input_cnt += 1
 
 class ConfigSettings(RawConfigParser):
 
@@ -2731,14 +2767,14 @@ class ObjectDetectionFrame(InputFrame, ProcessorMixin):
                         IntTrait(0, -2**16, 2**16, label='Min.')),
                         ('primary_normalizeMax',
                         IntTrait(255, -2**16, 2**16, label='Max.')),
-                        ], layout='flow')
+                        ], layout='flow', link='primary_channel_conversion')
         self.add_line()
 
         self.add_group('primary_zslice_selection',
                        BooleanTrait(True, label='Z-slice selection',
                                     widget_info=BooleanTrait.RADIOBUTTON),
                        [('primary_zslice_selection_slice',
-                        IntTrait(1, 1, 1000, label='Slice')),
+                        IntTrait(1, 0, 1000, label='Slice')),
                         ], layout='flow')
         self.add_group('primary_zslice_projection',
                        BooleanTrait(False, label='Z-slice projection',
@@ -2748,9 +2784,9 @@ class ObjectDetectionFrame(InputFrame, ProcessorMixin):
                                         ZSLICE_PROJECTION_METHODS,
                                         label='Method')),
                         ('primary_zslice_projection_begin',
-                         IntTrait(1, 1, 1000, label='Begin')),
+                         IntTrait(1, 0, 1000, label='Begin')),
                         ('primary_zslice_projection_end',
-                         IntTrait(1, 1, 1000, label='End')),
+                         IntTrait(1, 0, 1000, label='End')),
                         ('primary_zslice_projection_step',
                          IntTrait(1, 1, 1000, label='Step')),
                         ], layout='flow')
@@ -2767,7 +2803,7 @@ class ObjectDetectionFrame(InputFrame, ProcessorMixin):
                         ('primary_latLimit',
                          IntTrait(1, 0, 255, label='Min. contrast'),
                          (1,1,1,1)),
-                        ])
+                        ], link='primary_lat')
         self.add_group('primary_lat2',
                        BooleanTrait(False, label='Local adaptive threshold 2'),
                        [('primary_latWindowSize2',
@@ -2780,7 +2816,7 @@ class ObjectDetectionFrame(InputFrame, ProcessorMixin):
 
 
         self.add_group('primary_shapeWatershed',
-                       BooleanTrait(False, label='Watershed by shape'),
+                       BooleanTrait(False, label='Split & merge by shape'),
                        [('primary_shapeWatershed_gaussSize',
                          IntTrait(1, 0, 10000, label='Gauss radius'),
                          (0,0,1,1)),
@@ -2810,16 +2846,16 @@ class ObjectDetectionFrame(InputFrame, ProcessorMixin):
                        BooleanTrait(False, label='Object filter',
                                     tooltip='abc...'),
                         [('primary_postProcessing_roisize_min',
-                          IntTrait(-1, -1, 10000, label='ROI Size min.'),
+                          IntTrait(-1, -1, 10000, label='Min. object size'),
                           (0,0,1,1)),
                           ('primary_postProcessing_roisize_max',
-                          IntTrait(-1, -1, 10000, label='ROI Size max.'),
+                          IntTrait(-1, -1, 10000, label='Max. object size'),
                           (0,1,1,1)),
                           ('primary_postProcessing_intensity_min',
-                          IntTrait(-1, -1, 10000, label='Avg. intensity min.'),
+                          IntTrait(-1, -1, 10000, label='Min. average intensity'),
                           (1,0,1,1)),
                           ('primary_postProcessing_intensity_max',
-                          IntTrait(-1, -1, 10000, label='Avg. intensity max.'),
+                          IntTrait(-1, -1, 10000, label='Max. average intensity'),
                           (1,1,1,1)),
                         ])
 
@@ -2871,7 +2907,7 @@ class ObjectDetectionFrame(InputFrame, ProcessorMixin):
                         IntTrait(0, -2**16, 2**16, label='Min.')),
                         ('secondary_normalizeMax',
                         IntTrait(255, -2**16, 2**16, label='Max.')),
-                        ], layout='flow')
+                        ], layout='flow', link='secondary_channel_conversion')
 
         self.add_group('Channel registration', None,
                        [('secondary_channelRegistration_x',
@@ -2880,7 +2916,7 @@ class ObjectDetectionFrame(InputFrame, ProcessorMixin):
                         ('secondary_channelRegistration_y',
                          IntTrait(0, -99999, 99999,
                                   label='Shift Y')),
-                        ], layout='flow')
+                        ], layout='flow', link='secondary_channel_registration')
 
 #        self.add_input('medianRadius',
 #                       IntTrait(2, 0, 1000, label='Median radius',
@@ -2891,7 +2927,7 @@ class ObjectDetectionFrame(InputFrame, ProcessorMixin):
                        BooleanTrait(True, label='Z-slice selection',
                                     widget_info=BooleanTrait.RADIOBUTTON),
                        [('secondary_zslice_selection_slice',
-                        IntTrait(1, 1, 1000, label='Slice')),
+                        IntTrait(1, 0, 1000, label='Slice')),
                         ], layout='flow')
         self.add_group('secondary_zslice_projection',
                        BooleanTrait(False, label='Z-slice projection',
@@ -2901,30 +2937,56 @@ class ObjectDetectionFrame(InputFrame, ProcessorMixin):
                                         ZSLICE_PROJECTION_METHODS,
                                         label='Method')),
                         ('secondary_zslice_projection_begin',
-                         IntTrait(1, 1, 1000, label='Begin')),
+                         IntTrait(1, 0, 1000, label='Begin')),
                         ('secondary_zslice_projection_end',
-                         IntTrait(1, 1, 1000, label='End')),
+                         IntTrait(1, 0, 1000, label='End')),
                         ('secondary_zslice_projection_step',
                          IntTrait(1, 1, 1000, label='Step')),
                         ], layout='flow')
 
         self.add_line()
+        self.add_pixmap(QPixmap(':cecog_secondary_regions'), Qt.AlignRight)
 
         self.add_group('Region definition', None,
-                       [('secondary_regions',
-                         MultiSelectionTrait([], REGION_NAMES_SECONDARY,
-                                             label='Regions'),
-                         (0,0,3,1)),
-                        ('secondary_regions_expansionsize',
+                       [('secondary_regions_expanded',
+                         BooleanTrait(False, label='Expanded'),
+                         (0,0,1,1)),
+                        ('secondary_regions_expanded_expansionsize',
                          IntTrait(0, 0, 4000, label='Expansion size'),
                          (0,1,1,1)),
-                        ('secondary_regions_expansionseparationsize',
-                         IntTrait(0, 0, 4000, label='Expansion spacer'),
-                         (1,1,1,1)),
-                        ('secondary_regions_shrinkingseparationsize',
+                        (None, None, (1,0,1,9)),
+
+                        ('secondary_regions_inside',
+                         BooleanTrait(True, label='Inside'),
+                         (2,0,1,1)),
+                        ('secondary_regions_inside_shrinkingsize',
                          IntTrait(0, 0, 4000, label='Shrinking size'),
                          (2,1,1,1)),
-                        ])
+                        (None, None, (3,0,1,9)),
+
+                        ('secondary_regions_outside',
+                         BooleanTrait(False, label='Outside'),
+                         (4,0,1,1)),
+                        ('secondary_regions_outside_expansionsize',
+                         IntTrait(0, 0, 4000, label='Expansion size'),
+                         (4,1,1,1)),
+                        ('secondary_regions_outside_separationsize',
+                         IntTrait(0, 0, 4000, label='Separation size'),
+                         (4,2,1,1)),
+                        (None, None, (5,0,1,9)),
+
+                        ('secondary_regions_rim',
+                         BooleanTrait(False, label='Rim'),
+                         (6,0,1,1)),
+                        ('secondary_regions_rim_expansionsize',
+                         IntTrait(0, 0, 4000, label='Expansion size'),
+                         (6,1,1,1)),
+                        ('secondary_regions_rim_shrinkingsize',
+                         IntTrait(0, 0, 4000, label='Shrinking size'),
+                         (6,2,1,1)),
+
+                        ], link='secondary_region_definition')
+
 
         self.register_trait('secondary_zSliceOrProjection',
                        StringTrait('1', 10,
@@ -2940,7 +3002,9 @@ class ObjectDetectionFrame(InputFrame, ProcessorMixin):
         settings.set_section('ObjectDetection')
         prim_id = settings.get2('primary_channelid')
         sec_id = settings.get2('secondary_channelid')
-        sec_regions = settings.get2('secondary_regions')
+        sec_regions = [v for k,v in SECONDARY_REGIONS.iteritems()
+                       if settings.get2(k)]
+
         settings.set_section('Processing')
         settings.set2('secondary_processChannel', False)
         settings.set2('primary_classification', False)
@@ -3018,7 +3082,7 @@ class ClassificationFrame(InputFrame, ProcessorMixin):
                          BooleanTrait(True, label='Texture features')),
                         ('primary_simplefeatures_shape',
                          BooleanTrait(True, label='Shape features')),
-                        ], layout='flow')
+                        ], layout='flow', link='primary_featureextraction')
 
 #        self.add_input('primary_classification_regionName',
 #                       SelectionTrait(REGION_NAMES_PRIMARY[0],
@@ -3068,7 +3132,7 @@ class ClassificationFrame(InputFrame, ProcessorMixin):
 #                        ('secondary_featureExtraction_parameters',
 #                         DictTrait({}, label='Feature parameters',
 #                                   tooltip='abc...')),
-                        ], layout='flow')
+                        ], layout='flow', link='secondary_featureextraction')
 
         self.add_input('secondary_classification_regionName',
                        SelectionTrait(REGION_NAMES_SECONDARY[0],
@@ -3533,10 +3597,14 @@ class ProcessingFrame(InputFrame, ProcessorMixin):
         settings.set_section('ObjectDetection')
         prim_id = settings.get2('primary_channelid')
         sec_id = settings.get2('secondary_channelid')
-        sec_regions = settings.get2('secondary_regions')
+        sec_regions = [v for k,v in SECONDARY_REGIONS.iteritems()
+                       if settings.get2(k)]
+        lookup = dict([(v,k) for k,v in SECONDARY_REGIONS.iteritems()])
+
+        # FIXME: we should rather show a warning here!
         if not sec_region in sec_regions:
             sec_regions.append(sec_region)
-        settings.set2('secondary_regions', sec_regions)
+            settings.set2(lookup[sec_region], True)
 
         show_ids = settings.get('Output', 'rendering_contours_showids')
         show_ids_class = settings.get('Output', 'rendering_class_showids')

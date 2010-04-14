@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2009 Michael Held
+                     Copyright (c) 2006 - 2010 Michael Held
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -81,7 +81,7 @@ from cecog.io.reader import (create_image_container,
                              has_image_container,
                              )
 #from cecog.experiment.plate import *
-from cecog.util import hexToRgb
+from cecog.util.util import hexToRgb
 #from cecog.settings import Settings, ConstSettings, SettingsError, mapDirectory
 from cecog.learning.collector import CellCounterReader, CellCounterReaderXML
 from cecog.learning.learning import CommonObjectLearner, CommonClassPredictor
@@ -113,6 +113,12 @@ FEATURE_CATEGORIES_TEXTURE = ['normbase',
                               #'distance',
                               #moments',
                               ]
+
+SECONDARY_REGIONS = {'secondary_regions_expanded' : 'expanded',
+                     'secondary_regions_inside' : 'inside',
+                     'secondary_regions_outside' : 'outside',
+                     'secondary_regions_rim' : 'rim',
+                     }
 
 
 # set the max. recursion depth
@@ -353,7 +359,12 @@ class PositionAnalyzer(object):
         for channel, channel_id in self.channel_mapping.iteritems():
             #if self.oSettings.get('Classification', self._resolve_name(channel, 'featureextraction')):
             region_features = {}
-            for region in self.oSettings.get('ObjectDetection', self._resolve_name(channel, 'regions')):
+            if channel == self.PRIMARY_CHANNEL:
+                regions = self.oSettings.get('ObjectDetection', self._resolve_name(channel, 'regions'))
+            else:
+                regions = [v for k,v in SECONDARY_REGIONS.iteritems()
+                           if self.oSettings.get('ObjectDetection', k)]
+            for region in regions:
                 region_features[region] = self.oSettings.get('General', self._resolve_name(channel, 'featureextraction_exportfeaturenames'))
             self.export_features[channel_id] = region_features
 
@@ -741,17 +752,22 @@ class PositionAnalyzer(object):
                                   dctFeatureParameters = dctFeatureParameters,
                                   )
                 elif channel_section == self.SECONDARY_CHANNEL:
+                    secondary_regions = [v for k,v in SECONDARY_REGIONS.iteritems()
+                                         if self.oSettings.get2(k)]
                     params = dict(oZSliceOrProjection = projection_info,
                                   channelRegistration=channel_registration,
                                   fNormalizeMin = self.oSettings.get2('secondary_normalizemin'),
                                   fNormalizeMax = self.oSettings.get2('secondary_normalizemax'),
                                   #iMedianRadius = self.oSettings.get2('medianradius'),
-                                  iExpansionSize = self.oSettings.get2('secondary_regions_expansionsize'),
-                                  iExpansionSeparationSize = self.oSettings.get2('secondary_regions_expansionseparationsize'),
-                                  iShrinkingSeparationSize = self.oSettings.get2('secondary_regions_shrinkingseparationsize'),
+                                  iExpansionSizeExpanded = self.oSettings.get2('secondary_regions_expanded_expansionsize'),
+                                  iShrinkingSizeInside = self.oSettings.get2('secondary_regions_inside_shrinkingsize'),
+                                  iExpansionSizeOutside = self.oSettings.get2('secondary_regions_outside_expansionsize'),
+                                  iExpansionSeparationSizeOutside = self.oSettings.get2('secondary_regions_outside_separationsize'),
+                                  iExpansionSizeRim = self.oSettings.get2('secondary_regions_rim_expansionsize'),
+                                  iShrinkingSizeRim = self.oSettings.get2('secondary_regions_rim_shrinkingsize'),
                                   # FIXME
                                   fExpansionCostThreshold = 1.5,
-                                  lstAreaSelection = self.oSettings.get2('secondary_regions'),
+                                  lstAreaSelection = secondary_regions,
                                   lstFeatureCategories = lstFeatureCategories,
                                   dctFeatureParameters = dctFeatureParameters,
                                   )

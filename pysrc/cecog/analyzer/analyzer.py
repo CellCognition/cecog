@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2009 Michael Held
+                     Copyright (c) 2006 - 2010 Michael Held
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -413,7 +413,7 @@ class _Channel(PropertyManager):
                 method_const = ccore.ProjectionType.MaxProjection
             elif method == "minimum":
                 method_const = ccore.ProjectionType.MinProjection
-            elif method == "mean":
+            elif method == "average":
                 method_const = ccore.ProjectionType.MeanProjection
 
             self._oLogger.debug("* applying %s Z-Projection to stack of %d images..." % (method, len(images)))
@@ -650,19 +650,19 @@ class SecondaryChannel(_Channel):
     RANK = 2
 
     PROPERTIES = \
-        dict(iExpansionSize =
-                 IntProperty(None,
-                             is_mandatory=True,
-                             doc='final thickness of area around '
-                                 'primary object (in pixel)'),
-             iExpansionSeparationSize =
-                 IntProperty(None,
-                             is_mandatory=True,
-                             doc='separation outside of the primary object'),
-             iShrinkingSeparationSize =
-                 IntProperty(None,
-                             is_mandatory=True,
-                             doc='separation inside of the primary object'),
+        dict(iExpansionSizeExpanded =
+               IntProperty(None, is_mandatory=True),
+             iShrinkingSizeInside =
+               IntProperty(None, is_mandatory=True),
+             iExpansionSizeOutside =
+               IntProperty(None, is_mandatory=True),
+             iExpansionSeparationSizeOutside =
+               IntProperty(None, is_mandatory=True),
+             iShrinkingSizeRim =
+               IntProperty(None, is_mandatory=True),
+             iExpansionSizeRim =
+               IntProperty(None, is_mandatory=True),
+
              fExpansionCostThreshold =
                  IntProperty(None,
                              is_mandatory=True,
@@ -711,9 +711,14 @@ class SecondaryChannel(_Channel):
                                                   strPathOutDebug = self.strPathOutDebug,
                                                   bDebugMode = self.bDebugMode,
                                                   iMedianRadius = self.iMedianRadius,
-                                                  iExpansionSize = self.iExpansionSize,
-                                                  iExpansionSeparationSize = self.iExpansionSeparationSize,
-                                                  iShrinkingSeparationSize = self.iShrinkingSeparationSize,
+
+                                                  iExpansionSizeExpanded = self.iExpansionSizeExpanded,
+                                                  iShrinkingSizeInside = self.iShrinkingSizeInside,
+                                                  iExpansionSizeOutside = self.iExpansionSizeOutside,
+                                                  iExpansionSeparationSizeOutside = self.iExpansionSeparationSizeOutside,
+                                                  iExpansionSizeRim = self.iExpansionSizeRim,
+                                                  iShrinkingSizeRim = self.iShrinkingSizeRim,
+
                                                   fExpansionCostThreshold = self.fExpansionCostThreshold,
                                                   lstAreaSelection = self.lstAreaSelection,
                                                   bFlatfieldCorrection = self.bFlatfieldCorrection,
