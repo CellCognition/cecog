@@ -8,8 +8,9 @@
 
 <h1>Error Correction</h1>
 
-<hr></hr>
-<h3>Overview</h3>
+Correction of errors by HMM is implemented in <a href="http://www.r-project.org]">R</a> and requires installation of additional packages. CecogAnalyzer calls the R script, which reads the event-based trajectory files and generates the HMMs. The visualized results are written to one HTML page per channel, which opens automatically after processing is complete. The user can constrain graphs by specifying one text file per channel. The fully connected graph implying no constrains is used per default. The association between positions (individual movies) and experimental information such as oligo identifier or name of targeted gene symbol can also be defined in a simple text file. Based on this information trajectories are grouped by position, oligo ID or gene symbol and HMMs are generated per group.<br>
+Error correction can be tested separately for already picked events, e.g. by motif selection in <a href="qrc:/tracking">Tracking</a>.
+
 <hr></hr>
 
 <h3>Parameters</h3>

@@ -8,57 +8,96 @@
 
 <h1>General</h1>
 
-<hr></hr>
-<h3>Overview</h3>
-<hr></hr>
+Define folders for raw image data (input) and analysis results (output). Positions and timepoints can be constrained. A timepoint increment can be defined to process every n<sup>th</sup> frame.
 
-<h3>Parameters</h3>
+<hr></hr>
+<h3 class="param">Parameters</h3>
 
 <a name="pathin">
 <h4>Data folder</h4>
+<p class="text">Folder containing raw image files for processing. For now we only support TIFF stacks (one image per file) in a structure similar to our demo data, which must have
+<ul>
+<li>one sub-folder per movie (referred to as "position"), and</li>
+<li>similar naming schema (named tokens in the filename).</li>
+</ul>
+Multi-image TIFFs are interpreted as z-stacks (the corresponding filename token is in that case ignored). TIFFs must be encoded UINT8 or UINT16 (see <a href="qrc:/objectdetection#primary_channel_conversion">16 to 8 bit conversion in Object Detection</a>). LZW or ZIP compressed TIFFs are supported.
 
+</p>
 </a>
 
 <a name="pathout">
 <h4>Output folder</h4>
+<p class="text">The ouput folder in which all processing results (except classifier sample picking and training) are written. The created sub-folder contains:
+<ul>
+<li><tt>analyzed/</tt> - Folder containing all data generated during processing. Direct sub-folders are the positions containing each:
+<ul><li><tt>images/</tt> - Folder of overlay images with object contours, classification labels, or visualized trajectories.</li></ul>
+<ul><li><tt>statistics/</tt> - Folder containing read-outs and statistical data:
+<ul><li><tt>object_counts.txt</tt> - File containing counts of all objects and per class over all frames and channels.</li>
+    <li><tt>object_details.txt</tt> - File with detailed information per object (obj ID, class label, features) over all frames and channels.</li>
+    <li><tt>full/</tt> - Folder with full trajectories of all objects with 0 previous node (0 in-degree). Token <tt>Bxx</tt> in the filename indicates the branch (split) of the trajectory. Each file contains detailed information about the tracked object.</li>
+    <li><tt>events/</tt> - Folder with <i>in silico</i> aligned trajectories picked by the <i>class transition motif</i>. Same as <tt>full</tt> but with one column indicating the event. Trajectories can contain splits (multiple files). In case trajectories have equal length (default settings, see Tracking) they provide the input for error correction by hidden Markov models (see Error Correction).</li>
+</ul>
+
+</li></ul>
+</li>
+<li><tt>dump/</tt> - Internal data (dump files via Python's pickle), e.g. structure of input data.</li>
+<li><tt>hmm/</tt> - Data produced by the Error Correction.</li>
+<li><tt>log/</tt> - Log files per position. Every file in the sub-folder <tt>_finished</tt> indicates if the corresponding position finished processing. Those positions will not be processed again if <a href="#redofailedonly">Skip processed position</a> is active or the file is deleted (useful for batch processing).</li>
+</ul>
+</p>
 </a>
 
 <a name="namingscheme">
 <h4>Naming scheme</h4>
+<p class="text">Image files must follow a naming schema in order to be imported.
+So far, only image sequences with token in the filename are supported (see <a href="#pathin">Data folder</a>).
+Schema definitions can be added to a the file <tt>naming_schemes.conf</tt>, which is located in the <tt>resources</tt> sub-folder of this application (for MacOS: it's part of the .app package).
+The possibility to add/edit schemas from the GUI or to import data from <img class="extlink" src=":extlink"/><a href="http://www.openmicroscopy.org">OME / BioFormats</a> will be added in the future.</p>
 </a>
+
+<hr></hr>
 
 <a name="constrain_positions">
 <h4>Constrain positions</h4>
+<p class="text">Turn position constraint on or off. If positions are specified defines which positions of the experiment are processed. </p>
 </a>
 
 <a name="positions">
-<h4>Positions</h4>
+<h4 class="sub">Positions</h4>
+<p class="subtext">List of position names separated by comma. Each name can contain letters, digits or the underscore.</p>
 </a>
 
 <a name="redofailedonly">
 <h4>Skip processed positions</h4>
+<p class="text">Defines if already processed positions should be skipped. An empty file is created for every finished position in <tt>log/_finished/</tt> of the output folder.</p>
 </a>
+
+<hr></hr>
 
 <a name="framerange">
 <h4>Constrain timepoints</h4>
+<p class="text">Turn timepoint constrains on or off. Defines which frames (time points) of the experiment are processed.</p>
 </a>
 
 <a name="framerange_begin">
-<h4>Begin (Constrain timepoints)</h4>
+<h4 class="sub">First</h4>
+<p class="subtext">The first frame to be processed. If this value is outside the possible range the minimal possible frame will be used.</p>
 </a>
 
 <a name="frameRange_end">
-<h4>End (Constrain timepoints)</h4>
+<h4 class="sub">Last</h4>
+<p class="subtext">The last frame to be processed. If this value is outside the possible range or smaller than the <i>first</i> value the maximal possible frame will be used.</p>
 </a>
 
 <a name="frameincrement">
 <h4>Timepoint increment</h4>
+<p class="text">The step-size in frames from the first to the last frame.</p>
 </a>
 
 <hr></hr>
 <a name="controlpanel">
-<h3>Control Panel</h3>
-Parameters are loaded from and saved into a .conf file.
+<h2>Control Panel</h2>
+Load or save parameters to a .conf file.
 </a>
 
 
