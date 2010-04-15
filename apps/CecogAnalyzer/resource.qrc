@@ -20,6 +20,6 @@
         <file alias="cecog_secondary_regions">resources/secondary_regions-01.png</file>
         <file alias="cecog_workflow">resources/workflow-01.png</file>
         <file alias="cecog_workflow_kinetic">resources/workflow_kinetic-01.png</file>
-        <file alias="extlink">resources/extlink.gif</file>
+        <file alias="extlink">resources/extlink.png</file>
     </qresource>
 </RCC>
