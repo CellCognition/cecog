@@ -833,7 +833,16 @@ class ImageContainerStack(_ImageContainer):
             Z = 1
         else:
             imageIndex = -1
-        strPathImage = self.dctNamesByDimensions[P][T][C][Z]
+        if not P in self.dctNamesByDimensions:
+            raise KeyError('Image for P=%s not found. Possible values are %s.' % (P, self.dctNamesByDimensions.keys()))
+        elif not T in self.dctNamesByDimensions[P]:
+            raise KeyError('Image for T=%s not found. Possible values are %s.' % (T, self.dctNamesByDimensions[P].keys()))
+        elif not C in self.dctNamesByDimensions[P][T]:
+            raise KeyError('Image for C=%s not found. Possible values are %s.' % (C, self.dctNamesByDimensions[P][T].keys()))
+        elif not Z in self.dctNamesByDimensions[P][T][C]:
+            raise KeyError('Image for Z=%s not found. Possible values are %s.' % (Z, self.dctNamesByDimensions[P][T][C].keys()))
+        else:
+            strPathImage = self.dctNamesByDimensions[P][T][C][Z]
 #        except KeyError:
 #            if strFormat == UINT8:
 #                return ccore.Image(self.oMetaData.iDimX, self.oMetaData.iDimY)
