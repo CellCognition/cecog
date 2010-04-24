@@ -1,6 +1,6 @@
 
                           The CellCognition Project
-           Copyright (c) 2006 - 2009 Michael Held & Daniel Gerlich
+           Copyright (c) 2006 - 2010 Michael Held & Daniel Gerlich
                    Gerlich Lab, ETH Zurich, Switzerland
 
            CellCognition is distributed under the LGPL License.
@@ -19,4 +19,8 @@ ETH Zurich, Switzerland
 
 Bernd Fischer - developer of HMM code
 EMBL Heidelberg, Germany
+
+Thomas Walter - developer of morphological operators and related features
+EMBL Heidelberg, Germany
+
 
