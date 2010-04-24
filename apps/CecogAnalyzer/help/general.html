@@ -8,7 +8,9 @@
 
 <h1>General</h1>
 
-Define folders for raw image data (input) and analysis results (output). Positions and timepoints can be constrained. A timepoint increment can be defined to process every n<sup>th</sup> frame.
+Define folders for raw image data (input) and analysis results (output). Positions and time-points can be constrained. A time-point increment can be defined to process every n<sup>th</sup> frame.
+<br/>
+All parameters are stored in a human-readable text file (.conf files similar to Windows .ini).
 
 <hr></hr>
 <h3 class="param">Parameters</h3>
@@ -20,8 +22,8 @@ Define folders for raw image data (input) and analysis results (output). Positio
 <li>one sub-folder per movie (referred to as "position"), and</li>
 <li>similar naming schema (named tokens in the filename).</li>
 </ul>
-Multi-image TIFFs are interpreted as z-stacks (the corresponding filename token is in that case ignored). TIFFs must be encoded UINT8 or UINT16 (see <a href="qrc:/objectdetection#primary_channel_conversion">16 to 8 bit conversion in Object Detection</a>). LZW or ZIP compressed TIFFs are supported.
-
+</p>
+<p class="text">Multi-image TIFFs are interpreted as z-stacks (the corresponding filename token is in that case ignored). TIFFs must be encoded UINT8 or UINT16 (see <a href="qrc:/objectdetection#primary_channel_conversion">16 to 8 bit conversion in Object Detection</a>). LZW or ZIP compressed TIFFs are supported.
 </p>
 </a>
 
@@ -97,7 +99,9 @@ The possibility to add/edit schemas from the GUI or to import data from <img cla
 <hr></hr>
 <a name="controlpanel">
 <h2>Control Panel</h2>
+<p>
 Load or save parameters to a .conf file.
+</p>
 </a>
 
 

@@ -3,20 +3,6 @@ body {
 }
 
 a.header {
-  #color: black;
-  #text-decoration: none;
-  #text-align: center;
-}
-
-a.header:link {
-}
-
-a.header:visited {
-}
-
-a.header:hover {
-  #color: black;
-  #text-decoration: underline;
 }
 
 a.extlink {
@@ -45,9 +31,6 @@ td.footer {
 }
 
 a.footer {
-  #text-align: center;
-  #color: gray;
-  #text-decoration: none;
 }
 
 h4 {

@@ -8,15 +8,62 @@
 
 <h1>Processing</h1>
 
-This section combines all previous processing steps into one workflow. Individual steps or processing of the secondary channel can be enabled or disabled. A separate window allows selection of different image processing results.
+This section combines all previous processing steps into one work-flow. Individual steps or processing of the secondary channel can be enabled or disabled. A separate window allows selection of different image processing results.
 
 <hr></hr>
 
 <h3>Parameters</h3>
 
+<a name="primary_channel">
+<h4>Primary channel</h4>
+<p class="text">Processing steps of the primary channel
+
+<a name="primary_classification">
+<h4 class="sub">Classification</h4>
+<p class="subtext">Enables classification as defined in <a href="qrc:/classification#primary_channel">Classification</a>.</p>
+</a>
+
+<a name="tracking">
+<h4 class="sub">Tracking</h4>
+<p class="subtext">Enables object tracking, see <a href="qrc:/tracking">Tracking</a>.</p>
+</a>
+
+<a name="tracking_synchronize_trajectories">
+<h4 class="sub">Event selection</h4>
+<p class="subtext">Enables event selection, see <a href="qrc:/tracking#tracking_eventselection">Event selection</a>. (This option requires classification and tracking.)</p>
+</a>
+
+<a name="primary_errorcorrection">
+<h4 class="sub">Error correction</h4>
+<p class="subtext">Executes the error correction based on the found events, see <a href="qrc:/errorcorrection">Error Correction</a>. (This option requires event selection.)</p>
+</a>
+</p>
+</a>
+
+<a name="secondary_processchannel">
+<h4>Secondary channel</h4>
+<p class="text">Processing steps of the secondary channel
+
+<a name="secondary_classification">
+<h4 class="sub">Classification</h4>
+<p class="subtext">Enables classification as defined in <a href="qrc:/classification#secondary_channel">Classification</a>.</p>
+</a>
+
+<a name="secondary_errorcorrection">
+<h4 class="sub">Error correction</h4>
+<p class="subtext">Executes the error correction based on the found events, see <a href="qrc:/errorcorrection">Error Correction</a>. (This option requires event selection.)</p>
+</a>
+</p>
+</a>
+
 <hr></hr>
 <a name="controlpanel">
 <h3>Control Panel</h3>
+<p>
+<ul>
+<li><b>Start processing</b> - The entire processing pipe-line as define above is started. Note that only positions and frames as defined in <a href="qrc:/general">General</a> will be processed.</li>
+</ul>
+</p>
 </a>
 
 
