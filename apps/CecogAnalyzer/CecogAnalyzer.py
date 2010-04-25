@@ -1011,6 +1011,10 @@ class ClassifierResultFrame(QGroupBox):
         self._table_info.clear()
         self._has_data = False
 
+    def reset(self):
+        self._has_data = False
+        self._table_conf.clearContents()
+
     def on_load(self):
         self.load_classifier(check=True)
 
@@ -1112,8 +1116,8 @@ class ClassifierResultFrame(QGroupBox):
         names_horizontal = [('Name', 'class name'),
                             ('Samples', 'class samples'),
                             ('Color', 'class color'),
-                            ('PR%', 'class precision in %'),
-                            ('SE%', 'class sensitivity in %'),
+                            ('%PR', 'class precision in %'),
+                            ('%SE', 'class sensitivity in %'),
 #                            ('AC%', 'class accuracy in %'),
 #                            ('SE%', 'class sensitivity in %'),
 #                            ('SP%', 'class specificity in %'),
@@ -1218,13 +1222,14 @@ class ClassifierResultFrame(QGroupBox):
         self._table_conf.clear()
         self._table_conf.setColumnCount(cols)
         self._table_conf.setRowCount(rows)
+        #names2cols = self._learner.dctHexColors
         for c in range(cols):
             self._table_conf.setColumnWidth(c, 20)
             label = self._learner.nl2l[c]
             name = self._learner.dctClassNames[label]
             item = QTableWidgetItem(str(label))
             item.setToolTip('%d : %s' % (label, name))
-            #item.setForeground(QBrush(QColor(*hexToRgb(names2cols[name]))))
+            #item.setBackground(QBrush(QColor(*hexToRgb(names2cols[name]))))
             self._table_conf.setHorizontalHeaderItem(c, item)
         for r in range(rows):
             self._table_conf.setRowHeight(r, 20)
@@ -1256,7 +1261,7 @@ class ClassifierResultFrame(QGroupBox):
 
     def on_conf_result(self, c, g, conf):
         print "moo", c, g
-        self._set_info(c, g, conf.ac_sample)
+        self._set_info(c, g, conf)
 
         if not self._has_data:
             self._has_data = True
@@ -2228,6 +2233,7 @@ class ProcessorMixin(object):
 
                     self._analyzer.conf_result.connect(result_frame.on_conf_result,
                                                        Qt.QueuedConnection)
+                    result_frame.reset()
 
                 elif cls is HmmThread:
                     self._current_settings = self._get_modified_settings(name)
@@ -3479,14 +3485,14 @@ class ErrorCorrectionFrame(InputFrame, ProcessorMixin):
 
         self._init_control(has_images=False)
 
-#    def _get_modified_settings(self, name):
-#        settings = ProcessorMixin._get_modified_settings(self, name)
-#        settings.set_section('Processing')
-#        settings.set2('primary_errorcorrection', True)
-#        settings.set2('secondary_errorcorrection', True)
-#        print settings.get2('primary_classification')
-#        print settings.get2('secondary_classification')
-#        return settings
+    def _get_modified_settings(self, name):
+        settings = ProcessorMixin._get_modified_settings(self, name)
+        settings.set_section('Processing')
+        if settings.get2('primary_classification'):
+            settings.set2('primary_errorcorrection', True)
+        if settings.get2('secondary_classification'):
+            settings.set2('secondary_errorcorrection', True)
+        return settings
 
 
 class OutputFrame(InputFrame):

@@ -199,7 +199,9 @@ hmm.learn <- function(prob, graph, steps = 1, initial_emission=NULL) {
   # in case no emission matrix is given take unit-matrix with small error rates
   # outside the main diagonal. values are normalized in hmm.normalize.
   if (is.null(initial_emission)) {
-    initial_emission = matrix(0, nr=K, nc=K)
+      C <- dim(prob)[3]
+      K <- graph$K
+      initial_emission = matrix(0, nr=K, nc=C)
     diag(initial_emission) = 1
     initial_emission = initial_emission + 0.001
   }
