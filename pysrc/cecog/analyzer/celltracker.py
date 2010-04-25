@@ -1130,7 +1130,7 @@ class PlotCellTracker(CellTracker):
             #print dctData
             table.append(dctData)
 
-        write_table(strFilename, lstHeaderNames, table)
+        write_table(strFilename, table, column_names=lstHeaderNames)
 
 
     def _forwardVisitor(self, strNodeId, dctResults, dctEdges, iLevel=0, strStartId=None):
