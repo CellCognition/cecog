@@ -526,7 +526,7 @@ class SecondarySegmentation(_Segmentation):
                 imgLabelsOutA = oContainer.img_labels
             if self.iExpansionSizeRim > 0:
                 imgLabelsOutB = ccore.seededRegionExpansion(imgPrefiltered,
-                                                            imgLabelsOutB,
+                                                            oContainer.img_labels,
                                                             ccore.SrgType.KeepContours,
                                                             iLabelNumber,
                                                             self.fExpansionCostThreshold,
