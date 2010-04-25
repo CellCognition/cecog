@@ -1,5 +1,5 @@
 #                          The CellCognition Project
-#                    Copyright (c) 2006 - 2009 Michael Held
+#                    Copyright (c) 2006 - 2010 Michael Held
 #                     Gerlich Lab, ETH Zurich, Switzerland
 #                             www.cellcognition.org
 #
@@ -38,6 +38,7 @@ read.screen <- function(dir,filenameLayout,regionName,graph,fuseClasses=NULL)
         #    str.pos <- sprintf("%04d", screen$layout[i, pos.name])
         #else
         str.pos = pos
+        #spath = paste(str.pos, "_tracking", sep="/")
         spath = paste(str.pos, "statistics", "events", sep="/")
         path = paste(dir, spath, sep="/")
         print(paste(str.pos, path,file.exists(path)))
@@ -458,6 +459,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
                              realign_truncate=0,
                              features=NULL,
                              writeDecode=TRUE,
+                             writeDecode2=TRUE,
                              groupByOligoId=FALSE,
                              groupByGene=FALSE,
                              visualizeDecode=FALSE,
@@ -465,7 +467,9 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
                              max_time=120,
                              feature_range=c(0,1.2),
                              feature_filter_range=NULL,
-                             hmm_em_steps=1)
+                             hmm_em_steps=1,
+                             hmm_initial_emission=NULL,
+                             performDecode=TRUE)
 {
     if (!file.exists(outdir))
         dir.create(outdir)
@@ -566,8 +570,9 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
 
             print(paste("Generate HMM:", gene.name, " Pos:", pos.name, " Group:", i, " Samples:", N.gene))
 
-            hmm[[i]] <- hmm.learn(prob[I,,], graph, hmm_em_steps)
+            hmm[[i]] <- hmm.learn(prob[I,,], graph, steps=hmm_em_steps, initial_emission=hmm_initial_emission)
 
+            Sequence.Raw[I,] <- apply(prob[I,,], c(1,2), which.max)
             if (visualizeDecode)
             {
                 dirHmm <- paste(screen$dir, "..", "hmm", "_visualized", screen$regionName, sep="/")
@@ -576,13 +581,33 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
                                           cell=screen$cell[I,],
                                           dirHmm=dirHmm)
             } else
-                Sequence[I,] <- hmm.decode(prob[I,,], hmm[[i]])
-
-            Sequence.Raw[I,] <- apply(prob[I,,], c(1,2), which.max)
+            {
+                if (performDecode)
+                    Sequence[I,] <- hmm.decode(prob[I,,], hmm[[i]])
+                else
+                    Sequence[I,] <- Sequence.Raw[I,]
+            }
 
             if (writeDecode)
+            {
                 write.decode(screen, screen$cell[I,], hmm[[i]])
-
+            }
+            if (writeDecode2)
+            {
+                #print(Sequence2)
+                mcell <- screen$cell[I,]
+                for (f in 1:dim(mcell)[1])
+                {
+                    dirHmm2 <- paste(screen$dir, mcell$tracking[f], "_hmm2", sep="/")
+                    if (!file.exists(dirHmm2))
+                        dir.create(dirHmm2)
+                    #print(dim(mcell))
+                    #print(Sequence[I,][f,])
+                    write.table(Sequence[I,][f,], paste(dirHmm2, mcell$name[f], sep="/"), quote=FALSE, sep="\t",
+                        row.names=FALSE,
+                        col.names=c("class__A__label"))
+                }
+            }
             fn <- matrix("",nr=groups,nc=2)
             fn[,1] <- paste("sequence_",1:groups,".png",sep="")
             fn[,2] <- paste("sequence_",1:groups,".ps",sep="")
@@ -819,8 +844,8 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             CairoPNG(paste(outdir_region,"/",fn.raw[i,1],sep=""), width=1000, height=1000, bg='transparent')
             #CairoPS(paste(outdir,"/",fn.raw[i,2],sep=""), width=15, height=15, bg='transparent')
             par(mar=c(0,0,0,0))
-            sq <- sq.raw[I.sort,]
-            image(t(sq), col=class.colors, zlim=c(1,K), xaxt="n", yaxt="n")
+            sq.raw <- sq.raw[I.sort,]
+            image(t(sq.raw), col=class.colors, zlim=c(1,K), xaxt="n", yaxt="n")
             box()
             #axis(1, seq(T))
             dev.off()
@@ -834,16 +859,16 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
                 features2 <- features
                 features2[features2 > feature_range[2]] <- feature_range[2]
                 features2[features2 < feature_range[1]] <- feature_range[1]
-                sq <- features2[I,][I.indices,][I.sort,]
-                image(t(sq), xaxt="n", yaxt="n", col=bwcol_features, zlim=feature_range)
+                sq.f <- features2[I,][I.indices,][I.sort,]
+                image(t(sq.f), xaxt="n", yaxt="n", col=bwcol_features, zlim=feature_range)
                 box()
                 #axis(1, seq(T))
                 dev.off()
 
                 CairoPNG(paste(outdir_region,"/",fn.f[i,2],sep=""), width=1000, height=1000)
                 par(mar=c(5,4,1,1), cex=2)
-                sq <- sq[,20:60]
-                T <- dim(sq)[2]
+                sq.f <- sq[,20:60]
+                T <- dim(sq.f)[2]
                 xv <- seq(1,T)
                 xlim <- c(1,T)
                 ylim <- feature_range
@@ -853,7 +878,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
                 {
                     if (!isPlot)
                     {
-                        plot(sq[i,], xlim=xlim, ylim=ylim, type='l',
+                        plot(sq.f[i,], xlim=xlim, ylim=ylim, type='l',
                                 xaxt='n',
                                 xlab='time (min)',
                                 ylab='intensity', col=col,
@@ -862,7 +887,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
                         #axis(1, xv2, labels=format((xv2-1)*2.7, nsmall=0))
                         isPlot = TRUE
                     } else
-                        lines(sq[i,], type='l', col=col)
+                        lines(sq.f[i,], type='l', col=col)
                 }
                 dev.off()
             }
@@ -916,7 +941,8 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
     if (openHTML) {
         browseURL(paste(outdir_region,"/index.html",sep=""))
     }
-    return(list(indices=indices[I.sort], realign=realign.starts.nofilter))
+    list(sq=sq, sq.raw=sq.raw,
+         indices=indices[I.sort], realign=realign.starts.nofilter)
 
 }
 

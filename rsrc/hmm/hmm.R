@@ -1,5 +1,5 @@
 #                          The CellCognition Project
-#                    Copyright (c) 2006 - 2009 Michael Held
+#                    Copyright (c) 2006 - 2010 Michael Held
 #                     Gerlich Lab, ETH Zurich, Switzerland
 #                             www.cellcognition.org
 #
@@ -13,7 +13,7 @@
 # Source: $URL:$'
 
 
-hmm.summarize <- function(prob, post) {
+hmm.summarize <- function(prob, post, emission) {
   hmm <- list()
   N <- dim(prob)[1]
   T <- dim(prob)[2]
@@ -29,14 +29,21 @@ hmm.summarize <- function(prob, post) {
     }
     hmm$start <- hmm$start + post[i,1,]
   }
-  hmm$e <- matrix(0,nr=K,nc=C)
-  for (i in 1:N) {
-    for (j in 1:T) {
-      P <- matrix(post[i,j,],nr=K,nc=1) %*% matrix(prob[i,j,],nr=1,nc=C)
-      hmm$e <- hmm$e + P
-    }
+  if (is.null(emission))
+  {
+    emission = matrix(0, nr=K, nc=C)
+    diag(emission) = 1
   }
-  #print(hmm$e)
+  hmm$e = emission
+
+# learn emission prob. from posterior prob. (used by EM)
+#  hmm$e <- matrix(0,nr=K,nc=C)
+#  for (i in 1:N) {
+#    for (j in 1:T) {
+#      P <- matrix(post[i,j,],nr=K,nc=1) %*% matrix(prob[i,j,],nr=1,nc=C)
+#      hmm$e <- hmm$e + P
+#    }
+#  }
   return(hmm)
 }
 
@@ -94,10 +101,7 @@ hmm.normalize <- function(hmm, graph) {
       hmm$e[i,] = 1/graph$C
     }
   }
-
   hmm$graph <- graph
-  print(hmm$e)
-
   return(hmm)
 }
 
@@ -147,21 +151,24 @@ hmm.decode <- function(prob,hmm) {
   for (i in 1:N) {
     E[] <- 0.0
     for (k in 1:C) {
-      E <- E + matrix(rep(hmm$e[,k],each=T),nr=T,nc=K) *
-               matrix(rep(prob[i,,k],times=K),nr=T,nc=K)
+       E <- E + matrix(rep(hmm$e[,k],each=T),nr=T,nc=K) *
+                matrix(rep(prob[i,,k],times=K),nr=T,nc=K)
     }
     P <- matrix(0,nr=T,nc=K)
     bp <- matrix(0,nr=T,nc=K)
     P2 <- matrix(0,nr=K,nc=K)
-    #P[1,] <- hmm$start * E[1,]
-    P[1,] <- hmm$start * prob[i,1,]
+
+    # new
+    P[1,] <- hmm$start * E[1,]
+    # old
+    #P[1,] <- hmm$start * prob[i,1,]
     for (t in 2:T) {
       for (p in 1:K) {
-        #P2[p,] <- P[t-1,p] * hmm$trans[p,] * E[t,]
-        P2[p,] <- P[t-1,p] * hmm$trans[p,] * prob[i,t,]
-        #print(paste(t, p, sep=" "))
-        #print(E[t,])
-        #print(prob[i,t,])
+        # new implementation: emission prob. learned by EM
+        P2[p,] <- P[t-1,p] * hmm$trans[p,] * E[t,]
+
+        # old implementation: equal-distributed emission prob.
+        #P2[p,] <- P[t-1,p] * hmm$trans[p,] * prob[i,t,]
     }
       for (q in 1:K) {
         P[t,q] <- max(P2[,q])
@@ -179,18 +186,27 @@ hmm.decode <- function(prob,hmm) {
 hmm.post.init <- function(prob,graph) {
   N <- dim(prob)[1]
   T <- dim(prob)[2]
-  K <- dim(prob)[3]
-  post <- array(0.0,dim=c(N,T,graph$K))
-  for (i in 1:graph$K) {
+  K <- graph$K
+  post <- array(0.0,dim=c(N,T,K))
+  for (i in 1:K) {
     post[,,i] = prob[,,graph$h2o[i]]
   }
   return(post)
 }
 
-hmm.learn <- function(prob, graph, steps = 1) {
+hmm.learn <- function(prob, graph, steps = 1, initial_emission=NULL) {
+
+  # in case no emission matrix is given take unit-matrix with small error rates
+  # outside the main diagonal. values are normalized in hmm.normalize.
+  if (is.null(initial_emission)) {
+    initial_emission = matrix(0, nr=K, nc=K)
+    diag(initial_emission) = 1
+    initial_emission = initial_emission + 0.001
+  }
+
   post <- hmm.post.init(prob,graph)
   for (i in 1:steps) {
-    hmm <- hmm.summarize(prob,post)
+    hmm <- hmm.summarize(prob,post,initial_emission)
     hmm <- hmm.normalize(hmm,graph)
     post <- hmm.posterior(prob,hmm)
   }

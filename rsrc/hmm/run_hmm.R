@@ -1,5 +1,5 @@
 #                          The CellCognition Project
-#                    Copyright (c) 2006 - 2009 Michael Held
+#                    Copyright (c) 2006 - 2010 Michael Held
 #                     Gerlich Lab, ETH Zurich, Switzerland
 #                             www.cellcognition.org
 #
@@ -11,6 +11,8 @@
 # Date: $Date:$
 # Revision: $Rev:$'
 # Source: $URL:$'
+
+print('Running HMM error correction...')
 
 FILENAME_GRAPH_P = NULL
 FILENAME_GRAPH_S = NULL
