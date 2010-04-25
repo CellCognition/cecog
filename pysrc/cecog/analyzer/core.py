@@ -14,6 +14,11 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
+# Core module of the image processing work flow handling all positions of an
+# experiment including the general setup (AnalyzerCore), and the analysis of
+# a single position (PositionAnalyzer). This separation was necessary for the
+# distributed computing of positions.
+
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
@@ -31,8 +36,6 @@ import sys, \
        csv
 
 import cPickle as pickle
-
-#from guppy import hpy
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -1099,10 +1102,9 @@ class AnalyzerCore(object):
 #                self.oImageContainer.getOption('dctScaleChannels')[strChannelId] = tplData[2]
 
         self._oLogger.info("\n%s" % self.oMetaData.format(time=self.oSettings.get2('timelapseData')))
-        #print self.oMetaData.format(time=self.oSettings.get2('timelapseData'))
 
         # define range of frames to do analysis within
-        lstFrames = range(1, self.oMetaData.iDimT+1)
+        lstFrames = list(self.oMetaData.setT)
 
         if self.oSettings.get2('frameRange'):
             frames_begin = self.oSettings.get2('frameRange_begin')
