@@ -70,7 +70,7 @@ from pdk.errors import NotImplementedMethodError
 
 from cecog import ccore
 
-from cecog.util import *
+from cecog.util.util import hexToRgb
 from cecog.analyzer.celltracker import CellTracker, DotWriter
 from cecog.segmentation.strategies import (PrimarySegmentation,
                                           SecondarySegmentation)
