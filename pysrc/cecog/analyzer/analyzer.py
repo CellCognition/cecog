@@ -34,10 +34,6 @@ import cPickle as pickle
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
-
-from numpy import asarray, NAN, median
-#from rpy import r
-
 from pdk.options import Option
 from pdk.optionmanagers import OptionManager
 
@@ -60,9 +56,9 @@ from pdk.fileutils import safe_mkdirs
 from pdk.iterator import unique, flatten
 from pdk.ordereddict import OrderedDict
 from pdk.errors import NotImplementedMethodError
-#from pdk.containers.tableio import (importTable,
-#                                    exportTable)
-#from pdk.containers.tablefactories import newTable
+
+import numpy
+import netCDF4
 
 #-------------------------------------------------------------------------------
 # cecog module imports:
@@ -222,8 +218,8 @@ class ObjectHolder(dict):
     def getFeaturesByNames(self, iObjId, lstFeatureNames):
         if lstFeatureNames is None:
             lstFeatureNames = self._lstFeatureNames
-        aData = asarray([self[iObjId].aFeatures[self._dctNamesIdx[strFeatureName]]
-                         for strFeatureName in lstFeatureNames])
+        aData = numpy.asarray([self[iObjId].aFeatures[self._dctNamesIdx[strFeatureName]]
+                               for strFeatureName in lstFeatureNames])
         return aData
 
 
@@ -512,7 +508,8 @@ class _Channel(PropertyManager):
 
                         # assign feature values in sorted order as NumPy array
                         oImageObject.aFeatures = \
-                            asarray(dict_values(dctFeatures, self.lstFeatureNames))
+                            numpy.asarray(dict_values(dctFeatures,
+                                                      self.lstFeatureNames))
 
                         oObjectHolder[iObjectId] = oImageObject
 
@@ -816,7 +813,7 @@ class TimeHolder(OrderedDict):
         f.close()
 
 
-    def extportObjectDetails(self, filename, P, sep='\t'):
+    def extportObjectDetails(self, filename, sep='\t'):
         f = file(filename, 'w')
 
         feature_lookup = OrderedDict()
@@ -886,6 +883,38 @@ class TimeHolder(OrderedDict):
                 f.write('%s\n' % sep.join(map(str, prefix + items)))
 
         f.close()
+
+    def export_netcdf4(self, filename):
+        dataset = netCDF4.Dataset(filename, 'w', format='NETCDF4')
+        dataset.createDimension('frames', None)
+        dataset.createDimension('channels', None)
+        dataset.createDimension('regions', None)
+        dataset.createDimension('max_objects', None)
+        dataset.createDimension('max_features', None)
+
+        objects = dataset.createVariable('objects', 'f4', ('frames', 'max_objects', 'channels', 'regions', 'max_features'), zlib='True')
+
+        for frame_idx, (frame, channels) in enumerate(self.iteritems()):
+            print 'frame_idx', frame_idx
+            prim_region = channels.values()[0].getRegion('primary')
+            for obj_idx, obj_id in enumerate(prim_region):
+                print 'obj_idx', obj_idx
+
+                for channel_idx, channel in enumerate(channels.values()):
+                    print 'channel_idx', channel_idx
+
+                    for region_idx, region_id in enumerate(channel.getRegionNames()):
+                        print 'region_idx', region_idx
+                        region = channel.getRegion(region_id)
+
+                        print obj_id in region
+                        print region.getFeatureNames()
+                        print region[obj_id].aFeatures.shape
+                        print region[obj_id].aFeatures.dtype
+
+                        for idx, value in enumerate(region[obj_id].aFeatures):
+                            objects[frame_idx, obj_idx, channel_idx, region_idx, idx] = value
+        dataset.close()
 
 
 class CellAnalyzer(PropertyManager):

@@ -23,75 +23,31 @@ __source__ = '$URL$'
 # standard library imports:
 #
 import sys, \
-       os, \
-       re, \
-       pprint, \
-       logging, \
-       copy, \
-       shutil, \
-       types, \
-       time, \
-       weakref, \
-       traceback, \
-       csv
-
+       time
 import cPickle as pickle
 
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
-from numpy import array, asarray, transpose, min, max, median, isnan, sum
-import svm
-
-# pdk imports
-from pdk.optionmanagers import OptionManager
-#from pdk.processes import ChildProcess, ChildProcessProxy
-#from pdk.idgenerators import newGuid
-#from pdk.messaging import registerSlot
 from pdk.datetimeutils import StopWatch
-from pdk.map import dict_append_list
-from pdk.iterator import (unique,
-                          difference,
-                          is_subset)
-from pdk.fileutils import safe_mkdirs
-#from pdk.util.exit import registerExitHandler
-#from pdk.util.command import sendEmail
-
-
-# PyFarm imports
-#from pyfarm.launcher import (launchClient,
-#                             ClientLauncher)
-#from pyfarm.clients import closeClient
-#from pyfarm.farming import (MSG_FARMING_JOB_COMPLETE,
-#                            MSG_FARMING_JOB_ITEM_COMPLETE)
-#from pyfarm.farms import getFarm
-
+from pdk.iterator import is_subset
 
 #-------------------------------------------------------------------------------
 # cecog module imports:
 #
 from cecog import ccore
 from cecog.analyzer.analyzer import (CellAnalyzer,
-                                    QualityControl,
-                                    PrimaryChannel,
-                                    SecondaryChannel,
-                                    TimeHolder)
+                                     PrimaryChannel,
+                                     SecondaryChannel,
+                                     TimeHolder)
 from cecog.analyzer.celltracker import *
-#from cecog.analyzer.cutter import Cutter, CutterLabel
 from cecog.io.reader import (create_image_container,
                              load_image_container,
                              dump_image_container,
                              has_image_container,
                              )
-#from cecog.experiment.plate import *
-from cecog.util.util import hexToRgb
-#from cecog.settings import Settings, ConstSettings, SettingsError, mapDirectory
 from cecog.learning.collector import CellCounterReader, CellCounterReaderXML
 from cecog.learning.learning import CommonObjectLearner, CommonClassPredictor
-from cecog.learning.classifier import LibSvmClassifier
-#from cecog.colors import makeColors
-
-#from cecog.commonanalysis.test import Test
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -400,7 +356,10 @@ class PositionAnalyzer(object):
             if self.oSettings.get('Output', 'export_object_details'):
                 filename = os.path.join(strPathOutPositionStats, 'P%s__object_details.txt' % self.P)
 
-                oTimeHolder.extportObjectDetails(filename, self.P)
+                oTimeHolder.extportObjectDetails(filename)
+
+                #filename = os.path.join(strPathOutPositionStats, 'P%s__objects.nc4' % self.P)
+                #oTimeHolder.export_netcdf4(filename)
 
 
             self.oSettings.set_section('Tracking')
@@ -1093,13 +1052,6 @@ class AnalyzerCore(object):
             else:
                 self._oLogger.warning("Cannot redo failed positions without directory '%s'!" % strPathFinished)
 
-        #print self.lstPositions
-
-
-#        # set image scale options per channel (optional third parameter of 'dctChannelMapping')
-#        for strChannelId, tplData in self.oSettings.dctChannelMapping.iteritems():
-#            if len(tplData) > 2:
-#                self.oImageContainer.getOption('dctScaleChannels')[strChannelId] = tplData[2]
 
         self._oLogger.info("\n%s" % self.oMetaData.format(time=self.oSettings.get2('timelapseData')))
 
@@ -1122,46 +1074,11 @@ class AnalyzerCore(object):
 
         lstAnalysisFrames = lstFrames[lstFrames.index(self.tplFrameRange[0]):
                                       lstFrames.index(self.tplFrameRange[1])+1]
-#        else:
-#            tplValid = (1, self.oMetaData.iDimT)
-#            raise SettingsError("tplFrameRange %s has an incorrect value. A valid range is e.g. %s." %
-#                                (tplFrameRange, tplValid))
 
         # take every n'th element from the list
         self.lstAnalysisFrames = lstAnalysisFrames[::self.oSettings.get2('frameincrement')]
 
 
-        # check channel settings
-#        self.tplChannelIds = tuple(self.oSettings.dctChannelMapping.keys())
-#        #
-#        for strChannelId in self.oSettings.dctChannelMapping:
-#            if strChannelId not in self.oMetaData.setC:
-#                raise SettingsError("Channel Id '%s' not known in image meta data. Valid channels are %s" %
-#                                    (strChannelId, self.oMetaData.setC))
-
-
-    @classmethod
-    def notifyByEmail(cls, lstEmailRecipients, strSubject, strMsg):
-        if len(lstEmailRecipients) > 0:
-            sendEmail(cls.EMAIL_SENDER,
-                      lstEmailRecipients,
-                      strSubject,
-                      strMsg,
-                      smtp=cls.EMAIL_SERVER,
-                      login=cls.EMAIL_SERVER_LOGIN,
-                      useTls=True)
-
-#    def onSignalJobCompleted(self, info):
-#        print "result available for item %d.  %s" % (info["itemIndex"], info)
-
-    def onSignalJobItemCompleted(self, infos):
-        if infos['guid'] == self.oJobGuid:
-            #print infos
-            self._oLogger.info("P %04d completed. %4d / %4d items, %3.1f%%" %\
-                               (self.lstPositions[infos['itemIndex']],
-                                infos['numberDoneItems'],
-                                infos['numberScheduledItems'],
-                                infos['percentComplete']))
 
     def processPositions(self, qthread=None):
         # loop over positions
@@ -1179,102 +1096,33 @@ class AnalyzerCore(object):
                               )
             lstJobInputs.append((tplArgs, dctOptions))
 
-        #if self.oSettings.get('Farming', 'usePyFarm'):
-        if False:
 
-            registerSlot(MSG_FARMING_JOB_ITEM_COMPLETE,
-                         self,
-                         self.onSignalJobItemCompleted,
-                         remote=True,
-                         threadSafe=False,
-                         domain='farming')
-            getFarm().registerEventObserver(self.guid)
+        stage_info = {'stage': 1,
+                      'min': 1,
+                      'max': len(lstJobInputs),
+                       }
+        for idx, (tplArgs, dctOptions) in enumerate(lstJobInputs):
 
-            self.oJobGuid = self._oClient.submitJob("cecog.commonanalysis.commonanalysis_pyfarm.analyzePosition",
-                                                    lstJobInputs,
-                                                    **self.oSettings.dctJobParameters)
-            self._oLogger.info("Job submitted successfully! '%s'" % self.oJobGuid)
+            if not qthread is None:
+                if qthread.get_abort():
+                    return 0
 
-            self._pollResults()
+                stage_info.update({'progress': idx+1,
+                                   'text': 'P %s (%d/%d)' % (tplArgs[0], idx+1, len(lstJobInputs)),
+                                   })
+                qthread.set_stage_info(stage_info)
 
-        else:
+            analyzePosition(*tplArgs, **dctOptions)
 
-            stage_info = {'stage': 1,
-                          'min': 1,
-                          'max': len(lstJobInputs),
-                           }
-            for idx, (tplArgs, dctOptions) in enumerate(lstJobInputs):
+        if self.oSettings.get('Classification', 'collectsamples'):
+            self.oObjectLearner.export()
 
-                if not qthread is None:
-                    if qthread.get_abort():
-                        return 0
-
-                    stage_info.update({'progress': idx+1,
-                                       'text': 'P %s (%d/%d)' % (tplArgs[0], idx+1, len(lstJobInputs)),
-                                       })
-                    qthread.set_stage_info(stage_info)
-
-                analyzePosition(*tplArgs, **dctOptions)
-
-            if self.oSettings.get('Classification', 'collectsamples'):
-                self.oObjectLearner.export()
-
-                f = file(os.path.join(self.oObjectLearner.dctEnvPaths['data'],
-                                      self.oObjectLearner.getOption('filename_pickle')), 'wb')
-                pickle.dump(self.oObjectLearner, f)
-                f.close()
+            f = file(os.path.join(self.oObjectLearner.dctEnvPaths['data'],
+                                  self.oObjectLearner.getOption('filename_pickle')), 'wb')
+            pickle.dump(self.oObjectLearner, f)
+            f.close()
 
 #            stage_info['progress'] = len(lstJobInputs)
 #            qthread.set_stage_info(stage_info)
 
-
-    def _pollResults(self):
-        while True:
-            try:
-                lstJobOutput = self._oClient.getJobOutput(self.oJobGuid)
-            except:
-                self._oLogger.error(traceback.format_exc())
-            else:
-                # job finished?
-                if not lstJobOutput is None:
-                    self.oStopWatch.stop()
-                    strSubject = '[cecog analyzer] finished %s' % os.path.split(self.oSettings.strFilename)[1]
-
-                    if not None in lstJobOutput:
-                        self._oLogger.info("Job finished successfully! %d images analyzed." % sum(lstJobOutput))
-
-                        iNumberImageSets = sum(lstJobOutput)
-                        if iNumberImageSets > 0:
-                            strTimePerImageSet = (self.oStopWatch.stop_interval() / float(iNumberImageSets)).format(msec=True)
-                        else:
-                            strTimePerImageSet = 'NaN'
-
-                        strMsg = "*** THIS IS AN AUTOMATIC EMAIL. DO NOT REPLY. ***\n\n"
-                        strMsg +=  "Job '%s' finished successfully via PyFarm!\n\n" % self.oJobGuid
-                        strMsg += "Settings: '%s'\n" % self.oSettings.strFilename
-                        strMsg += "Analyzed: %d image sets\n" % iNumberImageSets
-                        strMsg += "Start:    %s\n" % time.ctime(self.oStopWatch.get_start_time())
-                        strMsg += "Stop:     %s\n" % time.ctime(self.oStopWatch.get_stopt_time())
-                        strMsg += "Duration: %s\n" % self.oStopWatch.stop_interval()
-    #                    strMsg += "Average:  %s / image set\n" % strTimePerImageSet
-                        strMsg += "\n*** THIS IS AN AUTOMATIC EMAIL. DO NOT REPLY. ***\n"
-                    else:
-                        self._oLogger.info("Job finished NOT successfully!")
-                        strMsg =  "Job '%s' finished NOT successfully via PyFarm!\n\n" % self.oJobGuid
-
-                    if (hasattr(self.oSettings, 'lstEmailRecipients') and
-                        self.oSettings.lstEmailRecipients is not None):
-                        self.notifyByEmail(self.oSettings.lstEmailRecipients,
-                                           strSubject, strMsg)
-
-                    break
-                else:
-                    infos = getFarm().getJobInfo(self.oJobGuid)
-                    self._oLogger.info("   done: %04d, scheduled: %04d, queued: %04d, pending: %04d" %\
-                                       (infos['numberDoneItems'],
-                                        infos['numberScheduledItems'],
-                                        infos['numberQueuedItems'],
-                                        infos['numberPendingItems']))
-
-            time.sleep(30)
 
