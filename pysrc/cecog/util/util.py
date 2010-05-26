@@ -19,7 +19,8 @@ __source__ = '$URL$'
 #
 
 import logging, \
-       types
+       types, \
+       os
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -28,6 +29,11 @@ import logging, \
 from pdk.options import Option
 from pdk.optionmanagers import OptionManager
 
+
+#-------------------------------------------------------------------------------
+# constants:
+#
+PACKAGE_PATH = ''
 
 #-------------------------------------------------------------------------------
 # functions:
@@ -85,6 +91,8 @@ def write_table(filename, rows, column_names=None, sep='\t'):
             f.write('%s\n' % sep.join(map(str, func(row))))
     f.close()
 
+def convert_package_path(path):
+    return os.path.normpath(os.path.join(PACKAGE_PATH, path))
 
 #-------------------------------------------------------------------------------
 # classes:
