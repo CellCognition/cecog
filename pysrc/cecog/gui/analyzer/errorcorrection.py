@@ -27,14 +27,11 @@ __all__ = ['ErrorCorrectionFrame']
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
+from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
 from cecog.gui.analyzer import (_BaseFrame,
                                 _ProcessorMixin,
                                 HmmThread
                                 )
-from cecog.traits.guitraits import (StringTrait,
-                                    FloatTrait,
-                                    BooleanTrait,
-                                    )
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -51,8 +48,8 @@ from cecog.traits.guitraits import (StringTrait,
 #
 class ErrorCorrectionFrame(_BaseFrame, _ProcessorMixin):
 
-    SECTION = 'ErrorCorrection'
-    NAME = 'Error Correction'
+    SECTION_NAME = SECTION_NAME_ERRORCORRECTION
+    DISPLAY_NAME = 'Error Correction'
 
     def __init__(self, settings, parent):
         _BaseFrame.__init__(self, settings, parent)
@@ -62,58 +59,27 @@ class ErrorCorrectionFrame(_BaseFrame, _ProcessorMixin):
                                      HmmThread,
                                      ('Correct errors', 'Stop correction'))
 
-        self.add_input('filename_to_R',
-                       StringTrait('', 1000, label='R-project executable',
-                                   widget_info=StringTrait.STRING_FILE))
-
+        self.add_input('filename_to_r')
         self.add_line()
-
         self.add_group('constrain_graph',
-                       BooleanTrait(True, label='Constrain graph'),
-                       [('primary_graph',
-                         StringTrait('', 1000, label='Primary file',
-                                     widget_info=StringTrait.STRING_FILE)),
-                        ('secondary_graph',
-                         StringTrait('', 1000, label='Secondary file',
-                                     widget_info=StringTrait.STRING_FILE)),
+                       [('primary_graph',),
+                        ('secondary_graph',),
                         ])
-
         self.add_group('position_labels',
-                       BooleanTrait(False, label='Position labels'),
-                       [('mappingfile',
-                         StringTrait('', 1000, label='File',
-                                     widget_info=StringTrait.STRING_FILE)),
+                       [('mappingfile',),
                         ])
-        self.add_group('Group by', None,
-                       [('groupby_position',
-                         BooleanTrait(True, label='Position',
-                                      widget_info=BooleanTrait.RADIOBUTTON)),
-                        ('groupby_oligoid',
-                         BooleanTrait(False, label='Oligo ID',
-                                      widget_info=BooleanTrait.RADIOBUTTON)),
-                        ('groupby_genesymbol',
-                         BooleanTrait(False, label='Gene symbol',
-                                      widget_info=BooleanTrait.RADIOBUTTON)),
-                        ], layout='flow', link='groupby')
-
+        self.add_group(None,
+                       [('groupby_position',),
+                        ('groupby_oligoid',),
+                        ('groupby_genesymbol',),
+                        ], layout='flow', link='groupby', label='Group by')
         self.add_line()
-
-        self.add_group('Plot parameter', None,
-                       [('timelapse',
-                         FloatTrait(1, 0, 2000, digits=2,
-                                    label='Time-lapse [min]')),
-                        ('max_time',
-                         FloatTrait(100, 1, 2000, digits=2,
-                                    label='Max. time in plot [min]')),
-                        ], layout='flow', link='plot_parameter')
-
-        self.register_trait('primary_sort',
-                            StringTrait('', 100))
-        self.register_trait('secondary_sort',
-                            StringTrait('', 100))
-
+        self.add_group(None,
+                       [('timelapse',),
+                        ('max_time',),
+                        ], layout='flow', link='plot_parameter',
+                        label='Plot parameter')
         self.add_expanding_spacer()
-
         self._init_control(has_images=False)
 
     def _get_modified_settings(self, name):

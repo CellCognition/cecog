@@ -26,6 +26,7 @@ import types, \
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
+from pdk.ordereddict import OrderedDict
 
 #-------------------------------------------------------------------------------
 # cecog imports:
@@ -45,13 +46,12 @@ import types, \
 #-------------------------------------------------------------------------------
 # classes:
 #
-
 class Trait(object):
 
     DATATYPE = None
 
-    def __init__(self, value):
-        self.value = value
+    def __init__(self, default_value):
+        self.default_value = default_value
 
     def convert(self, value):
         if not self.DATATYPE is None and not type(value) == self.DATATYPE:
@@ -62,8 +62,8 @@ class Trait(object):
 
 class NumberTrait(Trait):
 
-    def __init__(self, value, min_value, max_value):
-        super(NumberTrait, self).__init__(value)
+    def __init__(self, default_value, min_value, max_value):
+        super(NumberTrait, self).__init__(default_value)
         self.min_value = min_value
         self.max_value = max_value
 
@@ -76,8 +76,8 @@ class FloatTrait(NumberTrait):
 
     DATATYPE = float
 
-    def __init__(self, value, min_value, max_value, digits=1):
-        super(FloatTrait, self).__init__(value, min_value, max_value)
+    def __init__(self, default_value, min_value, max_value, digits=1):
+        super(FloatTrait, self).__init__(default_value, min_value, max_value)
         self.digits = digits
 
 
@@ -88,8 +88,8 @@ class StringTrait(Trait):
     STRING_PATH = 1
     STRING_FILE = 2
 
-    def __init__(self, value, max_length, mask=None):
-        super(StringTrait, self).__init__(value)
+    def __init__(self, default_value, max_length, mask=None):
+        super(StringTrait, self).__init__(default_value)
         self.max_length = max_length
         self.mask = mask
 
@@ -123,8 +123,8 @@ class ListTrait(Trait):
 
 class SelectionTrait(ListTrait):
 
-    def __init__(self, value, list_data):
-        super(SelectionTrait, self).__init__(value)
+    def __init__(self, default_value, list_data):
+        super(SelectionTrait, self).__init__(default_value)
         self.list_data = list_data
 
     def index(self, value):

@@ -34,8 +34,9 @@ from pdk.ordereddict import OrderedDict
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
+from cecog.analyzer import R_LIBRARIES
 from cecog.traits.config import ConfigSettings
-from cecog.gui.analyzer import R_LIBRARIES
+from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.gui.analyzer.general import GeneralFrame
 from cecog.gui.analyzer.objectdetection import ObjectDetectionFrame
 from cecog.gui.analyzer.classification import ClassificationFrame
@@ -146,7 +147,7 @@ class AnalyzerMainWindow(QMainWindow):
         #pagesWidget->addWidget(new UpdatePage);
         #pagesWidget->addWidget(new QueryPage);
         self._settings_filename = None
-        self._settings = ConfigSettings() #ConfigParser.RawConfigParser()
+        self._settings = ConfigSettings(SECTION_REGISTRY)
 
         self._tab_lookup = OrderedDict()
         self._tabs = [GeneralFrame(self._settings, self._pages),

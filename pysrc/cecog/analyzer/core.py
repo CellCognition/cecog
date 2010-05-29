@@ -36,6 +36,7 @@ from pdk.iterator import is_subset
 # cecog module imports:
 #
 from cecog import ccore
+from cecog.analyzer import SECONDARY_REGIONS
 from cecog.analyzer.analyzer import (CellAnalyzer,
                                      PrimaryChannel,
                                      SecondaryChannel,
@@ -48,6 +49,7 @@ from cecog.io.reader import (create_image_container,
                              )
 from cecog.learning.collector import CellCounterReader, CellCounterReaderXML
 from cecog.learning.learning import CommonObjectLearner, CommonClassPredictor
+from cecog.traits.config import NAMING_SCHEMAS
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -72,12 +74,6 @@ FEATURE_CATEGORIES_TEXTURE = ['normbase',
                               #'distance',
                               #moments',
                               ]
-
-SECONDARY_REGIONS = {'secondary_regions_expanded' : 'expanded',
-                     'secondary_regions_inside' : 'inside',
-                     'secondary_regions_outside' : 'outside',
-                     'secondary_regions_rim' : 'rim',
-                     }
 
 
 # set the max. recursion depth
@@ -1012,7 +1008,7 @@ class AnalyzerCore(object):
             self.oSettings.lstPositions = None
 
             naming_scheme = {}
-            for option, value in self.oSettings.naming_schemes.items(self.oSettings.get2('namingScheme')):
+            for option, value in NAMING_SCHEMAS.items(self.oSettings.get2('namingscheme')):
                 naming_scheme[option] = value
             self.oImageContainer = create_image_container(self.strPathIn,
                                                           naming_scheme,

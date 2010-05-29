@@ -13,3 +13,58 @@ __author__ = 'Michael Held'
 __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
+
+__all__ = []
+
+#-------------------------------------------------------------------------------
+# standard library imports:
+#
+
+#-------------------------------------------------------------------------------
+# extension module imports:
+#
+
+#-------------------------------------------------------------------------------
+# cecog imports:
+#
+
+#-------------------------------------------------------------------------------
+# constants:
+#
+CONTROL_1 = 'CONTROL_1'
+CONTROL_2 = 'CONTROL_2'
+
+FEATURE_CATEGORIES = ['roisize',
+                      'circularity',
+                      'irregularity',
+                      'irregularity2',
+                      'axes',
+                      'normbase',
+                      'normbase2',
+                      'levelset',
+                      'convexhull',
+                      'dynamics',
+                      'granulometry',
+                      'distance',
+                      'moments',
+                      ]
+REGION_NAMES_PRIMARY = ['primary']
+REGION_NAMES_SECONDARY = ['expanded', 'inside', 'outside', 'rim']
+SECONDARY_COLORS = {'inside' : '#FFFF00',
+                    'outside' : '#00FF00',
+                    'expanded': '#00FFFF',
+                    'rim' : '#FF00FF',
+                    }
+
+SECONDARY_REGIONS = {'secondary_regions_expanded' : 'expanded',
+                     'secondary_regions_inside' : 'inside',
+                     'secondary_regions_outside' : 'outside',
+                     'secondary_regions_rim' : 'rim',
+                     }
+
+ZSLICE_PROJECTION_METHODS = ['maximum', 'average']
+
+COMPRESSION_FORMATS = ['raw', 'bz2', 'gz']
+TRACKING_METHODS = ['ClassificationCellTracker',]
+
+R_LIBRARIES = ['hwriter', 'RColorBrewer', 'igraph']

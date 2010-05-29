@@ -27,16 +27,11 @@ __all__ = ['TrackingFrame']
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
+from cecog.traits.analyzer.tracking import SECTION_NAME_TRACKING
 from cecog.gui.analyzer import (_BaseFrame,
                                 _ProcessorMixin,
-                                COMPRESSION_FORMATS,
                                 AnalzyerThread,
                                 )
-from cecog.traits.guitraits import (StringTrait,
-                                    IntTrait,
-                                    BooleanTrait,
-                                    SelectionTrait,
-                                    )
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -53,7 +48,7 @@ from cecog.traits.guitraits import (StringTrait,
 #
 class TrackingFrame(_BaseFrame, _ProcessorMixin):
 
-    SECTION = 'Tracking'
+    SECTION_NAME = SECTION_NAME_TRACKING
     PROCESS_TRACKING = 'PROCESS_TRACKING'
     PROCESS_SYNCING = 'PROCESS_SYNCING'
 
@@ -69,104 +64,28 @@ class TrackingFrame(_BaseFrame, _ProcessorMixin):
                                      ('Apply event selection',
                                       'Stop event selection'))
 
-        self.add_group('Tracking', None,
-                       [('tracking_maxObjectDistance',
-                         IntTrait(0, 0, 4000, label='Max object x-y distance'),
-                         (0,0,1,1)),
-                        ('tracking_maxTrackingGap',
-                         IntTrait(0, 0, 4000, label='Max time-point gap'),
-                         (0,1,1,1)),
-                        ('tracking_maxSplitObjects',
-                         IntTrait(0, 0, 4000, label='Max split events'),
-                         (1,0,1,1)),
-                        ], link='tracking')
-
+        self.add_group(None,
+                       [('tracking_maxobjectdistance', (0,0,1,1)),
+                        ('tracking_maxtrackinggap', (0,1,1,1)),
+                        ('tracking_maxsplitobjects', (1,0,1,1)),
+                        ], link='tracking', label='Tracking')
         self.add_line()
-
-        self.add_group('Event selection', None,
-                       [('tracking_labelTransitions',
-                         StringTrait('', 200, label='Class transition motif(s)',
-                                     mask='(\(\d+,\d+\),)*\(\d+,\d+\)'),
-                         (0,0,1,4)),
-                        ('tracking_backwardRange',
-                         IntTrait(0, -1, 4000, label='Time-points [pre]'),
-                         (1,0,1,1)),
-                        ('tracking_forwardRange',
-                         IntTrait(0, -1, 4000, label='Time-points [post]'),
-                         (1,1,1,1)),
-                        ('tracking_backwardLabels',
-                         StringTrait('', 200, label='Class filter [pre]',
-                                     mask='(\d+,)*\d+'),
-                         (2,0,1,1)),
-                        ('tracking_forwardLabels',
-                         StringTrait('', 200, label='Class filter [post]',
-                                     mask='(\d+,)*\d+'),
-                         (2,1,1,1)),
-                        ('tracking_backwardCheck',
-                         IntTrait(2, 0, 4000, label='Filter time-points [pre]'),
-                         (3,0,1,1)),
-                        ('tracking_forwardCheck',
-                         IntTrait(2, 0, 4000, label='Filter time-points [post]'),
-                         (3,1,1,1)),
-                        ], link='tracking_eventselection')
-
-        self.register_trait('tracking_forwardRange_min',
-                            BooleanTrait(False, label='Min.'))
-        self.register_trait('tracking_backwardRange_min',
-                            BooleanTrait(False, label='Min.'))
-
-
-#        self.add_group('tracking_event_tracjectory',
-#                       BooleanTrait(True, label='Events by trajectory',
-#                                    widget_info=BooleanTrait.RADIOBUTTON),
-#                       [('tracking_backwardCheck',
-#                         IntTrait(0, 0, 4000, label='Backward check',
-#                                  tooltip='abc...')),
-#                        ('tracking_forwardCheck',
-#                         IntTrait(0, 0, 4000, label='Forward check',
-#                                  tooltip='abc...')),
-#                        ], layout='flow')
-
-
+        self.add_group(None,
+                       [('tracking_labeltransitions', (0,0,1,4)),
+                        ('tracking_backwardrange', (1,0,1,1)),
+                        ('tracking_forwardrange', (1,1,1,1)),
+                        ('tracking_backwardlabels', (2,0,1,1)),
+                        ('tracking_forwardlabels', (2,1,1,1)),
+                        ('tracking_backwardcheck', (3,0,1,1)),
+                        ('tracking_forwardcheck', (3,1,1,1)),
+                        ], link='tracking_eventselection',
+                        label='Event selection')
         self.add_line()
-
-#        self.add_group('tracking_exportTrackFeatures',
-#                       BooleanTrait(False, label='Export tracks'),
-#                       [('tracking_compressionTrackFeatures',
-#                         SelectionTrait(COMPRESSION_FORMATS[0], COMPRESSION_FORMATS,
-#                                        label='Compression'))
-#                       ], layout='flow')
-
-
         self.add_group('tracking_visualization',
-                       BooleanTrait(False, label='Visualization'),
-                       [('tracking_visualize_track_length',
-                         IntTrait(5, -1, 10000,
-                                  label='Max. time-points')),
-                        ('tracking_centroid_radius',
-                         IntTrait(3, -1, 50, label='Centroid radius')),
+                       [('tracking_visualize_track_length',),
+                        ('tracking_centroid_radius',),
                        ], layout='flow')
-
-#        self.add_group('tracking_exportFlatFeatures',
-#                       BooleanTrait(False, label='Export flat',
-#                                    tooltip='abc...'),
-#                       [('tracking_compressionFlatFeatures',
-#                         SelectionTrait(COMPRESSION_FORMATS[0], COMPRESSION_FORMATS,
-#                                        label='Compression',
-#                                        tooltip='abc...'))
-#                       ])
-
         self.add_expanding_spacer()
-
-        self.register_trait('tracking_maxInDegree',
-                       IntTrait(0, 0, 4000, label='Max in-degree'))
-        self.register_trait('tracking_maxOutDegree',
-                       IntTrait(0, 0, 4000, label='Max out-degree'))
-        self.register_trait('tracking_exportTrackFeatures',
-                            BooleanTrait(True, label='Export tracks'))
-        self.register_trait('tracking_compressionTrackFeatures',
-                             SelectionTrait(COMPRESSION_FORMATS[0], COMPRESSION_FORMATS,
-                                            label='Compression'))
 
         self._init_control()
 

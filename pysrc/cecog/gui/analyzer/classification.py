@@ -32,19 +32,14 @@ from PyQt4.Qt import *
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
+from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
+from cecog.gui.util import information
 from cecog.gui.analyzer import (_BaseFrame,
                                 _ProcessorMixin,
-                                REGION_NAMES_PRIMARY,
-                                REGION_NAMES_SECONDARY,
-                                SECONDARY_REGIONS,
                                 AnalzyerThread,
                                 TrainingThread,
                                 )
-from cecog.gui.util import information
-from cecog.traits.guitraits import (StringTrait,
-                                    BooleanTrait,
-                                    SelectionTrait,
-                                    )
+from cecog.analyzer import SECONDARY_REGIONS
 from cecog.learning.learning import (CommonClassPredictor,
                                      )
 from cecog.util.util import (hexToRgb,
@@ -396,7 +391,7 @@ class ClassifierResultFrame(QGroupBox):
 
 class ClassificationFrame(_BaseFrame, _ProcessorMixin):
 
-    SECTION = 'Classification'
+    SECTION_NAME = SECTION_NAME_CLASSIFICATION
     TABS = ['PrimaryChannel', 'SecondaryChannel']
     PROCESS_PICKING = 'PROCESS_PICKING'
     PROCESS_TRAINING = 'PROCESS_TRAINING'
@@ -419,106 +414,36 @@ class ClassificationFrame(_BaseFrame, _ProcessorMixin):
 
         self.set_tab_name('PrimaryChannel')
 
-        self.add_input('primary_classification_envPath',
-                       StringTrait('', 1000, label='Classifier folder',
-                                   widget_info=StringTrait.STRING_PATH))
-
-#        self.add_group('primary_featureExtraction',
-#                       BooleanTrait(False, label='Apply feature extraction',
-#                                    tooltip='abc...'),
-#                       [('primary_featureExtraction_categories',
-#                         MultiSelectionTrait([], FEATURE_CATEGORIES,
-#                                             label='Feature categories',
-#                                             tooltip='abc...')),
-#                        ('primary_featureExtraction_parameters',
-#                         DictTrait({}, label='Feature parameters',
-#                                   tooltip='abc...')),
-#                        ])
+        self.add_input('primary_classification_envpath')
         self.add_line()
-        self.add_group('Feature extraction', None,
-                       [
-                        ('primary_simplefeatures_texture',
-                         BooleanTrait(True, label='Texture features')),
-                        ('primary_simplefeatures_shape',
-                         BooleanTrait(True, label='Shape features')),
-                        ], layout='flow', link='primary_featureextraction')
-
-#        self.add_input('primary_classification_regionName',
-#                       SelectionTrait(REGION_NAMES_PRIMARY[0],
-#                                      REGION_NAMES_PRIMARY,
-#                                      label='Region name',
-#                                      tooltip='abc...'))
-#        self.add_input('primary_classification_labels',
-#                         ListTrait([], label='Class labels',
-#                                   tooltip='abc...'))
-
-        self.register_trait('primary_classification_regionName',
-                            SelectionTrait(REGION_NAMES_PRIMARY[0],
-                                           REGION_NAMES_PRIMARY,
-                                           label='Region name'))
-
+        self.add_group(None,
+                       [('primary_simplefeatures_texture',),
+                        ('primary_simplefeatures_shape',),
+                        ], layout='flow', link='primary_featureextraction',
+                        label='Feature extraction')
         self.add_line()
 
         frame_results = self._add_result_frame('primary')
         self.add_handler('primary_classification_envpath',
                          frame_results.on_load)
 
-        #self.add_expanding_spacer()
-
 
         self.set_tab_name('SecondaryChannel')
 
-        self.add_input('secondary_classification_envPath',
-                       StringTrait('', 1000, label='Classifier folder',
-                                   widget_info=StringTrait.STRING_PATH))
-
+        self.add_input('secondary_classification_envpath')
         self.add_line()
+        self.add_group(None,
+                       [('secondary_simplefeatures_texture',),
+                        ('secondary_simplefeatures_shape',)
+                        ], layout='flow', link='secondary_featureextraction',
+                        label='Feature extraction')
 
-#                        ('secondary_classification_collectSamples',
-#                         BooleanTrait(False, label='Collect samples',
-#                                      tooltip='abc...')),
-        self.add_group('Feature extraction', None,
-                       [
-                        ('secondary_simplefeatures_texture',
-                         BooleanTrait(True, label='Texture features')),
-                        ('secondary_simplefeatures_shape',
-                         BooleanTrait(True, label='Shape features'))
-#                        ('secondary_featureExtraction_categories',
-#                         MultiSelectionTrait([], FEATURE_CATEGORIES,
-#                                             label='Feature categories',
-#                                             tooltip='abc...')),
-#                        ('secondary_featureExtraction_parameters',
-#                         DictTrait({}, label='Feature parameters',
-#                                   tooltip='abc...')),
-                        ], layout='flow', link='secondary_featureextraction')
-
-        self.add_input('secondary_classification_regionName',
-                       SelectionTrait(REGION_NAMES_SECONDARY[0],
-                                      REGION_NAMES_SECONDARY,
-                                      label='Region name'))
-#                        ('secondary_classification_prefix',
-#                         StringTrait('', 50, label='Name prefix',
-#                                     tooltip='abc...')),
-#                        ('secondary_classification_annotationFileExt',
-#                         StringTrait('', 50, label='Annotation ext.',
-#                                     tooltip='abc...')),
-#        self.add_input('secondary_classification_labels',
-#                         ListTrait([], label='Class labels',
-#                                   tooltip='abc...'))
-
-        self.register_trait('collectsamples', BooleanTrait(False))
-        self.register_trait('collectsamples_prefix', StringTrait('',100))
-        self.register_trait('primary_classification_annotationFileExt',
-                            StringTrait('.xml', 50, label='Annotation ext.'))
-        self.register_trait('secondary_classification_annotationFileExt',
-                            StringTrait('.xml', 50, label='Annotation ext.'))
-
+        self.add_input('secondary_classification_regionname')
         self.add_line()
 
         frame_results = self._add_result_frame('secondary')
         self.add_handler('secondary_classification_envpath',
                          frame_results.on_load)
-        #self.add_expanding_spacer()
 
         self._init_control()
 

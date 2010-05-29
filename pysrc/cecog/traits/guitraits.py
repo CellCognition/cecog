@@ -23,10 +23,6 @@ __all__ = []
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
-from PyQt4.Qt import *
-
 
 #-------------------------------------------------------------------------------
 # cecog imports:
@@ -72,18 +68,18 @@ class GuiNumberTrait(GuiTrait):
 
 class IntTrait(traits.IntTrait, GuiNumberTrait):
 
-    def __init__(self, value, min_value, max_value, step=None,
+    def __init__(self, default_value, min_value, max_value, step=None,
                  label=None, tooltip=None, doc=None):
-        traits.IntTrait.__init__(self, value, min_value, max_value)
+        traits.IntTrait.__init__(self, default_value, min_value, max_value)
         GuiNumberTrait.__init__(self, label, step=step, tooltip=tooltip,
                                 doc=doc)
 
 
 class FloatTrait(traits.FloatTrait, GuiNumberTrait):
 
-    def __init__(self, value, min_value, max_value, digits=1, step=None,
+    def __init__(self, default_value, min_value, max_value, digits=1, step=None,
                  label=None, tooltip=None, doc=None):
-        traits.FloatTrait.__init__(self, value, min_value, max_value,
+        traits.FloatTrait.__init__(self, default_value, min_value, max_value,
                                    digits=digits)
         GuiNumberTrait.__init__(self, label, step=step, tooltip=tooltip,
                                 doc=doc)
@@ -91,9 +87,9 @@ class FloatTrait(traits.FloatTrait, GuiNumberTrait):
 
 class StringTrait(traits.StringTrait, GuiTrait):
 
-    def __init__(self, value, max_length, mask=None,
+    def __init__(self, default_value, max_length, mask=None,
                  label=None, tooltip=None, doc=None, widget_info=None):
-        traits.StringTrait.__init__(self, value, max_length, mask=mask)
+        traits.StringTrait.__init__(self, default_value, max_length, mask=mask)
         GuiTrait.__init__(self, label, tooltip=tooltip, doc=doc)
         if widget_info is None:
             widget_info = self.STRING_NORMAL
@@ -105,9 +101,9 @@ class StringTrait(traits.StringTrait, GuiTrait):
 
 class BooleanTrait(traits.BooleanTrait, GuiTrait):
 
-    def __init__(self, value, label=None, tooltip=None, doc=None,
+    def __init__(self, default_value, label=None, tooltip=None, doc=None,
                  widget_info=None):
-        traits.BooleanTrait.__init__(self, value)
+        traits.BooleanTrait.__init__(self, default_value)
         GuiTrait.__init__(self, label, tooltip=tooltip, doc=doc)
         if widget_info is None:
             widget_info = self.CHECKBOX
@@ -119,8 +115,8 @@ class BooleanTrait(traits.BooleanTrait, GuiTrait):
 
 class ListTrait(traits.ListTrait, GuiTrait):
 
-    def __init__(self, value, label=None, tooltip=None, doc=None):
-        traits.ListTrait.__init__(self, value)
+    def __init__(self, default_value, label=None, tooltip=None, doc=None):
+        traits.ListTrait.__init__(self, default_value)
         GuiTrait.__init__(self, label, tooltip=tooltip, doc=doc)
 
     def set_value(self, widget, value):
@@ -131,8 +127,8 @@ class ListTrait(traits.ListTrait, GuiTrait):
 
 class SelectionTrait(traits.SelectionTrait, GuiTrait):
 
-    def __init__(self, value, list_data, label=None, tooltip=None, doc=None):
-        traits.SelectionTrait.__init__(self, value, list_data)
+    def __init__(self, default_value, list_data, label=None, tooltip=None, doc=None):
+        traits.SelectionTrait.__init__(self, default_value, list_data)
         GuiTrait.__init__(self, label, tooltip=tooltip, doc=doc)
 
     def set_value(self, widget, value):
@@ -141,22 +137,22 @@ class SelectionTrait(traits.SelectionTrait, GuiTrait):
 
 class MultiSelectionTrait(traits.MultiSelectionTrait, GuiTrait):
 
-    def __init__(self, value, list_data, label=None, tooltip=None, doc=None):
-        traits.MultiSelectionTrait.__init__(self, value, list_data)
+    def __init__(self, default_value, list_data, label=None, tooltip=None, doc=None):
+        traits.MultiSelectionTrait.__init__(self, default_value, list_data)
         GuiTrait.__init__(self, label, tooltip=tooltip, doc=doc)
 
     def set_value(self, widget, value):
         widget.clearSelection()
-        for item in value:
-            w_listitem = widget.findItems(str(item), Qt.MatchExactly)
-            #if len(w_listitem) > 0:
-            widget.setCurrentItem(w_listitem[0], QItemSelectionModel.Select)
+#        for item in value:
+#            w_listitem = widget.findItems(str(item), Qt.MatchExactly)
+#            #if len(w_listitem) > 0:
+#            widget.setCurrentItem(w_listitem[0], QItemSelectionModel.Select)
 
 
 class DictTrait(traits.DictTrait, GuiTrait):
 
-    def __init__(self, value, label=None, tooltip=None, doc=None):
-        traits.DictTrait.__init__(self, value)
+    def __init__(self, default_value, label=None, tooltip=None, doc=None):
+        traits.DictTrait.__init__(self, default_value)
         GuiTrait.__init__(self, label, tooltip=tooltip, doc=doc)
 
 

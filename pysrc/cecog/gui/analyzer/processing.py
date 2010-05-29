@@ -27,15 +27,15 @@ __all__ = ['ProcessingFrame']
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
+from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
 from cecog.gui.analyzer import (_BaseFrame,
                                 _ProcessorMixin,
-                                SECONDARY_REGIONS,
-                                SECONDARY_COLORS,
                                 AnalzyerThread,
                                 HmmThread,
                                 )
-from cecog.traits.guitraits import (BooleanTrait,
-                                    )
+from cecog.analyzer import (SECONDARY_REGIONS,
+                            SECONDARY_COLORS,
+                            )
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -52,7 +52,7 @@ from cecog.traits.guitraits import (BooleanTrait,
 #
 class ProcessingFrame(_BaseFrame, _ProcessorMixin):
 
-    SECTION = 'Processing'
+    SECTION_NAME = SECTION_NAME_PROCESSING
 
     def __init__(self, settings, parent):
         _BaseFrame.__init__(self, settings, parent)
@@ -63,29 +63,15 @@ class ProcessingFrame(_BaseFrame, _ProcessorMixin):
                                       HmmThread],
                                      ('Start processing', 'Stop processing'))
 
-        self.add_group('Primary channel', None,
-                       [('primary_classification',
-                         BooleanTrait(False, label='Classification'),
-                         (0,0,1,1)),
-                        ('tracking',
-                         BooleanTrait(False, label='Tracking'),
-                         (1,0,1,1)),
-                        ('tracking_synchronize_trajectories',
-                         BooleanTrait(False, label='Event selection'),
-                         (2,0,1,1)),
-                        ('primary_errorcorrection',
-                         BooleanTrait(False, label='Error correction'),
-                         (3,0,1,1))
-                        ], link='primary_channel')
-
-        self.add_group('secondary_processChannel',
-                        BooleanTrait(False, label='Secondary channel'),
-                       [('secondary_classification',
-                         BooleanTrait(False, label='Classification'),
-                         (0,0,1,1)),
-                        ('secondary_errorcorrection',
-                         BooleanTrait(False, label='Error correction'),
-                         (1,0,1,1))
+        self.add_group(None,
+                       [('primary_classification', (0,0,1,1)),
+                        ('tracking', (1,0,1,1)),
+                        ('tracking_synchronize_trajectories', (2,0,1,1)),
+                        ('primary_errorcorrection', (3,0,1,1))
+                        ], link='primary_channel', label='Primary channel')
+        self.add_group('secondary_processchannel',
+                       [('secondary_classification', (0,0,1,1)),
+                        ('secondary_errorcorrection', (1,0,1,1))
                         ])
 
         #self.add_line()

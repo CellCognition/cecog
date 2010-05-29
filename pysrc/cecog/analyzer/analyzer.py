@@ -846,7 +846,7 @@ class TimeHolder(OrderedDict):
                         if obj_id in region:
                             #FIXME:
                             feature_lookup2 = feature_lookup.copy()
-                            for k,v in feature_lookup2.iteritems():
+                            for k,v in feature_lookup2.items():
                                 if not region.hasFeatureName(v):
                                     del feature_lookup2[k]
 

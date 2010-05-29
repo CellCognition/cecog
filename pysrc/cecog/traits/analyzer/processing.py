@@ -14,7 +14,7 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = ['OutputFrame']
+__all__ = ['SectionProcessing']
 
 #-------------------------------------------------------------------------------
 # standard library imports:
@@ -27,13 +27,13 @@ __all__ = ['OutputFrame']
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
-from cecog.gui.analyzer import _BaseFrame
+from cecog.traits.config import _Section
+from cecog.traits.guitraits import BooleanTrait
 
 #-------------------------------------------------------------------------------
 # constants:
 #
-
+SECTION_NAME_PROCESSING = 'Processing'
 
 #-------------------------------------------------------------------------------
 # functions:
@@ -43,24 +43,23 @@ from cecog.gui.analyzer import _BaseFrame
 #-------------------------------------------------------------------------------
 # classes:
 #
-class OutputFrame(_BaseFrame):
+class SectionProcessing(_Section):
 
-    SECTION_NAME = SECTION_NAME_OUTPUT
+    SECTION_NAME = SECTION_NAME_PROCESSING
 
-    def __init__(self, settings, parent):
-        _BaseFrame.__init__(self, settings, parent)
-
-        self.add_group(None,
-                       [('rendering_labels_discwrite', (0,0,1,1)),
-                        ('rendering_contours_discwrite', (1,0,1,1)),
-                        ('rendering_contours_showids', (1,1,1,1)),
-                        ('rendering_class_discwrite', (2,0,1,1)),
-                        ('rendering_class_showids', (2,1,1,1)),
-                        ], link='export_result_images',
-                        label='Export result images')
-        self.add_group(None,
-                       [('export_object_counts', (0,0,1,1)),
-                        ('export_object_details', (1,0,1,1)),
-                        ('export_track_data', (2,0,1,1)),
-                        ], link='statistics', label='Statistics')
-        self.add_expanding_spacer()
+    OPTIONS = [
+        ('primary_classification',
+            BooleanTrait(False, label='Classification')),
+        ('tracking',
+            BooleanTrait(False, label='Tracking')),
+        ('tracking_synchronize_trajectories',
+            BooleanTrait(False, label='Event selection')),
+        ('primary_errorcorrection',
+            BooleanTrait(False, label='Error correction')),
+        ('secondary_processchannel',
+            BooleanTrait(False, label='Secondary channel')),
+        ('secondary_classification',
+            BooleanTrait(False, label='Classification')),
+        ('secondary_errorcorrection',
+            BooleanTrait(False, label='Error correction')),
+        ]

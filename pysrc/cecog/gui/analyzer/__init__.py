@@ -52,7 +52,6 @@ from pdk.fileutils import safe_mkdirs
 # cecog imports:
 #
 from cecog.traits.display import TraitDisplayMixin
-
 from cecog.learning.learning import (CommonObjectLearner,
                                      CommonClassPredictor,
                                      ConfusionMatrix,
@@ -69,43 +68,12 @@ from cecog.gui.util import (ImageRatioDisplay,
                             information,
                             status,
                             )
+from cecog.analyzer import (CONTROL_1,
+                            CONTROL_2,
+                            )
 from cecog.analyzer.core import AnalyzerCore, SECONDARY_REGIONS
 from cecog.io.reader import PIXEL_TYPES
 from cecog import ccore
-
-#-------------------------------------------------------------------------------
-# constants:
-#
-CONTROL_1 = 'CONTROL_1'
-CONTROL_2 = 'CONTROL_2'
-
-FEATURE_CATEGORIES = ['roisize',
-                      'circularity',
-                      'irregularity',
-                      'irregularity2',
-                      'axes',
-                      'normbase',
-                      'normbase2',
-                      'levelset',
-                      'convexhull',
-                      'dynamics',
-                      'granulometry',
-                      'distance',
-                      'moments',
-                      ]
-REGION_NAMES_PRIMARY = ['primary']
-REGION_NAMES_SECONDARY = ['expanded', 'inside', 'outside', 'rim']
-SECONDARY_COLORS = {'inside' : '#FFFF00',
-                    'outside' : '#00FF00',
-                    'expanded': '#00FFFF',
-                    'rim' : '#FF00FF',
-                    }
-ZSLICE_PROJECTION_METHODS = ['maximum', 'average']
-
-COMPRESSION_FORMATS = ['raw', 'bz2', 'gz']
-TRACKING_METHODS = ['ClassificationCellTracker',]
-
-R_LIBRARIES = ['hwriter', 'RColorBrewer', 'igraph']
 
 #-------------------------------------------------------------------------------
 # functions:
@@ -687,16 +655,17 @@ class _ProcessorMixin(object):
 
         # try to resolve the paths relative to the package dir
         # (only in case of an relative path given)
-        settings.convert_package_path('General', 'pathin')
-        settings.convert_package_path('General', 'pathout')
-
-        settings.convert_package_path('Classification', 'primary_classification_envpath')
-        settings.convert_package_path('Classification', 'secondary_classification_envpath')
-        print settings.get('Classification', 'secondary_classification_envpath')
-
-        settings.convert_package_path('ErrorCorrection', 'primary_graph')
-        settings.convert_package_path('ErrorCorrection', 'secondary_graph')
-        settings.convert_package_path('ErrorCorrection', 'mappingfile')
+        converts = [('General', 'pathin'),
+                    ('General', 'pathout'),
+                    ('Classification', 'primary_classification_envpath'),
+                    ('Classification', 'secondary_classification_envpath'),
+                    ('ErrorCorrection', 'primary_graph'),
+                    ('ErrorCorrection', 'secondary_graph'),
+                    ('ErrorCorrection', 'mappingfile'),
+                    ]
+        for section, option in converts:
+            value = settings.get(section, option)
+            settings.set(section, option, convert_package_path(value))
         return settings
 
 
@@ -756,7 +725,7 @@ class _ProcessorMixin(object):
                 cls = self._process_items[self._current_process_item]
 
 
-            if self.SECTION == 'Classification':
+            if self.SECTION_NAME == 'Classification':
                 result_frame = self._get_result_frame(self._tab_name)
                 result_frame.load_classifier(check=False)
                 learner = result_frame._learner
@@ -940,9 +909,9 @@ class _ProcessorMixin(object):
             # enable all section button of the main widget
             self.toggle_tabs.emit(self.get_name())
             if not self._is_abort and not self._has_error:
-                if self.SECTION == 'ObjectDetection':
+                if self.SECTION_NAME == 'ObjectDetection':
                     msg = 'Object detection successfully finished.'
-                elif self.SECTION == 'Classification':
+                elif self.SECTION_NAME == 'Classification':
                     if self._current_process == self.PROCESS_PICKING:
                         msg = 'Samples successfully picked.'
                         result_frame = self._get_result_frame(self._tab_name)
@@ -951,14 +920,14 @@ class _ProcessorMixin(object):
                         msg = 'Classifier successfully trained.'
                     elif self._current_process == self.PROCESS_TESTING:
                         msg = 'Classifier testing successfully finished.'
-                elif self.SECTION == 'Tracking':
+                elif self.SECTION_NAME == 'Tracking':
                     if self._current_process == self.PROCESS_TRACKING:
                         msg = 'Tracking successfully finished.'
                     elif self._current_process == self.PROCESS_SYNCING:
                         msg = 'Motif selection successfully finished.'
-                elif self.SECTION == 'ErrorCorrection':
+                elif self.SECTION_NAME == 'ErrorCorrection':
                     msg = 'HMM error correction successfully finished.'
-                elif self.SECTION == 'Processing':
+                elif self.SECTION_NAME == 'Processing':
                     msg = 'Processing successfully finished.'
 
                 information(self, 'Process finished', msg)

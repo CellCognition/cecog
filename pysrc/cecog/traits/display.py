@@ -59,39 +59,40 @@ from cecog.gui.util import show_html
 #
 class TraitDisplayMixin(object):
 
-    SECTION = None
-    NAME = None
+    SECTION_NAME = None
+    DISPLAY_NAME = None
 
     def __init__(self, settings):
         self._registry = {}
         self._settings = settings
-        self._settings.register_section(self.SECTION)
         self._extra_columns = 0
         self._final_handlers = {}
 
     def get_name(self):
-        return self.SECTION if self.NAME is None else self.NAME
+        return self.SECTION_NAME if self.DISPLAY_NAME is None \
+            else self.DISPLAY_NAME
 
     def add_handler(self, name, function):
         self._final_handlers[name] = function
 
-    def add_group(self, name, trait, items, layout="grid", link=None):
+    def add_group(self, trait_name, items, layout="grid",
+                  link=None, label=None):
         frame = self._get_frame(self._tab_name)
         frame_layout = frame.layout()
 
-        if not trait is None:
-            name = name.lower()
-            w_input = self.add_input(name, trait)
+        if not trait_name is None:
+            w_input = self.add_input(trait_name)
+            trait = self._get_trait(trait_name)
         else:
-            w_input = self._create_label(frame, name, link=link)
-            frame_layout.addWidget(w_input, frame._input_cnt, 0, Qt.AlignRight|Qt.AlignTop)
+            w_input = self._create_label(frame, label, link=link)
+            frame_layout.addWidget(w_input, frame._input_cnt, 0,
+                                   Qt.AlignRight|Qt.AlignTop)
+            trait = None
 
         if len(items) > 0:
             w_group = QGroupBox(frame)
             w_group.setSizePolicy(QSizePolicy(QSizePolicy.Expanding,
                                               QSizePolicy.Fixed))
-            if not trait is None:
-                w_group.setEnabled(self.get_value(name))
 
             w_group._input_cnt = 0
             if layout == 'grid':
@@ -99,35 +100,30 @@ class TraitDisplayMixin(object):
             else:
                 QBoxLayout(QBoxLayout.LeftToRight, w_group)
             for info in items:
-                name2, trait2 = info[:2]
+                trait_name2 = info[0]
                 grid = None
                 alignment = None
                 # add a line
-                if trait2 is None:
+                if trait_name2 is None:
                     line = QFrame(w_group)
                     line.setFrameShape(QFrame.HLine)
-                    grid = info[2]
+                    grid = info[1]
                     w_group.layout().addWidget(line, *grid)
                 else:
+                    if len(info) >= 2:
+                        grid = info[1]
                     if len(info) >= 3:
-                        grid = info[2]
-                    if len(info) >= 4:
-                        alignment = info[3]
-                    self.add_input(name2, trait2, parent=w_group, grid=grid, alignment=alignment)
+                        alignment = info[2]
+                    self.add_input(trait_name2, parent=w_group, grid=grid,
+                                   alignment=alignment)
             frame_layout.addWidget(w_group, frame._input_cnt, 1, 1, 1)
+
             if not trait is None:
+                w_group.setEnabled(self._get_value(trait_name))
                 handler = lambda x : w_group.setEnabled(w_input.isChecked())
                 self.connect(w_input, SIGNAL('toggled(bool)'), handler)
+
         frame._input_cnt += 1
-
-    def get_value(self, name):
-        return self._settings.get_value(self.SECTION, name)
-
-    def set_value(self, name, value):
-        self._settings.set(self.SECTION, name, value)
-
-    def register_trait(self, name, trait):
-        self._settings.register_trait(self.SECTION, name, trait)
 
     def _create_label(self, parent, label, link=None):
         if link is None:
@@ -145,27 +141,24 @@ class TraitDisplayMixin(object):
         w_label.setToolTip('Click on the label for help.')
         return w_label
 
-    def add_input(self, name, trait, parent=None, grid=None, alignment=None):
-        name = name.lower()
-
-        # FIXME: this should be done from the modules
-        self.register_trait(name, trait)
-
+    def add_input(self, trait_name, parent=None, grid=None, alignment=None):
         if parent is None:
             parent = self._get_frame(self._tab_name)
 
         policy_fixed = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         policy_expanding = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
-        label = trait.label or name
-        w_label = self._create_label(parent, label, link=name)
+        trait = self._get_trait(trait_name)
+
+        label = trait.label
+        w_label = self._create_label(parent, label, link=trait_name)
         w_button = None
-        w_doc = None
+        #w_doc = None
         #w_label.setMinimumWidth(width)
 
-        value = self.get_value(name)
+        value = self._get_value(trait_name)
 
-        handler = lambda name: lambda value: self.set_value(name, value)
+        handler = lambda name: lambda value: self._set_value(name, value)
 
         if isinstance(trait, StringTrait):
             w_input = QLineEdit(parent)
@@ -176,14 +169,15 @@ class TraitDisplayMixin(object):
                 regexp.setPatternSyntax(QRegExp.RegExp2)
                 w_input.setValidator(QRegExpValidator(regexp, w_input))
             trait.set_value(w_input, value)
-            self.connect(w_input, SIGNAL('textEdited(QString)'), handler(name))
+            self.connect(w_input, SIGNAL('textEdited(QString)'),
+                         handler(trait_name))
 
             if trait.widget_info != StringTrait.STRING_NORMAL:
                 w_button = QPushButton("Browse", parent)
                 handler2 = lambda name, mode: lambda: \
                     self._on_browse_name(name, mode)
                 self.connect(w_button, SIGNAL('clicked()'),
-                             handler2(name, trait.widget_info))
+                             handler2(trait_name, trait.widget_info))
 
         elif isinstance(trait, IntTrait):
             w_input = QSpinBox(parent)
@@ -192,7 +186,8 @@ class TraitDisplayMixin(object):
             trait.set_value(w_input, value)
             if not trait.step is None:
                 w_input.setSingleStep(trait.step)
-            self.connect(w_input, SIGNAL('valueChanged(int)'), handler(name))
+            self.connect(w_input, SIGNAL('valueChanged(int)'),
+                         handler(trait_name))
 #            w_input = CecogSpinBox(parent, trait.checkable)
 #            w_input.setRange(trait.min_value, trait.max_value)
 #            w_input.setSizePolicy(policy_fixed)
@@ -210,7 +205,8 @@ class TraitDisplayMixin(object):
                 w_input.setSingleStep(trait.step)
             if not trait.digits is None:
                 w_input.setDecimals(trait.digits)
-            self.connect(w_input, SIGNAL('valueChanged(double)'), handler(name))
+            self.connect(w_input, SIGNAL('valueChanged(double)'),
+                         handler(trait_name))
 
         elif isinstance(trait, BooleanTrait):
             if trait.widget_info == BooleanTrait.CHECKBOX:
@@ -218,9 +214,10 @@ class TraitDisplayMixin(object):
             elif trait.widget_info == BooleanTrait.RADIOBUTTON:
                 w_input = QRadioButton(parent)
             trait.set_value(w_input, value)
-            handler = lambda n: lambda v: self.set_value(n, trait.convert(v))
+            handler = lambda n: lambda v: self._set_value(n, trait.convert(v))
             w_input.setSizePolicy(policy_fixed)
-            self.connect(w_input, SIGNAL('toggled(bool)'), handler(name))
+            self.connect(w_input, SIGNAL('toggled(bool)'),
+                         handler(trait_name))
 
         elif isinstance(trait, MultiSelectionTrait):
             w_input = QListWidget(parent)
@@ -235,7 +232,7 @@ class TraitDisplayMixin(object):
             trait.set_value(w_input, value)
             handler = lambda n: lambda: self._on_selection_changed(n)
             self.connect(w_input, SIGNAL('itemSelectionChanged()'),
-                         handler(name))
+                         handler(trait_name))
 
         elif isinstance(trait, SelectionTrait):
             w_input = QComboBox(parent)
@@ -245,7 +242,7 @@ class TraitDisplayMixin(object):
             w_input.setSizePolicy(policy_fixed)
             handler = lambda n: lambda v: self._on_current_index(n, v)
             self.connect(w_input, SIGNAL('currentIndexChanged(int)'),
-                         handler(name))
+                         handler(trait_name))
 
         elif isinstance(trait, DictTrait):
             w_input = QTextEdit(parent)
@@ -253,7 +250,8 @@ class TraitDisplayMixin(object):
             w_input.setSizePolicy(policy_expanding)
             trait.set_value(w_input, value)
             handler = lambda n: lambda: self._on_text_to_dict(n)
-            self.connect(w_input, SIGNAL('textChanged()'), handler(name))
+            self.connect(w_input, SIGNAL('textChanged()'),
+                         handler(trait_name))
 
         elif isinstance(trait, ListTrait):
             w_input = QTextEdit(parent)
@@ -264,13 +262,14 @@ class TraitDisplayMixin(object):
             #print value
             trait.set_value(w_input, value)
             handler = lambda n: lambda: self._on_text_to_list(n)
-            self.connect(w_input, SIGNAL('textChanged()'), handler(name))
+            self.connect(w_input, SIGNAL('textChanged()'),
+                         handler(trait_name))
 
         else:
             raise TypeError("Cannot handle name '%s' with trait '%s'." %
-                            (name, trait))
+                            (trait_name, trait))
 
-        self._registry[name] = w_input
+        self._registry[trait_name] = w_input
 
         if not w_button is None:
             w_button.setSizePolicy(policy_fixed)
@@ -303,12 +302,15 @@ class TraitDisplayMixin(object):
             else:
                 layout.addWidget(w_label, grid[0], grid[1]*3, Qt.AlignRight)
                 if alignment is None:
-                    layout.addWidget(w_input, grid[0], grid[1]*3+1, grid[2], grid[3])
+                    layout.addWidget(w_input, grid[0], grid[1]*3+1,
+                                     grid[2], grid[3])
                 else:
-                    layout.addWidget(w_input, grid[0], grid[1]*3+1, grid[2], grid[3], alignment)
+                    layout.addWidget(w_input, grid[0], grid[1]*3+1,
+                                     grid[2], grid[3], alignment)
                 layout.addItem(QSpacerItem(1, 1,
                                            QSizePolicy.MinimumExpanding,
-                                           QSizePolicy.Fixed), grid[0], grid[1]*3+2)
+                                           QSizePolicy.Fixed),
+                               grid[0], grid[1]*3+2)
         else:
             layout.addWidget(w_label)
             layout.addWidget(w_input)
@@ -321,11 +323,11 @@ class TraitDisplayMixin(object):
 
     def update_input(self):
         #if self._settings.has_section(self.SECTION):
-        for name, value in self._settings.items(self.SECTION):
+        for name, value in self._settings.items(self.SECTION_NAME):
             #print self.SECTION, name, name in self._registry
             if name in self._registry:
                 w_input = self._registry[name]
-                trait = self._settings.get_trait(self.SECTION, name)
+                trait = self._get_trait(name)
                 #print '    ', name, value
                 trait.set_value(w_input, value)
 
@@ -333,20 +335,35 @@ class TraitDisplayMixin(object):
 #            self._settings.add_section(self.SECTION)
 
 
+    # convenience methods
+
+    def _get_value(self, name):
+        return self._settings.get_value(self.SECTION_NAME, name)
+
+    def _set_value(self, name, value):
+        self._settings.set(self.SECTION_NAME, name, value)
+
+    def _get_trait(self, name):
+        return self._settings.get_trait(self.SECTION_NAME, name)
+
+
+    # event methods
+
     def _on_show_help(self, link):
-        print self.SECTION, link
-        show_html(self.SECTION, link=link, header='_header', footer='_footer')
+        print self.SECTION_NAME, link
+        show_html(self.SECTION_NAME, link=link,
+                  header='_header', footer='_footer')
 
 
     def _on_set_radio_button(self, name, value):
         # FIXME: this is somehow hacky. we need to inform all the radio-buttons
         #        if the state of one is changed
-        for option in self._settings.options(self.SECTION):
-            trait = self._settings.get_trait(self.SECTION, option)
+        for option in self._settings.options(self.SECTION_NAME):
+            trait = self._get_trait(option)
             if (isinstance(trait, BooleanTrait) and
                 trait.widget_info == BooleanTrait.RADIOBUTTON):
                 #print option, name, value
-                self.set_value(option, option == name)
+                self._set_value(option, option == name)
 
     def _on_browse_name(self, name, mode):
         # FIXME: signals are send during init were registry is not set yet
@@ -368,7 +385,7 @@ class TraitDisplayMixin(object):
             if dialog.exec_():
                 path = str(dialog.selectedFiles()[0])
                 self._registry[name].setText(path)
-                self.set_value(name, path)
+                self._set_value(name, path)
 
                 # call final handler
                 if name in self._final_handlers:
@@ -377,19 +394,19 @@ class TraitDisplayMixin(object):
     def _on_current_index(self, name, index):
         # FIXME: signals are send during init but registry is not set yet
         if name in self._registry:
-            self.set_value(name, str(self._registry[name].currentText()))
+            self._set_value(name, str(self._registry[name].currentText()))
 
     def _on_selection_changed(self, name):
         # FIXME: signals are send during init but registry is not set yet
         if name in self._registry:
             widgets = self._registry[name].selectedItems()
-            self.set_value(name, [str(w.text()) for w in widgets])
+            self._set_value(name, [str(w.text()) for w in widgets])
 
     def _on_text_to_list(self, name):
         # FIXME: signals are send during init but registry is not set yet
         if name in self._registry:
             text = str(self._registry[name].toPlainText())
-            self.set_value(name, [x.strip() for x in text.split('\n')])
+            self._set_value(name, [x.strip() for x in text.split('\n')])
 
     def _on_text_to_dict(self, name):
         # FIXME: signals are send during init but registry is not set yet
@@ -397,7 +414,7 @@ class TraitDisplayMixin(object):
             text = str(self._registry[name].toPlainText())
             value = eval(text)
             assert type(value) == types.DictType
-            self.set_value(name, value)
+            self._set_value(name, value)
 
     def _on_show_doc(self, name, trait):
         QMessageBox().information(self,
