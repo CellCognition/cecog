@@ -28,10 +28,10 @@ __all__ = ['SectionErrorcorrection']
 # cecog imports:
 #
 from cecog.traits.config import _Section
-from cecog.traits.guitraits import (StringTrait,
-                                    FloatTrait,
-                                    BooleanTrait,
-                                    )
+from cecog.gui.guitraits import (StringTrait,
+                                 FloatTrait,
+                                 BooleanTrait,
+                                 )
 
 #-------------------------------------------------------------------------------
 # constants:

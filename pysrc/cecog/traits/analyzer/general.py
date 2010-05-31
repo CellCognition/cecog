@@ -28,13 +28,13 @@ __all__ = []
 # cecog imports:
 #
 from cecog.traits.config import _Section
-from cecog.traits.guitraits import (StringTrait,
-                                    IntTrait,
-                                    BooleanTrait,
-                                    SelectionTrait,
-                                    DictTrait,
-                                    ListTrait
-                                    )
+from cecog.gui.guitraits import (StringTrait,
+                                 IntTrait,
+                                 BooleanTrait,
+                                 SelectionTrait,
+                                 DictTrait,
+                                 ListTrait
+                                 )
 from cecog.traits.config import NAMING_SCHEMAS
 
 #-------------------------------------------------------------------------------

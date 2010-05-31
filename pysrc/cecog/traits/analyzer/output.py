@@ -28,8 +28,7 @@ __all__ = ['SectionOutput']
 # cecog imports:
 #
 from cecog.traits.config import _Section
-from cecog.traits.guitraits import (BooleanTrait,
-                                    )
+from cecog.gui.guitraits import BooleanTrait
 
 #-------------------------------------------------------------------------------
 # constants:

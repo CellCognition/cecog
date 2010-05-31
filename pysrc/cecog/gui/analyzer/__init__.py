@@ -51,7 +51,7 @@ from pdk.fileutils import safe_mkdirs
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog.traits.display import TraitDisplayMixin
+from cecog.gui.display import TraitDisplayMixin
 from cecog.learning.learning import (CommonObjectLearner,
                                      CommonClassPredictor,
                                      ConfusionMatrix,

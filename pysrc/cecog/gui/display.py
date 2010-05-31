@@ -32,15 +32,15 @@ from PyQt4.Qt import *
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog.traits.guitraits import (StringTrait,
-                                    IntTrait,
-                                    FloatTrait,
-                                    BooleanTrait,
-                                    SelectionTrait,
-                                    MultiSelectionTrait,
-                                    DictTrait,
-                                    ListTrait
-                                    )
+from cecog.gui.guitraits import (StringTrait,
+                                 IntTrait,
+                                 FloatTrait,
+                                 BooleanTrait,
+                                 SelectionTrait,
+                                 MultiSelectionTrait,
+                                 DictTrait,
+                                 ListTrait
+                                 )
 from cecog.util.util import convert_package_path
 from cecog.gui.util import show_html
 

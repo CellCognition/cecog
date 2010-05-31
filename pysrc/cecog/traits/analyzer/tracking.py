@@ -28,11 +28,11 @@ __all__ = ['SectionTracking']
 # cecog imports:
 #
 from cecog.traits.config import _Section
-from cecog.traits.guitraits import (StringTrait,
-                                    IntTrait,
-                                    BooleanTrait,
-                                    SelectionTrait,
-                                    )
+from cecog.gui.guitraits import (StringTrait,
+                                 IntTrait,
+                                 BooleanTrait,
+                                 SelectionTrait,
+                                 )
 from cecog.analyzer import (COMPRESSION_FORMATS,
                             )
 

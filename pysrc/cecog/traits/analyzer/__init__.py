@@ -36,6 +36,7 @@ from cecog.traits.analyzer.tracking import SectionTracking
 from cecog.traits.analyzer.errorcorrection import SectionErrorcorrection
 from cecog.traits.analyzer.output import SectionOutput
 from cecog.traits.analyzer.processing import SectionProcessing
+from cecog.traits.analyzer.cluster import SectionCluster
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -48,3 +49,4 @@ SECTION_REGISTRY.register_section(SectionTracking())
 SECTION_REGISTRY.register_section(SectionErrorcorrection())
 SECTION_REGISTRY.register_section(SectionOutput())
 SECTION_REGISTRY.register_section(SectionProcessing())
+SECTION_REGISTRY.register_section(SectionCluster())

@@ -28,10 +28,10 @@ __all__ = ['SectionClassification']
 # cecog imports:
 #
 from cecog.traits.config import _Section
-from cecog.traits.guitraits import (StringTrait,
-                                    BooleanTrait,
-                                    SelectionTrait,
-                                    )
+from cecog.gui.guitraits import (StringTrait,
+                                 BooleanTrait,
+                                 SelectionTrait,
+                                 )
 from cecog.analyzer import (REGION_NAMES_PRIMARY,
                             REGION_NAMES_SECONDARY,
                             )
