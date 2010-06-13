@@ -80,8 +80,9 @@ class ProcessingFrame(_BaseFrame, _ProcessorMixin):
 
         self._init_control()
 
-    def _get_modified_settings(self, name):
-        settings = _ProcessorMixin._get_modified_settings(self, name)
+    @classmethod
+    def get_special_settings(cls, settings):
+        settings = _ProcessorMixin.get_special_settings(settings)
 
         settings.set('General', 'rendering', {})
         settings.set('General', 'rendering_class', {})

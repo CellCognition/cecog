@@ -33,7 +33,9 @@ from PyQt4.Qt import *
 # cecog imports:
 #
 from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
-from cecog.gui.util import information
+from cecog.gui.util import (information,
+                            exception,
+                            )
 from cecog.gui.analyzer import (_BaseFrame,
                                 _ProcessorMixin,
                                 AnalzyerThread,
@@ -147,47 +149,49 @@ class ClassifierResultFrame(QGroupBox):
                             'strChannelId' : _resolve('ObjectDetection', 'channelid'),
                             'strRegionId' : _resolve('Classification', 'classification_regionname'),
                             }
-        self._learner = CommonClassPredictor(dctCollectSamples=classifier_infos)
-
-        result = self._learner.check()
-        if check:
-            b = lambda x: 'Yes' if x else 'No'
-            msg =  'Classifier path: %s\n' % result['path_env']
-            msg += 'Found class definition: %s\n' % b(result['has_definition'])
-            msg += 'Found annotations: %s\n' % b(result['has_path_annotations'])
-            msg += 'Can you pick new samples? %s\n\n' % b(self.is_pick_samples())
-            msg += 'Found ARFF file: %s\n' % b(result['has_arff'])
-            msg += 'Can you train a classifier? %s\n\n' % b(self.is_train_classifier())
-            msg += 'Found SVM model: %s\n' % b(result['has_model'])
-            msg += 'Found SVM range: %s\n' % b(result['has_range'])
-            msg += 'Can you apply the classifier to images? %s\n\n' % b(self.is_apply_classifier())
-            msg += 'Found samples: %s\n' % b(result['has_path_samples'])
-            msg += 'Sample images are only used for visualization and annotation control at the moment.'
-
-            txt = '%s classifier inspection results' % self._channel
-            widget = information(self, txt, txt, info=msg)
-
-        if result['has_arff']:
-            self._learner.importFromArff()
-            self._label_features.setText(self.LABEL_FEATURES %
-                                         len(self._learner.lstFeatureNames))
-
-        elif result['has_definition']:
-            self._learner.loadDefinition()
-            self._set_info_table()
-
-        if result['has_conf']:
-            c, g, conf = self._learner.importConfusion()
-            self._set_info(c, g, conf)
-            self._init_conf_table(conf)
-            self._update_conf_table(conf)
+        try:
+            self._learner = CommonClassPredictor(dctCollectSamples=classifier_infos)
+        except:
+            exception(self, 'Error on loading classifier.')
         else:
-            conf = None
-        self._set_info_table(conf)
+            result = self._learner.check()
+            if check:
+                b = lambda x: 'Yes' if x else 'No'
+                msg =  'Classifier path: %s\n' % result['path_env']
+                msg += 'Found class definition: %s\n' % b(result['has_definition'])
+                msg += 'Found annotations: %s\n' % b(result['has_path_annotations'])
+                msg += 'Can you pick new samples? %s\n\n' % b(self.is_pick_samples())
+                msg += 'Found ARFF file: %s\n' % b(result['has_arff'])
+                msg += 'Can you train a classifier? %s\n\n' % b(self.is_train_classifier())
+                msg += 'Found SVM model: %s\n' % b(result['has_model'])
+                msg += 'Found SVM range: %s\n' % b(result['has_range'])
+                msg += 'Can you apply the classifier to images? %s\n\n' % b(self.is_apply_classifier())
+                msg += 'Found samples: %s\n' % b(result['has_path_samples'])
+                msg += 'Sample images are only used for visualization and annotation control at the moment.'
+
+                txt = '%s classifier inspection results' % self._channel
+                widget = information(self, txt, info=msg)
+
+            if result['has_arff']:
+                self._learner.importFromArff()
+                self._label_features.setText(self.LABEL_FEATURES %
+                                             len(self._learner.lstFeatureNames))
+
+            if result['has_definition']:
+                self._learner.loadDefinition()
+
+            if result['has_conf']:
+                c, g, conf = self._learner.importConfusion()
+                self._set_info(c, g, conf)
+                self._init_conf_table(conf)
+                self._update_conf_table(conf)
+            else:
+                conf = None
+            self._set_info_table(conf)
 
     def msg_pick_samples(self, parent):
         result = self._learner.check()
-        title = 'Sample picking is not possible'
+        text = 'Sample picking is not possible'
         info = 'You need to provide a class definition '\
                'file and annotation files.'
         detail = 'Missing components:\n'
@@ -195,7 +199,7 @@ class ClassifierResultFrame(QGroupBox):
             detail += "- Annotation path '%s' not found.\n" % result['path_annotations']
         if not result['has_definition']:
             detail += "- Class definition file '%s' not found.\n" % result['definition']
-        return information(parent, title, title, info, detail)
+        return information(parent, text, info, detail)
 
     def is_pick_samples(self):
         result = self._learner.check()
@@ -203,12 +207,12 @@ class ClassifierResultFrame(QGroupBox):
 
     def msg_train_classifier(self, parent):
         result = self._learner.check()
-        title = 'Classifier training is not possible'
+        text = 'Classifier training is not possible'
         info = 'You need to pick samples first.'
         detail = 'Missing components:\n'
         if not result['has_arff']:
             detail += "- Feature file '%s' not found.\n" % result['arff']
-        return information(parent, title, title, info, detail)
+        return information(parent, text, info, detail)
 
     def is_train_classifier(self):
         result = self._learner.check()
@@ -216,14 +220,14 @@ class ClassifierResultFrame(QGroupBox):
 
     def msg_apply_classifier(self, parent):
         result = self._learner.check()
-        title = 'Classifier model not found'
+        text = 'Classifier model not found'
         info = 'You need to train a classifier first.'
         detail = 'Missing components:\n'
         if not result['has_model']:
             detail += "- SVM model file '%s' not found.\n" % result['model']
         if not result['has_range']:
             detail += "- SVM range file '%s' not found.\n" % result['range']
-        return information(parent, title, title, info, detail)
+        return information(parent, text, info, detail)
 
     def is_apply_classifier(self):
         result = self._learner.check()
@@ -264,7 +268,7 @@ class ClassifierResultFrame(QGroupBox):
             item.setBackground(QBrush(QColor(*hexToRgb(self._learner.dctHexColors[name]))))
             self._table_info.setItem(r, 2, item)
 
-            if not conf is None:
+            if not conf is None and r < len(conf):
                 item = QTableWidgetItem('%.1f' % (conf.ppv[r] * 100.))
                 item.setToolTip('"%s" precision' %  name)
                 self._table_info.setItem(r, 3, item)
@@ -369,8 +373,9 @@ class ClassifierResultFrame(QGroupBox):
             for c in range(cols):
                 item = QTableWidgetItem()
                 item.setToolTip('%d samples' % conf_array[r,c])
-                col = int(255 * (1 - conf_norm[r,c]))
-                item.setBackground(QBrush(QColor(col, col, col)))
+                if not numpy.isnan(conf_norm[r,c]):
+                    col = int(255 * (1 - conf_norm[r,c]))
+                    item.setBackground(QBrush(QColor(col, col, col)))
                 self._table_conf.setItem(r, c, item)
 
     def _set_info(self, c, g, conf):
@@ -519,3 +524,17 @@ class ClassificationFrame(_BaseFrame, _ProcessorMixin):
 
     def _get_result_frame(self, name):
         return self._result_frames[name]
+
+    def _update_classifier(self):
+        if self._tab.currentIndex() == 0:
+            channel = 'primary'
+        else:
+            channel = 'secondary'
+        result_frame = self._result_frames[channel]
+        result_frame.load_classifier(check=False)
+
+    def page_changed(self):
+        self._update_classifier()
+
+    def tab_changed(self, index):
+        self._update_classifier()

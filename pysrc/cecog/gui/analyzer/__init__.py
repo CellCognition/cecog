@@ -118,6 +118,7 @@ class _BaseFrame(QFrame, TraitDisplayMixin):
                 self._tab_lookup[name] = (idx, frame)
             scroll_area.setWidget(self._tab)
             #layout.addWidget(self._tab)
+            self._tab.currentChanged.connect(self.on_tab_changed)
         else:
             self._frame = QFrame(self)
             self._frame._input_cnt = 0
@@ -131,6 +132,10 @@ class _BaseFrame(QFrame, TraitDisplayMixin):
         layout.addWidget(self._control)
 
         TraitDisplayMixin.__init__(self, settings)
+
+    @pyqtSlot('int')
+    def on_tab_changed(self, index):
+        self.tab_changed(index)
 
     def set_tab_name(self, name):
         self._tab_name = name
@@ -172,6 +177,16 @@ class _BaseFrame(QFrame, TraitDisplayMixin):
         label.setPixmap(pixmap)
         frame.layout().addWidget(label, frame._input_cnt, 0, 1, 2, align)
         frame._input_cnt += 1
+
+    def page_changed(self):
+        '''
+        Abstract method. Invoked by the AnalyzerMainWindow when this frame
+        is activated for display.
+        '''
+        pass
+
+    def tab_changed(self, index):
+        pass
 
 
 
@@ -305,7 +320,7 @@ class HmmThread(_ProcessingThread):
             elif line2 == '#MAX_TIME':
                 lines[i] = "MAX_TIME = %s\n" % self._settings.get2('max_time')
 
-            if 'primary' in self._learner_dict and self._settings.get('Processing', 'primary_errorcorrection'):
+            if 'primary' in self._learner_dict:# and self._settings.get('Processing', 'primary_errorcorrection'):
 
                 if self._settings.get2('constrain_graph'):
                     primary_graph = self._convert(self._settings.get2('primary_graph'))
@@ -327,7 +342,7 @@ class HmmThread(_ProcessingThread):
                     else:
                         lines[i] = "SORT_CLASSES_P = c(%s)\n" % primary_sort
 
-            if 'secondary' in self._learner_dict and self._settings.get('Processing', 'secondary_errorcorrection'):
+            if 'secondary' in self._learner_dict:# and self._settings.get('Processing', 'secondary_errorcorrection'):
                 if self._settings.get2('constrain_graph'):
                     secondary_graph = self._convert(self._settings.get2('secondary_graph'))
                 else:
@@ -370,8 +385,9 @@ class HmmThread(_ProcessingThread):
                      self._on_stdout)
         self.connect(self._process, SIGNAL('readyReadStandardError()'),
                      self._on_stderr)
+        #self._process.error.connect(self._on_error)
 
-        self._process.waitForFinished()
+        self._process.waitForFinished(-1)
 
 
     def _generate_graph(self, channel, wd, hmm_path, region_name):
@@ -417,12 +433,12 @@ class HmmThread(_ProcessingThread):
         return filename_out
 
     def _on_finished(self, code):
-        print 'finished', code
-        progress = 1 if code == 0 else None
+        print 'finished: "%s"' % code
+        #progress = 1 if code == 0 else None
         info = {'min' : 0,
                 'max' : 1,
                 'stage': 0,
-                'progress': progress}
+                'progress': 1}
         self.set_stage_info(info)
 
     def _on_stdout(self):
@@ -436,6 +452,10 @@ class HmmThread(_ProcessingThread):
         self._process.setReadChannel(QProcess.StandardError)
         msg = ''.join(list(self._process.readAll()))
         self.analyzer_error.emit(msg, 0)
+
+    @pyqtSlot('QProcess::ProcessError')
+    def _on_error(self, error):
+        print 'error', error
 
     def set_abort(self):
         _ProcessingThread.set_abort(self)
@@ -650,8 +670,9 @@ class _ProcessorMixin(object):
             for name in self._control_buttons:
                 self._set_control_button_text(name=name)
 
-    def _get_modified_settings(self, name):
-        settings = copy.deepcopy(self._settings)
+    @classmethod
+    def get_special_settings(cls, settings):
+        settings = copy.deepcopy(settings)
 
         # try to resolve the paths relative to the package dir
         # (only in case of an relative path given)
@@ -668,6 +689,8 @@ class _ProcessorMixin(object):
             settings.set(section, option, convert_package_path(value))
         return settings
 
+    def _get_modified_settings(self, name):
+        return self.get_special_settings(self._settings)
 
     def _on_tab_changed(self, idx):
         names = ['primary', 'secondary']
@@ -735,8 +758,10 @@ class _ProcessorMixin(object):
                         is_valid = False
                         result_frame.msg_pick_samples(self)
                     elif result_frame.is_train_classifier():
-                        if question(self, '', 'Samples already picked',
-                                    'Do you want to pick samples again and overwrite previous results?') != QMessageBox.Yes:
+                        if question(self, 'Samples already picked',
+                                    'Do you want to pick samples again and '
+                                    'overwrite previous '
+                                    'results?') != QMessageBox.Yes:
                             is_valid = False
 
                 elif name == self.PROCESS_TRAINING:
@@ -744,8 +769,9 @@ class _ProcessorMixin(object):
                         is_valid = False
                         result_frame.msg_train_classifier(self)
                     elif result_frame.is_apply_classifier():
-                        if question(self, '', 'Classifier already trained',
-                                    'Do you want to train the classifier again?') != QMessageBox.Yes:
+                        if question(self, 'Classifier already trained',
+                                    'Do you want to train the classifier '
+                                    'again?') != QMessageBox.Yes:
                             is_valid = False
 
                 elif name == self.PROCESS_TESTING and not result_frame.is_apply_classifier():
@@ -757,7 +783,7 @@ class _ProcessorMixin(object):
 
                 success, cmd = HmmThread.test_executable(self._settings.get('ErrorCorrection', 'filename_to_R'))
                 if not success:
-                    critical(self, 'Error running R', 'Error running R',
+                    critical(self, 'Error running R',
                              "The R command line program '%s' could not be executed.\n\n"\
                              "Make sure that the R-project is installed.\n\n"\
                              "See README.txt for details." % cmd)
@@ -834,7 +860,8 @@ class _ProcessorMixin(object):
                     for kind in ['primary', 'secondary']:
                         _resolve = lambda x,y: self._settings.get(x, '%s_%s' % (kind, y))
                         env_path = convert_package_path(_resolve('Classification', 'classification_envpath'))
-                        if _resolve('Processing', 'classification'): # and _resolve('Processing', 'errorcorrection'):
+                        if (_resolve('Processing', 'classification') and
+                            (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))):
                             classifier_infos = {'strEnvPath' : env_path,
                                                 'strChannelId' : _resolve('ObjectDetection', 'channelid'),
                                                 'strRegionId' : _resolve('Classification', 'classification_regionname'),
@@ -885,7 +912,7 @@ class _ProcessorMixin(object):
         msgbox.setText("An error occured during processing.")
         #msgBox.setInformativeText("Do you want to save your changes?");
         msgbox.setIcon(QMessageBox.Critical)
-        msgbox.setDetailedText(str(msg))
+        msgbox.setDetailedText(msg)
         #msgbox.setWindowFlags(0)
         msgbox.setFixedSize(400,200)
         msgbox.setStandardButtons(QMessageBox.Ok)
@@ -913,11 +940,16 @@ class _ProcessorMixin(object):
                     msg = 'Object detection successfully finished.'
                 elif self.SECTION_NAME == 'Classification':
                     if self._current_process == self.PROCESS_PICKING:
-                        msg = 'Samples successfully picked.'
+                        msg = 'Samples successfully picked.\n\n'\
+                              'Please train the classifier now based on the '\
+                              'newly picked samples.'
                         result_frame = self._get_result_frame(self._tab_name)
                         result_frame.load_classifier(check=False)
                     elif self._current_process == self.PROCESS_TRAINING:
-                        msg = 'Classifier successfully trained.'
+                        msg = 'Classifier successfully trained.\n\n'\
+                              'You can test the classifier performance here'\
+                              'visually or apply the classifier in the '\
+                              'processing workflow.'
                     elif self._current_process == self.PROCESS_TESTING:
                         msg = 'Classifier testing successfully finished.'
                 elif self.SECTION_NAME == 'Tracking':

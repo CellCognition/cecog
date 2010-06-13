@@ -275,19 +275,6 @@ class TraitDisplayMixin(object):
             w_button.setSizePolicy(policy_fixed)
             self._extra_columns = 1
 
-#        if not trait.doc is None:
-#            w_doc = QPushButton(parent)
-#            w_doc.setIcon(QIcon(':question_mark'))
-#            #w_doc.setAutoRaise(True)
-#            w_doc.setMaximumSize(14,14)
-#            w_doc.setFlat(True)
-#            handler2 = lambda: self._on_show_doc(name, trait)
-#            self.connect(w_doc, SIGNAL('clicked()'), handler2)
-#        else:
-#            w_doc = QFrame(parent)
-#        w_doc.setSizePolicy(QSizePolicy(QSizePolicy.Fixed,
-#                                        QSizePolicy.Fixed))
-
         layout = parent.layout()
         if isinstance(layout, QGridLayout):
 
@@ -415,8 +402,3 @@ class TraitDisplayMixin(object):
             value = eval(text)
             assert type(value) == types.DictType
             self._set_value(name, value)
-
-    def _on_show_doc(self, name, trait):
-        QMessageBox().information(self,
-                                  "Help about '%s'" % trait.label,
-                                  trait.doc)

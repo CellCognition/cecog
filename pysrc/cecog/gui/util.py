@@ -20,8 +20,9 @@ __all__ = ['QRC_TOKEN',
            'message',
            'information',
            'question',
-           'critical',
            'warning',
+           'critical',
+           'exception',
            'status',
            'load_qrc_text',
            'show_html',
@@ -31,6 +32,8 @@ __all__ = ['QRC_TOKEN',
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
+import sys, \
+       traceback
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -87,11 +90,14 @@ def numpy_to_qimage(data, colors=None):
             qimage.setColor(idx, col.rgb())
     return qimage
 
-def message(parent, title, text, info=None, detail=None, buttons=None,
-            icon=None):
+def message(parent, text, info=None, detail=None, buttons=None,
+            icon=None, title=None):
     msg_box = QMessageBox(parent)
+    if title is None:
+        title = text
     msg_box.setWindowTitle(title)
     msg_box.setText(text)
+    print text
     if not info is None:
         msg_box.setInformativeText(info)
     if not detail is None:
@@ -102,25 +108,37 @@ def message(parent, title, text, info=None, detail=None, buttons=None,
         msg_box.setStandardButtons(buttons)
     return msg_box.exec_()
 
-def information(parent, title, text, info=None, detail=None):
-    return message(parent, title, text, info=info, detail=detail,
+def information(parent, text, info=None, detail=None):
+    return message(parent, text, info=info, detail=detail,
                    buttons=QMessageBox.Ok,
                    icon=QMessageBox.Information)
 
-def question(parent, title, text, info=None, detail=None):
-    return message(parent, title, text, info=info, detail=detail,
+def question(parent, text, info=None, detail=None):
+    return message(parent, text, info=info, detail=detail,
                    buttons=QMessageBox.Yes|QMessageBox.No,
                    icon=QMessageBox.Question)
 
-def critical(parent, title, text, info=None, detail=None):
-    return message(parent, title, text, info=info, detail=detail,
+def warning(parent, text, info=None, detail=None):
+    return message(parent, text, info=info, detail=detail,
+                   buttons=QMessageBox.Ok,
+                   icon=QMessageBox.Warning)
+
+def critical(parent, text=None, info=None, detail=None, detail_tb=False,
+             tb_limit=None):
+    if detail_tb and detail is None:
+        detail = traceback.format_exc(tb_limit)
+    return message(parent, text, info=info, detail=detail,
                    buttons=QMessageBox.Ok,
                    icon=QMessageBox.Critical)
 
-def warning(parent, title, text, info=None, detail=None):
-    return message(parent, title, text, info=info, detail=detail,
+def exception(parent, text, tb_limit=None):
+    type, value = sys.exc_info()[:2]
+    return message(parent, text,
+                   info='%s : %s ' % (str(type.__name__), str(value)),
+                   detail=traceback.format_exc(tb_limit),
                    buttons=QMessageBox.Ok,
-                   icon=QMessageBox.Warning)
+                   icon=QMessageBox.Critical)
+
 
 def status(msg, timeout=0):
     qApp._statusbar.showMessage(msg, timeout)
@@ -135,6 +153,7 @@ def load_qrc_text(name):
         text = str(s.readAll())
         f.close()
     return text
+
 
 def show_html(name, link='_top', title=None,
               header='_header', footer='_footer'):
