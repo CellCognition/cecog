@@ -170,7 +170,10 @@ class BaseLearner(LoggerMixin, OptionManager):
 
 
     def initEnv(self):
-        #strEnvPath = self.getOption('strEnvPath')
+        env_path = self.getOption('strEnvPath')
+        if not os.path.isdir(env_path):
+            raise IOError("Classifier environment path '%s' does not exist." %
+                          env_path)
         for strName, strPath in self.dctEnvPaths.iteritems():
             safe_mkdirs(strPath)
 
@@ -210,6 +213,9 @@ class BaseLearner(LoggerMixin, OptionManager):
             path = self.getOption('strEnvPath')
         f = open(os.path.join(path, filename), "r")
         reader = csv.reader(f, delimiter='\t', quoting=csv.QUOTE_NONE)
+        self.dctClassNames.clear()
+        self.dctClassLabels.clear()
+        self.dctHexColors.clear()
         for row in reader:
             label = int(row[0])
             name = row[1]
@@ -762,6 +768,8 @@ class ConfusionMatrix(object):
         self.ac_sample = numpy.sum(self.tp) / numpy.sum(self.samples,
                                                         dtype=numpy.float)
 
+    def __len__(self):
+        return self.conf.shape[0]
 
     def export(self, filename, sep='\t', mapping=None):
         f = file(filename, 'w')
