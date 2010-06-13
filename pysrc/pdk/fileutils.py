@@ -538,7 +538,15 @@ def safe_mkdirs(path, prompt=False):
             else:
                 is_ok = True
             if is_ok:
-                os.makedirs(path)
+                # this function is not atomic, so another process could create
+                # the folder in between.
+                # if an IOError occurs but the folder exists, everything is
+                # still ok, otherwise there are other errors which are raised
+                try:
+                    os.makedirs(path)
+                except IOError as err:
+                    if not os.path.isdir(path):
+                        raise err
     else:
         is_ok = True
     return is_ok
