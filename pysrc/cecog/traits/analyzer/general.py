@@ -81,6 +81,7 @@ class SectionGeneral(_Section):
             IntTrait(1, 0, 1000, label='End')),
         ('frameincrement',
             IntTrait(1, 1, 100, label='Timepoint increment')),
+        ('createimagecontainer', BooleanTrait(True)),
         ('preferimagecontainer', BooleanTrait(False)),
         ('binningfactor', IntTrait(1,1,10)),
         ('timelapsedata', BooleanTrait(True)),

@@ -16,6 +16,12 @@ __source__ = '$URL$'
 
 __all__ = ['NAMING_SCHEMAS',
            'ANALYZER_CONFIG',
+           'PATH_MAPPER'
+           'map_path_to_os',
+           'is_path_mappable',
+           'ConfigSettings',
+           '_Section'
+           'SectionRegistry'
            ]
 
 #-------------------------------------------------------------------------------
@@ -32,12 +38,19 @@ from pdk.ordereddict import OrderedDict
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
+from cecog.util.util import (read_table,
+                             write_table,
+                             )
+from cecog.util.mapping import map_path_to_os as _map_path_to_os
+from cecog.traits.traits import StringTrait
 
 #-------------------------------------------------------------------------------
 # constants:
 #
-NAMING_SCHEMA_FILENAME   = os.path.join('resources', 'naming_schemas.ini')
 ANALYZER_CONFIG_FILENAME = os.path.join('resources', 'config.ini')
+FONT12_FILENAME = os.path.join('resources', 'font12.png')
+NAMING_SCHEMA_FILENAME   = os.path.join('resources', 'naming_schemas.ini')
+PATH_MAPPING_FILENAME = os.path.join('resources', 'path_mappings.txt')
 
 #-------------------------------------------------------------------------------
 # functions:
@@ -78,13 +91,9 @@ class ConfigSettings(RawConfigParser):
 
         self._section_registry = section_registry
         for section_name in section_registry.get_section_names():
-            print section_name
             self.add_section(section_name)
-
             section = section_registry.get_section(section_name)
-            print section, dir(section)
             for trait_name in section.get_trait_names():
-                print trait_name
                 trait = section.get_trait(trait_name)
                 self.set(section_name, trait_name, trait.default_value)
 
@@ -155,6 +164,17 @@ class SectionRegistry(object):
     def get_section_names(self):
         return self._registry.keys()
 
+    def get_path_settings(self):
+        result = []
+        for section_name, section in self._registry.iteritems():
+            for trait_name in section.get_trait_names():
+                trait = section.get_trait(trait_name)
+                if (isinstance(trait, StringTrait) and
+                    trait.widget_info in [StringTrait.STRING_FILE,
+                                          StringTrait.STRING_PATH]):
+                    result.append((section_name, trait_name, trait))
+        return result
+
 
 class _Section(object):
 
@@ -174,6 +194,40 @@ class _Section(object):
         return self._registry.keys()
 
 
+class PathMapper(object):
+
+    def __init__(self, filename):
+        self._column_names, self._path_mappings = None, None
+        self.read(filename)
+
+    def map_path_to_os(self, path, target_os=None, force=True):
+        path2 = _map_path_to_os(path, self._path_mappings, target_os=target_os)
+        if path2 is None and force:
+            path2 = path
+        return path2
+
+    def is_path_mappable(self, path, target_os=None):
+        path2 = _map_path_to_os(path, self._path_mappings, target_os=target_os)
+        return not path2 is None
+
+    def read(self, filename):
+        self._column_names, self._path_mappings = read_table(filename)
+
+    def write(self, filename):
+        write_table(filename, self._path_mappings,
+                    column_names=self._column_names)
+
+    @property
+    def column_names(self):
+        return self._column_names[:]
+
+
 NAMING_SCHEMAS  = _ConfigParser(NAMING_SCHEMA_FILENAME, 'naming schemas')
 ANALYZER_CONFIG = _ConfigParser(ANALYZER_CONFIG_FILENAME, 'analyzer config')
+
+PATH_MAPPER = PathMapper(PATH_MAPPING_FILENAME)
+
+# define global functions which are in fact methods
+map_path_to_os = PATH_MAPPER.map_path_to_os
+is_path_mappable = PATH_MAPPER.is_path_mappable
 
