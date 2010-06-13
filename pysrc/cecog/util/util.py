@@ -28,12 +28,19 @@ import logging, \
 
 from pdk.options import Option
 from pdk.optionmanagers import OptionManager
-
+from pdk.platform import (on_mac,
+                          on_windows,
+                          on_linux,
+                          )
 
 #-------------------------------------------------------------------------------
 # constants:
 #
 PACKAGE_PATH = ''
+
+OS_WINDOWS = 'windows'
+OS_MAC = 'mac'
+OS_LINUX = 'linux'
 
 #-------------------------------------------------------------------------------
 # functions:
@@ -91,8 +98,25 @@ def write_table(filename, rows, column_names=None, sep='\t'):
             f.write('%s\n' % sep.join(map(str, func(row))))
     f.close()
 
+def get_package_path():
+    return PACKAGE_PATH
+
+def set_package_path(name):
+    global PACKAGE_PATH
+    PACKAGE_PATH = name
+
 def convert_package_path(path):
     return os.path.normpath(os.path.join(PACKAGE_PATH, path))
+
+def resolve_os_name():
+    os_str = None
+    if on_windows():
+        os_str = OS_WINDOWS
+    elif on_mac():
+        os_str = OS_MAC
+    elif on_linux():
+        os_str = OS_LINUX
+    return os_str
 
 #-------------------------------------------------------------------------------
 # classes:
