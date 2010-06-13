@@ -14,7 +14,7 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = []
+__all__ = ['VERSION']
 
 #-------------------------------------------------------------------------------
 # standard library imports:
@@ -23,3 +23,9 @@ __all__ = []
 #-------------------------------------------------------------------------------
 # constants:
 #
+VERSION_NUM = (1, 0, 7)
+VERSION = '.'.join([str(digit) for digit in VERSION_NUM])
+
+JOB_CONTROL_SUSPEND = 'Suspend'
+JOB_CONTROL_RESUME = 'Resume'
+JOB_CONTROL_TERMINATE = 'Terminate'
