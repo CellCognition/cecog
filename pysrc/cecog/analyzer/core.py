@@ -51,6 +51,8 @@ from cecog.learning.collector import CellCounterReader, CellCounterReaderXML
 from cecog.learning.learning import CommonObjectLearner, CommonClassPredictor
 from cecog.traits.config import NAMING_SCHEMAS
 
+#from cecog.analyzer.cutter import Cutter
+
 #-------------------------------------------------------------------------------
 # constants:
 #
@@ -103,7 +105,7 @@ class PositionAnalyzer(object):
 
     def __init__(self, P, strPathOut, oSettings, lstAnalysisFrames,
                  lstSampleReader, dctSamplePositions, oObjectLearner,
-                 qthread=None):
+                 qthread=None, image_container=None):
 
         self.origP = P
         self.P = self._adjustPositionLength(P)
@@ -117,7 +119,10 @@ class PositionAnalyzer(object):
         self.strPathOutAnalyzed = os.path.join(self.strPathOut, 'analyzed')
         self.oSettings = oSettings
 
-        self.oImageContainer = load_image_container(os.path.join(self.strPathOut, 'dump'))
+        if image_container is None:
+            self.oImageContainer = load_image_container(os.path.join(self.strPathOut, 'dump'))
+        else:
+            self.oImageContainer = image_container
 
         # FIXME: a bit of a hack but the entire ImageContainer path is mapped to the current OS
         self.oImageContainer.setPathMappingFunction(mapDirectory)
@@ -371,7 +376,7 @@ class PositionAnalyzer(object):
                 if not self._qthread is None:
                     if self._qthread.get_abort():
                         return 0
-                self._qthread.set_stage_info(stage_info)
+                    self._qthread.set_stage_info(stage_info)
 
                 self.oCellTracker.initVisitor()
                 self._oLogger.debug("--- visitor ok")
@@ -381,8 +386,8 @@ class PositionAnalyzer(object):
                     if not self._qthread is None:
                         if self._qthread.get_abort():
                             return 0
-                    stage_info.update({'text' : 'export events...'})
-                    self._qthread.set_stage_info(stage_info)
+                        stage_info.update({'text' : 'export events...'})
+                        self._qthread.set_stage_info(stage_info)
 
                     # clear the _tracking path
                     self.oCellTracker.analyze(self.export_features,
@@ -397,14 +402,15 @@ class PositionAnalyzer(object):
                 if not self._qthread is None:
                     if self._qthread.get_abort():
                         return 0
-                stage_info.update({'max' : 1,
-                                   'progress' : 1})
-                self._qthread.set_stage_info(stage_info)
+                    stage_info.update({'max' : 1,
+                                       'progress' : 1})
+                    self._qthread.set_stage_info(stage_info)
 
 
-#            if self.oSettings.bDoObjectCutting:
+            #if self.oSettings.bDoObjectCutting:
+#            if True:
 #
-#                strPathCutter = os.path.join(self.strPathOutPosition, "_cutter")
+#                strPathCutter = os.path.join(self.strPathOutPosition, "cutter")
 #                # clear the cutter data
 #                if os.path.isdir(strPathCutter):
 #                    shutil.rmtree(strPathCutter)
@@ -413,12 +419,12 @@ class PositionAnalyzer(object):
 #                    if os.path.isdir(strPathCutterIn):
 #                        strPathCutterOut = os.path.join(strPathCutter, strRenderName)
 #                        self._oLogger.info("running Cutter for '%s'..." % strRenderName)
-#                        Cutter(oCellTracker,
+#                        Cutter(self.oCellTracker,
 #                               strPathCutterIn,
 #                               self.P,
 #                               strPathCutterOut,
-#                               self.oMetaData,
-#                               **self.oSettings.dctCutterInfos)
+#                               self.oMetaData)#,
+#                               #**self.oSettings.dctCutterInfos)
 #
 #            if (isinstance(oCellTracker, PlotCellTracker) and
 #                hasattr(self.oSettings, "bDoObjectCutting3") and
@@ -526,7 +532,7 @@ class PositionAnalyzer(object):
         # write an empty file to mark this position as finished
         strPathFinished = os.path.join(self.strPathLog, '_finished')
         safe_mkdirs(strPathFinished)
-        oFile = file(os.path.join(strPathFinished, '_%s_finished.txt' % self.P), 'w')
+        oFile = file(os.path.join(strPathFinished, '%s__finished.txt' % self.P), 'w')
         oFile.close()
 
         return iNumberImages
@@ -989,7 +995,7 @@ class AnalyzerCore(object):
     def _openImageContainer(self):
         self.oSettings.set_section('General')
         self.lstPositions = self.oSettings.get2('positions')
-        #print self.lstPositions, type(self.lstPositions)
+        print 'MOOO', self.lstPositions, type(self.lstPositions)
         if self.lstPositions == '' or not self.oSettings.get2('constrain_positions'):
             self.lstPositions = None
         else:
@@ -1016,7 +1022,8 @@ class AnalyzerCore(object):
 
             self.oImageContainer.setOption('iBinningFactor', self.oSettings.get2('binningFactor'))
 
-            dump_image_container(self.strPathOutDump, self.oImageContainer)
+            if self.oSettings.get2('createimagecontainer'):
+                dump_image_container(self.strPathOutDump, self.oImageContainer)
 
         self.oMetaData = self.oImageContainer.oMetaData
 
@@ -1036,15 +1043,19 @@ class AnalyzerCore(object):
             setFound = set()
             if os.path.isdir(strPathFinished):
                 for strFilePath in collect_files(strPathFinished, ['.txt'], absolute=True, force_python=True):
-                    strFilename = os.path.split(strFilePath)[1]
-                    P = strFilename.split('__')[1]
+                    filename = os.path.split(strFilePath)[1]
+                    # stay compatible with an old filename definition (which did
+                    # not support _ in the position name
+                    if filename[0] == '_':
+                        P = filename.split('_')[1]
+                    else:
+                        P = filename.split('__')[0]
                     if P in self.oMetaData.setP:
                         setFound.add(P)
                 self.lstPositions = [P for P in self.lstPositions
                                      if not P in setFound]
                 self.lstPositions.sort()
                 self._oLogger.info("* redo failed positions only: %s" % self.lstPositions)
-                bHasPositions = True
             else:
                 self._oLogger.warning("Cannot redo failed positions without directory '%s'!" % strPathFinished)
 
@@ -1089,6 +1100,7 @@ class AnalyzerCore(object):
                        self.oObjectLearner,
                        )
             dctOptions = dict(qthread = qthread,
+                              image_container = self.oImageContainer,
                               )
             lstJobInputs.append((tplArgs, dctOptions))
 
@@ -1108,7 +1120,8 @@ class AnalyzerCore(object):
                                    })
                 qthread.set_stage_info(stage_info)
 
-            analyzePosition(*tplArgs, **dctOptions)
+            analyzer = PositionAnalyzer(*tplArgs, **dctOptions)
+            analyzer()
 
         if self.oSettings.get('Classification', 'collectsamples'):
             self.oObjectLearner.export()
