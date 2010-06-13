@@ -14,18 +14,54 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-
-#import ez_setup
-#ez_setup.use_setuptools()
-
+#-------------------------------------------------------------------------------
+# standard library imports:
+#
 from setuptools import setup
 import shutil
 import os
 import sys
+
+#-------------------------------------------------------------------------------
+# extension module imports:
+#
 from pdk.fileutils import safe_mkdirs, collect_files
 
-main_script = 'CecogAnalyzer.py'
+#-------------------------------------------------------------------------------
+# cecog imports:
+#
+from cecog.traits.config import (ANALYZER_CONFIG_FILENAME,
+                                 FONT12_FILENAME,
+                                 NAMING_SCHEMA_FILENAME,
+                                 PATH_MAPPING_FILENAME,
+                                 )
 
+#-------------------------------------------------------------------------------
+# constants:
+#
+MAIN_SCRIPT = 'CecogAnalyzer.py'
+
+APP = [MAIN_SCRIPT]
+INCLUDES = ['sip', 'netCDF4_utils', 'netcdftime',]
+EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
+            'PyQt4.QtOpenGL', 'PyQt4.QtScript',
+            'PyQt4.QtSql', 'PyQt4.QtTest',
+            'PyQt4.QtWebKit', 'PyQt4.QtXml',
+            'PyQt4.phonon',
+            'scipy', 'rpy',
+            'Tkconstants', 'Tkinter', 'tcl',
+            ]
+PACKAGES = ['cecog',]
+
+RESOURCE_FILES = [ANALYZER_CONFIG_FILENAME,
+                  FONT12_FILENAME,
+                  NAMING_SCHEMA_FILENAME,
+                  PATH_MAPPING_FILENAME,
+                  ]
+
+#-------------------------------------------------------------------------------
+# functions:
+#
 def tempsyspath(path):
     def decorate(f):
         def handler():
@@ -36,33 +72,24 @@ def tempsyspath(path):
         return handler
     return decorate
 
-#def read_pkginfo_file(setup_file):
-#    path = os.path.dirname(setup_file)
-#    @tempsyspath(path)
-#    def _import_pkginfo_file():
-#        if '__pgkinfo__' in sys.modules:
-#            del sys.modules['__pkginfo__']
-#        return __import__('__pkginfo__')
-#    return _import_pkginfo_file()
+def read_pkginfo_file(setup_file):
+    path = os.path.dirname(setup_file)
+    @tempsyspath(path)
+    def _import_pkginfo_file():
+        if '__pgkinfo__' in sys.modules:
+            del sys.modules['__pkginfo__']
+        return __import__('__pkginfo__')
+    return _import_pkginfo_file()
+
+#-------------------------------------------------------------------------------
+# main:
 #
-#pkginfo = read_pkginfo_file(__file__)
+pkginfo = read_pkginfo_file(__file__)
 
 # delete target folder before execution of py2app
 for path in ['dist', 'build']:
     if os.path.isdir(path):
         shutil.rmtree(path)
-
-APP = [main_script]
-INCLUDES = ['sip', 'netCDF4_utils', 'netcdftime']
-EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
-            'PyQt4.QtOpenGL', 'PyQt4.QtScript',
-            'PyQt4.QtSql', 'PyQt4.QtTest',
-            'PyQt4.QtWebKit', 'PyQt4.QtXml',
-            'PyQt4.phonon',
-            'scipy', 'rpy',
-            'Tkconstants', 'Tkinter', 'tcl',
-            ]
-PACKAGES = ['cecog',]
 
 if sys.platform == 'darwin':
     OPTIONS = {'app' : APP}
@@ -84,7 +111,7 @@ elif sys.platform == 'win32':
     import py2exe # pylint: disable-msg=F0401,W0611
     FILENAME_ZIP = 'data.zip'
     #FILENAME_ZIP = 'CecogAnalyzer.exe'
-    OPTIONS = {'windows': [{'script': main_script,
+    OPTIONS = {'windows': [{'script': MAIN_SCRIPT,
                             'icon_resources': \
                                [(1, r'resources\cecog_analyzer_icon.ico')],
                            }],
@@ -109,33 +136,28 @@ setup(
     data_files=DATA_FILES,
     options={SYSTEM: EXTRA_OPTIONS},
     setup_requires=[SYSTEM],
-#    name=pkginfo.name,
-#    version=pkginfo.version,
-#    author=pkginfo.author,
-#    author_email=pkginfo.author_email,
-#    license=pkginfo.license,
-#    description=pkginfo.description,
-#    long_description=pkginfo.long_description,
-#    url=pkginfo.url,
-#    download_url=pkginfo.download_url,
-#    classifiers=pkginfo.classifiers,
-##    package_dir=pkginfo.package_dir,
-##    packages=pkginfo.packages,
-#    platforms=pkginfo.platforms,
-#    provides=pkginfo.provides,
+    name=pkginfo.name,
+    version=pkginfo.version,
+    author=pkginfo.author,
+    author_email=pkginfo.author_email,
+    license=pkginfo.license,
+    description=pkginfo.description,
+    long_description=pkginfo.long_description,
+    url=pkginfo.url,
+    download_url=pkginfo.download_url,
+    classifiers=pkginfo.classifiers,
+    package_dir=pkginfo.package_dir,
+    packages=pkginfo.packages,
+    platforms=pkginfo.platforms,
+    provides=pkginfo.provides,
     **OPTIONS
 )
 
 
+# post-processing steps for py2app /py2exe
 if sys.platform == 'darwin':
 
     base_path = 'dist/CecogAnalyzer.app'
-
-    # for unknown reasons the pyconfig.h is needed but not included
-#    target_path = os.path.join(base_path, 'Contents/Resources/include/python2.6')
-#    safe_mkdirs(target_path)
-#    shutil.copy('/Library/Frameworks/Python.framework/Versions/2.6/include/python2.6/pyconfig.h',
-#                target_path)
 
     # delete all stupid Qt4 debug files (~130MB!!!)
     target_path = os.path.join(base_path, 'Contents/Frameworks')
@@ -172,8 +194,9 @@ if sys.platform == 'darwin':
     safe_mkdirs(target)
     for filename in filenames:
         shutil.copy(os.path.join('../../rsrc/hmm', filename), target)
-    shutil.copy('resources/font12.png', resource_path)
-    shutil.copy('resources/naming_schemes.conf', resource_path)
+
+    for filename in RESOURCE_FILES:
+        shutil.copy(filename, resource_path)
 
 
 elif sys.platform == 'win32':
@@ -193,10 +216,12 @@ elif sys.platform == 'win32':
                  'hmm_report.R',
                  'run_hmm.R',
                  ]
-    target = 'dist/resources/rsrc/hmm'
+    resource_path = os.path.join('dist', 'resources')
+    target = os.path.join(resource_path, 'rsrc', 'hmm')
     safe_mkdirs(target)
     for filename in filenames:
         shutil.copy(os.path.join('../../rsrc/hmm', filename), target)
-    shutil.copy('resources/font12.png', 'dist/resources')
-    shutil.copy('resources/naming_schemes.conf', 'dist/resources')
+
+    for filename in RESOURCE_FILES:
+        shutil.copy(filename, resource_path)
 

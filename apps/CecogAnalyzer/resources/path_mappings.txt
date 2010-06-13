@@ -1,0 +1,11 @@
+mac	windows	linux
+/Volumes/GERLICH1	Q:	/BIOL/gerlich1
+/Volumes/GERLICH2	R:	/BIOL/gerlich2
+/Volumes/GERLICH3	S:	/BIOL/gerlich3
+/Volumes/GERLICH4	T:	/BIOL/gerlich4
+/Volumes/GERLICH5	U:	/BIOL/gerlich5
+/Volumes/KUTAY	V:	/BIOL/kutay
+/Volumes/PETER	W:	/BIOL/peter
+/Volumes/share-gerlich-1-$	X:	/BIOL/share-gerlich
+/Volumes/share-gr-peter-1-$	Y:	/BIOL/share-peter
+/Volumes/gerlich-analysis	Z:	/BIOL/share-gerlich-analysis

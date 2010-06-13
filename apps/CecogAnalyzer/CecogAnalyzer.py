@@ -13,7 +13,6 @@ __author__ = 'Michael Held'
 __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
-__version__ = '1.0.7'
 
 #-------------------------------------------------------------------------------
 # standard library imports:
@@ -34,8 +33,11 @@ from pdk.ordereddict import OrderedDict
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
+from cecog import VERSION
 from cecog.analyzer import R_LIBRARIES
-from cecog.traits.config import ConfigSettings
+from cecog.traits.config import (ConfigSettings,
+                                 ANALYZER_CONFIG,
+                                 )
 from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.gui.analyzer.general import GeneralFrame
 from cecog.gui.analyzer.objectdetection import ObjectDetectionFrame
@@ -44,14 +46,19 @@ from cecog.gui.analyzer.tracking import TrackingFrame
 from cecog.gui.analyzer.errorcorrection import ErrorCorrectionFrame
 from cecog.gui.analyzer.output import OutputFrame
 from cecog.gui.analyzer.processing import ProcessingFrame
+from cecog.gui.analyzer.cluster import ClusterFrame
 
 from cecog.gui.log import (GuiLogHandler,
                            LogWindow,
                            )
 from cecog.util.util import (convert_package_path,
-                             PACKAGE_PATH,
+                             set_package_path,
+                             get_package_path,
                              )
-from cecog.gui.util import status
+from cecog.gui.util import (status,
+                            show_html,
+                            )
+
 
 import resource
 
@@ -129,8 +136,8 @@ class AnalyzerMainWindow(QMainWindow):
         self._selection = QListWidget(central_widget)
         self._selection.setViewMode(QListView.IconMode)
         #self._selection.setUniformItemSizes(True)
-        self._selection.setIconSize(QSize(50, 50))
-        self._selection.setGridSize(QSize(150,80))
+        self._selection.setIconSize(QSize(40, 40))
+        self._selection.setGridSize(QSize(140,70))
         #self._selection.setWrapping(False)
         #self._selection.setMovement(QListView.Static)
         #self._selection.setFlow(QListView.TopToBottom)
@@ -158,6 +165,9 @@ class AnalyzerMainWindow(QMainWindow):
                       OutputFrame(self._settings, self._pages),
                       ProcessingFrame(self._settings, self._pages),
                       ]
+        if ANALYZER_CONFIG.get('Analyzer', 'cluster_support'):
+            self._tabs.append(ClusterFrame(self._settings, self._pages))
+
         widths = []
         for tab in self._tabs:
             size = self._add_page(tab)
@@ -184,7 +194,7 @@ class AnalyzerMainWindow(QMainWindow):
 
         logger = logging.getLogger()
         qApp._log_handler.setLevel(logging.NOTSET)
-        formatter = logging.Formatter('%(asctime)s %(levelname)-6s %(message)s')
+        formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
         qApp._log_handler.setFormatter(formatter)
         #logger.addHandler(self._handler)
         logger.setLevel(logging.NOTSET)
@@ -225,8 +235,7 @@ class AnalyzerMainWindow(QMainWindow):
                   'packages:\n'
             msg += ', '.join(R_LIBRARIES)
             msg += '\n\nSee http://www.r-project.org\n\n'
-            msg += traceback.format_exc(1)
-            QMessageBox.warning(self, 'R installation not found', msg)
+            critical(self, 'R installation not found', info=msg, detail_tb=True)
 
 
         if has_R_version:
@@ -245,7 +254,7 @@ class AnalyzerMainWindow(QMainWindow):
                 msg += '\n\nSee http://www.r-project.org\n\n'
                 msg += '\n'.join(buffer)
 
-                QMessageBox.warning(self, 'Missing R libraries', msg)
+                critical(self, 'Missing R libraries', info=msg, detail_tb=True)
                 qApp.valid_R_version = False
             else:
                 qApp.valid_R_version = True
@@ -258,6 +267,7 @@ class AnalyzerMainWindow(QMainWindow):
         button.setTextAlignment(Qt.AlignHCenter)
         button.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
 
+        #self.connect(button, )
 #        scroll_area = QScrollArea(self._pages)
 #        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
 #        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -266,6 +276,7 @@ class AnalyzerMainWindow(QMainWindow):
 #
 #        self._pages.addWidget(scroll_area)
         self._pages.addWidget(widget)
+
         widget.toggle_tabs.connect(self._on_toggle_tabs)
         self._tab_lookup[widget.get_name()] = (button, widget)
         return widget.size()
@@ -289,7 +300,10 @@ class AnalyzerMainWindow(QMainWindow):
     def _on_change_page(self, current, previous):
         if not current:
             current = previous
-        self._pages.setCurrentIndex(self._selection.row(current));
+        index = self._selection.row(current)
+        self._pages.setCurrentIndex(index);
+        widget = self._pages.widget(index)
+        widget.page_changed()
 
     def center(self):
         screen = QDesktopWidget().screenGeometry()
@@ -336,13 +350,15 @@ class AnalyzerMainWindow(QMainWindow):
             self._settings.write(f)
             f.close()
         except:
-            QMessageBox().critical(self, "Save settings file",
-                "Could not save settings file as '%s'." % filename)
-#        else:
-#            self._settings_filename = filename
-#            QMessageBox().information(self, "Save settings file",
-#                "Settings successfully saved as '%s'." % filename)
-        status('Settings successfully saved.')
+            critical(self,
+                     "Error on save settings file",
+                     info="Could not save settings file as '%s'." % filename,
+                     detail_tb=True)
+            status('Settings not successfully saved.')
+        else:
+            self._settings_filename = filename
+            self.setWindowTitle('%s - %s' % (self.TITLE, filename))
+            status('Settings successfully saved.')
 
     def _on_about(self):
         print "about"
@@ -365,7 +381,7 @@ class AnalyzerMainWindow(QMainWindow):
         label2.setText('CecogAnalyzer\nVersion %s\n\n'
                        'Copyright (c) 2006 - 2009\n'
                        'Michael Held & Daniel Gerlich\n'
-                       'ETH Zurich, Switzerland' % __version__)
+                       'ETH Zurich, Switzerland' % VERSION)
         label3 = QLabel(dialog)
         label3.setStyleSheet('background: transparent;')
         label3.setTextFormat(Qt.AutoText)
@@ -401,7 +417,6 @@ class AnalyzerMainWindow(QMainWindow):
                 dialog.setDirectory(os.path.dirname(filename))
         if dialog.exec_():
             filename = str(dialog.selectedFiles()[0])
-            #print filename
             self.read_settings(filename)
 
     def _on_file_save(self):
@@ -431,16 +446,14 @@ class AnalyzerMainWindow(QMainWindow):
             filename = convert_package_path(self._settings_filename)
             if os.path.isfile(filename):
                 # FIXME: Qt4 has a bug with setting a path and saving a file:
-                # the file is save one dir higher then selected
+                # the file is saved one dir higher then selected
                 # this line should read:
-                # dialog.setDirectory(os.path.dirname(filename))
+                dialog.setDirectory(os.path.dirname(filename))
                 # this version does not stably give the path for MacOSX
-                dialog.setDirectory(filename)
+                #dialog.setDirectory(filename)
         filename = None
         if dialog.exec_():
             filename = str(dialog.selectedFiles()[0])
-            self.setWindowTitle('%s - %s' % (self.TITLE, filename))
-            #print map(str, dialog.selectedFiles())
         return filename
 
     def _on_help_startup(self):
@@ -450,31 +463,31 @@ class AnalyzerMainWindow(QMainWindow):
 #-------------------------------------------------------------------------------
 # main:
 #
-
 if __name__ == "__main__":
     import time
     from pdk.fileutils import safe_mkdirs
-
-    safe_mkdirs('log')
 
     app = QApplication(sys.argv)
 
     working_path = os.path.abspath(os.path.dirname(sys.argv[0]))
     program_name = os.path.split(sys.argv[0])[1]
-
-    global PACKAGE_PATH
+    package_path = None
 
     if sys.platform == 'darwin':
         idx = working_path.find('/CecogAnalyzer.app/Contents/Resources')
-        PACKAGE_PATH = working_path[:idx]
-        #package_dir = '/Users/miheld/Desktop/CecogPackage'
         if idx > -1:
-            sys.stdout = file('log/cecog_analyzer_stdout.log', 'w')
-            sys.stderr = file('log/cecog_analyzer_stderr.log', 'w')
+            package_path = working_path[:idx]
     else:
-        PACKAGE_PATH = working_path
-        sys.stdout = file('log/cecog_analyzer_stdout.log', 'w')
-        sys.stderr = file('log/cecog_analyzer_stderr.log', 'w')
+        package_path = working_path
+
+    if not package_path is None:
+        set_package_path(package_path)
+        log_path = os.path.join(package_path, 'log')
+        safe_mkdirs(log_path)
+        sys.stdout = \
+            file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
+        sys.stderr = \
+            file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
 
     splash = QSplashScreen(QPixmap(':cecog_splash'))
     splash.show()
@@ -485,13 +498,14 @@ if __name__ == "__main__":
     main = AnalyzerMainWindow()
     main.raise_()
 
-    filename = os.path.join(PACKAGE_PATH,
+    filename = os.path.join(get_package_path(),
                             'Data/Cecog_settings/demo_settings.conf')
 
-    filename = '/Users/miheld/data/CellCognition/demo_data/H2bTub20x_settings.conf'
+    #filename = '/Users/miheld/data/CellCognition/demo_data/cluster_test.conf'
+    #filename = '/Users/miheld/data/CellCognition/demo_data/H2bTub20x_settings.conf'
     if os.path.isfile(filename):
         main.read_settings(filename)
-        #show_html('_startup')
+        show_html('_startup')
 
     splash.finish(main)
     sys.exit(app.exec_())
