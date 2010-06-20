@@ -27,8 +27,7 @@ __all__ = ['REGION_NAMES_PRIMARY',
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
-import copy, \
-       types, \
+import types, \
        traceback, \
        logging, \
        sys, \
@@ -672,7 +671,7 @@ class _ProcessorMixin(object):
 
     @classmethod
     def get_special_settings(cls, settings):
-        settings = copy.deepcopy(settings)
+        settings = settings.copy()
 
         # try to resolve the paths relative to the package dir
         # (only in case of an relative path given)
@@ -758,10 +757,10 @@ class _ProcessorMixin(object):
                         is_valid = False
                         result_frame.msg_pick_samples(self)
                     elif result_frame.is_train_classifier():
-                        if question(self, 'Samples already picked',
+                        if not question(self, 'Samples already picked',
                                     'Do you want to pick samples again and '
                                     'overwrite previous '
-                                    'results?') != QMessageBox.Yes:
+                                    'results?'):
                             is_valid = False
 
                 elif name == self.PROCESS_TRAINING:
@@ -769,9 +768,9 @@ class _ProcessorMixin(object):
                         is_valid = False
                         result_frame.msg_train_classifier(self)
                     elif result_frame.is_apply_classifier():
-                        if question(self, 'Classifier already trained',
+                        if not question(self, 'Classifier already trained',
                                     'Do you want to train the classifier '
-                                    'again?') != QMessageBox.Yes:
+                                    'again?'):
                             is_valid = False
 
                 elif name == self.PROCESS_TESTING and not result_frame.is_apply_classifier():
@@ -842,7 +841,7 @@ class _ProcessorMixin(object):
 
 
                 elif cls is TrainingThread:
-                    self._current_settings = copy.deepcopy(self._settings)
+                    self._current_settings = self._settings.copy()
 
                     self._analyzer = cls(self, self._current_settings,
                                          result_frame._learner)

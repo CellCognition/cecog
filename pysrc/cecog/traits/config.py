@@ -27,7 +27,9 @@ __all__ = ['NAMING_SCHEMAS',
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
-import os
+import os, \
+       copy
+
 from ConfigParser import RawConfigParser
 
 #-------------------------------------------------------------------------------
@@ -97,6 +99,9 @@ class ConfigSettings(RawConfigParser):
                 trait = section.get_trait(trait_name)
                 self.set(section_name, trait_name, trait.default_value)
 
+    def copy(self):
+        return copy.deepcopy(self)
+
     def set_section(self, section_name):
         if self.has_section(section_name):
             self._current_section = section_name
@@ -125,7 +130,7 @@ class ConfigSettings(RawConfigParser):
         self.set(self._current_section, trait_name, value)
 
     def read(self, filenames):
-        RawConfigParser.read(self, filenames)
+        result = RawConfigParser.read(self, filenames)
 
         for section_name in self.sections():
             if section_name in self._section_registry.get_section_names():
@@ -144,6 +149,7 @@ class ConfigSettings(RawConfigParser):
                 print("Warning: section '%s' is not defined and will be "
                       "deleted" % section_name)
                 self.remove_section(section_name)
+        return result
 
 
 

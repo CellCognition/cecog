@@ -35,10 +35,9 @@ from pdk.ordereddict import OrderedDict
 #
 from cecog import VERSION
 from cecog.analyzer import R_LIBRARIES
-from cecog.traits.config import (ConfigSettings,
-                                 ANALYZER_CONFIG,
-                                 )
+from cecog.traits.config import ANALYZER_CONFIG
 from cecog.traits.analyzer import SECTION_REGISTRY
+from cecog.gui.config import GuiConfigSettings
 from cecog.gui.analyzer.general import GeneralFrame
 from cecog.gui.analyzer.objectdetection import ObjectDetectionFrame
 from cecog.gui.analyzer.classification import ClassificationFrame
@@ -57,6 +56,8 @@ from cecog.util.util import (convert_package_path,
                              )
 from cecog.gui.util import (status,
                             show_html,
+                            critical,
+                            question,
                             )
 
 
@@ -82,6 +83,7 @@ class AnalyzerMainWindow(QMainWindow):
 
     def __init__(self):
         QMainWindow.__init__(self)
+        self._debug = False
 
         self.setWindowTitle(self.TITLE)
 
@@ -154,7 +156,7 @@ class AnalyzerMainWindow(QMainWindow):
         #pagesWidget->addWidget(new UpdatePage);
         #pagesWidget->addWidget(new QueryPage);
         self._settings_filename = None
-        self._settings = ConfigSettings(SECTION_REGISTRY)
+        self._settings = GuiConfigSettings(self, SECTION_REGISTRY)
 
         self._tab_lookup = OrderedDict()
         self._tabs = [GeneralFrame(self._settings, self._pages),
@@ -208,11 +210,12 @@ class AnalyzerMainWindow(QMainWindow):
         self.center()
         self.raise_()
 
-
     def closeEvent(self, event):
-        print "close"
-        QMainWindow.closeEvent(self, event)
-        qApp.quit()
+        '''
+        The app should quit when the main window is closed.
+        '''
+        if not self._exit_app():
+            event.ignore()
 
     def test_r_import(self):
         try:
@@ -305,6 +308,35 @@ class AnalyzerMainWindow(QMainWindow):
         widget = self._pages.widget(index)
         widget.page_changed()
 
+    def _check_settings_saved(self):
+        if self.isWindowModified():
+            result = question(self, 'Settings have been modified.',
+                              info='Do you want to save settings before exit?',
+                              modal=True, show_cancel=True,
+                              default=QMessageBox.Yes)
+        else:
+            result = QMessageBox.No
+
+        if result == QMessageBox.Yes:
+            self.save_settings()
+            qApp.quit()
+        elif result == QMessageBox.No:
+            qApp.quit()
+        return result
+
+    def _exit_app(self):
+        do_exit = False
+        if not self._debug:
+            if question(self, 'Do you really want to exit?', modal=True):
+                if self._check_settings_saved() != QMessageBox.Cancel:
+                    do_exit = True
+                    qApp.exit()
+        else:
+            do_exit = True
+            qApp.exit()
+        return do_exit
+
+
     def center(self):
         screen = QDesktopWidget().screenGeometry()
         size =  self.geometry()
@@ -336,15 +368,28 @@ class AnalyzerMainWindow(QMainWindow):
         action.setChecked(checked)
         return action
 
-    def read_settings(self, filename):
-        self._settings.read(filename)
-        self._settings_filename = filename
-        self.setWindowTitle('%s - %s' % (self.TITLE, filename))
-        for widget in self._tabs:
-            widget.update_input()
-        status('Settings successfully loaded.')
+    def save_settings(self, save_as=False):
+        filename = self._settings_filename
+        if filename is None or save_as:
+            filename = self.__get_save_as_filename()
+        if not filename is None:
+            self._write_settings(filename)
 
-    def write_settings(self, filename):
+    def _read_settings(self, filename):
+        if len(self._settings.read(filename)) == 0:
+            critical(self,
+                     "Error on load settings file",
+                     info="Could not load settings file '%s'." % filename)
+            status('Settings not successfully loaded.')
+        else:
+            self._settings_filename = filename
+            self.setWindowTitle('%s - %s' % (self.TITLE, filename))
+            for widget in self._tabs:
+                widget.update_input()
+            self.setWindowModified(False)
+            status('Settings successfully loaded.')
+
+    def _write_settings(self, filename):
         try:
             f = file(filename, 'w')
             self._settings.write(f)
@@ -358,6 +403,7 @@ class AnalyzerMainWindow(QMainWindow):
         else:
             self._settings_filename = filename
             self.setWindowTitle('%s - %s' % (self.TITLE, filename))
+            self.setWindowModified(False)
             status('Settings successfully saved.')
 
     def _on_about(self):
@@ -403,8 +449,7 @@ class AnalyzerMainWindow(QMainWindow):
         print "pref"
 
     def _on_quit(self):
-        print "quit"
-        QApplication.quit()
+        self._exit_app()
 
     def _on_file_open(self):
         dialog = QFileDialog(self)
@@ -417,19 +462,13 @@ class AnalyzerMainWindow(QMainWindow):
                 dialog.setDirectory(os.path.dirname(filename))
         if dialog.exec_():
             filename = str(dialog.selectedFiles()[0])
-            self.read_settings(filename)
+            self._read_settings(filename)
 
     def _on_file_save(self):
-        filename = self._settings_filename
-        if filename is None:
-            filename = self.__get_save_as_filename()
-        if not filename is None:
-            self.write_settings(filename)
+        self.save_settings(False)
 
     def _on_file_save_as(self):
-        filename = self.__get_save_as_filename()
-        if not filename is None:
-            self.write_settings(filename)
+        self.save_settings(True)
 
     def _on_show_log_window(self):
         logger = logging.getLogger()
@@ -473,12 +512,16 @@ if __name__ == "__main__":
     program_name = os.path.split(sys.argv[0])[1]
     package_path = None
 
+    is_app = False
+
     if sys.platform == 'darwin':
         idx = working_path.find('/CecogAnalyzer.app/Contents/Resources')
         if idx > -1:
             package_path = working_path[:idx]
+            is_app = True
     else:
         package_path = working_path
+        is_app = True
 
     if not package_path is None:
         set_package_path(package_path)
@@ -498,14 +541,17 @@ if __name__ == "__main__":
     main = AnalyzerMainWindow()
     main.raise_()
 
-    filename = os.path.join(get_package_path(),
-                            'Data/Cecog_settings/demo_settings.conf')
-
-    #filename = '/Users/miheld/data/CellCognition/demo_data/cluster_test.conf'
-    #filename = '/Users/miheld/data/CellCognition/demo_data/H2bTub20x_settings.conf'
-    if os.path.isfile(filename):
-        main.read_settings(filename)
+    if is_app:
+        filename = os.path.join(get_package_path(),
+                                'Data/Cecog_settings/demo_settings.conf')
+        main._read_settings(filename)
         show_html('_startup')
+    else:
+        #filename = '/Users/miheld/data/CellCognition/demo_data/cluster_test.conf'
+        filename = '/Users/miheld/data/CellCognition/demo_data/H2bTub20x_settings.conf'
+        #if os.path.isfile(filename):
+        main._read_settings(filename)
+        main._debug = True
 
     splash.finish(main)
     sys.exit(app.exec_())

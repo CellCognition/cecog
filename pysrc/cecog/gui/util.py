@@ -44,6 +44,8 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
+from pdk.platform import on_mac
+
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
@@ -90,54 +92,64 @@ def numpy_to_qimage(data, colors=None):
             qimage.setColor(idx, col.rgb())
     return qimage
 
-def message(parent, text, info=None, detail=None, buttons=None,
-            icon=None, title=None):
-    msg_box = QMessageBox(parent)
+def message(icon, text, parent, info=None, detail=None, buttons=None,
+            title=None, default=None, modal=False):
     if title is None:
         title = text
-    msg_box.setWindowTitle(title)
-    msg_box.setText(text)
-    print text
+    msg_box = QMessageBox(icon, title, text, QMessageBox.NoButton,
+                          parent, Qt.Dialog)
+    if on_mac() and modal:
+        msg_box.setWindowModality(Qt.WindowModal)
     if not info is None:
         msg_box.setInformativeText(info)
     if not detail is None:
         msg_box.setDetailedText(detail)
-    if not icon is None:
-        msg_box.setIcon(icon)
     if not buttons is None:
         msg_box.setStandardButtons(buttons)
+    if not default is None:
+        msg_box.setDefaultButton(default)
     return msg_box.exec_()
 
-def information(parent, text, info=None, detail=None):
-    return message(parent, text, info=info, detail=detail,
-                   buttons=QMessageBox.Ok,
-                   icon=QMessageBox.Information)
+def information(parent, text, info=None, detail=None, modal=False):
+    return message(QMessageBox.Information,
+                   text, parent, info=info, detail=detail, modal=modal,
+                   buttons=QMessageBox.Ok)
 
-def question(parent, text, info=None, detail=None):
-    return message(parent, text, info=info, detail=detail,
-                   buttons=QMessageBox.Yes|QMessageBox.No,
-                   icon=QMessageBox.Question)
+def question(parent, text, info=None, detail=None, modal=False,
+             show_cancel=False, default=None):
+    buttons = QMessageBox.Yes|QMessageBox.No
+    if default is None:
+        default = QMessageBox.No
+    if show_cancel:
+        buttons |= QMessageBox.Cancel
+    result = message(QMessageBox.Question,
+                     text, parent, info=info, detail=detail, modal=modal,
+                     buttons=buttons, default=default)
+    if show_cancel:
+        return result
+    else:
+        return result == QMessageBox.Yes
 
-def warning(parent, text, info=None, detail=None):
-    return message(parent, text, info=info, detail=detail,
-                   buttons=QMessageBox.Ok,
-                   icon=QMessageBox.Warning)
+def warning(parent, text, info=None, detail=None, modal=False):
+    return message(QMessageBox.Warning,
+                   text, parent, info=info, detail=detail, modal=modal,
+                   buttons=QMessageBox.Ok)
 
 def critical(parent, text=None, info=None, detail=None, detail_tb=False,
-             tb_limit=None):
+             tb_limit=None, modal=False):
     if detail_tb and detail is None:
         detail = traceback.format_exc(tb_limit)
-    return message(parent, text, info=info, detail=detail,
-                   buttons=QMessageBox.Ok,
-                   icon=QMessageBox.Critical)
+    return message(QMessageBox.Critical,
+                   text, parent, info=info, detail=detail, modal=modal,
+                   buttons=QMessageBox.Ok)
 
-def exception(parent, text, tb_limit=None):
+def exception(parent, text, tb_limit=None, modal=False):
     type, value = sys.exc_info()[:2]
-    return message(parent, text,
+    return message(QMessageBox.Critical,
+                   text, parent,
                    info='%s : %s ' % (str(type.__name__), str(value)),
-                   detail=traceback.format_exc(tb_limit),
-                   buttons=QMessageBox.Ok,
-                   icon=QMessageBox.Critical)
+                   detail=traceback.format_exc(tb_limit), modal=modal,
+                   buttons=QMessageBox.Ok)
 
 
 def status(msg, timeout=0):
