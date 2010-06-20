@@ -58,7 +58,26 @@
 
 #include "cecog/seededregion.hxx"
 
+namespace vigra
+{
+  typedef BasicImageView< UInt8 >  UInt8ImageView;
+  typedef BasicImageView< Int8 >   Int8ImageView;
+  typedef BasicImageView< UInt16 > UInt16ImageView;
+  typedef BasicImageView< Int16 >  Int16ImageView;
+  typedef BasicImageView< UInt32 > UInt32ImageView;
+  typedef BasicImageView< Int32 >  Int32ImageView;
+  typedef BasicImageView< float >  FImageView;
+  typedef BasicImageView< double > DImageView;
 
+  typedef BasicImageView< RGBValue < UInt8 > >  UInt8RGBImageView;
+  typedef BasicImageView< RGBValue < Int8 > >   Int8RGBImageView;
+  typedef BasicImageView< RGBValue < UInt16 > > UInt16RGBImageView;
+  typedef BasicImageView< RGBValue < Int16 > >  Int16RGBImageView;
+  typedef BasicImageView< RGBValue < UInt32 > > UInt32RGBImageView;
+  typedef BasicImageView< RGBValue < Int32 > >  Int32RGBImageView;
+  typedef BasicImageView< RGBValue < float > >  FRGBImageView;
+  typedef BasicImageView< RGBValue < double > > DRGBImageView;
+}
 
 using namespace boost::python;
 
@@ -129,33 +148,174 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(pyOverloads_ImageToArray, pyImageToArray, 1, 2)
 
 
 
-template <class IMAGE>
-object pyImageToArray(IMAGE const & img, bool copy=false)
+//template <class IMAGE>
+//object pyImageToArray(IMAGE const & img, bool copy=false)
+//{
+//  npy_intp n = img.width() * img.height();
+//  npy_intp dims[] = { img.height(), img.width() };
+//  if(copy)
+//  {
+//    object obj(handle<>(PyArray_SimpleNew(2, &dims[0],
+//           TypeAsNumPyType<typename IMAGE::PixelType>::result())));
+//    char *arr_data = ((PyArrayObject*) obj.ptr())->data;
+//    ((PyArrayObject*) obj.ptr())->strides[0] = img.width() * sizeof(typename IMAGE::PixelType);
+//    ((PyArrayObject*) obj.ptr())->strides[1] = sizeof(typename IMAGE::PixelType);
+//    ((PyArrayObject*) obj.ptr())->nd = 2;
+//    memcpy(arr_data, img[0], sizeof(typename IMAGE::PixelType) * n);
+//    return obj;
+//  }
+//  else
+//  {
+//    object obj(handle<>(PyArray_SimpleNewFromData(2, &dims[0],
+//            TypeAsNumPyType<typename IMAGE::PixelType>::result(), (char *)img[0])));
+//    ((PyArrayObject*) obj.ptr())->strides[0] = img.width() * sizeof(typename IMAGE::PixelType);
+//    ((PyArrayObject*) obj.ptr())->strides[1] = sizeof(typename IMAGE::PixelType);
+//    ((PyArrayObject*) obj.ptr())->nd = 2;
+//    return obj;
+//  }
+//}
+
+    template <class IMAGE>
+    numeric::array
+    pyImageToArray(IMAGE const & img, bool copy=false)
+    {
+      npy_intp dims[] = { img.width(), img.height() };
+      if(copy)
+      {
+        object obj(handle<>(PyArray_SimpleNew(2, &dims[0],
+                            TypeAsNumPyType<typename IMAGE::PixelType>::result())));
+        void* arr_data = PyArray_DATA((PyArrayObject*) obj.ptr());
+        ((PyArrayObject*) obj.ptr())->strides[0] = sizeof(typename IMAGE::PixelType);
+        ((PyArrayObject*) obj.ptr())->strides[1] = img.width() * sizeof(typename IMAGE::PixelType);
+        ((PyArrayObject*) obj.ptr())->nd = 2;
+        npy_intp n = img.width() * img.height();
+        memcpy(arr_data, (void*)img[0], sizeof(typename IMAGE::PixelType) * n);
+        return extract<numeric::array>(obj);
+      }
+      else
+      {
+        object obj(handle<>(PyArray_SimpleNewFromData(2, &dims[0],
+                            TypeAsNumPyType<typename IMAGE::PixelType>::result(), (char*)img[0])));
+        ((PyArrayObject*) obj.ptr())->strides[0] = sizeof(typename IMAGE::PixelType);
+        ((PyArrayObject*) obj.ptr())->strides[1] = img.width() * sizeof(typename IMAGE::PixelType);
+        ((PyArrayObject*) obj.ptr())->nd = 2;
+        return extract<numeric::array>(obj);
+      }
+    }
+
+    template <class IMAGE>
+inline PyObject*
+_numpyToImageView(PyArrayObject *array)
 {
-  npy_intp n = img.width() * img.height();
-  npy_intp dims[] = { img.height(), img.width() };
-  if(copy)
-  {
-    object obj(handle<>(PyArray_SimpleNew(2, &dims[0],
-           TypeAsNumPyType<typename IMAGE::PixelType>::result())));
-    char *arr_data = ((PyArrayObject*) obj.ptr())->data;
-    ((PyArrayObject*) obj.ptr())->strides[0] = img.width() * sizeof(typename IMAGE::PixelType);
-    ((PyArrayObject*) obj.ptr())->strides[1] = sizeof(typename IMAGE::PixelType);
-    ((PyArrayObject*) obj.ptr())->nd = 2;
-    memcpy(arr_data, img[0], sizeof(typename IMAGE::PixelType) * n);
-    return obj;
-  }
-  else
-  {
-    object obj(handle<>(PyArray_SimpleNewFromData(2, &dims[0],
-            TypeAsNumPyType<typename IMAGE::PixelType>::result(), (char *)img[0])));
-    ((PyArrayObject*) obj.ptr())->strides[0] = img.width() * sizeof(typename IMAGE::PixelType);
-    ((PyArrayObject*) obj.ptr())->strides[1] = sizeof(typename IMAGE::PixelType);
-    ((PyArrayObject*) obj.ptr())->nd = 2;
-    return obj;
-  }
+  std::auto_ptr< IMAGE > res(new IMAGE((typename IMAGE::PixelType*) array->data,
+                                       array->dimensions[1], array->dimensions[0]));
+  return incref(object(res).ptr());
 }
 
+template <class IMAGEVIEW>
+inline PyObject*
+_numpyToImage(PyArrayObject *array)
+{
+  std::auto_ptr< IMAGEVIEW > res(new IMAGEVIEW(array->dimensions[1], array->dimensions[0],
+                                               (typename IMAGEVIEW::PixelType*) array->data));
+  return incref(object(res).ptr());
+}
+
+static inline PyObject*
+pyNumpyToImage(PyObject *obj, bool copy=false)
+{
+  if (obj == 0 || !PyArray_Check(obj))
+  {
+    std::string msg = "Not a valid numpy.ndarray.";
+    PyErr_SetString(PyExc_TypeError, msg.c_str());
+    throw_error_already_set();
+  }
+  PyArrayObject *array = (PyArrayObject*)obj;
+  PyArray_Descr *descr = array->descr;
+
+  if (array->nd == 2)
+  // convert 2D arrays to 2D images/views
+  {
+    if (copy)
+    {
+      if (descr->type_num == NPY_UBYTE)
+        return _numpyToImage< vigra::UInt8Image >(array);
+      else if (descr->type_num == NPY_BYTE)
+        return _numpyToImage< vigra::Int8Image >(array);
+      else if (descr->type_num == NPY_USHORT)
+        return _numpyToImage< vigra::UInt16Image >(array);
+      else if (descr->type_num == NPY_SHORT)
+        return _numpyToImage< vigra::Int16Image >(array);
+      else if (descr->type_num == NPY_ULONG)
+        return _numpyToImage< vigra::UInt32Image >(array);
+      else if (descr->type_num == NPY_LONG)
+        return _numpyToImage< vigra::Int32Image >(array);
+      else if (descr->type_num == NPY_FLOAT)
+        return _numpyToImage< vigra::FImage >(array);
+      else if (descr->type_num == NPY_DOUBLE)
+        return _numpyToImage< vigra::DImage >(array);
+    } else
+    {
+      if (descr->type_num == NPY_UBYTE)
+        return _numpyToImageView< vigra::UInt8ImageView >(array);
+      else if (descr->type_num == NPY_BYTE)
+        return _numpyToImageView< vigra::Int8ImageView >(array);
+      else if (descr->type_num == NPY_USHORT)
+        return _numpyToImageView< vigra::UInt16ImageView >(array);
+      else if (descr->type_num == NPY_SHORT)
+        return _numpyToImageView< vigra::Int16ImageView >(array);
+      else if (descr->type_num == NPY_ULONG)
+        return _numpyToImageView< vigra::UInt32ImageView >(array);
+      else if (descr->type_num == NPY_LONG)
+        return _numpyToImageView< vigra::Int32ImageView >(array);
+      else if (descr->type_num == NPY_FLOAT)
+        return _numpyToImageView< vigra::FImageView >(array);
+      else if (descr->type_num == NPY_DOUBLE)
+        return _numpyToImageView< vigra::DImageView >(array);
+    }
+  } else if (array->nd == 3 && array->dimensions[2] == 3)
+  // convert 3D arrays to 2D RGB images/views
+  {
+    if (copy)
+    {
+      if (descr->type_num == NPY_UBYTE)
+        return _numpyToImage< vigra::UInt8RGBImage >(array);
+      else if (descr->type_num == NPY_BYTE)
+        return _numpyToImage< vigra::Int8Image >(array);
+      else if (descr->type_num == NPY_USHORT)
+        return _numpyToImage< vigra::UInt16Image >(array);
+      else if (descr->type_num == NPY_SHORT)
+        return _numpyToImage< vigra::Int16Image >(array);
+      else if (descr->type_num == NPY_ULONG)
+        return _numpyToImage< vigra::UInt32Image >(array);
+      else if (descr->type_num == NPY_LONG)
+        return _numpyToImage< vigra::Int32Image >(array);
+      else if (descr->type_num == NPY_FLOAT)
+        return _numpyToImage< vigra::FImage >(array);
+      else if (descr->type_num == NPY_DOUBLE)
+        return _numpyToImage< vigra::DImage >(array);
+    } else
+    {
+      if (descr->type_num == NPY_UBYTE)
+        return _numpyToImageView< vigra::UInt8RGBImageView >(array);
+      else if (descr->type_num == NPY_BYTE)
+        return _numpyToImageView< vigra::Int8ImageView >(array);
+      else if (descr->type_num == NPY_USHORT)
+        return _numpyToImageView< vigra::UInt16ImageView >(array);
+      else if (descr->type_num == NPY_SHORT)
+        return _numpyToImageView< vigra::Int16ImageView >(array);
+      else if (descr->type_num == NPY_ULONG)
+        return _numpyToImageView< vigra::UInt32ImageView >(array);
+      else if (descr->type_num == NPY_LONG)
+        return _numpyToImageView< vigra::Int32ImageView >(array);
+      else if (descr->type_num == NPY_FLOAT)
+        return _numpyToImageView< vigra::FImageView >(array);
+      else if (descr->type_num == NPY_DOUBLE)
+        return _numpyToImageView< vigra::DImageView >(array);
+    }
+
+  }
+}
 
 template <class IMAGE>
 numeric::array
@@ -366,6 +526,12 @@ list pyImageHistogram(IMAGE1 const &imin, unsigned int valueCount)
    for (int i=0; i<p.size(); i++)
      h.append(p[i]);
    return h;
+}
+
+template <class IMAGE>
+void pyHoleFilling(IMAGE & img_bin, bool eightneigborhood=false)
+{
+   cecog::holeFilling(img_bin, eightneigborhood);
 }
 
 template <class Image1, class Image2>
@@ -1139,6 +1305,12 @@ static void wrap_images()
       ("imgIn", "strFilename", arg("strCompression")="100"), "Write UInt8 image to file.");
   def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::UInt16 > >,
       ("imgIn", "strFilename", arg("strCompression")="100"), "Write UInt16 image to file.");
+  def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::Int16 > >,
+      ("imgIn", "strFilename", arg("strCompression")="100"), "Write Int16 image to file.");
+  def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::UInt32 > >,
+      ("imgIn", "strFilename", arg("strCompression")="100"), "Write UInt32 image to file.");
+  def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::Int32 > >,
+      ("imgIn", "strFilename", arg("strCompression")="100"), "Write Int32 image to file.");
   def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::RGBValue< vigra::UInt8 > > >,
       ("imgIn", "strFilename", arg("strCompression")="100"), "Write RGB image (3xUInt8) to file.");
 
@@ -1192,11 +1364,15 @@ static void wrap_images()
   def("makeRGBImage", pyMakeRGBImage1<vigra::UInt8>);
   def("makeRGBImage", pyMakeRGBImage2<vigra::UInt8>);
 
-  def("imageToArray", pyImageToArray<vigra::BImage>);
+  def("numpy_to_image", pyNumpyToImage, (arg("array"), arg("copy")=false), "Converts a numpy.ndarray to a VIGRA image.");
+
+  //def("imageToArray", pyImageToArray<vigra::BImage>);
   def("rgbImageToArray", pyRgbImageToArray<vigra::BasicImage< vigra::RGBValue<uint8> > >);
 
 
   def("labelImage", pyLabelImage<vigra::BImage, vigra::Int16Image>);
+  def("holeFilling", pyHoleFilling<vigra::BImage>, (arg("img_bin"), arg("eightneighborhood")=false));
+
 
   def("windowAverageThreshold", pyWindowAverageThreshold<vigra::BImage, vigra::BImage>,
       (arg("imgIn"), arg("size"), arg("contrastLimit")=0, arg("lower")=0, arg("higher")=255),

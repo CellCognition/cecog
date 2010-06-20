@@ -241,10 +241,8 @@ class PrimarySegmentation(_Segmentation):
                  BooleanProperty(True,
                                  doc='remove all objects touching the image borders'),
 
-             iEmptyImageMax =
-                 IntProperty(30,
-                             doc=''),
-
+             hole_filling =
+                 BooleanProperty(False),
            )
 
     def __init__(self, **dctOptions):
@@ -281,13 +279,6 @@ class PrimarySegmentation(_Segmentation):
                                           oMetaImage.format("00raw.jpg", bC=True)),
                              self.strImageOutCompression)
 
-        # FIXME: scan for empty images
-        iMin, iMax = imgXY.getMinmax()
-        if iMax < self.iEmptyImageMax:
-            #print "max", iMax
-            self._oLogger.warning("Empty image found! Max image value %d < 'iEmptyImageMax' %d." %
-                                  (iMax, self.iEmptyImageMax))
-            return None
 
         imgPrefiltered = ccore.discMedian(imgXY,
                                           self.iMedianRadius)
@@ -305,6 +296,9 @@ class PrimarySegmentation(_Segmentation):
                                               self.iLatWindowSize,
                                               self.iLatLimit)
         self._oLogger.debug("         --- local threshold ok, %s" % stopwatch2.current_interval())
+
+        if self.hole_filling:
+            ccore.holeFilling(imgBin, False)
 
         stopwatch3 = StopWatch()
         #self._oLogger.debug("         --- local threshold2 %s %s" % (self.iLatWindowSize2, )

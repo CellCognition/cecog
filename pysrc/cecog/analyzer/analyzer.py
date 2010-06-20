@@ -67,6 +67,9 @@ import netCDF4
 from cecog import ccore
 
 from cecog.util.util import hexToRgb
+from cecog.analyzer import (REGION_NAMES_PRIMARY,
+                            REGION_NAMES_SECONDARY,
+                            )
 from cecog.analyzer.celltracker import CellTracker, DotWriter
 from cecog.segmentation.strategies import (PrimarySegmentation,
                                           SecondarySegmentation)
@@ -193,18 +196,17 @@ class QualityControl(object):
                             writeRowLabels=False)
 
 
-
 class ObjectHolder(dict):
 
     def __init__(self, strName):
         super(ObjectHolder, self).__init__()
         self.strName = strName
-        self._lstFeatureNames = None
-        self._dctNamesIdx = None
+        self._lstFeatureNames = []
+        self._dctNamesIdx = {}
 
     def setFeatureNames(self, lstFeatureNames):
         self._lstFeatureNames = lstFeatureNames[:]
-        self._dctNamesIdx = {}
+        self._dctNamesIdx.clear()
         # build mapping: featureName -> index
         for iIdx, strFeatureName in enumerate(self._lstFeatureNames):
             self._dctNamesIdx[strFeatureName] = iIdx
@@ -274,6 +276,9 @@ class _Channel(PropertyManager):
              lstFeatureNames =
                  ListProperty(None,
                               doc=''),
+             lstAreaSelection =
+                 ListProperty(None,
+                              is_mandatory=True),
 
              dctAreaRendering =
                  DictionaryProperty(None,
@@ -330,7 +335,7 @@ class _Channel(PropertyManager):
                       Attribute('_oLogger'),
                       Attribute('_dctRegions'),
                       Attribute('oMetaImage'),
-                      Attribute('dctContainers'),
+                      Attribute('dctContainers')
                       ]
 
     def __init__(self, **dctOptions):
@@ -357,6 +362,32 @@ class _Channel(PropertyManager):
         self._dctRegions = {}
         self.oMetaImage = None
         self.dctContainers = {}
+
+    def dump_label_image(self, dataset, frame_idx, region_lookup):
+        labels = dataset.variables['label_images']
+        finished = dataset.variables['label_images_finished']
+        for k, v in self.dctContainers.iteritems():
+            idx = region_lookup[k]
+            labels[frame_idx, idx] = v.img_labels.toArray(copy=False)
+            finished[frame_idx, idx] = 1
+
+    def load_label_image(self, dataset, frame_idx, region_lookup):
+        labels = dataset.variables['label_images']
+        finished = dataset.variables['label_images_finished']
+        success = True
+        for region_name in self.lstAreaSelection:
+            idx = region_lookup[region_name]
+            if finished[frame_idx, idx] != 0:
+                finished[frame_idx, idx] = 1
+                img_label = ccore.numpy_to_image(labels[frame_idx, idx],
+                                                 copy=True)
+                img_xy = self.oMetaImage.imgXY
+                container = ccore.ImageMaskContainer(img_xy, img_label, False)
+                self.dctContainers[region_name] = container
+            else:
+                success = False
+                break
+        return success
 
     def getRegionNames(self):
         return self._dctRegions.keys()
@@ -577,9 +608,8 @@ class PrimaryChannel(_Channel):
                  BooleanProperty(True,
                                  doc='remove all objects touching the image borders'),
 
-             iEmptyImageMax =
-                 IntProperty(30,
-                             doc=''),
+             hole_filling =
+                 BooleanProperty(False),
 
              )
 
@@ -617,7 +647,6 @@ class PrimaryChannel(_Channel):
                                             iMaximaSizeIntensity = self.iMaximaSizeIntensity,
                                             iMinMergeSize = self.iMinMergeSize,
                                             bRemoveBorderObjects = self.bRemoveBorderObjects,
-                                            iEmptyImageMax = self.iEmptyImageMax,
                                             bPostProcessing = self.bPostProcessing,
                                             lstPostprocessingFeatureCategories = self.lstPostprocessingFeatureCategories,
                                             strPostprocessingConditions = self.strPostprocessingConditions,
@@ -631,13 +660,10 @@ class PrimaryChannel(_Channel):
                                             fNormalizeRatio = self.fNormalizeRatio,
                                             fNormalizeOffset = self.fNormalizeOffset,
                                             tplCropRegion = self.tplCropRegion,
+                                            hole_filling = self.hole_filling,
                                             )
         oContainer = oSegmentation(self.oMetaImage)
-        if not oContainer is None:
-            self.dctContainers['primary'] = oContainer
-            return True
-        else:
-            return False
+        self.dctContainers['primary'] = oContainer
 
 
 class SecondaryChannel(_Channel):
@@ -664,10 +690,6 @@ class SecondaryChannel(_Channel):
                  IntProperty(None,
                              is_mandatory=True,
                              doc=''),
-             lstAreaSelection =
-                 ListProperty(None,
-                              is_mandatory=True,
-                              doc='values: "expanded", "inside", "outside"'),
 
              bEstimateBackground =
                  BooleanProperty(False),
@@ -738,10 +760,55 @@ class SecondaryChannel(_Channel):
 
 class TimeHolder(OrderedDict):
 
-    def __init__(self, channels):
+    def __init__(self, channels, filename, meta):
         super(TimeHolder, self).__init__()
         self._iCurrentT = None
         self.channels = channels
+        self.metadata = meta
+
+#        frames = sorted(list(meta.setT))
+#        region_names = REGION_NAMES_PRIMARY + REGION_NAMES_SECONDARY
+#        region_channels = ['primary']*len(REGION_NAMES_PRIMARY) + \
+#                          ['secondary']*len(REGION_NAMES_SECONDARY)
+#
+#        if os.path.isfile(filename):
+#            dataset = netCDF4.Dataset(filename, 'a')
+#        else:
+#            dataset = netCDF4.Dataset(filename, 'w', format='NETCDF4')
+#            dataset.createDimension('frames', meta.iDimT)
+#            dataset.createDimension('channels', meta.iDimC)
+#            dataset.createDimension('height', meta.iDimY)
+#            dataset.createDimension('width', meta.iDimX)
+#            dataset.createDimension('regions', len(region_names))
+#
+#            frames_idx = dataset.createVariable('frames_idx', 'u4', ('frames',))
+#            frames_idx[:] = frames
+#
+#            var = dataset.createVariable('region_names', str, 'regions')
+#            var[:] = numpy.asarray(region_names, 'O')
+#
+#            var = dataset.createVariable('region_channels', str, 'regions')
+#            var[:] = numpy.asarray(region_channels, 'O')
+#
+#            dataset.createVariable('label_images', 'i2',
+#                                   ('frames', 'regions', 'height', 'width'),
+#                                   zlib='True',
+#                                   chunksizes=(1,1,meta.iDimY,meta.iDimX))
+#
+#            finished = dataset.createVariable('label_images_finished', 'i1',
+#                                              ('frames', 'regions'))
+#            finished[:] = 0
+#
+#        self._dataset = dataset
+#
+#        self._frames_to_idx = dict([(f,i) for i, f in enumerate(frames)])
+#        self._idx_to_frames = dict([(i,f) for i, f in enumerate(frames)])
+#
+#        self._regions_to_idx = dict([(n,i) for i, n in enumerate(region_names)])
+
+
+#    def __del__(self):
+#        self._dataset.close()
 
     def initTimePoint(self, iT):
         self._iCurrentT = iT
@@ -758,6 +825,21 @@ class TimeHolder(OrderedDict):
             self[iT] = OrderedDict()
         self[iT][oChannel.strChannelId] = oChannel
         self[iT].sort(key = lambda x: self[iT][x])
+
+    def dump_label_image(self, channel):
+        channel.dump_label_image(self._dataset,
+                                 self._frames_to_idx[self._iCurrentT],
+                                 self._regions_to_idx)
+
+    def apply_segmentation(self, channel, primary_channel=None):
+#        success = channel.load_label_image(self._dataset,
+#                                           self._frames_to_idx[self._iCurrentT],
+#                                           self._regions_to_idx)
+        success = False
+        if not success:
+            channel.applySegmentation(primary_channel)
+            #self.dump_label_image(channel)
+
 
     def extportObjectCounts(self, filename, P, metadata, prim_info=None, sec_info=None, sep='\t'):
         f = file(filename, 'w')
@@ -785,20 +867,24 @@ class TimeHolder(OrderedDict):
 
                 if not region_info is None:
                     region_name, class_names = region_info
-                    region = channel.getRegion(region_name)
-                    total = len(region)
                     if not has_header:
                         keys = ['total'] + class_names
                         line4 += keys
                         line3 += ['total'] + ['class']*len(class_names)
                         line1 += [channel.NAME.upper()] * len(keys)
                         line2 += [region_name] * len(keys)
-                    count = dict([(x, 0) for x in class_names])
-                    # in case just total counts are needed
-                    if len(class_names) > 0:
-                        for obj in region.values():
-                            count[obj.strClassName] += 1
-                    items += [total] + [count[x] for x in class_names]
+
+                    if channel.hasRegion(region_name):
+                        region = channel.getRegion(region_name)
+                        total = len(region)
+                        count = dict([(x, 0) for x in class_names])
+                        # in case just total counts are needed
+                        if len(class_names) > 0:
+                            for obj in region.values():
+                                count[obj.strClassName] += 1
+                        items += [total] + [count[x] for x in class_names]
+                    else:
+                        items += [numpy.NAN] * (len(class_names) + 1)
 
             if not has_header:
                 has_header = True
@@ -964,7 +1050,6 @@ class CellAnalyzer(PropertyManager):
         return self._dctChannels[strChannelId]
 
     def process(self):
-        bSuccess = True
         # sort by Channel `RANK`
         lstChannels = self._dctChannels.values()
         lstChannels.sort()
@@ -973,21 +1058,16 @@ class CellAnalyzer(PropertyManager):
 
             oChannel.applyZSelection()
 #            oChannel.applyBinning(self.iBinningFactor)
-            oResult = oChannel.applySegmentation(oPrimaryChannel)
+            self.oTimeHolder.apply_segmentation(oChannel, oPrimaryChannel)
 
             oChannel.applyFeatures()
 
             if oPrimaryChannel is None:
-                if oResult:
-                    assert oChannel.RANK == 1
-                    oPrimaryChannel = oChannel
-                else:
-                    bSuccess = False
-                    break
+                assert oChannel.RANK == 1
+                oPrimaryChannel = oChannel
 
         for oChannel in lstChannels:
             self.oTimeHolder.applyChannel(oChannel)
-        return bSuccess
 
     def purge(self, features=None):
         for oChannel in self._dctChannels.values():

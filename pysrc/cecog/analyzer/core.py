@@ -36,7 +36,9 @@ from pdk.iterator import is_subset
 # cecog module imports:
 #
 from cecog import ccore
-from cecog.analyzer import SECONDARY_REGIONS
+from cecog.analyzer import (REGION_NAMES_PRIMARY,
+                            SECONDARY_REGIONS,
+                            )
 from cecog.analyzer.analyzer import (CellAnalyzer,
                                      PrimaryChannel,
                                      SecondaryChannel,
@@ -119,8 +121,9 @@ class PositionAnalyzer(object):
         self.strPathOutAnalyzed = os.path.join(self.strPathOut, 'analyzed')
         self.oSettings = oSettings
 
+        self._path_dump = os.path.join(self.strPathOut, 'dump')
         if image_container is None:
-            self.oImageContainer = load_image_container(os.path.join(self.strPathOut, 'dump'))
+            self.oImageContainer = load_image_container(self._path_dump)
         else:
             self.oImageContainer = image_container
 
@@ -235,7 +238,9 @@ class PositionAnalyzer(object):
                             'DISABLED FOR NOW'))
                             #self.oSettings.bClearTrackingPath))
 
-        oTimeHolder = TimeHolder(channels=self.tplChannelIds)
+        max_frames = max(self.lstAnalysisFrames)
+        filename_netcdf = os.path.join(self._path_dump, '%s.netcdf4' % self.P)
+        oTimeHolder = TimeHolder(self.tplChannelIds, filename_netcdf, self.oMetaData)
 
         self.oSettings.set_section('Tracking')
         # structure and logic to handle object trajectories
@@ -705,9 +710,11 @@ class PositionAnalyzer(object):
                                   iGaussSizeIntensity = self.oSettings.get2('primary_intensitywatershed_gausssize'),
                                   iMaximaSizeIntensity = self.oSettings.get2('primary_intensitywatershed_maximasize'),
                                   # FIXME:
+                                  lstAreaSelection = REGION_NAMES_PRIMARY,
+                                  # FIXME:
                                   iMinMergeSize = self.oSettings.get2('primary_shapewatershed_minmergesize'),
                                   bRemoveBorderObjects = self.oSettings.get2('primary_removeborderobjects'),
-                                  iEmptyImageMax = self.oSettings.get2('primary_emptyimagemax'),
+                                  hole_filling = self.oSettings.get2('primary_holefilling'),
                                   bPostProcessing = bPostProcessing,
                                   lstPostprocessingFeatureCategories = lstPostprocessingFeatureCategories,
                                   strPostprocessingConditions = strPostprocessingConditions,
@@ -772,7 +779,8 @@ class PositionAnalyzer(object):
                     #channel_id = self.oObjectLearner.strChannelId
                     #self.oObjectLearner.setFeatureNames(oCellAnalyzer.getChannel(channel_id).lstFeatureNames)
 
-            elif oCellAnalyzer.process():
+            else:
+                oCellAnalyzer.process()
                 iNumberImages += 1
 
                 if not self._qthread:

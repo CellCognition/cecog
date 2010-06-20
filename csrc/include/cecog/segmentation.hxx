@@ -71,8 +71,8 @@ namespace cecog
    */
   template <class BIMAGE>
   void holeFilling(BIMAGE & img_bin, bool eightneigborhood=false,
-                    typename BIMAGE::value_type background=0,
-                    typename BIMAGE::value_type foreground=255)
+                   typename BIMAGE::value_type background=0,
+                   typename BIMAGE::value_type foreground=255)
   {
     vigra::IImage labels(img_bin.size());
     int max_background_label = labelImageWithBackground(srcImageRange(img_bin), destImage(labels), eightneigborhood, foreground);
@@ -91,16 +91,6 @@ namespace cecog
                                 Param(background),
                                 Param(foreground))
                     );
-  }
-
-  template <class RGBImage, class BImage>
-  void extractRGBChannel(RGBImage const & img_rgb, BImage & img_out, int channel)
-  {
-    transformImage(srcImageRange(img_rgb),
-                   destImage(img_out),
-                   RGBChannelFunctor<
-                     typename RGBImage::PixelType,
-                     typename BImage::PixelType>(channel));
   }
 
 
@@ -507,7 +497,7 @@ namespace cecog
 
 
     // do some hole-filling
-    holeFilling(img_bin, false, background, foreground);
+    //holeFilling(img_bin, false, background, foreground);
 
     vigra::IImage labels(wx, hx), labels2(wx, hx);
     //printf("moo3\n");
@@ -899,7 +889,8 @@ namespace cecog
     typedef vigra::triple<unsigned, unsigned, ROIObject> merged_type;
     std::vector<merged_type> mergedL;
 
-    for (int j=0; j < obj_idL.size()-1; ++j)
+    int size = obj_idL.size();
+    for (int j=0; j < size-1; ++j)
     {
       unsigned id_j = obj_idL[j];
 
@@ -909,7 +900,7 @@ namespace cecog
 
       const ROIObject& obj_j = container.objects[id_j];
 
-      for (int i=j+1; i < obj_idL.size(); ++i)
+      for (int i=j+1; i < size; ++i)
       {
         unsigned id_i = obj_idL[i];
         const ROIObject& obj_i = container.objects[id_i];
@@ -1012,12 +1003,12 @@ namespace cecog
                                   id_i,
                                   Param(id_ij));
 
-            // fill the cap between objects
+            // fill the gap between objects
             point2d_vector::iterator point_it = found_pointL.begin();
             for (; point_it != found_pointL.end(); ++point_it)
               img_new_labels[*point_it] = id_ij;
 
-            // look for remaining cap-pixels to fill (in neighborhood of the watershed-line)
+            // look for remaining gap-pixels to fill (in neighborhood of the watershed-line)
             const int neighborhood = 8;
             for (point_it = found_pointL.begin(); point_it != found_pointL.end(); ++point_it)
             {

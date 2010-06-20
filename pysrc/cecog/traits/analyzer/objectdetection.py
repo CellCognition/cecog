@@ -124,8 +124,8 @@ class SectionObjectdetection(_Section):
         ('primary_regions',
             MultiSelectionTrait([REGION_NAMES_PRIMARY[0]],
                                  REGION_NAMES_PRIMARY)),
-        ('primary_emptyimagemax',
-            IntTrait(90, -1, 10000)),
+        ('primary_holefilling',
+            BooleanTrait(True, label='Fill holes')),
 
         ('secondary_channelid',
             StringTrait('rfp', 100, label='Secondary channel ID')),
