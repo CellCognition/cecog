@@ -37,12 +37,12 @@ from cecog import ccore
 #
 from cecog.util.token import (Token,
                               TokenHandler)
-from cecog.core.imagecontainer import (MetaData,
-                                       DIMENSION_NAME_POSITION,
-                                       DIMENSION_NAME_TIME,
-                                       DIMENSION_NAME_CHANNEL,
-                                       DIMENSION_NAME_ZSLICE,
-                                       )
+from cecog.io.imagecontainer import (MetaData,
+                                     DIMENSION_NAME_POSITION,
+                                     DIMENSION_NAME_TIME,
+                                     DIMENSION_NAME_CHANNEL,
+                                     DIMENSION_NAME_ZSLICE,
+                                     )
 
 #------------------------------------------------------------------------------
 # constants:
@@ -113,8 +113,8 @@ class FileTokenImporter(object):
 
             if not has_xy:
                 has_xy = True
-                info = ImageImportInfo(os.path.join(self.path,
-                                                    item['filename']))
+                info = ccore.ImageImportInfo(os.path.join(self.path,
+                                                          item['filename']))
                 self.meta_data.dim_x = info.width
                 self.meta_data.dim_y = info.height
                 self.meta_data.pixel_type = info.pixel_type
@@ -165,7 +165,7 @@ class FileTokenImporter(object):
         #print position, frame, channel, zslice, index
         filename_rel = self.dimension_lookup[position][frame][channel][zslice]
         filename_abs = os.path.join(self.path, filename_rel)
-        image = read_image(filename_abs, image_index=index)
+        image = ccore.readImage(filename_abs, image_index=index)
         return image
 
 
