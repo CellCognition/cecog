@@ -57,6 +57,32 @@ from cecog.io.imagecontainer import (MetaData,
 #------------------------------------------------------------------------------
 # classes:
 #
+class DefaultCoordinates(object):
+    def __init__(self):
+        self.default_values = {
+                               DIMENSION_NAME_TIME: '1',
+                               DIMENSION_NAME_CHANNEL: 'ch0',
+                               DIMENSION_NAME_ZSLICE: '1',
+                               'DEFAULT': ''
+                               }
+        return
+
+    def __call__(self, image_info, key):
+        #if not image_info.has_key(key):
+        if self.default_values.has_key(key):
+            if not image_info.has_key(key):
+                return self.default_values[key]
+            elif image_info[key] in ['', None]:
+                return self.default_values[key]
+            #else:
+            #    return image_info[key]
+        else:
+            if image_info.has_key(key):
+                return image_info[key]
+            else:
+                return self.default_values['DEFAULT']
+
+        return image_info[key]
 
 class FileTokenImporter(object):
 
@@ -98,6 +124,7 @@ class FileTokenImporter(object):
                 result['timestamp'] = os.path.getmtime(filename)
                 token_list.append(result)
         return token_list
+
 
     def _build_dimension_lookup(self):
         token_list = self._build_token_list()
@@ -229,7 +256,95 @@ class ZeissLifeTokenImporter(SimpleTokenImporter):
                              ignore_prefixes=ignore_prefixes,
                              multi_image=multi_image)
 
+class FlatFileImporter(FileTokenImporter):
+
+    def __init__(self, path, filename,
+                 extensions=None, ignore_prefixes=None,
+                 multi_image=None):
+        self.flat_filename = filename
+        super(FlatFileImporter,
+              self).__init__(path, token_handler=None,
+                             extensions=extensions,
+                             ignore_prefixes=ignore_prefixes,
+                             multi_image=multi_image)
+
+    def _build_dimension_lookup(self, filename=None):
+        if filename is None:
+            filename = self.flat_filename
+
+        df = DefaultCoordinates()
+
+        lookup = {}
+
+        file = open(filename, 'r')
+        headers = None
+        has_xy = False
+
+        positions = []
+        times = []
+        channels = []
+        zslices = []
+
+        for line in file.xreadlines():
+
+            if headers is None:
+                headers = [x.strip() for x in line.split('\t')]
+                continue
+
+            image_coord = dict(zip(headers, [x.strip() for x in line.split('\t')]))
+            if not has_xy:
+                has_xy = True
+                info = ccore.ImageImportInfo(os.path.join(self.path,
+                                                    image_coord['path'],
+                                                    image_coord['filename']))
+                self.meta_data.dim_x = info.width
+                self.meta_data.dim_y = info.height
+                self.meta_data.pixel_type = info.pixel_type
+                self.has_multi_images = info.images > 1
+
+            position = image_coord[DIMENSION_NAME_POSITION]
+            if not position in lookup:
+                lookup[position] = {}
+            time = df(image_coord, DIMENSION_NAME_TIME)
+            #time = image_coord[DIMENSION_NAME_TIME]
+            if not time in lookup[position]:
+                lookup[position][time] = {}
+            channel = df(image_coord, DIMENSION_NAME_CHANNEL)
+            if not channel in lookup[position][time]:
+                lookup[position][time][channel] = {}
+            zslice = df(image_coord, DIMENSION_NAME_ZSLICE)
+            if not zslice in lookup[position][time][channel]:
+                lookup[position][time][channel][zslice] = os.path.join(image_coord['path'], image_coord['filename'])
+
+            timestamp = os.path.getmtime(os.path.join(self.path, os.path.join(image_coord['path'], image_coord['filename'])))
+            self.meta_data.append_absolute_time(position,
+                                                time,
+                                                timestamp)
+
+            if (self.has_multi_images and
+                self.multi_image == self.MULTIIMAGE_USE_ZSLICE):
+                if not zslice is None:
+                    raise ValueError('Multi-image assigned for zslice conflicts'
+                                     ' with zslice token in filename!')
+                zslices.extend(range(1,info.images+1))
+            else:
+                zslices.append(zslice)
+
+            positions.append(position)
+            times.append(time)
+            channels.append(channel)
+        file.close()
+
+        self.meta_data.positions = tuple(sorted(unique(positions)))
+        self.meta_data.times = tuple(sorted(unique(times)))
+        self.meta_data.channels = tuple(sorted(unique(channels)))
+        self.meta_data.zslices = tuple(sorted(unique(zslices)))
+
+        return lookup
+
+
 class LsmImporter(object):
 
     def __init__(self):
         pass
+

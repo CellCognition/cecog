@@ -35,6 +35,7 @@ import types
 # extension module imports:
 #
 from pdk.ordereddict import OrderedDict
+from pdk.datetimeutils import StopWatch
 
 #------------------------------------------------------------------------------
 # cecog imports:
@@ -65,7 +66,7 @@ class MetaData(object):
         self.dim_x = None
         self.dim_y = None
         self.dim_z = None
-        self.dim_c = None 
+        self.dim_c = None
         self.dim_t = None
         self.dim_p = None
 
@@ -123,7 +124,7 @@ class MetaData(object):
             for time, timestamp in timestamps.iteritems():
                 self.timestamps_relative[position][time] = \
                     timestamp - base_time
-                    
+
         self.dim_p = len(self.positions)
         self.dim_t = len(self.times)
         self.dim_c = len(self.channels)
@@ -166,7 +167,7 @@ class MetaImage(object):
     Image reading is implemented lazy.
     """
 
-    def __init__(self, image_container, position, time, channel, zslice, 
+    def __init__(self, image_container, position, time, channel, zslice,
                  height, width):
         self.position = position
         self.time = time
@@ -190,15 +191,15 @@ class MetaImage(object):
                                                        self.channel,
                                                        self.zslice)
         return self._img
-       
+
 #class Axis(object):
-#    
+#
 #    NAME = None
-#    
+#
 #    def __init__(self, current=None):
 #        self.values = OrderedSet()
-#        self.       
-                    
+#        self.
+
 class AxisIterator(object):
     """
     Concept of iterator-generator chains, which are linked according the given
@@ -224,7 +225,7 @@ class AxisIterator(object):
         # iterate on the a given sequence of values
         elif type(selected_values) in [types.ListType, types.TupleType]:
             self.values = selected_values
-        # iterate just on one given value    
+        # iterate just on one given value
         elif selected_values in possible_values:
             self.values = [selected_values]
         else:
@@ -257,26 +258,26 @@ class AxisIterator(object):
                 params = tuple(dimensions) + (value,)
                 # pylint: disable-msg=W0142
                 yield self.image_container.get_meta_image(*params)
-        
+
 
 class ImageContainer(object):
-    
+
     def __init__(self, importer):
         self.importer = importer
         self.meta_data = importer.meta_data
-        
+
     def iterator(self, position=None, time=None, channel=None, zslice=None,
-                 interrupt_time=False, 
-                 interrupt_channel=False, 
+                 interrupt_time=False,
+                 interrupt_channel=False,
                  interrupt_zslice=False):
         # FIXME: linking of iterators should adapt to any scan-order
-        iter_zslice = AxisIterator(self, zslice, self.meta_data.zslices, 
+        iter_zslice = AxisIterator(self, zslice, self.meta_data.zslices,
                                    'zslice')
-        iter_channel = AxisIterator(self, channel, self.meta_data.channels, 
+        iter_channel = AxisIterator(self, channel, self.meta_data.channels,
                                     'channel', interrupt_zslice, iter_zslice)
         iter_time = AxisIterator(self, time, self.meta_data.times,
                                  'time', interrupt_channel, iter_channel)
-        iter_position = AxisIterator(self, position, self.meta_data.positions, 
+        iter_position = AxisIterator(self, position, self.meta_data.positions,
                                      'position', interrupt_time, iter_time)
         return iter_position()
 
@@ -285,7 +286,26 @@ class ImageContainer(object):
     def get_meta_image(self, position, time, channel, zslice):
         return MetaImage(self, position, time, channel, zslice,
                          self.meta_data.dim_y, self.meta_data.dim_x)
-        
+
     def get_image(self, position, time, channel, zslice):
         return self.importer.get_image(position, time, channel, zslice)
-    
+
+#-------------------------------------------------------------------------------
+# main:
+#
+if __name__ ==  "__main__":
+    from cecog.io.filetoken import MetaMorphTokenImporter
+    from cecog.io.filetoken import FlatFileImporter
+
+    path = '/Users/twalter/CecogPackage/H2B_aTubulin'
+    filename = '/Users/twalter/cecog_test.txt'
+    #image_container = ImageContainer(MetaMorphTokenImporter(path))
+    s = StopWatch()
+    #path = '/Volumes/mattaj/andri/laminB_data/040210'
+    #filename = '/Users/twalter/040210.txt'
+    #path = '/Users/twalter/data/Andri/Images/110210'
+    #filename = '/Users/twalter/110210_part.txt'
+    image_container = ImageContainer(FlatFileImporter(path, filename))
+    print image_container.meta_data
+    print s
+
