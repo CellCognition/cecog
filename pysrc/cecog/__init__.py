@@ -21,6 +21,11 @@ __all__ = ['VERSION']
 #
 
 #-------------------------------------------------------------------------------
+# cecog imports:
+#
+from cecog.traits.config import (init_constants,
+                                 init_application_support_path)
+#-------------------------------------------------------------------------------
 # constants:
 #
 VERSION_NUM = (1, 0, 7)
@@ -29,3 +34,6 @@ VERSION = '.'.join([str(digit) for digit in VERSION_NUM])
 JOB_CONTROL_SUSPEND = 'Suspend'
 JOB_CONTROL_RESUME = 'Resume'
 JOB_CONTROL_TERMINATE = 'Terminate'
+
+init_application_support_path()
+init_constants()

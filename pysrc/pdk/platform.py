@@ -133,3 +133,7 @@ def get_main_dir():
             main_dir = os.path.sep + \
                          os.path.join(*strExePath.split(os.path.sep)[:-3]) # pylint: disable-msg=W0142
     return main_dir
+
+is_mac = on_mac()
+is_windows = on_windows()
+is_linux = on_linux()

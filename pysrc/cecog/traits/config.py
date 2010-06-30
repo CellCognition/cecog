@@ -28,7 +28,9 @@ __all__ = ['NAMING_SCHEMAS',
 # standard library imports:
 #
 import os, \
-       copy
+       copy, \
+       cStringIO, \
+       shutil
 
 from ConfigParser import RawConfigParser
 
@@ -36,12 +38,17 @@ from ConfigParser import RawConfigParser
 # extension module imports:
 #
 from pdk.ordereddict import OrderedDict
+from pdk.fileutils import safe_mkdirs
+from pdk.platform import (is_mac,
+                          is_windows,
+                          is_linux,
+                          )
 
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
 from cecog.util.util import (read_table,
-                             write_table,
+                             write_table
                              )
 from cecog.util.mapping import map_path_to_os as _map_path_to_os
 from cecog.traits.traits import StringTrait
@@ -49,14 +56,80 @@ from cecog.traits.traits import StringTrait
 #-------------------------------------------------------------------------------
 # constants:
 #
-ANALYZER_CONFIG_FILENAME = os.path.join('resources', 'config.ini')
-FONT12_FILENAME = os.path.join('resources', 'font12.png')
-NAMING_SCHEMA_FILENAME   = os.path.join('resources', 'naming_schemas.ini')
-PATH_MAPPING_FILENAME = os.path.join('resources', 'path_mappings.txt')
+RESOURCE_PATH            = 'resources'
+
+
+# forward declarations defined in init_constants() (called upon import of cecog)
+APPLICATION_SUPPORT_PATH = None
+ANALYZER_CONFIG_FILENAME = None
+NAMING_SCHEMA_FILENAME   = None
+PATH_MAPPING_FILENAME    = None
+FONT12_FILENAME          = None
+
+NAMING_SCHEMAS = None
+ANALYZER_CONFIG = None
+PATH_MAPPER = None
+map_path_to_os = None
+is_path_mappable = None
 
 #-------------------------------------------------------------------------------
 # functions:
 #
+def init_application_support_path():
+    global APPLICATION_SUPPORT_PATH
+    folder = 'CellCognition'
+    if APPLICATION_SUPPORT_PATH is None:
+        if is_mac:
+            path = '~/Library/Application Support'
+            path = os.path.expanduser(path)
+        elif is_windows:
+            pass
+        elif is_linux:
+            pass
+        path = os.path.join(path, folder)
+        safe_mkdirs(path)
+        APPLICATION_SUPPORT_PATH = path
+    return APPLICATION_SUPPORT_PATH
+
+def init_constants():
+    global ANALYZER_CONFIG_FILENAME
+    ANALYZER_CONFIG_FILENAME = _copy_check_file(RESOURCE_PATH,
+                                                APPLICATION_SUPPORT_PATH,
+                                                'config.ini')
+    global NAMING_SCHEMA_FILENAME
+    NAMING_SCHEMA_FILENAME = _copy_check_file(RESOURCE_PATH,
+                                              APPLICATION_SUPPORT_PATH,
+                                              'naming_schemas.ini')
+    global PATH_MAPPING_FILENAME
+    PATH_MAPPING_FILENAME = _copy_check_file(RESOURCE_PATH,
+                                             APPLICATION_SUPPORT_PATH,
+                                             'path_mappings.txt')
+    global FONT12_FILENAME
+    FONT12_FILENAME = _copy_check_file(RESOURCE_PATH,
+                                       APPLICATION_SUPPORT_PATH,
+                                       'font12.png')
+
+    global NAMING_SCHEMAS
+    NAMING_SCHEMAS  = _ConfigParser(NAMING_SCHEMA_FILENAME, 'naming schemas')
+    global ANALYZER_CONFIG
+    ANALYZER_CONFIG = _ConfigParser(ANALYZER_CONFIG_FILENAME, 'analyzer config')
+    global PATH_MAPPER
+    PATH_MAPPER = PathMapper(PATH_MAPPING_FILENAME)
+
+    # define global functions which are in fact methods
+    global map_path_to_os
+    map_path_to_os = PATH_MAPPER.map_path_to_os
+    global is_path_mappable
+    is_path_mappable = PATH_MAPPER.is_path_mappable
+
+
+def _copy_check_file(path_in, path_out, filename):
+    print path_in, path_out, filename
+    fn_in = os.path.abspath(os.path.join(path_in, filename))
+    fn_out = os.path.abspath(os.path.join(path_out, filename))
+    if not os.path.isfile(fn_out):
+        shutil.copy2(fn_in, fn_out)
+    return fn_out
 
 #-------------------------------------------------------------------------------
 # classes:
@@ -85,11 +158,6 @@ class ConfigSettings(RawConfigParser):
         RawConfigParser.__init__(self, {}, OrderedDict)
         self._registry = OrderedDict()
         self._current_section = None
-        #self.naming_schemes = RawConfigParser({}, OrderedDict)
-        #filename = os.path.join('resources', 'naming_schemes.conf')
-        #if not os.path.isfile(filename):
-        #    raise IOError("Naming scheme file '%s' not found." % filename)
-        #self.naming_schemes.read(filename)
 
         self._section_registry = section_registry
         for section_name in section_registry.get_section_names():
@@ -105,6 +173,9 @@ class ConfigSettings(RawConfigParser):
     def set_section(self, section_name):
         if self.has_section(section_name):
             self._current_section = section_name
+
+    def get_section(self, section_name):
+        return self._section_registry.get_section(section_name)
 
     def get_trait(self, section_name, trait_name):
         section = self._section_registry.get_section(section_name)
@@ -129,8 +200,13 @@ class ConfigSettings(RawConfigParser):
     def set2(self, trait_name, value):
         self.set(self._current_section, trait_name, value)
 
-    def read(self, filenames):
-        result = RawConfigParser.read(self, filenames)
+    def read(self, filename):
+        fp = file(filename, 'r')
+        self.readfp(fp)
+        fp.close()
+
+    def readfp(self, fp):
+        result = RawConfigParser.readfp(self, fp)
 
         for section_name in self.sections():
             if section_name in self._section_registry.get_section_names():
@@ -151,6 +227,30 @@ class ConfigSettings(RawConfigParser):
                 self.remove_section(section_name)
         return result
 
+    def to_string(self):
+        stringio = cStringIO.StringIO()
+        self.write(stringio)
+        s = stringio.getvalue()
+        stringio.close()
+        return s
+
+    def from_string(self, s):
+        stringio = cStringIO.StringIO()
+        stringio.writelines(s)
+        stringio.seek(0)
+        self.readfp(stringio)
+        stringio.close()
+
+    def compare(self, settings, section_name, grp_name):
+        section = self.get_section(section_name)
+        names = section.get_trait_names_for_group(grp_name)
+        equal = True
+        for name in names:
+            if (self.get(section_name, name) !=
+                settings.get(section_name, name)):
+                equal = False
+                break
+        return equal
 
 
 class SectionRegistry(object):
@@ -182,6 +282,22 @@ class SectionRegistry(object):
         return result
 
 
+class TraitGroup(object):
+
+    def __init__(self, name):
+        self.name = name
+        self._registry = OrderedDict()
+
+    def register_trait(self, name, trait):
+        self._registry[name] = trait
+
+    def get_trait(self, name):
+        return self._registry[name]
+
+    def get_trait_names(self):
+        return self._registry.keys()
+
+
 class _Section(object):
 
     SECTION_NAME = None
@@ -189,15 +305,36 @@ class _Section(object):
 
     def __init__(self):
         self._registry = OrderedDict()
-        for trait_name, trait in self.OPTIONS:
-            trait_name = trait_name.lower()
-            self._registry[trait_name] = trait
+        self._traitname_grpname = OrderedDict()
 
-    def get_trait(self, name):
+        for grp_name, grp_items in self.OPTIONS:
+            grp = TraitGroup(grp_name)
+            self._registry[grp_name] = grp
+            for trait_name, trait in grp_items:
+                trait_name = trait_name.lower()
+                grp.register_trait(trait_name, trait)
+                self._traitname_grpname[trait_name] = grp_name
+
+    def get_group(self, name):
         return self._registry[name]
 
-    def get_trait_names(self):
+    def get_group_names(self):
         return self._registry.keys()
+
+    def get_trait(self, trait_name):
+        grp_name = self._traitname_grpname[trait_name]
+        grp = self._registry[grp_name]
+        return grp.get_trait(trait_name)
+
+    def get_trait_names(self):
+        names = []
+        for grp in self._registry.values():
+            names += grp.get_trait_names()
+        return set(names)
+
+    def get_trait_names_for_group(self, name):
+        grp = self.get_group(name)
+        return grp.get_trait_names()
 
 
 class PathMapper(object):
@@ -228,12 +365,4 @@ class PathMapper(object):
         return self._column_names[:]
 
 
-NAMING_SCHEMAS  = _ConfigParser(NAMING_SCHEMA_FILENAME, 'naming schemas')
-ANALYZER_CONFIG = _ConfigParser(ANALYZER_CONFIG_FILENAME, 'analyzer config')
-
-PATH_MAPPER = PathMapper(PATH_MAPPING_FILENAME)
-
-# define global functions which are in fact methods
-map_path_to_os = PATH_MAPPER.map_path_to_os
-is_path_mappable = PATH_MAPPER.is_path_mappable
 

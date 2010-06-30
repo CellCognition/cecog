@@ -28,10 +28,6 @@ import logging, \
 
 from pdk.options import Option
 from pdk.optionmanagers import OptionManager
-from pdk.platform import (on_mac,
-                          on_windows,
-                          on_linux,
-                          )
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -110,11 +106,11 @@ def convert_package_path(path):
 
 def resolve_os_name():
     os_str = None
-    if on_windows():
+    if is_windows:
         os_str = OS_WINDOWS
-    elif on_mac():
+    elif is_mac:
         os_str = OS_MAC
-    elif on_linux():
+    elif is_linux:
         os_str = OS_LINUX
     return os_str
 
