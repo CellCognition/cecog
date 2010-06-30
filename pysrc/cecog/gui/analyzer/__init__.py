@@ -907,15 +907,8 @@ class _ProcessorMixin(object):
 
     def _on_error(self, msg, type=0):
         self._has_error = True
-        msgbox = QMessageBox(self)
-        msgbox.setText("An error occured during processing.")
-        #msgBox.setInformativeText("Do you want to save your changes?");
-        msgbox.setIcon(QMessageBox.Critical)
-        msgbox.setDetailedText(msg)
-        #msgbox.setWindowFlags(0)
-        msgbox.setFixedSize(400,200)
-        msgbox.setStandardButtons(QMessageBox.Ok)
-        msgbox.exec_()
+        critical(self, 'An error occurred during processing.',
+                 detail=msg)
 
     def _on_process_finished(self):
 

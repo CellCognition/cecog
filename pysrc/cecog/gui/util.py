@@ -108,12 +108,13 @@ def message(icon, text, parent, info=None, detail=None, buttons=None,
         msg_box.setStandardButtons(buttons)
     if not default is None:
         msg_box.setDefaultButton(default)
+        msg_box.setEscapeButton(default)
     return msg_box.exec_()
 
 def information(parent, text, info=None, detail=None, modal=False):
     return message(QMessageBox.Information,
                    text, parent, info=info, detail=detail, modal=modal,
-                   buttons=QMessageBox.Ok)
+                   buttons=QMessageBox.Ok, default=QMessageBox.Ok)
 
 def question(parent, text, info=None, detail=None, modal=False,
              show_cancel=False, default=None):
@@ -133,7 +134,7 @@ def question(parent, text, info=None, detail=None, modal=False,
 def warning(parent, text, info=None, detail=None, modal=False):
     return message(QMessageBox.Warning,
                    text, parent, info=info, detail=detail, modal=modal,
-                   buttons=QMessageBox.Ok)
+                   buttons=QMessageBox.Ok, default=QMessageBox.Ok)
 
 def critical(parent, text=None, info=None, detail=None, detail_tb=False,
              tb_limit=None, modal=False):
@@ -141,7 +142,7 @@ def critical(parent, text=None, info=None, detail=None, detail_tb=False,
         detail = traceback.format_exc(tb_limit)
     return message(QMessageBox.Critical,
                    text, parent, info=info, detail=detail, modal=modal,
-                   buttons=QMessageBox.Ok)
+                   buttons=QMessageBox.Ok, default=QMessageBox.Ok)
 
 def exception(parent, text, tb_limit=None, modal=False):
     type, value = sys.exc_info()[:2]
@@ -149,7 +150,7 @@ def exception(parent, text, tb_limit=None, modal=False):
                    text, parent,
                    info='%s : %s ' % (str(type.__name__), str(value)),
                    detail=traceback.format_exc(tb_limit), modal=modal,
-                   buttons=QMessageBox.Ok)
+                   buttons=QMessageBox.Ok, default=QMessageBox.Ok)
 
 
 def status(msg, timeout=0):

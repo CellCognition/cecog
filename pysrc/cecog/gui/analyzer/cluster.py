@@ -21,8 +21,7 @@ __all__ = ['ClusterFrame']
 #
 import types, \
        copy, \
-       traceback, \
-       cStringIO
+       traceback
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -182,12 +181,10 @@ class ClusterDisplay(QGroupBox):
         positions = positions.split(',')
         nr_items = len(positions)
         path_out = self._submit_settings.get(SECTION_NAME_GENERAL, 'pathout')
-        stringio = cStringIO.StringIO()
-        self._submit_settings.write(stringio)
         emails = str(self._txt_mail.text()).split(',')
         try:
             jobid = self._service.submit_job('cecog_batch',
-                                             stringio.getvalue(),
+                                             self._submit_settings.to_string(),
                                              path_out, emails,
                                              nr_items)
         except:
@@ -200,7 +197,6 @@ class ClusterDisplay(QGroupBox):
                 self._jobid = str(jobid)
             self._txt_jobid.setText(self._jobid)
             self._update_job_status()
-        stringio.close()
 
     @pyqtSlot()
     def _on_terminate_job(self):
