@@ -48,18 +48,4 @@ class SectionCluster(_Section):
     SECTION_NAME = SECTION_NAME_CLUSTER
 
     OPTIONS = [
-        ('primary_classification',
-            BooleanTrait(False, label='Classification')),
-        ('tracking',
-            BooleanTrait(False, label='Tracking')),
-        ('tracking_synchronize_trajectories',
-            BooleanTrait(False, label='Event selection')),
-        ('primary_errorcorrection',
-            BooleanTrait(False, label='Error correction')),
-        ('secondary_processchannel',
-            BooleanTrait(False, label='Secondary channel')),
-        ('secondary_classification',
-            BooleanTrait(False, label='Classification')),
-        ('secondary_errorcorrection',
-            BooleanTrait(False, label='Error correction')),
         ]

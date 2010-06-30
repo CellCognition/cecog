@@ -38,6 +38,8 @@ from cecog.traits.analyzer.output import SectionOutput
 from cecog.traits.analyzer.processing import SectionProcessing
 from cecog.traits.analyzer.cluster import SectionCluster
 
+from cecog.extensions.graphLib import Graph
+
 #-------------------------------------------------------------------------------
 # constants:
 #
@@ -50,3 +52,35 @@ SECTION_REGISTRY.register_section(SectionErrorcorrection())
 SECTION_REGISTRY.register_section(SectionOutput())
 SECTION_REGISTRY.register_section(SectionProcessing())
 SECTION_REGISTRY.register_section(SectionCluster())
+
+class UpdateDependency(object):
+
+    def __init__(self):
+        graph = Graph()
+        name = SectionObjectdetection.SECTION_NAME
+        graph.add_node(1, (name, 'primary_image'))
+        graph.add_node(2, (name, 'primary_segmentation'))
+        graph.add_node(3, (name, 'secondary_image'))
+        graph.add_node(4, (name, 'secondary_segmentation'))
+        graph.add_node(5, (name, 'secondary_registration'))
+
+        name = SectionClassification.SECTION_NAME
+        graph.add_node(6, (name, 'primary_features'))
+        graph.add_node(7, (name, 'primary_classification'))
+
+        graph.add_node(11, (name, 'secondary_features'))
+        graph.add_node(12, (name, 'secondary_classification'))
+
+        graph.add_edge(1, 2)
+        graph.add_edge(3, 4)
+        graph.add_edge(2, 4)
+        graph.add_edge(5, 1)
+        graph.add_edge(5, 3)
+
+        graph.add_edge(2, 6)
+        graph.add_edge(6, 7)
+        graph.add_edge(4, 11)
+        graph.add_edge(11, 12)
+
+        self._graph = graph
+

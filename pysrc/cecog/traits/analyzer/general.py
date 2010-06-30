@@ -56,7 +56,8 @@ class SectionGeneral(_Section):
     SECTION_NAME = SECTION_NAME_GENERAL
 
     OPTIONS = [
-        ('pathin',
+      ('general',
+       [('pathin',
             StringTrait('', 1000, label='Data folder',
                                    widget_info=StringTrait.STRING_PATH)),
         ('pathout',
@@ -98,6 +99,7 @@ class SectionGeneral(_Section):
         ('secondary_featureextraction_exportfeaturenames',
             ListTrait(['n2_avg', 'n2_stddev', 'roisize'], label='Secondary channel')),
 
+      ])
     ]
 
 

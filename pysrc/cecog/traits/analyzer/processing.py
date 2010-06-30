@@ -48,7 +48,8 @@ class SectionProcessing(_Section):
     SECTION_NAME = SECTION_NAME_PROCESSING
 
     OPTIONS = [
-        ('primary_classification',
+      ('processing',
+       [('primary_classification',
             BooleanTrait(False, label='Classification')),
         ('tracking',
             BooleanTrait(False, label='Tracking')),
@@ -62,4 +63,5 @@ class SectionProcessing(_Section):
             BooleanTrait(False, label='Classification')),
         ('secondary_errorcorrection',
             BooleanTrait(False, label='Error correction')),
-        ]
+        ]),
+      ]

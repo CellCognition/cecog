@@ -58,7 +58,8 @@ class SectionObjectdetection(_Section):
     SECTION_NAME = SECTION_NAME_OBJECTDETECTION
 
     OPTIONS = [
-        ('primary_channelid',
+      ('primary_image',
+       [('primary_channelid',
             StringTrait('rfp', 100, label='Primary channel ID')),
         ('primary_normalizemin',
             IntTrait(0, -2**16, 2**16, label='Min.')),
@@ -81,7 +82,10 @@ class SectionObjectdetection(_Section):
             IntTrait(1, 0, 1000, label='End')),
         ('primary_zslice_projection_step',
             IntTrait(1, 1, 1000, label='Step')),
-        ('primary_medianradius',
+       ]),
+
+      ('primary_segmentation',
+       [('primary_medianradius',
             IntTrait(2, 0, 1000, label='Median radius')),
         ('primary_latwindowsize',
             IntTrait(20, 1, 1000, label='Window size')),
@@ -126,18 +130,15 @@ class SectionObjectdetection(_Section):
                                  REGION_NAMES_PRIMARY)),
         ('primary_holefilling',
             BooleanTrait(True, label='Fill holes')),
+       ]),
 
-        ('secondary_channelid',
+      ('secondary_image',
+       [('secondary_channelid',
             StringTrait('rfp', 100, label='Secondary channel ID')),
         ('secondary_normalizemin',
             IntTrait(0, -2**16, 2**16, label='Min.')),
         ('secondary_normalizemax',
             IntTrait(255, -2**16, 2**16, label='Max.')),
-
-        ('secondary_channelregistration_x',
-            IntTrait(0, -99999, 99999, label='Shift X')),
-        ('secondary_channelRegistration_y',
-            IntTrait(0, -99999, 99999, label='Shift Y')),
 
         ('secondary_zslice_selection',
             BooleanTrait(True, label='Z-slice selection',
@@ -156,12 +157,20 @@ class SectionObjectdetection(_Section):
             IntTrait(1, 0, 1000, label='End')),
         ('secondary_zslice_projection_step',
             IntTrait(1, 1, 1000, label='Step')),
+       ]),
 
-        ('secondary_regions_expanded',
+      ('secondary_registration',
+       [('secondary_channelregistration_x',
+            IntTrait(0, -99999, 99999, label='Shift X')),
+        ('secondary_channelRegistration_y',
+            IntTrait(0, -99999, 99999, label='Shift Y')),
+       ]),
+
+      ('secondary_segmentation',
+       [('secondary_regions_expanded',
             BooleanTrait(False, label='Expanded')),
         ('secondary_regions_expanded_expansionsize',
             IntTrait(0, 0, 4000, label='Expansion size')),
-
         ('secondary_regions_inside',
             BooleanTrait(True, label='Inside')),
         ('secondary_regions_inside_shrinkingsize',
@@ -178,4 +187,5 @@ class SectionObjectdetection(_Section):
             IntTrait(0, 0, 4000, label='Expansion size')),
         ('secondary_regions_rim_shrinkingsize',
             IntTrait(0, 0, 4000, label='Shrinking size')),
-        ]
+       ])
+      ]

@@ -51,7 +51,8 @@ class SectionErrorcorrection(_Section):
     SECTION_NAME = SECTION_NAME_ERRORCORRECTION
 
     OPTIONS = [
-        ('filename_to_r',
+      ('error_correction',
+       [('filename_to_r',
             StringTrait('', 1000, label='R-project executable',
                         widget_info=StringTrait.STRING_FILE)),
         ('constrain_graph',
@@ -86,4 +87,5 @@ class SectionErrorcorrection(_Section):
             StringTrait('', 100)),
         ('secondary_sort',
             StringTrait('', 100)),
-        ]
+        ])
+      ]

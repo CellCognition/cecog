@@ -124,7 +124,6 @@ def init_constants():
 
 
 def _copy_check_file(path_in, path_out, filename):
-    print path_in, path_out, filename
     fn_in = os.path.abspath(os.path.join(path_in, filename))
     fn_out = os.path.abspath(os.path.join(path_out, filename))
     if not os.path.isfile(fn_out):

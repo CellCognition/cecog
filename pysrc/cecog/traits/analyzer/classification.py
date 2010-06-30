@@ -54,34 +54,47 @@ class SectionClassification(_Section):
     SECTION_NAME = SECTION_NAME_CLASSIFICATION
 
     OPTIONS = [
-        ('primary_classification_envpath',
-            StringTrait('', 1000, label='Classifier folder',
-                        widget_info=StringTrait.STRING_PATH)),
-        ('primary_simplefeatures_texture',
+
+      ('primary_features',
+       [('primary_simplefeatures_texture',
             BooleanTrait(True, label='Texture features')),
         ('primary_simplefeatures_shape',
             BooleanTrait(True, label='Shape features')),
+        ]),
+
+      ('primary_classification',
+       [('primary_classification_envpath',
+            StringTrait('', 1000, label='Classifier folder',
+                        widget_info=StringTrait.STRING_PATH)),
         ('primary_classification_regionname',
             SelectionTrait(REGION_NAMES_PRIMARY[0], REGION_NAMES_PRIMARY,
                            label='Region name')),
+        ('primary_classification_annotationfileext',
+            StringTrait('.xml', 50, label='Annotation ext.')),
+        ]),
 
-        ('secondary_classification_envpath',
-            StringTrait('', 1000, label='Classifier folder',
-                        widget_info=StringTrait.STRING_PATH)),
-        ('secondary_simplefeatures_texture',
+      ('secondary_features',
+       [('secondary_simplefeatures_texture',
             BooleanTrait(True, label='Texture features')),
         ('secondary_simplefeatures_shape',
             BooleanTrait(True, label='Shape features')),
+        ]),
+
+      ('secondary_classification',
+       [('secondary_classification_envpath',
+            StringTrait('', 1000, label='Classifier folder',
+                        widget_info=StringTrait.STRING_PATH)),
         ('secondary_classification_regionname',
             SelectionTrait(REGION_NAMES_SECONDARY[0], REGION_NAMES_SECONDARY,
                            label='Region name')),
+        ('secondary_classification_annotationFileExt',
+            StringTrait('.xml', 50, label='Annotation ext.')),
+        ]),
 
-        ('collectsamples',
+      ('collectsamples',
+       [('collectsamples',
             BooleanTrait(False)),
         ('collectsamples_prefix',
             StringTrait('',100)),
-        ('primary_classification_annotationfileext',
-            StringTrait('.xml', 50, label='Annotation ext.')),
-        ('secondary_classification_annotationFileExt',
-            StringTrait('.xml', 50, label='Annotation ext.')),
-        ]
+        ])
+      ]

@@ -48,7 +48,8 @@ class SectionOutput(_Section):
     SECTION_NAME = SECTION_NAME_OUTPUT
 
     OPTIONS = [
-        ('rendering_labels_discwrite',
+     ('output',
+       [('rendering_labels_discwrite',
             BooleanTrait(False, label='Label images')),
         ('rendering_contours_discwrite',
             BooleanTrait(False, label='Contour images')),
@@ -64,4 +65,5 @@ class SectionOutput(_Section):
             BooleanTrait(False, label='Export detailed object data')),
         ('export_track_data',
             BooleanTrait(False, label='Export track data')),
-        ]
+        ]),
+      ]
