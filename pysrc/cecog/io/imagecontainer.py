@@ -126,6 +126,28 @@ class MetaData(object):
                                                  META_INFO_SUBWELL: subwell,
                                                  }
 
+    def get_well_and_subwell(self, position):
+        if position in self._position_well_map:
+            return (self._position_well_map[position][META_INFO_WELL],
+                    self._position_well_map[position][META_INFO_SUBWELL])
+        else:
+            return (None, None)
+
+    def get_well_and_subwell_dict(self):
+        wells_subwell_pairs = [(self._position_well_map[x][META_INFO_WELL],
+                               self._position_well_map[x][META_INFO_SUBWELL])
+                               for x in self._position_well_map.keys()]
+        well_map = {}
+        for well, subwell in wells_subwell_pairs:
+            if well in ['', None]:
+                continue
+            if not well in well_map:
+                well_map[well] = []
+            if not subwell in ['', None]:
+                well_map[well].append(subwell)
+
+        return well_map
+
     def setup(self):
         for position in self._timestamps_absolute:
             self._timestamps_absolute[position].sort()
@@ -157,7 +179,7 @@ class MetaData(object):
         strings += ["* Z-slices: %s" % self.dim_z]
         strings += ["* Height: %s" % self.dim_y]
         strings += ["* Width: %s" % self.dim_x]
-        strings += ["* Wells: %s" % len(self._position_well_map)]
+        strings += ["* Wells: %s" % len(self.get_well_and_subwell_dict())]
 #        if time:
 #            lstStr += ["* Timestamp(s):\n" + oPrinter.pformat(self.dctTimestampStrs) + "\n"]
 #        lstChannels = ["%s: %s" % (key, value)
