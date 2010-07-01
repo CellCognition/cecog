@@ -42,12 +42,13 @@ from cecog.io.imagecontainer import (MetaData,
                                      DIMENSION_NAME_TIME,
                                      DIMENSION_NAME_CHANNEL,
                                      DIMENSION_NAME_ZSLICE,
+                                     META_INFO_WELL,
+                                     META_INFO_SUBWELL
                                      )
 
 #------------------------------------------------------------------------------
 # constants:
 #
-
 
 #------------------------------------------------------------------------------
 # functions:
@@ -68,14 +69,11 @@ class DefaultCoordinates(object):
         return
 
     def __call__(self, image_info, key):
-        #if not image_info.has_key(key):
         if self.default_values.has_key(key):
             if not image_info.has_key(key):
                 return self.default_values[key]
             elif image_info[key] in ['', None]:
                 return self.default_values[key]
-            #else:
-            #    return image_info[key]
         else:
             if image_info.has_key(key):
                 return image_info[key]
@@ -320,6 +318,14 @@ class FlatFileImporter(FileTokenImporter):
             self.meta_data.append_absolute_time(position,
                                                 time,
                                                 timestamp)
+
+            if image_coord.has_key(META_INFO_WELL) and image_coord.has_key(META_INFO_SUBWELL):
+                well = image_coord[META_INFO_WELL]
+                subwell = image_coord[META_INFO_SUBWELL]
+
+            well = df(image_coord, META_INFO_WELL)
+            subwell = df(image_coord, META_INFO_SUBWELL)
+            self.meta_data.append_well_subwell_info(position, well, subwell)
 
             if (self.has_multi_images and
                 self.multi_image == self.MULTIIMAGE_USE_ZSLICE):

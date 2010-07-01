@@ -51,6 +51,9 @@ DIMENSION_NAME_CHANNEL = 'channel'
 DIMENSION_NAME_ZSLICE = 'zslice'
 DIMENSION_NAME_HEIGHT = 'height'
 DIMENSION_NAME_WIDTH = 'width'
+META_INFO_WELL = 'well'
+META_INFO_SUBWELL = 'subwell'
+
 
 #------------------------------------------------------------------------------
 # functions:
@@ -75,8 +78,10 @@ class MetaData(object):
         self.times = None
         self.positions = None
 
-        self.timestamps_relative = {}
-        self.timestamps_absolute = {}
+        self._timestamps_relative = {}
+        self._timestamps_absolute = {}
+
+        self._position_well_map = {}
 
         self.pixel_type = None
 #
@@ -96,7 +101,7 @@ class MetaData(object):
 
     def get_timestamp_relative(self, position, frame):
         try:
-            timestamp = self.timestamps_relative[position][frame]
+            timestamp = self._timestamps_relative[position][frame]
         except KeyError:
             return float('NAN')
         else:
@@ -104,25 +109,31 @@ class MetaData(object):
 
     def get_timestamp_absolute(self, position, frame):
         try:
-            timestamp = self.timestamps_absolute[position][frame]
+            timestamp = self._timestamps_absolute[position][frame]
         except KeyError:
             return float('NAN')
         else:
             return timestamp
 
     def append_absolute_time(self, position, time, timestamp):
-        if not position in self.timestamps_absolute:
-            self.timestamps_absolute[position] = OrderedDict()
-        self.timestamps_absolute[position][time] = timestamp
+        if not position in self._timestamps_absolute:
+            self._timestamps_absolute[position] = OrderedDict()
+        self._timestamps_absolute[position][time] = timestamp
+
+    def append_well_subwell_info(self, position, well, subwell):
+        if not position in self._position_well_map:
+            self._position_well_map[position] = {META_INFO_WELL: well,
+                                                 META_INFO_SUBWELL: subwell,
+                                                 }
 
     def setup(self):
-        for position in self.timestamps_absolute:
-            self.timestamps_absolute[position].sort()
-        for position, timestamps in self.timestamps_absolute.iteritems():
+        for position in self._timestamps_absolute:
+            self._timestamps_absolute[position].sort()
+        for position, timestamps in self._timestamps_absolute.iteritems():
             base_time = timestamps.values()[0]
-            self.timestamps_relative[position] = OrderedDict()
+            self._timestamps_relative[position] = OrderedDict()
             for time, timestamp in timestamps.iteritems():
-                self.timestamps_relative[position][time] = \
+                self._timestamps_relative[position][time] = \
                     timestamp - base_time
 
         self.dim_p = len(self.positions)
@@ -146,6 +157,7 @@ class MetaData(object):
         strings += ["* Z-slices: %s" % self.dim_z]
         strings += ["* Height: %s" % self.dim_y]
         strings += ["* Width: %s" % self.dim_x]
+        strings += ["* Wells: %s" % len(self._position_well_map)]
 #        if time:
 #            lstStr += ["* Timestamp(s):\n" + oPrinter.pformat(self.dctTimestampStrs) + "\n"]
 #        lstChannels = ["%s: %s" % (key, value)
