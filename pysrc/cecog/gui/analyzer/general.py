@@ -55,7 +55,10 @@ class GeneralFrame(_BaseFrame):
 
         self.add_input('pathin')
         self.add_input('pathout')
-        self.add_input('namingscheme')
+        # original: self.add_input('namingscheme')
+        self.add_group('image_import_namingschema', [('namingscheme',),],
+                       layout='flow')
+        self.add_group('image_import_structurefile', [('structure_filename',)])
         self.add_line()
         self.add_group('constrain_positions', [('positions',)])
         self.add_input('redofailedonly')
