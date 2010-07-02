@@ -171,10 +171,20 @@ class ObjectDetectionFrame(_BaseFrame, _ProcessorMixin):
         settings.set2('tracking', False)
         settings.set_section('Classification')
         settings.set2('collectsamples', False)
-        settings.set2('primary_simplefeatures_texture', False)
-        settings.set2('primary_simplefeatures_shape', False)
-        settings.set2('secondary_simplefeatures_texture', False)
-        settings.set2('secondary_simplefeatures_shape', False)
+
+        # HERE I AM
+        for feature_cat_short in ['intensity', 'haralick',
+                                  'stat_geom', 'granugrey',
+                                  'basicshape', 'convhull',
+                                  'distance', 'moments']:
+            feature_category = 'primary_featurecategory_' + feature_cat_short
+            settings.set2(feature_category, False)
+            feature_category = 'secondary_featurecategory_' + feature_cat_short
+            settings.set2(feature_category, False)
+        #settings.set2('primary_simplefeatures_texture', False)
+        #settings.set2('primary_simplefeatures_shape', False)
+        #settings.set2('secondary_simplefeatures_texture', False)
+        #settings.set2('secondary_simplefeatures_shape', False)
         settings.set_section('General')
         settings.set2('rendering_class', {})
         #settings.set2('rendering_discwrite', True)

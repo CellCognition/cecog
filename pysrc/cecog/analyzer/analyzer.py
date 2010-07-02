@@ -494,6 +494,8 @@ class _Channel(PropertyManager):
             if not oContainer is None:
 
                 for strFeatureCategory in self.lstFeatureCategories:
+                    print strFeatureCategory
+                    sys.stdout.flush()
                     oContainer.applyFeature(strFeatureCategory)
 
                 # calculate set of haralick features

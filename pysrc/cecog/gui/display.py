@@ -100,22 +100,38 @@ class TraitDisplayMixin(object):
             else:
                 QBoxLayout(QBoxLayout.LeftToRight, w_group)
             for info in items:
-                trait_name2 = info[0]
                 grid = None
                 alignment = None
-                # add a line
-                if trait_name2 is None:
-                    line = QFrame(w_group)
-                    line.setFrameShape(QFrame.HLine)
-                    grid = info[1]
-                    w_group.layout().addWidget(line, *grid)
-                else:
+                if type(info[0]) == types.TupleType:
                     if len(info) >= 2:
                         grid = info[1]
                     if len(info) >= 3:
                         alignment = info[2]
-                    self.add_input(trait_name2, parent=w_group, grid=grid,
+                    w_group2 = QGroupBox(w_group)
+                    w_group2._input_cnt = 0
+                    #QGridLayout(w_group2)
+                    QBoxLayout(QBoxLayout.LeftToRight, w_group2)
+                    self.add_input(info[0][0], parent=w_group2, grid=(0,0,1,1),
                                    alignment=alignment)
+                    self.add_input(info[0][1], parent=w_group2, grid=(0,1,1,1),
+                                   alignment=alignment)
+                    w_group.layout().addWidget(w_group2, w_group._input_cnt, 1, 1, 1)
+                else:
+                    trait_name2 = info[0]
+                    # add a line
+                    if trait_name2 is None:
+                        line = QFrame(w_group)
+                        line.setFrameShape(QFrame.HLine)
+                        grid = info[1]
+                        w_group.layout().addWidget(line, *grid)
+                    else:
+                        if len(info) >= 2:
+                            grid = info[1]
+                        if len(info) >= 3:
+                            alignment = info[2]
+                        self.add_input(trait_name2, parent=w_group, grid=grid,
+                                       alignment=alignment)
+
             frame_layout.addWidget(w_group, frame._input_cnt, 1, 1, 1)
 
             if not trait is None:
@@ -164,6 +180,7 @@ class TraitDisplayMixin(object):
             w_input = QLineEdit(parent)
             w_input.setMaxLength(trait.max_length)
             w_input.setSizePolicy(policy_expanding)
+            w_input.setToolTip(value)
             if not trait.mask is None:
                 regexp = QRegExp(trait.mask)
                 regexp.setPatternSyntax(QRegExp.RegExp2)

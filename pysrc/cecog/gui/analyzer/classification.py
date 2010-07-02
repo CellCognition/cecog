@@ -422,10 +422,23 @@ class ClassificationFrame(_BaseFrame, _ProcessorMixin):
         self.add_input('primary_classification_envpath')
         self.add_line()
         self.add_group(None,
-                       [('primary_simplefeatures_texture',),
-                        ('primary_simplefeatures_shape',),
-                        ], layout='flow', link='primary_featureextraction',
-                        label='Feature extraction')
+                       [('primary_featurecategory_intensity', (0, 0, 1, 1) ),
+                        ('primary_featurecategory_haralick', (1, 0, 1, 1) ),
+                        ('primary_featurecategory_stat_geom', (2, 0, 1, 1) ),
+                        ('primary_featurecategory_granugrey', (3, 0, 1, 1)),
+                        ('primary_featurecategory_basicshape', (0, 1, 1, 1) ),
+                        ('primary_featurecategory_convhull', (1, 1, 1, 1)),
+                        ('primary_featurecategory_distance', (2, 1, 1, 1)),
+                        ('primary_featurecategory_moments', (3, 1, 1, 1) ),
+                        ],
+                       layout='grid',
+                       link='primary_featureextraction',
+                       label='Feature extraction')
+#        self.add_group(None,
+#                       [('primary_simplefeatures_texture',),
+#                        ('primary_simplefeatures_shape',),
+#                        ], layout='flow', link='primary_featureextraction',
+#                        label='Feature extraction')
         self.add_line()
 
         frame_results = self._add_result_frame('primary')
@@ -438,10 +451,23 @@ class ClassificationFrame(_BaseFrame, _ProcessorMixin):
         self.add_input('secondary_classification_envpath')
         self.add_line()
         self.add_group(None,
-                       [('secondary_simplefeatures_texture',),
-                        ('secondary_simplefeatures_shape',)
-                        ], layout='flow', link='secondary_featureextraction',
-                        label='Feature extraction')
+                       [('secondary_featurecategory_intensity', (0, 0, 1, 1) ),
+                        ('secondary_featurecategory_haralick', (1, 0, 1, 1) ),
+                        ('secondary_featurecategory_stat_geom', (2, 0, 1, 1) ),
+                        ('secondary_featurecategory_granugrey', (3, 0, 1, 1)),
+                        ('secondary_featurecategory_basicshape', (0, 1, 1, 1) ),
+                        ('secondary_featurecategory_convhull', (1, 1, 1, 1)),
+                        ('secondary_featurecategory_distance', (2, 1, 1, 1)),
+                        ('secondary_featurecategory_moments', (3, 1, 1, 1) ),
+                        ],
+                       layout='grid',
+                       link='secondary_featureextraction',
+                       label='Feature extraction')
+#        self.add_group(None,
+#                       [('secondary_simplefeatures_texture',),
+#                        ('secondary_simplefeatures_shape',)
+#                        ], layout='flow', link='secondary_featureextraction',
+#                        label='Feature extraction')
 
         self.add_input('secondary_classification_regionname')
         self.add_line()
@@ -472,8 +498,16 @@ class ClassificationFrame(_BaseFrame, _ProcessorMixin):
 
         if self._tab.currentIndex() == 0:
             settings.set_section('Classification')
-            settings.set2('secondary_simplefeatures_texture', False)
-            settings.set2('secondary_simplefeatures_shape', False)
+            settings.set2('secondary_featurecategory_intensity', False )
+            settings.set2('secondary_featurecategory_haralick', False )
+            settings.set2('secondary_featurecategory_stat_geom', False)
+            settings.set2('secondary_featurecategory_granugrey', False)
+            settings.set2('secondary_featurecategory_basicshape', False)
+            settings.set2('secondary_featurecategory_convhull', False)
+            settings.set2('secondary_featurecategory_distance', False)
+            settings.set2('secondary_featurecategory_moments', False)
+            #settings.set2('secondary_simplefeatures_texture', False)
+            #settings.set2('secondary_simplefeatures_shape', False)
             settings.set2('collectsamples_prefix', 'primary')
             settings.set('Processing', 'secondary_processChannel', False)
 
@@ -492,8 +526,16 @@ class ClassificationFrame(_BaseFrame, _ProcessorMixin):
         else:
             settings.set_section('Classification')
             sec_region = settings.get2('secondary_classification_regionname')
-            settings.set2('primary_simplefeatures_texture', False)
-            settings.set2('primary_simplefeatures_shape', False)
+            settings.set2('primary_featurecategory_intensity', False )
+            settings.set2('primary_featurecategory_haralick', False )
+            settings.set2('primary_featurecategory_stat_geom', False)
+            settings.set2('primary_featurecategory_granugrey', False)
+            settings.set2('primary_featurecategory_basicshape', False)
+            settings.set2('primary_featurecategory_convhull', False)
+            settings.set2('primary_featurecategory_distance', False)
+            settings.set2('primary_featurecategory_moments', False)
+            #settings.set2('primary_simplefeatures_texture', False)
+            #settings.set2('primary_simplefeatures_shape', False)
             settings.set2('collectsamples_prefix', 'secondary')
             for k,v in SECONDARY_REGIONS.iteritems():
                 settings.set('ObjectDetection', k, v == sec_region)

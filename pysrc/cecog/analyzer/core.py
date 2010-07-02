@@ -61,6 +61,22 @@ from cecog.traits.config import NAMING_SCHEMAS
 FILENAME_CELLTRACKER_DUMP = "P%04d_CellTracker.pkl"
 
 
+FEATURE_MAP = {
+               'featurecategory_intensity': ['normbase', 'normbase2'],
+               'featurecategory_haralick': ['haralick', 'haralick2'],
+               'featurecategory_stat_geom': ['levelset'],
+               'featurecategory_granugrey': ['granulometry'],
+               'featurecategory_basicshape': ['roisize',
+                                              #'circularity',
+                                              'irregularity',
+                                              'irregularity2',
+                                              'axes',
+                                              ],
+               'featurecategory_convhull': ['convexhull'],
+               'featurecategory_distance': ['distance'],
+               'featurecategory_moments': ['moments'],
+               }
+
 FEATURE_CATEGORIES_SHAPE = ['roisize',
                             'circularity',
                             'irregularity',
@@ -216,7 +232,7 @@ class PositionAnalyzer(object):
 
     def __call__(self):
         # turn libtiff warnings off
-        ccore.turn_off()
+        #ccore.turn_off()
 
         oStopWatchPos = StopWatch()
 
@@ -649,15 +665,25 @@ class PositionAnalyzer(object):
                     projection_info = (method, begin, end, step)
 
 
+                # determine the list of features to be calculated from each object
                 lstFeatureCategories = []
-                if self.oSettings.get('Classification',
-                                      self._resolve_name(channel_section,
-                                                         'simplefeatures_shape')):
-                    lstFeatureCategories += FEATURE_CATEGORIES_SHAPE
-                if self.oSettings.get('Classification',
-                                      self._resolve_name(channel_section,
-                                                         'simplefeatures_texture')):
-                    lstFeatureCategories += FEATURE_CATEGORIES_TEXTURE
+                for feature in FEATURE_MAP.keys():
+                    if self.oSettings.get('Classification',
+                                          self._resolve_name(channel_section,
+                                                             feature)):
+                        lstFeatureCategories += FEATURE_MAP[feature]
+
+                # temp: print fetures to be calculated
+                print 'features: ', lstFeatureCategories
+
+#OLD:                if self.oSettings.get('Classification',
+#                                      self._resolve_name(channel_section,
+#                                                         'simplefeatures_shape')):
+#                    lstFeatureCategories += FEATURE_CATEGORIES_SHAPE
+#                if self.oSettings.get('Classification',
+#                                      self._resolve_name(channel_section,
+#                                                         'simplefeatures_texture')):
+#                    lstFeatureCategories += FEATURE_CATEGORIES_TEXTURE
                 dctFeatureParameters = {}
                 for name in lstFeatureCategories[:]:
                     if 'haralick' in name:
