@@ -707,38 +707,55 @@ namespace cecog
   };
 
 
+
+  // calculate Perimeter calculates the perimeter of an object identified by
+  // its label.
+  // object pixels on the image border are supposed to be object border pixels.
+  // upperleft, lowerright, sa refer to the label image
+  // roi_ul, roi_lr define the roi containing the object with the label <label>
+  // image_w, image_h are the image width and height.
+  // nbh indicates the neighborhood; possible values are 8 and 4, default is 8.
   template <class SrcIterator, class SrcAccessor>
   inline
   unsigned int
   calculatePerimeter(SrcIterator upperleft,
                      SrcIterator lowerright,
-                     SrcAccessor sa)
+                     SrcAccessor sa,
+                     vigra::Diff2D roi_ul,
+                     vigra::Diff2D roi_lr,
+                     int label,
+                     int image_w, int image_h,
+                     int nbh=8)
   {
-    static const vigra::Diff2D neighbors[] = {
-          vigra::Diff2D(-1,0),  // left
-          vigra::Diff2D(1,0),   // right
-          vigra::Diff2D(0,-1),  // top
-          vigra::Diff2D(0,1)    // bottom
-        };
-    static const int left = 0, right = 1, top = 2, bottom = 3;
-
-    SrcIterator xs(upperleft);
+    SrcIterator xs(upperleft + roi_ul);
+    //SrcIterator
     unsigned int perimeter = 0;
-    int w = lowerright.x - upperleft.x;
-    int h = lowerright.y - upperleft.y;
-    int x, y;
 
-    for(y = 0; y != h; ++y, ++xs.y)
+    for(int y = roi_ul.y; y != roi_lr.y; ++y, ++xs.y)
     {
-      xs.x = upperleft.x;
-      for(x=0; x != w; ++x, ++xs.x)
+      xs.x = upperleft.x + roi_ul.x;
+      for(int x=roi_ul.x; x != roi_lr.x; ++x, ++xs.x)
       {
-        if (sa(xs) &&
-            !(sa(xs, neighbors[top]) && sa(xs, neighbors[left]) &&
-              sa(xs, neighbors[bottom]) && sa(xs, neighbors[right])))
+        // if xs is not an object pixel, it can be skipped.
+        if (sa(xs) != label)
+          continue;
+
+        // if xs is on the image border, it is considered to be an object border pixel.
+        if (x <=0 || x >= image_w-1 || y <= 0 || y >= image_h-1) {
           perimeter++;
-      }
-    }
+          continue;
+        }
+
+        // if xs is not on the image border it is an object border pixel if
+        // it has a background pixel in its neighborhood (default 8).
+        for (int i=0; i<nbh; i++){
+          if(sa(xs, NEIGHBORS[i]) != label) {
+            perimeter++;
+            break;
+          }
+        }
+      } // end of x loop
+    } // end of y loop
     return perimeter;
   }
 

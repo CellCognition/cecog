@@ -168,7 +168,22 @@ namespace cecog
         // shape features
         else if (name == "perimeter")
         {
-          __blockFeature<BlockPerimeter>(name);
+          // old: __blockFeature<BlockPerimeter>(name);
+          // this is a bugfix (the call is now according to the axes feature):
+          ObjectMap::iterator it = objects.begin();
+          for (; it != objects.end(); ++it)
+          {
+            ROIObject& o = (*it).second;
+            o.features["perimeter"] = calculatePerimeter(
+              img_labels.upperLeft(),
+              img_labels.upperLeft(),
+              img_labels.accessor(),
+              o.roi.upperLeft,
+              o.roi.lowerRight,
+              (*it).first,
+              width, height
+            );
+          }
         }
         else if (name == "axes")
         {
@@ -828,7 +843,7 @@ namespace cecog
      * export the label image
      */
     void exportLabelImage(std::string filepath,
-                          std::string compression)
+                          std::string compression = "100")
     {
       vigra::ImageExportInfo exp_info(filepath.c_str());
       exp_info.setCompression(compression.c_str());
@@ -873,7 +888,6 @@ namespace cecog
 
         typedef binary_type::value_type binary_value;
 
-        //printf("msk: %d %d, %d %d, %d %d\n", t1.x, t1.y, t2.x, t2.y, img_binary.width(), img_binary.height());
         copyImageIfLabel(img_binary.upperLeft() + ul,
                          img_binary.upperLeft() + lr,
                          img_binary.accessor(),
@@ -883,9 +897,7 @@ namespace cecog
                          mask.accessor(),
                          objId);
 
-        //printf("done!\n");
         vigra::exportImage(srcImageRange(mask), msk_info);
-        //printf("done!\n");
       }
       else
         std::cout << "no object for this id: "
