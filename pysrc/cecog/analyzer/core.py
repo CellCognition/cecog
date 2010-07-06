@@ -673,17 +673,6 @@ class PositionAnalyzer(object):
                                                              feature)):
                         lstFeatureCategories += FEATURE_MAP[feature]
 
-                # temp: print fetures to be calculated
-                print 'features: ', lstFeatureCategories
-
-#OLD:                if self.oSettings.get('Classification',
-#                                      self._resolve_name(channel_section,
-#                                                         'simplefeatures_shape')):
-#                    lstFeatureCategories += FEATURE_CATEGORIES_SHAPE
-#                if self.oSettings.get('Classification',
-#                                      self._resolve_name(channel_section,
-#                                                         'simplefeatures_texture')):
-#                    lstFeatureCategories += FEATURE_CATEGORIES_TEXTURE
                 dctFeatureParameters = {}
                 for name in lstFeatureCategories[:]:
                     if 'haralick' in name:
