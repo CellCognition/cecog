@@ -1,0 +1,685 @@
+"""
+                           The CellCognition Project
+                     Copyright (c) 2006 - 2010 Michael Held
+                      Gerlich Lab, ETH Zurich, Switzerland
+                              www.cellcognition.org
+
+              CellCognition is distributed under the LGPL License.
+                        See trunk/LICENSE.txt for details.
+                 See trunk/AUTHORS.txt for author contributions.
+"""
+
+__author__ = 'Michael Held'
+__date__ = '$Date$'
+__revision__ = '$Rev$'
+__source__ = '$URL$'
+
+__all__ = []
+
+#-------------------------------------------------------------------------------
+# standard library imports:
+#
+import sys, \
+       types, \
+       logging
+
+#-------------------------------------------------------------------------------
+# extension module imports:
+#
+from pdk.propertymanagers import PropertyManager
+from pdk.properties import (BooleanProperty,
+                            FloatProperty,
+                            IntProperty,
+                            ListProperty,
+                            TupleProperty,
+                            StringProperty,
+                            DictionaryProperty,
+                            Property,
+                            )
+from pdk.attributemanagers import (get_attribute_values,
+                                   set_attribute_values)
+from pdk.attributes import Attribute
+from pdk.iterator import unique, flatten
+from pdk.map import dict_values
+from pdk.errors import NotImplementedMethodError
+
+import numpy
+
+#-------------------------------------------------------------------------------
+# cecog imports:
+#
+from cecog.analyzer.object import (ImageObject,
+                                   ObjectHolder,
+                                   )
+from cecog.segmentation.strategies import (PrimarySegmentation,
+                                          SecondarySegmentation,
+                                          )
+from cecog import ccore
+
+#-------------------------------------------------------------------------------
+# constants:
+#
+
+#-------------------------------------------------------------------------------
+# functions:
+#
+
+#-------------------------------------------------------------------------------
+# classes:
+#
+class _Channel(PropertyManager):
+
+    NAME = None
+
+    RANK = None
+
+    PROPERTIES = \
+        dict(strChannelId =
+                 StringProperty(None,
+                                is_mandatory=True,
+                                doc=''),
+
+             oZSliceOrProjection =
+                 Property(1,
+                          doc='either the number of the z-slice (starting by 1) '
+                              'or the type of Z-projection: "max", "min", "mean"'),
+
+             channelRegistration =
+                 TupleProperty(None),
+
+             strChannelColor =
+                 StringProperty('#FFFFFF'),
+             iMedianRadius =
+                 IntProperty(0,
+                             doc='strength of median-filtering'),
+
+             strImageOutCompression =
+                 StringProperty('80'),
+             strPathOutDebug =
+                 StringProperty(None),
+             bDebugMode =
+                 BooleanProperty(False),
+
+             bDoClassification =
+                 BooleanProperty(False,
+                                 doc=''),
+             strClassificationEnv =
+                 StringProperty('',
+                                doc=''),
+             strClassificationModel =
+                 StringProperty('',
+                                doc=''),
+             lstFeatureCategories =
+                 ListProperty(None,
+                              doc=''),
+             dctFeatureParameters =
+                 DictionaryProperty(None,
+                                    doc=''),
+             lstFeatureNames =
+                 ListProperty(None,
+                              doc=''),
+             lstAreaSelection =
+                 ListProperty(None,
+                              is_mandatory=True),
+
+             dctAreaRendering =
+                 DictionaryProperty(None,
+                                    doc=''),
+
+             bPostProcessing =
+                 BooleanProperty(True,
+                                 doc='post-processing: filter objects by size, '
+                                     'shape, intensity, etc.'),
+             lstPostprocessingFeatureCategories =
+                 ListProperty(None,
+                              doc=''),
+             strPostprocessingConditions =
+                 StringProperty('roisize > 50',
+                                doc=''),
+             bPostProcessDeleteObjects =
+                 BooleanProperty(True,
+                                 doc=''),
+
+             tplScale =
+                TupleProperty(None, doc=''),
+
+             tplCropRegion =
+                TupleProperty(None, doc=''),
+
+
+             bFlatfieldCorrection =
+                 BooleanProperty(False,
+                                 doc=''),
+             strImageType =
+                 StringProperty('UInt8',
+                                doc=''),
+             strBackgroundImagePath =
+                 StringProperty('',
+                                doc=''),
+             fBackgroundCorrection =
+                 FloatProperty('',
+                               doc=''),
+             fNormalizeMin =
+                 FloatProperty('',
+                               doc=''),
+             fNormalizeMax =
+                 FloatProperty('',
+                               doc=''),
+             fNormalizeRatio =
+                 FloatProperty('',
+                               doc=''),
+             fNormalizeOffset =
+                 FloatProperty('',
+                               doc=''),
+             )
+
+    __attributes__ = [Attribute('_lstZSlices'),
+                      Attribute('_oLogger'),
+                      Attribute('_dctRegions'),
+                      Attribute('meta_image'),
+                      Attribute('dctContainers')
+                      ]
+
+    def __init__(self, **dctOptions):
+        super(_Channel, self).__init__(**dctOptions)
+        self._oLogger = logging.getLogger(self.__class__.__name__)
+        self.clear()
+
+    def __cmp__(self, oOther):
+        return cmp(self.RANK, oOther.RANK)
+
+    def __getstate__(self):
+        # FIXME: not very elegant way to prevent logger from getting pickled
+        dctState = get_attribute_values(self)
+        del dctState['_oLogger']
+        return dctState
+
+    def __setstate__(self, state):
+        set_attribute_values(self, state)
+        # FIXME: restore logger instance
+        self._oLogger = logging.getLogger(self.NAME)
+
+    def clear(self):
+        self._lstZSlices = []
+        self._dctRegions = {}
+        self.meta_image = None
+        self.dctContainers = {}
+
+    def dump_label_image(self, dataset, frame_idx, region_lookup):
+        var = dataset.variables['label_images']
+        finished = dataset.variables['label_images_finished']
+        for k, v in self.dctContainers.iteritems():
+            idx = region_lookup[k]
+            var[frame_idx, idx] = v.img_labels.toArray(copy=False)
+            finished[frame_idx, idx] = 1
+        self._oLogger.debug('Wrote %d region(s) to nc4 file.' %
+                            len(self.dctContainers))
+
+    def load_label_image(self, dataset, frame_idx, region_lookup):
+        var = dataset.variables['label_images']
+        finished = dataset.variables['label_images_finished']
+        success = True
+        for region_name in self.lstAreaSelection:
+            idx = region_lookup[region_name]
+            #print region_name, frame_idx, idx, finished[frame_idx, idx] != 0
+            if finished[frame_idx, idx] != 0:
+                finished[frame_idx, idx] = 1
+                img_label = ccore.numpy_to_image(var[frame_idx, idx],
+                                                 copy=True)
+                img_xy = self.meta_image.image
+                container = ccore.ImageMaskContainer(img_xy, img_label, False)
+                self.dctContainers[region_name] = container
+            else:
+                success = False
+                break
+        if success:
+            self._oLogger.debug('%d region(s) loaded from nc4 file.' %
+                                len(self.lstAreaSelection))
+        else:
+            self._oLogger.debug('Could not load all %d region(s) from '\
+                                'nc4 file.' % len(self.lstAreaSelection))
+        return success
+
+    def dump_raw_image(self, dataset, frame_idx, channel_idx):
+        var = dataset.variables['raw_images']
+        finished = dataset.variables['raw_images_finished']
+        img = self.meta_image.image
+        var[frame_idx, channel_idx] = img.toArray(copy=False)
+        finished[frame_idx, channel_idx] = 1
+        self._oLogger.debug('Wrote raw image to nc4 file.')
+
+    def load_raw_image(self, dataset, frame_idx, channel_idx, meta_image):
+        var = dataset.variables['raw_images']
+        finished = dataset.variables['raw_images_finished']
+        if finished[frame_idx, channel_idx] != 0:
+            finished[frame_idx, channel_idx] = 1
+            img = ccore.numpy_to_image(var[frame_idx, channel_idx], copy=True)
+            self.meta_image = meta_image
+            self.meta_image.set_image(img)
+            success = True
+        else:
+            success = False
+        if success:
+            self._oLogger.debug('Raw image loaded from nc4 file.')
+        else:
+            self._oLogger.debug('Could not load raw image from nc4 file.')
+        return success
+
+
+    def getRegionNames(self):
+        return self._dctRegions.keys()
+
+    def getRegion(self, name):
+        return self._dctRegions[name]
+
+    def hasRegion(self, name):
+        return name in self._dctRegions
+
+    def getContainer(self, name):
+        return self.dctContainers[name]
+
+    def purge(self, features=None):
+        self.meta_image = None
+        self._lstZSlices = []
+        for x in self.dctContainers.keys():
+            del self.dctContainers[x]
+
+        # purge features
+        if not features is None:
+            channelFeatures = []
+            for featureNames in features.values():
+                if not featureNames is None:
+                    channelFeatures.extend(featureNames)
+            channelFeatures = sorted(unique(channelFeatures))
+
+            # reduce features per region and object to given list
+            for regionName in self.getRegionNames():
+                region = self.getRegion(regionName)
+                channelFeatures2 = [x for x in channelFeatures
+                                    if region.hasFeatureName(x)]
+                for objId in region:
+                    try:
+                        region[objId].aFeatures = region.getFeaturesByNames(objId, channelFeatures2)
+                    except KeyError:
+                        pass
+                region.setFeatureNames(channelFeatures2)
+
+
+    def append_zslice(self, meta_image):
+        self._lstZSlices.append(meta_image)
+
+    def apply_zselection(self):
+        if type(self.oZSliceOrProjection) == types.TupleType:
+            method, zbegin, zend, zstep = self.oZSliceOrProjection
+            images = [img.image for img in self._lstZSlices][(zbegin-1):zend:zstep]
+
+            if method == "maximum":
+                method_const = ccore.ProjectionType.MaxProjection
+            elif method == "minimum":
+                method_const = ccore.ProjectionType.MinProjection
+            elif method == "average":
+                method_const = ccore.ProjectionType.MeanProjection
+
+            self._oLogger.debug("* applying %s Z-Projection to stack of %d images..." % (method, len(images)))
+            img_proj = ccore.projectImage(images, method_const)
+
+
+            # overwrite the first MetaImage found with the projected image data
+            meta_image = self._lstZSlices[0]
+            meta_image.image = img_proj
+        else:
+            self.oZSliceOrProjection = int(self.oZSliceOrProjection)
+            self._oLogger.debug("* selecting z-slice %d..." % self.oZSliceOrProjection)
+            meta_image = self._lstZSlices[self.oZSliceOrProjection-1]
+            #print meta_image
+
+#        elif type(self.oZSliceOrProjection) == types.IntType:
+#            self._oLogger.debug("* selecting z-slice %d..." % self.oZSliceOrProjection)
+#            meta_image = self._lstZSlices[self.oZSliceOrProjection-1]
+#        else:
+#            raise ValueError("Wrong 'oZSliceOrProjection' value '%s' for channel Id '%s'" %\
+#                             (self.oZSliceOrProjection, self.strChannelId))
+
+#        if not self.channelRegistration is None:
+#            shift = self.channelRegistration.values()[0]
+#            w = meta_image.iWidth - shift[0]
+#            h = meta_image.iHeight - shift[1]
+#            if self.strChannelId in self.channelRegistration:
+#                s = (0,0)
+#            else:
+#                s = shift
+#            meta_image.image = ccore.subImage(meta_image.image,
+#                                              ccore.Diff2D(*s),
+#                                              ccore.Diff2D(w, h))
+
+        self.meta_image = meta_image
+
+
+
+    def applyBinning(self, iFactor):
+        self.meta_image.binning(iFactor)
+
+    def applySegmentation(self):
+        raise NotImplementedMethodError()
+
+    def applyFeatures(self):
+
+        for strKey, oContainer in self.dctContainers.iteritems():
+
+            oObjectHolder = ObjectHolder(strKey)
+
+            if not oContainer is None:
+
+                for strFeatureCategory in self.lstFeatureCategories:
+                    print strFeatureCategory
+                    sys.stdout.flush()
+                    oContainer.applyFeature(strFeatureCategory)
+
+                # calculate set of haralick features
+                # (with differnt distances)
+                if 'haralick_categories' in self.dctFeatureParameters:
+                    for strHaralickCategory in self.dctFeatureParameters['haralick_categories']:
+                        for iHaralickDistance in self.dctFeatureParameters['haralick_distances']:
+                            oContainer.haralick_distance = iHaralickDistance
+                            oContainer.applyFeature(strHaralickCategory)
+
+                lstValidObjectIds = []
+                lstRejectedObjectIds = []
+
+                for iObjectId, oObject in oContainer.getObjects().iteritems():
+                    dctFeatures = oObject.getFeatures()
+
+                    bAcceptObject = True
+
+#                    # post-processing
+#                    if self.bPostProcessing:
+#
+#                        if not eval(self.strPostprocessingConditions, dctFeatures):
+#                            if self.bPostProcessDeleteObjects:
+#                                #del dctObjects[iObjectId]
+#                                oContainer.delObject(iObjectId)
+#                                bAcceptObject = False
+#                            lstRejectedObjectIds.append(iObjectId)
+#                        else:
+#                            lstValidObjectIds.append(iObjectId)
+#                    else:
+#                        lstValidObjectIds.append(iObjectId)
+#
+#                    oContainer.lstValidObjectIds = lstValidObjectIds
+#                    oContainer.lstRejectedObjectIds = lstRejectedObjectIds
+
+                    if bAcceptObject:
+                        # build a new ImageObject
+                        oImageObject = ImageObject(oObject)
+                        oImageObject.iId = iObjectId
+
+                        if self.lstFeatureNames is None:
+                            self.lstFeatureNames = sorted(dctFeatures.keys())
+
+                        # assign feature values in sorted order as NumPy array
+                        oImageObject.aFeatures = \
+                            numpy.asarray(dict_values(dctFeatures,
+                                                      self.lstFeatureNames))
+
+                        oObjectHolder[iObjectId] = oImageObject
+
+            if not self.lstFeatureNames is None:
+                oObjectHolder.setFeatureNames(self.lstFeatureNames)
+            self._dctRegions[strKey] = oObjectHolder
+
+    def normalize_image(self):
+        img_in = self.meta_image.image
+#        if self.bFlatfieldCorrection:
+#
+#            if self.strImageType == 'UInt16':
+#                imgBackground = ccore.readImageUInt16(self.strBackgroundImagePath)
+#            else:
+#                imgBackground = ccore.readImage(self.strBackgroundImagePath)
+#            imgF = ccore.flatfieldCorrection(imgIn, imgBackground, self.fBackgroundCorrection, True)
+#            #print imgF.getMinmax()
+#            #imgOut = convertImageMinMax(imgF)
+#            imgOut = ccore.linearTransform2(imgF, self.fNormalizeMin, self.fNormalizeMax, 0, 255, 0, 255)
+#            #print imgOut.getMinmax()
+#
+#            #if imgOut == ccore.ImageUInt16:
+#            #    imgOut = convertImageUInt12(imgOut)
+        if type(img_in) == ccore.ImageUInt16:
+            img_out = ccore.linearTransform3(img_in, int(self.fNormalizeMin),
+                                             int(self.fNormalizeMax),
+                                             0, 255, 0, 255)
+        else:
+#            #FIXME:
+#            #if not self.fNormalizeMin is None and not self.fNormalizeMax is None:
+#            #    imgOut = ccore.linearTransform2(imgIn, int(self.fNormalizeMin), int(self.fNormalizeMax), 0, 255, 0, 255)
+#            if not self.fNormalizeRatio is None and not self.fNormalizeOffset is None:
+#                imgOut = ccore.linearTransform(imgIn, self.fNormalizeRatio, int(self.fNormalizeOffset))
+#            else:
+            img_out = img_in
+
+#        if not self.tplCropRegion is None:
+#            x1, y1, x2, y2 = self.tplCropRegion
+#            imgOut2 = ccore.Image(x2-x1+1, y2-y1+1)
+#            ccore.copySubImage(imgOut, ccore.Diff2D(x1,y1), ccore.Diff2D(x2+1,y2+1), imgOut2, ccore.Diff2D(0,0))
+#            imgOut = imgOut2
+        self.meta_image.set_image(img_out)
+
+
+
+class PrimaryChannel(_Channel):
+
+    NAME = 'Primary'
+
+    RANK = 1
+
+    PROPERTIES = \
+        dict(bSpeedup =
+                 BooleanProperty(False,
+                                 doc=''),
+             iLatWindowSize =
+                 IntProperty(None,
+                             doc='size of averaging window for '
+                                 'local adaptive thresholding.'),
+             iLatLimit =
+                 IntProperty(None,
+                             doc='lower threshold for '
+                                 'local adaptive thresholding.'),
+
+             iLatWindowSize2 =
+                 IntProperty(None,
+                             doc='size of averaging window for '
+                                 'local adaptive thresholding.'),
+             iLatLimit2 =
+                 IntProperty(None,
+                             doc='lower threshold for '
+                                 'local adaptive thresholding.'),
+
+             bDoShapeWatershed =
+                 BooleanProperty(True,
+                                 doc='shape-based watershed: '
+                                     'split objects by distance-transformation.'),
+             iGaussSizeShape =
+                 IntProperty(4,
+                             doc=''),
+             iMaximaSizeShape =
+                 IntProperty(12,
+                             doc=''),
+
+             bDoIntensityWatershed =
+                 BooleanProperty(False,
+                                 doc='intensity-based watershed: '
+                                     'split objects by intensity.'),
+             iGaussSizeIntensity =
+                 IntProperty(5,
+                             doc=''),
+             iMaximaSizeIntensity =
+                 IntProperty(11,
+                             doc=''),
+
+             iMinMergeSize = IntProperty(75,
+                                         doc='watershed merge size: '
+                                             'merge all objects below that size'),
+
+             bRemoveBorderObjects =
+                 BooleanProperty(True,
+                                 doc='remove all objects touching the image borders'),
+
+             hole_filling =
+                 BooleanProperty(False),
+
+             )
+
+    def __init__(self, **dctOptions):
+        super(PrimaryChannel, self).__init__(**dctOptions)
+
+    def applySegmentation(self, oDummy):
+        if (not self.channelRegistration is None and
+            len(self.channelRegistration) == 2):
+            shift = self.channelRegistration
+            imgIn = self.meta_image.image
+            w = imgIn.width - abs(shift[0])
+            h = imgIn.height - abs(shift[1])
+            ul_x = shift[0] if shift[0] >= 0 else 0
+            ul_y = shift[1] if shift[1] >= 0 else 0
+
+            self.meta_image.image = ccore.subImage(imgIn,
+                                                   ccore.Diff2D(ul_x, ul_y),
+                                                   ccore.Diff2D(w, h))
+
+        oSegmentation = PrimarySegmentation(strImageOutCompression = self.strImageOutCompression,
+                                            strPathOutDebug = self.strPathOutDebug,
+                                            bDebugMode = self.bDebugMode,
+                                            iMedianRadius = self.iMedianRadius,
+                                            bSpeedup = self.bSpeedup,
+                                            iLatWindowSize = self.iLatWindowSize,
+                                            iLatLimit = self.iLatLimit,
+                                            iLatWindowSize2 = self.iLatWindowSize2,
+                                            iLatLimit2 = self.iLatLimit2,
+                                            bDoShapeWatershed = self.bDoShapeWatershed,
+                                            iGaussSizeShape = self.iGaussSizeShape,
+                                            iMaximaSizeShape = self.iMaximaSizeShape,
+                                            bDoIntensityWatershed = self.bDoIntensityWatershed,
+                                            iGaussSizeIntensity = self.iGaussSizeIntensity,
+                                            iMaximaSizeIntensity = self.iMaximaSizeIntensity,
+                                            iMinMergeSize = self.iMinMergeSize,
+                                            bRemoveBorderObjects = self.bRemoveBorderObjects,
+                                            bPostProcessing = self.bPostProcessing,
+                                            lstPostprocessingFeatureCategories = self.lstPostprocessingFeatureCategories,
+                                            strPostprocessingConditions = self.strPostprocessingConditions,
+                                            bPostProcessDeleteObjects = self.bPostProcessDeleteObjects,
+                                            bFlatfieldCorrection = self.bFlatfieldCorrection,
+                                            strImageType = self.strImageType,
+                                            strBackgroundImagePath = self.strBackgroundImagePath,
+                                            fBackgroundCorrection = self.fBackgroundCorrection,
+                                            fNormalizeMin = self.fNormalizeMin,
+                                            fNormalizeMax = self.fNormalizeMax,
+                                            fNormalizeRatio = self.fNormalizeRatio,
+                                            fNormalizeOffset = self.fNormalizeOffset,
+                                            tplCropRegion = self.tplCropRegion,
+                                            hole_filling = self.hole_filling,
+                                            )
+        oContainer = oSegmentation(self.meta_image)
+        self.dctContainers['primary'] = oContainer
+
+
+class SecondaryChannel(_Channel):
+
+    NAME = 'Secondary'
+
+    RANK = 2
+
+    PROPERTIES = \
+        dict(iExpansionSizeExpanded =
+               IntProperty(None, is_mandatory=True),
+             iShrinkingSizeInside =
+               IntProperty(None, is_mandatory=True),
+             iExpansionSizeOutside =
+               IntProperty(None, is_mandatory=True),
+             iExpansionSeparationSizeOutside =
+               IntProperty(None, is_mandatory=True),
+             iShrinkingSizeRim =
+               IntProperty(None, is_mandatory=True),
+             iExpansionSizeRim =
+               IntProperty(None, is_mandatory=True),
+
+             fExpansionCostThreshold =
+                 IntProperty(None,
+                             is_mandatory=True,
+                             doc=''),
+
+             bEstimateBackground =
+                 BooleanProperty(False),
+             iBackgroundMedianRadius =
+                 IntProperty(None),
+             iBackgroundLatSize =
+                 IntProperty(None),
+             iBackgroundLatLimit =
+                 IntProperty(None),
+             )
+
+
+    __attributes__ = [Attribute('fBackgroundAverage'),
+                      Attribute('bSegmentationSuccessful'),
+                      ]
+
+    def __init__(self, **dctOptions):
+        super(SecondaryChannel, self).__init__(**dctOptions)
+        self.fBackgroundAverage = float('NAN')
+        self.bSegmentationSuccessful = False
+
+    def applySegmentation(self, oChannel):
+        if (not self.channelRegistration is None and
+            len(self.channelRegistration) == 2):
+            shift = self.channelRegistration
+            imgIn = self.meta_image.image
+            w = imgIn.width - abs(shift[0])
+            h = imgIn.height - abs(shift[1])
+            ul_x = -shift[0] if shift[0] < 0 else 0
+            ul_y = -shift[1] if shift[1] < 0 else 0
+
+            self.meta_image.image = ccore.subImage(imgIn,
+                                                   ccore.Diff2D(ul_x, ul_y),
+                                                   ccore.Diff2D(w, h))
+
+        if 'primary' in oChannel.dctContainers:
+            oSegmentation = SecondarySegmentation(strImageOutCompression = self.strImageOutCompression,
+                                                  strPathOutDebug = self.strPathOutDebug,
+                                                  bDebugMode = self.bDebugMode,
+                                                  iMedianRadius = self.iMedianRadius,
+
+                                                  iExpansionSizeExpanded = self.iExpansionSizeExpanded,
+                                                  iShrinkingSizeInside = self.iShrinkingSizeInside,
+                                                  iExpansionSizeOutside = self.iExpansionSizeOutside,
+                                                  iExpansionSeparationSizeOutside = self.iExpansionSeparationSizeOutside,
+                                                  iExpansionSizeRim = self.iExpansionSizeRim,
+                                                  iShrinkingSizeRim = self.iShrinkingSizeRim,
+
+                                                  fExpansionCostThreshold = self.fExpansionCostThreshold,
+                                                  lstAreaSelection = self.lstAreaSelection,
+                                                  bFlatfieldCorrection = self.bFlatfieldCorrection,
+                                                  strImageType = self.strImageType,
+                                                  strBackgroundImagePath = self.strBackgroundImagePath,
+                                                  fBackgroundCorrection = self.fBackgroundCorrection,
+                                                  fNormalizeMin = self.fNormalizeMin,
+                                                  fNormalizeMax = self.fNormalizeMax,
+                                                  tplCropRegion = self.tplCropRegion,
+                                                  )
+            self.dctContainers = oSegmentation(self.meta_image, oChannel.dctContainers['primary'])
+
+            if self.bEstimateBackground:
+                self.fBackgroundAverage = oSegmentation.estimateBackground(self.meta_image,
+                                                                           self.iBackgroundMedianRadius,
+                                                                           self.iBackgroundLatSize,
+                                                                           self.iBackgroundLatLimit)
+            self.bSegmentationSuccessful = True
+
+
+class TertiaryChannel(SecondaryChannel):
+
+    NAME = 'Tertiary'
+
+    RANK = 3
+
+#-------------------------------------------------------------------------------
+# main:
+#
+

@@ -23,7 +23,8 @@ __source__ = '$URL$'
 # standard library imports:
 #
 import sys, \
-       time
+       time, \
+       copy
 import cPickle as pickle
 
 #-------------------------------------------------------------------------------
@@ -40,15 +41,14 @@ from cecog.analyzer import (REGION_NAMES_PRIMARY,
                             SECONDARY_REGIONS,
                             )
 from cecog.analyzer.analyzer import (CellAnalyzer,
-                                     PrimaryChannel,
-                                     SecondaryChannel,
-                                     TimeHolder)
+                                     TimeHolder,
+                                     )
+from cecog.analyzer.channel import (PrimaryChannel,
+                                    SecondaryChannel,
+                                    TertiaryChannel,
+                                    )
 from cecog.analyzer.celltracker import *
-from cecog.io.reader import (create_image_container,
-                             load_image_container,
-                             dump_image_container,
-                             has_image_container,
-                             )
+from cecog.io.imagecontainer import ImageContainer
 from cecog.learning.collector import CellCounterReader, CellCounterReaderXML
 from cecog.learning.learning import CommonObjectLearner, CommonClassPredictor
 from cecog.traits.config import NAMING_SCHEMAS
@@ -67,7 +67,7 @@ FEATURE_MAP = {
                'featurecategory_stat_geom': ['levelset'],
                'featurecategory_granugrey': ['granulometry'],
                'featurecategory_basicshape': ['roisize',
-                                              #'circularity',
+                                              'circularity',
                                               'irregularity',
                                               'irregularity2',
                                               'axes',
@@ -77,24 +77,11 @@ FEATURE_MAP = {
                'featurecategory_moments': ['moments'],
                }
 
-FEATURE_CATEGORIES_SHAPE = ['roisize',
-                            'circularity',
-                            'irregularity',
-                            'irregularity2',
-                            'axes',
-                            ]
-FEATURE_CATEGORIES_TEXTURE = ['normbase',
-                              'normbase2',
-                              'levelset',
-                              'haralick',
-                              'haralick2',
-                              #'convexhull',
-                              #'dynamics',
-                              #'granulometry',
-                              #'distance',
-                              #moments',
-                              ]
 
+CHANNEL_CLASSES = {'PrimaryChannel'   : PrimaryChannel,
+                   'SecondaryChannel' : SecondaryChannel,
+                   'TertiaryChannel'  : TertiaryChannel,
+                   }
 
 # set the max. recursion depth
 # WARNING: this might crash your Python interpreter.
@@ -117,13 +104,12 @@ class PositionAnalyzer(object):
     POSITION_LENGTH = 4
     PRIMARY_CHANNEL = 'PrimaryChannel'
     SECONDARY_CHANNEL = 'SecondaryChannel'
-    CHANNEL_METHODS = {'PrimaryChannel'   : PrimaryChannel,
-                       'SecondaryChannel' : SecondaryChannel,
-                       }
+    TERTIARY_CHANNEL = 'TertiaryChannel'
 
     def __init__(self, P, strPathOut, oSettings, lstAnalysisFrames,
                  lstSampleReader, dctSamplePositions, oObjectLearner,
-                 qthread=None, image_container=None):
+                 image_container,
+                 qthread=None):
 
         self.origP = P
         self.P = self._adjustPositionLength(P)
@@ -138,15 +124,12 @@ class PositionAnalyzer(object):
         self.oSettings = oSettings
 
         self._path_dump = os.path.join(self.strPathOut, 'dump')
-        if image_container is None:
-            self.oImageContainer = load_image_container(self._path_dump)
-        else:
-            self.oImageContainer = image_container
+        self._imagecontainer = image_container
 
         # FIXME: a bit of a hack but the entire ImageContainer path is mapped to the current OS
-        self.oImageContainer.setPathMappingFunction(mapDirectory)
+        #self._imagecontainer.setPathMappingFunction(mapDirectory)
 
-        self.oMetaData = self.oImageContainer.oMetaData
+        self._meta_data = self._imagecontainer.meta_data
         self.lstAnalysisFrames = lstAnalysisFrames
 
         self.lstSampleReader = lstSampleReader
@@ -155,10 +138,12 @@ class PositionAnalyzer(object):
 
         self._qthread = qthread
 
-        name_lookup = {self.PRIMARY_CHANNEL : 'primary',
+        name_lookup = {self.PRIMARY_CHANNEL   : 'primary',
                        self.SECONDARY_CHANNEL : 'secondary',
+                       self.TERTIARY_CHANNEL  : 'tertiary',
                        }
-        self._resolve_name = lambda channel, name: '%s_%s' % (name_lookup[channel], name)
+        self._resolve_name = lambda channel, name: '%s_%s' % \
+                             (name_lookup[channel], name)
 
 
         # setup output directories
@@ -199,7 +184,7 @@ class PositionAnalyzer(object):
                 channel_id = self.channel_mapping[channel]
                 self.oSettings.set_section('Classification')
                 classifier_infos = {'strEnvPath' : mapDirectory(self.oSettings.get2(self._resolve_name(channel, 'classification_envpath'))),
-                                    'strChannelId' : channel_id,
+                                    'strChannelId' : CHANNEL_CLASSES[channel].NAME,
                                     'strRegionId' : self.oSettings.get2(self._resolve_name(channel, 'classification_regionname')),
                                     }
                 predictor = CommonClassPredictor(dctCollectSamples=classifier_infos)
@@ -240,7 +225,7 @@ class PositionAnalyzer(object):
 #        if self.oSettings.bQualityControl:
 #            strPathOutQualityControl = os.path.join(self.strPathOut, 'qc')
 #            oQualityControl = QualityControl(strPathOutQualityControl,
-#                                             self.oMetaData,
+#                                             self._meta_data,
 #                                             self.oSettings.dctQualityControl)
 #            oQualityControl.initPosition(self.P, self.origP)
 
@@ -255,8 +240,9 @@ class PositionAnalyzer(object):
                             #self.oSettings.bClearTrackingPath))
 
         max_frames = max(self.lstAnalysisFrames)
-        filename_netcdf = os.path.join(self._path_dump, '%s.netcdf4' % self.P)
-        oTimeHolder = TimeHolder(self.tplChannelIds, filename_netcdf, self.oMetaData)
+        filename_netcdf = os.path.join(self._path_dump, '%s.nc4' % self.P)
+        oTimeHolder = TimeHolder(self.P, self.tplChannelIds, filename_netcdf,
+                                 self._meta_data, self.oSettings)
 
         self.oSettings.set_section('Tracking')
         # structure and logic to handle object trajectories
@@ -317,7 +303,7 @@ class PositionAnalyzer(object):
 #                clsCellTracker = PlotCellTracker
 
             self.oCellTracker = clsCellTracker(oTimeHolder=oTimeHolder,
-                                          oMetaData=self.oMetaData,
+                                          oMetaData=self._meta_data,
                                           P=self.P,
                                           origP=self.origP,
                                           strPathOut=strPathOutPositionStats,
@@ -329,8 +315,8 @@ class PositionAnalyzer(object):
         else:
             self.oCellTracker = None
 
-        oCellAnalyzer = CellAnalyzer(oTimeHolder=oTimeHolder,
-                                     oCellTracker=self.oCellTracker,
+        oCellAnalyzer = CellAnalyzer(time_holder=oTimeHolder,
+                                     #oCellTracker=self.oCellTracker,
                                      P = self.P,
                                      bCreateImages = True,#self.oSettings.bCreateImages,
                                      iBinningFactor = self.oSettings.get('General', 'binningFactor'),
@@ -372,7 +358,7 @@ class PositionAnalyzer(object):
                         infos = self.classifier_infos[channel_id]
                         sec_info = (infos['strRegionId'], infos['predictor'].lstClassNames)
 
-                oTimeHolder.extportObjectCounts(filename, self.P, self.oMetaData,
+                oTimeHolder.extportObjectCounts(filename, self.P, self._meta_data,
                                                 prim_info, sec_info)
 
             if self.oSettings.get('Output', 'export_object_details'):
@@ -444,7 +430,7 @@ class PositionAnalyzer(object):
 #                               strPathCutterIn,
 #                               self.P,
 #                               strPathCutterOut,
-#                               self.oMetaData)#,
+#                               self._meta_data)#,
 #                               #**self.oSettings.dctCutterInfos)
 #
 #            if (isinstance(oCellTracker, PlotCellTracker) and
@@ -463,7 +449,7 @@ class PositionAnalyzer(object):
 #                                            strPathRegion,
 #                                            self.P,
 #                                            strPathCutterOut,
-#                                            self.oMetaData,
+#                                            self._meta_data,
 #                                            **self.oSettings.dctCutter3Infos)
 
 #            if self.oSettings.bQualityControl:
@@ -520,7 +506,7 @@ class PositionAnalyzer(object):
 #                    oChannel = dctChannels[strChannelId]
 #                    if oChannel.bSegmentationSuccessful:
 #                        oTable.append({'Frame' : iT,
-#                                       'Timestamp' : self.oMetaData.getTimestamp(self.origP, iT),
+#                                       'Timestamp' : self._meta_data.getTimestamp(self.origP, iT),
 #                                       'Background_avg' : oChannel.fBackgroundAverage})
 #                exportTable(oTable,
 #                            os.path.join(self.strPathOutPosition,
@@ -603,18 +589,19 @@ class PositionAnalyzer(object):
         # - loop over a sub-space with fixed position 'P' and reduced time and
         #   channel axis (in case more channels or time-points exist)
         # - define break-points at C and Z which will yield two nested generators
-        for iT, oIteratorC in self.oImageContainer(oP=self.origP,
-                                                   oT=self.lstAnalysisFrames,
-                                                   oC=self.tplChannelIds,
-                                                   bBreakC=True,
-                                                   bBreakZ=True):
+        for frame, iter_channel in self._imagecontainer(position=self.origP,
+                                                        time=self.lstAnalysisFrames,
+                                                        channel=self.tplChannelIds,
+                                                        interrupt_channel=True,
+                                                        interrupt_zslice=True):
+            print frame
 
             if not self._qthread is None:
                 if self._qthread.get_abort():
                     return 0
 
-                stage_info.update({'progress': self.lstAnalysisFrames.index(iT)+1,
-                                   'text': 'T %d (%d/%d)' % (iT, self.lstAnalysisFrames.index(iT)+1, len(self.lstAnalysisFrames)),
+                stage_info.update({'progress': self.lstAnalysisFrames.index(frame)+1,
+                                   'text': 'T %d (%d/%d)' % (frame, self.lstAnalysisFrames.index(frame)+1, len(self.lstAnalysisFrames)),
                                    'interval': stopwatch.current_interval(),
                                    })
                 self._qthread.set_stage_info(stage_info)
@@ -623,18 +610,21 @@ class PositionAnalyzer(object):
 
             stopwatch.reset()
 
-            oCellAnalyzer.initTimepoint(iT)
+            oCellAnalyzer.initTimepoint(frame)
             # loop over the channels
-            for strC, oIteratorZ in oIteratorC:
-#                if hasattr(self.oSettings, 'tplCropRegion'):
-#                    tplCropRegion = self.oSettings.tplCropRegion
-#                else:
-#                    tplCropRegion = None
+            for channel_id, iter_zslice in iter_channel:
+                print channel_id
 
-                channel_section = self.channel_mapping_reversed[strC]
-                clsChannel = self.CHANNEL_METHODS[channel_section]
+                zslice_images = []
+                for zslice, meta_image in iter_zslice:
+                    print zslice
+
+                    #P, iFrame, strC, iZ = oMetaImage.position, oMetaImage.time, oMetaImage.channel, oMetaImage.zslice
+                    #self._oLogger.info("Image P %s, T %05d / %05d, C %s, Z %d" % (self.P, iFrame, iLastFrame, strC, iZ))
+                    zslice_images.append(meta_image)
+
+
                 self.oSettings.set_section('ObjectDetection')
-
                 registration_x = self.oSettings.get2('secondary_channelRegistration_x')
                 registration_y = self.oSettings.get2('secondary_channelRegistration_y')
                 if registration_x == 0 and registration_y == 0:
@@ -642,139 +632,146 @@ class PositionAnalyzer(object):
                 else:
                     channel_registration = (registration_x, registration_y)
 
-                if self.oSettings.get2(self._resolve_name(channel_section,
-                                                          'zslice_selection')):
-                    projection_info = self.oSettings.get2(self._resolve_name(
-                                                            channel_section,
-                                                            'zslice_selection_slice'))
-                else:
-                    assert self.oSettings.get2(self._resolve_name(channel_section,
-                                                          'zslice_projection'))
-                    method = self.oSettings.get2(self._resolve_name(
-                                                   channel_section,
-                                                   'zslice_projection_method'))
-                    begin = self.oSettings.get2(self._resolve_name(
-                                                   channel_section,
-                                                   'zslice_projection_begin'))
-                    end = self.oSettings.get2(self._resolve_name(
-                                                   channel_section,
-                                                   'zslice_projection_end'))
-                    step = self.oSettings.get2(self._resolve_name(
-                                                   channel_section,
-                                                   'zslice_projection_step'))
-                    projection_info = (method, begin, end, step)
+                # important change: image channels can be assigned to multiple
+                # processing channels
+
+                # loop over all possible channels:
+                for channel_section, cls in CHANNEL_CLASSES.iteritems():
+
+                    if (channel_section in self.channel_mapping and
+                        channel_id == self.channel_mapping[channel_section]):
+
+                        self.oSettings.set_section('ObjectDetection')
+                        if self.oSettings.get2(self._resolve_name(channel_section,
+                                                                  'zslice_selection')):
+                            projection_info = self.oSettings.get2(self._resolve_name(
+                                                                    channel_section,
+                                                                    'zslice_selection_slice'))
+                        else:
+                            assert self.oSettings.get2(self._resolve_name(channel_section,
+                                                                  'zslice_projection'))
+                            method = self.oSettings.get2(self._resolve_name(
+                                                           channel_section,
+                                                           'zslice_projection_method'))
+                            begin = self.oSettings.get2(self._resolve_name(
+                                                           channel_section,
+                                                           'zslice_projection_begin'))
+                            end = self.oSettings.get2(self._resolve_name(
+                                                           channel_section,
+                                                           'zslice_projection_end'))
+                            step = self.oSettings.get2(self._resolve_name(
+                                                           channel_section,
+                                                           'zslice_projection_step'))
+                            projection_info = (method, begin, end, step)
 
 
-                # determine the list of features to be calculated from each object
-                lstFeatureCategories = []
-                for feature in FEATURE_MAP.keys():
-                    if self.oSettings.get('Classification',
-                                          self._resolve_name(channel_section,
-                                                             feature)):
-                        lstFeatureCategories += FEATURE_MAP[feature]
+                        # determine the list of features to be calculated from each object
+                        lstFeatureCategories = []
+                        for feature in FEATURE_MAP.keys():
+                            if self.oSettings.get('Classification',
+                                                  self._resolve_name(channel_section,
+                                                                     feature)):
+                                lstFeatureCategories += FEATURE_MAP[feature]
 
-                dctFeatureParameters = {}
-                for name in lstFeatureCategories[:]:
-                    if 'haralick' in name:
-                        lstFeatureCategories.remove(name)
-                        dict_append_list(dctFeatureParameters, 'haralick_categories', name)
-                        dctFeatureParameters['haralick_distances'] = (1, 2, 4, 8)
+                        # temp: print fetures to be calculated
+                        print 'features: ', lstFeatureCategories
 
-                if channel_section == self.PRIMARY_CHANNEL:
-                    lstPostprocessingFeatureCategories = []
-                    lstPostprocessingConditions = []
-                    bPostProcessing = False
-                    if self.oSettings.get2('primary_postProcessing_roisize_min') > -1:
-                        lstPostprocessingFeatureCategories.append('roisize')
-                        lstPostprocessingConditions.append('roisize >= %d' % self.oSettings.get2('primary_postProcessing_roisize_min'))
-                    if self.oSettings.get2('primary_postProcessing_roisize_max') > -1:
-                        lstPostprocessingFeatureCategories.append('roisize')
-                        lstPostprocessingConditions.append('roisize <= %d' % self.oSettings.get2('primary_postProcessing_roisize_max'))
-                    if self.oSettings.get2('primary_postProcessing_intensity_min') > -1:
-                        lstPostprocessingFeatureCategories.append('normbase2')
-                        lstPostprocessingConditions.append('n2_avg >= %d' % self.oSettings.get2('primary_postProcessing_intensity_min'))
-                    if self.oSettings.get2('primary_postProcessing_intensity_max') > -1:
-                        lstPostprocessingFeatureCategories.append('normbase2')
-                        lstPostprocessingConditions.append('n2_avg <= %d' % self.oSettings.get2('primary_postProcessing_intensity_max'))
+                        dctFeatureParameters = {}
+                        for name in lstFeatureCategories[:]:
+                            if 'haralick' in name:
+                                lstFeatureCategories.remove(name)
+                                dict_append_list(dctFeatureParameters, 'haralick_categories', name)
+                                dctFeatureParameters['haralick_distances'] = (1, 2, 4, 8)
 
-                    lstPostprocessingFeatureCategories = unique(lstPostprocessingFeatureCategories)
-                    if len(lstPostprocessingFeatureCategories) > 0:
-                        bPostProcessing = True
-                    strPostprocessingConditions = ' and '.join(lstPostprocessingConditions)
+                        if channel_section == self.PRIMARY_CHANNEL:
+                            lstPostprocessingFeatureCategories = []
+                            lstPostprocessingConditions = []
+                            bPostProcessing = False
+                            if self.oSettings.get2('primary_postProcessing_roisize_min') > -1:
+                                lstPostprocessingFeatureCategories.append('roisize')
+                                lstPostprocessingConditions.append('roisize >= %d' % self.oSettings.get2('primary_postProcessing_roisize_min'))
+                            if self.oSettings.get2('primary_postProcessing_roisize_max') > -1:
+                                lstPostprocessingFeatureCategories.append('roisize')
+                                lstPostprocessingConditions.append('roisize <= %d' % self.oSettings.get2('primary_postProcessing_roisize_max'))
+                            if self.oSettings.get2('primary_postProcessing_intensity_min') > -1:
+                                lstPostprocessingFeatureCategories.append('normbase2')
+                                lstPostprocessingConditions.append('n2_avg >= %d' % self.oSettings.get2('primary_postProcessing_intensity_min'))
+                            if self.oSettings.get2('primary_postProcessing_intensity_max') > -1:
+                                lstPostprocessingFeatureCategories.append('normbase2')
+                                lstPostprocessingConditions.append('n2_avg <= %d' % self.oSettings.get2('primary_postProcessing_intensity_max'))
 
-                    if self.oSettings.get2('primary_lat2'):
-                        iLatWindowSize2 = self.oSettings.get2('primary_latwindowsize2')
-                        iLatLimit2 = self.oSettings.get2('primary_latlimit2')
-                    else:
-                        iLatWindowSize2 = None
-                        iLatLimit2 = None
+                            lstPostprocessingFeatureCategories = unique(lstPostprocessingFeatureCategories)
+                            if len(lstPostprocessingFeatureCategories) > 0:
+                                bPostProcessing = True
+                            strPostprocessingConditions = ' and '.join(lstPostprocessingConditions)
 
-                    params = dict(oZSliceOrProjection = projection_info,
-                                  channelRegistration=channel_registration,
-                                  fNormalizeMin = self.oSettings.get2('primary_normalizemin'),
-                                  fNormalizeMax = self.oSettings.get2('primary_normalizemax'),
-                                  iMedianRadius = self.oSettings.get2('primary_medianradius'),
-                                  iLatWindowSize = self.oSettings.get2('primary_latwindowsize'),
-                                  iLatLimit = self.oSettings.get2('primary_latlimit'),
-                                  iLatWindowSize2 = iLatWindowSize2,
-                                  iLatLimit2 = iLatLimit2,
-                                  bDoShapeWatershed = self.oSettings.get2('primary_shapewatershed'),
-                                  iGaussSizeShape = self.oSettings.get2('primary_shapewatershed_gausssize'),
-                                  iMaximaSizeShape = self.oSettings.get2('primary_shapewatershed_maximasize'),
-                                  bDoIntensityWatershed = self.oSettings.get2('primary_intensitywatershed'),
-                                  iGaussSizeIntensity = self.oSettings.get2('primary_intensitywatershed_gausssize'),
-                                  iMaximaSizeIntensity = self.oSettings.get2('primary_intensitywatershed_maximasize'),
-                                  # FIXME:
-                                  lstAreaSelection = REGION_NAMES_PRIMARY,
-                                  # FIXME:
-                                  iMinMergeSize = self.oSettings.get2('primary_shapewatershed_minmergesize'),
-                                  bRemoveBorderObjects = self.oSettings.get2('primary_removeborderobjects'),
-                                  hole_filling = self.oSettings.get2('primary_holefilling'),
-                                  bPostProcessing = bPostProcessing,
-                                  lstPostprocessingFeatureCategories = lstPostprocessingFeatureCategories,
-                                  strPostprocessingConditions = strPostprocessingConditions,
-                                  bPostProcessDeleteObjects = True,
-                                  lstFeatureCategories = lstFeatureCategories,
-                                  dctFeatureParameters = dctFeatureParameters,
-                                  )
-                elif channel_section == self.SECONDARY_CHANNEL:
-                    secondary_regions = [v for k,v in SECONDARY_REGIONS.iteritems()
-                                         if self.oSettings.get2(k)]
-                    params = dict(oZSliceOrProjection = projection_info,
-                                  channelRegistration=channel_registration,
-                                  fNormalizeMin = self.oSettings.get2('secondary_normalizemin'),
-                                  fNormalizeMax = self.oSettings.get2('secondary_normalizemax'),
-                                  #iMedianRadius = self.oSettings.get2('medianradius'),
-                                  iExpansionSizeExpanded = self.oSettings.get2('secondary_regions_expanded_expansionsize'),
-                                  iShrinkingSizeInside = self.oSettings.get2('secondary_regions_inside_shrinkingsize'),
-                                  iExpansionSizeOutside = self.oSettings.get2('secondary_regions_outside_expansionsize'),
-                                  iExpansionSeparationSizeOutside = self.oSettings.get2('secondary_regions_outside_separationsize'),
-                                  iExpansionSizeRim = self.oSettings.get2('secondary_regions_rim_expansionsize'),
-                                  iShrinkingSizeRim = self.oSettings.get2('secondary_regions_rim_shrinkingsize'),
-                                  # FIXME
-                                  fExpansionCostThreshold = 1.5,
-                                  lstAreaSelection = secondary_regions,
-                                  lstFeatureCategories = lstFeatureCategories,
-                                  dctFeatureParameters = dctFeatureParameters,
-                                  )
+                            if self.oSettings.get2('primary_lat2'):
+                                iLatWindowSize2 = self.oSettings.get2('primary_latwindowsize2')
+                                iLatLimit2 = self.oSettings.get2('primary_latlimit2')
+                            else:
+                                iLatWindowSize2 = None
+                                iLatLimit2 = None
 
-                oChannel = clsChannel(strChannelId=strC,
+                            params = dict(oZSliceOrProjection = projection_info,
+                                          channelRegistration=channel_registration,
+                                          fNormalizeMin = self.oSettings.get2('primary_normalizemin'),
+                                          fNormalizeMax = self.oSettings.get2('primary_normalizemax'),
+                                          iMedianRadius = self.oSettings.get2('primary_medianradius'),
+                                          iLatWindowSize = self.oSettings.get2('primary_latwindowsize'),
+                                          iLatLimit = self.oSettings.get2('primary_latlimit'),
+                                          iLatWindowSize2 = iLatWindowSize2,
+                                          iLatLimit2 = iLatLimit2,
+                                          bDoShapeWatershed = self.oSettings.get2('primary_shapewatershed'),
+                                          iGaussSizeShape = self.oSettings.get2('primary_shapewatershed_gausssize'),
+                                          iMaximaSizeShape = self.oSettings.get2('primary_shapewatershed_maximasize'),
+                                          bDoIntensityWatershed = self.oSettings.get2('primary_intensitywatershed'),
+                                          iGaussSizeIntensity = self.oSettings.get2('primary_intensitywatershed_gausssize'),
+                                          iMaximaSizeIntensity = self.oSettings.get2('primary_intensitywatershed_maximasize'),
+                                          # FIXME:
+                                          lstAreaSelection = REGION_NAMES_PRIMARY,
+                                          # FIXME:
+                                          iMinMergeSize = self.oSettings.get2('primary_shapewatershed_minmergesize'),
+                                          bRemoveBorderObjects = self.oSettings.get2('primary_removeborderobjects'),
+                                          hole_filling = self.oSettings.get2('primary_holefilling'),
+                                          bPostProcessing = bPostProcessing,
+                                          lstPostprocessingFeatureCategories = lstPostprocessingFeatureCategories,
+                                          strPostprocessingConditions = strPostprocessingConditions,
+                                          bPostProcessDeleteObjects = True,
+                                          lstFeatureCategories = lstFeatureCategories,
+                                          dctFeatureParameters = dctFeatureParameters,
+                                          )
+                        elif channel_section == self.SECONDARY_CHANNEL:
+                            secondary_regions = [v for k,v in SECONDARY_REGIONS.iteritems()
+                                                 if self.oSettings.get2(k)]
+                            params = dict(oZSliceOrProjection = projection_info,
+                                          channelRegistration=channel_registration,
+                                          fNormalizeMin = self.oSettings.get2('secondary_normalizemin'),
+                                          fNormalizeMax = self.oSettings.get2('secondary_normalizemax'),
+                                          #iMedianRadius = self.oSettings.get2('medianradius'),
+                                          iExpansionSizeExpanded = self.oSettings.get2('secondary_regions_expanded_expansionsize'),
+                                          iShrinkingSizeInside = self.oSettings.get2('secondary_regions_inside_shrinkingsize'),
+                                          iExpansionSizeOutside = self.oSettings.get2('secondary_regions_outside_expansionsize'),
+                                          iExpansionSeparationSizeOutside = self.oSettings.get2('secondary_regions_outside_separationsize'),
+                                          iExpansionSizeRim = self.oSettings.get2('secondary_regions_rim_expansionsize'),
+                                          iShrinkingSizeRim = self.oSettings.get2('secondary_regions_rim_shrinkingsize'),
+                                          # FIXME
+                                          fExpansionCostThreshold = 1.5,
+                                          lstAreaSelection = secondary_regions,
+                                          lstFeatureCategories = lstFeatureCategories,
+                                          dctFeatureParameters = dctFeatureParameters,
+                                          )
+
+                        channel = cls(strChannelId=channel_id,
                                       bDebugMode=debug_mode,
-                                      #tplCropRegion=tplCropRegion,
                                       strPathOutDebug=self.strPathOutPositionDebug,
                                       **params)
 
-                # loop over the z-slices
-                for iZ, oMetaImage in oIteratorZ:
+                        # loop over the z-slices
+                        for meta_image in zslice_images:
+                            channel.append_zslice(meta_image)
 
-                    P, iFrame, strC, iZ = oMetaImage.P, oMetaImage.iT, oMetaImage.strC, oMetaImage.iZ
-                    self._oLogger.info("Image P %s, T %05d / %05d, C %s, Z %d" % (self.P, iFrame, iLastFrame, strC, iZ))
-                    oChannel.appendZSlice(oMetaImage)
+                        oCellAnalyzer.register_channel(channel)
 
-                oCellAnalyzer.registerChannel(oChannel)
-
-
-            #self._oLogger.info("  timestamp: %.2f sec" % (self.oMetaData.dctTimestamps[P][iFrame]))
 
 
             if self.oSettings.get('Classification', 'collectsamples'):
@@ -789,7 +786,7 @@ class PositionAnalyzer(object):
                         #if self._qthread.get_renderer() == strType:
                         self._qthread.set_image(None,
                                                 img_rgb,
-                                                'P %s - T %05d' % (self.origP, iT))
+                                                'P %s - T %05d' % (self.origP, frame))
 
                     #channel_id = self.oObjectLearner.strChannelId
                     #self.oObjectLearner.setFeatureNames(oCellAnalyzer.getChannel(channel_id).lstFeatureNames)
@@ -803,12 +800,12 @@ class PositionAnalyzer(object):
 
                 images = []
                 if self.oSettings.get('Processing', 'tracking'):
-                    self.oCellTracker.trackAtTimepoint(iT)
+                    self.oCellTracker.trackAtTimepoint(frame)
 
                     self.oSettings.set_section('Tracking')
                     if self.oSettings.get2('tracking_visualization'):
                         size = oCellAnalyzer.getImageSize(self.channel_mapping[self.PRIMARY_CHANNEL])
-                        img_conn, img_split = self.oCellTracker.visualizeTracks(iT, size,
+                        img_conn, img_split = self.oCellTracker.visualizeTracks(frame, size,
                                                                                 n=self.oSettings.get2('tracking_visualize_track_length'),
                                                                                 radius=self.oSettings.get2('tracking_centroid_radius'))
                         images += [(img_conn, '#FFFF00', 1.0),
@@ -830,7 +827,7 @@ class PositionAnalyzer(object):
                     if not self._qthread is None and not img_rgb is None:
                         self._qthread.set_image(strType,
                                                 img_rgb,
-                                                'P %s - T %05d' % (self.origP, iT),
+                                                'P %s - T %05d' % (self.origP, frame),
                                                 filename)
                         time.sleep(.05)
 
@@ -844,7 +841,7 @@ class PositionAnalyzer(object):
                         #print strType, self._qthread.get_renderer(), self.oSettings.get('Rendering', 'rendering')
                         self._qthread.set_image(strType,
                                                 img_rgb,
-                                                'P %s - T %05d' % (self.origP, iT),
+                                                'P %s - T %05d' % (self.origP, frame),
                                                 filename)
                         time.sleep(.05)
 
@@ -874,7 +871,7 @@ def analyzePosition(*tplArgs, **dctOptions):
 
 class AnalyzerCore(object):
 
-    def __init__(self, settings):
+    def __init__(self, settings, imagecontainer=None):
 
         #self.guid = newGuid()
         self.oStopWatch = StopWatch()
@@ -912,6 +909,7 @@ class AnalyzerCore(object):
         #if self.oSettings.bCollectSamples:
         #    self.oSettings.tplFrameRange = None
 
+        self._imagecontainer = imagecontainer
         self._openImageContainer()
 
         self.lstSampleReader = []
@@ -997,7 +995,7 @@ class AnalyzerCore(object):
 
 #            self.oQualityControl = QualityControl(oPlate,
 #                                                  strPathOutQualityControl,
-#                                                  self.oMetaData,
+#                                                  self._meta_data,
 #                                                  self.oSettings.dctQualityControl,
 #                                                  dctPlotterInfos={'bUseCairo' : True})
 #        else:
@@ -1024,41 +1022,20 @@ class AnalyzerCore(object):
         else:
             self.lstPositions = self.lstPositions.split(',')
 
-        # dump the file-structure and meta data in a file
-        if has_image_container(self.strPathOutDump) and self.oSettings.get2('preferimagecontainer'):
-            self.oImageContainer = load_image_container(self.strPathOutDump)
-            self.oImageContainer.setOption('iBinningFactor',
-                                           self.oSettings.get2('binningFactor'))
 
-        else:
-            # determine which ImageContainer to generate by input directory and read
-            # file structure in
-            # read ALL positions in dump-mode (otherwise things are getting complicated)
-            self.oSettings.lstPositions = None
-
-            naming_scheme = {}
-            for option, value in NAMING_SCHEMAS.items(self.oSettings.get2('namingscheme')):
-                naming_scheme[option] = value
-            self.oImageContainer = create_image_container(self.strPathIn,
-                                                          naming_scheme,
-                                                          self.lstPositions)
-
-            self.oImageContainer.setOption('iBinningFactor', self.oSettings.get2('binningFactor'))
-
-            if self.oSettings.get2('createimagecontainer'):
-                dump_image_container(self.strPathOutDump, self.oImageContainer)
-
-        self.oMetaData = self.oImageContainer.oMetaData
+        if self._imagecontainer is None:
+            self._imagecontainer = ImageContainer.from_settings(self.oSettings)
+        self._meta_data = self._imagecontainer.meta_data
 
         # does a position selection exist?
-        #print self.lstPositions, self.oMetaData.setP
+        #print self.lstPositions, self._meta_data.setP
         if not self.lstPositions is None:
-            if not is_subset(self.lstPositions, self.oMetaData.setP):
+            if not is_subset(self.lstPositions, self._meta_data.positions):
                 raise ValueError("The list of selected positions is not valid! %s\nValid values are %s" %\
-                                 (self.lstPositions, self.oMetaData.setP))
+                                 (self.lstPositions, self._meta_data.positions))
         else:
             # take all positions found
-            self.lstPositions = list(self.oMetaData.setP)
+            self.lstPositions = list(self._meta_data.positions)
         self.lstPositions.sort()
 
         if self.oSettings.get2('redoFailedOnly'):
@@ -1073,7 +1050,7 @@ class AnalyzerCore(object):
                         P = filename.split('_')[1]
                     else:
                         P = filename.split('__')[0]
-                    if P in self.oMetaData.setP:
+                    if P in self._meta_data.positions:
                         setFound.add(P)
                 self.lstPositions = [P for P in self.lstPositions
                                      if not P in setFound]
@@ -1083,10 +1060,10 @@ class AnalyzerCore(object):
                 self._oLogger.warning("Cannot redo failed positions without directory '%s'!" % strPathFinished)
 
 
-        self._oLogger.info("\n%s" % self.oMetaData.format(time=self.oSettings.get2('timelapseData')))
+        self._oLogger.info("\n%s" % self._meta_data.format(time=self.oSettings.get2('timelapseData')))
 
         # define range of frames to do analysis within
-        lstFrames = list(self.oMetaData.setT)
+        lstFrames = list(self._meta_data.times)
 
         if self.oSettings.get2('frameRange'):
             frames_begin = self.oSettings.get2('frameRange_begin')
@@ -1121,9 +1098,9 @@ class AnalyzerCore(object):
                        self.lstSampleReader,
                        self.dctSamplePositions,
                        self.oObjectLearner,
+                       self._imagecontainer,
                        )
             dctOptions = dict(qthread = qthread,
-                              image_container = self.oImageContainer,
                               )
             lstJobInputs.append((tplArgs, dctOptions))
 
