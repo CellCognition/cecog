@@ -169,12 +169,16 @@ namespace cecog
         else if (name == "perimeter")
         {
           // old: __blockFeature<BlockPerimeter>(name);
-          // this is a bugfix (the call is now according to the axes feature):
+          // The problem of the BlockPerimeter functor is that it does not
+          // ask whether the pixel is on the image border (-> segmentation fault)
+          // for secondary objects, we do generally not remove objects touching
+          // the borders.
+          // The call is now according to the axes feature.
           ObjectMap::iterator it = objects.begin();
           for (; it != objects.end(); ++it)
           {
             ROIObject& o = (*it).second;
-            o.features["perimeter"] = calculatePerimeter(
+            o.features["perimeter"] = (double)calculatePerimeter(
               img_labels.upperLeft(),
               img_labels.upperLeft(),
               img_labels.accessor(),
@@ -183,7 +187,9 @@ namespace cecog
               (*it).first,
               width, height
             );
+            //std::cout << o.features["perimeter"] << "  ";
           }
+          //std::cout << std::endl;
         }
         else if (name == "axes")
         {
