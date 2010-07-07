@@ -20,6 +20,7 @@ __source__ = '$URL$'
 import sys, \
        os, \
        logging
+import cPickle as pickle
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -35,11 +36,18 @@ from pdk.ordereddict import OrderedDict
 #
 from cecog import VERSION
 from cecog.analyzer import R_LIBRARIES
-from cecog.traits.config import ANALYZER_CONFIG
+from cecog.io.imagecontainer import ImageContainer
+from cecog.traits.config import (ANALYZER_CONFIG,
+                                 APPLICATION_SUPPORT_PATH,
+                                 )
 from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.gui.config import GuiConfigSettings
-from cecog.gui.analyzer.general import GeneralFrame
-from cecog.gui.analyzer.objectdetection import ObjectDetectionFrame
+from cecog.gui.analyzer.general import (GeneralFrame,
+                                        SECTION_NAME_GENERAL,
+                                        )
+from cecog.gui.analyzer.objectdetection import (ObjectDetectionFrame,
+                                                SECTION_NAME_OBJECTDETECTION,
+                                                )
 from cecog.gui.analyzer.classification import ClassificationFrame
 from cecog.gui.analyzer.tracking import TrackingFrame
 from cecog.gui.analyzer.errorcorrection import ErrorCorrectionFrame
@@ -59,7 +67,6 @@ from cecog.gui.util import (status,
                             critical,
                             question,
                             )
-
 
 import resource
 
@@ -84,6 +91,8 @@ class AnalyzerMainWindow(QMainWindow):
     def __init__(self):
         QMainWindow.__init__(self)
         self._debug = False
+        self._imagecontainer = None
+        self._meta_data = None
 
         self.setWindowTitle(self.TITLE)
 
@@ -313,7 +322,8 @@ class AnalyzerMainWindow(QMainWindow):
             result = question(self, 'Settings have been modified.',
                               info='Do you want to save settings before exit?',
                               modal=True, show_cancel=True,
-                              default=QMessageBox.Yes)
+                              default=QMessageBox.Yes,
+                              escape=QMessageBox.Cancel)
         else:
             result = QMessageBox.No
 
@@ -376,10 +386,13 @@ class AnalyzerMainWindow(QMainWindow):
             self._write_settings(filename)
 
     def _read_settings(self, filename):
-        if len(self._settings.read(filename)) == 0:
+        try:
+            self._settings.read(filename)
+        except:
             critical(self,
-                     "Error on load settings file",
-                     info="Could not load settings file '%s'." % filename)
+                     "Error loading settings file",
+                     info="Could not load settings file '%s'." % filename,
+                     detail_tb=True)
             status('Settings not successfully loaded.')
         else:
             self._settings_filename = filename
@@ -396,7 +409,7 @@ class AnalyzerMainWindow(QMainWindow):
             f.close()
         except:
             critical(self,
-                     "Error on save settings file",
+                     "Error saving settings file",
                      info="Could not save settings file as '%s'." % filename,
                      detail_tb=True)
             status('Settings not successfully saved.')
@@ -451,6 +464,19 @@ class AnalyzerMainWindow(QMainWindow):
     def _on_quit(self):
         self._exit_app()
 
+    @pyqtSlot()
+    def _on_load_input(self):
+        self._imagecontainer = ImageContainer.from_settings(self._settings)
+        self._meta_data = self._imagecontainer.meta_data
+        trait = self._settings.get_trait(SECTION_NAME_OBJECTDETECTION,
+                                         'primary_channelid')
+        trait.set_list_data(self._meta_data.channels)
+        trait = self._settings.get_trait(SECTION_NAME_OBJECTDETECTION,
+                                         'secondary_channelid')
+        trait.set_list_data(self._meta_data.channels)
+        print self._imagecontainer.meta_data
+
+    @pyqtSlot()
     def _on_file_open(self):
         dialog = QFileDialog(self)
         dialog.setFileMode(QFileDialog.ExistingFile)
@@ -464,9 +490,11 @@ class AnalyzerMainWindow(QMainWindow):
             filename = str(dialog.selectedFiles()[0])
             self._read_settings(filename)
 
+    @pyqtSlot()
     def _on_file_save(self):
         self.save_settings(False)
 
+    @pyqtSlot()
     def _on_file_save_as(self):
         self.save_settings(True)
 
@@ -499,6 +527,19 @@ class AnalyzerMainWindow(QMainWindow):
         show_html('_startup')
 
 
+def handle_exception(exc_type, exc_value, exc_traceback):
+  import traceback
+  filename, line, dummy, dummy = \
+    traceback.extract_tb(exc_traceback).pop()
+  filename = os.path.basename(filename)
+  error = "%s: %s" % (str(exc_type).split(".")[-1], exc_value)
+
+  QMessageBox.critical(None, "ERROR",
+    "There has been an error: "
+    + "<b>%s</b> " % error
+    + "on line %d, file %s" % (line, filename))
+
+
 #-------------------------------------------------------------------------------
 # main:
 #
@@ -507,6 +548,7 @@ if __name__ == "__main__":
     from pdk.fileutils import safe_mkdirs
 
     app = QApplication(sys.argv)
+    #sys.excepthook=handle_exception
 
     working_path = os.path.abspath(os.path.dirname(sys.argv[0]))
     program_name = os.path.split(sys.argv[0])[1]
@@ -549,8 +591,9 @@ if __name__ == "__main__":
     else:
         #filename = '/Users/miheld/data/CellCognition/demo_data/cluster_test.conf'
         filename = '/Users/miheld/data/CellCognition/demo_data/H2bTub20x_settings.conf'
-        #if os.path.isfile(filename):
-        main._read_settings(filename)
+        #filename = '/Users/miheld/data/CellCognition/Thomas/ANDRISETTINGS_local_HD.conf'
+        if os.path.isfile(filename):
+            main._read_settings(filename)
         main._debug = True
 
     splash.finish(main)
