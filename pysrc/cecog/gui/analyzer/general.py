@@ -70,25 +70,25 @@ class GeneralFrame(_BaseFrame):
         self.add_expanding_spacer()
 
         layout = QHBoxLayout(self._control)
-        btn1 = QPushButton('Load settings...', self._control)
-        btn2 = QPushButton('Save settings', self._control)
-        btn3 = QPushButton('Save settings as...', self._control)
         layout.addStretch()
-        layout.addWidget(btn1)
-        layout.addWidget(btn2)
-        layout.addWidget(btn3)
+        btn = QPushButton('Load input data...', self._control)
+        layout.addWidget(btn)
+        btn.clicked.connect(self.parent().main_window._on_load_input)
+        btn = QPushButton('Load settings...', self._control)
+        layout.addWidget(btn)
+        btn.clicked.connect(self.parent().main_window._on_file_open)
+        btn = QPushButton('Save settings', self._control)
+        layout.addWidget(btn)
+        btn.clicked.connect(self.parent().main_window._on_file_save)
+        btn = QPushButton('Save settings as...', self._control)
+        layout.addWidget(btn)
+        btn.clicked.connect(self.parent().main_window._on_file_save_as)
         layout.addStretch()
-        self.connect(btn1, SIGNAL('clicked()'),
-                     self.parent().main_window._on_file_open)
-        self.connect(btn2, SIGNAL('clicked()'),
-                     self.parent().main_window._on_file_save)
-        self.connect(btn3, SIGNAL('clicked()'),
-                     self.parent().main_window._on_file_save_as)
 
         help_button = QToolButton(self._control)
         help_button.setIcon(QIcon(':question_mark'))
         handler = lambda x: lambda : self._on_show_help(x)
-        self.connect(help_button, SIGNAL('clicked()'), handler('controlpanel'))
         layout.addWidget(help_button)
+        help_button.clicked.connect(handler('controlpanel'))
 
 

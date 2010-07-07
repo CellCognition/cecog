@@ -75,7 +75,7 @@ class SectionGeneral(_Section):
                            label='Naming scheme')),
         ('structure_filename',
             StringTrait('', 1000, label='Folder to structure files',
-                                   widget_info=StringTrait.STRING_PATH)),
+                                   widget_info=StringTrait.STRING_FILE)),
 
 #        ('primary_zslice_selection_slice',
 #            IntTrait(1, 0, 1000, label='Slice')),

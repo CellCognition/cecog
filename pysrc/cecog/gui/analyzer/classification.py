@@ -42,6 +42,10 @@ from cecog.gui.analyzer import (_BaseFrame,
                                 TrainingThread,
                                 )
 from cecog.analyzer import SECONDARY_REGIONS
+from cecog.analyzer.channel import (PrimaryChannel,
+                                    SecondaryChannel,
+                                    TertiaryChannel,
+                                    )
 from cecog.learning.learning import (CommonClassPredictor,
                                      )
 from cecog.util.util import (hexToRgb,
@@ -482,8 +486,8 @@ class ClassificationFrame(_BaseFrame, _ProcessorMixin):
         settings = _ProcessorMixin._get_modified_settings(self, name)
 
         settings.set_section('ObjectDetection')
-        prim_id = settings.get2('primary_channelid')
-        sec_id = settings.get2('secondary_channelid')
+        prim_id = PrimaryChannel.NAME #settings.get2('primary_channelid')
+        sec_id = SecondaryChannel.NAME #settings.get2('secondary_channelid')
         #sec_regions = settings.get2('secondary_regions')
         settings.set_section('Processing')
         settings.set2('primary_classification', False)

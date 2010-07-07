@@ -32,6 +32,7 @@ from cecog.gui.guitraits import (StringTrait,
                                  IntTrait,
                                  BooleanTrait,
                                  SelectionTrait,
+                                 SelectionTrait2,
                                  MultiSelectionTrait,
                                  )
 from cecog.analyzer import (ZSLICE_PROJECTION_METHODS,
@@ -60,7 +61,7 @@ class SectionObjectdetection(_Section):
     OPTIONS = [
       ('primary_image',
        [('primary_channelid',
-            StringTrait('rfp', 100, label='Primary channel ID')),
+            SelectionTrait2(None, [], label='Primary channel ID')),
         ('primary_normalizemin',
             IntTrait(0, -2**16, 2**16, label='Min.')),
         ('primary_normalizemax',
@@ -134,7 +135,7 @@ class SectionObjectdetection(_Section):
 
       ('secondary_image',
        [('secondary_channelid',
-            StringTrait('rfp', 100, label='Secondary channel ID')),
+            SelectionTrait2(None, [], label='Secondary channel ID')),
         ('secondary_normalizemin',
             IntTrait(0, -2**16, 2**16, label='Min.')),
         ('secondary_normalizemax',

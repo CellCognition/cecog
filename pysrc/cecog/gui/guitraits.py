@@ -50,6 +50,10 @@ class GuiTrait(object):
         self.tooltip = tooltip
         self.doc = doc
         self.checkable = checkable
+        self._widget = None
+
+    def set_widget(self, widget):
+        self._widget = widget
 
 
 class GuiNumberTrait(GuiTrait):
@@ -96,6 +100,7 @@ class StringTrait(traits.StringTrait, GuiTrait):
         self.widget_info = widget_info
 
     def set_value(self, widget, value):
+        widget.setToolTip(value)
         widget.setText(value)
 
 
@@ -133,6 +138,29 @@ class SelectionTrait(traits.SelectionTrait, GuiTrait):
 
     def set_value(self, widget, value):
         widget.setCurrentIndex(self.index(value))
+
+
+class SelectionTrait2(traits.SelectionTrait2, GuiTrait):
+
+    def __init__(self, default_value, list_data, label=None, tooltip=None, doc=None):
+        traits.SelectionTrait2.__init__(self, default_value, list_data)
+        GuiTrait.__init__(self, label, tooltip=tooltip, doc=doc)
+
+    def set_value(self, widget, value):
+        if not value is None:
+            index = self.index(value)
+            if index is None:
+                widget.addItem(str(value))
+            else:
+                widget.setCurrentIndex(index)
+
+    def set_list_data(self, list_data):
+        traits.SelectionTrait2.set_list_data(self, list_data)
+        if not self._widget is None:
+            for item in self.list_data:
+                str_item = str(item)
+                if self._widget.findText(str_item) == -1:
+                    self._widget.addItem(str_item)
 
 
 class MultiSelectionTrait(traits.MultiSelectionTrait, GuiTrait):

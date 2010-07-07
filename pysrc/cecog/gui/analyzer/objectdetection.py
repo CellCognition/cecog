@@ -38,7 +38,10 @@ from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
 from cecog.analyzer import (SECONDARY_COLORS,
                             SECONDARY_REGIONS,
                             )
-
+from cecog.analyzer.channel import (PrimaryChannel,
+                                    SecondaryChannel,
+                                    TertiaryChannel,
+                                    )
 #-------------------------------------------------------------------------------
 # constants:
 #
@@ -159,13 +162,12 @@ class ObjectDetectionFrame(_BaseFrame, _ProcessorMixin):
         settings = _ProcessorMixin._get_modified_settings(self, name)
 
         settings.set_section('ObjectDetection')
-        prim_id = settings.get2('primary_channelid')
-        sec_id = settings.get2('secondary_channelid')
+        prim_id = PrimaryChannel.NAME#settings.get2('primary_channelid')
+        sec_id = SecondaryChannel.NAME#settings.get2('secondary_channelid')
         sec_regions = [v for k,v in SECONDARY_REGIONS.iteritems()
                        if settings.get2(k)]
 
         settings.set_section('Processing')
-        settings.set2('secondary_processChannel', False)
         settings.set2('primary_classification', False)
         settings.set2('secondary_classification', False)
         settings.set2('tracking', False)
@@ -196,6 +198,7 @@ class ObjectDetectionFrame(_BaseFrame, _ProcessorMixin):
 
 
         if self._tab.currentIndex() == 0:
+            settings.set('Processing', 'secondary_processChannel', False)
             settings.set('General', 'rendering', {'primary_contours': {prim_id: {'raw': ('#FFFFFF', 1.0), 'contours': {'primary': ('#FF0000', 1, show_ids)}}}})
         else:
             settings.set('Processing', 'secondary_processChannel', True)

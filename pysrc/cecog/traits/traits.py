@@ -134,6 +134,19 @@ class SelectionTrait(ListTrait):
         return value
 
 
+class SelectionTrait2(SelectionTrait):
+
+    def index(self, value):
+        if value in self.list_data:
+            index = self.list_data.index(value)
+        else:
+            index = None
+        return index
+
+    def set_list_data(self, list_data):
+        self.list_data = list_data
+
+
 class MultiSelectionTrait(SelectionTrait):
 
     def convert(self, value):

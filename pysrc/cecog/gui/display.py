@@ -37,6 +37,7 @@ from cecog.gui.guitraits import (StringTrait,
                                  FloatTrait,
                                  BooleanTrait,
                                  SelectionTrait,
+                                 SelectionTrait2,
                                  MultiSelectionTrait,
                                  DictTrait,
                                  ListTrait
@@ -186,6 +187,8 @@ class TraitDisplayMixin(object):
                 regexp.setPatternSyntax(QRegExp.RegExp2)
                 w_input.setValidator(QRegExpValidator(regexp, w_input))
             trait.set_value(w_input, value)
+            handler = lambda name: lambda value: self._set_value(name, value,
+                                                                 tooltip=value)
             self.connect(w_input, SIGNAL('textEdited(QString)'),
                          handler(trait_name))
 
@@ -255,6 +258,17 @@ class TraitDisplayMixin(object):
             w_input = QComboBox(parent)
             for item in trait.list_data:
                 w_input.addItem(str(item))
+            trait.set_value(w_input, value)
+            w_input.setSizePolicy(policy_fixed)
+            handler = lambda n: lambda v: self._on_current_index(n, v)
+            self.connect(w_input, SIGNAL('currentIndexChanged(int)'),
+                         handler(trait_name))
+
+        elif isinstance(trait, SelectionTrait2):
+            w_input = QComboBox(parent)
+            for item in trait.list_data:
+                w_input.addItem(str(item))
+            trait.set_widget(w_input)
             trait.set_value(w_input, value)
             w_input.setSizePolicy(policy_fixed)
             handler = lambda n: lambda v: self._on_current_index(n, v)
@@ -335,16 +349,16 @@ class TraitDisplayMixin(object):
                 #print '    ', name, value
                 trait.set_value(w_input, value)
 
-#        else:
-#            self._settings.add_section(self.SECTION)
-
 
     # convenience methods
 
     def _get_value(self, name):
         return self._settings.get_value(self.SECTION_NAME, name)
 
-    def _set_value(self, name, value):
+    def _set_value(self, name, value, tooltip=None):
+        if not tooltip is None:
+            widget = self._registry[name]
+            widget.setToolTip(str(tooltip))
         self._settings.set(self.SECTION_NAME, name, value)
 
     def _get_trait(self, name):

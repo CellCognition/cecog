@@ -93,7 +93,7 @@ def numpy_to_qimage(data, colors=None):
     return qimage
 
 def message(icon, text, parent, info=None, detail=None, buttons=None,
-            title=None, default=None, modal=False):
+            title=None, default=None, escape=None, modal=False):
     if title is None:
         title = text
     msg_box = QMessageBox(icon, title, text, QMessageBox.NoButton,
@@ -108,7 +108,8 @@ def message(icon, text, parent, info=None, detail=None, buttons=None,
         msg_box.setStandardButtons(buttons)
     if not default is None:
         msg_box.setDefaultButton(default)
-        msg_box.setEscapeButton(default)
+    if not escape is None:
+        msg_box.setEscapeButton(escape)
     return msg_box.exec_()
 
 def information(parent, text, info=None, detail=None, modal=False):
@@ -117,15 +118,17 @@ def information(parent, text, info=None, detail=None, modal=False):
                    buttons=QMessageBox.Ok, default=QMessageBox.Ok)
 
 def question(parent, text, info=None, detail=None, modal=False,
-             show_cancel=False, default=None):
+             show_cancel=False, default=None, escape=None):
     buttons = QMessageBox.Yes|QMessageBox.No
     if default is None:
         default = QMessageBox.No
+    if escape is None:
+        escape = default
     if show_cancel:
         buttons |= QMessageBox.Cancel
     result = message(QMessageBox.Question,
                      text, parent, info=info, detail=detail, modal=modal,
-                     buttons=buttons, default=default)
+                     buttons=buttons, default=default, escape=escape)
     if show_cancel:
         return result
     else:

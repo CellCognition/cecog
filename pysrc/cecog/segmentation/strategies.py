@@ -121,63 +121,23 @@ class _Segmentation(PropertyManager):
         super(_Segmentation, self).__init__(**dctOptions)
         self._oLogger = logging.getLogger(self.__class__.__name__)
 
-    def __call__(self, oMetaImage):
-
-        imgIn = oMetaImage.imgXY
-        #print type(imgIn)
-        if self.bFlatfieldCorrection:
-
-            if self.strImageType == 'UInt16':
-                imgBackground = ccore.readImageUInt16(self.strBackgroundImagePath)
-            else:
-                imgBackground = ccore.readImage(self.strBackgroundImagePath)
-            imgF = ccore.flatfieldCorrection(imgIn, imgBackground, self.fBackgroundCorrection, True)
-            #print imgF.getMinmax()
-            #imgOut = convertImageMinMax(imgF)
-            imgOut = ccore.linearTransform2(imgF, self.fNormalizeMin, self.fNormalizeMax, 0, 255, 0, 255)
-            #print imgOut.getMinmax()
-
-            #if imgOut == ccore.ImageUInt16:
-            #    imgOut = convertImageUInt12(imgOut)
-
-        elif type(imgIn) == ccore.ImageUInt16:
-            imgOut = ccore.linearTransform3(imgIn, int(self.fNormalizeMin), int(self.fNormalizeMax), 0, 255, 0, 255)
-        else:
-            #FIXME:
-            #if not self.fNormalizeMin is None and not self.fNormalizeMax is None:
-            #    imgOut = ccore.linearTransform2(imgIn, int(self.fNormalizeMin), int(self.fNormalizeMax), 0, 255, 0, 255)
-            if not self.fNormalizeRatio is None and not self.fNormalizeOffset is None:
-                imgOut = ccore.linearTransform(imgIn, self.fNormalizeRatio, int(self.fNormalizeOffset))
-            else:
-                imgOut = imgIn
-
-        if not self.tplCropRegion is None:
-            x1, y1, x2, y2 = self.tplCropRegion
-            imgOut2 = ccore.Image(x2-x1+1, y2-y1+1)
-            ccore.copySubImage(imgOut, ccore.Diff2D(x1,y1), ccore.Diff2D(x2+1,y2+1), imgOut2, ccore.Diff2D(0,0))
-            imgOut = imgOut2
-
-        oMetaImage.setImageXY(imgOut)
-        #print type(oMetaImage.imgXY)
-
-
     def estimateBackground(self, metaImage, medianRadius, latWindowSize, latLimit):
         self._oLogger.debug("         --- estimate background")
-        imgXY = metaImage.imgXY
+        image = metaImage.image
 
-        imgPrefiltered = ccore.discMedian(imgXY, medianRadius)
+        imgPrefiltered = ccore.discMedian(image, medianRadius)
         imgBin = ccore.windowAverageThreshold(imgPrefiltered,
                                               latWindowSize,
                                               latLimit)
-        if self.bDebugMode:
-            ccore.writeImage(imgBin,
-                             os.path.join(self.strPathOutDebug,
-                                          metaImage.format("background.jpg", bC=True)),
-                             self.strImageOutCompression)
+#        if self.bDebugMode:
+#            ccore.writeImage(imgBin,
+#                             os.path.join(self.strPathOutDebug,
+#                                          metaImage.format("background.jpg", bC=True)),
+#                             self.strImageOutCompression)
 
-        imgLabels = ccore.ImageInt16(imgXY.width, imgXY.height)
+        imgLabels = ccore.ImageInt16(image.width, image.height)
         iCount = ccore.labelImage(imgBin, imgLabels, True, 0)
-        dctAvg = ccore.findAverage(imgXY, imgLabels, iCount)
+        dctAvg = ccore.findAverage(image, imgLabels, iCount)
         return dctAvg[0]
 
 
@@ -248,49 +208,47 @@ class PrimarySegmentation(_Segmentation):
     def __init__(self, **dctOptions):
         super(PrimarySegmentation, self).__init__(**dctOptions)
 
-    def __call__(self, oMetaImage):
+    def __call__(self, meta_image):
         stopwatch1 = StopWatch()
-        _Segmentation.__call__(self, oMetaImage)
 
         #print "moo123"
-        #imgXY = oMetaImage.imgXY
-        #print type(imgXY), imgXY.getMinmax()
-        #oMetaImage.setImageXY(convertImageMinMax(imgXY))
+        #image = meta_image.image
+        #print type(image), image.getMinmax()
+        #meta_image.setImageXY(convertImageMinMax(image))
 
-        imgXY = oMetaImage.imgXY
-        #print type(imgXY), imgXY.getMinmax()
-        iWidth, iHeight = oMetaImage.iWidth, oMetaImage.iHeight
-        #print iWidth, iHeight, self.strPathOutDebug
+        image = meta_image.image
+        #print type(image), image.getMinmax()
+        width, height = meta_image.width, meta_image.height
+        #print width, height, self.strPathOutDebug
 
         if self.bSpeedup:
-            imgTmp1 = ccore.Image(iWidth, iHeight)
-            ccore.binImage(imgXY, imgTmp1, 2)
-            iWidth /= 2
-            iHeight /= 2
-            imgTmp2 = ccore.Image(iWidth, iHeight)
+            imgTmp1 = ccore.Image(width, height)
+            ccore.binImage(image, imgTmp1, 2)
+            width /= 2
+            height /= 2
+            imgTmp2 = ccore.Image(width, height)
             ccore.scaleImage(imgTmp1, imgTmp2, "no")
-            imgXY = imgTmp2
+            image = imgTmp2
 
-        #print self.bDebugMode, self.strPathOutDebug
-        if self.bDebugMode:
-            strPathOutDebug = self.strPathOutDebug
-            ccore.writeImage(imgXY,
-                             os.path.join(strPathOutDebug,
-                                          oMetaImage.format("00raw.jpg", bC=True)),
-                             self.strImageOutCompression)
+#        if self.bDebugMode:
+#            strPathOutDebug = self.strPathOutDebug
+#            ccore.writeImage(image,
+#                             os.path.join(strPathOutDebug,
+#                                          meta_image.format("00raw.jpg", bC=True)),
+#                             self.strImageOutCompression)
 
 
-        imgPrefiltered = ccore.discMedian(imgXY,
+        imgPrefiltered = ccore.discMedian(image,
                                           self.iMedianRadius)
         self._oLogger.debug("         --- median ok, %s" % stopwatch1.current_interval())
 
         stopwatch2 = StopWatch()
         #print self.bDebugMode, self.strPathOutDebug
-        if self.bDebugMode:
-            ccore.writeImage(imgPrefiltered,
-                             os.path.join(strPathOutDebug,
-                                          oMetaImage.format("00pre.jpg", bC=True)),
-                             self.strImageOutCompression)
+#        if self.bDebugMode:
+#            ccore.writeImage(imgPrefiltered,
+#                             os.path.join(strPathOutDebug,
+#                                          meta_image.format("00pre.jpg", bC=True)),
+#                             self.strImageOutCompression)
 
         imgBin = ccore.windowAverageThreshold(imgPrefiltered,
                                               self.iLatWindowSize,
@@ -310,21 +268,21 @@ class PrimarySegmentation(_Segmentation):
             self._oLogger.debug("         --- local threshold2 ok, %s" % stopwatch3.current_interval())
 
         stopwatch4 = StopWatch()
-        if self.bDebugMode:
-            strPathOutDebug = self.strPathOutDebug
-            ccore.writeImage(imgBin,
-                             os.path.join(strPathOutDebug,
-                                          oMetaImage.format("01bin.jpg", bC=True)),
-                             self.strImageOutCompression)
-        else:
-            strPathOutDebug = ""
+#        if self.bDebugMode:
+#            strPathOutDebug = self.strPathOutDebug
+#            ccore.writeImage(imgBin,
+#                             os.path.join(strPathOutDebug,
+#                                          meta_image.format("01bin.jpg", bC=True)),
+#                             self.strImageOutCompression)
+#        else:
+#            strPathOutDebug = ""
 
         if self.bDoShapeWatershed:
             # some weird form of debug prefix
             # (works only if compiler flag was set)
 
-            strFilePathDebug = os.path.join(strPathOutDebug,
-                                            oMetaImage.format("01wsShape---", bC=True))
+            strFilePathDebug = ''#os.path.join(strPathOutDebug,
+#                                            meta_image.format("01wsShape---", bC=True))
             imgBin = ccore.watershedShape(imgPrefiltered,
                                           imgBin,
                                           strFilePathDebug,
@@ -334,8 +292,8 @@ class PrimarySegmentation(_Segmentation):
                                           self.iMinMergeSize)
 
         if self.bDoIntensityWatershed:
-            strFilePathDebug = os.path.join(strPathOutDebug,
-                                            oMetaImage.format("02wsIntensity---", bC=True))
+            strFilePathDebug = ''#os.path.join(strPathOutDebug,
+#                                            meta_image.format("02wsIntensity---", bC=True))
             imgBin = ccore.watershedIntensity(imgPrefiltered,
                                               imgBin,
                                               strFilePathDebug,
@@ -348,14 +306,14 @@ class PrimarySegmentation(_Segmentation):
 
         stopwatch5 = StopWatch()
         if self.bSpeedup:
-            iWidth, iHeight = oMetaImage.iWidth, oMetaImage.iHeight
-            imgTmpBin = ccore.Image(iWidth, iHeight)
+            width, height = meta_image.width, meta_image.height
+            imgTmpBin = ccore.Image(width, height)
             ccore.scaleImage(imgBin, imgTmpBin, "no")
             imgBin = imgTmpBin
 
-            imgXY = oMetaImage.imgXY
+            image = meta_image.image
 
-        oContainer = ccore.ImageMaskContainer(imgXY,
+        oContainer = ccore.ImageMaskContainer(image,
                                               imgBin,
                                               self.bRemoveBorderObjects)
 
@@ -391,17 +349,17 @@ class PrimarySegmentation(_Segmentation):
         oContainer.lstGoodObjectIds = lstGoodObjectIds
         oContainer.lstRejectedObjectIds = lstRejectedObjectIds
 
-        if self.bDebugMode:
-            oContainer.markObjects(ccore.RGBValue(0,255,0), False, False)
-            #oContainer.markObjects(lstGoodObjectIds, ccore.RGBValue(0,255,0), False, False)
-            #oContainer.markObjects(lstRejectedObjectIds, ccore.RGBValue(255,0,0), False, False)
-            oContainer.exportRGB(os.path.join(strPathOutDebug,
-                                              oMetaImage.format("03Contour.jpg", bC=True)),
-                                 self.strImageOutCompression)
-
-            # reset the container RGB
-            oContainer.eraseRGB()
-            oContainer.combineExtraRGB([7],[1])
+#        if self.bDebugMode:
+#            oContainer.markObjects(ccore.RGBValue(0,255,0), False, False)
+#            #oContainer.markObjects(lstGoodObjectIds, ccore.RGBValue(0,255,0), False, False)
+#            #oContainer.markObjects(lstRejectedObjectIds, ccore.RGBValue(255,0,0), False, False)
+#            oContainer.exportRGB(os.path.join(strPathOutDebug,
+#                                              meta_image.format("03Contour.jpg", bC=True)),
+#                                 self.strImageOutCompression)
+#
+#            # reset the container RGB
+#            oContainer.eraseRGB()
+#            oContainer.combineExtraRGB([7],[1])
         return oContainer
 
 
@@ -435,22 +393,20 @@ class SecondarySegmentation(_Segmentation):
     def __init__(self, **dctOptions):
         super(SecondarySegmentation, self).__init__(**dctOptions)
 
-    def __call__(self, oMetaImage, oContainer):
-        _Segmentation.__call__(self, oMetaImage)
-
-        imgXY, iWidth, iHeight = oMetaImage.imgXY, oMetaImage.iWidth, oMetaImage.iHeight
-        #imgPrefiltered = ccore.discMedian(imgXY, self.iMedianRadius)
+    def __call__(self, meta_image, oContainer):
+        image, width, height = meta_image.image, meta_image.width, meta_image.height
+        #imgPrefiltered = ccore.discMedian(image, self.iMedianRadius)
         #self._oLogger.debug("         --- median ok")
-        imgPrefiltered = imgXY
+        imgPrefiltered = image
 
-        if self.bDebugMode:
-            ccore.writeImage(imgXY,
-                             os.path.join(self.strPathOutDebug,
-                                          oMetaImage.format("01raw.jpg", bC=True)),
-                             self.strImageOutCompression)
+#        if self.bDebugMode:
+#            ccore.writeImage(image,
+#                             os.path.join(self.strPathOutDebug,
+#                                          meta_image.format("01raw.jpg", bC=True)),
+#                             self.strImageOutCompression)
 #            ccore.writeImage(imgPrefiltered,
 #                             os.path.join(self.strPathOutDebug,
-#                                          oMetaImage.format("02pre.jpg", bC=True)),
+#                                          meta_image.format("02pre.jpg", bC=True)),
 #                             self.strImageOutCompression)
 
         dctContainers = {}
@@ -471,7 +427,7 @@ class SecondarySegmentation(_Segmentation):
             else:
                 imgLabelsOut = oContainer.img_labels
             dctContainers['expanded'] =\
-                ccore.ImageMaskContainer(imgXY, imgLabelsOut, False)
+                ccore.ImageMaskContainer(image, imgLabelsOut, False)
             self._oLogger.debug("         --- expanded container ok")
 
         # inside - in case shrinking size == 0 original regions are taken
@@ -486,7 +442,7 @@ class SecondarySegmentation(_Segmentation):
             else:
                 imgLabelsOut = oContainer.img_labels
             dctContainers['inside'] =\
-                ccore.ImageMaskContainer(imgXY, imgLabelsOut, False)
+                ccore.ImageMaskContainer(image, imgLabelsOut, False)
             self._oLogger.debug("         --- inside container ok")
 
         # outside - expansion size > 0 AND expansion > separation size needed,
@@ -504,7 +460,7 @@ class SecondarySegmentation(_Segmentation):
                                                        )
             imgLabelsOut = ccore.substractImages(imgLabelsOut, oContainer.img_labels)
             dctContainers['outside'] =\
-                ccore.ImageMaskContainer(imgXY, imgLabelsOut, False)
+                ccore.ImageMaskContainer(image, imgLabelsOut, False)
             self._oLogger.debug("         --- outside container ok")
 
         # rim - one value > 0 needed, otherwise area is 0
@@ -531,7 +487,7 @@ class SecondarySegmentation(_Segmentation):
                 imgLabelsOutB = oContainer.img_labels
             imgLabelsOut = ccore.substractImages(imgLabelsOutB, imgLabelsOutA)
             dctContainers['rim'] =\
-                ccore.ImageMaskContainer(imgXY, imgLabelsOut, False)
+                ccore.ImageMaskContainer(image, imgLabelsOut, False)
             self._oLogger.debug("         --- rim container ok")
 
 #        if 'expanded' in dctContainers and not 'expanded' in self.lstAreaSelection:

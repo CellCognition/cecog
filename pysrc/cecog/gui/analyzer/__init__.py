@@ -471,13 +471,15 @@ class AnalzyerThread(_ProcessingThread):
 
     image_ready = pyqtSignal(ccore.ImageRGB, str, str)
 
-    def __init__(self, parent, settings):
+    def __init__(self, parent, settings, imagecontainer):
         _ProcessingThread.__init__(self, parent, settings)
         self._renderer = None
+        self._imagecontainer = imagecontainer
         self._buffer = {}
 
     def _run(self):
-        analyzer = AnalyzerCore(self._settings)
+        analyzer = AnalyzerCore(self._settings,
+                                imagecontainer=self._imagecontainer)
         analyzer.processPositions(self)
 
     def set_renderer(self, name):
@@ -809,7 +811,8 @@ class _ProcessorMixin(object):
                 if cls is AnalzyerThread:
 
                     self._current_settings = self._get_modified_settings(name)
-                    self._analyzer = cls(self, self._current_settings)
+                    self._analyzer = cls(self, self._current_settings,
+                                         self.parent().main_window._imagecontainer)
 
                     rendering = self._current_settings.get('General', 'rendering').keys()
                     rendering += self._current_settings.get('General', 'rendering_class').keys()
