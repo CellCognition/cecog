@@ -43,12 +43,22 @@ from cecog.io.imagecontainer import (MetaData,
                                      DIMENSION_NAME_CHANNEL,
                                      DIMENSION_NAME_ZSLICE,
                                      META_INFO_WELL,
-                                     META_INFO_SUBWELL
+                                     META_INFO_SUBWELL,
+                                     UINT8,
+                                     UINT16,
                                      )
 
 #------------------------------------------------------------------------------
 # constants:
 #
+TOKEN_P = Token('P', type_code='i', length='+', prefix='',
+                name=DIMENSION_NAME_POSITION)
+TOKEN_T = Token('T', type_code='i', length='+', prefix='',
+                name=DIMENSION_NAME_TIME)
+TOKEN_C = Token('C', type_code='c', length='+', prefix='',
+                name=DIMENSION_NAME_CHANNEL, regex_type='\D')
+TOKEN_Z = Token('Z', type_code='i', length='+', prefix='',
+                name=DIMENSION_NAME_ZSLICE)
 
 #------------------------------------------------------------------------------
 # functions:
@@ -61,9 +71,9 @@ from cecog.io.imagecontainer import (MetaData,
 class DefaultCoordinates(object):
     def __init__(self):
         self.default_values = {
-                               DIMENSION_NAME_TIME: '1',
+                               DIMENSION_NAME_TIME: 1,
                                DIMENSION_NAME_CHANNEL: 'ch0',
-                               DIMENSION_NAME_ZSLICE: '1',
+                               DIMENSION_NAME_ZSLICE: 1,
                                'DEFAULT': ''
                                }
         return
@@ -81,6 +91,7 @@ class DefaultCoordinates(object):
                 return self.default_values['DEFAULT']
 
         return image_info[key]
+
 
 class FileTokenImporter(object):
 
@@ -190,7 +201,10 @@ class FileTokenImporter(object):
         #print position, frame, channel, zslice, index
         filename_rel = self.dimension_lookup[position][frame][channel][zslice]
         filename_abs = os.path.join(self.path, filename_rel)
-        image = ccore.readImage(filename_abs, image_index=index)
+        if self.meta_data.pixel_type == UINT8:
+            image = ccore.readImage(filename_abs, index)
+        elif self.meta_data.pixel_type == UINT16:
+            image = ccore.readImageUInt16(filename_abs, index)
         return image
 
 
@@ -303,14 +317,14 @@ class FlatFileImporter(FileTokenImporter):
             position = image_coord[DIMENSION_NAME_POSITION]
             if not position in lookup:
                 lookup[position] = {}
-            time = df(image_coord, DIMENSION_NAME_TIME)
+            time = int(df(image_coord, DIMENSION_NAME_TIME))
             #time = image_coord[DIMENSION_NAME_TIME]
             if not time in lookup[position]:
                 lookup[position][time] = {}
             channel = df(image_coord, DIMENSION_NAME_CHANNEL)
             if not channel in lookup[position][time]:
                 lookup[position][time][channel] = {}
-            zslice = df(image_coord, DIMENSION_NAME_ZSLICE)
+            zslice = int(df(image_coord, DIMENSION_NAME_ZSLICE))
             if not zslice in lookup[position][time][channel]:
                 lookup[position][time][channel][zslice] = os.path.join(image_coord['path'], image_coord['filename'])
 

@@ -29,13 +29,15 @@ __all__ = ['DIMENSION_NAME_POSITION',
 #------------------------------------------------------------------------------
 # standard library imports:
 #
-import types
+import types, \
+       os
 
 #------------------------------------------------------------------------------
 # extension module imports:
 #
 from pdk.ordereddict import OrderedDict
 from pdk.datetimeutils import StopWatch
+from pdk.fileutils import safe_mkdirs
 
 #------------------------------------------------------------------------------
 # cecog imports:
@@ -44,6 +46,9 @@ from pdk.datetimeutils import StopWatch
 #------------------------------------------------------------------------------
 # constants:
 #
+UINT8 = 'UINT8'
+UINT16 = 'UINT16'
+PIXEL_TYPES = [UINT8, UINT16]
 
 DIMENSION_NAME_POSITION = 'position'
 DIMENSION_NAME_TIME = 'time'
@@ -201,14 +206,16 @@ class MetaImage(object):
     Image reading is implemented lazy.
     """
 
-    def __init__(self, image_container, position, time, channel, zslice,
-                 height, width):
+    def __init__(self, image_container=None, position=None, time=None,
+                 channel=None, zslice=None, height=None, width=None,
+                 format=UINT8):
         self.position = position
         self.time = time
         self.channel = channel
         self.zslice = zslice
         self.height = height
         self.width = width
+        self.format = format
         self.image_container = image_container
         self._img = None
 
@@ -225,6 +232,26 @@ class MetaImage(object):
                                                        self.channel,
                                                        self.zslice)
         return self._img
+
+    def set_image(self, img):
+        self._img = img
+
+    def format(self, suffix=None, show_position=True, show_time=True,
+               show_channel=True, show_zslice=True, sep='_'):
+        lstFormat = []
+        if bP:
+            lstFormat.append("P%s" % self.P)
+        if bT:
+            lstFormat.append("T%05d" % self.iT)
+        if bC:
+            lstFormat.append("C%s" % self.strC)
+        if bZ:
+            lstFormat.append("Z%02d" % self.iZ)
+        if strSuffix is not None:
+            lstFormat.append(strSuffix)
+        return strSep.join(lstFormat)
+
+
 
 #class Axis(object):
 #
@@ -291,7 +318,7 @@ class AxisIterator(object):
             for value in self.values:
                 params = tuple(dimensions) + (value,)
                 # pylint: disable-msg=W0142
-                yield self.image_container.get_meta_image(*params)
+                yield value, self.image_container.get_meta_image(*params)
 
 
 class ImageContainer(object):
@@ -323,6 +350,39 @@ class ImageContainer(object):
 
     def get_image(self, position, time, channel, zslice):
         return self.importer.get_image(position, time, channel, zslice)
+
+    @classmethod
+    def from_settings(cls, settings):
+        from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
+        from cecog.io.filetoken import (MetaMorphTokenImporter,
+                                        FlatFileImporter,
+                                        )
+        import cPickle as pickle
+        settings.set_section(SECTION_NAME_GENERAL)
+        path_input = settings.get2('pathin')
+        path_output = settings.get2('pathout')
+        path_output_dump = os.path.join(path_output, 'dump')
+        filename_pkl = os.path.join(path_output_dump, 'imagecontainer.pkl')
+
+        if os.path.isfile(filename_pkl):
+            f = file(filename_pkl, 'rb')
+            imagecontainer = pickle.load(f)
+            f.close()
+        else:
+            if settings.get2('image_import_namingschema'):
+                importer = MetaMorphTokenImporter(path_input)
+            elif settings.get2('image_import_structurefile'):
+                filename = settings.get2('structure_filename')
+                importer = FlatFileImporter(path_input, filename)
+            imagecontainer = cls(importer)
+
+            safe_mkdirs(path_output)
+            safe_mkdirs(path_output_dump)
+
+            f = file(filename_pkl, 'wb')
+            pickle.dump(imagecontainer, f, 1)
+            f.close()
+        return imagecontainer
 
 #-------------------------------------------------------------------------------
 # main:
