@@ -31,6 +31,7 @@ import os
 from pdk.fileutils import collect_files
 from pdk.iterator import unique
 from cecog import ccore
+from cecog.util.util import read_table
 
 #------------------------------------------------------------------------------
 # cecog imports:
@@ -42,6 +43,7 @@ from cecog.io.imagecontainer import (MetaData,
                                      DIMENSION_NAME_TIME,
                                      DIMENSION_NAME_CHANNEL,
                                      DIMENSION_NAME_ZSLICE,
+                                     META_INFO_TIMESTAMP,
                                      META_INFO_WELL,
                                      META_INFO_SUBWELL,
                                      UINT8,
@@ -130,22 +132,22 @@ class FileTokenImporter(object):
             if filename_short[0] not in self.ignore_prefixes:
                 result = self.token_handler.search_all(filename_short)
                 result['filename'] = filename_rel
-                result['timestamp'] = os.path.getmtime(filename)
                 token_list.append(result)
         return token_list
 
+    def _get_dimension_items(self):
+        token_list = self._build_token_list()
+        return token_list
 
     def _build_dimension_lookup(self):
-        token_list = self._build_token_list()
         lookup = {}
         has_xy = False
-
         positions = []
         times = []
         channels = []
         zslices = []
 
-        for item in token_list:
+        for item in self._get_dimension_items():
 
             if not has_xy:
                 has_xy = True
@@ -159,19 +161,35 @@ class FileTokenImporter(object):
             position = item[DIMENSION_NAME_POSITION]
             if not position in lookup:
                 lookup[position] = {}
-            time = item[DIMENSION_NAME_TIME]
+            time = int(item[DIMENSION_NAME_TIME])
             if not time in lookup[position]:
                 lookup[position][time] = {}
             channel = item[DIMENSION_NAME_CHANNEL]
             if not channel in lookup[position][time]:
                 lookup[position][time][channel] = {}
+
+            # leave zslice optional.
+            # in case of multi-images it must not be defined
             zslice = item[DIMENSION_NAME_ZSLICE]
+            if zslice == '':
+                zslice = None
+            if not zslice is None:
+                zslice = int(zslice)
             if not zslice in lookup[position][time][channel]:
                 lookup[position][time][channel][zslice] = item['filename']
 
-            self.meta_data.append_absolute_time(position,
-                                                time,
-                                                item['timestamp'])
+            # allow to read timestamps from file mtime if not present
+            if META_INFO_TIMESTAMP in item:
+                timestamp = item[META_INFO_TIMESTAMP]
+            else:
+                timestamp = os.path.getmtime(os.path.join(self.path,
+                                                          item['filename']))
+            self.meta_data.append_absolute_time(position, time, timestamp)
+
+            if META_INFO_WELL in item and META_INFO_SUBWELL in item:
+                well = item[META_INFO_WELL]
+                subwell = item[META_INFO_SUBWELL]
+                self.meta_data.append_well_subwell_info(position, well, subwell)
 
             if (self.has_multi_images and
                 self.multi_image == self.MULTIIMAGE_USE_ZSLICE):
@@ -187,9 +205,20 @@ class FileTokenImporter(object):
             channels.append(channel)
 
         self.meta_data.positions = tuple(sorted(unique(positions)))
-        self.meta_data.times = tuple(sorted(unique(times)))
-        self.meta_data.channels = tuple(sorted(unique(channels)))
-        self.meta_data.zslices = tuple(sorted(unique(zslices)))
+
+        # assure that all items of one dimension are of same length
+        times = set(times)
+        channels = set(channels)
+        zslices = set(zslices)
+        for p in lookup:
+            times = times.intersection(lookup[p].keys())
+            for t in times:
+                channels = channels.intersection(lookup[p][t].keys())
+                for c in channels:
+                    zslices = zslices.intersection(lookup[p][t][c].keys())
+        self.meta_data.times = sorted(times)
+        self.meta_data.channels = sorted(channels)
+        self.meta_data.zslices = sorted(zslices)
         return lookup
 
     def get_image(self, position, frame, channel, zslice):
@@ -231,12 +260,12 @@ class SimpleTokenImporter(FileTokenImporter):
 
 class MetaMorphTokenImporter(SimpleTokenImporter):
 
-    TOKEN_P = Token('P', type_code='i', length='+', prefix='',
+    TOKEN_P = Token('P', type_code='c', length='+', prefix='',
                     name=DIMENSION_NAME_POSITION)
     TOKEN_T = Token('T', type_code='i', length='+', prefix='',
                     name=DIMENSION_NAME_TIME)
     TOKEN_C = Token('C', type_code='c', length='+', prefix='',
-                    name=DIMENSION_NAME_CHANNEL, regex_type='\D')
+                    name=DIMENSION_NAME_CHANNEL)
     TOKEN_Z = Token('Z', type_code='i', length='+', prefix='',
                     name=DIMENSION_NAME_ZSLICE)
 
@@ -280,87 +309,23 @@ class FlatFileImporter(FileTokenImporter):
                              ignore_prefixes=ignore_prefixes,
                              multi_image=multi_image)
 
-    def _build_dimension_lookup(self, filename=None):
-        if filename is None:
-            filename = self.flat_filename
-
-        df = DefaultCoordinates()
-
-        lookup = {}
-
-        file = open(filename, 'r')
-        headers = None
-        has_xy = False
-
-        positions = []
-        times = []
-        channels = []
-        zslices = []
-
-        for line in file.xreadlines():
-
-            if headers is None:
-                headers = [x.strip() for x in line.split('\t')]
-                continue
-
-            image_coord = dict(zip(headers, [x.strip() for x in line.split('\t')]))
-            if not has_xy:
-                has_xy = True
-                info = ccore.ImageImportInfo(os.path.join(self.path,
-                                                    image_coord['path'],
-                                                    image_coord['filename']))
-                self.meta_data.dim_x = info.width
-                self.meta_data.dim_y = info.height
-                self.meta_data.pixel_type = info.pixel_type
-                self.has_multi_images = info.images > 1
-
-            position = image_coord[DIMENSION_NAME_POSITION]
-            if not position in lookup:
-                lookup[position] = {}
-            time = int(df(image_coord, DIMENSION_NAME_TIME))
-            #time = image_coord[DIMENSION_NAME_TIME]
-            if not time in lookup[position]:
-                lookup[position][time] = {}
-            channel = df(image_coord, DIMENSION_NAME_CHANNEL)
-            if not channel in lookup[position][time]:
-                lookup[position][time][channel] = {}
-            zslice = int(df(image_coord, DIMENSION_NAME_ZSLICE))
-            if not zslice in lookup[position][time][channel]:
-                lookup[position][time][channel][zslice] = os.path.join(image_coord['path'], image_coord['filename'])
-
-            timestamp = os.path.getmtime(os.path.join(self.path, os.path.join(image_coord['path'], image_coord['filename'])))
-            self.meta_data.append_absolute_time(position,
-                                                time,
-                                                timestamp)
-
-            if image_coord.has_key(META_INFO_WELL) and image_coord.has_key(META_INFO_SUBWELL):
-                well = image_coord[META_INFO_WELL]
-                subwell = image_coord[META_INFO_SUBWELL]
-
-            well = df(image_coord, META_INFO_WELL)
-            subwell = df(image_coord, META_INFO_SUBWELL)
-            self.meta_data.append_well_subwell_info(position, well, subwell)
-
-            if (self.has_multi_images and
-                self.multi_image == self.MULTIIMAGE_USE_ZSLICE):
-                if not zslice is None:
-                    raise ValueError('Multi-image assigned for zslice conflicts'
-                                     ' with zslice token in filename!')
-                zslices.extend(range(1,info.images+1))
-            else:
-                zslices.append(zslice)
-
-            positions.append(position)
-            times.append(time)
-            channels.append(channel)
-        file.close()
-
-        self.meta_data.positions = tuple(sorted(unique(positions)))
-        self.meta_data.times = tuple(sorted(unique(times)))
-        self.meta_data.channels = tuple(sorted(unique(channels)))
-        self.meta_data.zslices = tuple(sorted(unique(zslices)))
-
-        return lookup
+    def _get_dimension_items(self):
+        column_names, table = read_table(self.flat_filename, True)
+        test = ['path',
+                'filename',
+                DIMENSION_NAME_POSITION,
+                DIMENSION_NAME_TIME,
+                DIMENSION_NAME_CHANNEL,
+                DIMENSION_NAME_ZSLICE,
+                ]
+        for name in test:
+            if not name in column_names:
+                raise ValueError("Missing column '%s' in coordinate file "\
+                                 "'%s'." % (name, self.flat_filename))
+        for i in range(len(table)):
+            table[i]['filename'] = os.path.join(table[i]['path'],
+                                                table[i]['filename'])
+        return table
 
 
 class LsmImporter(object):

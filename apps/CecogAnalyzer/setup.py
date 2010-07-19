@@ -172,6 +172,13 @@ if sys.platform == 'darwin':
     # one more special py2app hack forcing Qt to load libs from the app only!
     shutil.copy('qt.conf', os.path.join(base_path, 'Contents/Resources'))
 
+    ## delete .DS_Store files
+    target = os.path.join(base_path, '')
+    for filepath in collect_files(target, ['.DS_Store'],
+                                  absolute=True, recursive=True):
+        print filepath
+        os.remove(filepath)
+
     ## delete ALL .py files from lib (and use .pyc/.pyo instead)
     target = os.path.join(base_path, 'Contents/Resources/lib/python2.6/')
     for filepath in collect_files(target, ['.py'],

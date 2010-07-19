@@ -63,4 +63,10 @@ class OutputFrame(_BaseFrame):
                         ('export_object_details', (1,0,1,1)),
                         ('export_track_data', (2,0,1,1)),
                         ], link='statistics', label='Statistics')
+        self.add_group('imagecontainer_create_file',
+                       [('imagecontainer_reuse_file',),
+                        ], layout='flow')
+        self.add_group('netcdf_create_file',
+                       [('netcdf_reuse_file',),
+                        ], layout='flow')
         self.add_expanding_spacer()

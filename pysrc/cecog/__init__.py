@@ -28,7 +28,7 @@ from cecog.traits.config import (init_constants,
 #-------------------------------------------------------------------------------
 # constants:
 #
-VERSION_NUM = (1, 0, 7)
+VERSION_NUM = (1, 1, 0)
 VERSION = '.'.join([str(digit) for digit in VERSION_NUM])
 
 JOB_CONTROL_SUSPEND = 'Suspend'

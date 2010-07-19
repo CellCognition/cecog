@@ -83,7 +83,8 @@ def init_application_support_path():
             path = '~/Library/Application Support'
             path = os.path.expanduser(path)
         elif is_windows:
-            pass
+            path = '~/Application Data'
+            path = os.path.expanduser(path)
         elif is_linux:
             pass
         path = os.path.join(path, folder)

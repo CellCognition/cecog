@@ -241,8 +241,12 @@ class PositionAnalyzer(object):
 
         max_frames = max(self.lstAnalysisFrames)
         filename_netcdf = os.path.join(self._path_dump, '%s.nc4' % self.P)
+        self.oSettings.set_section('Output')
         oTimeHolder = TimeHolder(self.P, self.tplChannelIds, filename_netcdf,
-                                 self._meta_data, self.oSettings)
+                                 self._meta_data, self.oSettings,
+                                 create_nc4=self.oSettings.get2('netcdf_create_file'),
+                                 reuse_nc4=self.oSettings.get2('netcdf_reuse_file')
+                                 )
 
         self.oSettings.set_section('Tracking')
         # structure and logic to handle object trajectories
@@ -938,6 +942,12 @@ class AnalyzerCore(object):
             # FIXME: if the resulting .ARFF file is trained directly from
             # Python SVM (instead of easy.py) NO leading ID needs to be inserted
             self.oObjectLearner.hasZeroInsert = False
+
+            # FIXME:
+            lookup = {'primary'   : 'Primary',
+                      'secondary' : 'Secondary',
+                      }
+            self.oObjectLearner.channel_name = lookup[self.oSettings.get2('collectsamples_prefix')]
 
             strAnnotationsPath = self.oObjectLearner.dctEnvPaths['annotations']
             for strFilename in os.listdir(strAnnotationsPath):

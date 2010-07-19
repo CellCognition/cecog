@@ -77,18 +77,23 @@ class GeneralFrame(_BaseFrame):
         btn = QPushButton('Load settings...', self._control)
         layout.addWidget(btn)
         btn.clicked.connect(self.parent().main_window._on_file_open)
-        btn = QPushButton('Save settings', self._control)
-        layout.addWidget(btn)
-        btn.clicked.connect(self.parent().main_window._on_file_save)
+        self._btn_save = QPushButton('Save settings', self._control)
+        self._btn_save.setEnabled(False)
+        layout.addWidget(self._btn_save)
+        self._btn_save.clicked.connect(self.parent().main_window._on_file_save)
         btn = QPushButton('Save settings as...', self._control)
         layout.addWidget(btn)
         btn.clicked.connect(self.parent().main_window._on_file_save_as)
         layout.addStretch()
+        self.parent().main_window.modified.connect(self._on_modified)
 
         help_button = QToolButton(self._control)
         help_button.setIcon(QIcon(':question_mark'))
         handler = lambda x: lambda : self._on_show_help(x)
         layout.addWidget(help_button)
         help_button.clicked.connect(handler('controlpanel'))
+
+    def _on_modified(self, changed):
+        self._btn_save.setEnabled(changed)
 
 

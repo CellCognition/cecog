@@ -88,13 +88,15 @@ class AnalyzerMainWindow(QMainWindow):
     NAME_FILTERS = ['Settings files (*.conf)',
                     'All files (*.*)']
 
+    modified = pyqtSignal('bool')
+
     def __init__(self):
         QMainWindow.__init__(self)
         self._debug = False
         self._imagecontainer = None
         self._meta_data = None
 
-        self.setWindowTitle(self.TITLE)
+        self.setWindowTitle(self.TITLE+'[*]')
 
         central_widget = QFrame(self)
         self.setCentralWidget(central_widget)
@@ -115,6 +117,7 @@ class AnalyzerMainWindow(QMainWindow):
                                          shortcut=QKeySequence.Save,
                                          slot=self._on_file_save
                                          )
+        self.action_save = action_save
         action_save_as = self.create_action('&Save Settings As...',
                                             shortcut=QKeySequence.SaveAs,
                                             slot=self._on_file_save_as
@@ -271,6 +274,10 @@ class AnalyzerMainWindow(QMainWindow):
             else:
                 qApp.valid_R_version = True
 
+    def settings_changed(self, changed):
+        self.setWindowModified(changed)
+        self.action_save.setEnabled(changed)
+        self.modified.emit(changed)
 
     def _add_page(self, widget):
         button = QListWidgetItem(self._selection)
@@ -320,18 +327,14 @@ class AnalyzerMainWindow(QMainWindow):
     def _check_settings_saved(self):
         if self.isWindowModified():
             result = question(self, 'Settings have been modified.',
-                              info='Do you want to save settings before exit?',
+                              info='Do you want to save settings?',
                               modal=True, show_cancel=True,
                               default=QMessageBox.Yes,
                               escape=QMessageBox.Cancel)
+            if result == QMessageBox.Yes:
+                self.save_settings()
         else:
             result = QMessageBox.No
-
-        if result == QMessageBox.Yes:
-            self.save_settings()
-            qApp.quit()
-        elif result == QMessageBox.No:
-            qApp.quit()
         return result
 
     def _exit_app(self):
@@ -396,10 +399,10 @@ class AnalyzerMainWindow(QMainWindow):
             status('Settings not successfully loaded.')
         else:
             self._settings_filename = filename
-            self.setWindowTitle('%s - %s' % (self.TITLE, filename))
+            self.setWindowTitle('%s - %s[*]' % (self.TITLE, filename))
             for widget in self._tabs:
                 widget.update_input()
-            self.setWindowModified(False)
+            self.settings_changed(False)
             status('Settings successfully loaded.')
 
     def _write_settings(self, filename):
@@ -415,8 +418,8 @@ class AnalyzerMainWindow(QMainWindow):
             status('Settings not successfully saved.')
         else:
             self._settings_filename = filename
-            self.setWindowTitle('%s - %s' % (self.TITLE, filename))
-            self.setWindowModified(False)
+            self.setWindowTitle('%s - %s[*]' % (self.TITLE, filename))
+            self.settings_changed(False)
             status('Settings successfully saved.')
 
     def _on_about(self):
@@ -478,17 +481,18 @@ class AnalyzerMainWindow(QMainWindow):
 
     @pyqtSlot()
     def _on_file_open(self):
-        dialog = QFileDialog(self)
-        dialog.setFileMode(QFileDialog.ExistingFile)
-        dialog.setAcceptMode(QFileDialog.AcceptOpen)
-        dialog.setNameFilters(self.NAME_FILTERS)
-        if not self._settings_filename is None:
-            filename = convert_package_path(self._settings_filename)
-            if os.path.isfile(filename):
-                dialog.setDirectory(os.path.dirname(filename))
-        if dialog.exec_():
-            filename = str(dialog.selectedFiles()[0])
-            self._read_settings(filename)
+        if self._check_settings_saved() != QMessageBox.Cancel:
+            dialog = QFileDialog(self)
+            dialog.setFileMode(QFileDialog.ExistingFile)
+            dialog.setAcceptMode(QFileDialog.AcceptOpen)
+            dialog.setNameFilters(self.NAME_FILTERS)
+            if not self._settings_filename is None:
+                filename = convert_package_path(self._settings_filename)
+                if os.path.isfile(filename):
+                    dialog.setDirectory(os.path.dirname(filename))
+            if dialog.exec_():
+                filename = str(dialog.selectedFiles()[0])
+                self._read_settings(filename)
 
     @pyqtSlot()
     def _on_file_save(self):
@@ -586,7 +590,8 @@ if __name__ == "__main__":
     if is_app:
         filename = os.path.join(get_package_path(),
                                 'Data/Cecog_settings/demo_settings.conf')
-        main._read_settings(filename)
+        if os.path.isfile(filename):
+            main._read_settings(filename)
         show_html('_startup')
     else:
         #filename = '/Users/miheld/data/CellCognition/demo_data/cluster_test.conf'

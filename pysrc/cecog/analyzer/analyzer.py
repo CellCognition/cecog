@@ -160,8 +160,8 @@ class TimeHolder(OrderedDict):
         self.channels = channels
         self._meta_data = meta_data
 
-        create_nc4=False
-        reuse_nc4=False
+        #create_nc4=False
+        #reuse_nc4=False
 
         frames = sorted(list(meta_data.times))
         channels = sorted(list(meta_data.channels))
@@ -183,6 +183,9 @@ class TimeHolder(OrderedDict):
             # compare current and saved settings and decide which data is to
             # process again by setting the *_finished variables to zero
 
+            valid = {'primary'   : [True, True],
+                     'secondary' : [True, True],
+                     }
             for name in ['primary', 'secondary']:
                 channel_id = settings2.get(SECTION_NAME_OBJECTDETECTION,
                                            '%s_channelid' % name)
@@ -190,12 +193,18 @@ class TimeHolder(OrderedDict):
                 if (not settings.compare(settings2, SECTION_NAME_OBJECTDETECTION,
                                          '%s_image' % name) or
                     not settings.compare(settings2, SECTION_NAME_OBJECTDETECTION,
-                                         'secondary_registration')):
+                                         'secondary_registration') or
+                    not valid[name][0]):
                     dataset.variables['raw_images_finished'][:,idx] = 0
+                    valid['primary'] = [False, False]
+                    valid['secondary'] = [False, False]
                 idx = dataset.variables['region_channels'][:] == name
-                if not settings.compare(settings2, SECTION_NAME_OBJECTDETECTION,
-                                        '%s_segmentation' % name):
+                if (not settings.compare(settings2, SECTION_NAME_OBJECTDETECTION,
+                                        '%s_segmentation' % name) or
+                    not valid[name][1]):
                     dataset.variables['label_images_finished'][:,idx] = 0
+                    valid['primary'] = [False, False]
+                    valid['secondary'] = [False, False]
 
 
         elif create_nc4:
@@ -659,7 +668,7 @@ class CellAnalyzer(PropertyManager):
 
     def collectObjects(self, P, lstReader, oLearner, byTime=True):
 
-        channel_name = oLearner.strChannelId
+        #channel_name = oLearner.strChannelId
         strRegionId = oLearner.strRegionId
         img_rgb = None
 
@@ -678,7 +687,8 @@ class CellAnalyzer(PropertyManager):
 #                oPrimaryChannel = oChannel2
         self.process(apply = False)
 
-        oChannel = self._channel_registry[channel_name]
+        print self._channel_registry
+        oChannel = self._channel_registry[oLearner.channel_name]
         oContainer = oChannel.getContainer(strRegionId)
         objects = oContainer.getObjects()
 

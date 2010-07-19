@@ -56,6 +56,7 @@ DIMENSION_NAME_CHANNEL = 'channel'
 DIMENSION_NAME_ZSLICE = 'zslice'
 DIMENSION_NAME_HEIGHT = 'height'
 DIMENSION_NAME_WIDTH = 'width'
+META_INFO_TIMESTAMP = 'timestamp'
 META_INFO_WELL = 'well'
 META_INFO_SUBWELL = 'subwell'
 
@@ -354,6 +355,7 @@ class ImageContainer(object):
     @classmethod
     def from_settings(cls, settings):
         from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
+        from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
         from cecog.io.filetoken import (MetaMorphTokenImporter,
                                         FlatFileImporter,
                                         )
@@ -364,7 +366,14 @@ class ImageContainer(object):
         path_output_dump = os.path.join(path_output, 'dump')
         filename_pkl = os.path.join(path_output_dump, 'imagecontainer.pkl')
 
-        if os.path.isfile(filename_pkl):
+        create_imagecontainer = settings.get(SECTION_NAME_OUTPUT,
+                                             'imagecontainer_create_file')
+        reuse_imagecontainer = settings.get(SECTION_NAME_OUTPUT,
+                                            'imagecontainer_reuse_file')
+        if not create_imagecontainer:
+            reuse_imagecontainer = False
+
+        if os.path.isfile(filename_pkl) and reuse_imagecontainer:
             f = file(filename_pkl, 'rb')
             imagecontainer = pickle.load(f)
             f.close()
@@ -379,9 +388,10 @@ class ImageContainer(object):
             safe_mkdirs(path_output)
             safe_mkdirs(path_output_dump)
 
-            f = file(filename_pkl, 'wb')
-            pickle.dump(imagecontainer, f, 1)
-            f.close()
+            if create_imagecontainer:
+                f = file(filename_pkl, 'wb')
+                pickle.dump(imagecontainer, f, 1)
+                f.close()
         return imagecontainer
 
 #-------------------------------------------------------------------------------

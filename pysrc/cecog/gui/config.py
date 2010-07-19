@@ -60,7 +60,7 @@ class GuiConfigSettings(ConfigSettings):
     def set(self, section_name, trait_name, value):
         ConfigSettings.set(self, section_name, trait_name, value)
         if not self._parent is None:
-            self._parent.setWindowModified(True)
+            self._parent.settings_changed(True)
 
 
 #-------------------------------------------------------------------------------
