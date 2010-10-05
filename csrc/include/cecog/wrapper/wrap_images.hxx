@@ -56,8 +56,6 @@
 #include "cecog/inspectors.hxx"
 #include "cecog/transforms.hxx"
 
-#include "cecog/seededregion.hxx"
-
 namespace vigra
 {
   typedef BasicImageView< UInt8 >  UInt8ImageView;
@@ -346,44 +344,12 @@ pyRgbImageToArray(IMAGE & img, bool copy=true)
   }
 }
 
-template <class IMAGE1, class IMAGE2>
-PyObject * pyDiscMedian(IMAGE1 const &imgIn, int radius)
-{
-  std::auto_ptr< IMAGE2 > imgPtr(new IMAGE2(imgIn.size()));
-  vigra::discMedian(srcImageRange(imgIn), destImage(*imgPtr), radius);
-  return incref(object(imgPtr).ptr());
-}
-
-template <class IMAGE1, class IMAGE2>
-PyObject * pyToggleMapping(IMAGE1 const &imgIn, int size)
-{
-  std::auto_ptr< IMAGE2 > imgPtr(new IMAGE2(imgIn.size()));
-  using namespace cecog::morpho;
-  structuringElement2D se(WITHCENTER8, size);
-  ImFastToggleMapping(srcImageRange(imgIn), destImage(*imgPtr), se);
-  return incref(object(imgPtr).ptr());
-}
 
 template <class IMAGE1, class IMAGE2>
 PyObject * pyGaussian(IMAGE1 const &imgIn, int size)
 {
   std::auto_ptr< IMAGE2 > imgPtr(new IMAGE2(imgIn.size()));
   vigra::gaussianSmoothing(srcImageRange(imgIn), destImage(*imgPtr), (double)size);
-  return incref(object(imgPtr).ptr());
-}
-
-template <class IMAGE1, class IMAGE2>
-PyObject * pyThreshold(IMAGE1 const &imgIn,
-                       typename IMAGE1::PixelType lower,
-                       typename IMAGE1::PixelType higher,
-                       typename IMAGE2::PixelType noresult,
-                       typename IMAGE2::PixelType yesresult)
-{
-  std::auto_ptr< IMAGE2 > imgPtr(new IMAGE2(imgIn.size()));
-  vigra::transformImage(srcImageRange(imgIn), destImage(*imgPtr),
-                        vigra::Threshold<typename IMAGE1::PixelType,
-                                         typename IMAGE2::PixelType>
-                        (lower, higher, noresult, yesresult));
   return incref(object(imgPtr).ptr());
 }
 
@@ -528,12 +494,6 @@ list pyImageHistogram(IMAGE1 const &imin, unsigned int valueCount)
    return h;
 }
 
-template <class IMAGE>
-void pyHoleFilling(IMAGE & img_bin, bool eightneigborhood=false)
-{
-   cecog::holeFilling(img_bin, eightneigborhood);
-}
-
 template <class Image1, class Image2>
 PyObject * pyScaleImage1(Image1 const &imgIn, vigra::Diff2D const &size, std::string method="linear")
 {
@@ -613,25 +573,14 @@ void pyBackgroundSubtraction(IMAGE1 const & imin, IMAGE2 & imout, unsigned int r
 }
 
 
-template <class IMAGE1, class IMAGE2>
-unsigned int pyLabelImage(IMAGE1 const & img1,
-                          IMAGE2 & img2,
-                          bool eightNbh, typename IMAGE1::PixelType background)
-{
-  return vigra::labelImageWithBackground(srcImageRange(img1),
-                                         destImage(img2),
-                                         eightNbh,
-                                         background);
-}
-
 template <class PixelType>
 inline static PyObject * pyReadImage(std::string strFilename, int imageIndex=-1)
 //inline static PyObject * pyReadImage(std::string strFilename)
 {
   typedef vigra::BasicImage< PixelType > ImageType;
   vigra::ImageImportInfo oInfo(strFilename.c_str());
-  if (imageIndex > -1)
-    oInfo.setImageIndex(imageIndex);
+  //if (imageIndex > -1)
+  //  oInfo.setImageIndex(imageIndex);
   std::auto_ptr< ImageType > imgPtr(new ImageType(oInfo.size()));
   vigra::importImage(oInfo, vigra::destImage(*imgPtr));
   return incref(object(imgPtr).ptr());
@@ -718,13 +667,15 @@ template <class VALUE_TYPE>
 std::string RGBValue__str__(vigra::RGBValue<VALUE_TYPE> const & rgbvalue)
 {
   char s[100];
-  if (boost::is_same<VALUE_TYPE, uint8>() || boost::is_same<VALUE_TYPE, unsigned char>())
+  if (boost::is_same<VALUE_TYPE, vigra::UInt8>() || boost::is_same<VALUE_TYPE, unsigned char>())
   {
     long int hex = (rgbvalue.red() << 16) + (rgbvalue.green() << 8) + rgbvalue.blue();
-    sprintf(s, "RGBValue(<%d,%d,%d> = #%06X)", rgbvalue.red(), rgbvalue.green(), rgbvalue.blue(), hex);
+    sprintf(s, "RGBValue(<%d,%d,%d> = #%06X)",
+            rgbvalue.red(), rgbvalue.green(), rgbvalue.blue(), (int)hex);
   }
   else
-    sprintf(s, "RGBValue(%d,%d,%d)", rgbvalue.red(), rgbvalue.green(), rgbvalue.blue());
+    sprintf(s, "RGBValue(%d,%d,%d)",
+            rgbvalue.red(), rgbvalue.green(), rgbvalue.blue());
   return std::string(s);
 }
 
@@ -983,67 +934,6 @@ void pyDrawContour(ImageOrView1 const &imgIn, ImageOrView2 &imgOut, typename Ima
   cecog::drawContour(srcImageRange(imgIn), destImage(imgOut), value, quad);
 }
 
-template <class Image1, class Image2>
-PyObject * pyWindowAverageThreshold(Image1 const &imgIn,
-                                    unsigned size,
-                                    typename Image1::value_type contrastLimit=vigra::NumericTraits<typename Image1::value_type>::zero(),
-                                    typename Image1::value_type lower=vigra::NumericTraits<typename Image1::value_type>::min(),
-                                    typename Image1::value_type higher=vigra::NumericTraits<typename Image1::value_type>::max())
-{
-  std::auto_ptr< Image2 > imgPtr(new Image2(imgIn.size()));
-  cecog::windowAverageThreshold(imgIn, *imgPtr, size, contrastLimit, lower, higher);
-  return incref(object(imgPtr).ptr());
-}
-
-template <class Image1, class Image2>
-PyObject * pyWindowStdThreshold(Image1 const &imgIn,
-                                unsigned size,
-                                float threshold,
-                                typename Image1::value_type contrastLimit=vigra::NumericTraits<typename Image1::value_type>::zero())
-{
-  std::auto_ptr< Image2 > imgPtr(new Image2(imgIn.size()));
-  cecog::windowStdThreshold(imgIn, *imgPtr, size, threshold, contrastLimit);
-  return incref(object(imgPtr).ptr());
-}
-
-template <class Image1, class Image2, class Image3, class RegionStatisticsArray>
-PyObject * pySeededRegionExpansion(Image1 const &imgIn,
-                                   Image2 const &imgSeeds,
-                                   const cecog::SRGType srgType,
-                                   unsigned labelNumber,
-                                   typename RegionStatisticsArray::value_type::cost_type costThreshold,
-                                   int expansionRounds,
-                                   int sepExpandRounds=0)
-{
-  std::auto_ptr< Image3 > imgPtr(new Image3(imgIn.size()));
-  RegionStatisticsArray stats(labelNumber);
-  cecog::seededRegionExpansion(srcImageRange(imgIn),
-                              maskImage(imgSeeds),
-                              destImage(*imgPtr),
-                              srgType,
-                              stats,
-                              costThreshold,
-                              expansionRounds,
-                              sepExpandRounds);
-  return incref(object(imgPtr).ptr());
-}
-
-template <class Image1, class Image2, class Image3, class RegionStatisticsArray>
-PyObject * pySeededRegionShrinking(Image1 const &imgIn,
-                                   Image2 const &imgSeeds,
-                                   unsigned labelNumber,
-                                   int shrinkingRounds)
-{
-  std::auto_ptr< Image3 > imgPtr(new Image3(imgIn.size()));
-  RegionStatisticsArray stats(labelNumber);
-  cecog::seededRegionShrinking(srcImageRange(imgIn),
-                              maskImage(imgSeeds),
-                              destImage(*imgPtr),
-                              stats,
-                              shrinkingRounds);
-  return incref(object(imgPtr).ptr());
-}
-
 
 template <class Image1, class Image2>
 void pyCopyImage(Image1 const &imgIn, Image2 &imgOut)
@@ -1229,14 +1119,14 @@ static void wrap_images()
 
 
   class_< vigra::ImageImportInfo, boost::noncopyable >("ImageImportInfo", init<const char *>())
-    .def(init<const char *, unsigned int>())
+    //.def(init<const char *, unsigned int>())
     .add_property("file_name", &vigra::ImageImportInfo::getFileName)
     .add_property("file_type", &vigra::ImageImportInfo::getFileType)
     .add_property("width", &vigra::ImageImportInfo::width)
     .add_property("height", &vigra::ImageImportInfo::height)
     .add_property("bands", &vigra::ImageImportInfo::numBands)
-    .add_property("index", &vigra::ImageImportInfo::getImageIndex, &vigra::ImageImportInfo::setImageIndex)
-    .add_property("images", &vigra::ImageImportInfo::numImages)
+    //.add_property("index", &vigra::ImageImportInfo::getImageIndex, &vigra::ImageImportInfo::setImageIndex)
+    //.add_property("images", &vigra::ImageImportInfo::numImages)
     .add_property("size", &vigra::ImageImportInfo::size)
     .add_property("is_grayscale", &vigra::ImageImportInfo::isGrayscale)
     .add_property("is_color", &vigra::ImageImportInfo::isColor)
@@ -1287,53 +1177,53 @@ static void wrap_images()
 //      ("strFilename"), "Read RGB image (3xUInt8) from file.");
 
   def("writeImage", pyWriteImage< vigra::UInt8Image >,
-      ("imgIn", "strFilename", arg("strCompression")="100"), "Write UInt8 image to file.");
+      ("image", "filename", arg("compression")="100"), "Write UInt8 image to file.");
   def("writeImage", pyWriteImage< vigra::UInt16Image >,
-      ("imgIn", "strFilename", arg("strCompression")="100"), "Write UInt16 image to file.");
+      ("image", "filename", arg("compression")="100"), "Write UInt16 image to file.");
   def("writeImage", pyWriteImage< vigra::Int16Image >,
-      ("imgIn", "strFilename", arg("strCompression")="100"), "Write Int16 image to file.");
+      ("image", "filename", arg("compression")="100"), "Write Int16 image to file.");
   def("writeImage", pyWriteImage< vigra::UInt32Image >,
-      ("imgIn", "strFilename", arg("strCompression")="100"), "Write UInt32 image to file.");
+      ("image", "filename", arg("compression")="100"), "Write UInt32 image to file.");
   def("writeImage", pyWriteImage< vigra::Int32Image >,
-      ("imgIn", "strFilename", arg("strCompression")="100"), "Write Int32 image to file.");
+      ("image", "filename", arg("compression")="100"), "Write Int32 image to file.");
   def("writeImage", pyWriteImage< vigra::UInt8RGBImage >,
-      ("imgIn", "strFilename", arg("strCompression")="100"), "Write RGB image (3xUInt8) to file.");
+      ("image", "filename", arg("compression")="100"), "Write RGB image (3xUInt8) to file.");
   def("writeImage", pyWriteImage< vigra::FImage >,
-      ("imgIn", "strFilename", arg("strCompression")="100"), "Write float image to file.");
+      ("image", "filename", arg("compression")="100"), "Write float image to file.");
 
   def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::UInt8 > >,
-      ("imgIn", "strFilename", arg("strCompression")="100"), "Write UInt8 image to file.");
+      ("image", "filename", arg("compression")="100"), "Write UInt8 image to file.");
   def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::UInt16 > >,
-      ("imgIn", "strFilename", arg("strCompression")="100"), "Write UInt16 image to file.");
+      ("image", "filename", arg("compression")="100"), "Write UInt16 image to file.");
   def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::Int16 > >,
-      ("imgIn", "strFilename", arg("strCompression")="100"), "Write Int16 image to file.");
+      ("image", "filename", arg("compression")="100"), "Write Int16 image to file.");
   def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::UInt32 > >,
-      ("imgIn", "strFilename", arg("strCompression")="100"), "Write UInt32 image to file.");
+      ("image", "filename", arg("compression")="100"), "Write UInt32 image to file.");
   def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::Int32 > >,
-      ("imgIn", "strFilename", arg("strCompression")="100"), "Write Int32 image to file.");
+      ("image", "filename", arg("compression")="100"), "Write Int32 image to file.");
   def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::RGBValue< vigra::UInt8 > > >,
-      ("imgIn", "strFilename", arg("strCompression")="100"), "Write RGB image (3xUInt8) to file.");
+      ("image", "filename", arg("compression")="100"), "Write RGB image (3xUInt8) to file.");
 
 
 
   wrapImage<vigra::UInt8>("Image");
   //wrapImage<vigra::UInt8>("ImageUInt8");
-  wrapImage<vigra::UInt16>("ImageUInt16");
-  wrapImage<vigra::Int16>("ImageInt16");
-  wrapImage<vigra::UInt32>("ImageUInt32");
-  wrapImage<vigra::Int32>("ImageInt32");
+  wrapImage<vigra::UInt16>("UInt16Image");
+  wrapImage<vigra::Int16>("Int16Image");
+  wrapImage<vigra::UInt32>("UInt32Image");
+  wrapImage<vigra::Int32>("Int32Image");
 
-  wrapImage<float>("ImageFloat");
+  wrapImage<float>("FloatImage");
 
-  wrapImageView<vigra::UInt8>("ImageViewUInt8");
-  wrapImageView<vigra::UInt16>("ImageViewUInt16");
-  wrapImageView<vigra::Int16>("ImageViewInt16");
-  wrapImageView<vigra::UInt32>("ImageViewUInt32");
-  wrapImageView<vigra::Int32>("ImageViewInt32");
+  wrapImageView<vigra::UInt8>("UInt8ImageView");
+  wrapImageView<vigra::UInt16>("UInt16ImageView");
+  wrapImageView<vigra::Int16>("Int16ImageView");
+  wrapImageView<vigra::UInt32>("UInt32ImageView");
+  wrapImageView<vigra::Int32>("Int32ImageView");
 
   //pyWrapImage<int>("IImage");
-  wrapRGBImage<vigra::UInt8>("ImageRGB");
-  wrapRGBImageView<vigra::UInt8>("ImageViewRGB");
+  wrapRGBImage<vigra::UInt8>("RGBImage");
+  wrapRGBImageView<vigra::UInt8>("RGBImageView");
 
   //wrapRGBImage<uint8>("ImageRGB");
 
@@ -1367,38 +1257,7 @@ static void wrap_images()
   def("numpy_to_image", pyNumpyToImage, (arg("array"), arg("copy")=false), "Converts a numpy.ndarray to a VIGRA image.");
 
   //def("imageToArray", pyImageToArray<vigra::BImage>);
-  def("rgbImageToArray", pyRgbImageToArray<vigra::BasicImage< vigra::RGBValue<uint8> > >);
-
-
-  def("labelImage", pyLabelImage<vigra::BImage, vigra::Int16Image>);
-  def("holeFilling", pyHoleFilling<vigra::BImage>, (arg("img_bin"), arg("eightneighborhood")=false));
-
-
-  def("windowAverageThreshold", pyWindowAverageThreshold<vigra::BImage, vigra::BImage>,
-      (arg("imgIn"), arg("size"), arg("contrastLimit")=0, arg("lower")=0, arg("higher")=255),
-      "Window Average Threshold of window size.");
-
-  def("windowStdThreshold", pyWindowStdThreshold<vigra::BImage, vigra::BImage>,
-      (arg("imgIn"), arg("size"), arg("threshold"), arg("contrastLimit")=0),
-      "Window Stddev Threshold of window size and stddev threshold.");
-
-  //  def("localAdaptiveThreshold_NewLimit", cecog::localAdaptiveThresholdNewLimit<vigra::BImage, vigra::BImage>);
-
-  //def("localThreshold", pyLocalThreshold<vigra::BImage, vigra::BImage>);
-  //def("globalThreshold", pyGlobalThreshold<vigra::BImage, vigra::BImage>);
-  //def("backgroundSubtraction", pyBackgroundSubtraction<vigra::BImage, vigra::BImage>);
-
- // def("imageMean", pyImageMean< vigra::BImage >);
- // def("imageMax", pyImageMax< vigra::BImage >);
- // def("imageMin", pyImageMin< vigra::BImage >);
-
-  def("discMedian", pyDiscMedian<vigra::UInt8Image, vigra::UInt8Image>);
-  def("discMedian", pyDiscMedian<vigra::UInt16Image, vigra::UInt16Image>);
-  def("discMedian", pyDiscMedian<vigra::Int16Image, vigra::Int16Image>);
-
-  def("toggleMapping", pyToggleMapping<vigra::UInt8Image, vigra::UInt8Image>);
-  def("toggleMapping", pyToggleMapping<vigra::UInt16Image, vigra::UInt16Image>);
-  def("toggleMapping", pyToggleMapping<vigra::Int16Image, vigra::Int16Image>);
+  def("rgbImageToArray", pyRgbImageToArray< vigra::UInt8RGBImage >);
 
   def("gaussianFilter", pyGaussian<vigra::UInt8Image, vigra::UInt8Image>);
   def("gaussianFilter", pyGaussian<vigra::UInt16Image, vigra::UInt16Image>);
@@ -1421,12 +1280,9 @@ static void wrap_images()
 //  def("binResampleImage", pyBinResampleImage< vigra::BImage, vigra::BImage >, (arg("imgIn"), arg("imgOut"), arg("iFactor")), "n times image binning and implicit resampling");
 
 
-  def("watershedShape", cecog::watershedShape);
-  def("watershedIntensity", cecog::watershedIntensity);
-
-  def("linearTransform", pyLinearTransform<vigra::FImage, vigra::BImage>);
-  def("linearTransform", pyLinearTransform<vigra::BImage, vigra::BImage>);
-  def("linearTransform", pyLinearTransform<vigra::UInt16Image, vigra::BImage>);
+  def("linearTransform", pyLinearTransform<vigra::FImage, vigra::UInt8Image>);
+  def("linearTransform", pyLinearTransform<vigra::UInt8Image, vigra::UInt8Image>);
+  def("linearTransform", pyLinearTransform<vigra::UInt16Image, vigra::UInt8Image>);
   def("linearTransformU16", pyLinearTransform<vigra::UInt16Image, vigra::UInt16Image>);
 
   def("linearTransform2", pyLinearTransform2<vigra::FImage, vigra::UInt8Image>);
@@ -1435,11 +1291,11 @@ static void wrap_images()
 
   def("linearTransform3", pyLinearTransform2<vigra::UInt16Image, vigra::UInt8Image>);
 
-  def("linearRangeMapping", pyLinearRangeMapping<vigra::BImage, vigra::BImage>);
+  def("linearRangeMapping", pyLinearRangeMapping<vigra::UInt8Image, vigra::UInt8Image>);
   //def("linearRangeMapping", pyLinearRangeMapping<vigra::UInt16Image, vigra::BImage>);
   def("linearRangeMapping", pyLinearRangeMapping<vigra::UInt16Image, vigra::UInt16Image>);
 
-  def("histogramEqualization", pyHistogramEqualization<vigra::BImage>);
+  def("histogramEqualization", pyHistogramEqualization<vigra::UInt8Image>);
   def("histogramEqualization", pyHistogramEqualization<vigra::UInt16Image>);
   def("histogramEqualization", pyHistogramEqualization<vigra::Int16Image>);
 
@@ -1461,17 +1317,17 @@ static void wrap_images()
   def("findMinmax", pyFindMinmax< vigra::UInt8Image, vigra::UInt8Image >,
       args("imgIn", "imgLabels", "iLabelCount"), "Return dict of tuples(min,max) for all labels of imgLabels measured in imIn.");
 
-  def("drawContour", pyDrawContour< vigra::BImage, vigra::BRGBImage >, (arg("imgIn"), arg("imgOut"), arg("oValue"), arg("bQuad")=false), "Contours of input image. (8bit->RGB)");
-  def("drawContour", pyDrawContour< vigra::BImage, vigra::BImage >, (arg("imgIn"), arg("imgOut"), arg("oValue"), arg("bQuad")=false), "Contours of input image. (8bit->8bit)");
-  def("drawContour", pyDrawContour< vigra::Int16Image, vigra::BRGBImage >, (arg("imgIn"), arg("imgOut"), arg("oValue"), arg("bQuad")=false), "Contours of input image. (8bit->RGB)");
-  def("drawContour", pyDrawContour< vigra::Int16Image, vigra::BImage >, (arg("imgIn"), arg("imgOut"), arg("oValue"), arg("bQuad")=false), "Contours of input image. (8bit->8bit)");
+  def("drawContour", pyDrawContour< vigra::UInt8Image, vigra::UInt8RGBImage >, (arg("imgIn"), arg("imgOut"), arg("oValue"), arg("bQuad")=false), "Contours of input image. (8bit->RGB)");
+  def("drawContour", pyDrawContour< vigra::UInt8Image, vigra::UInt8Image >, (arg("imgIn"), arg("imgOut"), arg("oValue"), arg("bQuad")=false), "Contours of input image. (8bit->8bit)");
+  def("drawContour", pyDrawContour< vigra::Int16Image, vigra::UInt8RGBImage >, (arg("imgIn"), arg("imgOut"), arg("oValue"), arg("bQuad")=false), "Contours of input image. (8bit->RGB)");
+  def("drawContour", pyDrawContour< vigra::Int16Image, vigra::UInt8Image >, (arg("imgIn"), arg("imgOut"), arg("oValue"), arg("bQuad")=false), "Contours of input image. (8bit->8bit)");
   //def("findStdDev", pyFindStdDev< vigra::BasicImageView<vigra::UInt8>, vigra::BasicImageView<vigra::Int32> >);
 
-  def("copyImage", pyCopyImage< vigra::BImage, vigra::BImage >);
+  def("copyImage", pyCopyImage< vigra::UInt8Image, vigra::UInt8Image >);
   def("copyImage", pyCopyImage< vigra::Int16Image, vigra::Int16Image >);
   def("copyImage", pyCopyImage< vigra::UInt16Image, vigra::UInt16Image >);
-  def("copyImage", pyCopyImage< vigra::BRGBImage, vigra::BRGBImage >);
-  def("copyImage", pyCopyImageGray< vigra::BRGBImage, vigra::BImage >);
+  def("copyImage", pyCopyImage< vigra::UInt8RGBImage, vigra::UInt8RGBImage >);
+  def("copyImage", pyCopyImageGray< vigra::UInt8RGBImage, vigra::UInt8Image >);
 
   def("copySubImage", pyCopySubImage1< vigra::BImage, vigra::BImage >);
   def("copySubImage", pyCopySubImage1< vigra::Int16Image, vigra::Int16Image >);
@@ -1518,8 +1374,6 @@ static void wrap_images()
   def("flatfieldCorrection", pyFlatfieldCorrection< vigra::UInt16Image, vigra::UInt16Image >);
   def("flatfieldCorrection", pyFlatfieldCorrection< vigra::Int16Image, vigra::Int16Image >);
 
-  def("threshold", pyThreshold< vigra::UInt8Image, vigra::UInt8Image >);
-
   def("drawLine", pyDrawLine< vigra::BImage >, (arg("p1"), arg("p2"), arg("image"), arg("color"), arg("thick")=false), "Draws a line from p1 to p2.");
   def("drawLine", pyDrawLine< vigra::Int16Image >, (arg("p1"), arg("p2"), arg("image"), arg("color"), arg("thick")=false), "Draws a line from p1 to p2.");
   def("drawLine", pyDrawLine< vigra::UInt16Image >, (arg("p1"), arg("p2"), arg("image"), arg("color"), arg("thick")=false), "Draws a line from p1 to p2.");
@@ -1530,34 +1384,6 @@ static void wrap_images()
   def("drawFilledCircle", pyDrawFilledCircle< vigra::UInt16Image >, (arg("p"), arg("r"), arg("image"), arg("color")), "Draws a filled circle at point p with radius r.");
   def("drawFilledCircle", pyDrawFilledCircle< vigra::BRGBImage >, (arg("p"), arg("r"), arg("image"), arg("color")), "Draws a filled circle at point p with radius r.");
 
-  def("seededRegionExpansion", pySeededRegionExpansion< vigra::BImage, vigra::Int16Image, vigra::Int16Image,
-                                                        vigra::ArrayOfRegionStatistics<cecog::SrgConstValueFunctor<double> > >,
-      (arg("imgIn"), arg("imLabels"), arg("srgType"), arg("labelNumber"),
-       arg("costThreshold"), arg("expansionRounds"), arg("sepExpandRounds")=0),
-      "Expand an image of seeds (imgLabel) several rounds without overlapping different seeds.");
-
-  def("seededRegionExpansionMean", pySeededRegionExpansion< vigra::BImage, vigra::Int16Image, vigra::Int16Image,
-                                                            vigra::ArrayOfRegionStatistics<cecog::SrgMeanValueFunctor<double> > >,
-      (arg("imgIn"), arg("imLabels"), arg("srgType"), arg("labelNumber"),
-       arg("costThreshold"), arg("expansionRounds"), arg("sepExpandRounds")=0),
-      "Expand an image of seeds (imgLabel) several rounds without overlapping different seeds by mean-functor of imgIn.");
-
-  def("seededRegionExpansionNormMean", pySeededRegionExpansion< vigra::BImage, vigra::Int16Image, vigra::Int16Image,
-                                                          vigra::ArrayOfRegionStatistics<cecog::SrgNormMeanValueFunctor<double> > >,
-      (arg("imgIn"), arg("imLabels"), arg("srgType"), arg("labelNumber"),
-       arg("costThreshold"), arg("expansionRounds"), arg("sepExpandRounds")=0),
-      "Expand an image of seeds (imgLabel) several rounds without overlapping different seeds by norm. mean-functor of imgIn.");
-
-
-  def("seededRegionShrinking", pySeededRegionShrinking< vigra::BImage, vigra::Int16Image, vigra::Int16Image,
-                                                        vigra::ArrayOfRegionStatistics<cecog::SrgConstValueFunctor<double> > >,
-      (arg("imgIn"), arg("imLabels"), arg("labelNumber"), arg("shrinkingRounds")),
-      "Shrink an image of seeds (imgLabel) several rounds without overlapping different seeds.");
-
-  def("seededRegionExpansionHalfSize", pySeededRegionShrinking< vigra::BImage, vigra::Int16Image, vigra::Int16Image,
-                                                                vigra::ArrayOfRegionStatistics<cecog::ShrinkHalfSizeFunctor<double> > >,
-      (arg("imgIn"), arg("imLabels"), arg("labelNumber"), arg("shrinkingRounds")),
-      "Shrink an image of seeds (imgLabel) several rounds without overlapping different seeds.");
 
 
   enum_<cecog::ProjectionType>("ProjectionType")

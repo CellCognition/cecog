@@ -96,6 +96,176 @@ namespace cecog {
   enum SRGType { KeepContours, KeepContoursPlus, CompleteGrow };
   enum SRGLabel { SRGWatershedLabel = -1, SRGFreeLabel = 0, SRGListedLabel = -2, SRGBackgroundLabel = 0 };
 
+  // FIXME: this should not be here
+  static const vigra::Diff2D dist8[] = { vigra::Diff2D(-1,0), vigra::Diff2D(0,-1),
+                                         vigra::Diff2D(1,0),  vigra::Diff2D(0,1),
+                                         vigra::Diff2D(-1,1), vigra::Diff2D(1,-1),
+                                         vigra::Diff2D(1,1),  vigra::Diff2D(-1,-1) };
+
+  template <class T, class B>
+  class SegmentationPropagate
+  {
+  public:
+    typedef typename T::value_type pixel_type;
+    typedef typename B::value_type label_type;
+
+    SegmentationPropagate(T const &imgIn,
+                          vigra::BImage const &imgInBinary,
+                          B const &imgLabelsIn,
+                          B &imgLabelsOut,
+                          float lambda = 0.05,
+                          int deltaWidth = 1,
+                          SRGType srgType = KeepContours
+                          )
+     : imgIn(imgIn), imgLabelsOut(imgLabelsOut), imgInBinary(imgInBinary),
+       lambda(lambda), deltaWidth(deltaWidth), pixelQueue()
+    {
+      width  = imgIn.width();
+      height = imgIn.height();
+
+      int i, j;
+
+      // create a new image to store distances as doubles
+      vigra::DImage imgDists(imgIn.size());
+      for (j = 0; j < height; ++j)
+        for (i = 0; i < width; ++i)
+        {
+          label_type label = imgLabelsIn(i, j);
+          imgLabelsOut(i, j) = label;
+          if (label > 0 && imgInBinary(i, j))
+          {
+            imgDists(i, j) = 0.0;
+            push_neighbors_on_queue(0.0, i, j, label);
+          } else
+            imgDists(i, j) = DBL_MAX;
+        }
+
+      while (!pixelQueue.empty())
+      {
+        Pixel p = pixelQueue.top();
+        pixelQueue.pop();
+
+        if (imgDists(p.i, p.j) > p.distance)
+        {
+          // seek distance maximum
+
+          if (srgType != CompleteGrow)
+            for (int n = 0; n < 8; ++n)
+            {
+              vigra::Diff2D nh = vigra::Diff2D(p.i,p.j) + dist8[n];
+              if (nh.x >= 0 && nh.y >= 0 && nh.x < width && nh.y < height)
+              {
+                if (imgLabelsOut[nh] > 0 && imgLabelsOut[nh] != p.label)
+                {
+                  p.label = -1;
+                  imgLabelsOut(p.i, p.j) = p.label;
+                  //printf("border\n");
+                  break;
+                }
+              }
+            }
+
+          if (p.label >= 0)
+          {
+            imgDists(p.i, p.j) = p.distance;
+            imgLabelsOut(p.i, p.j) = p.label;
+            push_neighbors_on_queue(p.distance, p.i, p.j, p.label);
+          }
+        }
+      }
+    }
+
+  private:
+
+    struct Pixel
+    {
+      double distance;
+      int i, j;
+      label_type label;
+      Pixel (double ds, int ini, int inj, label_type l) :
+        distance(ds), i(ini), j(inj), label(l) {}
+    };
+
+    struct PixelCompare
+    {
+      inline
+      bool operator() (const Pixel& a, const Pixel& b) const
+      {
+        return a.distance > b.distance;
+      }
+    };
+
+    typedef std::priority_queue<Pixel, std::vector<Pixel>,
+        PixelCompare> PixelQueue;
+
+    inline
+    pixel_type clampedFetch(int i, int j)
+    {
+      if (i < 0) i = 0;
+      else
+      if (i >= width) i = width-1;
+      if (j < 0) j = 0;
+      else
+      if (j >= height) j = height-1;
+      return imgIn(i,j);
+    }
+
+    inline
+    double difference(int i1,  int j1,
+                      int i2,  int j2)
+    {
+      int delta_i, delta_j;
+      double pixel_diff = 0.0;
+
+      /* At some point, the width over which differences are calculated should probably be user controlled. */
+      for (delta_j = -deltaWidth; delta_j <= deltaWidth; ++delta_j)
+        for (delta_i = -deltaWidth; delta_i <= deltaWidth; ++delta_i)
+          pixel_diff += fabs(clampedFetch(i1 + delta_i, j1 + delta_j) -
+                             clampedFetch(i2 + delta_i, j2 + delta_j));
+
+      return sqrt(pixel_diff*pixel_diff + (abs(i1 - i2) + abs(j1 - j2)) * lambda * lambda);
+    }
+
+
+    inline
+    void push_neighbors_on_queue(double dist,
+                                 int i, int j,
+                                 label_type label)
+    {
+      for (int k=0; k < 8; k++)
+      {
+        vigra::Diff2D p = vigra::Diff2D(i,j) + dist8[k];
+        if (p.x >= 0 && p.y >= 0 && p.x < width && p.y < height &&
+            imgInBinary(p.x,p.y) > 0)
+          pixelQueue.push(Pixel(dist + difference(i, j, p.x, p.y),
+                                p.x, p.y, label));
+      }
+    }
+
+    PixelQueue pixelQueue;
+    int width, height;
+    double lambda;
+    int deltaWidth;
+    const vigra::BImage &imgInBinary;
+    const T &imgIn;
+    B &imgLabelsOut;
+  };
+
+
+  template <class T, class B>
+  void segmentationPropagate(T const &imgIn,
+                             vigra::BImage const &imgInBinary,
+                             B const &imgLabelsIn,
+                             B &imgLabelsOut,
+                             float lambda = 0.05,
+                             int deltaWidth = 1,
+                             SRGType srgType = KeepContours)
+  {
+    SegmentationPropagate<T,B>(imgIn, imgInBinary, imgLabelsIn, imgLabelsOut,
+                               lambda, deltaWidth, srgType);
+  }
+
+
   template <class SrcImageIterator, class SrcAccessor,
             class SeedImageIterator, class SeedAccessor,
             class DestImageIterator, class DestAccessor,

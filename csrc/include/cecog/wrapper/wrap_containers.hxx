@@ -1,9 +1,9 @@
 /*******************************************************************************
 
                            The CellCognition Project
-                   Copyright (c) 2006 - 2010 by Michael Held
+                     Copyright (c) 2006 - 2010 Michael Held
                       Gerlich Lab, ETH Zurich, Switzerland
-                             www.cellcognition.org
+                              www.cellcognition.org
 
               CellCognition is distributed under the LGPL License.
                         See trunk/LICENSE.txt for details.
@@ -16,64 +16,65 @@
 // $Rev$
 // $URL$
 
-
-#ifndef CECOG_WRAP_CONTAINERS
-#define CECOG_WRAP_CONTAINERS
-
-#include <memory>
+#ifndef CECOG_PYTHON_WRAP_CONTAINERS_HXX_
+#define CECOG_PYTHON_WRAP_CONTAINERS_HXX_
 
 #include <boost/python.hpp>
 #include <boost/python/register_ptr_to_python.hpp>
 #include <boost/python/list.hpp>
 #include <boost/python/dict.hpp>
 #include <boost/python/str.hpp>
-#include <boost/shared_ptr.hpp>
+#include <boost/python/overloads.hpp>
+#include <boost/python/args.hpp>
 
 #include "cecog/containers.hxx"
-#include "cecog/shared_objects.hxx"
 
 using namespace boost::python;
 
-
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(apply_feature_overloads, applyFeature, 1, 2)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(export_rgb_overloads, exportRGB, 1, 3)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(draw_ellipse_overloads, drawEllipse, 4, 6)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(connect_objects_overloads, connectObjects, 2, 4)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(mark_objects_overloads1, markObjects, 1, 6)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(mark_objects_overloads2, markObjects, 0, 5)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(show_labels_overloads, showLabels, 2, 3)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(export_image_overloads, exportImage, 1, 2)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(export_binary_overloads, exportBinary, 1, 2)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(export_object_overloads, exportObject, 3, 4)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(threshold_overloads, threshold, 1, 2)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(draw_contours_byids_overloads, drawContoursByIds, 3, 5)
-
-
-
-template <class OBJECT_CONTAINER>
-dict object_wrapper(OBJECT_CONTAINER &c)
+namespace cecog
 {
-  dict result;
-  typename OBJECT_CONTAINER::ObjectMap::iterator it;
-  for (it = c.objects.begin(); it != c.objects.end(); ++it)
-    result[(*it).first] = (*it).second;
-  return result;
+  namespace python
+  {
+
+    BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(apply_feature_overloads, applyFeature, 1, 2)
+    BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(export_rgb_overloads, exportRGB, 1, 3)
+    BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(draw_ellipse_overloads, drawEllipse, 4, 6)
+    BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(connect_objects_overloads, connectObjects, 2, 4)
+    BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(mark_objects_overloads1, markObjects, 1, 6)
+    BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(mark_objects_overloads2, markObjects, 0, 5)
+    BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(show_labels_overloads, showLabels, 2, 3)
+    BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(export_image_overloads, exportImage, 1, 2)
+    BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(export_binary_overloads, exportBinary, 1, 2)
+    BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(export_object_overloads, exportObject, 3, 4)
+    BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(threshold_overloads, threshold, 1, 2)
+    BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(draw_contours_byids_overloads, drawContoursByIds, 3, 5)
+
+    template <class OBJECT_CONTAINER>
+    dict object_wrapper(OBJECT_CONTAINER &c)
+    {
+      dict result;
+      typename OBJECT_CONTAINER::ObjectMap::iterator it;
+      for (it = c.objects.begin(); it != c.objects.end(); ++it)
+        result[(*it).first] = (*it).second;
+      return result;
+    }
+
+    template <class OBJECT_CONTAINER>
+    list pyCrackCoordinates(OBJECT_CONTAINER &c, unsigned objId)
+    {
+      list result;
+      typename OBJECT_CONTAINER::PositionList posList = c.getCrackCoordinates(objId);
+      typename OBJECT_CONTAINER::PositionList::iterator it = posList.begin();
+      for (; it != posList.end(); it++)
+        result.append(make_tuple((*it).x, (*it).y));
+      return result;
+    }
+  }
 }
 
-template <class OBJECT_CONTAINER>
-list pyCrackCoordinates(OBJECT_CONTAINER &c, unsigned objId)
+void wrap_containers()
 {
-  list result;
-  typename OBJECT_CONTAINER::PositionList posList = c.getCrackCoordinates(objId);
-  typename OBJECT_CONTAINER::PositionList::iterator it = posList.begin();
-  for (; it != posList.end(); it++)
-    result.append(make_tuple((*it).x, (*it).y));
-  return result;
-}
-
-
-static void wrap_containers()
-{
+  using namespace cecog::python;
   typedef cecog::ObjectContainerBase<8> _ObjectContainerBase;
 
   void (_ObjectContainerBase::*fx1)(std::vector<unsigned>, cecog::RGBValue, bool, bool, bool, bool) = &_ObjectContainerBase::markObjects;
@@ -173,11 +174,9 @@ static void wrap_containers()
   class_< _ImageMaskContainer, bases<_ObjectContainerBase> >
     ("ImageMaskContainer", init< std::string, std::string >())
     .def(init<vigra::BImage, vigra::BImage, bool>())
-    .def(init<vigra::BImage, vigra::Int16Image, bool>())
+    .def(init<vigra::BImage, vigra::Int16Image, bool, bool>())
   ;
   register_ptr_to_python< std::auto_ptr<_ImageMaskContainer> >();
 
 }
-
-
-#endif // CECOG_WRAP_CONTAINERS
+#endif // CECOG_PYTHON_WRAP_CONTAINERS_HXX_

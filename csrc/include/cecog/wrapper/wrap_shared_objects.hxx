@@ -55,6 +55,33 @@ dict measurement_wrapper(cecog::ROIObject & c)
   return result;
 }
 
+#define WRAP_PAIR(first_type,second_type, name) \
+  class_< std::pair<first_type,second_type>, boost::noncopyable >(name, no_init) \
+    .def_readonly("first", &std::pair<first_type,second_type>::first) \
+    .def_readonly("second", &std::pair<first_type,second_type>::second); \
+  register_ptr_to_python< std::auto_ptr < std::pair <first_type, second_type> > >();
+
+
+struct to_python_Diff2D
+{
+  static PyObject* convert(vigra::Diff2D const& d)
+  {
+    PyObject * t = PyTuple_New(2);
+    PyTuple_SetItem(t, 0, PyInt_FromLong((long) d.x));
+    PyTuple_SetItem(t, 1, PyInt_FromLong((long) d.y));
+    return incref(t);
+  }
+};
+
+
+list known_feature_wrapper()
+{
+  list result;
+  for (int i=0; i < cecog::FEATURE_COUNT; ++i)
+    result.append(cecog::FEATURES[i]);
+  return result;
+}
+
 static void wrap_shared_objects()
 {
 
@@ -88,6 +115,22 @@ static void wrap_shared_objects()
     .def("getMeasurements", &measurement_wrapper)
   ;
   register_ptr_to_python< std::auto_ptr<cecog::ROIObject> >();
+
+
+  def("FEATURES", &known_feature_wrapper);
+
+
+  class_<vigra::Diff2D>("Diff2D", init<int, int>())
+  .add_property("x", &vigra::Diff2D::x)
+  .add_property("y", &vigra::Diff2D::y)
+  .def("magnitude", &vigra::Diff2D::magnitude)
+  .def("squaredMagnitude", &vigra::Diff2D::squaredMagnitude)
+  .def(self + self)           // __add__
+  .def(self - self)           // __sub__
+  .def(self += self)          // __iadd__
+  .def(self -= self)          // __isub__
+  ;
+  register_ptr_to_python< std::auto_ptr<vigra::Diff2D> >();
 
 }
 

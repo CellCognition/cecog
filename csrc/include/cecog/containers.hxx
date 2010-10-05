@@ -1010,9 +1010,9 @@ namespace cecog
      * create the object list (ObjectMap) from the label image.
      * ObjectMap(key, value) -> (object ID, object)
      */
-    void __buildObjects()
+    void _buildObjects(bool findCrack=true)
     {
-      //printf("moo123\n");
+      printf("moo123 1\n");
       vigra::ArrayOfRegionStatistics< vigra::FindBoundingRectangle >
         bounds(this->total_labels);
       inspectTwoImages(srcIterRange(vigra::Diff2D(0,0),
@@ -1020,6 +1020,7 @@ namespace cecog
                                     this->img_labels.size()),
                        srcImage(this->img_labels), bounds);
 
+      printf("moo123 2\n");
       vigra::ArrayOfRegionStatistics< FindAVGCenter >
         center(this->total_labels);
       inspectTwoImages(srcIterRange(vigra::Diff2D(0,0),
@@ -1027,11 +1028,13 @@ namespace cecog
                                     this->img_labels.size()),
                        srcImage(this->img_labels), center);
 
+      printf("moo123 3\n");
       vigra::ArrayOfRegionStatistics< vigra::FindROISize<value_type> >
         roisize(this->total_labels);
       inspectTwoImages(srcImageRange(this->img_labels),
                        srcImage(this->img_labels), roisize);
 
+      printf("moo123 4\n");
 //      // FIXME: some stupid bugfix
       vigra::IImage imgLabels2(img_labels.size()+vigra::Diff2D(2,2));
       copyImage(this->img_labels.upperLeft(),
@@ -1042,6 +1045,7 @@ namespace cecog
 
       //printf("  mooA %d\n", total_labels);
 
+      printf("moo123 5\n");
       for (int i=1; i <= this->total_labels; ++i)
       {
         vigra::Diff2D ul = bounds[i].upperLeft;
@@ -1060,15 +1064,23 @@ namespace cecog
             )
            )
         {
+          printf("moo123 6\n");
           vigra::Diff2D cn = center[i]() - ul;
-          vigra::Diff2D cs = findCrackStart(img_labels.upperLeft() + ul,
-                                            img_labels.upperLeft() + lr,
-                                            img_labels.accessor(), i) + ul;
+
+          vigra::Diff2D cs(0,0);
           vigra::Diff2D cs2(0,0);
-          findCrackStartOld(imgLabels2.upperLeft() + ul + vigra::Diff2D(1,1),
-                            imgLabels2.upperLeft() + lr + vigra::Diff2D(1,1),
-                            imgLabels2.accessor(), i, cs2);
-          //printf("  moo %d  %d,%d\n", i, cs.x, cs.y);
+          if (findCrack)
+          {
+            printf("moo123 7\n");
+            //vigra::Diff2D cs = findCrackStart(img_labels.upperLeft() + ul,
+            //                                  img_labels.upperLeft() + lr,
+            //                                  img_labels.accessor(), i) + ul;
+            findCrackStartOld(imgLabels2.upperLeft() + ul + vigra::Diff2D(1,1),
+                              imgLabels2.upperLeft() + lr + vigra::Diff2D(1,1),
+                              imgLabels2.accessor(), i, cs2);
+            //printf("  moo %d  %d,%d\n", i, cs.x, cs.y);
+          }
+          printf("moo123 8\n");
           this->objects[i] = ROIObject(ul, lr, cn, cs2, cs, roisize[i]());
         } else
           // delete not used objects from label image
@@ -1083,6 +1095,7 @@ namespace cecog
                                 Param(0)
                                 );
       }
+      printf("moo123 9\n");
     }
 
     // font for text labels
@@ -1100,7 +1113,7 @@ namespace cecog
 
 
   /**
-   * subclass of ObjectContainerBase to perform segmentation and labelling
+   * subclass of ObjectContainerBase to perform segmentation and labeling
    * on gray level reference
    */
   template <int BIT_DEPTH>
@@ -1290,7 +1303,7 @@ namespace cecog
                                  destImage(this->img_labels),
                                  true, 0);
 
-      this->__buildObjects();
+      this->_buildObjects();
 
       // build binary image from label image (set all !0 to 255)
       transformImageIf(srcImageRange(this->img_labels),
@@ -1366,7 +1379,7 @@ namespace cecog
                        Param(single_id)
                        );
 
-      this->__buildObjects();
+      this->_buildObjects();
     }
   };
 
@@ -1477,7 +1490,8 @@ namespace cecog
 
     ImageMaskContainer(vigra::BImage const & imgIn,
                        label_type const & imgLabel,
-                       bool bRemoveBorderObjects=true
+                       bool bRemoveBorderObjects=true,
+                       bool findCrack=true
                        )
         : Base()
     {
@@ -1509,7 +1523,7 @@ namespace cecog
                        Param(static_cast<typename binary_type::value_type>(FOREGROUND))
                        );
 
-      this->__buildObjects();
+      this->_buildObjects(findCrack);
     }
 
 
@@ -1539,7 +1553,7 @@ namespace cecog
 
       this->region_size = 0;
 
-      this->__buildObjects();
+      this->_buildObjects();
     }
   };
 

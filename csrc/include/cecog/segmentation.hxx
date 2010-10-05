@@ -26,6 +26,7 @@
 #include <map>
 #include <vector>
 #include <list>
+#include <queue>
 
 
 #include "vigra/stdimage.hxx"
@@ -98,7 +99,6 @@ namespace cecog
 
 
   typedef ImageMaskContainer<8> ImageMaskContainer8;
-
 
 
   //ImageMaskContainer8::label_type
@@ -403,31 +403,17 @@ namespace cecog
 
 
 
-  vigra::BImage testSegmentation(
-                                          vigra::BImage const & img_in,
-                                          vigra::BImage const & bin_in,
-                                          std::string const & filepath_img,
-                                          int rsize,
-                                          int gauss_size, int maxima_size,
-                                          int iMinMergeSize,
-                                          std::string filepath_rgb="",
-                                          SegmentationType segmentation_type=ShapeBasedSegmentation
-                                          )
-//  void testSegmentation(std::string filepath_img, int rgb_channel,
-//                                         int rsize, int gauss_size, int maxima_size,
-//                                         std::string filepath_rgb="")
+  void segmentationCorrection(vigra::BImage const & img_in,
+                              vigra::BImage const & bin_in,
+                              vigra::BImage & bin_out,
+                              std::string const & filepath_img,
+                              int rsize,
+                              int gauss_size, int maxima_size,
+                              int iMinMergeSize,
+                              std::string filepath_rgb="",
+                              SegmentationType segmentation_type=ShapeBasedSegmentation)
+
   {
-/*    const int SEG_SIZE = 40;
-    const int GAUSS_SIZE = 10;
-    const int MAXIMA_SIZE = 10;
-
-    int rsize = SEG_SIZE * acq_scale;
-    int gauss_size = GAUSS_SIZE * acq_scale;
-    int maxima_size = MAXIMA_SIZE * acq_scale;
-*/
-
-    //std::string filepath_img = "/Users/miheld/data/lsm510/segmentation_merge/L4_ZProj_T0012.tif";
-
     const int squaredRsize = 2*rsize;
 
     StopWatch oStopWatch, oStopWatchTotal;
@@ -1157,12 +1143,11 @@ namespace cecog
       //container2.exportRGB(filepath_rgb, "");
     }
 
-    ImageMaskContainer8::binary_type img_bin_n(w, h);
     copyImage(container.img_binary.upperLeft() + vigra::Diff2D(mem_border, mem_border),
               container.img_binary.lowerRight() - vigra::Diff2D(mem_border, mem_border),
               container.img_binary.accessor(),
-              img_bin_n.upperLeft(),
-              img_bin_n.accessor());
+              bin_out.upperLeft(),
+              bin_out.accessor());
 
     #ifdef __DEBUG__
       printf("moo erase4\n");
@@ -1172,9 +1157,6 @@ namespace cecog
       printf("StopWatch: final %.3fs\n", oStopWatchTotal.measure());
     #endif
     oStopWatch.reset();
-
-
-    return img_bin_n;
   }
 
 
@@ -1409,45 +1391,6 @@ namespace cecog
     return ImageMaskContainer8(container.img, container.img_binary, false);
   }
 
-
-
-  vigra::BImage watershedShape(vigra::BImage const & imgIn,
-                               vigra::BImage const & imgInBin,
-                               std::string sFilepathLsm,
-                               int iRSize,
-                               int iGaussSize,
-                               int iMaximaSize,
-                               int iMinMergeSize)
-  {
-    vigra::BImage imgOutBin = testSegmentation(imgIn,
-                                               imgInBin,
-                                               sFilepathLsm,
-                                               iRSize,
-                                               iGaussSize,
-                                               iMaximaSize,
-                                               iMinMergeSize,
-                                               "", ShapeBasedSegmentation);
-   return imgOutBin;
-  }
-
-  vigra::BImage watershedIntensity(vigra::BImage const & imgIn,
-                                   vigra::BImage const & imgInBin,
-                                   std::string sFilepathLsm,
-                                   int iRSize,
-                                   int iGaussSize,
-                                   int iMaximaSize,
-                                   int iMinMergeSize)
-  {
-    vigra::BImage imgOutBin = testSegmentation(imgIn,
-                                               imgInBin,
-                                               sFilepathLsm,
-                                               iRSize,
-                                               iGaussSize,
-                                               iMaximaSize,
-                                               iMinMergeSize,
-                                               "", IntensityBasedSegmentation);
-   return imgOutBin;
-  }
 
 
 }

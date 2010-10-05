@@ -333,6 +333,56 @@ namespace cecog
                                       contrastLimit)();
   }
 
+  class OtsuThreshold
+  {
+  public:
+
+    long operator()(std::vector<double> const &prob)
+    {
+      const long VCOUNT = prob.size();
+
+      /* find best threshold by computing moments for all thresholds */
+      double m0Low, m0High, m1Low, m1High, varLow, varHigh;
+      double varWithin, varWMin;
+      long thresh;
+      long i, j, n;
+      long nHistM1 = VCOUNT - 1;
+
+      for (i = 1, thresh = 0, varWMin = LONG_MAX; i < nHistM1; ++i)
+      {
+        m0Low = m0High = m1Low = m1High = varLow = varHigh = 0.0;
+        for (j = 0; j <= i; j++) {
+          m0Low += prob[j];
+          m1Low += j * prob[j];
+        }
+        m1Low = (m0Low != 0.0) ? m1Low / m0Low : i;
+        for (j = i + 1; j < VCOUNT; j++)
+        {
+          m0High += prob[j];
+          m1High += j * prob[j];
+        }
+        m1High = (m0High != 0.0) ? m1High / m0High : i;
+        for (j = 0; j <= i; j++)
+          varLow += (j - m1Low) * (j - m1Low) * prob[j];
+        for (j = i + 1; j < VCOUNT; j++)
+          varHigh += (j - m1High) * (j - m1High) * prob[j];
+
+        varWithin = m0Low * varLow + m0High * varHigh;
+        if (varWithin < varWMin)
+        {
+          varWMin = varWithin;
+          thresh = i;
+        }
+      }
+      return thresh;
+    }
+  };
+
+  long otsuThreshold(std::vector<double> const &prob)
+  {
+    return OtsuThreshold()(prob);
+  }
+
 }
 
 #endif // CECOG_THRESHOLDS

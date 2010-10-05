@@ -147,6 +147,17 @@ namespace cecog
      return (double)(clock() - oStartTime) / CLOCKS_PER_SEC;
    }
 
+   double operator()()
+   {
+     return measure();
+   }
+
+   void print()
+   {
+     printf("%f\n", measure());
+   }
+
+
 //   clock_t stop()
 //   {
 //
