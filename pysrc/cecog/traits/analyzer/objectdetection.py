@@ -30,6 +30,7 @@ __all__ = ['SectionObjectdetection']
 from cecog.traits.config import _Section
 from cecog.gui.guitraits import (StringTrait,
                                  IntTrait,
+                                 FloatTrait,
                                  BooleanTrait,
                                  SelectionTrait,
                                  SelectionTrait2,
@@ -49,7 +50,11 @@ SECTION_NAME_OBJECTDETECTION = 'ObjectDetection'
 #-------------------------------------------------------------------------------
 # functions:
 #
-
+def unlist(a):
+    b = []
+    for x in a:
+        b += x
+    return b
 
 #-------------------------------------------------------------------------------
 # classes:
@@ -133,60 +138,83 @@ class SectionObjectdetection(_Section):
             BooleanTrait(True, label='Fill holes')),
        ]),
 
-      ('secondary_image',
-       [('secondary_channelid',
-            SelectionTrait2(None, [], label='Secondary channel ID')),
-        ('secondary_normalizemin',
+      ] +\
+      unlist(
+      [[('%s_image' % prefix,
+       [('%s_channelid' % prefix,
+            SelectionTrait2(None, [], label='%s channel ID' % name)),
+        ('%s_normalizemin' % prefix,
             IntTrait(0, -2**16, 2**16, label='Min.')),
-        ('secondary_normalizemax',
+        ('%s_normalizemax' % prefix,
             IntTrait(255, -2**16, 2**16, label='Max.')),
 
-        ('secondary_zslice_selection',
+        ('%s_zslice_selection' % prefix,
             BooleanTrait(True, label='Z-slice selection',
                          widget_info=BooleanTrait.RADIOBUTTON)),
-        ('secondary_zslice_selection_slice',
+        ('%s_zslice_selection_slice' % prefix,
             IntTrait(1, 0, 1000, label='Slice')),
-        ('secondary_zslice_projection',
+        ('%s_zslice_projection' % prefix,
             BooleanTrait(False, label='Z-slice projection',
                          widget_info=BooleanTrait.RADIOBUTTON)),
-        ('secondary_zslice_projection_method',
+        ('%s_zslice_projection_method' % prefix,
             SelectionTrait(ZSLICE_PROJECTION_METHODS[0],
                            ZSLICE_PROJECTION_METHODS, label='Method')),
-        ('secondary_zslice_projection_begin',
+        ('%s_zslice_projection_begin' % prefix,
             IntTrait(1, 0, 1000, label='Begin')),
-        ('secondary_zslice_projection_end',
+        ('%s_zslice_projection_end' % prefix,
             IntTrait(1, 0, 1000, label='End')),
-        ('secondary_zslice_projection_step',
+        ('%s_zslice_projection_step' % prefix,
             IntTrait(1, 1, 1000, label='Step')),
        ]),
 
-      ('secondary_registration',
-       [('secondary_channelregistration_x',
+      ('%s_registration' % prefix,
+       [('%s_channelregistration_x' % prefix,
             IntTrait(0, -99999, 99999, label='Shift X')),
-        ('secondary_channelRegistration_y',
+        ('%s_channelRegistration_y' % prefix,
             IntTrait(0, -99999, 99999, label='Shift Y')),
        ]),
 
-      ('secondary_segmentation',
-       [('secondary_regions_expanded',
+      ('%s_segmentation' % prefix,
+       [('%s_presegmentation' % prefix,
+            BooleanTrait(False, label='Pre-Segmentation')),
+        ('%s_presegmentation_medianradius' % prefix,
+            IntTrait(1, 0, 1000, label='Median radius')),
+        ('%s_presegmentation_alpha' % prefix,
+            FloatTrait(1.0, 0, 4000, label='Otsu factor', digits=2)),
+
+
+        ('%s_regions_expanded' % prefix,
             BooleanTrait(False, label='Expanded')),
-        ('secondary_regions_expanded_expansionsize',
+        ('%s_regions_expanded_expansionsize' % prefix,
             IntTrait(0, 0, 4000, label='Expansion size')),
-        ('secondary_regions_inside',
+
+        ('%s_regions_inside' % prefix,
             BooleanTrait(True, label='Inside')),
-        ('secondary_regions_inside_shrinkingsize',
+        ('%s_regions_inside_shrinkingsize' % prefix,
             IntTrait(0, 0, 4000, label='Shrinking size')),
-        ('secondary_regions_outside',
+
+        ('%s_regions_outside' % prefix,
             BooleanTrait(False, label='Outside')),
-        ('secondary_regions_outside_expansionsize',
+        ('%s_regions_outside_expansionsize' % prefix,
             IntTrait(0, 0, 4000, label='Expansion size')),
-        ('secondary_regions_outside_separationsize',
+        ('%s_regions_outside_separationsize' % prefix,
             IntTrait(0, 0, 4000, label='Separation size')),
-        ('secondary_regions_rim',
+
+        ('%s_regions_rim' % prefix,
             BooleanTrait(False, label='Rim')),
-        ('secondary_regions_rim_expansionsize',
+        ('%s_regions_rim_expansionsize' % prefix,
             IntTrait(0, 0, 4000, label='Expansion size')),
-        ('secondary_regions_rim_shrinkingsize',
+        ('%s_regions_rim_shrinkingsize' % prefix,
             IntTrait(0, 0, 4000, label='Shrinking size')),
-       ])
-      ]
+
+        ('%s_regions_propagate' % prefix,
+            BooleanTrait(False, label='Propagate')),
+        ('%s_regions_propagate_lambda' % prefix,
+            FloatTrait(0.05, 0, 4000, label='Lambda', digits=2)),
+        ('%s_regions_propagate_deltawidth' % prefix,
+            IntTrait(1, 0, 4000, label='Delta width')),
+       ])]
+      for name, prefix in [('Secondary', 'secondary'),
+                           #('Tertiary', 'tertiary')
+                           ]]
+      )

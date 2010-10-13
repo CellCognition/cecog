@@ -154,7 +154,7 @@ class CellCounterReader(OrderedDict):
 
     def getPosition(self):
         strFilename = os.path.split(self.strFilename)[1]
-        oRe = re.compile("P(?P<P>.+?)[_|\.]")
+        oRe = re.compile("P(?P<P>.+?)((__)|\.)")
         oSearch = oRe.search(strFilename)
         if not oSearch is None:
             return oSearch.group('P')

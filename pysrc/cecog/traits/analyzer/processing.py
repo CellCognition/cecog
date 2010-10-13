@@ -49,7 +49,10 @@ class SectionProcessing(_Section):
 
     OPTIONS = [
       ('processing',
-       [('primary_classification',
+       [
+        ('primary_featureextraction',
+            BooleanTrait(True, label='Feature Extraction')),
+        ('primary_classification',
             BooleanTrait(False, label='Classification')),
         ('tracking',
             BooleanTrait(False, label='Tracking')),
@@ -59,6 +62,8 @@ class SectionProcessing(_Section):
             BooleanTrait(False, label='Error correction')),
         ('secondary_processchannel',
             BooleanTrait(False, label='Secondary channel')),
+        ('secondary_featureextraction',
+            BooleanTrait(True, label='Feature Extraction')),
         ('secondary_classification',
             BooleanTrait(False, label='Classification')),
         ('secondary_errorcorrection',

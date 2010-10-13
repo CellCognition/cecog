@@ -29,7 +29,6 @@ import copy
 # cecog imports:
 #
 from cecog.traits.config import ConfigSettings
-
 #-------------------------------------------------------------------------------
 # constants:
 #
@@ -54,7 +53,17 @@ class GuiConfigSettings(ConfigSettings):
     def copy(self):
         new = copy.copy(self)
         new._parent = None
+        # some deepcopy problem introduced with Python 2.7
+        # ConfigParser cannot be deepcopied due to a new regex stored in self
+        try:
+            new._optcre = None
+        except AttributeError:
+            pass
         new = copy.deepcopy(new)
+        try:
+            new._optcre = self._optcre
+        except AttributeError:
+            pass
         return new
 
     def set(self, section_name, trait_name, value):

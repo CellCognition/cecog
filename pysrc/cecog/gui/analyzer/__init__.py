@@ -71,7 +71,7 @@ from cecog.analyzer import (CONTROL_1,
                             CONTROL_2,
                             )
 from cecog.analyzer.core import AnalyzerCore, SECONDARY_REGIONS
-from cecog.io.reader import PIXEL_TYPES
+from cecog.io.imagecontainer import PIXEL_TYPES
 from cecog import ccore
 
 #-------------------------------------------------------------------------------
@@ -469,7 +469,7 @@ class HmmThread(_ProcessingThread):
 
 class AnalzyerThread(_ProcessingThread):
 
-    image_ready = pyqtSignal(ccore.ImageRGB, str, str)
+    image_ready = pyqtSignal(ccore.RGBImage, str, str)
 
     def __init__(self, parent, settings, imagecontainer):
         _ProcessingThread.__init__(self, parent, settings)
@@ -694,7 +694,7 @@ class _ProcessorMixin(object):
         return self.get_special_settings(self._settings)
 
     def _on_tab_changed(self, idx):
-        names = ['primary', 'secondary']
+        names = ['primary', 'secondary', 'tertiary']
         self._tab_name = names[idx]
         for name in self._control_buttons:
             self._set_control_button_text(name=name)
@@ -1067,6 +1067,7 @@ class _ProcessorMixin(object):
             qimage = numpy_to_qimage(image_rgb.toArray(copy=False))
             #qimage = qimage.scaled(800, 800, Qt.KeepAspectRatio, Qt.SmoothTransformation)
             if qApp._image_dialog is None:
+            #if True:
                 qApp._image_dialog = QFrame()
                 shortcut = QShortcut(QKeySequence(Qt.Key_Escape), qApp._image_dialog)
                 qApp._image_dialog.connect(shortcut, SIGNAL('activated()'), self._on_esc_pressed)

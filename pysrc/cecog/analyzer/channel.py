@@ -205,77 +205,16 @@ class _Channel(PropertyManager):
         self.meta_image = None
         self.dctContainers = {}
 
-    def dump_label_image(self, dataset, frame_idx, region_lookup):
-        var = dataset.variables['label_images']
-        finished = dataset.variables['label_images_finished']
-        for k, v in self.dctContainers.iteritems():
-            idx = region_lookup[k]
-            var[frame_idx, idx] = v.img_labels.toArray(copy=False)
-            finished[frame_idx, idx] = 1
-        self._oLogger.debug('Wrote %d region(s) to nc4 file.' %
-                            len(self.dctContainers))
-
-    def load_label_image(self, dataset, frame_idx, region_lookup):
-        var = dataset.variables['label_images']
-        finished = dataset.variables['label_images_finished']
-        success = True
-        for region_name in self.lstAreaSelection:
-            idx = region_lookup[region_name]
-            #print region_name, frame_idx, idx, finished[frame_idx, idx] != 0
-            if finished[frame_idx, idx] != 0:
-                finished[frame_idx, idx] = 1
-                img_label = ccore.numpy_to_image(var[frame_idx, idx],
-                                                 copy=True)
-                img_xy = self.meta_image.image
-                container = ccore.ImageMaskContainer(img_xy, img_label, False)
-                self.dctContainers[region_name] = container
-            else:
-                success = False
-                break
-        if success:
-            self._oLogger.debug('%d region(s) loaded from nc4 file.' %
-                                len(self.lstAreaSelection))
-        else:
-            self._oLogger.debug('Could not load all %d region(s) from '\
-                                'nc4 file.' % len(self.lstAreaSelection))
-        return success
-
-    def dump_raw_image(self, dataset, frame_idx, channel_idx):
-        var = dataset.variables['raw_images']
-        finished = dataset.variables['raw_images_finished']
-        img = self.meta_image.image
-        var[frame_idx, channel_idx] = img.toArray(copy=False)
-        finished[frame_idx, channel_idx] = 1
-        self._oLogger.debug('Wrote raw image to nc4 file.')
-
-    def load_raw_image(self, dataset, frame_idx, channel_idx, meta_image):
-        var = dataset.variables['raw_images']
-        finished = dataset.variables['raw_images_finished']
-        if finished[frame_idx, channel_idx] != 0:
-            finished[frame_idx, channel_idx] = 1
-            img = ccore.numpy_to_image(var[frame_idx, channel_idx], copy=True)
-            self.meta_image = meta_image
-            self.meta_image.set_image(img)
-            success = True
-        else:
-            success = False
-        if success:
-            self._oLogger.debug('Raw image loaded from nc4 file.')
-        else:
-            self._oLogger.debug('Could not load raw image from nc4 file.')
-        return success
-
-
-    def getRegionNames(self):
+    def region_names(self):
         return self._dctRegions.keys()
 
-    def getRegion(self, name):
+    def get_region(self, name):
         return self._dctRegions[name]
 
-    def hasRegion(self, name):
+    def has_region(self, name):
         return name in self._dctRegions
 
-    def getContainer(self, name):
+    def get_container(self, name):
         return self.dctContainers[name]
 
     def purge(self, features=None):
@@ -293,8 +232,8 @@ class _Channel(PropertyManager):
             channelFeatures = sorted(unique(channelFeatures))
 
             # reduce features per region and object to given list
-            for regionName in self.getRegionNames():
-                region = self.getRegion(regionName)
+            for regionName in self.region_names():
+                region = self.get_region(regionName)
                 channelFeatures2 = [x for x in channelFeatures
                                     if region.hasFeatureName(x)]
                 for objId in region:
@@ -356,13 +295,13 @@ class _Channel(PropertyManager):
 
 
 
-    def applyBinning(self, iFactor):
+    def apply_binning(self, iFactor):
         self.meta_image.binning(iFactor)
 
-    def applySegmentation(self):
+    def apply_segmentation(self):
         raise NotImplementedMethodError()
 
-    def applyFeatures(self):
+    def apply_features(self):
 
         for strKey, oContainer in self.dctContainers.iteritems():
 
@@ -443,7 +382,7 @@ class _Channel(PropertyManager):
 #
 #            #if imgOut == ccore.ImageUInt16:
 #            #    imgOut = convertImageUInt12(imgOut)
-        if type(img_in) == ccore.ImageUInt16:
+        if type(img_in) == ccore.UInt16Image:
             img_out = ccore.linearTransform3(img_in, int(self.fNormalizeMin),
                                              int(self.fNormalizeMax),
                                              0, 255, 0, 255)
@@ -531,7 +470,7 @@ class PrimaryChannel(_Channel):
     def __init__(self, **dctOptions):
         super(PrimaryChannel, self).__init__(**dctOptions)
 
-    def applySegmentation(self, oDummy):
+    def apply_segmentation(self, oDummy):
         if (not self.channelRegistration is None and
             len(self.channelRegistration) == 2):
             shift = self.channelRegistration
@@ -606,6 +545,18 @@ class SecondaryChannel(_Channel):
                              is_mandatory=True,
                              doc=''),
 
+             fPropagateLambda =
+               FloatProperty(None, is_mandatory=True),
+             iPropagateDeltaWidth =
+               IntProperty(None, is_mandatory=True),
+
+             bPresegmentation =
+               BooleanProperty(None, is_mandatory=True),
+             iPresegmentationMedianRadius =
+               IntProperty(None, is_mandatory=True),
+             fPresegmentationAlpha =
+               FloatProperty(None, is_mandatory=True),
+
              bEstimateBackground =
                  BooleanProperty(False),
              iBackgroundMedianRadius =
@@ -626,7 +577,7 @@ class SecondaryChannel(_Channel):
         self.fBackgroundAverage = float('NAN')
         self.bSegmentationSuccessful = False
 
-    def applySegmentation(self, oChannel):
+    def apply_segmentation(self, oChannel):
         if (not self.channelRegistration is None and
             len(self.channelRegistration) == 2):
             shift = self.channelRegistration
@@ -654,6 +605,14 @@ class SecondaryChannel(_Channel):
                                                   iShrinkingSizeRim = self.iShrinkingSizeRim,
 
                                                   fExpansionCostThreshold = self.fExpansionCostThreshold,
+
+                                                  fPropagateLambda = self.fPropagateLambda,
+                                                  iPropagateDeltaWidth = self.iPropagateDeltaWidth,
+
+                                                  bPresegmentation = self.bPresegmentation,
+                                                  iPresegmentationMedianRadius = self.iPresegmentationMedianRadius,
+                                                  fPresegmentationAlpha = self.fPresegmentationAlpha,
+
                                                   lstAreaSelection = self.lstAreaSelection,
                                                   bFlatfieldCorrection = self.bFlatfieldCorrection,
                                                   strImageType = self.strImageType,

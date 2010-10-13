@@ -59,7 +59,7 @@ class ObjectDetectionFrame(_BaseFrame, _ProcessorMixin):
 
     SECTION_NAME = SECTION_NAME_OBJECTDETECTION
     DISPLAY_NAME = 'Object Detection'
-    TABS = ['PrimaryChannel', 'SecondaryChannel']
+    TABS = ['Primary Channel', 'Secondary Channel', 'Tertiary Channel']
 
     def __init__(self, settings, parent):
         _BaseFrame.__init__(self, settings, parent)
@@ -69,7 +69,7 @@ class ObjectDetectionFrame(_BaseFrame, _ProcessorMixin):
                                      AnalzyerThread,
                                      ('Detect %s objects', 'Stop %s detection'))
 
-        self.set_tab_name('PrimaryChannel')
+        self.set_tab_name('Primary Channel')
 
         self.add_input('primary_channelid')
         self.add_group(None,
@@ -84,13 +84,13 @@ class ObjectDetectionFrame(_BaseFrame, _ProcessorMixin):
                        [('primary_zslice_projection_method',),
                         ('primary_zslice_projection_begin',),
                         ('primary_zslice_projection_end',),
-                        ('primary_zslice_projection_step',),
+                        ('primary_zslice_projection_step', None, None, True),
                         ], layout='flow')
         self.add_line()
-        self.add_input('primary_medianradius')
         self.add_group(None,
-                       [('primary_latwindowsize', (1,0,1,1)),
-                        ('primary_latlimit', (1,1,1,1)),
+                       [('primary_medianradius', (0,0,1,1)),
+                        ('primary_latwindowsize', (0,1,1,1)),
+                        ('primary_latlimit', (0,2,1,1)),
                         ], link='primary_lat', label='Local adaptive threshold')
         self.add_group('primary_lat2',
                        [('primary_latwindowsize2', (0,0,1,1)),
@@ -110,53 +110,67 @@ class ObjectDetectionFrame(_BaseFrame, _ProcessorMixin):
                         ])
 
         self.add_expanding_spacer()
-        self.set_tab_name('SecondaryChannel')
 
-        self.add_input('secondary_channelid')
-        self.add_group(None,
-                       [('secondary_normalizemin',),
-                        ('secondary_normalizemax',),
-                        ], layout='flow', link='secondary_channel_conversion',
-                        label='16 to 8 bit conversion')
-        self.add_group(None,
-                       [('secondary_channelregistration_x',),
-                        ('secondary_channelregistration_y',),
-                        ], layout='flow', link='secondary_channel_registration',
-                        label='Channel registration')
-        self.add_line()
-        self.add_group('secondary_zslice_selection',
-                       [('secondary_zslice_selection_slice',)], layout='flow')
-        self.add_group('secondary_zslice_projection',
-                       [('secondary_zslice_projection_method',),
-                        ('secondary_zslice_projection_begin',),
-                        ('secondary_zslice_projection_end',),
-                        ('secondary_zslice_projection_step',),
-                        ], layout='flow')
-        self.add_line()
-        self.add_pixmap(QPixmap(':cecog_secondary_regions'), Qt.AlignRight)
-        self.add_group(None,
-                       [('secondary_regions_expanded', (0,0,1,1)),
-                        ('secondary_regions_expanded_expansionsize', (0,1,1,1)),
-                        (None, (1,0,1,9)),
+        for tab_name, prefix in [('Secondary Channel', 'secondary'),
+                                 #('Tertiary Channel', 'tertiary')
+                                 ]:
+            self.set_tab_name(tab_name)
 
-                        ('secondary_regions_inside', (2,0,1,1)),
-                        ('secondary_regions_inside_shrinkingsize', (2,1,1,1)),
-                        (None, (3,0,1,9)),
+            self.add_input('%s_channelid' % prefix)
+            self.add_group(None,
+                           [('%s_normalizemin' % prefix,),
+                            ('%s_normalizemax' % prefix,),
+                            ], layout='flow', link='%s_channel_conversion' % prefix,
+                            label='16 to 8 bit conversion')
+            self.add_group(None,
+                           [('%s_channelregistration_x' % prefix,),
+                            ('%s_channelregistration_y' % prefix,),
+                            ], layout='flow', link='%s_channel_registration' % prefix,
+                            label='Channel registration')
+            self.add_line()
+            self.add_group('%s_zslice_selection' % prefix,
+                           [('%s_zslice_selection_slice' % prefix,)], layout='flow')
+            self.add_group('%s_zslice_projection' % prefix,
+                           [('%s_zslice_projection_method' % prefix,),
+                            ('%s_zslice_projection_begin' % prefix,),
+                            ('%s_zslice_projection_end' % prefix,),
+                            ('%s_zslice_projection_step' % prefix, None, None, True),
+                            ], layout='flow')
+            self.add_line()
+            self.add_pixmap(QPixmap(':cecog_secondary_regions'), Qt.AlignRight)
+            self.add_group(None,
+                           [('%s_regions_expanded' % prefix, (0,0,1,1)),
+                            ('%s_regions_expanded_expansionsize' % prefix, (0,1,1,1), None, True),
+                            (None, (1,0,1,8)),
 
-                        ('secondary_regions_outside', (4,0,1,1)),
-                        ('secondary_regions_outside_expansionsize', (4,1,1,1)),
-                        ('secondary_regions_outside_separationsize', (4,2,1,1)),
-                        (None, (5,0,1,9)),
+                            ('%s_regions_inside' % prefix, (2,0,1,1)),
+                            ('%s_regions_inside_shrinkingsize' % prefix, (2,1,1,1), None, True),
+                            (None, (3,0,1,8)),
 
-                        ('secondary_regions_rim', (6,0,1,1)),
-                        ('secondary_regions_rim_expansionsize', (6,1,1,1)),
-                        ('secondary_regions_rim_shrinkingsize', (6,2,1,1)),
+                            ('%s_regions_outside' % prefix, (4,0,1,1)),
+                            ('%s_regions_outside_expansionsize' % prefix, (4,1,1,1)),
+                            ('%s_regions_outside_separationsize' % prefix, (4,2,1,1), None, True),
+                            (None, (5,0,1,8)),
 
-                        ], link='secondary_region_definition',
-                        label='Region definition')
+                            ('%s_regions_rim' % prefix, (6,0,1,1)),
+                            ('%s_regions_rim_expansionsize' % prefix, (6,1,1,1)),
+                            ('%s_regions_rim_shrinkingsize' % prefix, (6,2,1,1), None, True),
+                            (None, (7,0,1,8)),
 
-        self.add_expanding_spacer()
+                            ], link='%s_region_definition' % prefix,
+                            label='Region definition')
+
+            self.add_group('%s_regions_propagate' % prefix,
+                           [('%s_presegmentation_medianradius' % prefix, (0,0,1,1)),
+                            ('%s_presegmentation_alpha' % prefix, (0,1,1,1)),
+                            ('%s_regions_propagate_lambda' % prefix, (0,2,1,1)),
+                            ('%s_regions_propagate_deltawidth' % prefix, (0,3,1,1), None, True),
+                            ])
+
+            self.add_expanding_spacer()
+
         self._init_control()
+
 
     def _get_modified_settings(self, name):
         settings = _ProcessorMixin._get_modified_settings(self, name)
@@ -168,25 +182,14 @@ class ObjectDetectionFrame(_BaseFrame, _ProcessorMixin):
                        if settings.get2(k)]
 
         settings.set_section('Processing')
+        settings.set2('primary_featureextraction', False)
+        settings.set2('secondary_featureextraction', False)
         settings.set2('primary_classification', False)
         settings.set2('secondary_classification', False)
         settings.set2('tracking', False)
         settings.set_section('Classification')
         settings.set2('collectsamples', False)
 
-        # HERE I AM
-        for feature_cat_short in ['intensity', 'haralick',
-                                  'stat_geom', 'granugrey',
-                                  'basicshape', 'convhull',
-                                  'distance', 'moments']:
-            feature_category = 'primary_featurecategory_' + feature_cat_short
-            settings.set2(feature_category, False)
-            feature_category = 'secondary_featurecategory_' + feature_cat_short
-            settings.set2(feature_category, False)
-        #settings.set2('primary_simplefeatures_texture', False)
-        #settings.set2('primary_simplefeatures_shape', False)
-        #settings.set2('secondary_simplefeatures_texture', False)
-        #settings.set2('secondary_simplefeatures_shape', False)
         settings.set_section('General')
         settings.set2('rendering_class', {})
         #settings.set2('rendering_discwrite', True)
@@ -202,7 +205,7 @@ class ObjectDetectionFrame(_BaseFrame, _ProcessorMixin):
             settings.set('General', 'rendering', {'primary_contours': {prim_id: {'raw': ('#FFFFFF', 1.0), 'contours': {'primary': ('#FF0000', 1, show_ids)}}}})
         else:
             settings.set('Processing', 'secondary_processChannel', True)
-            settings.get('General', 'rendering').update(dict([('secondary_contours_%s' % x, {sec_id: {'raw': ('#FFFFFF', 1.0),
+            settings.set('General', 'rendering', dict([('secondary_contours_%s' % x, {sec_id: {'raw': ('#FFFFFF', 1.0),
                                                                                                       'contours': [(x, SECONDARY_COLORS[x] , 1, show_ids)]
                                                                                              }})
                                                               for x in sec_regions]))

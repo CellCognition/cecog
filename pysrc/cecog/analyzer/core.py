@@ -53,6 +53,9 @@ from cecog.learning.collector import CellCounterReader, CellCounterReaderXML
 from cecog.learning.learning import CommonObjectLearner, CommonClassPredictor
 from cecog.traits.config import NAMING_SCHEMAS
 
+from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACTION
+from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
+
 #from cecog.analyzer.cutter import Cutter
 
 #-------------------------------------------------------------------------------
@@ -80,7 +83,7 @@ FEATURE_MAP = {
 
 CHANNEL_CLASSES = {'PrimaryChannel'   : PrimaryChannel,
                    'SecondaryChannel' : SecondaryChannel,
-                   'TertiaryChannel'  : TertiaryChannel,
+                   #'TertiaryChannel'  : TertiaryChannel,
                    }
 
 # set the max. recursion depth
@@ -244,8 +247,8 @@ class PositionAnalyzer(object):
         self.oSettings.set_section('Output')
         oTimeHolder = TimeHolder(self.P, self.tplChannelIds, filename_netcdf,
                                  self._meta_data, self.oSettings,
-                                 create_nc4=self.oSettings.get2('netcdf_create_file'),
-                                 reuse_nc4=self.oSettings.get2('netcdf_reuse_file')
+                                 create_nc=self.oSettings.get2('netcdf_create_file'),
+                                 reuse_nc=self.oSettings.get2('netcdf_reuse_file')
                                  )
 
         self.oSettings.set_section('Tracking')
@@ -671,38 +674,43 @@ class PositionAnalyzer(object):
 
                         # determine the list of features to be calculated from each object
                         lstFeatureCategories = []
-                        for feature in FEATURE_MAP.keys():
-                            if self.oSettings.get('Classification',
-                                                  self._resolve_name(channel_section,
-                                                                     feature)):
-                                lstFeatureCategories += FEATURE_MAP[feature]
+                        feature_extraction = self.oSettings.get(SECTION_NAME_PROCESSING,
+                                                                self._resolve_name(channel_section,
+                                                                                   'featureextraction'))
+                        if feature_extraction:
+                            for feature in FEATURE_MAP.keys():
+                                if self.oSettings.get(SECTION_NAME_FEATURE_EXTRACTION,
+                                                      self._resolve_name(channel_section,
+                                                                         feature)):
+                                    lstFeatureCategories += FEATURE_MAP[feature]
 
                         # temp: print fetures to be calculated
                         print 'features: ', lstFeatureCategories
 
                         dctFeatureParameters = {}
-                        for name in lstFeatureCategories[:]:
-                            if 'haralick' in name:
-                                lstFeatureCategories.remove(name)
-                                dict_append_list(dctFeatureParameters, 'haralick_categories', name)
-                                dctFeatureParameters['haralick_distances'] = (1, 2, 4, 8)
+                        if feature_extraction:
+                            for name in lstFeatureCategories[:]:
+                                if 'haralick' in name:
+                                    lstFeatureCategories.remove(name)
+                                    dict_append_list(dctFeatureParameters, 'haralick_categories', name)
+                                    dctFeatureParameters['haralick_distances'] = (1, 2, 4, 8)
 
                         if channel_section == self.PRIMARY_CHANNEL:
                             lstPostprocessingFeatureCategories = []
                             lstPostprocessingConditions = []
                             bPostProcessing = False
-                            if self.oSettings.get2('primary_postProcessing_roisize_min') > -1:
+                            if self.oSettings.get2('primary_postprocessing_roisize_min') > -1:
                                 lstPostprocessingFeatureCategories.append('roisize')
-                                lstPostprocessingConditions.append('roisize >= %d' % self.oSettings.get2('primary_postProcessing_roisize_min'))
-                            if self.oSettings.get2('primary_postProcessing_roisize_max') > -1:
+                                lstPostprocessingConditions.append('roisize >= %d' % self.oSettings.get2('primary_postprocessing_roisize_min'))
+                            if self.oSettings.get2('primary_postprocessing_roisize_max') > -1:
                                 lstPostprocessingFeatureCategories.append('roisize')
-                                lstPostprocessingConditions.append('roisize <= %d' % self.oSettings.get2('primary_postProcessing_roisize_max'))
-                            if self.oSettings.get2('primary_postProcessing_intensity_min') > -1:
+                                lstPostprocessingConditions.append('roisize <= %d' % self.oSettings.get2('primary_postprocessing_roisize_max'))
+                            if self.oSettings.get2('primary_postprocessing_intensity_min') > -1:
                                 lstPostprocessingFeatureCategories.append('normbase2')
-                                lstPostprocessingConditions.append('n2_avg >= %d' % self.oSettings.get2('primary_postProcessing_intensity_min'))
-                            if self.oSettings.get2('primary_postProcessing_intensity_max') > -1:
+                                lstPostprocessingConditions.append('n2_avg >= %d' % self.oSettings.get2('primary_postprocessing_intensity_min'))
+                            if self.oSettings.get2('primary_postprocessing_intensity_max') > -1:
                                 lstPostprocessingFeatureCategories.append('normbase2')
-                                lstPostprocessingConditions.append('n2_avg <= %d' % self.oSettings.get2('primary_postProcessing_intensity_max'))
+                                lstPostprocessingConditions.append('n2_avg <= %d' % self.oSettings.get2('primary_postprocessing_intensity_max'))
 
                             lstPostprocessingFeatureCategories = unique(lstPostprocessingFeatureCategories)
                             if len(lstPostprocessingFeatureCategories) > 0:
@@ -758,6 +766,13 @@ class PositionAnalyzer(object):
                                           iExpansionSeparationSizeOutside = self.oSettings.get2('secondary_regions_outside_separationsize'),
                                           iExpansionSizeRim = self.oSettings.get2('secondary_regions_rim_expansionsize'),
                                           iShrinkingSizeRim = self.oSettings.get2('secondary_regions_rim_shrinkingsize'),
+                                          fPropagateLambda = self.oSettings.get2('secondary_regions_propagate_lambda'),
+                                          iPropagateDeltaWidth = self.oSettings.get2('secondary_regions_propagate_deltawidth'),
+
+                                          bPresegmentation = self.oSettings.get2('secondary_presegmentation'),
+                                          iPresegmentationMedianRadius = self.oSettings.get2('secondary_presegmentation_medianradius'),
+                                          fPresegmentationAlpha = self.oSettings.get2('secondary_presegmentation_alpha'),
+
                                           # FIXME
                                           fExpansionCostThreshold = 1.5,
                                           lstAreaSelection = secondary_regions,
@@ -808,7 +823,7 @@ class PositionAnalyzer(object):
 
                     self.oSettings.set_section('Tracking')
                     if self.oSettings.get2('tracking_visualization'):
-                        size = oCellAnalyzer.getImageSize(self.channel_mapping[self.PRIMARY_CHANNEL])
+                        size = oCellAnalyzer.getImageSize(PrimaryChannel.NAME)
                         img_conn, img_split = self.oCellTracker.visualizeTracks(frame, size,
                                                                                 n=self.oSettings.get2('tracking_visualize_track_length'),
                                                                                 radius=self.oSettings.get2('tracking_centroid_radius'))

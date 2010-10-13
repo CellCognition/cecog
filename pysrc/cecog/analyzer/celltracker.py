@@ -962,8 +962,8 @@ class PlotCellTracker(CellTracker):
         for iT in self._dctTimeChannels:
             oChannel = self._dctTimeChannels[iT][strChannelId]
 
-            if oChannel.hasRegion(strRegionId):
-                oRegion = oChannel.getRegion(strRegionId)
+            if oChannel.has_region(strRegionId):
+                oRegion = oChannel.get_region(strRegionId)
 
                 if len(oRegion) > 0:
                     if lstFeatureNames is None:
@@ -1055,7 +1055,7 @@ class PlotCellTracker(CellTracker):
                 assert len(lstChildIds) == len(lstObjectIds)
 
             oChannel = self._dctTimeChannels[iT][strChannelId]
-            oRegion = oChannel.getRegion(strRegionId)
+            oRegion = oChannel.get_region(strRegionId)
 
             if not bHasFeatures:
                 bHasFeatures = True
@@ -1782,9 +1782,9 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                     items = []
 
                     for channel in self._dctTimeChannels[frame].values():
-                        for region_id in channel.getRegionNames():
+                        for region_id in channel.region_names():
 
-                            region = channel.getRegion(region_id)
+                            region = channel.get_region(region_id)
 
                             if obj_id in region:
                                 #FIXME:

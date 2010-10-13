@@ -32,6 +32,10 @@ from cecog.gui.analyzer import (_BaseFrame,
                                 _ProcessorMixin,
                                 AnalzyerThread,
                                 )
+from cecog.analyzer.channel import (PrimaryChannel,
+                                    SecondaryChannel,
+                                    TertiaryChannel,
+                                    )
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -93,8 +97,8 @@ class TrackingFrame(_BaseFrame, _ProcessorMixin):
         settings = _ProcessorMixin._get_modified_settings(self, name)
 
         settings.set_section('ObjectDetection')
-        prim_id = settings.get2('primary_channelid')
-        sec_id = settings.get2('secondary_channelid')
+        prim_id = PrimaryChannel.NAME
+        sec_id = SecondaryChannel.NAME
         settings.set_section('Processing')
         settings.set2('tracking', True)
         settings.set2('tracking_synchronize_trajectories', False)
@@ -112,25 +116,31 @@ class TrackingFrame(_BaseFrame, _ProcessorMixin):
         show_ids_class = settings.get('Output', 'rendering_class_showids')
 
         if name == self.PROCESS_TRACKING:
-            settings.set2('primary_simplefeatures_texture', False)
-            settings.set2('primary_simplefeatures_shape', False)
-            settings.set2('secondary_simplefeatures_texture', False)
-            settings.set2('secondary_simplefeatures_shape', False)
-            settings.set('Processing', 'primary_classification', False)
-            settings.set('Processing', 'secondary_classification', False)
-            settings.set('Processing', 'secondary_processChannel', False)
+            settings.set_section('Processing')
+            settings.set2('primary_featureextraction', False)
+            settings.set2('secondary_featureextraction', False)
+            settings.set2('primary_classification', False)
+            settings.set2('secondary_classification', False)
+            settings.set2('secondary_processChannel', False)
             settings.set('General', 'rendering', {'primary_contours': {prim_id: {'raw': ('#FFFFFF', 1.0),
                                                                                  'contours': {'primary': ('#FF0000', 1, show_ids)}}}})
         else:
-            settings.set('Processing', 'tracking_synchronize_trajectories', True)
-            settings.set('Processing', 'primary_classification', True)
+            settings.set_section('Processing')
+            settings.set2('primary_featureextraction', True)
+            settings.set2('primary_classification', True)
+            settings.set2('tracking_synchronize_trajectories', True)
             settings.set('General', 'rendering_class', {'primary_classification': {prim_id: {'raw': ('#FFFFFF', 1.0),
                                                                                              'contours': [('primary', 'class_label', 1, False),
                                                                                                           ('primary', '#000000', 1, show_ids_class)]}},
-                                                        'secondary_classification_%s' % sec_region: {sec_id: {'raw': ('#FFFFFF', 1.0),
+                                                        })
+
+            settings.set_section('Processing')
+            if (settings.get2('secondary_featureextraction') and
+                settings.get2('secondary_classification') and
+                settings.get2('secondary_processchannel')):
+                settings.get('General', 'rendering_class').update({'secondary_classification_%s' % sec_region: {sec_id: {'raw': ('#FFFFFF', 1.0),
                                                                                                               'contours': [(sec_region, 'class_label', 1, False),
                                                                                                                            (sec_region, '#000000', 1, show_ids_class)]}
                                                                                                               }
-                                                        })
-
+                                                                   })
         return settings

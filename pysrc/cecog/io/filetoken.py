@@ -156,7 +156,7 @@ class FileTokenImporter(object):
                 self.meta_data.dim_x = info.width
                 self.meta_data.dim_y = info.height
                 self.meta_data.pixel_type = info.pixel_type
-                self.has_multi_images = info.images > 1
+                self.has_multi_images = False#info.images > 1
 
             position = item[DIMENSION_NAME_POSITION]
             if not position in lookup:

@@ -33,11 +33,12 @@ import os, \
        shutil
 
 from ConfigParser import RawConfigParser
+from collections import OrderedDict
 
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
-from pdk.ordereddict import OrderedDict
+#from pdk.ordereddict import OrderedDict
 from pdk.fileutils import safe_mkdirs
 from pdk.platform import (is_mac,
                           is_windows,
@@ -137,7 +138,7 @@ def _copy_check_file(path_in, path_out, filename):
 class _ConfigParser(RawConfigParser):
 
     def __init__(self, filename, name):
-        RawConfigParser.__init__(self, {}, OrderedDict)
+        RawConfigParser.__init__(self)
         self.filename = filename
         if not os.path.isfile(filename):
             raise IOError("File for %s with name '%s' not found." %
@@ -155,7 +156,7 @@ class ConfigSettings(RawConfigParser):
     """
 
     def __init__(self, section_registry):
-        RawConfigParser.__init__(self, {}, OrderedDict)
+        RawConfigParser.__init__(self)
         self._registry = OrderedDict()
         self._current_section = None
 
@@ -176,6 +177,9 @@ class ConfigSettings(RawConfigParser):
 
     def get_section(self, section_name):
         return self._section_registry.get_section(section_name)
+
+    def get_section_names(self):
+        return self._section_registry.get_section_names()
 
     def get_trait(self, section_name, trait_name):
         section = self._section_registry.get_section(section_name)

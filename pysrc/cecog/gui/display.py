@@ -103,6 +103,7 @@ class TraitDisplayMixin(object):
             for info in items:
                 grid = None
                 alignment = None
+                last = False
                 if type(info[0]) == types.TupleType:
                     if len(info) >= 2:
                         grid = info[1]
@@ -130,8 +131,10 @@ class TraitDisplayMixin(object):
                             grid = info[1]
                         if len(info) >= 3:
                             alignment = info[2]
+                        if len(info) >= 4:
+                            last = info[3]
                         self.add_input(trait_name2, parent=w_group, grid=grid,
-                                       alignment=alignment)
+                                       alignment=alignment, last=last)
 
             frame_layout.addWidget(w_group, frame._input_cnt, 1, 1, 1)
 
@@ -158,7 +161,8 @@ class TraitDisplayMixin(object):
         w_label.setToolTip('Click on the label for help.')
         return w_label
 
-    def add_input(self, trait_name, parent=None, grid=None, alignment=None):
+    def add_input(self, trait_name, parent=None, grid=None, alignment=None,
+                  last=False):
         if parent is None:
             parent = self._get_frame(self._tab_name)
 
@@ -325,14 +329,18 @@ class TraitDisplayMixin(object):
                 else:
                     layout.addWidget(w_input, grid[0], grid[1]*3+1,
                                      grid[2], grid[3], alignment)
-                layout.addItem(QSpacerItem(1, 1,
-                                           QSizePolicy.MinimumExpanding,
-                                           QSizePolicy.Fixed),
-                               grid[0], grid[1]*3+2)
+                # do not add a spacer if the element is last in a row
+                if not last:
+                    #layout.setColumnStretch(grid[1]*3+2, 0)
+                    layout.addItem(QSpacerItem(0, 0,
+                                               QSizePolicy.MinimumExpanding,
+                                               QSizePolicy.Fixed),
+                                   grid[0], grid[1]*3+2)
         else:
             layout.addWidget(w_label)
             layout.addWidget(w_input)
-            layout.addStretch()
+            if not last:
+                layout.addStretch()
             if not w_button is None:
                 layout.addWidget(w_button)
 
@@ -349,6 +357,8 @@ class TraitDisplayMixin(object):
                 #print '    ', name, value
                 trait.set_value(w_input, value)
 
+    def get_widget(self, trait_name):
+        return self._registry[trait_name]
 
     # convenience methods
 

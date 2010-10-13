@@ -64,14 +64,16 @@ class ProcessingFrame(_BaseFrame, _ProcessorMixin):
                                      ('Start processing', 'Stop processing'))
 
         self.add_group(None,
-                       [('primary_classification', (0,0,1,1)),
-                        ('tracking', (1,0,1,1)),
-                        ('tracking_synchronize_trajectories', (2,0,1,1)),
-                        ('primary_errorcorrection', (3,0,1,1))
+                       [('primary_featureextraction', (0,0,1,1)),
+                        ('primary_classification', (1,0,1,1)),
+                        ('tracking', (2,0,1,1)),
+                        ('tracking_synchronize_trajectories', (3,0,1,1)),
+                        ('primary_errorcorrection', (4,0,1,1))
                         ], link='primary_channel', label='Primary channel')
         self.add_group('secondary_processchannel',
-                       [('secondary_classification', (0,0,1,1)),
-                        ('secondary_errorcorrection', (1,0,1,1))
+                       [('secondary_featureextraction', (0,0,1,1)),
+                        ('secondary_classification', (1,0,1,1)),
+                        ('secondary_errorcorrection', (2,0,1,1))
                         ])
 
         #self.add_line()

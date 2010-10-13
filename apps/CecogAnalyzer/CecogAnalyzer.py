@@ -31,6 +31,7 @@ from PyQt4.Qt import *
 
 from pdk.ordereddict import OrderedDict
 
+#import vigra
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
@@ -48,6 +49,7 @@ from cecog.gui.analyzer.general import (GeneralFrame,
 from cecog.gui.analyzer.objectdetection import (ObjectDetectionFrame,
                                                 SECTION_NAME_OBJECTDETECTION,
                                                 )
+from cecog.gui.analyzer.featureextraction import FeatureExtractionFrame
 from cecog.gui.analyzer.classification import ClassificationFrame
 from cecog.gui.analyzer.tracking import TrackingFrame
 from cecog.gui.analyzer.errorcorrection import ErrorCorrectionFrame
@@ -150,8 +152,8 @@ class AnalyzerMainWindow(QMainWindow):
         self._selection = QListWidget(central_widget)
         self._selection.setViewMode(QListView.IconMode)
         #self._selection.setUniformItemSizes(True)
-        self._selection.setIconSize(QSize(40, 40))
-        self._selection.setGridSize(QSize(140,70))
+        self._selection.setIconSize(QSize(35, 35))
+        self._selection.setGridSize(QSize(140,60))
         #self._selection.setWrapping(False)
         #self._selection.setMovement(QListView.Static)
         #self._selection.setFlow(QListView.TopToBottom)
@@ -173,6 +175,7 @@ class AnalyzerMainWindow(QMainWindow):
         self._tab_lookup = OrderedDict()
         self._tabs = [GeneralFrame(self._settings, self._pages),
                       ObjectDetectionFrame(self._settings, self._pages),
+                      FeatureExtractionFrame(self._settings, self._pages),
                       ClassificationFrame(self._settings, self._pages),
                       TrackingFrame(self._settings, self._pages),
                       ErrorCorrectionFrame(self._settings, self._pages),
@@ -441,7 +444,7 @@ class AnalyzerMainWindow(QMainWindow):
         label2.setStyleSheet('background: transparent;')
         label2.setAlignment(Qt.AlignCenter)
         label2.setText('CecogAnalyzer\nVersion %s\n\n'
-                       'Copyright (c) 2006 - 2009\n'
+                       'Copyright (c) 2006 - 2010\n'
                        'Michael Held & Daniel Gerlich\n'
                        'ETH Zurich, Switzerland' % VERSION)
         label3 = QLabel(dialog)
@@ -477,6 +480,8 @@ class AnalyzerMainWindow(QMainWindow):
         trait = self._settings.get_trait(SECTION_NAME_OBJECTDETECTION,
                                          'secondary_channelid')
         trait.set_list_data(self._meta_data.channels)
+        self._tabs[1].get_widget('primary_channelid').update()
+        self._tabs[1].get_widget('secondary_channelid').update()
         print self._imagecontainer.meta_data
 
     @pyqtSlot()
@@ -550,6 +555,12 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 if __name__ == "__main__":
     import time
     from pdk.fileutils import safe_mkdirs
+    log_path = 'log'
+    safe_mkdirs(log_path)
+#    sys.stdout = \
+#        file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
+#    sys.stderr = \
+#        file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
 
     app = QApplication(sys.argv)
     #sys.excepthook=handle_exception

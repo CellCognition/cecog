@@ -66,7 +66,8 @@ import netCDF4
 from cecog import ccore
 
 from cecog.util.util import hexToRgb
-from cecog.analyzer import (REGION_NAMES_PRIMARY,
+from cecog.analyzer import (REGION_NAMES,
+                            REGION_NAMES_PRIMARY,
                             REGION_NAMES_SECONDARY,
                             )
 from cecog.analyzer.celltracker import CellTracker, DotWriter
@@ -128,7 +129,7 @@ class QualityControl(object):
 
                 for iT, dctChannels in time_holder.iteritems():
                     try:
-                        oRegion = dctChannels[strChannelId].getRegion(strRegionId)
+                        oRegion = dctChannels[strChannelId].get_region(strRegionId)
                     except KeyError:
                         iCellcount = 0
                     else:
@@ -152,24 +153,36 @@ class QualityControl(object):
 
 class TimeHolder(OrderedDict):
 
+    NC_GROUP_RAW = 'raw'
+    NC_GROUP_LABEL = 'label'
+    NC_GROUP_FEATURE = 'feature'
+    NC_ZLIB = True
+    NC_SHUFFLE = True
+
     def __init__(self, P, channels, filename, meta_data, settings,
-                 create_nc4=True, reuse_nc4=True):
+                 create_nc=True, reuse_nc=True):
         super(TimeHolder, self).__init__()
         self.P = P
         self._iCurrentT = None
         self.channels = channels
         self._meta_data = meta_data
 
-        #create_nc4=False
-        #reuse_nc4=False
+        self._create_nc = create_nc
+        self._reuse_nc = reuse_nc
 
+        self._logger = logging.getLogger(self.__class__.__name__)
+
+        # frames get an index representation with the NC file, starting at 0
         frames = sorted(list(meta_data.times))
+        self._frames_to_idx = dict([(f,i) for i, f in enumerate(frames)])
+        self._idx_to_frames = dict([(i,f) for i, f in enumerate(frames)])
+
         channels = sorted(list(meta_data.channels))
         region_names = REGION_NAMES_PRIMARY + REGION_NAMES_SECONDARY
         region_channels = ['primary']*len(REGION_NAMES_PRIMARY) + \
                           ['secondary']*len(REGION_NAMES_SECONDARY)
 
-        if os.path.isfile(filename) and reuse_nc4:
+        if os.path.isfile(filename) and self._reuse_nc:
             dataset = netCDF4.Dataset(filename, 'a')
 
             # decide which parts need to be reprocessed based on changes
@@ -183,73 +196,124 @@ class TimeHolder(OrderedDict):
             # compare current and saved settings and decide which data is to
             # process again by setting the *_finished variables to zero
 
-            valid = {'primary'   : [True, True],
-                     'secondary' : [True, True],
-                     }
-            for name in ['primary', 'secondary']:
-                channel_id = settings2.get(SECTION_NAME_OBJECTDETECTION,
-                                           '%s_channelid' % name)
-                idx = dataset.variables['channels_idx'][:] == channel_id
-                if (not settings.compare(settings2, SECTION_NAME_OBJECTDETECTION,
-                                         '%s_image' % name) or
-                    not settings.compare(settings2, SECTION_NAME_OBJECTDETECTION,
-                                         'secondary_registration') or
-                    not valid[name][0]):
-                    dataset.variables['raw_images_finished'][:,idx] = 0
-                    valid['primary'] = [False, False]
-                    valid['secondary'] = [False, False]
-                idx = dataset.variables['region_channels'][:] == name
-                if (not settings.compare(settings2, SECTION_NAME_OBJECTDETECTION,
-                                        '%s_segmentation' % name) or
-                    not valid[name][1]):
-                    dataset.variables['label_images_finished'][:,idx] = 0
-                    valid['primary'] = [False, False]
-                    valid['secondary'] = [False, False]
+#            valid = {'primary'   : [True, True],
+#                     'secondary' : [True, True],
+#                     }
+#            for name in ['primary', 'secondary']:
+#                channel_id = settings2.get(SECTION_NAME_OBJECTDETECTION,
+#                                           '%s_channelid' % name)
+#                idx = dataset.variables['channels_idx'][:] == channel_id
+#                if (not settings.compare(settings2, SECTION_NAME_OBJECTDETECTION,
+#                                         '%s_image' % name) or
+#                    not settings.compare(settings2, SECTION_NAME_OBJECTDETECTION,
+#                                         'secondary_registration') or
+#                    not valid[name][0]):
+#                    dataset.variables['raw_images_finished'][:,idx] = 0
+#                    valid['primary'] = [False, False]
+#                    valid['secondary'] = [False, False]
+#                idx = dataset.variables['region_channels'][:] == name
+#                if (not settings.compare(settings2, SECTION_NAME_OBJECTDETECTION,
+#                                        '%s_segmentation' % name) or
+#                    not valid[name][1]):
+#                    dataset.variables['label_images_finished'][:,idx] = 0
+#                    valid['primary'] = [False, False]
+#                    valid['secondary'] = [False, False]
 
 
-        elif create_nc4:
+        elif self._create_nc:
+            dim_x = meta_data.dim_x
+            dim_y = meta_data.dim_y
+            dim_t = meta_data.dim_t
+            dim_c = meta_data.dim_c
+
             dataset = netCDF4.Dataset(filename, 'w', format='NETCDF4')
-            dataset.createDimension('frames', meta_data.dim_t)
-            dataset.createDimension('channels', meta_data.dim_c)
-            dataset.createDimension('height', meta_data.dim_y)
-            dataset.createDimension('width', meta_data.dim_x)
-            dataset.createDimension('regions', len(region_names))
+            dataset.createDimension('frames', dim_t)
+            dataset.createDimension('channels', dim_c)
+            dataset.createDimension('height', dim_y)
+            dataset.createDimension('width', dim_x)
+            #dataset.createDimension('regions', len(region_names))
             dataset.createDimension('one', 1)
 
-            dataset.createVariable('settings', str, 'one')
-
             var = dataset.createVariable('frames_idx', 'u4', 'frames')
+            var.description = 'Mapping from indices to frames.'
             var[:] = frames
 
-            var = dataset.createVariable('channels_idx', str, 'channels')
-            var[:] = numpy.asarray(channels, 'O')
+            var = dataset.createVariable('settings', str, 'one')
+            var.description = 'Cecog settings used for the generation of this '\
+                              'netCDF file. Current cecog and this settings '\
+                              'are compared hierarchically leading to a '\
+                              'stepwise invalidation of preprocessed values.'
 
-            var = dataset.createVariable('region_names', str, 'regions')
-            var[:] = numpy.asarray(region_names, 'O')
+            raw_g = dataset.createGroup(self.NC_GROUP_RAW)
+            raw_g.description = 'Converted raw images as processed by cecog '\
+                                'after 8bit conversion, registration, and '\
+                                'z-projection/selection.'
+            label_g = dataset.createGroup(self.NC_GROUP_LABEL)
+            label_g.description = 'Label images as a result of object '\
+                                  'detection.'
 
-            var = dataset.createVariable('region_channels', str, 'regions')
-            var[:] = numpy.asarray(region_channels, 'O')
+            object_g = dataset.createGroup('object')
+            object_g.description = 'General object values and mapping'
+            feature_g = dataset.createGroup(self.NC_GROUP_FEATURE)
+            feature_g.description = 'Feature values'
 
-            dataset.createVariable('raw_images', 'u1',
-                                   ('frames', 'channels', 'height', 'width'),
-                                   zlib='True',
-                                   shuffle=False,
-                                   chunksizes=(1, 1, meta_data.dim_y,
-                                               meta_data.dim_x))
-            finished = dataset.createVariable('raw_images_finished', 'i1',
-                                              ('frames', 'channels'))
-            finished[:] = 0
+            for channel_id in meta_data.channels:
+                var = raw_g.createVariable(channel_id, 'u1',
+                                           ('frames', 'height', 'width'),
+                                           zlib=self.NC_ZLIB,
+                                           shuffle=self.NC_SHUFFLE,
+                                           chunksizes=(1, dim_y, dim_x))
+                var.valid = [0] * dim_t
 
-            dataset.createVariable('label_images', 'i2',
-                                   ('frames', 'regions', 'height', 'width'),
-                                   zlib='True',
-                                   shuffle=False,
-                                   chunksizes=(1, 1, meta_data.dim_y,
-                                               meta_data.dim_x))
-            finished = dataset.createVariable('label_images_finished', 'i1',
-                                              ('frames', 'regions'))
+            for channel_name in REGION_NAMES.keys():
+                channel_g = label_g.createGroup(channel_name)
+                grp1 = object_g.createGroup(channel_name)
+                grp2 = feature_g.createGroup(channel_name)
+                for region_name in REGION_NAMES[channel_name]:
+                    var = channel_g.createVariable(region_name, 'i2',
+                                                   ('frames', 'height',
+                                                    'width'),
+                                                   zlib=self.NC_ZLIB,
+                                                   shuffle=self.NC_SHUFFLE,
+                                                   chunksizes=(1, dim_y, dim_x))
+                    var.valid = [0] * dim_t
+                    grp1.createGroup(region_name)
+                    grp2.createGroup(region_name)
 
-            finished[:] = 0
+
+#
+#            var = dataset.createVariable('channels_idx', str, 'channels')
+#            var[:] = numpy.asarray(channels, 'O')
+#
+#            var = dataset.createVariable('region_names', str, 'regions')
+#            var[:] = numpy.asarray(region_names, 'O')
+#
+#            var = dataset.createVariable('region_channels', str, 'regions')
+#            var[:] = numpy.asarray(region_channels, 'O')
+#
+#            print(meta_data)
+#            dataset.createVariable('raw_images', 'u1',
+#                                   ('frames', 'channels', 'height', 'width'),
+#                                   zlib='True',
+#                                   shuffle=False,
+#                                   chunksizes=(1, 1, meta_data.dim_y,
+#                                               meta_data.dim_x)
+#                                   )
+#            finished = dataset.createVariable('raw_images_finished', 'i1',
+#                                              ('frames', 'channels'))
+#            finished[:] = 0
+#
+#            dataset.createVariable('label_images', 'i2',
+#                                   ('frames', 'regions', 'height', 'width'),
+#                                   zlib='True',
+#                                   shuffle=False,
+#                                   chunksizes=(1, 1, meta_data.dim_y,
+#                                               meta_data.dim_x)
+#                                   )
+#            finished = dataset.createVariable('label_images_finished', 'i1',
+#                                              ('frames', 'regions'))
+#
+#            finished[:] = 0
         else:
             dataset = None
 
@@ -258,17 +322,19 @@ class TimeHolder(OrderedDict):
             var = dataset.variables['settings']
             var[:] = numpy.asarray(settings.to_string(), 'O')
 
-
         self._dataset = dataset
 
-        self._frames_to_idx = dict([(f,i) for i, f in enumerate(frames)])
-        self._idx_to_frames = dict([(i,f) for i, f in enumerate(frames)])
 
         self._channels_to_idx = dict([(f,i) for i, f in enumerate(channels)])
         self._idx_to_channels = dict([(i,f) for i, f in enumerate(channels)])
 
         self._regions_to_idx = dict([(n,i) for i, n in enumerate(region_names)])
 
+    @staticmethod
+    def nc_valid_set(var, idx, value):
+        helper = var.valid
+        helper[idx] = value
+        var.valid = helper
 
     def __del__(self):
         if not self._dataset is None:
@@ -283,7 +349,7 @@ class TimeHolder(OrderedDict):
     def getCurrentChannels(self):
         return self[self._iCurrentT]
 
-    def applyChannel(self, oChannel):
+    def apply_channel(self, oChannel):
         iT = self._iCurrentT
         if not iT in self:
             self[iT] = OrderedDict()
@@ -292,35 +358,83 @@ class TimeHolder(OrderedDict):
 
     def apply_segmentation(self, channel, primary_channel=None):
         valid = False
-        if not self._dataset is None:
-            valid = channel.load_label_image(self._dataset,
-                                             self._frames_to_idx[self._iCurrentT],
-                                             self._regions_to_idx)
+        desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
+                                         channel.strChannelId)
+        name = channel.NAME.lower()
+        if self._create_nc or self._reuse_nc:
+            grp = self._dataset.groups[self.NC_GROUP_LABEL]
+            grp = grp.groups[name]
+            frame_idx = self._frames_to_idx[self._iCurrentT]
+        if self._reuse_nc:
+            for region_name in channel.lstAreaSelection:
+                var = grp.variables[region_name]
+                if var.valid[frame_idx]:
+                    img_label = ccore.numpy_to_image(var[frame_idx],
+                                                     copy=True)
+                    img_xy = channel.meta_image.image
+                    container = ccore.ImageMaskContainer(img_xy, img_label,
+                                                         False)
+                    channel.dctContainers[region_name] = container
+                    valid = True
+                else:
+                    valid = False
+                    break
         if not valid:
-            channel.applySegmentation(primary_channel)
-            if not self._dataset is None:
-                channel.dump_label_image(self._dataset,
-                                         self._frames_to_idx[self._iCurrentT],
-                                         self._regions_to_idx)
+            channel.apply_segmentation(primary_channel)
+            if self._create_nc:
+                for region_name in channel.lstAreaSelection:
+                    var = grp.variables[region_name]
+                    container = channel.dctContainers[region_name]
+                    var[frame_idx] = \
+                        container.img_labels.toArray(copy=False)
+                    self.nc_valid_set(var, frame_idx, 1)
+                self._logger.debug('Label images %s written to nc4 file.' %\
+                                   desc)
+        else:
+            self._logger.debug('Label images %s loaded from nc4 file.' %\
+                   desc)
+
 
     def prepare_raw_image(self, channel):
-        valid = False
-        if not self._dataset is None:
+        desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
+                                         channel.strChannelId)
+        if self._create_nc or self._reuse_nc:
+            grp = self._dataset.groups[self.NC_GROUP_RAW]
+            var = grp.variables[channel.strChannelId]
+            frame_idx = self._frames_to_idx[self._iCurrentT]
+        if self._reuse_nc and var.valid[frame_idx]:
             meta_image = MetaImage(image_container=None,
                                    position=self.P, time=self._iCurrentT,
                                    channel=channel.strChannelId, zslice=1)
-            valid = channel.load_raw_image(self._dataset,
-                                           self._frames_to_idx[self._iCurrentT],
-                                           self._channels_to_idx[channel.strChannelId],
-                                           meta_image)
-        if not valid:
+
+            img = ccore.numpy_to_image(var[frame_idx], copy=True)
+            meta_image.set_image(img)
+            channel.meta_image = meta_image
+            self._logger.debug('Raw image %s loaded from nc4 file.' % desc)
+        else:
             channel.apply_zselection()
             channel.normalize_image()
-            if not self._dataset is None:
-                channel.dump_raw_image(self._dataset,
-                                       self._frames_to_idx[self._iCurrentT],
-                                       self._channels_to_idx[channel.strChannelId])
+            if self._create_nc:
+                img = channel.meta_image.image
+                grp = self._dataset.groups[self.NC_GROUP_RAW]
+                var = grp.variables[channel.strChannelId]
+                var[frame_idx] = img.toArray(copy=False)
+                self.nc_valid_set(var, frame_idx, 1)
+                self._logger.debug('Raw image %s written to nc4 file.' % desc)
 
+    def apply_features(self, channel):
+        valid = False
+        desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
+                                         channel.strChannelId)
+
+        name = channel.NAME.lower()
+        #grp = self._dataset.groups[self.NC_GROUP_FEATURE]
+        #grp = grp.groups[name]
+        #frame_idx = self._frames_to_idx[self._iCurrentT]
+        #if var.valid[frame_idx] and self._reuse_nc:
+
+        if not valid:
+            channel.apply_features()
 
     def extportObjectCounts(self, filename, P, meta_data, prim_info=None, sec_info=None, sep='\t'):
         f = file(filename, 'w')
@@ -355,8 +469,8 @@ class TimeHolder(OrderedDict):
                         line1 += [channel.NAME.upper()] * len(keys)
                         line2 += [region_name] * len(keys)
 
-                    if channel.hasRegion(region_name):
-                        region = channel.getRegion(region_name)
+                    if channel.has_region(region_name):
+                        region = channel.get_region(region_name)
                         total = len(region)
                         count = dict([(x, 0) for x in class_names])
                         # in case just total counts are needed
@@ -397,7 +511,7 @@ class TimeHolder(OrderedDict):
 
             items = []
 
-            prim_region = channels.values()[0].getRegion('primary')
+            prim_region = channels.values()[0].get_region('primary')
 
             for obj_id in prim_region:
 
@@ -407,9 +521,9 @@ class TimeHolder(OrderedDict):
 
                 for channel in channels.values():
 
-                    for region_id in channel.getRegionNames():
+                    for region_id in channel.region_names():
 
-                        region = channel.getRegion(region_id)
+                        region = channel.get_region(region_id)
                         if obj_id in region:
                             #FIXME:
                             feature_lookup2 = feature_lookup.copy()
@@ -463,16 +577,16 @@ class TimeHolder(OrderedDict):
 
         for frame_idx, (frame, channels) in enumerate(self.iteritems()):
             print 'frame_idx', frame_idx
-            prim_region = channels.values()[0].getRegion('primary')
+            prim_region = channels.values()[0].get_region('primary')
             for obj_idx, obj_id in enumerate(prim_region):
                 print 'obj_idx', obj_idx
 
                 for channel_idx, channel in enumerate(channels.values()):
                     print 'channel_idx', channel_idx
 
-                    for region_idx, region_id in enumerate(channel.getRegionNames()):
+                    for region_idx, region_id in enumerate(channel.region_names()):
                         print 'region_idx', region_idx
-                        region = channel.getRegion(region_id)
+                        region = channel.get_region(region_id)
 
                         print obj_id in region
                         print region.getFeatureNames()
@@ -530,10 +644,9 @@ class CellAnalyzer(PropertyManager):
         for channel in channels:
 
             self.time_holder.prepare_raw_image(channel)
-#            oChannel.applyBinning(self.iBinningFactor)
             self.time_holder.apply_segmentation(channel, primary_channel)
 
-            channel.applyFeatures()
+            self.time_holder.apply_features(channel)
 
             if primary_channel is None:
                 assert channel.RANK == 1
@@ -541,7 +654,7 @@ class CellAnalyzer(PropertyManager):
 
         if apply:
             for channel in channels:
-                self.time_holder.applyChannel(channel)
+                self.time_holder.apply_channel(channel)
 
     def purge(self, features=None):
         for oChannel in self._channel_registry.values():
@@ -565,8 +678,8 @@ class CellAnalyzer(PropertyManager):
 
     def getImageSize(self, name):
         oChannel = self._channel_registry[name]
-        w = oChannel.meta_image.iWidth
-        h = oChannel.meta_image.iHeight
+        w = oChannel.meta_image.width
+        h = oChannel.meta_image.height
         return (w,h)
 
     def render(self, strPathOut, dctRenderInfo=None,
@@ -610,7 +723,7 @@ class CellAnalyzer(PropertyManager):
                                 bThickContours = False
                             if strNameOrColor == 'class_label':
                                 oContainer = oChannel.dctContainers[strRegion]
-                                oRegion = oChannel.getRegion(strRegion)
+                                oRegion = oChannel.get_region(strRegion)
                                 dctLabels = {}
                                 dctColors = {}
                                 for iObjId, oObj in oRegion.iteritems():
@@ -636,7 +749,7 @@ class CellAnalyzer(PropertyManager):
 
                             else:
                                 oContainer = oChannel.dctContainers[strRegion]
-                                oRegion = oChannel.getRegion(strRegion)
+                                oRegion = oChannel.get_region(strRegion)
                                 lstObjIds = oRegion.keys()
                                 imgRaw = oChannel.meta_image.image
                                 imgCon = ccore.Image(imgRaw.width, imgRaw.height)
@@ -689,7 +802,7 @@ class CellAnalyzer(PropertyManager):
 
         print self._channel_registry
         oChannel = self._channel_registry[oLearner.channel_name]
-        oContainer = oChannel.getContainer(strRegionId)
+        oContainer = oChannel.get_container(strRegionId)
         objects = oContainer.getObjects()
 
         object_lookup = {}
@@ -731,7 +844,7 @@ class CellAnalyzer(PropertyManager):
             oContainer.delObject(obj_id)
 
         oChannel.applyFeatures()
-        region = oChannel.getRegion(strRegionId)
+        region = oChannel.get_region(strRegionId)
 
         learner_objects = []
         for label, object_ids in object_lookup.iteritems():
@@ -792,7 +905,7 @@ class CellAnalyzer(PropertyManager):
         channel_name = oPredictor.strChannelId
         strRegionId = oPredictor.strRegionId
         oChannel = self._channel_registry[channel_name]
-        oRegion = oChannel.getRegion(strRegionId)
+        oRegion = oChannel.get_region(strRegionId)
         for iObjId, oObj in oRegion.iteritems():
             iLabel, dctProb = oPredictor.predict(oObj.aFeatures.copy(), oRegion.getFeatureNames())
             oObj.iLabel = iLabel

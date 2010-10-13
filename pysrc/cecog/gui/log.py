@@ -55,7 +55,7 @@ class LogWindow(QFrame):
               'WARN'  : logging.WARNING,
               'ERROR' : logging.ERROR}
 
-    def __init__(self, handler):
+    def __init__(self, handler, max_count=500):
         QFrame.__init__(self)
         self.setWindowTitle('Log window')
 
@@ -65,6 +65,8 @@ class LogWindow(QFrame):
         layout = QGridLayout(self)
         layout.setContentsMargins(5,5,5,5)
         self._log_widget = QPlainTextEdit(self)
+        self._log_widget.setReadOnly(True)
+        self._log_widget.setMaximumBlockCount(max_count)
         format = QTextCharFormat()
         format.setFontFixedPitch(True)
         format.setFontPointSize(11)
