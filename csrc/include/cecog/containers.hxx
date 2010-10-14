@@ -1072,9 +1072,9 @@ namespace cecog
           if (findCrack)
           {
             printf("moo123 7\n");
-            //vigra::Diff2D cs = findCrackStart(img_labels.upperLeft() + ul,
-            //                                  img_labels.upperLeft() + lr,
-            //                                  img_labels.accessor(), i) + ul;
+            cs = findCrackStart(img_labels.upperLeft() + ul,
+                                img_labels.upperLeft() + lr,
+                                img_labels.accessor(), i) + ul;
             findCrackStartOld(imgLabels2.upperLeft() + ul + vigra::Diff2D(1,1),
                               imgLabels2.upperLeft() + lr + vigra::Diff2D(1,1),
                               imgLabels2.accessor(), i, cs2);
