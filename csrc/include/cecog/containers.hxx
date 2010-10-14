@@ -1012,7 +1012,6 @@ namespace cecog
      */
     void _buildObjects(bool findCrack=true)
     {
-      printf("moo123 1\n");
       vigra::ArrayOfRegionStatistics< vigra::FindBoundingRectangle >
         bounds(this->total_labels);
       inspectTwoImages(srcIterRange(vigra::Diff2D(0,0),
@@ -1020,7 +1019,6 @@ namespace cecog
                                     this->img_labels.size()),
                        srcImage(this->img_labels), bounds);
 
-      printf("moo123 2\n");
       vigra::ArrayOfRegionStatistics< FindAVGCenter >
         center(this->total_labels);
       inspectTwoImages(srcIterRange(vigra::Diff2D(0,0),
@@ -1028,13 +1026,11 @@ namespace cecog
                                     this->img_labels.size()),
                        srcImage(this->img_labels), center);
 
-      printf("moo123 3\n");
       vigra::ArrayOfRegionStatistics< vigra::FindROISize<value_type> >
         roisize(this->total_labels);
       inspectTwoImages(srcImageRange(this->img_labels),
                        srcImage(this->img_labels), roisize);
 
-      printf("moo123 4\n");
 //      // FIXME: some stupid bugfix
       vigra::IImage imgLabels2(img_labels.size()+vigra::Diff2D(2,2));
       copyImage(this->img_labels.upperLeft(),
@@ -1043,16 +1039,11 @@ namespace cecog
                 imgLabels2.upperLeft() + vigra::Diff2D(1,1),
                 imgLabels2.accessor());
 
-      //printf("  mooA %d\n", total_labels);
-
-      printf("moo123 5\n");
       for (int i=1; i <= this->total_labels; ++i)
       {
         vigra::Diff2D ul = bounds[i].upperLeft;
         vigra::Diff2D lr = bounds[i].lowerRight;
         vigra::Diff2D diff = lr - ul;
-
-        //printf("  mooB (%d %d) (%d %d) (%d %d)\n", diff.x, diff.y, ul.x, ul.y, lr.x, lr.y);
 
         // check for border and size greater 1 pixel
         if (diff.x > 1 && diff.y > 1 &&
@@ -1064,23 +1055,18 @@ namespace cecog
             )
            )
         {
-          printf("moo123 6\n");
           vigra::Diff2D cn = center[i]() - ul;
-
           vigra::Diff2D cs(0,0);
           vigra::Diff2D cs2(0,0);
           if (findCrack)
           {
-            printf("moo123 7\n");
             cs = findCrackStart(img_labels.upperLeft() + ul,
                                 img_labels.upperLeft() + lr,
                                 img_labels.accessor(), i) + ul;
             findCrackStartOld(imgLabels2.upperLeft() + ul + vigra::Diff2D(1,1),
                               imgLabels2.upperLeft() + lr + vigra::Diff2D(1,1),
                               imgLabels2.accessor(), i, cs2);
-            //printf("  moo %d  %d,%d\n", i, cs.x, cs.y);
           }
-          printf("moo123 8\n");
           this->objects[i] = ROIObject(ul, lr, cn, cs2, cs, roisize[i]());
         } else
           // delete not used objects from label image
@@ -1095,7 +1081,6 @@ namespace cecog
                                 Param(0)
                                 );
       }
-      printf("moo123 9\n");
     }
 
     // font for text labels
