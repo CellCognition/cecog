@@ -356,8 +356,6 @@ class TimeHolder(OrderedDict):
         self[iT][oChannel.strChannelId] = oChannel
         self[iT].sort(key = lambda x: self[iT][x])
 
-        # YOYO
-
     def apply_segmentation(self, channel, primary_channel=None):
         valid = False
         desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
