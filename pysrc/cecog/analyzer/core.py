@@ -1041,7 +1041,7 @@ class AnalyzerCore(object):
     def _openImageContainer(self):
         self.oSettings.set_section('General')
         self.lstPositions = self.oSettings.get2('positions')
-        print 'MOOO', self.lstPositions, type(self.lstPositions)
+        #print 'MOOO', self.lstPositions, type(self.lstPositions)
         if self.lstPositions == '' or not self.oSettings.get2('constrain_positions'):
             self.lstPositions = None
         else:

@@ -140,6 +140,7 @@ class _ConfigParser(RawConfigParser):
     def __init__(self, filename, name):
         RawConfigParser.__init__(self)
         self.filename = filename
+        self.name = name
         if not os.path.isfile(filename):
             raise IOError("File for %s with name '%s' not found." %
                           (name, filename))

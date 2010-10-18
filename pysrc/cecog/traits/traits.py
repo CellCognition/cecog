@@ -128,7 +128,16 @@ class SelectionTrait(ListTrait):
         self.list_data = list_data
 
     def index(self, value):
-        return self.list_data.index(value)
+        try:
+            idx = self.list_data.index(value)
+        except ValueError:
+            raise ValueError("The value '%s' is not in the list %s." %
+                             (value, self.list_data))
+        else:
+            return idx
+
+    def length(self):
+        return len(self.list_data)
 
     def convert(self, value):
         return value

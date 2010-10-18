@@ -68,6 +68,7 @@ from cecog.gui.util import (status,
                             show_html,
                             critical,
                             question,
+                            exception
                             )
 
 import resource
@@ -403,8 +404,14 @@ class AnalyzerMainWindow(QMainWindow):
         else:
             self._settings_filename = filename
             self.setWindowTitle('%s - %s[*]' % (self.TITLE, filename))
-            for widget in self._tabs:
-                widget.update_input()
+            try:
+                for widget in self._tabs:
+                    widget.update_input()
+            except:
+                critical(self, "Problem loading settings file.",
+                         info = "Fix the problem in file '%s' and load the "\
+                                "settings file again." % filename,
+                         detail_tb = True)
             self.settings_changed(False)
             status('Settings successfully loaded.')
 

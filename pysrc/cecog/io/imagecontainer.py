@@ -30,7 +30,9 @@ __all__ = ['DIMENSION_NAME_POSITION',
 # standard library imports:
 #
 import types, \
-       os
+       os, \
+       cPickle as pickle, \
+       pprint
 
 #------------------------------------------------------------------------------
 # extension module imports:
@@ -42,6 +44,7 @@ from pdk.fileutils import safe_mkdirs
 #------------------------------------------------------------------------------
 # cecog imports:
 #
+from cecog.traits.config import NAMING_SCHEMAS
 
 #------------------------------------------------------------------------------
 # constants:
@@ -117,9 +120,8 @@ class MetaData(object):
         try:
             timestamp = self._timestamps_absolute[position][frame]
         except KeyError:
-            return float('NAN')
-        else:
-            return timestamp
+            timestamp = float('NAN')
+        return timestamp
 
     def append_absolute_time(self, position, time, timestamp):
         if not position in self._timestamps_absolute:
@@ -134,15 +136,16 @@ class MetaData(object):
 
     def get_well_and_subwell(self, position):
         if position in self._position_well_map:
-            return (self._position_well_map[position][META_INFO_WELL],
-                    self._position_well_map[position][META_INFO_SUBWELL])
+            result = (self._position_well_map[position][META_INFO_WELL],
+                      self._position_well_map[position][META_INFO_SUBWELL])
         else:
-            return (None, None)
+            result = (None, None)
+        return result
 
     def get_well_and_subwell_dict(self):
         wells_subwell_pairs = [(self._position_well_map[x][META_INFO_WELL],
-                               self._position_well_map[x][META_INFO_SUBWELL])
-                               for x in self._position_well_map.keys()]
+                                self._position_well_map[x][META_INFO_SUBWELL])
+                                for x in self._position_well_map.keys()]
         well_map = {}
         for well, subwell in wells_subwell_pairs:
             if well in ['', None]:
@@ -169,6 +172,15 @@ class MetaData(object):
         self.dim_c = len(self.channels)
         self.dim_z = len(self.zslices)
 
+    def h(self, a):
+        if len(a) == 0:
+            s = '[ - ]'
+        elif len(a) == 1:
+            s = '[ %s ]' % a[0]
+        elif len(a) > 1:
+            s = '[ %s ... %s ]' % (a[0], a[-1])
+        return s
+
     def format(self, time=True):
 #        if len(self.dctTimestampStrs) == 0:
 #            self._analyzeTimestamps()
@@ -179,10 +191,12 @@ class MetaData(object):
         strings += [line]
         strings += [head]
         strings += [line]
-        strings += ["* Positions: %s" % self.dim_p]
-        strings += ["* Time-points: %s" % self.dim_t]
-        strings += ["* Channels: %s" % self.dim_c]
-        strings += ["* Z-slices: %s" % self.dim_z]
+        strings += ["* Positions: %s %s" %
+                    (self.dim_p, self.h(self.positions))]
+        strings += ["* Time-points: %s (%d - %d)" %
+                    (self.dim_t, min(self.times), max(self.times))]
+        strings += ["* Channels: %s %s" % (self.dim_c, self.channels)]
+        strings += ["* Z-slices: %s %s" % (self.dim_z, self.zslices)]
         strings += ["* Height: %s" % self.dim_y]
         strings += ["* Width: %s" % self.dim_x]
         strings += ["* Wells: %s" % len(self.get_well_and_subwell_dict())]
@@ -239,18 +253,18 @@ class MetaImage(object):
 
     def format(self, suffix=None, show_position=True, show_time=True,
                show_channel=True, show_zslice=True, sep='_'):
-        lstFormat = []
-        if bP:
-            lstFormat.append("P%s" % self.P)
-        if bT:
-            lstFormat.append("T%05d" % self.iT)
-        if bC:
-            lstFormat.append("C%s" % self.strC)
-        if bZ:
-            lstFormat.append("Z%02d" % self.iZ)
-        if strSuffix is not None:
-            lstFormat.append(strSuffix)
-        return strSep.join(lstFormat)
+        items = []
+        if show_position:
+            items.append("P%s" % self.P)
+        if show_time:
+            items.append("T%05d" % self.iT)
+        if show_channel:
+            items.append("C%s" % self.strC)
+        if show_zslice:
+            items.append("Z%02d" % self.iZ)
+        if suffix is not None:
+            items.append(suffix)
+        return sep.join(items)
 
 
 
@@ -356,10 +370,9 @@ class ImageContainer(object):
     def from_settings(cls, settings):
         from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
         from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
-        from cecog.io.filetoken import (MetaMorphTokenImporter,
+        from cecog.io.filetoken import (IniFileImporter,
                                         FlatFileImporter,
                                         )
-        import cPickle as pickle
         settings.set_section(SECTION_NAME_GENERAL)
         path_input = settings.get2('pathin')
         path_output = settings.get2('pathout')
@@ -378,8 +391,13 @@ class ImageContainer(object):
             imagecontainer = pickle.load(f)
             f.close()
         else:
+            # read file structure according to naming schema file
             if settings.get2('image_import_namingschema'):
-                importer = MetaMorphTokenImporter(path_input)
+                config_parser = NAMING_SCHEMAS
+                section_name = settings.get2('namingscheme')
+                importer = IniFileImporter(path_input,
+                                           config_parser, section_name)
+            # read file structure according to dimension/structure file
             elif settings.get2('image_import_structurefile'):
                 filename = settings.get2('structure_filename')
                 importer = FlatFileImporter(path_input, filename)

@@ -23,7 +23,8 @@ __all__ = ['FileTokenImporter',
 #------------------------------------------------------------------------------
 # standard library imports:
 #
-import os
+import os, \
+       re
 
 #------------------------------------------------------------------------------
 # extension module imports:
@@ -95,7 +96,7 @@ class DefaultCoordinates(object):
         return image_info[key]
 
 
-class FileTokenImporter(object):
+class AbstractImporter(object):
 
     EXTENSIONS = ['.tif', '.png', '.png']
     IGNORE_PREFIXES = ['.']
@@ -103,7 +104,7 @@ class FileTokenImporter(object):
     MULTIIMAGE_IGNORE = 'ignore'
     MULTIIMAGE_USE_ZSLICE = 'zslice'
 
-    def __init__(self, path, token_handler,
+    def __init__(self, path,
                  extensions=None, ignore_prefixes=None, multi_image=None):
         self.path = os.path.normpath(path)
         self.extensions = self.EXTENSIONS if extensions is None \
@@ -113,31 +114,26 @@ class FileTokenImporter(object):
         self.multi_image = self.MULTIIMAGE_USE_ZSLICE if multi_image is None \
                            else multi_image
         self.has_multi_images = False
-        self.token_handler = token_handler
         self.meta_data = MetaData()
+
+    #def load(self):
         self.dimension_lookup = self._build_dimension_lookup()
         self.meta_data.setup()
-        #print self.meta_data
-        #print self.dimension_lookup
 
-    def _build_token_list(self):
-        file_list = collect_files(self.path, self.extensions, absolute=True,
-                                  follow=False, recursive=True,
-                                  ignore_case=True, force_python=True)
-
-        token_list = []
-        for filename in file_list:
-            filename_rel = filename[len(self.path)+1:]
-            filename_short = os.path.split(filename_rel)[1]
-            if filename_short[0] not in self.ignore_prefixes:
-                result = self.token_handler.search_all(filename_short)
-                result['filename'] = filename_rel
-                token_list.append(result)
-        return token_list
-
-    def _get_dimension_items(self):
-        token_list = self._build_token_list()
-        return token_list
+    def get_image(self, position, frame, channel, zslice):
+        index = 0
+        if (self.has_multi_images and
+            self.multi_image == self.MULTIIMAGE_USE_ZSLICE):
+            index = zslice - 1
+            zslice = None
+        #print position, frame, channel, zslice, index
+        filename_rel = self.dimension_lookup[position][frame][channel][zslice]
+        filename_abs = os.path.join(self.path, filename_rel)
+        if self.meta_data.pixel_type == UINT8:
+            image = ccore.readImage(filename_abs, index)
+        elif self.meta_data.pixel_type == UINT16:
+            image = ccore.readImageUInt16(filename_abs, index)
+        return image
 
     def _build_dimension_lookup(self):
         lookup = {}
@@ -149,6 +145,7 @@ class FileTokenImporter(object):
 
         for item in self._get_dimension_items():
 
+            # import image info only once
             if not has_xy:
                 has_xy = True
                 info = ccore.ImageImportInfo(os.path.join(self.path,
@@ -221,20 +218,32 @@ class FileTokenImporter(object):
         self.meta_data.zslices = sorted(zslices)
         return lookup
 
-    def get_image(self, position, frame, channel, zslice):
-        index = 0
-        if (self.has_multi_images and
-            self.multi_image == self.MULTIIMAGE_USE_ZSLICE):
-            index = zslice - 1
-            zslice = None
-        #print position, frame, channel, zslice, index
-        filename_rel = self.dimension_lookup[position][frame][channel][zslice]
-        filename_abs = os.path.join(self.path, filename_rel)
-        if self.meta_data.pixel_type == UINT8:
-            image = ccore.readImage(filename_abs, index)
-        elif self.meta_data.pixel_type == UINT16:
-            image = ccore.readImageUInt16(filename_abs, index)
-        return image
+    def _get_dimension_items(self):
+        raise NotImplementedError()
+
+
+class FileTokenImporter(AbstractImporter):
+
+    def __init__(self, path, token_handler,
+                 extensions=None, ignore_prefixes=None, multi_image=None):
+        super(FileTokenImporter, self).__init__(path, extensions=extensions,
+                                                ignore_prefixes=ignore_prefixes,
+                                                multi_image=multi_image)
+        self.token_handler = token_handler
+
+    def _get_dimension_items(self):
+        file_list = collect_files(self.path, self.extensions, absolute=True,
+                                  follow=False, recursive=True,
+                                  ignore_case=True, force_python=True)
+        token_list = []
+        for filename in file_list:
+            filename_rel = filename[len(self.path)+1:]
+            filename_short = os.path.split(filename_rel)[1]
+            if filename_short[0] not in self.ignore_prefixes:
+                result = self.token_handler.search_all(filename_short)
+                result['filename'] = filename_rel
+                token_list.append(result)
+        return token_list
 
 
 class SimpleTokenImporter(FileTokenImporter):
@@ -258,6 +267,7 @@ class SimpleTokenImporter(FileTokenImporter):
                              ignore_prefixes=ignore_prefixes,
                              multi_image=multi_image)
 
+
 class MetaMorphTokenImporter(SimpleTokenImporter):
 
     TOKEN_P = Token('P', type_code='c', length='+', prefix='',
@@ -276,6 +286,7 @@ class MetaMorphTokenImporter(SimpleTokenImporter):
                              extensions=extensions,
                              ignore_prefixes=ignore_prefixes,
                              multi_image=multi_image)
+
 
 class ZeissLifeTokenImporter(SimpleTokenImporter):
 
@@ -297,17 +308,12 @@ class ZeissLifeTokenImporter(SimpleTokenImporter):
                              ignore_prefixes=ignore_prefixes,
                              multi_image=multi_image)
 
-class FlatFileImporter(FileTokenImporter):
 
-    def __init__(self, path, filename,
-                 extensions=None, ignore_prefixes=None,
-                 multi_image=None):
+class FlatFileImporter(AbstractImporter):
+
+    def __init__(self, path, filename):
         self.flat_filename = filename
-        super(FlatFileImporter,
-              self).__init__(path, token_handler=None,
-                             extensions=extensions,
-                             ignore_prefixes=ignore_prefixes,
-                             multi_image=multi_image)
+        super(FlatFileImporter, self).__init__(path)
 
     def _get_dimension_items(self):
         column_names, table = read_table(self.flat_filename, True)
@@ -326,6 +332,68 @@ class FlatFileImporter(FileTokenImporter):
             table[i]['filename'] = os.path.join(table[i]['path'],
                                                 table[i]['filename'])
         return table
+
+
+class IniFileImporter(AbstractImporter):
+
+    def __init__(self, path, config_parser, section_name):
+        self.config_parser = config_parser
+        self.section_name = section_name
+
+        regex_subdirectories = self.config_parser.get(self.section_name,
+                                                      'regex_subdirectories')
+        if regex_subdirectories is None:
+            regex_subdirectories = '.*'
+        self._re_subdir = re.compile(regex_subdirectories)
+
+        regex_filename_substr = self.config_parser.get(self.section_name,
+                                                      'regex_filename_substr')
+        if regex_filename_substr is None:
+            regex_filename_substr = '(.*)'
+        self._re_substr = re.compile(regex_filename_substr)
+
+        self._re_dim = re.compile(self.config_parser.get(self.section_name,
+                                                         'regex_dimensions'))
+        super(IniFileImporter, self).__init__(path)
+
+    def _get_dimension_items(self):
+        token_list = []
+        extensions = self.config_parser.get(self.section_name,
+                                            'file_extensions').split()
+        subdir_list = [x for x in os.listdir(self.path)
+                       if not self._re_subdir.search(x) is None]
+
+        if self.config_parser.getboolean(self.section_name,
+                                         'use_subdirectories_as_positions'):
+            pass
+        else:
+            file_list = []
+            # collect all files with matching extensions from all subdirs
+            for subdir in subdir_list:
+                subdir_full = os.path.join(self.path, subdir)
+                file_list += collect_files(subdir_full, extensions,
+                                           absolute=True,
+                                           follow=False, recursive=True,
+                                           ignore_case=True, force_python=True)
+            # extract dimension informations according to regex patterns from
+            # relative filename (including extension)
+            for filename in file_list:
+                filename_rel = filename[len(self.path)+1:]
+                filename_short = os.path.split(filename_rel)[1]
+                #if filename_short[0] not in self.ignore_prefixes:
+
+                # search substring to reduce relative filename to for
+                # dimension search
+                search = self._re_substr.search(filename_short)
+                if not search is None and len(search.groups()) > 0:
+                    found_name = search.groups()[0]
+                    # check substring according to regex pattern
+                    search2 = self._re_dim.search(found_name)
+                    if not search2 is None:
+                        result = search2.groupdict()
+                        result['filename'] = filename_rel
+                        token_list.append(result)
+        return token_list
 
 
 class LsmImporter(object):
