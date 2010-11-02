@@ -50,6 +50,8 @@ class SectionProcessing(_Section):
     OPTIONS = [
       ('processing',
        [
+        ('objectdetection',
+            BooleanTrait(True, label='Object detection')),
         ('primary_featureextraction',
             BooleanTrait(True, label='Feature Extraction')),
         ('primary_classification',
@@ -62,6 +64,8 @@ class SectionProcessing(_Section):
             BooleanTrait(False, label='Error correction')),
         ('secondary_processchannel',
             BooleanTrait(False, label='Secondary channel')),
+        #('secondary_objectdetection',
+        #    BooleanTrait(True, label='Object detection')),
         ('secondary_featureextraction',
             BooleanTrait(True, label='Feature Extraction')),
         ('secondary_classification',
