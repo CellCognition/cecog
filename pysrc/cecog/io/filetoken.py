@@ -31,12 +31,13 @@ import os, \
 #
 from pdk.fileutils import collect_files
 from pdk.iterator import unique
-from cecog import ccore
-from cecog.util.util import read_table
+from pdk.datetimeutils import StopWatch
 
 #------------------------------------------------------------------------------
 # cecog imports:
 #
+from cecog import ccore
+from cecog.util.util import read_table
 from cecog.util.token import (Token,
                               TokenHandler)
 from cecog.io.imagecontainer import (MetaData,
@@ -136,6 +137,7 @@ class AbstractImporter(object):
         return image
 
     def _build_dimension_lookup(self):
+        s = StopWatch()
         lookup = {}
         has_xy = False
         positions = []
@@ -216,6 +218,8 @@ class AbstractImporter(object):
         self.meta_data.times = sorted(times)
         self.meta_data.channels = sorted(channels)
         self.meta_data.zslices = sorted(zslices)
+
+        print('Build time: %s' % s)
         return lookup
 
     def _get_dimension_items(self):
@@ -363,10 +367,11 @@ class IniFileImporter(AbstractImporter):
         subdir_list = [x for x in os.listdir(self.path)
                        if not self._re_subdir.search(x) is None]
 
-        if self.config_parser.getboolean(self.section_name,
-                                         'use_subdirectories_as_positions'):
-            pass
-        else:
+        #if self.config_parser.getboolean(self.section_name,
+        #                                 'use_subdirectories_as_positions'):
+        #    pass
+        #else:
+        if True:
             file_list = []
             # collect all files with matching extensions from all subdirs
             for subdir in subdir_list:
@@ -382,12 +387,13 @@ class IniFileImporter(AbstractImporter):
                 filename_short = os.path.split(filename_rel)[1]
                 #if filename_short[0] not in self.ignore_prefixes:
 
-                # search substring to reduce relative filename to for
+                # search substring to reduce relative filename for
                 # dimension search
                 search = self._re_substr.search(filename_short)
                 if not search is None and len(search.groups()) > 0:
                     found_name = search.groups()[0]
                     # check substring according to regex pattern
+                    # extract dimension information
                     search2 = self._re_dim.search(found_name)
                     if not search2 is None:
                         result = search2.groupdict()

@@ -250,6 +250,8 @@ class MetaImage(object):
 
     def set_image(self, img):
         self._img = img
+        self.width = img.width
+        self.height = img.height
 
     def format(self, suffix=None, show_position=True, show_time=True,
                show_channel=True, show_zslice=True, sep='_'):
@@ -376,8 +378,8 @@ class ImageContainer(object):
         settings.set_section(SECTION_NAME_GENERAL)
         path_input = settings.get2('pathin')
         path_output = settings.get2('pathout')
-        path_output_dump = os.path.join(path_output, 'dump')
-        filename_pkl = os.path.join(path_output_dump, 'imagecontainer.pkl')
+        path_output_dump = os.path.join(path_output,'dump')
+        filename_pkl = os.path.join(path_output_dump,'imagecontainer.pkl')
 
         create_imagecontainer = settings.get(SECTION_NAME_OUTPUT,
                                              'imagecontainer_create_file')
