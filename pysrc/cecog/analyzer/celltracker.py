@@ -1094,7 +1094,7 @@ class PlotCellTracker(CellTracker):
                 #print lstFeatureTypes
 
             dctData = {'Frame' : iT,
-                       'Timestamp' : self.oMetaData.getTimestamp(self.origP, iT),
+                       'Timestamp' : self.oMetaData.get_timestamp_relative(self.origP, iT),
                        'isEvent' : 1 if iT == iEventT else 0,
                        }
             if bHasSplitId:
@@ -1777,7 +1777,7 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                 for node_id in track:
                     frame, obj_id = self.getComponentsFromNodeId(node_id)
 
-                    prefix = [frame, self.oMetaData.getTimestamp(self.origP, frame), obj_id]
+                    prefix = [frame, self.oMetaData.get_timestamp_relative(self.origP, frame), obj_id]
                     prefix_names = ['frame', 'time', 'objID']
                     items = []
 

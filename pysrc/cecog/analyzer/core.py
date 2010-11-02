@@ -112,7 +112,7 @@ class PositionAnalyzer(object):
     def __init__(self, P, strPathOut, oSettings, lstAnalysisFrames,
                  lstSampleReader, dctSamplePositions, oObjectLearner,
                  image_container,
-                 qthread=None):
+                 qthread=None, myhack=None):
 
         self.origP = P
         self.P = self._adjustPositionLength(P)
@@ -140,6 +140,7 @@ class PositionAnalyzer(object):
         self.oObjectLearner = oObjectLearner
 
         self._qthread = qthread
+        self._myhack = myhack
 
         name_lookup = {self.PRIMARY_CHANNEL   : 'primary',
                        self.SECONDARY_CHANNEL : 'secondary',
@@ -327,6 +328,7 @@ class PositionAnalyzer(object):
                                      P = self.P,
                                      bCreateImages = True,#self.oSettings.bCreateImages,
                                      iBinningFactor = self.oSettings.get('General', 'binningFactor'),
+                                     detect_objects = self.oSettings.get('Processing', 'objectdetection'),
                                      )
 
         self.export_features = {}
@@ -850,6 +852,7 @@ class PositionAnalyzer(object):
                                                 filename)
                         time.sleep(.05)
 
+
                 self.oSettings.set_section('General')
                 for strType, dctRenderInfo in self.oSettings.get2('rendering').iteritems():
                     strPathOutImages = os.path.join(self.strPathOutPositionImages, strType)
@@ -863,6 +866,8 @@ class PositionAnalyzer(object):
                                                 'P %s - T %05d' % (self.origP, frame),
                                                 filename)
                         time.sleep(.05)
+                    if not self._myhack is None and not img_rgb is None:
+                        self._myhack.set_image(img_rgb)
 
                 if self.oSettings.get('Output', 'rendering_labels_discwrite'):
                     strPathOutImages = os.path.join(self.strPathOutPositionImages, '_labels')
@@ -1112,7 +1117,7 @@ class AnalyzerCore(object):
 
 
 
-    def processPositions(self, qthread=None):
+    def processPositions(self, qthread=None, myhack=None):
         # loop over positions
         lstJobInputs = []
         for oP in self.lstPositions:
@@ -1126,6 +1131,7 @@ class AnalyzerCore(object):
                        self._imagecontainer,
                        )
             dctOptions = dict(qthread = qthread,
+                              myhack = myhack,
                               )
             lstJobInputs.append((tplArgs, dctOptions))
 

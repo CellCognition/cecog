@@ -373,7 +373,7 @@ class TimeHolder(OrderedDict):
                                                      copy=True)
                     img_xy = channel.meta_image.image
                     container = ccore.ImageMaskContainer(img_xy, img_label,
-                                                         False)
+                                                         False, False)
                     channel.dctContainers[region_name] = container
                     valid = True
                 else:
@@ -609,6 +609,9 @@ class CellAnalyzer(PropertyManager):
                  IntProperty(None,
                              is_mandatory=True,
                              doc=''),
+             detect_objects =
+                 BooleanProperty(True),
+
 
              time_holder =
                  InstanceProperty(None,
@@ -644,13 +647,14 @@ class CellAnalyzer(PropertyManager):
         for channel in channels:
 
             self.time_holder.prepare_raw_image(channel)
-            self.time_holder.apply_segmentation(channel, primary_channel)
 
-            self.time_holder.apply_features(channel)
+            if self.detect_objects:
+                self.time_holder.apply_segmentation(channel, primary_channel)
+                self.time_holder.apply_features(channel)
 
-            if primary_channel is None:
-                assert channel.RANK == 1
-                primary_channel = channel
+                if primary_channel is None:
+                    assert channel.RANK == 1
+                    primary_channel = channel
 
         if apply:
             for channel in channels:
@@ -717,51 +721,54 @@ class CellAnalyzer(PropertyManager):
 
                         for tplData in lstContourInfos:
                             strRegion, strNameOrColor, fAlpha, bShowLabels = tplData[:4]
-                            if len(tplData) > 4:
-                                bThickContours = tplData[4]
-                            else:
-                                bThickContours = False
-                            if strNameOrColor == 'class_label':
-                                oContainer = oChannel.dctContainers[strRegion]
-                                oRegion = oChannel.get_region(strRegion)
-                                dctLabels = {}
-                                dctColors = {}
-                                for iObjId, oObj in oRegion.iteritems():
-                                    iLabel = oObj.iLabel
-                                    if not iLabel is None:
-                                        if not iLabel in dctLabels:
-                                            dctLabels[iLabel] = []
-                                        dctLabels[iLabel].append(iObjId)
-                                        dctColors[iLabel] = oObj.strHexColor
-                                #print dctLabels
-                                imgRaw = oChannel.meta_image.image
-                                imgCon2 = ccore.Image(imgRaw.width, imgRaw.height)
-                                for iLabel, lstObjIds in dctLabels.iteritems():
-                                    imgCon = ccore.Image(imgRaw.width, imgRaw.height)
-                                    oContainer.drawContoursByIds(lstObjIds, 255, imgCon, bThickContours, False)
-                                    lstImages.append((imgCon, dctColors[iLabel], fAlpha))
 
-                                    if type(bShowLabels) == types.BooleanType and bShowLabels:
-                                    #    oContainer.drawTextsByIds(lstObjIds, lstObjIds, imgCon2)
-                                    #else:
-                                        oContainer.drawTextsByIds(lstObjIds, [str(iLabel)]*len(lstObjIds), imgCon2)
-                                lstImages.append((imgCon2, '#FFFFFF', 1.0))
-
-                            else:
-                                oContainer = oChannel.dctContainers[strRegion]
-                                oRegion = oChannel.get_region(strRegion)
-                                lstObjIds = oRegion.keys()
-                                imgRaw = oChannel.meta_image.image
-                                imgCon = ccore.Image(imgRaw.width, imgRaw.height)
-                                if not strNameOrColor is None:
-                                    oContainer.drawContoursByIds(lstObjIds, 255, imgCon, bThickContours, False)
+                            # draw contours only if region is present
+                            if oChannel.has_region(strRegion):
+                                if len(tplData) > 4:
+                                    bThickContours = tplData[4]
                                 else:
-                                    strNameOrColor = '#FFFFFF'
-                                lstImages.append((imgCon, strNameOrColor, fAlpha))
-                                if bShowLabels:
+                                    bThickContours = False
+                                if strNameOrColor == 'class_label':
+                                    oContainer = oChannel.dctContainers[strRegion]
+                                    oRegion = oChannel.get_region(strRegion)
+                                    dctLabels = {}
+                                    dctColors = {}
+                                    for iObjId, oObj in oRegion.iteritems():
+                                        iLabel = oObj.iLabel
+                                        if not iLabel is None:
+                                            if not iLabel in dctLabels:
+                                                dctLabels[iLabel] = []
+                                            dctLabels[iLabel].append(iObjId)
+                                            dctColors[iLabel] = oObj.strHexColor
+                                    #print dctLabels
+                                    imgRaw = oChannel.meta_image.image
                                     imgCon2 = ccore.Image(imgRaw.width, imgRaw.height)
-                                    oContainer.drawLabelsByIds(lstObjIds, imgCon2)
+                                    for iLabel, lstObjIds in dctLabels.iteritems():
+                                        imgCon = ccore.Image(imgRaw.width, imgRaw.height)
+                                        oContainer.drawContoursByIds(lstObjIds, 255, imgCon, bThickContours, False)
+                                        lstImages.append((imgCon, dctColors[iLabel], fAlpha))
+
+                                        if type(bShowLabels) == types.BooleanType and bShowLabels:
+                                        #    oContainer.drawTextsByIds(lstObjIds, lstObjIds, imgCon2)
+                                        #else:
+                                            oContainer.drawTextsByIds(lstObjIds, [str(iLabel)]*len(lstObjIds), imgCon2)
                                     lstImages.append((imgCon2, '#FFFFFF', 1.0))
+
+                                else:
+                                    oContainer = oChannel.dctContainers[strRegion]
+                                    oRegion = oChannel.get_region(strRegion)
+                                    lstObjIds = oRegion.keys()
+                                    imgRaw = oChannel.meta_image.image
+                                    imgCon = ccore.Image(imgRaw.width, imgRaw.height)
+                                    if not strNameOrColor is None:
+                                        oContainer.drawContoursByIds(lstObjIds, 255, imgCon, bThickContours, False)
+                                    else:
+                                        strNameOrColor = '#FFFFFF'
+                                    lstImages.append((imgCon, strNameOrColor, fAlpha))
+                                    if bShowLabels:
+                                        imgCon2 = ccore.Image(imgRaw.width, imgRaw.height)
+                                        oContainer.drawLabelsByIds(lstObjIds, imgCon2)
+                                        lstImages.append((imgCon2, '#FFFFFF', 1.0))
 
 
         if len(lstImages) > 0:
@@ -888,7 +895,7 @@ class CellAnalyzer(PropertyManager):
 
         if len(learner_objects) > 0:
             oLearner.applyObjects(learner_objects)
-            # we dont want to apply None for feature names
+            # we don't want to apply None for feature names
             oLearner.setFeatureNames(oChannel.lstFeatureNames)
 
         strPathOut = os.path.join(oLearner.dctEnvPaths['controls'])

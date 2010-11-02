@@ -311,8 +311,8 @@ class PrimarySegmentation(_Segmentation):
             image = meta_image.image
 
         container = ccore.ImageMaskContainer(image,
-                                              imgBin,
-                                              self.bRemoveBorderObjects)
+                                             imgBin,
+                                             self.bRemoveBorderObjects)
 
         self._logger.debug("         --- container ok, %s" %
                             stopwatch.current_interval())

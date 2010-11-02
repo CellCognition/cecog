@@ -36,6 +36,9 @@ from cecog.gui.analyzer import (_BaseFrame,
 from cecog.analyzer import (SECONDARY_REGIONS,
                             SECONDARY_COLORS,
                             )
+from cecog.analyzer.channel import (PrimaryChannel,
+                                    SecondaryChannel,
+                                    )
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -93,8 +96,8 @@ class ProcessingFrame(_BaseFrame, _ProcessorMixin):
         sec_region = settings.get2('secondary_classification_regionname')
 
         settings.set_section('ObjectDetection')
-        prim_id = settings.get2('primary_channelid')
-        sec_id = settings.get2('secondary_channelid')
+        prim_id = PrimaryChannel.NAME
+        sec_id = SecondaryChannel.NAME
         sec_regions = [v for k,v in SECONDARY_REGIONS.iteritems()
                        if settings.get2(k)]
         lookup = dict([(v,k) for k,v in SECONDARY_REGIONS.iteritems()])

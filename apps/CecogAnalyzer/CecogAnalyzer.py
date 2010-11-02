@@ -56,7 +56,7 @@ from cecog.gui.analyzer.errorcorrection import ErrorCorrectionFrame
 from cecog.gui.analyzer.output import OutputFrame
 from cecog.gui.analyzer.processing import ProcessingFrame
 from cecog.gui.analyzer.cluster import ClusterFrame
-
+from cecog.gui.browser import Browser
 from cecog.gui.log import (GuiLogHandler,
                            LogWindow,
                            )
@@ -131,6 +131,16 @@ class AnalyzerMainWindow(QMainWindow):
                                      None, action_save, action_save_as,
                                      None, action_quit))
 
+        action_open = self.create_action('&Open Browser...',
+                                         shortcut=QKeySequence('CTRL+B'),
+                                         slot=self._on_browser_open
+                                         )
+        menu_browser = self.menuBar().addMenu('&Browser')
+        self.add_actions(menu_browser, (action_open,
+                                     #None, action_save, action_save_as,
+                                     #None, action_quit
+                                     ))
+
         action_log = self.create_action('&Show Log Window...',
                                         shortcut=QKeySequence(Qt.CTRL + Qt.Key_L),
                                         slot=self._on_show_log_window
@@ -192,9 +202,7 @@ class AnalyzerMainWindow(QMainWindow):
             widths.append(size.width())
         self._pages.setMinimumWidth(max(widths)+45)
 
-        self.connect(self._selection,
-                     SIGNAL('currentItemChanged(QListWidgetItem *, QListWidgetItem *)'),
-                     self._on_change_page)
+        self._selection.currentItemChanged.connect(self._on_change_page)
 
         self._selection.setCurrentRow(0)
 
@@ -477,7 +485,11 @@ class AnalyzerMainWindow(QMainWindow):
     def _on_quit(self):
         self._exit_app()
 
-    @pyqtSlot()
+    def _on_browser_open(self):
+        self._browser = Browser(self._settings,
+                                self._imagecontainer)
+        self._browser.show()
+
     def _on_load_input(self):
         self._imagecontainer = ImageContainer.from_settings(self._settings)
         self._meta_data = self._imagecontainer.meta_data
@@ -617,6 +629,7 @@ if __name__ == "__main__":
         #filename = '/Users/miheld/data/CellCognition/Thomas/ANDRISETTINGS_local_HD.conf'
         if os.path.isfile(filename):
             main._read_settings(filename)
+            main._on_load_input()
         main._debug = True
 
     splash.finish(main)

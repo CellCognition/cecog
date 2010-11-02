@@ -247,5 +247,8 @@ class ImageRatioDisplay(QLabel):
                         Qt.WindowMinimizeButtonHint|Qt.SubWindow)
         self._ratio = ratio
 
+    def set_ratio(self, ratio):
+        self._ratio = ratio
+
     def heightForWidth(self, w):
         return int(w*self._ratio)
