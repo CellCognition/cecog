@@ -364,8 +364,16 @@ class IniFileImporter(AbstractImporter):
         token_list = []
         extensions = self.config_parser.get(self.section_name,
                                             'file_extensions').split()
+
         subdir_list = [x for x in os.listdir(self.path)
-                       if not self._re_subdir.search(x) is None]
+                       if os.path.isdir(os.path.join(self.path, x))]
+        print(subdir_list)
+        if len(subdir_list) == 0:
+            subdir_list = [self.path]
+        else:
+            subdir_list = [x for x in subdir_list
+                           if not self._re_subdir.search(x) is None]
+        print(subdir_list)
 
         #if self.config_parser.getboolean(self.section_name,
         #                                 'use_subdirectories_as_positions'):
@@ -373,6 +381,7 @@ class IniFileImporter(AbstractImporter):
         #else:
         if True:
             file_list = []
+
             # collect all files with matching extensions from all subdirs
             for subdir in subdir_list:
                 subdir_full = os.path.join(self.path, subdir)

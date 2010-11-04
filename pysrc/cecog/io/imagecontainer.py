@@ -193,8 +193,11 @@ class MetaData(object):
         strings += [line]
         strings += ["* Positions: %s %s" %
                     (self.dim_p, self.h(self.positions))]
-        strings += ["* Time-points: %s (%d - %d)" %
-                    (self.dim_t, min(self.times), max(self.times))]
+        if len(self.times) > 0:
+            strings += ["* Time-points: %s (%d - %d)" %
+                        (self.dim_t, min(self.times), max(self.times))]
+        else:
+            strings += ["* Time-points: %s" % self.dim_t]
         strings += ["* Channels: %s %s" % (self.dim_c, self.channels)]
         strings += ["* Z-slices: %s %s" % (self.dim_z, self.zslices)]
         strings += ["* Height: %s" % self.dim_y]
@@ -253,17 +256,17 @@ class MetaImage(object):
         self.width = img.width
         self.height = img.height
 
-    def format(self, suffix=None, show_position=True, show_time=True,
-               show_channel=True, show_zslice=True, sep='_'):
+    def format_info(self, suffix=None, show_position=True, show_time=True,
+                    show_channel=True, show_zslice=True, sep='_'):
         items = []
         if show_position:
-            items.append("P%s" % self.P)
+            items.append("P%s" % self.position)
         if show_time:
-            items.append("T%05d" % self.iT)
+            items.append("T%05d" % self.time)
         if show_channel:
-            items.append("C%s" % self.strC)
+            items.append("C%s" % self.channel)
         if show_zslice:
-            items.append("Z%02d" % self.iZ)
+            items.append("Z%02d" % self.zslice)
         if suffix is not None:
             items.append(suffix)
         return sep.join(items)
@@ -372,9 +375,9 @@ class ImageContainer(object):
     def from_settings(cls, settings):
         from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
         from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
-        from cecog.io.filetoken import (IniFileImporter,
-                                        FlatFileImporter,
-                                        )
+        from cecog.io.importer import (IniFileImporter,
+                                       FlatFileImporter,
+                                       )
         settings.set_section(SECTION_NAME_GENERAL)
         path_input = settings.get2('pathin')
         path_output = settings.get2('pathout')
@@ -388,11 +391,20 @@ class ImageContainer(object):
         if not create_imagecontainer:
             reuse_imagecontainer = False
 
+        imagecontainer = None
+
         if os.path.isfile(filename_pkl) and reuse_imagecontainer:
             f = file(filename_pkl, 'rb')
-            imagecontainer = pickle.load(f)
+            try:
+                imagecontainer = pickle.load(f)
+            except ImportError:
+                # in case pickle and class structure are not longer compatible:
+                # ignore this error and rescan the file structure
+                # FIXME: report to user/GUI
+                pass
             f.close()
-        else:
+
+        if imagecontainer is None:
             # read file structure according to naming schema file
             if settings.get2('image_import_namingschema'):
                 config_parser = NAMING_SCHEMAS
@@ -413,23 +425,4 @@ class ImageContainer(object):
                 pickle.dump(imagecontainer, f, 1)
                 f.close()
         return imagecontainer
-
-#-------------------------------------------------------------------------------
-# main:
-#
-if __name__ ==  "__main__":
-    from cecog.io.filetoken import MetaMorphTokenImporter
-    from cecog.io.filetoken import FlatFileImporter
-
-    path = '/Users/twalter/CecogPackage/H2B_aTubulin'
-    filename = '/Users/twalter/cecog_test.txt'
-    #image_container = ImageContainer(MetaMorphTokenImporter(path))
-    s = StopWatch()
-    #path = '/Volumes/mattaj/andri/laminB_data/040210'
-    #filename = '/Users/twalter/040210.txt'
-    #path = '/Users/twalter/data/Andri/Images/110210'
-    #filename = '/Users/twalter/110210_part.txt'
-    image_container = ImageContainer(FlatFileImporter(path, filename))
-    print image_container.meta_data
-    print s
 

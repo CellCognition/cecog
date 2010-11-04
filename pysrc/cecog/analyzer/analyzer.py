@@ -72,9 +72,6 @@ from cecog.analyzer import (REGION_NAMES,
                             )
 from cecog.analyzer.celltracker import CellTracker, DotWriter
 from cecog.learning.learning import ClassPredictor
-from cecog.io.filetoken import (MetaMorphTokenImporter,
-                                FlatFileImporter,
-                                )
 from cecog.io.imagecontainer import MetaImage
 
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
