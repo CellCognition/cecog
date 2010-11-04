@@ -131,6 +131,7 @@ class Browser(QMainWindow):
                                      #act_transform
                                      ))
 
+        self.setContentsMargins(5, 5, 5, 5)
         self.statusbar = QStatusBar(self)
         self.setStatusBar(self.statusbar)
 
@@ -209,10 +210,15 @@ class Browser(QMainWindow):
         #table.setMinimumWidth(20)
         layout.addWidget(table, 1, 0)
 
+        self._annotations = {}
+
         layout = QGridLayout(frame)
         layout.setContentsMargins(5, 5, 5, 5)
         self._image_viewer = ImageViewer(frame, auto_resize=True)
         self._image_viewer.image_mouse_pressed.connect(self._on_new_point)
+        self._image_viewer.image_mouse_dblclk.connect(self._on_dbl_clk)
+        self._image_viewer.setTransformationAnchor(ImageViewer.AnchorViewCenter)
+        self._image_viewer.setResizeAnchor(ImageViewer.AnchorViewCenter)
         #self._image_viewer.setSizePolicy(QSizePolicy(QSizePolicy.Expanding,
         #                                             QSizePolicy.Expanding))
         layout.addWidget(self._image_viewer, 0, 0, 1, 2)
@@ -277,10 +283,44 @@ class Browser(QMainWindow):
                                                 image.height))
         qimage = numpy_to_qimage(image.toArray(copy=True))
         self._image_viewer.from_qimage(qimage)
+
+        if self._position in self._annotations:
+            if self._time in self._annotations[self._position]:
+                for point in self._annotations[self._position][self._time]:
+                    shape = self._draw_shape(point)
         print('SET IMAGE: %s' % s)
 
-    def _on_new_point(self, point):
-        print(point)
+    def _on_new_point(self, point, modifier):
+        if modifier == Qt.ShiftModifier:
+            if self._position in self._annotations:
+                if self._time in self._annotations[self._position]:
+                    points = self._annotations[self._position][self._time]
+                    l = [(i,(x - point).manhattanLength())
+                         for i,x in enumerate(points)]
+                    l.sort(key=lambda x: x[1])
+                    min_point = points[l[0][0]]
+                    scene = self._image_viewer.scene()
+                    item = scene.itemAt(min_point)
+                    scene.removeItem(item)
+                    points.remove(min_point)
+        else:
+            if not self._position in self._annotations:
+                self._annotations[self._position] = {}
+            if not self._time in self._annotations[self._position]:
+                self._annotations[self._position][self._time] = []
+            self._annotations[self._position][self._time].append(point)
+            self._draw_shape(point)
+
+    def _on_dbl_clk(self, point):
+        items = self._image_viewer.items(point)
+        print(items)
+
+    def _draw_shape(self, point):
+        scene = self._image_viewer.scene()
+        #point = self._image_viewer.mapToScene(point)
+        item = scene.addEllipse(QRectF(point.x()-3, point.y()-3, 6, 6),
+                                QPen(Qt.white), QBrush(Qt.white))
+        return item
 
     def _on_detect_box(self, state):
         self._detect_objects = state

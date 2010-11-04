@@ -69,7 +69,8 @@ class ImageViewer(QGraphicsView):
 
     MOVE_KEY = Qt.Key_Space
 
-    image_mouse_pressed = pyqtSignal(QPoint)
+    image_mouse_pressed = pyqtSignal(QPointF, int)
+    image_mouse_dblclk = pyqtSignal(QPointF)
 
     def __init__(self, parent, auto_resize=False):
         super(ImageViewer, self).__init__(parent)
@@ -178,10 +179,17 @@ class ImageViewer(QGraphicsView):
         self.update()
 
     def scale_relative(self, value, ensure_fit=False):
-        rect = self._scene.sceneRect()
-        size = self.size()
-        coord = self.mapFromScene(rect.width(),rect.height()) * value
+        # prevent scaling beyond the viewport size (either below or above,
+        # depending on zoom in (value > 1.) or zoom out (value < 1.)
+        # only one side is required for fit (the entire image is visible)
         if ensure_fit:
+            # the size of the scene (transform independent)
+            rect = self.sceneRect()
+            # the size of the viewport
+            size = self.viewport().size()
+            # map the width/height to the scene to see how big the scene within
+            # the viewport really is -> any simpler solution?
+            coord = self.mapFromScene(rect.width(), rect.height())
             if (value < 1. and
                 (coord.x() >= size.width() or coord.y() >= size.height()) or
                 value > 1. and
@@ -194,7 +202,7 @@ class ImageViewer(QGraphicsView):
         self.resetTransform()
 
     def scale_to_fit(self):
-        self.fitInView(self._scene.sceneRect(), mode=Qt.KeepAspectRatio)
+        self.fitInView(self.sceneRect(), mode=Qt.KeepAspectRatio)
 
     def set_auto_resize(self, state):
         self._auto_resize = state
@@ -208,78 +216,26 @@ class ImageViewer(QGraphicsView):
 
     def keyReleaseEvent(self, ev):
         if ev.key() == self.MOVE_KEY and self._move_on:
-            self._move_on = False
-            self._click_on = False
             self.setDragMode(QGraphicsView.NoDrag)
+            self._move_on = False
 
     def enterEvent(self, ev):
         self.setFocus()
-        if not self._click_on:
-            self._move_on = False
 
-#    def mouseMoveEvent(self, ev):
-#        if self._click_on:
-#            geom = self.sceneRect()
-#            size = self.size()
-#            point = ev.pos() - self._home_pos
-#            if point.x() >= 0: point.setX(0)
-#            if point.y() >= 0: point.setY(0)
-#            if size.width()-point.x() > geom.width():
-#                point.setX(size.width() - geom.width())
-#            if size.height()-point.y() > geom.height():
-#                point.setY(size.height() - geom.height())
-#            print point, geom, size
-#            self.setSceneRect(QRectF(point.x(), point.y(),
-#                                     geom.width(), geom.height()))
-#            #self.
-#
     def mousePressEvent(self, ev):
-        print("MOO", self._move_on, self._click_on)
-#            point = (ev.pos() - pos) / self._scale
-#            self.image_mouse_pressed.emit(point)
         super(ImageViewer, self).mousePressEvent(ev)
         if not self._move_on:
             point = self.mapToScene(ev.pos())
-            #self.image_mouse_pressed.emit(point)
-            self._scene.addEllipse(QRectF(point.x()-2, point.y()-2, 4, 4),
-                                   QPen(Qt.white))
+            self.image_mouse_pressed.emit(point, ev.modifiers())
+
+#    def mouseDoubleClickEvent(self, ev):
+#        super(ImageViewer, self).mouseDoubleClickEvent(ev)
+#        if not self._move_on:
+#            point = self.mapToScene(ev.pos())
+#            self.image_mouse_dblclk.emit(point)
 
     def resizeEvent(self, ev):
         super(ImageViewer, self).resizeEvent(ev)
         if self._auto_resize:
             self.scale_to_fit()
-
-#
-#    def mouseReleaseEvent(self, ev):
-#        if self._move_on and self._click_on:
-#            self._click_on = False
-#            self._home_pos = None
-#            self.setCursor(Qt.OpenHandCursor)
-#            #self.releaseKeyboard()
-#            #self.releaseMouse()
-#        elif self._click_on:
-#            self._click_on = False
-#            self._home_pos = None
-#        #print self._move_on, self._click_on
-
-#    def resizeEvent(self, ev):
-#        super(ImageViewer, self).resizeEvent(ev)
-#        geom = self.label.geometry()
-#        size = ev.size()
-#        point = QPoint(geom.x(), geom.y())
-#        move = False
-#        if size.width() > geom.width() + geom.x():
-#            point.setX(size.width() - geom.width())
-#            move = True
-#        if size.height() > geom.height() + geom.y():
-#            point.setY(size.height() - geom.height())
-#            move = True
-#        if move:
-#            self.label.move(point)
-
-
-
-#-------------------------------------------------------------------------------
-# main:
-#
 
