@@ -159,51 +159,51 @@ if sys.platform == 'darwin':
 
     base_path = 'dist/CecogAnalyzer.app'
 
-#    # delete all stupid Qt4 debug files (~130MB!!!)
-#    target_path = os.path.join(base_path, 'Contents/Frameworks')
-#    filenames = collect_files(target_path, [], absolute=True, recursive=True)
-#    filenames = [x for x in filenames if 'debug' in os.path.split(x)[1]]
-#    for filename in filenames:
-#        if os.path.isdir(filename):
-#            shutil.rmtree(filename)
-#        elif os.path.isfile(filename):
-#            os.remove(filename)
-#
-#    # one more special py2app hack forcing Qt to load libs from the app only!
-#    shutil.copy('qt.conf', os.path.join(base_path, 'Contents/Resources'))
-#
-#    ## delete .DS_Store files
-#    target = os.path.join(base_path, '')
-#    for filepath in collect_files(target, ['.DS_Store'],
-#                                  absolute=True, recursive=True):
-#        print filepath
-#        os.remove(filepath)
-#
-#    ## delete ALL .py files from lib (and use .pyc/.pyo instead)
-#    target = os.path.join(base_path, 'Contents/Resources/lib/python2.7/')
-#    for filepath in collect_files(target, ['.py'],
-#                                  absolute=True, recursive=True):
-#        filename = os.path.split(filepath)[1]
-#        if not filename in ['site.py', '__init__.py'] and os.path.isfile(filepath):
-#            os.remove(filepath)
-#    filenames = ['graph_template.txt',
-#                 'hmm.R',
-#                 'hmm_report.R',
-#                 'run_hmm.R',
-#                 ]
-#
-#    cecog_pyd = os.path.join(target, 'cecog', 'ccore', '_cecog.pyd')
-#    if os.path.isfile(cecog_pyd):
-#        os.remove(cecog_pyd)
-#
-#    resource_path = os.path.join(base_path, 'Contents/Resources/resources')
-#    target = os.path.join(resource_path, 'rsrc/hmm')
-#    safe_mkdirs(target)
-#    for filename in filenames:
-#        shutil.copy(os.path.join('../../rsrc/hmm', filename), target)
-#
-#    for filename in RESOURCE_FILES:
-#        shutil.copy(filename, resource_path)
+    # delete all Qt4 debug files
+    target_path = os.path.join(base_path, 'Contents/Frameworks')
+    filenames = collect_files(target_path, [], absolute=True, recursive=True)
+    filenames = [x for x in filenames if 'debug' in os.path.split(x)[1]]
+    for filename in filenames:
+        if os.path.isdir(filename):
+            shutil.rmtree(filename)
+        elif os.path.isfile(filename):
+            os.remove(filename)
+
+    # one more special py2app hack forcing Qt to load libs from the app only!
+    shutil.copy('qt.conf', os.path.join(base_path, 'Contents/Resources'))
+
+    # delete .DS_Store files
+    target = os.path.join(base_path, '')
+    for filepath in collect_files(target, ['.DS_Store'],
+                                  absolute=True, recursive=True):
+        print filepath
+        os.remove(filepath)
+
+    # delete ALL .py files from lib (and use .pyc/.pyo instead)
+    target = os.path.join(base_path, 'Contents/Resources/lib/python2.7/')
+    for filepath in collect_files(target, ['.py'],
+                                  absolute=True, recursive=True):
+        filename = os.path.split(filepath)[1]
+        if not filename in ['site.py', '__init__.py'] and os.path.isfile(filepath):
+            os.remove(filepath)
+    filenames = ['graph_template.txt',
+                 'hmm.R',
+                 'hmm_report.R',
+                 'run_hmm.R',
+                 ]
+
+    cecog_pyd = os.path.join(target, 'cecog', 'ccore', '_cecog.pyd')
+    if os.path.isfile(cecog_pyd):
+        os.remove(cecog_pyd)
+
+    resource_path = os.path.join(base_path, 'Contents/Resources/resources')
+    target = os.path.join(resource_path, 'rsrc/hmm')
+    safe_mkdirs(target)
+    for filename in filenames:
+        shutil.copy(os.path.join('../../rsrc/hmm', filename), target)
+
+    for filename in RESOURCE_FILES:
+        shutil.copy(filename, resource_path)
 
 
 elif sys.platform == 'win32':
