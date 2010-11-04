@@ -8,8 +8,7 @@
                See trunk/AUTHORS.txt for author contributions.
 """
 
-__docformat__ = "epytext"
-__author__ = 'Michael Held'
+__author__ = 'Michael Held, Thomas Walter'
 __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL::                                                          $'
@@ -160,16 +159,16 @@ class AbstractImporter(object):
             position = item[DIMENSION_NAME_POSITION]
             if not position in lookup:
                 lookup[position] = {}
-            time = int(item[DIMENSION_NAME_TIME])
+            time = int(item.get(DIMENSION_NAME_TIME, 0))
             if not time in lookup[position]:
                 lookup[position][time] = {}
-            channel = item[DIMENSION_NAME_CHANNEL]
+            channel = item.get(DIMENSION_NAME_CHANNEL, 'w1')
             if not channel in lookup[position][time]:
                 lookup[position][time][channel] = {}
 
             # leave zslice optional.
             # in case of multi-images it must not be defined
-            zslice = item[DIMENSION_NAME_ZSLICE]
+            zslice = item.get(DIMENSION_NAME_ZSLICE, 0)
             if zslice == '':
                 zslice = None
             if not zslice is None:
@@ -339,6 +338,38 @@ class FlatFileImporter(AbstractImporter):
 
 
 class IniFileImporter(AbstractImporter):
+    '''
+    Scan file structure based on config file (see ConfigParser) definitions.
+
+    Parameters for the config file are:
+
+    file_extensions = .tiff .tif
+    - a list of file extensions separated by whitespace(s)
+    - example: take all files with .tif or .tiff extension
+
+    regex_subdirectories = ^[^_].*
+    - a filter rule for any sub-directory from which images should be imported
+    - is a regular expression which must be found via re.search()
+    - can be empty, in that case all directories are taken
+    - example: ignore all directories with a leading underscore
+
+    regex_filename_substr = (.+?)\.
+    - defines a part of the relative filename in which the dimension definition
+      will be searched
+    - is a regular expression which is searched and must define a group via ()
+    - can be empty, in that case the entire filename is considered
+    - example: take sub-string till the first dot
+
+    regex_dimensions = P(?P<position>.+?)_+?T(?P<time>\d+)_+?C(?P<channel>.+?)_+?Z(?P<zslice>\d+)
+    - defines how the dimensions 'position', 'time', 'channel', and 'zslice' are
+      extracted from the sub-string of the relative filename (see above)
+    - is a regular expression with named groups which is searched
+    - time, channel, and zslice are optional and default to 0, w1, 0
+    - time and zslice MUST be digits!
+    - example: defines position, time, channel, and zslice with tokens separated
+               by at least one underscore, e.g. will find
+               abcd_P0023_T00001_Cgfp_Z1_efg
+    '''
 
     def __init__(self, path, config_parser, section_name):
         self.config_parser = config_parser
@@ -346,13 +377,15 @@ class IniFileImporter(AbstractImporter):
 
         regex_subdirectories = self.config_parser.get(self.section_name,
                                                       'regex_subdirectories')
-        if regex_subdirectories is None:
+        # take all sub-directories if parameter is empty
+        if regex_subdirectories == '':
             regex_subdirectories = '.*'
         self._re_subdir = re.compile(regex_subdirectories)
 
         regex_filename_substr = self.config_parser.get(self.section_name,
                                                       'regex_filename_substr')
-        if regex_filename_substr is None:
+        # take the entire filename if parameter is empty
+        if regex_filename_substr == '':
             regex_filename_substr = '(.*)'
         self._re_substr = re.compile(regex_filename_substr)
 
@@ -365,40 +398,26 @@ class IniFileImporter(AbstractImporter):
         extensions = self.config_parser.get(self.section_name,
                                             'file_extensions').split()
 
-        subdir_list = [x for x in os.listdir(self.path)
-                       if os.path.isdir(os.path.join(self.path, x))]
-        print(subdir_list)
-        if len(subdir_list) == 0:
-            subdir_list = [self.path]
-        else:
-            subdir_list = [x for x in subdir_list
-                           if not self._re_subdir.search(x) is None]
-        print(subdir_list)
+        for dirpath, dirnames, filenames in os.walk(self.path):
+            # prune filenames by file extension
+            if len(extensions) > 0:
+                filenames = [x for x in filenames
+                             if os.path.splitext(x)[1].lower() in extensions]
+            # prune dirnames by regex search for next iteration of os.walk
+            # dirnames must be removed in-place!
+            for dirname in dirnames[:]:
+                if self._re_subdir.search(dirname) is None:
+                    dirnames.remove(dirname)
 
-        #if self.config_parser.getboolean(self.section_name,
-        #                                 'use_subdirectories_as_positions'):
-        #    pass
-        #else:
-        if True:
-            file_list = []
-
-            # collect all files with matching extensions from all subdirs
-            for subdir in subdir_list:
-                subdir_full = os.path.join(self.path, subdir)
-                file_list += collect_files(subdir_full, extensions,
-                                           absolute=True,
-                                           follow=False, recursive=True,
-                                           ignore_case=True, force_python=True)
             # extract dimension informations according to regex patterns from
             # relative filename (including extension)
-            for filename in file_list:
-                filename_rel = filename[len(self.path)+1:]
-                filename_short = os.path.split(filename_rel)[1]
-                #if filename_short[0] not in self.ignore_prefixes:
+            path_rel = os.path.relpath(dirpath, self.path)
+            for filename in filenames:
+                filename_rel = os.path.join(path_rel, filename)
 
                 # search substring to reduce relative filename for
                 # dimension search
-                search = self._re_substr.search(filename_short)
+                search = self._re_substr.search(filename)
                 if not search is None and len(search.groups()) > 0:
                     found_name = search.groups()[0]
                     # check substring according to regex pattern

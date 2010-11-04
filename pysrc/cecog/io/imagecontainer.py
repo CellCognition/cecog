@@ -8,8 +8,7 @@
                See trunk/AUTHORS.txt for author contributions.
 """
 
-__docformat__ = "epytext"
-__author__ = 'Michael Held'
+__author__ = 'Michael Held, Thomas Walter'
 __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL::                                                          $'
