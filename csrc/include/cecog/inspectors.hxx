@@ -599,38 +599,19 @@ namespace cecog
     int x, y;
     bool found = false;
     vigra::Diff2D start(0,0);
-    //BlockFunctorBase_NewSave<SrcIterator, SrcAccessor> functor(xs, sa, w, h, 8, label);
-    //BlockFunctorBase<SrcIterator, SrcAccessor> functor;
 
-    //xs.y += 1;
-    //if (h < 1 or w < 1)
-    //  return false;
-
-
-    for (int x=0; x < w && !found; ++x, ++xs.x)
+    for (int y=0; y < h && !found; ++y, ++xs.y)
     {
       xs.y = upperleft.y;
-      for (int y=0; y < h && !found; ++y, ++xs.y)
+      for (int x=0; x < w && !found; ++x, ++xs.x)
       {
-        if (sa(xs) == label)
-          for (int i=0; i < 8; ++i)
-          {
-            vigra::Diff2D p(vigra::Diff2D(x,y) + NEIGHBORS[i]);
-            if (p.x >= 0 && p.x < w && p.y >= 0 && p.y < h)
-            {
-              if (sa(xs, NEIGHBORS[i]) != label)
-              {
-                start = vigra::Diff2D(x,y);
-                found = true;
-                break;
-              }
-            } else
-            {
-              start = vigra::Diff2D(x,y);
-              found = true;
-              break;
-            }
-          }
+        // look for a pixel in the region with the left neighbor outside
+        if (sa(xs) == label && sa(xs + vigra::Diff2D(-1,0)) != label)
+        {
+            start = vigra::Diff2D(x,y);
+            found = true;
+            break;
+        }
       }
     }
     return start;

@@ -788,22 +788,24 @@ namespace cecog
     {
       PositionList posList;
       ROIObject& obj = objects[objId];
-//      label_type limg(obj.roi.size+vigra::Diff2D(4,4));
-//      copyImageIfLabel(this->img_labels.upperLeft()+obj.roi.upperLeft,
-//                       this->img_labels.upperLeft()+obj.roi.lowerRight,
-//                       this->img_labels.accessor(),
-//                       this->img_labels.upperLeft()+obj.roi.upperLeft,
-//                       this->img_labels.accessor(),
-//                       limg.upperLeft() + vigra::Diff2D(2,2),
-//                       limg.accessor(),
-//                       objId);
-      vigra::CrackContourCirculator<label_type::Iterator> crack(this->img_labels.upperLeft() + obj.crack_start2);
+      label_type limg(obj.roi.size+vigra::Diff2D(4,4));
+      copyImageIfLabel(this->img_labels.upperLeft()+obj.roi.upperLeft,
+                       this->img_labels.upperLeft()+obj.roi.lowerRight,
+                       this->img_labels.accessor(),
+                       this->img_labels.upperLeft()+obj.roi.upperLeft,
+                       this->img_labels.accessor(),
+                       limg.upperLeft() + vigra::Diff2D(2,2),
+                       limg.accessor(),
+                       objId);
+      //vigra::CrackContourCirculator<label_type::Iterator> crack(this->img_labels.upperLeft() + obj.crack_start2);
+      vigra::Diff2D anchor(obj.crack_start2 + vigra::Diff2D(2,2));
+      vigra::CrackContourCirculator<label_type::Iterator> crack(limg.upperLeft() + anchor);
       vigra::CrackContourCirculator<label_type::Iterator> crackEnd(crack);
-      //printf("\n crack start (%d,%d) %d\n", obj.crack_start2.x, obj.crack_start2.y, this->img_labels[obj.crack_start2]);
+      //printf("\n crack start (%d,%d) %d\n", anchor.x, anchor.y, limg[anchor]);
       do
       {
         posList.push_back(obj.crack_start2 + crack.pos());
-        //vigra::Diff2D np = obj.crack_start2 + crack.pos();
+        vigra::Diff2D np = obj.crack_start2 + crack.pos();
         //printf("  (%d,%d)  (%d,%d)\n", crack.pos().x, crack.pos().y, np.x, np.y);
       } while (++crack != crackEnd);
       return posList;
@@ -1060,9 +1062,9 @@ namespace cecog
           vigra::Diff2D cs2(0,0);
           if (findCrack)
           {
-            cs = findCrackStart(img_labels.upperLeft() + ul,
-                                img_labels.upperLeft() + lr,
-                                img_labels.accessor(), i) + ul;
+            cs = findCrackStart(imgLabels2.upperLeft() + ul + vigra::Diff2D(1,1),
+                                imgLabels2.upperLeft() + lr + vigra::Diff2D(1,1),
+                                imgLabels2.accessor(), i);
             findCrackStartOld(imgLabels2.upperLeft() + ul + vigra::Diff2D(1,1),
                               imgLabels2.upperLeft() + lr + vigra::Diff2D(1,1),
                               imgLabels2.accessor(), i, cs2);
