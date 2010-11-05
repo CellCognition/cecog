@@ -797,15 +797,14 @@ namespace cecog
                        limg.upperLeft() + vigra::Diff2D(2,2),
                        limg.accessor(),
                        objId);
-      //vigra::CrackContourCirculator<label_type::Iterator> crack(this->img_labels.upperLeft() + obj.crack_start2);
-      vigra::Diff2D anchor(obj.crack_start2 + vigra::Diff2D(2,2));
+      vigra::Diff2D anchor(obj.crack_start + vigra::Diff2D(2,2));
       vigra::CrackContourCirculator<label_type::Iterator> crack(limg.upperLeft() + anchor);
       vigra::CrackContourCirculator<label_type::Iterator> crackEnd(crack);
       //printf("\n crack start (%d,%d) %d\n", anchor.x, anchor.y, limg[anchor]);
       do
       {
-        posList.push_back(obj.crack_start2 + crack.pos());
-        vigra::Diff2D np = obj.crack_start2 + crack.pos();
+        posList.push_back(obj.crack_start + crack.pos());
+        //vigra::Diff2D np = obj.crack_start + crack.pos();
         //printf("  (%d,%d)  (%d,%d)\n", crack.pos().x, crack.pos().y, np.x, np.y);
       } while (++crack != crackEnd);
       return posList;
@@ -1034,12 +1033,12 @@ namespace cecog
                        srcImage(this->img_labels), roisize);
 
 //      // FIXME: some stupid bugfix
-      vigra::IImage imgLabels2(img_labels.size()+vigra::Diff2D(2,2));
-      copyImage(this->img_labels.upperLeft(),
-                this->img_labels.lowerRight(),
-                this->img_labels.accessor(),
-                imgLabels2.upperLeft() + vigra::Diff2D(1,1),
-                imgLabels2.accessor());
+//      vigra::IImage imgLabels2(img_labels.size()+vigra::Diff2D(2,2));
+//      copyImage(this->img_labels.upperLeft(),
+//                this->img_labels.lowerRight(),
+//                this->img_labels.accessor(),
+//                imgLabels2.upperLeft() + vigra::Diff2D(1,1),
+//                imgLabels2.accessor());
 
       for (int i=1; i <= this->total_labels; ++i)
       {
@@ -1059,17 +1058,17 @@ namespace cecog
         {
           vigra::Diff2D cn = center[i]() - ul;
           vigra::Diff2D cs(0,0);
-          vigra::Diff2D cs2(0,0);
+//          vigra::Diff2D cs2(0,0);
           if (findCrack)
           {
-            cs = findCrackStart(imgLabels2.upperLeft() + ul + vigra::Diff2D(1,1),
-                                imgLabels2.upperLeft() + lr + vigra::Diff2D(1,1),
-                                imgLabels2.accessor(), i);
-            findCrackStartOld(imgLabels2.upperLeft() + ul + vigra::Diff2D(1,1),
-                              imgLabels2.upperLeft() + lr + vigra::Diff2D(1,1),
-                              imgLabels2.accessor(), i, cs2);
+//            cs = findCrackStart(imgLabels2.upperLeft() + ul + vigra::Diff2D(1,1),
+//                                imgLabels2.upperLeft() + lr + vigra::Diff2D(1,1),
+//                                imgLabels2.accessor(), i);
+            cs = findCrackStart(this->img_labels.upperLeft() + ul,
+                                this->img_labels.upperLeft() + lr,
+                                this->img_labels.accessor(), i);
           }
-          this->objects[i] = ROIObject(ul, lr, cn, cs2, cs, roisize[i]());
+          this->objects[i] = ROIObject(ul, lr, cn, cs, roisize[i]());
         } else
           // delete not used objects from label image
           transformImageIfLabel(this->img_labels.upperLeft() + ul,

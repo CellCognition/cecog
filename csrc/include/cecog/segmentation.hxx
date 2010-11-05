@@ -100,7 +100,7 @@ namespace cecog
 
   typedef ImageMaskContainer<8> ImageMaskContainer8;
 
-
+/*
   //ImageMaskContainer8::label_type
   vigra::BImage
   splitMergeSegmentation(vigra::BImage const & img_in,
@@ -397,7 +397,7 @@ namespace cecog
 
     return bin_out;
   }
-
+*/
 
 
 
@@ -903,7 +903,7 @@ namespace cecog
 
           typedef ImageMaskContainer8::binary_type::traverser ImageIterator;
 
-          vigra::Diff2D start_j = obj_j.crack_start2;
+          vigra::Diff2D start_j = obj_j.crack_start + obj_j.roi.upperLeft;
           vigra::CrackContourCirculator<ImageIterator> crack_j(container.img_binary.upperLeft() + start_j);
           vigra::CrackContourCirculator<ImageIterator> crackend_j(crack_j);
           bool found = false;
@@ -918,7 +918,7 @@ namespace cecog
           {
             vigra::Diff2D p_j = start_j + crack_j.pos();
             //container.img_rgb.accessor().set(RED, container.img_rgb.upperLeft() + start_j + crack_j.pos());
-            vigra::Diff2D start_i = obj_i.crack_start2;
+            vigra::Diff2D start_i = obj_i.crack_start + obj_i.roi.upperLeft;
             vigra::CrackContourCirculator<ImageIterator> crack_i(container.img_binary.upperLeft() + start_i);
             vigra::CrackContourCirculator<ImageIterator> crackend_i(crack_i);
 
@@ -1073,7 +1073,7 @@ namespace cecog
                                                            container.img_labels.accessor(),
                                                            id_ij);
 
-              ROIObject obj_ij(roi_ul, roi_lr, roicenter_ij, crackstart_ij, crackstart_ij, roisize_ij);
+              ROIObject obj_ij(roi_ul, roi_lr, roicenter_ij, crackstart_ij, roisize_ij);
               mergedL.push_back(merged_type(id_i, id_j, obj_ij));
             }
 
@@ -1162,7 +1162,7 @@ namespace cecog
 
 
 
-
+/*
   ImageMaskContainer<8>
   testPreSegmentation(std::string filepath_img, std::string filepath_msk, std::string filepath_rgb, int channel)
   {
@@ -1342,7 +1342,7 @@ namespace cecog
                                                            container.img_labels.accessor(),
                                                            id_ij);
 
-              ROIObject obj_ij(roi_ul, roi_lr, roicenter_ij, crackstart_ij, crackstart_ij, roisize_ij);
+              ROIObject obj_ij(roi_ul, roi_lr, roicenter_ij, crackstart_ij, roisize_ij);
               mergedL.push_back(merged_type(id_i, id_j, obj_ij));
             }
 
@@ -1390,7 +1390,7 @@ namespace cecog
 
     return ImageMaskContainer8(container.img, container.img_binary, false);
   }
-
+*/
 
 
 }

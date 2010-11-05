@@ -600,13 +600,12 @@ namespace cecog
     bool found = false;
     vigra::Diff2D start(0,0);
 
-    for (int y=0; y < h && !found; ++y, ++xs.y)
+    for (int x=0; x < w && !found; ++x, ++xs.x)
     {
       xs.y = upperleft.y;
-      for (int x=0; x < w && !found; ++x, ++xs.x)
+      for (int y=0; y < h && !found; ++y, ++xs.y)
       {
-        // look for a pixel in the region with the left neighbor outside
-        if (sa(xs) == label && sa(xs + vigra::Diff2D(-1,0)) != label)
+        if (sa(xs) == label)
         {
             start = vigra::Diff2D(x,y);
             found = true;
@@ -617,42 +616,42 @@ namespace cecog
     return start;
   }
 
-  template <class SrcIterator, class SrcAccessor>
-  inline
-  bool findCrackStartOld(SrcIterator const & upperleft,
-                         SrcIterator const & lowerright,
-                         SrcAccessor const & sa,
-                         typename SrcAccessor::value_type const & label,
-                         vigra::Diff2D & start)
-  {
-    SrcIterator xs(upperleft);
-    int w = lowerright.x - upperleft.x;
-    int h = lowerright.y - upperleft.y;
-    int x, y;
-    bool found = false;
-//    BlockFunctorBase_NewSave<SrcIterator, SrcAccessor> functor(xs, sa, w, h, 8, label);
-    BlockFunctorBase<SrcIterator, SrcAccessor> functor;
-
-    //xs.y += 1;
-    //if (h < 1 or w < 1)
-    //  return false;
-
-
-    for (int y=0; y < h; ++y, ++xs.y)
-    {
-      xs.x = upperleft.x;
-      for (int x=0; x < w; ++x, ++xs.x)
-        if (functor.is_border_fg(xs, sa, label))
-        {
-          start = vigra::Diff2D(x,y);
-          found = true;
-          break;
-        }
-      if (found)
-        break;
-    }
-    return found;
-  }
+//  template <class SrcIterator, class SrcAccessor>
+//  inline
+//  bool findCrackStartOld(SrcIterator const & upperleft,
+//                         SrcIterator const & lowerright,
+//                         SrcAccessor const & sa,
+//                         typename SrcAccessor::value_type const & label,
+//                         vigra::Diff2D & start)
+//  {
+//    SrcIterator xs(upperleft);
+//    int w = lowerright.x - upperleft.x;
+//    int h = lowerright.y - upperleft.y;
+//    int x, y;
+//    bool found = false;
+////    BlockFunctorBase_NewSave<SrcIterator, SrcAccessor> functor(xs, sa, w, h, 8, label);
+//    BlockFunctorBase<SrcIterator, SrcAccessor> functor;
+//
+//    //xs.y += 1;
+//    //if (h < 1 or w < 1)
+//    //  return false;
+//
+//
+//    for (int y=0; y < h; ++y, ++xs.y)
+//    {
+//      xs.x = upperleft.x;
+//      for (int x=0; x < w; ++x, ++xs.x)
+//        if (functor.is_border_fg(xs, sa, label))
+//        {
+//          start = vigra::Diff2D(x,y);
+//          found = true;
+//          break;
+//        }
+//      if (found)
+//        break;
+//    }
+//    return found;
+//  }
 
   template <class SrcIterator, class SrcAccessor>
   class BlockPerimeter : public BlockFunctorBase<SrcIterator, SrcAccessor>
