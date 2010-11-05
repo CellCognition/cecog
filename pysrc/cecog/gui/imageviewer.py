@@ -9,7 +9,7 @@
                  See trunk/AUTHORS.txt for author contributions.
 """
 
-__author__ = 'Michael Held'
+__author__ = 'Michael Held, Thomas Walter'
 __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
@@ -69,7 +69,7 @@ class ImageViewer(QGraphicsView):
 
     MOVE_KEY = Qt.Key_Space
 
-    image_mouse_pressed = pyqtSignal(QPointF, int)
+    image_mouse_pressed = pyqtSignal(QPointF, int, int)
     image_mouse_dblclk = pyqtSignal(QPointF)
 
     def __init__(self, parent, auto_resize=False):
@@ -226,7 +226,7 @@ class ImageViewer(QGraphicsView):
         super(ImageViewer, self).mousePressEvent(ev)
         if not self._move_on:
             point = self.mapToScene(ev.pos())
-            self.image_mouse_pressed.emit(point, ev.modifiers())
+            self.image_mouse_pressed.emit(point, ev.button(), ev.modifiers())
 
 #    def mouseDoubleClickEvent(self, ev):
 #        super(ImageViewer, self).mouseDoubleClickEvent(ev)

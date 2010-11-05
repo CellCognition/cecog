@@ -868,6 +868,18 @@ class PositionAnalyzer(object):
                         time.sleep(.05)
                     if not self._myhack is None and not img_rgb is None:
                         self._myhack.set_image(img_rgb)
+                        channel = oCellAnalyzer.getChannel(PrimaryChannel.NAME)
+                        if channel.has_region('primary'):
+                            region = channel.get_region('primary')
+                            container = channel.get_container('primary')
+                            coords = {}
+                            for obj_id in region:
+                                coords[obj_id] = \
+                                    [(pos[0]+region[obj_id].oRoi.upperLeft[0],
+                                      pos[1]+region[obj_id].oRoi.upperLeft[1])
+                                     for pos in
+                                     container.getCrackCoordinates(obj_id)]
+                            self._myhack.set_coords(coords)
 
                 if self.oSettings.get('Output', 'rendering_labels_discwrite'):
                     strPathOutImages = os.path.join(self.strPathOutPositionImages, '_labels')

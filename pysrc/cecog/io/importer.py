@@ -11,7 +11,7 @@
 __author__ = 'Michael Held, Thomas Walter'
 __date__ = '$Date$'
 __revision__ = '$Rev$'
-__source__ = '$URL::                                                          $'
+__source__ = '$URL$'
 
 __all__ = ['FileTokenImporter',
            'MetaMorphTokenImporter',

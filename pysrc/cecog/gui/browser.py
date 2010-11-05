@@ -9,7 +9,7 @@
                  See trunk/AUTHORS.txt for author contributions.
 """
 
-__author__ = 'Michael Held'
+__author__ = 'Michael Held, Thomas Walter'
 __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
@@ -57,6 +57,40 @@ from cecog import ccore
 #-------------------------------------------------------------------------------
 # classes:
 #
+
+
+class MyItem(QGraphicsPolygonItem):
+
+    SCALE = 1.1
+
+    def __init__(self, polygon):
+        super(MyItem, self).__init__(polygon)
+        self._oldwidth = self.pen().width()
+        #self.setAcceptHoverEvents(True)
+#        self._effect = QGraphicsColorizeEffect()
+#        self._effect.setColor(QColor('red'))
+#        self._effect.setStrength(100.0)
+#        self._effect.setEnabled(False)
+#        self.setGraphicsEffect(self._effect)
+
+    def hoverEnterEvent(self, ev):
+        #self.setTransformOriginPoint(0, 0)
+        #self.setScale(self.SCALE)
+        #self._effect.setEnabled(True)
+        pen = self.pen()
+        self._oldwidth = self.pen().width()
+        pen.setWidth(3)
+        self.setPen(pen)
+        super(MyItem, self).hoverEnterEvent(ev)
+
+    def hoverLeaveEvent(self, ev):
+        #self.setScale(1.0)
+        #self._effect.setEnabled(False)
+        pen = self.pen()
+        pen.setWidth(self._oldwidth)
+        self.setPen(pen)
+        super(MyItem, self).hoverLeaveEvent(ev)
+
 
 class Browser(QMainWindow):
 
@@ -211,17 +245,21 @@ class Browser(QMainWindow):
         layout.addWidget(table, 1, 0)
 
         self._annotations = {}
+        self._object_items = {}
 
         layout = QGridLayout(frame)
         layout.setContentsMargins(5, 5, 5, 5)
         self._image_viewer = ImageViewer(frame, auto_resize=True)
-        self._image_viewer.image_mouse_pressed.connect(self._on_new_point)
-        self._image_viewer.image_mouse_dblclk.connect(self._on_dbl_clk)
         self._image_viewer.setTransformationAnchor(ImageViewer.AnchorViewCenter)
         self._image_viewer.setResizeAnchor(ImageViewer.AnchorViewCenter)
-        #self._image_viewer.setSizePolicy(QSizePolicy(QSizePolicy.Expanding,
-        #                                             QSizePolicy.Expanding))
+        print(int(self._image_viewer.renderHints()))
+        self._image_viewer.setRenderHints(QPainter.Antialiasing |
+                                          QPainter.SmoothPixmapTransform)
+        print(int(self._image_viewer.renderHints()))
+        self._image_viewer.setViewportUpdateMode(ImageViewer.SmartViewportUpdate)
         layout.addWidget(self._image_viewer, 0, 0, 1, 2)
+        self._image_viewer.image_mouse_pressed.connect(self._on_new_point)
+        self._image_viewer.image_mouse_dblclk.connect(self._on_dbl_clk)
 
         self._t_slider = QSlider(Qt.Horizontal, frame)
         self._t_slider.setMinimum(self._meta_data.times[0])
@@ -236,7 +274,7 @@ class Browser(QMainWindow):
         self._time = self._t_slider.minimum()
 
         self._t_label = QLabel('t=%d' % self._time, frame)
-        self._t_label.setMinimumWidth(35)
+        self._t_label.setMinimumWidth(45)
         layout.addWidget(self._t_label, 1, 0)
 
         layout = QGridLayout(frame_side)
@@ -248,6 +286,7 @@ class Browser(QMainWindow):
 
         # ensure a valid position (not None!)
         table.setCurrentCell(0, 0)
+
 
     def create_action(self, text, slot=None, shortcut=None, icon=None,
                       tooltip=None, checkable=None, signal='triggered()',
@@ -274,6 +313,23 @@ class Browser(QMainWindow):
             else:
                 target.addAction(action)
 
+    def set_coords(self, coords):
+        scene = self._image_viewer.scene()
+        for obj_id, crack in coords.iteritems():
+            poly = QPolygonF([QPointF(*pos) for pos in crack])
+            item = MyItem(poly)
+            item.setPen(QPen(Qt.white))
+            item.setAcceptHoverEvents(True)
+            item.setData(0, obj_id)
+            scene.addItem(item)
+            self._object_items[obj_id] = item
+
+        if self._position in self._annotations:
+            if self._time in self._annotations[self._position]:
+                for obj_id in self._annotations[self._position][self._time]:
+                    item = self._object_items[obj_id]
+                    self._activate_object(item, True)
+
     def set_image(self, image):
         s = StopWatch()
         print(image)
@@ -284,43 +340,48 @@ class Browser(QMainWindow):
         qimage = numpy_to_qimage(image.toArray(copy=True))
         self._image_viewer.from_qimage(qimage)
 
-        if self._position in self._annotations:
-            if self._time in self._annotations[self._position]:
-                for point in self._annotations[self._position][self._time]:
-                    shape = self._draw_shape(point)
         print('SET IMAGE: %s' % s)
 
-    def _on_new_point(self, point, modifier):
-        if modifier == Qt.ShiftModifier:
-            if self._position in self._annotations:
-                if self._time in self._annotations[self._position]:
-                    points = self._annotations[self._position][self._time]
-                    l = [(i,(x - point).manhattanLength())
-                         for i,x in enumerate(points)]
-                    l.sort(key=lambda x: x[1])
-                    min_point = points[l[0][0]]
-                    scene = self._image_viewer.scene()
-                    item = scene.itemAt(min_point)
-                    scene.removeItem(item)
-                    points.remove(min_point)
-        else:
-            if not self._position in self._annotations:
-                self._annotations[self._position] = {}
-            if not self._time in self._annotations[self._position]:
-                self._annotations[self._position][self._time] = []
-            self._annotations[self._position][self._time].append(point)
-            self._draw_shape(point)
+    def _on_new_point(self, point, button, modifier):
+        if button == Qt.LeftButton:
+            item = self._get_object_item(point)
+            if not item is None:
+                if modifier == Qt.ShiftModifier:
+                    if self._position in self._annotations:
+                        if self._time in self._annotations[self._position]:
+                            ids = self._annotations[self._position][self._time]
+                            obj_id = self._activate_object(item, False)
+                            if obj_id in ids:
+                                ids.remove(obj_id)
+                else:
+                    if not self._position in self._annotations:
+                        self._annotations[self._position] = {}
+                    if not self._time in self._annotations[self._position]:
+                        self._annotations[self._position][self._time] = []
+                    obj_id = self._activate_object(item, True)
+                    ids = self._annotations[self._position][self._time]
+                    if obj_id not in ids:
+                        ids.append(obj_id)
+
 
     def _on_dbl_clk(self, point):
         items = self._image_viewer.items(point)
         print(items)
 
-    def _draw_shape(self, point):
+    def _get_object_item(self, point):
         scene = self._image_viewer.scene()
-        #point = self._image_viewer.mapToScene(point)
-        item = scene.addEllipse(QRectF(point.x()-3, point.y()-3, 6, 6),
-                                QPen(Qt.white), QBrush(Qt.white))
-        return item
+        item = scene.itemAt(point)
+        print(item)
+        return item if isinstance(item, MyItem) else None
+
+    def _activate_object(self, item, state=True):
+        pen = item.pen()
+        pen.setColor(Qt.red if state else Qt.white)
+        item.setPen(pen)
+        obj_id = item.data(0).toInt()[0]
+        print(obj_id, type(obj_id))
+        return obj_id
+
 
     def _on_detect_box(self, state):
         self._detect_objects = state
@@ -404,7 +465,7 @@ class Browser(QMainWindow):
         settings.set('Processing', 'secondary_processChannel', False)
         show_ids = False
         settings.set('General', 'rendering', {'primary_contours': {prim_id: {'raw': ('#FFFFFF', 1.0),
-                                                                             'contours': {'primary': ('#FF0000', 1, show_ids)}
+                                                                             #'contours': {'primary': ('#FF0000', 1, show_ids)}
                                                                              }}})
 
         analyzer = AnalyzerCore(settings,
