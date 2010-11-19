@@ -31,6 +31,8 @@ from cecog.traits.config import (init_constants,
 VERSION_NUM = (1, 1, 0)
 VERSION = '.'.join([str(digit) for digit in VERSION_NUM])
 
+HAS_GUI = False
+
 JOB_CONTROL_SUSPEND = 'Suspend'
 JOB_CONTROL_RESUME = 'Resume'
 JOB_CONTROL_TERMINATE = 'Terminate'

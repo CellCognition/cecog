@@ -56,7 +56,10 @@ class Normalizer(object):
 
     def scale(self, lstValues):
         #print self.iMode, len(lstValues), len(self.lstScale)
-        assert len(lstValues) == len(self.lstScale)
+        if len(lstValues) != len(self.lstScale):
+            raise ValueError('Length of value list (%d) differs from length '
+                             'of scale factor list (%d)!' % \
+                             (len(lstValues), len(self.lstScale)))
         if self.iMode == 0:
             # range [-1,1]
             lstResults = [2.0 * (lstValues[i] - lo) / (hi - lo) - 1.0

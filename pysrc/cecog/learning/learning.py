@@ -47,9 +47,11 @@ from pdk.attributemanagers import (get_attribute_values,
 #
 from cecog.learning.util import SparseWriter, ArffWriter, ArffReader
 from cecog.learning.classifier import LibSvmClassifier
-from cecog.util.util import rgbToHex, LoggerMixin
-#from cecog.ccore import SingleObjectContainer
-
+from cecog.util.util import (rgbToHex,
+                             LoggerMixin,
+                             read_table,
+                             write_table,
+                             )
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -67,6 +69,8 @@ from cecog.util.util import rgbToHex, LoggerMixin
 #
 
 class BaseLearner(LoggerMixin, OptionManager):
+
+    ANNOTATIONS = 'annotations'
 
     OPTIONS = {"strEnvPath" :          Option(".", callback="_onEnvPath"),
                "lstClassDefinitions" : Option([], callback="_onDefineClasses"),
@@ -104,6 +108,15 @@ class BaseLearner(LoggerMixin, OptionManager):
 
     def __setstate__(self, state):
         set_attribute_values(self, state)
+
+    def clear(self):
+        self.dctFeatureData.clear()
+        self.dctClassNames.clear()
+        self.dctClassLabels.clear()
+        self.lstFeatureNames = None
+        self.dctHexColors.clear()
+        self.dctSampleNames.clear()
+        self.dctImageObjects.clear()
 
     def mergeClasses(self, info, mapping):
         newl = copy.deepcopy(self)
@@ -198,7 +211,7 @@ class BaseLearner(LoggerMixin, OptionManager):
 
     def _onEnvPath(self, strEnvPath):
         self.dctEnvPaths = {'samples' :    os.path.join(strEnvPath, "samples"),
-                            'annotations': os.path.join(strEnvPath, "annotations"),
+                            self.ANNOTATIONS : os.path.join(strEnvPath, self.ANNOTATIONS),
                             'data':        os.path.join(strEnvPath, "data"),
                             'controls':    os.path.join(strEnvPath, "controls"),
                        }
@@ -206,12 +219,19 @@ class BaseLearner(LoggerMixin, OptionManager):
     def getPath(self, strName):
         return self.dctEnvPaths[strName]
 
+    def get_env_path(self):
+        return self.getOption('strEnvPath')
+
+    def set_env_path(self, path):
+        self.setOption('strEnvPath', path)
+        self._onEnvPath(path)
+
     def loadDefinition(self, path=None, filename=None):
         if filename is None:
             filename = self.getOption('strDefinitionFileName')
         if path is None:
             path = self.getOption('strEnvPath')
-        f = open(os.path.join(path, filename), "r")
+        f = open(os.path.join(path, filename), "rb")
         reader = csv.reader(f, delimiter='\t', quoting=csv.QUOTE_NONE)
         self.dctClassNames.clear()
         self.dctClassLabels.clear()
@@ -223,6 +243,19 @@ class BaseLearner(LoggerMixin, OptionManager):
             self.dctClassNames[label] = name
             self.dctClassLabels[name] = label
             self.dctHexColors[name] = color
+        f.close()
+
+    def saveDefinition(self, path=None, filename=None):
+        if filename is None:
+            filename = self.getOption('strDefinitionFileName')
+        if path is None:
+            path = self.getOption('strEnvPath')
+        f = open(os.path.join(path, filename), "wb")
+        writer = csv.writer(f, delimiter='\t', quoting=csv.QUOTE_NONE)
+        for class_name in self.lstClassNames:
+            class_label = self.dctClassLabels[class_name]
+            color = self.dctHexColors[class_name]
+            writer.writerow([class_label, class_name, color])
         f.close()
 
     def exportRanges(self, strFilePath=None, strFileName=None):
@@ -511,7 +544,7 @@ class ClassPredictor(BaseLearner):
             # scale between -1 and +1
             samples = 2.0 * (samples - lo) / (hi - lo) - 1.0
         # FIXME: stupid libSVM conversions
-        #labels = map(int, labels)
+        labels = map(int, labels)
         samples = [dict([(i+1, float(v))
                          for i,v in enumerate(items)
                          if not numpy.isnan(v)])

@@ -42,7 +42,7 @@ from cecog.traits.config import (ANALYZER_CONFIG_FILENAME,
 MAIN_SCRIPT = 'CecogAnalyzer.py'
 
 APP = [MAIN_SCRIPT]
-INCLUDES = ['sip', 'netCDF4_utils', 'netcdftime',]
+INCLUDES = ['sip', 'netCDF4_utils', 'netcdftime', 'pyamf']
 EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
             'PyQt4.QtOpenGL', 'PyQt4.QtScript',
             'PyQt4.QtSql', 'PyQt4.QtTest',
@@ -231,4 +231,8 @@ elif sys.platform == 'win32':
 
     for filename in RESOURCE_FILES:
         shutil.copy(filename, resource_path)
+
+    w9 = os.path.join('dist', 'w9xpopen.exe')
+    if os.path.isfile(w9):
+        os.remove(w9)
 

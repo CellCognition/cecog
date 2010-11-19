@@ -486,6 +486,7 @@ class AnalyzerMainWindow(QMainWindow):
         self._exit_app()
 
     def _on_browser_open(self):
+        self._on_load_input()
         self._browser = Browser(self._settings,
                                 self._imagecontainer)
         self._browser.show()
@@ -574,8 +575,8 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 if __name__ == "__main__":
     import time
     from pdk.fileutils import safe_mkdirs
-    log_path = 'log'
-    safe_mkdirs(log_path)
+#    log_path = 'log'
+#    safe_mkdirs(log_path)
 #    sys.stdout = \
 #        file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
 #    sys.stderr = \
@@ -629,7 +630,6 @@ if __name__ == "__main__":
         #filename = '/Users/miheld/data/CellCognition/Thomas/ANDRISETTINGS_local_HD.conf'
         if os.path.isfile(filename):
             main._read_settings(filename)
-            main._on_load_input()
         main._debug = True
 
     splash.finish(main)

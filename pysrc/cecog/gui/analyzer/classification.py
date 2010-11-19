@@ -46,8 +46,7 @@ from cecog.analyzer.channel import (PrimaryChannel,
                                     SecondaryChannel,
                                     TertiaryChannel,
                                     )
-from cecog.learning.learning import (CommonClassPredictor,
-                                     )
+from cecog.learning.learning import CommonClassPredictor
 from cecog.util.util import (hexToRgb,
                              convert_package_path,
                              )

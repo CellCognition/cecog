@@ -637,7 +637,7 @@ class CellAnalyzer(PropertyManager):
     def getChannel(self, name):
         return self._channel_registry[name]
 
-    def process(self, apply=True):
+    def process(self, apply=True, extract_features=True):
         # sort by Channel `RANK`
         channels = sorted(self._channel_registry.values())
         primary_channel = None
@@ -647,7 +647,8 @@ class CellAnalyzer(PropertyManager):
 
             if self.detect_objects:
                 self.time_holder.apply_segmentation(channel, primary_channel)
-                self.time_holder.apply_features(channel)
+                if extract_features:
+                    self.time_holder.apply_features(channel)
 
                 if primary_channel is None:
                     assert channel.RANK == 1
@@ -802,7 +803,7 @@ class CellAnalyzer(PropertyManager):
 #            if oPrimaryChannel is None:
 #                assert oChannel2.RANK == 1
 #                oPrimaryChannel = oChannel2
-        self.process(apply = False)
+        self.process(apply = False, extract_features = False)
 
         print self._channel_registry
         oChannel = self._channel_registry[oLearner.channel_name]
@@ -847,7 +848,7 @@ class CellAnalyzer(PropertyManager):
         for obj_id in objects_del:
             oContainer.delObject(obj_id)
 
-        oChannel.applyFeatures()
+        self.time_holder.apply_features(oChannel)
         region = oChannel.get_region(strRegionId)
 
         learner_objects = []

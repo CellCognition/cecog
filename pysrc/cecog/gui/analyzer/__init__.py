@@ -216,10 +216,9 @@ class _ProcessingThread(QThread):
             self._run()
         except:
             msg = traceback.format_exc()
-            msg2 = traceback.format_exc(5)
             logger = logging.getLogger()
             logger.error(msg)
-            self.analyzer_error.emit(msg2, 0)
+            self.analyzer_error.emit(msg, 0)
             raise
 
     def set_abort(self):
@@ -561,7 +560,7 @@ class TrainingThread(_ProcessingThread):
                 best_log2g = log2g
                 best_conf = conf
                 self.conf_result.emit(log2c, log2g, conf)
-            time.sleep(.3)
+            time.sleep(.05)
 
             if self.get_abort():
                 is_abort = True
@@ -882,7 +881,7 @@ class _ProcessorMixin(object):
                 self._analyzer.analyzer_error.connect(self._on_error,
                                                       Qt.QueuedConnection)
 
-                self._analyzer.start(QThread.IdlePriority)
+                self._analyzer.start(QThread.LowestPriority)
                 if self._current_process_item == 0:
                     status('Process started...')
 

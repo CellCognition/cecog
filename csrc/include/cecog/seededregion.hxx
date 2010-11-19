@@ -220,8 +220,8 @@ namespace cecog {
       /* At some point, the width over which differences are calculated should probably be user controlled. */
       for (delta_j = -deltaWidth; delta_j <= deltaWidth; ++delta_j)
         for (delta_i = -deltaWidth; delta_i <= deltaWidth; ++delta_i)
-          pixel_diff += fabs(clampedFetch(i1 + delta_i, j1 + delta_j) -
-                             clampedFetch(i2 + delta_i, j2 + delta_j));
+          pixel_diff += abs(clampedFetch(i1 + delta_i, j1 + delta_j) -
+                            clampedFetch(i2 + delta_i, j2 + delta_j));
 
       return sqrt(pixel_diff*pixel_diff + (abs(i1 - i2) + abs(j1 - j2)) * lambda * lambda);
     }

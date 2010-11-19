@@ -406,11 +406,11 @@ namespace cecog
   void segmentationCorrection(vigra::BImage const & img_in,
                               vigra::BImage const & bin_in,
                               vigra::BImage & bin_out,
-                              std::string const & filepath_img,
+                              //std::string const & filepath_img,
                               int rsize,
                               int gauss_size, int maxima_size,
                               int iMinMergeSize,
-                              std::string filepath_rgb="",
+                              //std::string filepath_rgb="",
                               SegmentationType segmentation_type=ShapeBasedSegmentation)
 
   {
@@ -418,15 +418,15 @@ namespace cecog
 
     StopWatch oStopWatch, oStopWatchTotal;
 
-    std::string filepath_base = filepath_img.substr(0, filepath_img.size()-4);
-    std::string filepath_export_inv           = filepath_base + "__01inv.png";
-    std::string filepath_export_binary        = filepath_base + "__02bin.png";
-    std::string filepath_export_min           = filepath_base + "__03min.png";
-    std::string filepath_export_voronoi       = filepath_base + "__04voronoi.png";
-    std::string filepath_export_binws         = filepath_base + "__05binws.png";
-    std::string filepath_export_rgb           = filepath_base + "__06seg.png";
-    std::string filepath_export_rgb_merged    = filepath_base + "__07seg_merged.png";
-    std::string filepath_export_binary_merged = filepath_base + "__08bin_merged.png";
+//    std::string filepath_base = filepath_img.substr(0, filepath_img.size()-4);
+//    std::string filepath_export_inv           = filepath_base + "__01inv.png";
+//    std::string filepath_export_binary        = filepath_base + "__02bin.png";
+//    std::string filepath_export_min           = filepath_base + "__03min.png";
+//    std::string filepath_export_voronoi       = filepath_base + "__04voronoi.png";
+//    std::string filepath_export_binws         = filepath_base + "__05binws.png";
+//    std::string filepath_export_rgb           = filepath_base + "__06seg.png";
+//    std::string filepath_export_rgb_merged    = filepath_base + "__07seg_merged.png";
+//    std::string filepath_export_binary_merged = filepath_base + "__08bin_merged.png";
 
     typedef ImageMaskContainer<8> ImageMaskContainer8;
     typedef ImageMaskContainer8::label_type::value_type label_value_type;
@@ -1135,13 +1135,13 @@ namespace cecog
       printf("moo erase3\n");
     #endif
 
-    if (filepath_rgb != "")
-    {
-      //container.makeRGB();
-      //copyImage(srcImageRange(img_rgb), destImage(container.img_rgb));
-      //container2.markObjects(WHITE, false, true, false, true);
-      //container2.exportRGB(filepath_rgb, "");
-    }
+//    if (filepath_rgb != "")
+//    {
+//      //container.makeRGB();
+//      //copyImage(srcImageRange(img_rgb), destImage(container.img_rgb));
+//      //container2.markObjects(WHITE, false, true, false, true);
+//      //container2.exportRGB(filepath_rgb, "");
+//    }
 
     copyImage(container.img_binary.upperLeft() + vigra::Diff2D(mem_border, mem_border),
               container.img_binary.lowerRight() - vigra::Diff2D(mem_border, mem_border),

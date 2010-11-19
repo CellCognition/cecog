@@ -44,6 +44,7 @@ from pdk.fileutils import safe_mkdirs
 # cecog imports:
 #
 from cecog.traits.config import NAMING_SCHEMAS
+from cecog.util.util import convert_package_path
 
 #------------------------------------------------------------------------------
 # constants:
@@ -378,10 +379,13 @@ class ImageContainer(object):
                                        FlatFileImporter,
                                        )
         settings.set_section(SECTION_NAME_GENERAL)
-        path_input = settings.get2('pathin')
-        path_output = settings.get2('pathout')
-        path_output_dump = os.path.join(path_output,'dump')
-        filename_pkl = os.path.join(path_output_dump,'imagecontainer.pkl')
+        path_input = convert_package_path(settings.get2('pathin'))
+        safe_mkdirs(path_input)
+        path_output = convert_package_path(settings.get2('pathout'))
+        safe_mkdirs(path_output)
+        path_output_dump = convert_package_path(os.path.join(path_output,'dump'))
+        safe_mkdirs(path_output_dump)
+        filename_pkl = os.path.join(path_output_dump,'imagecontainer2.pkl')
 
         create_imagecontainer = settings.get(SECTION_NAME_OUTPUT,
                                              'imagecontainer_create_file')

@@ -173,9 +173,9 @@ namespace cecog
                                              int iMinMergeSize)
     {
       std::auto_ptr< vigra::BImage > imgPtr(new vigra::BImage(imgIn.size()));
-      cecog::segmentationCorrection(imgIn, binIn, *imgPtr, "",
+      cecog::segmentationCorrection(imgIn, binIn, *imgPtr,
                                     rSize, gaussSize, maximaSize, iMinMergeSize,
-                                    "", ShapeBasedSegmentation);
+                                    ShapeBasedSegmentation);
       return incref(object(imgPtr).ptr());
     }
 
@@ -186,9 +186,9 @@ namespace cecog
                                                  int iMinMergeSize)
     {
       std::auto_ptr< vigra::BImage > imgPtr(new vigra::BImage(imgIn.size()));
-      cecog::segmentationCorrection(imgIn, binIn, *imgPtr, "",
+      cecog::segmentationCorrection(imgIn, binIn, *imgPtr,
                                     rSize, gaussSize, maximaSize, iMinMergeSize,
-                                    "", IntensityBasedSegmentation);
+                                    IntensityBasedSegmentation);
       return incref(object(imgPtr).ptr());
     }
 

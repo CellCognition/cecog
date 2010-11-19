@@ -49,7 +49,7 @@ from pdk.platform import on_mac
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
-
+from cecog.util.color import rgb_to_hex
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -234,6 +234,14 @@ def on_anchor_clicked(link):
         qApp.cecog_help_wtext.scrollToAnchor(slink[1:])
     else:
         QDesktopServices.openUrl(link)
+
+def qcolor_to_hex(qcolor):
+    return rgb_to_hex(qcolor.red(), qcolor.green(), qcolor.blue())
+
+def get_qcolor_hicontrast(qcolor, threshold=0.5):
+    lightness = qcolor.lightnessF()
+    return QColor('white' if lightness <= threshold else 'black')
+
 
 
 #-------------------------------------------------------------------------------

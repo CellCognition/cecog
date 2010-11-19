@@ -243,7 +243,7 @@ class PositionAnalyzer(object):
                             'DISABLED FOR NOW'))
                             #self.oSettings.bClearTrackingPath))
 
-        max_frames = max(self.lstAnalysisFrames)
+        #max_frames = max(self.lstAnalysisFrames)
         filename_netcdf = os.path.join(self._path_dump, '%s.nc4' % self.P)
         self.oSettings.set_section('Output')
         oTimeHolder = TimeHolder(self.P, self.tplChannelIds, filename_netcdf,
@@ -946,6 +946,7 @@ class AnalyzerCore(object):
         #    self.oSettings.tplFrameRange = None
 
         self._imagecontainer = imagecontainer
+        self.lstAnalysisFrames = []
         self._openImageContainer()
 
         self.lstSampleReader = []
@@ -972,7 +973,7 @@ class AnalyzerCore(object):
             self.oObjectLearner.loadDefinition()
 
             # FIXME: if the resulting .ARFF file is trained directly from
-            # Python SVM (instead of easy.py) NO leading ID needs to be inserted
+            # Python SVM (instead of easy.py) NO leading ID need to be inserted
             self.oObjectLearner.hasZeroInsert = False
 
             # FIXME:
@@ -1106,6 +1107,7 @@ class AnalyzerCore(object):
 
         # define range of frames to do analysis within
         lstFrames = list(self._meta_data.times)
+        print lstFrames
 
         if self.oSettings.get2('frameRange'):
             frames_begin = self.oSettings.get2('frameRange_begin')
@@ -1120,12 +1122,15 @@ class AnalyzerCore(object):
             frames_end = lstFrames[-1]
 
         self.tplFrameRange = (frames_begin, frames_end)
+        print self.tplFrameRange
 
         lstAnalysisFrames = lstFrames[lstFrames.index(self.tplFrameRange[0]):
                                       lstFrames.index(self.tplFrameRange[1])+1]
+        print lstAnalysisFrames
 
         # take every n'th element from the list
         self.lstAnalysisFrames = lstAnalysisFrames[::self.oSettings.get2('frameincrement')]
+        print self.lstAnalysisFrames
 
 
 
@@ -1133,19 +1138,26 @@ class AnalyzerCore(object):
         # loop over positions
         lstJobInputs = []
         for oP in self.lstPositions:
-            tplArgs = (oP,
-                       self.strPathOut,
-                       self.oSettings,
-                       self.lstAnalysisFrames,
-                       self.lstSampleReader,
-                       self.dctSamplePositions,
-                       self.oObjectLearner,
-                       self._imagecontainer,
-                       )
-            dctOptions = dict(qthread = qthread,
-                              myhack = myhack,
-                              )
-            lstJobInputs.append((tplArgs, dctOptions))
+
+            if oP in self.dctSamplePositions:
+                analyze = len(self.dctSamplePositions[oP]) > 0
+            else:
+                analyze = len(self.lstAnalysisFrames) > 0
+
+            if analyze:
+                tplArgs = (oP,
+                           self.strPathOut,
+                           self.oSettings,
+                           self.lstAnalysisFrames,
+                           self.lstSampleReader,
+                           self.dctSamplePositions,
+                           self.oObjectLearner,
+                           self._imagecontainer,
+                           )
+                dctOptions = dict(qthread = qthread,
+                                  myhack = myhack,
+                                  )
+                lstJobInputs.append((tplArgs, dctOptions))
 
 
         stage_info = {'stage': 1,

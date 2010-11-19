@@ -210,16 +210,20 @@ class ImageViewer(QGraphicsView):
     # protected method overload
 
     def keyPressEvent(self, ev):
+        super(ImageViewer, self).keyPressEvent(ev)
         if ev.key() == self.MOVE_KEY and not self._move_on:
             self._move_on = True
             self.setDragMode(QGraphicsView.ScrollHandDrag)
 
     def keyReleaseEvent(self, ev):
+        super(ImageViewer, self).keyReleaseEvent(ev)
         if ev.key() == self.MOVE_KEY and self._move_on:
             self.setDragMode(QGraphicsView.NoDrag)
+            self.releaseMouse()
             self._move_on = False
 
     def enterEvent(self, ev):
+        super(ImageViewer, self).enterEvent(ev)
         self.setFocus()
 
     def mousePressEvent(self, ev):
@@ -227,12 +231,6 @@ class ImageViewer(QGraphicsView):
         if not self._move_on:
             point = self.mapToScene(ev.pos())
             self.image_mouse_pressed.emit(point, ev.button(), ev.modifiers())
-
-#    def mouseDoubleClickEvent(self, ev):
-#        super(ImageViewer, self).mouseDoubleClickEvent(ev)
-#        if not self._move_on:
-#            point = self.mapToScene(ev.pos())
-#            self.image_mouse_dblclk.emit(point)
 
     def resizeEvent(self, ev):
         super(ImageViewer, self).resizeEvent(ev)
