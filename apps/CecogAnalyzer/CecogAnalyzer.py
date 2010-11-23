@@ -95,6 +95,8 @@ class AnalyzerMainWindow(QMainWindow):
 
     def __init__(self):
         QMainWindow.__init__(self)
+        qApp._main_window = self
+
         self._debug = False
         self._imagecontainer = None
         self._meta_data = None
@@ -490,6 +492,8 @@ class AnalyzerMainWindow(QMainWindow):
         self._browser = Browser(self._settings,
                                 self._imagecontainer)
         self._browser.show()
+        self._browser.raise_()
+        self._browser.setFocus()
 
     def _on_load_input(self):
         self._imagecontainer = ImageContainer.from_settings(self._settings)

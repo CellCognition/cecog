@@ -50,6 +50,7 @@ from cecog.learning.learning import CommonClassPredictor
 from cecog.util.util import (hexToRgb,
                              convert_package_path,
                              )
+from cecog.gui.browser import Browser
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -126,6 +127,9 @@ class ClassifierResultFrame(QGroupBox):
         layout_desc.addWidget(self._label_c, Qt.AlignLeft)
         self._label_g = QLabel(self.LABEL_G % float('NAN'), desc)
         layout_desc.addWidget(self._label_g, Qt.AlignLeft)
+        btn = QPushButton('Show Browser', desc)
+        btn.clicked.connect(qApp._main_window._on_browser_open)
+        layout_desc.addWidget(btn)
         layout.addWidget(desc)
 
         self._has_data = False
