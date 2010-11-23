@@ -42,6 +42,25 @@ OS_LINUX = 'linux'
 # functions:
 #
 
+def singleton(cls):
+    '''
+    singleton class decorator
+    Example:
+    @singleton
+    class Foo():
+        pass
+
+    foo1 = Foo()
+    foo2 = Foo()
+    assert foo1 is foo2
+    '''
+    instances = {}
+    def getinstance(*args, **options):
+        if cls not in instances:
+            instances[cls] = cls(*args, **options)
+        return instances[cls]
+    return getinstance
+
 def hexToRgb(string):
     hex = eval(string.replace('#','0x'))
     b = hex & 0xff

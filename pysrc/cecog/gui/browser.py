@@ -27,7 +27,8 @@ import os, \
        re, \
        numpy, \
        time, \
-       shutil
+       shutil, \
+       math
 from xml.dom import minidom
 
 from PyQt4.QtGui import *
@@ -59,6 +60,7 @@ from cecog.analyzer.core import AnalyzerCore
 from cecog import ccore
 from cecog.util.util import (hexToRgb,
                              convert_package_path,
+                             singleton,
                              )
 from cecog.learning.learning import BaseLearner
 
@@ -292,6 +294,7 @@ class Annotations(object):
                 f.close()
 
 
+@singleton
 class Browser(QMainWindow):
 
     ZOOM_STEP = 1.05
@@ -301,7 +304,7 @@ class Browser(QMainWindow):
     COLUMN_CLASS_COUNT = 3
 
     def __init__(self, settings, imagecontainer):
-        super(Browser, self).__init__()
+        QMainWindow.__init__(self)
 
         frame = QFrame(self)
         self.setCentralWidget(frame)
@@ -310,6 +313,10 @@ class Browser(QMainWindow):
         self._zoom_value = 1.0
         self._current_class = None
         self._detect_objects = False
+        self._current_scene_items = set()
+
+        self.grabGesture(Qt.PinchGesture)
+        self.grabGesture(Qt.SwipeGesture)
 
         act_new = self.create_action('New Classifier...',
                                      shortcut=QKeySequence.New,
@@ -330,10 +337,10 @@ class Browser(QMainWindow):
                                      ))
 
         act_next_t = self.create_action('Next Time-point',
-                                        shortcut=QKeySequence.SelectNextChar,
+                                        shortcut=QKeySequence('Right'),
                                         slot=self._on_shortcut_right)
         act_prev_t = self.create_action('Previous Time-point',
-                                        shortcut=QKeySequence.SelectPreviousChar,
+                                        shortcut=QKeySequence('Left'),
                                         slot=self._on_shortcut_left)
         act_resize = self.create_action('Automatically Resize',
                                          shortcut=QKeySequence('SHIFT+CTRL+R'),
@@ -341,6 +348,7 @@ class Browser(QMainWindow):
                                          signal='triggered(bool)',
                                          checkable=True,
                                          checked=True)
+        self._act_resize = act_resize
         act_zoomfit = self.create_action('Zoom to Fit',
                                          shortcut=QKeySequence('CTRL+0'),
                                          slot=self._on_shortcut_zoomfit)
@@ -359,6 +367,7 @@ class Browser(QMainWindow):
                                             signal='triggered(bool)',
                                             checkable=True,
                                             checked=False)
+        self._act_fullscreen = act_fullscreen
         act_anti = self.create_action('Antialiasing',
                                       shortcut=QKeySequence('CTRL+ALT+A'),
                                       slot=self._on_shortcut_antialiasing,
@@ -484,9 +493,11 @@ class Browser(QMainWindow):
         self._image_viewer.setRenderHints(QPainter.Antialiasing |
                                           QPainter.SmoothPixmapTransform)
         self._image_viewer.setViewportUpdateMode(ImageViewer.SmartViewportUpdate)
+        self._image_viewer.setBackgroundBrush(QBrush(QColor('#666666')))
         layout.addWidget(self._image_viewer, 0, 0, 1, 2)
         self._image_viewer.image_mouse_pressed.connect(self._on_new_point)
         self._image_viewer.image_mouse_dblclk.connect(self._on_dbl_clk)
+        self._image_viewer.zoom_info_updated.connect(self._on_zoom_info_updated)
 
         self._t_slider = QSlider(Qt.Horizontal, frame)
         self._t_slider.setMinimum(self._meta_data.times[0])
@@ -552,6 +563,7 @@ class Browser(QMainWindow):
         table.setCurrentCell(0, 0)
         #self._class_table.setCurrentCell(0, 0)
 
+
     def _on_class_color(self):
         dlg = QColorDialog(self)
         if not self._class_color is None:
@@ -562,6 +574,9 @@ class Browser(QMainWindow):
                                                 % (col.red(), col.green(),
                                                    col.blue()))
             self._class_color = col
+
+    def _on_zoom_info_updated(self, info):
+        print info
 
     def _find_items_in_class_table(self, value, column, match=Qt.MatchExactly):
         items = self._class_table.findItems(value, match)
@@ -702,6 +717,7 @@ class Browser(QMainWindow):
                                             qcolor_to_hex(self._class_color))
         class_table = self._class_table
         class_table.clearContents()
+        class_table.setRowCount(0)
         if self._detect_objects:
             self._activate_objects_for_image(False, clear=True)
         self._annotations.remove_all()
@@ -844,6 +860,9 @@ class Browser(QMainWindow):
 
     def set_coords(self, coords):
         scene = self._image_viewer.scene()
+        for item in self._current_scene_items:
+            scene.removeItem(item)
+        self._current_scene_items.clear()
         for obj_id, crack in coords.iteritems():
             poly = QPolygonF([QPointF(*pos) for pos in crack])
             item = MyItem(poly)
@@ -851,6 +870,7 @@ class Browser(QMainWindow):
             item.setAcceptHoverEvents(True)
             item.setData(0, obj_id)
             scene.addItem(item)
+            self._current_scene_items.add(item)
         self._object_items.clear()
         self._activate_objects_for_image()
         self._update_class_table()
@@ -982,11 +1002,18 @@ class Browser(QMainWindow):
     def _on_shortcut_right(self):
         self._t_slider.setValue(self._t_slider.value()+1)
 
+    def _on_shortcut_up(self):
+        pass
+
+    def _on_shortcut_down(self):
+        pass
+
     def _on_shortcut_fullscreen(self, checked):
         if checked:
             self.showFullScreen()
         else:
             self.showNormal()
+        self.raise_()
 
     def _on_shortcut_antialiasing(self, checked):
         self._image_viewer.setRenderHint(QPainter.Antialiasing, checked)
@@ -999,18 +1026,27 @@ class Browser(QMainWindow):
 
     def _on_shortcut_autoresize(self, state):
         self._image_viewer.set_auto_resize(state)
+        if state:
+            self._zoom_value = self._image_viewer.scale_to_fit()
 
     def _on_shortcut_zoom100(self):
-        #self._zoom_value = 1.0
+        self._image_viewer.set_auto_resize(False)
+        self._act_resize.setChecked(False)
         self._image_viewer.scale_reset()
 
     def _on_shortcut_zoomfit(self):
+        self._image_viewer.set_auto_resize(False)
+        self._act_resize.setChecked(False)
         self._zoom_value = self._image_viewer.scale_to_fit()
 
     def _on_shortcut_zoomin(self):
+        self._image_viewer.set_auto_resize(False)
+        self._act_resize.setChecked(False)
         self._image_viewer.scale_relative(self.ZOOM_STEP, ensure_fit=False)
 
     def _on_shortcut_zoomout(self):
+        self._image_viewer.set_auto_resize(False)
+        self._act_resize.setChecked(False)
         self._image_viewer.scale_relative(1/self.ZOOM_STEP, ensure_fit=True)
 
     def _on_shortcut_transform(self, checked):
@@ -1094,3 +1130,48 @@ class Browser(QMainWindow):
             exception(self, 'Error on saving classifier')
             success = False
         return success
+
+
+    def keyPressEvent(self, ev):
+        QMainWindow.keyPressEvent(self, ev)
+        # allow to return from fullscreen via the Escape key
+        if self.isFullScreen() and ev.key() == Qt.Key_Escape:
+            self.showNormal()
+            self._act_fullscreen.setChecked(False)
+            self.raise_()
+
+    def gestureEvent(self, ev):
+        # determine whether a swipe gesture was detected
+        if not ev.gesture(Qt.SwipeGesture) is None:
+            gesture = ev.gesture(Qt.SwipeGesture)
+            if gesture.state() == Qt.GestureFinished:
+                if gesture.horizontalDirection() == QSwipeGesture.Left:
+                    self._on_shortcut_left()
+                elif gesture.horizontalDirection() == QSwipeGesture.Right:
+                    self._on_shortcut_right()
+                elif gesture.horizontalDirection() == QSwipeGesture.Up:
+                    self._on_shortcut_up()
+                elif gesture.horizontalDirection() == QSwipeGesture.Down:
+                    self._on_shortcut_down()
+        # or a pinch gesture was detected
+        elif not ev.gesture(Qt.PinchGesture) is None:
+            gesture = ev.gesture(Qt.PinchGesture)
+            if gesture.state() == Qt.GestureStarted:
+                self._image_viewer.setTransformationAnchor(
+                    ImageViewer.AnchorUnderMouse)
+            f = gesture.scaleFactor()
+            if f != 1.0:
+                self._image_viewer.scale_relative(math.sqrt(f), ensure_fit=True,
+                                                  small_only=True)
+                self._image_viewer.set_auto_resize(False)
+                self._act_resize.setChecked(False)
+
+            if gesture.state() in [Qt.GestureCanceled, Qt.GestureFinished]:
+                self._image_viewer.setTransformationAnchor(
+                    ImageViewer.AnchorViewCenter)
+        return True
+
+    def event(self, ev):
+        if ev.type() == QEvent.Gesture:
+            return self.gestureEvent(ev)
+        return QWidget.event(self, ev)

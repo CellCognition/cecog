@@ -68,9 +68,11 @@ class ImageScene(QGraphicsScene):
 class ImageViewer(QGraphicsView):
 
     MOVE_KEY = Qt.Key_Space
+    MAX_SCALE = 200
 
     image_mouse_pressed = pyqtSignal(QPointF, int, int)
     image_mouse_dblclk = pyqtSignal(QPointF)
+    zoom_info_updated = pyqtSignal(float)
 
     def __init__(self, parent, auto_resize=False):
         super(ImageViewer, self).__init__(parent)
@@ -80,13 +82,7 @@ class ImageViewer(QGraphicsView):
         self.setScene(self._scene)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
         self.setDragMode(QGraphicsView.NoDrag)
-
-        #self.label.setSizePolicy(QSizePolicy(QSizePolicy.Expanding,
-        #                                     QSizePolicy.Expanding))
-
-        #self.label.show()
 
         self._qimage = None
         self.connect(self, SIGNAL('MouseMovedOverImage'),
@@ -98,8 +94,11 @@ class ImageViewer(QGraphicsView):
         self._click_on = False
         self._home_pos = None
 
-        #self._renderer = ImageViewerRenderer(self)
-        #workflow_manager.register_renderer(self._renderer)
+        self._pixmap = QGraphicsPixmapItem()
+        self._pixmap.setShapeMode(QGraphicsPixmapItem.BoundingRectShape)
+        self._pixmap.setTransformationMode(Qt.SmoothTransformation)
+        self._scene.addItem(self._pixmap)
+
 
 #    def set_channels(self, channels):
 #        for name, rgb_tuple in channels:
@@ -162,14 +161,7 @@ class ImageViewer(QGraphicsView):
             print pos, QColor(color).getRgb()[:3]
 
     def _update(self):
-#        qimage = self._qimage.scaled(self._qimage.width()*self._scale,
-#                                     self._qimage.height()*self._scale,
-#                                     Qt.KeepAspectRatio,
-#                                     self._scale_transform)
-#        self.label.setPixmap(QPixmap.fromImage(qimage))
-#        self.label.resize(self.label.pixmap().size())
-#        self.setMaximumSize(self.label.size())
-        self._scene.addPixmap(QPixmap.fromImage(self._qimage))
+        self._pixmap.setPixmap(QPixmap.fromImage(self._qimage))
 
     def center(self):
         screen = self.geometry()
@@ -178,7 +170,18 @@ class ImageViewer(QGraphicsView):
                         (screen.height()-size.height())/2)
         self.update()
 
-    def scale_relative(self, value, ensure_fit=False):
+    @property
+    def scale_factor(self):
+        return self.transform().m11()
+
+    def _update_zoom_info(self):
+        self.zoom_info_updated.emit(self.scale_factor)
+
+    def scale(self, sx, sy):
+        if sx*self.scale_factor <= self.MAX_SCALE:
+            super(ImageViewer, self).scale(sx, sy)
+
+    def scale_relative(self, value, ensure_fit=False, small_only=False):
         # prevent scaling beyond the viewport size (either below or above,
         # depending on zoom in (value > 1.) or zoom out (value < 1.)
         # only one side is required for fit (the entire image is visible)
@@ -186,23 +189,28 @@ class ImageViewer(QGraphicsView):
             # the size of the scene (transform independent)
             rect = self.sceneRect()
             # the size of the viewport
-            size = self.viewport().size()
+            size = self.size()
             # map the width/height to the scene to see how big the scene within
             # the viewport really is -> any simpler solution?
-            coord = self.mapFromScene(rect.width(), rect.height())
+            coord = self.mapFromScene(rect.width(), rect.height()) * value
             if (value < 1. and
                 (coord.x() >= size.width() or coord.y() >= size.height()) or
-                value > 1. and
-                (coord.x() <= size.width() or coord.y() <= size.height())):
+                value > 1. and (small_only or
+                 coord.x() <= size.width() or coord.y() <= size.height())):
                 self.scale(value, value)
+            else:
+                self.scale_to_fit()
         else:
             self.scale(value, value)
+        self._update_zoom_info()
 
     def scale_reset(self):
         self.resetTransform()
+        self._update_zoom_info()
 
     def scale_to_fit(self):
         self.fitInView(self.sceneRect(), mode=Qt.KeepAspectRatio)
+        self._update_zoom_info()
 
     def set_auto_resize(self, state):
         self._auto_resize = state
@@ -219,12 +227,13 @@ class ImageViewer(QGraphicsView):
         super(ImageViewer, self).keyReleaseEvent(ev)
         if ev.key() == self.MOVE_KEY and self._move_on:
             self.setDragMode(QGraphicsView.NoDrag)
-            self.releaseMouse()
             self._move_on = False
 
     def enterEvent(self, ev):
+        print "moo", ev
         super(ImageViewer, self).enterEvent(ev)
         self.setFocus()
+        self._scene.setFocus()
 
     def mousePressEvent(self, ev):
         super(ImageViewer, self).mousePressEvent(ev)
@@ -236,4 +245,5 @@ class ImageViewer(QGraphicsView):
         super(ImageViewer, self).resizeEvent(ev)
         if self._auto_resize:
             self.scale_to_fit()
+
 
