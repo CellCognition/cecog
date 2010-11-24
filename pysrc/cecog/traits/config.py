@@ -80,15 +80,13 @@ def init_application_support_path():
     global APPLICATION_SUPPORT_PATH
     folder = 'CellCognition'
     if APPLICATION_SUPPORT_PATH is None:
+        path = os.path.expanduser('~')
         if is_mac:
-            path = '~/Library/Application Support'
-            path = os.path.expanduser(path)
+            path = os.path.join(path, 'Library/Application Support', folder)
         elif is_windows:
-            path = '~/Application Data'
-            path = os.path.expanduser(path)
-        elif is_linux:
-            pass
-        path = os.path.join(path, folder)
+            path = os.path.join(path, 'Application Data', folder)
+        else:
+            path = os.path.join(path, '.%s' % folder.lower())
         safe_mkdirs(path)
         APPLICATION_SUPPORT_PATH = path
     return APPLICATION_SUPPORT_PATH
