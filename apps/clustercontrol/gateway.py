@@ -9,11 +9,6 @@
                  See trunk/AUTHORS.txt for author contributions.
 """
 
-"""
-Simple PyAMF-based web-service controlling the cluster scheduler via a DRMAA 1.0
-(http://www.drmaa.org/) interface.
-"""
-
 __author__ = 'Michael Held'
 __date__ = '$Date$'
 __revision__ = '$Rev$'
@@ -24,8 +19,7 @@ __all__ = []
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
-import socket, \
-       os, \
+import os, \
        sys
 
 #-------------------------------------------------------------------------------
@@ -40,7 +34,8 @@ from pdk.fileutils import safe_mkdirs
 # cecog imports:
 #
 import cecog.batch
-from cecog import (JOB_CONTROL_RESUME,
+from cecog import (VERSION,
+                   JOB_CONTROL_RESUME,
                    JOB_CONTROL_SUSPEND,
                    JOB_CONTROL_TERMINATE,
                    )
@@ -48,7 +43,6 @@ from cecog import (JOB_CONTROL_RESUME,
 #-------------------------------------------------------------------------------
 # constants:
 #
-# map DRMAA status codes to readable text
 DRMAA_STATUS_TEXT = {
     drmaa.JobState.UNDETERMINED : 'process status cannot be determined',
     drmaa.JobState.QUEUED_ACTIVE : 'job is queued and active',
@@ -63,12 +57,14 @@ DRMAA_STATUS_TEXT = {
     drmaa.JobState.FAILED : 'job finished, but failed',
     }
 
-# map cecog job actions to DRMAA
 DRMAA_CONTROL_ACTIONS = {
     JOB_CONTROL_RESUME : drmaa.JobControlAction.RESUME,
     JOB_CONTROL_SUSPEND : drmaa.JobControlAction.SUSPEND,
     JOB_CONTROL_TERMINATE : drmaa.JobControlAction.TERMINATE,
     }
+
+CECOG_VERSIONS_PATH = '/home/miheld/src/cecog_versions'
+CECOG_DEFAULT_VERSION = '1.0.7'
 
 #-------------------------------------------------------------------------------
 # functions:
@@ -88,16 +84,21 @@ def parse_args(args):
     return parser.parse_args(args)
 
 
-def cecog_job_template(jt, path_out, args, emails, is_bulk_job=False):
+def cecog_job_template(jt, path_out, args, emails, version, is_bulk_job=False):
     job_name = 'cecog_batch_analyzer'
-    env_variables = ['PYTHONPATH', 'PATH', 'LD_LIBRARY_PATH']
+    env_variables = ['PATH', 'LD_LIBRARY_PATH']
+
+    base_path = os.path.join(CECOG_VERSIONS_PATH, version)
+    batch_path = os.path.join(base_path, 'pysrc', 'cecog', 'batch')
 
     jt.jobName = job_name
-    jt.workingDirectory = cecog.batch.__path__[0]
+    jt.workingDirectory = batch_path
     print jt.workingDirectory
+
     jt.jobEnvironment = dict([(x, os.environ[x]) for x in env_variables])
+    jt.jobEnvironment['PYTHONPATH'] = os.path.join(base_path, 'pysrc')
     print jt.jobEnvironment
-    jt.remoteCommand = sys.executable
+    jt.remoteCommand = os.path.join(batch_path, 'python')
     print jt.remoteCommand
     jt.args = ['batch.py'] + args
     jt.joinFiles = True
@@ -109,11 +110,11 @@ def cecog_job_template(jt, path_out, args, emails, is_bulk_job=False):
     safe_mkdirs(path_out_cluster)
     path_out_cluster = ':' + path_out_cluster
     if is_bulk_job:
-        jt.outputPath = path_out_cluster
+        jt.outputPath = path_out_cluster 
         # FIXME: another DRMAA hack: the PARAMETRIC_INDEX is NOT resolved in args!
         jt.args += ['--cluster_index', 'SGE_TASK_ID']#drmaa.JobTemplate.PARAMETRIC_INDEX]
     else:
-        jt.outputPath = path_out_cluster
+        jt.outputPath = path_out_cluster 
     return jt
 
 #-------------------------------------------------------------------------------
@@ -128,9 +129,9 @@ class ClusterControl(object):
     def __del__(self):
         self._session.exit()
 
-    def submit_job(self, job_type, settings, path_out, emails, nr_items=1):
+    def submit_job(self, job_type, settings, path_out, emails, nr_items=1,
+                   version=CECOG_DEFAULT_VERSION):
 
-        # FIXME: hack converting Windows paths
         path_out = str(path_out.replace('\\','/'))
         settings = settings.replace('\\','/')
         path_out = os.path.normpath(path_out)
@@ -138,8 +139,9 @@ class ClusterControl(object):
         print path_out_settings
         safe_mkdirs(path_out_settings)
 
+        print path_out_settings
         filename_settings = os.path.join(path_out_settings, 'cecog_settings.conf')
-        f = file(filename_settings, 'w')
+	f = file(filename_settings, 'w')
         f.write(settings)
         f.close()
 
@@ -148,7 +150,7 @@ class ClusterControl(object):
         is_bulk_job = True if nr_items > 1 else False
 
         jt = self._session.createJobTemplate()
-        jt = cecog_job_template(jt, path_out, args, emails, is_bulk_job)
+        jt = cecog_job_template(jt, path_out, args, emails, version, is_bulk_job)
 
         if is_bulk_job:
             job_id = self._session.runBulkJobs(jt, 1, nr_items, 1)
@@ -159,16 +161,32 @@ class ClusterControl(object):
 
     def control_job(self, job_id, action):
         self._check_jobid(job_id)
-        self._session.control(job_id, DRMAA_CONTROL_ACTIONS[action])
+        job_ids = str(job_id).split(',')
+        print 'control_job', job_ids, action
+        for job_id in job_ids:
+            self._session.control(job_id, DRMAA_CONTROL_ACTIONS[action])
 
     def get_job_status(self, job_id):
         self._check_jobid(job_id)
-        return DRMAA_STATUS_TEXT[self._session.jobStatus(job_id)]
+        job_ids = str(job_id).split(',')
+        print 'get_job_status', job_ids
+        status = {}
+        for job_id in job_ids:
+            s = DRMAA_STATUS_TEXT[self._session.jobStatus(job_id)]
+            if not s in status:
+                status[s] = 0
+            status[s] += 1
+        return ", ".join(["%s (%dx)" % (k,v) for k,v in status.iteritems()])
 
     def get_service_info(self):
-        return "Service on %s up and running. (Scheduler: %s, DRMAA %s)" %\
-               (socket.gethostname(), self._session.drmsInfo,
-                self._session.version)
+        return "Service up and running. Scheduler: %s, cecog versions: %s" %\
+               (self._session.drmsInfo, ', '.join(self.cecog_versions))
+
+    @property 
+    def cecog_versions(self):
+	names = [n for n in os.listdir(CECOG_VERSIONS_PATH)
+                 if os.path.isdir(os.path.join(CECOG_VERSIONS_PATH, n))]
+        return names
 
     def _check_jobid(self, job_id):
         if job_id is None:
