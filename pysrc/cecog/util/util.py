@@ -20,7 +20,9 @@ __source__ = '$URL$'
 
 import logging, \
        types, \
-       os
+       os, \
+       bz2, \
+       gzip
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -73,33 +75,54 @@ def rgbToHex(r,g,b, scale=1):
     return "#%s" % "".join(map(lambda c: hex(c)[2:].zfill(2), (r, g, b)))
 
 
-def read_table(filename, has_column_names=True, sep='\t'):
+def get_file_handle(filename, mode, guess_compression=True, compress_level=6):
+    ext = os.path.splitext(filename)[1].lower()
+    if guess_compression:
+        if ext == '.gz':
+            fh = gzip.GzipFile(filename, mode=mode,
+                               compresslevel=compress_level)
+        elif ext == '.bz2':
+            fh = bz2.BZ2File(filename, mode=mode,
+                             compresslevel=compress_level)
+        else:
+            fh = file(filename, mode)
+    else:
+        fh = file(filename, mode)
+    return fh
+
+
+def read_table(filename, has_column_names=True, sep='\t',
+               guess_compression=True):
     '''
     Reads a list of dicts ordered by header_names to file.
     Unfortunately Python's csv is unable of writing headers.
     '''
-    f = file(filename, 'r')
+    f = get_file_handle(filename, 'r', guess_compression=guess_compression)
     if has_column_names:
-        column_names = f.readline().strip().split(sep)
+        column_names = f.readline().split(sep)
+        column_names = [x.strip() for x in column_names]
     else:
         column_names = None
     rows = []
     for line in f:
-        items = line.strip().split(sep)
+        items = line.split(sep)
+        items = [x.strip() for x in items]
         if column_names is None:
             column_names = range(len(items))
         rows.append(dict(zip(column_names, items)))
     f.close()
     return column_names, rows
 
-def write_table(filename, rows, column_names=None, sep='\t'):
+def write_table(filename, rows, column_names=None, sep='\t',
+                guess_compression=True):
     '''
     Write a list of dicts ordered by header_names to file, or a list of lists
     if no column_names are specified.
 
-    Unfortunately Python's csv is unable of writing headers.
+    Unfortunately Python's csv is unable of writing headers
+    (changed in Python 2.7)
     '''
-    f = file(filename, 'w')
+    f = get_file_handle(filename, 'w', guess_compression=guess_compression)
     if not column_names is None:
         f.write('%s\n' % sep.join(column_names))
         for row in rows:
@@ -122,6 +145,12 @@ def set_package_path(name):
 
 def convert_package_path(path):
     return os.path.normpath(os.path.join(PACKAGE_PATH, path))
+
+def unlist(a):
+    b = []
+    for x in a:
+        b += x
+    return b
 
 def resolve_os_name():
     os_str = None
