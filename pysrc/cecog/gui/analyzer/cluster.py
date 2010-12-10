@@ -53,10 +53,14 @@ from cecog.analyzer import (SECONDARY_REGIONS,
                             )
 from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.util.util import OS_LINUX
-from cecog.gui.util import exception
+from cecog.gui.util import (exception,
+                            information,
+                            warning,
+                            )
 from cecog import (JOB_CONTROL_RESUME,
                    JOB_CONTROL_SUSPEND,
                    JOB_CONTROL_TERMINATE,
+                   VERSION
                    )
 
 #-------------------------------------------------------------------------------
@@ -79,6 +83,7 @@ class ClusterDisplay(QGroupBox):
         self._settings = settings
         self._jobid = None
         self._toggle_state = JOB_CONTROL_SUSPEND
+        self._service = None
 
         self._host_url = ANALYZER_CONFIG.get('Cluster', 'host_url')
 
@@ -185,8 +190,8 @@ class ClusterDisplay(QGroupBox):
         try:
             jobid = self._service.submit_job('cecog_batch',
                                              self._submit_settings.to_string(),
-                                             path_out, emails,
-                                             nr_items)
+                                             path_out, emails, nr_items,
+                                             VERSION)
         except:
             exception(self, 'Error on job submission')
         else:
@@ -228,7 +233,8 @@ class ClusterDisplay(QGroupBox):
 
     @pyqtSlot()
     def _on_update_job_status(self):
-        self._update_job_status()
+        txt = self._update_job_status()
+        information(self, 'Cluster update', "Message: '%s'" % txt)
 
     def _update_job_status(self):
         try:
@@ -237,6 +243,7 @@ class ClusterDisplay(QGroupBox):
             exception(self, 'Error on retrieve job status')
         else:
             self._label_jobstatus.setText(txt)
+        return txt
 
     def _connect(self):
         success = False
@@ -247,7 +254,13 @@ class ClusterDisplay(QGroupBox):
         except:
             exception(self, 'Error on connecting to cluster control service')
         else:
-            success = True
+            cluster_versions = self._service.get_cecog_versions()
+            if not VERSION in set(cluster_versions):
+                warning(self, 'Cecog version %s not supported by the cluster' %
+                        VERSION, 'Valid versions are: %s' %
+                        ', '.join(cluster_versions))
+            else:
+                success = True
         return success
 
     def _get_mappable_paths(self):

@@ -97,7 +97,7 @@ def message(icon, text, parent, info=None, detail=None, buttons=None,
     if title is None:
         title = text
     msg_box = QMessageBox(icon, title, text, QMessageBox.NoButton,
-                          parent, Qt.Dialog)
+                          parent, Qt.Tool)
     if on_mac() and modal:
         msg_box.setWindowModality(Qt.WindowModal)
     if not info is None:
@@ -110,6 +110,7 @@ def message(icon, text, parent, info=None, detail=None, buttons=None,
         msg_box.setDefaultButton(default)
     if not escape is None:
         msg_box.setEscapeButton(escape)
+    #msg_box.setMinimumSize(300, 100)
     return msg_box.exec_()
 
 def information(parent, text, info=None, detail=None, modal=False):

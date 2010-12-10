@@ -63,7 +63,7 @@ from cecog.util.util import (hexToRgb,
                              singleton,
                              )
 from cecog.learning.learning import BaseLearner
-
+from cecog.gui.widgets.groupbox import QxtGroupBox
 #-------------------------------------------------------------------------------
 # constants:
 #
@@ -180,6 +180,25 @@ class Annotations(object):
         except KeyError:
             pass
 
+    def iter_all(self, channel=None):
+        ann = self._annotations
+        for plateid in ann:
+            for position in ann[plateid]:
+                for time in ann[plateid][position]:
+                    print ann[plateid][position][time].keys()
+                    if channel is None:
+                        for channel in ann[plateid][position][time]:
+                            ann2 = ann[plateid][position][time][channel]
+                            for cn in ann2:
+                                items = ann2[cn]
+                                yield (plateid, position, time, channel, cn,
+                                       items)
+                    elif channel in ann[plateid][position][time]:
+                        ann2 = ann[plateid][position][time][channel]
+                        for cn in ann2:
+                            items = ann2[cn]
+                            yield plateid, position, time, cn, items
+
     def get_class_counts(self):
         return self._counts
 
@@ -210,7 +229,7 @@ class Annotations(object):
             if (os.path.isfile(file_path) and suffix.lower() == '.xml' and
                 not match is None):
 
-                plateid = None
+                plateid = ''
                 position = match.group('position')
                 time = int(match.group('time'))
 
@@ -400,7 +419,7 @@ class Browser(QMainWindow):
         menu = self.menuBar().addMenu('&Annotation')
         self.add_actions(menu, act_class)
 
-        self.setContentsMargins(5, 5, 5, 5)
+        self.setContentsMargins(5,5,5,5)
         self.statusbar = QStatusBar(self)
         self.setStatusBar(self.statusbar)
 
@@ -409,7 +428,7 @@ class Browser(QMainWindow):
         self._meta_data = self._imagecontainer.meta_data
 
         layout = QVBoxLayout(frame)
-        layout.setContentsMargins(5, 5, 5, 5)
+        layout.setContentsMargins(0,0,0,0)
 
         splitter = QSplitter(Qt.Horizontal, frame)
         #splitter.setSizePolicy(QSizePolicy(QSizePolicy.Minimum,
@@ -417,21 +436,23 @@ class Browser(QMainWindow):
         layout.addWidget(splitter)
 
         splitter2 = QSplitter(Qt.Vertical, splitter)
-        #splitter2.setSizePolicy(QSizePolicy(QSizePolicy.Fixed,
+        #splitter2.setSizePolicy(QSizePolicy(QSizePolicy.Minimum,
         #                                    QSizePolicy.Expanding))
-        #splitter2.setMinimumWidth(20)
+        splitter2.setMinimumWidth(40)
 
         frame = QFrame(splitter)
         frame_side = QFrame(splitter)
-        #frame.setSizePolicy(QSizePolicy(QSizePolicy.Expanding,
-        #                                QSizePolicy.Expanding))
+        layout_side = QBoxLayout(QBoxLayout.TopToBottom, frame_side)
+        layout_side.setContentsMargins(0,0,0,0)
 
         splitter.addWidget(splitter2)
         splitter.addWidget(frame)
         splitter.addWidget(frame_side)
-        splitter.setMinimumWidth(20)
-        splitter.setStretchFactor(1,2)
-        #splitter.setSizes([30,300])
+        splitter.setMinimumWidth(40)
+        splitter.setStretchFactor(0,0)
+        splitter.setStretchFactor(1,1)
+        splitter.setStretchFactor(2,0)
+        splitter.setSizes([120,None,None])
 
         grp1 = QFrame(splitter2)
         grp2 = QFrame(splitter2)
@@ -439,21 +460,21 @@ class Browser(QMainWindow):
         splitter2.addWidget(grp2)
 
         layout = QGridLayout(grp1)
-        layout.setContentsMargins(5, 5, 5, 5)
+        layout.setContentsMargins(0,0,0,0)
         layout.addWidget(QLabel('Plates', grp1), 0, 0)
 
         table = QTableWidget(grp1)
         table.setEditTriggers(QTableWidget.NoEditTriggers)
         table.setSelectionMode(QTableWidget.NoSelection)
-        #table.setSizePolicy(QSizePolicy(QSizePolicy.MinimumExpanding,
-        #                                QSizePolicy.Expanding|QSizePolicy.Maximum))
+        #table.setSizePolicy(QSizePolicy(QSizePolicy.Minimum,
+        #                                QSizePolicy.Expanding))
         #table.setColumnCount(3)
         #table.setRowCount(len(meta_data.positions))
         #table.setMinimumWidth(20)
         layout.addWidget(table, 1, 0)
 
         layout = QGridLayout(grp2)
-        layout.setContentsMargins(5, 5, 5, 5)
+        layout.setContentsMargins(0,0,0,0)
         layout.addWidget(QLabel('Positions', grp2), 0, 0)
 
         table = QTableWidget(grp2)
@@ -461,8 +482,8 @@ class Browser(QMainWindow):
         table.setSelectionMode(QTableWidget.SingleSelection)
         table.setSelectionBehavior(QTableWidget.SelectRows)
         table.setAlternatingRowColors(True)
-        #table.setSizePolicy(QSizePolicy(QSizePolicy.MinimumExpanding,
-        #                                QSizePolicy.Expanding|QSizePolicy.Maximum))
+        #table.setSizePolicy(QSizePolicy(QSizePolicy.Minimum,
+        #                                QSizePolicy.Expanding))
         table.setColumnCount(3)
         table.setHorizontalHeaderLabels(['Position', 'Well', 'Subwell'])
         table.setRowCount(len(self._meta_data.positions))
@@ -482,11 +503,11 @@ class Browser(QMainWindow):
 
         self._annotations = Annotations()
         self._object_items = {}
-        self._plateid = None
-        self._channel = None
+        self._plateid = ''
+        self._channel = ''
 
         layout = QGridLayout(frame)
-        layout.setContentsMargins(5, 5, 5, 5)
+        layout.setContentsMargins(0,0,0,0)
         self._image_viewer = ImageViewer(frame, auto_resize=True)
         self._image_viewer.setTransformationAnchor(ImageViewer.AnchorViewCenter)
         self._image_viewer.setResizeAnchor(ImageViewer.AnchorViewCenter)
@@ -513,10 +534,36 @@ class Browser(QMainWindow):
         self._t_label.setMinimumWidth(45)
         layout.addWidget(self._t_label, 1, 0)
 
-        layout = QGridLayout(frame_side)
-        layout.setContentsMargins(5, 5, 5, 5)
 
-        class_table = QTableWidget(frame_side)
+#        grp_box = QxtGroupBox('Annotation2', frame_side)
+#        grp_box.setFlat(True)
+#        grp_box.setMinimumHeight(30)
+#        layout = QBoxLayout(QBoxLayout.TopToBottom, grp_box)
+#        layout.setContentsMargins(2,2,2,2)
+#
+#        ann_table = QTableWidget(grp_box)
+#        ann_table.setEditTriggers(QTableWidget.NoEditTriggers)
+#        ann_table.setSelectionMode(QTableWidget.SingleSelection)
+#        ann_table.setSelectionBehavior(QTableWidget.SelectRows)
+#        ann_table.setSortingEnabled(True)
+#        ann_table.setColumnCount(4)
+#        ann_table.setHorizontalHeaderLabels(['Plate', 'Position', 'Time',
+#                                             'Samples',
+#                                             ])
+#        ann_table.resizeColumnsToContents()
+#        ann_table.currentItemChanged.connect(self._on_class_changed)
+#        layout.addWidget(ann_table)
+#        self._ann_table = ann_table
+#        frame_side.layout().addWidget(grp_box)
+#        frame_side.layout().addSpacing(1)
+
+        grp_box = QxtGroupBox('Annotation', frame_side)
+        grp_box.setFlat(True)
+
+        layout = QBoxLayout(QBoxLayout.TopToBottom, grp_box)
+        layout.setContentsMargins(2,2,2,2)
+
+        class_table = QTableWidget(grp_box)
         class_table.setEditTriggers(QTableWidget.NoEditTriggers)
         class_table.setSelectionMode(QTableWidget.SingleSelection)
         class_table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -527,11 +574,12 @@ class Browser(QMainWindow):
                                                ])
         class_table.resizeColumnsToContents()
         class_table.currentItemChanged.connect(self._on_class_changed)
-        layout.addWidget(class_table, 0, 0, 1, 3)
+        layout.addWidget(class_table)
         self._class_table = class_table
 
-        frame2 = QFrame(frame_side)
+        frame2 = QFrame(grp_box)
         layout2 = QBoxLayout(QBoxLayout.LeftToRight, frame2)
+        layout2.setContentsMargins(0,0,0,0)
         self._class_sbox = QSpinBox(frame2)
         self._class_color_btn = QToolButton(frame2)
         self._class_color_btn.clicked.connect(self._on_class_color)
@@ -541,23 +589,33 @@ class Browser(QMainWindow):
         layout2.addWidget(self._class_color_btn)
         layout2.addWidget(self._class_sbox)
         layout2.addWidget(self._class_text)
-        layout.addWidget(frame2, 1, 0, 1, 3)
-        btn = QPushButton('Apply', frame_side)
-        btn.clicked.connect(self._on_class_apply)
-        layout.addWidget(btn, 2, 0)
-        btn = QPushButton('Add', frame_side)
-        btn.clicked.connect(self._on_class_add)
-        layout.addWidget(btn, 2, 1)
-        btn = QPushButton('Remove', frame_side)
-        btn.clicked.connect(self._on_class_remove)
-        layout.addWidget(btn, 2, 2)
+        layout.addWidget(frame2)
 
-        self._learner = self._init_new_classifier()
+        frame2 = QFrame(grp_box)
+        layout2 = QBoxLayout(QBoxLayout.LeftToRight, frame2)
+        layout2.setContentsMargins(0,0,0,0)
+        btn = QPushButton('Apply', frame2)
+        btn.clicked.connect(self._on_class_apply)
+        layout2.addWidget(btn)
+        btn = QPushButton('Add', frame2)
+        btn.clicked.connect(self._on_class_add)
+        layout2.addWidget(btn)
+        btn = QPushButton('Remove', frame2)
+        btn.clicked.connect(self._on_class_remove)
+        layout2.addWidget(btn)
+        layout.addWidget(frame2)
+        layout_side.addWidget(grp_box)
+        layout_side.addSpacing(1)
+
+
 
         box = QCheckBox('Detect objects', frame_side)
         box.setCheckState(Qt.Checked if self._detect_objects else Qt.Unchecked)
-        layout.addWidget(box, 10, 0)
+        layout_side.addWidget(box)
+        #frame_side.layout().addSpacerItem(QSpacerItem(1,1))
+
         box.clicked.connect(self._on_detect_box)
+        self._learner = self._init_new_classifier()
 
         # ensure a valid position (not None!)
         table.setCurrentCell(0, 0)
@@ -730,7 +788,7 @@ class Browser(QMainWindow):
             self._learner = self._init_new_classifier()
 
     def _on_open_classifier(self):
-        channel =  None
+        channel =  self._channel
 
         dialog = QFileDialog(self)
         dialog.setFileMode(QFileDialog.Directory)
@@ -779,6 +837,22 @@ class Browser(QMainWindow):
                         class_table.setCurrentCell(0, self.COLUMN_CLASS_NAME)
                     else:
                         self._current_class = None
+
+#                    iter_all = self._annotations.iter_all(self._channel)
+#                    items = [(pi,p,t,cn,len(it)) for pi,p,t,cn,it in iter_all]
+#                    ann_table = self._ann_table
+#                    ann_table.clearContents()
+#                    ann_table.setRowCount(len(items))
+#                    #ann_table.setM
+#                    for idx, (pi,p,t,cn,cnt) in enumerate(items):
+#                        print idx, pi,p,t,cn,cnt
+#                        ann_table.setItem(idx, 0, QTableWidgetItem(str(pi)))
+#                        ann_table.setItem(idx, 1, QTableWidgetItem(str(p)))
+#                        ann_table.setItem(idx, 2, QTableWidgetItem(str(t)))
+#                        ann_table.setItem(idx, 3, QTableWidgetItem(str(cnt)))
+#                    ann_table.resizeColumnsToContents()
+#                    ann_table.resizeRowsToContents()
+
                     information(self, "Classifier successfully loaded",
                                 "Class definitions and annotations "
                                 "successfully loaded from '%s'." % path)
@@ -871,8 +945,7 @@ class Browser(QMainWindow):
             item.setData(0, obj_id)
             scene.addItem(item)
             self._current_scene_items.add(item)
-        self._object_items.clear()
-        self._activate_objects_for_image()
+        self._activate_objects_for_image(clear=True)
         self._update_class_table()
 
     def set_image(self, image):
@@ -983,6 +1056,12 @@ class Browser(QMainWindow):
             self._current_class = None
 
     def _on_detect_box(self, state):
+        if not state:
+            scene = self._image_viewer.scene()
+            for item in self._current_scene_items:
+                scene.removeItem(item)
+            self._current_scene_items.clear()
+            self._object_items.clear()
         self._detect_objects = state
         self._process_image()
 

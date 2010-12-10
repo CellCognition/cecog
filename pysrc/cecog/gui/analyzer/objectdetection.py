@@ -37,6 +37,7 @@ from cecog.gui.analyzer import (_BaseFrame,
 from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
 from cecog.analyzer import (SECONDARY_COLORS,
                             SECONDARY_REGIONS,
+                            TERTIARY_REGIONS,
                             )
 from cecog.analyzer.channel import (PrimaryChannel,
                                     SecondaryChannel,
@@ -112,7 +113,7 @@ class ObjectDetectionFrame(_BaseFrame, _ProcessorMixin):
         self.add_expanding_spacer()
 
         for tab_name, prefix in [('Secondary Channel', 'secondary'),
-                                 #('Tertiary Channel', 'tertiary')
+                                 ('Tertiary Channel',  'tertiary')
                                  ]:
             self.set_tab_name(tab_name)
 
@@ -176,16 +177,18 @@ class ObjectDetectionFrame(_BaseFrame, _ProcessorMixin):
         settings = _ProcessorMixin._get_modified_settings(self, name)
 
         settings.set_section('ObjectDetection')
-        prim_id = PrimaryChannel.NAME#settings.get2('primary_channelid')
-        sec_id = SecondaryChannel.NAME#settings.get2('secondary_channelid')
+        prim_id = PrimaryChannel.NAME
+        sec_id = SecondaryChannel.NAME
         sec_regions = [v for k,v in SECONDARY_REGIONS.iteritems()
+                       if settings.get2(k)]
+        tert_id = TertiaryChannel.NAME
+        tert_regions = [v for k,v in TERTIARY_REGIONS.iteritems()
                        if settings.get2(k)]
 
         settings.set_section('Processing')
-        settings.set2('primary_featureextraction', False)
-        settings.set2('secondary_featureextraction', False)
-        settings.set2('primary_classification', False)
-        settings.set2('secondary_classification', False)
+        for prefix in ['primary', 'secondary', 'tertiary']:
+            settings.set2('%s_featureextraction' % prefix, False)
+            settings.set2('%s_classification' % prefix, False)
         settings.set2('tracking', False)
         settings.set_section('Classification')
         settings.set2('collectsamples', False)
@@ -200,14 +203,25 @@ class ObjectDetectionFrame(_BaseFrame, _ProcessorMixin):
         #settings.set('Output', 'export_object_counts', False)
 
 
-        if self._tab.currentIndex() == 0:
-            settings.set('Processing', 'secondary_processChannel', False)
+        current_tab = self._tab.currentIndex()
+        print current_tab
+        if current_tab == 0:
+            settings.set('Processing', 'secondary_processchannel', False)
+            settings.set('Processing', 'tertiary_processchannel', False)
             settings.set('General', 'rendering', {'primary_contours': {prim_id: {'raw': ('#FFFFFF', 1.0), 'contours': {'primary': ('#FF0000', 1, show_ids)}}}})
-        else:
-            settings.set('Processing', 'secondary_processChannel', True)
+        elif current_tab == 1:
+            settings.set('Processing', 'secondary_processchannel', True)
+            settings.set('Processing', 'tertiary_processchannel', False)
             settings.set('General', 'rendering', dict([('secondary_contours_%s' % x, {sec_id: {'raw': ('#FFFFFF', 1.0),
                                                                                                       'contours': [(x, SECONDARY_COLORS[x] , 1, show_ids)]
                                                                                              }})
                                                               for x in sec_regions]))
+        else:
+            settings.set('Processing', 'secondary_processChannel', True)
+            settings.set('Processing', 'tertiary_processchannel', True)
+            settings.set('General', 'rendering', dict([('tertiary_contours_%s' % x, {tert_id: {'raw': ('#FFFFFF', 1.0),
+                                                                                               'contours': [(x, SECONDARY_COLORS[x] , 1, show_ids)]
+                                                                                             }})
+                                                              for x in tert_regions]))
         return settings
 

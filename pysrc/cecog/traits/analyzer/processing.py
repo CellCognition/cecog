@@ -29,6 +29,7 @@ __all__ = ['SectionProcessing']
 #
 from cecog.traits.config import _Section
 from cecog.gui.guitraits import BooleanTrait
+from cecog.util.util import unlist
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -62,15 +63,18 @@ class SectionProcessing(_Section):
             BooleanTrait(False, label='Event selection')),
         ('primary_errorcorrection',
             BooleanTrait(False, label='Error correction')),
-        ('secondary_processchannel',
-            BooleanTrait(False, label='Secondary channel')),
-        #('secondary_objectdetection',
-        #    BooleanTrait(True, label='Object detection')),
-        ('secondary_featureextraction',
-            BooleanTrait(True, label='Feature Extraction')),
-        ('secondary_classification',
+        ] +\
+        unlist(
+        [[('%s_processchannel' % x,
+            BooleanTrait(False, label='%s channel' % x.capitalize())),
+          #('secondary_objectdetection',
+          #    BooleanTrait(True, label='Object detection')),
+          ('%s_featureextraction' % x,
+            BooleanTrait(False, label='Feature Extraction')),
+          ('%s_classification' % x,
             BooleanTrait(False, label='Classification')),
-        ('secondary_errorcorrection',
+          ('%s_errorcorrection' % x,
             BooleanTrait(False, label='Error correction')),
-        ]),
-      ]
+        ] for x in ['secondary', 'tertiary']]
+        )
+      )]

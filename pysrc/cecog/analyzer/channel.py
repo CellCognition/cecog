@@ -21,7 +21,8 @@ __all__ = []
 #
 import sys, \
        types, \
-       logging
+       logging, \
+       copy
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -291,7 +292,7 @@ class _Channel(PropertyManager):
 #                                              ccore.Diff2D(*s),
 #                                              ccore.Diff2D(w, h))
 
-        self.meta_image = meta_image
+        self.meta_image = copy.copy(meta_image)
 
 
 
@@ -407,6 +408,7 @@ class _Channel(PropertyManager):
 class PrimaryChannel(_Channel):
 
     NAME = 'Primary'
+    PREFIX = 'primary'
 
     RANK = 1
 
@@ -523,6 +525,7 @@ class PrimaryChannel(_Channel):
 class SecondaryChannel(_Channel):
 
     NAME = 'Secondary'
+    PREFIX = 'secondary'
 
     RANK = 2
 
@@ -635,8 +638,10 @@ class SecondaryChannel(_Channel):
 class TertiaryChannel(SecondaryChannel):
 
     NAME = 'Tertiary'
+    PREFIX = 'tertiary'
 
     RANK = 3
+
 
 #-------------------------------------------------------------------------------
 # main:

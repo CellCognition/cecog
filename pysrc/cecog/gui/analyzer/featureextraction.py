@@ -70,45 +70,41 @@ class FeatureExtractionFrame(_BaseFrame, _ProcessorMixin):
 
     SECTION_NAME = SECTION_NAME_FEATURE_EXTRACTION
     DISPLAY_NAME = 'Feature Extraction'
-    TABS = ['PrimaryChannel', 'SecondaryChannel']
+    TABS = ['Primary Channel', 'Secondary Channel', 'Tertiary Channel']
 
     def __init__(self, settings, parent):
         _BaseFrame.__init__(self, settings, parent)
         _ProcessorMixin.__init__(self)
         self._result_frames = {}
 
-        self.set_tab_name('PrimaryChannel')
+        for tab_name, prefix in [('Primary Channel', 'secondary'),
+                                 ('Secondary Channel', 'secondary'),
+                                 ('Tertiary Channel',  'tertiary')
+                                 ]:
 
-        self.add_group(None,
-                       [('primary_featurecategory_intensity', (0, 0, 1, 1) ),
-                        ('primary_featurecategory_haralick', (1, 0, 1, 1) ),
-                        ('primary_featurecategory_stat_geom', (2, 0, 1, 1) ),
-                        ('primary_featurecategory_granugrey', (3, 0, 1, 1)),
-                        ('primary_featurecategory_basicshape', (0, 1, 1, 1) ),
-                        ('primary_featurecategory_convhull', (1, 1, 1, 1)),
-                        ('primary_featurecategory_distance', (2, 1, 1, 1)),
-                        ('primary_featurecategory_moments', (3, 1, 1, 1) ),
-                        ],
-                       layout='grid',
-                       link='primary_featureextraction',
-                       label='Feature extraction')
-        self.add_expanding_spacer()
+            self.set_tab_name(tab_name)
+            self.add_group(None,
+                           [('%s_featurecategory_intensity' % prefix,
+                             (0, 0, 1, 1) ),
+                            ('%s_featurecategory_haralick' % prefix,
+                             (1, 0, 1, 1) ),
+                            ('%s_featurecategory_stat_geom' % prefix,
+                             (2, 0, 1, 1) ),
+                            ('%s_featurecategory_granugrey' % prefix,
+                             (3, 0, 1, 1)),
+                            ('%s_featurecategory_basicshape' % prefix,
+                             (0, 1, 1, 1) ),
+                            ('%s_featurecategory_convhull' % prefix,
+                             (1, 1, 1, 1)),
+                            ('%s_featurecategory_distance' % prefix,
+                             (2, 1, 1, 1)),
+                            ('%s_featurecategory_moments' % prefix,
+                             (3, 1, 1, 1) ),
+                            ],
+                           layout='grid',
+                           link='%s_featureextraction' % prefix,
+                           label='Feature extraction')
+            self.add_expanding_spacer()
 
-        self.set_tab_name('SecondaryChannel')
-
-        self.add_group(None,
-                       [('secondary_featurecategory_intensity', (0, 0, 1, 1) ),
-                        ('secondary_featurecategory_haralick', (1, 0, 1, 1) ),
-                        ('secondary_featurecategory_stat_geom', (2, 0, 1, 1) ),
-                        ('secondary_featurecategory_granugrey', (3, 0, 1, 1)),
-                        ('secondary_featurecategory_basicshape', (0, 1, 1, 1) ),
-                        ('secondary_featurecategory_convhull', (1, 1, 1, 1)),
-                        ('secondary_featurecategory_distance', (2, 1, 1, 1)),
-                        ('secondary_featurecategory_moments', (3, 1, 1, 1) ),
-                        ],
-                       layout='grid',
-                       link='secondary_featureextraction',
-                       label='Feature extraction')
-        self.add_expanding_spacer()
         #self._init_control()
 

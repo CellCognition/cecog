@@ -39,6 +39,7 @@ from pdk.iterator import is_subset
 from cecog import ccore
 from cecog.analyzer import (REGION_NAMES_PRIMARY,
                             SECONDARY_REGIONS,
+                            TERTIARY_REGIONS,
                             )
 from cecog.analyzer.analyzer import (CellAnalyzer,
                                      TimeHolder,
@@ -83,7 +84,7 @@ FEATURE_MAP = {
 
 CHANNEL_CLASSES = {'PrimaryChannel'   : PrimaryChannel,
                    'SecondaryChannel' : SecondaryChannel,
-                   #'TertiaryChannel'  : TertiaryChannel,
+                   'TertiaryChannel'  : TertiaryChannel,
                    }
 
 # set the max. recursion depth
@@ -133,6 +134,9 @@ class PositionAnalyzer(object):
         #self._imagecontainer.setPathMappingFunction(mapDirectory)
 
         self._meta_data = self._imagecontainer.meta_data
+
+        self._has_timelapse = len(self._meta_data.times) > 1
+
         self.lstAnalysisFrames = lstAnalysisFrames
 
         self.lstSampleReader = lstSampleReader
@@ -152,7 +156,7 @@ class PositionAnalyzer(object):
 
         # setup output directories
 
-        if self.oSettings.get('General', 'timelapseData'):
+        if self._has_timelapse:
             self.strPathOutPosition = os.path.join(self.strPathOutAnalyzed, "%s" % self.P)
         else:
             self.strPathOutPosition = self.strPathOutAnalyzed
@@ -172,6 +176,8 @@ class PositionAnalyzer(object):
         self.channel_mapping = {self.PRIMARY_CHANNEL : self.oSettings.get2('primary_channelid')}
         if self.oSettings.get('Processing', 'secondary_processchannel'):
             self.channel_mapping[self.SECONDARY_CHANNEL] = self.oSettings.get2('secondary_channelid')
+        if self.oSettings.get('Processing', 'tertiary_processchannel'):
+            self.channel_mapping[self.TERTIARY_CHANNEL] = self.oSettings.get2('tertiary_channelid')
 
         self.channel_mapping_reversed = dict([(v,k) for k,v in self.channel_mapping.iteritems()])
 
@@ -179,7 +185,10 @@ class PositionAnalyzer(object):
         #print self.tplChannelIds
 
         self.classifier_infos = {}
-        for channel in [self.PRIMARY_CHANNEL, self.SECONDARY_CHANNEL]:
+        for channel in [self.PRIMARY_CHANNEL,
+                        self.SECONDARY_CHANNEL,
+                        self.TERTIARY_CHANNEL,
+                        ]:
             process_channel = channel in self.channel_mapping
 
             self.oSettings.set_section('Processing')
@@ -221,7 +230,7 @@ class PositionAnalyzer(object):
 
     def __call__(self):
         # turn libtiff warnings off
-        #ccore.turn_off()
+        ccore.turn_off()
 
         oStopWatchPos = StopWatch()
 
@@ -371,12 +380,12 @@ class PositionAnalyzer(object):
                                                 prim_info, sec_info)
 
             if self.oSettings.get('Output', 'export_object_details'):
-                filename = os.path.join(strPathOutPositionStats, 'P%s__object_details.txt' % self.P)
-
-                oTimeHolder.extportObjectDetails(filename)
-
-                #filename = os.path.join(strPathOutPositionStats, 'P%s__objects.nc4' % self.P)
-                #oTimeHolder.export_netcdf4(filename)
+                filename = os.path.join(strPathOutPositionStats,
+                                        'P%s__object_details.txt' % self.P)
+                oTimeHolder.extportObjectDetails(filename, excel_style=False)
+                filename = os.path.join(strPathOutPositionStats,
+                                        'P%s__object_details_excel.txt' % self.P)
+                oTimeHolder.extportObjectDetails(filename, excel_style=True)
 
 
             self.oSettings.set_section('Tracking')
@@ -587,7 +596,7 @@ class PositionAnalyzer(object):
                       'min': 1,
                       'max': len(self.lstAnalysisFrames),
                       'meta' : 'Image processing:',
-                      'item_name': 'timepoint',
+                      'item_name': 'image set',
                       }
 
         iNumberImages = 0
@@ -754,30 +763,36 @@ class PositionAnalyzer(object):
                                           lstFeatureCategories = lstFeatureCategories,
                                           dctFeatureParameters = dctFeatureParameters,
                                           )
-                        elif channel_section == self.SECONDARY_CHANNEL:
-                            secondary_regions = [v for k,v in SECONDARY_REGIONS.iteritems()
-                                                 if self.oSettings.get2(k)]
+                        elif channel_section in [self.SECONDARY_CHANNEL,
+                                                 self.TERTIARY_CHANNEL]:
+                            prefix = cls.PREFIX
+                            if channel_section == self.SECONDARY_CHANNEL:
+                                regions_lookup = SECONDARY_REGIONS
+                            else:
+                                regions_lookup = TERTIARY_REGIONS
+                            regions = [v for k,v in regions_lookup.iteritems()
+                                       if self.oSettings.get2(k)]
                             params = dict(oZSliceOrProjection = projection_info,
                                           channelRegistration=channel_registration,
-                                          fNormalizeMin = self.oSettings.get2('secondary_normalizemin'),
-                                          fNormalizeMax = self.oSettings.get2('secondary_normalizemax'),
+                                          fNormalizeMin = self.oSettings.get2('%s_normalizemin' % prefix),
+                                          fNormalizeMax = self.oSettings.get2('%s_normalizemax' % prefix),
                                           #iMedianRadius = self.oSettings.get2('medianradius'),
-                                          iExpansionSizeExpanded = self.oSettings.get2('secondary_regions_expanded_expansionsize'),
-                                          iShrinkingSizeInside = self.oSettings.get2('secondary_regions_inside_shrinkingsize'),
-                                          iExpansionSizeOutside = self.oSettings.get2('secondary_regions_outside_expansionsize'),
-                                          iExpansionSeparationSizeOutside = self.oSettings.get2('secondary_regions_outside_separationsize'),
-                                          iExpansionSizeRim = self.oSettings.get2('secondary_regions_rim_expansionsize'),
-                                          iShrinkingSizeRim = self.oSettings.get2('secondary_regions_rim_shrinkingsize'),
-                                          fPropagateLambda = self.oSettings.get2('secondary_regions_propagate_lambda'),
-                                          iPropagateDeltaWidth = self.oSettings.get2('secondary_regions_propagate_deltawidth'),
+                                          iExpansionSizeExpanded = self.oSettings.get2('%s_regions_expanded_expansionsize' % prefix),
+                                          iShrinkingSizeInside = self.oSettings.get2('%s_regions_inside_shrinkingsize' % prefix),
+                                          iExpansionSizeOutside = self.oSettings.get2('%s_regions_outside_expansionsize' % prefix),
+                                          iExpansionSeparationSizeOutside = self.oSettings.get2('%s_regions_outside_separationsize' % prefix),
+                                          iExpansionSizeRim = self.oSettings.get2('%s_regions_rim_expansionsize' % prefix),
+                                          iShrinkingSizeRim = self.oSettings.get2('%s_regions_rim_shrinkingsize' % prefix),
+                                          fPropagateLambda = self.oSettings.get2('%s_regions_propagate_lambda' % prefix),
+                                          iPropagateDeltaWidth = self.oSettings.get2('%s_regions_propagate_deltawidth' % prefix),
 
-                                          bPresegmentation = self.oSettings.get2('secondary_presegmentation'),
-                                          iPresegmentationMedianRadius = self.oSettings.get2('secondary_presegmentation_medianradius'),
-                                          fPresegmentationAlpha = self.oSettings.get2('secondary_presegmentation_alpha'),
+                                          bPresegmentation = self.oSettings.get2('%s_presegmentation' % prefix),
+                                          iPresegmentationMedianRadius = self.oSettings.get2('%s_presegmentation_medianradius' % prefix),
+                                          fPresegmentationAlpha = self.oSettings.get2('%s_presegmentation_alpha' % prefix),
 
                                           # FIXME
                                           fExpansionCostThreshold = 1.5,
-                                          lstAreaSelection = secondary_regions,
+                                          lstAreaSelection = regions,
                                           lstFeatureCategories = lstFeatureCategories,
                                           dctFeatureParameters = dctFeatureParameters,
                                           )
@@ -790,7 +805,7 @@ class PositionAnalyzer(object):
                         # loop over the z-slices
                         for meta_image in zslice_images:
                             channel.append_zslice(meta_image)
-
+                        #print channel_section, channel_id, channel
                         oCellAnalyzer.register_channel(channel)
 
 
@@ -854,6 +869,7 @@ class PositionAnalyzer(object):
 
 
                 self.oSettings.set_section('General')
+                print self.oSettings.get2('rendering')
                 for strType, dctRenderInfo in self.oSettings.get2('rendering').iteritems():
                     strPathOutImages = os.path.join(self.strPathOutPositionImages, strType)
                     img_rgb, filename = oCellAnalyzer.render(strPathOutImages, dctRenderInfo=dctRenderInfo,
@@ -979,6 +995,7 @@ class AnalyzerCore(object):
             # FIXME:
             lookup = {'primary'   : 'Primary',
                       'secondary' : 'Secondary',
+                      'tertiary'  : 'Tertiary',
                       }
             self.oObjectLearner.channel_name = lookup[self.oSettings.get2('collectsamples_prefix')]
 

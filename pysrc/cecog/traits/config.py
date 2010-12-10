@@ -33,12 +33,12 @@ import os, \
        shutil
 
 from ConfigParser import RawConfigParser
-#from collections import OrderedDict
+from collections import OrderedDict
 
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
-from pdk.ordereddict import OrderedDict
+#from pdk.ordereddict import OrderedDict
 from pdk.fileutils import safe_mkdirs
 from pdk.platform import (is_mac,
                           is_windows,
@@ -155,7 +155,9 @@ class ConfigSettings(RawConfigParser):
     """
 
     def __init__(self, section_registry):
-        RawConfigParser.__init__(self)
+        RawConfigParser.__init__(self,
+                                 dict_type=OrderedDict,
+                                 allow_no_value=True)
         self._registry = OrderedDict()
         self._current_section = None
 

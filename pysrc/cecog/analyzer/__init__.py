@@ -69,6 +69,12 @@ SECONDARY_REGIONS = {'secondary_regions_expanded' : 'expanded',
                      'secondary_regions_rim' : 'rim',
                      'secondary_regions_propagate' : 'propagate',
                      }
+TERTIARY_REGIONS  = {'tertiary_regions_expanded' : 'expanded',
+                     'tertiary_regions_inside' : 'inside',
+                     'tertiary_regions_outside' : 'outside',
+                     'tertiary_regions_rim' : 'rim',
+                     'tertiary_regions_propagate' : 'propagate',
+                     }
 
 ZSLICE_PROJECTION_METHODS = ['maximum', 'average']
 

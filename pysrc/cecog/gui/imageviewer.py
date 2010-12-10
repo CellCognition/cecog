@@ -163,12 +163,12 @@ class ImageViewer(QGraphicsView):
     def _update(self):
         self._pixmap.setPixmap(QPixmap.fromImage(self._qimage))
 
-    def center(self):
-        screen = self.geometry()
-        size = self.label.geometry()
-        self.label.move((screen.width()-size.width())/2,
-                        (screen.height()-size.height())/2)
-        self.update()
+#    def center(self):
+#        screen = self.geometry()
+#        size = self.label.geometry()
+#        self.label.move((screen.width()-size.width())/2,
+#                        (screen.height()-size.height())/2)
+#        self.update()
 
     @property
     def scale_factor(self):
@@ -209,7 +209,10 @@ class ImageViewer(QGraphicsView):
         self._update_zoom_info()
 
     def scale_to_fit(self):
-        self.fitInView(self.sceneRect(), mode=Qt.KeepAspectRatio)
+        #rect = self.sceneRect()
+        #rect.setWidth(rect.width()-3)
+        #rect.setHeight(rect.height()-3)
+        self.fitInView(self._pixmap, mode=Qt.KeepAspectRatio)
         self._update_zoom_info()
 
     def set_auto_resize(self, state):

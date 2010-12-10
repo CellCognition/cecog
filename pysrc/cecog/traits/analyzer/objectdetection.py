@@ -28,8 +28,7 @@ __all__ = ['SectionObjectdetection']
 # cecog imports:
 #
 from cecog.traits.config import _Section
-from cecog.gui.guitraits import (StringTrait,
-                                 IntTrait,
+from cecog.gui.guitraits import (IntTrait,
                                  FloatTrait,
                                  BooleanTrait,
                                  SelectionTrait,
@@ -39,7 +38,7 @@ from cecog.gui.guitraits import (StringTrait,
 from cecog.analyzer import (ZSLICE_PROJECTION_METHODS,
                             REGION_NAMES_PRIMARY,
                             )
-
+from cecog.util.util import unlist
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -50,11 +49,6 @@ SECTION_NAME_OBJECTDETECTION = 'ObjectDetection'
 #-------------------------------------------------------------------------------
 # functions:
 #
-def unlist(a):
-    b = []
-    for x in a:
-        b += x
-    return b
 
 #-------------------------------------------------------------------------------
 # classes:
@@ -215,6 +209,6 @@ class SectionObjectdetection(_Section):
             IntTrait(1, 0, 4000, label='Delta width')),
        ])]
       for name, prefix in [('Secondary', 'secondary'),
-                           #('Tertiary', 'tertiary')
+                           ('Tertiary', 'tertiary')
                            ]]
       )

@@ -119,6 +119,8 @@ class SectionGeneral(_Section):
             ListTrait(['n2_avg', 'n2_stddev', 'roisize'], label='Primary channel')),
         ('secondary_featureextraction_exportfeaturenames',
             ListTrait(['n2_avg', 'n2_stddev', 'roisize'], label='Secondary channel')),
+        ('tertiary_featureextraction_exportfeaturenames',
+            ListTrait(['n2_avg', 'n2_stddev', 'roisize'], label='Secondary channel')),
 
       ])
     ]

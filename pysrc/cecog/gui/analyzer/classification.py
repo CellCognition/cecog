@@ -404,7 +404,7 @@ class ClassifierResultFrame(QGroupBox):
 class ClassificationFrame(_BaseFrame, _ProcessorMixin):
 
     SECTION_NAME = SECTION_NAME_CLASSIFICATION
-    TABS = ['PrimaryChannel', 'SecondaryChannel']
+    TABS = ['Primary Channel', 'Secondary Channel', 'Tertiary Channel']
     PROCESS_PICKING = 'PROCESS_PICKING'
     PROCESS_TRAINING = 'PROCESS_TRAINING'
     PROCESS_TESTING = 'PROCESS_TESTING'
@@ -424,7 +424,7 @@ class ClassificationFrame(_BaseFrame, _ProcessorMixin):
                                      AnalzyerThread,
                                      ('Test classifier', 'Stop testing'))
 
-        self.set_tab_name('PrimaryChannel')
+        self.set_tab_name('Primary Channel')
 
         self.add_input('primary_classification_envpath')
 
@@ -432,16 +432,18 @@ class ClassificationFrame(_BaseFrame, _ProcessorMixin):
         self.add_handler('primary_classification_envpath',
                          frame_results.on_load)
 
+        for tab_name, prefix in [('Secondary Channel', 'secondary'),
+                                 ('Tertiary Channel', 'tertiary'),
+                                 ]:
+            self.set_tab_name(tab_name)
 
-        self.set_tab_name('SecondaryChannel')
+            self.add_input('%s_classification_envpath' % prefix)
+            self.add_line()
+            self.add_input('%s_classification_regionname' % prefix)
 
-        self.add_input('secondary_classification_envpath')
-        self.add_line()
-        self.add_input('secondary_classification_regionname')
-
-        frame_results = self._add_result_frame('secondary')
-        self.add_handler('secondary_classification_envpath',
-                         frame_results.on_load)
+            frame_results = self._add_result_frame(prefix)
+            self.add_handler('%s_classification_envpath' % prefix,
+                             frame_results.on_load)
 
         self._init_control()
 
@@ -463,7 +465,8 @@ class ClassificationFrame(_BaseFrame, _ProcessorMixin):
 
         show_ids_class = settings.get('Output', 'rendering_class_showids')
 
-        if self._tab.currentIndex() == 0:
+        current_tab = self._tab.currentIndex()
+        if current_tab == 0:
             settings.set('Processing', 'primary_featureextraction', True)
             settings.set('Processing', 'secondary_featureextraction', False)
             settings.set_section('Classification')

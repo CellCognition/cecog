@@ -260,7 +260,9 @@ class TimeHolder(OrderedDict):
                                            zlib=self.NC_ZLIB,
                                            shuffle=self.NC_SHUFFLE,
                                            chunksizes=(1, dim_y, dim_x))
+                # FIXME: not working for dim_t == 1 (no timelapse data)
                 var.valid = [0] * dim_t
+                #print channel_id, dim_t, var.valid
 
             for channel_name in REGION_NAMES.keys():
                 channel_g = label_g.createGroup(channel_name)
@@ -350,7 +352,7 @@ class TimeHolder(OrderedDict):
         iT = self._iCurrentT
         if not iT in self:
             self[iT] = OrderedDict()
-        self[iT][oChannel.strChannelId] = oChannel
+        self[iT][oChannel.NAME] = oChannel
         self[iT].sort(key = lambda x: self[iT][x])
 
     def apply_segmentation(self, channel, primary_channel=None):
@@ -433,7 +435,8 @@ class TimeHolder(OrderedDict):
         if not valid:
             channel.apply_features()
 
-    def extportObjectCounts(self, filename, P, meta_data, prim_info=None, sec_info=None, sep='\t'):
+    def extportObjectCounts(self, filename, P, meta_data, prim_info=None,
+                            sec_info=None, sep='\t'):
         f = file(filename, 'w')
         has_header = False
 
@@ -491,7 +494,7 @@ class TimeHolder(OrderedDict):
         f.close()
 
 
-    def extportObjectDetails(self, filename, sep='\t'):
+    def extportObjectDetails(self, filename, sep='\t', excel_style=False):
         f = file(filename, 'w')
 
         feature_lookup = OrderedDict()
@@ -507,7 +510,6 @@ class TimeHolder(OrderedDict):
         for frame, channels in self.iteritems():
 
             items = []
-
             prim_region = channels.values()[0].get_region('primary')
 
             for obj_id in prim_region:
@@ -533,9 +535,14 @@ class TimeHolder(OrderedDict):
                                 if channel.NAME == 'Primary':
                                     keys += ['centerX', 'centerY']
                                 keys += feature_lookup2.keys()
-                                line1 += [channel.NAME.upper()] * len(keys)
-                                line2 += [region_id] * len(keys)
-                                line3 += keys
+                                if excel_style:
+                                    line1 += [channel.NAME.upper()] * len(keys)
+                                    line2 += [region_id] * len(keys)
+                                    line3 += keys
+                                else:
+                                    line1 += ['%s_%s_%s' % (channel.NAME.upper(),
+                                                            region_id, key)
+                                              for key in keys]
 
                             obj = region[obj_id]
                             #print feature_lookup2.keys(), feature_lookup2.values()
@@ -551,12 +558,16 @@ class TimeHolder(OrderedDict):
                 if not has_header:
                     has_header = True
                     prefix_str = [''] * len(prefix)
-                    line1 = prefix_str + line1
-                    line2 = prefix_str + line2
-                    line3 = prefix_names + line3
-                    f.write('%s\n' % sep.join(line1))
-                    f.write('%s\n' % sep.join(line2))
-                    f.write('%s\n' % sep.join(line3))
+                    if excel_style:
+                        line1 = prefix_str + line1
+                        line2 = prefix_str + line2
+                        line3 = prefix_names + line3
+                        f.write('%s\n' % sep.join(line1))
+                        f.write('%s\n' % sep.join(line2))
+                        f.write('%s\n' % sep.join(line3))
+                    else:
+                        line1 = prefix_names + line1
+                        f.write('%s\n' % sep.join(line1))
 
                 f.write('%s\n' % sep.join(map(str, prefix + items)))
 

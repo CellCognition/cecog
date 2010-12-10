@@ -83,4 +83,9 @@ class SectionFeatureExtraction(_Section):
        for name, desc in zip(FEATURE_CATEGORIES, FEATURE_CATEGORY_DESC)
       ]),
 
+    ('tertiary_features',
+     [('tertiary_featurecategory_%s' % name,
+       BooleanTrait(True, label=desc))
+       for name, desc in zip(FEATURE_CATEGORIES, FEATURE_CATEGORY_DESC)
+      ]),
     ]
