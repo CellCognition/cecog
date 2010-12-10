@@ -34,6 +34,7 @@ from cecog.traits.config import (ANALYZER_CONFIG_FILENAME,
                                  FONT12_FILENAME,
                                  NAMING_SCHEMA_FILENAME,
                                  PATH_MAPPING_FILENAME,
+                                 RESOURCE_PATH,
                                  )
 
 #-------------------------------------------------------------------------------
@@ -42,7 +43,7 @@ from cecog.traits.config import (ANALYZER_CONFIG_FILENAME,
 MAIN_SCRIPT = 'CecogAnalyzer.py'
 
 APP = [MAIN_SCRIPT]
-INCLUDES = ['sip', 'netCDF4_utils', 'netcdftime', 'pyamf']
+INCLUDES = ['sip', 'netCDF4_utils', 'netcdftime', ]
 EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
             'PyQt4.QtOpenGL', 'PyQt4.QtScript',
             'PyQt4.QtSql', 'PyQt4.QtTest',
@@ -51,7 +52,7 @@ EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
             'scipy', 'rpy',
             'Tkconstants', 'Tkinter', 'tcl',
             ]
-PACKAGES = ['cecog']
+PACKAGES = ['cecog', ]
 
 RESOURCE_FILES = [ANALYZER_CONFIG_FILENAME,
                   FONT12_FILENAME,
@@ -203,6 +204,9 @@ if sys.platform == 'darwin':
         shutil.copy(os.path.join('../../rsrc/hmm', filename), target)
 
     for filename in RESOURCE_FILES:
+        # make sure we use the unchanged versions from the repository
+        filename = os.path.join('resources', os.path.split(filename)[1])
+        print filename
         shutil.copy(filename, resource_path)
 
 
@@ -230,6 +234,9 @@ elif sys.platform == 'win32':
         shutil.copy(os.path.join('../../rsrc/hmm', filename), target)
 
     for filename in RESOURCE_FILES:
+        # make sure we use the unchanged versions from the repository
+        filename = os.path.join('resources', os.path.split(filename)[1])
+        print filename
         shutil.copy(filename, resource_path)
 
     w9 = os.path.join('dist', 'w9xpopen.exe')

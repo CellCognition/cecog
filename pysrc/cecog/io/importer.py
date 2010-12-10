@@ -36,9 +36,12 @@ from pdk.datetimeutils import StopWatch
 # cecog imports:
 #
 from cecog import ccore
-from cecog.util.util import read_table
+from cecog.util.util import (read_table,
+                             write_table,
+                             )
 from cecog.util.token import (Token,
-                              TokenHandler)
+                              TokenHandler,
+                              )
 from cecog.io.imagecontainer import (MetaData,
                                      DIMENSION_NAME_POSITION,
                                      DIMENSION_NAME_TIME,
@@ -114,9 +117,12 @@ class AbstractImporter(object):
         self.multi_image = self.MULTIIMAGE_USE_ZSLICE if multi_image is None \
                            else multi_image
         self.has_multi_images = False
+        self.timestamps_from_file = None
+        self.dimension_lookup = None
         self.meta_data = MetaData()
+        self._dimension_items = None
 
-    #def load(self):
+    def load(self):
         self.dimension_lookup = self._build_dimension_lookup()
         self.meta_data.setup()
 
@@ -144,7 +150,10 @@ class AbstractImporter(object):
         channels = []
         zslices = []
 
-        for item in self._get_dimension_items():
+        self._dimension_items = self._get_dimension_items()
+        print("Get dimensions: %s" % s)
+        s.reset()
+        for item in self._dimension_items:
 
             # import image info only once
             if not has_xy:
@@ -176,13 +185,20 @@ class AbstractImporter(object):
             if not zslice in lookup[position][time][channel]:
                 lookup[position][time][channel][zslice] = item['filename']
 
-            # allow to read timestamps from file mtime if not present
+            # insert relative path (only needed for export)
+            item['path'] = ''
+
+            # allow to read timestamps from file if not present
             if META_INFO_TIMESTAMP in item:
                 timestamp = item[META_INFO_TIMESTAMP]
-            else:
-                timestamp = os.path.getmtime(os.path.join(self.path,
-                                                          item['filename']))
-            self.meta_data.append_absolute_time(position, time, timestamp)
+            elif self.timestamps_from_file in ['mtime', 'ctime']:
+                filename_full = os.path.join(self.path, item['filename'])
+                if self.timestamps_from_file == 'mtime':
+                    timestamp = os.path.getmtime(filename_full)
+                else:
+                    timestamp = os.path.getctime(filename_full)
+                item[META_INFO_TIMESTAMP] = timestamp
+                self.meta_data.append_absolute_time(position, time, timestamp)
 
             if META_INFO_WELL in item and META_INFO_SUBWELL in item:
                 well = item[META_INFO_WELL]
@@ -223,6 +239,21 @@ class AbstractImporter(object):
 
     def _get_dimension_items(self):
         raise NotImplementedError()
+
+    def export_to_flatfile(self, filename):
+        has_timestamps = (len(self._dimension_items) > 0 and
+                          META_INFO_TIMESTAMP in self._dimension_items[0])
+        column_names = ['path', 'filename',
+                        DIMENSION_NAME_POSITION,
+                        DIMENSION_NAME_TIME,
+                        DIMENSION_NAME_CHANNEL,
+                        DIMENSION_NAME_ZSLICE,
+                        ]
+        if has_timestamps:
+            column_names.append(META_INFO_TIMESTAMP)
+        write_table(filename, self._dimension_items, column_names,
+                    sep='\t', guess_compression=True)
+
 
 
 class FileTokenImporter(AbstractImporter):
@@ -319,13 +350,11 @@ class FlatFileImporter(AbstractImporter):
         super(FlatFileImporter, self).__init__(path)
 
     def _get_dimension_items(self):
-        column_names, table = read_table(self.flat_filename, True)
+        column_names, table = read_table(self.flat_filename, True,
+                                         guess_compression=True)
         test = ['path',
                 'filename',
                 DIMENSION_NAME_POSITION,
-                DIMENSION_NAME_TIME,
-                DIMENSION_NAME_CHANNEL,
-                DIMENSION_NAME_ZSLICE,
                 ]
         for name in test:
             if not name in column_names:
@@ -344,34 +373,46 @@ class IniFileImporter(AbstractImporter):
     Parameters for the config file are:
 
     file_extensions = .tiff .tif
-    - a list of file extensions separated by whitespace(s)
-    - example: take all files with .tif or .tiff extension
+     - a list of file extensions separated by whitespace(s)
+     - example: take all files with .tif or .tiff extension
 
     regex_subdirectories = ^[^_].*
-    - a filter rule for any sub-directory from which images should be imported
-    - is a regular expression which must be found via re.search()
-    - can be empty, in that case all directories are taken
-    - example: ignore all directories with a leading underscore
+     - a filter rule for any sub-directory from which images should be imported
+     - is a regular expression which must be found via re.search()
+     - can be empty, in that case all directories are taken
+     - example: ignore all directories with a leading underscore
 
     regex_filename_substr = (.+?)\.
-    - defines a part of the relative filename in which the dimension definition
-      will be searched
-    - is a regular expression which is searched and must define a group via ()
-    - can be empty, in that case the entire filename is considered
-    - example: take sub-string till the first dot
+     - defines a part of the relative filename in which the dimension definition
+       will be searched
+     - is a regular expression which is searched and must define a group via ()
+     - can be empty, in that case the entire filename is considered
+     - example: take sub-string till the first dot
 
     regex_dimensions = P(?P<position>.+?)_+?T(?P<time>\d+)_+?C(?P<channel>.+?)_+?Z(?P<zslice>\d+)
-    - defines how the dimensions 'position', 'time', 'channel', and 'zslice' are
-      extracted from the sub-string of the relative filename (see above)
-    - is a regular expression with named groups which is searched
-    - time, channel, and zslice are optional and default to 0, w1, 0
-    - time and zslice MUST be digits!
-    - example: defines position, time, channel, and zslice with tokens separated
-               by at least one underscore, e.g. will find
-               abcd_P0023_T00001_Cgfp_Z1_efg
+     - defines how the dimensions 'position', 'time', 'channel', and 'zslice' are
+       extracted from the sub-string of the relative filename (see above)
+     - is a regular expression with named groups which is searched
+     - time, channel, and zslice are optional and default to 0, w1, 0
+     - time and zslice MUST be digits!
+     - example: defines position, time, channel, and zslice with tokens separated
+                by at least one underscore, e.g. will find
+                abcd_P0023_T00001_Cgfp_Z1_efg
+
+    timestamps_from_file = mtime
+     - decide if the timestamp information is taken from the file directly
+     - valid values are:
+           * mtime - file modification time
+           * ctime - file creation time
+     - any other value (or omitting the parameter) will disable the timestamp
+       extraction from file
+     - NOTE: using timestamps from files can be dangerous, because the
+             information can be lost during file copy. nevertheless this is for
+             TIFF stacks often the only source of this information.
     '''
 
     def __init__(self, path, config_parser, section_name):
+        super(IniFileImporter, self).__init__(path)
         self.config_parser = config_parser
         self.section_name = section_name
 
@@ -391,7 +432,11 @@ class IniFileImporter(AbstractImporter):
 
         self._re_dim = re.compile(self.config_parser.get(self.section_name,
                                                          'regex_dimensions'))
-        super(IniFileImporter, self).__init__(path)
+        if self.config_parser.has_option(self.section_name,
+                                         'timestamps_from_file'):
+            self.timestamps_from_file = \
+                self.config_parser.get(self.section_name,
+                                       'timestamps_from_file')
 
     def _get_dimension_items(self):
         token_list = []
@@ -425,6 +470,7 @@ class IniFileImporter(AbstractImporter):
                     search2 = self._re_dim.search(found_name)
                     if not search2 is None:
                         result = search2.groupdict()
+                        assert DIMENSION_NAME_POSITION in result
                         result['filename'] = filename_rel
                         token_list.append(result)
         return token_list

@@ -63,6 +63,8 @@ META_INFO_TIMESTAMP = 'timestamp'
 META_INFO_WELL = 'well'
 META_INFO_SUBWELL = 'subwell'
 
+IMAGECONTAINER_FILENAME = '.cecog_imagecontainer.txt.bz2'
+
 
 #------------------------------------------------------------------------------
 # functions:
@@ -81,6 +83,8 @@ class MetaData(object):
         self.dim_c = None
         self.dim_t = None
         self.dim_p = None
+
+        self.has_timelapse = False
 
         self.zslices = None
         self.channels = None
@@ -171,6 +175,7 @@ class MetaData(object):
         self.dim_t = len(self.times)
         self.dim_c = len(self.channels)
         self.dim_z = len(self.zslices)
+        self.has_timelapse = self.dim_t > 1
 
     def h(self, a):
         if len(a) == 0:
@@ -372,43 +377,34 @@ class ImageContainer(object):
         return self.importer.get_image(position, time, channel, zslice)
 
     @classmethod
-    def from_settings(cls, settings):
+    def check_container_file(cls, settings):
         from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
-        from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
-        from cecog.io.importer import (IniFileImporter,
-                                       FlatFileImporter,
-                                       )
         settings.set_section(SECTION_NAME_GENERAL)
         path_input = convert_package_path(settings.get2('pathin'))
         safe_mkdirs(path_input)
         path_output = convert_package_path(settings.get2('pathout'))
         safe_mkdirs(path_output)
-        path_output_dump = convert_package_path(os.path.join(path_output,'dump'))
-        safe_mkdirs(path_output_dump)
-        filename_pkl = os.path.join(path_output_dump,'imagecontainer2.pkl')
+        #path_output_dump = convert_package_path(os.path.join(path_output,
+        #                                                     'dump'))
+        #safe_mkdirs(path_output_dump)
 
-        create_imagecontainer = settings.get(SECTION_NAME_OUTPUT,
-                                             'imagecontainer_create_file')
-        reuse_imagecontainer = settings.get(SECTION_NAME_OUTPUT,
-                                            'imagecontainer_reuse_file')
-        if not create_imagecontainer:
-            reuse_imagecontainer = False
+        filename = os.path.join(path_input, IMAGECONTAINER_FILENAME)
+        if not os.path.isfile(filename):
+            filename = os.path.join(path_output, IMAGECONTAINER_FILENAME)
+            if not os.path.isfile(filename):
+                filename = None
+        return path_input, filename
 
-        imagecontainer = None
+    @classmethod
+    def from_settings(cls, settings, force=False):
+        #from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
+        from cecog.io.importer import (IniFileImporter,
+                                       FlatFileImporter,
+                                       )
 
-        if os.path.isfile(filename_pkl) and reuse_imagecontainer:
-            f = file(filename_pkl, 'rb')
-            try:
-                imagecontainer = pickle.load(f)
-            except ImportError:
-                # in case pickle and class structure are not longer compatible:
-                # ignore this error and rescan the file structure
-                # FIXME: report to user/GUI
-                pass
-            f.close()
+        path_input, filename = ImageContainer.check_container_file(settings)
 
-        if imagecontainer is None:
-            # read file structure according to naming schema file
+        if filename is None or force:
             if settings.get2('image_import_namingschema'):
                 config_parser = NAMING_SCHEMAS
                 section_name = settings.get2('namingscheme')
@@ -418,14 +414,12 @@ class ImageContainer(object):
             elif settings.get2('image_import_structurefile'):
                 filename = settings.get2('structure_filename')
                 importer = FlatFileImporter(path_input, filename)
-            imagecontainer = cls(importer)
-
-            safe_mkdirs(path_output)
-            safe_mkdirs(path_output_dump)
-
-            if create_imagecontainer:
-                f = file(filename_pkl, 'wb')
-                pickle.dump(imagecontainer, f, 1)
-                f.close()
+            importer.load()
+            importer.export_to_flatfile(os.path.join(path_input,
+                                                     IMAGECONTAINER_FILENAME))
+        else:
+            importer = FlatFileImporter(path_input, filename)
+            importer.load()
+        imagecontainer = cls(importer)
         return imagecontainer
 

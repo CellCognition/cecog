@@ -19,7 +19,8 @@ __source__ = '$URL$'
 #
 import sys, \
        os, \
-       logging
+       logging, \
+       time
 import cPickle as pickle
 
 #-------------------------------------------------------------------------------
@@ -488,7 +489,8 @@ class AnalyzerMainWindow(QMainWindow):
         self._exit_app()
 
     def _on_browser_open(self):
-        self._on_load_input()
+        #self._on_load_input()
+        print self._imagecontainer
         self._browser = Browser(self._settings,
                                 self._imagecontainer)
         self._browser.show()
@@ -496,16 +498,44 @@ class AnalyzerMainWindow(QMainWindow):
         self._browser.setFocus()
 
     def _on_load_input(self):
-        self._imagecontainer = ImageContainer.from_settings(self._settings)
+        # check the path_in and path_out
+
+        # check if image structure is already stored and valid
+
+        path_input, filename = \
+            ImageContainer.check_container_file(self._settings)
+        if not filename is None:
+            force = question(self, 'Scanning input data',
+                             'Input data was already scanned. Do you want '
+                             'to rescan the file structure '
+                             '(this can take several minutes)?')
+        else:
+            force = False
+
+        dlg = QProgressDialog()
+        dlg.setLabelText('Please wait until the input structure is scanned...')
+        dlg.setWindowModality(Qt.WindowModal)
+        dlg.setAutoClose(True)
+        dlg.setCancelButton(None)
+        dlg.setRange(0,0)
+        dlg.show()
+
+        thread = ImageContainerThread(self._settings, force)
+        fct = lambda x,y : lambda : self._on_load_finished(x,y)
+        thread.finished.connect(fct(dlg, thread))
+        thread.start()
+        thread.setPriority(QThread.LowestPriority)
+
+    def _on_load_finished(self, dlg, thread):
+        dlg.reset()
+
+        self._imagecontainer = thread.imagecontainer
         self._meta_data = self._imagecontainer.meta_data
-        trait = self._settings.get_trait(SECTION_NAME_OBJECTDETECTION,
-                                         'primary_channelid')
-        trait.set_list_data(self._meta_data.channels)
-        trait = self._settings.get_trait(SECTION_NAME_OBJECTDETECTION,
-                                         'secondary_channelid')
-        trait.set_list_data(self._meta_data.channels)
-        self._tabs[1].get_widget('primary_channelid').update()
-        self._tabs[1].get_widget('secondary_channelid').update()
+        for prefix in ['primary', 'secondary', 'tertiary']:
+            trait = self._settings.get_trait(SECTION_NAME_OBJECTDETECTION,
+                                             '%s_channelid' % prefix)
+            trait.set_list_data(self._meta_data.channels)
+            self._tabs[1].get_widget('%s_channelid' % prefix).update()
         print self._imagecontainer.meta_data
 
     @pyqtSlot()
@@ -560,6 +590,21 @@ class AnalyzerMainWindow(QMainWindow):
         show_html('_startup')
 
 
+class ImageContainerThread(QThread):
+
+    def __init__(self, settings, force):
+        super(ImageContainerThread, self).__init__()
+        self._settings = settings
+        self._force = force
+        self.imagecontainer = None
+
+    def run(self):
+        self.imagecontainer = ImageContainer.from_settings(self._settings,
+                                                           force=self._force)
+        print self.imagecontainer
+
+
+
 def handle_exception(exc_type, exc_value, exc_traceback):
   import traceback
   filename, line, dummy, dummy = \
@@ -600,9 +645,9 @@ if __name__ == "__main__":
         if idx > -1:
             package_path = working_path[:idx]
             is_app = True
-    else:
-        package_path = working_path
-        is_app = True
+#    else:
+#        package_path = working_path
+#        is_app = True
 
     if not package_path is None:
         set_package_path(package_path)
