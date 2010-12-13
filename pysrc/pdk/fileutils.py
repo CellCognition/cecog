@@ -544,7 +544,7 @@ def safe_mkdirs(path, prompt=False):
                 # still ok, otherwise there are other errors which are raised
                 try:
                     os.makedirs(path)
-                except IOError as err:
+                except OSError as err:
                     if not os.path.isdir(path):
                         raise err
     else:
