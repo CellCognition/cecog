@@ -185,9 +185,6 @@ class AbstractImporter(object):
             if not zslice in lookup[position][time][channel]:
                 lookup[position][time][channel][zslice] = item['filename']
 
-            # insert relative path (only needed for export)
-            item['path'] = ''
-
             # allow to read timestamps from file if not present
             if META_INFO_TIMESTAMP in item:
                 timestamp = item[META_INFO_TIMESTAMP]
@@ -251,7 +248,11 @@ class AbstractImporter(object):
                         ]
         if has_timestamps:
             column_names.append(META_INFO_TIMESTAMP)
-        write_table(filename, self._dimension_items, column_names,
+        dimension_items = self._dimension_items[:]
+        for item in dimension_items:
+            item['path'] = ''
+            item['filename'] = item['filename'].replace('\\', '/')
+        write_table(filename, dimension_items, column_names,
                     sep='\t', guess_compression=True)
 
 
