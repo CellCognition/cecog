@@ -91,13 +91,15 @@ def get_file_handle(filename, mode, guess_compression=True, compress_level=6):
     return fh
 
 
-def read_table(filename, has_column_names=True, sep='\t',
+def read_table(filename, has_column_names=True, skip=0, sep='\t',
                guess_compression=True):
     '''
     Reads a list of dicts ordered by header_names to file.
     Unfortunately Python's csv is unable of writing headers.
     '''
-    f = get_file_handle(filename, 'r', guess_compression=guess_compression)
+    f = get_file_handle(filename, 'rbU', guess_compression=guess_compression)
+    for i in range(skip):
+        f.readline()
     if has_column_names:
         column_names = f.readline().split(sep)
         column_names = [x.strip() for x in column_names]
@@ -122,7 +124,7 @@ def write_table(filename, rows, column_names=None, sep='\t',
     Unfortunately Python's csv is unable of writing headers
     (changed in Python 2.7)
     '''
-    f = get_file_handle(filename, 'w', guess_compression=guess_compression)
+    f = get_file_handle(filename, 'wb', guess_compression=guess_compression)
     if not column_names is None:
         f.write('%s\n' % sep.join(column_names))
         for row in rows:
