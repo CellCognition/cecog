@@ -87,6 +87,8 @@ class _Channel(PropertyManager):
 
              channelRegistration =
                  TupleProperty(None),
+             registration_start = TupleProperty(None),
+             new_image_size = TupleProperty(None),
 
              strChannelColor =
                  StringProperty('#FFFFFF'),
@@ -302,6 +304,14 @@ class _Channel(PropertyManager):
     def apply_segmentation(self):
         raise NotImplementedMethodError()
 
+    def apply_registration(self):
+        img_in = self.meta_image.image
+        image = ccore.subImage(img_in,
+                               ccore.Diff2D(*self.registration_start)-
+                               ccore.Diff2D(*self.channelRegistration),
+                               ccore.Diff2D(*self.new_image_size))
+        self.meta_image.set_image(image)
+
     def apply_features(self):
 
         for strKey, oContainer in self.dctContainers.iteritems():
@@ -473,19 +483,6 @@ class PrimaryChannel(_Channel):
         super(PrimaryChannel, self).__init__(**dctOptions)
 
     def apply_segmentation(self, oDummy):
-        if (not self.channelRegistration is None and
-            len(self.channelRegistration) == 2):
-            shift = self.channelRegistration
-            imgIn = self.meta_image.image
-            w = imgIn.width - abs(shift[0])
-            h = imgIn.height - abs(shift[1])
-            ul_x = shift[0] if shift[0] >= 0 else 0
-            ul_y = shift[1] if shift[1] >= 0 else 0
-
-            self.meta_image.image = ccore.subImage(imgIn,
-                                                   ccore.Diff2D(ul_x, ul_y),
-                                                   ccore.Diff2D(w, h))
-
         oSegmentation = PrimarySegmentation(strImageOutCompression = self.strImageOutCompression,
                                             strPathOutDebug = self.strPathOutDebug,
                                             bDebugMode = self.bDebugMode,
@@ -581,19 +578,6 @@ class SecondaryChannel(_Channel):
         self.bSegmentationSuccessful = False
 
     def apply_segmentation(self, oChannel):
-        if (not self.channelRegistration is None and
-            len(self.channelRegistration) == 2):
-            shift = self.channelRegistration
-            imgIn = self.meta_image.image
-            w = imgIn.width - abs(shift[0])
-            h = imgIn.height - abs(shift[1])
-            ul_x = -shift[0] if shift[0] < 0 else 0
-            ul_y = -shift[1] if shift[1] < 0 else 0
-
-            self.meta_image.image = ccore.subImage(imgIn,
-                                                   ccore.Diff2D(ul_x, ul_y),
-                                                   ccore.Diff2D(w, h))
-
         if 'primary' in oChannel.dctContainers:
             oSegmentation = SecondarySegmentation(strImageOutCompression = self.strImageOutCompression,
                                                   strPathOutDebug = self.strPathOutDebug,

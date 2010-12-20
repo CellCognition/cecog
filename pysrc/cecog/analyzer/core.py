@@ -466,17 +466,18 @@ class PositionAnalyzer(object):
                 for render_name in gallery_images:
                     strPathCutterIn = os.path.join(self.strPathOutPositionImages, render_name)
                     if os.path.isdir(strPathCutterIn):
-                        strPathCutterOut = os.path.join(strPathCutter, render_name)
-                        self._oLogger.info("running Cutter for '%s'..." % render_name)
-                        image_size =\
-                            self.oSettings.get('Output', 'events_gallery_image_size')
-                        EventGallery(self.oCellTracker,
-                                     strPathCutterIn,
-                                     self.P,
-                                     strPathCutterOut,
-                                     self._meta_data,
-                                     oneFilePerTrack=True,
-                                     size=(image_size,image_size))
+                        if not self.oCellTracker is None:
+                            strPathCutterOut = os.path.join(strPathCutter, render_name)
+                            self._oLogger.info("running Cutter for '%s'..." % render_name)
+                            image_size =\
+                                self.oSettings.get('Output', 'events_gallery_image_size')
+                            EventGallery(self.oCellTracker,
+                                         strPathCutterIn,
+                                         self.P,
+                                         strPathCutterOut,
+                                         self._meta_data,
+                                         oneFilePerTrack=True,
+                                         size=(image_size,image_size))
                         # FIXME: be careful here. normally only raw images are
                         #        used for the cutter and can be deleted
                         #        afterwards
@@ -673,13 +674,28 @@ class PositionAnalyzer(object):
                     zslice_images.append(meta_image)
 
 
+                # compute values for the registration of multiple channels
+                # (translation only)
                 self.oSettings.set_section('ObjectDetection')
-                registration_x = self.oSettings.get2('secondary_channelRegistration_x')
-                registration_y = self.oSettings.get2('secondary_channelRegistration_y')
-                if registration_x == 0 and registration_y == 0:
-                    channel_registration = None
-                else:
-                    channel_registration = (registration_x, registration_y)
+                xs = [0]
+                ys = [0]
+                for prefix in [SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]:
+                    if self.oSettings.get('Processing','%s_processchannel' % prefix):
+                        reg_x = self.oSettings.get2('%s_channelregistration_x' % prefix)
+                        reg_y = self.oSettings.get2('%s_channelregistration_y' % prefix)
+                        xs.append(reg_x)
+                        ys.append(reg_y)
+                diff_x = []
+                diff_y = []
+                for i in range(len(xs)):
+                    for j in range(i, len(xs)):
+                        diff_x.append(abs(xs[i]-xs[j]))
+                        diff_y.append(abs(ys[i]-ys[j]))
+                # new image size after registration of all images
+                new_image_size = (meta_image.width - max(diff_x),
+                                  meta_image.height - max(diff_y))
+                # relative start point of registered image
+                registration_start = (max(xs), max(ys))
 
                 # important change: image channels can be assigned to multiple
                 # processing channels
@@ -765,9 +781,12 @@ class PositionAnalyzer(object):
                             else:
                                 iLatWindowSize2 = None
                                 iLatLimit2 = None
-
+                            channel_registration = (0,0)
                             params = dict(oZSliceOrProjection = projection_info,
                                           channelRegistration=channel_registration,
+                                          new_image_size=new_image_size,
+                                          registration_start=registration_start,
+
                                           fNormalizeMin = self.oSettings.get2('primary_normalizemin'),
                                           fNormalizeMax = self.oSettings.get2('primary_normalizemax'),
                                           iMedianRadius = self.oSettings.get2('primary_medianradius'),
@@ -803,8 +822,13 @@ class PositionAnalyzer(object):
                                 regions_lookup = TERTIARY_REGIONS
                             regions = [v for k,v in regions_lookup.iteritems()
                                        if self.oSettings.get2(k)]
+                            channel_registration = (self.oSettings.get2('%s_channelregistration_x' % prefix),
+                                                    self.oSettings.get2('%s_channelregistration_y' % prefix))
                             params = dict(oZSliceOrProjection = projection_info,
                                           channelRegistration=channel_registration,
+                                          new_image_size=new_image_size,
+                                          registration_start=registration_start,
+
                                           fNormalizeMin = self.oSettings.get2('%s_normalizemin' % prefix),
                                           fNormalizeMax = self.oSettings.get2('%s_normalizemax' % prefix),
                                           #iMedianRadius = self.oSettings.get2('medianradius'),

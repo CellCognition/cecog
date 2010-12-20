@@ -379,6 +379,7 @@ class TimeHolder(OrderedDict):
                     valid = False
                     break
         if not valid:
+            channel.apply_registration()
             channel.apply_segmentation(primary_channel)
             if self._create_nc:
                 for region_name in channel.lstAreaSelection:
