@@ -185,8 +185,10 @@ class ClusterDisplay(QGroupBox):
         positions = self._submit_settings.get(SECTION_NAME_GENERAL, 'positions')
         positions = positions.split(',')
         nr_items = len(positions)
-        batch_size = self._submit_settings.get(SECTION_NAME_CLUSTER,
-                                               'position_granularity')
+        # FIXME: this is a hack
+        settings_dummy = ProcessingFrame.get_special_settings(self._settings)
+        batch_size = settings_dummy.get(SECTION_NAME_CLUSTER,
+                                        'position_granularity')
         path_out = self._submit_settings.get(SECTION_NAME_GENERAL, 'pathout')
         emails = str(self._txt_mail.text()).split(',')
         try:
