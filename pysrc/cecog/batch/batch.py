@@ -129,7 +129,8 @@ folder of the settings file can be overwritten by the options below.
             positions = positions.split(',')
             batch_pos = positions[(index*batch_size) : ((index+1)*batch_size)]
             if index >= 0 and index < len(positions):
-                settings.set(SECTION_NAME_GENERAL, 'positions', batch_pos)
+                settings.set(SECTION_NAME_GENERAL, 'positions',
+                             ','.join(batch_pos))
             else:
                 parser.error('Cluster index between 1 and %d required!' %
                              len(positions))
