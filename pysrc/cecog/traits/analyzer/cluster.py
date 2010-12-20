@@ -28,7 +28,7 @@ __all__ = ['SectionCluster']
 # cecog imports:
 #
 from cecog.traits.config import _Section
-from cecog.gui.guitraits import BooleanTrait
+from cecog.gui.guitraits import IntTrait
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -48,4 +48,8 @@ class SectionCluster(_Section):
     SECTION_NAME = SECTION_NAME_CLUSTER
 
     OPTIONS = [
-        ]
+      ('cluster',
+       [('position_granularity',
+            IntTrait(1, 1, 1000, label='Batch size (non-timelapse)')),
+        ])
+      ]

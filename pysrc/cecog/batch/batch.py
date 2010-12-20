@@ -79,6 +79,10 @@ folder of the settings file can be overwritten by the options below.
                       help="The index in a cluster job array referring to the "
                            "position or any other bulk-definition. (Starting "
                            "at 1 for reasons of compatibility, e.g. with SGE).")
+    parser.add_option("", "--batch_size",
+                      help="The number of positions executed together as one "
+                           "job item in a bulk job. This reduces the load on "
+                           "the job scheduler heavily.", default=1, type="int")
 
     (options, args) = parser.parse_args()
 
@@ -110,6 +114,7 @@ folder of the settings file can be overwritten by the options below.
         settings.set2('pathout', options.output)
 
     index = options.cluster_index
+    batch_size = options.batch_size
     print "moo123", index, sys.argv
     if not index is None:
         # FIXME: hack for the somewhat stupid DRMAA 1.0
@@ -122,9 +127,9 @@ folder of the settings file can be overwritten by the options below.
         positions = settings.get(SECTION_NAME_GENERAL, 'positions')
         if not positions is None:
             positions = positions.split(',')
+            batch_pos = positions[(index*batch_size) : ((index+1)*batch_size)]
             if index >= 0 and index < len(positions):
-                settings.set(SECTION_NAME_GENERAL, 'positions',
-                             positions[index])
+                settings.set(SECTION_NAME_GENERAL, 'positions', batch_pos)
             else:
                 parser.error('Cluster index between 1 and %d required!' %
                              len(positions))

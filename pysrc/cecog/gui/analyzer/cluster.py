@@ -185,13 +185,15 @@ class ClusterDisplay(QGroupBox):
         positions = self._submit_settings.get(SECTION_NAME_GENERAL, 'positions')
         positions = positions.split(',')
         nr_items = len(positions)
+        batch_size = self._submit_settings.get(SECTION_NAME_CLUSTER,
+                                               'position_granularity')
         path_out = self._submit_settings.get(SECTION_NAME_GENERAL, 'pathout')
         emails = str(self._txt_mail.text()).split(',')
         try:
             jobid = self._service.submit_job('cecog_batch',
                                              self._submit_settings.to_string(),
                                              path_out, emails, nr_items,
-                                             VERSION)
+                                             batch_size, VERSION)
         except:
             exception(self, 'Error on job submission')
         else:
@@ -344,28 +346,9 @@ class ClusterFrame(_BaseFrame, _ProcessorMixin):
         _ProcessorMixin.__init__(self)
 
         self._cluster_display = self._add_frame()
-#
-#        self.register_control_button('process',
-#                                     [AnalzyerThread,
-#                                      HmmThread],
-#                                     ('Start processing', 'Stop processing'))
-#
-#        self.add_group(None,
-#                       [('primary_classification', (0,0,1,1)),
-#                        ('tracking', (1,0,1,1)),
-#                        ('tracking_synchronize_trajectories', (2,0,1,1)),
-#                        ('primary_errorcorrection', (3,0,1,1))
-#                        ], link='primary_channel', label='Primary channel')
-#        self.add_group('secondary_processchannel',
-#                       [('secondary_classification', (0,0,1,1)),
-#                        ('secondary_errorcorrection', (1,0,1,1))
-#                        ])
-#
-#        #self.add_line()
-#
-#        self.add_expanding_spacer()
-#
-#        self._init_control()
+        self.add_group(None,
+                       [('position_granularity', (0,0,1,1)),
+                        ], label='Cluster Settings')
 
 
     def _add_frame(self):
