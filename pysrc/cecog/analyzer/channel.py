@@ -311,7 +311,7 @@ class _Channel(PropertyManager):
             if not oContainer is None:
 
                 for strFeatureCategory in self.lstFeatureCategories:
-                    print strFeatureCategory
+                    #print strFeatureCategory
                     sys.stdout.flush()
                     oContainer.applyFeature(strFeatureCategory)
 

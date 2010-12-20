@@ -63,9 +63,15 @@ class OutputFrame(_BaseFrame):
                         ('export_object_details', (1,0,1,1)),
                         ('export_track_data', (2,0,1,1)),
                         ], link='statistics', label='Statistics')
-        self.add_group('imagecontainer_create_file',
-                       [('imagecontainer_reuse_file',),
-                        ], layout='flow')
+
+        self.add_group(None,
+                       [('events_export_all_features', (0,0,1,1)),
+                        ('events_export_gallery_images', (1,0,1,1)),
+                        ('events_gallery_image_size', (1,1,1,1)),
+                        ], link='events', label='Events')
+#        self.add_group('imagecontainer_create_file',
+#                       [('imagecontainer_reuse_file',),
+#                        ], layout='flow')
         self.add_group('netcdf_create_file',
                        [('netcdf_reuse_file',),
                         ], layout='flow')

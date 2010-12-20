@@ -187,7 +187,8 @@ class AbstractImporter(object):
 
             # allow to read timestamps from file if not present
             if META_INFO_TIMESTAMP in item:
-                timestamp = item[META_INFO_TIMESTAMP]
+                timestamp = float(item[META_INFO_TIMESTAMP])
+                self.meta_data.append_absolute_time(position, time, timestamp)
             elif self.timestamps_from_file in ['mtime', 'ctime']:
                 filename_full = os.path.join(self.path, item['filename'])
                 if self.timestamps_from_file == 'mtime':

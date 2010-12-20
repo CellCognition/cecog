@@ -19,6 +19,7 @@ __all__ = ['ProcessingFrame']
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
+from collections import OrderedDict
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -151,5 +152,12 @@ class ProcessingFrame(_BaseFrame, _ProcessorMixin):
             else:
                 settings.set2('%s_classification' % prefix, False)
                 settings.set2('%s_errorcorrection' % prefix, False)
+
+        if settings.get('Output', 'events_export_gallery_images'):
+            settings.get('General', 'rendering').update({'primary' : {prim_id : {'raw': ('#FFFFFF', 1.0)}}})
+            for prefix in additional_prefixes:
+                if settings.get2('%s_processchannel' % prefix):
+                    sec_id = sec_ids[prefix]
+                    settings.get('General', 'rendering').update({prefix : {sec_id : {'raw': ('#FFFFFF', 1.0)}}})
 
         return settings

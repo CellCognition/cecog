@@ -294,10 +294,14 @@ class ClusterDisplay(QGroupBox):
             self._submit_settings = \
                 ProcessingFrame.get_special_settings(self._settings)
 
-            self._submit_settings.set(SECTION_NAME_GENERAL,
-                                      'createimagecontainer', False)
-            self._submit_settings.set(SECTION_NAME_GENERAL,
-                                      'preferimagecontainer', False)
+            self._submit_settings.set_section(SECTION_NAME_GENERAL)
+            self._submit_settings.set2('createimagecontainer', False)
+            self._submit_settings.set2('preferimagecontainer', False)
+            if not self._submit_settings.get2('constrain_positions'):
+                # FIXME:
+                meta_data = qApp._main_window._imagecontainer.meta_data
+                pos_str = ','.join(meta_data.positions)
+                self._submit_settings.set2('positions', pos_str)
 
             self._label_hosturl.setText(self._host_url)
             self._label_status.setText(self._service.get_service_info())

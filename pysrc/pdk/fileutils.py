@@ -346,7 +346,7 @@ def collect_files_by_suffix(start_dir, suffix):
                         recursive=True, exclude=None)
 
 
-def collect_files_by_regex(start_dir, regex, extensions=None):
+def collect_files_by_regex(start_dir, regex, extensions=None, absolute=False):
     """
     Collects files matching the given suffix in the tree starting from the given
     directory.
@@ -364,7 +364,7 @@ def collect_files_by_regex(start_dir, regex, extensions=None):
     if extensions is None:
         extensions = []
     file_names = collect_files(start_dir, extensions,
-                              absolute=False, follow=False,
+                              absolute=absolute, follow=False,
                               recursive=True, exclude=None)
     regex = re.compile(regex)
     results = []

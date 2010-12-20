@@ -821,7 +821,8 @@ class PlotCellTracker(CellTracker):
     def getBoundingBoxes(self, method="objectCentered", size=None, border=0):
         dctBoundingBoxes = {}
         for strStartId, dctEventData in self.eventIterator():
-            #print strStartId, dctEventData
+            if strStartId in ['_full', '_current']:
+                continue
             if method == "objectCentered":
                 lstData = []
                 for tplNodeIds in zip(*dctEventData['tracks']):
@@ -918,6 +919,7 @@ class PlotCellTracker(CellTracker):
 
                     if self.getOption("bExportTrackFeatures"):
                         for strChannelId, dctRegions in dctChannels.iteritems():
+                            print strChannelId, dctRegions,self._dctTimeChannels.channels
                             if strChannelId in self._dctTimeChannels.channels:
                                 for strRegionId, lstFeatureNames in dctRegions.iteritems():
 
@@ -1028,7 +1030,10 @@ class PlotCellTracker(CellTracker):
         if bHasSplitId:
             lstHeaderNames.append('isSplit')
             lstHeaderTypes.append('b')
-            iSplitT, iObjId = self.getComponentsFromNodeId(dctEventData['splitId'])
+            if not dctEventData['splitId'] is None:
+                iSplitT, iObjId = self.getComponentsFromNodeId(dctEventData['splitId'])
+            else:
+                iSplitT = None
 
         table = []
 
@@ -1706,14 +1711,15 @@ class ClassificationCellTracker2(ClassificationCellTracker):
 
                         for cnt, track in enumerate(lstTracks):
                             new_start_id = '%s_%d' % (strStartId, cnt+1)
-                            dctResults[new_start_id] = {#'splitId'  : lstForwardNodeIds[iSplitIdx-1],
+                            dctResults[new_start_id] = {'splitId'  : lstForwardNodeIds[iSplitIdx-1],
                                                         'eventId'  : strNodeId,
                                                         'maxLength': track_length,
                                                         'tracks'   : [track],
                                                         }
                     else:
                         lstNodeIds = lstBackwardNodeIds + lstForwardNodeIds
-                        dctResults[strStartId] = {'eventId'  : strNodeId,
+                        dctResults[strStartId] = {'splitId'  : None,
+                                                  'eventId'  : strNodeId,
                                                   'maxLength': track_length,
                                                   'tracks'   : [lstNodeIds],
                                                   }

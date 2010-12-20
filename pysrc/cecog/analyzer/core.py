@@ -57,7 +57,7 @@ from cecog.traits.config import NAMING_SCHEMAS
 from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACTION
 from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
 
-#from cecog.analyzer.cutter import Cutter
+from cecog.analyzer.gallery import EventGallery
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -255,7 +255,13 @@ class PositionAnalyzer(object):
         #max_frames = max(self.lstAnalysisFrames)
         filename_netcdf = os.path.join(self._path_dump, '%s.nc4' % self.P)
         self.oSettings.set_section('Output')
-        oTimeHolder = TimeHolder(self.P, self.tplChannelIds, filename_netcdf,
+        channel_names = [PrimaryChannel.NAME]
+        for name in [SecondaryChannel.NAME, TertiaryChannel.NAME]:
+            if self.oSettings.get('Processing', '%s_processchannel' % name.lower()):
+                channel_names.append(name)
+        oTimeHolder = TimeHolder(self.P,
+                                 channel_names,
+                                 filename_netcdf,
                                  self._meta_data, self.oSettings,
                                  create_nc=self.oSettings.get2('netcdf_create_file'),
                                  reuse_nc=self.oSettings.get2('netcdf_reuse_file')
@@ -326,7 +332,7 @@ class PositionAnalyzer(object):
                                           strPathOut=strPathOutPositionStats,
                                           **tracker_options)
 
-            primary_channel_id = self.channel_mapping[self.PRIMARY_CHANNEL]
+            primary_channel_id = PrimaryChannel.NAME
             self.oCellTracker.initTrackingAtTimepoint(primary_channel_id, 'primary')
 
         else:
@@ -341,17 +347,31 @@ class PositionAnalyzer(object):
                                      )
 
         self.export_features = {}
-        for channel, channel_id in self.channel_mapping.iteritems():
+        for name in [PrimaryChannel.NAME,
+                     SecondaryChannel.NAME,
+                     TertiaryChannel.NAME]:
             #if self.oSettings.get('Classification', self._resolve_name(channel, 'featureextraction')):
             region_features = {}
-            if channel == self.PRIMARY_CHANNEL:
-                regions = self.oSettings.get('ObjectDetection', self._resolve_name(channel, 'regions'))
-            else:
+            prefix = name.lower()
+            if name == PrimaryChannel.NAME:
+                regions = self.oSettings.get('ObjectDetection', '%s_regions' % prefix)
+            elif name == SecondaryChannel.NAME:
                 regions = [v for k,v in SECONDARY_REGIONS.iteritems()
                            if self.oSettings.get('ObjectDetection', k)]
+            elif name == TertiaryChannel.NAME:
+                regions = [v for k,v in TERTIARY_REGIONS.iteritems()
+                           if self.oSettings.get('ObjectDetection', k)]
+
             for region in regions:
-                region_features[region] = self.oSettings.get('General', self._resolve_name(channel, 'featureextraction_exportfeaturenames'))
-            self.export_features[channel_id] = region_features
+                # export all features extracted per regions
+                if self.oSettings.get('Output', 'events_export_all_features'):
+                    region_features[region] = None
+                # export selected features from settings
+                else:
+                    region_features[region] = \
+                        self.oSettings.get('General',
+                                           '%s_featureextraction_exportfeaturenames' % prefix)
+            self.export_features[name] = region_features
 
 
         iNumberImages = self._analyzePosition(oCellAnalyzer)
@@ -432,25 +452,36 @@ class PositionAnalyzer(object):
                     self._qthread.set_stage_info(stage_info)
 
 
-            #if self.oSettings.bDoObjectCutting:
-#            if True:
-#
-#                strPathCutter = os.path.join(self.strPathOutPosition, "cutter")
-#                # clear the cutter data
-#                if os.path.isdir(strPathCutter):
-#                    shutil.rmtree(strPathCutter)
-#                for strRenderName in self.oSettings.lstCutterRenderInfos:
-#                    strPathCutterIn = os.path.join(self.strPathOutPositionImages, strRenderName)
-#                    if os.path.isdir(strPathCutterIn):
-#                        strPathCutterOut = os.path.join(strPathCutter, strRenderName)
-#                        self._oLogger.info("running Cutter for '%s'..." % strRenderName)
-#                        Cutter(self.oCellTracker,
-#                               strPathCutterIn,
-#                               self.P,
-#                               strPathCutterOut,
-#                               self._meta_data)#,
-#                               #**self.oSettings.dctCutterInfos)
-#
+            if self.oSettings.get('Output', 'events_export_gallery_images'):
+
+                strPathCutter = os.path.join(self.strPathOutPosition, "gallery")
+                # clear the cutter data
+                if os.path.isdir(strPathCutter):
+                    shutil.rmtree(strPathCutter)
+                gallery_images = ['primary']
+                for prefix in [SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]:
+                    if self.oSettings.get('Processing',
+                                          '%s_processchannel' % prefix):
+                        gallery_images.append(prefix)
+                for render_name in gallery_images:
+                    strPathCutterIn = os.path.join(self.strPathOutPositionImages, render_name)
+                    if os.path.isdir(strPathCutterIn):
+                        strPathCutterOut = os.path.join(strPathCutter, render_name)
+                        self._oLogger.info("running Cutter for '%s'..." % render_name)
+                        image_size =\
+                            self.oSettings.get('Output', 'events_gallery_image_size')
+                        EventGallery(self.oCellTracker,
+                                     strPathCutterIn,
+                                     self.P,
+                                     strPathCutterOut,
+                                     self._meta_data,
+                                     oneFilePerTrack=True,
+                                     size=(image_size,image_size))
+                        # FIXME: be careful here. normally only raw images are
+                        #        used for the cutter and can be deleted
+                        #        afterwards
+                        shutil.rmtree(strPathCutterIn, ignore_errors=True)
+
 #            if (isinstance(oCellTracker, PlotCellTracker) and
 #                hasattr(self.oSettings, "bDoObjectCutting3") and
 #                self.oSettings.bDoObjectCutting3):
@@ -696,7 +727,7 @@ class PositionAnalyzer(object):
                                     lstFeatureCategories += FEATURE_MAP[feature]
 
                         # temp: print fetures to be calculated
-                        print 'features: ', lstFeatureCategories
+                        #print 'features: ', lstFeatureCategories
 
                         dctFeatureParameters = {}
                         if feature_extraction:
@@ -869,13 +900,18 @@ class PositionAnalyzer(object):
 
 
                 self.oSettings.set_section('General')
-                print self.oSettings.get2('rendering')
+                #print self.oSettings.get2('rendering')
                 for strType, dctRenderInfo in self.oSettings.get2('rendering').iteritems():
                     strPathOutImages = os.path.join(self.strPathOutPositionImages, strType)
+                    if strType in [PrimaryChannel.PREFIX, SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]:
+                        images_renderer = None
+                    else:
+                        images_renderer = images
                     img_rgb, filename = oCellAnalyzer.render(strPathOutImages, dctRenderInfo=dctRenderInfo,
                                                              writeToDisc=self.oSettings.get('Output', 'rendering_contours_discwrite'),
-                                                             images=images)
-                    if not self._qthread is None and not img_rgb is None:
+                                                             images=images_renderer)
+                    if (not self._qthread is None and not img_rgb is None and
+                        not strType in [PrimaryChannel.PREFIX, SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]):
                         #print strType, self._qthread.get_renderer(), self.oSettings.get('Rendering', 'rendering')
                         self._qthread.set_image(strType,
                                                 img_rgb,

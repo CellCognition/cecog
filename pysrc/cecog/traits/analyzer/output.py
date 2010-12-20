@@ -28,7 +28,9 @@ __all__ = ['SectionOutput']
 # cecog imports:
 #
 from cecog.traits.config import _Section
-from cecog.gui.guitraits import BooleanTrait
+from cecog.gui.guitraits import (BooleanTrait,
+                                 IntTrait,
+                                 )
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -65,6 +67,12 @@ class SectionOutput(_Section):
             BooleanTrait(False, label='Export detailed object data')),
         ('export_track_data',
             BooleanTrait(False, label='Export track data')),
+        ('events_export_all_features',
+            BooleanTrait(False, label='Export all features per event')),
+        ('events_export_gallery_images',
+            BooleanTrait(False, label='Export gallery images')),
+        ('events_gallery_image_size',
+            IntTrait(50, 1, 1000, label='Gallery image size (pixel)')),
         ]),
      ('ImageContainer',
        [('imagecontainer_create_file',

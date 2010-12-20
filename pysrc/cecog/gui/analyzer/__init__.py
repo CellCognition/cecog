@@ -979,7 +979,7 @@ class _ProcessorMixin(object):
     def _on_update_stage_info(self, info):
         sep = '   |   '
         info = dict([(str(k), v) for k,v in info.iteritems()])
-        print info
+        #print info
         if self.CONTROL == CONTROL_1:
             if info['stage'] == 0:
                 self._progress0.setRange(info['min'], info['max'])
