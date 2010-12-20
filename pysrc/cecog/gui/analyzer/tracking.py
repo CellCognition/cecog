@@ -122,6 +122,7 @@ class TrackingFrame(_BaseFrame, _ProcessorMixin):
             settings.set2('primary_classification', False)
             settings.set2('secondary_classification', False)
             settings.set2('secondary_processChannel', False)
+            settings.set('Output', 'events_export_gallery_images', False)
             settings.set('General', 'rendering', {'primary_contours': {prim_id: {'raw': ('#FFFFFF', 1.0),
                                                                                  'contours': {'primary': ('#FF0000', 1, show_ids)}}}})
         else:
