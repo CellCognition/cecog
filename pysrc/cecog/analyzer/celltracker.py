@@ -1068,7 +1068,7 @@ class PlotCellTracker(CellTracker):
                     lstFeatureNames = oRegion.getFeatureNames()
                     #print "moo123", lstFeatureNames
 
-                lstHeaderNames = [self.OBJID_COLUMN_PATTERN]
+                lstHeaderNames += [self.OBJID_COLUMN_PATTERN]
 
                 if self.getOption('bHasClassificationData'):
                     lstHeaderNames += [self.CLASS_COLUMN_PATTERN % x
