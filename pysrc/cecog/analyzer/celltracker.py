@@ -804,10 +804,10 @@ class PlotCellTracker(CellTracker):
     FEATURE_FLAT_PATTERN = "feature__%s"
     CLASS_FLAT_PATTERN = "class__%s"
     TRACKING_FLAT_PATTERN = "tracking__%s"
-    FEATURE_COLUMN_PATTERN = "feature__%s__%s"
-    TRACKING_COLUMN_PATTERN = "tracking__%s__%s"
-    CLASS_COLUMN_PATTERN = "class__%s__%s"
-    OBJID_COLUMN_PATTERN = "objId__%s"
+    FEATURE_COLUMN_PATTERN = "feature__%s"
+    TRACKING_COLUMN_PATTERN = "tracking__%s"
+    CLASS_COLUMN_PATTERN = "class__%s"
+    OBJID_COLUMN_PATTERN = "objId"
 
     def __init__(self, **dctOptions):
         super(PlotCellTracker, self).__init__(**dctOptions)
@@ -1054,10 +1054,10 @@ class PlotCellTracker(CellTracker):
             if iT is None:
                 #print "no tracks found for event '%strEventId'" % strEventId
                 return
-            elif lstChildIds is None:
-                lstChildIds = [chr(65+i) for i in range(len(lstObjectIds))]
-            else:
-                assert len(lstChildIds) == len(lstObjectIds)
+#            elif lstChildIds is None:
+#                lstChildIds = [chr(65+i) for i in range(len(lstObjectIds))]
+#            else:
+#                assert len(lstChildIds) == len(lstObjectIds)
 
             oChannel = self._dctTimeChannels[iT][strChannelId]
             oRegion = oChannel.get_region(strRegionId)
@@ -1068,26 +1068,21 @@ class PlotCellTracker(CellTracker):
                     lstFeatureNames = oRegion.getFeatureNames()
                     #print "moo123", lstFeatureNames
 
-                lstHeaderNames += [self.OBJID_COLUMN_PATTERN % strChild
-                                   for strChild in lstChildIds]
-                #lstFeatureTypes += ['i'] * len(lstChildIds)
+                lstHeaderNames = [self.OBJID_COLUMN_PATTERN]
 
                 if self.getOption('bHasClassificationData'):
-                    lstHeaderNames += [self.CLASS_COLUMN_PATTERN % (strChild, x)
-                                       for strChild in lstChildIds
+                    lstHeaderNames += [self.CLASS_COLUMN_PATTERN % x
                                        for x in ['name', 'label', 'probability']]
                     #lstFeatureTypes += ['c', 'i', 'c'] * len(lstChildIds)
 
-                lstHeaderNames += [self.FEATURE_COLUMN_PATTERN % (strChild, strFeatureName)
-                                   for strChild in lstChildIds
+                lstHeaderNames += [self.FEATURE_COLUMN_PATTERN % strFeatureName
                                    for strFeatureName in lstFeatureNames]
                 #lstFeatureTypes += ['f'] * (len(lstFeatureNames) * len(lstChildIds))
 
                 tracking_features = ['center_x','center_y',
                                      'upperleft_x', 'upperleft_y',
                                      'lowerright_x', 'lowerright_y']
-                lstHeaderNames += [self.TRACKING_COLUMN_PATTERN % (strChild, strFeatureName)
-                                   for strChild in lstChildIds
+                lstHeaderNames += [self.TRACKING_COLUMN_PATTERN % strFeatureName
                                    for strFeatureName in tracking_features]
                 #lstFeatureTypes += ['i'] * (len(tracking_features) * len(lstChildIds))
 
@@ -1105,32 +1100,33 @@ class PlotCellTracker(CellTracker):
             if bHasSplitId:
                 dctData['isSplit'] = 1 if iT == iSplitT else 0
 
-            #print iT, strChannelId, strRegionId, lstObjectIds
-            for iIdx, iObjId in enumerate(lstObjectIds):
-                if iObjId in oRegion:
-                    oObj = oRegion[iObjId]
+            print iT, strChannelId, strRegionId, lstObjectIds
+            #for iIdx, iObjId in enumerate(lstObjectIds):
+            iObjId = lstObjectIds[0]
+            if iObjId in oRegion:
+                oObj = oRegion[iObjId]
 
-                    dctData[self.OBJID_COLUMN_PATTERN % lstChildIds[iIdx]] = iObjId
+                dctData[self.OBJID_COLUMN_PATTERN] = iObjId
 
-                    # classification data
-                    if self.getOption('bHasClassificationData'):
-                        dctData[self.CLASS_COLUMN_PATTERN % (lstChildIds[iIdx], 'label')] = oObj.iLabel
-                        dctData[self.CLASS_COLUMN_PATTERN % (lstChildIds[iIdx], 'name')] = oObj.strClassName
-                        dctData[self.CLASS_COLUMN_PATTERN % (lstChildIds[iIdx], 'probability')] =\
-                            ','.join(['%d:%.5f' % (int(x),y) for x,y in oObj.dctProb.iteritems()])
+                # classification data
+                if self.getOption('bHasClassificationData'):
+                    dctData[self.CLASS_COLUMN_PATTERN % 'label'] = oObj.iLabel
+                    dctData[self.CLASS_COLUMN_PATTERN % 'name'] = oObj.strClassName
+                    dctData[self.CLASS_COLUMN_PATTERN % 'probability'] =\
+                        ','.join(['%d:%.5f' % (int(x),y) for x,y in oObj.dctProb.iteritems()])
 
-                    # object features
-                    aFeatures = oRegion.getFeaturesByNames(iObjId, lstFeatureNames)
-                    for fFeature, strFeatureName in zip(aFeatures, lstFeatureNames):
-                        dctData[self.FEATURE_COLUMN_PATTERN % (lstChildIds[iIdx], strFeatureName)] = fFeature
+                # object features
+                aFeatures = oRegion.getFeaturesByNames(iObjId, lstFeatureNames)
+                for fFeature, strFeatureName in zip(aFeatures, lstFeatureNames):
+                    dctData[self.FEATURE_COLUMN_PATTERN % strFeatureName] = fFeature
 
-                    # object tracking data (absolute center)
-                    dctData[self.TRACKING_COLUMN_PATTERN % (lstChildIds[iIdx], 'center_x')] = oObj.oCenterAbs[0]
-                    dctData[self.TRACKING_COLUMN_PATTERN % (lstChildIds[iIdx], 'center_y')] = oObj.oCenterAbs[1]
-                    dctData[self.TRACKING_COLUMN_PATTERN % (lstChildIds[iIdx], 'upperleft_x')] = oObj.oRoi.upperLeft[0]
-                    dctData[self.TRACKING_COLUMN_PATTERN % (lstChildIds[iIdx], 'upperleft_y')] = oObj.oRoi.upperLeft[1]
-                    dctData[self.TRACKING_COLUMN_PATTERN % (lstChildIds[iIdx], 'lowerright_x')] = oObj.oRoi.lowerRight[0]
-                    dctData[self.TRACKING_COLUMN_PATTERN % (lstChildIds[iIdx], 'lowerright_y')] = oObj.oRoi.lowerRight[1]
+                # object tracking data (absolute center)
+                dctData[self.TRACKING_COLUMN_PATTERN % 'center_x'] = oObj.oCenterAbs[0]
+                dctData[self.TRACKING_COLUMN_PATTERN % 'center_y'] = oObj.oCenterAbs[1]
+                dctData[self.TRACKING_COLUMN_PATTERN % 'upperleft_x'] = oObj.oRoi.upperLeft[0]
+                dctData[self.TRACKING_COLUMN_PATTERN % 'upperleft_y'] = oObj.oRoi.upperLeft[1]
+                dctData[self.TRACKING_COLUMN_PATTERN % 'lowerright_x'] = oObj.oRoi.lowerRight[0]
+                dctData[self.TRACKING_COLUMN_PATTERN % 'lowerright_y'] = oObj.oRoi.lowerRight[1]
 
             #print dctData
             table.append(dctData)
