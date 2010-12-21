@@ -452,6 +452,10 @@ class PositionAnalyzer(object):
                     self._qthread.set_stage_info(stage_info)
 
 
+            # remove all features from all channels to free memory
+            # for the generation of gallery images
+            oTimeHolder.purge_features()
+
             if self.oSettings.get('Output', 'events_export_gallery_images'):
 
                 strPathCutter = os.path.join(self.strPathOutPosition, "gallery")

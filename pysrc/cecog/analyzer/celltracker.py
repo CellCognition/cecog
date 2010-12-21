@@ -1100,7 +1100,7 @@ class PlotCellTracker(CellTracker):
             if bHasSplitId:
                 dctData['isSplit'] = 1 if iT == iSplitT else 0
 
-            #print iT, strChannelId, strRegionId, lstObjectIds
+            print iT, strChannelId, strRegionId, lstObjectIds
             #for iIdx, iObjId in enumerate(lstObjectIds):
             iObjId = lstObjectIds[0]
             if iObjId in oRegion:
@@ -1127,11 +1127,15 @@ class PlotCellTracker(CellTracker):
                 dctData[self.TRACKING_COLUMN_PATTERN % 'upperleft_y'] = oObj.oRoi.upperLeft[1]
                 dctData[self.TRACKING_COLUMN_PATTERN % 'lowerright_x'] = oObj.oRoi.lowerRight[0]
                 dctData[self.TRACKING_COLUMN_PATTERN % 'lowerright_y'] = oObj.oRoi.lowerRight[1]
+            else:
+                # we rather skip the entire event in case the object ID is not valid
+                return
 
             #print dctData
             table.append(dctData)
 
-        write_table(strFilename, table, column_names=lstHeaderNames)
+        if len(table) > 0:
+            write_table(strFilename, table, column_names=lstHeaderNames)
 
 
     def _forwardVisitor(self, strNodeId, dctResults, dctEdges, iLevel=0, strStartId=None):
