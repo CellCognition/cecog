@@ -698,7 +698,7 @@ class CellTracker(OptionManager):
                     #print " * node removed by first_filter:", node_id
 
 
-       # find all nodes which are not reachable from the first timepoint
+        # find all nodes which are not reachable from the first timepoint
         nodeL = self.node_timeD[1]
         reachableD = {}
         edgeD = {}
@@ -919,7 +919,7 @@ class PlotCellTracker(CellTracker):
 
                     if self.getOption("bExportTrackFeatures"):
                         for strChannelId, dctRegions in dctChannels.iteritems():
-                            print strChannelId, dctRegions,self._dctTimeChannels.channels
+                            #print strChannelId, dctRegions,self._dctTimeChannels.channels
                             if strChannelId in self._dctTimeChannels.channels:
                                 for strRegionId, lstFeatureNames in dctRegions.iteritems():
 
@@ -1018,7 +1018,7 @@ class PlotCellTracker(CellTracker):
 
     def exportChannelData(self, dctEventData, strFilename, strChannelId, strRegionId, lstFeatureNames):
         bHasFeatures = False
-        lstChildIds = None
+        #lstChildIds = None
 
         strEventId = dctEventData['eventId']
         iEventT, iObjId = self.getComponentsFromNodeId(strEventId)
@@ -1100,7 +1100,7 @@ class PlotCellTracker(CellTracker):
             if bHasSplitId:
                 dctData['isSplit'] = 1 if iT == iSplitT else 0
 
-            print iT, strChannelId, strRegionId, lstObjectIds
+            #print iT, strChannelId, strRegionId, lstObjectIds
             #for iIdx, iObjId in enumerate(lstObjectIds):
             iObjId = lstObjectIds[0]
             if iObjId in oRegion:

@@ -644,7 +644,7 @@ class PositionAnalyzer(object):
                                                         channel=self.tplChannelIds,
                                                         interrupt_channel=True,
                                                         interrupt_zslice=True):
-            print frame
+            #print frame
 
             if not self._qthread is None:
                 if self._qthread.get_abort():
@@ -663,11 +663,11 @@ class PositionAnalyzer(object):
             oCellAnalyzer.initTimepoint(frame)
             # loop over the channels
             for channel_id, iter_zslice in iter_channel:
-                print channel_id
+                #print channel_id
 
                 zslice_images = []
                 for zslice, meta_image in iter_zslice:
-                    print zslice
+                    #print zslice
 
                     #P, iFrame, strC, iZ = oMetaImage.position, oMetaImage.time, oMetaImage.channel, oMetaImage.zslice
                     #self._oLogger.info("Image P %s, T %05d / %05d, C %s, Z %d" % (self.P, iFrame, iLastFrame, strC, iZ))
@@ -923,39 +923,46 @@ class PositionAnalyzer(object):
                         time.sleep(.05)
 
 
+                prefixes = [PrimaryChannel.PREFIX, SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]
                 self.oSettings.set_section('General')
                 #print self.oSettings.get2('rendering')
                 for strType, dctRenderInfo in self.oSettings.get2('rendering').iteritems():
-                    strPathOutImages = os.path.join(self.strPathOutPositionImages, strType)
-                    if strType in [PrimaryChannel.PREFIX, SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]:
-                        images_renderer = None
-                    else:
-                        images_renderer = images
-                    img_rgb, filename = oCellAnalyzer.render(strPathOutImages, dctRenderInfo=dctRenderInfo,
-                                                             writeToDisc=self.oSettings.get('Output', 'rendering_contours_discwrite'),
-                                                             images=images_renderer)
-                    if (not self._qthread is None and not img_rgb is None and
-                        not strType in [PrimaryChannel.PREFIX, SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]):
-                        #print strType, self._qthread.get_renderer(), self.oSettings.get('Rendering', 'rendering')
-                        self._qthread.set_image(strType,
-                                                img_rgb,
-                                                'P %s - T %05d' % (self.origP, frame),
-                                                filename)
-                        time.sleep(.05)
-                    if not self._myhack is None and not img_rgb is None:
-                        self._myhack.set_image(img_rgb)
-                        channel = oCellAnalyzer.getChannel(PrimaryChannel.NAME)
-                        if channel.has_region('primary'):
-                            region = channel.get_region('primary')
-                            container = channel.get_container('primary')
-                            coords = {}
-                            for obj_id in region:
-                                coords[obj_id] = \
-                                    [(pos[0]+region[obj_id].oRoi.upperLeft[0],
-                                      pos[1]+region[obj_id].oRoi.upperLeft[1])
-                                     for pos in
-                                     container.getCrackCoordinates(obj_id)]
-                            self._myhack.set_coords(coords)
+                    if not strType in prefixes:
+                        strPathOutImages = os.path.join(self.strPathOutPositionImages, strType)
+                        img_rgb, filename = oCellAnalyzer.render(strPathOutImages,
+                                                                 dctRenderInfo=dctRenderInfo,
+                                                                 writeToDisc=self.oSettings.get('Output', 'rendering_contours_discwrite'),
+                                                                 images=images)
+                        if (not self._qthread is None and not img_rgb is None and
+                            not strType in [PrimaryChannel.PREFIX, SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]):
+                            #print strType, self._qthread.get_renderer(), self.oSettings.get('Rendering', 'rendering')
+                            self._qthread.set_image(strType,
+                                                    img_rgb,
+                                                    'P %s - T %05d' % (self.origP, frame),
+                                                    filename)
+                            time.sleep(.05)
+                        if not self._myhack is None and not img_rgb is None:
+                            self._myhack.set_image(img_rgb)
+                            channel = oCellAnalyzer.getChannel(PrimaryChannel.NAME)
+                            if channel.has_region('primary'):
+                                region = channel.get_region('primary')
+                                container = channel.get_container('primary')
+                                coords = {}
+                                for obj_id in region:
+                                    coords[obj_id] = \
+                                        [(pos[0]+region[obj_id].oRoi.upperLeft[0],
+                                          pos[1]+region[obj_id].oRoi.upperLeft[1])
+                                         for pos in
+                                         container.getCrackCoordinates(obj_id)]
+                                self._myhack.set_coords(coords)
+
+                # treat the raw images used for the gallery images differently
+                for strType, dctRenderInfo in self.oSettings.get2('rendering').iteritems():
+                    if strType in prefixes:
+                        strPathOutImages = os.path.join(self.strPathOutPositionImages, strType)
+                        img_rgb, filename = oCellAnalyzer.render(strPathOutImages,
+                                                                 dctRenderInfo=dctRenderInfo,
+                                                                 writeToDisc=True)
 
                 if self.oSettings.get('Output', 'rendering_labels_discwrite'):
                     strPathOutImages = os.path.join(self.strPathOutPositionImages, '_labels')

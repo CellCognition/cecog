@@ -80,7 +80,7 @@ class EventGallery(object):
 
             if writeDescription:
                 oFile = file(os.path.join(strPathOutEvent,
-                                          "_%s.dat" % self._format_name(oP, iStartT, iObjId, branch_id)), "w")
+                                          "_%s.txt" % self._format_name(oP, iStartT, iObjId, branch_id)), "w")
                 lstData = ["Frame", "ObjId", "x1", "y1", "x2", "y2"]
                 oFile.write("%s\n" % "\t".join(map(str, lstData)))
 
@@ -182,9 +182,11 @@ class EventGallery(object):
                     ccore.writeImage(img_out,
                                      filename_out)
 
-                    shutil.copy2(os.path.join(event_path, '_%s.dat' % event_id),
-                                 os.path.join(path_out, '_%s.tsv' % event_id))
-                    shutil.rmtree(event_path, True)
+                    path_out_info = os.path.join(path_out, '_info')
+                    safe_mkdirs(path_out_info)
+                    shutil.copy2(os.path.join(event_path, '_%s.txt' % event_id),
+                                 os.path.join(path_out_info, '_%s.txt' % event_id))
+                    shutil.rmtree(event_path, ignore_errors=True)
 
 
     def _getImage(self, strPathIn, iT):
