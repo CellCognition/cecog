@@ -351,7 +351,7 @@ class TimeHolder(OrderedDict):
     def purge_features(self):
         for channels in self.itervalues():
             for channel in channels.itervalues():
-                channel.purge(features=[])
+                channel.purge(features={})
 
     def apply_channel(self, oChannel):
         iT = self._iCurrentT
