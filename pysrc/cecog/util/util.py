@@ -154,6 +154,9 @@ def unlist(a):
         b += x
     return b
 
+def yesno(state):
+    return 'yes' if state else 'no'
+
 def resolve_os_name():
     os_str = None
     if is_windows:

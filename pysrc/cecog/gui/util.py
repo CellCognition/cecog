@@ -62,7 +62,7 @@ QRC_TOKEN = 'qrc:/'
 #
 def numpy_to_qimage(data, colors=None):
     w, h = data.shape[:2]
-    #print data.shape, data.ndim
+    #print data.dtype, data.ndim, data.shape
     if data.dtype == numpy.uint8:
         if data.ndim == 2:
             shape = (numpy.ceil(w / 4.) * 4, h)
@@ -72,17 +72,19 @@ def numpy_to_qimage(data, colors=None):
             else:
                 image = data
             format = QImage.Format_Indexed8
-            #colors = [QColor(i,i,i) for i in range(256)]
+            colors = [QColor(i,i,i) for i in range(256)]
         elif data.ndim == 3:
-            c = data.shape[2]
-            shape = (int(numpy.ceil(w / 4.) * 4), h, c)
-            if c == 3:
+            if data.shape[2] == 3:
+                c = data.shape[2]
+                shape = (int(numpy.ceil(w / 4.) * 4), h, c)
                 if shape != data.shape:
                     image = numpy.zeros(shape, numpy.uint8)
                 else:
                     image = data
                 format = QImage.Format_RGB888
-            elif data.shape[2] == 4:
+            elif data.shape[0] == 3:
+                w, h = data.shape[1:3]
+                image = data
                 format = QImage.Format_RGB32
 
     qimage = QImage(image, w, h, format)

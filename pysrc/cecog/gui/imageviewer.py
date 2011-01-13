@@ -58,6 +58,34 @@ from cecog.util.color import hex_to_rgb
 #-------------------------------------------------------------------------------
 # classes:
 #
+class ItemHoverMixin:
+
+    SCALE = 1.1
+
+    def __init__(self, hover=True):
+        self._oldwidth = self.pen().width()
+        self.setAcceptHoverEvents(hover)
+
+    def hoverEnterEvent(self, ev):
+        pen = self.pen()
+        self._oldwidth = self.pen().width()
+        pen.setWidth(3)
+        self.setPen(pen)
+        QGraphicsItem.hoverEnterEvent(self, ev)
+
+    def hoverLeaveEvent(self, ev):
+        pen = self.pen()
+        pen.setWidth(self._oldwidth)
+        self.setPen(pen)
+        QGraphicsItem.hoverLeaveEvent(self, ev)
+
+
+class HoverPolygonItem(QGraphicsPolygonItem, ItemHoverMixin):
+
+    def __init__(self, polygon, hover=True):
+        QGraphicsPolygonItem.__init__(self, polygon)
+        ItemHoverMixin.__init__(self, hover=hover)
+
 
 class ImageScene(QGraphicsScene):
 
@@ -73,6 +101,7 @@ class ImageViewer(QGraphicsView):
     image_mouse_pressed = pyqtSignal(QPointF, int, int)
     image_mouse_dblclk = pyqtSignal(QPointF)
     zoom_info_updated = pyqtSignal(float)
+    #object_clicked = pyqtSignal(QGraphicsItem)
 
     def __init__(self, parent, auto_resize=False):
         super(ImageViewer, self).__init__(parent)
@@ -93,6 +122,7 @@ class ImageViewer(QGraphicsView):
         self._move_on = False
         self._click_on = False
         self._home_pos = None
+        self._objects = set()
 
         self._pixmap = QGraphicsPixmapItem()
         self._pixmap.setShapeMode(QGraphicsPixmapItem.BoundingRectShape)
@@ -135,8 +165,14 @@ class ImageViewer(QGraphicsView):
         self._qimage.ndarray = data
         self._update()
 
-    def from_pyvigra(self, image):
-        self._qimage = numpy_to_qimage(image.to_array())
+    def from_vigra(self, image):
+#        if image.width % 4 != 0:
+#            image = ccore.subImage(image, ccore.Diff2D(0,0),
+#                                   ccore.Diff2D(image.width-(image.width % 4),
+#                                                image.height))
+#        qimage = numpy_to_qimage(image.toArray(copy=True))
+
+        self._qimage = numpy_to_qimage(image.toArray(copy=False))
         # safe the data for garbage collection
         self._qimage.vigra_image = image
         self._update()
@@ -218,6 +254,33 @@ class ImageViewer(QGraphicsView):
     def set_auto_resize(self, state):
         self._auto_resize = state
 
+    def set_objects_by_crackcoords(self, coords):
+        scene = self.scene()
+        for obj_id, crack in coords.iteritems():
+            poly = QPolygonF([QPointF(*pos) for pos in crack])
+            item = HoverPolygonItem(poly, hover=True)
+            item.setPen(QPen(Qt.white))
+            item.setData(0, obj_id)
+            scene.addItem(item)
+            self._objects.add(item)
+
+    def remove_objects(self):
+        scene = self.scene()
+        for item in self._objects:
+            scene.removeItem(item)
+        self._objects.clear()
+
+    def get_object_item(self, point):
+        scene = self.scene()
+        item = scene.itemAt(point)
+        if isinstance(item, HoverPolygonItem):
+            found_item = item
+        elif isinstance(item.parentItem(), HoverPolygonItem):
+            found_item = item.parentItem()
+        else:
+            found_item = None
+        return found_item
+
     # protected method overload
 
     def keyPressEvent(self, ev):
@@ -233,7 +296,6 @@ class ImageViewer(QGraphicsView):
             self._move_on = False
 
     def enterEvent(self, ev):
-        print "moo", ev
         super(ImageViewer, self).enterEvent(ev)
         self.setFocus()
         self._scene.setFocus()
