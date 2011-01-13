@@ -489,8 +489,9 @@ class AnalyzerMainWindow(QMainWindow):
         self._exit_app()
 
     def _on_browser_open(self):
-        #self._on_load_input()
-        print self._imagecontainer
+        self._imagecontainer = ImageContainer.from_settings(self._settings,
+                                                            force=False)
+        self._meta_data = self._imagecontainer.meta_data
         self._browser = Browser(self._settings,
                                 self._imagecontainer)
         self._browser.show()
@@ -512,6 +513,9 @@ class AnalyzerMainWindow(QMainWindow):
         else:
             force = False
 
+        self._load_image_container(force)
+
+    def _load_image_container(self, force=False, wait=False):
         dlg = QProgressDialog()
         dlg.setLabelText('Please wait until the input structure is scanned...')
         dlg.setWindowModality(Qt.WindowModal)
@@ -524,7 +528,9 @@ class AnalyzerMainWindow(QMainWindow):
         fct = lambda x,y : lambda : self._on_load_finished(x,y)
         thread.finished.connect(fct(dlg, thread))
         thread.start()
-        thread.setPriority(QThread.LowestPriority)
+        #thread.setPriority(QThread.LowestPriority)
+        if wait:
+            thread.wait()
 
     def _on_load_finished(self, dlg, thread):
         dlg.reset()
@@ -645,18 +651,18 @@ if __name__ == "__main__":
         if idx > -1:
             package_path = working_path[:idx]
             is_app = True
-#    else:
-#        package_path = working_path
-#        is_app = True
+    else:
+        package_path = working_path
+        is_app = True
 
     if not package_path is None:
         set_package_path(package_path)
         log_path = os.path.join(package_path, 'log')
         safe_mkdirs(log_path)
-        sys.stdout = \
-            file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
-        sys.stderr = \
-            file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
+#        sys.stdout = \
+#            file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
+#        sys.stderr = \
+#            file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
 
     splash = QSplashScreen(QPixmap(':cecog_splash'))
     splash.show()
