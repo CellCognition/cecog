@@ -229,7 +229,7 @@ def strip_prefix(prefix_path, path):
 
 def collect_files(start_dir, extensions,
                  absolute=False, follow=False, recursive=True, exclude=None,
-                 ignore_case=False, force_python=False):
+                 ignore_case=False, force_python=True):
     """
     Collects all files that have any of the given extensions from a
     directory tree.
