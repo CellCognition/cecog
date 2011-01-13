@@ -29,9 +29,8 @@ __all__ = ['DIMENSION_NAME_POSITION',
 # standard library imports:
 #
 import types, \
-       os, \
-       cPickle as pickle, \
-       pprint
+       os
+import numpy
 
 #------------------------------------------------------------------------------
 # extension module imports:
@@ -51,7 +50,10 @@ from cecog.util.util import convert_package_path
 #
 UINT8 = 'UINT8'
 UINT16 = 'UINT16'
-PIXEL_TYPES = [UINT8, UINT16]
+INT8 = 'INT8'
+INT16 = 'INT16'
+PIXEL_TYPES = [UINT8, UINT16, INT8, INT16]
+PIXEL_INFO = dict((n, n.lower()) for n in PIXEL_TYPES)
 
 DIMENSION_NAME_POSITION = 'position'
 DIMENSION_NAME_TIME = 'time'
@@ -85,6 +87,9 @@ class MetaData(object):
         self.dim_p = None
 
         self.has_timelapse = False
+        self.has_timestamp_info = False
+        self.has_condition_info = False
+        self.has_well_info = False
 
         self.zslices = None
         self.channels = None
@@ -93,32 +98,31 @@ class MetaData(object):
 
         self._timestamps_relative = {}
         self._timestamps_absolute = {}
+        self._timestamp_summary = {}
+
+        self.plate_timestamp_info = None
 
         self._position_well_map = {}
 
         self.pixel_type = None
-#
-#    def _analyzeTimestamps(self):
-#        for iP, dctPosTimestamps in self.dctTimestamps.iteritems():
-#            lstTKeys = dctPosTimestamps.keys()
-#            lstTKeys.sort()
-#            lstDeltas = [dctPosTimestamps[lstTKeys[iIdx+1]] - dctPosTimestamps[lstTKeys[iIdx]]
-#                         for iIdx in range(len(lstTKeys)-1)]
-#            self.dctTimestampDeltas[iP] = lstDeltas
-#            if len(lstDeltas) > 1:
-#                fMean = mean(lstDeltas)
-#                fStd  = std(lstDeltas)
-#                self.dctTimestampStrs[iP] = "%.2fmin (+/- %.3fmin)" % (fMean / 60.0, fStd / 60.0)
-#            else:
-#                self.dctTimestampStrs[iP] = "-"
+
+    @property
+    def pixel_info(self):
+        return PIXEL_INFO[self.pixel_type]
+
+    def get_timestamp_info(self, position):
+        try:
+            info = self._timestamp_summary[position]
+        except KeyError:
+            info = None
+        return info
 
     def get_timestamp_relative(self, position, frame):
         try:
             timestamp = self._timestamps_relative[position][frame]
         except KeyError:
-            return float('NAN')
-        else:
-            return timestamp
+            timestamp = float('NAN')
+        return timestamp
 
     def get_timestamp_absolute(self, position, frame):
         try:
@@ -131,12 +135,14 @@ class MetaData(object):
         if not position in self._timestamps_absolute:
             self._timestamps_absolute[position] = OrderedDict()
         self._timestamps_absolute[position][time] = timestamp
+        self.has_timestamp_info = True
 
     def append_well_subwell_info(self, position, well, subwell):
         if not position in self._position_well_map:
             self._position_well_map[position] = {META_INFO_WELL: well,
                                                  META_INFO_SUBWELL: subwell,
                                                  }
+        self.has_well_info = True
 
     def get_well_and_subwell(self, position):
         if position in self._position_well_map:
@@ -167,15 +173,28 @@ class MetaData(object):
         for position, timestamps in self._timestamps_absolute.iteritems():
             base_time = timestamps.values()[0]
             self._timestamps_relative[position] = OrderedDict()
-            for time, timestamp in timestamps.iteritems():
-                self._timestamps_relative[position][time] = \
+            for frame, timestamp in timestamps.iteritems():
+                self._timestamps_relative[position][frame] = \
                     timestamp - base_time
+        for position, timestamps in self._timestamps_absolute.iteritems():
+            values = numpy.array(timestamps.values())
+            diff = numpy.diff(values)
+            self._timestamp_summary[position] = (numpy.mean(diff),
+                                                 numpy.std(diff))
+
+        if self.has_timestamp_info:
+            values = numpy.array(self._timestamp_summary.values())
+            mean = numpy.mean(values, axis=0)
+            std = numpy.std(values, axis=0)
+            self.plate_timestamp_info = (mean[0],
+                                         std[0] + mean[1])
 
         self.dim_p = len(self.positions)
         self.dim_t = len(self.times)
         self.dim_c = len(self.channels)
         self.dim_z = len(self.zslices)
         self.has_timelapse = self.dim_t > 1
+
 
     def h(self, a):
         if len(a) == 0:
@@ -187,9 +206,6 @@ class MetaData(object):
         return s
 
     def format(self, time=True):
-#        if len(self.dctTimestampStrs) == 0:
-#            self._analyzeTimestamps()
-#        printer = pprint.PrettyPrinter(indent=6, depth=6, width=1)
         strings = []
         head = "*   Imaging MetaData   *"
         line = "*"*len(head)
