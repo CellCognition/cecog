@@ -651,7 +651,10 @@ class CellAnalyzer(PropertyManager):
     def register_channel(self, channel):
         self._channel_registry[channel.NAME] = channel
 
-    def getChannel(self, name):
+    def get_channel_names(self):
+        return self._channel_registry.keys()
+
+    def get_channel(self, name):
         return self._channel_registry[name]
 
     def process(self, apply=True, extract_features=True):
