@@ -23,21 +23,14 @@ __all__ = ['Browser']
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
-import os, \
-       re, \
-       numpy, \
-       time, \
-       shutil, \
-       math
-from xml.dom import minidom
+import math
+import numpy
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
 from pdk.datetimeutils import StopWatch
-from pdk.ordereddict import OrderedDict
-from pdk.fileutils import safe_mkdirs
 
 #-------------------------------------------------------------------------------
 # cecog imports:
@@ -56,6 +49,7 @@ from cecog.analyzer.channel import (PrimaryChannel,
                                     SecondaryChannel,
                                     TertiaryChannel,
                                     )
+from cecog.analyzer import REGION_NAMES_SECONDARY
 from cecog.analyzer.core import AnalyzerCore
 from cecog import ccore
 from cecog.util.util import (hexToRgb,
@@ -65,9 +59,9 @@ from cecog.util.util import (hexToRgb,
 from cecog.learning.learning import BaseLearner
 from cecog.gui.widgets.groupbox import QxtGroupBox
 
-from cecog.gui.navigation import Navigation
-from cecog.gui.channel import Channel
-from cecog.gui.annotation import Annotation
+from cecog.gui.modules.navigation import NavigationModule
+from cecog.gui.modules.display import DisplayModule
+from cecog.gui.modules.annotation import AnnotationModule
 #-------------------------------------------------------------------------------
 # constants:
 #
@@ -101,8 +95,6 @@ class Browser(QMainWindow):
         self._imagecontainer = imagecontainer
         self._meta_data = self._imagecontainer.meta_data
 
-
-        self.grabGesture(Qt.PinchGesture)
         self.grabGesture(Qt.SwipeGesture)
 
         # setup the main menu
@@ -127,45 +119,45 @@ class Browser(QMainWindow):
 #
         act_next_t = self.create_action('Next Time-point',
                                         shortcut=QKeySequence('Right'),
-                                        slot=self._on_shortcut_right)
+                                        slot=self.on_shortcut_right)
         act_prev_t = self.create_action('Previous Time-point',
                                         shortcut=QKeySequence('Left'),
-                                        slot=self._on_shortcut_left)
+                                        slot=self.on_shortcut_left)
         act_resize = self.create_action('Automatically Resize',
                                          shortcut=QKeySequence('SHIFT+CTRL+R'),
-                                         slot=self._on_shortcut_autoresize,
+                                         slot=self.on_shortcut_autoresize,
                                          signal='triggered(bool)',
                                          checkable=True,
                                          checked=True)
         self._act_resize = act_resize
         act_zoomfit = self.create_action('Zoom to Fit',
                                          shortcut=QKeySequence('CTRL+0'),
-                                         slot=self._on_shortcut_zoomfit)
+                                         slot=self.on_shortcut_zoomfit)
         act_zoom100 = self.create_action('Actual Size',
                                          shortcut=QKeySequence('CTRL+1'),
-                                         slot=self._on_shortcut_zoom100)
+                                         slot=self.on_shortcut_zoom100)
         act_zoomin = self.create_action('Zoom In',
                                         shortcut=QKeySequence('CTRL++'),
-                                        slot=self._on_shortcut_zoomin)
+                                        slot=self.on_shortcut_zoomin)
         act_zoomout = self.create_action('Zoom Out',
                                          shortcut=QKeySequence('CTRL+-'),
-                                         slot=self._on_shortcut_zoomout)
+                                         slot=self.on_shortcut_zoomout)
         act_fullscreen = self.create_action('Full Screen',
                                             shortcut=QKeySequence('CTRL+F'),
-                                            slot=self._on_shortcut_fullscreen,
+                                            slot=self.on_shortcut_fullscreen,
                                             signal='triggered(bool)',
                                             checkable=True,
                                             checked=False)
         self._act_fullscreen = act_fullscreen
         act_anti = self.create_action('Antialiasing',
                                       shortcut=QKeySequence('CTRL+ALT+A'),
-                                      slot=self._on_shortcut_antialiasing,
+                                      slot=self.on_shortcut_antialiasing,
                                       signal='triggered(bool)',
                                       checkable=True,
                                       checked=True)
         act_smooth = self.create_action('Smooth Transform',
                                         shortcut=QKeySequence('CTRL+ALT+S'),
-                                        slot=self._on_shortcut_smoothtransform,
+                                        slot=self.on_shortcut_smoothtransform,
                                         signal='triggered(bool)',
                                         checkable=True,
                                         checked=True)
@@ -194,7 +186,7 @@ class Browser(QMainWindow):
 
 
         layout = QVBoxLayout(frame)
-        layout.setContentsMargins(0,0,0,0)
+        layout.setContentsMargins(0, 0, 0, 0)
 
         splitter = QSplitter(Qt.Horizontal, frame)
         #splitter.setSizePolicy(QSizePolicy(QSizePolicy.Minimum,
@@ -206,9 +198,9 @@ class Browser(QMainWindow):
         #splitter.setChildrenCollapsible(False)
         splitter.addWidget(frame)
         splitter.addWidget(self._frame_side)
-        splitter.setStretchFactor(0,1)
-        splitter.setStretchFactor(1,0)
-        splitter.setSizes([None,80])
+        splitter.setStretchFactor(0, 1)
+        splitter.setStretchFactor(1, 0)
+        splitter.setSizes([None, 80])
 
         #self._frame_side.setSizePolicy(QSizePolicy(QSizePolicy.Minimum,
         #                                           QSizePolicy.Expanding))
@@ -218,24 +210,18 @@ class Browser(QMainWindow):
         self._channel = ''
 
         layout = QGridLayout(frame)
-        layout.setContentsMargins(0,0,0,0)
+        layout.setContentsMargins(0, 0, 0, 0)
         self.image_viewer = ImageViewer(frame, auto_resize=True)
-        self.image_viewer.setTransformationAnchor(ImageViewer.AnchorViewCenter)
-        self.image_viewer.setResizeAnchor(ImageViewer.AnchorViewCenter)
-        self.image_viewer.setRenderHints(QPainter.Antialiasing |
-                                          QPainter.SmoothPixmapTransform)
-        self.image_viewer.setViewportUpdateMode(ImageViewer.SmartViewportUpdate)
-        self.image_viewer.setBackgroundBrush(QBrush(QColor('#666666')))
         layout.addWidget(self.image_viewer, 0, 0)
 
         #self.image_viewer.image_mouse_dblclk.connect(self._on_dbl_clk)
-        self.image_viewer.zoom_info_updated.connect(self._on_zoom_info_updated)
+        self.image_viewer.zoom_info_updated.connect(self.on_zoom_info_updated)
 
         self._t_slider = QSlider(Qt.Horizontal, frame)
         self._t_slider.setMinimum(self._meta_data.times[0])
         self._t_slider.setMaximum(self._meta_data.times[-1])
         self._t_slider.setTickPosition(QSlider.TicksBelow)
-        self._t_slider.valueChanged.connect(self._on_time_changed,
+        self._t_slider.valueChanged.connect(self.on_time_changed,
                                             Qt.DirectConnection)
         layout.addWidget(self._t_slider, 1, 0)
 
@@ -251,15 +237,29 @@ class Browser(QMainWindow):
         self._toolbar_grp = QButtonGroup(self._toolbar)
         self._toolbar_grp.setExclusive(True)
 
-        self._tabs = {}
-        self._register_tab(Navigation(self._frame_side, self,
-                                      self._meta_data))
-        self._register_tab(Channel(self._frame_side, self,
-                                   self._meta_data))
-        self._register_tab(Annotation(self._frame_side, self,
-                                      self._settings, self._imagecontainer))
+        region_names = ['Primary - primary']
+        self._settings.set_section('ObjectDetection')
+        for prefix in ['secondary', 'tertiary']:
+            if self._settings.get('Processing', '%s_processchannel' % prefix):
+                for name in REGION_NAMES_SECONDARY:
+                    if self._settings.get2('%s_regions_%s' % (prefix, name)):
+                        region_names.append('%s - %s' % (prefix.capitalize(), name))
 
-        self._activate_tab(Navigation.NAME)
+
+        self._tabs = {}
+        navigation = NavigationModule(self._frame_side, self, self._meta_data)
+        display = DisplayModule(self._frame_side, self, self._meta_data,
+                          region_names)
+        annotation = AnnotationModule(self._frame_side, self, self._settings,
+                                self._imagecontainer)
+        self._register_tab(navigation)
+        self._register_tab(display)
+        self._register_tab(annotation)
+
+        display.show_objects_toggled.connect(self.on_show_objects)
+
+        self._activate_tab(NavigationModule.NAME)
+
 
 #        grp_box = QxtGroupBox('Annotation2', frame_side)
 #        grp_box.setFlat(True)
@@ -292,7 +292,7 @@ class Browser(QMainWindow):
         idx = len(self._tabs)
         name = widget.NAME
         btn = QPushButton(name, self._toolbar)
-        btn.toggled.connect(lambda x: self._on_tab_changed(name))
+        btn.toggled.connect(lambda x: self.on_tab_changed(name))
         btn.setFlat(True)
         btn.setCheckable(True)
         self._toolbar.addWidget(btn)
@@ -306,14 +306,8 @@ class Browser(QMainWindow):
         btn.setChecked(True)
         widget.activate()
 
-    def _on_tab_changed(self, name):
-        self._frame_side.setCurrentWidget(self.get_tab_widget(name))
-
     def get_tab_widget(self, name):
         return self._tabs[name][0]
-
-    def _on_zoom_info_updated(self, info):
-        self.update_statusbar()
 
     def create_action(self, text, slot=None, shortcut=None, icon=None,
                       tooltip=None, checkable=None, signal='triggered()',
@@ -343,15 +337,23 @@ class Browser(QMainWindow):
     def set_coords(self, coords):
         self.image_viewer.remove_objects()
         self.image_viewer.set_objects_by_crackcoords(coords)
-        widget = self.get_tab_widget(Annotation.NAME)
+        widget = self.get_tab_widget(AnnotationModule.NAME)
         widget.set_coords()
 
     def set_image(self, image_dict):
-        widget = self.get_tab_widget(Channel.NAME)
+        widget = self.get_tab_widget(DisplayModule.NAME)
         widget.set_image_dict(image_dict)
         self.update_statusbar()
 
-    def _on_time_changed(self, time):
+    # slots
+
+    def on_tab_changed(self, name):
+        self._frame_side.setCurrentWidget(self.get_tab_widget(name))
+
+    def on_zoom_info_updated(self, info):
+        self.update_statusbar()
+
+    def on_time_changed(self, time):
         self._time = time
         self._process_image()
 
@@ -361,71 +363,77 @@ class Browser(QMainWindow):
         self._position = position
         self._process_image()
 
-    def _on_shortcut_left(self):
+    def on_shortcut_left(self):
         self._t_slider.setValue(self._t_slider.value()-1)
 
-    def _on_shortcut_right(self):
+    def on_shortcut_right(self):
         self._t_slider.setValue(self._t_slider.value()+1)
 
-    def _on_shortcut_up(self):
+    def on_shortcut_up(self):
         pass
 
-    def _on_shortcut_down(self):
+    def on_shortcut_down(self):
         pass
 
-    def _on_shortcut_fullscreen(self, checked):
+    def on_shortcut_fullscreen(self, checked):
         if checked:
             self.showFullScreen()
         else:
             self.showNormal()
         self.raise_()
 
-    def _on_shortcut_antialiasing(self, checked):
+    def on_shortcut_antialiasing(self, checked):
         self.image_viewer.setRenderHint(QPainter.Antialiasing, checked)
         self.image_viewer.update()
 
-    def _on_shortcut_smoothtransform(self, checked):
+    def on_shortcut_smoothtransform(self, checked):
         self.image_viewer.setRenderHint(QPainter.SmoothPixmapTransform,
                                          checked)
         self.image_viewer.update()
 
-    def _on_shortcut_autoresize(self, state):
+    def on_shortcut_autoresize(self, state):
         self.image_viewer.set_auto_resize(state)
         if state:
             self.image_viewer.scale_to_fit()
 
-    def _on_shortcut_zoom100(self):
+    def on_shortcut_zoom100(self):
         self.image_viewer.set_auto_resize(False)
         self._act_resize.setChecked(False)
         self.image_viewer.scale_reset()
 
-    def _on_shortcut_zoomfit(self):
+    def on_shortcut_zoomfit(self):
         self.image_viewer.set_auto_resize(False)
         self._act_resize.setChecked(False)
         self.image_viewer.scale_to_fit()
 
-    def _on_shortcut_zoomin(self):
+    def on_shortcut_zoomin(self):
         self.image_viewer.set_auto_resize(False)
         self._act_resize.setChecked(False)
         self.image_viewer.scale_relative(self.ZOOM_STEP, ensure_fit=False)
 
-    def _on_shortcut_zoomout(self):
+    def on_shortcut_zoomout(self):
         self.image_viewer.set_auto_resize(False)
         self._act_resize.setChecked(False)
         self.image_viewer.scale_relative(1/self.ZOOM_STEP, ensure_fit=True)
 
-    def _on_shortcut_transform(self, checked):
+    def on_shortcut_transform(self, checked):
         if checked:
             self.image_viewer.set_scale_transform(Qt.FastTransformation)
         else:
             self.image_viewer.set_scale_transform(Qt.SmoothTransformation)
         self._process_image()
 
-    def _on_shortcut_class_selected(self, class_label):
+    def on_shortcut_class_selected(self, class_label):
         items = self._find_items_in_class_table(str(class_label),
                                                 self.COLUMN_CLASS_LABEL)
         if len(items) == 1:
             self._class_table.setCurrentItem(items[0])
+
+    def on_show_objects(self, state):
+        self.image_viewer.remove_objects()
+        annotations = self._tabs[AnnotationModule.NAME][0]
+        annotations.set_show_objects(state)
+        self._process_image()
 
     def update_statusbar(self):
         timestamp = self._meta_data.get_timestamp_relative(self._position,
@@ -463,8 +471,8 @@ class Browser(QMainWindow):
         settings.set2('secondary_featureextraction', False)
 
         # FIXME: just interim solution
-        widget = self._tabs[Annotation.NAME][0]
-        settings.set2('objectdetection', widget._detect_objects)
+        widget = self._tabs[DisplayModule.NAME][0]
+        settings.set2('objectdetection', widget.show_objects)
         settings.set2('tracking', False)
         settings.set_section('Output')
         settings.set2('rendering_contours_discwrite', False)
@@ -532,22 +540,6 @@ class Browser(QMainWindow):
                     self._on_shortcut_up()
                 elif gesture.horizontalDirection() == QSwipeGesture.Down:
                     self._on_shortcut_down()
-        # or a pinch gesture was detected
-        elif not ev.gesture(Qt.PinchGesture) is None:
-            gesture = ev.gesture(Qt.PinchGesture)
-            if gesture.state() == Qt.GestureStarted:
-                self.image_viewer.setTransformationAnchor(
-                    ImageViewer.AnchorUnderMouse)
-            f = gesture.scaleFactor()
-            if f != 1.0:
-                self.image_viewer.scale_relative(math.sqrt(f), ensure_fit=True,
-                                                  small_only=True)
-                self.image_viewer.set_auto_resize(False)
-                self._act_resize.setChecked(False)
-
-            if gesture.state() in [Qt.GestureCanceled, Qt.GestureFinished]:
-                self.image_viewer.setTransformationAnchor(
-                    ImageViewer.AnchorViewCenter)
         return True
 
     def event(self, ev):

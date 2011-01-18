@@ -72,7 +72,8 @@ def numpy_to_qimage(data, colors=None):
             else:
                 image = data
             format = QImage.Format_Indexed8
-            colors = [QColor(i,i,i) for i in range(256)]
+            if colors is None:
+                colors = [QColor(i,i,i) for i in range(256)]
         elif data.ndim == 3:
             if data.shape[2] == 3:
                 c = data.shape[2]
@@ -90,8 +91,7 @@ def numpy_to_qimage(data, colors=None):
     qimage = QImage(image, w, h, format)
     qimage.ndarray = image
     if not colors is None:
-        for idx, col in enumerate(colors):
-            qimage.setColor(idx, col.rgb())
+        qimage.setColorTable(colors)
     return qimage
 
 def message(icon, text, parent, info=None, detail=None, buttons=None,

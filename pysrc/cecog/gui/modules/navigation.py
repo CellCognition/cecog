@@ -30,7 +30,7 @@ from PyQt4.Qt import *
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog.gui.module import Module
+from cecog.gui.modules.module import Module
 from cecog.util.util import yesno
 
 #-------------------------------------------------------------------------------
@@ -45,7 +45,7 @@ from cecog.util.util import yesno
 # classes:
 #
 
-class Navigation(Module):
+class NavigationModule(Module):
 
     NAME = 'Navigation'
 

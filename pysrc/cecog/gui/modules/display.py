@@ -37,13 +37,15 @@ from pdk.datetimeutils import StopWatch
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog.gui.module import Module
+from cecog.gui.modules.module import Module
 from cecog.gui.colorbox import ColorBox
 from cecog.traits.config import RESOURCE_PATH
 from cecog.util.palette import (NucMedPalette,
                                 ZeissPalette,
                                 SingleColorPalette,
                                 )
+from cecog.gui.util import numpy_to_qimage
+from cecog.gui.widgets.colorbutton import ColorButton
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -70,16 +72,20 @@ COLOR_DEFINITIONS = {'red'    : '#FF0000',
 #
 def blend_images_max(images):
     '''
-    blend a list of rgb images together by element-wise maximum
-    color must be the innermost dimension
+    blend a list of QImages together by "lighten" composition (lighter color
+    of source and dest image is selected; same effect as max operation)
     '''
-    if len(images) > 1:
-        d = numpy.maximum(images[0], images[1])
-        for image in images[2:]:
-            d = numpy.maximum(d, image)
-        return d
-    elif len(images) == 1:
-        return images[0]
+    assert len(images) > 0, 'At least one image required for blending.'
+    pixmap = QPixmap(images[0].width(), images[0].height())
+    # for some reason the pixmap is NOT empty
+    pixmap.fill(Qt.black)
+    painter = QPainter(pixmap)
+    painter.setCompositionMode(QPainter.CompositionMode_Lighten)
+    for image in images:
+        if not image is None:
+            painter.drawImage(0, 0, image)
+    painter.end()
+    return pixmap
 
 #-------------------------------------------------------------------------------
 # classes:
@@ -122,10 +128,14 @@ class ChannelItem(QFrame):
     def render_image(self, image):
         if self._show_image:
             palette = self._palettes[self._current]
-            rgb_image = palette.apply_to_numpy(image)
+            qimage = numpy_to_qimage(image, palette.qt)
+            # seems to be not necessary although result is Index8
+            #qimage = qimage.convertToFormat(QImage.Format_ARGB32_Premultiplied)
         else:
-            rgb_image = numpy.zeros(list(image.shape)+[3], numpy.uint8)
-        return rgb_image
+            width, height = image.shape
+            qimage = QImage(width, height, QImage.Format_ARGB32_Premultiplied)
+            qimage.fill(0)
+        return qimage
 
     def on_show_toggled(self, state):
         self._show_image = state
@@ -147,12 +157,26 @@ class DisplaySettings:
         self.contrast = self.slider_range / 2.0
         self.minimum = default_minimum
         self.maximum = default_maximum
+        self.image_minimum = disp_minimum
+        self.image_maximum = disp_maximum
 
     def reset(self):
         self.minimum = self.default_minimum
         self.maximum = self.default_maximum
         self.brightness = self.slider_range / 2.0
         self.contrast = self.slider_range / 2.0
+
+    def set_image_minmax(self, image):
+        self.image_minimum = numpy.min(image)
+        self.image_maximum = numpy.max(image)
+        #print self.image_minimum, self.image_maximum
+
+    def set_to_image_minmax(self, image=None):
+        if not image is None:
+            self.set_image_minmax(image)
+        self.minimum = self.image_minimum
+        self.maximum = self.image_maximum
+        self._update()
 
     def set_contrast(self, contrast):
         self.contrast = contrast
@@ -200,7 +224,7 @@ class DisplaySettings:
         self.brightness = normalized * self.slider_range
 
 
-class DisplayChannelGroup(QFrame):
+class EnhancementFrame(QFrame):
 
     SLIDER_NAMES = ['minimum', 'maximum', 'brightness', 'contrast']
 
@@ -241,7 +265,7 @@ class DisplayChannelGroup(QFrame):
 
         frame = QFrame(self)
         layout_frame = QGridLayout(frame)
-        layout_frame.setContentsMargins(5,5,5,5)
+        layout_frame.setContentsMargins(2, 0, 2, 0)
 
         self._sliders = {}
         fct = lambda x: lambda : self.on_slider_changed(x)
@@ -289,9 +313,16 @@ class DisplayChannelGroup(QFrame):
         self.set_sliders()
         layout.addWidget(frame)
 
+        frame = QFrame(self)
+        layout_frame = QBoxLayout(QBoxLayout.LeftToRight, frame)
+        layout_frame.setContentsMargins(5, 5, 5, 5)
+        btn = QPushButton('Min/Max', self)
+        btn.clicked.connect(self.on_minmax)
+        layout_frame.addWidget(btn)
         btn = QPushButton('Reset', self)
         btn.clicked.connect(self.on_reset)
-        layout.addWidget(btn)
+        layout_frame.addWidget(btn)
+        layout.addWidget(frame)
 
     def set_sliders(self, ignore=None):
         s = self._display_settings[self._current]
@@ -315,6 +346,12 @@ class DisplayChannelGroup(QFrame):
         self.set_sliders()
         self.values_changed.emit(self._current)
 
+    def on_minmax(self):
+        s = self._display_settings[self._current]
+        s.set_to_image_minmax()
+        self.set_sliders()
+        self.values_changed.emit(self._current)
+
     def on_channel_changed(self, name, state):
         if state:
             self._current = name
@@ -322,8 +359,10 @@ class DisplayChannelGroup(QFrame):
 
     def transform_image(self, name, image):
         s = self._display_settings[name]
-        print s.maximum, s.minimum
+        s.set_image_minmax(image)
+        #print s.maximum, s.minimum
         image = numpy.require(image, numpy.float)
+        # add a small value in case max == min
         image *= 255.0 / (s.maximum - s.minimum + 0.1)
         image -= s.minimum
         image[image > 255] = 255
@@ -332,45 +371,123 @@ class DisplayChannelGroup(QFrame):
         return image
 
 
-class Channel(Module):
+class ObjectsFrame(QFrame):
 
-    NAME = 'Channel'
+    show_toggled = pyqtSignal('bool')
 
-    def __init__(self, parent, browser, meta_data):
+    def __init__(self, show_objects, region_names, parent):
+        QFrame.__init__(self, parent)
+        layout = QGridLayout(self)
+        layout.setContentsMargins(5, 5, 5, 5)
+
+        self._show_objects = show_objects
+
+        box = QCheckBox('Show', self)
+        box.setChecked(self._show_objects)
+        box.toggled.connect(self._on_show_toggled)
+        layout.addWidget(box, 0, 0)
+        #layout.addStretch(1)
+
+        box = QComboBox(self)
+        box.addItems(region_names)
+        layout.addWidget(box, 1, 0, 1, 2)
+
+        box = QCheckBox('Show Contours', self)
+        layout.addWidget(box, 2, 0)
+        btn = ColorButton(QColor('white'), self)
+        layout.addWidget(btn, 2, 1)
+        box = QCheckBox('Mouse over', self)
+        layout.addWidget(box, 3, 0)
+        btn = ColorButton(QColor('white'), self)
+        layout.addWidget(btn, 3, 1)
+
+    def _on_show_toggled(self, state):
+        self.show_toggled.emit(state)
+
+
+class DisplayFrame(QFrame):
+
+    def __init__(self, browser, parent):
+        QFrame.__init__(self, parent)
+        layout = QBoxLayout(QBoxLayout.LeftToRight, self)
+        layout.setContentsMargins(5, 5, 5, 5)
+        btn = QPushButton('100%', self)
+        btn.clicked.connect(browser.on_shortcut_zoom100)
+        layout.addWidget(btn)
+        btn = QPushButton('Fit', self)
+        btn.clicked.connect(browser.on_shortcut_zoomfit)
+        layout.addWidget(btn)
+        btn = QPushButton('+', self)
+        btn.clicked.connect(browser.on_shortcut_zoomin)
+        layout.addWidget(btn)
+        btn = QPushButton('-', self)
+        btn.clicked.connect(browser.on_shortcut_zoomout)
+        layout.addWidget(btn)
+
+
+class DisplayModule(Module):
+
+    NAME = 'Display'
+
+    show_objects_toggled = pyqtSignal('bool')
+
+    def __init__(self, parent, browser, meta_data, region_names):
         Module.__init__(self, parent, browser)
         self._meta_data = meta_data
         self._image_dict = {}
         self._display_images = {}
         self._rgb_images = {}
 
+        self.setStyleSheet("QGroupBox {font-size: 10px;}"
+                           "QGroupBox::title {margin: 0; margin-top: 4px;}")
+
         palettes = self.import_palettes()
 
         layout = QBoxLayout(QBoxLayout.TopToBottom, self)
-        layout.setContentsMargins(5, 5, 5, 5)
+        layout.setContentsMargins(5, 6, 5, 5)
 
         frame_channels = QGroupBox('Channels', self)
-        #frame_channels.setSizePolicy(QSizePolicy(QSizePolicy.Minimum,
-        #                                         QSizePolicy.Minimum))
-        layout.addWidget(frame_channels)
-        frame_display = QGroupBox('Display', self)
-        layout.addWidget(frame_display)
         layout_channels = QBoxLayout(QBoxLayout.TopToBottom, frame_channels)
         layout_channels.setContentsMargins(5, 5, 5, 5)
+        frame_enhance = QGroupBox('Image Enhancement', self)
+        layout_enhance = QBoxLayout(QBoxLayout.TopToBottom, frame_enhance)
+        layout_enhance.setContentsMargins(5, 5, 5, 5)
+        frame_objects = QGroupBox('Objects', self)
+        layout_objects = QBoxLayout(QBoxLayout.TopToBottom, frame_objects)
+        layout_objects.setContentsMargins(5, 5, 5, 5)
+        frame_display = QGroupBox('Display', self)
         layout_display = QBoxLayout(QBoxLayout.TopToBottom, frame_display)
         layout_display.setContentsMargins(5, 5, 5, 5)
+
+        layout.addWidget(frame_channels)
+        layout.addSpacing(5)
+        layout.addWidget(frame_enhance)
+        layout.addSpacing(5)
+        layout.addWidget(frame_display)
+        layout.addSpacing(5)
+        layout.addWidget(frame_objects)
         layout.addStretch(1)
 
         self._channels = OrderedDict()
         channel_names = sorted(self._meta_data.channels)
         for idx, channel_name in enumerate(channel_names):
-            widget = ChannelItem(channel_name, idx, palettes, frame_channels)
+            widget = ChannelItem(channel_name, idx, palettes, self)
             layout_channels.addWidget(widget)
             self._channels[channel_name] = widget
             widget.channel_changed.connect(self.on_channel_changed)
 
-        self._display_ctrl = DisplayChannelGroup(channel_names, frame_display)
+        self._display_ctrl = EnhancementFrame(channel_names, frame_enhance)
         self._display_ctrl.values_changed.connect(self.on_display_changed)
-        layout_display.addWidget(self._display_ctrl)
+        layout_enhance.addWidget(self._display_ctrl)
+
+        self.show_objects = False
+        self._display_objects = ObjectsFrame(self.show_objects,
+                                             region_names, frame_objects)
+        self._display_objects.show_toggled.connect(self.on_show_toggled)
+        layout_objects.addWidget(self._display_objects)
+
+        display = DisplayFrame(browser, frame_display)
+        layout_display.addWidget(display)
 
     def import_palettes(self):
         palettes = OrderedDict()
@@ -384,6 +501,9 @@ class Channel(Module):
             filename = os.path.abspath(filename)
             p = ZeissPalette(filename)
             palettes[p.name] = p
+        for palette in palettes.values():
+            # FIXME: not optimal, mixin required for Qt purposes
+            palette.qt = [qRgb(r, g, b) for r,g,b in palette.lut]
         return palettes
 
     def set_image_dict(self, image_dict):
@@ -408,18 +528,28 @@ class Channel(Module):
                 rgb_image = widget.render_image(image)
                 self._rgb_images[name] = rgb_image
         rgb_images = self._rgb_images.values()
-        self._browser.image_viewer.from_numpy(blend_images_max(rgb_images))
+        self._browser.image_viewer.from_pixmap(blend_images_max(rgb_images))
 
     def on_channel_changed(self, name):
         name = str(name)
         self.update_renderer(restrict=name)
 
     def on_display_changed(self, name):
-        # in case all channels is changed no restriction applies
+        # in case all channels are changed no restriction applies
         if not name is None:
             name = str(name)
         self.update_display(restrict=name)
         self.update_renderer(restrict=name)
+
+    def on_show_toggled(self, state):
+        self.show_objects = state
+#        if not state:
+#            self._browser.image_viewer.remove_objects()
+#            #self._object_items.clear()
+#        #self._detect_objects = state
+#        self._browser._process_image()
+
+        self.show_objects_toggled.emit(state)
 
     def set_object_dict(self, d):
         pass

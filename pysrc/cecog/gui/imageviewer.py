@@ -20,8 +20,7 @@ __all__ = ['ImageViewer',
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
-import sys
-import os
+import math
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -33,17 +32,7 @@ from PyQt4.Qt import *
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog.gui.util import (#DEFAULT_COLORS,
-                            #StyledFrame,
-                            numpy_to_qimage,
-                            )
-
-from cecog.util.color import hex_to_rgb
-#from cecog.ccore import (apply_lut,
-#                         apply_blending,
-#                         lut_from_single_color,
-#                         )
-#from cecog.core.workflow import workflow_manager, ImageViewerRenderer
+from cecog.gui.util import numpy_to_qimage
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -111,7 +100,13 @@ class ImageViewer(QGraphicsView):
         self.setScene(self._scene)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setDragMode(QGraphicsView.NoDrag)
+        self.setDragMode(self.NoDrag)
+        self.setTransformationAnchor(self.AnchorViewCenter)
+        self.setResizeAnchor(self.AnchorViewCenter)
+        self.setRenderHints(QPainter.Antialiasing |
+                            QPainter.SmoothPixmapTransform)
+        self.setViewportUpdateMode(self.SmartViewportUpdate)
+        self.setBackgroundBrush(QBrush(QColor('#666666')))
 
         self._qimage = None
         self.connect(self, SIGNAL('MouseMovedOverImage'),
@@ -129,35 +124,7 @@ class ImageViewer(QGraphicsView):
         self._pixmap.setTransformationMode(Qt.SmoothTransformation)
         self._scene.addItem(self._pixmap)
 
-
-#    def set_channels(self, channels):
-#        for name, rgb_tuple in channels:
-#            lut = lut_from_single_color(rgb_tuple)
-#            self.channel_mapping[name] = (lut, 1.0)
-
-    def update_lut_by_name(self, name, lut, alpha):
-        self.channel_mapping[name] = (lut, alpha)
-        self._update_view()
-
-    def update_view(self):
-        pass
-#        rgb_image = make_image_overlay([items[1] for items in self.channel_list],
-#                                       [self.channel_mapping[items[0]]
-#                                        for items in self.channel_list])
-
-        #workflow_manager.process_experiment_channels(self.channel_list)
-        #rgb_image = workflow_manager.get_render_result()
-
-#        rgb_image = apply_blending([apply_lut(image,
-#                                              self.channel_mapping[channel][0])
-#                                    for channel, image in self.channel_list],
-#                                   [self.channel_mapping[channel][1]
-#                                    for channel, image in self.channel_list])
-        #self.from_pyvigra(rgb_image)
-        #self.from_pyvigra(self.channel_list[0][1])
-
-    def set_scale_transform(self, transform):
-        self._scale_transform = transform
+        self.grabGesture(Qt.PinchGesture)
 
     def from_numpy(self, data):
         self._qimage = numpy_to_qimage(data)
@@ -185,6 +152,10 @@ class ImageViewer(QGraphicsView):
         self._qimage = qimage
         self._update()
 
+    def from_pixmap(self, pixmap):
+        self._qimage = None
+        self._pixmap.setPixmap(pixmap)
+
     def from_channel_list(self, channel_list):
         self.channel_list = channel_list
         self.update_view()
@@ -198,13 +169,6 @@ class ImageViewer(QGraphicsView):
 
     def _update(self):
         self._pixmap.setPixmap(QPixmap.fromImage(self._qimage))
-
-#    def center(self):
-#        screen = self.geometry()
-#        size = self.label.geometry()
-#        self.label.move((screen.width()-size.width())/2,
-#                        (screen.height()-size.height())/2)
-#        self.update()
 
     @property
     def scale_factor(self):
@@ -283,16 +247,21 @@ class ImageViewer(QGraphicsView):
 
     # protected method overload
 
+    def event(self, ev):
+        if ev.type() == QEvent.Gesture:
+            return self.gestureEvent(ev)
+        return super(ImageViewer, self).event(ev)
+
     def keyPressEvent(self, ev):
         super(ImageViewer, self).keyPressEvent(ev)
         if ev.key() == self.MOVE_KEY and not self._move_on:
             self._move_on = True
-            self.setDragMode(QGraphicsView.ScrollHandDrag)
+            self.setDragMode(self.ScrollHandDrag)
 
     def keyReleaseEvent(self, ev):
         super(ImageViewer, self).keyReleaseEvent(ev)
         if ev.key() == self.MOVE_KEY and self._move_on:
-            self.setDragMode(QGraphicsView.NoDrag)
+            self.setDragMode(self.NoDrag)
             self._move_on = False
 
     def enterEvent(self, ev):
@@ -311,4 +280,18 @@ class ImageViewer(QGraphicsView):
         if self._auto_resize:
             self.scale_to_fit()
 
+    def gestureEvent(self, ev):
+        # a pinch gesture was detected
+        if not ev.gesture(Qt.PinchGesture) is None:
+            gesture = ev.gesture(Qt.PinchGesture)
+            if gesture.state() == Qt.GestureStarted:
+                self.setTransformationAnchor(self.AnchorUnderMouse)
+            f = gesture.scaleFactor()
+            if f != 1.0:
+                self.scale_relative(math.sqrt(f), ensure_fit=True,
+                                    small_only=True)
+                self.set_auto_resize(False)
+            if gesture.state() in [Qt.GestureCanceled, Qt.GestureFinished]:
+                self.setTransformationAnchor(self.AnchorViewCenter)
+        return True
 

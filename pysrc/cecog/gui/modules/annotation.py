@@ -64,7 +64,8 @@ from cecog.util.util import (hexToRgb,
                              )
 from cecog.learning.learning import BaseLearner
 from cecog.gui.widgets.groupbox import QxtGroupBox
-from cecog.gui.module import Module
+from cecog.gui.widgets.colorbutton import ColorButton
+from cecog.gui.modules.module import Module
 #-------------------------------------------------------------------------------
 # constants:
 #
@@ -276,7 +277,7 @@ class Annotations(object):
                 f.close()
 
 
-class Annotation(Module):
+class AnnotationModule(Module):
 
     NAME = 'Annotation'
 
@@ -348,9 +349,7 @@ class Annotation(Module):
         layout2 = QBoxLayout(QBoxLayout.LeftToRight, frame2)
         layout2.setContentsMargins(0,0,0,0)
         self._class_sbox = QSpinBox(frame2)
-        self._class_color_btn = QToolButton(frame2)
-        self._class_color_btn.clicked.connect(self._on_class_color)
-        self._class_color = None
+        self._class_color_btn = ColorButton(None, frame2)
         self._class_sbox.setRange(0, 1000)
         self._class_text = QLineEdit(frame2)
         layout2.addWidget(self._class_color_btn)
@@ -379,29 +378,7 @@ class Annotation(Module):
         layout = QBoxLayout(QBoxLayout.TopToBottom, self)
         layout.addWidget(splitter)
 
-        box = QCheckBox('Detect objects', self)
-        box.setCheckState(Qt.Checked if self._detect_objects else Qt.Unchecked)
-        layout.addWidget(box)
-        #frame_side.layout().addSpacerItem(QSpacerItem(1,1))
-
-        box.clicked.connect(self._on_detect_box)
         self._learner = self._init_new_classifier()
-
-    def _on_class_color(self):
-        '''
-        Open the color dialog for a class
-        '''
-        dlg = QColorDialog(self)
-        dlg.setOption(QColorDialog.ShowAlphaChannel)
-        if not self._class_color is None:
-            dlg.setCurrentColor(self._class_color)
-        if dlg.exec_():
-            col = dlg.currentColor()
-            # FIXME: assignment and update should be made upon "apply"
-            self._class_color_btn.setStyleSheet('background-color: rgb(%d, %d, %d)'\
-                                                % (col.red(), col.green(),
-                                                   col.blue()))
-            self._class_color = col
 
     def _find_items_in_class_table(self, value, column, match=Qt.MatchExactly):
         items = self._class_table.findItems(value, match)
@@ -440,8 +417,9 @@ class Annotation(Module):
 
                 learner.dctClassNames[class_label_new] = class_name_new
                 learner.dctClassLabels[class_name_new] = class_label_new
+                class_color = self._class_color_btn.current_color
                 learner.dctHexColors[class_name_new] = \
-                    qcolor_to_hex(self._class_color)
+                    qcolor_to_hex(class_color)
 
                 item.setText(class_name_new)
                 item2 = self._class_table.item(item.row(),
@@ -449,12 +427,12 @@ class Annotation(Module):
                 item2.setText(str(class_label_new))
                 item2 = self._class_table.item(item.row(),
                                                self.COLUMN_CLASS_COLOR)
-                item2.setBackground(QBrush(self._class_color))
+                item2.setBackground(QBrush(class_color))
 
-                col = get_qcolor_hicontrast(self._class_color)
+                col = get_qcolor_hicontrast(class_color)
                 self._class_table.setStyleSheet("selection-background-color: %s;"\
                                                 "selection-color: %s;" %\
-                                                (qcolor_to_hex(self._class_color),
+                                                (qcolor_to_hex(class_color),
                                                  qcolor_to_hex(col)))
                 self._class_table.resizeRowsToContents()
                 self._class_table.resizeColumnsToContents()
@@ -488,8 +466,9 @@ class Annotation(Module):
 
             learner.dctClassNames[class_label_new] = class_name_new
             learner.dctClassLabels[class_name_new] = class_label_new
+            class_color = self._class_color_btn.current_color
             learner.dctHexColors[class_name_new] = \
-                qcolor_to_hex(self._class_color)
+                qcolor_to_hex(class_color)
 
             row = self._class_table.rowCount()
             self._class_table.insertRow(row)
@@ -500,7 +479,7 @@ class Annotation(Module):
             self._class_table.setItem(row, self.COLUMN_CLASS_COUNT,
                                       QTableWidgetItem('0'))
             item = QTableWidgetItem()
-            item.setBackground(QBrush(self._class_color))
+            item.setBackground(QBrush(class_color))
             self._class_table.setItem(row, self.COLUMN_CLASS_COLOR, item)
             self._class_table.resizeRowsToContents()
             self._class_table.resizeColumnsToContents()
@@ -545,9 +524,7 @@ class Annotation(Module):
         self._current_class = None
         self._class_sbox.setValue(1)
         self._class_text.setText('class1')
-        self._class_color = QColor('red')
-        self._class_color_btn.setStyleSheet("background-color: %s;" %
-                                            qcolor_to_hex(self._class_color))
+        self._class_color_btn.set_color(QColor('red'))
         class_table = self._class_table
         class_table.clearContents()
         class_table.setRowCount(0)
@@ -760,17 +737,14 @@ class Annotation(Module):
             self._class_text.setText(self._current_class)
             class_label = self._learner.dctClassLabels[self._current_class]
             self._class_sbox.setValue(class_label)
-            self._class_color_btn.setStyleSheet("background-color: %s;" % hex_col)
-            self._class_color = QColor(hex_col)
+            self._class_color_btn.set_color(QColor(hex_col))
         else:
             self._current_class = None
 
-    def _on_detect_box(self, state):
+    def set_show_objects(self, state):
         if not state:
-            self._browser.image_viewer.remove_objects()
             self._object_items.clear()
         self._detect_objects = state
-        self._browser._process_image()
 
     def _on_shortcut_class_selected(self, class_label):
         items = self._find_items_in_class_table(str(class_label),
