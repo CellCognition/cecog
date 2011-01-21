@@ -51,6 +51,45 @@ class Module(QFrame):
         QFrame.__init__(self, parent)
         self._is_initialized = False
         self._browser = browser
+        self.setStyleSheet(
+"""
+ QWidget {
+     font-size: 11px;
+ }
+
+ QGroupBox {
+     background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                       stop: 0 #E0E0E0, stop: 1 #FFFFFF);
+     border: 2px solid #999999;
+     border-radius: 5px;
+     margin-top: 1ex; /* leave space at the top for the title */
+     font-size: 13px;
+ }
+
+ QGroupBox::title {
+     subcontrol-origin: margin;
+     subcontrol-position: top center; /* position at the top center */
+     padding: 0 3px;
+ }
+
+ QTableView {
+     font-size: 10px;
+     alternate-background-color: #EEEEFF;
+ }
+
+ QPushButton {
+     font-size: 11px;
+ }
+
+ ColorButton::enabled {
+     border: 1px solid #444444;
+ }
+
+ ColorButton::disabled {
+     border: 1px solid #AAAAAA;
+ }
+
+""")
 
     def initialize(self):
         pass

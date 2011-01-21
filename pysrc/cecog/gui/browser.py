@@ -83,6 +83,9 @@ class Browser(QMainWindow):
 
     ZOOM_STEP = 1.05
 
+    show_objects_toggled = pyqtSignal('bool')
+    coordinates_changed = pyqtSignal(str, str, int)
+
     def __init__(self, settings, imagecontainer):
         QMainWindow.__init__(self)
 
@@ -93,30 +96,18 @@ class Browser(QMainWindow):
 
         self._settings = settings
         self._imagecontainer = imagecontainer
-        self._meta_data = self._imagecontainer.meta_data
+        self.meta_data = self._imagecontainer.meta_data
+        self._show_objects = False
+        self._object_region = None
 
         self.grabGesture(Qt.SwipeGesture)
 
-        # setup the main menu
+        self.setStyleSheet(
+"""
+  QStatusBar { border-top: 1px solid gray; }
+""")
 
-#        act_new = self.create_action('New Classifier...',
-#                                     shortcut=QKeySequence.New,
-#                                     slot=self._on_new_classifier)
-#        act_open = self.create_action('Open Classifier...',
-#                                      shortcut=QKeySequence.Open,
-#                                      slot=self._on_open_classifier)
-##        act_save = self.create_action('Save Classifier...',
-##                                      shortcut=QKeySequence.Save,
-##                                      slot=self._on_save_classifier)
-#        act_saveas = self.create_action('Save Classifier As...',
-#                                        shortcut=QKeySequence.SaveAs,
-#                                        slot=self._on_saveas_classifier)
-#        file_menu = self.menuBar().addMenu('&File')
-#        self.add_actions(file_menu, (act_new, act_open, None,
-#                                     #act_save,
-#                                     act_saveas,
-#                                     ))
-#
+
         act_next_t = self.create_action('Next Time-point',
                                         shortcut=QKeySequence('Right'),
                                         slot=self.on_shortcut_right)
@@ -171,16 +162,6 @@ class Browser(QMainWindow):
                                      act_anti, act_smooth,
                                      ))
 
-#        class_fct = lambda id: lambda : self._on_shortcut_class_selected(id)
-#        act_class = \
-#            [self.create_action(
-#                'Select Class Label %d' % x,
-#                 shortcut=QKeySequence(str(x) if x < 10 else '0'),
-#                 slot=class_fct(x))
-#             for x in range(1,11)]
-#        menu = self.menuBar().addMenu('&Annotation')
-#        self.add_actions(menu, act_class)
-
         self._statusbar = QStatusBar(self)
         self.setStatusBar(self._statusbar)
 
@@ -218,8 +199,8 @@ class Browser(QMainWindow):
         self.image_viewer.zoom_info_updated.connect(self.on_zoom_info_updated)
 
         self._t_slider = QSlider(Qt.Horizontal, frame)
-        self._t_slider.setMinimum(self._meta_data.times[0])
-        self._t_slider.setMaximum(self._meta_data.times[-1])
+        self._t_slider.setMinimum(self.meta_data.times[0])
+        self._t_slider.setMaximum(self.meta_data.times[-1])
         self._t_slider.setTickPosition(QSlider.TicksBelow)
         self._t_slider.valueChanged.connect(self.on_time_changed,
                                             Qt.DirectConnection)
@@ -245,48 +226,20 @@ class Browser(QMainWindow):
                     if self._settings.get2('%s_regions_%s' % (prefix, name)):
                         region_names.append('%s - %s' % (prefix.capitalize(), name))
 
-
+        # FIXME: something went wrong with setting up the current region
+        self._object_region = region_names[0].split(' - ')
         self._tabs = {}
-        navigation = NavigationModule(self._frame_side, self, self._meta_data)
-        display = DisplayModule(self._frame_side, self, self._meta_data,
-                          region_names)
+        display = DisplayModule(self._frame_side, self, self.meta_data,
+                                region_names)
         annotation = AnnotationModule(self._frame_side, self, self._settings,
-                                self._imagecontainer)
+                                      self._imagecontainer)
+        navigation = NavigationModule(self._frame_side, self, self.meta_data)
         self._register_tab(navigation)
         self._register_tab(display)
         self._register_tab(annotation)
 
-        display.show_objects_toggled.connect(self.on_show_objects)
-
         self._activate_tab(NavigationModule.NAME)
 
-
-#        grp_box = QxtGroupBox('Annotation2', frame_side)
-#        grp_box.setFlat(True)
-#        grp_box.setMinimumHeight(30)
-#        layout = QBoxLayout(QBoxLayout.TopToBottom, grp_box)
-#        layout.setContentsMargins(2,2,2,2)
-#
-#        ann_table = QTableWidget(grp_box)
-#        ann_table.setEditTriggers(QTableWidget.NoEditTriggers)
-#        ann_table.setSelectionMode(QTableWidget.SingleSelection)
-#        ann_table.setSelectionBehavior(QTableWidget.SelectRows)
-#        ann_table.setSortingEnabled(True)
-#        ann_table.setColumnCount(4)
-#        ann_table.setHorizontalHeaderLabels(['Plate', 'Position', 'Time',
-#                                             'Samples',
-#                                             ])
-#        ann_table.resizeColumnsToContents()
-#        ann_table.currentItemChanged.connect(self._on_class_changed)
-#        layout.addWidget(ann_table)
-#        self._ann_table = ann_table
-#        frame_side.layout().addWidget(grp_box)
-#        frame_side.layout().addSpacing(1)
-
-
-        # ensure a valid position (not None!)
-        #table.setCurrentCell(0, 0)
-        #self._class_table.setCurrentCell(0, 0)
 
     def _register_tab(self, widget):
         idx = len(self._tabs)
@@ -345,6 +298,69 @@ class Browser(QMainWindow):
         widget.set_image_dict(image_dict)
         self.update_statusbar()
 
+    def update_statusbar(self):
+        timestamp = self.meta_data.get_timestamp_relative(self._position,
+                                                           self._time)
+        time_info = str(self._time)
+        if not numpy.isnan(timestamp):
+            time_info += ' (%.1f min)' % (timestamp / 60)
+        msg = 'Plate %s | Position %s | Frame %s  ||  Zoom %.1f%%' % \
+              (self._plateid, self._position, time_info,
+               self.image_viewer.scale_factor*100)
+        self._statusbar.showMessage(msg)
+
+    def get_coordinates(self):
+        return self._plateid, self._position, self._time
+
+    def set_coordinates(self, plateid, position, time):
+        self._plateid = plateid
+        self._position = position
+        self._time = time
+        self._t_slider.blockSignals(True)
+        self._t_slider.setValue(time)
+        self._t_slider.blockSignals(False)
+        self._process_image()
+        self.coordinates_changed.emit(plateid, position, time)
+
+    def _process_image(self):
+        self._stopwatch.reset()
+        s = StopWatch()
+        settings = _ProcessorMixin.get_special_settings(self._settings)
+        settings.set_section('General')
+        settings.set2('constrain_positions', True)
+        settings.set2('positions', self._position)
+        settings.set2('framerange', True)
+        settings.set2('framerange_begin', self._time)
+        settings.set2('framerange_end', self._time)
+
+        settings.set_section('ObjectDetection')
+        prim_id = PrimaryChannel.NAME
+        #sec_id = SecondaryChannel.NAME
+        #sec_regions = settings.get2('secondary_regions')
+        settings.set_section('Processing')
+        settings.set2('primary_classification', False)
+        settings.set2('secondary_classification', False)
+        settings.set2('primary_featureextraction', False)
+        settings.set2('secondary_featureextraction', False)
+
+        settings.set2('objectdetection', self._show_objects)
+        settings.set2('tracking', False)
+        settings.set_section('Output')
+        settings.set2('rendering_contours_discwrite', False)
+        settings.set2('rendering_class_discwrite', False)
+        settings.set_section('Classification')
+        settings.set2('collectsamples', False)
+        settings.set('General', 'rendering', {})
+        settings.set('General', 'rendering_class', {})
+
+        settings.set('Processing', 'secondary_processChannel', True)
+        settings.set('General', 'rendering', {})
+
+        analyzer = AnalyzerCore(settings,
+                                imagecontainer=self._imagecontainer)
+        analyzer.processPositions(myhack=self)
+        print('PROCESS IMAGE: %s' % s)
+
     # slots
 
     def on_tab_changed(self, name):
@@ -356,11 +372,16 @@ class Browser(QMainWindow):
     def on_time_changed(self, time):
         self._time = time
         self._process_image()
+        self.coordinates_changed.emit(self._plateid, self._position, time)
 
     def on_position_changed(self, position):
         position = str(position)
-        assert position in self._meta_data.positions, "Position not valid"
+        assert position in self.meta_data.positions, "Position not valid"
         self._position = position
+        self._process_image()
+
+    def on_object_region_changed(self, channel, region):
+        self._object_region = str(channel), str(region)
         self._process_image()
 
     def on_shortcut_left(self):
@@ -430,92 +451,10 @@ class Browser(QMainWindow):
             self._class_table.setCurrentItem(items[0])
 
     def on_show_objects(self, state):
+        self._show_objects = state
         self.image_viewer.remove_objects()
-        annotations = self._tabs[AnnotationModule.NAME][0]
-        annotations.set_show_objects(state)
         self._process_image()
-
-    def update_statusbar(self):
-        timestamp = self._meta_data.get_timestamp_relative(self._position,
-                                                           self._time)
-        time_info = str(self._time)
-        if not numpy.isnan(timestamp):
-            time_info += ' (%.1f min)' % (timestamp / 60)
-        msg = 'Plate %s | Position %s | Frame %s  ||  Zoom %.1f%%' % \
-              (self._plateid, self._position, time_info,
-               self.image_viewer.scale_factor*100)
-        self._statusbar.showMessage(msg)
-
-    def get_coordinates(self):
-        return self._plateid, self._position, self._time
-
-    def _process_image(self):
-        self._stopwatch.reset()
-        s = StopWatch()
-        settings = _ProcessorMixin.get_special_settings(self._settings)
-        settings.set_section('General')
-        settings.set2('constrain_positions', True)
-        settings.set2('positions', self._position)
-        settings.set2('framerange', True)
-        settings.set2('framerange_begin', self._time)
-        settings.set2('framerange_end', self._time)
-
-        settings.set_section('ObjectDetection')
-        prim_id = PrimaryChannel.NAME
-        #sec_id = SecondaryChannel.NAME
-        #sec_regions = settings.get2('secondary_regions')
-        settings.set_section('Processing')
-        settings.set2('primary_classification', False)
-        settings.set2('secondary_classification', False)
-        settings.set2('primary_featureextraction', False)
-        settings.set2('secondary_featureextraction', False)
-
-        # FIXME: just interim solution
-        widget = self._tabs[DisplayModule.NAME][0]
-        settings.set2('objectdetection', widget.show_objects)
-        settings.set2('tracking', False)
-        settings.set_section('Output')
-        settings.set2('rendering_contours_discwrite', False)
-        settings.set2('rendering_class_discwrite', False)
-        settings.set_section('Classification')
-        settings.set2('collectsamples', False)
-        settings.set('General', 'rendering', {})
-        settings.set('General', 'rendering_class', {})
-
-        settings.set('Processing', 'secondary_processChannel', True)
-        settings.set('General', 'rendering', {})
-
-        analyzer = AnalyzerCore(settings,
-                                imagecontainer=self._imagecontainer)
-        analyzer.processPositions(myhack=self)
-        print('PROCESS IMAGE: %s' % s)
-
-    def _load_classifier(self, path):
-        learner = None
-        try:
-            learner = BaseLearner(strEnvPath=path)
-        except:
-            exception(self, 'Error on loading classifier')
-        else:
-            result = learner.check()
-            #if result['has_arff']:
-            #    self._learner.importFromArff()
-
-            if result['has_definition']:
-                learner.loadDefinition()
-        return learner
-
-    def _save_classifier(self, path):
-        learner = self._learner
-        success = True
-        try:
-            learner.set_env_path(path)
-            learner.initEnv()
-            learner.saveDefinition()
-        except:
-            exception(self, 'Error on saving classifier')
-            success = False
-        return success
+        self.show_objects_toggled.emit(state)
 
     # Qt method overwrites
 

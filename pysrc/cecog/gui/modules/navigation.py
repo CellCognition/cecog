@@ -64,17 +64,19 @@ class NavigationModule(Module):
         splitter.setMinimumWidth(40)
 
         layout = QBoxLayout(QBoxLayout.TopToBottom, self)
+        layout.setContentsMargins(5, 5, 5, 5)
         layout.addWidget(splitter)
+        layout.addSpacing(5)
         layout.addWidget(self._frame_info)
+        layout.addSpacing(5)
 
-        grp1 = QFrame(splitter)
-        grp2 = QFrame(splitter)
+        grp1 = QGroupBox('Plates', splitter)
+        grp2 = QGroupBox('Positions', splitter)
         splitter.addWidget(grp1)
         splitter.addWidget(grp2)
 
         layout = QGridLayout(grp1)
-        layout.setContentsMargins(0,0,0,0)
-        layout.addWidget(QLabel('Plates', grp1), 0, 0)
+        layout.setContentsMargins(5, 10, 5, 5)
 
         table = QTableWidget(grp1)
         table.setEditTriggers(QTableWidget.NoEditTriggers)
@@ -84,11 +86,10 @@ class NavigationModule(Module):
         #table.setColumnCount(3)
         #table.setRowCount(len(meta_data.positions))
         #table.setMinimumWidth(20)
-        layout.addWidget(table, 1, 0)
+        layout.addWidget(table, 0, 0)
 
         layout = QGridLayout(grp2)
-        layout.setContentsMargins(0,0,0,0)
-        layout.addWidget(QLabel('Positions', grp2), 0, 0)
+        layout.setContentsMargins(5, 10, 5, 5)
 
         table = QTableWidget(grp2)
         table.setEditTriggers(QTableWidget.NoEditTriggers)
@@ -132,7 +133,9 @@ class NavigationModule(Module):
         table.currentItemChanged.connect(self._on_position_changed)
         self._table_position = table
         #table.setMinimumWidth(20)
-        layout.addWidget(table, 1, 0)
+        layout.addWidget(table, 0, 0)
+
+        browser.coordinates_changed.connect(self._on_coordinates_changed)
 
     def update_frame_info(self):
         frame = self._frame_info
@@ -177,4 +180,12 @@ class NavigationModule(Module):
         position = str(item.data(0).toString())
         self.position_changed.emit(position)
 
+    def _on_coordinates_changed(self, plateid, position, time):
+        self._table_position.blockSignals(True)
+
+        item = self._table_position.findItems(position, Qt.MatchExactly)[0]
+        print plateid, position, time, item.text()
+        self._table_position.setCurrentItem(item)
+
+        self._table_position.blockSignals(False)
 

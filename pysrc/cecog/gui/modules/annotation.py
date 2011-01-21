@@ -107,10 +107,13 @@ class Annotations(object):
     def remove(self, coordinates, item):
         plate, position, time = coordinates
         items = self._annotations[plate][position][time]
-        for class_name in items:
+        for class_name in items.keys():
             if item in items[class_name]:
                 items[class_name].remove(item)
                 self._counts[class_name] -= 1
+                if len(items[class_name]) == 0:
+                    del self._annotations[plate][position][time][class_name]
+                break
 
     def remove_all(self):
         self._annotations.clear()
@@ -171,6 +174,21 @@ class Annotations(object):
             if item in items[class_name]:
                 return class_name
         return None
+
+    def get_annotations_per_class(self, class_name):
+        per_class = []
+        ann = self._annotations
+        for plateid in ann:
+            for position in ann[plateid]:
+                for time in ann[plateid][position]:
+                    ann2 = ann[plateid][position][time]
+                    if class_name in ann2:
+                        per_class.append((plateid, position, time,
+                                          len(ann2[class_name])))
+        per_class.sort(key = lambda x: x[2])
+        per_class.sort(key = lambda x: x[1])
+        per_class.sort(key = lambda x: x[0])
+        return per_class
 
     def rebuild_class_counts(self):
         self._counts.clear()
@@ -286,6 +304,11 @@ class AnnotationModule(Module):
     COLUMN_CLASS_COLOR = 2
     COLUMN_CLASS_COUNT = 3
 
+    COLUMN_ANN_PLATE = 0
+    COLUMN_ANN_POSITION = 1
+    COLUMN_ANN_TIME = 2
+    COLUMN_ANN_SAMPLES = 3
+
     def __init__(self, parent, browser, settings, imagecontainer):
         Module.__init__(self, parent, browser)
 
@@ -301,35 +324,11 @@ class AnnotationModule(Module):
         self._plateid = ''
         #self._channel = ''
 
-        splitter = QSplitter(Qt.Horizontal, self)
+        splitter = QSplitter(Qt.Vertical, self)
 
-#        grp_box = QxtGroupBox('Annotation2', frame_side)
-#        grp_box.setFlat(True)
-#        grp_box.setMinimumHeight(30)
-#        layout = QBoxLayout(QBoxLayout.TopToBottom, grp_box)
-#        layout.setContentsMargins(2,2,2,2)
-#
-#        ann_table = QTableWidget(grp_box)
-#        ann_table.setEditTriggers(QTableWidget.NoEditTriggers)
-#        ann_table.setSelectionMode(QTableWidget.SingleSelection)
-#        ann_table.setSelectionBehavior(QTableWidget.SelectRows)
-#        ann_table.setSortingEnabled(True)
-#        ann_table.setColumnCount(4)
-#        ann_table.setHorizontalHeaderLabels(['Plate', 'Position', 'Time',
-#                                             'Samples',
-#                                             ])
-#        ann_table.resizeColumnsToContents()
-#        ann_table.currentItemChanged.connect(self._on_class_changed)
-#        layout.addWidget(ann_table)
-#        self._ann_table = ann_table
-#        frame_side.layout().addWidget(grp_box)
-#        frame_side.layout().addSpacing(1)
-
-        grp_box = QxtGroupBox('Annotation', splitter)
-        grp_box.setFlat(True)
-
+        grp_box = QGroupBox('Classes', splitter)
         layout = QBoxLayout(QBoxLayout.TopToBottom, grp_box)
-        layout.setContentsMargins(2,2,2,2)
+        layout.setContentsMargins(5, 10, 5, 5)
 
         class_table = QTableWidget(grp_box)
         class_table.setEditTriggers(QTableWidget.NoEditTriggers)
@@ -342,6 +341,7 @@ class AnnotationModule(Module):
                                                ])
         class_table.resizeColumnsToContents()
         class_table.currentItemChanged.connect(self._on_class_changed)
+        class_table.setStyleSheet('font-size: 10px;')
         layout.addWidget(class_table)
         self._class_table = class_table
 
@@ -372,13 +372,64 @@ class AnnotationModule(Module):
         layout.addWidget(frame2)
 
         splitter.addWidget(grp_box)
-        #layout_side.addWidget(grp_box)
-        #layout_side.addSpacing(1)
+
+
+        grp_box = QGroupBox('Annotations', splitter)
+        layout = QBoxLayout(QBoxLayout.TopToBottom, grp_box)
+        layout.setContentsMargins(5, 10, 5, 5)
+
+        ann_table = QTableWidget(grp_box)
+        ann_table.setEditTriggers(QTableWidget.NoEditTriggers)
+        ann_table.setSelectionMode(QTableWidget.SingleSelection)
+        ann_table.setSelectionBehavior(QTableWidget.SelectRows)
+        #ann_table.setSortingEnabled(True)
+        ann_table.setColumnCount(4)
+        ann_table.setHorizontalHeaderLabels(['Plate', 'Position', 'Time',
+                                             'Samples',
+                                             ])
+        ann_table.resizeColumnsToContents()
+        ann_table.currentItemChanged.connect(self._on_anntable_changed)
+        ann_table.setStyleSheet('font-size: 10px;')
+        layout.addWidget(ann_table)
+        self._ann_table = ann_table
+        splitter.addWidget(grp_box)
+
+
+        frame = QFrame(self)
+        layout_frame = QBoxLayout(QBoxLayout.LeftToRight, frame)
+        layout_frame.setContentsMargins(0, 0, 0, 0)
+        btn = QPushButton('New...', frame)
+        btn.clicked.connect(self._on_new_classifier)
+        layout_frame.addWidget(btn)
+        #layout_frame.addSpacing(5)
+        btn = QPushButton('Open...', frame)
+        btn.clicked.connect(self._on_open_classifier)
+        layout_frame.addWidget(btn)
+        #layout_frame.addSpacing(5)
+        btn = QPushButton('Save As...', frame)
+        btn.clicked.connect(self._on_saveas_classifier)
+        layout_frame.addWidget(btn)
 
         layout = QBoxLayout(QBoxLayout.TopToBottom, self)
+        layout.setContentsMargins(5, 5, 5, 5)
         layout.addWidget(splitter)
+        layout.addWidget(frame)
 
         self._learner = self._init_new_classifier()
+
+        self._action_grp = QActionGroup(browser)
+        class_fct = lambda id: lambda : self._on_shortcut_class_selected(id)
+        for x in range(1,11):
+            action = browser.create_action(
+                'Select Class Label %d' % x,
+                 shortcut=QKeySequence(str(x) if x < 10 else '0'),
+                 slot=class_fct(x))
+            self._action_grp.addAction(action)
+            browser.addAction(action)
+
+        browser.coordinates_changed.connect(self._on_coordinates_changed)
+        browser.show_objects_toggled.connect(self._on_show_objects)
+
 
     def _find_items_in_class_table(self, value, column, match=Qt.MatchExactly):
         items = self._class_table.findItems(value, match)
@@ -430,13 +481,13 @@ class AnnotationModule(Module):
                 item2.setBackground(QBrush(class_color))
 
                 col = get_qcolor_hicontrast(class_color)
-                self._class_table.setStyleSheet("selection-background-color: %s;"\
-                                                "selection-color: %s;" %\
-                                                (qcolor_to_hex(class_color),
-                                                 qcolor_to_hex(col)))
                 self._class_table.resizeRowsToContents()
                 self._class_table.resizeColumnsToContents()
                 self._class_table.scrollToItem(item)
+                css = "selection-background-color: %s; selection-color: %s;" %\
+                       (qcolor_to_hex(class_color), qcolor_to_hex(col))
+                self._class_table.setStyleSheet(css)
+                self._ann_table.setStyleSheet(css)
 
                 self._annotations.rename_class(class_name, class_name_new)
                 self._current_class = class_name_new
@@ -528,6 +579,9 @@ class AnnotationModule(Module):
         class_table = self._class_table
         class_table.clearContents()
         class_table.setRowCount(0)
+        ann_table = self._ann_table
+        ann_table.clearContents()
+        ann_table.setRowCount(0)
         if self._detect_objects:
             self._activate_objects_for_image(False, clear=True)
         self._annotations.remove_all()
@@ -609,7 +663,7 @@ class AnnotationModule(Module):
                                 "successfully loaded from '%s'." % path)
 
     def _on_saveas_classifier(self):
-        min_time = self._meta_data.times[0]
+        min_time = self._browser.meta_data.times[0]
 
         learner = self._learner
         dialog = QFileDialog(self)
@@ -641,7 +695,7 @@ class AnnotationModule(Module):
                                 "Class definitions and annotations "
                                 "successfully saved to '%s'." % path)
 
-    def _activate_objects_for_image(self, state=True, clear=False):
+    def _activate_objects_for_image(self, state, clear=False):
         if clear:
             self._object_items.clear()
         coordinates = self._browser.get_coordinates()
@@ -664,9 +718,48 @@ class AnnotationModule(Module):
                 item.setText(str(counts[class_name]))
         #self._class_table.update()
 
+    def _update_annotation_table(self):
+        per_class = \
+            self._annotations.get_annotations_per_class(self._current_class)
+        ann_table = self._ann_table
+        ann_table.blockSignals(True)
+        ann_table.clearContents()
+        ann_table.setRowCount(len(per_class))
+        for idx, item in enumerate(per_class):
+            ann_table.setItem(idx, self.COLUMN_ANN_PLATE,
+                              QTableWidgetItem(item[0]))
+            ann_table.setItem(idx, self.COLUMN_ANN_POSITION,
+                              QTableWidgetItem(item[1]))
+            ann_table.setItem(idx, self.COLUMN_ANN_TIME,
+                              QTableWidgetItem(str(item[2])))
+            ann_table.setItem(idx, self.COLUMN_ANN_SAMPLES,
+                              QTableWidgetItem(str(item[3])))
+
+        ann_table.resizeColumnsToContents()
+        ann_table.resizeRowsToContents()
+        #ann_table.setStyleSheet(css)
+        coords = self._browser.get_coordinates()
+        self._find_annotation_row(*coords)
+        ann_table.blockSignals(False)
+
+    def _find_annotation_row(self, plateid, position, time):
+        items1 = self._ann_table.findItems(plateid, Qt.MatchExactly)
+        items2 = self._ann_table.findItems(position, Qt.MatchExactly)
+        items3 = self._ann_table.findItems(str(time), Qt.MatchExactly)
+        rows1 = set(x.row() for x in items1)
+        items2 = [x for x in items2 if x.row() in rows1 and x.column() == 1]
+        rows2 = set(x.row() for x in items2)
+        items3 = [x for x in items3 if x.row() in rows2 and x.column() == 2]
+        print 'ann', items3
+        assert len(items3) in [0,1]
+        if len(items3) == 1:
+            self._ann_table.setCurrentItem(items3[0])
+        else:
+            self._ann_table.clearSelection()
+
     def _on_new_point(self, point, button, modifier):
         item = self._browser.image_viewer.get_object_item(point)
-        print(item,point,item in self._object_items)
+        #print(item,point,item in self._object_items)
         if button == Qt.LeftButton and not item is None:
 
             coordinates = self._browser.get_coordinates()
@@ -692,21 +785,19 @@ class AnnotationModule(Module):
                                       self._current_class, tpl)
                 self._object_items[item] = point
                 self._activate_object(item, self._current_class, True)
-            self._update_class_table()
 
+            self._update_class_table()
+            self._update_annotation_table()
 
     def _on_dbl_clk(self, point):
         items = self.image_viewer.items(point)
         print(items)
 
     def _activate_object(self, item, class_name, state=True):
-        pen = item.pen()
-        color = \
-            QColor(*hexToRgb(self._learner.dctHexColors[class_name]))
-        pen.setColor(color if state else Qt.white)
-        item.setPen(pen)
-
         if state:
+            color = \
+                QColor(*hexToRgb(self._learner.dctHexColors[class_name]))
+            #color.setAlphaF(1.0)
             rect = item.boundingRect()
             label = self._learner.dctClassLabels[class_name]
             item2 = QGraphicsSimpleTextItem(str(label), item)
@@ -715,33 +806,51 @@ class AnnotationModule(Module):
             item2.setBrush(QBrush(color))
             item2.show()
         else:
+            color = self._browser.image_viewer.contour_color
             scene = item.scene()
             for item2 in item.childItems():
                 scene.removeItem(item2)
+        item.set_pen_color(color)
         obj_id = item.data(0).toInt()[0]
         return obj_id
 
+    def _on_coordinates_changed(self, plateid, position, time):
+        self._find_annotation_row(plateid, position, time)
+
+    def _on_anntable_changed(self, current, previous):
+        if not current is None:
+            plateid = str(self._ann_table.item(current.row(),
+                                               self.COLUMN_ANN_PLATE).text())
+            position = str(self._ann_table.item(current.row(),
+                                                self.COLUMN_ANN_POSITION).text())
+            time = int(self._ann_table.item(current.row(),
+                                            self.COLUMN_ANN_TIME).text())
+            self._browser.set_coordinates(plateid, position, time)
+
     def _on_class_changed(self, current, previous):
-        print self._class_table.rowCount(), current
         if not current is None:
             item = self._class_table.item(current.row(),
                                           self.COLUMN_CLASS_NAME)
-            self._current_class = str(item.text())
-            print self._current_class, current.row()
-            hex_col = self._learner.dctHexColors[self._current_class]
+            class_name = str(item.text())
+            self._current_class = class_name
+            hex_col = self._learner.dctHexColors[class_name]
             col = get_qcolor_hicontrast(QColor(hex_col))
-            self._class_table.setStyleSheet("selection-background-color: %s;"\
-                                            "selection-color: %s;" %\
-                                            (hex_col, qcolor_to_hex(col)))
-            self._class_table.scrollToItem(item)
-            self._class_text.setText(self._current_class)
-            class_label = self._learner.dctClassLabels[self._current_class]
+            class_table = self._class_table
+            css = "selection-background-color: %s; selection-color: %s;" % \
+                  (hex_col, qcolor_to_hex(col))
+            class_table.scrollToItem(item)
+            self._class_text.setText(class_name)
+            class_label = self._learner.dctClassLabels[class_name]
             self._class_sbox.setValue(class_label)
             self._class_color_btn.set_color(QColor(hex_col))
+            class_table.setStyleSheet(css)
+
+            self._update_annotation_table()
+            self._ann_table.setStyleSheet(css)
         else:
             self._current_class = None
 
-    def set_show_objects(self, state):
+    def _on_show_objects(self, state):
         if not state:
             self._object_items.clear()
         self._detect_objects = state
@@ -780,15 +889,23 @@ class AnnotationModule(Module):
         return success
 
     def set_coords(self):
-        self._activate_objects_for_image(clear=True)
-        self._update_class_table()
+        if self.isVisible():
+            self._activate_objects_for_image(True, clear=True)
+            self._update_class_table()
 
     def showEvent(self, event):
-        QFrame.showEvent(self, event)
+        self._activate_objects_for_image(True, clear=True)
+        self._update_class_table()
         self._browser.image_viewer.image_mouse_pressed.connect(self._on_new_point)
+        self._action_grp.setEnabled(True)
+        self._find_annotation_row(*self._browser.get_coordinates())
+        QFrame.showEvent(self, event)
 
     def hideEvent(self, event):
-        QFrame.hideEvent(self, event)
+        self._activate_objects_for_image(False, clear=True)
         self._browser.image_viewer.image_mouse_pressed.disconnect(self._on_new_point)
+        self._browser.image_viewer.purify_objects()
+        self._action_grp.setEnabled(False)
+        QFrame.hideEvent(self, event)
 
 

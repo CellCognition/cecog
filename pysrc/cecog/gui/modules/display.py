@@ -116,7 +116,7 @@ class ChannelItem(QFrame):
         self._palettes = palettes
 
         layout = QGridLayout(self)
-        layout.setContentsMargins(5, 5, 5, 5)
+        layout.setContentsMargins(2, 2, 2, 2)
         box = QCheckBox(name, self)
         box.setChecked(self._show_image)
         box.toggled.connect(self.on_show_toggled)
@@ -251,6 +251,7 @@ class EnhancementFrame(QFrame):
             btn.setCheckable(True)
             btn.setStyleSheet('QPushButton {border: 1px solid #8f8f91;'
                               'border-radius: 3px;'
+                              'padding: 2px; font-size: 12px;'
                               'min-width: 40px;}'
                               'QPushButton:checked { background-color: #afafb1; }')
             grp.addButton(btn)
@@ -272,6 +273,7 @@ class EnhancementFrame(QFrame):
 
         name = 'minimum'
         label = QLabel(name.capitalize(), frame)
+        label.setAlignment(Qt.AlignRight)
         sld = QSlider(Qt.Horizontal, frame)
         sld.setRange(0, 255)
         sld.setTickPosition(QSlider.TicksBelow)
@@ -282,6 +284,7 @@ class EnhancementFrame(QFrame):
 
         name = 'maximum'
         label = QLabel(name.capitalize(), frame)
+        label.setAlignment(Qt.AlignRight)
         sld = QSlider(Qt.Horizontal, frame)
         sld.setRange(0, 255)
         sld.setTickPosition(QSlider.TicksBelow)
@@ -292,6 +295,7 @@ class EnhancementFrame(QFrame):
 
         name = 'brightness'
         label = QLabel(name.capitalize(), frame)
+        label.setAlignment(Qt.AlignRight)
         sld = QSlider(Qt.Horizontal, frame)
         sld.setRange(0, 255)
         sld.setTickPosition(QSlider.TicksBelow)
@@ -302,6 +306,7 @@ class EnhancementFrame(QFrame):
 
         name = 'contrast'
         label = QLabel(name.capitalize(), frame)
+        label.setAlignment(Qt.AlignRight)
         sld = QSlider(Qt.Horizontal, frame)
         sld.setRange(0, 255)
         sld.setTickPosition(QSlider.TicksBelow)
@@ -373,36 +378,72 @@ class EnhancementFrame(QFrame):
 
 class ObjectsFrame(QFrame):
 
-    show_toggled = pyqtSignal('bool')
+    show_objects_toggled = pyqtSignal('bool')
+    object_region_changed = pyqtSignal(str, str)
 
-    def __init__(self, show_objects, region_names, parent):
+    def __init__(self, browser, region_names, parent):
         QFrame.__init__(self, parent)
         layout = QGridLayout(self)
         layout.setContentsMargins(5, 5, 5, 5)
 
-        self._show_objects = show_objects
+        self.show_objects_toggled.connect(browser.on_show_objects)
+        self._show_objects = False
+        self._show_contours = False
+        self._show_mouseover = True
+        self._browser = browser
 
-        box = QCheckBox('Show', self)
-        box.setChecked(self._show_objects)
-        box.toggled.connect(self._on_show_toggled)
-        layout.addWidget(box, 0, 0)
+        box_detect = QCheckBox('Show / Detect Objects', self)
+        box_detect.toggled.connect(self._on_show_objects)
+        box_detect.setChecked(self._show_objects)
+        layout.addWidget(box_detect, 0, 0)
         #layout.addStretch(1)
 
+
         box = QComboBox(self)
+        box.setEnabled(box_detect.checkState() == Qt.Checked)
         box.addItems(region_names)
+        box.currentIndexChanged.connect(self._on_current_region_changed)
+        print region_names
+        if len(region_names) > 0:
+            box.setCurrentIndex(0)
         layout.addWidget(box, 1, 0, 1, 2)
+        self._box_region = box
 
         box = QCheckBox('Show Contours', self)
+        box.setEnabled(box_detect.checkState() == Qt.Checked)
+        box.setChecked(self._browser.image_viewer.show_contours)
+        box.toggled.connect(self._on_show_contours)
         layout.addWidget(box, 2, 0)
-        btn = ColorButton(QColor('white'), self)
-        layout.addWidget(btn, 2, 1)
-        box = QCheckBox('Mouse over', self)
-        layout.addWidget(box, 3, 0)
-        btn = ColorButton(QColor('white'), self)
-        layout.addWidget(btn, 3, 1)
+        self._box_contours = box
 
-    def _on_show_toggled(self, state):
-        self.show_toggled.emit(state)
+        self._btn_contour_color = ColorButton(None, self)
+        self._btn_contour_color.setEnabled(box_detect.checkState() == Qt.Checked)
+        self._btn_contour_color.color_changed.connect(self._on_contour_color_changed)
+        # set the color button color and propagate the color to the observers
+        color = QColor('white')
+        color.setAlphaF(0.5)
+        self._btn_contour_color.set_color(color)
+        layout.addWidget(self._btn_contour_color, 2, 1)
+
+    #@pyqtSlot('QString')
+    def _on_current_region_changed(self, idx):
+        #print idx
+        # FIXME: pyqtSlot('QString') not working here
+        name = self._box_region.currentText()
+        channel, region = str(name).split(' - ')
+        self.object_region_changed.emit(channel, region)
+
+    def _on_show_objects(self, state):
+        self._box_region.setEnabled(state)
+        self._box_contours.setEnabled(state)
+        self._btn_contour_color.setEnabled(state)
+        self.show_objects_toggled.emit(state)
+
+    def _on_show_contours(self, state):
+        self._browser.image_viewer.set_show_contours(state)
+
+    def _on_contour_color_changed(self, color):
+        self._browser.image_viewer.set_contour_color(color)
 
 
 class DisplayFrame(QFrame):
@@ -429,7 +470,8 @@ class DisplayModule(Module):
 
     NAME = 'Display'
 
-    show_objects_toggled = pyqtSignal('bool')
+    #show_objects_toggled = pyqtSignal('bool')
+    object_region_changed = pyqtSignal(str, str)
 
     def __init__(self, parent, browser, meta_data, region_names):
         Module.__init__(self, parent, browser)
@@ -438,33 +480,33 @@ class DisplayModule(Module):
         self._display_images = {}
         self._rgb_images = {}
 
-        self.setStyleSheet("QGroupBox {font-size: 10px;}"
-                           "QGroupBox::title {margin: 0; margin-top: 4px;}")
-
         palettes = self.import_palettes()
 
+        self.object_region_changed.connect(browser.on_object_region_changed)
+
         layout = QBoxLayout(QBoxLayout.TopToBottom, self)
-        layout.setContentsMargins(5, 6, 5, 5)
+        layout.setContentsMargins(5, 5, 5, 5)
 
         frame_channels = QGroupBox('Channels', self)
         layout_channels = QBoxLayout(QBoxLayout.TopToBottom, frame_channels)
-        layout_channels.setContentsMargins(5, 5, 5, 5)
+        layout_channels.setContentsMargins(10, 12, 7, 10)
         frame_enhance = QGroupBox('Image Enhancement', self)
         layout_enhance = QBoxLayout(QBoxLayout.TopToBottom, frame_enhance)
-        layout_enhance.setContentsMargins(5, 5, 5, 5)
+        layout_enhance.setContentsMargins(5, 10, 5, 5)
         frame_objects = QGroupBox('Objects', self)
         layout_objects = QBoxLayout(QBoxLayout.TopToBottom, frame_objects)
-        layout_objects.setContentsMargins(5, 5, 5, 5)
+        layout_objects.setContentsMargins(5, 10, 5, 5)
         frame_display = QGroupBox('Display', self)
         layout_display = QBoxLayout(QBoxLayout.TopToBottom, frame_display)
-        layout_display.setContentsMargins(5, 5, 5, 5)
+        layout_display.setContentsMargins(5, 10, 5, 5)
 
+        layout.addSpacing(15)
         layout.addWidget(frame_channels)
-        layout.addSpacing(5)
+        layout.addSpacing(7)
         layout.addWidget(frame_enhance)
-        layout.addSpacing(5)
+        layout.addSpacing(7)
         layout.addWidget(frame_display)
-        layout.addSpacing(5)
+        layout.addSpacing(7)
         layout.addWidget(frame_objects)
         layout.addStretch(1)
 
@@ -476,15 +518,13 @@ class DisplayModule(Module):
             self._channels[channel_name] = widget
             widget.channel_changed.connect(self.on_channel_changed)
 
-        self._display_ctrl = EnhancementFrame(channel_names, frame_enhance)
-        self._display_ctrl.values_changed.connect(self.on_display_changed)
-        layout_enhance.addWidget(self._display_ctrl)
+        self._enhancement = EnhancementFrame(channel_names, frame_enhance)
+        self._enhancement.values_changed.connect(self.on_display_changed)
+        layout_enhance.addWidget(self._enhancement)
 
-        self.show_objects = False
-        self._display_objects = ObjectsFrame(self.show_objects,
-                                             region_names, frame_objects)
-        self._display_objects.show_toggled.connect(self.on_show_toggled)
-        layout_objects.addWidget(self._display_objects)
+        display = ObjectsFrame(browser, region_names, frame_objects)
+        display.object_region_changed.connect(self.on_object_region_changed)
+        layout_objects.addWidget(display)
 
         display = DisplayFrame(browser, frame_display)
         layout_display.addWidget(display)
@@ -518,7 +558,7 @@ class DisplayModule(Module):
         for name, image_helper in self._image_dict.iteritems():
             image = image_helper.array
             if restrict is None or restrict == name:
-                image = self._display_ctrl.transform_image(name, image)
+                image = self._enhancement.transform_image(name, image)
                 self._display_images[name] = image
 
     def update_renderer(self, restrict=None):
@@ -530,6 +570,9 @@ class DisplayModule(Module):
         rgb_images = self._rgb_images.values()
         self._browser.image_viewer.from_pixmap(blend_images_max(rgb_images))
 
+    def on_object_region_changed(self, channel, region):
+        self.object_region_changed.emit(channel, region)
+
     def on_channel_changed(self, name):
         name = str(name)
         self.update_renderer(restrict=name)
@@ -540,16 +583,6 @@ class DisplayModule(Module):
             name = str(name)
         self.update_display(restrict=name)
         self.update_renderer(restrict=name)
-
-    def on_show_toggled(self, state):
-        self.show_objects = state
-#        if not state:
-#            self._browser.image_viewer.remove_objects()
-#            #self._object_items.clear()
-#        #self._detect_objects = state
-#        self._browser._process_image()
-
-        self.show_objects_toggled.emit(state)
 
     def set_object_dict(self, d):
         pass

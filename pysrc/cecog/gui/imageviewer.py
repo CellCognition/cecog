@@ -51,29 +51,36 @@ class ItemHoverMixin:
 
     SCALE = 1.1
 
-    def __init__(self, hover=True):
-        self._oldwidth = self.pen().width()
-        self.setAcceptHoverEvents(hover)
+    def __init__(self):
+        self._old_pen = self.pen()
+
+    def set_pen_color(self, color):
+        self._old_pen.setColor(color)
+        pen = self.pen()
+        pen.setColor(color)
+        self.setPen(pen)
+
+    # overwrite QGraphicsItem event methods
 
     def hoverEnterEvent(self, ev):
         pen = self.pen()
-        self._oldwidth = self.pen().width()
-        pen.setWidth(3)
-        self.setPen(pen)
+        self._old_pen = pen
+        new_pen = QPen(pen)
+        new_pen.setWidth(3)
+        new_pen.setStyle(Qt.SolidLine)
+        self.setPen(new_pen)
         QGraphicsItem.hoverEnterEvent(self, ev)
 
     def hoverLeaveEvent(self, ev):
-        pen = self.pen()
-        pen.setWidth(self._oldwidth)
-        self.setPen(pen)
+        self.setPen(self._old_pen)
         QGraphicsItem.hoverLeaveEvent(self, ev)
 
 
 class HoverPolygonItem(QGraphicsPolygonItem, ItemHoverMixin):
 
-    def __init__(self, polygon, hover=True):
+    def __init__(self, polygon):
         QGraphicsPolygonItem.__init__(self, polygon)
-        ItemHoverMixin.__init__(self, hover=hover)
+        ItemHoverMixin.__init__(self)
 
 
 class ImageScene(QGraphicsScene):
@@ -118,6 +125,9 @@ class ImageViewer(QGraphicsView):
         self._click_on = False
         self._home_pos = None
         self._objects = set()
+        self.contour_color = QColor('white')
+        self.show_contours = True
+        self.show_mouseover = True
 
         self._pixmap = QGraphicsPixmapItem()
         self._pixmap.setShapeMode(QGraphicsPixmapItem.BoundingRectShape)
@@ -218,21 +228,47 @@ class ImageViewer(QGraphicsView):
     def set_auto_resize(self, state):
         self._auto_resize = state
 
+    def set_contour_color(self, color):
+        self.contour_color = color
+        self._update_contours()
+
+    def set_show_contours(self, state=True):
+        self.show_contours = state
+        self._update_contours()
+
+    def set_show_mouseover(self, state=True):
+        self.show_mouseover = state
+        self._update_contours()
+
+    def _update_contours(self):
+        pen = QPen(self.contour_color)
+        pen.setStyle(Qt.SolidLine if self.show_contours else Qt.NoPen)
+        for item in self._objects:
+            item.setPen(pen)
+            item.setAcceptHoverEvents(self.show_mouseover)
+
     def set_objects_by_crackcoords(self, coords):
         scene = self.scene()
         for obj_id, crack in coords.iteritems():
             poly = QPolygonF([QPointF(*pos) for pos in crack])
-            item = HoverPolygonItem(poly, hover=True)
-            item.setPen(QPen(Qt.white))
+            item = HoverPolygonItem(poly)
+            #item.setPen(self.object_pen)
             item.setData(0, obj_id)
             scene.addItem(item)
             self._objects.add(item)
+        self._update_contours()
 
     def remove_objects(self):
         scene = self.scene()
         for item in self._objects:
             scene.removeItem(item)
         self._objects.clear()
+
+    def purify_objects(self):
+        scene = self.scene()
+        for item in self._objects:
+            for item2 in item.childItems():
+                scene.removeItem(item2)
 
     def get_object_item(self, point):
         scene = self.scene()

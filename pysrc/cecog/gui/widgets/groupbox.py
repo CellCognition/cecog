@@ -84,7 +84,7 @@ class QxtGroupBox(QGroupBox):
             else:
                 self._flat = self.isFlat()
                 self.setFlat(True)
-            self.parent().layout().update()
+            #self.parent().layout().update()
 
     def childEvent(self, event):
         child = event.child()

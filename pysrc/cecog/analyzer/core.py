@@ -952,10 +952,12 @@ class PositionAnalyzer(object):
                         channel = oCellAnalyzer.get_channel(name)
                         d[channel.strChannelId] = channel.meta_image.image
                     self._myhack.set_image(d)
-                    channel = oCellAnalyzer.get_channel(PrimaryChannel.NAME)
-                    if channel.has_region('primary'):
-                        region = channel.get_region('primary')
-                        container = channel.get_container('primary')
+
+                    channel_name, region_name = self._myhack._object_region
+                    channel = oCellAnalyzer.get_channel(channel_name)
+                    if channel.has_region(region_name):
+                        region = channel.get_region(region_name)
+                        container = channel.get_container(region_name)
                         coords = {}
                         for obj_id in region:
                             coords[obj_id] = \
