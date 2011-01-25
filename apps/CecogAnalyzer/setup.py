@@ -90,7 +90,7 @@ pkginfo = read_pkginfo_file(__file__)
 # delete target folder before execution of py2app
 for path in ['dist', 'build']:
     if os.path.isdir(path):
-        shutil.rmtree(path)
+        shutil.rmtree(path, ignore_errors=True)
 
 if sys.platform == 'darwin':
     OPTIONS = {'app' : APP}
@@ -209,6 +209,9 @@ if sys.platform == 'darwin':
         print filename
         shutil.copy(filename, resource_path)
 
+    shutil.copytree(os.path.join(RESOURCE_PATH, 'palettes', 'zeiss'),
+                    os.path.join(resource_path, 'palettes', 'zeiss'))
+
 
 elif sys.platform == 'win32':
     import zipfile, glob
@@ -238,6 +241,9 @@ elif sys.platform == 'win32':
         filename = os.path.join('resources', os.path.split(filename)[1])
         print filename
         shutil.copy(filename, resource_path)
+
+    shutil.copytree(os.path.join(RESOURCE_PATH, 'palettes', 'zeiss'),
+                    os.path.join(resource_path, 'palettes', 'zeiss'))
 
     w9 = os.path.join('dist', 'w9xpopen.exe')
     if os.path.isfile(w9):

@@ -77,7 +77,7 @@ class FeatureExtractionFrame(_BaseFrame, _ProcessorMixin):
         _ProcessorMixin.__init__(self)
         self._result_frames = {}
 
-        for tab_name, prefix in [('Primary Channel', 'secondary'),
+        for tab_name, prefix in [('Primary Channel', 'primary'),
                                  ('Secondary Channel', 'secondary'),
                                  ('Tertiary Channel',  'tertiary')
                                  ]:

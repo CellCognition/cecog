@@ -95,6 +95,7 @@ class MetaData(object):
         self.channels = None
         self.times = None
         self.positions = None
+        self.plateids = None
 
         self._timestamps_relative = {}
         self._timestamps_absolute = {}

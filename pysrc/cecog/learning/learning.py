@@ -97,7 +97,7 @@ class BaseLearner(LoggerMixin, OptionManager):
         self.dctHexColors = {}
         self.dctSampleNames = {}
         self.dctEnvPaths = {}
-        self.hasZeroInsert = True
+        self.hasZeroInsert = False
         self.dctImageObjects = OrderedDict()
 
         super(BaseLearner, self).__init__(**options)
@@ -273,7 +273,7 @@ class BaseLearner(LoggerMixin, OptionManager):
         f.write('x\n')
         f.write('-1 1\n')
         for idx, (m1, m2) in enumerate(zip(features_min, features_max)):
-            f.write('%d %f %f\n' % (idx+1, m1, m2))
+            f.write('%d %.10e %.10e\n' % (idx+1, m1, m2))
         f.close()
 
     def importFromArff(self, strFilePath=None, strFileName=None):
@@ -526,7 +526,6 @@ class ClassPredictor(BaseLearner):
         dctNameLookup = dict([(name,i) for i,name in enumerate(lstFeatureNames)])
         lstRequiredFeatureData = [aFeatureData[dctNameLookup[x]]
                                   for x in self.lstFeatureNames]
-        #lstRequiredFeatureData = aFeatureData
         return self.oClassifier(lstRequiredFeatureData)
 
     def getData(self, normalize=True):
@@ -539,16 +538,13 @@ class ClassPredictor(BaseLearner):
         labels = numpy.asarray(labels)
         samples = numpy.asarray(samples)
         if normalize:
-            lo = numpy.amin(samples, 0)
-            hi = numpy.amax(samples, 0)
+            lo = numpy.min(samples, 0)
+            hi = numpy.max(samples, 0)
             # scale between -1 and +1
-            samples = 2.0 * (samples - lo) / (hi - lo) - 1.0
+            samples = 2.0 * (samples - lo) / (hi - lo + 0.0000001) - 1.0
         # FIXME: stupid libSVM conversions
         labels = map(int, labels)
-        samples = [dict([(i+1, float(v))
-                         for i,v in enumerate(items)
-                         if not numpy.isnan(v)])
-                   for items in samples]
+        samples = samples.tolist()
         return labels, samples
 
     def train(self, c, g, probability=True, compensation=True,
@@ -563,8 +559,9 @@ class ClassPredictor(BaseLearner):
                                   probability=1 if probability else 0)
 
         labels, samples = self.getData(normalize=True)
+
         # because we train the SVM with dict we need to redefine the zero-insert
-        self.hasZeroInsert = True
+        self.hasZeroInsert = False
         if not self.oClassifier is None:
             self.oClassifier.setOption('hasZeroInsert', True)
 

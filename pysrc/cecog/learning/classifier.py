@@ -24,6 +24,7 @@ import os, \
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
+import numpy
 
 from svm import svm_model
 

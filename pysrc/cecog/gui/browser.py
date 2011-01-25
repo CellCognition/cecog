@@ -78,7 +78,7 @@ from cecog.gui.modules.annotation import AnnotationModule
 
 
 
-@singleton
+#@singleton
 class Browser(QMainWindow):
 
     ZOOM_STEP = 1.05
@@ -381,7 +381,7 @@ class Browser(QMainWindow):
         self._process_image()
 
     def on_object_region_changed(self, channel, region):
-        self._object_region = str(channel), str(region)
+        self._object_region = channel, region
         self._process_image()
 
     def on_shortcut_left(self):

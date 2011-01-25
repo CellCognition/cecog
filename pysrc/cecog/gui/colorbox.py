@@ -71,7 +71,7 @@ class ColorBox(QComboBox):
 #                        QVariant(self.TEXT_MORE))
 
         self.setCurrentIndex(self.findData(current))
-        self.currentIndexChanged.connect(self._on_current_changed)
+        self.currentIndexChanged[int].connect(self._on_current_changed)
 
 
     def add_palette(self, name, palette, user=False):
@@ -95,7 +95,6 @@ class ColorBox(QComboBox):
 #        self._luts[index] = lut
         return index
 
-    @pyqtSlot(int)
     def _on_current_changed(self, idx):
         name = str(self.itemData(idx).toString())
         self.selection_changed.emit(name)

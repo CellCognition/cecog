@@ -64,12 +64,15 @@ class Module(QFrame):
      border-radius: 5px;
      margin-top: 1ex; /* leave space at the top for the title */
      font-size: 13px;
+     color: black;
  }
 
  QGroupBox::title {
      subcontrol-origin: margin;
      subcontrol-position: top center; /* position at the top center */
      padding: 0 3px;
+     font-size: 13px;
+     color: black;
  }
 
  QTableView {
@@ -78,7 +81,7 @@ class Module(QFrame):
  }
 
  QPushButton {
-     font-size: 11px;
+     font-size: 11px; min-width: 10px;
  }
 
  ColorButton::enabled {

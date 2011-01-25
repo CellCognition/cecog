@@ -249,17 +249,15 @@ class EnhancementFrame(QFrame):
             btn = QPushButton(name, frame_grp)
             btn.toggled.connect(fct(name))
             btn.setCheckable(True)
-            btn.setStyleSheet('QPushButton {border: 1px solid #8f8f91;'
+            btn.setStyleSheet('QPushButton {'
+                              'border: 1px solid #888888;'
                               'border-radius: 3px;'
                               'padding: 2px; font-size: 12px;'
                               'min-width: 40px;}'
-                              'QPushButton:checked { background-color: #afafb1; }')
+                              'QPushButton:checked { background-color: #999999;'
+                              'border: 1px solid #444444;}')
             grp.addButton(btn)
             layout_grp.addWidget(btn)
-            if idx == 0:
-                btn.setChecked(True)
-                self._current = name
-            #if idx > 0:
             self._display_settings[name] = DisplaySettings(0, 255)
         layout_grp.addStretch(1)
         layout.addWidget(frame_grp)
@@ -315,7 +313,6 @@ class EnhancementFrame(QFrame):
         layout_frame.addWidget(label, 3, 0)
         layout_frame.addWidget(sld, 3, 1)
 
-        self.set_sliders()
         layout.addWidget(frame)
 
         frame = QFrame(self)
@@ -328,6 +325,9 @@ class EnhancementFrame(QFrame):
         btn.clicked.connect(self.on_reset)
         layout_frame.addWidget(btn)
         layout.addWidget(frame)
+
+        if len(grp.buttons()) > 0:
+            grp.buttons()[0].setChecked(True)
 
     def set_sliders(self, ignore=None):
         s = self._display_settings[self._current]
@@ -388,22 +388,17 @@ class ObjectsFrame(QFrame):
 
         self.show_objects_toggled.connect(browser.on_show_objects)
         self._show_objects = False
-        self._show_contours = False
-        self._show_mouseover = True
         self._browser = browser
 
         box_detect = QCheckBox('Show / Detect Objects', self)
         box_detect.toggled.connect(self._on_show_objects)
         box_detect.setChecked(self._show_objects)
         layout.addWidget(box_detect, 0, 0)
-        #layout.addStretch(1)
-
 
         box = QComboBox(self)
         box.setEnabled(box_detect.checkState() == Qt.Checked)
         box.addItems(region_names)
-        box.currentIndexChanged.connect(self._on_current_region_changed)
-        print region_names
+        box.currentIndexChanged[str].connect(self._on_current_region_changed)
         if len(region_names) > 0:
             box.setCurrentIndex(0)
         layout.addWidget(box, 1, 0, 1, 2)
@@ -425,12 +420,8 @@ class ObjectsFrame(QFrame):
         self._btn_contour_color.set_color(color)
         layout.addWidget(self._btn_contour_color, 2, 1)
 
-    #@pyqtSlot('QString')
-    def _on_current_region_changed(self, idx):
-        #print idx
-        # FIXME: pyqtSlot('QString') not working here
-        name = self._box_region.currentText()
-        channel, region = str(name).split(' - ')
+    def _on_current_region_changed(self, name):
+        channel, region = name.split(' - ')
         self.object_region_changed.emit(channel, region)
 
     def _on_show_objects(self, state):

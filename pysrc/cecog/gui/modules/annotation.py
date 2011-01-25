@@ -318,6 +318,7 @@ class AnnotationModule(Module):
 
         self._settings = settings
         self._imagecontainer = imagecontainer
+        self._meta_data = self._imagecontainer.meta_data
 
         self._annotations = Annotations()
         self._object_items = {}
@@ -545,10 +546,11 @@ class AnnotationModule(Module):
         Remove a class and all its annotations
         '''
         class_name = self._current_class
-        if question(self, "Do you really want to remove class '%s'?" % \
-                    class_name,
-                    info="All %d annotations will be lost." % \
-                    self._annotations.get_count_for_class(class_name)):
+        if (not class_name is None and
+            question(self, "Do you really want to remove class '%s'?" % \
+                     class_name,
+                     info="All %d annotations will be lost." % \
+                     self._annotations.get_count_for_class(class_name))):
 
             self._activate_objects_for_image(False)
             learner = self._learner
@@ -569,6 +571,8 @@ class AnnotationModule(Module):
                 row = row if row < row_count else row_count-1
                 item = self._class_table.item(row, self.COLUMN_CLASS_NAME)
                 self._class_table.setCurrentItem(item)
+            else:
+                self._update_annotation_table()
 
     def _init_new_classifier(self):
         learner = BaseLearner()
@@ -705,7 +709,7 @@ class AnnotationModule(Module):
             if not item is None:
                 if not item in self._object_items:
                     self._object_items[item] = point
-                self._activate_object(item, class_name, state=state)
+                self._activate_object(item, point, class_name, state=state)
 
     def _update_class_table(self):
         counts = self._annotations.get_class_counts()
@@ -725,15 +729,32 @@ class AnnotationModule(Module):
         ann_table.blockSignals(True)
         ann_table.clearContents()
         ann_table.setRowCount(len(per_class))
-        for idx, item in enumerate(per_class):
-            ann_table.setItem(idx, self.COLUMN_ANN_PLATE,
-                              QTableWidgetItem(item[0]))
-            ann_table.setItem(idx, self.COLUMN_ANN_POSITION,
-                              QTableWidgetItem(item[1]))
-            ann_table.setItem(idx, self.COLUMN_ANN_TIME,
-                              QTableWidgetItem(str(item[2])))
-            ann_table.setItem(idx, self.COLUMN_ANN_SAMPLES,
-                              QTableWidgetItem(str(item[3])))
+        for idx, data in enumerate(per_class):
+            plateid, position, time, nr_samples = data
+            m = self._meta_data
+            # plateid in m.plateids
+            if position in m.positions and time in m.times:
+                flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
+                tooltip = 'Jump to coordinate to see the annotation.'
+            else:
+                flags = Qt.NoItemFlags
+                tooltip = 'Coordinate not found in this data set.'
+            item = QTableWidgetItem(plateid)
+            item.setFlags(flags)
+            item.setToolTip(tooltip)
+            ann_table.setItem(idx, self.COLUMN_ANN_PLATE, item)
+            item = QTableWidgetItem(position)
+            item.setFlags(flags)
+            item.setToolTip(tooltip)
+            ann_table.setItem(idx, self.COLUMN_ANN_POSITION, item)
+            item = QTableWidgetItem(str(time))
+            item.setFlags(flags)
+            item.setToolTip(tooltip)
+            ann_table.setItem(idx, self.COLUMN_ANN_TIME, item)
+            item = QTableWidgetItem(str(nr_samples))
+            item.setFlags(flags)
+            item.setToolTip(tooltip)
+            ann_table.setItem(idx, self.COLUMN_ANN_SAMPLES, item)
 
         ann_table.resizeColumnsToContents()
         ann_table.resizeRowsToContents()
@@ -750,7 +771,6 @@ class AnnotationModule(Module):
         items2 = [x for x in items2 if x.row() in rows1 and x.column() == 1]
         rows2 = set(x.row() for x in items2)
         items3 = [x for x in items3 if x.row() in rows2 and x.column() == 2]
-        print 'ann', items3
         assert len(items3) in [0,1]
         if len(items3) == 1:
             self._ann_table.setCurrentItem(items3[0])
@@ -773,7 +793,7 @@ class AnnotationModule(Module):
                     self._annotations.get_class_name(coordinates, tpl)
                 self._annotations.remove(coordinates, tpl)
                 del self._object_items[item]
-                self._activate_object(item, self._current_class, False)
+                self._activate_object(item, point, self._current_class, False)
 
             # mark a new item only if the shift-key is not pressed, a class
             # is currently active and the class name is different
@@ -784,7 +804,7 @@ class AnnotationModule(Module):
                 self._annotations.add(coordinates,
                                       self._current_class, tpl)
                 self._object_items[item] = point
-                self._activate_object(item, self._current_class, True)
+                self._activate_object(item, point, self._current_class, True)
 
             self._update_class_table()
             self._update_annotation_table()
@@ -793,15 +813,20 @@ class AnnotationModule(Module):
         items = self.image_viewer.items(point)
         print(items)
 
-    def _activate_object(self, item, class_name, state=True):
+    def _activate_object(self, item, point, class_name, state=True):
         if state:
             color = \
                 QColor(*hexToRgb(self._learner.dctHexColors[class_name]))
             #color.setAlphaF(1.0)
-            rect = item.boundingRect()
             label = self._learner.dctClassLabels[class_name]
+#            item2 = QGraphicsEllipseItem(point.x(), point.y(), 3, 3,item)
+#            item2.setPen(QPen(color))
+#            item2.setBrush(QBrush(color))
+#            item2.show()
             item2 = QGraphicsSimpleTextItem(str(label), item)
-            item2.setPos(rect.x()+rect.width()/2., rect.y()+rect.height()/2)
+            rect = item2.boundingRect()
+            # center the text item at the annotated point
+            item2.setPos(point - QPointF(rect.width()/2, rect.height()/2))
             item2.setPen(QPen(color))
             item2.setBrush(QBrush(color))
             item2.show()

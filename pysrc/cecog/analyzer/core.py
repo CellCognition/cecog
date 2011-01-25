@@ -735,10 +735,10 @@ class PositionAnalyzer(object):
 
 
                         # determine the list of features to be calculated from each object
-                        lstFeatureCategories = []
                         feature_extraction = self.oSettings.get(SECTION_NAME_PROCESSING,
                                                                 self._resolve_name(channel_section,
                                                                                    'featureextraction'))
+                        lstFeatureCategories = []
                         if feature_extraction:
                             for feature in FEATURE_MAP.keys():
                                 if self.oSettings.get(SECTION_NAME_FEATURE_EXTRACTION,

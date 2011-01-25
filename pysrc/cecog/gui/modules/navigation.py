@@ -177,15 +177,13 @@ class NavigationModule(Module):
 
     def _on_position_changed(self, current, previous):
         item = self._table_position.item(current.row(), 0)
-        position = str(item.data(0).toString())
+        position = item.data(0).toPyObject()
         self.position_changed.emit(position)
 
     def _on_coordinates_changed(self, plateid, position, time):
         self._table_position.blockSignals(True)
-
         item = self._table_position.findItems(position, Qt.MatchExactly)[0]
         print plateid, position, time, item.text()
         self._table_position.setCurrentItem(item)
-
         self._table_position.blockSignals(False)
 

@@ -62,12 +62,12 @@ class Normalizer(object):
                              (len(lstValues), len(self.lstScale)))
         if self.iMode == 0:
             # range [-1,1]
-            lstResults = [2.0 * (lstValues[i] - lo) / (hi - lo) - 1.0
+            lstResults = [2.0 * (lstValues[i] - lo) / (hi - lo + 0.0000001) - 1.0
                           for i,lo,hi in self.lstScale
                          ]
         else:
             # range [0,1]
-            lstResults = [(lstValues[i] - lo) / (hi - lo)
+            lstResults = [(lstValues[i] - lo) / (hi - lo + 0.0000001)
                           for i,lo,hi in self.lstScale
                          ]
         return lstResults
@@ -278,7 +278,7 @@ class ArffWriter(WriterBase):
                  dctHexColors=None, hasZeroInsert=False):
         super(ArffWriter, self).__init__(strFilename, lstFeatureNames,
                                          dctClassLabels)
-        self.writeLine("@RELATION MitoClassifier")
+        self.writeLine("@RELATION CecogClassifier")
         self.writeLine()
         for strFeatureName in self.lstFeatureNames:
             self.writeLine("@ATTRIBUTE %s NUMERIC" % strFeatureName)

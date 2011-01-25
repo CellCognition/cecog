@@ -54,9 +54,11 @@ class ColorButton(QToolButton):
 
     def set_color(self, color):
         self.current_color = color
-        self.setStyleSheet('background-color: rgba(%d, %d, %d, %d)'\
-                            % (color.red(), color.green(), color.blue(),
-                               color.alpha()))
+        # restrict the css to this class, otherwise the QColorDialog background
+        # is changed as well (on Windows only)
+        self.setStyleSheet(
+            'ColorButton { background-color: rgba(%d, %d, %d, %d) }' %
+             (color.red(), color.green(), color.blue(), color.alpha()))
         self.color_changed.emit(color)
 
     def _on_clicked(self):

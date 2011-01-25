@@ -26,6 +26,10 @@ import cPickle as pickle
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
+import sip
+# set PyQt API version to 2.0 and disable QString
+sip.setapi('QString', 2)
+
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
@@ -492,11 +496,11 @@ class AnalyzerMainWindow(QMainWindow):
         self._imagecontainer = ImageContainer.from_settings(self._settings,
                                                             force=False)
         self._meta_data = self._imagecontainer.meta_data
-        self._browser = Browser(self._settings,
-                                self._imagecontainer)
-        self._browser.show()
-        self._browser.raise_()
-        self._browser.setFocus()
+        browser = Browser(self._settings,
+                          self._imagecontainer)
+        browser.show()
+        browser.raise_()
+        browser.setFocus()
 
     def _on_load_input(self):
         # check the path_in and path_out
@@ -659,10 +663,10 @@ if __name__ == "__main__":
         set_package_path(package_path)
         log_path = os.path.join(package_path, 'log')
         safe_mkdirs(log_path)
-#        sys.stdout = \
-#            file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
-#        sys.stderr = \
-#            file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
+        sys.stdout = \
+            file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
+        sys.stderr = \
+            file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
 
     splash = QSplashScreen(QPixmap(':cecog_splash'))
     splash.show()
