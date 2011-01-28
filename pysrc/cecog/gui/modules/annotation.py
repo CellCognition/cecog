@@ -202,7 +202,7 @@ class Annotations(object):
                         items = ann[plateid][position][time][cn]
                         self._counts[cn] += len(items)
 
-    def import_from_xml(self, path, labels_to_names):
+    def import_from_xml(self, path, labels_to_names, time_points):
         pattern = re.compile('(.*__)?P(?P<position>.+?)__T(?P<time>\d+).*?')
         ann = self._annotations
         ann.clear()
@@ -217,32 +217,43 @@ class Annotations(object):
                 position = match.group('position')
                 time = int(match.group('time'))
 
-                if not plateid in ann:
-                    ann[plateid] = {}
-                if not position in ann[plateid]:
-                    ann[plateid][position] = {}
+                # check whether time is in this data set
+                # otherwise this XML file is skipped
+                if time in time_points:
+                    idx_base = time_points.index(time)
 
-                doc = minidom.parse(file_path)
+                    if not plateid in ann:
+                        ann[plateid] = {}
+                    if not position in ann[plateid]:
+                        ann[plateid][position] = {}
 
-                for marker_type in doc.getElementsByTagName('Marker_Type'):
-                    class_label = int(marker_type.getElementsByTagName('Type')[0].childNodes[0].data.strip())
-                    class_name = labels_to_names[class_label]
+                    doc = minidom.parse(file_path)
 
-                    for marker in marker_type.getElementsByTagName('Marker'):
-                        x = int(marker.getElementsByTagName('MarkerX')[0].childNodes[0].data)
-                        y = int(marker.getElementsByTagName('MarkerY')[0].childNodes[0].data)
-                        t = int(marker.getElementsByTagName('MarkerZ')[0].childNodes[0].data)
+                    for marker_type in doc.getElementsByTagName('Marker_Type'):
+                        class_label = int(marker_type.getElementsByTagName('Type')[0].childNodes[0].data.strip())
+                        class_name = labels_to_names[class_label]
 
-                        time_ref = time + t - 1
-                        if not time_ref in ann[plateid][position]:
-                            ann[plateid][position][time_ref] = {}
-                        ann2 = ann[plateid][position][time_ref]
-                        if not class_name in ann2:
-                            ann2[class_name] = set()
-                        ann2[class_name].add((x, y))
+                        for marker in marker_type.getElementsByTagName('Marker'):
+                            x = int(marker.getElementsByTagName('MarkerX')[0].childNodes[0].data)
+                            y = int(marker.getElementsByTagName('MarkerY')[0].childNodes[0].data)
+                            # Z is used as the time information in an ImageJ stack here
+                            # it's an relative index (1 based). this first frame used
+                            # is stored in the XML filename
+                            t = int(marker.getElementsByTagName('MarkerZ')[0].childNodes[0].data)
+
+                            idx = idx_base + t - 1
+                            if idx < len(time_points):
+                                time_ref = time_points[idx]
+                                if not time_ref in ann[plateid][position]:
+                                    ann[plateid][position][time_ref] = {}
+                                ann2 = ann[plateid][position][time_ref]
+                                if not class_name in ann2:
+                                    ann2[class_name] = set()
+                                ann2[class_name].add((x, y))
+        # rebuild the count info according to the annotation
         self.rebuild_class_counts()
 
-    def export_to_xml(self, path, min_time, names_to_labels):
+    def export_to_xml(self, path, min_time, names_to_labels, time_points):
         impl = minidom.getDOMImplementation()
         ann = self._annotations
         for plateid in ann:
@@ -261,6 +272,8 @@ class Annotations(object):
                 element = doc.createElement('Marker_Data')
                 top.appendChild(element)
 
+                idx_base = time_points[min_time]
+
                 for cn in bycn:
                     element2 = doc.createElement('Marker_Type')
                     element.appendChild(element2)
@@ -270,6 +283,8 @@ class Annotations(object):
                     element3.appendChild(text)
                     element2.appendChild(element3)
                     for time in bycn[cn]:
+                        idx = time_points.index(time) + 1 - idx_base
+
                         for item in bycn[cn][time]:
                             element3 = doc.createElement('Marker')
 
@@ -282,7 +297,7 @@ class Annotations(object):
                             element4.appendChild(text)
                             element3.appendChild(element4)
                             element4 = doc.createElement('MarkerZ')
-                            text = doc.createTextNode(str(time))
+                            text = doc.createTextNode(str(idx))
                             element4.appendChild(text)
                             element3.appendChild(element4)
 
@@ -385,7 +400,7 @@ class AnnotationModule(Module):
         ann_table.setSelectionBehavior(QTableWidget.SelectRows)
         #ann_table.setSortingEnabled(True)
         ann_table.setColumnCount(4)
-        ann_table.setHorizontalHeaderLabels(['Plate', 'Position', 'Time',
+        ann_table.setHorizontalHeaderLabels(['Plate', 'Position', 'Frame',
                                              'Samples',
                                              ])
         ann_table.resizeColumnsToContents()
@@ -598,7 +613,6 @@ class AnnotationModule(Module):
             self._learner = self._init_new_classifier()
 
     def _on_open_classifier(self):
-
         dialog = QFileDialog(self)
         dialog.setFileMode(QFileDialog.Directory)
         path = self._learner.get_env_path()
@@ -630,37 +644,22 @@ class AnnotationModule(Module):
                 class_table.resizeColumnsToContents()
                 class_table.resizeRowsToContents()
 
+                self._activate_objects_for_image(False, clear=True)
                 path2 = learner.getPath(learner.ANNOTATIONS)
                 try:
                     self._annotations.import_from_xml(path2,
-                                                      learner.dctClassNames)
+                                                      learner.dctClassNames,
+                                                      self._meta_data.times)
                 except:
                     exception(self, "Problems loading annotation data...")
                     self._learner = self._init_new_classifier()
                 else:
-                    if self._detect_objects:
-                        self._activate_objects_for_image(False, clear=True)
-                        self._activate_objects_for_image(True)
+                    self._activate_objects_for_image(True)
                     self._update_class_table()
                     if class_table.rowCount() > 0:
                         class_table.setCurrentCell(0, self.COLUMN_CLASS_NAME)
                     else:
                         self._current_class = None
-
-#                    iter_all = self._annotations.iter_all(self._channel)
-#                    items = [(pi,p,t,cn,len(it)) for pi,p,t,cn,it in iter_all]
-#                    ann_table = self._ann_table
-#                    ann_table.clearContents()
-#                    ann_table.setRowCount(len(items))
-#                    #ann_table.setM
-#                    for idx, (pi,p,t,cn,cnt) in enumerate(items):
-#                        print idx, pi,p,t,cn,cnt
-#                        ann_table.setItem(idx, 0, QTableWidgetItem(str(pi)))
-#                        ann_table.setItem(idx, 1, QTableWidgetItem(str(p)))
-#                        ann_table.setItem(idx, 2, QTableWidgetItem(str(t)))
-#                        ann_table.setItem(idx, 3, QTableWidgetItem(str(cnt)))
-#                    ann_table.resizeColumnsToContents()
-#                    ann_table.resizeRowsToContents()
 
                     information(self, "Classifier successfully loaded",
                                 "Class definitions and annotations "
@@ -691,7 +690,8 @@ class AnnotationModule(Module):
                         shutil.copy2(filename, path_backup)
                         os.remove(filename)
                     self._annotations.export_to_xml(path2, min_time,
-                                                    learner.dctClassLabels)
+                                                    learner.dctClassLabels,
+                                                    self._meta_data.times)
                 except:
                     exception(self, "Problems saving annotation data...")
                 else:
@@ -700,6 +700,9 @@ class AnnotationModule(Module):
                                 "successfully saved to '%s'." % path)
 
     def _activate_objects_for_image(self, state, clear=False):
+        '''
+        activate or
+        '''
         if clear:
             self._object_items.clear()
         coordinates = self._browser.get_coordinates()
@@ -712,6 +715,9 @@ class AnnotationModule(Module):
                 self._activate_object(item, point, class_name, state=state)
 
     def _update_class_table(self):
+        '''
+        update the class count for the class table
+        '''
         counts = self._annotations.get_class_counts()
         for class_name in self._learner.lstClassNames:
             if class_name in counts:
@@ -723,6 +729,10 @@ class AnnotationModule(Module):
         #self._class_table.update()
 
     def _update_annotation_table(self):
+        '''
+        update the annotation table. set the annotation coordinates for
+        the current class
+        '''
         per_class = \
             self._annotations.get_annotations_per_class(self._current_class)
         ann_table = self._ann_table
