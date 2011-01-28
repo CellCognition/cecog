@@ -84,6 +84,7 @@ class Browser(QMainWindow):
     ZOOM_STEP = 1.05
 
     show_objects_toggled = pyqtSignal('bool')
+    show_contours_toggled = pyqtSignal('bool')
     coordinates_changed = pyqtSignal(str, str, int)
 
     def __init__(self, settings, imagecontainer):
@@ -106,64 +107,6 @@ class Browser(QMainWindow):
 """
   QStatusBar { border-top: 1px solid gray; }
 """)
-
-
-        act_next_t = self.create_action('Next Time-point',
-                                        shortcut=QKeySequence('Right'),
-                                        slot=self.on_shortcut_right)
-        act_prev_t = self.create_action('Previous Time-point',
-                                        shortcut=QKeySequence('Left'),
-                                        slot=self.on_shortcut_left)
-        act_resize = self.create_action('Automatically Resize',
-                                         shortcut=QKeySequence('SHIFT+CTRL+R'),
-                                         slot=self.on_shortcut_autoresize,
-                                         signal='triggered(bool)',
-                                         checkable=True,
-                                         checked=True)
-        self._act_resize = act_resize
-        act_zoomfit = self.create_action('Zoom to Fit',
-                                         shortcut=QKeySequence('CTRL+0'),
-                                         slot=self.on_shortcut_zoomfit)
-        act_zoom100 = self.create_action('Actual Size',
-                                         shortcut=QKeySequence('CTRL+1'),
-                                         slot=self.on_shortcut_zoom100)
-        act_zoomin = self.create_action('Zoom In',
-                                        shortcut=QKeySequence('CTRL++'),
-                                        slot=self.on_shortcut_zoomin)
-        act_zoomout = self.create_action('Zoom Out',
-                                         shortcut=QKeySequence('CTRL+-'),
-                                         slot=self.on_shortcut_zoomout)
-        act_fullscreen = self.create_action('Full Screen',
-                                            shortcut=QKeySequence('CTRL+F'),
-                                            slot=self.on_shortcut_fullscreen,
-                                            signal='triggered(bool)',
-                                            checkable=True,
-                                            checked=False)
-        self._act_fullscreen = act_fullscreen
-        act_anti = self.create_action('Antialiasing',
-                                      shortcut=QKeySequence('CTRL+ALT+A'),
-                                      slot=self.on_shortcut_antialiasing,
-                                      signal='triggered(bool)',
-                                      checkable=True,
-                                      checked=True)
-        act_smooth = self.create_action('Smooth Transform',
-                                        shortcut=QKeySequence('CTRL+ALT+S'),
-                                        slot=self.on_shortcut_smoothtransform,
-                                        signal='triggered(bool)',
-                                        checkable=True,
-                                        checked=True)
-        view_menu = self.menuBar().addMenu('&View')
-        self.add_actions(view_menu, (act_resize, None,
-                                     act_zoom100, act_zoomfit,
-                                     act_zoomin, act_zoomout,
-                                     None,
-                                     act_prev_t, act_next_t, None,
-                                     act_fullscreen, None,
-                                     act_anti, act_smooth,
-                                     ))
-
-        self._statusbar = QStatusBar(self)
-        self.setStatusBar(self._statusbar)
 
 
         layout = QVBoxLayout(frame)
@@ -209,6 +152,75 @@ class Browser(QMainWindow):
         self._position = None
         self._time = self._t_slider.minimum()
 
+        # menus
+
+        act_next_t = self.create_action('Next Time-point',
+                                        shortcut=QKeySequence('Right'),
+                                        slot=self.on_shortcut_right)
+        act_prev_t = self.create_action('Previous Time-point',
+                                        shortcut=QKeySequence('Left'),
+                                        slot=self.on_shortcut_left)
+        act_resize = self.create_action('Automatically Resize',
+                                         shortcut=QKeySequence('SHIFT+CTRL+R'),
+                                         slot=self.on_shortcut_autoresize,
+                                         signal='triggered(bool)',
+                                         checkable=True,
+                                         checked=True)
+        self._act_resize = act_resize
+        act_zoomfit = self.create_action('Zoom to Fit',
+                                         shortcut=QKeySequence('CTRL+0'),
+                                         slot=self.on_shortcut_zoomfit)
+        act_zoom100 = self.create_action('Actual Size',
+                                         shortcut=QKeySequence('CTRL+1'),
+                                         slot=self.on_shortcut_zoom100)
+        act_zoomin = self.create_action('Zoom In',
+                                        shortcut=QKeySequence('CTRL++'),
+                                        slot=self.on_shortcut_zoomin)
+        act_zoomout = self.create_action('Zoom Out',
+                                         shortcut=QKeySequence('CTRL+-'),
+                                         slot=self.on_shortcut_zoomout)
+        act_fullscreen = self.create_action('Full Screen',
+                                            shortcut=QKeySequence('CTRL+F'),
+                                            slot=self.on_shortcut_fullscreen,
+                                            signal='triggered(bool)',
+                                            checkable=True,
+                                            checked=False)
+        self._act_fullscreen = act_fullscreen
+
+        act_show_contours = self.create_action('Show Object Contours',
+                                               shortcut=QKeySequence('ALT+C'),
+                                               slot=self.on_shortcut_show_contours,
+                                               signal='triggered(bool)',
+                                               checkable=True,
+                                               checked=self.image_viewer.show_contours)
+        self._act_show_contours = act_show_contours
+
+        act_anti = self.create_action('Antialiasing',
+                                      shortcut=QKeySequence('CTRL+ALT+A'),
+                                      slot=self.on_shortcut_antialiasing,
+                                      signal='triggered(bool)',
+                                      checkable=True,
+                                      checked=True)
+        act_smooth = self.create_action('Smooth Transform',
+                                        shortcut=QKeySequence('CTRL+ALT+S'),
+                                        slot=self.on_shortcut_smoothtransform,
+                                        signal='triggered(bool)',
+                                        checkable=True,
+                                        checked=True)
+        view_menu = self.menuBar().addMenu('&View')
+        self.add_actions(view_menu, (act_resize, None,
+                                     act_zoom100, act_zoomfit,
+                                     act_zoomin, act_zoomout,
+                                     None,
+                                     act_prev_t, act_next_t, None,
+                                     act_fullscreen, None,
+                                     act_show_contours, None,
+                                     act_anti, act_smooth,
+                                     ))
+
+        self._statusbar = QStatusBar(self)
+        self.setStatusBar(self._statusbar)
+
 
         # tool bar
 
@@ -239,6 +251,7 @@ class Browser(QMainWindow):
         self._register_tab(annotation)
 
         self._activate_tab(NavigationModule.NAME)
+
 
 
     def _register_tab(self, widget):
@@ -402,6 +415,13 @@ class Browser(QMainWindow):
         else:
             self.showNormal()
         self.raise_()
+
+    def on_shortcut_show_contours(self, checked):
+        self._act_show_contours.blockSignals(True)
+        self._act_show_contours.setChecked(checked)
+        self._act_show_contours.blockSignals(False)
+        self.image_viewer.set_show_contours(checked)
+        self.show_contours_toggled.emit(checked)
 
     def on_shortcut_antialiasing(self, checked):
         self.image_viewer.setRenderHint(QPainter.Antialiasing, checked)

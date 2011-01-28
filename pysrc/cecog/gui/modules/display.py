@@ -407,7 +407,7 @@ class ObjectsFrame(QFrame):
         box = QCheckBox('Show Contours', self)
         box.setEnabled(box_detect.checkState() == Qt.Checked)
         box.setChecked(self._browser.image_viewer.show_contours)
-        box.toggled.connect(self._on_show_contours)
+        box.toggled.connect(self._browser.on_shortcut_show_contours)
         layout.addWidget(box, 2, 0)
         self._box_contours = box
 
@@ -420,6 +420,8 @@ class ObjectsFrame(QFrame):
         self._btn_contour_color.set_color(color)
         layout.addWidget(self._btn_contour_color, 2, 1)
 
+        self._browser.show_contours_toggled.connect(self._on_set_contour_state)
+
     def _on_current_region_changed(self, name):
         channel, region = name.split(' - ')
         self.object_region_changed.emit(channel, region)
@@ -430,8 +432,10 @@ class ObjectsFrame(QFrame):
         self._btn_contour_color.setEnabled(state)
         self.show_objects_toggled.emit(state)
 
-    def _on_show_contours(self, state):
-        self._browser.image_viewer.set_show_contours(state)
+    def _on_set_contour_state(self, state):
+        self._box_contours.blockSignals(True)
+        self._box_contours.setChecked(state)
+        self._box_contours.blockSignals(False)
 
     def _on_contour_color_changed(self, color):
         self._browser.image_viewer.set_contour_color(color)
@@ -519,6 +523,8 @@ class DisplayModule(Module):
 
         display = DisplayFrame(browser, frame_display)
         layout_display.addWidget(display)
+
+
 
     def import_palettes(self):
         palettes = OrderedDict()
