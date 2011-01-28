@@ -849,19 +849,31 @@ class CellAnalyzer(PropertyManager):
                         dctData['iPosX'] < oContainer.width and
                         dctData['iPosY'] >= 0 and
                         dctData['iPosY'] < oContainer.height):
+
                         center1 = ccore.Diff2D(dctData['iPosX'],
                                                dctData['iPosY'])
-                        dists = []
-                        for obj_id, obj in objects.iteritems():
-                            diff = obj.oCenterAbs - center1
-                            dist_sq = diff.squaredMagnitude()
-                            # limit to 30 pixel radius
-                            if dist_sq < 900:
-                                dists.append((obj_id, dist_sq))
-                        if len(dists) > 0:
-                            dists.sort(lambda a,b: cmp(a[1], b[1]))
-                            obj_id = dists[0][0]
+
+                        # test for obj_id "under" annotated pixel first
+                        obj_id = oContainer.img_labels[center1]
+
+                        # if not background: valid obj_id found
+                        if obj_id > 0:
                             dict_append_list(object_lookup, label, obj_id)
+
+                        # otherwise try to find nearest object in a search
+                        # radius of 30 pixel (compatibility with CellCounter)
+                        else:
+                            dists = []
+                            for obj_id, obj in objects.iteritems():
+                                diff = obj.oCenterAbs - center1
+                                dist_sq = diff.squaredMagnitude()
+                                # limit to 30 pixel radius
+                                if dist_sq < 900:
+                                    dists.append((obj_id, dist_sq))
+                            if len(dists) > 0:
+                                dists.sort(lambda a,b: cmp(a[1], b[1]))
+                                obj_id = dists[0][0]
+                                dict_append_list(object_lookup, label, obj_id)
 
         object_ids = set(flatten(object_lookup.values()))
         objects_del = set(objects.keys()) - object_ids

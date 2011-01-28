@@ -1091,7 +1091,7 @@ class AnalyzerCore(object):
                     has_timelapse = self.oSettings.get('General', 'timelapsedata')
 
                     if has_timelapse:
-                        reference = self.lstAnalysisFrames
+                        reference = self._meta_data.times
                     else:
                         reference = self.lstPositions
 
