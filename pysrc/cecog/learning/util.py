@@ -101,7 +101,7 @@ class ArffReader(object):
         self._close()
 
     def _convert_string(self, string):
-        return string.replace('\'','').replace('"','').replace(' ','')
+        return string.replace('\'','').replace('"','')
 
     def _read(self):
         in_data = False
