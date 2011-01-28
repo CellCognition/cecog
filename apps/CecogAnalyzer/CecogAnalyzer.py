@@ -466,9 +466,7 @@ class AnalyzerMainWindow(QMainWindow):
         label2.setStyleSheet('background: transparent;')
         label2.setAlignment(Qt.AlignCenter)
         label2.setText('CecogAnalyzer\nVersion %s\n\n'
-                       'Copyright (c) 2006 - 2010\n'
-                       'Michael Held & Daniel Gerlich\n'
-                       'ETH Zurich, Switzerland' % VERSION)
+                       'Copyright (c) 2006 - 2011\n' % VERSION)
         label3 = QLabel(dialog)
         label3.setStyleSheet('background: transparent;')
         label3.setTextFormat(Qt.AutoText)
@@ -478,7 +476,7 @@ class AnalyzerMainWindow(QMainWindow):
         #palette.link = QBrush(QColor(200,200,200))
         #label3.setPalette(palette)
         label3.setText('<style>a { color: green; } a:visited { color: green; }</style>'
-                       '<a href="http://www.cellcognition.org">www.cellcognition.org</a><br>')
+                       '<a href="http://cellcognition.org">cellcognition.org</a><br>')
         layout.addWidget(label2, 1, 0)
         layout.addWidget(label3, 2, 0)
         layout.setAlignment(Qt.AlignCenter|

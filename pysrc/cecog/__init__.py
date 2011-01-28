@@ -28,7 +28,7 @@ from cecog.traits.config import (init_constants,
 #-------------------------------------------------------------------------------
 # constants:
 #
-VERSION_NUM = (1, 1, 1)
+VERSION_NUM = (1, 1, 2)
 VERSION = '.'.join([str(digit) for digit in VERSION_NUM])
 
 HAS_GUI = False
