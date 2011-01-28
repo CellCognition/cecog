@@ -568,19 +568,13 @@ class TrainingThread(_ProcessingThread):
 
         # overwrite only if grid-search was not aborted by the user
         if not is_abort:
-            #self.conf_result.emit(best_c, best_g, best_accuracy, best_conf)
-            c=0.03125
-            g=0.0078125
-            self._learner.train(c,g)
-            #self._learner.train(2**best_log2c, 2**best_log2g)
+            self._learner.train(2**best_log2c, 2**best_log2g)
             self._learner.exportConfusion(best_log2c, best_log2g, best_conf)
             self._learner.exportRanges()
             # FIXME: in case the meta-data (colors, names, zero-insert) changed
             #        the ARFF file has to be written again
             #        -> better store meta-data outside ARFF
             self._learner.exportToArff()
-
-
 
 
 
