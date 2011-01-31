@@ -64,6 +64,8 @@ if (!is.null(FILENAME_GRAPH_P))
                          openHTML=TRUE,
                          timelapse=TIMELAPSE,
                          max_time=MAX_TIME,
+                         write_decode=FALSE,
+                         write_decode2=FALSE
                          )
     }
 }
@@ -88,6 +90,8 @@ if (!is.null(FILENAME_GRAPH_S))
                 openHTML=TRUE,
                 timelapse=TIMELAPSE,
                 max_time=MAX_TIME,
+                write_decode=FALSE,
+                write_decode2=FALSE
         )
     }
 }

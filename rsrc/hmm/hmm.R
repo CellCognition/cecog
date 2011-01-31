@@ -12,6 +12,10 @@
 # Revision: $Rev:$'
 # Source: $URL:$'
 
+hmm.export <- function(hmm, filename) {
+    write.table(hmm$trans, filename, quote=FALSE, sep="\t",
+                row.names=FALSE)
+}
 
 hmm.summarize <- function(prob, post, emission) {
   hmm <- list()
@@ -206,11 +210,13 @@ hmm.learn <- function(prob, graph, steps = 1, initial_emission=NULL) {
     initial_emission = initial_emission + 0.001
   }
 
-  post <- hmm.post.init(prob,graph)
   for (i in 1:steps) {
+    if (i == 1)
+        post <- hmm.post.init(prob,graph)
+    else
+        post <- hmm.posterior(prob,hmm)
     hmm <- hmm.summarize(prob,post,initial_emission)
     hmm <- hmm.normalize(hmm,graph)
-    post <- hmm.posterior(prob,hmm)
   }
   return(hmm)
 }

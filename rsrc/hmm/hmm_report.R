@@ -16,11 +16,11 @@ library(hwriter)
 library(igraph)
 library(Cairo)
 
-read.screen <- function(dir,filenameLayout,regionName,graph,fuseClasses=NULL)
+read.screen <- function(dir,filenameLayout,regionName,graph,fuseClasses=NULL,singleBranch=FALSE)
 {
     screen <- list()
     screen$dir <- dir
-    screen$layout <- read.delim(filenameLayout, colClasses = "character")
+    screen$layout <- read.delim(filenameLayout, as.is=TRUE)
     screen$nrOfPositions <- dim(screen$layout)[1]
     screen$nrOfCells <- 0
     screen$K <- graph$K
@@ -34,19 +34,30 @@ read.screen <- function(dir,filenameLayout,regionName,graph,fuseClasses=NULL)
         else
             pos.name = "Position"
         pos = screen$layout[i, pos.name]
-        #if (is.numeric(pos))
-        #    str.pos <- sprintf("%04d", screen$layout[i, pos.name])
-        #else
-        str.pos = pos
+        #print(paste(pos, pos.name))
+        if (is.numeric(pos))
+            str.pos <- sprintf("%04d", as.numeric(pos))
+        else
+            str.pos = pos
+        #path = paste(str.pos, "_tracking/_features_events", sep="/")
         #spath = paste(str.pos, "_tracking", sep="/")
         spath = paste(str.pos, "statistics", "events", sep="/")
         path = paste(dir, spath, sep="/")
-        print(paste(str.pos, path,file.exists(path)))
+        #print(paste(str.pos, path,file.exists(path)))
         if (file.exists(path))
         {
             filename <- list.files(path, paste(".*",regionName,".*",sep=""))
-            if (length(filename) > 0)
+            if (singleBranch)
+                filename = filename[grep('_B01_', filename)]
+            #if (length(filename) > 0)
             {
+                if (length(filename) > 0)
+                  valid = rep(TRUE, length(filename))
+                else
+                {
+                    filename = ""
+                    valid = c(FALSE)
+                }
                 name <- filename
                 tracking <- spath
                 filename <- paste(spath, filename, sep="/")
@@ -56,13 +67,14 @@ read.screen <- function(dir,filenameLayout,regionName,graph,fuseClasses=NULL)
                 oligoid <- rep(screen$layout$OligoID[i],length(filename))
                 cell <- data.frame(filename = filename, position = position,
                                    gene = gene, oligoid = oligoid,
-                                   tracking = tracking, name = name)
+                                   tracking = tracking, name = name,
+                                   valid = valid)
                 if (i == 1)
                     screen$cell <- cell
                 else
                     screen$cell <- rbind(screen$cell,cell)
-            } else
-                screen$nrOfPositions = screen$nrOfPositions - 1
+            } #else
+            #    screen$nrOfPositions = screen$nrOfPositions - 1
         } else
             screen$nrOfPositions = screen$nrOfPositions - 1
     }
@@ -142,22 +154,24 @@ hmm.read.graph.structure <- function(filename) {
 
 read.probabilities <- function(screen)
 {
-    print(paste(screen$dir,"/",screen$cell$filename[1],sep=""))
-    t <- read.delim(paste(screen$dir,"/",screen$cell$filename[1],sep=""), as.is=TRUE)
-    T <- dim(t)[1]
-
+    T <- NULL
     K <- screen$K
     fuseClasses <- screen$fuseClasses
-    #if (!is.null(fuseClasses))
-    #    K <- K - dim(fuseClasses)[1]
-
-    prob <- array(0,dim = c(screen$nrOfCells,T,K))
     n <- 0
     for (i in 1:screen$nrOfCells)
     {
-        cat("Read file ", paste(screen$dir,"/",screen$cell$filename[i],sep=""), "\n")
+        valid = screen$cell$valid[i]
+        print(paste("Read file: ", screen$dir, "/", screen$cell$filename[i], ", valid=", valid, sep=" "))
+
+        if (valid)
+        {
         t <- read.delim(paste(screen$dir,"/",screen$cell$filename[i],sep=""), as.is=TRUE)
 
+        if (is.null(T))
+        {
+          T = dim(t)[1]
+            prob <- array(0,dim = c(screen$nrOfCells,T,K))
+        }
         if (dim(t)[1] != T) {
             cat("ERROR: The number of time points in file ", screen$cell$filename[i], " is ", dim(t)[1],". Expected number of time points is ",T,"\n")
             stop()
@@ -165,7 +179,7 @@ read.probabilities <- function(screen)
 
         for (j in 1:T)
         {
-            Cstr <- t$class__A__probability[j]
+            Cstr <- t$class__probability[j]
             Cstr2 <- strsplit(Cstr,split=",")[[1]]
             C <- strsplit(Cstr2, split=":")
             Cs <- rep(0, K)
@@ -190,6 +204,7 @@ read.probabilities <- function(screen)
                 p[k2] <- p[k2] + Cs[k]
             }
             prob[i,j,] <- p
+        }
         }
     }
     return(prob)
@@ -457,9 +472,10 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
                              realign=NULL,
                              realign_onset=NULL,
                              realign_truncate=0,
+                             realign_center=10,
                              features=NULL,
-                             writeDecode=TRUE,
-                             writeDecode2=TRUE,
+                             write_decode=TRUE,
+                             write_decode2=TRUE,
                              groupByOligoId=FALSE,
                              groupByGene=FALSE,
                              visualizeDecode=FALSE,
@@ -469,7 +485,9 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
                              feature_filter_range=NULL,
                              hmm_em_steps=1,
                              hmm_initial_emission=NULL,
-                             performDecode=TRUE)
+                             performDecode=TRUE,
+                             truncate_from_front=NULL,
+                             motif_sequence=NULL)
 {
     if (!file.exists(outdir))
         dir.create(outdir)
@@ -485,9 +503,23 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
     if (!file.exists(outdir_region))
         dir.create(outdir_region)
 
+    rel_sequences = '_sequences'
+    outdir_sequences = paste(outdir_region, rel_sequences, sep='/')
+    if (!file.exists(outdir_sequences))
+        dir.create(outdir_sequences)
+
     N <- dim(prob)[1]
     T <- dim(prob)[2]
-    K <- dim(prob)[3]
+    C <- graph$C
+    K <- graph$K
+    T.old <- T
+
+    counts.all <- list()
+    names.all <- list()
+    symbols.all <- list()
+
+    overall_indices = NULL
+    overall_realign = NULL
 
     # Learn HMM model for each condition
 
@@ -499,20 +531,23 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
     Lpos <- levels(screen$cell$position)
     S <- length(L)
     Spos <- length(Lpos)
-    K <- dim(prob)[3]
 
 
     if (groupByOligoId)
     {
-    L <- levels(screen$cell$oligoid)
-      S <- length(L)
+        L <- levels(screen$cell$oligoid)
+        S <- length(L)
         groups <- S
-        sortedIndex <- seq(1,S)
+        #sortedIndex <- seq(1,S)
+        sortedIndex <- sort(L, index.return=TRUE, method="shell")$ix
     } else
     if (groupByGene)
     {
+        L <- levels(screen$cell$gene)
+        S <- length(L)
         groups <- S
-        sortedIndex <- seq(1,S)
+        #sortedIndex <- seq(1,S)
+        sortedIndex <- sort(L, index.return=TRUE, method="shell")$ix
     } else
     {
         groups <- Spos
@@ -521,7 +556,10 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
         {
             I <- screen$cell$position == Lpos[i]
             #print(screen$cell[I,]$gene[1])
-            pos.names[i] <- as.character(screen$cell[I,]$gene[1])
+            name = as.character(screen$cell[I,]$gene[1])
+            if (is.na(name))
+                name = Lpos[i]
+            pos.names[i] = name
             #print(pos.names[i])
         }
         print(pos.names)
@@ -530,45 +568,80 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
         #break
     }
 
-    T1 <- matrix("", nr=2, nc=groups)
+    T1 <- matrix("", nr=3, nc=groups)
   cat("groups=",groups,"\n")
+
+    fn <- matrix("",nr=groups,nc=2)
+    fn.raw <- matrix("",nr=groups,nc=2)
+    fn.f <- matrix("",nr=groups,nc=2)
+    fn.b <- matrix("",nr=groups,nc=2)
+
+
+###MICHIO####
+    countsAll.mean <- matrix(0,nr=groups,nc=K)
+    countsAll.sd <- matrix(0,nr=groups,nc=K)
+    countsAll.median <- matrix(0,nr=groups,nc=K)
+    TrajectoryNumber <- matrix(0,nr=groups,nc=3)
+    countsMotif <- matrix(0,nr=groups,nc=4)
+###MICHIO####
 
     for (i in 1:groups)
     {
-      if (groupByOligoId)
-            I <- screen$cell$oligoid == L[i]
+        if (groupByOligoId)
+        {
+            I <- screen$cell$oligoid == L[sortedIndex[i]]
+                pos.name = L[sortedIndex[i]]
+                gene.name = L[sortedIndex[i]]
+                gene.symbol = screen$cell$gene[I][1]
+                pos.list = levels(factor(screen$cell$position[I]))
+                str.pos.list = paste(pos.list, collapse=',')
+            #I <- (screen$cell$oligoid == L[sortedIndex[i]] && screen$cell$valid == TRUE)
+        }
         else
         if (groupByGene)
-            I <- screen$cell$gene == L[i]
-        else
-            I <- screen$cell$position == Lpos[sortedIndex[i]]
-
-    if (!is.null(features) & !is.null(feature_filter_range))
-    {
-      I2 <- seq(1,length(I))[I]
-      #print(I2)
-      feature.means <- apply(features[I,], 1, mean)
-      #print(feature.meaeans)
-      I[I2[feature.means < feature_filter_range[0] | feature.means > feature_filter_range[1]]] <- FALSE
-      #print(I)
-    }
-
-        N.gene <- sum(I)
-
-        if (N.gene > 1)
         {
-            if (groupByGene | groupByOligoId)
-            {
-                pos.name = L[i]
-                gene.name = L[i]
-            }
-            else
-            {
+            I <- screen$cell$gene == L[sortedIndex[i]]
+                pos.name = L[sortedIndex[i]]
+                gene.name = L[sortedIndex[i]]
+                gene.symbol = screen$cell$gene[I][1]
+                pos.list = levels(factor(screen$cell$position[I]))
+                str.pos.list = paste(pos.list, collapse=',')
+                str.pos.filename = paste(pos.list, collapse='_')
+
+            #I <- (screen$cell$gene == L[sortedIndex[i]] && screen$cell$valid == TRUE)
+        }
+        else
+        {
+            I <- screen$cell$position == Lpos[sortedIndex[i]]
                 pos.name <- Lpos[sortedIndex[i]]
                 gene.name <- pos.names[sortedIndex[i]]
-            }
+                str.pos.list = pos.name
+                str.pos.filename = str.pos.list
+                gene.symbol = screen$cell$gene[I][1]
+            #I <- (screen$cell$position == Lpos[sortedIndex[i]] && screen$cell$valid == TRUE)
+        }
+        N.gene <- sum(I)
+        print(paste("Generate HMM:", pos.name, " Pos:", str.pos.list, " Group:", i, " Samples:", N.gene))
 
-            print(paste("Generate HMM:", gene.name, " Pos:", pos.name, " Group:", i, " Samples:", N.gene))
+
+#    if (!is.null(features) & !is.null(feature_filter_range))
+#   {
+#      I2 <- seq(1,length(I))[I]
+#      #print(I2)
+#      feature.means <- apply(features[I,], 1, mean)
+#      #print(feature.meaeans)
+#      I[I2[feature.means < feature_filter_range[0] | feature.means > feature_filter_range[1]]] <- FALSE
+#      #print(I)
+#    }
+
+    if (N.gene <= 1)
+    {
+        I[c(1,2)] = TRUE
+        N.gene <- sum(I)
+    }
+
+  N.gene.old = N.gene
+        {
 
             hmm[[i]] <- hmm.learn(prob[I,,], graph, steps=hmm_em_steps, initial_emission=hmm_initial_emission)
 
@@ -588,11 +661,28 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
                     Sequence[I,] <- Sequence.Raw[I,]
             }
 
-            if (writeDecode)
+            # export hmm model
+            dir_model <- paste(outdir_region, '_model', sep="/")
+            if (!file.exists(dir_model))
+                dir.create(dir_model, recursive=TRUE)
+            hmm.export(hmm[[i]], paste(dir_model, '/', pos.name, '__pre.txt', sep=''))
+
+            # build new model based on corrected input
+            # generate prob vector for corrected sequences
+            if (K == C) {
+                prob2 = array(.0, dim=c(N.gene, T, K))
+                for (k1 in 1:N.gene)
+                    for (k2 in 1:T)
+                        prob2[k1,k2,Sequence[I,][k1,k2]] = 1.
+                hmm2 <- hmm.learn(prob2, graph, steps=1)
+                hmm.export(hmm2, paste(dir_model, '/', pos.name, '__post.txt', sep=''))
+            }
+
+            if (write_decode)
             {
                 write.decode(screen, screen$cell[I,], hmm[[i]])
             }
-            if (writeDecode2)
+            if (write_decode2)
             {
                 #print(Sequence2)
                 mcell <- screen$cell[I,]
@@ -608,21 +698,18 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
                         col.names=c("class__A__label"))
                 }
             }
-            fn <- matrix("",nr=groups,nc=2)
-            fn[,1] <- paste("sequence_",1:groups,".png",sep="")
-            fn[,2] <- paste("sequence_",1:groups,".ps",sep="")
 
-            fn.raw <- matrix("",nr=groups,nc=2)
-            fn.raw[,1] <- paste("sequence_raw_",1:groups,".png",sep="")
-            fn.raw[,2] <- paste("sequence_raw_",1:groups,".ps",sep="")
+            fn[i,1] <- paste(rel_sequences,"/sequence__",pos.name,".png",sep="")
+            fn[i,2] <- paste(rel_sequences,"/sequence__",pos.name,".ps",sep="")
 
-            fn.f <- matrix("",nr=groups,nc=2)
-            fn.f[,1] <- paste("sequence_features_",1:groups,".png",sep="")
-            fn.f[,2] <- paste("sequence_features_lines_",1:groups,".png",sep="")
+            fn.raw[i,1] <- paste(rel_sequences,"/sequence_raw__",pos.name,".png",sep="")
+            fn.raw[i,2] <- paste(rel_sequences,"/sequence_raw__",pos.name,".ps",sep="")
 
-            fn.b <- matrix("",nr=groups,nc=2)
-            fn.b[,1] <- paste("sequence_boxplot_",1:groups,".png",sep="")
-            fn.b[,2] <- paste("sequence_barplot_",1:groups,".png",sep="")
+            fn.f[i,1] <- paste(rel_sequences,"/sequence_features__",pos.name,".png",sep="")
+            fn.f[i,2] <- paste(rel_sequences,"/sequence_features_lines__",pos.name,".png",sep="")
+
+            fn.b[i,1] <- paste(rel_sequences,"/sequence_boxplot__",pos.name,".png",sep="")
+            fn.b[i,2] <- paste(rel_sequences,"/sequence_barplot__",pos.name,".png",sep="")
 
 
 
@@ -631,23 +718,19 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             # Plot transition graphs
 
             # write PNG and PDF
-            plot.transition.graph(hmm[[i]], type="PNG", filename=paste(outdir_region,"/graph_loop_",i,".png",sep=""), loops=TRUE, weights=TRUE)
-            #plotTransitionGraph(hmm[[i]], type="PDF", filename=paste(outdir,"/graph_loop_",i,".pdf",sep=""), loops=TRUE, weights=TRUE)
-            plot.transition.graph(hmm[[i]], type="PS",  filename=paste(outdir_region,"/graph_loop_",i,".ps",sep=""), loops=TRUE, weights=TRUE)
+            plot.transition.graph(hmm[[i]], type="PNG", filename=paste(outdir_sequences,"/graph_loop__",pos.name,".png",sep=""), loops=TRUE, weights=TRUE)
+            #plotTransitionGraph(hmm[[i]], type="PDF", filename=paste(outdir_sequences,"/graph_loop__",pos.name,".pdf",sep=""), loops=TRUE, weights=TRUE)
+            plot.transition.graph(hmm[[i]], type="PS",  filename=paste(outdir_sequences,"/graph_loop__",pos.name,".ps",sep=""), loops=TRUE, weights=TRUE)
 
-            plot.transition.graph(hmm[[i]], type="PNG", filename=paste(outdir_region,"/graph_",i,".png",sep=""), loops=FALSE, weights=TRUE)
-            #plotTransitionGraph(hmm[[i]], type="PDF", filename=paste(outdir,"/graph_",i,".pdf",sep=""), loops=FALSE, weights=TRUE)
-            #plot.transition.graph(hmm[[i]], type="PS",  filename=paste(outdir_region,"/graph_",i,".ps",sep=""), loops=FALSE, weights=TRUE)
+            plot.transition.graph(hmm[[i]], type="PNG", filename=paste(outdir_sequences,"/graph__",pos.name,".png",sep=""), loops=FALSE, weights=TRUE)
+            #plotTransitionGraph(hmm[[i]], type="PDF", filename=paste(outdir_sequences,"/graph__",pos.name,".pdf",sep=""), loops=FALSE, weights=TRUE)
+            #plot.transition.graph(hmm[[i]], type="PS",  filename=paste(outdir_sequences,"/graph_",i,".ps",sep=""), loops=FALSE, weights=TRUE)
 
 
             # write HTML
-            if (groupByOligoId | groupByGene)
-                plot_title = paste(gene.name, " (", N.gene, ")", sep="")
-            else
-                plot_title = paste(pos.name, " - ", gene.name, " (", N.gene, ")", sep="")
-            T1[1,i] <- plot_title
             #T1[2,i] <- hwriteImage(paste("graph_loop_",i,".png",sep=""), link=paste("graph_loop_",i,".pdf",sep=""))
-            T1[2,i] <- hwriteImage(paste("graph_",i,".png",sep=""), link=paste("graph_",i,".pdf",sep=""), width=400, height=400)
+            T1[2,i] <- hwriteImage(paste(rel_sequences,"/graph__",pos.name,".png",sep=""), link=paste(rel_sequences,"/graph__",pos.name,".png",sep=""), width=400, height=400)
+            T1[3,i] <- hwriteImage(paste(rel_sequences,"/graph__loop",pos.name,".png",sep=""), link=paste(rel_sequences,"/graph__loop",pos.name,".png",sep=""), width=400, height=400)
             #T1[2,i] <- hwriteImage(paste("graph_",i,".png",sep=""), link=paste("graph_",i,".pdf",sep=""))
             #T1[i,3] <- hwrite(hmm[[i]]$trans)
 
@@ -657,26 +740,32 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             sq.raw <- Sequence.Raw[I,]
 
           realign.starts.nofilter <- rep(0,0)
-          if (!is.null(realign_onset)) {
+          if (!is.null(realign_onset) || !is.null(realign)) {
             #print(dim(sq))
             #print(T)
             #I3 <- rep(FALSE, sum(I))
 
               if (is.null(realign))
-                  onsets <- apply(sq, 1, subsearch, c(1,1,1,1,1,1,1,2,2,2))
+                  onsets <- apply(sq, 1, subsearch, realign_onset)
+            else {
+                  I.id = realign$id == i
+                  #print(sum(I.id))
+                    realign.i <- realign$ix[I.id]
+        }
 
+        T <- dim(sq)[2]
                 I2 <- seq(1,length(I))[I]
                 nsq <- matrix(0, nc=T, nr=0)
                 nsq.raw <- matrix(0, nc=T, nr=0)
                 realign.starts <- rep(0,0)
-                center <- 10
+                center <- realign_center
                 for (k in 1:length(I2)) {
                     if (is.null(realign))
                         s <- center - onsets[k][[1]][1]
                     else
-                        s <- realign[k]
-
-                    if (!is.na(s)) {
+                        s <- realign.i[k]
+                    if (!is.na(s))
+                    {
                         line <- rep(0,T)
                         line.raw <- rep(0,T)
                         if (s < 0) {
@@ -693,15 +782,37 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
                         I[I2[k]] <- FALSE
                     realign.starts.nofilter <- append(realign.starts.nofilter, s)
                 }
+
+                if (is.null(overall_realign))
+                {
+                  overall_realign = list()
+                  overall_realign$id = rep(i, length(realign.starts.nofilter))
+                  overall_realign$ix = realign.starts.nofilter
+                } else {
+                  overall_realign$id = c(overall_realign$id, rep(i, length(realign.starts.nofilter)))
+                  overall_realign$ix = c(overall_realign$ix, realign.starts.nofilter)
+                 }
+                #print(length(realign.starts.nofilter))
+
                 T <- T - realign_truncate
     #            print(dim(nsq))
     #            print(T)
                 I2 <- seq(1,length(I))[I]
                 check <- rep(0,0)
-                sq <- matrix(0, nc=T, nr=0)
-                sq.raw <- matrix(0, nc=T, nr=0)
-                for (k in 1:(dim(nsq)[1])) {
+                Kn <- dim(nsq)[1]
+                #sq <- matrix(0, nc=T, nr=0)
+                #sq.raw <- matrix(0, nc=T, nr=0)
+                sq = nsq
+                sq.raw = nsq.raw
+                check = 1:Kn
+                if (Kn > 0 && FALSE)
+                for (k in 1:Kn) {
+                    #print("moo1")
+                    #print(dim(nsq))
+                    #print(k)
+                    #print(T)
                     if (nsq[k,T] != 0) {
+                       #print("moo2")
                         sq <- rbind(sq, nsq[k,1:T])
                         sq.raw <- rbind(sq.raw, nsq.raw[k,1:T])
                         check <- append(check, k)
@@ -717,10 +828,14 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
                 I.indices <- 1:N.gene
             else
             {
-                I.indices <- indices
+                I.id = indices$id == i
+                #print(sum(I.id))
+                I.indices <- indices$ix[I.id]
+                #print(length(I.indices))
                 sq <- sq[I.indices,]
                 sq.raw  <- sq.raw[I.indices,]
                 N.gene <- dim(sq)[1]
+
             }
             I.sort <- rep(TRUE, N.gene)
 
@@ -760,6 +875,15 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
                 I.sort <- rev(sort(apply(occurence, 1, sum), index.return=TRUE, method="shell")$ix)
                 sq <- sq[I.sort,]
             }
+        if (is.null(overall_indices))
+        {
+        overall_indices = list()
+        overall_indices$id = rep(i, N.gene)
+        overall_indices$ix = I.sort
+      } else {
+        overall_indices$id = c(overall_indices$id, rep(i, N.gene))
+        overall_indices$ix = c(overall_indices$ix, I.sort)
+      }
 
             #cell <- screen$cell[I,][I.indices,][I.sort,]
             export.data <- data.frame(name=screen$cell[I,][I.indices,][I.sort,]$name,
@@ -771,6 +895,29 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             write.table(export.data, paste(dirHmm, "/", pos.name, ".txt", sep=""), quote=FALSE, sep="\t",
                         row.names=FALSE, col.names=c("Trajectory", "Realign"))
 
+            if (groupByOligoId | groupByGene)
+                plot_title = paste(gene.name, " n=", N.gene,"/",N.gene.old, " (", str.pos.list, ")", sep="")
+            else
+                plot_title = paste(pos.name, " - ", gene.name, " n=", N.gene,"/",N.gene.old, sep="")
+            print(plot_title)
+            T1[1,i] <- plot_title
+
+
+      if (!is.null(truncate_from_front))
+      {
+        print(T)
+        if (T > truncate_from_front)
+          T.trunc = truncate_from_front
+        else
+          T.trunc = T
+        print(T.trunc)
+        print(dim(sq))
+        print(N.gene)
+        if (!is.null(dim(sq)))
+          sq <- sq[,1:T.trunc]
+        print(dim(sq))
+      } else
+        T.trunc = T
 
             CairoPNG(paste(outdir_region,"/",fn[i,1],sep=""), width=1000, height=1000, bg='transparent')
             #CairoPS(paste(outdir,"/",fn[i,2],sep=""), width=15, height=15, bg='transparent')
@@ -778,29 +925,93 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             #par(mar=c(1,1,0,0))
             par(mar=c(0,0,0,0))
 
+            if (N.gene > 1)
+      {
             image(t(sq), col=class.colors.hmm,
                   #xlab=paste("cells", " (", N.gene, ")", sep=""),
                   #ylab="time",
                   zlim=c(1,K), xaxt="n", yaxt="n")
             box()
             #axis(1, seq(T))
+            }
             dev.off()
 
             counts <- matrix(0,nr=K,nc=N.gene)
             for (k in 1:K)
             {
-                counts[k,] <- apply(sq == k, 1, sum)
+                s <- sq == k
+                #print(sq)
+                #print(dim(s))
+                if (is.null(dim(s)))
+                    counts[k,] <- NA
+                else
+                    counts[k,] <- apply(s, 1, sum)
                 #print(apply(sq == k, 1, sum))
             }
 
             counts.time <- counts * timelapse
-            counts.time[counts.time == 0] = NA
+            #counts.time[counts.time == 0] = NA
             # export class counts per position/condition
             dirCounts <- paste(outdir_region, "_counts", sep="/")
             if (!file.exists(dirCounts))
                 dir.create(dirCounts, recursive=TRUE)
             write.table(t(counts.time), paste(dirCounts, "/", pos.name, ".txt", sep=""), quote=FALSE, sep="\t",
                 row.names=FALSE, col.names=1:k)
+
+            counts.all[[i]] = counts.time
+            names.all[[i]] = gene.name
+            symbols.all[[i]] = gene.symbol
+
+###MICHIO####
+     countsAll.mean[i,] <- apply(counts.time, 1, mean, na.rm=TRUE)
+     countsAll.sd[i,] <- apply(counts.time, 1, sd, na.rm=TRUE)
+     countsAll.median[i,] <- apply(counts.time, 1, median, na.rm=TRUE)
+            TrajectoryNumber[i,1] <- pos.name
+            TrajectoryNumber[i,2] <- N.gene.old
+            TrajectoryNumber[i,3] <- N.gene
+###MICHIO####
+
+      # compute the time between two motifs (or the trajectory length if the
+      # motif can not be found)
+      if (!is.null(motif_sequence) && N.gene > 1)
+      {
+        #print(sq)
+        #print(motif_sequence$start)
+        start = apply(sq, 1, subsearch, motif_sequence$start)
+        end = apply(sq, 1, subsearch, motif_sequence$end)
+        T.sq = dim(sq)[2]
+        empty = apply(sq[,(realign_center:T.sq)], 1, subsearch, c(0))
+
+        start2 = rep(0, N.gene)
+        end2 = rep(0, N.gene)
+        empty2 = rep(0, N.gene)
+        # transform "strange list" constructo to simple vector
+        for (k in 1:N.gene)
+        {
+          start2[k] = start[k][[1]][1]
+          end2[k] = end[k][[1]][1]
+          empty2[k] = empty[k][[1]][1]
+        }
+        #print(empty2)
+        # replace all NAs (motif not found) by the 0-onset (trajectory end)
+        nas = is.na(end2)
+        end2[nas] <- empty2[nas]
+        # replace all NAs (neither motif nor 0-onset) by the maximum trajectory length
+        nas = is.na(end2)
+        end2[nas] <- T.sq
+
+        #print(start)
+        #print(end)
+        counts = (end2 - start2 + 1) * timelapse
+        #print(counts)
+        #print(paste(T.old, T, T.trunc, dim(sq)))
+        counts[counts < 0] <- NA
+        countsMotif[i,1] = sum(!is.na(counts))
+        countsMotif[i,2] = mean(counts, na.rm=TRUE)
+        countsMotif[i,3] = sd(counts, na.rm=TRUE)
+        countsMotif[i,4] = median(counts, na.rm=TRUE)
+        #print(counts)
+      }
 
             #apply(counts, 1, mean)
 
@@ -844,10 +1055,13 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             CairoPNG(paste(outdir_region,"/",fn.raw[i,1],sep=""), width=1000, height=1000, bg='transparent')
             #CairoPS(paste(outdir,"/",fn.raw[i,2],sep=""), width=15, height=15, bg='transparent')
             par(mar=c(0,0,0,0))
-            sq.raw <- sq.raw[I.sort,]
-            image(t(sq.raw), col=class.colors, zlim=c(1,K), xaxt="n", yaxt="n")
+            if (N.gene > 1)
+      {
+            sq.raw <- sq.raw[I.sort,1:T.trunc]
+            image(t(sq.raw), col=class.colors, zlim=c(1,C), xaxt="n", yaxt="n")
             box()
             #axis(1, seq(T))
+      }
             dev.off()
 
             if (!is.null(features))
@@ -905,12 +1119,12 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
     p <- openPage(paste(outdir_region,"/index.html",sep=""))
 
 #        plotTransitionGraph(graph, type="PS", filename=paste(outdir,"/graph_prior.ps",sep=""),loops=FALSE,weights=FALSE)
-    plot.transition.graph(graph, type="PNG", filename=paste(outdir_region,"/graph_prior.png",sep=""),loops=FALSE,weights=FALSE)
+    plot.transition.graph(graph, type="PNG", filename=paste(outdir_sequences,"/graph_prior.png",sep=""),loops=FALSE,weights=FALSE)
 #    plotTransitionGraph(graph, type="PS", filename=paste(outdir,"/graph_prior_loop.ps",sep=""),loops=TRUE,weights=FALSE)
-    plot.transition.graph(graph, type="PNG", filename=paste(outdir_region,"/graph_prior_loop.png",sep=""),loops=TRUE,weights=FALSE)
+    plot.transition.graph(graph, type="PNG", filename=paste(outdir_sequences,"/graph_prior_loop.png",sep=""),loops=TRUE,weights=FALSE)
 #        #plotTransitionGraph(graph, type="PDF", filename=paste(outdir,"/graph_prior.pdf",sep=""),loops=FALSE,weights=FALSE)
     hwrite("Prior Selected Graph Structure",p,heading=3)
-    hwriteImage(paste("graph_prior.png",sep=""),p,link=paste("graph_prior.png",sep=""))
+    hwriteImage(paste(outdir_sequences, "/graph_prior.png",sep=""),p,link=paste(outdir_sequences,"/graph_prior.png",sep=""))
 
     hwrite("Transition probabilities",p,heading=3)
     hwrite(T1,p)
@@ -941,9 +1155,46 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
     if (openHTML) {
         browseURL(paste(outdir_region,"/index.html",sep=""))
     }
-    list(sq=sq, sq.raw=sq.raw,
-         indices=indices[I.sort], realign=realign.starts.nofilter)
 
+###MICHIO####
+  dir_summary <- paste(outdir_region, "_summary", sep="/")
+    if (!file.exists(dir_summary))
+      dir.create(dir_summary, recursive=TRUE)
+
+    write.table(countsAll.mean, paste(dir_summary, "/all_mean.txt", sep=""), quote=FALSE, sep="\t",
+                row.names=FALSE, col.names=FALSE)
+    write.table(countsAll.sd, paste(dir_summary, "/all_sd.txt", sep=""), quote=FALSE, sep="\t",
+                row.names=FALSE, col.names=FALSE)
+    write.table(countsAll.median, paste(dir_summary, "/all_median.txt", sep=""), quote=FALSE, sep="\t",
+                row.names=FALSE, col.names=FALSE)
+    write.table(TrajectoryNumber, paste(dir_summary, "/all_TrajectoryNumbers.txt", sep=""), quote=FALSE, sep="\t",
+                row.names=FALSE, col.names=FALSE)
+
+  together = cbind(TrajectoryNumber, countsAll.mean, countsAll.sd, countsAll.median)
+  cnames = c('Pos', 'Pre', 'Post',
+             paste('Mean__', 1:K, sep=''),
+             paste('Sd__', 1:K, sep=''),
+             paste('Median__', 1:K, sep=''))
+  if (!is.null(motif_sequence))
+  {
+      cnames = c(cnames, 'Post__motif', 'Mean__motif', 'Sd__motif', 'Median__motif')
+    together = cbind(together, countsMotif)
+  }
+  print(cnames)
+  print(dim(together))
+    write.table(together, paste(dir_summary, "/all_together.txt", sep=""), quote=FALSE, sep="\t",
+                row.names=FALSE, col.names=cnames)
+
+
+###MICHIO####
+
+
+    list(overall_indices=overall_indices,
+         overall_realign=overall_realign,
+         counts.all = counts.all,
+         names.all = names.all,
+         symbols.all = symbols.all,
+         out.dir=outdir_region)
 }
 
 bwcol  <- colorRampPalette(c("#FFFFFF","#000000"), space="rgb")(256)
