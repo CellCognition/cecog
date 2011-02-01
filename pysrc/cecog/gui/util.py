@@ -98,8 +98,8 @@ def message(icon, text, parent, info=None, detail=None, buttons=None,
             title=None, default=None, escape=None, modal=False):
     if title is None:
         title = text
-    msg_box = QMessageBox(icon, title, text, QMessageBox.NoButton,
-                          parent, Qt.Tool)
+    msg_box = MyMessageBox(icon, title, text, QMessageBox.NoButton,
+                           parent)
     if on_mac() and modal:
         msg_box.setWindowModality(Qt.WindowModal)
     if not info is None:
@@ -112,7 +112,6 @@ def message(icon, text, parent, info=None, detail=None, buttons=None,
         msg_box.setDefaultButton(default)
     if not escape is None:
         msg_box.setEscapeButton(escape)
-    #msg_box.setMinimumSize(300, 100)
     return msg_box.exec_()
 
 def information(parent, text, info=None, detail=None, modal=False):
@@ -243,7 +242,10 @@ def qcolor_to_hex(qcolor):
 
 def get_qcolor_hicontrast(qcolor, threshold=0.5):
     lightness = qcolor.lightnessF()
-    return QColor('white' if lightness <= threshold else 'black')
+    blue = qcolor.blueF()
+    # decrease the lightness by the color blueness
+    value = lightness - 0.2 * blue
+    return QColor('white' if value <= threshold else 'black')
 
 
 
@@ -263,3 +265,10 @@ class ImageRatioDisplay(QLabel):
 
     def heightForWidth(self, w):
         return int(w*self._ratio)
+
+
+class MyMessageBox(QMessageBox):
+
+    def showEvent(self, event):
+        QMessageBox.showEvent(self, event)
+        #self.setFixedSize(400, 100)
