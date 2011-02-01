@@ -44,6 +44,7 @@ from cecog.gui.util import (exception,
                             qcolor_to_hex,
                             )
 from cecog.gui.imageviewer import ImageViewer
+from cecog.gui.modules.module import ModuleManager
 from cecog.gui.analyzer import _ProcessorMixin
 from cecog.analyzer.channel import (PrimaryChannel,
                                     SecondaryChannel,
@@ -118,17 +119,13 @@ class Browser(QMainWindow):
         layout.addWidget(splitter)
 
         frame = QFrame(self)
-        self._frame_side = QStackedWidget(splitter)
+        frame_side = QStackedWidget(splitter)
         #splitter.setChildrenCollapsible(False)
         splitter.addWidget(frame)
-        splitter.addWidget(self._frame_side)
+        splitter.addWidget(frame_side)
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 0)
         splitter.setSizes([None, 80])
-
-        #self._frame_side.setSizePolicy(QSizePolicy(QSizePolicy.Minimum,
-        #                                           QSizePolicy.Expanding))
-
 
         self._plateid = ''
         self._channel = ''
@@ -224,11 +221,9 @@ class Browser(QMainWindow):
 
         # tool bar
 
-        self._toolbar = self.addToolBar('Toolbar')
-        self._toolbar.setMovable(False)
-        self._toolbar.setFloatable(False)
-        self._toolbar_grp = QButtonGroup(self._toolbar)
-        self._toolbar_grp.setExclusive(True)
+        toolbar = self.addToolBar('Toolbar')
+        toolbar.setMovable(False)
+        toolbar.setFloatable(False)
 
         region_names = ['Primary - primary']
         self._settings.set_section('ObjectDetection')
@@ -240,40 +235,20 @@ class Browser(QMainWindow):
 
         # FIXME: something went wrong with setting up the current region
         self._object_region = region_names[0].split(' - ')
-        self._tabs = {}
-        display = DisplayModule(self._frame_side, self, self.meta_data,
-                                region_names)
-        annotation = AnnotationModule(self._frame_side, self, self._settings,
-                                      self._imagecontainer)
-        navigation = NavigationModule(self._frame_side, self, self.meta_data)
-        self._register_tab(navigation)
-        self._register_tab(display)
-        self._register_tab(annotation)
-
-        self._activate_tab(NavigationModule.NAME)
 
 
+        # create a new ModuleManager with a QToolbar and QStackedFrame
+        self._module_manager = ModuleManager(toolbar, frame_side)
 
-    def _register_tab(self, widget):
-        idx = len(self._tabs)
-        name = widget.NAME
-        btn = QPushButton(name, self._toolbar)
-        btn.toggled.connect(lambda x: self.on_tab_changed(name))
-        btn.setFlat(True)
-        btn.setCheckable(True)
-        self._toolbar.addWidget(btn)
-        self._toolbar_grp.addButton(btn, idx)
-        self._frame_side.addWidget(widget)
-        self._tabs[name] = (widget, idx)
+        NavigationModule(self._module_manager, self, self.meta_data)
 
-    def _activate_tab(self, name):
-        widget, idx = self._tabs[name]
-        btn = self._toolbar_grp.button(idx)
-        btn.setChecked(True)
-        widget.activate()
+        DisplayModule(self._module_manager, self, self.meta_data, region_names)
 
-    def get_tab_widget(self, name):
-        return self._tabs[name][0]
+        AnnotationModule(self._module_manager, self, self._settings,
+                         self._imagecontainer)
+
+        self._module_manager.activate_tab(NavigationModule.NAME)
+
 
     def create_action(self, text, slot=None, shortcut=None, icon=None,
                       tooltip=None, checkable=None, signal='triggered()',
@@ -303,11 +278,11 @@ class Browser(QMainWindow):
     def set_coords(self, coords):
         self.image_viewer.remove_objects()
         self.image_viewer.set_objects_by_crackcoords(coords)
-        widget = self.get_tab_widget(AnnotationModule.NAME)
+        widget = self._module_manager.get_widget(AnnotationModule.NAME)
         widget.set_coords()
 
     def set_image(self, image_dict):
-        widget = self.get_tab_widget(DisplayModule.NAME)
+        widget = self._module_manager.get_widget(DisplayModule.NAME)
         widget.set_image_dict(image_dict)
         self.update_statusbar()
 
@@ -375,9 +350,6 @@ class Browser(QMainWindow):
         print('PROCESS IMAGE: %s' % s)
 
     # slots
-
-    def on_tab_changed(self, name):
-        self._frame_side.setCurrentWidget(self.get_tab_widget(name))
 
     def on_zoom_info_updated(self, info):
         self.update_statusbar()

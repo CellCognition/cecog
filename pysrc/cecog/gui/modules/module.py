@@ -43,14 +43,55 @@ from PyQt4.Qt import *
 # classes:
 #
 
-class Module(QFrame):
+class ModuleManager(object):
+
+    def __init__(self, toolbar, stacked_frame):
+        self.toolbar = toolbar
+        self.stacked_frame = stacked_frame
+        self._tabs = {}
+        self.current_widget = None
+        self._toolbar_grp = QButtonGroup(self.toolbar)
+        self._toolbar_grp.setExclusive(True)
+
+    def register_tab(self, widget):
+        idx = len(self._tabs)
+        name = widget.NAME
+        btn = QPushButton(name, self.toolbar)
+        btn.toggled.connect(lambda x: self.on_tab_changed(name))
+        btn.setFlat(True)
+        btn.setCheckable(True)
+        self.toolbar.addWidget(btn)
+        self._toolbar_grp.addButton(btn, idx)
+        self.stacked_frame.addWidget(widget)
+        self._tabs[name] = (widget, idx)
+
+    def activate_tab(self, name):
+        self.current_widget, idx = self._tabs[name]
+        btn = self._toolbar_grp.button(idx)
+        btn.setChecked(True)
+        self.current_widget.activate()
+
+    def get_widget(self, name):
+        return self._tabs[name][0]
+
+    def on_tab_changed(self, name):
+        if not self.current_widget is None:
+            self.current_widget.deactivate()
+        self.current_widget = self.get_widget(name)
+        self.current_widget.activate()
+        self.stacked_frame.setCurrentWidget(self.current_widget)
+
+
+class Module(QFrame, object):
 
     NAME = ''
 
-    def __init__(self, parent, browser):
-        QFrame.__init__(self, parent)
-        self._is_initialized = False
-        self._browser = browser
+    def __init__(self, module_manager, browser):
+        self.module_manager = module_manager
+        self.browser = browser
+        super(Module, self).__init__(self.module_manager.stacked_frame)
+        self.is_initialized = False
+        self.module_manager.register_tab(self)
         self.setStyleSheet(
 """
  QWidget {
@@ -98,6 +139,9 @@ class Module(QFrame):
         pass
 
     def activate(self):
-        if not self._is_initialized:
+        if not self.is_initialized:
             self.initialize()
-            self._is_initialized = True
+            self.is_initialized = True
+
+    def deactivate(self):
+        pass

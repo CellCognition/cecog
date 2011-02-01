@@ -172,7 +172,7 @@ class NavigationModule(Module):
 
 
     def initialize(self):
-        self.position_changed.connect(self._browser.on_position_changed)
+        self.position_changed.connect(self.browser.on_position_changed)
         self._table_position.setCurrentCell(0, 0)
 
     def _on_position_changed(self, current, previous):

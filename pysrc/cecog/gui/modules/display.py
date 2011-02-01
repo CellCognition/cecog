@@ -388,7 +388,7 @@ class ObjectsFrame(QFrame):
 
         self.show_objects_toggled.connect(browser.on_show_objects)
         self._show_objects = False
-        self._browser = browser
+        self.browser = browser
 
         box_detect = QCheckBox('Show / Detect Objects', self)
         box_detect.toggled.connect(self._on_show_objects)
@@ -406,8 +406,8 @@ class ObjectsFrame(QFrame):
 
         box = QCheckBox('Show Contours', self)
         box.setEnabled(box_detect.checkState() == Qt.Checked)
-        box.setChecked(self._browser.image_viewer.show_contours)
-        box.toggled.connect(self._browser.on_shortcut_show_contours)
+        box.setChecked(self.browser.image_viewer.show_contours)
+        box.toggled.connect(self.browser.on_shortcut_show_contours)
         layout.addWidget(box, 2, 0)
         self._box_contours = box
 
@@ -420,7 +420,7 @@ class ObjectsFrame(QFrame):
         self._btn_contour_color.set_color(color)
         layout.addWidget(self._btn_contour_color, 2, 1)
 
-        self._browser.show_contours_toggled.connect(self._on_set_contour_state)
+        self.browser.show_contours_toggled.connect(self._on_set_contour_state)
 
     def _on_current_region_changed(self, name):
         channel, region = name.split(' - ')
@@ -438,7 +438,7 @@ class ObjectsFrame(QFrame):
         self._box_contours.blockSignals(False)
 
     def _on_contour_color_changed(self, color):
-        self._browser.image_viewer.set_contour_color(color)
+        self.browser.image_viewer.set_contour_color(color)
 
 
 class DisplayFrame(QFrame):
@@ -565,7 +565,7 @@ class DisplayModule(Module):
                 rgb_image = widget.render_image(image)
                 self._rgb_images[name] = rgb_image
         rgb_images = self._rgb_images.values()
-        self._browser.image_viewer.from_pixmap(blend_images_max(rgb_images))
+        self.browser.image_viewer.from_pixmap(blend_images_max(rgb_images))
 
     def on_object_region_changed(self, channel, region):
         self.object_region_changed.emit(channel, region)

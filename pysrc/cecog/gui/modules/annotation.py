@@ -206,6 +206,7 @@ class Annotations(object):
         pattern = re.compile('(.*__)?P(?P<position>.+?)__T(?P<time>\d+).*?')
         ann = self._annotations
         ann.clear()
+        has_invalid = False
         for filename in os.listdir(path):
             file_path = os.path.join(path, filename)
             prefix, suffix = os.path.splitext(filename)
@@ -250,8 +251,13 @@ class Annotations(object):
                                 if not class_name in ann2:
                                     ann2[class_name] = set()
                                 ann2[class_name].add((x, y))
+                            else:
+                                has_invalid = True
+                else:
+                    has_invalid = True
         # rebuild the count info according to the annotation
         self.rebuild_class_counts()
+        return has_invalid
 
     def export_to_xml(self, path, min_time, names_to_labels, time_points):
         impl = minidom.getDOMImplementation()
@@ -272,7 +278,7 @@ class Annotations(object):
                 element = doc.createElement('Marker_Data')
                 top.appendChild(element)
 
-                idx_base = time_points[min_time]
+                idx_base = time_points.index(min_time)
 
                 for cn in bycn:
                     element2 = doc.createElement('Marker_Type')
@@ -445,7 +451,7 @@ class AnnotationModule(Module):
 
         browser.coordinates_changed.connect(self._on_coordinates_changed)
         browser.show_objects_toggled.connect(self._on_show_objects)
-
+        browser.show_contours_toggled.connect(self._on_show_contours_toggled)
 
     def _find_items_in_class_table(self, value, column, match=Qt.MatchExactly):
         items = self._class_table.findItems(value, match)
@@ -607,8 +613,8 @@ class AnnotationModule(Module):
         return learner
 
     def _on_new_classifier(self):
-        if question(self, 'New classifier',
-                    'Are you sure to setup a new classifer? All annotations '
+        if question(None, 'New classifier',
+                    'Are you sure to setup a new classifer?\nAll annotations '
                     'will be lost.'):
             self._learner = self._init_new_classifier()
 
@@ -647,11 +653,11 @@ class AnnotationModule(Module):
                 self._activate_objects_for_image(False, clear=True)
                 path2 = learner.getPath(learner.ANNOTATIONS)
                 try:
-                    self._annotations.import_from_xml(path2,
-                                                      learner.dctClassNames,
-                                                      self._meta_data.times)
+                    has_invalid = self._annotations.import_from_xml(path2,
+                                                                    learner.dctClassNames,
+                                                                    self._meta_data.times)
                 except:
-                    exception(self, "Problems loading annotation data...")
+                    exception(None, "Problems loading annotation data...")
                     self._learner = self._init_new_classifier()
                 else:
                     self._activate_objects_for_image(True)
@@ -661,12 +667,12 @@ class AnnotationModule(Module):
                     else:
                         self._current_class = None
 
-                    information(self, "Classifier successfully loaded",
+                    information(None, "Classifier successfully loaded",
                                 "Class definitions and annotations "
                                 "successfully loaded from '%s'." % path)
 
     def _on_saveas_classifier(self):
-        min_time = self._browser.meta_data.times[0]
+        min_time = self.browser.meta_data.times[0]
 
         learner = self._learner
         dialog = QFileDialog(self)
@@ -705,10 +711,10 @@ class AnnotationModule(Module):
         '''
         if clear:
             self._object_items.clear()
-        coordinates = self._browser.get_coordinates()
+        coordinates = self.browser.get_coordinates()
         for class_name, tpl in self._annotations.iter_items(coordinates):
             point = QPointF(*tpl)
-            item = self._browser.image_viewer.get_object_item(point)
+            item = self.browser.image_viewer.get_object_item(point)
             if not item is None:
                 if not item in self._object_items:
                     self._object_items[item] = point
@@ -769,7 +775,7 @@ class AnnotationModule(Module):
         ann_table.resizeColumnsToContents()
         ann_table.resizeRowsToContents()
         #ann_table.setStyleSheet(css)
-        coords = self._browser.get_coordinates()
+        coords = self.browser.get_coordinates()
         self._find_annotation_row(*coords)
         ann_table.blockSignals(False)
 
@@ -788,11 +794,11 @@ class AnnotationModule(Module):
             self._ann_table.clearSelection()
 
     def _on_new_point(self, point, button, modifier):
-        item = self._browser.image_viewer.get_object_item(point)
+        item = self.browser.image_viewer.get_object_item(point)
         #print(item,point,item in self._object_items)
         if button == Qt.LeftButton and not item is None:
 
-            coordinates = self._browser.get_coordinates()
+            coordinates = self.browser.get_coordinates()
             old_class = None
             # remove the item if already present
             if item in self._object_items:
@@ -841,7 +847,7 @@ class AnnotationModule(Module):
             item2.setBrush(QBrush(color))
             item2.show()
         else:
-            color = self._browser.image_viewer.contour_color
+            color = self.browser.image_viewer.contour_color
             scene = item.scene()
             for item2 in item.childItems():
                 scene.removeItem(item2)
@@ -860,7 +866,7 @@ class AnnotationModule(Module):
                                                 self.COLUMN_ANN_POSITION).text())
             time = int(self._ann_table.item(current.row(),
                                             self.COLUMN_ANN_TIME).text())
-            self._browser.set_coordinates(plateid, position, time)
+            self.browser.set_coordinates(plateid, position, time)
 
     def _on_class_changed(self, current, previous):
         if not current is None:
@@ -884,6 +890,10 @@ class AnnotationModule(Module):
             self._ann_table.setStyleSheet(css)
         else:
             self._current_class = None
+
+    def _on_show_contours_toggled(self, state):
+        if self.isVisible():
+            self._activate_objects_for_image(True)
 
     def _on_show_objects(self, state):
         if not state:
@@ -928,19 +938,17 @@ class AnnotationModule(Module):
             self._activate_objects_for_image(True, clear=True)
             self._update_class_table()
 
-    def showEvent(self, event):
+    def activate(self):
+        super(AnnotationModule, self).activate()
         self._activate_objects_for_image(True, clear=True)
         self._update_class_table()
-        self._browser.image_viewer.image_mouse_pressed.connect(self._on_new_point)
+        self.browser.image_viewer.image_mouse_pressed.connect(self._on_new_point)
         self._action_grp.setEnabled(True)
-        self._find_annotation_row(*self._browser.get_coordinates())
-        QFrame.showEvent(self, event)
+        self._find_annotation_row(*self.browser.get_coordinates())
 
-    def hideEvent(self, event):
+    def deactivate(self):
+        super(AnnotationModule, self).deactivate()
         self._activate_objects_for_image(False, clear=True)
-        self._browser.image_viewer.image_mouse_pressed.disconnect(self._on_new_point)
-        self._browser.image_viewer.purify_objects()
+        self.browser.image_viewer.image_mouse_pressed.disconnect(self._on_new_point)
+        self.browser.image_viewer.purify_objects()
         self._action_grp.setEnabled(False)
-        QFrame.hideEvent(self, event)
-
-
