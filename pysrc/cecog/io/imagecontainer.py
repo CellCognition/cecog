@@ -97,6 +97,8 @@ class MetaData(object):
         self.positions = None
         self.plateids = None
 
+        self.image_files = 0
+
         self._timestamps_relative = {}
         self._timestamps_absolute = {}
         self._timestamp_summary = {}

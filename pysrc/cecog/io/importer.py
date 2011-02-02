@@ -231,6 +231,7 @@ class AbstractImporter(object):
         self.meta_data.times = sorted(times)
         self.meta_data.channels = sorted(channels)
         self.meta_data.zslices = sorted(zslices)
+        self.meta_data.image_files = len(self._dimension_items)
 
         print('Build time: %s' % s)
         return lookup
