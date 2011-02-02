@@ -379,7 +379,12 @@ class PositionAnalyzer(object):
             self.export_features[name] = region_features
 
 
+        #try:
         iNumberImages = self._analyzePosition(oCellAnalyzer)
+        #except Exception as e:
+        #    iNumberImages = 0
+        #    oTimeHolder.close_all()
+        #    raise e
 
         if iNumberImages > 0:
 

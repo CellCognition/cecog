@@ -57,7 +57,7 @@ from pdk.ordereddict import OrderedDict
 from pdk.errors import NotImplementedMethodError
 
 import numpy
-import h5py
+#import h5py
 import netCDF4
 
 #-------------------------------------------------------------------------------
@@ -166,9 +166,13 @@ class TimeHolder(OrderedDict):
         self._iCurrentT = None
         self.channels = channels
         self._meta_data = meta_data
+        self._settings = settings
 
         self._create_nc = create_nc
         self._reuse_nc = reuse_nc
+
+        self._nc4_filename = filename
+        self._dataset = None
 
         self._hdf5_create = hdf5_create
         self._hdf5_include_raw_images = hdf5_include_raw_images
@@ -176,7 +180,6 @@ class TimeHolder(OrderedDict):
         self._hdf5_include_features = hdf5_include_features
 
         self._logger = logging.getLogger(self.__class__.__name__)
-
         # frames get an index representation with the NC file, starting at 0
         frames = sorted(list(meta_data.times))
         self._frames_to_idx = dict([(f,i) for i, f in enumerate(frames)])
@@ -196,16 +199,30 @@ class TimeHolder(OrderedDict):
                     if settings.get2('%s_regions_%s' % (prefix, name)):
                         region_names2.append((prefix.capitalize(), name))
 
-        if os.path.isfile(filename) and self._reuse_nc:
-            dataset = netCDF4.Dataset(filename, 'a')
+
+
+        self._channels_to_idx = dict([(f,i) for i, f in enumerate(channels)])
+        self._idx_to_channels = dict([(i,f) for i, f in enumerate(channels)])
+
+        self._regions_to_idx = dict([(n,i) for i, n in enumerate(region_names)])
+        self._regions_to_idx2 = OrderedDict([(n,i) for i, n in enumerate(region_names2)])
+
+        if self._hdf5_create:
+            f = h5py.File(filename_hdf5, 'w')
+            self._hdf5_file = f
+
+    def create_nc4(self):
+        settings = self._settings
+        if self._create_nc and self._reuse_nc and self._dataset is None:
+            dataset = netCDF4.Dataset(self._nc4_filename, 'a')
 
             # decide which parts need to be reprocessed based on changes
             # between the saved (from nc4) and the current settings
 
             # load settings from nc4 file
-            var = str(dataset.variables['settings'][:][0])
-            settings2 = settings.copy()
-            settings2.from_string(var)
+            #var = str(dataset.variables['settings'][:][0])
+            #settings2 = settings.copy()
+            #settings2.from_string(var)
 
             # compare current and saved settings and decide which data is to
             # process again by setting the *_finished variables to zero
@@ -233,21 +250,27 @@ class TimeHolder(OrderedDict):
 #                    valid['primary'] = [False, False]
 #                    valid['secondary'] = [False, False]
 
+        elif self._create_nc and self._dataset is None:
+            meta = self._meta_data
+            dim_t = meta.dim_t
+            dim_c = meta.dim_c
+            w = meta.real_image_width
+            h = meta.real_image_height
 
-        elif self._create_nc:
-            dim_x = meta_data.dim_x
-            dim_y = meta_data.dim_y
-            dim_t = meta_data.dim_t
-            dim_c = meta_data.dim_c
+            channels = sorted(list(meta.channels))
+            region_names = REGION_NAMES_PRIMARY + REGION_NAMES_SECONDARY
+            region_channels = ['primary']*len(REGION_NAMES_PRIMARY) + \
+                              ['secondary']*len(REGION_NAMES_SECONDARY)
 
-            dataset = netCDF4.Dataset(filename, 'w', format='NETCDF4')
+            dataset = netCDF4.Dataset(self._nc4_filename, 'w', format='NETCDF4')
             dataset.createDimension('frames', dim_t)
             dataset.createDimension('channels', dim_c)
-            dataset.createDimension('height', dim_y)
-            dataset.createDimension('width', dim_x)
-            #dataset.createDimension('regions', len(region_names))
+            dataset.createDimension('height', h)
+            dataset.createDimension('width', w)
+            dataset.createDimension('regions', len(region_names))
             dataset.createDimension('one', 1)
 
+            frames = sorted(list(meta.times))
             var = dataset.createVariable('frames_idx', 'u4', 'frames')
             var.description = 'Mapping from indices to frames.'
             var[:] = frames
@@ -271,12 +294,12 @@ class TimeHolder(OrderedDict):
             feature_g = dataset.createGroup(self.NC_GROUP_FEATURE)
             feature_g.description = 'Feature values'
 
-            for channel_id in meta_data.channels:
+            for channel_id in meta.channels:
                 var = raw_g.createVariable(channel_id, 'u1',
                                            ('frames', 'height', 'width'),
                                            zlib=self.NC_ZLIB,
                                            shuffle=self.NC_SHUFFLE,
-                                           chunksizes=(1, dim_y, dim_x))
+                                           chunksizes=(1, h, w))
                 # FIXME: not working for dim_t == 1 (no timelapse data)
                 var.valid = [0] * dim_t
                 #print channel_id, dim_t, var.valid
@@ -291,45 +314,40 @@ class TimeHolder(OrderedDict):
                                                     'width'),
                                                    zlib=self.NC_ZLIB,
                                                    shuffle=self.NC_SHUFFLE,
-                                                   chunksizes=(1, dim_y, dim_x))
+                                                   chunksizes=(1, h, w))
                     var.valid = [0] * dim_t
                     grp1.createGroup(region_name)
                     grp2.createGroup(region_name)
 
+            var = dataset.createVariable('channels_idx', str, 'channels')
+            var[:] = numpy.asarray(channels, 'O')
 
-#
-#            var = dataset.createVariable('channels_idx', str, 'channels')
-#            var[:] = numpy.asarray(channels, 'O')
-#
-#            var = dataset.createVariable('region_names', str, 'regions')
-#            var[:] = numpy.asarray(region_names, 'O')
-#
-#            var = dataset.createVariable('region_channels', str, 'regions')
-#            var[:] = numpy.asarray(region_channels, 'O')
-#
-#            print(meta_data)
-#            dataset.createVariable('raw_images', 'u1',
-#                                   ('frames', 'channels', 'height', 'width'),
-#                                   zlib='True',
-#                                   shuffle=False,
-#                                   chunksizes=(1, 1, meta_data.dim_y,
-#                                               meta_data.dim_x)
-#                                   )
-#            finished = dataset.createVariable('raw_images_finished', 'i1',
-#                                              ('frames', 'channels'))
-#            finished[:] = 0
-#
-#            dataset.createVariable('label_images', 'i2',
-#                                   ('frames', 'regions', 'height', 'width'),
-#                                   zlib='True',
-#                                   shuffle=False,
-#                                   chunksizes=(1, 1, meta_data.dim_y,
-#                                               meta_data.dim_x)
-#                                   )
-#            finished = dataset.createVariable('label_images_finished', 'i1',
-#                                              ('frames', 'regions'))
-#
-#            finished[:] = 0
+            var = dataset.createVariable('region_names', str, 'regions')
+            var[:] = numpy.asarray(region_names, 'O')
+
+            var = dataset.createVariable('region_channels', str, 'regions')
+            var[:] = numpy.asarray(region_channels, 'O')
+
+            dataset.createVariable('raw_images', 'u1',
+                                   ('frames', 'channels', 'height', 'width'),
+                                   zlib='True',
+                                   shuffle=False,
+                                   chunksizes=(1, 1, h, w)
+                                   )
+            finished = dataset.createVariable('raw_images_finished', 'i1',
+                                              ('frames', 'channels'))
+            finished[:] = 0
+
+            dataset.createVariable('label_images', 'i2',
+                                   ('frames', 'regions', 'height', 'width'),
+                                   zlib='True',
+                                   shuffle=False,
+                                   chunksizes=(1, 1, h, w)
+                                   )
+            finished = dataset.createVariable('label_images_finished', 'i1',
+                                              ('frames', 'regions'))
+
+            finished[:] = 0
         else:
             dataset = None
 
@@ -337,19 +355,7 @@ class TimeHolder(OrderedDict):
             # update the settings to the current version
             var = dataset.variables['settings']
             var[:] = numpy.asarray(settings.to_string(), 'O')
-
-        self._dataset = dataset
-
-
-        self._channels_to_idx = dict([(f,i) for i, f in enumerate(channels)])
-        self._idx_to_channels = dict([(i,f) for i, f in enumerate(channels)])
-
-        self._regions_to_idx = dict([(n,i) for i, n in enumerate(region_names)])
-        self._regions_to_idx2 = OrderedDict([(n,i) for i, n in enumerate(region_names2)])
-
-        if self._hdf5_create:
-            f = h5py.File(filename_hdf5, 'w')
-            self._hdf5_file = f
+            self._dataset = dataset
 
     @staticmethod
     def nc_valid_set(var, idx, value):
@@ -357,11 +363,22 @@ class TimeHolder(OrderedDict):
         helper[idx] = value
         var.valid = helper
 
-    def __del__(self):
+    def close_all(self):
+        print 'moo1'
         if not self._dataset is None:
+            print 'moo2'
             self._dataset.close()
+            print 'moo3'
+            self._dataset = None
+            self._create_nc = False
+        print 'moo4'
         if self._hdf5_create:
+            print 'moo2'
             self._hdf5_file.close()
+            self._hdf5_create = False
+
+    def __del__(self):
+        self.close_all()
 
     def initTimePoint(self, iT):
         self._iCurrentT = iT
@@ -385,6 +402,7 @@ class TimeHolder(OrderedDict):
         self[iT].sort(key = lambda x: self[iT][x])
 
     def apply_segmentation(self, channel, primary_channel=None):
+        self.create_nc4()
         valid = False
         desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
                                          channel.strChannelId)
@@ -447,6 +465,8 @@ class TimeHolder(OrderedDict):
 
 
     def prepare_raw_image(self, channel):
+        self.create_nc4()
+
         desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
                                          channel.strChannelId)
         if self._create_nc or self._reuse_nc:
@@ -497,6 +517,7 @@ class TimeHolder(OrderedDict):
             images[channel_idx, frame_idx, 0] = array
 
     def apply_features(self, channel):
+        self.create_nc4()
         valid = False
         desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
                                          channel.strChannelId)
@@ -504,22 +525,21 @@ class TimeHolder(OrderedDict):
         name = channel.NAME.lower()
         channel.apply_features()
 
-        meta = self._meta_data
-        w = meta.real_image_width
-        h = meta.real_image_height
-        f = self._hdf5_file
-        if 'features' in f:
-            features = f['features']
-        else:
-            features = f.create_group('features')
-
-        if 'objects' in f:
-            objects = f['objects']
-        else:
-            objects = f.create_group('objects')
-
         if self._hdf5_create and self._hdf5_include_features:
-            pass
+            meta = self._meta_data
+            w = meta.real_image_width
+            h = meta.real_image_height
+            f = self._hdf5_file
+            if 'features' in f:
+                features = f['features']
+            else:
+                features = f.create_group('features')
+
+            if 'objects' in f:
+                objects = f['objects']
+            else:
+                objects = f.create_group('objects')
+
 #        #nr_objects
 #
 #        data_f = features.create_dataset(str(self._iCurrentT), (), 'float32',
