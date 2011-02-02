@@ -142,11 +142,15 @@ class Browser(QMainWindow):
         self._t_slider.setMinimum(self.meta_data.times[0])
         self._t_slider.setMaximum(self.meta_data.times[-1])
         self._t_slider.setTickPosition(QSlider.TicksBelow)
-        self._t_slider.valueChanged.connect(self.on_time_changed,
+        self._t_slider.valueChanged.connect(self.on_time_changed_by_slider,
                                             Qt.DirectConnection)
+        if self.meta_data.has_timelapse:
+            self._t_slider.show()
+        else:
+            self._t_slider.hide()
         layout.addWidget(self._t_slider, 1, 0)
 
-        self._position = None
+        self._position = self.meta_data.positions[0]
         self._time = self._t_slider.minimum()
 
         # menus
@@ -247,8 +251,11 @@ class Browser(QMainWindow):
         AnnotationModule(self._module_manager, self, self._settings,
                          self._imagecontainer)
 
+        # set the Navigation module activated
         self._module_manager.activate_tab(NavigationModule.NAME)
 
+        # process and display the first image
+        self._process_image()
 
     def create_action(self, text, slot=None, shortcut=None, icon=None,
                       tooltip=None, checkable=None, signal='triggered()',
@@ -288,7 +295,7 @@ class Browser(QMainWindow):
 
     def update_statusbar(self):
         timestamp = self.meta_data.get_timestamp_relative(self._position,
-                                                           self._time)
+                                                          self._time)
         time_info = str(self._time)
         if not numpy.isnan(timestamp):
             time_info += ' (%.1f min)' % (timestamp / 60)
@@ -354,10 +361,18 @@ class Browser(QMainWindow):
     def on_zoom_info_updated(self, info):
         self.update_statusbar()
 
-    def on_time_changed(self, time):
+    def on_time_changed_by_slider(self, time):
         self._time = time
         self._process_image()
         self.coordinates_changed.emit(self._plateid, self._position, time)
+
+    def on_time_changed(self, time):
+        assert time in self.meta_data.times, "Time not valid"
+        self._time = time
+        self._t_slider.blockSignals(True)
+        self._t_slider.setValue(time)
+        self._t_slider.blockSignals(False)
+        self._process_image()
 
     def on_position_changed(self, position):
         position = str(position)
