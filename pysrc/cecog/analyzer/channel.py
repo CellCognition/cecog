@@ -297,7 +297,6 @@ class _Channel(PropertyManager):
         self.meta_image = copy.copy(meta_image)
 
 
-
     def apply_binning(self, iFactor):
         self.meta_image.binning(iFactor)
 

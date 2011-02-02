@@ -254,6 +254,7 @@ class PositionAnalyzer(object):
 
         #max_frames = max(self.lstAnalysisFrames)
         filename_netcdf = os.path.join(self._path_dump, '%s.nc4' % self.P)
+        filename_hdf5 = os.path.join(self._path_dump, '%s.hdf5' % self.P)
         self.oSettings.set_section('Output')
         channel_names = [PrimaryChannel.NAME]
         for name in [SecondaryChannel.NAME, TertiaryChannel.NAME]:
@@ -261,10 +262,14 @@ class PositionAnalyzer(object):
                 channel_names.append(name)
         oTimeHolder = TimeHolder(self.P,
                                  channel_names,
-                                 filename_netcdf,
+                                 filename_netcdf, filename_hdf5,
                                  self._meta_data, self.oSettings,
                                  create_nc=self.oSettings.get2('netcdf_create_file'),
-                                 reuse_nc=self.oSettings.get2('netcdf_reuse_file')
+                                 reuse_nc=self.oSettings.get2('netcdf_reuse_file'),
+                                 hdf5_create=self.oSettings.get2('hdf5_create_file'),
+                                 hdf5_include_raw_images=self.oSettings.get2('hdf5_include_raw_images'),
+                                 hdf5_include_label_images=self.oSettings.get2('hdf5_include_label_images'),
+                                 hdf5_include_features=self.oSettings.get2('hdf5_include_features')
                                  )
 
         self.oSettings.set_section('Tracking')
@@ -450,6 +455,9 @@ class PositionAnalyzer(object):
                     stage_info.update({'max' : 1,
                                        'progress' : 1})
                     self._qthread.set_stage_info(stage_info)
+
+            #oTimeHolder.export_hdf5(os.path.join(self._path_dump,
+            #                                     '%s.hdf5' % self.P))
 
 
             # remove all features from all channels to free memory
@@ -698,6 +706,10 @@ class PositionAnalyzer(object):
                 # new image size after registration of all images
                 new_image_size = (meta_image.width - max(diff_x),
                                   meta_image.height - max(diff_y))
+
+                self._meta_data.real_image_width = new_image_size[0]
+                self._meta_data.real_image_height = new_image_size[1]
+
                 # relative start point of registered image
                 registration_start = (max(xs), max(ys))
 

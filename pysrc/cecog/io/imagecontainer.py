@@ -86,6 +86,9 @@ class MetaData(object):
         self.dim_t = None
         self.dim_p = None
 
+        self.real_image_width = None
+        self.real_image_height = None
+
         self.has_timelapse = False
         self.has_timestamp_info = False
         self.has_condition_info = False
