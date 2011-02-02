@@ -57,7 +57,7 @@ from pdk.ordereddict import OrderedDict
 from pdk.errors import NotImplementedMethodError
 
 import numpy
-import netCDF4
+import h5py
 
 #-------------------------------------------------------------------------------
 # cecog module imports:
