@@ -75,9 +75,9 @@ class OutputFrame(_BaseFrame):
         self.add_group('netcdf_create_file',
                        [('netcdf_reuse_file',),
                         ], layout='flow')
-        self.add_group('hdf5_create_file',
-                       [('hdf5_include_raw_images',),
-                        ('hdf5_include_label_images',),
-                        ('hdf5_include_features',),
-                        ], layout='flow')
+#        self.add_group('hdf5_create_file',
+#                       [('hdf5_include_raw_images',),
+#                        ('hdf5_include_label_images',),
+#                        ('hdf5_include_features',),
+#                        ], layout='flow')
         self.add_expanding_spacer()
