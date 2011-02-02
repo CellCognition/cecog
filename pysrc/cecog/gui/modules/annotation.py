@@ -476,7 +476,7 @@ class AnnotationModule(Module):
             class_names.remove(class_name)
 
             if len(class_name_new) == 0:
-                warning(self, "Invalid class name",
+                warning(None, "Invalid class name",
                         info="The class name must not be empty!")
             elif (not class_name_new in class_names and
                   not class_label_new in class_labels):
@@ -516,7 +516,7 @@ class AnnotationModule(Module):
                 self._activate_objects_for_image(False)
                 self._activate_objects_for_image(True)
             else:
-                warning(self, "Class names and labels must be unique!",
+                warning(None, "Class names and labels must be unique!",
                         info="Class name '%s' or label '%s' already used." %\
                              (class_name_new, class_label_new))
 
@@ -531,7 +531,7 @@ class AnnotationModule(Module):
         class_labels = set(learner.lstClassLabels)
         class_names = set(learner.lstClassNames)
         if len(class_name_new) == 0:
-            warning(self, "Invalid class name",
+            warning(None, "Invalid class name",
                     info="The class name must not be empty!")
         elif (not class_name_new in class_names and
               not class_label_new in class_labels):
@@ -558,7 +558,7 @@ class AnnotationModule(Module):
             self._class_table.resizeColumnsToContents()
             self._class_table.setCurrentItem(item)
         else:
-            warning(self, "Class names and labels must be unique!",
+            warning(None, "Class names and labels must be unique!",
                     info="Class name '%s' or label '%s' already used." %\
                          (class_name_new, class_label_new))
 
@@ -568,7 +568,7 @@ class AnnotationModule(Module):
         '''
         class_name = self._current_class
         if (not class_name is None and
-            question(self, "Do you really want to remove class '%s'?" % \
+            question(None, "Do you really want to remove class '%s'?" % \
                      class_name,
                      info="All %d annotations will be lost." % \
                      self._annotations.get_count_for_class(class_name))):
@@ -699,9 +699,9 @@ class AnnotationModule(Module):
                                                     learner.dctClassLabels,
                                                     self._meta_data.times)
                 except:
-                    exception(self, "Problems saving annotation data...")
+                    exception(None, "Problems saving annotation data...")
                 else:
-                    information(self, "Classifier successfully saved",
+                    information(None, "Classifier successfully saved",
                                 "Class definitions and annotations "
                                 "successfully saved to '%s'." % path)
 
@@ -911,7 +911,7 @@ class AnnotationModule(Module):
         try:
             learner = BaseLearner(strEnvPath=path)
         except:
-            exception(self, 'Error on loading classifier')
+            exception(None, 'Error on loading classifier')
         else:
             result = learner.check()
             #if result['has_arff']:
@@ -929,7 +929,7 @@ class AnnotationModule(Module):
             learner.initEnv()
             learner.saveDefinition()
         except:
-            exception(self, 'Error on saving classifier')
+            exception(None, 'Error on saving classifier')
             success = False
         return success
 
