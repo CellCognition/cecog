@@ -780,6 +780,8 @@ class AnnotationModule(Module):
                 flags = Qt.NoItemFlags
                 tooltip = 'Coordinate not found in this data set.'
 
+            # make plate information dependent whether the data set contains
+            # multiple plates
             if self._imagecontainer.has_multiple_plates:
                 item = QTableWidgetItem(plate)
                 item.setFlags(flags)
