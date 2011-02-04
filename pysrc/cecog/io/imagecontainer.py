@@ -29,7 +29,8 @@ __all__ = ['DIMENSION_NAME_POSITION',
 # standard library imports:
 #
 import types, \
-       os
+       os, \
+       copy
 import numpy
 
 #------------------------------------------------------------------------------
@@ -200,8 +201,7 @@ class MetaData(object):
             values = numpy.array(self._timestamp_summary.values())
             mean = numpy.mean(values, axis=0)
             std = numpy.std(values, axis=0)
-            self.plate_timestamp_info = (mean[0],
-                                         std[0] + mean[1])
+            self.plate_timestamp_info = (mean[0], std[0] + mean[1])
 
         self.dim_p = len(self.positions)
         self.dim_t = len(self.times)
@@ -378,6 +378,9 @@ class Coordinate(object):
         self.time = time
         self.channel = channel
         self.zslice = zslice
+
+    def copy(self):
+        return copy.deepcopy(self)
 
 
 class ImageContainer(object):

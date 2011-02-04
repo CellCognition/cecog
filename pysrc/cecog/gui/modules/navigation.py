@@ -161,6 +161,7 @@ class NavigationModule(Module):
             table.setItem(idx, 0, item)
 
             if meta_data.has_timestamp_info:
+                coordinate.time = time
                 ts_rel = meta_data.get_timestamp_relative(coordinate)
                 ts_abs = meta_data.get_timestamp_absolute(coordinate)
                 if not numpy.isnan(ts_rel):
