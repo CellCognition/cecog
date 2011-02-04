@@ -43,6 +43,7 @@ from pdk.fileutils import safe_mkdirs
 # cecog imports:
 #
 from cecog.traits.config import NAMING_SCHEMAS
+from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.util.util import convert_package_path
 
 #------------------------------------------------------------------------------
@@ -116,6 +117,11 @@ class MetaData(object):
     def pixel_info(self):
         return PIXEL_INFO[self.pixel_type]
 
+    def set_image_info(self, info):
+        self.dim_x = info.width
+        self.dim_y = info.height
+        self.pixel_type = info.pixel_type
+
     def get_timestamp_info(self, position):
         try:
             info = self._timestamp_summary[position]
@@ -123,16 +129,18 @@ class MetaData(object):
             info = None
         return info
 
-    def get_timestamp_relative(self, position, frame):
+    def get_timestamp_relative(self, coordinate):
         try:
-            timestamp = self._timestamps_relative[position][frame]
+            timestamp = self._timestamps_relative[coordinate.position] \
+                                                 [coordinate.time]
         except KeyError:
             timestamp = float('NAN')
         return timestamp
 
-    def get_timestamp_absolute(self, position, frame):
+    def get_timestamp_absolute(self, coordinate):
         try:
-            timestamp = self._timestamps_absolute[position][frame]
+            timestamp = self._timestamps_absolute[coordinate.position] \
+                                                 [coordinate.time]
         except KeyError:
             timestamp = float('NAN')
         return timestamp
@@ -251,31 +259,24 @@ class MetaImage(object):
     Image reading is implemented lazy.
     """
 
-    def __init__(self, image_container=None, position=None, time=None,
-                 channel=None, zslice=None, height=None, width=None,
-                 format=UINT8):
-        self.position = position
-        self.time = time
-        self.channel = channel
-        self.zslice = zslice
+    def __init__(self, image_container=None, coordinate=None,
+                 height=None, width=None, format=UINT8):
+        self.coordinate = coordinate
         self.height = height
         self.width = width
         self.format = format
         self.image_container = image_container
         self._img = None
 
-    def __str__(self):
-        return "%s(P=%s,T=%s,C=%s,Z=%s,H=%s,W=%s)" % \
-               (self.__class__.__name__, self.position, self.time, self.channel,
-                self.zslice, self.height, self.width)
+#    def __str__(self):
+#        return "%s(P=%s,T=%s,C=%s,Z=%s,H=%s,W=%s)" % \
+#               (self.__class__.__name__, self.position, self.time, self.channel,
+#                self.zslice, self.height, self.width)
 
     @property
     def image(self):
         if self._img is None:
-            self._img = self.image_container.get_image(self.position,
-                                                       self.time,
-                                                       self.channel,
-                                                       self.zslice)
+            self._img = self.image_container.get_image(self.coordinate)
         return self._img
 
     def set_image(self, img):
@@ -283,20 +284,20 @@ class MetaImage(object):
         self.width = img.width
         self.height = img.height
 
-    def format_info(self, suffix=None, show_position=True, show_time=True,
-                    show_channel=True, show_zslice=True, sep='_'):
-        items = []
-        if show_position:
-            items.append("P%s" % self.position)
-        if show_time:
-            items.append("T%05d" % self.time)
-        if show_channel:
-            items.append("C%s" % self.channel)
-        if show_zslice:
-            items.append("Z%02d" % self.zslice)
-        if suffix is not None:
-            items.append(suffix)
-        return sep.join(items)
+#    def format_info(self, suffix=None, show_position=True, show_time=True,
+#                    show_channel=True, show_zslice=True, sep='_'):
+#        items = []
+#        if show_position:
+#            items.append("P%s" % self.position)
+#        if show_time:
+#            items.append("T%05d" % self.time)
+#        if show_channel:
+#            items.append("C%s" % self.channel)
+#        if show_zslice:
+#            items.append("Z%02d" % self.zslice)
+#        if suffix is not None:
+#            items.append(suffix)
+#        return sep.join(items)
 
 
 
@@ -344,78 +345,111 @@ class AxisIterator(object):
     def __str__(self):
         return "%s (%s)" % (self.__class__.__name__, self.name)
 
-    def __call__(self, current=None, dimensions=None):
+    def __call__(self, name=None, current=None, dimensions=None):
         if dimensions is None:
             dimensions = []
         else:
-            dimensions.append(current)
+            dimensions.append((name, current))
         if not self.next_iter is None:
             for value in self.values:
                 # interrupt: stop the iteration and return the generator
                 if self.interrupt:
                     # return the generator
-                    yield value, self.next_iter(value, dimensions[:])
+                    yield value, self.next_iter(self.name, value, dimensions[:])
                 else:
                     # iterate over the next generator: return elements of the
                     # next dimension
-                    for next_iter in self.next_iter(value, dimensions[:]):
+                    for next_iter in self.next_iter(self.name, value, dimensions[:]):
                         yield next_iter
         else:
             # end of generator-chain reached: return the MetaImages
             for value in self.values:
-                params = tuple(dimensions) + (value,)
-                # pylint: disable-msg=W0142
-                yield value, self.image_container.get_meta_image(*params)
+                params = dict(dimensions + [(self.name, value)])
+                coordinate = Coordinate(**params)
+                yield value, self.image_container.get_meta_image(coordinate)
+
+
+class Coordinate(object):
+
+    def __init__(self, plate=None, position=None, time=None, channel=None,
+                 zslice=None):
+        self.plate = plate
+        self.position = position
+        self.time = time
+        self.channel = channel
+        self.zslice = zslice
 
 
 class ImageContainer(object):
 
-    def __init__(self, importer):
-        self.importer = importer
-        self.meta_data = importer.meta_data
+    def __init__(self):
+        self._plates = OrderedDict()
+        self._meta_data = OrderedDict()
+        self.has_timelapse = None
 
-    def iterator(self, position=None, time=None, channel=None, zslice=None,
+    def register_plate(self, plate_id, importer):
+        self._plates[plate_id] = importer
+        self._meta_data[plate_id] = importer.meta_data
+        # FIXME: check some dimensions!!!
+        self.has_timelapse = importer.meta_data.has_timelapse
+
+    def iterator(self, coordinate,
+                 interrupt_position=False,
                  interrupt_time=False,
                  interrupt_channel=False,
                  interrupt_zslice=False):
+        meta_data = self.get_meta_data(coordinate.plate)
         # FIXME: linking of iterators should adapt to any scan-order
-        iter_zslice = AxisIterator(self, zslice, self.meta_data.zslices,
-                                   'zslice')
-        iter_channel = AxisIterator(self, channel, self.meta_data.channels,
-                                    'channel', interrupt_zslice, iter_zslice)
-        iter_time = AxisIterator(self, time, self.meta_data.times,
-                                 'time', interrupt_channel, iter_channel)
-        iter_position = AxisIterator(self, position, self.meta_data.positions,
-                                     'position', interrupt_time, iter_time)
-        return iter_position()
+        iter_zslice = AxisIterator(self, coordinate.zslice,
+                                   meta_data.zslices, 'zslice')
+        iter_channel = AxisIterator(self, coordinate.channel,
+                                    meta_data.channels, 'channel',
+                                    interrupt_zslice, iter_zslice)
+        iter_time = AxisIterator(self, coordinate.time,
+                                 meta_data.times, 'time',
+                                 interrupt_channel, iter_channel)
+        iter_position = AxisIterator(self, coordinate.position,
+                                     meta_data.positions, 'position',
+                                     interrupt_time, iter_time)
+        iter_plate = AxisIterator(self, coordinate.plate,
+                                  self.plates, 'plate',
+                                  interrupt_position, iter_position)
+        return iter_plate()
 
     __call__ = iterator
 
-    def get_meta_image(self, position, time, channel, zslice):
-        return MetaImage(self, position, time, channel, zslice,
-                         self.meta_data.dim_y, self.meta_data.dim_x)
+    def get_meta_image(self, coordinate):
+        meta_data = self.get_meta_data(coordinate.plate)
+        return MetaImage(self, coordinate, meta_data.dim_y, meta_data.dim_x)
 
-    def get_image(self, position, time, channel, zslice):
-        return self.importer.get_image(position, time, channel, zslice)
+    def get_image(self, coordinate):
+        importer = self._plates[coordinate.plate]
+        return importer.get_image(coordinate)
+
+    def get_meta_data(self, plate):
+        return self._meta_data[plate]
+
+    @property
+    def plates(self):
+        return self._plates.keys()
+
+    @property
+    def channels(self):
+        channels = []
+        for plate in self.plates:
+            print plate
+            meta_data = self._meta_data[plate]
+            channels += meta_data.channels
+        return sorted(set(channels))
 
     @classmethod
-    def check_container_file(cls, settings):
-        from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
-        settings.set_section(SECTION_NAME_GENERAL)
-        path_input = convert_package_path(settings.get2('pathin'))
-        safe_mkdirs(path_input)
-        path_output = convert_package_path(settings.get2('pathout'))
-        safe_mkdirs(path_output)
-        #path_output_dump = convert_package_path(os.path.join(path_output,
-        #                                                     'dump'))
-        #safe_mkdirs(path_output_dump)
-
-        filename = os.path.join(path_input, IMAGECONTAINER_FILENAME)
+    def check_container_file(cls, path_plate_in, path_plate_out, settings):
+        filename = os.path.join(path_plate_out, IMAGECONTAINER_FILENAME)
         if not os.path.isfile(filename):
-            filename = os.path.join(path_output, IMAGECONTAINER_FILENAME)
+            filename = os.path.join(path_plate_in, IMAGECONTAINER_FILENAME)
             if not os.path.isfile(filename):
                 filename = None
-        return path_input, filename
+        return filename
 
     @classmethod
     def from_settings(cls, settings, force=False):
@@ -424,24 +458,53 @@ class ImageContainer(object):
                                        FlatFileImporter,
                                        )
 
-        path_input, filename = ImageContainer.check_container_file(settings)
+        settings.set_section(SECTION_NAME_GENERAL)
+        path_in = convert_package_path(settings.get2('pathin'))
+        path_out = convert_package_path(settings.get2('pathout'))
+        has_multiple_plates = settings.get2('has_multiple_plates')
 
-        if filename is None or force:
-            if settings.get2('image_import_namingschema'):
-                config_parser = NAMING_SCHEMAS
-                section_name = settings.get2('namingscheme')
-                importer = IniFileImporter(path_input,
-                                           config_parser, section_name)
-            # read file structure according to dimension/structure file
-            elif settings.get2('image_import_structurefile'):
-                filename = settings.get2('structure_filename')
-                importer = FlatFileImporter(path_input, filename)
-            importer.load()
-            importer.export_to_flatfile(os.path.join(path_input,
-                                                     IMAGECONTAINER_FILENAME))
+        if has_multiple_plates:
+            plate_folders = [x for x in os.listdir(path_in)
+                             if os.path.isdir(os.path.join(path_in, x))]
         else:
-            importer = FlatFileImporter(path_input, filename)
+            plate_folders = [os.path.split(path_in)[1]]
+
+        imagecontainer = cls()
+
+        for plate_id in plate_folders:
+
+            if has_multiple_plates:
+                path_plate_in = os.path.join(path_in, plate_id)
+                path_plate_out = os.path.join(path_out, plate_id)
+            else:
+                path_plate_in = path_in
+                path_plate_out = path_out
+
+            # check if structure file exists
+            filename = cls.check_container_file(path_plate_in, path_plate_out,
+                                                settings)
+
+            if filename is None:
+                force = True
+
+            if force:
+                if settings.get2('image_import_namingschema'):
+                    config_parser = NAMING_SCHEMAS
+                    section_name = settings.get2('namingscheme')
+                    importer = IniFileImporter(path_plate_in,
+                                               config_parser, section_name)
+                # read file structure according to dimension/structure file
+                elif settings.get2('image_import_structurefile'):
+                    filename = settings.get2('structure_filename')
+                    importer = FlatFileImporter(path_plate_in, filename)
+            else:
+                importer = FlatFileImporter(path_plate_in, filename)
+
             importer.load()
-        imagecontainer = cls(importer)
+            if force:
+                importer.export_to_flatfile(os.path.join(path_plate_in,
+                                                         IMAGECONTAINER_FILENAME))
+            imagecontainer.register_plate(plate_id, importer)
+
         return imagecontainer
 

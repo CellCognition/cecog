@@ -65,12 +65,7 @@ def numpy_to_qimage(data, colors=None):
     #print data.dtype, data.ndim, data.shape
     if data.dtype == numpy.uint8:
         if data.ndim == 2:
-            shape = (numpy.ceil(w / 4.) * 4, h)
-            if shape != data.shape:
-                image = numpy.zeros(shape, numpy.uint8, 'C')
-                image[:w,:] = data
-            else:
-                image = data
+            image = data
             format = QImage.Format_Indexed8
             if colors is None:
                 colors = [QColor(i,i,i) for i in range(256)]
@@ -87,7 +82,6 @@ def numpy_to_qimage(data, colors=None):
                 w, h = data.shape[1:3]
                 image = data
                 format = QImage.Format_RGB32
-
     qimage = QImage(image, w, h, format)
     qimage.ndarray = image
     if not colors is None:

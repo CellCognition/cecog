@@ -60,6 +60,9 @@ class SectionGeneral(_Section):
        [('pathin',
             StringTrait('', 1000, label='Data folder',
                                    widget_info=StringTrait.STRING_PATH)),
+        ('has_multiple_plates',
+            BooleanTrait(False, label='Multiple plates')),
+
         ('pathout',
             StringTrait('', 1000, label='Output folder',
                                    widget_info=StringTrait.STRING_PATH)),

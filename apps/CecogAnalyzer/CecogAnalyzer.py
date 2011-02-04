@@ -493,7 +493,6 @@ class AnalyzerMainWindow(QMainWindow):
     def _on_browser_open(self):
         self._imagecontainer = ImageContainer.from_settings(self._settings,
                                                             force=False)
-        self._meta_data = self._imagecontainer.meta_data
         browser = Browser(self._settings,
                           self._imagecontainer)
         browser.show()
@@ -505,17 +504,16 @@ class AnalyzerMainWindow(QMainWindow):
 
         # check if image structure is already stored and valid
 
-        path_input, filename = \
-            ImageContainer.check_container_file(self._settings)
-        if not filename is None:
-            force = question(self, 'Scanning input data',
-                             'Input data was already scanned. Do you want '
-                             'to rescan the file structure '
-                             '(this can take several minutes)?')
-        else:
-            force = False
-
-        self._load_image_container(force)
+#        path_input, filename = \
+#            ImageContainer.check_container_file(self._settings)
+#        if not filename is None:
+#            force = question(self, 'Scanning input data',
+#                             'Input data was already scanned. Do you want '
+#                             'to rescan the file structure '
+#                             '(this can take several minutes)?')
+#        else:
+#            force = False
+        self._load_image_container()
 
     def _load_image_container(self, force=False, wait=False):
         dlg = QProgressDialog()
@@ -538,13 +536,15 @@ class AnalyzerMainWindow(QMainWindow):
         dlg.reset()
 
         self._imagecontainer = thread.imagecontainer
-        self._meta_data = self._imagecontainer.meta_data
+        channels = self._imagecontainer.channels
         for prefix in ['primary', 'secondary', 'tertiary']:
             trait = self._settings.get_trait(SECTION_NAME_OBJECTDETECTION,
                                              '%s_channelid' % prefix)
-            trait.set_list_data(self._meta_data.channels)
+            trait.set_list_data(channels)
             self._tabs[1].get_widget('%s_channelid' % prefix).update()
-        print self._imagecontainer.meta_data
+        for plate_id in self._imagecontainer.plates:
+            print plate_id
+            print self._imagecontainer.get_meta_data(plate_id)
 
     @pyqtSlot()
     def _on_file_open(self):

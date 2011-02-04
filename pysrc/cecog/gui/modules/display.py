@@ -46,6 +46,7 @@ from cecog.util.palette import (NucMedPalette,
                                 )
 from cecog.gui.util import numpy_to_qimage
 from cecog.gui.widgets.colorbutton import ColorButton
+from cecog import ccore
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -92,9 +93,13 @@ def blend_images_max(images):
 #
 class ImageHelper:
 
-    def __init__(self, vigra_image):
-        self._vigra_image = vigra_image
-        self.array = vigra_image.toArray(copy=False)
+    def __init__(self, image):
+        if image.width % 4 > 0:
+            image = ccore.subImage(image, ccore.Diff2D(0,0),
+                                   ccore.Diff2D(image.width - (image.width % 4),
+                                                image.height))
+        self._image = image
+        self.array = image.toArray(copy=False)
 
 
 class ChannelItem(QFrame):
@@ -468,9 +473,9 @@ class DisplayModule(Module):
     #show_objects_toggled = pyqtSignal('bool')
     object_region_changed = pyqtSignal(str, str)
 
-    def __init__(self, parent, browser, meta_data, region_names):
+    def __init__(self, parent, browser, image_container, region_names):
         Module.__init__(self, parent, browser)
-        self._meta_data = meta_data
+        self._image_container = image_container
         self._image_dict = {}
         self._display_images = {}
         self._rgb_images = {}
@@ -506,7 +511,7 @@ class DisplayModule(Module):
         layout.addStretch(1)
 
         self._channels = OrderedDict()
-        channel_names = sorted(self._meta_data.channels)
+        channel_names = sorted(self._image_container.channels)
         for idx, channel_name in enumerate(channel_names):
             widget = ChannelItem(channel_name, idx, palettes, self)
             layout_channels.addWidget(widget)

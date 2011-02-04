@@ -56,13 +56,12 @@ class NavigationModule(Module):
     time_changed = pyqtSignal(int)
     plate_changed = pyqtSignal(str)
 
-    def __init__(self, parent, browser, meta_data):
+    def __init__(self, parent, browser, image_container):
         Module.__init__(self, parent, browser)
 
-        self._meta_data = meta_data
+        self._image_container = image_container
 
         self._frame_info = QGroupBox('Plate Information', self)
-        self.update_info_frame()
 
         splitter = QSplitter(Qt.Vertical, self)
         splitter.setMinimumWidth(40)
@@ -81,13 +80,15 @@ class NavigationModule(Module):
 
         table = QTableWidget(grp1)
         table.setEditTriggers(QTableWidget.NoEditTriggers)
-        table.setSelectionMode(QTableWidget.NoSelection)
-        #table.setSizePolicy(QSizePolicy(QSizePolicy.Minimum,
-        #                                QSizePolicy.Expanding))
-        #table.setColumnCount(3)
-        #table.setRowCount(len(meta_data.positions))
-        #table.setMinimumWidth(20)
+        table.setSelectionMode(QTableWidget.SingleSelection)
+        table.setSelectionBehavior(QTableWidget.SelectRows)
+        table.setAlternatingRowColors(True)
+        table.setStyleSheet('font-size: 10px;')
+        table.currentItemChanged.connect(self._on_plate_changed)
+        self._table_plate = table
         layout.addWidget(table, 0, 0)
+
+        self.update_plate_table()
 
         layout = QGridLayout(grp2)
         layout.setContentsMargins(5, 10, 5, 5)
@@ -98,38 +99,11 @@ class NavigationModule(Module):
         table.setSelectionBehavior(QTableWidget.SelectRows)
         table.setAlternatingRowColors(True)
         table.setStyleSheet('font-size: 10px;')
-
-        column_names = ['Position']
-        if self._meta_data.has_well_info:
-            column_names += ['Well', 'Subwell']
-        if self._meta_data.has_condition_info:
-            column_names.append('Condition')
-        if self._meta_data.has_timestamp_info:
-            column_names.append('Time-lapse')
-
-        table.setColumnCount(len(column_names))
-        table.setHorizontalHeaderLabels(column_names)
-        table.setRowCount(len(self._meta_data.positions))
-
-        for idx, pos in enumerate(self._meta_data.positions):
-            item = QTableWidgetItem(pos)
-            item.setData(0, pos)
-            table.setItem(idx, 0, item)
-
-            if 'Time-lapse' in column_names:
-                column = column_names.index('Time-lapse')
-                info = self._meta_data.get_timestamp_info(pos)
-                info_str = '%.1fmin (%.1fs)' % (info[0] / 60, info[1])
-                table.setItem(idx, column, QTableWidgetItem(info_str))
-
-        table.resizeColumnsToContents()
-        table.resizeRowsToContents()
         table.currentItemChanged.connect(self._on_position_changed)
         self._table_position = table
-        #table.setMinimumWidth(20)
         layout.addWidget(table, 0, 0)
 
-        if meta_data.has_timelapse:
+        if self._image_container.has_timelapse:
             grp3 = QGroupBox('Time', splitter)
             splitter.addWidget(grp3)
 
@@ -142,35 +116,53 @@ class NavigationModule(Module):
             table.setSelectionBehavior(QTableWidget.SelectRows)
             table.setAlternatingRowColors(True)
             table.setStyleSheet('font-size: 10px;')
-
-            column_names = ['Frame']
-            if self._meta_data.has_timestamp_info:
-                column_names += ['rel. t (min)', 'abs. t (GMT)']
-            table.setColumnCount(len(column_names))
-            table.setHorizontalHeaderLabels(column_names)
-            table.setRowCount(len(self._meta_data.times))
-
-            self._table_time = table
-            self._table_time_column_names = column_names
-            self.update_time_table()
-
             table.currentItemChanged.connect(self._on_time_changed)
+            self._table_time = table
             layout.addWidget(table, 0, 0)
 
         splitter.addWidget(self._frame_info)
 
-    def update_time_table(self):
+    def update_plate_table(self):
+        table = self._table_plate
+        table.blockSignals(True)
+        table.clearContents()
+
+        column_names = ['Plate ID']
+        table.setColumnCount(len(column_names))
+        table.setHorizontalHeaderLabels(column_names)
+        plates = self._image_container.plates
+        table.setRowCount(len(plates))
+
+        for idx, plate in enumerate(plates):
+            item = QTableWidgetItem(plate)
+            item.setData(0, plate)
+            table.setItem(idx, 0, item)
+
+        table.resizeColumnsToContents()
+        table.resizeRowsToContents()
+        table.blockSignals(False)
+
+    def update_time_table(self, meta_data):
         table = self._table_time
-        column_names = self._table_time_column_names
-        plateid, position, dummy = self.browser.get_coordinates()
-        for idx, time in enumerate(self._meta_data.times):
+        table.blockSignals(True)
+        table.clearContents()
+
+        column_names = ['Frame']
+        if meta_data.has_timestamp_info:
+            column_names += ['rel. t (min)', 'abs. t (GMT)']
+        table.setColumnCount(len(column_names))
+        table.setHorizontalHeaderLabels(column_names)
+        table.setRowCount(len(meta_data.times))
+
+        coordinate = self.browser.get_coordinates()
+        for idx, time in enumerate(meta_data.times):
             item = QTableWidgetItem(str(time))
             item.setData(0, time)
             table.setItem(idx, 0, item)
 
-            if self._meta_data.has_timestamp_info:
-                ts_rel = self._meta_data.get_timestamp_relative(position, time)
-                ts_abs = self._meta_data.get_timestamp_absolute(position, time)
+            if meta_data.has_timestamp_info:
+                ts_rel = meta_data.get_timestamp_relative(coordinate)
+                ts_abs = meta_data.get_timestamp_absolute(coordinate)
                 if not numpy.isnan(ts_rel):
                     info = '%.1f' % (ts_rel / 60)
                     table.setItem(idx, 1, QTableWidgetItem(info))
@@ -180,11 +172,44 @@ class NavigationModule(Module):
                     table.setItem(idx, 2, QTableWidgetItem(info))
         table.resizeColumnsToContents()
         table.resizeRowsToContents()
+        table.blockSignals(False)
 
-    def update_info_frame(self):
+    def update_position_table(self, meta_data):
+        table = self._table_position
+        table.blockSignals(True)
+        table.clearContents()
+
+        column_names = ['Position']
+        if meta_data.has_well_info:
+            column_names += ['Well', 'Subwell']
+        if meta_data.has_condition_info:
+            column_names.append('Condition')
+        if meta_data.has_timestamp_info:
+            column_names.append('Time-lapse')
+
+        table.setColumnCount(len(column_names))
+        table.setHorizontalHeaderLabels(column_names)
+        table.setRowCount(len(meta_data.positions))
+
+        for idx, pos in enumerate(meta_data.positions):
+            item = QTableWidgetItem(pos)
+            item.setData(0, pos)
+            table.setItem(idx, 0, item)
+
+            if 'Time-lapse' in column_names:
+                column = column_names.index('Time-lapse')
+                info = meta_data.get_timestamp_info(pos)
+                info_str = '%.1fmin (%.1fs)' % (info[0] / 60, info[1])
+                table.setItem(idx, column, QTableWidgetItem(info_str))
+
+        table.resizeColumnsToContents()
+        table.resizeRowsToContents()
+        table.blockSignals(False)
+
+    def update_info_frame(self, meta_data):
         frame = self._frame_info
         frame.setStyleSheet('QLabel { font-size: 10px }')
-        meta = self._meta_data
+        meta = meta_data
         layout = QGridLayout(frame)
         txt  = '<table>' \
                '<tr><td align="right">Positions: </td><td>%d</td></tr>' % \
@@ -217,21 +242,42 @@ class NavigationModule(Module):
         label = QLabel(txt, frame)
         layout.addWidget(label, 0, 0, 0, 0, Qt.AlignCenter | Qt.AlignHCenter)
 
-
     def initialize(self):
         self.browser.coordinates_changed.connect(self._on_coordinates_changed)
-
+        self.plate_changed.connect(self.browser.on_plate_changed)
         self.position_changed.connect(self.browser.on_position_changed)
         self.time_changed.connect(self.browser.on_time_changed)
-        plate, position, time = self.browser.get_coordinates()
-        self._set_position(position)
-        self._set_time(time)
+        coordinate = self.browser.get_coordinates()
+        meta_data = self._image_container.get_meta_data(coordinate.plate)
+        self.update_position_table(meta_data)
+        self.update_time_table(meta_data)
+        self.update_info_frame(meta_data)
+
+        self._set_plate(coordinate.plate)
+        self._set_position(coordinate.position)
+        self._set_time(coordinate.time)
+
+    def _on_plate_changed(self, current, previous):
+        item = self._table_plate.item(current.row(), 0)
+        plate = item.data(0).toPyObject()
+        meta_data = self._image_container.get_meta_data(plate)
+        coordinate = self.browser.get_coordinates()
+        self.update_position_table(meta_data)
+        self._set_time(coordinate.position)
+        if self._image_container.has_timelapse:
+            meta_data = self._image_container.get_meta_data(coordinate.plate)
+            self.update_time_table(meta_data)
+            self._set_time(coordinate.time)
+        self.update_info_frame(meta_data)
 
     def _on_position_changed(self, current, previous):
         item = self._table_position.item(current.row(), 0)
         position = item.data(0).toPyObject()
-        if self._meta_data.has_timelapse:
-            self.update_time_table()
+        if self._image_container.has_timelapse:
+            coordinate = self.browser.get_coordinates()
+            meta_data = self._image_container.get_meta_data(coordinate.plate)
+            self.update_time_table(meta_data)
+            self._set_time(coordinate.time)
         self.position_changed.emit(position)
 
     def _on_time_changed(self, current, previous):
@@ -239,9 +285,16 @@ class NavigationModule(Module):
         time = int(item.data(0).toPyObject())
         self.time_changed.emit(time)
 
-    def _on_coordinates_changed(self, plateid, position, time):
-        self._set_position(position)
-        self._set_time(time)
+    def _on_coordinates_changed(self, coordinate):
+        self._set_plate(coordinate.plate)
+        self._set_position(coordinate.position)
+        self._set_time(coordinate.time)
+
+    def _set_plate(self, plate):
+        self._table_plate.blockSignals(True)
+        item = self._table_plate.findItems(plate, Qt.MatchExactly)[0]
+        self._table_plate.setCurrentItem(item)
+        self._table_plate.blockSignals(False)
 
     def _set_position(self, position):
         self._table_position.blockSignals(True)
@@ -250,7 +303,7 @@ class NavigationModule(Module):
         self._table_position.blockSignals(False)
 
     def _set_time(self, time):
-        if self._meta_data.has_timelapse:
+        if self._image_container.has_timelapse:
             self._table_time.blockSignals(True)
             item = self._table_time.findItems(str(time), Qt.MatchExactly)[0]
             self._table_time.setCurrentItem(item)
