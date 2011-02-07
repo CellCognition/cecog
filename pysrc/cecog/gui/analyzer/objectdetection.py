@@ -98,6 +98,7 @@ class ObjectDetectionFrame(_BaseFrame, _ProcessorMixin):
                         ('primary_latlimit2', (0,1,1,1)),
                         ])
         self.add_input('primary_holefilling')
+        self.add_input('primary_removeborderobjects')
         self.add_group('primary_shapewatershed',
                        [('primary_shapewatershed_gausssize', (0,0,1,1)),
                         ('primary_shapewatershed_maximasize', (0,1,1,1)),
