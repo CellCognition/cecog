@@ -213,7 +213,8 @@ class TimeHolder(OrderedDict):
 
     def create_nc4(self):
         settings = self._settings
-        if self._create_nc and self._reuse_nc and self._dataset is None:
+        if (self._create_nc and self._reuse_nc and self._dataset is None and
+            os.path.isfile(self._nc4_filename)):
             dataset = netCDF4.Dataset(self._nc4_filename, 'a')
 
             # decide which parts need to be reprocessed based on changes
