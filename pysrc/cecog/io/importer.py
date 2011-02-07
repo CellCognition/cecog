@@ -168,16 +168,29 @@ class AbstractImporter(object):
             position = item[DIMENSION_NAME_POSITION]
             if not position in lookup:
                 lookup[position] = {}
-            time = int(item.get(DIMENSION_NAME_TIME, 0))
+            if DIMENSION_NAME_TIME in item:
+                time = int(item[DIMENSION_NAME_TIME])
+            else:
+                time = 0
+                item[DIMENSION_NAME_TIME] = str(time)
             if not time in lookup[position]:
                 lookup[position][time] = {}
-            channel = item.get(DIMENSION_NAME_CHANNEL, 'w1')
+
+            if DIMENSION_NAME_CHANNEL in item:
+                channel = item[DIMENSION_NAME_CHANNEL]
+            else:
+                channel = '1'
+                item[DIMENSION_NAME_CHANNEL] = channel
             if not channel in lookup[position][time]:
                 lookup[position][time][channel] = {}
 
             # leave zslice optional.
             # in case of multi-images it must not be defined
-            zslice = item.get(DIMENSION_NAME_ZSLICE, 0)
+            if DIMENSION_NAME_ZSLICE in item:
+                zslice = item[DIMENSION_NAME_ZSLICE]
+            else:
+                zslice = 0
+                item[DIMENSION_NAME_ZSLICE] = zslice
             if zslice == '':
                 zslice = None
             if not zslice is None:
