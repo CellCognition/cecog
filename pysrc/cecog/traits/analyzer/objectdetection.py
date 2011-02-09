@@ -124,7 +124,7 @@ class SectionObjectdetection(_Section):
         ('primary_postprocessing_intensity_max',
             IntTrait(-1, -1, 10000, label='Max. average intensity')),
         ('primary_removeborderobjects',
-            BooleanTrait(True)),
+            BooleanTrait(True, label='Remove border objects')),
         ('primary_regions',
             MultiSelectionTrait([REGION_NAMES_PRIMARY[0]],
                                  REGION_NAMES_PRIMARY)),
