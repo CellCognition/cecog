@@ -388,11 +388,13 @@ class ImageContainer(object):
     def __init__(self):
         self._plates = OrderedDict()
         self._meta_data = OrderedDict()
+        self._path_out = OrderedDict()
         self.has_timelapse = None
 
-    def register_plate(self, plate_id, importer):
+    def register_plate(self, plate_id, path_out, importer):
         self._plates[plate_id] = importer
         self._meta_data[plate_id] = importer.meta_data
+        self._path_out[plate_id] = path_out
         # FIXME: check some dimensions!!!
         self.has_timelapse = importer.meta_data.has_timelapse
 
@@ -432,6 +434,9 @@ class ImageContainer(object):
     def get_meta_data(self, plate):
         return self._meta_data[plate]
 
+    def get_path_out(self, plate):
+        return self._path_out[plate]
+
     @property
     def plates(self):
         return self._plates.keys()
@@ -450,20 +455,7 @@ class ImageContainer(object):
         return sorted(set(channels))
 
     @classmethod
-    def check_container_file(cls, path_plate_in, path_plate_out, settings):
-        filename = os.path.join(path_plate_out, IMAGECONTAINER_FILENAME)
-        if not os.path.isfile(filename):
-            filename = os.path.join(path_plate_in, IMAGECONTAINER_FILENAME)
-            if not os.path.isfile(filename):
-                filename = None
-        return filename
-
-    @classmethod
-    def from_settings(cls, settings, force=False):
-        #from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
-        from cecog.io.importer import (IniFileImporter,
-                                       FlatFileImporter,
-                                       )
+    def iter_check_plates(cls, settings):
 
         settings.set_section(SECTION_NAME_GENERAL)
         path_in = convert_package_path(settings.get2('pathin'))
@@ -476,8 +468,6 @@ class ImageContainer(object):
         else:
             plate_folders = [os.path.split(path_in)[1]]
 
-        imagecontainer = cls()
-
         for plate_id in plate_folders:
 
             if has_multiple_plates:
@@ -488,13 +478,35 @@ class ImageContainer(object):
                 path_plate_out = path_out
 
             # check if structure file exists
-            filename = cls.check_container_file(path_plate_in, path_plate_out,
-                                                settings)
+            filename = os.path.join(path_plate_out, IMAGECONTAINER_FILENAME)
+            if not os.path.isfile(filename):
+                filename = os.path.join(path_plate_in, IMAGECONTAINER_FILENAME)
+                if not os.path.isfile(filename):
+                    filename = None
 
+            yield plate_id, path_plate_in, path_plate_out, filename
+
+
+    def iter_import_from_settings(self, settings, scan_plates=None):
+        from cecog.io.importer import (IniFileImporter,
+                                       FlatFileImporter,
+                                       )
+        settings.set_section(SECTION_NAME_GENERAL)
+
+        for info in self.iter_check_plates(settings):
+            plate_id, path_plate_in, path_plate_out, filename = info
+
+            # check whether this plate has to be rescanned
+            if not scan_plates is None and plate_id in scan_plates:
+                scan_plate = scan_plates[plate_id]
+            else:
+                scan_plate = False
+
+            # if no structure file was found scan the plate
             if filename is None:
-                force = True
+                scan_plate = True
 
-            if force:
+            if scan_plate:
                 if settings.get2('image_import_namingschema'):
                     config_parser = NAMING_SCHEMAS
                     section_name = settings.get2('namingscheme')
@@ -508,10 +520,15 @@ class ImageContainer(object):
                 importer = FlatFileImporter(path_plate_in, filename)
 
             importer.load()
-            if force:
+            if scan_plate:
                 importer.export_to_flatfile(os.path.join(path_plate_in,
                                                          IMAGECONTAINER_FILENAME))
-            imagecontainer.register_plate(plate_id, importer)
+            self.register_plate(plate_id, path_plate_out, importer)
 
-        return imagecontainer
+            yield info
+
+
+    def import_from_settings(self, settings, scan_plates=None):
+        list(self.iter_import_from_settings(settings, scan_plates))
+
 
