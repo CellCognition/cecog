@@ -61,7 +61,12 @@ class NavigationModule(Module):
 
         self._image_container = image_container
 
-        self._frame_info = QGroupBox('Plate Information', self)
+        frame_info = QGroupBox('Plate Information', self)
+        layout = QGridLayout(frame_info)
+        frame_info.setStyleSheet('QLabel { font-size: 10px }')
+        self._label_info = QLabel(frame_info)
+        layout.addWidget(self._label_info, 0, 0, 0, 0,
+                         Qt.AlignCenter | Qt.AlignHCenter)
 
         splitter = QSplitter(Qt.Vertical, self)
         splitter.setMinimumWidth(40)
@@ -120,7 +125,7 @@ class NavigationModule(Module):
             self._table_time = table
             layout.addWidget(table, 0, 0)
 
-        splitter.addWidget(self._frame_info)
+        splitter.addWidget(frame_info)
 
     def update_plate_table(self):
         table = self._table_plate
@@ -185,7 +190,7 @@ class NavigationModule(Module):
             column_names += ['Well', 'Subwell']
         if meta_data.has_condition_info:
             column_names.append('Condition')
-        if meta_data.has_timestamp_info:
+        if meta_data.has_timestamp_info and meta_data.has_timelapse:
             column_names.append('Time-lapse')
 
         table.setColumnCount(len(column_names))
@@ -203,15 +208,20 @@ class NavigationModule(Module):
                 info_str = '%.1fmin (%.1fs)' % (info[0] / 60, info[1])
                 table.setItem(idx, column, QTableWidgetItem(info_str))
 
+            if 'Well' in column_names:
+                column = column_names.index('Well')
+                well, subwell = meta_data.get_well_and_subwell(pos)
+                if not well is None:
+                    table.setItem(idx, column, QTableWidgetItem(well))
+                if not subwell is None:
+                    table.setItem(idx, column+1, QTableWidgetItem(subwell))
+
         table.resizeColumnsToContents()
         table.resizeRowsToContents()
         table.blockSignals(False)
 
     def update_info_frame(self, meta_data):
-        frame = self._frame_info
-        frame.setStyleSheet('QLabel { font-size: 10px }')
         meta = meta_data
-        layout = QGridLayout(frame)
         txt  = '<table>' \
                '<tr><td align="right">Positions: </td><td>%s</td></tr>' \
                '<tr><td align="right">Frames: </td><td>%d</td></tr>' % \
@@ -237,8 +247,7 @@ class NavigationModule(Module):
         txt += '<tr><td align="right">Condition info: </td><td>%s</td></tr>' % \
                yesno(meta.has_condition_info)
         txt += '</table>'
-        label = QLabel(txt, frame)
-        layout.addWidget(label, 0, 0, 0, 0, Qt.AlignCenter | Qt.AlignHCenter)
+        self._label_info.setText(txt)
 
     def initialize(self):
         self.browser.coordinates_changed.connect(self._on_coordinates_changed)
@@ -260,10 +269,11 @@ class NavigationModule(Module):
     def _on_plate_changed(self, current, previous):
         item = self._table_plate.item(current.row(), 0)
         plate = item.data(0).toPyObject()
+        self.plate_changed.emit(plate)
         meta_data = self._image_container.get_meta_data(plate)
         coordinate = self.browser.get_coordinates()
         self.update_position_table(meta_data)
-        self._set_time(coordinate.position)
+        self._set_position(coordinate.position)
         if self._image_container.has_timelapse:
             meta_data = self._image_container.get_meta_data(coordinate.plate)
             self.update_time_table(meta_data)
@@ -273,12 +283,12 @@ class NavigationModule(Module):
     def _on_position_changed(self, current, previous):
         item = self._table_position.item(current.row(), 0)
         position = item.data(0).toPyObject()
+        self.position_changed.emit(position)
         if self._image_container.has_timelapse:
             coordinate = self.browser.get_coordinates()
             meta_data = self._image_container.get_meta_data(coordinate.plate)
             self.update_time_table(meta_data)
             self._set_time(coordinate.time)
-        self.position_changed.emit(position)
 
     def _on_time_changed(self, current, previous):
         item = self._table_time.item(current.row(), 0)
