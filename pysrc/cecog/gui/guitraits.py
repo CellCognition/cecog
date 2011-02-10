@@ -156,15 +156,12 @@ class SelectionTrait2(traits.SelectionTrait2, GuiTrait):
 
     def set_list_data(self, list_data):
         traits.SelectionTrait2.set_list_data(self, list_data)
-        print(self._widget, list_data)
         if not self._widget is None:
+            current_idx = self._widget.currentIndex()
             for item in sorted(self.list_data):
                 if self._widget.findText(item) == -1:
                     self._widget.addItem(item)
-#            for i in range(self._widget.maxCount()):
-#                if self._widget.itemText(i) not in list_data:
-#                    self._widget.removeItem(i)
-            self._widget.update()
+            self._widget.setCurrentIndex(current_idx)
 
 
 class MultiSelectionTrait(traits.MultiSelectionTrait, GuiTrait):
