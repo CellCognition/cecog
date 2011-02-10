@@ -1032,14 +1032,9 @@ class AnalyzerCore(object):
         #self.plate = plate
         self._oLogger = logging.getLogger(self.__class__.__name__)
 
-        #self._oClient = oClient
-
-        #self.strPathIn  = strPathIn
-        #self.strPathOut = strPathOut
 
         self.oSettings.set_section('General')
-        self.strPathIn = self.oSettings.get2('pathIn')
-        self.strPathOut = self.oSettings.get2('pathOut')
+        self.strPathOut = imagecontainer.get_path_out(plate_id)
 
         bMkdirsOk = safe_mkdirs(self.strPathOut)
         self._oLogger.info("strPathOut '%s', ok: %s" % (self.strPathOut, bMkdirsOk))
