@@ -268,7 +268,7 @@ class _Channel(PropertyManager):
 
             # overwrite the first MetaImage found with the projected image data
             meta_image = self._lstZSlices[0]
-            meta_image.image = img_proj
+            meta_image.set_image(img_proj)
         else:
             self.oZSliceOrProjection = int(self.oZSliceOrProjection)
             self._oLogger.debug("* selecting z-slice %d..." % self.oZSliceOrProjection)
