@@ -909,7 +909,7 @@ class CellAnalyzer(PropertyManager):
             return imgRgb, strFilePath
 
 
-    def collectObjects(self, P, lstReader, oLearner, byTime=True):
+    def collectObjects(self, plate_id, P, lstReader, oLearner, byTime=True):
 
         #channel_name = oLearner.strChannelId
         strRegionId = oLearner.strRegionId
@@ -1009,13 +1009,13 @@ class CellAnalyzer(PropertyManager):
                                                    oLearner.dctClassNames[label])
                     safe_mkdirs(strPathOutLabel)
 
-                    strFilenameBase = 'P%s_T%05d_X%04d_Y%04d' % (self.P, self._iT, iCenterX, iCenterY)
+                    strFilenameBase = 'PL%s___P%s___T%05d___X%04d___Y%04d' % (plate_id, self.P, self._iT, iCenterX, iCenterY)
 
                     obj.sample_id = strFilenameBase
                     learner_objects.append(obj)
 
-                    strFilenameImg = os.path.join(strPathOutLabel, '%s__img.png' % strFilenameBase)
-                    strFilenameMsk = os.path.join(strPathOutLabel, '%s__msk.png' % strFilenameBase)
+                    strFilenameImg = os.path.join(strPathOutLabel, '%s___img.png' % strFilenameBase)
+                    strFilenameMsk = os.path.join(strPathOutLabel, '%s___msk.png' % strFilenameBase)
                     #print strFilenameImg, strFilenameMsk
                     oContainer.exportObject(obj_id,
                                             strFilenameImg,
