@@ -129,6 +129,7 @@ class Browser(QMainWindow):
         splitter.setStretchFactor(1, 0)
         splitter.setSizes([-1, 80])
 
+        print self._imagecontainer.channels
         self.coordinate.plate = self._imagecontainer.plates[0]
         self.coordinate.channel = self._imagecontainer.channels[0]
 
@@ -351,6 +352,9 @@ class Browser(QMainWindow):
         settings.set_section('Output')
         settings.set2('rendering_contours_discwrite', False)
         settings.set2('rendering_class_discwrite', False)
+        settings.set2('export_object_counts', False)
+        settings.set2('export_object_details', False)
+        settings.set2('export_track_data', False)
         settings.set_section('Classification')
         settings.set2('collectsamples', False)
         settings.set('General', 'rendering', {})
@@ -360,6 +364,7 @@ class Browser(QMainWindow):
             settings.set('Processing', 'secondary_processChannel', True)
         settings.set('General', 'rendering', {})
 
+        print settings
         analyzer = AnalyzerCore(self.coordinate.plate, settings,
                                 self._imagecontainer)
         analyzer.processPositions(myhack=self)
