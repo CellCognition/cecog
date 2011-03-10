@@ -36,6 +36,7 @@ from cecog.traits.config import ConfigSettings
 from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.analyzer.core import AnalyzerCore
+from cecog.io.imagecontainer import ImageContainer
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -113,6 +114,9 @@ folder of the settings file can be overwritten by the options below.
     if not options.output is None:
         settings.set2('pathout', options.output)
 
+    imagecontainer = ImageContainer()
+    imagecontainer.import_from_settings(settings)
+
     index = options.cluster_index
     batch_size = options.batch_size
     print "moo123", index, sys.argv
@@ -142,7 +146,7 @@ folder of the settings file can be overwritten by the options below.
                                  ','.join(plates[plate_id]))
                     print "Launching analyzer for plate '%s' with positions %s"%\
                           (plate_id, plates[plate_id])
-                    analyzer = AnalyzerCore(plate_id, settings)
+                    analyzer = AnalyzerCore(plate_id, settings, imagecontainer)
                     analyzer.processPositions()
             else:
                 parser.error('Cluster index between 1 and %d required!' %
