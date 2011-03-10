@@ -306,7 +306,7 @@ class ClusterDisplay(QGroupBox):
                 cluster_pos = []
                 for plate in imagecontainer.plates:
                     meta_data = imagecontainer.get_meta_data(plate)
-                    pos_str = ','.join('%s___%s' % ([plate, p])
+                    pos_str = ','.join('%s___%s' % (plate, p)
                                        for p in meta_data.positions)
                     cluster_pos.append(pos_str)
                 self._submit_settings.set2('positions', ','.join(cluster_pos))
