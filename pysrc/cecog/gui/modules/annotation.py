@@ -812,14 +812,23 @@ class AnnotationModule(Module):
         ann_table.blockSignals(False)
 
     def _find_annotation_row(self, coordinate):
-        items1 = self._ann_table.findItems(coordinate.plate, Qt.MatchExactly)
+        if self._imagecontainer.has_multiple_plates:
+            items1 = self._ann_table.findItems(coordinate.plate,
+                                               Qt.MatchExactly)
+            rows1 = set(x.row() for x in items1)
+            offset = 0
+        else:
+            rows1 = set(range(self._ann_table.rowCount()))
+            offset = 1
+
         items2 = self._ann_table.findItems(coordinate.position, Qt.MatchExactly)
         items3 = self._ann_table.findItems(str(coordinate.time),
                                            Qt.MatchExactly)
-        rows1 = set(x.row() for x in items1)
-        items2 = [x for x in items2 if x.row() in rows1 and x.column() == 1]
+        items2 = [x for x in items2 if x.row() in rows1 and
+                  x.column() == 1-offset]
         rows2 = set(x.row() for x in items2)
-        items3 = [x for x in items3 if x.row() in rows2 and x.column() == 2]
+        items3 = [x for x in items3 if x.row() in rows2 and
+                  x.column() == 2-offset]
         assert len(items3) in [0,1]
         if len(items3) == 1:
             self._ann_table.setCurrentItem(items3[0])
