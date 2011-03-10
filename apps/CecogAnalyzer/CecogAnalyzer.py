@@ -104,6 +104,7 @@ class AnalyzerMainWindow(QMainWindow):
         QMainWindow.__init__(self)
         qApp._main_window = self
 
+        self._is_initialized = False
         self._debug = False
         self._imagecontainer = None
         self._meta_data = None
@@ -243,6 +244,7 @@ class AnalyzerMainWindow(QMainWindow):
         self.show()
         self.center()
         self.raise_()
+        self._is_initialized = True
 
     def closeEvent(self, event):
         '''
@@ -297,9 +299,10 @@ class AnalyzerMainWindow(QMainWindow):
                 qApp.valid_R_version = True
 
     def settings_changed(self, changed):
-        self.setWindowModified(changed)
-        self.action_save.setEnabled(changed)
-        self.modified.emit(changed)
+        if self._is_initialized:
+            self.setWindowModified(changed)
+            self.action_save.setEnabled(changed)
+            self.modified.emit(changed)
 
     def _add_page(self, widget):
         button = QListWidgetItem(self._selection)
@@ -499,11 +502,14 @@ class AnalyzerMainWindow(QMainWindow):
                     'The input data structure was not loaded.\n'
                     'Please click "Load input data" in General.')
         else:
-            browser = Browser(self._settings,
-                              self._imagecontainer)
-            browser.show()
-            browser.raise_()
-            browser.setFocus()
+            try:
+                browser = Browser(self._settings,
+                                  self._imagecontainer)
+                browser.show()
+                browser.raise_()
+                browser.setFocus()
+            except:
+                exception(None, 'Problem opening the browser')
 
     def _on_load_input(self):
         try:
@@ -534,12 +540,14 @@ class AnalyzerMainWindow(QMainWindow):
                                     ('\n'.join(found_plates),
                                      '\n'.join(missing_plates)))
 
-                if has_missing:
+                if not has_missing:
+                    btn1 = QPushButton('No', box)
+                    box.addButton(btn1, QMessageBox.NoRole)
+                elif len(found_plates) > 0:
                     btn1 = QPushButton('Rescan missing', box)
                     box.addButton(btn1, QMessageBox.YesRole)
                 else:
-                    btn1 = QPushButton('No', box)
-                    box.addButton(btn1, QMessageBox.NoRole)
+                    btn1 = None
 
                 btn2 = QPushButton('Rescan all', box)
                 box.addButton(btn2, QMessageBox.YesRole)
@@ -748,8 +756,8 @@ if __name__ == "__main__":
         filename = '/Users/miheld/data/Peter/Analysis/t2/peter_t2.conf'
         filename = '/Users/miheld/data/Katja/EMBL_H2bIbb.conf'
         #filename = '/Users/miheld/data/CellCognition/Thomas/ANDRISETTINGS_local_HD.conf'
-        if os.path.isfile(filename):
-            main._read_settings(filename)
+#        if os.path.isfile(filename):
+#            main._read_settings(filename)
         main._debug = True
 
     splash.finish(main)
