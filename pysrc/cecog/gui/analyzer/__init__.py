@@ -196,7 +196,7 @@ class _ProcessingThread(QThread):
 
     def __init__(self, parent, settings):
         QThread.__init__(self, parent)
-        self._settings = settings
+        self._settings = settings.copy()
         self._abort = False
         self._mutex = QMutex()
         self._stage_info = {'text': '',
