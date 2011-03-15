@@ -151,17 +151,23 @@ class SelectionTrait2(traits.SelectionTrait2, GuiTrait):
             index = self.index(value)
             if index is None:
                 widget.addItem(str(value))
-            else:
-                widget.setCurrentIndex(index)
+                # FIXME: the Qt interface is not returning an index
+                index = widget.count() - 1
+            widget.setCurrentIndex(index)
 
     def set_list_data(self, list_data):
         traits.SelectionTrait2.set_list_data(self, list_data)
         if not self._widget is None:
             current_idx = self._widget.currentIndex()
-            for item in sorted(self.list_data):
-                if self._widget.findText(item) == -1:
-                    self._widget.addItem(item)
-            self._widget.setCurrentIndex(current_idx)
+            text = self._widget.itemText(current_idx)
+            self._widget.clear()
+            str_data = map(str, list_data)
+            self._widget.addItems(str_data)
+            if text in str_data:
+                index = str_data.index(text)
+            else:
+                index = 0
+            self._widget.setCurrentIndex(index)
 
 
 class MultiSelectionTrait(traits.MultiSelectionTrait, GuiTrait):
