@@ -903,7 +903,8 @@ class PositionAnalyzer(object):
                         #if self._qthread.get_renderer() == strType:
                         self._qthread.set_image(None,
                                                 img_rgb,
-                                                'P %s - T %05d' % (self.origP, frame))
+                                                'PL %s - P %s - T %05d' % (self.plate_id, self.origP, frame))
+
 
                     #channel_id = self.oObjectLearner.strChannelId
                     #self.oObjectLearner.setFeatureNames(oCellAnalyzer.getChannel(channel_id).lstFeatureNames)
@@ -944,7 +945,7 @@ class PositionAnalyzer(object):
                     if not self._qthread is None and not img_rgb is None:
                         self._qthread.set_image(strType,
                                                 img_rgb,
-                                                'P %s - T %05d' % (self.origP, frame),
+                                                'PL %s - P %s - T %05d' % (self.plate_id, self.origP, frame),
                                                 filename)
                         time.sleep(.05)
 
@@ -964,7 +965,7 @@ class PositionAnalyzer(object):
                             #print strType, self._qthread.get_renderer(), self.oSettings.get('Rendering', 'rendering')
                             self._qthread.set_image(strType,
                                                     img_rgb,
-                                                    'P %s - T %05d' % (self.origP, frame),
+                                                    'PL %s - P %s - T %05d' % (self.plate_id, self.origP, frame),
                                                     filename)
                             time.sleep(.05)
 
@@ -1103,7 +1104,7 @@ class AnalyzerCore(object):
                 strSampleFilename = os.path.join(strAnnotationsPath, strFilename)
 
                 result = annotation_re.match(strFilename)
-                print result
+                #print result
                 strFilenameExt = os.path.splitext(strSampleFilename)[1]
                 if (os.path.isfile(strSampleFilename) and
                     strFilenameExt == self.oSettings.get2(_resolve('classification_annotationfileext')) and
@@ -1111,7 +1112,7 @@ class AnalyzerCore(object):
                     not result is None and
                     (result.group('plate') is None or result.group('plate') == self.plate_id)):
 
-                    print strSampleFilename, os.path.splitext(strSampleFilename)[1]
+                    #print strSampleFilename, os.path.splitext(strSampleFilename)[1]
 
                     has_timelapse = self.oSettings.get('General', 'timelapsedata')
 
@@ -1147,7 +1148,7 @@ class AnalyzerCore(object):
             #self.lstPositions = self.oSettings.lstPositions
             self.lstPositions = sorted(self.dctSamplePositions.keys())
             #print self.oSettings.lstPositions
-            print self.dctSamplePositions
+            #print self.dctSamplePositions
 
 
 
@@ -1227,7 +1228,7 @@ class AnalyzerCore(object):
 
         # define range of frames to do analysis within
         lstFrames = list(self._meta_data.times)
-        print lstFrames
+        #print lstFrames
 
         if self.oSettings.get2('frameRange'):
             frames_begin = self.oSettings.get2('frameRange_begin')
@@ -1242,15 +1243,15 @@ class AnalyzerCore(object):
             frames_end = lstFrames[-1]
 
         self.tplFrameRange = (frames_begin, frames_end)
-        print self.tplFrameRange
+        #print self.tplFrameRange
 
         lstAnalysisFrames = lstFrames[lstFrames.index(self.tplFrameRange[0]):
                                       lstFrames.index(self.tplFrameRange[1])+1]
-        print lstAnalysisFrames
+        #print lstAnalysisFrames
 
         # take every n'th element from the list
         self.lstAnalysisFrames = lstAnalysisFrames[::self.oSettings.get2('frameincrement')]
-        print self.lstAnalysisFrames
+        #print self.lstAnalysisFrames
 
 
 
