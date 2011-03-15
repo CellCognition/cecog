@@ -930,7 +930,7 @@ class CellAnalyzer(PropertyManager):
 #                oPrimaryChannel = oChannel2
         self.process(apply = False, extract_features = False)
 
-        print self._channel_registry
+        # self._channel_registry
         oChannel = self._channel_registry[oLearner.channel_name]
         oContainer = oChannel.get_container(strRegionId)
         objects = oContainer.getObjects()
