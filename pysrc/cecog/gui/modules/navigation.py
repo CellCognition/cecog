@@ -35,6 +35,7 @@ import numpy
 #
 from cecog.gui.modules.module import Module
 from cecog.util.util import yesno
+from cecog.io.imagecontainer import Coordinate
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -52,9 +53,7 @@ class NavigationModule(Module):
 
     NAME = 'Navigation'
 
-    position_changed = pyqtSignal(str)
-    time_changed = pyqtSignal(int)
-    plate_changed = pyqtSignal(str)
+    coordinate_changed = pyqtSignal(Coordinate)
 
     def __init__(self, parent, browser, image_container):
         Module.__init__(self, parent, browser)
@@ -159,7 +158,7 @@ class NavigationModule(Module):
         table.setHorizontalHeaderLabels(column_names)
         table.setRowCount(len(meta_data.times))
 
-        coordinate = self.browser.get_coordinates()
+        coordinate = self.browser.get_coordinate()
         for idx, time in enumerate(meta_data.times):
             item = QTableWidgetItem(str(time))
             item.setData(0, time)
@@ -237,10 +236,10 @@ class NavigationModule(Module):
         if meta.has_timestamp_info and meta.has_timelapse:
             info = meta.plate_timestamp_info
             txt += \
-               '<tr><td align="right">Time-lapse: </td><td>%.1f min (+/- %.1f s)</td></tr>' % \
+               '<tr><td align="right">Time-lapse info: </td><td>%.1f min (+/- %.1f s)</td></tr>' % \
                (info[0]/60, info[1])
         else:
-            txt += '<tr><td align="right">Time-lapse: </td><td>no</td></tr>'
+            txt += '<tr><td align="right">Time-lapse info: </td><td>no</td></tr>'
 
         txt += '<tr><td align="right">Well info: </td><td>%s</td></tr>' % \
                yesno(meta.has_well_info)
@@ -251,10 +250,11 @@ class NavigationModule(Module):
 
     def initialize(self):
         self.browser.coordinates_changed.connect(self._on_coordinates_changed)
-        self.plate_changed.connect(self.browser.on_plate_changed)
-        self.position_changed.connect(self.browser.on_position_changed)
-        self.time_changed.connect(self.browser.on_time_changed)
-        coordinate = self.browser.get_coordinates()
+        #self.plate_changed.connect(self.browser.on_plate_changed)
+        #self.position_changed.connect(self.browser.on_position_changed)
+        #self.time_changed.connect(self.browser.on_time_changed)
+        self.coordinate_changed.connect(self.browser.on_coordinate_changed)
+        coordinate = self.browser.get_coordinate()
         meta_data = self._image_container.get_meta_data(coordinate.plate)
         self.update_position_table(meta_data)
         self.update_info_frame(meta_data)
@@ -266,34 +266,59 @@ class NavigationModule(Module):
             self.update_time_table(meta_data)
             self._set_time(coordinate.time)
 
+    def _get_closeby_position(self, coordinate_old, coordinate_new):
+        #md_old = self._image_container.get_meta_data(coordinate_old.plate)
+        md_new = self._image_container.get_meta_data(coordinate_new.plate)
+        if coordinate_old.position in md_new.positions:
+            coordinate_new.position = coordinate_old.position
+        else:
+            coordinate_new.position = md_new.positions[0]
+
+    def _get_closeby_time(self, coordinate_old, coordinate_new):
+        #md_old = self._image_container.get_meta_data(coordinate_old.plate)
+        md_new = self._image_container.get_meta_data(coordinate_new.plate)
+        if coordinate_old.time in md_new.times:
+            coordinate_new.time = coordinate_old.time
+        else:
+            coordinate_new.time = md_new.times[0]
+
     def _on_plate_changed(self, current, previous):
+        coordinate_old = self.browser.get_coordinate()
+        coordinate_new = coordinate_old.copy()
+
         item = self._table_plate.item(current.row(), 0)
         plate = item.data(0).toPyObject()
-        self.plate_changed.emit(plate)
+        coordinate_new.plate = plate
         meta_data = self._image_container.get_meta_data(plate)
-        coordinate = self.browser.get_coordinates()
         self.update_position_table(meta_data)
-        self._set_position(coordinate.position)
+
+        self._get_closeby_position(coordinate_old, coordinate_new)
+        self._set_position(coordinate_new.position)
         if self._image_container.has_timelapse:
-            meta_data = self._image_container.get_meta_data(coordinate.plate)
+            meta_data = self._image_container.get_meta_data(coordinate_new.plate)
             self.update_time_table(meta_data)
-            self._set_time(coordinate.time)
+            self._get_closeby_time(coordinate_old, coordinate_new)
+            self._set_time(coordinate_new.time)
         self.update_info_frame(meta_data)
+        self.coordinate_changed.emit(coordinate_new)
 
     def _on_position_changed(self, current, previous):
+        coordinate = self.browser.get_coordinate()
         item = self._table_position.item(current.row(), 0)
         position = item.data(0).toPyObject()
-        self.position_changed.emit(position)
+        coordinate.position = position
         if self._image_container.has_timelapse:
-            coordinate = self.browser.get_coordinates()
             meta_data = self._image_container.get_meta_data(coordinate.plate)
             self.update_time_table(meta_data)
             self._set_time(coordinate.time)
+        self.coordinate_changed.emit(coordinate)
 
     def _on_time_changed(self, current, previous):
+        coordinate = self.browser.get_coordinate()
         item = self._table_time.item(current.row(), 0)
         time = int(item.data(0).toPyObject())
-        self.time_changed.emit(time)
+        coordinate.time = time
+        self.coordinate_changed.emit(coordinate)
 
     def _on_coordinates_changed(self, coordinate):
         self._set_plate(coordinate.plate)
@@ -316,5 +341,6 @@ class NavigationModule(Module):
         if self._image_container.has_timelapse:
             self._table_time.blockSignals(True)
             item = self._table_time.findItems(str(time), Qt.MatchExactly)[0]
+            print "MOOO", item.text()
             self._table_time.setCurrentItem(item)
             self._table_time.blockSignals(False)

@@ -314,15 +314,18 @@ class Browser(QMainWindow):
                self.image_viewer.scale_factor*100)
         self._statusbar.showMessage(msg)
 
-    def get_coordinates(self):
+    def get_coordinate(self):
         return self.coordinate.copy()
 
-    def set_coordinates(self, coordinate):
-        self.coordinate = coordinate
+    def on_coordinate_changed(self, coordinate):
+        self.coordinate = coordinate.copy()
         self._t_slider.blockSignals(True)
         self._t_slider.setValue(coordinate.time)
         self._t_slider.blockSignals(False)
         self._process_image()
+
+    def set_coordinate(self, coordinate):
+        self.on_coordinate_changed(coordinate)
         self.coordinates_changed.emit(coordinate)
 
     def _process_image(self):
@@ -379,27 +382,6 @@ class Browser(QMainWindow):
         self.coordinate.time = time
         self._process_image()
         self.coordinates_changed.emit(self.coordinate)
-
-    def on_time_changed(self, time):
-        meta_data = self._imagecontainer.get_meta_data(self.coordinate.plate)
-        assert time in meta_data.times, "Time not valid"
-        self.coordinate.time = time
-        self._t_slider.blockSignals(True)
-        self._t_slider.setValue(time)
-        self._t_slider.blockSignals(False)
-        self._process_image()
-
-    def on_position_changed(self, position):
-        meta_data = self._imagecontainer.get_meta_data(self.coordinate.plate)
-        #position = str(position)
-        assert position in meta_data.positions, "Position not valid"
-        self.coordinate.position = position
-        self._process_image()
-
-    def on_plate_changed(self, plate):
-        assert plate in self._imagecontainer.plates, "Plate not valid"
-        self.coordinate.plate = plate
-        self._process_image()
 
     def on_object_region_changed(self, channel, region):
         self._object_region = channel, region
