@@ -597,9 +597,9 @@ class AnalyzerMainWindow(QMainWindow):
                                              '%s_channelid' % prefix)
             trait.set_list_data(channels)
             self._tabs[1].get_widget('%s_channelid' % prefix).update()
-        for plate_id in self._imagecontainer.plates:
-            print plate_id
-            print self._imagecontainer.get_meta_data(plate_id)
+        #for plate_id in self._imagecontainer.plates:
+        #    print plate_id
+        #    print self._imagecontainer.get_meta_data(plate_id)
 
         self.set_modules_active(state=True)
 
@@ -625,6 +625,7 @@ class AnalyzerMainWindow(QMainWindow):
             if dialog.exec_():
                 filename = str(dialog.selectedFiles()[0])
                 self._read_settings(filename)
+                self.set_modules_active(state=False)
 
     @pyqtSlot()
     def _on_file_save(self):
@@ -751,13 +752,13 @@ if __name__ == "__main__":
         show_html('_startup')
     else:
         #filename = '/Users/miheld/data/CellCognition/demo_data/cluster_test.conf'
-        filename = '/Users/miheld/data/CellCognition/demo_data/H2bTub20x_settings.conf'
-        filename = '/Users/miheld/data/Fabrice/Analysis/test/fabrice_test.conf'
-        filename = '/Users/miheld/data/Peter/Analysis/t2/peter_t2.conf'
+        #filename = '/Users/miheld/data/CellCognition/demo_data/H2bTub20x_settings.conf'
+        #filename = '/Users/miheld/data/Fabrice/Analysis/test/fabrice_test.conf'
+        #filename = '/Users/miheld/data/Peter/Analysis/t2/peter_t2.conf'
         filename = '/Users/miheld/data/Katja/EMBL_H2bIbb.conf'
         #filename = '/Users/miheld/data/CellCognition/Thomas/ANDRISETTINGS_local_HD.conf'
-#        if os.path.isfile(filename):
-#            main._read_settings(filename)
+        if os.path.isfile(filename):
+            main._read_settings(filename)
         main._debug = True
 
     splash.finish(main)
