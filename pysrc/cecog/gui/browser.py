@@ -311,7 +311,7 @@ class Browser(QMainWindow):
         self._statusbar.showMessage(msg)
 
     def get_coordinates(self):
-        return self.coordinate
+        return self.coordinate.copy()
 
     def set_coordinates(self, coordinate):
         self.coordinate = coordinate
