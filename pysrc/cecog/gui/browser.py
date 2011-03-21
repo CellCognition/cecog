@@ -301,11 +301,14 @@ class Browser(QMainWindow):
 
     def update_statusbar(self):
         meta_data = self._imagecontainer.get_meta_data(self.coordinate.plate)
-        timestamp = meta_data.get_timestamp_relative(self.coordinate)
-        time_info = str(self.coordinate.time)
-        if not numpy.isnan(timestamp):
-            time_info += ' (%.1f min)' % (timestamp / 60)
-        msg = 'Plate %s | Position %s | Frame %s  ||  Zoom %.1f%%' % \
+        if meta_data.has_timelapse:
+            timestamp = meta_data.get_timestamp_relative(self.coordinate)
+            time_info = ' | Frame: %d' % self.coordinate.time
+            if not numpy.isnan(timestamp):
+                time_info += ' (%.1f min)' % (timestamp / 60)
+        else:
+            time_info = ''
+        msg = 'Plate: %s | Position: %s%s ||  Zoom: %.1f%%' % \
               (self.coordinate.plate, self.coordinate.position, time_info,
                self.image_viewer.scale_factor*100)
         self._statusbar.showMessage(msg)
