@@ -420,10 +420,11 @@ class AnnotationModule(Module):
         ann_table.setSelectionMode(QTableWidget.SingleSelection)
         ann_table.setSelectionBehavior(QTableWidget.SelectRows)
         #ann_table.setSortingEnabled(True)
-        ann_table.setColumnCount(4)
-        ann_table.setHorizontalHeaderLabels(['Plate', 'Position', 'Frame',
-                                             'Samples',
-                                             ])
+        column_names = ['Position', 'Frame', 'Samples']
+        if self._imagecontainer.has_multiple_plates:
+            column_names = 'Plate' + column_names
+        ann_table.setColumnCount(len(column_names))
+        ann_table.setHorizontalHeaderLabels(column_names)
         ann_table.resizeColumnsToContents()
         ann_table.currentItemChanged.connect(self._on_anntable_changed)
         ann_table.setStyleSheet('font-size: 10px;')
@@ -778,22 +779,28 @@ class AnnotationModule(Module):
             else:
                 flags = Qt.NoItemFlags
                 tooltip = 'Coordinate not found in this data set.'
-            item = QTableWidgetItem(plate)
-            item.setFlags(flags)
-            item.setToolTip(tooltip)
-            ann_table.setItem(idx, self.COLUMN_ANN_PLATE, item)
+
+            if self._imagecontainer.has_multiple_plates:
+                item = QTableWidgetItem(plate)
+                item.setFlags(flags)
+                item.setToolTip(tooltip)
+                ann_table.setItem(idx, self.COLUMN_ANN_PLATE, item)
+                offset = 0
+            else:
+                offset = 1
+
             item = QTableWidgetItem(position)
             item.setFlags(flags)
             item.setToolTip(tooltip)
-            ann_table.setItem(idx, self.COLUMN_ANN_POSITION, item)
+            ann_table.setItem(idx, self.COLUMN_ANN_POSITION - offset, item)
             item = QTableWidgetItem(str(time))
             item.setFlags(flags)
             item.setToolTip(tooltip)
-            ann_table.setItem(idx, self.COLUMN_ANN_TIME, item)
+            ann_table.setItem(idx, self.COLUMN_ANN_TIME - offset, item)
             item = QTableWidgetItem(str(nr_samples))
             item.setFlags(flags)
             item.setToolTip(tooltip)
-            ann_table.setItem(idx, self.COLUMN_ANN_SAMPLES, item)
+            ann_table.setItem(idx, self.COLUMN_ANN_SAMPLES - offset, item)
 
         ann_table.resizeColumnsToContents()
         ann_table.resizeRowsToContents()
@@ -884,12 +891,17 @@ class AnnotationModule(Module):
 
     def _on_anntable_changed(self, current, previous):
         if not current is None:
-            plate = str(self._ann_table.item(current.row(),
-                                             self.COLUMN_ANN_PLATE).text())
-            position = str(self._ann_table.item(current.row(),
-                                                self.COLUMN_ANN_POSITION).text())
-            time = int(self._ann_table.item(current.row(),
-                                            self.COLUMN_ANN_TIME).text())
+            if self._imagecontainer.has_multiple_plates:
+                offset = 0
+                plate = self._ann_table.item(current.row(),
+                                             self.COLUMN_ANN_PLATE).text()
+            else:
+                offset = 1
+                plate = self._imagecontainer.plates[0]
+            col = self.COLUMN_ANN_POSITION - offset
+            position = self._ann_table.item(current.row(), col).text()
+            col = self.COLUMN_ANN_TIME - offset
+            time = int(self._ann_table.item(current.row(), col).text())
             coordinate = Coordinate(plate=plate, position=position, time=time)
             self.browser.set_coordinates(coordinate)
 
