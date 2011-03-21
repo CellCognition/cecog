@@ -127,11 +127,10 @@ class Browser(QMainWindow):
         splitter.addWidget(frame_side)
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 0)
-        splitter.setSizes([None, 80])
+        splitter.setSizes([-1, 80])
 
         self.coordinate.plate = self._imagecontainer.plates[0]
-        #x = self._imagecontainer.channels()
-        self.coordinate.channel = 'rfp'
+        self.coordinate.channel = self._imagecontainer.channels[0]
 
         meta_data = self._imagecontainer.get_meta_data(self.coordinate.plate)
 
@@ -296,6 +295,7 @@ class Browser(QMainWindow):
 
     def set_image(self, image_dict):
         widget = self._module_manager.get_widget(DisplayModule.NAME)
+        print image_dict
         widget.set_image_dict(image_dict)
         self.update_statusbar()
 
@@ -322,6 +322,7 @@ class Browser(QMainWindow):
         self.coordinates_changed.emit(coordinate)
 
     def _process_image(self):
+        print 'process image'
         self._stopwatch.reset()
         s = StopWatch()
         settings = _ProcessorMixin.get_special_settings(self._settings)
@@ -352,7 +353,8 @@ class Browser(QMainWindow):
         settings.set('General', 'rendering', {})
         settings.set('General', 'rendering_class', {})
 
-        settings.set('Processing', 'secondary_processChannel', True)
+        if len(self._imagecontainer.channels) > 1:
+            settings.set('Processing', 'secondary_processChannel', True)
         settings.set('General', 'rendering', {})
 
         analyzer = AnalyzerCore(self.coordinate.plate, settings,
