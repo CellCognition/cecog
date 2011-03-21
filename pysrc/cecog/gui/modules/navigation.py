@@ -213,27 +213,24 @@ class NavigationModule(Module):
         meta = meta_data
         layout = QGridLayout(frame)
         txt  = '<table>' \
-               '<tr><td align="right">Positions: </td><td>%d</td></tr>' % \
-               meta.dim_p
-        if meta.has_timelapse:
-            txt += \
+               '<tr><td align="right">Positions: </td><td>%s</td></tr>' \
                '<tr><td align="right">Frames: </td><td>%d</td></tr>' % \
-               meta.dim_t
+               (meta.dim_p, meta.dim_t)
         txt += '<tr><td align="right">Channels: </td><td>%d (%s)</td></tr>' \
                '<tr><td align="right">Z-slices: </td><td>%d</td></tr>' \
                '<tr><td align="right">Width / Height: </td><td>%d x %d</td></tr>' \
                '<tr><td colspan="2"></td></tr>' \
-               '<tr><td align="right">Image Files: </td><td>%d</td></tr>' %\
+               '<tr><td align="right">Image Files: </td><td>%d</td></tr>' % \
                (meta.dim_c, meta.pixel_info, meta.dim_z, meta.dim_x,
                 meta.dim_y, meta.image_files)
         txt += '<tr><td></td></tr>'
-        if meta.has_timestamp_info:
+        if meta.has_timestamp_info and meta.has_timelapse:
             info = meta.plate_timestamp_info
             txt += \
                '<tr><td align="right">Time-lapse: </td><td>%.1f min (+/- %.1f s)</td></tr>' % \
                (info[0]/60, info[1])
         else:
-            txt += '<tr><td align="right">Time-lapse info: </td><td>no</td></tr>'
+            txt += '<tr><td align="right">Time-lapse: </td><td>no</td></tr>'
 
         txt += '<tr><td align="right">Well info: </td><td>%s</td></tr>' % \
                yesno(meta.has_well_info)
@@ -251,12 +248,14 @@ class NavigationModule(Module):
         coordinate = self.browser.get_coordinates()
         meta_data = self._image_container.get_meta_data(coordinate.plate)
         self.update_position_table(meta_data)
-        self.update_time_table(meta_data)
         self.update_info_frame(meta_data)
 
         self._set_plate(coordinate.plate)
         self._set_position(coordinate.position)
-        self._set_time(coordinate.time)
+
+        if self._image_container.has_timelapse:
+            self.update_time_table(meta_data)
+            self._set_time(coordinate.time)
 
     def _on_plate_changed(self, current, previous):
         item = self._table_plate.item(current.row(), 0)
