@@ -434,6 +434,10 @@ class ImageContainer(object):
         return self._plates.keys()
 
     @property
+    def has_multiple_plates(self):
+        return len(self.plates) > 1
+
+    @property
     def channels(self):
         channels = []
         for plate in self.plates:
