@@ -422,7 +422,7 @@ class AnnotationModule(Module):
         #ann_table.setSortingEnabled(True)
         column_names = ['Position', 'Frame', 'Samples']
         if self._imagecontainer.has_multiple_plates:
-            column_names = 'Plate' + column_names
+            column_names = ['Plate'] + column_names
         ann_table.setColumnCount(len(column_names))
         ann_table.setHorizontalHeaderLabels(column_names)
         ann_table.resizeColumnsToContents()
