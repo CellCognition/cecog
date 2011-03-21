@@ -256,6 +256,9 @@ class AbstractImporter(object):
     def export_to_flatfile(self, filename):
         has_timestamps = (len(self._dimension_items) > 0 and
                           META_INFO_TIMESTAMP in self._dimension_items[0])
+        has_wellinfo = (len(self._dimension_items) > 0 and
+                        META_INFO_WELL in self._dimension_items[0])
+
         column_names = ['path', 'filename',
                         DIMENSION_NAME_POSITION,
                         DIMENSION_NAME_TIME,
@@ -264,6 +267,9 @@ class AbstractImporter(object):
                         ]
         if has_timestamps:
             column_names.append(META_INFO_TIMESTAMP)
+        if has_wellinfo:
+            column_names += [META_INFO_WELL, META_INFO_SUBWELL]
+
         dimension_items = self._dimension_items[:]
         for item in dimension_items:
             item['path'] = ''
@@ -474,6 +480,13 @@ class IniFileImporter(AbstractImporter):
             # extract dimension informations according to regex patterns from
             # relative filename (including extension)
             path_rel = os.path.relpath(dirpath, self.path)
+            search_path = self._re_subdir.search(os.path.split(dirpath)[1])
+
+            if not search_path is None:
+                result_path = search_path.groupdict()
+            else:
+                result_path = {}
+
             for filename in filenames:
                 filename_rel = os.path.join(path_rel, filename)
 
@@ -487,6 +500,11 @@ class IniFileImporter(AbstractImporter):
                     search2 = self._re_dim.search(found_name)
                     if not search2 is None:
                         result = search2.groupdict()
+
+                        # use path data if not defined for the filename
+                        for key in [DIMENSION_NAME_POSITION, META_INFO_WELL, META_INFO_SUBWELL]:
+                            if not key in result and key in result_path:
+                                result[key] = result_path[key]
 
                         if not DIMENSION_NAME_POSITION in result:
                             if META_INFO_WELL in result:
