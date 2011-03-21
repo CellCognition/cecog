@@ -18,43 +18,24 @@ __source__ = '$URL$'
 # standard library imports:
 #
 
-import sys, \
-       os, \
-       math, \
-       copy,\
-       pprint, \
-       subprocess, \
+import os, \
        types, \
-       logging, \
-       gc
-
-from exceptions import IOError, ValueError
+       logging
 
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
-from pdk.options import Option
-from pdk.optionmanagers import OptionManager
-
 from pdk.propertymanagers import PropertyManager
 from pdk.properties import (BooleanProperty,
-                            FloatProperty,
                             IntProperty,
-                            ListProperty,
-                            TupleProperty,
                             StringProperty,
                             InstanceProperty,
-                            DictionaryProperty,
-                            Property,
                             )
-from pdk.attributemanagers import (get_attribute_values,
-                                   set_attribute_values)
 from pdk.attributes import Attribute
-from pdk.map import dict_values, dict_append_list
+from pdk.map import dict_append_list
 from pdk.fileutils import safe_mkdirs
-from pdk.iterator import unique, flatten
+from pdk.iterator import flatten
 from pdk.ordereddict import OrderedDict
-from pdk.errors import NotImplementedMethodError
 
 import numpy
 #import h5py
@@ -71,13 +52,9 @@ from cecog.analyzer import (REGION_NAMES,
                             REGION_NAMES_PRIMARY,
                             REGION_NAMES_SECONDARY,
                             )
-from cecog.analyzer.celltracker import CellTracker, DotWriter
-from cecog.learning.learning import ClassPredictor
-from cecog.io.imagecontainer import MetaImage
-
-from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
-from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
-
+from cecog.io.imagecontainer import (Coordinate,
+                                     MetaImage,
+                                     )
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -475,9 +452,9 @@ class TimeHolder(OrderedDict):
             var = grp.variables[channel.strChannelId]
             frame_idx = self._frames_to_idx[self._iCurrentT]
         if self._reuse_nc and var.valid[frame_idx]:
-            meta_image = MetaImage(image_container=None,
-                                   position=self.P, time=self._iCurrentT,
-                                   channel=channel.strChannelId, zslice=1)
+            coordinate = Coordinate(position=self.P, time=self._iCurrentT,
+                                    channel=channel.strChannelId, zslice=1)
+            meta_image = MetaImage(image_container=None, coordinate=coordinate)
 
             img = ccore.numpy_to_image(var[frame_idx], copy=True)
             meta_image.set_image(img)
@@ -578,8 +555,8 @@ class TimeHolder(OrderedDict):
             line3 = []
             line4 = []
             items = []
-
-            prefix = [frame, meta_data.get_timestamp_relative(P, frame)]
+            coordinate = Coordinate(position=P, time=frame)
+            prefix = [frame, meta_data.get_timestamp_relative(coordinate)]
             prefix_names = ['frame', 'time']
 
             for channel in channels.values():

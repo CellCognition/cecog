@@ -57,6 +57,7 @@ from cecog.util.util import (hexToRgb,
                              convert_package_path,
                              singleton,
                              )
+from cecog.io.imagecontainer import Coordinate
 from cecog.learning.learning import BaseLearner
 from cecog.gui.widgets.groupbox import QxtGroupBox
 
@@ -86,7 +87,7 @@ class Browser(QMainWindow):
 
     show_objects_toggled = pyqtSignal('bool')
     show_contours_toggled = pyqtSignal('bool')
-    coordinates_changed = pyqtSignal(str, str, int)
+    coordinates_changed = pyqtSignal(Coordinate)
 
     def __init__(self, settings, imagecontainer):
         QMainWindow.__init__(self)
@@ -98,9 +99,10 @@ class Browser(QMainWindow):
 
         self._settings = settings
         self._imagecontainer = imagecontainer
-        self.meta_data = self._imagecontainer.meta_data
         self._show_objects = False
         self._object_region = None
+
+        self.coordinate = Coordinate()
 
         self.grabGesture(Qt.SwipeGesture)
 
@@ -127,8 +129,11 @@ class Browser(QMainWindow):
         splitter.setStretchFactor(1, 0)
         splitter.setSizes([None, 80])
 
-        self._plateid = ''
-        self._channel = ''
+        self.coordinate.plate = self._imagecontainer.plates[0]
+        #x = self._imagecontainer.channels()
+        self.coordinate.channel = 'rfp'
+
+        meta_data = self._imagecontainer.get_meta_data(self.coordinate.plate)
 
         layout = QGridLayout(frame)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -139,19 +144,19 @@ class Browser(QMainWindow):
         self.image_viewer.zoom_info_updated.connect(self.on_zoom_info_updated)
 
         self._t_slider = QSlider(Qt.Horizontal, frame)
-        self._t_slider.setMinimum(self.meta_data.times[0])
-        self._t_slider.setMaximum(self.meta_data.times[-1])
+        self._t_slider.setMinimum(meta_data.times[0])
+        self._t_slider.setMaximum(meta_data.times[-1])
         self._t_slider.setTickPosition(QSlider.TicksBelow)
         self._t_slider.valueChanged.connect(self.on_time_changed_by_slider,
                                             Qt.DirectConnection)
-        if self.meta_data.has_timelapse:
+        if self._imagecontainer.has_timelapse:
             self._t_slider.show()
         else:
             self._t_slider.hide()
         layout.addWidget(self._t_slider, 1, 0)
 
-        self._position = self.meta_data.positions[0]
-        self._time = self._t_slider.minimum()
+        self.coordinate.position = meta_data.positions[0]
+        self.coordinate.time = self._t_slider.minimum()
 
         # menus
 
@@ -244,9 +249,10 @@ class Browser(QMainWindow):
         # create a new ModuleManager with a QToolbar and QStackedFrame
         self._module_manager = ModuleManager(toolbar, frame_side)
 
-        NavigationModule(self._module_manager, self, self.meta_data)
+        NavigationModule(self._module_manager, self, self._imagecontainer)
 
-        DisplayModule(self._module_manager, self, self.meta_data, region_names)
+        DisplayModule(self._module_manager, self, self._imagecontainer,
+                      region_names)
 
         AnnotationModule(self._module_manager, self, self._settings,
                          self._imagecontainer)
@@ -294,28 +300,26 @@ class Browser(QMainWindow):
         self.update_statusbar()
 
     def update_statusbar(self):
-        timestamp = self.meta_data.get_timestamp_relative(self._position,
-                                                          self._time)
-        time_info = str(self._time)
+        meta_data = self._imagecontainer.get_meta_data(self.coordinate.plate)
+        timestamp = meta_data.get_timestamp_relative(self.coordinate)
+        time_info = str(self.coordinate.time)
         if not numpy.isnan(timestamp):
             time_info += ' (%.1f min)' % (timestamp / 60)
         msg = 'Plate %s | Position %s | Frame %s  ||  Zoom %.1f%%' % \
-              (self._plateid, self._position, time_info,
+              (self.coordinate.plate, self.coordinate.position, time_info,
                self.image_viewer.scale_factor*100)
         self._statusbar.showMessage(msg)
 
     def get_coordinates(self):
-        return self._plateid, self._position, self._time
+        return self.coordinate
 
-    def set_coordinates(self, plateid, position, time):
-        self._plateid = plateid
-        self._position = position
-        self._time = time
+    def set_coordinates(self, coordinate):
+        self.coordinate = coordinate
         self._t_slider.blockSignals(True)
-        self._t_slider.setValue(time)
+        self._t_slider.setValue(coordinate.time)
         self._t_slider.blockSignals(False)
         self._process_image()
-        self.coordinates_changed.emit(plateid, position, time)
+        self.coordinates_changed.emit(coordinate)
 
     def _process_image(self):
         self._stopwatch.reset()
@@ -323,10 +327,10 @@ class Browser(QMainWindow):
         settings = _ProcessorMixin.get_special_settings(self._settings)
         settings.set_section('General')
         settings.set2('constrain_positions', True)
-        settings.set2('positions', self._position)
+        settings.set2('positions', self.coordinate.position)
         settings.set2('framerange', True)
-        settings.set2('framerange_begin', self._time)
-        settings.set2('framerange_end', self._time)
+        settings.set2('framerange_begin', self.coordinate.time)
+        settings.set2('framerange_end', self.coordinate.time)
 
         settings.set_section('ObjectDetection')
         prim_id = PrimaryChannel.NAME
@@ -351,8 +355,8 @@ class Browser(QMainWindow):
         settings.set('Processing', 'secondary_processChannel', True)
         settings.set('General', 'rendering', {})
 
-        analyzer = AnalyzerCore(settings,
-                                imagecontainer=self._imagecontainer)
+        analyzer = AnalyzerCore(self.coordinate.plate, settings,
+                                self._imagecontainer)
         analyzer.processPositions(myhack=self)
         print('PROCESS IMAGE: %s' % s)
 
@@ -362,22 +366,29 @@ class Browser(QMainWindow):
         self.update_statusbar()
 
     def on_time_changed_by_slider(self, time):
-        self._time = time
+        self.coordinate.time = time
         self._process_image()
-        self.coordinates_changed.emit(self._plateid, self._position, time)
+        self.coordinates_changed.emit(self.coordinate)
 
     def on_time_changed(self, time):
-        assert time in self.meta_data.times, "Time not valid"
-        self._time = time
+        meta_data = self._imagecontainer.get_meta_data(self.coordinate.plate)
+        assert time in meta_data.times, "Time not valid"
+        self.coordinate.time = time
         self._t_slider.blockSignals(True)
         self._t_slider.setValue(time)
         self._t_slider.blockSignals(False)
         self._process_image()
 
     def on_position_changed(self, position):
-        position = str(position)
-        assert position in self.meta_data.positions, "Position not valid"
-        self._position = position
+        meta_data = self._imagecontainer.get_meta_data(self.coordinate.plate)
+        #position = str(position)
+        assert position in meta_data.positions, "Position not valid"
+        self.coordinate.position = position
+        self._process_image()
+
+    def on_plate_changed(self, plate):
+        assert plate in self._imagecontainer.plates, "Plate not valid"
+        self.coordinate.plate = plate
         self._process_image()
 
     def on_object_region_changed(self, channel, region):

@@ -47,6 +47,7 @@ from pdk.attributemanagers import (get_slot_values,
 #
 from cecog.extensions.graphLib import Graph
 from cecog.util.util import write_table
+from cecog.io.imagecontainer import Coordinate
 from cecog import ccore
 
 #-------------------------------------------------------------------------------
@@ -1093,8 +1094,9 @@ class PlotCellTracker(CellTracker):
                 #print lstFeatureColumns
                 #print lstFeatureTypes
 
+            coordinate = Coordinate(position=self.origP, time=iT)
             dctData = {'Frame' : iT,
-                       'Timestamp' : self.oMetaData.get_timestamp_relative(self.origP, iT),
+                       'Timestamp' : self.oMetaData.get_timestamp_relative(coordinate),
                        'isEvent' : 1 if iT == iEventT else 0,
                        }
             if bHasSplitId:
@@ -1783,7 +1785,8 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                 for node_id in track:
                     frame, obj_id = self.getComponentsFromNodeId(node_id)
 
-                    prefix = [frame, self.oMetaData.get_timestamp_relative(self.origP, frame), obj_id]
+                    coordinate = Coordinate(position=self.origP, time=frame)
+                    prefix = [frame, self.oMetaData.get_timestamp_relative(coordinate), obj_id]
                     prefix_names = ['frame', 'time', 'objID']
                     items = []
 

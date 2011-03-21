@@ -49,7 +49,9 @@ from cecog.analyzer.channel import (PrimaryChannel,
                                     TertiaryChannel,
                                     )
 from cecog.analyzer.celltracker import *
-from cecog.io.imagecontainer import ImageContainer
+from cecog.io.imagecontainer import (ImageContainer,
+                                     Coordinate,
+                                     )
 from cecog.learning.collector import CellCounterReader, CellCounterReaderXML
 from cecog.learning.learning import CommonObjectLearner, CommonClassPredictor
 from cecog.traits.config import NAMING_SCHEMAS
@@ -110,11 +112,12 @@ class PositionAnalyzer(object):
     SECONDARY_CHANNEL = 'SecondaryChannel'
     TERTIARY_CHANNEL = 'TertiaryChannel'
 
-    def __init__(self, P, strPathOut, oSettings, lstAnalysisFrames,
+    def __init__(self, plate_id, P, strPathOut, oSettings, lstAnalysisFrames,
                  lstSampleReader, dctSamplePositions, oObjectLearner,
                  image_container,
                  qthread=None, myhack=None):
 
+        self.plate_id = plate_id
         self.origP = P
         self.P = self._adjustPositionLength(P)
         self.P = P
@@ -133,7 +136,7 @@ class PositionAnalyzer(object):
         # FIXME: a bit of a hack but the entire ImageContainer path is mapped to the current OS
         #self._imagecontainer.setPathMappingFunction(mapDirectory)
 
-        self._meta_data = self._imagecontainer.meta_data
+        self._meta_data = self._imagecontainer.get_meta_data(self.plate_id)
 
         self._has_timelapse = len(self._meta_data.times) > 1
 
@@ -656,9 +659,10 @@ class PositionAnalyzer(object):
         # - loop over a sub-space with fixed position 'P' and reduced time and
         #   channel axis (in case more channels or time-points exist)
         # - define break-points at C and Z which will yield two nested generators
-        for frame, iter_channel in self._imagecontainer(position=self.origP,
-                                                        time=self.lstAnalysisFrames,
-                                                        channel=self.tplChannelIds,
+        coordinate = Coordinate(plate=self.plate_id, position = self.origP,
+                                time = self.lstAnalysisFrames,
+                                channel = self.tplChannelIds)
+        for frame, iter_channel in self._imagecontainer(coordinate,
                                                         interrupt_channel=True,
                                                         interrupt_zslice=True):
             #print frame
@@ -1018,12 +1022,13 @@ def analyzePosition(*tplArgs, **dctOptions):
 
 class AnalyzerCore(object):
 
-    def __init__(self, settings, imagecontainer=None):
+    def __init__(self, plate_id, settings, imagecontainer):
 
         #self.guid = newGuid()
         self.oStopWatch = StopWatch()
 
         self.oSettings = settings
+        self.plate_id = plate_id
         #self.plate = plate
         self._oLogger = logging.getLogger(self.__class__.__name__)
 
@@ -1180,7 +1185,7 @@ class AnalyzerCore(object):
 
         if self._imagecontainer is None:
             self._imagecontainer = ImageContainer.from_settings(self.oSettings)
-        self._meta_data = self._imagecontainer.meta_data
+        self._meta_data = self._imagecontainer.get_meta_data(self.plate_id)
 
         # does a position selection exist?
         #print self.lstPositions, self._meta_data.setP
@@ -1257,7 +1262,8 @@ class AnalyzerCore(object):
                 analyze = len(self.lstAnalysisFrames) > 0
 
             if analyze:
-                tplArgs = (oP,
+                tplArgs = (self.plate_id,
+                           oP,
                            self.strPathOut,
                            self.oSettings,
                            self.lstAnalysisFrames,

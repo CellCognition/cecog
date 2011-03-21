@@ -477,9 +477,10 @@ class AnalzyerThread(_ProcessingThread):
         self._buffer = {}
 
     def _run(self):
-        analyzer = AnalyzerCore(self._settings,
-                                imagecontainer=self._imagecontainer)
-        analyzer.processPositions(self)
+        for plate_id in self._imagecontainer.plates:
+            analyzer = AnalyzerCore(plate_id, self._settings,
+                                    self._imagecontainer)
+            analyzer.processPositions(self)
 
     def set_renderer(self, name):
         self._mutex.lock()

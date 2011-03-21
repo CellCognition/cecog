@@ -126,14 +126,17 @@ class AbstractImporter(object):
         self.dimension_lookup = self._build_dimension_lookup()
         self.meta_data.setup()
 
-    def get_image(self, position, frame, channel, zslice):
+    def get_image(self, coordinate):
         index = 0
+        zslice = coordinate.zslice
         if (self.has_multi_images and
             self.multi_image == self.MULTIIMAGE_USE_ZSLICE):
             index = zslice - 1
             zslice = None
-        #print position, frame, channel, zslice, index
-        filename_rel = self.dimension_lookup[position][frame][channel][zslice]
+        filename_rel = self.dimension_lookup[coordinate.position] \
+                                            [coordinate.time] \
+                                            [coordinate.channel] \
+                                            [zslice]
         filename_abs = os.path.join(self.path, filename_rel)
         if self.meta_data.pixel_type == UINT8:
             image = ccore.readImage(filename_abs, index)
@@ -160,9 +163,7 @@ class AbstractImporter(object):
                 has_xy = True
                 info = ccore.ImageImportInfo(os.path.join(self.path,
                                                           item['filename']))
-                self.meta_data.dim_x = info.width
-                self.meta_data.dim_y = info.height
-                self.meta_data.pixel_type = info.pixel_type
+                self.meta_data.set_image_info(info)
                 self.has_multi_images = False#info.images > 1
 
             position = item[DIMENSION_NAME_POSITION]

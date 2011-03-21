@@ -54,6 +54,7 @@ class GeneralFrame(_BaseFrame):
         super(GeneralFrame, self).__init__(settings, parent)
 
         self.add_input('pathin')
+        self.add_input('has_multiple_plates')
         self.add_input('pathout')
         # original: self.add_input('namingscheme')
         self.add_group('image_import_namingschema', [('namingscheme',),],
