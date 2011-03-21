@@ -517,7 +517,7 @@ class AnalyzerMainWindow(QMainWindow):
         except:
             exception(None, "Error scanning input structure")
         else:
-            found_any = numpy.any(info[3] for info in infos)
+            found_any = numpy.any([not info[3] is None for info in infos])
             cancel = False
             if found_any:
                 found_plates = [info[0] for info in infos
@@ -597,9 +597,9 @@ class AnalyzerMainWindow(QMainWindow):
                                              '%s_channelid' % prefix)
             trait.set_list_data(channels)
             self._tabs[1].get_widget('%s_channelid' % prefix).update()
-        #for plate_id in self._imagecontainer.plates:
-        #    print plate_id
-        #    print self._imagecontainer.get_meta_data(plate_id)
+        for plate_id in self._imagecontainer.plates:
+            print plate_id
+            print self._imagecontainer.get_meta_data(plate_id)
 
         self.set_modules_active(state=True)
 
