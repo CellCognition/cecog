@@ -212,9 +212,9 @@ class AbstractImporter(object):
                 item[META_INFO_TIMESTAMP] = timestamp
                 self.meta_data.append_absolute_time(position, time, timestamp)
 
-            if META_INFO_WELL in item and META_INFO_SUBWELL in item:
+            if META_INFO_WELL in item:
                 well = item[META_INFO_WELL]
-                subwell = item[META_INFO_SUBWELL]
+                subwell = item.get(META_INFO_SUBWELL, None)
                 self.meta_data.append_well_subwell_info(position, well, subwell)
 
             if (self.has_multi_images and
@@ -487,7 +487,18 @@ class IniFileImporter(AbstractImporter):
                     search2 = self._re_dim.search(found_name)
                     if not search2 is None:
                         result = search2.groupdict()
-                        assert DIMENSION_NAME_POSITION in result
+
+                        if not DIMENSION_NAME_POSITION in result:
+                            if META_INFO_WELL in result:
+                                position = result[META_INFO_WELL]
+                                if META_INFO_SUBWELL in result:
+                                    position += '_' + result[META_INFO_SUBWELL]
+                                result[DIMENSION_NAME_POSITION] = position
+                            else:
+                                raise ValueError("Either 'position' or 'well' "
+                                                 "information required in "
+                                                 "regular expression.")
+
                         result['filename'] = filename_rel
                         token_list.append(result)
         return token_list
