@@ -67,7 +67,11 @@ META_INFO_TIMESTAMP = 'timestamp'
 META_INFO_WELL = 'well'
 META_INFO_SUBWELL = 'subwell'
 
-IMAGECONTAINER_FILENAME = '.cecog_imagecontainer.txt.bz2'
+IMAGECONTAINER_FILENAME = '.cecog_imagecontainer.txt'
+# FIXME: compression with .bz2 or .gz lead to crashed on Windows when used from
+#        a PyQt py2exe application
+IMAGECONTAINER_WRITE_EXTENSION = ''
+IMAGECONTAINER_READ_EXTENSIONS = ['', '.gz', '.bz2']
 
 
 #------------------------------------------------------------------------------
@@ -455,6 +459,16 @@ class ImageContainer(object):
         return sorted(set(channels))
 
     @classmethod
+    def _is_container_file(cls, path):
+        filename = None
+        for ext in IMAGECONTAINER_READ_EXTENSIONS:
+            filename_test = os.path.join(path, IMAGECONTAINER_FILENAME + ext)
+            if os.path.isfile(filename_test):
+                filename = filename_test
+                break
+        return filename
+
+    @classmethod
     def iter_check_plates(cls, settings):
 
         settings.set_section(SECTION_NAME_GENERAL)
@@ -478,14 +492,11 @@ class ImageContainer(object):
                 path_plate_out = path_out
 
             # check if structure file exists
-            filename = os.path.join(path_plate_out, IMAGECONTAINER_FILENAME)
-            if not os.path.isfile(filename):
-                filename = os.path.join(path_plate_in, IMAGECONTAINER_FILENAME)
-                if not os.path.isfile(filename):
-                    filename = None
+            filename = cls._is_container_file(path_plate_out)
+            if filename is None:
+                filename = cls._is_container_file(path_plate_in)
 
             yield plate_id, path_plate_in, path_plate_out, filename
-
 
     def iter_import_from_settings(self, settings, scan_plates=None):
         from cecog.io.importer import (IniFileImporter,
@@ -521,8 +532,10 @@ class ImageContainer(object):
 
             importer.load()
             if scan_plate:
+                container_filename = IMAGECONTAINER_FILENAME + \
+                    IMAGECONTAINER_WRITE_EXTENSION
                 importer.export_to_flatfile(os.path.join(path_plate_in,
-                                                         IMAGECONTAINER_FILENAME))
+                                                         container_filename))
             self.register_plate(plate_id, path_plate_out, importer)
 
             yield info
@@ -530,5 +543,3 @@ class ImageContainer(object):
 
     def import_from_settings(self, settings, scan_plates=None):
         list(self.iter_import_from_settings(settings, scan_plates))
-
-

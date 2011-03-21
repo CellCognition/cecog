@@ -183,8 +183,7 @@ class ClusterDisplay(QGroupBox):
     @pyqtSlot()
     def _on_submit_job(self):
         positions = self._submit_settings.get(SECTION_NAME_GENERAL, 'positions')
-        positions = positions.split(',')
-        nr_items = len(positions)
+        nr_items = len(positions.split(','))
         # FIXME: this is a hack
         settings_dummy = ProcessingFrame.get_special_settings(self._settings)
         batch_size = settings_dummy.get(SECTION_NAME_CLUSTER,
@@ -303,9 +302,14 @@ class ClusterDisplay(QGroupBox):
             self._submit_settings.set2('preferimagecontainer', False)
             if not self._submit_settings.get2('constrain_positions'):
                 # FIXME:
-                meta_data = qApp._main_window._imagecontainer.meta_data
-                pos_str = ','.join(meta_data.positions)
-                self._submit_settings.set2('positions', pos_str)
+                imagecontainer = qApp._main_window._imagecontainer
+                cluster_pos = []
+                for plate in imagecontainer.plates:
+                    meta_data = imagecontainer.get_meta_data(plate)
+                    pos_str = ','.join('%s___%s' % (plate, p)
+                                       for p in meta_data.positions)
+                    cluster_pos.append(pos_str)
+                self._submit_settings.set2('positions', ','.join(cluster_pos))
 
             self._label_hosturl.setText(self._host_url)
             self._label_status.setText(self._service.get_service_info())

@@ -117,8 +117,9 @@ class TimeDimension(_Dimension):
 
 class CellCounterReader(OrderedDict):
 
-    def __init__(self, strFilename, reference, strFieldDelimiter='\t', scale=1.0, timelapse=True):
+    def __init__(self, regex_result, strFilename, reference, strFieldDelimiter='\t', scale=1.0, timelapse=True):
         super(CellCounterReader, self).__init__()
+        self.regex_result = regex_result
         self.strFilename = strFilename
         self._strFieldDelimiter = strFieldDelimiter
         self._fScale = float(scale)
@@ -153,25 +154,10 @@ class CellCounterReader(OrderedDict):
                                  )
 
     def getPosition(self):
-        strFilename = os.path.split(self.strFilename)[1]
-        oRe = re.compile("P(?P<P>.+?)((__)|\.)")
-        oSearch = oRe.search(strFilename)
-        if not oSearch is None:
-            return oSearch.group('P')
-        else:
-            raise ValueError("No position found in filename '%s'." %\
-                             self.strFilename)
+        return self.regex_result.group('position')
 
     def getTimePoint(self):
-        strFilename = os.path.split(self.strFilename)[1]
-        oRe = re.compile("T(?P<T>\d+)")
-        oSearch = oRe.search(strFilename)
-        if not oSearch is None:
-            return int(oSearch.group('T'))
-        else:
-            logging.warning("No time-point found in filename '%s'." %\
-                            self.strFilename)
-            return 1
+        return int(self.regex_result.group('time'))
 
     def getTimePoints(self):
         return self.keys()
@@ -180,8 +166,8 @@ class CellCounterReader(OrderedDict):
 
 class CellCounterReaderXML(CellCounterReader):
 
-    def __init__(self, strFilename, reference, scale=1.0, timelapse=True):
-        super(CellCounterReaderXML, self).__init__(strFilename, reference, scale=scale, timelapse=timelapse)
+    def __init__(self, regex_result, strFilename, reference, scale=1.0, timelapse=True):
+        super(CellCounterReaderXML, self).__init__(regex_result, strFilename, reference, scale=scale, timelapse=timelapse)
 
     def _importData(self, iOffset):
 

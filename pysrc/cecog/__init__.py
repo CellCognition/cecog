@@ -28,8 +28,8 @@ from cecog.traits.config import (init_constants,
 #-------------------------------------------------------------------------------
 # constants:
 #
-VERSION_NUM = (1, 1, 2)
-VERSION = '.'.join([str(digit) for digit in VERSION_NUM])
+VERSION_NUM = (1, 2, 0)
+VERSION = '.'.join([str(digit) for digit in VERSION_NUM]) + ' beta'
 
 HAS_GUI = False
 

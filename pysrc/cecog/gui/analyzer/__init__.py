@@ -196,7 +196,7 @@ class _ProcessingThread(QThread):
 
     def __init__(self, parent, settings):
         QThread.__init__(self, parent)
-        self._settings = settings
+        self._settings = settings.copy()
         self._abort = False
         self._mutex = QMutex()
         self._stage_info = {'text': '',
@@ -481,6 +481,15 @@ class AnalzyerThread(_ProcessingThread):
             analyzer = AnalyzerCore(plate_id, self._settings,
                                     self._imagecontainer)
             analyzer.processPositions(self)
+
+        learner = None
+        for plate_id in self._imagecontainer.plates:
+            analyzer = AnalyzerCore(plate_id, self._settings,
+                                    self._imagecontainer,
+                                    learner=learner)
+            learner = analyzer.processPositions(self)
+        if not learner is None:
+            learner.export()
 
     def set_renderer(self, name):
         self._mutex.lock()

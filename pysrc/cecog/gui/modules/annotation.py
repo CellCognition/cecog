@@ -209,11 +209,12 @@ class Annotations(object):
                         items = ann[plateid][position][time][cn]
                         self._counts[cn] += len(items)
 
-    def import_from_xml(self, path, labels_to_names, plates, time_points):
+    def import_from_xml(self, path, labels_to_names, imagecontainer):
         pattern = re.compile('((.*?_{3})?PL(?P<plate>.*?)_{3})?P(?P<position>.+?)_{1,3}T(?P<time>\d+).*?')
         ann = self._annotations
         ann.clear()
         has_invalid = False
+        plates = imagecontainer.plates
         for filename in os.listdir(path):
             file_path = os.path.join(path, filename)
             prefix, suffix = os.path.splitext(filename)
@@ -232,12 +233,14 @@ class Annotations(object):
                                      "annotation file '%s', but multiple "
                                      "plates found in dataset." % filename)
 
+                meta_data = imagecontainer.get_meta_data(plateid)
+                time_points = meta_data.times
                 position = match.group('position')
                 time = int(match.group('time'))
 
                 # check whether time is in this data set
                 # otherwise this XML file is skipped
-                if time in time_points:
+                if time in time_points and position in meta_data.positions:
                     idx_base = time_points.index(time)
 
                     if not plateid in ann:
@@ -276,12 +279,18 @@ class Annotations(object):
         self.rebuild_class_counts()
         return has_invalid
 
-    def export_to_xml(self, path, min_time, names_to_labels, time_points):
+    def export_to_xml(self, path, names_to_labels, imagecontainer):
         impl = minidom.getDOMImplementation()
         ann = self._annotations
         for plateid in ann:
-            for position in ann[plateid]:
 
+            # load plate specific meta data
+            meta_data = imagecontainer.get_meta_data(plateid)
+            time_points = meta_data.times
+            # the reference time on which this file is based on
+            min_time = time_points[0]
+
+            for position in ann[plateid]:
                 ann2 = ann[plateid][position]
                 bycn = OrderedDict()
                 for time in ann2:
@@ -668,14 +677,10 @@ class AnnotationModule(Module):
 
                 self._activate_objects_for_image(False, clear=True)
                 path2 = learner.getPath(learner.ANNOTATIONS)
-                coordinate = self.browser.get_coordinates()
-                meta_data = self._imagecontainer.get_meta_data(coordinate.plate)
-                plates = self._imagecontainer.plates
                 try:
                     has_invalid = self._annotations.import_from_xml(path2,
                                                                     learner.dctClassNames,
-                                                                    plates,
-                                                                    meta_data.times)
+                                                                    self._imagecontainer)
                 except:
                     exception(None, "Problems loading annotation data...")
                     self._learner = self._init_new_classifier()
@@ -692,10 +697,6 @@ class AnnotationModule(Module):
                                 "successfully loaded from '%s'." % path)
 
     def _on_saveas_classifier(self):
-        coordinate = self.browser.get_coordinates()
-        meta_data = self._imagecontainer.get_meta_data(coordinate.plate)
-        min_time = meta_data.times[0]
-
         learner = self._learner
         dialog = QFileDialog(self)
         dialog.setFileMode(QFileDialog.Directory)
@@ -717,11 +718,9 @@ class AnnotationModule(Module):
                     for filename in filenames:
                         shutil.copy2(filename, path_backup)
                         os.remove(filename)
-                    coordinate = self.browser.get_coordinates()
-                    meta_data = self._imagecontainer.get_meta_data(coordinate.plate)
-                    self._annotations.export_to_xml(path2, min_time,
+                    self._annotations.export_to_xml(path2,
                                                     learner.dctClassLabels,
-                                                    meta_data.times)
+                                                    self._imagecontainer)
                 except:
                     exception(None, "Problems saving annotation data...")
                 else:
@@ -735,7 +734,7 @@ class AnnotationModule(Module):
         '''
         if clear:
             self._object_items.clear()
-        coordinate = self.browser.get_coordinates()
+        coordinate = self.browser.get_coordinate()
         for class_name, tpl in self._annotations.iter_items(coordinate):
             point = QPointF(*tpl)
             item = self.browser.image_viewer.get_object_item(point)
@@ -807,19 +806,28 @@ class AnnotationModule(Module):
         ann_table.resizeColumnsToContents()
         ann_table.resizeRowsToContents()
         #ann_table.setStyleSheet(css)
-        coordinate = self.browser.get_coordinates()
+        coordinate = self.browser.get_coordinate()
         self._find_annotation_row(coordinate)
         ann_table.blockSignals(False)
 
     def _find_annotation_row(self, coordinate):
-        items1 = self._ann_table.findItems(coordinate.plate, Qt.MatchExactly)
+        if self._imagecontainer.has_multiple_plates:
+            items1 = self._ann_table.findItems(coordinate.plate,
+                                               Qt.MatchExactly)
+            rows1 = set(x.row() for x in items1)
+            offset = 0
+        else:
+            rows1 = set(range(self._ann_table.rowCount()))
+            offset = 1
+
         items2 = self._ann_table.findItems(coordinate.position, Qt.MatchExactly)
         items3 = self._ann_table.findItems(str(coordinate.time),
                                            Qt.MatchExactly)
-        rows1 = set(x.row() for x in items1)
-        items2 = [x for x in items2 if x.row() in rows1 and x.column() == 1]
+        items2 = [x for x in items2 if x.row() in rows1 and
+                  x.column() == 1-offset]
         rows2 = set(x.row() for x in items2)
-        items3 = [x for x in items3 if x.row() in rows2 and x.column() == 2]
+        items3 = [x for x in items3 if x.row() in rows2 and
+                  x.column() == 2-offset]
         assert len(items3) in [0,1]
         if len(items3) == 1:
             self._ann_table.setCurrentItem(items3[0])
@@ -831,7 +839,7 @@ class AnnotationModule(Module):
         #print(item,point,item in self._object_items)
         if button == Qt.LeftButton and not item is None:
 
-            coordinate = self.browser.get_coordinates()
+            coordinate = self.browser.get_coordinate()
             old_class = None
             # remove the item if already present
             if item in self._object_items:
@@ -905,7 +913,7 @@ class AnnotationModule(Module):
             col = self.COLUMN_ANN_TIME - offset
             time = int(self._ann_table.item(current.row(), col).text())
             coordinate = Coordinate(plate=plate, position=position, time=time)
-            self.browser.set_coordinates(coordinate)
+            self.browser.set_coordinate(coordinate)
 
     def _on_class_changed(self, current, previous):
         if not current is None:
@@ -983,7 +991,7 @@ class AnnotationModule(Module):
         self._update_class_table()
         self.browser.image_viewer.image_mouse_pressed.connect(self._on_new_point)
         self._action_grp.setEnabled(True)
-        self._find_annotation_row(self.browser.get_coordinates())
+        self._find_annotation_row(self.browser.get_coordinate())
 
     def deactivate(self):
         super(AnnotationModule, self).deactivate()
