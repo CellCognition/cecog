@@ -59,12 +59,12 @@ class GuiConfigSettings(ConfigSettings):
             new._optcre = None
         except AttributeError:
             pass
-        new = copy.deepcopy(new)
+        new2 = copy.deepcopy(new)
         try:
-            new._optcre = self._optcre
+            new2._optcre = self._optcre
         except AttributeError:
             pass
-        return new
+        return new2
 
     def set(self, section_name, trait_name, value):
         ConfigSettings.set(self, section_name, trait_name, value)
