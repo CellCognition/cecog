@@ -19,7 +19,6 @@ __all__ = ['ProcessingFrame']
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
-from collections import OrderedDict
 
 #-------------------------------------------------------------------------------
 # extension module imports:

@@ -20,7 +20,8 @@ __all__ = []
 # standard library imports:
 #
 import os
-from collections import OrderedDict
+#from collections import OrderedDict
+from pdk.ordereddict import OrderedDict
 
 #-------------------------------------------------------------------------------
 # extension module imports:

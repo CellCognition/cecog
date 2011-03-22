@@ -33,12 +33,12 @@ import os, \
        shutil
 
 from ConfigParser import RawConfigParser
-from collections import OrderedDict
+#from collections import OrderedDict
 
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
-#from pdk.ordereddict import OrderedDict
+from pdk.ordereddict import OrderedDict
 from pdk.fileutils import safe_mkdirs
 from pdk.platform import (is_mac,
                           is_windows,
