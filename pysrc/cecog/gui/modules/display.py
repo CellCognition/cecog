@@ -413,7 +413,7 @@ class ObjectsFrame(QFrame):
         box = QCheckBox('Show Contours', self)
         box.setEnabled(box_detect.checkState() == Qt.Checked)
         box.setChecked(self.browser.image_viewer.show_contours)
-        box.toggled.connect(self.browser.on_shortcut_show_contours)
+        box.toggled.connect(self.browser.on_act_show_contours)
         layout.addWidget(box, 2, 0)
         self._box_contours = box
 
@@ -454,16 +454,16 @@ class DisplayFrame(QFrame):
         layout = QBoxLayout(QBoxLayout.LeftToRight, self)
         layout.setContentsMargins(5, 5, 5, 5)
         btn = QPushButton('100%', self)
-        btn.clicked.connect(browser.on_shortcut_zoom100)
+        btn.clicked.connect(browser.on_act_zoom100)
         layout.addWidget(btn)
         btn = QPushButton('Fit', self)
-        btn.clicked.connect(browser.on_shortcut_zoomfit)
+        btn.clicked.connect(browser.on_act_zoomfit)
         layout.addWidget(btn)
         btn = QPushButton('+', self)
-        btn.clicked.connect(browser.on_shortcut_zoomin)
+        btn.clicked.connect(browser.on_act_zoomin)
         layout.addWidget(btn)
         btn = QPushButton('-', self)
-        btn.clicked.connect(browser.on_shortcut_zoomout)
+        btn.clicked.connect(browser.on_act_zoomout)
         layout.addWidget(btn)
 
 
@@ -476,7 +476,7 @@ class DisplayModule(Module):
 
     def __init__(self, parent, browser, image_container, region_names):
         Module.__init__(self, parent, browser)
-        self._image_container = image_container
+        self._imagecontainer = image_container
         self._image_dict = {}
         self._display_images = {}
         self._rgb_images = {}
@@ -512,7 +512,7 @@ class DisplayModule(Module):
         layout.addStretch(1)
 
         self._channels = OrderedDict()
-        channel_names = sorted(self._image_container.channels)
+        channel_names = sorted(self._imagecontainer.channels)
         for idx, channel_name in enumerate(channel_names):
             widget = ChannelItem(channel_name, idx, palettes, self)
             layout_channels.addWidget(widget)

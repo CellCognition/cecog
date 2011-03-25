@@ -162,32 +162,44 @@ class Browser(QMainWindow):
 
         act_next_t = self.create_action('Next Time-point',
                                         shortcut=QKeySequence('Right'),
-                                        slot=self.on_shortcut_right)
+                                        slot=self.on_act_next_t)
         act_prev_t = self.create_action('Previous Time-point',
                                         shortcut=QKeySequence('Left'),
-                                        slot=self.on_shortcut_left)
+                                        slot=self.on_act_prev_t)
+        act_next_pos = self.create_action('Next Position',
+                                          shortcut=QKeySequence('Shift+Down'),
+                                          slot=self.on_act_next_pos)
+        act_prev_pos = self.create_action('Previous Position',
+                                          shortcut=QKeySequence('Shift+Up'),
+                                          slot=self.on_act_prev_pos)
+        act_next_plate = self.create_action('Next Plate',
+                                            shortcut=QKeySequence('Shift+Alt+Down'),
+                                            slot=self.on_act_next_plate)
+        act_prev_plate = self.create_action('Previous Plate',
+                                            shortcut=QKeySequence('Shift+Alt+Up'),
+                                            slot=self.on_act_prev_plate)
         act_resize = self.create_action('Automatically Resize',
                                          shortcut=QKeySequence('SHIFT+CTRL+R'),
-                                         slot=self.on_shortcut_autoresize,
+                                         slot=self.on_act_autoresize,
                                          signal='triggered(bool)',
                                          checkable=True,
                                          checked=True)
         self._act_resize = act_resize
         act_zoomfit = self.create_action('Zoom to Fit',
                                          shortcut=QKeySequence('CTRL+0'),
-                                         slot=self.on_shortcut_zoomfit)
+                                         slot=self.on_act_zoomfit)
         act_zoom100 = self.create_action('Actual Size',
                                          shortcut=QKeySequence('CTRL+1'),
-                                         slot=self.on_shortcut_zoom100)
+                                         slot=self.on_act_zoom100)
         act_zoomin = self.create_action('Zoom In',
                                         shortcut=QKeySequence('CTRL++'),
-                                        slot=self.on_shortcut_zoomin)
+                                        slot=self.on_act_zoomin)
         act_zoomout = self.create_action('Zoom Out',
                                          shortcut=QKeySequence('CTRL+-'),
-                                         slot=self.on_shortcut_zoomout)
+                                         slot=self.on_act_zoomout)
         act_fullscreen = self.create_action('Full Screen',
                                             shortcut=QKeySequence('CTRL+F'),
-                                            slot=self.on_shortcut_fullscreen,
+                                            slot=self.on_act_fullscreen,
                                             signal='triggered(bool)',
                                             checkable=True,
                                             checked=False)
@@ -195,7 +207,7 @@ class Browser(QMainWindow):
 
         act_show_contours = self.create_action('Show Object Contours',
                                                shortcut=QKeySequence('ALT+C'),
-                                               slot=self.on_shortcut_show_contours,
+                                               slot=self.on_act_show_contours,
                                                signal='triggered(bool)',
                                                checkable=True,
                                                checked=self.image_viewer.show_contours)
@@ -203,13 +215,13 @@ class Browser(QMainWindow):
 
         act_anti = self.create_action('Antialiasing',
                                       shortcut=QKeySequence('CTRL+ALT+A'),
-                                      slot=self.on_shortcut_antialiasing,
+                                      slot=self.on_act_antialiasing,
                                       signal='triggered(bool)',
                                       checkable=True,
                                       checked=True)
         act_smooth = self.create_action('Smooth Transform',
                                         shortcut=QKeySequence('CTRL+ALT+S'),
-                                        slot=self.on_shortcut_smoothtransform,
+                                        slot=self.on_act_smoothtransform,
                                         signal='triggered(bool)',
                                         checkable=True,
                                         checked=True)
@@ -218,7 +230,10 @@ class Browser(QMainWindow):
                                      act_zoom100, act_zoomfit,
                                      act_zoomin, act_zoomout,
                                      None,
-                                     act_prev_t, act_next_t, None,
+                                     act_prev_t, act_next_t,
+                                     act_prev_pos, act_next_pos,
+                                     act_prev_plate, act_next_plate,
+                                     None,
                                      act_fullscreen, None,
                                      act_show_contours, None,
                                      act_anti, act_smooth,
@@ -318,15 +333,25 @@ class Browser(QMainWindow):
         return self.coordinate.copy()
 
     def on_coordinate_changed(self, coordinate):
+        """
+        All coordinate changes are handled via the Navigator. The change event
+        from the Navigator is processed here and further propagated via
+        a new Browser event (the Modules are not supposed to know each other).
+        """
         self.coordinate = coordinate.copy()
         self._t_slider.blockSignals(True)
         self._t_slider.setValue(coordinate.time)
         self._t_slider.blockSignals(False)
         self._process_image()
+        # propagate the signal further to other modules
+        self.coordinates_changed.emit(coordinate)
 
     def set_coordinate(self, coordinate):
-        self.on_coordinate_changed(coordinate)
-        self.coordinates_changed.emit(coordinate)
+        """
+        Changes the Navigator to a fixed coordinate
+        """
+        nav = self._module_manager.get_widget(NavigationModule.NAME)
+        nav.nav_to_coordinate(coordinate)
 
     def _process_image(self):
         print 'process image'
@@ -380,82 +405,91 @@ class Browser(QMainWindow):
         self.update_statusbar()
 
     def on_time_changed_by_slider(self, time):
-        self.coordinate.time = time
-        self._process_image()
-        self.coordinates_changed.emit(self.coordinate)
+        nav = self._module_manager.get_widget(NavigationModule.NAME)
+        nav.nav_to_time(time)
 
     def on_object_region_changed(self, channel, region):
         self._object_region = channel, region
         self._process_image()
 
-    def on_shortcut_left(self):
+    def on_act_prev_t(self):
         self._t_slider.setValue(self._t_slider.value()-1)
 
-    def on_shortcut_right(self):
+    def on_act_next_t(self):
         self._t_slider.setValue(self._t_slider.value()+1)
 
-    def on_shortcut_up(self):
-        pass
+    def on_act_prev_pos(self):
+        nav = self._module_manager.get_widget(NavigationModule.NAME)
+        nav.nav_to_prev_position()
 
-    def on_shortcut_down(self):
-        pass
+    def on_act_next_pos(self):
+        nav = self._module_manager.get_widget(NavigationModule.NAME)
+        nav.nav_to_next_position()
 
-    def on_shortcut_fullscreen(self, checked):
+    def on_act_prev_plate(self):
+        nav = self._module_manager.get_widget(NavigationModule.NAME)
+        nav.nav_to_prev_plate()
+
+    def on_act_next_plate(self):
+        nav = self._module_manager.get_widget(NavigationModule.NAME)
+        nav.nav_to_next_plate()
+
+    def on_act_fullscreen(self, checked):
         if checked:
             self.showFullScreen()
         else:
             self.showNormal()
         self.raise_()
 
-    def on_shortcut_show_contours(self, checked):
+    def on_act_show_contours(self, checked):
         self._act_show_contours.blockSignals(True)
         self._act_show_contours.setChecked(checked)
         self._act_show_contours.blockSignals(False)
         self.image_viewer.set_show_contours(checked)
         self.show_contours_toggled.emit(checked)
 
-    def on_shortcut_antialiasing(self, checked):
+    def on_act_antialiasing(self, checked):
         self.image_viewer.setRenderHint(QPainter.Antialiasing, checked)
         self.image_viewer.update()
 
-    def on_shortcut_smoothtransform(self, checked):
+    def on_act_smoothtransform(self, checked):
         self.image_viewer.setRenderHint(QPainter.SmoothPixmapTransform,
                                          checked)
         self.image_viewer.update()
 
-    def on_shortcut_autoresize(self, state):
+    def on_act_autoresize(self, state):
         self.image_viewer.set_auto_resize(state)
         if state:
             self.image_viewer.scale_to_fit()
 
-    def on_shortcut_zoom100(self):
+    def on_act_zoom100(self):
         self.image_viewer.set_auto_resize(False)
         self._act_resize.setChecked(False)
         self.image_viewer.scale_reset()
 
-    def on_shortcut_zoomfit(self):
+    def on_act_zoomfit(self):
         self.image_viewer.set_auto_resize(False)
         self._act_resize.setChecked(False)
         self.image_viewer.scale_to_fit()
 
-    def on_shortcut_zoomin(self):
+    def on_act_zoomin(self):
         self.image_viewer.set_auto_resize(False)
         self._act_resize.setChecked(False)
         self.image_viewer.scale_relative(self.ZOOM_STEP, ensure_fit=False)
 
-    def on_shortcut_zoomout(self):
+    def on_act_zoomout(self):
         self.image_viewer.set_auto_resize(False)
         self._act_resize.setChecked(False)
         self.image_viewer.scale_relative(1/self.ZOOM_STEP, ensure_fit=True)
 
-    def on_shortcut_transform(self, checked):
+    def on_act_transform(self, checked):
         if checked:
             self.image_viewer.set_scale_transform(Qt.FastTransformation)
         else:
             self.image_viewer.set_scale_transform(Qt.SmoothTransformation)
         self._process_image()
 
-    def on_shortcut_class_selected(self, class_label):
+    def on_act_class_selected(self, class_label):
         items = self._find_items_in_class_table(str(class_label),
                                                 self.COLUMN_CLASS_LABEL)
         if len(items) == 1:
@@ -483,13 +517,13 @@ class Browser(QMainWindow):
             gesture = ev.gesture(Qt.SwipeGesture)
             if gesture.state() == Qt.GestureFinished:
                 if gesture.horizontalDirection() == QSwipeGesture.Left:
-                    self._on_shortcut_left()
+                    self._on_act_left()
                 elif gesture.horizontalDirection() == QSwipeGesture.Right:
-                    self._on_shortcut_right()
+                    self._on_act_right()
                 elif gesture.horizontalDirection() == QSwipeGesture.Up:
-                    self._on_shortcut_up()
+                    self._on_act_up()
                 elif gesture.horizontalDirection() == QSwipeGesture.Down:
-                    self._on_shortcut_down()
+                    self._on_act_down()
         return True
 
     def event(self, ev):
