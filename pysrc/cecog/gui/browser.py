@@ -336,6 +336,7 @@ class Browser(QMainWindow):
         settings.set_section('General')
         settings.set2('constrain_positions', True)
         settings.set2('positions', self.coordinate.position)
+        settings.set2('redofailedonly', False)
         settings.set2('framerange', True)
         settings.set2('framerange_begin', self.coordinate.time)
         settings.set2('framerange_end', self.coordinate.time)
