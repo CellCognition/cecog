@@ -913,7 +913,12 @@ class AnnotationModule(Module):
             col = self.COLUMN_ANN_TIME - offset
             time = int(self._ann_table.item(current.row(), col).text())
             coordinate = Coordinate(plate=plate, position=position, time=time)
-            self.browser.set_coordinate(coordinate)
+            try:
+                self.browser.set_coordinate(coordinate)
+            except:
+                exception(None, "Selected coordinate was not found. "
+                                "Make sure the data and annotation match and "
+                                "that the data was scanned/imported correctly.")
 
     def _on_class_changed(self, current, previous):
         if not current is None:

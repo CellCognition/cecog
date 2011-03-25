@@ -55,10 +55,10 @@ class NavigationModule(Module):
 
     coordinate_changed = pyqtSignal(Coordinate)
 
-    def __init__(self, parent, browser, image_container):
+    def __init__(self, parent, browser, imagecontainer):
         Module.__init__(self, parent, browser)
 
-        self._image_container = image_container
+        self._imagecontainer = imagecontainer
 
         frame_info = QGroupBox('Plate Information', self)
         layout = QGridLayout(frame_info)
@@ -92,7 +92,7 @@ class NavigationModule(Module):
         self._table_plate = table
         layout.addWidget(table, 0, 0)
 
-        self.update_plate_table()
+        self._update_plate_table()
 
         layout = QGridLayout(grp2)
         layout.setContentsMargins(5, 10, 5, 5)
@@ -107,7 +107,7 @@ class NavigationModule(Module):
         self._table_position = table
         layout.addWidget(table, 0, 0)
 
-        if self._image_container.has_timelapse:
+        if self._imagecontainer.has_timelapse:
             grp3 = QGroupBox('Time', splitter)
             splitter.addWidget(grp3)
 
@@ -126,7 +126,7 @@ class NavigationModule(Module):
 
         splitter.addWidget(frame_info)
 
-    def update_plate_table(self):
+    def _update_plate_table(self):
         table = self._table_plate
         table.blockSignals(True)
         table.clearContents()
@@ -134,7 +134,7 @@ class NavigationModule(Module):
         column_names = ['Plate ID']
         table.setColumnCount(len(column_names))
         table.setHorizontalHeaderLabels(column_names)
-        plates = self._image_container.plates
+        plates = self._imagecontainer.plates
         table.setRowCount(len(plates))
 
         for idx, plate in enumerate(plates):
@@ -146,7 +146,8 @@ class NavigationModule(Module):
         table.resizeRowsToContents()
         table.blockSignals(False)
 
-    def update_time_table(self, meta_data):
+    def _update_time_table(self, meta_data, coordinate):
+        coordinate = coordinate.copy()
         table = self._table_time
         table.blockSignals(True)
         table.clearContents()
@@ -158,7 +159,6 @@ class NavigationModule(Module):
         table.setHorizontalHeaderLabels(column_names)
         table.setRowCount(len(meta_data.times))
 
-        coordinate = self.browser.get_coordinate()
         for idx, time in enumerate(meta_data.times):
             item = QTableWidgetItem(str(time))
             item.setData(0, time)
@@ -179,7 +179,7 @@ class NavigationModule(Module):
         table.resizeRowsToContents()
         table.blockSignals(False)
 
-    def update_position_table(self, meta_data):
+    def _update_position_table(self, meta_data):
         table = self._table_position
         table.blockSignals(True)
         table.clearContents()
@@ -219,7 +219,7 @@ class NavigationModule(Module):
         table.resizeRowsToContents()
         table.blockSignals(False)
 
-    def update_info_frame(self, meta_data):
+    def _update_info_frame(self, meta_data):
         meta = meta_data
         txt  = '<table>' \
                '<tr><td align="right">Positions: </td><td>%s</td></tr>' \
@@ -249,57 +249,114 @@ class NavigationModule(Module):
         self._label_info.setText(txt)
 
     def initialize(self):
-        self.browser.coordinates_changed.connect(self._on_coordinates_changed)
-        #self.plate_changed.connect(self.browser.on_plate_changed)
-        #self.position_changed.connect(self.browser.on_position_changed)
-        #self.time_changed.connect(self.browser.on_time_changed)
         self.coordinate_changed.connect(self.browser.on_coordinate_changed)
         coordinate = self.browser.get_coordinate()
-        meta_data = self._image_container.get_meta_data(coordinate.plate)
-        self.update_position_table(meta_data)
-        self.update_info_frame(meta_data)
+        meta_data = self._imagecontainer.get_meta_data(coordinate.plate)
+        self._update_position_table(meta_data)
+        self._update_info_frame(meta_data)
 
-        self._set_plate(coordinate.plate)
-        self._set_position(coordinate.position)
+        self._set_current_plate(coordinate.plate)
+        self._set_current_position(coordinate.position)
 
-        if self._image_container.has_timelapse:
-            self.update_time_table(meta_data)
-            self._set_time(coordinate.time)
+        if self._imagecontainer.has_timelapse:
+            self._update_time_table(meta_data, coordinate)
+            self._set_current_time(coordinate.time)
+
+    def nav_to_coordinate(self, coordinate):
+        """
+        Set the browser coordinate to a coordinate and emit signal
+        """
+        meta_data = self._imagecontainer.get_meta_data(coordinate.plate)
+        self._set_current_plate(coordinate.plate)
+        self._update_position_table(meta_data)
+        self._set_current_position(coordinate.position)
+        if self._imagecontainer.has_timelapse:
+            meta_data = self._imagecontainer.get_meta_data(coordinate.plate)
+            self._update_time_table(meta_data, coordinate)
+            self._set_current_time(coordinate.time)
+        self._update_info_frame(meta_data)
+        self.coordinate_changed.emit(coordinate)
+
+    def nav_to_time(self, time):
+        """
+        Set the browser coordinate to a coordinate and emit signal
+        """
+        coordinate = self.browser.get_coordinate()
+        coordinate.time = time
+        self._set_time(coordinate, True)
+
+    def nav_to_prev_position(self):
+        coordinate = self.browser.get_coordinate()
+        meta_data = self._imagecontainer.get_meta_data(coordinate.plate)
+        pos = meta_data.positions
+        idx = pos.index(coordinate.position)
+        if idx > 0:
+            coordinate.position = pos[idx-1]
+            self._set_position(coordinate, True)
+
+    def nav_to_next_position(self):
+        coordinate = self.browser.get_coordinate()
+        meta_data = self._imagecontainer.get_meta_data(coordinate.plate)
+        pos = meta_data.positions
+        idx = pos.index(coordinate.position)
+        if idx < len(pos)-1:
+            coordinate.position = pos[idx+1]
+            self._set_position(coordinate, True)
+
+    def nav_to_prev_plate(self):
+        coordinate = self.browser.get_coordinate()
+        plates = self._imagecontainer.plates
+        idx = plates.index(coordinate.plate)
+        if idx > 0:
+            coordinate.plate = plates[idx-1]
+            self._set_plate(coordinate, True)
+
+    def nav_to_next_plate(self):
+        coordinate = self.browser.get_coordinate()
+        plates = self._imagecontainer.plates
+        idx = plates.index(coordinate.plate)
+        if idx < len(plates)-1:
+            coordinate.plate = plates[idx+1]
+            self._set_plate(coordinate, True)
 
     def _get_closeby_position(self, coordinate_old, coordinate_new):
-        #md_old = self._image_container.get_meta_data(coordinate_old.plate)
-        md_new = self._image_container.get_meta_data(coordinate_new.plate)
+        #md_old = self._imagecontainer.get_meta_data(coordinate_old.plate)
+        md_new = self._imagecontainer.get_meta_data(coordinate_new.plate)
         if coordinate_old.position in md_new.positions:
             coordinate_new.position = coordinate_old.position
         else:
             coordinate_new.position = md_new.positions[0]
 
     def _get_closeby_time(self, coordinate_old, coordinate_new):
-        #md_old = self._image_container.get_meta_data(coordinate_old.plate)
-        md_new = self._image_container.get_meta_data(coordinate_new.plate)
+        #md_old = self._imagecontainer.get_meta_data(coordinate_old.plate)
+        md_new = self._imagecontainer.get_meta_data(coordinate_new.plate)
         if coordinate_old.time in md_new.times:
             coordinate_new.time = coordinate_old.time
         else:
             coordinate_new.time = md_new.times[0]
 
     def _on_plate_changed(self, current, previous):
-        coordinate_old = self.browser.get_coordinate()
-        coordinate_new = coordinate_old.copy()
-
+        coordinate_new = self.browser.get_coordinate()
         item = self._table_plate.item(current.row(), 0)
         plate = item.data(0).toPyObject()
         coordinate_new.plate = plate
-        meta_data = self._image_container.get_meta_data(plate)
-        self.update_position_table(meta_data)
+        self._set_plate(coordinate_new)
 
+    def _set_plate(self, coordinate_new, set_current=False):
+        coordinate_old = self.browser.get_coordinate()
+        plate = coordinate_new.plate
+        meta_data = self._imagecontainer.get_meta_data(plate)
+        if set_current:
+            self._set_current_plate(plate)
+        self._update_position_table(meta_data)
         self._get_closeby_position(coordinate_old, coordinate_new)
-        self._set_position(coordinate_new.position)
-        if self._image_container.has_timelapse:
-            meta_data = self._image_container.get_meta_data(coordinate_new.plate)
-            self.update_time_table(meta_data)
+        self._set_current_position(coordinate_new.position)
+        if self._imagecontainer.has_timelapse:
+            meta_data = self._imagecontainer.get_meta_data(plate)
+            self._update_time_table(meta_data, coordinate_new)
             self._get_closeby_time(coordinate_old, coordinate_new)
-            self._set_time(coordinate_new.time)
-        self.update_info_frame(meta_data)
+            self._set_current_time(coordinate_new.time)
+        self._update_info_frame(meta_data)
         self.coordinate_changed.emit(coordinate_new)
 
     def _on_position_changed(self, current, previous):
@@ -307,10 +364,15 @@ class NavigationModule(Module):
         item = self._table_position.item(current.row(), 0)
         position = item.data(0).toPyObject()
         coordinate.position = position
-        if self._image_container.has_timelapse:
-            meta_data = self._image_container.get_meta_data(coordinate.plate)
-            self.update_time_table(meta_data)
-            self._set_time(coordinate.time)
+        self._set_position(coordinate)
+
+    def _set_position(self, coordinate, set_current=False):
+        if set_current:
+            self._set_current_position(coordinate.position)
+        if self._imagecontainer.has_timelapse:
+            meta_data = self._imagecontainer.get_meta_data(coordinate.plate)
+            self._update_time_table(meta_data, coordinate)
+            self._set_current_time(coordinate.time)
         self.coordinate_changed.emit(coordinate)
 
     def _on_time_changed(self, current, previous):
@@ -318,29 +380,34 @@ class NavigationModule(Module):
         item = self._table_time.item(current.row(), 0)
         time = int(item.data(0).toPyObject())
         coordinate.time = time
+        self._set_time(coordinate)
+
+    def _set_time(self, coordinate, set_current=False):
+        if set_current:
+            self._set_current_time(coordinate.time)
         self.coordinate_changed.emit(coordinate)
 
-    def _on_coordinates_changed(self, coordinate):
-        self._set_plate(coordinate.plate)
-        self._set_position(coordinate.position)
-        self._set_time(coordinate.time)
-
-    def _set_plate(self, plate):
+    def _set_current_plate(self, plate):
         self._table_plate.blockSignals(True)
         item = self._table_plate.findItems(plate, Qt.MatchExactly)[0]
         self._table_plate.setCurrentItem(item)
         self._table_plate.blockSignals(False)
+        self._table_plate.scrollToItem(item)
+        self._table_plate.update()
 
-    def _set_position(self, position):
+    def _set_current_position(self, position):
         self._table_position.blockSignals(True)
         item = self._table_position.findItems(position, Qt.MatchExactly)[0]
         self._table_position.setCurrentItem(item)
         self._table_position.blockSignals(False)
+        self._table_position.scrollToItem(item)
+        self._table_position.update()
 
-    def _set_time(self, time):
-        if self._image_container.has_timelapse:
+    def _set_current_time(self, time):
+        if self._imagecontainer.has_timelapse:
             self._table_time.blockSignals(True)
             item = self._table_time.findItems(str(time), Qt.MatchExactly)[0]
-            print "MOOO", item.text()
             self._table_time.setCurrentItem(item)
             self._table_time.blockSignals(False)
+            self._table_time.scrollToItem(item)
+            self._table_time.update()
