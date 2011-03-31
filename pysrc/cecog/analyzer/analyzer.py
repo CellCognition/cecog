@@ -20,7 +20,9 @@ __source__ = '$URL$'
 
 import os, \
        types, \
-       logging
+       logging, \
+       zlib, \
+       base64
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -38,8 +40,7 @@ from pdk.iterator import flatten
 from pdk.ordereddict import OrderedDict
 
 import numpy
-#import h5py
-import netCDF4
+import h5py
 
 #-------------------------------------------------------------------------------
 # cecog module imports:
@@ -128,16 +129,17 @@ class QualityControl(object):
 
 class TimeHolder(OrderedDict):
 
-    NC_GROUP_RAW = 'raw'
-    NC_GROUP_LABEL = 'label'
-    NC_GROUP_FEATURE = 'feature'
-    NC_ZLIB = True
-    NC_SHUFFLE = True
+    HDF5_GRP_DEFINITIONS = "/definitions"
+    HDF5_GRP_RELATIONS = "/relations"
+    HDF5_GRP_IMAGES = "/images"
+    HDF5_GRP_FRAMES = "/frames"
 
-    def __init__(self, P, channels, filename, filename_hdf5, meta_data, settings,
-                 create_nc=True, reuse_nc=True,
+    def __init__(self, P, channels, filename_hdf5, meta_data, settings,
                  hdf5_create=True, hdf5_include_raw_images=True,
-                 hdf5_include_label_images=True, hdf5_include_features=True):
+                 hdf5_include_label_images=True, hdf5_include_features=True,
+                 hdf5_include_classification=True, hdf5_include_crack=True,
+                 hdf5_compression='gzip', hdf5_include_tracking=True,
+                 hdf5_include_events=True):
         super(TimeHolder, self).__init__()
         self.P = P
         self._iCurrentT = None
@@ -145,16 +147,15 @@ class TimeHolder(OrderedDict):
         self._meta_data = meta_data
         self._settings = settings
 
-        self._create_nc = create_nc
-        self._reuse_nc = reuse_nc
-
-        self._nc4_filename = filename
-        self._dataset = None
-
         self._hdf5_create = hdf5_create
         self._hdf5_include_raw_images = hdf5_include_raw_images
         self._hdf5_include_label_images = hdf5_include_label_images
         self._hdf5_include_features = hdf5_include_features
+        self._hdf5_include_classification = hdf5_include_classification
+        self._hdf5_include_crack = hdf5_include_crack
+        self._hdf5_include_tracking = hdf5_include_tracking
+        self._hdf5_include_events = hdf5_include_events
+        self._hdf5_compression = hdf5_compression
 
         self._logger = logging.getLogger(self.__class__.__name__)
         # frames get an index representation with the NC file, starting at 0
@@ -162,201 +163,74 @@ class TimeHolder(OrderedDict):
         self._frames_to_idx = dict([(f,i) for i, f in enumerate(frames)])
         self._idx_to_frames = dict([(i,f) for i, f in enumerate(frames)])
 
-        channels = sorted(list(meta_data.channels))
-        region_names = REGION_NAMES_PRIMARY + REGION_NAMES_SECONDARY
-        region_channels = ['primary']*len(REGION_NAMES_PRIMARY) + \
-                          ['secondary']*len(REGION_NAMES_SECONDARY)
-
-        region_names2 = [('Primary', 'primary')]
-        #channel_names2 = [('Primary']
+        self._channel_info = [('primary',
+                               settings.get('ObjectDetection',
+                                            'primary_channelid'))]
+        self._region_infos = [('primary', 'primary__primary', 'primary')]
         settings.set_section('ObjectDetection')
         for prefix in ['secondary', 'tertiary']:
             if settings.get('Processing', '%s_processchannel' % prefix):
+                name = settings.get('ObjectDetection', '%s_channelid' % prefix)
+                self._channel_info.append((prefix, name))
                 for name in REGION_NAMES_SECONDARY:
                     if settings.get2('%s_regions_%s' % (prefix, name)):
-                        region_names2.append((prefix.capitalize(), name))
+                        self._region_infos.append((prefix,
+                                                   '%s__%s' % (prefix, name),
+                                                   name))
 
-
-
-        self._channels_to_idx = dict([(f,i) for i, f in enumerate(channels)])
-        self._idx_to_channels = dict([(i,f) for i, f in enumerate(channels)])
-
-        self._regions_to_idx = dict([(n,i) for i, n in enumerate(region_names)])
-        self._regions_to_idx2 = OrderedDict([(n,i) for i, n in enumerate(region_names2)])
+        self._channels_to_idx = OrderedDict([(n[0], i) for i, n in
+                                             enumerate(self._channel_info)])
+        self._regions_to_idx = OrderedDict([(n[1], i) for i, n in
+                                            enumerate(self._region_infos)])
+        self._edge_to_idx = {}
 
         if self._hdf5_create:
             f = h5py.File(filename_hdf5, 'w')
             self._hdf5_file = f
+            f.create_group(self.HDF5_GRP_FRAMES)
+            f.create_group(self.HDF5_GRP_IMAGES)
+            f.create_group(self.HDF5_GRP_RELATIONS)
+            grp_def = f.create_group(self.HDF5_GRP_DEFINITIONS)
+            dtype = numpy.dtype([('frame', 'i'), ('timestamp_abs', 'i'),
+                                 ('timestamp_rel', 'i')])
+            nr_frames = len(frames)
+            var = grp_def.create_dataset('frames', (nr_frames,),
+                                         dtype,
+                                         chunks=(1,),
+                                         compression=self._hdf5_compression)
+            for frame in frames:
+                idx = self._frames_to_idx[frame]
+                coord = Coordinate(position=self.P, time=frame)
+                ts_abs = meta_data.get_timestamp_absolute(coord)
+                ts_rel = meta_data.get_timestamp_relative(coord)
+                var[idx] = (frame, ts_abs, ts_rel)
 
-    def create_nc4(self):
-        settings = self._settings
-        if (self._create_nc and self._reuse_nc and self._dataset is None and
-            os.path.isfile(self._nc4_filename)):
-            dataset = netCDF4.Dataset(self._nc4_filename, 'a')
+            dtype = numpy.dtype([('channel_name', '|S50'),
+                                 ('description', '|S100'),
+                                 ('is_physical', bool)])
 
-            # decide which parts need to be reprocessed based on changes
-            # between the saved (from nc4) and the current settings
+            nr_channels = len(self._channel_info)
+            var = grp_def.create_dataset('channels', (nr_channels,), dtype)
+            for idx in self._channels_to_idx.values():
+                data = (self._channel_info[idx][0],
+                        self._channel_info[idx][1],
+                        True)
+                var[idx] = data
 
-            # load settings from nc4 file
-            #var = str(dataset.variables['settings'][:][0])
-            #settings2 = settings.copy()
-            #settings2.from_string(var)
-
-            # compare current and saved settings and decide which data is to
-            # process again by setting the *_finished variables to zero
-
-#            valid = {'primary'   : [True, True],
-#                     'secondary' : [True, True],
-#                     }
-#            for name in ['primary', 'secondary']:
-#                channel_id = settings2.get(SECTION_NAME_OBJECTDETECTION,
-#                                           '%s_channelid' % name)
-#                idx = dataset.variables['channels_idx'][:] == channel_id
-#                if (not settings.compare(settings2, SECTION_NAME_OBJECTDETECTION,
-#                                         '%s_image' % name) or
-#                    not settings.compare(settings2, SECTION_NAME_OBJECTDETECTION,
-#                                         'secondary_registration') or
-#                    not valid[name][0]):
-#                    dataset.variables['raw_images_finished'][:,idx] = 0
-#                    valid['primary'] = [False, False]
-#                    valid['secondary'] = [False, False]
-#                idx = dataset.variables['region_channels'][:] == name
-#                if (not settings.compare(settings2, SECTION_NAME_OBJECTDETECTION,
-#                                        '%s_segmentation' % name) or
-#                    not valid[name][1]):
-#                    dataset.variables['label_images_finished'][:,idx] = 0
-#                    valid['primary'] = [False, False]
-#                    valid['secondary'] = [False, False]
-
-        elif self._create_nc and self._dataset is None:
-            meta = self._meta_data
-            dim_t = meta.dim_t
-            dim_c = meta.dim_c
-            w = meta.real_image_width
-            h = meta.real_image_height
-
-            channels = sorted(list(meta.channels))
-            region_names = REGION_NAMES_PRIMARY + REGION_NAMES_SECONDARY
-            region_channels = ['primary']*len(REGION_NAMES_PRIMARY) + \
-                              ['secondary']*len(REGION_NAMES_SECONDARY)
-
-            dataset = netCDF4.Dataset(self._nc4_filename, 'w', format='NETCDF4')
-            dataset.createDimension('frames', dim_t)
-            dataset.createDimension('channels', dim_c)
-            dataset.createDimension('height', h)
-            dataset.createDimension('width', w)
-            dataset.createDimension('regions', len(region_names))
-            dataset.createDimension('one', 1)
-
-            frames = sorted(list(meta.times))
-            var = dataset.createVariable('frames_idx', 'u4', 'frames')
-            var.description = 'Mapping from indices to frames.'
-            var[:] = frames
-
-            var = dataset.createVariable('settings', str, 'one')
-            var.description = 'Cecog settings used for the generation of this '\
-                              'netCDF file. Current cecog and this settings '\
-                              'are compared hierarchically leading to a '\
-                              'stepwise invalidation of preprocessed values.'
-
-            raw_g = dataset.createGroup(self.NC_GROUP_RAW)
-            raw_g.description = 'Converted raw images as processed by cecog '\
-                                'after 8bit conversion, registration, and '\
-                                'z-projection/selection.'
-            label_g = dataset.createGroup(self.NC_GROUP_LABEL)
-            label_g.description = 'Label images as a result of object '\
-                                  'detection.'
-
-            object_g = dataset.createGroup('object')
-            object_g.description = 'General object values and mapping'
-            feature_g = dataset.createGroup(self.NC_GROUP_FEATURE)
-            feature_g.description = 'Feature values'
-
-            for channel_id in meta.channels:
-                var = raw_g.createVariable(channel_id, 'u1',
-                                           ('frames', 'height', 'width'),
-                                           zlib=self.NC_ZLIB,
-                                           shuffle=self.NC_SHUFFLE,
-                                           chunksizes=(1, h, w))
-                # FIXME: not working for dim_t == 1 (no timelapse data)
-                var.valid = [0] * dim_t
-                #print channel_id, dim_t, var.valid
-
-            for channel_name in REGION_NAMES.keys():
-                channel_g = label_g.createGroup(channel_name)
-                grp1 = object_g.createGroup(channel_name)
-                grp2 = feature_g.createGroup(channel_name)
-                for region_name in REGION_NAMES[channel_name]:
-                    var = channel_g.createVariable(region_name, 'i2',
-                                                   ('frames', 'height',
-                                                    'width'),
-                                                   zlib=self.NC_ZLIB,
-                                                   shuffle=self.NC_SHUFFLE,
-                                                   chunksizes=(1, h, w))
-                    var.valid = [0] * dim_t
-                    grp1.createGroup(region_name)
-                    grp2.createGroup(region_name)
-
-            var = dataset.createVariable('channels_idx', str, 'channels')
-            var[:] = numpy.asarray(channels, 'O')
-
-            var = dataset.createVariable('region_names', str, 'regions')
-            var[:] = numpy.asarray(region_names, 'O')
-
-            var = dataset.createVariable('region_channels', str, 'regions')
-            var[:] = numpy.asarray(region_channels, 'O')
-
-            dataset.createVariable('raw_images', 'u1',
-                                   ('frames', 'channels', 'height', 'width'),
-                                   zlib='True',
-                                   shuffle=False,
-                                   chunksizes=(1, 1, h, w)
-                                   )
-            finished = dataset.createVariable('raw_images_finished', 'i1',
-                                              ('frames', 'channels'))
-            finished[:] = 0
-
-            dataset.createVariable('label_images', 'i2',
-                                   ('frames', 'regions', 'height', 'width'),
-                                   zlib='True',
-                                   shuffle=False,
-                                   chunksizes=(1, 1, h, w)
-                                   )
-            finished = dataset.createVariable('label_images_finished', 'i1',
-                                              ('frames', 'regions'))
-
-            finished[:] = 0
-        else:
-            dataset = None
-
-        if not dataset is None:
-            # update the settings to the current version
-            var = dataset.variables['settings']
-            var[:] = numpy.asarray(settings.to_string(), 'O')
-            self._dataset = dataset
-
-    @staticmethod
-    def nc_valid_set(var, idx, value):
-        helper = var.valid
-        helper[idx] = value
-        var.valid = helper
+            dtype = numpy.dtype([('region_name', '|S50'),
+                                 ('channel_idx', 'i')])
+            nr_labels = len(self._regions_to_idx)
+            var = grp_def.create_dataset('regions', (nr_labels,),
+                                         dtype)
+            for tpl in self._region_infos:
+                channel_name, combined, region_name = tpl
+                idx = self._regions_to_idx[combined]
+                channel_idx = self._channels_to_idx[channel_name]
+                var[idx] = (region_name, channel_idx)
 
     def close_all(self):
-        print 'moo1'
-        if not self._dataset is None:
-            print 'moo2'
-            self._dataset.close()
-            print 'moo3'
-            self._dataset = None
-            self._create_nc = False
-        print 'moo4'
         if self._hdf5_create:
-            print 'moo2'
             self._hdf5_file.close()
-            self._hdf5_create = False
-
-    def __del__(self):
-        self.close_all()
 
     def initTimePoint(self, iT):
         self._iCurrentT = iT
@@ -372,6 +246,9 @@ class TimeHolder(OrderedDict):
             for channel in channels.itervalues():
                 channel.purge(features={})
 
+    def _convert_region_name(self, channel_name, region_name):
+        return '%s__%s' % (channel_name, region_name)
+
     def apply_channel(self, oChannel):
         iT = self._iCurrentT
         if not iT in self:
@@ -380,165 +257,360 @@ class TimeHolder(OrderedDict):
         self[iT].sort(key = lambda x: self[iT][x])
 
     def apply_segmentation(self, channel, primary_channel=None):
-        self.create_nc4()
-        valid = False
         desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
                                          channel.strChannelId)
-        name = channel.NAME.lower()
-        if self._create_nc or self._reuse_nc:
-            grp = self._dataset.groups[self.NC_GROUP_LABEL]
-            grp = grp.groups[name]
-            frame_idx = self._frames_to_idx[self._iCurrentT]
-        if self._reuse_nc:
-            for region_name in channel.lstAreaSelection:
-                var = grp.variables[region_name]
-                if var.valid[frame_idx]:
-                    img_label = ccore.numpy_to_image(var[frame_idx],
-                                                     copy=True)
-                    img_xy = channel.meta_image.image
-                    container = ccore.ImageMaskContainer(img_xy, img_label,
-                                                         False, True)
-                    channel.dctContainers[region_name] = container
-                    valid = True
-                else:
-                    valid = False
-                    break
-        if not valid:
-            channel.apply_segmentation(primary_channel)
-            if self._create_nc:
-                for region_name in channel.lstAreaSelection:
-                    var = grp.variables[region_name]
-                    container = channel.dctContainers[region_name]
-                    var[frame_idx] = \
-                        container.img_labels.toArray(copy=False)
-                    self.nc_valid_set(var, frame_idx, 1)
-                self._logger.debug('Label images %s written to nc4 file.' %\
-                                   desc)
-        else:
-            self._logger.debug('Label images %s loaded from nc4 file.' %\
-                   desc)
+        channel.apply_segmentation(primary_channel)
 
         if self._hdf5_create and self._hdf5_include_label_images:
             meta = self._meta_data
             w = meta.real_image_width
             h = meta.real_image_height
+            z = meta.dim_z
             f = self._hdf5_file
-            if 'labeled_images' in f:
-                labeled_images = f['labeled_images']
+            var_name = 'labels'
+            grp = f[self.HDF5_GRP_IMAGES]
+            if var_name in grp:
+                var_labels = grp[var_name]
             else:
-                nr_labels = len(self._regions_to_idx2)
-                dt = h5py.special_dtype(vlen=str)
-                names = f.create_dataset('label_names', (nr_labels, 2), dt)
-                for tpl, idx in self._regions_to_idx2.iteritems():
-                    names[idx] = tpl
-                labeled_images = f.create_dataset('label_images', (nr_labels, meta.dim_t, meta.dim_z, w, h),
-                                                  'int32', compression='szip', chunks=(1,1,meta.dim_z,w,h))
+                nr_labels = len(self._regions_to_idx)
+                var_labels = \
+                    grp.create_dataset(var_name,
+                                       (nr_labels, meta.dim_t, z, w, h),
+                                       'int32',
+                                       chunks=(1, 1, z, w, h),
+                                       compression=self._hdf5_compression)
 
             frame_idx = self._frames_to_idx[self._iCurrentT]
             for region_name in channel.lstAreaSelection:
-                idx = self._regions_to_idx2[(channel.NAME, region_name)]
+                idx = self._regions_to_idx[
+                        self._convert_region_name(channel.PREFIX, region_name)]
                 container = channel.dctContainers[region_name]
                 array = container.img_labels.toArray(copy=False)
-                labeled_images[idx, frame_idx, 0] = numpy.require(array, 'int32')
+                var_labels[idx, frame_idx, 0] = numpy.require(array, 'int32')
 
 
     def prepare_raw_image(self, channel):
-        self.create_nc4()
-
         desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
                                          channel.strChannelId)
-        if self._create_nc or self._reuse_nc:
-            grp = self._dataset.groups[self.NC_GROUP_RAW]
-            var = grp.variables[channel.strChannelId]
-            frame_idx = self._frames_to_idx[self._iCurrentT]
-        if self._reuse_nc and var.valid[frame_idx]:
-            coordinate = Coordinate(position=self.P, time=self._iCurrentT,
-                                    channel=channel.strChannelId, zslice=1)
-            meta_image = MetaImage(image_container=None, coordinate=coordinate)
-
-            img = ccore.numpy_to_image(var[frame_idx], copy=True)
-            meta_image.set_image(img)
-            channel.meta_image = meta_image
-            self._logger.debug('Raw image %s loaded from nc4 file.' % desc)
-        else:
-            channel.apply_zselection()
-            channel.normalize_image()
-            channel.apply_registration()
-            if self._create_nc:
-                img = channel.meta_image.image
-                grp = self._dataset.groups[self.NC_GROUP_RAW]
-                var = grp.variables[channel.strChannelId]
-                var[frame_idx] = img.toArray(copy=False)
-                self.nc_valid_set(var, frame_idx, 1)
-                self._logger.debug('Raw image %s written to nc4 file.' % desc)
+        channel.apply_zselection()
+        channel.normalize_image()
+        channel.apply_registration()
 
         if self._hdf5_create and self._hdf5_include_raw_images:
             meta = self._meta_data
             w = meta.real_image_width
             h = meta.real_image_height
+            z = meta.dim_z
+            t = meta.dim_t
             f = self._hdf5_file
-            if 'images' in f:
-                images = f['images']
+            nr_channels = len(self._channel_info)
+            var_name = 'projected'
+            grp = f[self.HDF5_GRP_IMAGES]
+            if var_name in grp:
+                var_images = grp[var_name]
             else:
-                images = f.create_dataset('pre_images', (meta.dim_c, meta.dim_t, meta.dim_z, w, h),
-                                          'uint8', compression='szip', chunks=(1,1,meta.dim_z,w,h))
-                dt = h5py.special_dtype(vlen=str)
-                channels = f.create_dataset('channel_names', (meta.dim_c,), dt)
-                for idx in range(meta.dim_c):
-                    channels[idx] = self._idx_to_channels[idx]
+                var_images = \
+                    grp.create_dataset(var_name,
+                                       (nr_channels, t, z, w, h),
+                                       'uint8',
+                                       chunks=(1, 1, 1, w, h),
+                                       compression=self._hdf5_compression)
 
             frame_idx = self._frames_to_idx[self._iCurrentT]
-            channel_idx = self._channels_to_idx[channel.strChannelId]
+            channel_idx = self._channels_to_idx[channel.PREFIX]
             img = channel.meta_image.image
             array = img.toArray(copy=False)
-            print array.shape, (meta.dim_c, meta.dim_t, meta.dim_z, w, h), frame_idx, channel_idx
-            images[channel_idx, frame_idx, 0] = array
+            var_images[channel_idx, frame_idx, 0] = array
 
     def apply_features(self, channel):
-        self.create_nc4()
-        valid = False
         desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
                                          channel.strChannelId)
 
         name = channel.NAME.lower()
         channel.apply_features()
 
-        if self._hdf5_create and self._hdf5_include_features:
-            meta = self._meta_data
-            w = meta.real_image_width
-            h = meta.real_image_height
+        if self._hdf5_create:
             f = self._hdf5_file
-            if 'features' in f:
-                features = f['features']
-            else:
-                features = f.create_group('features')
 
-            if 'objects' in f:
-                objects = f['objects']
-            else:
-                objects = f.create_group('objects')
+            grp_def = f[self.HDF5_GRP_DEFINITIONS]
+            if self._hdf5_include_features:
+                var_name = "feature_names"
+                if not var_name in grp_def:
+                    grp_fnames = grp_def.create_group(var_name)
+                else:
+                    grp_fnames = grp_def[var_name]
 
-#        #nr_objects
-#
-#        data_f = features.create_dataset(str(self._iCurrentT), (), 'float32',
-#                                         compression='szip', chunks=())
-#        data_o = objects.create_dataset(str(self._iCurrentT), (), 'float32',
-#                                         compression='szip', chunks=())
-#
-#            nr_labels = len(self._regions_to_idx2)
-#            dt = h5py.special_dtype(vlen=str)
-#            names = f.create_dataset('label_names', (nr_labels, 2), dt)
-#            for tpl, idx in self._regions_to_idx2.iteritems():
-#                names[idx] = tpl
-#            labeled_images = f.create_dataset('labeled_images', (nr_labels, meta.dim_t, meta.dim_z, w, h),
-#                                              'int32', compression='szip', chunks=(1,1,meta.dim_z,w,h))
-#
-#        frame_idx = self._frames_to_idx[self._iCurrentT]
-#        for region_name in channel.lstAreaSelection:
-#            idx = self._regions_to_idx2[(channel.NAME, region_name)]
-#            container = channel.dctContainers[region_name]
-#            array = container.img_labels.toArray(copy=False)
-#            labeled_images[idx, frame_idx, 0] = numpy.require(array, 'int32')
+            grp_frames = f[self.HDF5_GRP_FRAMES]
+            var_name = str(self._frames_to_idx[self._iCurrentT])
+            if not var_name in grp_frames:
+                grp_current_frame = grp_frames.create_group(var_name)
+            else:
+                grp_current_frame = grp_frames[var_name]
+
+            for region_name in channel.region_names():
+                idx = self._regions_to_idx[
+                        self._convert_region_name(name, region_name)]
+                grp_name = str(idx)
+                grp_region = grp_current_frame.create_group(grp_name)
+
+                region = channel.get_region(region_name)
+                feature_names = region.getFeatureNames()
+                nr_features = len(feature_names)
+                nr_objects = len(region)
+
+                dtype = numpy.dtype([('obj_id', 'int32'),
+                                     ('upper_left', 'int32', 2),
+                                     ('lower_right', 'int32', 2),
+                                     ('center', 'int32', 2)])
+                var_objects = grp_region.create_dataset('objects',
+                                             (nr_objects,),
+                                             dtype,
+                                             chunks=(nr_objects,),
+                                             compression=self._hdf5_compression)
+
+                if self._hdf5_include_features:
+                    if not grp_name in grp_fnames:
+                        dt = h5py.new_vlen(str)
+                        var_fnames = \
+                            grp_fnames.create_dataset(grp_name,
+                                                      (nr_features,), dt)
+                        var_fnames[:] = feature_names
+                    var_features = \
+                        grp_region.create_dataset('features',
+                                            (nr_objects, nr_features),
+                                            'float',
+                                            chunks=(nr_objects, nr_features),
+                                            compression=self._hdf5_compression)
+
+                if self._hdf5_include_crack:
+                    dt = h5py.new_vlen(str)
+                    var_crack = \
+                        grp_region.create_dataset('crack_contours',
+                                            (nr_objects, ), dt,
+                                            chunks=(1, ),
+                                            compression=self._hdf5_compression)
+                for idx, obj_id in enumerate(region):
+                    obj = region[obj_id]
+
+                    var_objects[idx] = (obj_id,
+                                        obj.oRoi.upperLeft, obj.oRoi.lowerRight,
+                                        obj.oCenterAbs)
+
+                    if self._hdf5_include_features:
+                        var_features[idx] = region[obj_id].aFeatures
+
+                    if self._hdf5_include_crack:
+                        data = ','.join(map(str, flatten(obj.crack_contour)))
+                        # FIXME: VLEN(str) compression seems not to work in
+                        #        h5py. 'external' compression is not nice
+                        var_crack[idx] = base64.b64encode(zlib.compress(data))
+
+    def serialize_tracking(self, tracker):
+        graph = tracker.get_graph()
+        channel_name = tracker._channelId
+        region_name = tracker._regionName
+        if self._hdf5_create and self._hdf5_include_tracking:
+            grp = self._hdf5_file[self.HDF5_GRP_RELATIONS]
+            nr_edges = graph.number_of_edges()
+            dtype = numpy.dtype([('region_idx1', 'int32'),
+                                 ('frame_idx1', 'int32'),
+                                 ('obj_idx1', 'int32'),
+                                 ('region_idx2', 'int32'),
+                                 ('frame_idx2', 'int32'),
+                                 ('obj_idx2', 'int32')])
+            var = grp.create_dataset('tracking',
+                                     (nr_edges, ),
+                                     dtype,
+                                     chunks=(1,),
+                                     compression=self._hdf5_compression)
+
+            region_idx = self._regions_to_idx[
+                self._convert_region_name(channel_name.lower(), region_name)]
+
+            for idx, edge in enumerate(graph.edges.itervalues()):
+                head_id, tail_id = edge[:2]
+                self._edge_to_idx[(head_id, tail_id)] = idx
+                head_frame, head_obj_id = \
+                    tracker.getComponentsFromNodeId(head_id)[:2]
+                tail_frame, tail_obj_id = \
+                    tracker.getComponentsFromNodeId(tail_id)[:2]
+                head_frame_idx = self._frames_to_idx[head_frame]
+                tail_frame_idx = self._frames_to_idx[tail_frame]
+
+                head_region = \
+                    self[head_frame][channel_name].get_region(region_name)
+                tail_region = \
+                    self[tail_frame][channel_name].get_region(region_name)
+                head_obj_idx = head_region.index(head_obj_id)
+                tail_obj_idx = tail_region.index(tail_obj_id)
+                var[idx] = (region_idx, head_frame_idx, head_obj_idx,
+                            region_idx, tail_frame_idx, tail_obj_idx)
+
+    def serialize_events(self, tracker):
+        if self._hdf5_create and self._hdf5_include_events:
+            grp = self._hdf5_file[self.HDF5_GRP_RELATIONS]
+            grp_events = grp.create_group('events')
+
+            nr_events = 0
+            nr_edges = None
+            nr_daughters = 0
+            daughters = {}
+            for events in tracker.dctVisitorData.itervalues():
+                for start_id, event in events.iteritems():
+                    if start_id[0] != '_':
+                        frame, obj_id = \
+                            tracker.getComponentsFromNodeId(start_id)[:2]
+                        new_id = tracker.getNodeIdFromComponents(frame, obj_id)
+                        if not new_id in daughters:
+                            daughters[new_id] = []
+                            nr_daughters += 1
+                        daughters[new_id].append(start_id)
+                        nr_events += 1
+                        if nr_edges is None:
+                            nr_edges = event['maxLength']-1
+
+            #dtype = numpy.dtype([('tracking_idx', 'i')])
+            var_edges = \
+                grp_events.create_dataset('edges',
+                                          (nr_events, nr_edges),
+                                          'int32',
+                                          chunks=(1, nr_edges),
+                                          compression=self._hdf5_compression)
+            dtype = numpy.dtype([('daughter_idx1', 'int32'),
+                                 ('daughter_idx2', 'int32'),
+                                 ('has_daughter', bool),
+                                 ('event_idx', 'int32'),
+                                 ('split_idx', 'int32')])
+            var_dau = \
+                grp_events.create_dataset('daughters',
+                                          (nr_daughters, ),
+                                          dtype,
+                                          chunks=(1,),
+                                          compression=self._hdf5_compression)
+
+            event_idx = 0
+            edges_to_idx = {}
+            for events in tracker.dctVisitorData.itervalues():
+                for start_id, event in events.iteritems():
+                    if start_id[0] != '_':
+                        track = event['tracks'][0]
+                        event_id, split_id = -1, -1
+                        for idx, (head_id, tail_id) in \
+                            enumerate(zip(track, track[1:])):
+                            edge_idx = self._edge_to_idx[(head_id, tail_id)]
+                            var_edges[event_idx, idx] = edge_idx
+                            if head_id == event['splitId']:
+                                split_id = idx
+                            if head_id == event['eventId']:
+                                event_id = idx
+                        edges_to_idx[start_id] = (event_idx, event_id, split_id)
+                        event_idx += 1
+            for idx, node_ids in enumerate(daughters.itervalues()):
+                d1_info = edges_to_idx[node_ids[0]]
+                if len(node_ids) > 1:
+                    d2_info = edges_to_idx[node_ids[1]]
+                    assert d1_info[1] == d2_info[1]
+                    assert d1_info[2] == d2_info[2]
+                    d2_idx = d2_info[0]
+                    has_daughter = True
+                else:
+                    d2_idx = -1
+                    has_daughter = False
+                var_dau[idx] = (d1_info[0], d2_idx, has_daughter,
+                                d1_info[1], d1_info[2])
+
+
+
+    def serialize_region_hierarchy(self, channel_name, region_name):
+
+        if self._hdf5_create:# and self._hdf5_include_tracking:
+            grp = self._hdf5_file[self.HDF5_GRP_RELATIONS]
+
+            nr_values = 0
+            for frame, channels in self.iteritems():
+                channel = channels[channel_name]
+                region = channel.get_region(region_name)
+                nr_values += len(region)
+            nr_regions = len(self._region_infos) - 1
+            nr_values *= nr_regions
+            dtype = numpy.dtype([('region_idx1', 'i'),
+                                 ('frame_idx1', 'i'),
+                                 ('obj_idx1', 'i'),
+                                 ('region_idx2', 'i'),
+                                 ('frame_idx2', 'i'),
+                                 ('obj_idx2', 'i')])
+            if nr_regions > 0:
+                var = grp.create_dataset('region_hierarchy',
+                                         (nr_values,),
+                                         dtype,
+                                         chunks=(nr_regions,),
+                                         compression=self._hdf5_compression)
+
+                region_idx1 = self._regions_to_idx[
+                    self._convert_region_name(channel_name.lower(),
+                                              region_name)]
+
+                idx = 0
+                for frame, channels in self.iteritems():
+                    frame_idx = self._frames_to_idx[frame]
+                    channel = channels[channel_name]
+                    region = channel.get_region(region_name)
+                    for obj_id in region:
+                        # get the index of the obj_id in the OrderedDict
+                        obj_idx = region.index(obj_id)
+                        for info in self._region_infos[1:]:
+                            region_idx2 = self._regions_to_idx[info[1]]
+                            var[idx] = (region_idx1, frame_idx, obj_idx,
+                                        region_idx2, frame_idx, obj_idx)
+                            idx += 1
+
+    def serialize_classification(self, channel_name, region_name, class_info):
+        if self._hdf5_create and self._hdf5_include_classification:
+            grp = self._hdf5_file[self.HDF5_GRP_FRAMES]
+
+            channel = self[self._iCurrentT][channel_name]
+            region = channel.get_region(region_name)
+            nr_classes = len(class_info)
+
+            region_idx = self._regions_to_idx[
+                self._convert_region_name(channel_name.lower(), region_name)]
+            var_name_region = str(region_idx)
+            grp_def = self._hdf5_file[self.HDF5_GRP_DEFINITIONS]
+            var_name = 'classes'
+            if not var_name in grp_def:
+                grp_classes = grp_def.create_group(var_name)
+            else:
+                grp_classes = grp_def[var_name]
+            if not var_name_region in grp_classes:
+                dtype = numpy.dtype([('label', 'i'),
+                                     ('name', '|S50')])
+                var = grp_classes.create_dataset(var_name_region, (nr_classes,),
+                                                 dtype)
+                var[:] = class_info
+
+            var_name = str(self._frames_to_idx[self._iCurrentT])
+            grp_current_frame = grp[var_name]
+            grp_region = grp_current_frame[var_name_region]
+            nr_objects = len(region)
+            var_class_probs = \
+                grp_region.create_dataset('classification_probs',
+                                    (nr_objects, nr_classes),
+                                    'float',
+                                    chunks=(nr_objects, nr_classes),
+                                    compression=self._hdf5_compression)
+            var_class = \
+                grp_region.create_dataset('classification',
+                                    (nr_objects, ),
+                                    'int16',
+                                    chunks=(nr_objects, ),
+                                    compression=self._hdf5_compression)
+
+            label_to_idx = dict([(tpl[0], i)
+                                 for i, tpl in enumerate(class_info)])
+            for idx, obj_id in enumerate(region):
+                obj = region[obj_id]
+                var_class[idx] = label_to_idx[obj.iLabel]
+                var_class_probs[idx] = obj.dctProb.values()
 
 
 
@@ -677,43 +749,6 @@ class TimeHolder(OrderedDict):
                         f.write('%s\n' % sep.join(line1))
 
                 f.write('%s\n' % sep.join(map(str, prefix + items)))
-
-        f.close()
-
-    def export_hdf5(self, filename):
-        f = h5py.File(filename, 'w')
-
-        meta = self._meta_data
-        w = meta.real_image_width
-        h = meta.real_image_height
-        images = f.create_dataset("images", (meta.dim_c, meta.dim_t, meta.dim_z, h, w),
-                                  "uint8", compression="szip", chunks=(1,1,1,h,w))
-
-        for frame_idx, (frame, channels) in enumerate(self.iteritems()):
-            print 'frame_idx', frame_idx, frame
-            prim_region = channels.values()[0].get_region('primary')
-            for obj_idx, obj_id in enumerate(prim_region):
-                print 'obj_idx', obj_idx
-
-                for channel_idx, channel in enumerate(channels.values()):
-                    print 'channel_idx', channel_idx, channel.NAME
-
-                    img = channel.meta_image.image
-                    images[channel_idx, frame_idx, 0] = img.toArray(copy=False)
-
-#
-#                    for region_idx, region_id in enumerate(channel.region_names()):
-#                        print 'region_idx', region_idx
-#                        region = channel.get_region(region_id)
-#
-#                        print obj_id in region
-#                        print region.getFeatureNames()
-#                        print region[obj_id].aFeatures.shape
-#                        print region[obj_id].aFeatures.dtype
-#
-#                        for idx, value in enumerate(region[obj_id].aFeatures):
-#                            objects[frame_idx, obj_idx, channel_idx, region_idx, idx] = value
-
         f.close()
 
 
@@ -1043,15 +1078,19 @@ class CellAnalyzer(PropertyManager):
         return img_rgb
 
 
-    def classifyObjects(self, oPredictor):
-        channel_name = oPredictor.strChannelId
-        strRegionId = oPredictor.strRegionId
-        oChannel = self._channel_registry[channel_name]
-        oRegion = oChannel.get_region(strRegionId)
-        for iObjId, oObj in oRegion.iteritems():
-            iLabel, dctProb = oPredictor.predict(oObj.aFeatures.copy(), oRegion.getFeatureNames())
-            oObj.iLabel = iLabel
-            oObj.dctProb = dctProb
-            oObj.strClassName = oPredictor.dctClassNames[iLabel]
-            oObj.strHexColor = oPredictor.dctHexColors[oObj.strClassName]
+    def classify_objects(self, predictor):
+        channel_name = predictor.strChannelId
+        region_name = predictor.strRegionId
+        channel = self._channel_registry[channel_name]
+        region = channel.get_region(region_name)
+        for obj in region.itervalues():
+            label, probs = predictor.predict(obj.aFeatures,
+                                             region.getFeatureNames())
+            obj.iLabel = label
+            obj.dctProb = probs
+            obj.strClassName = predictor.dctClassNames[label]
+            obj.strHexColor = predictor.dctHexColors[obj.strClassName]
 
+        class_info = zip(predictor.lstClassLabels, predictor.lstClassNames)
+        self.time_holder.serialize_classification(channel_name, region_name,
+                                                  class_info)

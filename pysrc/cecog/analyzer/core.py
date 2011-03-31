@@ -23,9 +23,7 @@ __source__ = '$URL$'
 # standard library imports:
 #
 import sys, \
-       time, \
-       copy
-import cPickle as pickle
+       time
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -255,24 +253,32 @@ class PositionAnalyzer(object):
                             'DISABLED FOR NOW'))
                             #self.oSettings.bClearTrackingPath))
 
-        #max_frames = max(self.lstAnalysisFrames)
-        filename_netcdf = os.path.join(self._path_dump, '%s.nc4' % self.P)
-        filename_hdf5 = os.path.join(self._path_dump, '%s.hdf5' % self.P)
         self.oSettings.set_section('Output')
         channel_names = [PrimaryChannel.NAME]
         for name in [SecondaryChannel.NAME, TertiaryChannel.NAME]:
             if self.oSettings.get('Processing', '%s_processchannel' % name.lower()):
                 channel_names.append(name)
+        filename_hdf5 = os.path.join(self._path_dump, '%s.hdf5' % self.P)
+
+
+        hdf5_include_tracking=self.oSettings.get2('hdf5_include_tracking')
+        if not self.oSettings.get('Processing', 'tracking'):
+            hdf5_include_tracking = False
+        hdf5_include_events=self.oSettings.get2('hdf5_include_events')
+        if not self.oSettings.get('Processing', 'tracking'):
+            hdf5_include_events = False
+
+
         oTimeHolder = TimeHolder(self.P,
-                                 channel_names,
-                                 filename_netcdf, filename_hdf5,
+                                 channel_names, filename_hdf5,
                                  self._meta_data, self.oSettings,
-                                 create_nc=self.oSettings.get2('netcdf_create_file'),
-                                 reuse_nc=self.oSettings.get2('netcdf_reuse_file'),
                                  hdf5_create=self.oSettings.get2('hdf5_create_file'),
                                  hdf5_include_raw_images=self.oSettings.get2('hdf5_include_raw_images'),
                                  hdf5_include_label_images=self.oSettings.get2('hdf5_include_label_images'),
-                                 hdf5_include_features=self.oSettings.get2('hdf5_include_features')
+                                 hdf5_include_features=self.oSettings.get2('hdf5_include_features'),
+                                 hdf5_include_crack=self.oSettings.get2('hdf5_include_crack'),
+                                 hdf5_include_tracking=hdf5_include_tracking,
+                                 hdf5_include_events=hdf5_include_events,
                                  )
 
         self.oSettings.set_section('Tracking')
@@ -340,8 +346,8 @@ class PositionAnalyzer(object):
                                           strPathOut=strPathOutPositionStats,
                                           **tracker_options)
 
-            primary_channel_id = PrimaryChannel.NAME
-            self.oCellTracker.initTrackingAtTimepoint(primary_channel_id, 'primary')
+            self.oCellTracker.initTrackingAtTimepoint(PrimaryChannel.NAME,
+                                                      'primary')
 
         else:
             self.oCellTracker = None
@@ -386,10 +392,13 @@ class PositionAnalyzer(object):
         iNumberImages = self._analyzePosition(oCellAnalyzer)
         #except Exception as e:
         #    iNumberImages = 0
-        #    oTimeHolder.close_all()
+        #
         #    raise e
 
         if iNumberImages > 0:
+
+            oTimeHolder.serialize_region_hierarchy(PrimaryChannel.NAME,
+                                                   'primary')
 
             if self.oSettings.get('Output', 'export_object_counts'):
                 filename = os.path.join(strPathOutPositionStats, 'P%s__object_counts.txt' % self.P)
@@ -436,10 +445,14 @@ class PositionAnalyzer(object):
                         return 0
                     self._qthread.set_stage_info(stage_info)
 
+                oTimeHolder.serialize_tracking(self.oCellTracker)
+                self._oLogger.debug("--- serializing tracking ok")
+
                 self.oCellTracker.initVisitor()
                 self._oLogger.debug("--- visitor ok")
 
-                if self.oSettings.get('Processing', 'tracking_synchronize_trajectories'):
+                if self.oSettings.get('Processing',
+                                      'tracking_synchronize_trajectories'):
 
                     if not self._qthread is None:
                         if self._qthread.get_abort():
@@ -449,10 +462,11 @@ class PositionAnalyzer(object):
 
                     # clear the _tracking path
                     self.oCellTracker.analyze(self.export_features,
-                                              channelId=primary_channel_id,
+                                              channelId=PrimaryChannel.NAME,
                                               clear_path=True)
                     self._oLogger.debug("--- visitor analysis ok")
-
+                    oTimeHolder.serialize_events(self.oCellTracker)
+                    self._oLogger.debug("--- serializing events ok")
 
                 if self.oSettings.get('Output', 'export_track_data'):
                     self.oCellTracker.exportFullTracks()
@@ -463,9 +477,6 @@ class PositionAnalyzer(object):
                     stage_info.update({'max' : 1,
                                        'progress' : 1})
                     self._qthread.set_stage_info(stage_info)
-
-            #oTimeHolder.export_hdf5(os.path.join(self._path_dump,
-            #                                     '%s.hdf5' % self.P))
 
 
             # remove all features from all channels to free memory
@@ -605,6 +616,8 @@ class PositionAnalyzer(object):
             oInterval = oStopWatchPos.stop_interval() / iNumberImages
             self._oLogger.info("* %d image sets analyzed, %s / image set" %
                                (iNumberImages, oInterval.format(msec=True)))
+
+        oTimeHolder.close_all()
 
         # write an empty file to mark this position as finished
         strPathFinished = os.path.join(self.strPathLog, '_finished')
@@ -931,7 +944,7 @@ class PositionAnalyzer(object):
                                    ]
 
                 for infos in self.classifier_infos.itervalues():
-                    oCellAnalyzer.classifyObjects(infos['predictor'])
+                    oCellAnalyzer.classify_objects(infos['predictor'])
 
 
                 self.oSettings.set_section('General')
@@ -980,14 +993,9 @@ class PositionAnalyzer(object):
                     channel = oCellAnalyzer.get_channel(channel_name)
                     if channel.has_region(region_name):
                         region = channel.get_region(region_name)
-                        container = channel.get_container(region_name)
                         coords = {}
-                        for obj_id in region:
-                            coords[obj_id] = \
-                                [(pos[0]+region[obj_id].oRoi.upperLeft[0],
-                                  pos[1]+region[obj_id].oRoi.upperLeft[1])
-                                 for pos in
-                                 container.getCrackCoordinates(obj_id)]
+                        for obj_id, obj in region.iteritems():
+                            coords[obj_id] = obj.crack_contour
                         self._myhack.set_coords(coords)
 
                 # treat the raw images used for the gallery images differently
