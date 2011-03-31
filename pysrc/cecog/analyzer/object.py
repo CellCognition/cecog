@@ -28,6 +28,7 @@ import numpy
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
+from pdk.ordereddict import OrderedDict
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -71,6 +72,7 @@ class ImageObject(object):
         self.strHexColor = None
         self.iId = None
         self.aFeatures = None
+        self.crack_contour = None
 
 #    def __copy__(self):
 #        oImageObject = ImageObject()
@@ -90,7 +92,7 @@ class ImageObject(object):
         return x*x + y*y
 
 
-class ObjectHolder(dict):
+class ObjectHolder(OrderedDict):
 
     def __init__(self, strName):
         super(ObjectHolder, self).__init__()
@@ -102,8 +104,8 @@ class ObjectHolder(dict):
         self._lstFeatureNames = lstFeatureNames[:]
         self._dctNamesIdx.clear()
         # build mapping: featureName -> index
-        for iIdx, strFeatureName in enumerate(self._lstFeatureNames):
-            self._dctNamesIdx[strFeatureName] = iIdx
+        self._dctNamesIdx = dict([(n,i)
+                                  for i, n in enumerate(self._lstFeatureNames)])
 
     def getFeatureNames(self):
         return self._lstFeatureNames[:]
@@ -111,11 +113,11 @@ class ObjectHolder(dict):
     def hasFeatureName(self, name):
         return name in self._dctNamesIdx
 
-    def getFeaturesByNames(self, iObjId, lstFeatureNames):
+    def getFeaturesByNames(self, obj_id, lstFeatureNames):
         if lstFeatureNames is None:
             lstFeatureNames = self._lstFeatureNames
         aData = \
-        numpy.asarray([self[iObjId].aFeatures[self._dctNamesIdx[strFeatureName]]
+        numpy.asarray([self[obj_id].aFeatures[self._dctNamesIdx[strFeatureName]]
                        for strFeatureName in lstFeatureNames])
         return aData
 
