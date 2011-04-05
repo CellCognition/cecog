@@ -108,6 +108,7 @@ class AnalyzerMainWindow(QMainWindow):
         self._debug = False
         self._imagecontainer = None
         self._meta_data = None
+        self._browser = None
 
         self.setWindowTitle(self.TITLE+'[*]')
 
@@ -501,15 +502,19 @@ class AnalyzerMainWindow(QMainWindow):
             warning(None, 'Data structure not loaded',
                     'The input data structure was not loaded.\n'
                     'Please click "Load input data" in General.')
-        else:
+        elif self._browser is None:
             try:
                 browser = Browser(self._settings,
                                   self._imagecontainer)
                 browser.show()
                 browser.raise_()
                 browser.setFocus()
+                self._browser = browser
             except:
                 exception(None, 'Problem opening the browser')
+        else:
+            self._browser.show()
+            self._browser.raise_()
 
     def _on_load_input(self):
         try:
@@ -601,6 +606,7 @@ class AnalyzerMainWindow(QMainWindow):
             print plate_id
             print self._imagecontainer.get_meta_data(plate_id)
 
+        self._on_browser_open()
         self.set_modules_active(state=True)
 
     def set_modules_active(self, state=True):
@@ -626,6 +632,11 @@ class AnalyzerMainWindow(QMainWindow):
                 filename = str(dialog.selectedFiles()[0])
                 self._read_settings(filename)
                 self.set_modules_active(state=False)
+
+                if not self._browser is None:
+                    self._browser.close()
+                    del self._browser
+                    self._browser = None
 
     @pyqtSlot()
     def _on_file_save(self):
@@ -752,13 +763,13 @@ if __name__ == "__main__":
         show_html('_startup')
     else:
         #filename = '/Users/miheld/data/CellCognition/demo_data/cluster_test.conf'
-        #filename = '/Users/miheld/data/CellCognition/demo_data/H2bTub20x_settings.conf'
+        filename = '/Users/miheld/data/CellCognition/demo_data/H2bTub20x_settings.conf'
         #filename = '/Users/miheld/data/Fabrice/Analysis/test/fabrice_test.conf'
         #filename = '/Users/miheld/data/Peter/Analysis/t2/peter_t2.conf'
         #filename = '/Users/miheld/data/Katja/EMBL_H2bIbb.conf'
         #filename = '/Users/miheld/data/Fabrice/Analysis/test/fabrice_test.conf'
         #filename = '/Users/miheld/data/Peter/Analysis/t2/peter_t2.conf'
-        filename = '/Users/miheld/data/Katja/EMBL_H2bIbb.conf'
+        #filename = '/Users/miheld/data/Katja/EMBL_H2bIbb.conf'
         #filename = '/Users/miheld/data/CellCognition/Thomas/ANDRISETTINGS_local_HD.conf'
         if os.path.isfile(filename):
             main._read_settings(filename)
