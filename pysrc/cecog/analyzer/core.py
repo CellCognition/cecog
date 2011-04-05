@@ -269,7 +269,7 @@ class PositionAnalyzer(object):
                                  self._meta_data, self.oSettings,
                                  create_nc=self.oSettings.get2('netcdf_create_file'),
                                  reuse_nc=self.oSettings.get2('netcdf_reuse_file'),
-                                 hdf5_create=self.oSettings.get2('hdf5_create_file'),
+                                 hdf5_create=False,#self.oSettings.get2('hdf5_create_file'),
                                  hdf5_include_raw_images=self.oSettings.get2('hdf5_include_raw_images'),
                                  hdf5_include_label_images=self.oSettings.get2('hdf5_include_label_images'),
                                  hdf5_include_features=self.oSettings.get2('hdf5_include_features')
