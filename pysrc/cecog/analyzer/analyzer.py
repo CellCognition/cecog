@@ -133,13 +133,14 @@ class TimeHolder(OrderedDict):
     HDF5_GRP_RELATIONS = "/relations"
     HDF5_GRP_IMAGES = "/images"
     HDF5_GRP_FRAMES = "/frames"
+    HDF5_GRP_REGIONS = "regions"
 
     def __init__(self, P, channels, filename_hdf5, meta_data, settings,
-                 hdf5_create=True, hdf5_include_raw_images=True,
+                 hdf5_create=True, hdf5_compression='gzip',
+                 hdf5_include_raw_images=True,
                  hdf5_include_label_images=True, hdf5_include_features=True,
                  hdf5_include_classification=True, hdf5_include_crack=True,
-                 hdf5_compression='gzip', hdf5_include_tracking=True,
-                 hdf5_include_events=True):
+                 hdf5_include_tracking=True, hdf5_include_events=True):
         super(TimeHolder, self).__init__()
         self.P = P
         self._iCurrentT = None
@@ -187,23 +188,31 @@ class TimeHolder(OrderedDict):
         if self._hdf5_create:
             f = h5py.File(filename_hdf5, 'w')
             self._hdf5_file = f
-            f.create_group(self.HDF5_GRP_FRAMES)
-            f.create_group(self.HDF5_GRP_IMAGES)
+
+            if self._meta_data.has_timelapse:
+                f.create_group(self.HDF5_GRP_FRAMES)
+            else:
+                f.create_group(self.HDF5_GRP_REGIONS)
+
+            if self._hdf5_include_raw_images or self._hdf5_include_label_images:
+                f.create_group(self.HDF5_GRP_IMAGES)
             f.create_group(self.HDF5_GRP_RELATIONS)
             grp_def = f.create_group(self.HDF5_GRP_DEFINITIONS)
-            dtype = numpy.dtype([('frame', 'i'), ('timestamp_abs', 'i'),
-                                 ('timestamp_rel', 'i')])
-            nr_frames = len(frames)
-            var = grp_def.create_dataset('frames', (nr_frames,),
-                                         dtype,
-                                         chunks=(1,),
-                                         compression=self._hdf5_compression)
-            for frame in frames:
-                idx = self._frames_to_idx[frame]
-                coord = Coordinate(position=self.P, time=frame)
-                ts_abs = meta_data.get_timestamp_absolute(coord)
-                ts_rel = meta_data.get_timestamp_relative(coord)
-                var[idx] = (frame, ts_abs, ts_rel)
+
+            if self._meta_data.has_timelapse:
+                dtype = numpy.dtype([('frame', 'i'), ('timestamp_abs', 'i'),
+                                     ('timestamp_rel', 'i')])
+                nr_frames = len(frames)
+                var = grp_def.create_dataset('frames', (nr_frames,),
+                                             dtype,
+                                             chunks=(1,),
+                                             compression=self._hdf5_compression)
+                for frame in frames:
+                    idx = self._frames_to_idx[frame]
+                    coord = Coordinate(position=self.P, time=frame)
+                    ts_abs = meta_data.get_timestamp_absolute(coord)
+                    ts_rel = meta_data.get_timestamp_relative(coord)
+                    var[idx] = (frame, ts_abs, ts_rel)
 
             dtype = numpy.dtype([('channel_name', '|S50'),
                                  ('description', '|S100'),
@@ -322,6 +331,26 @@ class TimeHolder(OrderedDict):
             array = img.toArray(copy=False)
             var_images[channel_idx, frame_idx, 0] = array
 
+    def _get_regions_group(self):
+        f = self._hdf5_file
+        if self._meta_data.has_timelapse:
+            grp_frames = f[self.HDF5_GRP_FRAMES]
+            var_name = str(self._frames_to_idx[self._iCurrentT])
+            if not var_name in grp_frames:
+                grp_current = grp_frames.create_group(var_name)
+            else:
+                grp_current = grp_frames[var_name]
+        else:
+            grp_current = f
+
+        if not self.HDF5_GRP_REGIONS in grp_current:
+            grp_region = grp_current.create_group(self.HDF5_GRP_REGIONS)
+        else:
+            grp_region = grp_current[self.HDF5_GRP_REGIONS]
+
+        return grp_region
+
+
     def apply_features(self, channel):
         desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
                                          channel.strChannelId)
@@ -340,18 +369,13 @@ class TimeHolder(OrderedDict):
                 else:
                     grp_fnames = grp_def[var_name]
 
-            grp_frames = f[self.HDF5_GRP_FRAMES]
-            var_name = str(self._frames_to_idx[self._iCurrentT])
-            if not var_name in grp_frames:
-                grp_current_frame = grp_frames.create_group(var_name)
-            else:
-                grp_current_frame = grp_frames[var_name]
+            grp_region = self._get_regions_group()
 
             for region_name in channel.region_names():
                 idx = self._regions_to_idx[
                         self._convert_region_name(name, region_name)]
                 grp_name = str(idx)
-                grp_region = grp_current_frame.create_group(grp_name)
+                grp_current_region = grp_region.create_group(grp_name)
 
                 region = channel.get_region(region_name)
                 feature_names = region.getFeatureNames()
@@ -362,7 +386,8 @@ class TimeHolder(OrderedDict):
                                      ('upper_left', 'int32', 2),
                                      ('lower_right', 'int32', 2),
                                      ('center', 'int32', 2)])
-                var_objects = grp_region.create_dataset('objects',
+                var_objects = \
+                    grp_current_region.create_dataset('objects',
                                              (nr_objects,),
                                              dtype,
                                              chunks=(nr_objects,),
@@ -376,7 +401,7 @@ class TimeHolder(OrderedDict):
                                                       (nr_features,), dt)
                         var_fnames[:] = feature_names
                     var_features = \
-                        grp_region.create_dataset('features',
+                        grp_current_region.create_dataset('features',
                                             (nr_objects, nr_features),
                                             'float',
                                             chunks=(nr_objects, nr_features),
@@ -385,7 +410,7 @@ class TimeHolder(OrderedDict):
                 if self._hdf5_include_crack:
                     dt = h5py.new_vlen(str)
                     var_crack = \
-                        grp_region.create_dataset('crack_contours',
+                        grp_current_region.create_dataset('crack_contours',
                                             (nr_objects, ), dt,
                                             chunks=(1, ),
                                             compression=self._hdf5_compression)
@@ -519,8 +544,6 @@ class TimeHolder(OrderedDict):
                 var_dau[idx] = (d1_info[0], d2_idx, has_daughter,
                                 d1_info[1], d1_info[2])
 
-
-
     def serialize_region_hierarchy(self, channel_name, region_name):
 
         if self._hdf5_create:# and self._hdf5_include_tracking:
@@ -566,8 +589,6 @@ class TimeHolder(OrderedDict):
 
     def serialize_classification(self, channel_name, region_name, class_info):
         if self._hdf5_create and self._hdf5_include_classification:
-            grp = self._hdf5_file[self.HDF5_GRP_FRAMES]
-
             channel = self[self._iCurrentT][channel_name]
             region = channel.get_region(region_name)
             nr_classes = len(class_info)
@@ -588,18 +609,17 @@ class TimeHolder(OrderedDict):
                                                  dtype)
                 var[:] = class_info
 
-            var_name = str(self._frames_to_idx[self._iCurrentT])
-            grp_current_frame = grp[var_name]
-            grp_region = grp_current_frame[var_name_region]
+            grp_region = self._get_regions_group()
+            grp_current_region = grp_region[var_name_region]
             nr_objects = len(region)
             var_class_probs = \
-                grp_region.create_dataset('classification_probs',
+                grp_current_region.create_dataset('classification_probs',
                                     (nr_objects, nr_classes),
                                     'float',
                                     chunks=(nr_objects, nr_classes),
                                     compression=self._hdf5_compression)
             var_class = \
-                grp_region.create_dataset('classification',
+                grp_current_region.create_dataset('classification',
                                     (nr_objects, ),
                                     'int16',
                                     chunks=(nr_objects, ),
