@@ -30,6 +30,7 @@ __all__ = ['SectionOutput']
 from cecog.traits.config import _Section
 from cecog.gui.guitraits import (BooleanTrait,
                                  IntTrait,
+                                 SelectionTrait2,
                                  )
 
 #-------------------------------------------------------------------------------
@@ -97,5 +98,9 @@ class SectionOutput(_Section):
             BooleanTrait(False, label='Include tracking')),
         ('hdf5_include_events',
             BooleanTrait(False, label='Include events')),
+        ('hdf5_compression',
+            BooleanTrait(True, label='Enable gzip compression')),
+        ('hdf5_merge_positions',
+            BooleanTrait(True, label='Merge positions into one file')),
         ]),
       ]

@@ -79,5 +79,8 @@ class OutputFrame(_BaseFrame):
                         ('hdf5_include_classification', (4,0,1,1)),
                         ('hdf5_include_tracking', (5,0,1,1)),
                         ('hdf5_include_events', (6,0,1,1)),
+                        (None, (7,0,1,3)),
+                        ('hdf5_compression', (8,0,1,1)),
+                        ('hdf5_merge_positions', (9,0,1,1)),
                         ])
         self.add_expanding_spacer()

@@ -136,6 +136,9 @@ class PositionAnalyzer(object):
 
         self._meta_data = self._imagecontainer.get_meta_data(self.plate_id)
 
+        if not self._meta_data.has_timelapse:
+            self.oSettings.set('Processing', 'tracking', False)
+
         self._has_timelapse = len(self._meta_data.times) > 1
 
         self.lstAnalysisFrames = lstAnalysisFrames
@@ -267,7 +270,9 @@ class PositionAnalyzer(object):
         hdf5_include_events=self.oSettings.get2('hdf5_include_events')
         if not self.oSettings.get('Processing', 'tracking'):
             hdf5_include_events = False
-
+        hdf5_compression = None
+        if self.oSettings.get2('hdf5_compression'):
+            hdf5_compression = 'gzip'
 
         oTimeHolder = TimeHolder(self.P,
                                  channel_names, filename_hdf5,
@@ -277,8 +282,10 @@ class PositionAnalyzer(object):
                                  hdf5_include_label_images=self.oSettings.get2('hdf5_include_label_images'),
                                  hdf5_include_features=self.oSettings.get2('hdf5_include_features'),
                                  hdf5_include_crack=self.oSettings.get2('hdf5_include_crack'),
+                                 hdf5_include_classification=self.oSettings.get2('hdf5_include_classification'),
                                  hdf5_include_tracking=hdf5_include_tracking,
                                  hdf5_include_events=hdf5_include_events,
+                                 hdf5_compression=hdf5_compression,
                                  )
 
         self.oSettings.set_section('Tracking')
