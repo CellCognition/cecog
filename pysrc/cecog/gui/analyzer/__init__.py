@@ -477,11 +477,6 @@ class AnalzyerThread(_ProcessingThread):
         self._buffer = {}
 
     def _run(self):
-        for plate_id in self._imagecontainer.plates:
-            analyzer = AnalyzerCore(plate_id, self._settings,
-                                    self._imagecontainer)
-            analyzer.processPositions(self)
-
         learner = None
         for plate_id in self._imagecontainer.plates:
             analyzer = AnalyzerCore(plate_id, self._settings,
