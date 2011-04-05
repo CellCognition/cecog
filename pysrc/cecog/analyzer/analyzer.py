@@ -284,9 +284,9 @@ class TimeHolder(OrderedDict):
                 nr_labels = len(self._regions_to_idx)
                 var_labels = \
                     grp.create_dataset(var_name,
-                                       (nr_labels, meta.dim_t, z, w, h),
+                                       (nr_labels, meta.dim_t, z, h, w),
                                        'int32',
-                                       chunks=(1, 1, z, w, h),
+                                       chunks=(1, 1, z, h, w),
                                        compression=self._hdf5_compression)
 
             frame_idx = self._frames_to_idx[self._iCurrentT]
@@ -320,9 +320,9 @@ class TimeHolder(OrderedDict):
             else:
                 var_images = \
                     grp.create_dataset(var_name,
-                                       (nr_channels, t, z, w, h),
+                                       (nr_channels, t, z, h, w),
                                        'uint8',
-                                       chunks=(1, 1, 1, w, h),
+                                       chunks=(1, 1, 1, h, w),
                                        compression=self._hdf5_compression)
 
             frame_idx = self._frames_to_idx[self._iCurrentT]
