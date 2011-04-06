@@ -30,6 +30,7 @@ __all__ = ['SectionOutput']
 from cecog.traits.config import _Section
 from cecog.gui.guitraits import (BooleanTrait,
                                  IntTrait,
+                                 SelectionTrait2,
                                  )
 
 #-------------------------------------------------------------------------------
@@ -80,12 +81,6 @@ class SectionOutput(_Section):
         ('imagecontainer_reuse_file',
             BooleanTrait(True, label='Reuse ImageContainer')),
         ]),
-     ('netcdf4',
-       [('netcdf_create_file',
-            BooleanTrait(False, label='Create NetCDF4')),
-        ('netcdf_reuse_file',
-            BooleanTrait(False, label='Reuse NetCDF4 (experimental!)')),
-        ]),
      ('hdf5',
        [('hdf5_create_file',
             BooleanTrait(False, label='Create HDF5')),
@@ -93,7 +88,19 @@ class SectionOutput(_Section):
             BooleanTrait(False, label='Include raw images')),
         ('hdf5_include_label_images',
             BooleanTrait(False, label='Include label images')),
+        ('hdf5_include_crack',
+            BooleanTrait(False, label='Include crack contours')),
         ('hdf5_include_features',
             BooleanTrait(False, label='Include features')),
+        ('hdf5_include_classification',
+            BooleanTrait(False, label='Include classification')),
+        ('hdf5_include_tracking',
+            BooleanTrait(False, label='Include tracking')),
+        ('hdf5_include_events',
+            BooleanTrait(False, label='Include events')),
+        ('hdf5_compression',
+            BooleanTrait(True, label='Enable gzip compression')),
+        ('hdf5_merge_positions',
+            BooleanTrait(True, label='Merge positions into one file')),
         ]),
       ]

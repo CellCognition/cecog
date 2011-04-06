@@ -573,7 +573,7 @@ class AnalyzerMainWindow(QMainWindow):
             if not cancel:
                 self._load_image_container(infos, scan_plates)
 
-    def _load_image_container(self, plate_infos, scan_plates):
+    def _load_image_container(self, plate_infos, scan_plates=None):
         dlg = QProgressDialog(None, Qt.CustomizeWindowHint | Qt.WindowTitleHint)
         dlg.setLabelText('Please wait until the input structure is scanned\n'
                          'or the structure data loaded...')
@@ -764,7 +764,7 @@ if __name__ == "__main__":
     else:
         #filename = '/Users/miheld/data/CellCognition/demo_data/cluster_test.conf'
         filename = '/Users/miheld/data/CellCognition/demo_data/H2bTub20x_settings.conf'
-        #filename = '/Users/miheld/data/Fabrice/Analysis/test/fabrice_test.conf'
+        #filename = '/Users/miheld/data/Fabrice/Analysis/Dataset/fabrice_test.conf'
         #filename = '/Users/miheld/data/Peter/Analysis/t2/peter_t2.conf'
         #filename = '/Users/miheld/data/Katja/EMBL_H2bIbb.conf'
         #filename = '/Users/miheld/data/Fabrice/Analysis/test/fabrice_test.conf'
@@ -773,6 +773,7 @@ if __name__ == "__main__":
         #filename = '/Users/miheld/data/CellCognition/Thomas/ANDRISETTINGS_local_HD.conf'
         if os.path.isfile(filename):
             main._read_settings(filename)
+            main._load_image_container(list(ImageContainer.iter_check_plates(main._settings)))
         main._debug = True
 
     splash.finish(main)

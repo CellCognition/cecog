@@ -256,14 +256,14 @@ class Graph(object):
   Return a list of the node id's of all visible nodes in the graph.
         """
         nl=self.nodes.keys()
-        return nl[:]
+        return nl
 
     #-- Similar to above.
     def edge_list(self):
         """
         """
         el=self.edges.keys()
-        return el[:]
+        return el
 
     def number_of_hidden_edges(self):
         return len(self.hidden_edges)

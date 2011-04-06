@@ -20,7 +20,6 @@ __all__ = []
 # standard library imports:
 #
 import os
-#from collections import OrderedDict
 from pdk.ordereddict import OrderedDict
 
 #-------------------------------------------------------------------------------
@@ -47,7 +46,6 @@ from cecog.util.palette import (NucMedPalette,
                                 )
 from cecog.gui.util import numpy_to_qimage
 from cecog.gui.widgets.colorbutton import ColorButton
-from cecog import ccore
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -95,10 +93,6 @@ def blend_images_max(images):
 class ImageHelper:
 
     def __init__(self, image):
-        if image.width % 4 > 0:
-            image = ccore.subImage(image, ccore.Diff2D(0,0),
-                                   ccore.Diff2D(image.width - (image.width % 4),
-                                                image.height))
         self._image = image
         self.array = image.toArray(copy=False)
 

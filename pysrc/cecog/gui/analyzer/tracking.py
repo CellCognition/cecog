@@ -112,6 +112,7 @@ class TrackingFrame(_BaseFrame, _ProcessorMixin):
         settings.set2('collectsamples', False)
         sec_region = settings.get2('secondary_classification_regionname')
 
+        settings.set('Output', 'hdf5_create_file', False)
         show_ids = settings.get('Output', 'rendering_contours_showids')
         show_ids_class = settings.get('Output', 'rendering_class_showids')
 

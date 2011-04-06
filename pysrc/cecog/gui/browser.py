@@ -384,6 +384,7 @@ class Browser(QMainWindow):
         settings.set2('export_object_counts', False)
         settings.set2('export_object_details', False)
         settings.set2('export_track_data', False)
+        settings.set2('hdf5_create_file', False)
         settings.set_section('Classification')
         settings.set2('collectsamples', False)
         settings.set('General', 'rendering', {})
