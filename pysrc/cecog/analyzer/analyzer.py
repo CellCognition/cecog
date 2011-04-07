@@ -68,64 +68,6 @@ from cecog.io.imagecontainer import (Coordinate,
 #-------------------------------------------------------------------------------
 # classes:
 #
-class QualityControl(object):
-
-    FILENAME_TOKEN = ['prefix', 'P', 'C', 'R', 'A']
-
-    def __init__(self, strFilePath, meta_data, dctProcessInfos, dctPlotterInfos=None):
-        super(QualityControl, self).__init__()
-
-        self.dctProcessInfos = dctProcessInfos
-
-        if dctPlotterInfos is None:
-            dctPlotterInfos = {}
-        #self._oPlotter = RPlotter(**dctPlotterInfos)
-        #self._oPlate = oPlate
-        self._strFilePath = strFilePath
-        self._dctPositions = {}
-        self._iCurrentP = None
-        self._meta_data = meta_data
-
-    def initPosition(self, iP, origP):
-        self._iCurrentP = iP
-        self._origP = origP
-        self._dctPositions[iP] = {}
-
-    def processPosition(self, time_holder):
-        iP = self._iCurrentP
-        for strChannelId, dctInfo in self.dctProcessInfos.iteritems():
-
-            strRegionId = dctInfo['regionId']
-            strTask = dctInfo['task']
-
-            if strTask == 'proliferation':
-
-                oTable = newTable(['Frame', 'Timestamp', 'Cellcount'],
-                                  columnTypeCodes=['i','f','i'])
-
-                for iT, dctChannels in time_holder.iteritems():
-                    try:
-                        oRegion = dctChannels[strChannelId].get_region(strRegionId)
-                    except KeyError:
-                        iCellcount = 0
-                    else:
-                        iCellcount = len(oRegion)
-
-                    fTimestamp = self.__meta_data.getTimestamp(self._origP, iT)
-
-                    oTable.append({'Frame'     : iT,
-                                   'Timestamp' : fTimestamp,
-                                   'Cellcount' : iCellcount,
-                                   })
-
-                #self._plotProliferation()
-                exportTable(oTable,
-                            os.path.join(self._strFilePath,
-                                         "qc_P%s_C%s_R%s_A%s.tsv" % (iP, strChannelId, strRegionId, strTask)),
-                            fieldDelimiter='\t',
-                            writeRowLabels=False)
-
-
 
 class TimeHolder(OrderedDict):
 
@@ -136,6 +78,7 @@ class TimeHolder(OrderedDict):
     HDF5_GRP_REGIONS = "regions"
 
     def __init__(self, P, channels, filename_hdf5, meta_data, settings,
+                 analysis_frames,
                  hdf5_create=True, hdf5_compression='gzip',
                  hdf5_include_raw_images=True,
                  hdf5_include_label_images=True, hdf5_include_features=True,
@@ -147,6 +90,7 @@ class TimeHolder(OrderedDict):
         self.channels = channels
         self._meta_data = meta_data
         self._settings = settings
+        self._analysis_frames = analysis_frames
 
         self._hdf5_create = hdf5_create
         self._hdf5_include_raw_images = hdf5_include_raw_images
@@ -160,7 +104,7 @@ class TimeHolder(OrderedDict):
 
         self._logger = logging.getLogger(self.__class__.__name__)
         # frames get an index representation with the NC file, starting at 0
-        frames = sorted(list(meta_data.times))
+        frames = self._analysis_frames
         self._frames_to_idx = dict([(f,i) for i, f in enumerate(frames)])
         self._idx_to_frames = dict([(i,f) for i, f in enumerate(frames)])
 
@@ -275,6 +219,7 @@ class TimeHolder(OrderedDict):
             w = meta.real_image_width
             h = meta.real_image_height
             z = meta.dim_z
+            t = len(self._analysis_frames)
             f = self._hdf5_file
             var_name = 'labels'
             grp = f[self.HDF5_GRP_IMAGES]
@@ -284,9 +229,9 @@ class TimeHolder(OrderedDict):
                 nr_labels = len(self._regions_to_idx)
                 var_labels = \
                     grp.create_dataset(var_name,
-                                       (nr_labels, meta.dim_t, z, h, w),
+                                       (nr_labels, t, z, h, w),
                                        'int32',
-                                       chunks=(1, 1, z, h, w),
+                                       chunks=(1, 1, 1, h, w),
                                        compression=self._hdf5_compression)
 
             frame_idx = self._frames_to_idx[self._iCurrentT]
@@ -310,10 +255,10 @@ class TimeHolder(OrderedDict):
             w = meta.real_image_width
             h = meta.real_image_height
             z = meta.dim_z
-            t = meta.dim_t
+            t = len(self._analysis_frames)
             f = self._hdf5_file
             nr_channels = len(self._channel_info)
-            var_name = 'projected'
+            var_name = 'raw'
             grp = f[self.HDF5_GRP_IMAGES]
             if var_name in grp:
                 var_images = grp[var_name]
