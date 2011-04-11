@@ -70,7 +70,6 @@ TOKEN_Z = Token('Z', type_code='i', length='+', prefix='',
 # functions:
 #
 
-
 #------------------------------------------------------------------------------
 # classes:
 #
@@ -118,11 +117,10 @@ class AbstractImporter(object):
                            else multi_image
         self.has_multi_images = False
         self.timestamps_from_file = None
-        self.dimension_lookup = None
+        self.dimension_lookup = {}
         self.meta_data = MetaData()
-        self._dimension_items = None
 
-    def load(self):
+    def scan(self):
         self.dimension_lookup = self._build_dimension_lookup()
         self.meta_data.setup()
 
@@ -153,10 +151,10 @@ class AbstractImporter(object):
         channels = []
         zslices = []
 
-        self._dimension_items = self._get_dimension_items()
+        dimension_items = self._get_dimension_items()
         print("Get dimensions: %s" % s)
         s.reset()
-        for item in self._dimension_items:
+        for item in dimension_items:
 
             # import image info only once
             if not has_xy:
@@ -245,7 +243,7 @@ class AbstractImporter(object):
         self.meta_data.times = sorted(times)
         self.meta_data.channels = sorted(channels)
         self.meta_data.zslices = sorted(zslices)
-        self.meta_data.image_files = len(self._dimension_items)
+        self.meta_data.image_files = len(dimension_items)
 
         print('Build time: %s' % s)
         return lookup
@@ -253,29 +251,29 @@ class AbstractImporter(object):
     def _get_dimension_items(self):
         raise NotImplementedError()
 
-    def export_to_flatfile(self, filename):
-        has_timestamps = (len(self._dimension_items) > 0 and
-                          META_INFO_TIMESTAMP in self._dimension_items[0])
-        has_wellinfo = (len(self._dimension_items) > 0 and
-                        META_INFO_WELL in self._dimension_items[0])
-
-        column_names = ['path', 'filename',
-                        DIMENSION_NAME_POSITION,
-                        DIMENSION_NAME_TIME,
-                        DIMENSION_NAME_CHANNEL,
-                        DIMENSION_NAME_ZSLICE,
-                        ]
-        if has_timestamps:
-            column_names.append(META_INFO_TIMESTAMP)
-        if has_wellinfo:
-            column_names += [META_INFO_WELL, META_INFO_SUBWELL]
-
-        dimension_items = self._dimension_items[:]
-        for item in dimension_items:
-            item['path'] = ''
-            item['filename'] = item['filename'].replace('\\', '/')
-        write_table(filename, dimension_items, column_names,
-                    sep='\t', guess_compression=True)
+#    def export_to_flatfile(self, filename):
+#        has_timestamps = (len(self._dimension_items) > 0 and
+#                          META_INFO_TIMESTAMP in self._dimension_items[0])
+#        has_wellinfo = (len(self._dimension_items) > 0 and
+#                        META_INFO_WELL in self._dimension_items[0])
+#
+#        column_names = ['path', 'filename',
+#                        DIMENSION_NAME_POSITION,
+#                        DIMENSION_NAME_TIME,
+#                        DIMENSION_NAME_CHANNEL,
+#                        DIMENSION_NAME_ZSLICE,
+#                        ]
+#        if has_timestamps:
+#            column_names.append(META_INFO_TIMESTAMP)
+#        if has_wellinfo:
+#            column_names += [META_INFO_WELL, META_INFO_SUBWELL]
+#
+#        dimension_items = self._dimension_items[:]
+#        for item in dimension_items:
+#            item['path'] = ''
+#            item['filename'] = item['filename'].replace('\\', '/')
+#        write_table(filename, dimension_items, column_names,
+#                    sep='\t', guess_compression=True)
 
 
 

@@ -136,7 +136,7 @@ class PositionAnalyzer(object):
         # FIXME: a bit of a hack but the entire ImageContainer path is mapped to the current OS
         #self._imagecontainer.setPathMappingFunction(mapDirectory)
 
-        self._meta_data = self._imagecontainer.get_meta_data(self.plate_id)
+        self._meta_data = self._imagecontainer.get_meta_data()
 
         self._has_timelapse = len(self._meta_data.times) > 1
 
@@ -659,7 +659,8 @@ class PositionAnalyzer(object):
         # - loop over a sub-space with fixed position 'P' and reduced time and
         #   channel axis (in case more channels or time-points exist)
         # - define break-points at C and Z which will yield two nested generators
-        coordinate = Coordinate(plate=self.plate_id, position = self.origP,
+        coordinate = Coordinate(plate=self.plate_id,
+                                position = self.origP,
                                 time = self.lstAnalysisFrames,
                                 channel = self.tplChannelIds)
         for frame, iter_channel in self._imagecontainer(coordinate,
@@ -1037,6 +1038,7 @@ class AnalyzerCore(object):
 
         self.oSettings.set_section('General')
         self.strPathOut = imagecontainer.get_path_out(plate_id)
+        imagecontainer.set_plate(plate_id)
 
         bMkdirsOk = safe_mkdirs(self.strPathOut)
         self._oLogger.info("strPathOut '%s', ok: %s" % (self.strPathOut, bMkdirsOk))
@@ -1187,9 +1189,9 @@ class AnalyzerCore(object):
             self.lstPositions = self.lstPositions.split(',')
 
 
-        if self._imagecontainer is None:
-            self._imagecontainer = ImageContainer.from_settings(self.oSettings)
-        self._meta_data = self._imagecontainer.get_meta_data(self.plate_id)
+        #if self._imagecontainer is None:
+        #    self._imagecontainer = ImageContainer.from_settings(self.oSettings)
+        self._meta_data = self._imagecontainer.get_meta_data()
 
         # does a position selection exist?
         #print self.lstPositions, self._meta_data.setP

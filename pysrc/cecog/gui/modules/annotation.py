@@ -233,7 +233,8 @@ class Annotations(object):
                                      "annotation file '%s', but multiple "
                                      "plates found in dataset." % filename)
 
-                meta_data = imagecontainer.get_meta_data(plateid)
+                imagecontainer.set_plate(plateid)
+                meta_data = imagecontainer.get_meta_data()
                 time_points = meta_data.times
                 position = match.group('position')
                 time = int(match.group('time'))
@@ -285,7 +286,8 @@ class Annotations(object):
         for plateid in ann:
 
             # load plate specific meta data
-            meta_data = imagecontainer.get_meta_data(plateid)
+            imagecontainer.set_plate(plateid)
+            meta_data = imagecontainer.get_meta_data()
             time_points = meta_data.times
             # the reference time on which this file is based on
             min_time = time_points[0]
@@ -695,6 +697,9 @@ class AnnotationModule(Module):
                     information(None, "Classifier successfully loaded",
                                 "Class definitions and annotations "
                                 "successfully loaded from '%s'." % path)
+                finally:
+                    coord = self.browser.get_coordinate()
+                    self._imagecontainer.set_plate(coord.plate)
 
     def _on_saveas_classifier(self):
         learner = self._learner
@@ -727,6 +732,9 @@ class AnnotationModule(Module):
                     information(None, "Classifier successfully saved",
                                 "Class definitions and annotations "
                                 "successfully saved to '%s'." % path)
+                finally:
+                    coord = self.browser.get_coordinate()
+                    self._imagecontainer.set_plate(coord.plate)
 
     def _activate_objects_for_image(self, state, clear=False):
         '''
@@ -770,14 +778,14 @@ class AnnotationModule(Module):
         ann_table.setRowCount(len(per_class))
         for idx, data in enumerate(per_class):
             plate, position, time, nr_samples = data
-            m = self._imagecontainer.get_meta_data(plate)
+            #m = self._imagecontainer.get_meta_data(plate)
             # plateid in m.plateids
-            if position in m.positions and time in m.times:
-                flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
-                tooltip = 'Jump to coordinate to see the annotation.'
-            else:
-                flags = Qt.NoItemFlags
-                tooltip = 'Coordinate not found in this data set.'
+            #if position in m.positions and time in m.times:
+            flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
+            tooltip = 'Jump to coordinate to see the annotation.'
+            #else:
+            #    flags = Qt.NoItemFlags
+            #    tooltip = 'Coordinate not found in this data set.'
 
             # make plate information dependent whether the data set contains
             # multiple plates

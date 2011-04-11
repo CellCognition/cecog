@@ -32,7 +32,8 @@ import types, \
        logging, \
        sys, \
        os, \
-       time
+       time, \
+       copy
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -480,7 +481,7 @@ class AnalzyerThread(_ProcessingThread):
         learner = None
         for plate_id in self._imagecontainer.plates:
             analyzer = AnalyzerCore(plate_id, self._settings,
-                                    self._imagecontainer,
+                                    copy.copy(self._imagecontainer),
                                     learner=learner)
             learner = analyzer.processPositions(self)
         if not learner is None:

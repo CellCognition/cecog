@@ -129,11 +129,12 @@ class Browser(QMainWindow):
         splitter.setStretchFactor(1, 0)
         splitter.setSizes([-1, 80])
 
-        print self._imagecontainer.channels
         self.coordinate.plate = self._imagecontainer.plates[0]
+        self._imagecontainer.set_plate(self.coordinate.plate)
+
         self.coordinate.channel = self._imagecontainer.channels[0]
 
-        meta_data = self._imagecontainer.get_meta_data(self.coordinate.plate)
+        meta_data = self._imagecontainer.get_meta_data()
 
         layout = QGridLayout(frame)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -316,7 +317,7 @@ class Browser(QMainWindow):
         self.update_statusbar()
 
     def update_statusbar(self):
-        meta_data = self._imagecontainer.get_meta_data(self.coordinate.plate)
+        meta_data = self._imagecontainer.get_meta_data()
         if meta_data.has_timelapse:
             timestamp = meta_data.get_timestamp_relative(self.coordinate)
             time_info = ' | Frame: %d' % self.coordinate.time

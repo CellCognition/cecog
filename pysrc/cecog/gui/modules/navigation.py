@@ -251,7 +251,7 @@ class NavigationModule(Module):
     def initialize(self):
         self.coordinate_changed.connect(self.browser.on_coordinate_changed)
         coordinate = self.browser.get_coordinate()
-        meta_data = self._imagecontainer.get_meta_data(coordinate.plate)
+        meta_data = self._imagecontainer.get_meta_data()
         self._update_position_table(meta_data)
         self._update_info_frame(meta_data)
 
@@ -266,12 +266,12 @@ class NavigationModule(Module):
         """
         Set the browser coordinate to a coordinate and emit signal
         """
-        meta_data = self._imagecontainer.get_meta_data(coordinate.plate)
+        self._imagecontainer.set_plate(coordinate.plate)
+        meta_data = self._imagecontainer.get_meta_data()
         self._set_current_plate(coordinate.plate)
         self._update_position_table(meta_data)
         self._set_current_position(coordinate.position)
         if self._imagecontainer.has_timelapse:
-            meta_data = self._imagecontainer.get_meta_data(coordinate.plate)
             self._update_time_table(meta_data, coordinate)
             self._set_current_time(coordinate.time)
         self._update_info_frame(meta_data)
@@ -287,7 +287,7 @@ class NavigationModule(Module):
 
     def nav_to_prev_position(self):
         coordinate = self.browser.get_coordinate()
-        meta_data = self._imagecontainer.get_meta_data(coordinate.plate)
+        meta_data = self._imagecontainer.get_meta_data()
         pos = meta_data.positions
         idx = pos.index(coordinate.position)
         if idx > 0:
@@ -296,7 +296,7 @@ class NavigationModule(Module):
 
     def nav_to_next_position(self):
         coordinate = self.browser.get_coordinate()
-        meta_data = self._imagecontainer.get_meta_data(coordinate.plate)
+        meta_data = self._imagecontainer.get_meta_data()
         pos = meta_data.positions
         idx = pos.index(coordinate.position)
         if idx < len(pos)-1:
@@ -320,16 +320,14 @@ class NavigationModule(Module):
             self._set_plate(coordinate, True)
 
     def _get_closeby_position(self, coordinate_old, coordinate_new):
-        #md_old = self._imagecontainer.get_meta_data(coordinate_old.plate)
-        md_new = self._imagecontainer.get_meta_data(coordinate_new.plate)
+        md_new = self._imagecontainer.get_meta_data()
         if coordinate_old.position in md_new.positions:
             coordinate_new.position = coordinate_old.position
         else:
             coordinate_new.position = md_new.positions[0]
 
     def _get_closeby_time(self, coordinate_old, coordinate_new):
-        #md_old = self._imagecontainer.get_meta_data(coordinate_old.plate)
-        md_new = self._imagecontainer.get_meta_data(coordinate_new.plate)
+        md_new = self._imagecontainer.get_meta_data()
         if coordinate_old.time in md_new.times:
             coordinate_new.time = coordinate_old.time
         else:
@@ -345,14 +343,14 @@ class NavigationModule(Module):
     def _set_plate(self, coordinate_new, set_current=False):
         coordinate_old = self.browser.get_coordinate()
         plate = coordinate_new.plate
-        meta_data = self._imagecontainer.get_meta_data(plate)
+        self._imagecontainer.set_plate(plate)
+        meta_data = self._imagecontainer.get_meta_data()
         if set_current:
             self._set_current_plate(plate)
         self._update_position_table(meta_data)
         self._get_closeby_position(coordinate_old, coordinate_new)
         self._set_current_position(coordinate_new.position)
         if self._imagecontainer.has_timelapse:
-            meta_data = self._imagecontainer.get_meta_data(plate)
             self._update_time_table(meta_data, coordinate_new)
             self._get_closeby_time(coordinate_old, coordinate_new)
             self._set_current_time(coordinate_new.time)
@@ -370,7 +368,7 @@ class NavigationModule(Module):
         if set_current:
             self._set_current_position(coordinate.position)
         if self._imagecontainer.has_timelapse:
-            meta_data = self._imagecontainer.get_meta_data(coordinate.plate)
+            meta_data = self._imagecontainer.get_meta_data()
             self._update_time_table(meta_data, coordinate)
             self._set_current_time(coordinate.time)
         self.coordinate_changed.emit(coordinate)

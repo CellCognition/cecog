@@ -569,6 +569,15 @@ class AnalyzerMainWindow(QMainWindow):
                     else:
                         scan_plates = dict((info[0], True) for info in infos)
             else:
+                has_multiple = self._settings.get(SECTION_NAME_GENERAL,
+                                                  "has_multiple_plates")
+                if not question(None, "No structure data found",
+                                "Are you sure to scan %s?\n\nThis can take "
+                                "several minutes depending on the number of "
+                                "images." %
+                                ("%d plates" % len(infos) if has_multiple else
+                                 "one plate")):
+                    cancel = True
                 scan_plates = dict((info[0], True) for info in infos)
             if not cancel:
                 self._load_image_container(infos, scan_plates)
@@ -596,6 +605,9 @@ class AnalyzerMainWindow(QMainWindow):
         dlg.reset()
 
         self._imagecontainer = thread.imagecontainer
+        plate = self._imagecontainer.plates[0]
+        self._imagecontainer.set_plate(plate)
+        self._imagecontainer.check_dimensions()
         channels = self._imagecontainer.channels
         for prefix in ['primary', 'secondary', 'tertiary']:
             trait = self._settings.get_trait(SECTION_NAME_OBJECTDETECTION,
@@ -604,9 +616,9 @@ class AnalyzerMainWindow(QMainWindow):
             self._tabs[1].get_widget('%s_channelid' % prefix).update()
         for plate_id in self._imagecontainer.plates:
             print plate_id
-            print self._imagecontainer.get_meta_data(plate_id)
+            #print self._imagecontainer.get_meta_data(plate_id)
 
-        self._on_browser_open()
+        #self._on_browser_open()
         self.set_modules_active(state=True)
 
     def set_modules_active(self, state=True):
@@ -763,7 +775,8 @@ if __name__ == "__main__":
         show_html('_startup')
     else:
         #filename = '/Users/miheld/data/CellCognition/demo_data/cluster_test.conf'
-        filename = '/Users/miheld/data/CellCognition/demo_data/H2bTub20x_settings.conf'
+        #filename = '/Users/miheld/data/CellCognition/demo_data/H2bTub20x_settings.conf'
+        filename = '/Users/miheld/data/for_michael/cecog_data/screen/settings/screen_settings.conf'
         #filename = '/Users/miheld/data/Fabrice/Analysis/test/fabrice_test.conf'
         #filename = '/Users/miheld/data/Peter/Analysis/t2/peter_t2.conf'
         #filename = '/Users/miheld/data/Katja/EMBL_H2bIbb.conf'
