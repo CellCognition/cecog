@@ -312,7 +312,6 @@ class Browser(QMainWindow):
 
     def set_image(self, image_dict):
         widget = self._module_manager.get_widget(DisplayModule.NAME)
-        print image_dict
         widget.set_image_dict(image_dict)
         self.update_statusbar()
 
