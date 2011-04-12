@@ -517,70 +517,80 @@ class AnalyzerMainWindow(QMainWindow):
             self._browser.raise_()
 
     def _on_load_input(self):
-        try:
-            infos = list(ImageContainer.iter_check_plates(self._settings))
-        except:
-            exception(None, "Error scanning input structure")
+        txt = "Error scanning input structure"
+        path_in = self._settings.get(SECTION_NAME_GENERAL, 'pathin')
+        if path_in == '':
+            critical(None, txt, "Image path must be defined.")
+        elif not os.path.isdir(path_in):
+            critical(None, txt, "Image path '%s' not found." % path_in)
         else:
-            found_any = numpy.any([not info[3] is None for info in infos])
-            cancel = False
-            if found_any:
-                found_plates = [info[0] for info in infos
-                                if not info[3] is None]
-                missing_plates = [info[0] for info in infos
-                                if info[3] is None]
-                has_missing = len(missing_plates) > 0
-                txt = '%s plates were already scanned.\nDo you want ' \
-                      'to rescan the file structure(s)? ' \
-                      'This can take several minutes.' % \
-                      ('Some' if has_missing else 'All')
-                title = 'Rescan input structure?'
-
-                box = QMessageBox(QMessageBox.Question, title, title,
-                                  QMessageBox.Cancel, None, Qt.Sheet)
-                #box.setWindowModality(Qt.WindowModal)
-                box.setInformativeText(txt)
-                box.setDetailedText('Plates with scanned structure: \n%s\n'
-                                    '\nPlates without scanned structure: \n%s' %
-                                    ('\n'.join(found_plates),
-                                     '\n'.join(missing_plates)))
-
-                if not has_missing:
-                    btn1 = QPushButton('No', box)
-                    box.addButton(btn1, QMessageBox.NoRole)
-                elif len(found_plates) > 0:
-                    btn1 = QPushButton('Rescan missing', box)
-                    box.addButton(btn1, QMessageBox.YesRole)
-                else:
-                    btn1 = None
-
-                btn2 = QPushButton('Rescan all', box)
-                box.addButton(btn2, QMessageBox.YesRole)
-
-                if box.exec_() == QMessageBox.Cancel:
-                    cancel = True
-                else:
-                    btn = box.clickedButton()
-                    if btn == btn1:
-                        if has_missing:
-                            scan_plates = dict((id, True) for id in missing_plates)
-                        else:
-                            scan_plates = dict((id, False) for id in found_plates)
-                    else:
-                        scan_plates = dict((info[0], True) for info in infos)
+            try:
+                infos = list(ImageContainer.iter_check_plates(self._settings))
+            except:
+                exception(None, txt)
             else:
-                has_multiple = self._settings.get(SECTION_NAME_GENERAL,
-                                                  "has_multiple_plates")
-                if not question(None, "No structure data found",
-                                "Are you sure to scan %s?\n\nThis can take "
-                                "several minutes depending on the number of "
-                                "images." %
-                                ("%d plates" % len(infos) if has_multiple else
-                                 "one plate")):
-                    cancel = True
-                scan_plates = dict((info[0], True) for info in infos)
-            if not cancel:
-                self._load_image_container(infos, scan_plates)
+                found_any = numpy.any([not info[3] is None for info in infos])
+                cancel = False
+                if found_any:
+                    found_plates = [info[0] for info in infos
+                                    if not info[3] is None]
+                    missing_plates = [info[0] for info in infos
+                                    if info[3] is None]
+                    has_missing = len(missing_plates) > 0
+                    txt = '%s plates were already scanned.\nDo you want ' \
+                          'to rescan the file structure(s)? ' \
+                          'This can take several minutes.' % \
+                          ('Some' if has_missing else 'All')
+                    title = 'Rescan input structure?'
+
+                    box = QMessageBox(QMessageBox.Question, title, title,
+                                      QMessageBox.Cancel, None, Qt.Sheet)
+                    #box.setWindowModality(Qt.WindowModal)
+                    box.setInformativeText(txt)
+                    box.setDetailedText('Plates with scanned structure: \n%s\n'
+                                        '\nPlates without scanned structure: '
+                                        '\n%s' %
+                                        ('\n'.join(found_plates),
+                                         '\n'.join(missing_plates)))
+                    if not has_missing:
+                        btn1 = QPushButton('No', box)
+                        box.addButton(btn1, QMessageBox.NoRole)
+                    elif len(found_plates) > 0:
+                        btn1 = QPushButton('Rescan missing', box)
+                        box.addButton(btn1, QMessageBox.YesRole)
+                    else:
+                        btn1 = None
+
+                    btn2 = QPushButton('Rescan all', box)
+                    box.addButton(btn2, QMessageBox.YesRole)
+
+                    if box.exec_() == QMessageBox.Cancel:
+                        cancel = True
+                    else:
+                        btn = box.clickedButton()
+                        if btn == btn1:
+                            if has_missing:
+                                scan_plates = dict((id, True)
+                                                   for id in missing_plates)
+                            else:
+                                scan_plates = dict((id, False)
+                                                   for id in found_plates)
+                        else:
+                            scan_plates = dict((info[0], True)
+                                               for info in infos)
+                else:
+                    has_multiple = self._settings.get(SECTION_NAME_GENERAL,
+                                                      "has_multiple_plates")
+                    if not question(None, "No structure data found",
+                                    "Are you sure to scan %s?\n\nThis can take "
+                                    "several minutes depending on the number of"
+                                    " images." %
+                                    ("%d plates" % len(infos) if has_multiple
+                                     else "one plate")):
+                        cancel = True
+                    scan_plates = dict((info[0], True) for info in infos)
+                if not cancel:
+                    self._load_image_container(infos, scan_plates)
 
     def _load_image_container(self, plate_infos, scan_plates):
         dlg = QProgressDialog(None, Qt.Popup)
@@ -597,33 +607,35 @@ class AnalyzerMainWindow(QMainWindow):
         fct = lambda x,y : lambda : self._on_load_finished(x,y)
         thread.finished.connect(fct(dlg, thread))
         thread.start()
-        #thread.setPriority(QThread.LowestPriority)
-        #if wait:
-        #thread.wait()
 
     def _on_load_finished(self, dlg, thread):
         dlg.reset()
 
+        # close and delete the current browser instance
         if not self._browser is None:
             self._browser.close()
             del self._browser
             self._browser = None
 
-        self._imagecontainer = thread.imagecontainer
-        plate = self._imagecontainer.plates[0]
-        self._imagecontainer.set_plate(plate)
-        self._imagecontainer.check_dimensions()
-        channels = self._imagecontainer.channels
-        for prefix in ['primary', 'secondary', 'tertiary']:
-            trait = self._settings.get_trait(SECTION_NAME_OBJECTDETECTION,
-                                             '%s_channelid' % prefix)
-            trait.set_list_data(channels)
-            self._tabs[1].get_widget('%s_channelid' % prefix).update()
-        for plate_id in self._imagecontainer.plates:
-            print plate_id
-            #print self._imagecontainer.get_meta_data(plate_id)
+        imagecontainer = thread.imagecontainer
+        if len(imagecontainer.plates) > 0:
+            self._imagecontainer = imagecontainer
+            plate = self._imagecontainer.plates[0]
+            self._imagecontainer.set_plate(plate)
+            self._imagecontainer.check_dimensions()
+            channels = self._imagecontainer.channels
+            for prefix in ['primary', 'secondary', 'tertiary']:
+                trait = self._settings.get_trait(SECTION_NAME_OBJECTDETECTION,
+                                                 '%s_channelid' % prefix)
+                trait.set_list_data(channels)
+                self._tabs[1].get_widget('%s_channelid' % prefix).update()
 
-        self.set_modules_active(state=True)
+            self.set_modules_active(state=True)
+        else:
+            critical(None, "No valid image data found",
+                     "The naming schema provided might not fit your image data"
+                     "or the coordinate file is not correct.\n\nPlease modify "
+                     "the values and scan the structure again.")
 
     def set_modules_active(self, state=True):
         for name, (button, widget) in self._tab_lookup.iteritems():
@@ -649,6 +661,7 @@ class AnalyzerMainWindow(QMainWindow):
                 self._read_settings(filename)
                 self.set_modules_active(state=False)
 
+                # close and delete the current browser instance
                 if not self._browser is None:
                     self._browser.close()
                     del self._browser

@@ -532,6 +532,7 @@ class ImageContainer(object):
             if filename is None:
                 scan_plate = True
 
+            # (re)scan the file structure
             if scan_plate:
                 if settings.get2('image_import_namingschema'):
                     config_parser = NAMING_SCHEMAS
@@ -543,13 +544,20 @@ class ImageContainer(object):
                     filename = settings.get2('structure_filename')
                     importer = FlatFileImporter(path_plate_in, filename)
 
+                # scan the file structure
                 importer.scan()
-                filename = self._get_structure_filename(settings, plate_id,
-                                                        path_plate_in,
-                                                        path_plate_out)
-                importer_pickle(importer, filename)
 
-            self.register_plate(plate_id, path_plate_out, filename)
+                # serialize importer and register plate only upon successful
+                # scan
+                if importer.is_valid:
+                    filename = self._get_structure_filename(settings, plate_id,
+                                                            path_plate_in,
+                                                            path_plate_out)
+
+                    importer_pickle(importer, filename)
+                    self.register_plate(plate_id, path_plate_out, filename)
+            else:
+                self.register_plate(plate_id, path_plate_out, filename)
 
             yield info
 

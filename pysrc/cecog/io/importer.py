@@ -124,6 +124,14 @@ class AbstractImporter(object):
         self.dimension_lookup = self._build_dimension_lookup()
         self.meta_data.setup()
 
+    @property
+    def is_valid(self):
+        """
+        Return the import success. For now only the number of identified files
+        is checked.
+        """
+        return self.meta_data.image_files > 0
+
     def get_image(self, coordinate):
         index = 0
         zslice = coordinate.zslice
