@@ -402,13 +402,15 @@ class ImageContainer(object):
 
     def __init__(self):
         self._plates = OrderedDict()
+        self._path_in = OrderedDict()
         self._path_out = OrderedDict()
         self._importer = None
         self.current_plate = None
         self.has_timelapse = None
 
-    def register_plate(self, plate_id, path_out, filename):
+    def register_plate(self, plate_id, path_in, path_out, filename):
         self._plates[plate_id] = filename
+        self._path_in[plate_id] = path_in
         self._path_out[plate_id] = path_out
         # FIXME: check some dimensions!!!
 
@@ -438,6 +440,7 @@ class ImageContainer(object):
             self.current_plate = plate
             filename = self._plates[plate]
             self._importer = importer_unpickle(filename)
+            self._importer.path = self._path_in[plate]
 
     def check_dimensions(self):
         self.has_timelapse = self._importer.meta_data.has_timelapse
@@ -555,9 +558,11 @@ class ImageContainer(object):
                                                             path_plate_out)
 
                     importer_pickle(importer, filename)
-                    self.register_plate(plate_id, path_plate_out, filename)
+                    self.register_plate(plate_id, path_plate_in,
+                                        path_plate_out, filename)
             else:
-                self.register_plate(plate_id, path_plate_out, filename)
+                self.register_plate(plate_id, path_plate_in,
+                                    path_plate_out, filename)
 
             yield info
 

@@ -147,6 +147,7 @@ class AbstractImporter(object):
                                             [coordinate.channel] \
                                             [zslice]
         filename_abs = os.path.join(self.path, filename_rel)
+        filename_abs = filename_abs.replace('\\', '/')
         if self.meta_data.pixel_type == UINT8:
             image = ccore.readImage(filename_abs, index)
         elif self.meta_data.pixel_type == UINT16:
