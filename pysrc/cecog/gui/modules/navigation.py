@@ -343,7 +343,16 @@ class NavigationModule(Module):
     def _set_plate(self, coordinate_new, set_current=False):
         coordinate_old = self.browser.get_coordinate()
         plate = coordinate_new.plate
+
+        progress = QProgressDialog(None, Qt.Tool)
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setCancelButton(None)
+        progress.setLabelText("Please wait until the plate is loaded.")
+        progress.setMinimumDuration(2000)
+        progress.setRange(0,0)
         self._imagecontainer.set_plate(plate)
+        progress.setValue(1)
+
         meta_data = self._imagecontainer.get_meta_data()
         if set_current:
             self._set_current_plate(plate)
