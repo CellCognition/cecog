@@ -517,7 +517,7 @@ class AnalyzerMainWindow(QMainWindow):
             self._browser.raise_()
 
     def _on_load_input(self):
-        txt = "Error scanning input structure"
+        txt = "Error scanning image structure"
         path_in = self._settings.get(SECTION_NAME_GENERAL, 'pathin')
         if path_in == '':
             critical(None, txt, "Image path must be defined.")
@@ -597,10 +597,9 @@ class AnalyzerMainWindow(QMainWindow):
         dlg.setWindowModality(Qt.WindowModal)
         dlg.setLabelText('Please wait until the input structure is scanned\n'
                          'or the structure data loaded...')
-        dlg.setAutoClose(True)
         dlg.setCancelButton(None)
-        dlg.setRange(0,len(plate_infos))
-        dlg.show()
+        dlg.setRange(0,0)# if len(plate_infos) == 1 else len(plate_infos))
+        #dlg.show()
 
         thread = ImageContainerThread(self._settings, scan_plates)
         thread.next_plate.connect(lambda x: dlg.setValue(x))
@@ -618,7 +617,7 @@ class AnalyzerMainWindow(QMainWindow):
             self._browser = None
 
         imagecontainer = thread.imagecontainer
-        if len(imagecontainer.plates) > 0:
+        if len(imagecontainer.plates) > 0 and thread.error_message is None:
             self._imagecontainer = imagecontainer
             plate = self._imagecontainer.plates[0]
             self._imagecontainer.set_plate(plate)
@@ -635,7 +634,8 @@ class AnalyzerMainWindow(QMainWindow):
             critical(None, "No valid image data found",
                      "The naming schema provided might not fit your image data"
                      "or the coordinate file is not correct.\n\nPlease modify "
-                     "the values and scan the structure again.")
+                     "the values and scan the structure again.",
+                     detail = thread.error_message)
 
     def set_modules_active(self, state=True):
         for name, (button, widget) in self._tab_lookup.iteritems():
@@ -713,13 +713,17 @@ class ImageContainerThread(QThread):
         self._settings = settings
         self.scan_plates = scan_plates
         self.imagecontainer = None
+        self.error_message = None
 
     def run(self):
         self.imagecontainer = ImageContainer()
         iter = self.imagecontainer.iter_import_from_settings(self._settings,
                                                              self.scan_plates)
-        for idx, info in enumerate(iter):
-            self.next_plate.emit(idx+1)
+        try:
+            for idx, info in enumerate(iter):
+                self.next_plate.emit(idx+1)
+        except Exception as e:
+            self.error_message = e.message
 
 
 def handle_exception(exc_type, exc_value, exc_traceback):
