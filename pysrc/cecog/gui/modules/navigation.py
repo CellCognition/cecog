@@ -213,7 +213,8 @@ class NavigationModule(Module):
                 if not well is None:
                     table.setItem(idx, column, QTableWidgetItem(well))
                 if not subwell is None:
-                    table.setItem(idx, column+1, QTableWidgetItem(subwell))
+                    table.setItem(idx, column+1,
+                                  QTableWidgetItem("%02d" % subwell))
 
         table.resizeColumnsToContents()
         table.resizeRowsToContents()

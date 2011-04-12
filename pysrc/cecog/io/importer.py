@@ -73,6 +73,9 @@ TOKEN_Z = Token('Z', type_code='i', length='+', prefix='',
 #------------------------------------------------------------------------------
 # classes:
 #
+class MetaDataError(ValueError):
+    pass
+
 class DefaultCoordinates(object):
     def __init__(self):
         self.default_values = {
@@ -438,6 +441,13 @@ class IniFileImporter(AbstractImporter):
      - NOTE: using timestamps from files can be dangerous, because the
              information can be lost during file copy. nevertheless this is for
              TIFF stacks often the only source of this information.
+
+    reformat_well = True
+     - boolean value defining whether the well information is reformatted to the
+       canonical form "[A-Z]\d{2}"
+     - default: True
+     - example: a1 -> A01
+                P5 -> P05
     '''
 
     def __init__(self, path, config_parser, section_name):
@@ -467,10 +477,21 @@ class IniFileImporter(AbstractImporter):
                 self.config_parser.get(self.section_name,
                                        'timestamps_from_file')
 
+        if self.config_parser.has_option(self.section_name,
+                                         'reformat_well'):
+            self.reformat_well = \
+                eval(self.config_parser.get(self.section_name,
+                                            'reformat_well'))
+        else:
+            self.reformat_well = True
+
     def _get_dimension_items(self):
         token_list = []
         extensions = self.config_parser.get(self.section_name,
                                             'file_extensions').split()
+
+        re_subwell_str = r"[a-zA-Z]\d{1,2}"
+        re_subwell = re.compile(re_subwell_str)
 
         for dirpath, dirnames, filenames in os.walk(self.path):
             # prune filenames by file extension
@@ -508,20 +529,41 @@ class IniFileImporter(AbstractImporter):
                         result = search2.groupdict()
 
                         # use path data if not defined for the filename
-                        for key in [DIMENSION_NAME_POSITION, META_INFO_WELL, META_INFO_SUBWELL]:
+                        for key in [DIMENSION_NAME_POSITION, META_INFO_WELL,
+                                    META_INFO_SUBWELL]:
                             if not key in result and key in result_path:
                                 result[key] = result_path[key]
 
+                        if META_INFO_WELL in result:
+
+                            # reformat well information
+                            if self.reformat_well:
+                                well = result[META_INFO_WELL]
+                                if re_subwell.match(well) is None:
+                                    raise MetaDataError("Well data '%s' not "
+                                                        "valid.\nValid are '%s'"
+                                                        % (re_subwell_str, well))
+                                result[META_INFO_WELL] = "%s%02d" % \
+                                    (well[0].upper(), int(well[1:]))
+
+                            # subwell is converted to int (default 1)
+                            if not META_INFO_SUBWELL in result:
+                                result[META_INFO_SUBWELL] = 1
+                            else:
+                                result[META_INFO_SUBWELL] = \
+                                    int(result[META_INFO_SUBWELL])
+
+                        # create position value if not found
                         if not DIMENSION_NAME_POSITION in result:
                             if META_INFO_WELL in result:
-                                position = result[META_INFO_WELL]
-                                if META_INFO_SUBWELL in result:
-                                    position += '_' + result[META_INFO_SUBWELL]
-                                result[DIMENSION_NAME_POSITION] = position
+                                result[DIMENSION_NAME_POSITION] = '%s_%02d' % \
+                                    (result[META_INFO_WELL],
+                                     result[META_INFO_SUBWELL])
                             else:
-                                raise ValueError("Either 'position' or 'well' "
-                                                 "information required in "
-                                                 "regular expression.")
+                                raise MetaDataError("Either 'position' or "
+                                                    "'well' information "
+                                                    "required in naming schema."
+                                                    )
 
                         result['filename'] = filename_rel
                         token_list.append(result)
