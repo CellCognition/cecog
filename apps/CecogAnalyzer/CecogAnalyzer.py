@@ -599,7 +599,7 @@ class AnalyzerMainWindow(QMainWindow):
                          'or the structure data loaded...')
         dlg.setCancelButton(None)
         dlg.setRange(0,0)# if len(plate_infos) == 1 else len(plate_infos))
-        #dlg.show()
+        dlg.show()
 
         thread = ImageContainerThread(self._settings, scan_plates)
         thread.next_plate.connect(lambda x: dlg.setValue(x))

@@ -347,12 +347,13 @@ class NavigationModule(Module):
 
         progress = QProgressDialog(None, Qt.Popup)
         progress.setWindowModality(Qt.WindowModal)
-        progress.setCancelButton(None)
         progress.setLabelText("Please wait until the plate is loaded.")
-        progress.setMinimumDuration(2000)
+        progress.setCancelButton(None)
+        progress.setMinimumDuration(1000)
         progress.setRange(0,0)
+        progress.show()
         self._imagecontainer.set_plate(plate)
-        progress.setValue(1)
+        progress.reset()
 
         meta_data = self._imagecontainer.get_meta_data()
         if set_current:
