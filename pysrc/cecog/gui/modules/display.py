@@ -530,8 +530,6 @@ class DisplayModule(Module):
         display = DisplayFrame(browser, frame_display)
         layout_display.addWidget(display)
 
-
-
     def import_palettes(self):
         palettes = OrderedDict()
 
@@ -550,8 +548,10 @@ class DisplayModule(Module):
         return palettes
 
     def set_image_dict(self, image_dict):
+        self._image_dict.clear()
         for name, image in image_dict.iteritems():
-            self._image_dict[name] = ImageHelper(image)
+            if not name in self._image_dict:
+                self._image_dict[name] = ImageHelper(image)
         self._display_images.clear()
         self._rgb_images.clear()
         self.update_display()
