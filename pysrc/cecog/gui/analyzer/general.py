@@ -79,7 +79,7 @@ class GeneralFrame(_BaseFrame):
 
         layout = QHBoxLayout(self._control)
         layout.addStretch()
-        btn = QPushButton('Load input data...', self._control)
+        btn = QPushButton('Load image data', self._control)
         layout.addWidget(btn)
         btn.clicked.connect(self.parent().main_window._on_load_input)
         btn = QPushButton('Load settings...', self._control)

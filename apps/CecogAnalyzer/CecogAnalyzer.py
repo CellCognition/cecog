@@ -501,7 +501,7 @@ class AnalyzerMainWindow(QMainWindow):
         if self._imagecontainer is None:
             warning(None, 'Data structure not loaded',
                     'The input data structure was not loaded.\n'
-                    'Please click "Load input data" in General.')
+                    'Please click "Load image data" in General.')
         elif self._browser is None:
             try:
                 browser = Browser(self._settings,
@@ -583,10 +583,10 @@ class AnalyzerMainWindow(QMainWindow):
                 self._load_image_container(infos, scan_plates)
 
     def _load_image_container(self, plate_infos, scan_plates):
-        dlg = QProgressDialog(None, Qt.CustomizeWindowHint | Qt.WindowTitleHint)
+        dlg = QProgressDialog(None, Qt.Popup)
+        dlg.setWindowModality(Qt.WindowModal)
         dlg.setLabelText('Please wait until the input structure is scanned\n'
                          'or the structure data loaded...')
-        dlg.setWindowModality(Qt.WindowModal)
         dlg.setAutoClose(True)
         dlg.setCancelButton(None)
         dlg.setRange(0,len(plate_infos))
@@ -604,6 +604,11 @@ class AnalyzerMainWindow(QMainWindow):
     def _on_load_finished(self, dlg, thread):
         dlg.reset()
 
+        if not self._browser is None:
+            self._browser.close()
+            del self._browser
+            self._browser = None
+
         self._imagecontainer = thread.imagecontainer
         plate = self._imagecontainer.plates[0]
         self._imagecontainer.set_plate(plate)
@@ -618,7 +623,6 @@ class AnalyzerMainWindow(QMainWindow):
             print plate_id
             #print self._imagecontainer.get_meta_data(plate_id)
 
-        #self._on_browser_open()
         self.set_modules_active(state=True)
 
     def set_modules_active(self, state=True):
