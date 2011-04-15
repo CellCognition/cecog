@@ -277,6 +277,8 @@ class ClusterDisplay(QGroupBox):
         results = []
         targets = [(('General', 'pathin'), []),
                    (('General', 'pathout'),[]),
+                   (('General', 'structure_file_extra_path_name'),
+                    [('General', 'structure_file_extra_path')]),
                    (('Classification', 'primary_classification_envpath'),
                     [('Processing', 'primary_classification')]),
                    (('Classification', 'secondary_classification_envpath'),
