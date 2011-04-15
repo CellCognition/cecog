@@ -42,7 +42,10 @@ import numpy
 # cecog imports:
 #
 from cecog import VERSION
-from cecog.analyzer import R_LIBRARIES
+from cecog.analyzer import (R_LIBRARIES,
+                            TRACKING_DURATION_UNITS_TIMELAPSE,
+                            TRACKING_DURATION_UNITS_DEFAULT,
+                            )
 from cecog.io.imagecontainer import ImageContainer
 from cecog.traits.config import (ANALYZER_CONFIG,
                                  APPLICATION_SUPPORT_PATH,
@@ -57,7 +60,9 @@ from cecog.gui.analyzer.objectdetection import (ObjectDetectionFrame,
                                                 )
 from cecog.gui.analyzer.featureextraction import FeatureExtractionFrame
 from cecog.gui.analyzer.classification import ClassificationFrame
-from cecog.gui.analyzer.tracking import TrackingFrame
+from cecog.gui.analyzer.tracking import (TrackingFrame,
+                                         SECTION_NAME_TRACKING,
+                                         )
 from cecog.gui.analyzer.errorcorrection import ErrorCorrectionFrame
 from cecog.gui.analyzer.output import OutputFrame
 from cecog.gui.analyzer.processing import ProcessingFrame
@@ -629,6 +634,17 @@ class AnalyzerMainWindow(QMainWindow):
                 trait.set_list_data(channels)
                 self._tabs[1].get_widget('%s_channelid' % prefix).update()
 
+            trait = self._settings.get_trait(SECTION_NAME_TRACKING,
+                                             'tracking_duration_unit')
+
+            # allow time-base tracking durations only if time-stamp
+            # information is present
+            meta_data = imagecontainer.get_meta_data()
+            if meta_data.has_timestamp_info:
+                trait.set_list_data(TRACKING_DURATION_UNITS_TIMELAPSE)
+            else:
+                trait.set_list_data(TRACKING_DURATION_UNITS_DEFAULT)
+
             self.set_modules_active(state=True)
         else:
             critical(None, "No valid image data found",
@@ -796,8 +812,8 @@ if __name__ == "__main__":
         show_html('_startup')
     else:
         #filename = '/Users/miheld/data/CellCognition/demo_data/cluster_test.conf'
-        #filename = '/Users/miheld/data/CellCognition/demo_data/H2bTub20x_settings.conf'
-        filename = '/Users/miheld/data/for_michael/cecog_data/screen/settings/screen_settings.conf'
+        filename = '/Users/miheld/data/CellCognition/demo_data/H2bTub20x_settings.conf'
+        #filename = '/Users/miheld/data/for_michael/cecog_data/screen/settings/screen_settings.conf'
         #filename = '/Users/miheld/data/Fabrice/Analysis/test/fabrice_test.conf'
         #filename = '/Users/miheld/data/Peter/Analysis/t2/peter_t2.conf'
         #filename = '/Users/miheld/data/Katja/EMBL_H2bIbb.conf'
