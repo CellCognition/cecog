@@ -95,7 +95,8 @@ class SectionTracking(_Section):
             FloatTrait(2, 0, 4000, label='Filter duration [post]')),
 
         ('tracking_duration_unit',
-            SelectionTrait2(None, TRACKING_DURATION_UNITS_DEFAULT,
+            SelectionTrait2(TRACKING_DURATION_UNITS_DEFAULT[0],
+                            TRACKING_DURATION_UNITS_DEFAULT,
                             label='Duration unit')),
 
         ('tracking_backwardrange_min',
