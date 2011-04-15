@@ -30,10 +30,13 @@ __all__ = ['SectionTracking']
 from cecog.traits.config import _Section
 from cecog.gui.guitraits import (StringTrait,
                                  IntTrait,
+                                 FloatTrait,
                                  BooleanTrait,
                                  SelectionTrait,
+                                 SelectionTrait2,
                                  )
 from cecog.analyzer import (COMPRESSION_FORMATS,
+                            TRACKING_DURATION_UNITS_DEFAULT,
                             )
 
 #-------------------------------------------------------------------------------
@@ -77,9 +80,9 @@ class SectionTracking(_Section):
             StringTrait('', 200, label='Class transition motif(s)',
                         mask='(\(\d+,\d+\),)*\(\d+,\d+\)')),
         ('tracking_backwardrange',
-            IntTrait(0, -1, 4000, label='Time-points [pre]')),
+            FloatTrait(0, -1, 4000, label='Duration [pre]')),
         ('tracking_forwardrange',
-            IntTrait(0, -1, 4000, label='Time-points [post]')),
+            FloatTrait(0, -1, 4000, label='Duration [post]')),
         ('tracking_backwardlabels',
             StringTrait('', 200, label='Class filter [pre]',
                         mask='(\d+,)*\d+')),
@@ -87,9 +90,13 @@ class SectionTracking(_Section):
             StringTrait('', 200, label='Class filter [post]',
                         mask='(\d+,)*\d+')),
         ('tracking_backwardcheck',
-            IntTrait(2, 0, 4000, label='Filter time-points [pre]')),
+            FloatTrait(2, 0, 4000, label='Filter duration [pre]')),
         ('tracking_forwardcheck',
-            IntTrait(2, 0, 4000, label='Filter time-points [post]')),
+            FloatTrait(2, 0, 4000, label='Filter duration [post]')),
+
+        ('tracking_duration_unit',
+            SelectionTrait2(None, TRACKING_DURATION_UNITS_DEFAULT,
+                            label='Duration unit')),
 
         ('tracking_backwardrange_min',
             BooleanTrait(False, label='Min.')),

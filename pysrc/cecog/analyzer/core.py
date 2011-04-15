@@ -23,10 +23,7 @@ __source__ = '$URL$'
 # standard library imports:
 #
 import sys, \
-       time, \
-       copy
-import cPickle as pickle
-
+       time
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
@@ -40,6 +37,9 @@ from cecog import ccore
 from cecog.analyzer import (REGION_NAMES_PRIMARY,
                             SECONDARY_REGIONS,
                             TERTIARY_REGIONS,
+                            TRACKING_DURATION_UNIT_FRAMES,
+                            TRACKING_DURATION_UNIT_MINUTES,
+                            TRACKING_DURATION_UNIT_SECONDS,
                             )
 from cecog.analyzer.analyzer import (CellAnalyzer,
                                      TimeHolder,
@@ -58,6 +58,7 @@ from cecog.traits.config import NAMING_SCHEMAS
 
 from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACTION
 from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
+from cecog.traits.analyzer.tracking import SECTION_NAME_TRACKING
 
 from cecog.analyzer.gallery import EventGallery
 
@@ -231,6 +232,28 @@ class PositionAnalyzer(object):
         #oLogger = logging.getLogger()
         self._oLogger.removeHandler(self._oLogHandler)
 
+    def __convert_tracking_duration(self, option_name):
+        """
+        Converts a tracking duration according to the selected unit and the
+        mean time-lapse of the current position.
+        Returns the number of frames (int).
+        """
+        value = self.oSettings.get(SECTION_NAME_TRACKING, option_name)
+        unit = self.oSettings.get(SECTION_NAME_TRACKING,
+                                  'tracking_duration_unit')
+
+        # get mean and stddev for the current position
+        info = self._meta_data.get_timestamp_info(self.P)
+        if unit == TRACKING_DURATION_UNIT_FRAMES or info is None:
+            result = value
+        elif unit == TRACKING_DURATION_UNIT_MINUTES:
+            result = (value * 60.) / info[0]
+        elif unit == TRACKING_DURATION_UNIT_SECONDS:
+            result = value / info[0]
+        else:
+            raise ValueError("Wrong unit '%s' specified." % unit)
+        return int(round(result))
+
     def __call__(self):
         # turn libtiff warnings off
         ccore.turn_off()
@@ -311,11 +334,12 @@ class PositionAnalyzer(object):
                                     })
 
             if self.oSettings.get('Processing', 'tracking_synchronize_trajectories'):
-                tracker_options.update({'iBackwardCheck'       : self.oSettings.get2('tracking_backwardCheck'),
-                                        'iForwardCheck'        : self.oSettings.get2('tracking_forwardCheck'),
 
-                                        'iBackwardRange'       : self.oSettings.get2('tracking_backwardrange'),
-                                        'iForwardRange'        : self.oSettings.get2('tracking_forwardrange'),
+                tracker_options.update({'iBackwardCheck'       : self.__convert_tracking_duration('tracking_backwardCheck'),
+                                        'iForwardCheck'        : self.__convert_tracking_duration('tracking_forwardCheck'),
+
+                                        'iBackwardRange'       : self.__convert_tracking_duration('tracking_backwardrange'),
+                                        'iForwardRange'        : self.__convert_tracking_duration('tracking_forwardrange'),
 
                                         'bBackwardRangeMin'    : self.oSettings.get2('tracking_backwardrange_min'),
                                         'bForwardRangeMin'     : self.oSettings.get2('tracking_forwardrange_min'),
