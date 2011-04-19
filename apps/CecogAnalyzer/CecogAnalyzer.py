@@ -752,7 +752,7 @@ if __name__ == "__main__":
         show_html('_startup')
     else:
         #filename = '/Users/miheld/data/CellCognition/demo_data/cluster_test.conf'
-        filename = '/Users/miheld/data/CellCognition/demo_data/H2bTub20x_settings.conf'
+        filename = '/Users/miheld/data/Analysis/H2bTub_20x_hdf5_test1/H2bTub20x_settings.conf'
         #filename = '/Users/miheld/data/Fabrice/Analysis/Dataset/fabrice_test.conf'
         #filename = '/Users/miheld/data/Peter/Analysis/t2/peter_t2.conf'
         #filename = '/Users/miheld/data/Katja/EMBL_H2bIbb.conf'
