@@ -276,7 +276,7 @@ class TimeHolder(OrderedDict):
             h = meta.real_image_height
             z = meta.dim_z
             f = self._hdf5_file
-            var_name = 'labels'
+            var_name = 'regions'
             grp = f[self.HDF5_GRP_IMAGES]
             if var_name in grp:
                 var_labels = grp[var_name]
@@ -313,7 +313,7 @@ class TimeHolder(OrderedDict):
             t = meta.dim_t
             f = self._hdf5_file
             nr_channels = len(self._channel_info)
-            var_name = 'projected'
+            var_name = 'channels'
             grp = f[self.HDF5_GRP_IMAGES]
             if var_name in grp:
                 var_images = grp[var_name]
