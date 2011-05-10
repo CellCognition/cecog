@@ -201,10 +201,15 @@ class ClusterDisplay(QGroupBox):
             # FIXME: no idea how DRMAA 1.0 compatible this is
             if type(jobid) == types.ListType:
                 self._jobid = ','.join(jobid)
+                main_jobid = jobid[0].split('.')[0]
             else:
                 self._jobid = str(jobid)
+                main_jobid = jobid
             self._txt_jobid.setText(self._jobid)
-            self._update_job_status()
+            self._update_job_status(show=False)
+            information(None, 'Job successfully submitted',
+                        "Job %d successfully submitted with %d items to the "
+                        "cluster." % (main_jobid, nr_items))
 
     @pyqtSlot()
     def _on_terminate_job(self):
@@ -239,13 +244,15 @@ class ClusterDisplay(QGroupBox):
         txt = self._update_job_status()
         information(self, 'Cluster update', "Message: '%s'" % txt)
 
-    def _update_job_status(self):
+    def _update_job_status(self, show):
         try:
             txt = self._service.get_job_status(self._jobid)
         except:
             exception(self, 'Error on retrieve job status')
         else:
             self._label_jobstatus.setText(txt)
+            if show:
+                information(None, 'Cluster status update', txt)
         return txt
 
     def _connect(self):
