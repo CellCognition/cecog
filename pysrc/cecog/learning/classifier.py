@@ -83,6 +83,8 @@ class LibSvmClassifier(BaseClassifier):
 
     SVM_MODEL = svm_model
     NORMALIZER = Normalizer
+    NAME = 'libSVM'
+    METHOD = 'Support Vector Machine'
 
     __attributes__ = ['oSvmModel',
                       'oNormalizer']
