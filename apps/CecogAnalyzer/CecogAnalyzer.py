@@ -606,7 +606,7 @@ class AnalyzerMainWindow(QMainWindow):
             print plate_id
             print self._imagecontainer.get_meta_data(plate_id)
 
-        self._on_browser_open()
+        #self._on_browser_open()
         self.set_modules_active(state=True)
 
     def set_modules_active(self, state=True):
