@@ -406,8 +406,8 @@ class PositionAnalyzer(object):
 
         if iNumberImages > 0:
 
-            oTimeHolder.serialize_region_hierarchy(PrimaryChannel.NAME,
-                                                   'primary')
+            #oTimeHolder.serialize_region_hierarchy(PrimaryChannel.NAME,
+            #                                       'primary')
 
             if self.oSettings.get('Output', 'export_object_counts'):
                 filename = os.path.join(strPathOutPositionStats, 'P%s__object_counts.txt' % self.P)
