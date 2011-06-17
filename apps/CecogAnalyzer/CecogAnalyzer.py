@@ -78,7 +78,7 @@ from cecog.gui.util import (status,
                             warning
                             )
 
-#import resource
+import resource
 
 #-------------------------------------------------------------------------------
 # constants:
