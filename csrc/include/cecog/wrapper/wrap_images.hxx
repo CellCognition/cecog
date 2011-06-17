@@ -290,15 +290,17 @@ template <class IMAGE>
 numeric::array
 pyRgbImageToArray(IMAGE & img, bool copy=true)
 {
-  npy_intp dims[] = { img.width(), img.height(), 3 };
+  npy_intp dims[] = {img.height(), img.width(), 3 };
   if (copy)
   {
     object obj(handle<>(PyArray_SimpleNew(3, &dims[0],
                                           TypeAsNumPyType<typename IMAGE::PixelType::value_type>::result())));
     char *arr_data = ((PyArrayObject*) obj.ptr())->data;
-    ((PyArrayObject*) obj.ptr())->strides[2] = sizeof(typename IMAGE::PixelType::value_type);
-    ((PyArrayObject*) obj.ptr())->strides[0] = sizeof(typename IMAGE::PixelType::value_type) * sizeof(typename IMAGE::PixelType);
-    ((PyArrayObject*) obj.ptr())->strides[1] = sizeof(typename IMAGE::PixelType::value_type) * sizeof(typename IMAGE::PixelType) * img.width();
+    
+    ((PyArrayObject*) obj.ptr())->strides[0] = sizeof(typename IMAGE::PixelType::value_type) * sizeof(typename IMAGE::PixelType) * img.width();
+    ((PyArrayObject*) obj.ptr())->strides[1] = sizeof(typename IMAGE::PixelType::value_type) * sizeof(typename IMAGE::PixelType);
+	((PyArrayObject*) obj.ptr())->strides[2] = sizeof(typename IMAGE::PixelType::value_type);
+
     ((PyArrayObject*) obj.ptr())->nd = 3;
     memcpy(arr_data, img[0], sizeof(typename IMAGE::PixelType::value_type) * sizeof(typename IMAGE::PixelType) * img.width() * img.height());
     return extract<numeric::array>(obj);
@@ -307,9 +309,11 @@ pyRgbImageToArray(IMAGE & img, bool copy=true)
   {
     object obj(handle<>(PyArray_SimpleNewFromData(3, &dims[0],
                                                   TypeAsNumPyType<typename IMAGE::PixelType::value_type>::result(), (char *)img[0])));
-    ((PyArrayObject*) obj.ptr())->strides[2] = sizeof(typename IMAGE::PixelType::value_type);
-    ((PyArrayObject*) obj.ptr())->strides[0] = sizeof(typename IMAGE::PixelType::value_type) * sizeof(typename IMAGE::PixelType);
-    ((PyArrayObject*) obj.ptr())->strides[1] = sizeof(typename IMAGE::PixelType::value_type) * sizeof(typename IMAGE::PixelType) * img.width();
+
+    ((PyArrayObject*) obj.ptr())->strides[0] = sizeof(typename IMAGE::PixelType::value_type) * sizeof(typename IMAGE::PixelType) * img.width();
+    ((PyArrayObject*) obj.ptr())->strides[1] = sizeof(typename IMAGE::PixelType::value_type) * sizeof(typename IMAGE::PixelType);
+	((PyArrayObject*) obj.ptr())->strides[2] = sizeof(typename IMAGE::PixelType::value_type);
+
     ((PyArrayObject*) obj.ptr())->nd = 3;
     return extract<numeric::array>(obj);
   }
