@@ -455,12 +455,14 @@ class ImageContainer(object):
     def get_meta_data(self):
         return self._importer.meta_data
 
-    def get_path_out(self, plate):
+    def get_path_out(self, plate=None):
+        if plate is None:
+            plate = self.current_plate
         return self._path_out[plate]
 
     @property
     def plates(self):
-        return self._plates.keys()
+        return sorted(self._plates.keys())
 
     @property
     def has_multiple_plates(self):
