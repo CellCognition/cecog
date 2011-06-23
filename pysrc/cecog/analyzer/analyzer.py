@@ -680,42 +680,6 @@ class TimeHolder(OrderedDict):
 
         f.close()
 
-    def export_hdf5(self, filename):
-        f = h5py.File(filename, 'w')
-
-        meta = self._meta_data
-        w = meta.real_image_width
-        h = meta.real_image_height
-        images = f.create_dataset("images", (meta.dim_c, meta.dim_t, meta.dim_z, h, w),
-                                  "uint8", compression="szip", chunks=(1,1,1,h,w))
-
-        for frame_idx, (frame, channels) in enumerate(self.iteritems()):
-            print 'frame_idx', frame_idx, frame
-            prim_region = channels.values()[0].get_region('primary')
-            for obj_idx, obj_id in enumerate(prim_region):
-                print 'obj_idx', obj_idx
-
-                for channel_idx, channel in enumerate(channels.values()):
-                    print 'channel_idx', channel_idx, channel.NAME
-
-                    img = channel.meta_image.image
-                    images[channel_idx, frame_idx, 0] = img.toArray(copy=False)
-
-#
-#                    for region_idx, region_id in enumerate(channel.region_names()):
-#                        print 'region_idx', region_idx
-#                        region = channel.get_region(region_id)
-#
-#                        print obj_id in region
-#                        print region.getFeatureNames()
-#                        print region[obj_id].aFeatures.shape
-#                        print region[obj_id].aFeatures.dtype
-#
-#                        for idx, value in enumerate(region[obj_id].aFeatures):
-#                            objects[frame_idx, obj_idx, channel_idx, region_idx, idx] = value
-
-        f.close()
-
 
 class CellAnalyzer(PropertyManager):
 
