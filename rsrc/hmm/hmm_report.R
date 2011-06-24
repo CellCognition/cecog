@@ -574,7 +574,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
         #break
     }
 
-    T1 <- matrix("", nr=3, nc=groups)
+    T1 <- matrix("", nr=2, nc=groups)
   cat("groups=",groups,"\n")
 
     fn <- matrix("",nr=groups,nc=2)
@@ -724,9 +724,9 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             # Plot transition graphs
 
             # write PNG and PDF
-            plot.transition.graph(hmm[[i]], type="PNG", filename=paste(outdir_sequences,"/graph_loop__",pos.name,".png",sep=""), loops=TRUE, weights=TRUE)
+            #plot.transition.graph(hmm[[i]], type="PNG", filename=paste(outdir_sequences,"/graph_loop__",pos.name,".png",sep=""), loops=TRUE, weights=TRUE)
             #plotTransitionGraph(hmm[[i]], type="PDF", filename=paste(outdir_sequences,"/graph_loop__",pos.name,".pdf",sep=""), loops=TRUE, weights=TRUE)
-            plot.transition.graph(hmm[[i]], type="PS",  filename=paste(outdir_sequences,"/graph_loop__",pos.name,".ps",sep=""), loops=TRUE, weights=TRUE)
+            #plot.transition.graph(hmm[[i]], type="PS",  filename=paste(outdir_sequences,"/graph_loop__",pos.name,".ps",sep=""), loops=TRUE, weights=TRUE)
 
             plot.transition.graph(hmm[[i]], type="PNG", filename=paste(outdir_sequences,"/graph__",pos.name,".png",sep=""), loops=FALSE, weights=TRUE)
             #plotTransitionGraph(hmm[[i]], type="PDF", filename=paste(outdir_sequences,"/graph__",pos.name,".pdf",sep=""), loops=FALSE, weights=TRUE)
@@ -736,7 +736,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             # write HTML
             #T1[2,i] <- hwriteImage(paste("graph_loop_",i,".png",sep=""), link=paste("graph_loop_",i,".pdf",sep=""))
             T1[2,i] <- hwriteImage(paste(rel_sequences,"/graph__",pos.name,".png",sep=""), link=paste(rel_sequences,"/graph__",pos.name,".png",sep=""), width=400, height=400)
-            T1[3,i] <- hwriteImage(paste(rel_sequences,"/graph__loop",pos.name,".png",sep=""), link=paste(rel_sequences,"/graph__loop",pos.name,".png",sep=""), width=400, height=400)
+            #T1[3,i] <- hwriteImage(paste(rel_sequences,"/graph__loop",pos.name,".png",sep=""), link=paste(rel_sequences,"/graph__loop",pos.name,".png",sep=""), width=400, height=400)
             #T1[2,i] <- hwriteImage(paste("graph_",i,".png",sep=""), link=paste("graph_",i,".pdf",sep=""))
             #T1[i,3] <- hwrite(hmm[[i]]$trans)
 
