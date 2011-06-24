@@ -30,6 +30,7 @@ import logging, \
 
 from pdk.options import Option
 from pdk.optionmanagers import OptionManager
+from pdk.platform import is_linux, is_mac, is_windows
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -166,6 +167,16 @@ def resolve_os_name():
     elif is_linux:
         os_str = OS_LINUX
     return os_str
+
+def get_appdata_path():
+    if is_windows:
+        from win32com.shell import shellcon, shell
+        path = shell.SHGetFolderPath(0, shellcon.CSIDL_APPDATA, 0, 0)
+    elif is_mac:
+        path = os.path.expanduser("~/Library/Application Support")
+    else:
+        path = os.path.expanduser("~")
+    return os.path.abspath(path)
 
 #-------------------------------------------------------------------------------
 # classes:
