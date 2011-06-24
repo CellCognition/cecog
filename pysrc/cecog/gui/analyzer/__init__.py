@@ -73,6 +73,7 @@ from cecog.analyzer import (CONTROL_1,
                             )
 from cecog.analyzer.core import AnalyzerCore, SECONDARY_REGIONS
 from cecog.io.imagecontainer import PIXEL_TYPES
+from cecog.traits.config import R_SOURCE_PATH
 from cecog import ccore
 
 #-------------------------------------------------------------------------------
@@ -243,9 +244,10 @@ class HmmThread(_ProcessingThread):
     DEFAULT_CMD_MAC = 'R32'
     DEFAULT_CMD_WIN = r'C:\Program Files\R\R-2.10.0\bin\R.exe'
 
-    def __init__(self, parent, settings, learner_dict):
+    def __init__(self, parent, settings, learner_dict, imagecontainer):
         _ProcessingThread.__init__(self, parent, settings)
         self._learner_dict = learner_dict
+        self._imagecontainer = imagecontainer
 
         qApp._log_window.show()
         qApp._log_window.raise_()
@@ -270,14 +272,28 @@ class HmmThread(_ProcessingThread):
         return success and process.exitCode() == QProcess.NormalExit, cmd
 
     def _run(self):
+        plates = self._imagecontainer.plates
+        info = {'min' : 0,
+                'max' : len(plates),
+                'stage': 0,
+                'meta': 'Error correction...',
+                'progress': 0}
+        for idx, plate_id in enumerate(plates):
+            info['text'] = "Plate %d / %d: '%s'" % (idx+1, len(plates), plate_id)
+            self.set_stage_info(info)
+            self._imagecontainer.set_plate(plate_id)
+            if not self._abort:
+                self._run_plate(plate_id)
+            info['progress'] = idx+1
+            self.set_stage_info(info)
+
+    def _run_plate(self, plate_id):
         filename = self._settings.get('ErrorCorrection', 'filename_to_R')
         cmd = self.get_cmd(filename)
 
-        wd = 'resources/rsrc/hmm'
-        wd = os.path.abspath(wd)
+        path_out = self._imagecontainer.get_path_out()
 
-        print cmd, wd
-
+        wd = os.path.abspath(os.path.join(R_SOURCE_PATH, 'hmm'))
         f = file(os.path.join(wd, 'run_hmm.R'), 'r')
         lines = f.readlines()
         f.close()
@@ -287,17 +303,38 @@ class HmmThread(_ProcessingThread):
         # R on windows works better with '/' then '\'
         self._convert = lambda x: x.replace('\\','/')
         self._join = lambda *x: self._convert('/'.join(x))
-        path_analyzed = self._join(self._settings.get('General', 'pathout'), 'analyzed')
-        path_out_hmm = self._join(self._settings.get('General', 'pathout'), 'hmm')
+
+        path_analyzed = self._join(path_out, 'analyzed')
+        path_out_hmm = self._join(path_out, 'hmm')
         safe_mkdirs(path_out_hmm)
 
         region_name_primary = self._settings.get('Classification', 'primary_classification_regionname')
         region_name_secondary = self._settings.get('Classification', 'secondary_classification_regionname')
 
+        # mapping files (mapping between plate well/position and experimental condition) can be defined by a directory
+        # which must contain all mapping files for all plates in the form <plate_id>.txt or .tsv
+        # if the option 'position_labels' is not enabled a dummy mapping file is generated
         if self._settings.get2('position_labels'):
-            mapping_file = self._convert(self._settings.get2('mappingfile'))
+            path_mapping = self._convert(self._settings.get2('mappingfile_path'))
+            mapping_file = os.path.join(path_mapping, '%s.tsv' % plate_id)
+            if not os.path.isfile(mapping_file):
+                mapping_file = os.path.join(path_mapping, '%s.txt' % plate_id)
+                if not os.path.isfile(mapping_file):
+                    raise IOError("Mapping file '%s' not found." % mapping_file)
+            mapping_file = os.path.abspath(mapping_file)
         else:
             mapping_file = self._generate_mapping(wd, path_out_hmm, path_analyzed)
+
+        if self._settings.get2('overwrite_time_lapse'):
+            time_lapse = self._settings.get2('timelapse')
+        else:
+            meta_data = self._imagecontainer.get_meta_data()
+            if meta_data.has_timestamp_info:
+                time_lapse = meta_data.plate_timestamp_info[0] / 60.
+            else:
+                raise ValueError("Plate '%s' has not time-lapse info.\n"
+                                 "Please define (overwrite) the value manually."
+                                 % plate_id)
 
         for i in range(len(lines)):
             line2 = lines[i].strip()
@@ -306,8 +343,7 @@ class HmmThread(_ProcessingThread):
             elif line2 == '#FILENAME_MAPPING':
                 lines[i] = "FILENAME_MAPPING = '%s'\n" % mapping_file
             elif line2 == '#PATH_INPUT':
-                path_out = path_analyzed
-                lines[i] = "PATH_INPUT = '%s'\n" % path_out
+                lines[i] = "PATH_INPUT = '%s'\n" % path_analyzed
             elif line2 == '#PATH_OUTPUT':
                 lines[i] = "PATH_OUTPUT = '%s'\n" % path_out_hmm
             elif line2 == '#GROUP_BY_GENE':
@@ -315,7 +351,7 @@ class HmmThread(_ProcessingThread):
             elif line2 == '#GROUP_BY_OLIGOID':
                 lines[i] = "GROUP_BY_OLIGOID = %s\n" % str(self._settings.get2('groupby_oligoid')).upper()
             elif line2 == '#TIMELAPSE':
-                lines[i] = "TIMELAPSE = %s\n" % self._settings.get2('timelapse')
+                lines[i] = "TIMELAPSE = %s\n" % time_lapse
             elif line2 == '#MAX_TIME':
                 lines[i] = "MAX_TIME = %s\n" % self._settings.get2('max_time')
 
@@ -367,12 +403,6 @@ class HmmThread(_ProcessingThread):
         input.writelines(lines)
         input.close()
 
-        info = {'min' : 0,
-                'max' : 0,
-                'stage': 0,
-                'meta': 'Error correction...',
-                'progress': 0}
-        self.set_stage_info(info)
 
         self._process = QProcess()
         self._process.setStandardInputFile(input_filename)
@@ -433,12 +463,6 @@ class HmmThread(_ProcessingThread):
 
     def _on_finished(self, code):
         print 'finished: "%s"' % code
-        #progress = 1 if code == 0 else None
-        info = {'min' : 0,
-                'max' : 1,
-                'stage': 0,
-                'progress': 1}
-        self.set_stage_info(info)
 
     def _on_stdout(self):
         self._process.setReadChannel(QProcess.StandardOutput)
@@ -460,11 +484,6 @@ class HmmThread(_ProcessingThread):
         _ProcessingThread.set_abort(self)
         if self._abort:
             self._process.kill()
-        info = {'min' : 0,
-                'max' : 1,
-                'stage': 0,
-                'progress': 0}
-        self.set_stage_info(info)
 
 
 class AnalzyerThread(_ProcessingThread):
@@ -685,7 +704,7 @@ class _ProcessorMixin(object):
                     ('Classification', 'secondary_classification_envpath'),
                     ('ErrorCorrection', 'primary_graph'),
                     ('ErrorCorrection', 'secondary_graph'),
-                    ('ErrorCorrection', 'mappingfile'),
+                    ('ErrorCorrection', 'mappingfile_path'),
                     ]
         for section, option in converts:
             value = settings.get(section, option)
@@ -874,7 +893,8 @@ class _ProcessorMixin(object):
                             learner.importFromArff()
                             learner_dict[kind] = learner
                     self._analyzer = cls(self, self._current_settings,
-                                         learner_dict)
+                                         learner_dict,
+                                         self.parent().main_window._imagecontainer)
                     self._analyzer.setTerminationEnabled(True)
 
                 self.connect(self._analyzer, SIGNAL('finished()'),
@@ -889,19 +909,28 @@ class _ProcessorMixin(object):
                     status('Process started...')
 
         else:
-            self.setCursor(Qt.BusyCursor)
-            self._is_abort = True
-            self._analyzer.set_abort()
-            #self._analyzer.terminate()
-            self._analyzer.wait()
-            self.setCursor(Qt.ArrowCursor)
-
+            self._abort_processing()
 
     def _toggle_tabs(self, state):
         if not self.TABS is None:
             for i in range(self._tab.count()):
                 if i != self._tab.currentIndex():
                     self._tab.setTabEnabled(i, state)
+
+    def _abort_processing(self):
+        self.setCursor(Qt.BusyCursor)
+        self._is_abort = True
+
+        dlg = QProgressDialog(None, Qt.Popup)
+        dlg.setWindowModality(Qt.WindowModal)
+        dlg.setLabelText('Please wait until the processing terminates...')
+        dlg.setCancelButton(None)
+        dlg.setRange(0,0)
+        dlg.exec_()
+        self._analyzer.set_abort()
+        self._analyzer.wait()
+        dlg.reset()
+        self.setCursor(Qt.ArrowCursor)
 
     def _on_render_changed(self, name):
         #FIXME: proper sub-classing needed
@@ -973,11 +1002,7 @@ class _ProcessorMixin(object):
     def _on_esc_pressed(self):
         print 'ESC'
         if self._is_running:
-            self.setCursor(Qt.BusyCursor)
-            self._is_abort = True
-            self._analyzer.set_abort()
-            self._analyzer.wait()
-            self.setCursor(Qt.ArrowCursor)
+            self._abort_processing()
 
     def _on_update_stage_info(self, info):
         sep = '   |   '
