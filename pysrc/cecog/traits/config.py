@@ -49,7 +49,8 @@ from pdk.platform import (is_mac,
 # cecog imports:
 #
 from cecog.util.util import (read_table,
-                             write_table
+                             write_table,
+                             get_appdata_path,
                              )
 from cecog.util.mapping import map_path_to_os as _map_path_to_os
 from cecog.traits.traits import StringTrait
@@ -58,6 +59,17 @@ from cecog.traits.traits import StringTrait
 # constants:
 #
 RESOURCE_PATH            = 'resources'
+if not os.path.isdir(RESOURCE_PATH):
+    RESOURCE_PATH = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir, 'apps',
+                                 'CecogAnalyzer', 'resources')
+    if not os.path.isdir(RESOURCE_PATH):
+        raise IOError("Resource path '%s' not found." % RESOURCE_PATH)
+
+R_SOURCE_PATH = os.path.join(RESOURCE_PATH, 'rsrc')
+if not os.path.isdir(R_SOURCE_PATH):
+    R_SOURCE_PATH = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir, 'rsrc')
+    if not os.path.isdir(R_SOURCE_PATH):
+        raise IOError("R-source path '%s' not found." % R_SOURCE_PATH)
 
 
 # forward declarations defined in init_constants() (called upon import of cecog)
@@ -80,11 +92,9 @@ def init_application_support_path():
     global APPLICATION_SUPPORT_PATH
     folder = 'CellCognition'
     if APPLICATION_SUPPORT_PATH is None:
-        path = os.path.expanduser('~')
-        if is_mac:
-            path = os.path.join(path, 'Library/Application Support', folder)
-        elif is_windows:
-            path = os.path.join(path, 'Application Data', folder)
+        path = get_appdata_path()
+        if is_mac or is_windows:
+            path = os.path.join(path, folder)
         else:
             path = os.path.join(path, '.%s' % folder.lower())
         safe_mkdirs(path)
