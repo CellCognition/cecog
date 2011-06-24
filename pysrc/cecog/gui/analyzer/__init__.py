@@ -279,13 +279,15 @@ class HmmThread(_ProcessingThread):
                 'meta': 'Error correction...',
                 'progress': 0}
         for idx, plate_id in enumerate(plates):
-            info['text'] = "Plate %d / %d: '%s'" % (idx+1, len(plates), plate_id)
-            self.set_stage_info(info)
-            self._imagecontainer.set_plate(plate_id)
             if not self._abort:
+                info['text'] = "Plate %d / %d: '%s'" % (idx+1, len(plates), plate_id)
+                self.set_stage_info(info)
+                self._imagecontainer.set_plate(plate_id)
                 self._run_plate(plate_id)
-            info['progress'] = idx+1
-            self.set_stage_info(info)
+                info['progress'] = idx+1
+                self.set_stage_info(info)
+            else:
+                break
 
     def _run_plate(self, plate_id):
         filename = self._settings.get('ErrorCorrection', 'filename_to_R')
@@ -306,6 +308,11 @@ class HmmThread(_ProcessingThread):
 
         path_analyzed = self._join(path_out, 'analyzed')
         path_out_hmm = self._join(path_out, 'hmm')
+
+        # don't do anything if the 'hmm' folder already exists and the skip-option is on
+        if os.path.isdir(path_out_hmm) and self._settings.get2('skip_processed_plates'):
+            return
+
         safe_mkdirs(path_out_hmm)
 
         region_name_primary = self._settings.get('Classification', 'primary_classification_regionname')
@@ -371,11 +378,10 @@ class HmmThread(_ProcessingThread):
                 elif line2 == '#REGION_NAME_P':
                     lines[i] = "REGION_NAME_P = '%s'\n" % region_name_primary
                 elif line2 == '#SORT_CLASSES_P':
-                    primary_sort = self._settings.get2('primary_sort')
-                    if primary_sort == '':
-                        lines[i] = "SORT_CLASSES_P = NULL\n"
+                    if self._settings.get2('enable_sorting'):
+                        lines[i] = "SORT_CLASSES_P = c(%s)\n" % self._settings.get2('sorting_sequence')
                     else:
-                        lines[i] = "SORT_CLASSES_P = c(%s)\n" % primary_sort
+                        lines[i] = "SORT_CLASSES_P = NULL\n"
 
             if 'secondary' in self._learner_dict:# and self._settings.get('Processing', 'secondary_errorcorrection'):
                 if self._settings.get2('constrain_graph'):
@@ -403,21 +409,23 @@ class HmmThread(_ProcessingThread):
         input.writelines(lines)
         input.close()
 
-
         self._process = QProcess()
-        self._process.setStandardInputFile(input_filename)
+        #self._process.setStandardInputFile(input_filename)
         self._process.setWorkingDirectory(wd)
-        self._process.start(cmd, ['--slave', '--no-save'])
-        self.connect(self._process, SIGNAL('finished ( int )'),
-                     self._on_finished)
-        self.connect(self._process, SIGNAL('readyReadStandardOutput()'),
-                     self._on_stdout)
-        self.connect(self._process, SIGNAL('readyReadStandardError()'),
-                     self._on_stderr)
-        #self._process.error.connect(self._on_error)
-
+        self._process.start(cmd, ['BATCH', '--silent', '-f', input_filename])
+        self._process.readyReadStandardOutput.connect(self._on_stdout)
+        # we have to use the old-style signal here because of an error:
+        # QObject::connect: Cannot queue arguments of type 'QProcess::ExitStatus'
+        self.connect(self._process, SIGNAL("finished(int)"), self._on_finished)
         self._process.waitForFinished(-1)
 
+    def _on_finished(self, exit_code):
+        if exit_code != 0:
+            self._process.setReadChannel(QProcess.StandardError)
+            msg = str(self._process.readLine()).rstrip()
+            msg = ''.join(list(self._process.readAll()))
+            self.analyzer_error.emit(msg, 0)
+            self.set_abort()
 
     def _generate_graph(self, channel, wd, hmm_path, region_name):
         f_in = file(os.path.join(wd, 'graph_template.txt'), 'rU')
@@ -461,24 +469,12 @@ class HmmThread(_ProcessingThread):
         write_table(filename_out, rows, column_names=header_names, sep='\t')
         return filename_out
 
-    def _on_finished(self, code):
-        print 'finished: "%s"' % code
-
     def _on_stdout(self):
         self._process.setReadChannel(QProcess.StandardOutput)
         msg = str(self._process.readLine()).rstrip()
         #print msg
         logger = logging.getLogger()
         logger.info(msg)
-
-    def _on_stderr(self):
-        self._process.setReadChannel(QProcess.StandardError)
-        msg = ''.join(list(self._process.readAll()))
-        self.analyzer_error.emit(msg, 0)
-
-    @pyqtSlot('QProcess::ProcessError')
-    def _on_error(self, error):
-        print 'error', error
 
     def set_abort(self):
         _ProcessingThread.set_abort(self)
@@ -926,9 +922,12 @@ class _ProcessorMixin(object):
         dlg.setLabelText('Please wait until the processing terminates...')
         dlg.setCancelButton(None)
         dlg.setRange(0,0)
-        dlg.exec_()
+        f = lambda : self._on_analyzer_terminated(dlg)
+        self._analyzer.finished.connect(f)
         self._analyzer.set_abort()
-        self._analyzer.wait()
+        dlg.exec_()
+
+    def _on_analyzer_terminated(self, dlg):
         dlg.reset()
         self.setCursor(Qt.ArrowCursor)
 

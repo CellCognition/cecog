@@ -74,8 +74,12 @@ class ErrorCorrectionFrame(_BaseFrame, _ProcessorMixin):
                         ('groupby_genesymbol',),
                         ], layout='flow', link='groupby', label='Group by')
         self.add_line()
+        self.add_input('skip_processed_plates')
         self.add_group('overwrite_time_lapse',
                        [('timelapse',),
+                        ], layout='flow')
+        self.add_group('enable_sorting',
+                       [('sorting_sequence',),
                         ], layout='flow')
         self.add_group(None,
                        [('max_time',),
