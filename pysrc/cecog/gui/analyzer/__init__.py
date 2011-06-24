@@ -248,6 +248,7 @@ class HmmThread(_ProcessingThread):
         _ProcessingThread.__init__(self, parent, settings)
         self._learner_dict = learner_dict
         self._imagecontainer = imagecontainer
+        self._mapping_files = {}
 
         qApp._log_window.show()
         qApp._log_window.raise_()
@@ -273,6 +274,21 @@ class HmmThread(_ProcessingThread):
 
     def _run(self):
         plates = self._imagecontainer.plates
+
+        # mapping files (mapping between plate well/position and experimental condition) can be defined by a directory
+        # which must contain all mapping files for all plates in the form <plate_id>.txt or .tsv
+        # if the option 'position_labels' is not enabled a dummy mapping file is generated
+        if self._settings.get2('position_labels'):
+            path_mapping = self._convert(self._settings.get2('mappingfile_path'))
+            for plate_id in plates:
+                mapping_file = os.path.join(path_mapping, '%s.tsv' % plate_id)
+                if not os.path.isfile(mapping_file):
+                    mapping_file = os.path.join(path_mapping, '%s.txt' % plate_id)
+                    if not os.path.isfile(mapping_file):
+                        raise IOError("Mapping file '%s' for plate '%s' not found." %
+                                      (mapping_file, plate_id))
+                self._mapping_files[plate_id] = os.path.abspath(mapping_file)
+
         info = {'min' : 0,
                 'max' : len(plates),
                 'stage': 0,
@@ -280,7 +296,7 @@ class HmmThread(_ProcessingThread):
                 'progress': 0}
         for idx, plate_id in enumerate(plates):
             if not self._abort:
-                info['text'] = "Plate %d / %d: '%s'" % (idx+1, len(plates), plate_id)
+                info['text'] = "Plate: '%s' (%d / %d)" % (plate_id, idx+1, len(plates))
                 self.set_stage_info(info)
                 self._imagecontainer.set_plate(plate_id)
                 self._run_plate(plate_id)
@@ -318,17 +334,8 @@ class HmmThread(_ProcessingThread):
         region_name_primary = self._settings.get('Classification', 'primary_classification_regionname')
         region_name_secondary = self._settings.get('Classification', 'secondary_classification_regionname')
 
-        # mapping files (mapping between plate well/position and experimental condition) can be defined by a directory
-        # which must contain all mapping files for all plates in the form <plate_id>.txt or .tsv
-        # if the option 'position_labels' is not enabled a dummy mapping file is generated
-        if self._settings.get2('position_labels'):
-            path_mapping = self._convert(self._settings.get2('mappingfile_path'))
-            mapping_file = os.path.join(path_mapping, '%s.tsv' % plate_id)
-            if not os.path.isfile(mapping_file):
-                mapping_file = os.path.join(path_mapping, '%s.txt' % plate_id)
-                if not os.path.isfile(mapping_file):
-                    raise IOError("Mapping file '%s' not found." % mapping_file)
-            mapping_file = os.path.abspath(mapping_file)
+        if plate_id in self._mapping_files:
+            mapping_file = self._mapping_files[plate_id]
         else:
             mapping_file = self._generate_mapping(wd, path_out_hmm, path_analyzed)
 
