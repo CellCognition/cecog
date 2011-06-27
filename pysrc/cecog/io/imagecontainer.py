@@ -68,12 +68,8 @@ META_INFO_TIMESTAMP = 'timestamp'
 META_INFO_WELL = 'well'
 META_INFO_SUBWELL = 'subwell'
 
-IMAGECONTAINER_FILENAME = '.cecog_imagecontainer___PL%s.pkl'
-# FIXME: compression with .bz2 or .gz lead to crashed on Windows when used from
-#        a PyQt py2exe application
-IMAGECONTAINER_WRITE_EXTENSION = ''
-IMAGECONTAINER_READ_EXTENSIONS = ['', '.gz', '.bz2']
-
+IMAGECONTAINER_FILENAME = 'cecog_imagecontainer___PL%s.pkl'
+IMAGECONTAINER_FILENAME_OLD = '.cecog_imagecontainer___PL%s.pkl'
 
 #------------------------------------------------------------------------------
 # functions:
@@ -475,7 +471,7 @@ class ImageContainer(object):
 
     @classmethod
     def _get_structure_filename(cls, settings, plate_id,
-                                path_plate_in, path_plate_out):
+                                path_plate_in, path_plate_out, use_old=False):
         if settings.get2('structure_file_pathin'):
             path_structure = path_plate_in
         elif settings.get2('structure_file_pathout'):
@@ -483,9 +479,11 @@ class ImageContainer(object):
         else:
             path_structure = \
                 settings.get2('structure_file_extra_path_name')
-        filename = os.path.join(path_structure,
-                                IMAGECONTAINER_FILENAME % plate_id)
-        return filename
+        if use_old:
+            filename_container = IMAGECONTAINER_FILENAME_OLD % plate_id
+        else:
+            filename_container = IMAGECONTAINER_FILENAME % plate_id
+        return os.path.join(path_structure, filename_container)
 
     @classmethod
     def iter_check_plates(cls, settings):
@@ -510,12 +508,12 @@ class ImageContainer(object):
                 path_plate_out = path_out
 
             # check if structure file exists
-            filename = cls._get_structure_filename(settings, plate_id,
-                                                   path_plate_in,
-                                                   path_plate_out)
+            filename = cls._get_structure_filename(settings, plate_id, path_plate_in, path_plate_out)
             if not os.path.isfile(filename):
-                filename = None
-
+                # check old (hidden) filename for compatibility reasons
+                filename = cls._get_structure_filename(settings, plate_id, path_plate_in, path_plate_out, use_old=True)
+                if not os.path.isfile(filename):
+                    filename = None
             yield plate_id, path_plate_in, path_plate_out, filename
 
     def iter_import_from_settings(self, settings, scan_plates=None):
