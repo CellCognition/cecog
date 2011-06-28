@@ -29,6 +29,7 @@ import cPickle as pickle
 import sip
 # set PyQt API version to 2.0 and disable QString
 sip.setapi('QString', 2)
+#sip.setapi('QVariant', 2)
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
@@ -80,7 +81,9 @@ from cecog.gui.util import (status,
                             critical,
                             question,
                             exception,
-                            warning
+                            information,
+                            warning,
+                            ProgressDialog,
                             )
 
 import resource
@@ -598,23 +601,21 @@ class AnalyzerMainWindow(QMainWindow):
                     self._load_image_container(infos, scan_plates)
 
     def _load_image_container(self, plate_infos, scan_plates):
-        dlg = QProgressDialog(None, Qt.Popup)
+        dlg = ProgressDialog(None, Qt.CustomizeWindowHint | Qt.WindowTitleHint)
         dlg.setWindowModality(Qt.WindowModal)
         dlg.setLabelText('Please wait until the input structure is scanned\n'
                          'or the structure data loaded...')
         dlg.setCancelButton(None)
-        dlg.setRange(0,0)# if len(plate_infos) == 1 else len(plate_infos))
-        dlg.show()
+        dlg.setRange(0,0)
 
         thread = ImageContainerThread(self._settings, scan_plates)
         thread.next_plate.connect(lambda x: dlg.setValue(x))
         fct = lambda x,y : lambda : self._on_load_finished(x,y)
         thread.finished.connect(fct(dlg, thread))
         thread.start()
+        dlg.exec_()
 
     def _on_load_finished(self, dlg, thread):
-        dlg.reset()
-
         # close and delete the current browser instance
         if not self._browser is None:
             self._browser.close()
@@ -646,12 +647,15 @@ class AnalyzerMainWindow(QMainWindow):
                 trait.set_list_data(TRACKING_DURATION_UNITS_DEFAULT)
 
             self.set_modules_active(state=True)
+            information(None, "Plate(s) successfully loaded",
+                        "%d plates loaded successfully." % len(imagecontainer.plates))
         else:
             critical(None, "No valid image data found",
                      "The naming schema provided might not fit your image data"
                      "or the coordinate file is not correct.\n\nPlease modify "
                      "the values and scan the structure again.",
                      detail = thread.error_message)
+        dlg.reset()
 
     def set_modules_active(self, state=True):
         for name, (button, widget) in self._tab_lookup.iteritems():
