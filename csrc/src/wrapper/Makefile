@@ -20,9 +20,9 @@
 #
 # Todo: Migration towards cmake
 
-SRC_PATH     = $(HOME)/src
+SRC_PATH     = $(HOME)/workspace
 DEP_PATH     = $(HOME)/cecog_dependencies
-CECOG_PATH    = $(SRC_PATH)/cecog_git
+CECOG_PATH    = $(SRC_PATH)/cecog
 NUMPY_PATH   = /Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages/numpy/core/include/
 PYTHON_PATH  = /Library/Frameworks/Python.framework/Versions/2.7/include/python2.7
 INSTALL_PATH = $(CECOG_PATH)/pysrc/cecog/ccore
@@ -37,16 +37,21 @@ CXX = ccache g++
 # NOTE: -march=nocona reduces runtime by >50% compared to default 
 #       -march=core2 is supposed to give better results but reduced runtime only by ~25% (compared to default)           
 
-CXXFLAGS = -isysroot $(MACOS_SDK) -mmacosx-version-min=$(MACOS_VERSION) -ansi -fno-operator-names -fPIC -DPIC -fast -march=nocona 
+#CXXFLAGS = -isysroot $(MACOS_SDK) -mmacosx-version-min=$(MACOS_VERSION) -ansi -fno-operator-names -fPIC -DPIC -fast -march=nocona 
+CXXFLAGS = -fast -mtune=nocona -mmacosx-version-min=10.5 -ansi -fno-operator-names -fPIC -DPIC -arch x86_64
 
 CXXINCLUDES = -I$(CECOG_PATH)/csrc/include -I$(DEP_PATH)/include -I$(PYTHON_PATH) -I$(NUMPY_PATH) 
 
-LDFLAGS = -headerpad_max_install_names -bundle -undefined dynamic_lookup -isysroot $(MACOS_SDK) -mmacosx-version-min=$(MACOS_VERSION) 
+#LDFLAGS = -headerpad_max_install_names -bundle -undefined dynamic_lookup -isysroot $(MACOS_SDK) -mmacosx-version-min=$(MACOS_VERSION) 
+#LDFLAGS = -headerpad_max_install_names -undefined dynamic_lookup -isysroot $(MACOS_SDK) -mmacosx-version-min=$(MACOS_VERSION) 
+#LDFLAGS = -bundle -flat_namespace -undefined warning -arch x86_64 -mmacosx-version-min=10.5 -isysroot /Developer/SDKs/MacOSX10.5.sdk 
+LDFLAGS = -bundle -flat_namespace -undefined warning -arch x86_64 -mmacosx-version-min=10.5 
 
 LIBS = -L$(DEP_PATH)/lib -lboost_python -lvigraimpex -ltiff #-ljpeg -lpng -lfftw3 -lz -lm
 OBJS = cecog.o #wrap_filters.o wrap_segmentation.o wrap_containers.o
     
 TARGET = cecog
+
 	
 LIB_NAME = _$(TARGET).so
 
