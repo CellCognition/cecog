@@ -247,8 +247,11 @@ class AbstractImporter(object):
         times = set(times)
         channels = set(channels)
         zslices = set(zslices)
+        # find overall valid number of frames
         for p in lookup:
             times = times.intersection(lookup[p].keys())
+        # find overall valid channels/zslices based on overall valid frames
+        for p in lookup:
             for t in times:
                 channels = channels.intersection(lookup[p][t].keys())
                 for c in channels:
