@@ -54,12 +54,9 @@ namespace morpho{
 
     typedef Pixel2D<VALUETYPE> PIX;
 
-//    std::priority_queue<PIX, std::vector<PIX>, PriorFunctor> PQ(priority);
-//    typedef PriorityBottomUp<typename Accessor1::value_type> PriorFunctor;
-//    PriorFunctor priority;
 
     int width  = srcLowerRight.x - srcUpperLeft.x;
-      int height = srcLowerRight.y - srcUpperLeft.y;
+    int height = srcLowerRight.y - srcUpperLeft.y;
 
     vigra::BasicImage<int> labelImage(width, height);
     vigra::BasicImage<int>::Iterator labUpperLeft = labelImage.upperLeft();
@@ -172,8 +169,6 @@ namespace morpho{
       }
 
     } // end of PRIORITY QUEUE
-
-    //StopTime(startTime, "watershed");
 
   } // end of function
 
@@ -468,6 +463,7 @@ namespace morpho{
           // first case: pixel has not been processed.
           if(label2 == WS_NOT_PROCESSED)
           {
+            // the priority is at least the current pixel value (value of o0).
             VALUETYPE priority = std::max(srca(srcUpperLeft, o1), srca(srcUpperLeft, o0));
             PQ.push(PIX(priority, o1, insertionOrder++));
             lab.set(WS_QUEUED, labUpperLeft, o1);
@@ -503,7 +499,7 @@ namespace morpho{
         }
       } // end for neighborhood
 
-      // if the pixel has not been treated
+      // if the pixel has not been assigned a label
       if(label1 == WS_NOT_PROCESSED)
       {
         // we know that this is not correct, but we think
