@@ -182,19 +182,31 @@ class ClusterDisplay(QGroupBox):
 
     @pyqtSlot()
     def _on_submit_job(self):
-        positions = self._submit_settings.get(SECTION_NAME_GENERAL, 'positions')
-        nr_items = len(positions.split(','))
-        # FIXME: this is a hack
+        if not self._submit_settings.get2('constrain_positions'):
+            # FIXME:
+            imagecontainer = qApp._main_window._imagecontainer
+            positions = []
+            for plate_id in imagecontainer.plates:
+                imagecontainer.set_plate(plate_id)
+                meta_data = imagecontainer.get_meta_data()
+                positions += ['%s___%s' % (plate_id, p) for p in meta_data.positions]
+            self._submit_settings.set2('positions', ','.join(positions))
+            nr_items = len(positions)
+        else:
+            positions = self._submit_settings.get(SECTION_NAME_GENERAL, 'positions')
+            nr_items = len(positions.split(','))
+
+        # FIXME: we need to get the current value for 'position_granularity'
         settings_dummy = ProcessingFrame.get_special_settings(self._settings)
-        batch_size = settings_dummy.get(SECTION_NAME_CLUSTER,
-                                        'position_granularity')
+        position_granularity = settings_dummy.get(SECTION_NAME_CLUSTER, 'position_granularity')
+
         path_out = self._submit_settings.get(SECTION_NAME_GENERAL, 'pathout')
         emails = str(self._txt_mail.text()).split(',')
         try:
             jobid = self._service.submit_job('cecog_batch',
                                              self._submit_settings.to_string(),
                                              path_out, emails, nr_items,
-                                             batch_size, VERSION)
+                                             position_granularity, VERSION)
         except:
             exception(self, 'Error on job submission')
         else:
@@ -207,9 +219,8 @@ class ClusterDisplay(QGroupBox):
                 main_jobid = jobid
             self._txt_jobid.setText(self._jobid)
             self._update_job_status(show=False)
-            information(None, 'Job successfully submitted',
-                        "Job %d successfully submitted with %d items to the "
-                        "cluster." % (main_jobid, nr_items))
+            information(None, 'Job submitted successfully',
+                        "Job successfully submitted to the cluster.\nJob ID: %s, items: %d" % (main_jobid, nr_items))
 
     @pyqtSlot()
     def _on_terminate_job(self):
@@ -309,17 +320,6 @@ class ClusterDisplay(QGroupBox):
             self._submit_settings.set_section(SECTION_NAME_GENERAL)
             self._submit_settings.set2('createimagecontainer', False)
             self._submit_settings.set2('preferimagecontainer', False)
-            if not self._submit_settings.get2('constrain_positions'):
-                # FIXME:
-                imagecontainer = qApp._main_window._imagecontainer
-                cluster_pos = []
-                for plate in imagecontainer.plates:
-                    imagecontainer.set_plate(plate)
-                    meta_data = imagecontainer.get_meta_data()
-                    pos_str = ','.join('%s___%s' % (plate, p)
-                                       for p in meta_data.positions)
-                    cluster_pos.append(pos_str)
-                self._submit_settings.set2('positions', ','.join(cluster_pos))
 
             self._label_hosturl.setText(self._host_url)
             self._label_status.setText(self._service.get_service_info())
