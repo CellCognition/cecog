@@ -49,13 +49,8 @@ import h5py
 from cecog import ccore
 
 from cecog.util.util import hexToRgb
-from cecog.analyzer import (REGION_NAMES,
-                            REGION_NAMES_PRIMARY,
-                            REGION_NAMES_SECONDARY,
-                            )
-from cecog.io.imagecontainer import (Coordinate,
-                                     MetaImage,
-                                     )
+from cecog.analyzer import REGION_NAMES_SECONDARY
+from cecog.io.imagecontainer import Coordinate
 from cecog.analyzer.channel import PrimaryChannel
 
 #-------------------------------------------------------------------------------
@@ -522,6 +517,7 @@ class TimeHolder(OrderedDict):
                             var_feature = \
                                 self._grp_def.create_dataset(self.HDF5_GRP_FEATURE,
                                                              (nr_features,), dt,
+                                                             chunks=(1,),
                                                              compression=self._hdf5_compression)
                             offset = 0
                         else:
