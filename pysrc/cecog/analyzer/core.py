@@ -38,6 +38,9 @@ from cecog import ccore
 from cecog.analyzer import (REGION_NAMES_PRIMARY,
                             SECONDARY_REGIONS,
                             TERTIARY_REGIONS,
+                            TRACKING_DURATION_UNIT_FRAMES,
+                            TRACKING_DURATION_UNIT_MINUTES,
+                            TRACKING_DURATION_UNIT_SECONDS,
                             )
 from cecog.analyzer.analyzer import (CellAnalyzer,
                                      TimeHolder,
@@ -56,6 +59,7 @@ from cecog.traits.config import NAMING_SCHEMAS
 
 from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACTION
 from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
+from cecog.traits.analyzer.tracking import SECTION_NAME_TRACKING
 
 from cecog.analyzer.gallery import EventGallery
 
@@ -134,7 +138,7 @@ class PositionAnalyzer(object):
         # FIXME: a bit of a hack but the entire ImageContainer path is mapped to the current OS
         #self._imagecontainer.setPathMappingFunction(mapDirectory)
 
-        self._meta_data = self._imagecontainer.get_meta_data(self.plate_id)
+        self._meta_data = self._imagecontainer.get_meta_data()
 
         if not self._meta_data.has_timelapse:
             self.oSettings.set('Processing', 'tracking', False)
@@ -232,6 +236,28 @@ class PositionAnalyzer(object):
         #oLogger = logging.getLogger()
         self._oLogger.removeHandler(self._oLogHandler)
 
+    def __convert_tracking_duration(self, option_name):
+        """
+        Converts a tracking duration according to the selected unit and the
+        mean time-lapse of the current position.
+        Returns the number of frames (int).
+        """
+        value = self.oSettings.get(SECTION_NAME_TRACKING, option_name)
+        unit = self.oSettings.get(SECTION_NAME_TRACKING,
+                                  'tracking_duration_unit')
+
+        # get mean and stddev for the current position
+        info = self._meta_data.get_timestamp_info(self.P)
+        if unit == TRACKING_DURATION_UNIT_FRAMES or info is None:
+            result = value
+        elif unit == TRACKING_DURATION_UNIT_MINUTES:
+            result = (value * 60.) / info[0]
+        elif unit == TRACKING_DURATION_UNIT_SECONDS:
+            result = value / info[0]
+        else:
+            raise ValueError("Wrong unit '%s' specified." % unit)
+        return int(round(result))
+
     def __call__(self):
         # turn libtiff warnings off
         ccore.turn_off()
@@ -326,11 +352,12 @@ class PositionAnalyzer(object):
                                     })
 
             if self.oSettings.get('Processing', 'tracking_synchronize_trajectories'):
-                tracker_options.update({'iBackwardCheck'       : self.oSettings.get2('tracking_backwardCheck'),
-                                        'iForwardCheck'        : self.oSettings.get2('tracking_forwardCheck'),
 
-                                        'iBackwardRange'       : self.oSettings.get2('tracking_backwardrange'),
-                                        'iForwardRange'        : self.oSettings.get2('tracking_forwardrange'),
+                tracker_options.update({'iBackwardCheck'       : self.__convert_tracking_duration('tracking_backwardCheck'),
+                                        'iForwardCheck'        : self.__convert_tracking_duration('tracking_forwardCheck'),
+
+                                        'iBackwardRange'       : self.__convert_tracking_duration('tracking_backwardrange'),
+                                        'iForwardRange'        : self.__convert_tracking_duration('tracking_forwardrange'),
 
                                         'bBackwardRangeMin'    : self.oSettings.get2('tracking_backwardrange_min'),
                                         'bForwardRangeMin'     : self.oSettings.get2('tracking_forwardrange_min'),
@@ -681,7 +708,8 @@ class PositionAnalyzer(object):
         # - loop over a sub-space with fixed position 'P' and reduced time and
         #   channel axis (in case more channels or time-points exist)
         # - define break-points at C and Z which will yield two nested generators
-        coordinate = Coordinate(plate=self.plate_id, position = self.origP,
+        coordinate = Coordinate(plate=self.plate_id,
+                                position = self.origP,
                                 time = self.lstAnalysisFrames,
                                 channel = self.tplChannelIds)
         for frame, iter_channel in self._imagecontainer(coordinate,
@@ -1054,6 +1082,7 @@ class AnalyzerCore(object):
 
         self.oSettings.set_section('General')
         self.strPathOut = imagecontainer.get_path_out(plate_id)
+        imagecontainer.set_plate(plate_id)
 
         bMkdirsOk = safe_mkdirs(self.strPathOut)
         self._oLogger.info("strPathOut '%s', ok: %s" % (self.strPathOut, bMkdirsOk))
@@ -1204,9 +1233,9 @@ class AnalyzerCore(object):
             self.lstPositions = self.lstPositions.split(',')
 
 
-        if self._imagecontainer is None:
-            self._imagecontainer = ImageContainer.from_settings(self.oSettings)
-        self._meta_data = self._imagecontainer.get_meta_data(self.plate_id)
+        #if self._imagecontainer is None:
+        #    self._imagecontainer = ImageContainer.from_settings(self.oSettings)
+        self._meta_data = self._imagecontainer.get_meta_data()
 
         # does a position selection exist?
         #print self.lstPositions, self._meta_data.setP

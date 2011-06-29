@@ -269,3 +269,13 @@ class MyMessageBox(QMessageBox):
     def showEvent(self, event):
         QMessageBox.showEvent(self, event)
         #self.setFixedSize(400, 100)
+
+class ProgressDialog(QProgressDialog):
+    '''
+    inherited QProgressDialog to ignore the ESC key during dialog exec_()
+    '''
+
+    def keyPressEvent(self, event):
+        if event.key() != Qt.Key_Escape:
+            QProgressDialog.keyPressEvent(self, event)
+

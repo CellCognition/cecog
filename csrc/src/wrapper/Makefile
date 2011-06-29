@@ -23,7 +23,7 @@
 SRC_PATH     = $(HOME)/src
 DEP_PATH     = $(HOME)/cecog_dependencies
 CECOG_PATH    = $(SRC_PATH)/cecog_git
-NUMPY_PATH   = /Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages/numpy/core/include/
+NUMPY_PATH   = /Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages/numpy-1.5.1-py2.7-macosx-10.5-intel.egg/numpy/core/include/
 PYTHON_PATH  = /Library/Frameworks/Python.framework/Versions/2.7/include/python2.7
 INSTALL_PATH = $(CECOG_PATH)/pysrc/cecog/ccore
 

@@ -32,6 +32,7 @@ import types, \
        os, \
        copy
 import numpy
+import cPickle as pickle
 
 #------------------------------------------------------------------------------
 # extension module imports:
@@ -67,16 +68,22 @@ META_INFO_TIMESTAMP = 'timestamp'
 META_INFO_WELL = 'well'
 META_INFO_SUBWELL = 'subwell'
 
-IMAGECONTAINER_FILENAME = '.cecog_imagecontainer.txt'
-# FIXME: compression with .bz2 or .gz lead to crashed on Windows when used from
-#        a PyQt py2exe application
-IMAGECONTAINER_WRITE_EXTENSION = ''
-IMAGECONTAINER_READ_EXTENSIONS = ['', '.gz', '.bz2']
-
+IMAGECONTAINER_FILENAME = 'cecog_imagecontainer___PL%s.pkl'
+IMAGECONTAINER_FILENAME_OLD = '.cecog_imagecontainer___PL%s.pkl'
 
 #------------------------------------------------------------------------------
 # functions:
 #
+def importer_pickle(obj, filename):
+    f = open(filename, 'wb')
+    pickle.dump(obj, f, protocol=1)
+    f.close()
+
+def importer_unpickle(filename):
+    f = open(filename, 'rb')
+    obj = pickle.load(f)
+    f.close()
+    return obj
 
 #------------------------------------------------------------------------------
 # classes:
@@ -391,23 +398,23 @@ class ImageContainer(object):
 
     def __init__(self):
         self._plates = OrderedDict()
-        self._meta_data = OrderedDict()
+        self._path_in = OrderedDict()
         self._path_out = OrderedDict()
+        self._importer = None
+        self.current_plate = None
         self.has_timelapse = None
 
-    def register_plate(self, plate_id, path_out, importer):
-        self._plates[plate_id] = importer
-        self._meta_data[plate_id] = importer.meta_data
+    def register_plate(self, plate_id, path_in, path_out, filename):
+        self._plates[plate_id] = filename
+        self._path_in[plate_id] = path_in
         self._path_out[plate_id] = path_out
         # FIXME: check some dimensions!!!
-        self.has_timelapse = importer.meta_data.has_timelapse
 
     def iterator(self, coordinate,
-                 interrupt_position=False,
                  interrupt_time=False,
                  interrupt_channel=False,
                  interrupt_zslice=False):
-        meta_data = self.get_meta_data(coordinate.plate)
+        meta_data = self.get_meta_data()
         # FIXME: linking of iterators should adapt to any scan-order
         iter_zslice = AxisIterator(self, coordinate.zslice,
                                    meta_data.zslices, 'zslice')
@@ -420,30 +427,38 @@ class ImageContainer(object):
         iter_position = AxisIterator(self, coordinate.position,
                                      meta_data.positions, 'position',
                                      interrupt_time, iter_time)
-        iter_plate = AxisIterator(self, coordinate.plate,
-                                  self.plates, 'plate',
-                                  interrupt_position, iter_position)
-        return iter_plate()
+        return iter_position()
 
     __call__ = iterator
 
+    def set_plate(self, plate):
+        if plate != self.current_plate:
+            self.current_plate = plate
+            filename = self._plates[plate]
+            self._importer = importer_unpickle(filename)
+            self._importer.path = self._path_in[plate]
+
+    def check_dimensions(self):
+        self.has_timelapse = self._importer.meta_data.has_timelapse
+
     def get_meta_image(self, coordinate):
-        meta_data = self.get_meta_data(coordinate.plate)
+        meta_data = self.get_meta_data()
         return MetaImage(self, coordinate, meta_data.dim_y, meta_data.dim_x)
 
     def get_image(self, coordinate):
-        importer = self._plates[coordinate.plate]
-        return importer.get_image(coordinate)
+        return self._importer.get_image(coordinate)
 
-    def get_meta_data(self, plate):
-        return self._meta_data[plate]
+    def get_meta_data(self):
+        return self._importer.meta_data
 
-    def get_path_out(self, plate):
+    def get_path_out(self, plate=None):
+        if plate is None:
+            plate = self.current_plate
         return self._path_out[plate]
 
     @property
     def plates(self):
-        return self._plates.keys()
+        return sorted(self._plates.keys())
 
     @property
     def has_multiple_plates(self):
@@ -451,26 +466,27 @@ class ImageContainer(object):
 
     @property
     def channels(self):
-        channels = []
-        for plate in self.plates:
-            print plate
-            meta_data = self._meta_data[plate]
-            channels += meta_data.channels
-        return sorted(set(channels))
+        meta_data = self.get_meta_data()
+        return sorted(meta_data.channels)
 
     @classmethod
-    def _is_container_file(cls, path):
-        filename = None
-        for ext in IMAGECONTAINER_READ_EXTENSIONS:
-            filename_test = os.path.join(path, IMAGECONTAINER_FILENAME + ext)
-            if os.path.isfile(filename_test):
-                filename = filename_test
-                break
-        return filename
+    def _get_structure_filename(cls, settings, plate_id,
+                                path_plate_in, path_plate_out, use_old=False):
+        if settings.get2('structure_file_pathin'):
+            path_structure = path_plate_in
+        elif settings.get2('structure_file_pathout'):
+            path_structure = path_plate_out
+        else:
+            path_structure = \
+                settings.get2('structure_file_extra_path_name')
+        if use_old:
+            filename_container = IMAGECONTAINER_FILENAME_OLD % plate_id
+        else:
+            filename_container = IMAGECONTAINER_FILENAME % plate_id
+        return os.path.join(path_structure, filename_container)
 
     @classmethod
     def iter_check_plates(cls, settings):
-
         settings.set_section(SECTION_NAME_GENERAL)
         path_in = convert_package_path(settings.get2('pathin'))
         path_out = convert_package_path(settings.get2('pathout'))
@@ -492,10 +508,12 @@ class ImageContainer(object):
                 path_plate_out = path_out
 
             # check if structure file exists
-            filename = cls._is_container_file(path_plate_out)
-            if filename is None:
-                filename = cls._is_container_file(path_plate_in)
-
+            filename = cls._get_structure_filename(settings, plate_id, path_plate_in, path_plate_out)
+            if not os.path.isfile(filename):
+                # check old (hidden) filename for compatibility reasons
+                filename = cls._get_structure_filename(settings, plate_id, path_plate_in, path_plate_out, use_old=True)
+                if not os.path.isfile(filename):
+                    filename = None
             yield plate_id, path_plate_in, path_plate_out, filename
 
     def iter_import_from_settings(self, settings, scan_plates=None):
@@ -517,6 +535,7 @@ class ImageContainer(object):
             if filename is None:
                 scan_plate = True
 
+            # (re)scan the file structure
             if scan_plate:
                 if settings.get2('image_import_namingschema'):
                     config_parser = NAMING_SCHEMAS
@@ -527,19 +546,25 @@ class ImageContainer(object):
                 elif settings.get2('image_import_structurefile'):
                     filename = settings.get2('structure_filename')
                     importer = FlatFileImporter(path_plate_in, filename)
-            else:
-                importer = FlatFileImporter(path_plate_in, filename)
 
-            importer.load()
-            if scan_plate:
-                container_filename = IMAGECONTAINER_FILENAME + \
-                    IMAGECONTAINER_WRITE_EXTENSION
-                importer.export_to_flatfile(os.path.join(path_plate_in,
-                                                         container_filename))
-            self.register_plate(plate_id, path_plate_out, importer)
+                # scan the file structure
+                importer.scan()
+
+                # serialize importer and register plate only upon successful
+                # scan
+                if importer.is_valid:
+                    filename = self._get_structure_filename(settings, plate_id,
+                                                            path_plate_in,
+                                                            path_plate_out)
+
+                    importer_pickle(importer, filename)
+                    self.register_plate(plate_id, path_plate_in,
+                                        path_plate_out, filename)
+            else:
+                self.register_plate(plate_id, path_plate_in,
+                                    path_plate_out, filename)
 
             yield info
-
 
     def import_from_settings(self, settings, scan_plates=None):
         list(self.iter_import_from_settings(settings, scan_plates))

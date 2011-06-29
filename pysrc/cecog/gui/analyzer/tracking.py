@@ -82,6 +82,7 @@ class TrackingFrame(_BaseFrame, _ProcessorMixin):
                         ('tracking_forwardlabels', (2,1,1,1)),
                         ('tracking_backwardcheck', (3,0,1,1)),
                         ('tracking_forwardcheck', (3,1,1,1)),
+                        ('tracking_duration_unit', (4,0,1,6)),
                         ], link='tracking_eventselection',
                         label='Event selection')
         self.add_line()

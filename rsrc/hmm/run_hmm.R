@@ -55,7 +55,7 @@ if (!is.null(FILENAME_GRAPH_P))
         class.colors.hmm <- class.colors[graphP$h2o]
 
         probP <- read.probabilities(screenP)
-        write.hmm.report(screenP, probP,
+        res = write.hmm.report(screenP, probP,
                          outdir=PATH_OUTPUT,
                          graphP,
                          sortClasses=SORT_CLASSES_P,
@@ -67,8 +67,7 @@ if (!is.null(FILENAME_GRAPH_P))
                          write_decode=FALSE,
                          write_decode2=FALSE
                          )
-    }
-}
+
 
 if (!is.null(FILENAME_GRAPH_S))
 {
@@ -82,6 +81,7 @@ if (!is.null(FILENAME_GRAPH_S))
 
         probS <- read.probabilities(screenS)
         write.hmm.report(screenS, probS,
+                indices=res$overall_indices,
                 outdir=PATH_OUTPUT,
                 graphS,
                 sortClasses=SORT_CLASSES_S,
@@ -94,4 +94,6 @@ if (!is.null(FILENAME_GRAPH_S))
                 write_decode2=FALSE
         )
     }
+}
+}
 }

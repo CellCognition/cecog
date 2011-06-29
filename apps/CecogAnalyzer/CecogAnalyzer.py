@@ -29,6 +29,7 @@ import cPickle as pickle
 import sip
 # set PyQt API version to 2.0 and disable QString
 sip.setapi('QString', 2)
+#sip.setapi('QVariant', 2)
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
@@ -42,7 +43,10 @@ import numpy
 # cecog imports:
 #
 from cecog import VERSION
-from cecog.analyzer import R_LIBRARIES
+from cecog.analyzer import (R_LIBRARIES,
+                            TRACKING_DURATION_UNITS_TIMELAPSE,
+                            TRACKING_DURATION_UNITS_DEFAULT,
+                            )
 from cecog.io.imagecontainer import ImageContainer
 from cecog.traits.config import (ANALYZER_CONFIG,
                                  APPLICATION_SUPPORT_PATH,
@@ -57,7 +61,9 @@ from cecog.gui.analyzer.objectdetection import (ObjectDetectionFrame,
                                                 )
 from cecog.gui.analyzer.featureextraction import FeatureExtractionFrame
 from cecog.gui.analyzer.classification import ClassificationFrame
-from cecog.gui.analyzer.tracking import TrackingFrame
+from cecog.gui.analyzer.tracking import (TrackingFrame,
+                                         SECTION_NAME_TRACKING,
+                                         )
 from cecog.gui.analyzer.errorcorrection import ErrorCorrectionFrame
 from cecog.gui.analyzer.output import OutputFrame
 from cecog.gui.analyzer.processing import ProcessingFrame
@@ -75,7 +81,9 @@ from cecog.gui.util import (status,
                             critical,
                             question,
                             exception,
-                            warning
+                            information,
+                            warning,
+                            ProgressDialog,
                             )
 
 import resource
@@ -501,7 +509,7 @@ class AnalyzerMainWindow(QMainWindow):
         if self._imagecontainer is None:
             warning(None, 'Data structure not loaded',
                     'The input data structure was not loaded.\n'
-                    'Please click "Load input data" in General.')
+                    'Please click "Load image data" in General.')
         elif self._browser is None:
             try:
                 browser = Browser(self._settings,
@@ -517,97 +525,137 @@ class AnalyzerMainWindow(QMainWindow):
             self._browser.raise_()
 
     def _on_load_input(self):
-        try:
-            infos = list(ImageContainer.iter_check_plates(self._settings))
-        except:
-            exception(None, "Error scanning input structure")
+        txt = "Error scanning image structure"
+        path_in = self._settings.get(SECTION_NAME_GENERAL, 'pathin')
+        if path_in == '':
+            critical(None, txt, "Image path must be defined.")
+        elif not os.path.isdir(path_in):
+            critical(None, txt, "Image path '%s' not found." % path_in)
         else:
-            found_any = numpy.any([not info[3] is None for info in infos])
-            cancel = False
-            if found_any:
-                found_plates = [info[0] for info in infos
-                                if not info[3] is None]
-                missing_plates = [info[0] for info in infos
-                                if info[3] is None]
-                has_missing = len(missing_plates) > 0
-                txt = '%s plates were already scanned.\nDo you want ' \
-                      'to rescan the file structure(s)? ' \
-                      'This can take several minutes.' % \
-                      ('Some' if has_missing else 'All')
-                title = 'Rescan input structure?'
-
-                box = QMessageBox(QMessageBox.Question, title, title,
-                                  QMessageBox.Cancel, None, Qt.Sheet)
-                #box.setWindowModality(Qt.WindowModal)
-                box.setInformativeText(txt)
-                box.setDetailedText('Plates with scanned structure: \n%s\n'
-                                    '\nPlates without scanned structure: \n%s' %
-                                    ('\n'.join(found_plates),
-                                     '\n'.join(missing_plates)))
-
-                if not has_missing:
-                    btn1 = QPushButton('No', box)
-                    box.addButton(btn1, QMessageBox.NoRole)
-                elif len(found_plates) > 0:
-                    btn1 = QPushButton('Rescan missing', box)
-                    box.addButton(btn1, QMessageBox.YesRole)
-                else:
-                    btn1 = None
-
-                btn2 = QPushButton('Rescan all', box)
-                box.addButton(btn2, QMessageBox.YesRole)
-
-                if box.exec_() == QMessageBox.Cancel:
-                    cancel = True
-                else:
-                    btn = box.clickedButton()
-                    if btn == btn1:
-                        if has_missing:
-                            scan_plates = dict((id, True) for id in missing_plates)
-                        else:
-                            scan_plates = dict((id, False) for id in found_plates)
-                    else:
-                        scan_plates = dict((info[0], True) for info in infos)
+            try:
+                infos = list(ImageContainer.iter_check_plates(self._settings))
+            except:
+                exception(None, txt)
             else:
-                scan_plates = dict((info[0], True) for info in infos)
-            if not cancel:
-                self._load_image_container(infos, scan_plates)
+                found_any = numpy.any([not info[3] is None for info in infos])
+                cancel = False
+                if found_any:
+                    found_plates = [info[0] for info in infos
+                                    if not info[3] is None]
+                    missing_plates = [info[0] for info in infos
+                                    if info[3] is None]
+                    has_missing = len(missing_plates) > 0
+                    txt = '%s plates were already scanned.\nDo you want ' \
+                          'to rescan the file structure(s)? ' \
+                          'This can take several minutes.' % \
+                          ('Some' if has_missing else 'All')
+                    title = 'Rescan input structure?'
+
+                    box = QMessageBox(QMessageBox.Question, title, title,
+                                      QMessageBox.Cancel, None, Qt.Sheet)
+                    #box.setWindowModality(Qt.WindowModal)
+                    box.setInformativeText(txt)
+                    box.setDetailedText('Plates with scanned structure: \n%s\n'
+                                        '\nPlates without scanned structure: '
+                                        '\n%s' %
+                                        ('\n'.join(found_plates),
+                                         '\n'.join(missing_plates)))
+                    if not has_missing:
+                        btn1 = QPushButton('No', box)
+                        box.addButton(btn1, QMessageBox.NoRole)
+                    elif len(found_plates) > 0:
+                        btn1 = QPushButton('Rescan missing', box)
+                        box.addButton(btn1, QMessageBox.YesRole)
+                    else:
+                        btn1 = None
+
+                    btn2 = QPushButton('Rescan all', box)
+                    box.addButton(btn2, QMessageBox.YesRole)
+
+                    if box.exec_() == QMessageBox.Cancel:
+                        cancel = True
+                    else:
+                        btn = box.clickedButton()
+                        if btn == btn1:
+                            if has_missing:
+                                scan_plates = dict((id, True)
+                                                   for id in missing_plates)
+                            else:
+                                scan_plates = dict((id, False)
+                                                   for id in found_plates)
+                        else:
+                            scan_plates = dict((info[0], True)
+                                               for info in infos)
+                else:
+                    has_multiple = self._settings.get(SECTION_NAME_GENERAL,
+                                                      "has_multiple_plates")
+                    if not question(None, "No structure data found",
+                                    "Are you sure to scan %s?\n\nThis can take "
+                                    "several minutes depending on the number of"
+                                    " images." %
+                                    ("%d plates" % len(infos) if has_multiple
+                                     else "one plate")):
+                        cancel = True
+                    scan_plates = dict((info[0], True) for info in infos)
+                if not cancel:
+                    self._load_image_container(infos, scan_plates)
 
     def _load_image_container(self, plate_infos, scan_plates=None):
         dlg = QProgressDialog(None, Qt.CustomizeWindowHint | Qt.WindowTitleHint)
+        dlg.setWindowModality(Qt.WindowModal)
         dlg.setLabelText('Please wait until the input structure is scanned\n'
                          'or the structure data loaded...')
-        dlg.setWindowModality(Qt.WindowModal)
-        dlg.setAutoClose(True)
         dlg.setCancelButton(None)
-        dlg.setRange(0,len(plate_infos))
-        dlg.show()
+        dlg.setRange(0,0)
 
         thread = ImageContainerThread(self._settings, scan_plates)
         thread.next_plate.connect(lambda x: dlg.setValue(x))
         fct = lambda x,y : lambda : self._on_load_finished(x,y)
         thread.finished.connect(fct(dlg, thread))
         thread.start()
-        #thread.setPriority(QThread.LowestPriority)
-        #if wait:
-        #thread.wait()
+        dlg.exec_()
 
     def _on_load_finished(self, dlg, thread):
+        # close and delete the current browser instance
+        if not self._browser is None:
+            self._browser.close()
+            del self._browser
+            self._browser = None
+
+        imagecontainer = thread.imagecontainer
+        if len(imagecontainer.plates) > 0 and thread.error_message is None:
+            self._imagecontainer = imagecontainer
+            plate = self._imagecontainer.plates[0]
+            self._imagecontainer.set_plate(plate)
+            self._imagecontainer.check_dimensions()
+            channels = self._imagecontainer.channels
+            for prefix in ['primary', 'secondary', 'tertiary']:
+                trait = self._settings.get_trait(SECTION_NAME_OBJECTDETECTION,
+                                                 '%s_channelid' % prefix)
+                trait.set_list_data(channels)
+                self._tabs[1].get_widget('%s_channelid' % prefix).update()
+
+            trait = self._settings.get_trait(SECTION_NAME_TRACKING,
+                                             'tracking_duration_unit')
+
+            # allow time-base tracking durations only if time-stamp
+            # information is present
+            meta_data = imagecontainer.get_meta_data()
+            if meta_data.has_timestamp_info:
+                trait.set_list_data(TRACKING_DURATION_UNITS_TIMELAPSE)
+            else:
+                trait.set_list_data(TRACKING_DURATION_UNITS_DEFAULT)
+
+            self.set_modules_active(state=True)
+            information(None, "Plate(s) successfully loaded",
+                        "%d plates loaded successfully." % len(imagecontainer.plates))
+        else:
+            critical(None, "No valid image data found",
+                     "The naming schema provided might not fit your image data"
+                     "or the coordinate file is not correct.\n\nPlease modify "
+                     "the values and scan the structure again.",
+                     detail = thread.error_message)
         dlg.reset()
-
-        self._imagecontainer = thread.imagecontainer
-        channels = self._imagecontainer.channels
-        for prefix in ['primary', 'secondary', 'tertiary']:
-            trait = self._settings.get_trait(SECTION_NAME_OBJECTDETECTION,
-                                             '%s_channelid' % prefix)
-            trait.set_list_data(channels)
-            self._tabs[1].get_widget('%s_channelid' % prefix).update()
-        for plate_id in self._imagecontainer.plates:
-            print plate_id
-            print self._imagecontainer.get_meta_data(plate_id)
-
-        #self._on_browser_open()
-        self.set_modules_active(state=True)
 
     def set_modules_active(self, state=True):
         for name, (button, widget) in self._tab_lookup.iteritems():
@@ -633,6 +681,7 @@ class AnalyzerMainWindow(QMainWindow):
                 self._read_settings(filename)
                 self.set_modules_active(state=False)
 
+                # close and delete the current browser instance
                 if not self._browser is None:
                     self._browser.close()
                     del self._browser
@@ -684,13 +733,17 @@ class ImageContainerThread(QThread):
         self._settings = settings
         self.scan_plates = scan_plates
         self.imagecontainer = None
+        self.error_message = None
 
     def run(self):
         self.imagecontainer = ImageContainer()
         iter = self.imagecontainer.iter_import_from_settings(self._settings,
                                                              self.scan_plates)
-        for idx, info in enumerate(iter):
-            self.next_plate.emit(idx+1)
+        try:
+            for idx, info in enumerate(iter):
+                self.next_plate.emit(idx+1)
+        except Exception as e:
+            self.error_message = e.message
 
 
 def handle_exception(exc_type, exc_value, exc_traceback):
@@ -765,6 +818,7 @@ if __name__ == "__main__":
         #filename = '/Users/miheld/data/CellCognition/demo_data/cluster_test.conf'
         filename = '/Users/miheld/data/Analysis/H2bTub_20x_hdf5_test1/H2bTub20x_settings.conf'
         #filename = '/Users/miheld/data/Fabrice/Analysis/Dataset/fabrice_test.conf'
+        #filename = '/Users/miheld/data/CellCognition/demo_data/H2bTub20x_settings.conf'
         #filename = '/Users/miheld/data/Peter/Analysis/t2/peter_t2.conf'
         #filename = '/Users/miheld/data/Katja/EMBL_H2bIbb.conf'
         #filename = '/Users/miheld/data/Fabrice/Analysis/test/fabrice_test.conf'
