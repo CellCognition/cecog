@@ -522,8 +522,53 @@ class SecondarySegmentation(_Segmentation):
             self._logger.debug("         --- propagate region ok, %s" %
                                stopwatch.current_interval())
 
+        if ('ws' in self.lstAreaSelection):
+            labels_out = self.constrainedWatershedApproach(image,
+                                                           container.img_labels)
+
+            dctContainers['ws'] =\
+                ccore.ImageMaskContainer(image, labels_out, False)
+            self._logger.debug("         --- watershed based container ok, %s",
+                               stopwatch.current_interval())
+
+
         self._logger.debug("         total time: %s" %
                             stopwatch_total.current_interval())
         return containers
 
+    def constrainedWatershedApproach(self, imgIn, imgLabel):
+
+        minlabel, maxlabel = imgLabel.getMinmax()
+        imgThresh = ccore.threshold(imgLabel, 1, maxlabel, 0, 255)
+
+        # internal marker
+        imgEro = ccore.erode(imgThresh, 3, 8)
+        imgInternalMarker = ccore.anchoredSkeleton(imgThresh, imgEro)
+        #self.writeImageTitle(imgInternalMarker, 'SKELETON_MARKER')
+        #imgInternalMarker = ccore.erode(imgThresh, 3, 8)
+
+        # external marker
+        imgInv = ccore.linearRangeMapping(imgThresh, 255, 0, 0, 255)
+        imgVoronoi = ccore.watershed(imgInv)
+        imgExternalMarker = ccore.threshold(imgVoronoi, 0, 0, 0, 255)
+
+        # full marker image
+        imgMarker = ccore.supremum(imgInternalMarker, imgExternalMarker)
+
+        # gradient image
+        #imgConv = ccore.conversionTo8Bit(imgIn, 2**15, 2**15 + 4096, 0, 255)
+        imgFiltered = ccore.gaussianFilter(imgIn, 2)
+        imgGrad = ccore.morphoGradient(imgFiltered, 1, 8)
+
+        # Watershed result: 0 is WSL, 1 is Background, all other values correspond to labels.
+        imgGradWatershed = ccore.constrainedWatershed(imgGrad, imgMarker)
+
+        # we first get the regions
+        minreslab, maxreslab = imgGradWatershed.getMinmax()
+        imgBinSegmentationRes = ccore.threshold(imgGradWatershed, 2, maxreslab, 0, 255)
+
+        imgTemp = ccore.copyImageIf(imgLabel, imgBinSegmentationRes)
+        imgRes = ccore.relabelImage(imgBinSegmentationRes, imgTemp)
+
+        return imgRes
 
