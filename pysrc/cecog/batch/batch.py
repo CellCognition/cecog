@@ -33,8 +33,10 @@ import sys, \
 #
 from cecog import VERSION
 from cecog.traits.config import ConfigSettings
+from cecog.traits.config import init_application_support_path, init_constants
 from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
+from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
 from cecog.analyzer.core import AnalyzerCore
 from cecog.io.imagecontainer import ImageContainer
 
@@ -84,6 +86,12 @@ folder of the settings file can be overwritten by the options below.
                       help="The number of positions executed together as one "
                            "job item in a bulk job. This reduces the load on "
                            "the job scheduler heavily.", default=1, type="int")
+    parser.add_option("-p", "--position_list", default=None,
+                      help="List of positions (as an alternative to the index"
+                           "of a cluster job.", dest="position_list")
+    parser.add_option("-c", "--create_images", default=None,
+                      help="flag for image creation. Overwrites the settings"
+                           "from the settings file.", dest="create_images")
 
     (options, args) = parser.parse_args()
 
@@ -101,6 +109,9 @@ folder of the settings file can be overwritten by the options below.
     logger.info("**************************************")
     logger.info("*** CellCognition - Batch Analyzer ***")
     logger.info("**************************************")
+
+    #init_application_support_path()
+    #init_constants()
 
     filename_settings = os.path.abspath(options.settings)
 
@@ -155,5 +166,36 @@ folder of the settings file can be overwritten by the options below.
             parser.error('Cluster index requires a position list specified in '
                          'the settings file!')
 
+    elif not position_list is None:
+        # find the plates from the position list
+        plates = {}
+        for item in position_list:
+            plate_id, pos = item.split('___')
+            if not plate_id in plates:
+                plates[plate_id] = []
+            plates[plate_id].append(pos)
+
+        settings.set(SECTION_NAME_GENERAL, 'constrain_positions', True)
+        if options.create_images.lower() == 'false':
+            settings.set(SECTION_NAME_GENERAL, 'createimages', False)
+            for rendering in ['rendering_labels_discwrite',
+                              'rendering_class_discwrite',
+                              'rendering_contours_discwrite']:
+                settings.set(SECTION_NAME_OUTPUT, rendering, False)
+
+        #createimages = True
+        for plate_id in plates:
+            settings.set(SECTION_NAME_GENERAL, 'positions',
+                         ','.join(plates[plate_id]))
+            print "Launching analyzer for plate '%s' with positions %s"%\
+            (plate_id, plates[plate_id])
+
+            analyzer = AnalyzerCore(plate_id, settings, imagecontainer)
+            analyzer.processPositions()
+
+    else:
+        print 'either a cluster index or a list of position has to be given.'
+
+    print 'BATCHPROCESSING DONE!'
 
 
