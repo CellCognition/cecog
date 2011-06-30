@@ -59,6 +59,8 @@
 #include "cecog/seededregion.hxx"
 #include "cecog/basic/focus.hxx"
 
+#include "cecog/morpho/basic.hxx"
+#include "cecog/morpho/label.hxx"
 #include "cecog/morpho/watershed.hxx"
 #include "cecog/morpho/geodesy.hxx"
 #include "cecog/morpho/structuring_elements.hxx"
@@ -364,7 +366,7 @@ PyObject * pyDiscMedian(IMAGE1 const &imgIn, int radius)
 template <class IMAGE1>
 double pyFocusQuantification(IMAGE1 const &imgIn, int method)
 {
-  using namespace mito;
+  using namespace cecog;
   double resval = focusQuantification(imgIn, method);
   return resval;
 }
@@ -373,7 +375,7 @@ template <class IMAGE1, class IMAGE2>
 PyObject * pyImWatershed(IMAGE1 const &imgIn)
 {
   std::auto_ptr< IMAGE2 > imgPtr(new IMAGE2(imgIn.size()));
-  using namespace mito::morpho;
+  using namespace cecog::morpho;
 
   neighborhood2D nb(WITHOUTCENTER8, imgIn.size());
   ImWatershed(srcImageRange(imgIn), destImage(*imgPtr), nb);
@@ -387,7 +389,7 @@ PyObject * pyImConstrainedWatershed(IMAGE1 const &imgIn,
 {
   std::auto_ptr< IMAGE3 > imgPtr(new IMAGE3(imgIn.size()));
 
-  using namespace mito::morpho;
+  using namespace cecog::morpho;
 
   neighborhood2D nb(WITHOUTCENTER8, imgIn.size());
 
@@ -401,7 +403,7 @@ PyObject * pyImMorphoGradient(IMAGE1 const &imgIn, int size, int connectivity=8)
 {
   std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
 
-  using namespace mito::morpho;
+  using namespace cecog::morpho;
 
   structuringElement2D se8(WITHCENTER8, size);
   structuringElement2D se4(WITHCENTER4, size);
@@ -422,7 +424,7 @@ PyObject * pyImExternalGradient(IMAGE1 const &imgIn, int size, int connectivity=
 {
   std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
 
-  using namespace mito::morpho;
+  using namespace cecog::morpho;
 
   structuringElement2D se8(WITHCENTER8, size);
   structuringElement2D se4(WITHCENTER4, size);
@@ -443,7 +445,7 @@ PyObject * pyImInternalGradient(IMAGE1 const &imgIn, int size, int connectivity=
 {
   std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
 
-  using namespace mito::morpho;
+  using namespace cecog::morpho;
 
   structuringElement2D se8(WITHCENTER8, size);
   structuringElement2D se4(WITHCENTER4, size);
@@ -464,7 +466,7 @@ PyObject * pyImErode(IMAGE1 const &imgIn, int size, int connectivity=8)
 {
   std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
 
-  using namespace mito::morpho;
+  using namespace cecog::morpho;
 
   structuringElement2D se8(WITHCENTER8, size);
   structuringElement2D se4(WITHCENTER4, size);
@@ -485,7 +487,7 @@ PyObject * pyImDilate(IMAGE1 const &imgIn, int size, int connectivity=8)
 {
   std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
 
-  using namespace mito::morpho;
+  using namespace cecog::morpho;
 
   structuringElement2D se8(WITHCENTER8, size);
   structuringElement2D se4(WITHCENTER4, size);
@@ -506,7 +508,7 @@ PyObject * pyImClose(IMAGE1 const &imgIn, int size, int connectivity=8)
 {
   std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
 
-  using namespace mito::morpho;
+  using namespace cecog::morpho;
 
   structuringElement2D se8(WITHCENTER8, size);
   structuringElement2D se4(WITHCENTER4, size);
@@ -527,7 +529,7 @@ PyObject * pyImOpen(IMAGE1 const &imgIn, int size, int connectivity=8)
 {
   std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
 
-  using namespace mito::morpho;
+  using namespace cecog::morpho;
 
   structuringElement2D se8(WITHCENTER8, size);
   structuringElement2D se4(WITHCENTER4, size);
@@ -551,7 +553,7 @@ PyObject * pyImInfimum(IMAGE1 const &a, IMAGE1 const &b)
   //typedef typename Accessor1::value_type INTYPE;
   //vigra::combineTwoImages(srcImageRange(a), srcImage(b), destImage(*imgPtr), std::min );
 
-  using namespace mito::morpho;
+  using namespace cecog::morpho;
   ImInfimum(srcImageRange(a), srcImage(b), destImage(*imgPtr));
   return incref(object(imgPtr).ptr());
 }
@@ -561,7 +563,7 @@ PyObject * pyImAnchoredSkeleton(Image1 const &imgIn, Image1 const &imgAnchor)
 {
   std::auto_ptr< Image1 > imgPtr(new Image1(imgIn.size()));
 
-  using namespace mito::morpho;
+  using namespace cecog::morpho;
   //simpleEight<Image1> simpleFunc(imgIn.size());
   ImAnchoredSkeleton(
       srcImageRange(imgIn),
@@ -578,7 +580,7 @@ PyObject * pyImSupremum(IMAGE1 const &a, IMAGE1 const &b)
   //typedef typename Accessor1::value_type INTYPE;
   //vigra::combineTwoImages(srcImageRange(a), srcImage(b), destImage(*imgPtr), std::max );
 
-  using namespace mito::morpho;
+  using namespace cecog::morpho;
   ImSupremum(srcImageRange(a), srcImage(b), destImage(*imgPtr));
   return incref(object(imgPtr).ptr());
 }
@@ -587,7 +589,7 @@ template <class IMAGE1, class IMAGE2>
 PyObject * pyToggleMapping(IMAGE1 const &imgIn, int size)
 {
   std::auto_ptr< IMAGE2 > imgPtr(new IMAGE2(imgIn.size()));
-  using namespace mito::morpho;
+  using namespace cecog::morpho;
   structuringElement2D se(WITHCENTER8, size);
   ImFastToggleMapping(srcImageRange(imgIn), destImage(*imgPtr), se);
   return incref(object(imgPtr).ptr());
@@ -600,7 +602,7 @@ PyObject * pyOverlayBinaryImage(Image1 const & imgIn1, Image2 const & imgIn2,
 
   std::auto_ptr< Image3 > imgPtr(new Image3(imgIn1.size()));
 
-  mito::ImOverlayBinaryImage(srcImageRange(imgIn1),
+  cecog::ImOverlayBinaryImage(srcImageRange(imgIn1),
       srcImage(imgIn2),
       destImage(*imgPtr),
       value);
@@ -636,10 +638,10 @@ PyObject * pyRelabelImage(Image1 const &imgMask, Image2 const &imgLabel)
    vigra::transformImage(srcImageRange(imgMask), destImage(imgTemp),
                          vigra::Threshold<mask_type, label_type>(1, mask_minmax.max, 0, label_minmax.max));
 
-   mito::morpho::neighborhood2D nb(mito::morpho::WITHOUTCENTER8, imgLabel.size());
+   cecog::morpho::neighborhood2D nb(cecog::morpho::WITHOUTCENTER8, imgLabel.size());
 
    vigra::copyImage(srcImageRange(imgLabel), destImage(*imgPtr));
-   mito::morpho::ImUnderBuild(destImageRange(*imgPtr), srcImage(imgTemp), nb);
+   cecog::morpho::ImUnderBuild(destImageRange(*imgPtr), srcImage(imgTemp), nb);
 
    return incref(object(imgPtr).ptr());
 }

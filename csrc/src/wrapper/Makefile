@@ -30,7 +30,8 @@ INSTALL_PATH = $(CECOG_PATH)/pysrc/cecog/ccore
 MACOS_VERSION = 10.5
 MACOS_SDK = /Developer/SDKs/MacOSX10.5.sdk
 
-CXX = ccache g++ 
+#CXX = ccache g++ 
+CXX = g++
 
 # Mac OS X - Intel Core (2) Duo optimization:
 # NOTE: CXXFLAGS are optimized for compilation on Mac OS 10.6 (gcc 4.2.1) supporting MacOS 10.5 and 10.6

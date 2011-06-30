@@ -20,7 +20,7 @@
 //#include "project_definitions.hxx"
 //#include "mito/basic/functors.hxx"
 
-namespace mito {
+namespace cecog {
 
 //  ///////////////////////
 //  // Global Focus Measure
