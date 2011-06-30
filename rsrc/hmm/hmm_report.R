@@ -544,6 +544,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
         L <- levels(screen$cell$oligoid)
         S <- length(L)
         groups <- S
+        grouping_name = 'OligoID'
         #sortedIndex <- seq(1,S)
         sortedIndex <- sort(L, index.return=TRUE, method="shell")$ix
     } else
@@ -552,11 +553,13 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
         L <- levels(screen$cell$gene)
         S <- length(L)
         groups <- S
+        grouping_name = 'GeneSymbol'
         #sortedIndex <- seq(1,S)
         sortedIndex <- sort(L, index.return=TRUE, method="shell")$ix
     } else
     {
         groups <- Spos
+        grouping_name = 'Position'
         pos.names <- vector(length=Spos)
         for (i in 1:Spos)
         {
@@ -1113,6 +1116,42 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             }
         }
     }
+
+
+    count_files = matrix("", nr=2, nc=graph$K)
+    width=1850
+    height=400
+    for (k in 1:graph$K)
+    {
+        class_name = k
+
+        filename = paste(dirCounts, '/', 'boxplot_', class_name, '.png', sep='')
+        count_files[1,k] = filename
+        png(filename, width, height)
+        par(mar=c(9,3,2,1))
+        data = list()
+        for (i in 1:groups)
+            data[[i]] = counts.all[[i]][k,]
+        boxplot(data, col=class.colors.hmm[k], ylim=c(0,max_time), xaxt='n')
+        axis(1, seq(groups), names.all, las=2)
+        title(paste('Class', class_name))
+        dev.off()
+
+        filename = paste(dirCounts, '/', 'barplot_', class_name, '.png', sep='')
+        count_files[2,k] = filename
+        png(filename, width, height)
+        par(mar=c(9,3,2,1))
+        data2 = vector(length=groups)
+        for (i in 1:groups)
+            data2[i] = mean(counts.all[[i]][k,], na.rm=TRUE)
+        mp = barplot(data2, col=class.colors.hmm[k], ylim=c(0,max_time), xaxt='n')
+        axis(1, mp, names.all, las=2)
+        title(paste('Class', class_name))
+        dev.off()
+    }
+
+
+
     T3 <- hwriteImage(fn[,1], width=400, height=400, link=fn[,1])
     T4 <- hwriteImage(fn.raw[,1], width=400, height=400, link=fn.raw[,1])
     T5 <- hwriteImage(fn.f[,1], width=400, height=400, link=fn.f[,1])
@@ -1131,6 +1170,8 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
 #        #plotTransitionGraph(graph, type="PDF", filename=paste(outdir,"/graph_prior.pdf",sep=""),loops=FALSE,weights=FALSE)
     hwrite("Prior Selected Graph Structure",p,heading=3)
     hwriteImage(paste(outdir_sequences, "/graph_prior.png",sep=""),p,link=paste(outdir_sequences,"/graph_prior.png",sep=""))
+
+    hwrite(paste("Summary per", grouping_name),p,heading=1)
 
     hwrite("Transition probabilities",p,heading=3)
     hwrite(T1,p)
@@ -1156,6 +1197,17 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
 
     hwrite("Single cell annotation (raw)",p,heading=3)
     hwrite(T4,p)
+
+    hwrite("",p,heading=2)
+    hwrite("Summary per class",p,heading=1)
+
+    hwrite("Boxplots",p,heading=3)
+    for (i in 1:graph$K)
+        hwriteImage(count_files[1,i], p)
+
+    hwrite("Barplots",p,heading=3)
+    for (i in 1:graph$K)
+        hwriteImage(count_files[2,i], p)
 
     closePage(p)
     if (openHTML) {
