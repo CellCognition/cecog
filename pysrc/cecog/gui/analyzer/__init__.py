@@ -75,6 +75,7 @@ from cecog.analyzer.core import AnalyzerCore, SECONDARY_REGIONS
 from cecog.io.imagecontainer import PIXEL_TYPES
 from cecog.traits.config import R_SOURCE_PATH
 from cecog import ccore
+from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
 
 #-------------------------------------------------------------------------------
 # functions:
@@ -250,6 +251,10 @@ class HmmThread(_ProcessingThread):
         self._imagecontainer = imagecontainer
         self._mapping_files = {}
 
+        # R on windows works better with '/' then '\'
+        self._convert = lambda x: x.replace('\\','/')
+        self._join = lambda *x: self._convert('/'.join(x))
+
         qApp._log_window.show()
         qApp._log_window.raise_()
 
@@ -274,6 +279,7 @@ class HmmThread(_ProcessingThread):
 
     def _run(self):
         plates = self._imagecontainer.plates
+        self._settings.set_section(SECTION_NAME_ERRORCORRECTION)
 
         # mapping files (mapping between plate well/position and experimental condition) can be defined by a directory
         # which must contain all mapping files for all plates in the form <plate_id>.txt or .tsv
@@ -306,7 +312,7 @@ class HmmThread(_ProcessingThread):
                 break
 
     def _run_plate(self, plate_id):
-        filename = self._settings.get('ErrorCorrection', 'filename_to_R')
+        filename = self._settings.get2('filename_to_R')
         cmd = self.get_cmd(filename)
 
         path_out = self._imagecontainer.get_path_out()
@@ -315,12 +321,6 @@ class HmmThread(_ProcessingThread):
         f = file(os.path.join(wd, 'run_hmm.R'), 'r')
         lines = f.readlines()
         f.close()
-
-        self._settings.set_section('ErrorCorrection')
-
-        # R on windows works better with '/' then '\'
-        self._convert = lambda x: x.replace('\\','/')
-        self._join = lambda *x: self._convert('/'.join(x))
 
         path_analyzed = self._join(path_out, 'analyzed')
         path_out_hmm = self._join(path_out, 'hmm')
