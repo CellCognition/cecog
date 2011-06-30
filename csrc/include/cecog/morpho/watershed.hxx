@@ -69,14 +69,21 @@ namespace morpho{
                nbOffset);
 
     std::priority_queue<PIX, std::vector<PIX>, PriorityFunctor> PQ(priority);
+    std::queue<Diff2D> Q;
 
     Diff2D o0(0,0);
+
+    VALUETYPE maxval = srca(srcUpperLeft, o0);
 
     // initialization of the hierarchical queue
     for(o0.y = 0; o0.y < height; ++o0.y)
     {
       for(o0.x = 0; o0.x < width; ++o0.x)
+
       {
+
+        maxval = std::max(srca(srcUpperLeft, o0), maxval);
+
         LABTYPE label = lab(labUpperLeft, o0);
         desta.set(label, destUpperLeft, o0);
         if(label > WS_NOT_PROCESSED)
@@ -92,7 +99,8 @@ namespace morpho{
             if(    (!nbOffset.isOutsidePixel(o1))
               && (lab(labUpperLeft, o1) == WS_NOT_PROCESSED))
             {
-              PQ.push(PIX(srca(srcUpperLeft, o1), o1, insertionOrder++));
+              VALUETYPE priority = std::max(srca(srcUpperLeft, o1), srca(srcUpperLeft, o0));
+              PQ.push(PIX(priority, o1, insertionOrder++));
               lab.set(WS_QUEUED, labUpperLeft, o1);
             }
           } // end for neighborhood
@@ -111,6 +119,8 @@ namespace morpho{
       int label1 = WS_NOT_PROCESSED;
       int label2 = WS_NOT_PROCESSED;
 
+      VALUETYPE currentval = px.value;
+
       // look to the neighborhood to determine the label of pixel o0.
       for(ITERATORTYPE iter = nbOffset.begin();
         iter != nbOffset.end();
@@ -123,7 +133,8 @@ namespace morpho{
           // first case: pixel has not been processed.
           if(label_o1 == WS_NOT_PROCESSED)
           {
-            PQ.push(PIX(srca(srcUpperLeft, o1), o1, insertionOrder++));
+            VALUETYPE priority = std::max(srca(srcUpperLeft, o1), currentval);
+            PQ.push(PIX(priority, o1, insertionOrder++));
             lab.set(WS_QUEUED, labUpperLeft, o1);
           }
 
@@ -153,22 +164,32 @@ namespace morpho{
                 lab.set(WS_WSLABEL, labUpperLeft, o0);
                 desta.set(OUT_WSLABEL, destUpperLeft, o0);
               }
+
             }
 
           }
         }
       } // end for neighborhood
 
-      // if the pixel has not been treated
+      // if there was no label assigned to the pixel
+      // (this can happen in some pathological but not uncommon situations)
       if(label1 == WS_NOT_PROCESSED)
       {
-        // we know that this is not correct, but we think
-        // that the differences do not concern many pixels.
-        lab.set(WS_WSLABEL, labUpperLeft, o0);
-        desta.set(OUT_WSLABEL, destUpperLeft, o0);
+        if(currentval < maxval) {
+            PQ.push(PIX(currentval+1, o0, insertionOrder++));
+            lab.set(WS_QUEUED, labUpperLeft, o0);
+        }
+        else {
+            Q.push(o0);
+        }
       }
 
     } // end of PRIORITY QUEUE
+
+    while(!Q.empty()) {
+       Diff2D o0 = Q.front(); Q.pop();
+       desta.set(OUT_WSLABEL, destUpperLeft, o0);
+    }
 
   } // end of function
 
@@ -254,19 +275,22 @@ namespace morpho{
     typedef Pixel2D<VALUETYPE> PIX;
 
     int width  = srcLowerRight.x - srcUpperLeft.x;
-      int height = srcLowerRight.y - srcUpperLeft.y;
+    int height = srcLowerRight.y - srcUpperLeft.y;
 
     vigra::BasicImage<int> labelImage(width, height);
     vigra::BasicImage<int>::Iterator labUpperLeft = labelImage.upperLeft();
     vigra::BasicImage<int>::Accessor lab;
 
     ImLabel(markerUpperLeft, markerLowerRight, marka,
-          labUpperLeft, lab,
+        labUpperLeft, lab,
         nbOffset);
 
     std::priority_queue<PIX, std::vector<PIX>, PriorityFunctor> PQ(priority);
+    std::queue<Diff2D> Q;
 
     Diff2D o0(0,0);
+
+    VALUETYPE maxval = srca(srcUpperLeft, o0);
 
     // initialization of the hierarchical queue
     for(o0.y = 0; o0.y < height; ++o0.y)
@@ -305,6 +329,12 @@ namespace morpho{
       int label1 = WS_NOT_PROCESSED;
       int label2 = WS_NOT_PROCESSED;
 
+      // the current flooding value is taken from the queue entry.
+      // it is not necessarily the same value as in the original image,
+      // because some lower regions might not have been flooded
+      // (either because of a buttonhole or because of the constraint).
+      VALUETYPE currentval = px.value;
+
       // look to the neighborhood to determine the label of pixel o0.
       for(SIZETYPE i = 0; i < nbOffset.numberOfPixels(); ++i)
       {
@@ -314,7 +344,7 @@ namespace morpho{
           // first case: pixel has not been processed.
           if(lab(labUpperLeft, o1) == WS_NOT_PROCESSED)
           {
-            VALUETYPE priority = std::max(srca(srcUpperLeft, o1), srca(srcUpperLeft, o0));
+            VALUETYPE priority = std::max(srca(srcUpperLeft, o1), currentval);
             PQ.push(PIX(priority, o1, insertionOrder++));
             lab.set(WS_QUEUED, labUpperLeft, o1);
           }
@@ -351,16 +381,31 @@ namespace morpho{
         }
       } // end for neighborhood
 
-      // if the pixel has not been treated
+      // if there was no label assigned to the pixel
+      // (this can happen in some pathological but not uncommon situations)
       if(label1 == WS_NOT_PROCESSED)
       {
-        // we know that this is not correct, but we think
-        // that the differences do not concern many pixels.
-        lab.set(WS_WSLABEL, labUpperLeft, o0);
-        desta.set(OUT_WSLABEL, destUpperLeft, o0);
+        if(currentval < maxval) {
+          // in this case the pixel is pushed back to the queue with
+          // increased priority level (so that it will be checked out again
+          // at the next grey level).
+            PQ.push(PIX(currentval+1, o0, insertionOrder++));
+            lab.set(WS_QUEUED, labUpperLeft, o0);
+        }
+        else {
+          // if the maximum level is already reached, the pixel remains
+          // outside the queue and is pushed to the final non-hierarchical queue.
+            Q.push(o0);
+        }
       }
 
     } // end of PRIORITY QUEUE
+
+    // all points in the rest queue are given the watershedline-label.
+    while(!Q.empty()) {
+       Diff2D o0 = Q.front(); Q.pop();
+       desta.set(OUT_WSLABEL, destUpperLeft, o0);
+    }
 
   } // end of function
 
@@ -404,7 +449,7 @@ namespace morpho{
     ImLabel(markerUpperLeft, markerLowerRight, marka,
           labUpperLeft, lab,
         nbOffset);
-    globalDebEnv.DebugWriteImage(labelImage, "label");
+    //globalDebEnv.DebugWriteImage(labelImage, "label");
 
     std::priority_queue<PIX, std::vector<PIX>, PriorityFunctor> PQ(priority);
 
@@ -525,7 +570,7 @@ namespace morpho{
   {
     typedef typename Accessor1::value_type val_type;
 
-    ImConstrainedWatershedOpt(src.first, src.second, src.third,
+    ImConstrainedWatershed(src.first, src.second, src.third,
                  marker.first, marker.second, marker.third,
                      dest.first, dest.second,
                      neighborOffset,
