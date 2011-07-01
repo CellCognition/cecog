@@ -522,12 +522,12 @@ class SecondarySegmentation(_Segmentation):
             self._logger.debug("         --- propagate region ok, %s" %
                                stopwatch.current_interval())
 
-        if ('ws' in self.lstAreaSelection):
+        if ('constrained_watershed' in self.lstAreaSelection):
             labels_out = self.constrainedWatershedApproach(image,
                                                            container.img_labels)
 
-            dctContainers['ws'] =\
-                ccore.ImageMaskContainer(image, labels_out, False)
+            containers['constrained_watershed'] =\
+                ccore.ImageMaskContainer(image, labels_out, False, True)
             self._logger.debug("         --- watershed based container ok, %s",
                                stopwatch.current_interval())
 
@@ -536,7 +536,7 @@ class SecondarySegmentation(_Segmentation):
                             stopwatch_total.current_interval())
         return containers
 
-    def constrainedWatershedApproach(self, imgIn, imgLabel):
+    def constrainedWatershedApproach(self, imgIn, imgLabel, iGaussFilterSize=2):
 
         minlabel, maxlabel = imgLabel.getMinmax()
         imgThresh = ccore.threshold(imgLabel, 1, maxlabel, 0, 255)
@@ -544,8 +544,6 @@ class SecondarySegmentation(_Segmentation):
         # internal marker
         imgEro = ccore.erode(imgThresh, 3, 8)
         imgInternalMarker = ccore.anchoredSkeleton(imgThresh, imgEro)
-        #self.writeImageTitle(imgInternalMarker, 'SKELETON_MARKER')
-        #imgInternalMarker = ccore.erode(imgThresh, 3, 8)
 
         # external marker
         imgInv = ccore.linearRangeMapping(imgThresh, 255, 0, 0, 255)
@@ -556,8 +554,7 @@ class SecondarySegmentation(_Segmentation):
         imgMarker = ccore.supremum(imgInternalMarker, imgExternalMarker)
 
         # gradient image
-        #imgConv = ccore.conversionTo8Bit(imgIn, 2**15, 2**15 + 4096, 0, 255)
-        imgFiltered = ccore.gaussianFilter(imgIn, 2)
+        imgFiltered = ccore.gaussianFilter(imgIn, iGaussFilterSize)
         imgGrad = ccore.morphoGradient(imgFiltered, 1, 8)
 
         # Watershed result: 0 is WSL, 1 is Background, all other values correspond to labels.
