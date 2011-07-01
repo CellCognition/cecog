@@ -474,25 +474,16 @@ class TimeHolder(OrderedDict):
 
                 grp_name = self._convert_region_name(channel_name, region_name, prefix='')
                 grp_cur_obj = grp_obj.require_group(grp_name)
-                var_name = 'edge'
+                var_name = self.HDF5_NAME_EDGE
                 if var_name not in grp_cur_obj:
-                    var_edge = \
-                        grp_cur_obj.create_dataset(var_name,
-                                    (nr_objects,),
-                                    self.HDF5_DTYPE_EDGE,
-                                    compression=self._hdf5_compression,
-                                    chunks=(1,))
+                    var_edge = grp_cur_obj.create_dataset(var_name, (nr_objects,), self.HDF5_DTYPE_EDGE)
                 else:
                     var_edge = grp_cur_obj[var_name]
                     var_edge.resize((var_rel_offset + nr_objects,))
 
-                var_name = 'id'
+                var_name = self.HDF5_NAME_ID
                 if var_name not in grp_cur_obj:
-                    var_prop = \
-                        grp_cur_obj.create_dataset(var_name,
-                                    (nr_objects,), self.HDF5_DTYPE_ID,
-                                    compression=self._hdf5_compression,
-                                    chunks=(1,))
+                    var_prop = grp_cur_obj.create_dataset(var_name, (nr_objects,), self.HDF5_DTYPE_ID)
                 else:
                     var_prop = grp_cur_obj[var_name]
                     var_prop.resize((var_rel_offset + nr_objects,))
@@ -634,11 +625,7 @@ class TimeHolder(OrderedDict):
                                          compression=self._hdf5_compression)
             grp = self._grp_cur_position[self.HDF5_GRP_OBJECT]
             grp_cur_obj = grp.create_group('track')
-            var_id = \
-                grp_cur_obj.create_dataset(self.HDF5_NAME_ID,
-                            (nr_objects,), self.HDF5_DTYPE_ID,
-                            compression=self._hdf5_compression,
-                            chunks=(1,))
+            var_id = grp_cur_obj.create_dataset(self.HDF5_NAME_ID, (nr_objects,), self.HDF5_DTYPE_ID)
 
             for idx, edge in enumerate(graph.edges.itervalues()):
                 head_id, tail_id = edge[:2]
@@ -668,12 +655,7 @@ class TimeHolder(OrderedDict):
                         data.append((obj_id, rel_idx))
                         nl.append(tail_id)
 
-            var_edge = \
-                grp_cur_obj.create_dataset(self.HDF5_NAME_EDGE,
-                                           (len(data),),
-                                           self.HDF5_DTYPE_EDGE,
-                                           compression=self._hdf5_compression,
-                                           chunks=(1,))
+            var_edge = grp_cur_obj.create_dataset(self.HDF5_NAME_EDGE, (len(data),), self.HDF5_DTYPE_EDGE)
             var_edge[:] = data
 
     def serialize_events(self, tracker):
@@ -699,17 +681,8 @@ class TimeHolder(OrderedDict):
             if nr_events > 0:
                 grp = self._grp_cur_position[self.HDF5_GRP_OBJECT]
                 grp_cur_obj = grp.create_group('event')
-                var_edge = \
-                    grp_cur_obj.create_dataset('edge',
-                                (nr_edges*nr_events,),
-                                self.HDF5_DTYPE_EDGE,
-                                compression=self._hdf5_compression,
-                                chunks=(1,))
-                var_id = \
-                    grp_cur_obj.create_dataset('id',
-                                (nr_events,), self.HDF5_DTYPE_ID,
-                                compression=self._hdf5_compression,
-                                chunks=(1,))
+                var_edge = grp_cur_obj.create_dataset(self.HDF5_NAME_EDGE, (nr_edges*nr_events,), self.HDF5_DTYPE_EDGE)
+                var_id = grp_cur_obj.create_dataset(self.HDF5_NAME_ID, (nr_events,), self.HDF5_DTYPE_ID)
 
                 obj_idx = 0
                 rel_idx = 0
@@ -726,82 +699,6 @@ class TimeHolder(OrderedDict):
                                 rel_idx += 1
                             obj_idx += 1
 
-#    def serialize_region_hierarchy(self, channel_name, region_name):
-#
-#        if self._hdf5_create:# and self._hdf5_include_tracking:
-#            grp = self._grp_cur_position[self.HDF5_GRP_RELATION]
-#
-#            nr_values = 0
-#            for frame, channels in self.iteritems():
-#                channel = channels[channel_name]
-#                region = channel.get_region(region_name)
-#                nr_values += len(region)
-#            nr_regions = len(self._region_infos) - 1
-#
-#            grp_obj = grp.require_group(self.HDF5_GRP_OBJECT)
-#            grp_rel = grp.require_group(self.HDF5_GRP_RELATION)
-#
-#            dt = numpy.dtype([('t1', 'uint32'),
-#                              ('z1', 'uint32'),
-#                              ('obj_id1', 'uint32'),
-#                              ('t2', 'uint32'),
-#                              ('z2', 'uint32'),
-#                              ('obj_id2', 'uint32')])
-#            var_rel = grp_rel.create_dataset('relation___%s__%s' % (channel_name, region_name),
-#                                             (nr_values,), dt,
-#                                             compression=self._hdf5_compression,
-#                                             chunks=(1,)
-#                                             )
-#            grp_cur_obj = grp_obj.create_group('%s__%s' % (channel_name, region_name))
-#            dt = numpy.dtype()
-#            var_edge =
-#                                             (nr_values,), dt,
-#                                             compression=self._hdf5_compression,
-#                                             chunks=(1,)
-#                                             )
-#
-#
-#                for frame, channels in self.iteritems():
-#                    frame_idx = self._frames_to_idx[frame]
-#                    channel = channels[channel_name]
-#                    region = channel.get_region(region_name)
-#                    for obj_id in region:
-#                        # get the index of the obj_id in the OrderedDict
-#                        obj_idx = region.index(obj_id)
-#                        for info in self._region_infos[1:]:
-#                            region_idx2 = self._regions_to_idx[info[1]]
-#                            var[idx] = (frame_idx, 0, region_idx1, obj_idx,
-#                                        frame_idx, 0, region_idx2, obj_idx)
-#
-#
-#            for obj_name, (idx, relation_name) in self._objects_to_idx.iteritems():
-#                var = grp_obj.create_dataset(obj_name, )
-#
-#
-#            if nr_regions > 0:
-#                var = grp.create_dataset('region_hierarchy',
-#                                         (nr_values,),
-#                                         self.HDF5_DTYPE_RELATION,
-#                                         chunks=(nr_regions,),
-#                                         compression=self._hdf5_compression)
-#
-#                region_idx1 = self._regions_to_idx[
-#                    self._convert_region_name(channel_name.lower(),
-#                                              region_name)]
-#
-#                idx = 0
-#                for frame, channels in self.iteritems():
-#                    frame_idx = self._frames_to_idx[frame]
-#                    channel = channels[channel_name]
-#                    region = channel.get_region(region_name)
-#                    for obj_id in region:
-#                        # get the index of the obj_id in the OrderedDict
-#                        obj_idx = region.index(obj_id)
-#                        for info in self._region_infos[1:]:
-#                            region_idx2 = self._regions_to_idx[info[1]]
-#                            var[idx] = (frame_idx, 0, region_idx1, obj_idx,
-#                                        frame_idx, 0, region_idx2, obj_idx)
-#                            idx += 1
 
     def serialize_classification(self, channel_name, region_name, predictor):
         if self._hdf5_create and self._hdf5_include_classification:
