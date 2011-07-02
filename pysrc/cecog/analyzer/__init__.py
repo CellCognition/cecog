@@ -49,7 +49,7 @@ FEATURE_CATEGORIES = ['roisize',
                       'moments',
                       ]
 REGION_NAMES_PRIMARY = ['primary']
-REGION_NAMES_SECONDARY = ['expanded', 'inside', 'outside', 'rim', 'propagate']
+REGION_NAMES_SECONDARY = ['expanded', 'inside', 'outside', 'rim', 'propagate', 'constrained_watershed']
 
 REGION_NAMES = {'primary'   : REGION_NAMES_PRIMARY,
                 'secondary' : REGION_NAMES_SECONDARY,
@@ -61,6 +61,7 @@ SECONDARY_COLORS = {'inside' : '#FFFF00',
                     'expanded': '#00FFFF',
                     'rim' : '#FF00FF',
                     'propagate': '#FFFF99',
+                    'constrained_watershed': '#FF99FF',
                     }
 
 SECONDARY_REGIONS = {'secondary_regions_expanded' : 'expanded',
@@ -68,12 +69,14 @@ SECONDARY_REGIONS = {'secondary_regions_expanded' : 'expanded',
                      'secondary_regions_outside' : 'outside',
                      'secondary_regions_rim' : 'rim',
                      'secondary_regions_propagate' : 'propagate',
+                     'secondary_regions_constrained_watershed' : 'constrained_watershed',
                      }
 TERTIARY_REGIONS  = {'tertiary_regions_expanded' : 'expanded',
                      'tertiary_regions_inside' : 'inside',
                      'tertiary_regions_outside' : 'outside',
                      'tertiary_regions_rim' : 'rim',
                      'tertiary_regions_propagate' : 'propagate',
+                     'tertiary_regions_constrained_watershed' : 'constrained_watershed',
                      }
 
 ZSLICE_PROJECTION_METHODS = ['maximum', 'average']

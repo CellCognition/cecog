@@ -393,6 +393,9 @@ class SecondarySegmentation(_Segmentation):
            iPropagateDeltaWidth =
                IntProperty(None, is_mandatory=True),
 
+           iConstrainedWatershedGaussFilterSize =
+               IntProperty(None, is_mandatory=True),
+
            bPresegmentation =
                BooleanProperty(None, is_mandatory=True),
            iPresegmentationMedianRadius =
@@ -523,12 +526,12 @@ class SecondarySegmentation(_Segmentation):
                                stopwatch.current_interval())
 
         if ('constrained_watershed' in self.lstAreaSelection):
-            labels_out = self.constrainedWatershedApproach(image,
-                                                           container.img_labels)
+            labels_out = self.constrainedWatershedApproach(image, container.img_labels,
+                                                           iGaussFilterSize=self.iConstrainedWatershedGaussFilterSize)
 
             containers['constrained_watershed'] =\
                 ccore.ImageMaskContainer(image, labels_out, False, True)
-            self._logger.debug("         --- watershed based container ok, %s",
+            self._logger.debug("         --- constrained_watershed region ok, %s",
                                stopwatch.current_interval())
 
 

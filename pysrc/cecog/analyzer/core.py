@@ -888,8 +888,11 @@ class PositionAnalyzer(object):
                                           iExpansionSeparationSizeOutside = self.oSettings.get2('%s_regions_outside_separationsize' % prefix),
                                           iExpansionSizeRim = self.oSettings.get2('%s_regions_rim_expansionsize' % prefix),
                                           iShrinkingSizeRim = self.oSettings.get2('%s_regions_rim_shrinkingsize' % prefix),
+
                                           fPropagateLambda = self.oSettings.get2('%s_regions_propagate_lambda' % prefix),
                                           iPropagateDeltaWidth = self.oSettings.get2('%s_regions_propagate_deltawidth' % prefix),
+
+                                          iConstrainedWatershedGaussFilterSize = self.oSettings.get2('%s_regions_constrained_watershed_gauss_filter_size' % prefix),
 
                                           bPresegmentation = self.oSettings.get2('%s_presegmentation' % prefix),
                                           iPresegmentationMedianRadius = self.oSettings.get2('%s_presegmentation_medianradius' % prefix),
