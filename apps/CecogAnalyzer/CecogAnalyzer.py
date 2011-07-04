@@ -646,16 +646,17 @@ class AnalyzerMainWindow(QMainWindow):
             else:
                 trait.set_list_data(TRACKING_DURATION_UNITS_DEFAULT)
 
+            dlg.reset()
             self.set_modules_active(state=True)
             information(None, "Plate(s) successfully loaded",
                         "%d plates loaded successfully." % len(imagecontainer.plates))
         else:
+            dlg.reset()
             critical(None, "No valid image data found",
                      "The naming schema provided might not fit your image data"
                      "or the coordinate file is not correct.\n\nPlease modify "
                      "the values and scan the structure again.",
                      detail = thread.error_message)
-        dlg.reset()
 
     def set_modules_active(self, state=True):
         for name, (button, widget) in self._tab_lookup.iteritems():
