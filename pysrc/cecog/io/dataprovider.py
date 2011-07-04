@@ -128,7 +128,10 @@ class Moo(object):
 # main:
 #
 if __name__ == '__main__':
-    m = Moo('/Users/miheld/data/Analysis/H2bTub_20x_hdf5_test1/dump/0037.hdf5')
+    try:
+        m = Moo('/Users/miheld/data/Analysis/H2bTub_20x_hdf5_test1/dump/0037.hdf5')
+    except:
+        m = Moo('C:/Users/sommerc/data/Chromatin-Microtubles/Analysis/H2b_aTub_MD20x_exp911/dump/0037.hdf5')
 
     for sample_id in m.data:
         print sample_id
