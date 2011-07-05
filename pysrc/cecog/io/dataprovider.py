@@ -88,6 +88,14 @@ class _DataProvider(object):
             # recurse one level up
             return self._parent.get_definition(definition_key)
                 
+    def get_object_definition(self):
+        return self.get_definition('object')
+        
+    
+    def get_relation_definition(self):
+        return self.get_definition('relation')
+        
+        
                 
         
 
@@ -162,6 +170,25 @@ class Position(_DataProvider):
         objects = self._hf_group['time'][str(time_id)]['zslice'][str(zslice_id)]['region']['0']['object']
         
         return objects[objects["obj_id"]==object_id]
+    
+    def get_object(self, object_name):
+        objects_description = self.get_object_definition()
+        object_name_found = False
+        
+        involved_relations = []
+        for o_desc in objects_description:
+            if o_desc[0] == object_name:
+                object_name_found = True
+                involved_relations.append(o_desc[1])
+                
+        if not object_name_found:
+            raise KeyError('get_object() object "%s" not found in definition.')
+        
+        is_terminal_object = bool(len(involved_relations))
+        
+        
+                
+
         
 
 class Experiment(_DataProvider):
@@ -197,6 +224,46 @@ class Moo(object):
 
     def close(self):
         self._hf.close()
+        
+class Relation(object):
+    def __init__(self, relation_table):
+        self.check(relation_table)
+        self._relation = relation_table
+        
+    def __getitem__(self, key):
+        pass
+        
+    def __call__(self, other_relation):
+        pass
+        
+    @property
+    def relation(self):
+        return self._relation
+        
+    @staticmethod
+    def check(relation_table):
+        pass
+    
+#class RelationKey(object):
+#    def __init__(self, time_id, zsclice_id, obj_id):
+#        self.time_id = time_id
+#        self.zslice zsclice_id
+#        self.obj_id = obj_id
+        
+class Objects(object):
+    HDF5_OBJECT_EDGE_NAME = 'edge'
+    HDF5_OBJECT_ID_NAME = 'id'
+    
+    def __init__(self, name, relation):
+        self.name = name
+        self.relations = {}
+        
+    def add_realtion(self, relation):
+        self.relations[relation.name] = relation
+        
+        
+    
+    
 
 #-------------------------------------------------------------------------------
 # main:
@@ -218,4 +285,4 @@ if __name__ == '__main__':
                     position = m.data[sample_id][plate_id][experiment_id][position_id]
 
                     #position.get_events()
-                    print position.get_definition('relation2')
+                    print position.get_object('event')
