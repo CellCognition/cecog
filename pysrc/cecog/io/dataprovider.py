@@ -276,6 +276,30 @@ class Objects(object):
                 res += ' - attributs: ' + attribs + '\n'
         return res
     
+    def get_obj_ids(self):
+        return self._h5_object_group[self.HDF5_OBJECT_ID_NAME]['obj_id']
+
+    
+    def apply_relation(self, relation, obj_ids=None):
+        if obj_ids is None:
+            obj_ids = self.get_obj_ids()
+            
+        relation_idx = dict([(x,[]) for x in obj_ids])
+        print relation_idx
+        for row in self._h5_object_group[self.HDF5_OBJECT_EDGE_NAME]:
+            relation_idx[row[0]].append(row[1])
+            
+        print relation_idx
+            
+            
+        
+            
+        
+            
+        
+    
+    
+    
         
         
     
@@ -301,4 +325,11 @@ if __name__ == '__main__':
                     position = m.data[sample_id][plate_id][experiment_id][position_id]
 
                     #position.get_events()
-                    print position.get_object('primary__primary')
+                    events = position.get_object('event')
+                    print events
+                    
+                    print events.get_obj_ids()
+                    
+                    events.apply_relation('tracking')
+                    
+                    
