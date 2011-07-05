@@ -166,10 +166,10 @@ class Position(_DataProvider):
         plt.draw()
         plt.show()
         
-    def get_object_from_id(self, time_id, zslice_id, object_id):
-        objects = self._hf_group['time'][str(time_id)]['zslice'][str(zslice_id)]['region']['0']['object']
-        
-        return objects[objects["obj_id"]==object_id]
+#    def get_object_from_id(self, time_id, zslice_id, object_id):
+#        objects = self._hf_group['time'][str(time_id)]['zslice'][str(zslice_id)]['region']['0']['object']
+#        
+#        return objects[objects["obj_id"]==object_id]
     
     def get_object(self, object_name):
         objects_description = self.get_object_definition()
@@ -185,11 +185,35 @@ class Position(_DataProvider):
             raise KeyError('get_object() object "%s" not found in definition.' % object_name)
         
         if object_name not in self._hf_group['object']:
-            raise KeyError('get_object() object nor entries found for object "%s".' % object_name)
+            raise KeyError('get_object() no entries found for object "%s".' % object_name)
         
         h5_object_group = self._hf_group['object'][object_name]
         
         return Objects(object_name, h5_object_group, involved_relations)
+    
+    def get_relation(self, relation_name):
+        releations = self.get_relation_definition()
+        
+        releation_name_found = False
+        for rel in releations:
+            if rel[0] == relation_name:
+                releation_name_found = True
+                from_object_name = rel[1]
+                to_object_name = rel[3]
+                
+        if not releation_name_found:
+            raise KeyError('get_relation() releation "%s" not found in definition.' % relation_name)
+        
+        if relation_name not in self._hf_group['relation']:
+            raise KeyError('get_relation() no entries found for relation "%s".' % relation_name)
+        
+        h5_relation_group = self._hf_group['relation'][relation_name]
+        
+        return Relation(relation_name, h5_relation_group, (from_object_name, to_object_name))
+                
+        
+                
+        
         
         
                 
@@ -231,29 +255,14 @@ class Moo(object):
         self._hf.close()
         
 class Relation(object):
-    def __init__(self, relation_table):
-        self.check(relation_table)
-        self._relation = relation_table
+    def __init__(self, relation_name, h5_table, from_to_object_names):
+        self.from_object, self.to_object = from_to_object_names
+        self.name = relation_name
+        self.h5_table = h5_table
         
-    def __getitem__(self, key):
-        pass
+    def map(self, idx):
+        return self.h5_table[list(idx)]
         
-    def __call__(self, other_relation):
-        pass
-        
-    @property
-    def relation(self):
-        return self._relation
-        
-    @staticmethod
-    def check(relation_table):
-        pass
-    
-#class RelationKey(object):
-#    def __init__(self, time_id, zsclice_id, obj_id):
-#        self.time_id = time_id
-#        self.zslice zsclice_id
-#        self.obj_id = obj_id
         
 class Objects(object):
     HDF5_OBJECT_EDGE_NAME = 'edge'
@@ -284,12 +293,15 @@ class Objects(object):
         if obj_ids is None:
             obj_ids = self.get_obj_ids()
             
-        relation_idx = dict([(x,[]) for x in obj_ids])
-        print relation_idx
+        relation_idx = dict([(x, []) for x in obj_ids])
+
         for row in self._h5_object_group[self.HDF5_OBJECT_EDGE_NAME]:
             relation_idx[row[0]].append(row[1])
             
-        print relation_idx
+        for obj_id, r_idx in relation_idx.iteritems():
+            print obj_id, '===', relation.map(r_idx)
+            
+        
             
             
         
@@ -330,6 +342,8 @@ if __name__ == '__main__':
                     
                     print events.get_obj_ids()
                     
-                    events.apply_relation('tracking')
+                    relation = position.get_relation('tracking')
+                    
+                    events.apply_relation(relation, obj_ids=None)
                     
                     
