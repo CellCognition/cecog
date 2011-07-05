@@ -182,9 +182,14 @@ class Position(_DataProvider):
                 involved_relations.append(o_desc[1])
                 
         if not object_name_found:
-            raise KeyError('get_object() object "%s" not found in definition.')
+            raise KeyError('get_object() object "%s" not found in definition.' % object_name)
         
-        is_terminal_object = bool(len(involved_relations))
+        if object_name not in self._hf_group['object']:
+            raise KeyError('get_object() object nor entries found for object "%s".' % object_name)
+        
+        h5_object_group = self._hf_group['object'][object_name]
+        
+        return Objects(object_name, h5_object_group, involved_relations)
         
         
                 
@@ -254,12 +259,23 @@ class Objects(object):
     HDF5_OBJECT_EDGE_NAME = 'edge'
     HDF5_OBJECT_ID_NAME = 'id'
     
-    def __init__(self, name, relation):
+    def __init__(self, name, h5_object_group, involveld_relations):
         self.name = name
-        self.relations = {}
+        self._h5_object_group = h5_object_group
+        self.relations = involveld_relations
+        self.isTerminal = bool(len(self.relations))
         
-    def add_realtion(self, relation):
-        self.relations[relation.name] = relation
+    def __str__(self):
+        res =  'object: ' + self.name + '\n' 
+        
+        for rel in self.relations:
+            res += ' - relations: '+ rel + '\n' 
+        
+        for attribs in self._h5_object_group:
+            if attribs not in [self.HDF5_OBJECT_EDGE_NAME, self.HDF5_OBJECT_ID_NAME]:
+                res += ' - attributs: ' + attribs + '\n'
+        return res
+    
         
         
     
@@ -285,4 +301,4 @@ if __name__ == '__main__':
                     position = m.data[sample_id][plate_id][experiment_id][position_id]
 
                     #position.get_events()
-                    print position.get_object('event')
+                    print position.get_object('primary__primary')
