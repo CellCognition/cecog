@@ -260,6 +260,9 @@ class Relation(object):
         self.name = relation_name
         self.h5_table = h5_table
         
+    def __str__(self):
+        return 'relation: ' + self.name + '\n' + ' - ' + self.from_object + ' --> ' + self.to_object
+    
     def map(self, idx):
         return self.h5_table[list(idx)]
         
@@ -289,7 +292,7 @@ class Objects(object):
         return self._h5_object_group[self.HDF5_OBJECT_ID_NAME]['obj_id']
 
     
-    def apply_relation(self, relation, obj_ids=None):
+    def apply_relation(self, relation, obj_ids=None, position_provider=None):
         if obj_ids is None:
             obj_ids = self.get_obj_ids()
             
@@ -298,9 +301,11 @@ class Objects(object):
         for row in self._h5_object_group[self.HDF5_OBJECT_EDGE_NAME]:
             relation_idx[row[0]].append(row[1])
             
-        for obj_id, r_idx in relation_idx.iteritems():
-            print obj_id, '===', relation.map(r_idx)
+#        for obj_id, r_idx in relation_idx.iteritems():
+#            pass#print obj_id, '===', relation.map(r_idx)
             
+        
+        return relation_idx, relation.to_object
         
             
             
@@ -340,10 +345,16 @@ if __name__ == '__main__':
                     events = position.get_object('event')
                     print events
                     
-                    print events.get_obj_ids()
+                    relation_tracking = position.get_relation(events.relations[0])
                     
-                    relation = position.get_relation('tracking')
+                    mapping, onto_objects = events.apply_relation(relation_tracking)
                     
-                    events.apply_relation(relation, obj_ids=None)
+                    primary_primary = position.get_object(onto_objects)
+                    
+                    relation_primary_primary = position.get_relation(primary_primary.relations[0])
+                    
+                    print relation_primary_primary
+                    
+                    
                     
                     
