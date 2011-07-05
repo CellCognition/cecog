@@ -299,13 +299,15 @@ class Objects(object):
         relation_idx = dict([(x, []) for x in obj_ids])
 
         for row in self._h5_object_group[self.HDF5_OBJECT_EDGE_NAME]:
-            relation_idx[row[0]].append(row[1])
+            if row[0] in obj_ids:
+                relation_idx[row[0]].append(row[1])
             
 #        for obj_id, r_idx in relation_idx.iteritems():
 #            pass#print obj_id, '===', relation.map(r_idx)
-            
-        
         return relation_idx, relation.to_object
+    
+    def get_objects_for_mapping(self, mapping):
+        pass
         
             
             
@@ -341,19 +343,26 @@ if __name__ == '__main__':
                     print position_id
                     position = m.data[sample_id][plate_id][experiment_id][position_id]
 
-                    #position.get_events()
                     events = position.get_object('event')
                     print events
-                    
                     relation_tracking = position.get_relation(events.relations[0])
+                    print relation_tracking
                     
-                    mapping, onto_objects = events.apply_relation(relation_tracking)
+                    mapping, onto_object_name = events.apply_relation(relation_tracking)
                     
-                    primary_primary = position.get_object(onto_objects)
-                    
+                    primary_primary = position.get_object(onto_object_name)
+                    print primary_primary
                     relation_primary_primary = position.get_relation(primary_primary.relations[0])
-                    
                     print relation_primary_primary
+                    
+                    selected_event_id = 42
+                    event_objects = mapping[selected_event_id]
+                    
+                    mapping, onto_object_name = primary_primary.apply_relation(relation_primary_primary, obj_ids=event_objects)
+                    
+                    for a, b in mapping.iteritems():
+                        print a, '-->', b
+                    print onto_object_name
                     
                     
                     
