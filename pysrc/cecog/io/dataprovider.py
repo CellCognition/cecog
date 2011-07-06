@@ -447,16 +447,17 @@ if __name__ == '__main__':
                     for e in selected_event_id:
                         primary_object_ids = mapping_tracking[e]['obj_id2']
                         
-                        region_primary_primary = position.get_object(onto_object_name)
+                        #region_primary_primary = position.get_object(onto_object_name)
                         
-                        mapping_primary, onto_object_name = region_primary_primary.apply_relation(relation_primary_primary, obj_ids=primary_object_ids)
+                        mapping_primary, onto_object_name = primary_primary.apply_relation(relation_primary_primary, obj_ids=primary_object_ids)
                         
                         print 'Boundingboxes for event %d' % e
                         for prim_obj_id in mapping_primary:
                             t = mapping_primary[prim_obj_id]['time_idx1']
                             z = mapping_primary[prim_obj_id]['zslice_idx1']
                             o = mapping_primary[prim_obj_id]['obj_id1']
-                            print position.get_bounding_box(t,z,o)
+                            c = position.get_definition('region')['channel_idx'][0]
+                            print position.get_bounding_box(t,z,o,c)
                             
                     
                     
