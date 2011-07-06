@@ -20,9 +20,11 @@ import os
 # extension module imports:
 #
 import h5py, \
-       networkx
+       networkx, \
+       numpy
 
 import matplotlib.pyplot as plt
+import time as timeing
 
 #-------------------------------------------------------------------------------
 # cecog imports:
@@ -38,6 +40,15 @@ import matplotlib.pyplot as plt
 
 #-------------------------------------------------------------------------------
 # classes:
+
+def print_timing(func):
+    def wrapper(*arg):
+        t1 = timeing.time()
+        res = func(*arg)
+        t2 = timeing.time()
+        print '%s took %0.3f ms' % (func.func_name, (t2-t1)*1000.0)
+        return res
+    return wrapper
 #
 class _DataProvider(object):
 
@@ -293,15 +304,90 @@ class Objects(object):
 
     
     def apply_relation(self, relation, obj_ids=None, position_provider=None):
+        use_all_obj_ids = False
         if obj_ids is None:
             obj_ids = self.get_obj_ids()
+            use_all_obj_ids = True
+            
             
         relation_idx = dict([(x, []) for x in obj_ids])
 
-        for row in self._h5_object_group[self.HDF5_OBJECT_EDGE_NAME]:
-            if row[0] in obj_ids:
+        relation_edges = self._h5_object_group[self.HDF5_OBJECT_EDGE_NAME]
+        
+#        Timing results for all obj_ids from primary__primary
+#        ====================================
+#        timeit_1 took 10114.000 ms
+#        timeit_2 did not finish in finite time
+#        timeit_3 took 48998.000 ms (extreme memory consumption up to 3.2 GB)
+#        timeit_4 took 14926.000 ms (extreme memory consumption up to 2.1 GB)
+#        timeit_5 took 4288.000 ms
+
+#        Timing results for one object from events
+#        ====================================
+#        timeit_1 took 213.000 ms
+#        timeit_2 took 64.000 ms
+#        timeit_3 took 6.000 ms 
+#        timeit_4 took 3.000 ms
+#        timeit_5 took 10.000 ms
+        
+        @print_timing
+        def timeit_1():
+            for row in relation_edges:
+                if row[0] in obj_ids:
+                    relation_idx[row[0]].append(row[1])   
+        @print_timing    
+        def timeit_2():
+            for o_id in obj_ids:
+                relation_idx[o_id].extend(relation_edges[relation_edges['obj_id'] == o_id]['relation_idx'])
+        
+        @print_timing    
+        def timeit_3():
+            tt = relation_edges.value
+            tt = tt.view(numpy.uint32).reshape(len(tt), 2)
+                    
+            for row in tt[numpy.logical_or.reduce([tt[:,0] == x for x in obj_ids]),:]:
                 relation_idx[row[0]].append(row[1])
+
+        @print_timing
+        def timeit_4():
+            # is memory intense! cause of outer product
+            tt = relation_edges.value
+            tt = tt.view(numpy.uint32).reshape(len(tt), 2)
             
+            obj_ids2 = numpy.expand_dims(obj_ids, 1)
+            
+            for row in tt[numpy.any(tt[:, 0] == obj_ids2, 0), :]:
+                relation_idx[row[0]].append(row[1])
+                 
+        @print_timing
+        def timeit_5():
+            tt = relation_edges.value
+            tt = tt.view(numpy.uint32).reshape(len(tt),2)
+            
+            @numpy.vectorize
+            def selected(elmt): return elmt in obj_ids
+            
+            for row in tt[selected(tt[:, 0]),:]:
+                relation_idx[row[0]].append(row[1])
+        
+        # use different implementation of the lookup
+        # when itheer all obj_ids are requested or just
+        # a given (usually small) list of obj_ids
+        if use_all_obj_ids:
+            timeit_5()
+        else:
+            timeit_4()
+
+        
+        
+            
+
+        
+        
+            
+        
+       
+        
 #        for obj_id, r_idx in relation_idx.iteritems():
 #            pass#print obj_id, '===', relation.map(r_idx)
         return relation_idx, relation.to_object
@@ -348,21 +434,23 @@ if __name__ == '__main__':
                     relation_tracking = position.get_relation(events.relations[0])
                     print relation_tracking
                     
-                    mapping, onto_object_name = events.apply_relation(relation_tracking)
+                    mapping_tracking, onto_object_name = events.apply_relation(relation_tracking)
                     
                     primary_primary = position.get_object(onto_object_name)
                     print primary_primary
                     relation_primary_primary = position.get_relation(primary_primary.relations[0])
                     print relation_primary_primary
                     
-                    selected_event_id = 42
-                    event_objects = mapping[selected_event_id]
+                    selected_event_id = [42, 108]
                     
-                    mapping, onto_object_name = primary_primary.apply_relation(relation_primary_primary, obj_ids=event_objects)
-                    
-                    for a, b in mapping.iteritems():
-                        print a, '-->', b
-                    print onto_object_name
+                    for e in selected_event_id:
+                        event_objects = mapping_tracking[e]
+                        
+                        mapping_primary, onto_object_name = primary_primary.apply_relation(relation_primary_primary, obj_ids=None)
+                        
+#                        for a, b in mapping_primary.iteritems():
+#                            print a, '-->', b
+#                        print onto_object_name
                     
                     
                     
