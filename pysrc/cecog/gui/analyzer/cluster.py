@@ -218,7 +218,7 @@ class ClusterDisplay(QGroupBox):
                 self._jobid = str(jobid)
                 main_jobid = jobid
             self._txt_jobid.setText(self._jobid)
-            self._update_job_status(show=False)
+            self._update_job_status()
             information(None, 'Job submitted successfully',
                         "Job successfully submitted to the cluster.\nJob ID: %s, items: %d" % (main_jobid, nr_items))
 
@@ -255,15 +255,13 @@ class ClusterDisplay(QGroupBox):
         txt = self._update_job_status()
         information(self, 'Cluster update', "Message: '%s'" % txt)
 
-    def _update_job_status(self, show):
+    def _update_job_status(self):
         try:
             txt = self._service.get_job_status(self._jobid)
         except:
             exception(self, 'Error on retrieve job status')
         else:
             self._label_jobstatus.setText(txt)
-            if show:
-                information(None, 'Cluster status update', txt)
         return txt
 
     def _connect(self):

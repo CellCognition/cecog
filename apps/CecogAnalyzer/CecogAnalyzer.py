@@ -552,8 +552,8 @@ class AnalyzerMainWindow(QMainWindow):
                     title = 'Rescan input structure?'
 
                     box = QMessageBox(QMessageBox.Question, title, title,
-                                      QMessageBox.Cancel, None, Qt.Sheet)
-                    #box.setWindowModality(Qt.WindowModal)
+                                      QMessageBox.Cancel, self, Qt.Sheet)
+                    box.setWindowModality(Qt.WindowModal)
                     box.setInformativeText(txt)
                     box.setDetailedText('Plates with scanned structure: \n%s\n'
                                         '\nPlates without scanned structure: '
@@ -601,7 +601,7 @@ class AnalyzerMainWindow(QMainWindow):
                     self._load_image_container(infos, scan_plates)
 
     def _load_image_container(self, plate_infos, scan_plates):
-        dlg = ProgressDialog(None, Qt.CustomizeWindowHint | Qt.WindowTitleHint)
+        dlg = ProgressDialog(self, Qt.CustomizeWindowHint | Qt.WindowTitleHint)
         dlg.setWindowModality(Qt.WindowModal)
         dlg.setLabelText('Please wait until the input structure is scanned\n'
                          'or the structure data loaded...')
