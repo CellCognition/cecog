@@ -507,7 +507,7 @@ class AnalyzerMainWindow(QMainWindow):
 
     def _on_browser_open(self):
         if self._imagecontainer is None:
-            warning(None, 'Data structure not loaded',
+            warning(self, 'Data structure not loaded',
                     'The input data structure was not loaded.\n'
                     'Please click "Load image data" in General.')
         elif self._browser is None:
@@ -519,7 +519,7 @@ class AnalyzerMainWindow(QMainWindow):
                 browser.setFocus()
                 self._browser = browser
             except:
-                exception(None, 'Problem opening the browser')
+                exception(self, 'Problem opening the browser')
         else:
             self._browser.show()
             self._browser.raise_()
@@ -528,14 +528,14 @@ class AnalyzerMainWindow(QMainWindow):
         txt = "Error scanning image structure"
         path_in = self._settings.get(SECTION_NAME_GENERAL, 'pathin')
         if path_in == '':
-            critical(None, txt, "Image path must be defined.")
+            critical(self, txt, "Image path must be defined.")
         elif not os.path.isdir(path_in):
-            critical(None, txt, "Image path '%s' not found." % path_in)
+            critical(self, txt, "Image path '%s' not found." % path_in)
         else:
             try:
                 infos = list(ImageContainer.iter_check_plates(self._settings))
             except:
-                exception(None, txt)
+                exception(self, txt)
             else:
                 found_any = numpy.any([not info[3] is None for info in infos])
                 cancel = False
@@ -589,7 +589,7 @@ class AnalyzerMainWindow(QMainWindow):
                 else:
                     has_multiple = self._settings.get(SECTION_NAME_GENERAL,
                                                       "has_multiple_plates")
-                    if not question(None, "No structure data found",
+                    if not question(self, "No structure data found",
                                     "Are you sure to scan %s?\n\nThis can take "
                                     "several minutes depending on the number of"
                                     " images." %
@@ -647,15 +647,16 @@ class AnalyzerMainWindow(QMainWindow):
                 trait.set_list_data(TRACKING_DURATION_UNITS_DEFAULT)
 
             self.set_modules_active(state=True)
-            information(None, "Plate(s) successfully loaded",
+            dlg.reset()
+            information(self, "Plate(s) successfully loaded",
                         "%d plates loaded successfully." % len(imagecontainer.plates))
         else:
-            critical(None, "No valid image data found",
+            dlg.reset()
+            critical(self, "No valid image data found",
                      "The naming schema provided might not fit your image data"
                      "or the coordinate file is not correct.\n\nPlease modify "
                      "the values and scan the structure again.",
                      detail = thread.error_message)
-        dlg.reset()
 
     def set_modules_active(self, state=True):
         for name, (button, widget) in self._tab_lookup.iteritems():
@@ -668,16 +669,13 @@ class AnalyzerMainWindow(QMainWindow):
     @pyqtSlot()
     def _on_file_open(self):
         if self._check_settings_saved() != QMessageBox.Cancel:
-            dialog = QFileDialog(self)
-            dialog.setFileMode(QFileDialog.ExistingFile)
-            dialog.setAcceptMode(QFileDialog.AcceptOpen)
-            dialog.setNameFilters(self.NAME_FILTERS)
+            dir = ''
             if not self._settings_filename is None:
-                filename = convert_package_path(self._settings_filename)
-                if os.path.isfile(filename):
-                    dialog.setDirectory(os.path.dirname(filename))
-            if dialog.exec_():
-                filename = str(dialog.selectedFiles()[0])
+                settings_filename = convert_package_path(self._settings_filename)
+                if os.path.isfile(settings_filename):
+                    dir = settings_filename
+            filename = QFileDialog.getOpenFileName(self, 'Open config file', dir, ';;'.join(self.NAME_FILTERS))
+            if filename:
                 self._read_settings(filename)
                 self.set_modules_active(state=False)
 
@@ -702,23 +700,13 @@ class AnalyzerMainWindow(QMainWindow):
         qApp._log_window.raise_()
 
     def __get_save_as_filename(self):
-        dialog = QFileDialog(self)
-        dialog.setFileMode(QFileDialog.AnyFile)
-        dialog.setNameFilters(self.NAME_FILTERS)
-        dialog.setAcceptMode(QFileDialog.AcceptSave)
+        dir = ''
         if not self._settings_filename is None:
-            filename = convert_package_path(self._settings_filename)
-            if os.path.isfile(filename):
-                # FIXME: Qt4 has a bug with setting a path and saving a file:
-                # the file is saved one dir higher then selected
-                # this line should read:
-                dialog.setDirectory(os.path.dirname(filename))
-                # this version does not stably give the path for MacOSX
-                #dialog.setDirectory(filename)
-        filename = None
-        if dialog.exec_():
-            filename = str(dialog.selectedFiles()[0])
-        return filename
+            settings_filename = convert_package_path(self._settings_filename)
+            if os.path.isfile(settings_filename):
+                dir = settings_filename
+        filename = QFileDialog.getSaveFileName(self, 'Save config file as', dir, ';;'.join(self.NAME_FILTERS))
+        return filename or None
 
     def _on_help_startup(self):
         show_html('_startup')

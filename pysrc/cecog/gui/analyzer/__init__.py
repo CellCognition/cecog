@@ -924,7 +924,7 @@ class _ProcessorMixin(object):
         self.setCursor(Qt.BusyCursor)
         self._is_abort = True
 
-        dlg = QProgressDialog(None, Qt.Popup)
+        dlg = QProgressDialog(self, Qt.Sheet)
         dlg.setWindowModality(Qt.WindowModal)
         dlg.setLabelText('Please wait until the processing terminates...')
         dlg.setCancelButton(None)

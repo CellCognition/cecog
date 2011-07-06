@@ -345,7 +345,7 @@ class NavigationModule(Module):
         coordinate_old = self.browser.get_coordinate()
         plate = coordinate_new.plate
 
-        progress = QProgressDialog(None, Qt.Popup)
+        progress = QProgressDialog(self, Qt.Sheet)
         progress.setWindowModality(Qt.WindowModal)
         progress.setLabelText("Please wait until the plate is loaded.")
         progress.setCancelButton(None)

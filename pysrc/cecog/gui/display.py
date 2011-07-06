@@ -398,25 +398,16 @@ class TraitDisplayMixin(object):
     def _on_browse_name(self, name, mode):
         # FIXME: signals are send during init were registry is not set yet
         if name in self._registry:
-            dialog = QFileDialog(self)
             input = convert_package_path(str(self._registry[name].text()))
+            dir = os.path.abspath(input)
             if mode == StringTrait.STRING_FILE:
-                dialog.setFileMode(QFileDialog.ExistingFile)
-                dialog.setAcceptMode(QFileDialog.AcceptOpen)
-                path = os.path.dirname(input)
+                result = QFileDialog.getOpenFileName(self, 'Select a file', dir)
             else:
-                dialog.setFileMode(QFileDialog.DirectoryOnly)
-                dialog.setAcceptMode(QFileDialog.AcceptOpen)
-                path = input
+                result = QFileDialog.getExistingDirectory(self, 'Select a directory', dir)
 
-            if os.path.isdir(path):
-                dialog.setDirectory(path)
-
-            if dialog.exec_():
-                path = str(dialog.selectedFiles()[0])
-                self._registry[name].setText(path)
-                self._set_value(name, path)
-
+            if result:
+                self._registry[name].setText(result)
+                self._set_value(name, result)
                 # call final handler
                 if name in self._final_handlers:
                     self._final_handlers[name]()

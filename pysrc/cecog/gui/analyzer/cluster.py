@@ -219,7 +219,7 @@ class ClusterDisplay(QGroupBox):
                 main_jobid = jobid
             self._txt_jobid.setText(self._jobid)
             self._update_job_status()
-            information(None, 'Job submitted successfully',
+            information(self, 'Job submitted successfully',
                         "Job successfully submitted to the cluster.\nJob ID: %s, items: %d" % (main_jobid, nr_items))
 
     @pyqtSlot()
