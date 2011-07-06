@@ -261,7 +261,7 @@ class Relation(object):
         self.h5_table = h5_table
         
     def __str__(self):
-        return 'relation: ' + self.name + '\n' + ' - ' + self.from_object + ' --> ' + self.to_object
+        return 'relation: ' + self.name + '\n' + ' - ' + self.from_object + ' --> ' + self.to_object + '\n'
     
     def map(self, idx):
         return self.h5_table[list(idx)]
@@ -338,9 +338,9 @@ if __name__ == '__main__':
         for plate_id in m.data[sample_id]:
             print plate_id
             for experiment_id in m.data[sample_id][plate_id]:
-                print experiment_id
+                print 'In experiment:', experiment_id
                 for position_id in m.data[sample_id][plate_id][experiment_id]:
-                    print position_id
+                    'In position:', position_id
                     position = m.data[sample_id][plate_id][experiment_id][position_id]
 
                     events = position.get_object('event')
