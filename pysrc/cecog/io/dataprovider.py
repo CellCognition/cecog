@@ -46,7 +46,7 @@ def print_timing(func):
         t1 = timeing.time()
         res = func(*arg)
         t2 = timeing.time()
-        print '%s took %0.3f ms' % (func.func_name, (t2-t1)*1000.0)
+        #print '%s took %0.3f ms' % (func.func_name, (t2-t1)*1000.0)
         return res
     return wrapper
 #
@@ -190,17 +190,25 @@ class Position(_DataProvider):
         for o_desc in objects_description:
             if o_desc[0] == object_name:
                 object_name_found = True
-                involved_relations.append(o_desc[1])
-                
-        if not object_name_found:
-            raise KeyError('get_object() object "%s" not found in definition.' % object_name)
+                if o_desc[1]:
+                    involved_relations.append(o_desc[1])
         
-        if object_name not in self._hf_group['object']:
-            raise KeyError('get_object() no entries found for object "%s".' % object_name)
+        is_terminal = len(involved_relations) == 0
+        if is_terminal:
+            return TerminalObjects(object_name)
+            
+        else:
+            # if a relation is involved with this objects
+            # also an group must be specified under positions
+            if not object_name_found:
+                raise KeyError('get_object() object "%s" not found in definition.' % object_name)
+            
+            if object_name not in self._hf_group['object']:
+                raise KeyError('get_object() no entries found for object "%s".' % object_name)
+            
+            h5_object_group = self._hf_group['object'][object_name]
         
-        h5_object_group = self._hf_group['object'][object_name]
-        
-        return Objects(object_name, h5_object_group, involved_relations)
+            return Objects(object_name, h5_object_group, involved_relations)
     
     def get_relation(self, relation_name):
         releations = self.get_relation_definition()
@@ -223,7 +231,10 @@ class Position(_DataProvider):
         return Relation(relation_name, h5_relation_group, (from_object_name, to_object_name))
                 
         
-                
+    def get_bounding_box(self, t, z, o, c=0):
+        obj = self._hf_group['time'][str(t[0])]['zslice'][str(z[0])]['region'][str(c)]['object']
+        obj = obj[obj['obj_id']==o]
+        return (obj['upper_left'], obj['lower_right'])
         
         
         
@@ -278,6 +289,7 @@ class Relation(object):
         return self.h5_table[list(idx)]
         
         
+
 class Objects(object):
     HDF5_OBJECT_EDGE_NAME = 'edge'
     HDF5_OBJECT_ID_NAME = 'id'
@@ -286,7 +298,6 @@ class Objects(object):
         self.name = name
         self._h5_object_group = h5_object_group
         self.relations = involveld_relations
-        self.isTerminal = bool(len(self.relations))
         
     def __str__(self):
         res =  'object: ' + self.name + '\n' 
@@ -377,37 +388,25 @@ class Objects(object):
             timeit_5()
         else:
             timeit_4()
-
-        
-        
-            
-
-        
-        
             
         
-       
+        self.mapping_to_relation_idx = relation_idx
         
-#        for obj_id, r_idx in relation_idx.iteritems():
-#            pass#print obj_id, '===', relation.map(r_idx)
-        return relation_idx, relation.to_object
+        related_obj = {}
+        
+        for o, r in relation_idx.iteritems():
+            related_obj[o] = relation.map(r)
+             
+           
+        return related_obj, relation.to_object
     
-    def get_objects_for_mapping(self, mapping):
-        pass
+class TerminalObjects(Objects):
+    def __init__(self, name):
+        super(TerminalObjects, self).__init__(name, None, [])
         
+    def get_obj_ids(self):
+        pass      
             
-            
-        
-            
-        
-            
-        
-    
-    
-    
-        
-        
-    
     
 
 #-------------------------------------------------------------------------------
@@ -424,33 +423,41 @@ if __name__ == '__main__':
         for plate_id in m.data[sample_id]:
             print plate_id
             for experiment_id in m.data[sample_id][plate_id]:
-                print 'In experiment:', experiment_id
+#                print 'In experiment:', experiment_id
                 for position_id in m.data[sample_id][plate_id][experiment_id]:
                     'In position:', position_id
                     position = m.data[sample_id][plate_id][experiment_id][position_id]
 
                     events = position.get_object('event')
-                    print events
+#                    print events
                     relation_tracking = position.get_relation(events.relations[0])
-                    print relation_tracking
+#                    print relation_tracking
                     
                     mapping_tracking, onto_object_name = events.apply_relation(relation_tracking)
                     
-                    primary_primary = position.get_object(onto_object_name)
-                    print primary_primary
-                    relation_primary_primary = position.get_relation(primary_primary.relations[0])
-                    print relation_primary_primary
                     
-                    selected_event_id = [42, 108]
+                    
+                    primary_primary = position.get_object(onto_object_name)
+#                    print primary_primary
+                    relation_primary_primary = position.get_relation(primary_primary.relations[0])
+#                    print relation_primary_primary
+                    
+                    selected_event_id = [3]
                     
                     for e in selected_event_id:
-                        event_objects = mapping_tracking[e]
+                        primary_object_ids = mapping_tracking[e]['obj_id2']
                         
-                        mapping_primary, onto_object_name = primary_primary.apply_relation(relation_primary_primary, obj_ids=None)
+                        region_primary_primary = position.get_object(onto_object_name)
                         
-#                        for a, b in mapping_primary.iteritems():
-#                            print a, '-->', b
-#                        print onto_object_name
+                        mapping_primary, onto_object_name = region_primary_primary.apply_relation(relation_primary_primary, obj_ids=primary_object_ids)
+                        
+                        print 'Boundingboxes for event %d' % e
+                        for prim_obj_id in mapping_primary:
+                            t = mapping_primary[prim_obj_id]['time_idx1']
+                            z = mapping_primary[prim_obj_id]['zslice_idx1']
+                            o = mapping_primary[prim_obj_id]['obj_id1']
+                            print position.get_bounding_box(t,z,o)
+                            
                     
                     
                     
