@@ -374,7 +374,7 @@ class PositionAnalyzer(object):
                                      #oCellTracker=self.oCellTracker,
                                      P = self.P,
                                      bCreateImages = True,#self.oSettings.bCreateImages,
-                                     iBinningFactor = self.oSettings.get('General', 'binningFactor'),
+                                     iBinningFactor = 1,
                                      detect_objects = self.oSettings.get('Processing', 'objectdetection'),
                                      )
 
@@ -645,7 +645,7 @@ class PositionAnalyzer(object):
 
     def _analyzePosition(self, oCellAnalyzer):
 
-        debug_mode = self.oSettings.get('General', 'debugMode')
+        debug_mode = False #self.oSettings.get('General', 'debugMode')
         if debug_mode:
             bMkdirsOk = safe_mkdirs(self.strPathOutPositionDebug)
             self._oLogger.info("strPathOutPositionDebug '%s', ok: %s" % (self.strPathOutPositionDebug,
@@ -923,7 +923,7 @@ class PositionAnalyzer(object):
                                                        self.origP,
                                                        self.lstSampleReader,
                                                        self.oObjectLearner,
-                                                       byTime=self.oSettings.get('General', 'timelapsedata'))
+                                                       byTime=True)
 
                 if not img_rgb is None:
                     iNumberImages += 1
@@ -1143,31 +1143,20 @@ class AnalyzerCore(object):
 
                     #print strSampleFilename, os.path.splitext(strSampleFilename)[1]
 
-                    has_timelapse = self.oSettings.get('General', 'timelapsedata')
-
-                    if has_timelapse:
-                        reference = self._meta_data.times
-                    else:
-                        reference = self.lstPositions
+                    reference = self._meta_data.times
 
                     if strFilenameExt == '.xml':
                         clsReader = CellCounterReaderXML
                     else:
                         clsReader = CellCounterReader
-                    oReader = clsReader(result, strSampleFilename, reference,
-                                        scale=self.oSettings.get('General', 'binningfactor'),
-                                        timelapse=has_timelapse)
+                    oReader = clsReader(result, strSampleFilename, reference)
 
                     self.lstSampleReader.append(oReader)
 
-                    if has_timelapse:
-                        position = result.group('position')
-                        if not position in self.dctSamplePositions:
-                            self.dctSamplePositions[position] = []
-                        self.dctSamplePositions[position].extend(oReader.getTimePoints())
-                    else:
-                        for position in oReader.keys():
-                            self.dctSamplePositions[position] = [1]
+                    position = result.group('position')
+                    if not position in self.dctSamplePositions:
+                        self.dctSamplePositions[position] = []
+                    self.dctSamplePositions[position].extend(oReader.getTimePoints())
 
             for position in self.dctSamplePositions:
                 if not self.dctSamplePositions[position] is None:
@@ -1180,29 +1169,6 @@ class AnalyzerCore(object):
             #print self.dctSamplePositions
 
 
-
-        elif self.oSettings.get('General', 'qualityControl'):
-            strPathOutQualityControl = os.path.join(self.strPathOut, 'qc')
-            bMkdirsOk = safe_mkdirs(strPathOutQualityControl)
-            self._oLogger.info("strPathOutQualityControl '%s', ok: %s" % (strPathOutQualityControl, bMkdirsOk))
-
-#            self.oQualityControl = QualityControl(oPlate,
-#                                                  strPathOutQualityControl,
-#                                                  self._meta_data,
-#                                                  self.oSettings.dctQualityControl,
-#                                                  dctPlotterInfos={'bUseCairo' : True})
-#        else:
-#            self.oQualityControl = None
-
-
-#        if self.oSettings.bClassify:
-#            dctCollectSamples = self.oSettings.dctCollectSamples
-#            self.oClassPredictor = CommonClassPredictor(dctCollectSamples,
-#                                                        strEnvPath=dctCollectSamples['strEnvPath'],
-#                                                        strModelPrefix=dctCollectSamples['strModelPrefix'])
-#            self.oClassPredictor.importFromArff()
-#
-#        else:
         self.oClassPredictor = None
 
 
@@ -1251,9 +1217,6 @@ class AnalyzerCore(object):
                 self._oLogger.info("* redo failed positions only: %s" % self.lstPositions)
             else:
                 self._oLogger.warning("Cannot redo failed positions without directory '%s'!" % strPathFinished)
-
-
-        self._oLogger.info("\n%s" % self._meta_data.format(time=self.oSettings.get2('timelapseData')))
 
         # define range of frames to do analysis within
         lstFrames = list(self._meta_data.times)
