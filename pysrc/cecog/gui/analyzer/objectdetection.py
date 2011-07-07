@@ -162,6 +162,12 @@ class ObjectDetectionFrame(_BaseFrame, _ProcessorMixin):
                             ], link='%s_region_definition' % prefix,
                             label='Region definition')
 
+            self.add_line()
+            self.add_group('%s_regions_constrained_watershed' % prefix,
+                           [('%s_regions_constrained_watershed_gauss_filter_size' % prefix, (0,0,1,1)),
+                            ])
+
+            self.add_line()
             self.add_group('%s_regions_propagate' % prefix,
                            [('%s_presegmentation_medianradius' % prefix, (0,0,1,1)),
                             ('%s_presegmentation_alpha' % prefix, (0,1,1,1)),

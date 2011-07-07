@@ -56,6 +56,17 @@
 #include "cecog/inspectors.hxx"
 #include "cecog/transforms.hxx"
 
+#include "cecog/seededregion.hxx"
+#include "cecog/basic/focus.hxx"
+
+#include "cecog/morpho/basic.hxx"
+#include "cecog/morpho/label.hxx"
+#include "cecog/morpho/watershed.hxx"
+#include "cecog/morpho/geodesy.hxx"
+#include "cecog/morpho/structuring_elements.hxx"
+#include "cecog/morpho/skeleton.hxx"
+
+
 namespace vigra
 {
   typedef BasicImageView< UInt8 >  UInt8ImageView;
@@ -344,6 +355,259 @@ pyRgbImageToArray(IMAGE & img, bool copy=true)
   }
 }
 
+template <class IMAGE1, class IMAGE2>
+PyObject * pyDiscMedian(IMAGE1 const &imgIn, int radius)
+{
+  std::auto_ptr< IMAGE2 > imgPtr(new IMAGE2(imgIn.size()));
+  vigra::discMedian(srcImageRange(imgIn), destImage(*imgPtr), radius);
+  return incref(object(imgPtr).ptr());
+}
+
+template <class IMAGE1>
+double pyFocusQuantification(IMAGE1 const &imgIn, int method)
+{
+  using namespace cecog;
+  double resval = focusQuantification(imgIn, method);
+  return resval;
+}
+
+template <class IMAGE1, class IMAGE2>
+PyObject * pyImWatershed(IMAGE1 const &imgIn)
+{
+  std::auto_ptr< IMAGE2 > imgPtr(new IMAGE2(imgIn.size()));
+  using namespace cecog::morpho;
+
+  neighborhood2D nb(WITHOUTCENTER8, imgIn.size());
+  ImWatershed(srcImageRange(imgIn), destImage(*imgPtr), nb);
+
+  return incref(object(imgPtr).ptr());
+}
+
+template <class IMAGE1, class IMAGE2, class IMAGE3>
+PyObject * pyImConstrainedWatershed(IMAGE1 const &imgIn,
+                    IMAGE2 &imgSeed)
+{
+  std::auto_ptr< IMAGE3 > imgPtr(new IMAGE3(imgIn.size()));
+
+  using namespace cecog::morpho;
+
+  neighborhood2D nb(WITHOUTCENTER8, imgIn.size());
+
+  ImConstrainedWatershed(srcImageRange(imgIn), srcImageRange(imgSeed), destImage(*imgPtr), nb);
+
+  return incref(object(imgPtr).ptr());
+}
+
+template <class IMAGE1>
+PyObject * pyImMorphoGradient(IMAGE1 const &imgIn, int size, int connectivity=8)
+{
+  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
+
+  using namespace cecog::morpho;
+
+  structuringElement2D se8(WITHCENTER8, size);
+  structuringElement2D se4(WITHCENTER4, size);
+
+  if (connectivity == 8) {
+    ImMorphoGradient(srcImageRange(imgIn), destImageRange(*imgPtr), se8);
+  }
+
+  if (connectivity == 4) {
+    ImMorphoGradient(srcImageRange(imgIn), destImageRange(*imgPtr), se4);
+  }
+
+  return incref(object(imgPtr).ptr());
+}
+
+template <class IMAGE1>
+PyObject * pyImExternalGradient(IMAGE1 const &imgIn, int size, int connectivity=8)
+{
+  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
+
+  using namespace cecog::morpho;
+
+  structuringElement2D se8(WITHCENTER8, size);
+  structuringElement2D se4(WITHCENTER4, size);
+
+  if (connectivity == 8) {
+    ImExternalGradient(srcImageRange(imgIn), destImageRange(*imgPtr), se8);
+  }
+
+  if (connectivity == 4) {
+    ImExternalGradient(srcImageRange(imgIn), destImageRange(*imgPtr), se4);
+  }
+
+  return incref(object(imgPtr).ptr());
+}
+
+template <class IMAGE1>
+PyObject * pyImInternalGradient(IMAGE1 const &imgIn, int size, int connectivity=8)
+{
+  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
+
+  using namespace cecog::morpho;
+
+  structuringElement2D se8(WITHCENTER8, size);
+  structuringElement2D se4(WITHCENTER4, size);
+
+  if (connectivity == 8) {
+    ImInternalGradient(srcImageRange(imgIn), destImageRange(*imgPtr), se8);
+  }
+
+  if (connectivity == 4) {
+   ImInternalGradient(srcImageRange(imgIn), destImageRange(*imgPtr), se4);
+  }
+
+  return incref(object(imgPtr).ptr());
+}
+
+template <class IMAGE1>
+PyObject * pyImErode(IMAGE1 const &imgIn, int size, int connectivity=8)
+{
+  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
+
+  using namespace cecog::morpho;
+
+  structuringElement2D se8(WITHCENTER8, size);
+  structuringElement2D se4(WITHCENTER4, size);
+
+  if (connectivity == 8) {
+    ImErode(srcImageRange(imgIn), destImageRange(*imgPtr), se8);
+  }
+
+  if (connectivity == 4) {
+    ImErode(srcImageRange(imgIn), destImageRange(*imgPtr), se4);
+  }
+
+  return incref(object(imgPtr).ptr());
+}
+
+template <class IMAGE1>
+PyObject * pyImDilate(IMAGE1 const &imgIn, int size, int connectivity=8)
+{
+  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
+
+  using namespace cecog::morpho;
+
+  structuringElement2D se8(WITHCENTER8, size);
+  structuringElement2D se4(WITHCENTER4, size);
+
+  if (connectivity == 8) {
+    ImDilate(srcImageRange(imgIn), destImageRange(*imgPtr), se8);
+  }
+
+  if (connectivity == 4) {
+    ImDilate(srcImageRange(imgIn), destImageRange(*imgPtr), se4);
+  }
+
+  return incref(object(imgPtr).ptr());
+}
+
+template <class IMAGE1>
+PyObject * pyImClose(IMAGE1 const &imgIn, int size, int connectivity=8)
+{
+  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
+
+  using namespace cecog::morpho;
+
+  structuringElement2D se8(WITHCENTER8, size);
+  structuringElement2D se4(WITHCENTER4, size);
+
+  if (connectivity == 8) {
+    ImClose(srcImageRange(imgIn), destImageRange(*imgPtr), se8);
+  }
+
+  if (connectivity == 4) {
+    ImClose(srcImageRange(imgIn), destImageRange(*imgPtr), se4);
+  }
+
+  return incref(object(imgPtr).ptr());
+}
+
+template <class IMAGE1>
+PyObject * pyImOpen(IMAGE1 const &imgIn, int size, int connectivity=8)
+{
+  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
+
+  using namespace cecog::morpho;
+
+  structuringElement2D se8(WITHCENTER8, size);
+  structuringElement2D se4(WITHCENTER4, size);
+
+  if (connectivity == 8) {
+    ImOpen(srcImageRange(imgIn), destImageRange(*imgPtr), se8);
+  }
+
+  if (connectivity == 4) {
+    ImOpen(srcImageRange(imgIn), destImageRange(*imgPtr), se4);
+  }
+
+  return incref(object(imgPtr).ptr());
+}
+
+template <class IMAGE1>
+PyObject * pyImInfimum(IMAGE1 const &a, IMAGE1 const &b)
+{
+  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(a.size()));
+
+  //typedef typename Accessor1::value_type INTYPE;
+  //vigra::combineTwoImages(srcImageRange(a), srcImage(b), destImage(*imgPtr), std::min );
+
+  using namespace cecog::morpho;
+  ImInfimum(srcImageRange(a), srcImage(b), destImage(*imgPtr));
+  return incref(object(imgPtr).ptr());
+}
+
+template <class Image1>
+PyObject * pyImAnchoredSkeleton(Image1 const &imgIn, Image1 const &imgAnchor)
+{
+  std::auto_ptr< Image1 > imgPtr(new Image1(imgIn.size()));
+
+  using namespace cecog::morpho;
+  //simpleEight<Image1> simpleFunc(imgIn.size());
+  ImAnchoredSkeleton(
+      srcImageRange(imgIn),
+      destImage(*imgPtr),
+      srcImage(imgAnchor));
+  return incref(object(imgPtr).ptr());
+}
+
+template <class IMAGE1>
+PyObject * pyImSupremum(IMAGE1 const &a, IMAGE1 const &b)
+{
+  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(a.size()));
+
+  //typedef typename Accessor1::value_type INTYPE;
+  //vigra::combineTwoImages(srcImageRange(a), srcImage(b), destImage(*imgPtr), std::max );
+
+  using namespace cecog::morpho;
+  ImSupremum(srcImageRange(a), srcImage(b), destImage(*imgPtr));
+  return incref(object(imgPtr).ptr());
+}
+
+template <class IMAGE1, class IMAGE2>
+PyObject * pyToggleMapping(IMAGE1 const &imgIn, int size)
+{
+  std::auto_ptr< IMAGE2 > imgPtr(new IMAGE2(imgIn.size()));
+  using namespace cecog::morpho;
+  structuringElement2D se(WITHCENTER8, size);
+  ImFastToggleMapping(srcImageRange(imgIn), destImage(*imgPtr), se);
+  return incref(object(imgPtr).ptr());
+}
+
+template <class Image1, class Image2, class Image3>
+PyObject * pyOverlayBinaryImage(Image1 const & imgIn1, Image2 const & imgIn2,
+    typename Image3::value_type value)
+{
+
+  std::auto_ptr< Image3 > imgPtr(new Image3(imgIn1.size()));
+
+  cecog::ImOverlayBinaryImage(srcImageRange(imgIn1),
+      srcImage(imgIn2),
+      destImage(*imgPtr),
+      value);
+  return incref(object(imgPtr).ptr());
+}
 
 template <class IMAGE1, class IMAGE2>
 PyObject * pyGaussian(IMAGE1 const &imgIn, int size)
@@ -351,6 +615,35 @@ PyObject * pyGaussian(IMAGE1 const &imgIn, int size)
   std::auto_ptr< IMAGE2 > imgPtr(new IMAGE2(imgIn.size()));
   vigra::gaussianSmoothing(srcImageRange(imgIn), destImage(*imgPtr), (double)size);
   return incref(object(imgPtr).ptr());
+}
+
+template <class Image1, class Image2>
+PyObject * pyRelabelImage(Image1 const &imgMask, Image2 const &imgLabel)
+{
+   std::auto_ptr< Image2 > imgPtr(new Image2(imgLabel.size()));
+
+   Image2 imgTemp(imgLabel.size());
+
+   typedef typename Image2::value_type label_type;
+   typedef typename Image1::value_type mask_type;
+
+   // get min and max label
+   vigra::FindMinMax<label_type> label_minmax;
+   vigra::inspectImage(srcImageRange(imgLabel), label_minmax);
+
+   // get min and max value
+   vigra::FindMinMax<mask_type> mask_minmax;
+   vigra::inspectImage(srcImageRange(imgMask), mask_minmax);
+
+   vigra::transformImage(srcImageRange(imgMask), destImage(imgTemp),
+                         vigra::Threshold<mask_type, label_type>(1, mask_minmax.max, 0, label_minmax.max));
+
+   cecog::morpho::neighborhood2D nb(cecog::morpho::WITHOUTCENTER8, imgLabel.size());
+
+   vigra::copyImage(srcImageRange(imgLabel), destImage(*imgPtr));
+   cecog::morpho::ImUnderBuild(destImageRange(*imgPtr), srcImage(imgTemp), nb);
+
+   return incref(object(imgPtr).ptr());
 }
 
 template <class IMAGE>
@@ -611,8 +904,20 @@ void pyWriteImage(IMAGE const &imgIn,
                      vigra::ImageExportInfo(strFilename.c_str()).setCompression(strCompression.c_str()));
 }
 
-
-
+template <class IMAGE1, class IMAGE2>
+PyObject * pyThreshold(IMAGE1 const &imgIn,
+                       typename IMAGE1::PixelType lower,
+                       typename IMAGE1::PixelType higher,
+                       typename IMAGE2::PixelType noresult,
+                       typename IMAGE2::PixelType yesresult)
+{
+  std::auto_ptr< IMAGE2 > imgPtr(new IMAGE2(imgIn.size()));
+  vigra::transformImage(srcImageRange(imgIn), destImage(*imgPtr),
+                        vigra::Threshold<typename IMAGE1::PixelType,
+                                         typename IMAGE2::PixelType>
+                        (lower, higher, noresult, yesresult));
+  return incref(object(imgPtr).ptr());
+}
 
 template <class IMAGE1, class IMAGE2>
 void pyGlobalThreshold(IMAGE1 const &imin, IMAGE2 & imout, typename IMAGE1::value_type thresh)
@@ -1258,6 +1563,84 @@ static void wrap_images()
 
   //def("imageToArray", pyImageToArray<vigra::BImage>);
   def("rgbImageToArray", pyRgbImageToArray< vigra::UInt8RGBImage >);
+
+  def("focusQuantification", pyFocusQuantification<vigra::UInt8Image>);
+  def("focusQuantification", pyFocusQuantification<vigra::UInt16Image>);
+  def("focusQuantification", pyFocusQuantification<vigra::Int16Image>);
+
+  def("discMedian", pyDiscMedian<vigra::UInt8Image, vigra::UInt8Image>);
+  def("discMedian", pyDiscMedian<vigra::UInt16Image, vigra::UInt16Image>);
+  def("discMedian", pyDiscMedian<vigra::Int16Image, vigra::Int16Image>);
+
+  def("toggleMapping", pyToggleMapping<vigra::UInt8Image, vigra::UInt8Image>);
+  def("toggleMapping", pyToggleMapping<vigra::UInt16Image, vigra::UInt16Image>);
+  def("toggleMapping", pyToggleMapping<vigra::Int16Image, vigra::Int16Image>);
+
+  def("relabelImage", pyRelabelImage<vigra::UInt8Image, vigra::UInt16Image>);
+  def("relabelImage", pyRelabelImage<vigra::UInt16Image, vigra::UInt16Image>);
+  def("relabelImage", pyRelabelImage<vigra::Int16Image, vigra::UInt16Image>);
+
+  def("relabelImage", pyRelabelImage<vigra::UInt8Image, vigra::Int16Image>);
+  def("relabelImage", pyRelabelImage<vigra::UInt16Image, vigra::Int16Image>);
+  def("relabelImage", pyRelabelImage<vigra::Int16Image, vigra::Int16Image>);
+
+  def("watershed", pyImWatershed<vigra::UInt8Image, vigra::UInt16Image>);
+  def("watershed", pyImWatershed<vigra::UInt16Image, vigra::UInt16Image>);
+  def("watershed", pyImWatershed<vigra::Int16Image, vigra::UInt16Image>);
+
+  def("constrainedWatershed", pyImConstrainedWatershed<vigra::UInt8Image, vigra::UInt8Image, vigra::UInt16Image>);
+  def("constrainedWatershed", pyImConstrainedWatershed<vigra::UInt16Image, vigra::UInt8Image, vigra::UInt16Image>);
+  def("constrainedWatershed", pyImConstrainedWatershed<vigra::Int16Image, vigra::UInt8Image, vigra::UInt16Image>);
+  def("constrainedWatershed", pyImConstrainedWatershed<vigra::UInt8Image, vigra::UInt16Image, vigra::UInt16Image>);
+  def("constrainedWatershed", pyImConstrainedWatershed<vigra::UInt16Image, vigra::UInt16Image, vigra::UInt16Image>);
+  def("constrainedWatershed", pyImConstrainedWatershed<vigra::Int16Image, vigra::UInt16Image, vigra::UInt16Image>);
+
+  def("erode", pyImErode<vigra::UInt8Image>);
+  def("erode", pyImErode<vigra::UInt16Image>);
+  def("erode", pyImErode<vigra::Int16Image>);
+
+  def("dilate", pyImDilate<vigra::UInt8Image>);
+  def("dilate", pyImDilate<vigra::UInt16Image>);
+  def("dilate", pyImDilate<vigra::Int16Image>);
+
+  def("open", pyImOpen<vigra::UInt8Image>);
+  def("open", pyImOpen<vigra::UInt16Image>);
+  def("open", pyImOpen<vigra::Int16Image>);
+
+  def("close", pyImClose<vigra::UInt8Image>);
+  def("close", pyImClose<vigra::UInt16Image>);
+  def("close", pyImClose<vigra::Int16Image>);
+
+  def("morphoGradient", pyImMorphoGradient<vigra::UInt8Image>);
+  def("morphoGradient", pyImMorphoGradient<vigra::UInt16Image>);
+  def("morphoGradient", pyImMorphoGradient<vigra::Int16Image>);
+
+  def("externalGradient", pyImExternalGradient<vigra::UInt8Image>);
+  def("externalGradient", pyImExternalGradient<vigra::UInt16Image>);
+  def("externalGradient", pyImExternalGradient<vigra::Int16Image>);
+
+  def("internalGradient", pyImInternalGradient<vigra::UInt8Image>);
+  def("internalGradient", pyImInternalGradient<vigra::UInt16Image>);
+  def("internalGradient", pyImInternalGradient<vigra::Int16Image>);
+
+  def("supremum", pyImSupremum<vigra::UInt8Image>);
+  def("supremum", pyImSupremum<vigra::UInt16Image>);
+  def("supremum", pyImSupremum<vigra::Int16Image>);
+
+  def("infimum", pyImInfimum<vigra::UInt8Image>);
+  def("infimum", pyImInfimum<vigra::UInt16Image>);
+  def("infimum", pyImInfimum<vigra::Int16Image>);
+
+  def("overlayBinaryImage", pyOverlayBinaryImage<vigra::UInt8Image, vigra::UInt8Image, vigra::UInt8RGBImage>);
+  def("overlayBinaryImage", pyOverlayBinaryImage<vigra::UInt16Image, vigra::UInt8Image, vigra::UInt16RGBImage>);
+
+  def("anchoredSkeleton", pyImAnchoredSkeleton< vigra::UInt8Image>);
+  def("anchoredSkeleton", pyImAnchoredSkeleton< vigra::UInt16Image>);
+  def("anchoredSkeleton", pyImAnchoredSkeleton< vigra::Int16Image>);
+
+  def("threshold", pyThreshold< vigra::UInt8Image, vigra::UInt8Image >);
+  def("threshold", pyThreshold< vigra::UInt16Image, vigra::UInt8Image >);
+  def("threshold", pyThreshold< vigra::Int16Image, vigra::UInt8Image >);
 
   def("gaussianFilter", pyGaussian<vigra::UInt8Image, vigra::UInt8Image>);
   def("gaussianFilter", pyGaussian<vigra::UInt16Image, vigra::UInt16Image>);

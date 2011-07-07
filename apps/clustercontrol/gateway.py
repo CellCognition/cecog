@@ -111,12 +111,12 @@ def cecog_job_template(jt, path_out, args, emails, version, batch_size=1, is_bul
     safe_mkdirs(path_out_cluster)
     path_out_cluster = ':' + path_out_cluster
     if is_bulk_job:
-        jt.outputPath = path_out_cluster 
+        jt.outputPath = path_out_cluster
         # FIXME: another DRMAA hack: the PARAMETRIC_INDEX is NOT resolved in args!
         jt.args += ['--cluster_index', 'SGE_TASK_ID',
                     '--batch_size', str(batch_size)]
     else:
-        jt.outputPath = path_out_cluster 
+        jt.outputPath = path_out_cluster
     return jt
 
 #-------------------------------------------------------------------------------
@@ -134,8 +134,8 @@ class ClusterControl(object):
     def submit_job(self, job_type, settings, path_out, emails, nr_items=1,
                    batch_size=1, version=CECOG_DEFAULT_VERSION):
 
-        path_out = str(path_out.replace('\\','/'))
-        settings = settings.replace('\\','/')
+        path_out = str(path_out.replace('\\', '/'))
+        settings = settings.replace('\\', '/')
         path_out = os.path.normpath(path_out)
         path_out_settings = os.path.join(path_out, 'settings')
         print path_out_settings
@@ -143,22 +143,22 @@ class ClusterControl(object):
 
         print path_out_settings
         filename_settings = os.path.join(path_out_settings, 'cecog_settings.conf')
-	f = file(filename_settings, 'w')
+        f = file(filename_settings, 'w')
         f.write(settings)
         f.close()
 
         args = ['-s', filename_settings]
 
         # adjust the number of job items according to the batch size
-	nr_items = int(nr_items / batch_size)
+        nr_items = int(nr_items / batch_size)
         # for modulo > 0 add one more item for the rest
         if nr_items % batch_size > 0:
-            nr_items += 1 
+            nr_items += 1
 
         is_bulk_job = True #if nr_items > 1 else False
 
         jt = self._session.createJobTemplate()
-        jt = cecog_job_template(jt, path_out, args, emails, version, 
+        jt = cecog_job_template(jt, path_out, args, emails, version,
                                 batch_size, is_bulk_job)
 
         if is_bulk_job:
@@ -185,16 +185,19 @@ class ClusterControl(object):
             if not s in status:
                 status[s] = 0
             status[s] += 1
-        return ", ".join(["%s (%dx)" % (k,v) for k,v in status.iteritems()])
+        return ", ".join(["%s (%dx)" % (k, v) for k, v in status.iteritems()])
 
     def get_service_info(self):
-        return "Service up and running. Scheduler: %s, cecog versions: %s" %\
+        return "Service up and running. Scheduler: %s, cecog versions: %s" % \
                (self._session.drmsInfo, ', '.join(self.get_cecog_versions()))
 
     def get_cecog_versions(self):
+        '''
+        returns a list of supported cecog versions
+        '''
         names = [n for n in os.listdir(CECOG_VERSIONS_PATH)
                  if os.path.isdir(os.path.join(CECOG_VERSIONS_PATH, n))]
-        return names
+        return sorted(names)
 
     def _check_jobid(self, job_id):
         if job_id is None:
