@@ -391,7 +391,6 @@ class ClassifierResultFrame(QGroupBox):
         self._label_g.setText(self.LABEL_G % g)
 
     def on_conf_result(self, c, g, conf):
-        print "moo", c, g
         self._set_info(c, g, conf)
 
         if not self._has_data:

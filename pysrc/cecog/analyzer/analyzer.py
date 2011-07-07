@@ -342,16 +342,11 @@ class TimeHolder(OrderedDict):
         var.valid = helper
 
     def close_all(self):
-        print 'moo1'
         if not self._dataset is None:
-            print 'moo2'
             self._dataset.close()
-            print 'moo3'
             self._dataset = None
             self._create_nc = False
-        print 'moo4'
         if self._hdf5_create:
-            print 'moo2'
             self._hdf5_file.close()
             self._hdf5_create = False
 
