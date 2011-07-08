@@ -275,4 +275,38 @@ class ProgressDialog(QProgressDialog):
     def keyPressEvent(self, event):
         if event.key() != Qt.Key_Escape:
             QProgressDialog.keyPressEvent(self, event)
+            
+    def setTarget(self, target, *args):
+        self.target = target
+        self.args = args
+        
+    def exec_(self):
+        self.setCancelButton(None)
+                
+        t = QThread()
+        t.finished.connect(self.close)
+        
+        def foo():
+            t.result = self.target(*self.args)                 
+        t.run = foo
+        t.start()
+        super(QProgressDialog, self).exec_()
+        t.wait()
+        return t.result
+    
+if __name__ == '__main__':
+    app = QApplication([''])
+    
+    import time
+    a = ProgressDialog('bla', 'blub', 0, 0, None)
+    def foo():
+        print 'running long long function'
+        time.sleep(3)
+        print 'finish'
+        return 42
+    a.setTarget(foo)
+    print 'result of foo:', a.exec_()
+    
+    app.exec_()
+    
 
