@@ -281,31 +281,35 @@ class ProgressDialog(QProgressDialog):
         self.args = args
         
     def exec_(self):
-        self.setCancelButton(None)
-                
-        t = QThread()
-        t.finished.connect(self.close)
-        
-        def foo():
-            t.result = self.target(*self.args)                 
-        t.run = foo
-        t.start()
-        super(QProgressDialog, self).exec_()
-        t.wait()
-        return t.result
+        if hasattr(self, 'target'):
+            self.setCancelButton(None)
+                    
+            t = QThread()
+            t.finished.connect(self.close)
+            
+            def foo():
+                t.result = self.target(*self.args)                 
+            t.run = foo
+            t.start()
+            super(QProgressDialog, self).exec_()
+            t.wait()
+            return t.result
+        else:
+            return super(QProgressDialog, self).exec_()
+            
     
 if __name__ == '__main__':
     app = QApplication([''])
     
     import time
-    a = ProgressDialog('bla', 'blub', 0, 0, None)
+    a = ProgressDialog('still running...', 'Cancel', 0, 0, None)
     def foo():
-        print 'running long long function'
-        time.sleep(3)
+        print 'running long long target function'
+        time.sleep(4)
         print 'finish'
         return 42
     a.setTarget(foo)
-    print 'result of foo:', a.exec_()
+    print 'result of dialog:', a.exec_()
     
     app.exec_()
     
