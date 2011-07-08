@@ -269,7 +269,10 @@ class MyMessageBox(QMessageBox):
 
 class ProgressDialog(QProgressDialog):
     '''
-    inherited QProgressDialog to ignore the ESC key during dialog exec_()
+    inherited QProgressDialog to ...
+       ... ignore the ESC key during dialog exec_()
+       ... to provide mechanism to show the dialog only
+           while a target function is running
     '''
 
     def keyPressEvent(self, event):
