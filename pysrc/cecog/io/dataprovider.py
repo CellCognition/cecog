@@ -21,7 +21,8 @@ import os
 #
 import h5py, \
        networkx, \
-       numpy
+       numpy, \
+       vigra
 
 import matplotlib.pyplot as plt
 import time as timeing
@@ -234,7 +235,22 @@ class Position(_DataProvider):
     def get_bounding_box(self, t, z, o, c=0):
         obj = self._hf_group['time'][str(t[0])]['zslice'][str(z[0])]['region'][str(c)]['object']
         obj = obj[obj['obj_id']==o]
-        return (obj['upper_left'], obj['lower_right'])
+        return (obj['upper_left'][0], obj['lower_right'][0])
+    
+    def get_cell(self, t, y, o, c, min_bounding_box_size=50):
+        ul, lr = self.get_bounding_box(t, z, o, c)
+        
+        offset_0 = (min_bounding_box_size - lr[0] + ul[0])
+        offset_1 = (min_bounding_box_size - lr[1] + ul[1]) 
+        
+        ul[0] = max(0, ul[0] - offset_0/2 - cmp(offset_0/2,0) * offset_0 % 2) 
+        ul[1] = max(0, ul[1] - offset_1/2 - cmp(offset_1/2,0) * offset_1 % 2)  
+        
+        lr[0] = min(self._hf_group['image']['channel'].shape[4], lr[0] + offset_0/2) 
+        lr[1] = min(self._hf_group['image']['channel'].shape[3], lr[1] + offset_1/2) 
+        
+        return self._hf_group['image']['channel'][c, t[0], z[0], ul[1]:lr[1], ul[0]:lr[0]]
+    
         
         
         
@@ -395,7 +411,10 @@ class Objects(object):
         related_obj = {}
         
         for o, r in relation_idx.iteritems():
-            related_obj[o] = relation.map(r)
+            try:
+                related_obj[o] = relation.map(r)
+            except:
+                print o, r
              
            
         return related_obj, relation.to_object
@@ -433,7 +452,9 @@ if __name__ == '__main__':
                     relation_tracking = position.get_relation(events.relations[0])
 #                    print relation_tracking
                     
-                    mapping_tracking, onto_object_name = events.apply_relation(relation_tracking)
+                    selected_event_id = [108]
+                    
+                    mapping_tracking, onto_object_name = events.apply_relation(relation_tracking, obj_ids=selected_event_id)
                     
                     
                     
@@ -442,7 +463,7 @@ if __name__ == '__main__':
                     relation_primary_primary = position.get_relation(primary_primary.relations[0])
 #                    print relation_primary_primary
                     
-                    selected_event_id = [3]
+                    
                     
                     for e in selected_event_id:
                         primary_object_ids = mapping_tracking[e]['obj_id2']
@@ -457,7 +478,8 @@ if __name__ == '__main__':
                             z = mapping_primary[prim_obj_id]['zslice_idx1']
                             o = mapping_primary[prim_obj_id]['obj_id1']
                             c = position.get_definition('region')['channel_idx'][0]
-                            print position.get_bounding_box(t,z,o,c)
+                            tmp = position.get_cell(t,z,o,c)
+                            vigra.impex.writeImage(tmp, 'c:/Users/sommerc/blub%d_%d_%d.png'%(e,t,o))
                             
                     
                     
