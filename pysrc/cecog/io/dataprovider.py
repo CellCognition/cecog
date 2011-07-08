@@ -452,8 +452,8 @@ if __name__ == '__main__':
                     relation_tracking = position.get_relation(events.relations[0])
 #                    print relation_tracking
                     
-                    selected_event_id = [108]
-                    
+                    selected_event_id = [20,30,40,50,108]
+                                        
                     mapping_tracking, onto_object_name = events.apply_relation(relation_tracking, obj_ids=selected_event_id)
                     
                     
@@ -472,7 +472,6 @@ if __name__ == '__main__':
                         
                         mapping_primary, onto_object_name = primary_primary.apply_relation(relation_primary_primary, obj_ids=primary_object_ids)
                         
-                        print 'Boundingboxes for event %d' % e
                         for prim_obj_id in mapping_primary:
                             t = mapping_primary[prim_obj_id]['time_idx1']
                             z = mapping_primary[prim_obj_id]['zslice_idx1']
