@@ -302,14 +302,20 @@ if __name__ == '__main__':
     app = QApplication([''])
     
     import time
-    a = ProgressDialog('still running...', 'Cancel', 0, 0, None)
-    def foo():
-        print 'running long long target function'
-        time.sleep(4)
-        print 'finish'
+    dlg = ProgressDialog('still running...', 'Cancel', 0, 0, None)
+    
+    def foo(t):
+        print 'running long long target function for %d seconds' % t, 
+        time.sleep(t)
+        print ' ...finished'
         return 42
-    a.setTarget(foo)
-    print 'result of dialog:', a.exec_()
+    
+    # This is optional. 
+    # If not specified, the standard ProgressDialog is used
+    dlg.setTarget(foo, 3)
+    
+    res = dlg.exec_()
+    print 'result of dialog target function is:', res
     
     app.exec_()
     
