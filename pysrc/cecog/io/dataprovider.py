@@ -442,35 +442,27 @@ if __name__ == '__main__':
         for plate_id in m.data[sample_id]:
             print plate_id
             for experiment_id in m.data[sample_id][plate_id]:
-#                print 'In experiment:', experiment_id
+                print 'In experiment:', experiment_id
                 for position_id in m.data[sample_id][plate_id][experiment_id]:
                     'In position:', position_id
                     position = m.data[sample_id][plate_id][experiment_id][position_id]
 
                     events = position.get_object('event')
-#                    print events
                     relation_tracking = position.get_relation(events.relations[0])
-#                    print relation_tracking
                     
                     selected_event_id = [20,30,40,50,108]
                                         
-                    mapping_tracking, onto_object_name = events.apply_relation(relation_tracking, obj_ids=selected_event_id)
+                    mapping_tracking, onto_object_name = events.apply_relation(relation_tracking, \
+                                                                               obj_ids=selected_event_id)
                     
-                    
-                    
+     
                     primary_primary = position.get_object(onto_object_name)
-#                    print primary_primary
-                    relation_primary_primary = position.get_relation(primary_primary.relations[0])
-#                    print relation_primary_primary
-                    
-                    
+                    relation_primary_primary = position.get_relation(primary_primary.relations[0])                 
                     
                     for e in selected_event_id:
                         primary_object_ids = mapping_tracking[e]['obj_id2']
-                        
-                        #region_primary_primary = position.get_object(onto_object_name)
-                        
-                        mapping_primary, onto_object_name = primary_primary.apply_relation(relation_primary_primary, obj_ids=primary_object_ids)
+                        mapping_primary, onto_object_name = primary_primary.apply_relation(relation_primary_primary, \
+                                                                                           obj_ids=primary_object_ids)
                         
                         for prim_obj_id in mapping_primary:
                             t = mapping_primary[prim_obj_id]['time_idx1']
@@ -478,7 +470,7 @@ if __name__ == '__main__':
                             o = mapping_primary[prim_obj_id]['obj_id1']
                             c = position.get_definition('region')['channel_idx'][0]
                             tmp = position.get_cell(t,z,o,c)
-                            vigra.impex.writeImage(tmp, 'c:/Users/sommerc/blub%d_%d_%d.png'%(e,t,o))
+                            #vigra.impex.writeImage(tmp, 'c:/Users/sommerc/blub%d_%d_%d.png'%(e,t,o))
                             
                     
                     
