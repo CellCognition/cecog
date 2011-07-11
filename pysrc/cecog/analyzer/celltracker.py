@@ -361,7 +361,9 @@ class CellTracker(OptionManager):
             self._oGraph.add_node(strNodeId, oImageObject)
             dict_append_list(self._dctTimePoints, iT, iObjId)
         #if len(self._dctTimePoints) > 1:
-        self._connectTimePoints(iT)
+        # connect time point only if any object is present
+        if iT in self._dctTimePoints:
+            self._connectTimePoints(iT)
 
     def _getClosestPreviousT(self, iT):
         iResultT = None
