@@ -268,6 +268,9 @@ class MyMessageBox(QMessageBox):
         #self.setFixedSize(400, 100)
 
 class ProgressDialog(QProgressDialog):
+
+    targetFinished = pyqtSignal()
+
     '''
     inherited QProgressDialog to ...
        ... ignore the ESC key during dialog exec_()
@@ -283,28 +286,32 @@ class ProgressDialog(QProgressDialog):
         if event.key() != Qt.Key_Escape or getattr(self, 'hasCancelButton', False):
             QProgressDialog.keyPressEvent(self, event)
 
-    def setTarget(self, target, *args):
-        self.target = target
-        self.args = args
+    def setTarget(self, target, *args, **options):
+        self._target = target
+        self._args = args
+        self._options = options
 
     def getTargetResult(self):
-        return getattr(self, 'target_result', None)
+        return getattr(self, '_target_result', None)
 
-    def exec_(self):
-        if hasattr(self, 'target'):
-            self.setCancelButton(None)
-
+    def exec_(self, finished=None, started=None):
+        if hasattr(self, '_target'):
             t = QThread()
-            t.finished.connect(self.close)
+            if finished is None:
+                finished = self.close
+            t.finished.connect(finished)
+            if started is not None:
+                t.started.connect(started)
 
             def foo():
-                t.result = self.target(*self.args)
+                t.result = self._target(*self._args, **self._options)
+                self.targetFinished.emit()
 
             t.run = foo
             t.start()
             dlg_result = super(QProgressDialog, self).exec_()
             t.wait()
-            self.target_result = t.result
+            self._target_result = t.result
         else:
             dlg_result = super(QProgressDialog, self).exec_()
         return dlg_result
