@@ -275,51 +275,60 @@ class ProgressDialog(QProgressDialog):
            while a target function is running
     '''
 
+    def setCancelButton(self, cancelButton):
+        self.hasCancelButton = cancelButton is not None
+        super(ProgressDialog, self).setCancelButton(cancelButton)
+
     def keyPressEvent(self, event):
-        if event.key() != Qt.Key_Escape:
+        if event.key() != Qt.Key_Escape or getattr(self, 'hasCancelButton', False):
             QProgressDialog.keyPressEvent(self, event)
-            
+
     def setTarget(self, target, *args):
         self.target = target
         self.args = args
-        
+
+    def getTargetResult(self):
+        return getattr(self, 'target_result', None)
+
     def exec_(self):
         if hasattr(self, 'target'):
             self.setCancelButton(None)
-                    
+
             t = QThread()
             t.finished.connect(self.close)
-            
+
             def foo():
-                t.result = self.target(*self.args)                 
+                t.result = self.target(*self.args)
+
             t.run = foo
             t.start()
             dlg_result = super(QProgressDialog, self).exec_()
             t.wait()
-            return dlg_result, t.result
+            self.target_result = t.result
         else:
-            return super(QProgressDialog, self).exec_()
-            
-    
+            dlg_result = super(QProgressDialog, self).exec_()
+        return dlg_result
+
+
 if __name__ == '__main__':
     app = QApplication([''])
-    
+
     import time
     dlg = ProgressDialog('still running...', 'Cancel', 0, 0, None)
-    
+
     def foo(t):
-        print 'running long long target function for %d seconds' % t, 
+        print 'running long long target function for %d seconds' % t,
         time.sleep(t)
         print ' ...finished'
         return 42
-    
-    # This is optional. 
+
+    # This is optional.
     # If not specified, the standard ProgressDialog is used
     dlg.setTarget(foo, 3)
-    
+
     res = dlg.exec_()
     print 'result of dialog target function is:', res
-    
+
     app.exec_()
-    
+
 
