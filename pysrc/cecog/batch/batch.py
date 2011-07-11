@@ -75,10 +75,12 @@ if __name__ ==  "__main__":
 
     group1 = OptionGroup(parser, "Overwrite options",
                          "These options overwrite definitions from SETTINGS_FILE.")
-    group1.add_option("-i", "--input", default=None,
-                      help="", metavar="INPUT_PATH")
-    group1.add_option("-o", "--output", default=None,
-                      help="", metavar="OUTPUT_PATH")
+    group1.add_option("-i", "--input", metavar="INPUT_PATH",
+                      help="Input path pointing to a directory that is one plate or a directory containing "
+                      "multiple plates as sub-directories, see MULTIPLE_PLATES.")
+    group1.add_option("-o", "--output", metavar="OUTPUT_PATH",
+                      help="Output path where analysis results are written. Depending on MULTIPLE_PLATES either "
+                      "one directory for one plate or the parent directory for multiple plates.")
     group1.add_option("--multiple_plates", action="store_true", dest="multiple_plates",
                       help="Multiple plates are expected in INPUT_PATH.")
     group1.add_option("--no_multiple_plates", action="store_false", dest="multiple_plates",
