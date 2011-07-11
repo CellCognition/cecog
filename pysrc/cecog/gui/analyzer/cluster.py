@@ -182,6 +182,7 @@ class ClusterDisplay(QGroupBox):
 
     @pyqtSlot()
     def _on_submit_job(self):
+        self._submit_settings.set_section(SECTION_NAME_GENERAL)
         if not self._submit_settings.get2('constrain_positions'):
             # FIXME:
             imagecontainer = qApp._main_window._imagecontainer
@@ -193,14 +194,14 @@ class ClusterDisplay(QGroupBox):
             self._submit_settings.set2('positions', ','.join(positions))
             nr_items = len(positions)
         else:
-            positions = self._submit_settings.get(SECTION_NAME_GENERAL, 'positions')
+            positions = self._submit_settings.get2('positions')
             nr_items = len(positions.split(','))
 
         # FIXME: we need to get the current value for 'position_granularity'
         settings_dummy = ProcessingFrame.get_special_settings(self._settings)
         position_granularity = settings_dummy.get(SECTION_NAME_CLUSTER, 'position_granularity')
 
-        path_out = self._submit_settings.get(SECTION_NAME_GENERAL, 'pathout')
+        path_out = self._submit_settings.get2('pathout')
         emails = str(self._txt_mail.text()).split(',')
         try:
             jobid = self._service.submit_job('cecog_batch',
@@ -314,10 +315,6 @@ class ClusterDisplay(QGroupBox):
             self._can_submit = True
             self._submit_settings = \
                 ProcessingFrame.get_special_settings(self._settings)
-
-            self._submit_settings.set_section(SECTION_NAME_GENERAL)
-            self._submit_settings.set2('createimagecontainer', False)
-            self._submit_settings.set2('preferimagecontainer', False)
 
             self._label_hosturl.setText(self._host_url)
             self._label_status.setText(self._service.get_service_info())
