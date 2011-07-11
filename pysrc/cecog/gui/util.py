@@ -294,9 +294,9 @@ class ProgressDialog(QProgressDialog):
                 t.result = self.target(*self.args)                 
             t.run = foo
             t.start()
-            super(QProgressDialog, self).exec_()
+            dlg_result = super(QProgressDialog, self).exec_()
             t.wait()
-            return t.result
+            return dlg_result, t.result
         else:
             return super(QProgressDialog, self).exec_()
             
