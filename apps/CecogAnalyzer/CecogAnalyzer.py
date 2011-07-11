@@ -601,62 +601,64 @@ class AnalyzerMainWindow(QMainWindow):
                     self._load_image_container(infos, scan_plates)
 
     def _load_image_container(self, plate_infos, scan_plates):
+
+        imagecontainer = ImageContainer()
+
+        def load():
+            iter = imagecontainer.iter_import_from_settings(self._settings, scan_plates)
+            for idx, info in enumerate(iter):
+                pass
+
+        def check():
+            # close and delete the current browser instance
+            if not self._browser is None:
+                self._browser.close()
+                del self._browser
+                self._browser = None
+
+            if len(imagecontainer.plates) > 0:
+                self._imagecontainer = imagecontainer
+                plate = self._imagecontainer.plates[0]
+                self._imagecontainer.set_plate(plate)
+                self._imagecontainer.check_dimensions()
+                channels = self._imagecontainer.channels
+                for prefix in ['primary', 'secondary', 'tertiary']:
+                    trait = self._settings.get_trait(SECTION_NAME_OBJECTDETECTION,
+                                                     '%s_channelid' % prefix)
+                    trait.set_list_data(channels)
+                    self._tabs[1].get_widget('%s_channelid' % prefix).update()
+
+                trait = self._settings.get_trait(SECTION_NAME_TRACKING,
+                                                 'tracking_duration_unit')
+
+                # allow time-base tracking durations only if time-stamp
+                # information is present
+                meta_data = imagecontainer.get_meta_data()
+                if meta_data.has_timestamp_info:
+                    trait.set_list_data(TRACKING_DURATION_UNITS_TIMELAPSE)
+                else:
+                    trait.set_list_data(TRACKING_DURATION_UNITS_DEFAULT)
+
+                dlg.close()
+                self.set_modules_active(state=True)
+                information(self, "Plate(s) successfully loaded",
+                            "%d plates loaded successfully." % len(imagecontainer.plates))
+            else:
+                dlg.close()
+                critical(self, "No valid image data found",
+                         "The naming schema provided might not fit your image data"
+                         "or the coordinate file is not correct.\n\nPlease modify "
+                         "the values and scan the structure again.",
+                         detail = thread.error_message)
+
         dlg = ProgressDialog(self, Qt.CustomizeWindowHint | Qt.WindowTitleHint)
         dlg.setWindowModality(Qt.WindowModal)
         dlg.setLabelText('Please wait until the input structure is scanned\n'
                          'or the structure data loaded...')
         dlg.setCancelButton(None)
         dlg.setRange(0,0)
-
-        thread = ImageContainerThread(self._settings, scan_plates)
-        thread.next_plate.connect(lambda x: dlg.setValue(x))
-        fct = lambda x,y : lambda : self._on_load_finished(x,y)
-        thread.finished.connect(fct(dlg, thread))
-        thread.start()
-        dlg.exec_()
-
-    def _on_load_finished(self, dlg, thread):
-        # close and delete the current browser instance
-        if not self._browser is None:
-            self._browser.close()
-            del self._browser
-            self._browser = None
-
-        imagecontainer = thread.imagecontainer
-        if len(imagecontainer.plates) > 0 and thread.error_message is None:
-            self._imagecontainer = imagecontainer
-            plate = self._imagecontainer.plates[0]
-            self._imagecontainer.set_plate(plate)
-            self._imagecontainer.check_dimensions()
-            channels = self._imagecontainer.channels
-            for prefix in ['primary', 'secondary', 'tertiary']:
-                trait = self._settings.get_trait(SECTION_NAME_OBJECTDETECTION,
-                                                 '%s_channelid' % prefix)
-                trait.set_list_data(channels)
-                self._tabs[1].get_widget('%s_channelid' % prefix).update()
-
-            trait = self._settings.get_trait(SECTION_NAME_TRACKING,
-                                             'tracking_duration_unit')
-
-            # allow time-base tracking durations only if time-stamp
-            # information is present
-            meta_data = imagecontainer.get_meta_data()
-            if meta_data.has_timestamp_info:
-                trait.set_list_data(TRACKING_DURATION_UNITS_TIMELAPSE)
-            else:
-                trait.set_list_data(TRACKING_DURATION_UNITS_DEFAULT)
-
-            self.set_modules_active(state=True)
-            dlg.reset()
-            information(self, "Plate(s) successfully loaded",
-                        "%d plates loaded successfully." % len(imagecontainer.plates))
-        else:
-            dlg.reset()
-            critical(self, "No valid image data found",
-                     "The naming schema provided might not fit your image data"
-                     "or the coordinate file is not correct.\n\nPlease modify "
-                     "the values and scan the structure again.",
-                     detail = thread.error_message)
+        dlg.setTarget(load)
+        dlg.exec_(finished=check)
 
     def set_modules_active(self, state=True):
         for name, (button, widget) in self._tab_lookup.iteritems():
@@ -710,28 +712,6 @@ class AnalyzerMainWindow(QMainWindow):
 
     def _on_help_startup(self):
         show_html('_startup')
-
-
-class ImageContainerThread(QThread):
-
-    next_plate = pyqtSignal(int)
-
-    def __init__(self, settings, scan_plates):
-        super(ImageContainerThread, self).__init__()
-        self._settings = settings
-        self.scan_plates = scan_plates
-        self.imagecontainer = None
-        self.error_message = None
-
-    def run(self):
-        self.imagecontainer = ImageContainer()
-        iter = self.imagecontainer.iter_import_from_settings(self._settings,
-                                                             self.scan_plates)
-        try:
-            for idx, info in enumerate(iter):
-                self.next_plate.emit(idx+1)
-        except Exception as e:
-            self.error_message = e.message
 
 
 def handle_exception(exc_type, exc_value, exc_traceback):

@@ -67,6 +67,7 @@ from cecog.gui.util import (ImageRatioDisplay,
                             critical,
                             information,
                             status,
+                            ProgressDialog,
                             )
 from cecog.analyzer import (CONTROL_1,
                             CONTROL_2,
@@ -224,10 +225,12 @@ class _ProcessingThread(QThread):
             self.analyzer_error.emit(msg, 0)
             raise
 
-    def set_abort(self):
+    def set_abort(self, wait=False):
         self._mutex.lock()
         self._abort = True
         self._mutex.unlock()
+        if wait:
+            self.wait()
 
     def get_abort(self):
         abort = self._abort
@@ -483,10 +486,9 @@ class HmmThread(_ProcessingThread):
         logger = logging.getLogger()
         logger.info(msg)
 
-    def set_abort(self):
-        _ProcessingThread.set_abort(self)
-        if self._abort:
-            self._process.kill()
+    def set_abort(self, wait=False):
+        self._process.kill()
+        _ProcessingThread.set_abort(self, wait=wait)
 
 
 class AnalzyerThread(_ProcessingThread):
@@ -924,18 +926,13 @@ class _ProcessorMixin(object):
         self.setCursor(Qt.BusyCursor)
         self._is_abort = True
 
-        dlg = QProgressDialog(self, Qt.Sheet)
+        dlg = ProgressDialog(self, Qt.Sheet)
         dlg.setWindowModality(Qt.WindowModal)
         dlg.setLabelText('Please wait until the processing terminates...')
         dlg.setCancelButton(None)
         dlg.setRange(0,0)
-        f = lambda : self._on_analyzer_terminated(dlg)
-        self._analyzer.finished.connect(f)
-        self._analyzer.set_abort()
+        dlg.setTarget(self._analyzer.set_abort, wait=True)
         dlg.exec_()
-
-    def _on_analyzer_terminated(self, dlg):
-        dlg.reset()
         self.setCursor(Qt.ArrowCursor)
 
     def _on_render_changed(self, name):
