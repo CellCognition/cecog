@@ -481,6 +481,10 @@ class PositionAnalyzer(object):
                 if self.oSettings.get('Output', 'export_track_data'):
                     self.oCellTracker.exportFullTracks()
 
+                if self.oSettings.get('Output', 'export_tracking_as_dot'):
+                    self.oCellTracker.exportGraph(os.path.join(strPathOutPositionStats,
+                                                               'tracking_graph___P%s.dot' % self.P))
+
                 if not self._qthread is None:
                     if self._qthread.get_abort():
                         return 0
