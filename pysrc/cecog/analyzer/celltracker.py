@@ -511,7 +511,7 @@ class CellTracker(OptionManager):
                                                    radius, img_conn, col)
             current += 1
 
-        if not found:
+        if not found and iT in self._dctTimePoints:
             for objId in self._dctTimePoints[iT]:
                 nodeId = self.getNodeIdFromComponents(iT, objId)
                 obj = self._oGraph.node_data(nodeId)
