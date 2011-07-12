@@ -67,7 +67,7 @@ from cecog.gui.util import (ImageRatioDisplay,
                             critical,
                             information,
                             status,
-                            ProgressDialog,
+                            waitingProgressDialog,
                             )
 from cecog.analyzer import (CONTROL_1,
                             CONTROL_2,
@@ -925,12 +925,7 @@ class _ProcessorMixin(object):
     def _abort_processing(self):
         self.setCursor(Qt.BusyCursor)
         self._is_abort = True
-
-        dlg = ProgressDialog(self, Qt.Sheet)
-        dlg.setWindowModality(Qt.WindowModal)
-        dlg.setLabelText('Please wait until the processing terminates...')
-        dlg.setCancelButton(None)
-        dlg.setRange(0,0)
+        dlg = waitingProgressDialog('Please wait until the processing has been terminated...', self)
         dlg.setTarget(self._analyzer.set_abort, wait=True)
         dlg.exec_()
         self.setCursor(Qt.ArrowCursor)

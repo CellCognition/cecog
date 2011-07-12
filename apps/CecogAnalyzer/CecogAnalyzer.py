@@ -83,7 +83,7 @@ from cecog.gui.util import (status,
                             exception,
                             information,
                             warning,
-                            ProgressDialog,
+                            waitingProgressDialog,
                             )
 
 import resource
@@ -609,7 +609,6 @@ class AnalyzerMainWindow(QMainWindow):
             for idx, info in enumerate(iter):
                 pass
 
-        def check():
             # close and delete the current browser instance
             if not self._browser is None:
                 self._browser.close()
@@ -639,26 +638,20 @@ class AnalyzerMainWindow(QMainWindow):
                 else:
                     trait.set_list_data(TRACKING_DURATION_UNITS_DEFAULT)
 
-                dlg.close()
-                self.set_modules_active(state=True)
-                information(self, "Plate(s) successfully loaded",
-                            "%d plates loaded successfully." % len(imagecontainer.plates))
-            else:
-                dlg.close()
-                critical(self, "No valid image data found",
-                         "The naming schema provided might not fit your image data"
-                         "or the coordinate file is not correct.\n\nPlease modify "
-                         "the values and scan the structure again.",
-                         detail = thread.error_message)
 
-        dlg = ProgressDialog(self, Qt.CustomizeWindowHint | Qt.WindowTitleHint)
-        dlg.setWindowModality(Qt.WindowModal)
-        dlg.setLabelText('Please wait until the input structure is scanned\n'
-                         'or the structure data loaded...')
-        dlg.setCancelButton(None)
-        dlg.setRange(0,0)
-        dlg.setTarget(load)
-        dlg.exec_(finished=check)
+        waitingProgressDialog('Please wait until the input structure is scanned\n'
+                              'or the structure data loaded...', self, load).exec_()
+
+        if len(self._imagecontainer.plates) > 0:
+            self.set_modules_active(state=True)
+            information(self, "Plate(s) successfully loaded",
+                        "%d plates loaded successfully." % len(imagecontainer.plates))
+        else:
+            critical(self, "No valid image data found",
+                     "The naming schema provided might not fit your image data"
+                     "or the coordinate file is not correct.\n\nPlease modify "
+                     "the values and scan the structure again.",
+                     detail = thread.error_message)
 
     def set_modules_active(self, state=True):
         for name, (button, widget) in self._tab_lookup.iteritems():

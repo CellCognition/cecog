@@ -317,6 +317,17 @@ class ProgressDialog(QProgressDialog):
         return dlg_result
 
 
+def waitingProgressDialog(msg, parent=None, target=None, range=(0,0)):
+    dlg = ProgressDialog(parent, Qt.CustomizeWindowHint | Qt.WindowTitleHint)
+    dlg.setWindowModality(Qt.WindowModal)
+    dlg.setLabelText(msg)
+    dlg.setCancelButton(None)
+    dlg.setRange(*range)
+    if target is not None:
+        dlg.setTarget(target)
+    return dlg
+
+
 if __name__ == '__main__':
     app = QApplication([''])
 
