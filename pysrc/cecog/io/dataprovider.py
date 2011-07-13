@@ -39,18 +39,19 @@ import time as timeing
 # functions:
 #
 
-#-------------------------------------------------------------------------------
-# classes:
-
 def print_timing(func):
     def wrapper(*arg):
         t1 = timeing.time()
         res = func(*arg)
         t2 = timeing.time()
-        #print '%s took %0.3f ms' % (func.func_name, (t2-t1)*1000.0)
+        print '%s took %0.3f ms' % (func.func_name, (t2-t1)*1000.0)
         return res
     return wrapper
+
+#-------------------------------------------------------------------------------
+# classes:
 #
+
 class _DataProvider(object):
 
     CHILDREN_GROUP_NAME = None
@@ -80,15 +81,14 @@ class _DataProvider(object):
                  if 'definition_key' can not be found it reaises a KeyError
         """
         # check local definition first
-        # FIXME: This local definition is a special case. E.g. each Position has a definition 
-        #        under each position number
+        # FIXME: The global at the root is a special case. 
         if 'definition' in self._hf_group:
             if definition_key in self._hf_group['definition']:
                 return self._hf_group['definition'][definition_key]
             
         # check parent
         if self._parent._hf_group.name == '/':
-            # we are parent already.
+            # we are root already.
             
             # definition is manditory the root node
             if definition_key in self._parent._hf_group['definition']:
@@ -107,10 +107,6 @@ class _DataProvider(object):
     def get_relation_definition(self):
         return self.get_definition('relation')
         
-        
-                
-        
-
 class Position(_DataProvider):
 
     CHILDREN_GROUP_NAME = None
@@ -187,14 +183,13 @@ class Position(_DataProvider):
         objects_description = self.get_object_definition()
         object_name_found = False
         
-        involved_relations = []
         for o_desc in objects_description:
             if o_desc[0] == object_name:
                 object_name_found = True
                 if o_desc[1]:
-                    involved_relations.append(o_desc[1])
+                    involved_relation = o_desc[1]
         
-        is_terminal = len(involved_relations) == 0
+        is_terminal = len(involved_relation) == 0
         if is_terminal:
             return TerminalObjects(object_name)
             
@@ -209,7 +204,7 @@ class Position(_DataProvider):
             
             h5_object_group = self._hf_group['object'][object_name]
         
-            return Objects(object_name, h5_object_group, involved_relations)
+            return Objects(object_name, h5_object_group, involved_relation)
     
     def get_relation(self, relation_name):
         releations = self.get_relation_definition()
@@ -234,7 +229,7 @@ class Position(_DataProvider):
         
     def get_bounding_box(self, t, z, o, c=0):
         obj = self._hf_group['time'][str(t[0])]['zslice'][str(z[0])]['region'][str(c)]['object']
-        obj = obj[obj['obj_id']==o]
+        obj = obj[obj['obj_id'] == o]
         return (obj['upper_left'][0], obj['lower_right'][0])
     
     def get_cell(self, t, y, o, c, min_bounding_box_size=50):
@@ -297,12 +292,15 @@ class Relation(object):
         self.from_object, self.to_object = from_to_object_names
         self.name = relation_name
         self.h5_table = h5_table
-        
+        self.h5_table_np_copy = self.h5_table.value
+        self.h5_table_np_copy = self.h5_table_np_copy.view(numpy.uint32) \
+                                 .reshape(len(self.h5_table_np_copy), -1)   # shape can be (.,4) or (.,8) 
+                                                                            # due to triple in obj_idx        
     def __str__(self):
         return 'relation: ' + self.name + '\n' + ' - ' + self.from_object + ' --> ' + self.to_object + '\n'
     
     def map(self, idx):
-        return self.h5_table[list(idx)]
+        return self.h5_table_np_copy[idx,:]
         
         
 
@@ -310,16 +308,43 @@ class Objects(object):
     HDF5_OBJECT_EDGE_NAME = 'edge'
     HDF5_OBJECT_ID_NAME = 'id'
     
-    def __init__(self, name, h5_object_group, involveld_relations):
+    def __init__(self, name, h5_object_group, involveld_relation):
         self.name = name
         self._h5_object_group = h5_object_group
-        self.relations = involveld_relations
+        self.relation_name = involveld_relation
+        self.relation = position.get_relation(self.relation_name)          
+        
+        
+        object_edges = self._h5_object_group[self.HDF5_OBJECT_EDGE_NAME]
+        object_id_edge_refs = self._h5_object_group[self.HDF5_OBJECT_ID_NAME]
+        
+        _object_id_edge_refs_np_copy = object_id_edge_refs.value
+        self._object_id_edge_refs_np_copy = _object_id_edge_refs_np_copy \
+                                 .view(numpy.uint32) \
+                                 .reshape(len(_object_id_edge_refs_np_copy), 3)
+                                 
+        _object_edge_np_copy = object_edges.value
+        self._object_edge_np_copy = _object_edge_np_copy \
+                                 .view(numpy.uint32) \
+                                 .reshape(len(object_edges), 2)
+                                 
+        self.mapping, self.next_object_level = self.apply_relation(self.relation)
+        
+    def __getitem__(self, obj_id):
+        if isinstance(obj_id, (list, tuple)):
+            return self.__getitemiter__(obj_id)    
+        else:
+            return self.mapping[obj_id]
+            
+    def __getitemiter__(self, obj_ids):
+        for o in obj_ids:
+            yield self.mapping[o]
         
     def __str__(self):
         res =  'object: ' + self.name + '\n' 
         
-        for rel in self.relations:
-            res += ' - relations: '+ rel + '\n' 
+        if self.relation_name:
+            res += ' - relations: '+ self.relation_name + '\n' 
         
         for attribs in self._h5_object_group:
             if attribs not in [self.HDF5_OBJECT_EDGE_NAME, self.HDF5_OBJECT_ID_NAME]:
@@ -327,20 +352,32 @@ class Objects(object):
         return res
     
     def get_obj_ids(self):
-        return self._h5_object_group[self.HDF5_OBJECT_ID_NAME]['obj_id']
+        return list(self._h5_object_group[self.HDF5_OBJECT_ID_NAME]['obj_id'])
+    
+#    def get_obj_idx(self):
+#        return xrange(len(self._h5_object_group[self.HDF5_OBJECT_ID_NAME]))
 
     
     def apply_relation(self, relation, obj_ids=None, position_provider=None):
-        use_all_obj_ids = False
         if obj_ids is None:
             obj_ids = self.get_obj_ids()
-            use_all_obj_ids = True
             
-            
-        relation_idx = dict([(x, []) for x in obj_ids])
-
-        relation_edges = self._h5_object_group[self.HDF5_OBJECT_EDGE_NAME]
+#        relation_idx = dict([(x[0], relation.map(self._object_edge_np_copy[x[1]:x[2], 1])) for x in self._object_id_edge_refs_np_copy])
+#        relation_idx = dict([(x[0], (self._object_edge_np_copy[x[1]:x[2], 1])) for x in self._object_id_edge_refs_np_copy if x[0] in obj_ids])
+       
+        relation_idx = {}
+        for x in self._object_id_edge_refs_np_copy:
+            relation_idx[x[0]] = self._object_edge_np_copy[x[1]:x[2], 1]
+                            
+        self.relation_idx = relation_idx
         
+        related_obj = {}   
+        for o, r in relation_idx.iteritems():
+            related_obj[o] = relation.map(r)
+    
+        self.mapping = related_obj
+        return related_obj, relation.to_object
+"""
 #        Timing results for all obj_ids from primary__primary
 #        ====================================
 #        timeit_1 took 10114.000 ms
@@ -404,20 +441,11 @@ class Objects(object):
             timeit_5()
         else:
             timeit_4()
-            
-        
-        self.mapping_to_relation_idx = relation_idx
-        
-        related_obj = {}
-        
-        for o, r in relation_idx.iteritems():
-            try:
-                related_obj[o] = relation.map(r)
-            except:
-                print o, r
+"""
+
+
              
            
-        return related_obj, relation.to_object
     
 class TerminalObjects(Objects):
     def __init__(self, name):
@@ -431,10 +459,12 @@ class TerminalObjects(Objects):
 #-------------------------------------------------------------------------------
 # main:
 #
+
 if __name__ == '__main__':
     try:
         m = Moo('/Users/miheld/data/Analysis/H2bTub_20x_hdf5_test1/dump/0037.hdf5')
     except:
+        
         m = Moo('C:/Users/sommerc/data/Chromatin-Microtubles/Analysis/H2b_aTub_MD20x_exp911/dump/0037.hdf5')
 
     for sample_id in m.data:
@@ -448,29 +478,27 @@ if __name__ == '__main__':
                     position = m.data[sample_id][plate_id][experiment_id][position_id]
 
                     events = position.get_object('event')
-                    relation_tracking = position.get_relation(events.relations[0])
+
+                    primary_primary = position.get_object(events.next_object_level)
                     
-                    selected_event_id = [20,30,40,50,108]
-                                        
-                    mapping_tracking, onto_object_name = events.apply_relation(relation_tracking, \
-                                                                               obj_ids=selected_event_id)
+                    print events[42][0,2]
+                    print primary_primary[events[42][0,2]]
+  
+                                   
                     
-     
-                    primary_primary = position.get_object(onto_object_name)
-                    relation_primary_primary = position.get_relation(primary_primary.relations[0])                 
-                    
-                    for e in selected_event_id:
-                        primary_object_ids = mapping_tracking[e]['obj_id2']
-                        mapping_primary, onto_object_name = primary_primary.apply_relation(relation_primary_primary, \
-                                                                                           obj_ids=primary_object_ids)
-                        
-                        for prim_obj_id in mapping_primary:
-                            t = mapping_primary[prim_obj_id]['time_idx1']
-                            z = mapping_primary[prim_obj_id]['zslice_idx1']
-                            o = mapping_primary[prim_obj_id]['obj_id1']
-                            c = position.get_definition('region')['channel_idx'][0]
-                            tmp = position.get_cell(t,z,o,c)
-                            #vigra.impex.writeImage(tmp, 'c:/Users/sommerc/blub%d_%d_%d.png'%(e,t,o))
+#                    for e in selected_event_id:
+#                        primary_object_ids = mapping_tracking[e]['obj_id2']
+#                        mapping_primary, onto_object_name = primary_primary.apply_relation(relation_primary_primary, \
+#                                                                                           obj_ids=primary_object_ids)
+#                        print type(position.get_object(onto_object_name))
+#                                   
+#                        for prim_obj_id in mapping_primary:
+#                            t = mapping_primary[prim_obj_id]['time_idx1']
+#                            z = mapping_primary[prim_obj_id]['zslice_idx1']
+#                            o = mapping_primary[prim_obj_id]['obj_id1']
+#                            c = position.get_definition('region')['channel_idx'][0]
+#                            tmp = position.get_cell(t,z,o,c)
+#                            vigra.impex.writeImage(tmp, 'c:/Users/sommerc/blub%d_%d_%d.png'%(e,t,o))
                             
                     
                     
