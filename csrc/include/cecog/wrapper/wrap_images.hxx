@@ -1674,8 +1674,9 @@ static void wrap_images()
 
   def("linearTransform3", pyLinearTransform2<vigra::UInt16Image, vigra::UInt8Image>);
 
+  def("conversionTo8Bit", pyLinearRangeMapping<vigra::UInt16Image, vigra::UInt8Image>);
   def("linearRangeMapping", pyLinearRangeMapping<vigra::UInt8Image, vigra::UInt8Image>);
-  //def("linearRangeMapping", pyLinearRangeMapping<vigra::UInt16Image, vigra::BImage>);
+  //def("linearRangeMapping", pyLinearRangeMapping<vigra::UInt16Image, vigra::UInt8Image>);
   def("linearRangeMapping", pyLinearRangeMapping<vigra::UInt16Image, vigra::UInt16Image>);
 
   def("histogramEqualization", pyHistogramEqualization<vigra::UInt8Image>);
