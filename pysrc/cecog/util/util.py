@@ -170,8 +170,9 @@ def resolve_os_name():
 
 def get_appdata_path():
     if is_windows:
-        from win32com.shell import shellcon, shell
-        path = str(shell.SHGetFolderPath(0, shellcon.CSIDL_APPDATA, 0, 0))
+#        from win32com.shell import shellcon, shell
+#        path = str(shell.SHGetFolderPath(0, shellcon.CSIDL_APPDATA, 0, 0))
+        path = os.path.expanduser("~")
     elif is_mac:
         path = os.path.expanduser("~/Library/Application Support")
     else:

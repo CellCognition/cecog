@@ -25,7 +25,7 @@ import h5py, \
        vigra
 
 import matplotlib.pyplot as plt
-import time as timeing
+import time as timing
 
 #-------------------------------------------------------------------------------
 # cecog imports:
@@ -111,6 +111,29 @@ class Position(_DataProvider):
 
     CHILDREN_GROUP_NAME = None
     CHILDREN_PROVIDER_CLASS = None
+    def __init__(self, hf_group, parent=None):
+        super(Position, self).__init__(hf_group, parent)
+        self._hf_group_np_copy = self._hf_group['image']['channel'].value
+        self._cache_terminal_objects()
+        
+    def _cache_terminal_objects(self):
+        t = len(self._hf_group['time'])
+        z = len(self._hf_group['time']['0']['zslice'])
+        c = len(self._hf_group['time']['0']['zslice']['0']['region'])
+
+        self._terminal_objects_np_cache = numpy.zeros((c, t, z), dtype=numpy.ndarray)
+        
+        for t, tg in self._hf_group['time'].iteritems():
+            t = int(t)
+            for z, zo in tg['zslice'].iteritems():
+                z = int(z)
+                for c, co in zo['region'].iteritems():
+                    c = int(c)
+                    self._terminal_objects_np_cache[c,t,z] = co['object'].value
+                
+                
+        
+        
 
     def get_events(self):
         object = self._hf_group['object']['event']
@@ -204,7 +227,7 @@ class Position(_DataProvider):
             
             h5_object_group = self._hf_group['object'][object_name]
         
-            return Objects(object_name, h5_object_group, involved_relation)
+            return Objects(object_name, h5_object_group, involved_relation, self)
     
     def get_relation(self, relation_name):
         releations = self.get_relation_definition()
@@ -228,11 +251,11 @@ class Position(_DataProvider):
                 
         
     def get_bounding_box(self, t, z, o, c=0):
-        obj = self._hf_group['time'][str(t[0])]['zslice'][str(z[0])]['region'][str(c)]['object']
-        obj = obj[obj['obj_id'] == o]
-        return (obj['upper_left'][0], obj['lower_right'][0])
+#        obj = self._hf_group['time'][str(t)]['zslice'][str(z)]['region'][str(c)]['object']
+        obj = self._terminal_objects_np_cache[c,t,z]
+        return (obj['upper_left'][o], obj['lower_right'][o])
     
-    def get_cell(self, t, y, o, c, min_bounding_box_size=50):
+    def get_cell(self, t, z, o, c, min_bounding_box_size=50):
         ul, lr = self.get_bounding_box(t, z, o, c)
         
         offset_0 = (min_bounding_box_size - lr[0] + ul[0])
@@ -244,7 +267,9 @@ class Position(_DataProvider):
         lr[0] = min(self._hf_group['image']['channel'].shape[4], lr[0] + offset_0/2) 
         lr[1] = min(self._hf_group['image']['channel'].shape[3], lr[1] + offset_1/2) 
         
-        return self._hf_group['image']['channel'][c, t[0], z[0], ul[1]:lr[1], ul[0]:lr[0]]
+#        return self._hf_group['image']['channel'][c, t, z, ul[1]:lr[1], ul[0]:lr[0]]
+        return self._hf_group_np_copy[c, t, z, ul[1]:lr[1], ul[0]:lr[0]]
+        
     
         
         
@@ -283,6 +308,46 @@ class Moo(object):
         self._hf = h5py.File(filename, 'r')
 
         self.data = Data(self._hf)
+        
+    def test(self):
+        for sample_id in self.data:
+            print sample_id
+            for plate_id in self.data[sample_id]:
+                print plate_id
+                for experiment_id in self.data[sample_id][plate_id]:
+                    print 'In experiment:', experiment_id
+                    for position_id in self.data[sample_id][plate_id][experiment_id]:
+                        'In position:', position_id
+                        position = self.data[sample_id][plate_id][experiment_id][position_id]
+    
+                        events = position.get_object('track')
+    
+                        primary_primary = position.get_object(events.next_object_level)
+                        c = position.get_definition('region')['channel_idx'][0]
+                        
+                        
+                        tic = timing.time()
+                        for e, event in events:
+                            print ' getting event', e
+                            start_node = event[0,2]
+                            start_node = start_node.reshape((1,))
+                            rest_nodes =  event[:,2]
+                            prim_prims_ids = numpy.concatenate((start_node, rest_nodes))
+                            for prim_prim_id in prim_prims_ids:
+                                t = primary_primary[prim_prim_id][0][1]
+                                z = primary_primary[prim_prim_id][0][2]
+                                obj_idx = primary_primary[prim_prim_id][0][3]
+                                obj_id= primary_primary[prim_prim_id][0][0] 
+                                tmp = position.get_cell(t, z, obj_idx, c)
+                                #vigra.impex.writeImage(tmp, 'test%d_%d_%d.png'%(e,t,obj_id))
+                        print timing.time() - tic
+                    
+                            
+                    
+                    
+                    
+                    
+
 
     def close(self):
         self._hf.close()
@@ -308,11 +373,13 @@ class Objects(object):
     HDF5_OBJECT_EDGE_NAME = 'edge'
     HDF5_OBJECT_ID_NAME = 'id'
     
-    def __init__(self, name, h5_object_group, involveld_relation):
+    def __init__(self, name, h5_object_group, involveld_relation, position):
         self.name = name
         self._h5_object_group = h5_object_group
         self.relation_name = involveld_relation
-        self.relation = position.get_relation(self.relation_name)          
+        self.relation = position.get_relation(self.relation_name)   
+        self.obj_ids = self.get_obj_ids()      
+        self.parent_positon_provider = position 
         
         
         object_edges = self._h5_object_group[self.HDF5_OBJECT_EDGE_NAME]
@@ -332,13 +399,16 @@ class Objects(object):
         
     def __getitem__(self, obj_id):
         if isinstance(obj_id, (list, tuple)):
-            return self.__getitemiter__(obj_id)    
+            return self.__iter__(obj_id)    
         else:
             return self.mapping[obj_id]
             
-    def __getitemiter__(self, obj_ids):
+    def __iter__(self, obj_ids=None):
+        if obj_ids is None:
+            obj_ids = self.obj_ids
         for o in obj_ids:
-            yield self.mapping[o]
+            if len(self.mapping[o]) > 0:
+                yield o, self.mapping[o]
         
     def __str__(self):
         res =  'object: ' + self.name + '\n' 
@@ -466,41 +536,12 @@ if __name__ == '__main__':
     except:
         
         m = Moo('C:/Users/sommerc/data/Chromatin-Microtubles/Analysis/H2b_aTub_MD20x_exp911/dump/0037.hdf5')
+        
+#    m.test()
+    import cProfile, pstats
+    cProfile.run('m.test()', 'profile-result')
+    ps = pstats.Stats('profile-result')
+    ps.strip_dirs().sort_stats('cumulative').print_stats()
+    
 
-    for sample_id in m.data:
-        print sample_id
-        for plate_id in m.data[sample_id]:
-            print plate_id
-            for experiment_id in m.data[sample_id][plate_id]:
-                print 'In experiment:', experiment_id
-                for position_id in m.data[sample_id][plate_id][experiment_id]:
-                    'In position:', position_id
-                    position = m.data[sample_id][plate_id][experiment_id][position_id]
-
-                    events = position.get_object('event')
-
-                    primary_primary = position.get_object(events.next_object_level)
-                    
-                    print events[42][0,2]
-                    print primary_primary[events[42][0,2]]
-  
-                                   
-                    
-#                    for e in selected_event_id:
-#                        primary_object_ids = mapping_tracking[e]['obj_id2']
-#                        mapping_primary, onto_object_name = primary_primary.apply_relation(relation_primary_primary, \
-#                                                                                           obj_ids=primary_object_ids)
-#                        print type(position.get_object(onto_object_name))
-#                                   
-#                        for prim_obj_id in mapping_primary:
-#                            t = mapping_primary[prim_obj_id]['time_idx1']
-#                            z = mapping_primary[prim_obj_id]['zslice_idx1']
-#                            o = mapping_primary[prim_obj_id]['obj_id1']
-#                            c = position.get_definition('region')['channel_idx'][0]
-#                            tmp = position.get_cell(t,z,o,c)
-#                            vigra.impex.writeImage(tmp, 'c:/Users/sommerc/blub%d_%d_%d.png'%(e,t,o))
-                            
-                    
-                    
-                    
-                    
+    
