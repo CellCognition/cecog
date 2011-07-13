@@ -787,9 +787,9 @@ if __name__ == "__main__":
         if idx > -1:
             package_path = working_path[:idx]
             is_app = True
-    else:
-        package_path = working_path
-        is_app = True
+#    else:
+#        package_path = working_path
+#        is_app = True
 
     if not package_path is None:
         set_package_path(package_path)

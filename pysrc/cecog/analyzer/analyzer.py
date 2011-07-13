@@ -85,18 +85,25 @@ class TimeHolder(OrderedDict):
     HDF5_OTYPE_OBJECT = 'object'
 
     HDF5_DTYPE_RELATION = \
-         numpy.dtype([('time_idx1', 'uint32'),
-                      ('zslice_idx1', 'uint32'),
-                      ('obj_id1', 'uint32'),
-                      ('time_idx2', 'uint32'),
-                      ('zslice_idx2', 'uint32'),
-                      ('obj_id2', 'uint32')])
+         numpy.dtype([('obj_id1', 'uint32'),
+                      ('obj_idx1', 'uint32'),
+                      ('obj_id2', 'uint32'),
+                      ('obj_idx2', 'uint32'),])
+
+    HDF5_DTYPE_TERMINAL_RELATION = \
+         numpy.dtype([('obj_id1', 'uint32'),
+                      ('obj_idx1', 'uint32', 3),
+                      ('obj_id2', 'uint32'),
+                      ('obj_idx2', 'uint32', 3),])
+
     HDF5_DTYPE_EDGE = \
         numpy.dtype([('obj_id', 'uint32'),
-                     ('relation_idx', 'uint32')])
+                     ('relation_idx', 'uint32'),])
 
     HDF5_DTYPE_ID = \
-        numpy.dtype([('obj_id', 'uint32')])
+        numpy.dtype([('obj_id', 'uint32'),
+                     ('edge_idx1', 'uint32'),
+                     ('edge_idx2', 'uint32'),])
 
 
     def __init__(self, P, channels, filename_hdf5, meta_data, settings,
@@ -422,7 +429,6 @@ class TimeHolder(OrderedDict):
     def apply_features(self, channel):
         desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
                                          channel.strChannelId)
-
         channel_name = channel.NAME.lower()
         channel.apply_features()
 
@@ -463,7 +469,7 @@ class TimeHolder(OrderedDict):
                 if var_name not in grp_rel:
                     var_rel = grp_rel.create_dataset(var_name,
                                                      (nr_objects,),
-                                                     self.HDF5_DTYPE_RELATION,
+                                                     self.HDF5_DTYPE_TERMINAL_RELATION,
                                                      compression=self._hdf5_compression,
                                                      chunks=(1,))
                     var_rel_offset = 0
@@ -582,10 +588,11 @@ class TimeHolder(OrderedDict):
                     # export unified objects and relations
                     idx_new = var_rel_offset + idx
                     new_obj_id = idx_new + 1
-                    coord = frame_idx, 0, obj_id,
-                    var_rel[idx_new] = coord + coord
+                    coord = frame_idx, 0, obj_id
+                    coord2 = obj_id, (frame_idx, 0, idx)
+                    var_rel[idx_new] = coord2 + coord2
                     var_edge[idx_new] = (new_obj_id, idx_new)
-                    var_id[idx_new] = (new_obj_id, )
+                    var_id[idx_new] = (new_obj_id, idx_new, idx_new+1)
 
                     self._object_coord_to_id[(channel.PREFIX, coord)] = new_obj_id
                     self._object_coord_to_idx[(channel.PREFIX, coord)] = idx_new
@@ -637,10 +644,12 @@ class TimeHolder(OrderedDict):
                 tail_frame_idx = self._frames_to_idx[tail_frame]
 
                 head_obj_id_meta = self._object_coord_to_id[(prefix, (head_frame_idx, 0, head_obj_id))]
+                head_obj_idx_meta = self._object_coord_to_idx[(prefix, (head_frame_idx, 0, head_obj_id))]
                 tail_obj_id_meta = self._object_coord_to_id[(prefix, (tail_frame_idx, 0, tail_obj_id))]
+                tail_obj_idx_meta = self._object_coord_to_idx[(prefix, (tail_frame_idx, 0, tail_obj_id))]
 
-                var_rel[idx] = (head_frame_idx, 0, head_obj_id_meta,
-                                tail_frame_idx, 0, tail_obj_id_meta)
+                var_rel[idx] = (head_obj_id_meta, head_obj_idx_meta,
+                                tail_obj_id_meta, tail_obj_idx_meta)
                 self._edge_to_idx[(head_id, tail_id)] = idx
 
 
@@ -649,8 +658,8 @@ class TimeHolder(OrderedDict):
             data = []
             for obj_idx, node_id in enumerate(head_nodes):
                 obj_id = obj_idx + 1
-                var_id[obj_idx] = (obj_id,)
                 nl = [node_id]
+                edge_idx_start = len(data)
                 while len(nl) > 0:
                     node_id2 = nl.pop()
                     for edge in graph.out_arcs(node_id2):
@@ -658,6 +667,7 @@ class TimeHolder(OrderedDict):
                         rel_idx = self._edge_to_idx[(node_id2, tail_id)]
                         data.append((obj_id, rel_idx))
                         nl.append(tail_id)
+                var_id[obj_idx] = (obj_id, edge_idx_start, len(data))
 
             var_edge = grp_cur_obj.create_dataset(self.HDF5_NAME_EDGE, (len(data),), self.HDF5_DTYPE_EDGE)
             var_edge[:] = data
@@ -695,12 +705,13 @@ class TimeHolder(OrderedDict):
                         if start_id[0] != '_':
                             # new event
                             obj_id = obj_idx + 1
-                            var_id[obj_idx] = (obj_id,)
                             track = event['tracks'][0]
+                            rel_idx_start = rel_idx
                             for head_id, tail_id in zip(track, track[1:]):
                                 edge_idx = self._edge_to_idx[(head_id, tail_id)]
                                 var_edge[rel_idx] = (obj_id, edge_idx)
                                 rel_idx += 1
+                            var_id[obj_idx] = (obj_id, rel_idx_start, rel_idx)
                             obj_idx += 1
 
 
