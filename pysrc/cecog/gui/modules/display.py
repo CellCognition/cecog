@@ -19,7 +19,8 @@ __all__ = []
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
-import os
+import os, \
+       zipfile
 #from collections import OrderedDict
 from pdk.ordereddict import OrderedDict
 
@@ -538,9 +539,12 @@ class DisplayModule(Module):
                                                   COLOR_DEFINITIONS[name])
             palettes[p.name] = p
         path_zeiss = os.path.join(RESOURCE_PATH, 'palettes', 'zeiss')
-        for filename in collect_files(path_zeiss, ['.lut'], absolute=True):
-            filename = os.path.abspath(filename)
-            p = ZeissPalette(filename)
+        for filename in collect_files(path_zeiss, ['.zip'], absolute=True):
+            with zipfile.ZipFile(filename, 'r') as f:
+                name = f.namelist()[0]
+                data = f.read(name)
+            name = os.path.splitext(name)[0]
+            p = ZeissPalette(name, data)
             palettes[p.name] = p
         for palette in palettes.values():
             # FIXME: not optimal, mixin required for Qt purposes
