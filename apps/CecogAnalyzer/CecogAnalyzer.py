@@ -752,14 +752,14 @@ if __name__ == "__main__":
         package_path = get_appdata_path()
         is_app = True
 
-#    if not package_path is None:
-#        set_package_path(package_path)
-#        log_path = os.path.join(package_path, 'log')
-#        safe_mkdirs(log_path)
-#        sys.stdout = \
-#            file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
-#        sys.stderr = \
-#            file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
+    if not package_path is None:
+        set_package_path(package_path)
+        log_path = os.path.join(package_path, 'log')
+        safe_mkdirs(log_path)
+        sys.stdout = \
+            file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
+        sys.stderr = \
+            file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
 
     splash = QSplashScreen(QPixmap(':cecog_splash'))
     splash.show()
