@@ -372,15 +372,20 @@ class EnhancementFrame(QFrame):
     def transform_image(self, name, image):
         s = self._display_settings[name]
         s.set_image_minmax(image)
-        #print s.maximum, s.minimum
-        image = numpy.require(image, numpy.float)
+
+        # FIXME: Just a workaround, the image comes with wrong strides
+        #        fixed in master
+        image2 = numpy.zeros(image.shape, dtype=numpy.float32, order='F')
+        image2[:] = image 
+
         # add a small value in case max == min
-        image *= 255.0 / (s.maximum - s.minimum + 0.1)
-        image -= s.minimum
-        image[image > 255] = 255
-        image[image < 0] = 0
-        image = numpy.require(image, numpy.uint8)
-        return image
+        image2 *= 255.0 / (s.maximum - s.minimum + 0.1)
+        image2 -= s.minimum
+
+        image2 = image2.clip(0, 255)
+
+        image2 = numpy.require(image2, numpy.uint8)
+        return image2
 
 
 class ObjectsFrame(QFrame):
