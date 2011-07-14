@@ -650,8 +650,7 @@ class AnalyzerMainWindow(QMainWindow):
             critical(self, "No valid image data found",
                      "The naming schema provided might not fit your image data"
                      "or the coordinate file is not correct.\n\nPlease modify "
-                     "the values and scan the structure again.",
-                     detail = thread.error_message)
+                     "the values and scan the structure again.")
 
     def set_modules_active(self, state=True):
         for name, (button, widget) in self._tab_lookup.iteritems():
