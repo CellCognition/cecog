@@ -726,6 +726,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 if __name__ == "__main__":
     import time
     from pdk.fileutils import safe_mkdirs
+    from cecog.util.util import get_appdata_path
 #    log_path = 'log'
 #    safe_mkdirs(log_path)
 #    sys.stdout = \
@@ -748,7 +749,7 @@ if __name__ == "__main__":
             package_path = working_path[:idx]
             is_app = True
     else:
-        package_path = working_path
+        package_path = get_appdata_path()
         is_app = True
 
     if not package_path is None:

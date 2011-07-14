@@ -126,7 +126,7 @@ elif sys.platform == 'win32':
                      'packages': PACKAGES,
                      'optimize': 2,
                      'compressed': True,
-                     'bundle_files': 1,
+                     'bundle_files': 3,
 
                      #'ascii': True,
                      #'xref': True,
@@ -214,16 +214,16 @@ if sys.platform == 'darwin':
 
 
 elif sys.platform == 'win32':
-    import zipfile, glob
-    lib_filename = os.path.join('dist', FILENAME_ZIP)
-    zfile = zipfile.PyZipFile(lib_filename, 'a')
-    filenames = [r'C:\Source\Lib\libfftw3-3.dll',
-                 ] +\
-                 glob.glob(r'C:\Source\Microsoft.VC90.CRT\*.*')
-    for filename in filenames:
-        print "adding '%s' to '%s'" % (filename, lib_filename)
-        zfile.write(filename, os.path.split(filename)[1])
-    zfile.close()
+#    import zipfile, glob
+#    lib_filename = os.path.join('dist', FILENAME_ZIP)
+#    zfile = zipfile.PyZipFile(lib_filename, 'a')
+#    filenames = [r'C:\Source\Lib\libfftw3-3.dll',
+#                 ] +\
+#                 glob.glob(r'C:\Source\Microsoft.VC90.CRT\*.*')
+#    for filename in filenames:
+#        print "adding '%s' to '%s'" % (filename, lib_filename)
+#        zfile.write(filename, os.path.split(filename)[1])
+#    zfile.close()
 
     filenames = ['graph_template.txt',
                  'hmm.R',
