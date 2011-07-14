@@ -170,7 +170,10 @@ def resolve_os_name():
 
 def get_appdata_path():
     if is_windows:
-        path = os.path.expanduser("~/Application Data")
+        if 'APPDATA' in os.environ:
+            path = os.environ['APPDATA']
+        else:
+            path = os.path.expanduser("~/Application Data")
     elif is_mac:
         path = os.path.expanduser("~/Library/Application Support")
     else:
