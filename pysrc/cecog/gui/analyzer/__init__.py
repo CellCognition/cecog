@@ -337,8 +337,10 @@ class HmmThread(_ProcessingThread):
         region_name_primary = self._settings.get('Classification', 'primary_classification_regionname')
         region_name_secondary = self._settings.get('Classification', 'secondary_classification_regionname')
 
+        # take mapping file for plate or generate dummy mapping file for the R script
         if plate_id in self._mapping_files:
-            mapping_file = self._mapping_files[plate_id]
+            # convert path for R
+            mapping_file = self._convert(self._mapping_files[plate_id])
         else:
             mapping_file = self._generate_mapping(wd, path_out_hmm, path_analyzed)
 
@@ -350,8 +352,7 @@ class HmmThread(_ProcessingThread):
                 time_lapse = meta_data.plate_timestamp_info[0] / 60.
             else:
                 raise ValueError("Plate '%s' has not time-lapse info.\n"
-                                 "Please define (overwrite) the value manually."
-                                 % plate_id)
+                                 "Please define (overwrite) the value manually." % plate_id)
 
         for i in range(len(lines)):
             line2 = lines[i].strip()
