@@ -307,6 +307,7 @@ class ProgressDialog(QProgressDialog):
                 t.result = self._target(*self._args, **self._options)
                 self.targetFinished.emit()
 
+            t.result = None
             t.run = foo
             t.start()
             dlg_result = super(QProgressDialog, self).exec_()
