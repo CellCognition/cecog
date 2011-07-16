@@ -753,7 +753,7 @@ if __name__ == "__main__":
 
     if not package_path is None:
         set_package_path(package_path)
-        log_path = os.path.join(package_path, 'log')
+        log_path = os.path.join(get_appdata_path(), 'log')
         safe_mkdirs(log_path)
         sys.stdout = \
             file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
