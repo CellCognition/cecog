@@ -106,6 +106,9 @@ class _DataProvider(object):
     
     def get_relation_definition(self):
         return self.get_definition('relation')
+    
+    def close(self):
+        self._hf_group.close()
         
 class Position(_DataProvider):
 
@@ -130,10 +133,6 @@ class Position(_DataProvider):
                 for c, co in zo['region'].iteritems():
                     c = int(c)
                     self._terminal_objects_np_cache[c,t,z] = co['object'].value
-                
-                
-        
-        
 
     def get_events(self):
         object = self._hf_group['object']['event']
@@ -215,7 +214,6 @@ class Position(_DataProvider):
         is_terminal = len(involved_relation) == 0
         if is_terminal:
             return TerminalObjects(object_name)
-            
         else:
             # if a relation is involved with this objects
             # also an group must be specified under positions
@@ -261,13 +259,12 @@ class Position(_DataProvider):
         offset_0 = (min_bounding_box_size - lr[0] + ul[0])
         offset_1 = (min_bounding_box_size - lr[1] + ul[1]) 
         
-        ul[0] = max(0, ul[0] - offset_0/2 - cmp(offset_0/2,0) * offset_0 % 2) 
-        ul[1] = max(0, ul[1] - offset_1/2 - cmp(offset_1/2,0) * offset_1 % 2)  
+        ul[0] = max(0, ul[0] - offset_0/2 - cmp(offset_0%2,0) * offset_0 % 2) 
+        ul[1] = max(0, ul[1] - offset_1/2 - cmp(offset_1%2,0) * offset_1 % 2)  
         
         lr[0] = min(self._hf_group['image']['channel'].shape[4], lr[0] + offset_0/2) 
         lr[1] = min(self._hf_group['image']['channel'].shape[3], lr[1] + offset_1/2) 
         
-#        return self._hf_group['image']['channel'][c, t, z, ul[1]:lr[1], ul[0]:lr[0]]
         return self._hf_group_np_copy[c, t, z, ul[1]:lr[1], ul[0]:lr[0]]
         
     
@@ -302,55 +299,59 @@ class Data(_DataProvider):
     CHILDREN_PROVIDER_CLASS = Sample
 
 
-class Moo(object):
-
+             
+class File(object):
     def __init__(self, filename):
-        self._hf = h5py.File(filename, 'r')
-
-        self.data = Data(self._hf)
+        self.filename = filename
+        self._data = Data(h5py.File(filename, 'r'))
         
-    def test(self):
-        for sample_id in self.data:
-            print sample_id
-            for plate_id in self.data[sample_id]:
-                print plate_id
-                for experiment_id in self.data[sample_id][plate_id]:
-                    print 'In experiment:', experiment_id
-                    for position_id in self.data[sample_id][plate_id][experiment_id]:
-                        'In position:', position_id
-                        position = self.data[sample_id][plate_id][experiment_id][position_id]
+    def __getitem__(self, spepos):
+        s, p, e, pos = spepos
+        return self._data[s][p][e][pos]
     
-                        events = position.get_object('track')
-    
-                        primary_primary = position.get_object(events.next_object_level)
-                        c = position.get_definition('region')['channel_idx'][0]
-                        
-                        
-                        tic = timing.time()
-                        for e, event in events:
-                            print ' getting event', e
-                            start_node = event[0,2]
-                            start_node = start_node.reshape((1,))
-                            rest_nodes =  event[:,2]
-                            prim_prims_ids = numpy.concatenate((start_node, rest_nodes))
-                            for prim_prim_id in prim_prims_ids:
-                                t = primary_primary[prim_prim_id][0][1]
-                                z = primary_primary[prim_prim_id][0][2]
-                                obj_idx = primary_primary[prim_prim_id][0][3]
-                                obj_id= primary_primary[prim_prim_id][0][0] 
-                                tmp = position.get_cell(t, z, obj_idx, c)
-                                #vigra.impex.writeImage(tmp, 'test%d_%d_%d.png'%(e,t,obj_id))
-                        print timing.time() - tic
-                    
-                            
-                    
-                    
-                    
-                    
-
-
     def close(self):
-        self._hf.close()
+        self._data.close()
+    
+    @property
+    def samples(self):
+        return [s for s in self._data]
+    
+    @property
+    def plates(self):
+        return [(s, p) for s in self.samples for p in self._data[s]]
+    
+    @property
+    def experiment(self):
+        return [(s, p, e) for (s, p) in self.plates for e in self._data[s][p]]
+    
+    @property
+    def positions(self):
+        return [(s, p, e, pos) for (s, p, e) in self.experiment for pos in self._data[s][p][e]]
+             
+    def traverse_objects(self, object_name): 
+        
+        # loop over all positions
+        for s, p, e, pos in self.positions:
+            position = self[s, p, e, pos]
+            c = position.get_definition('region')['channel_idx'][0]
+    
+            events = position.get_object(object_name) 
+            primary_primary = events.get_sub_objects()
+            
+            for event_id, prim_prims_ids in events.iter_sub_objects():  
+                res = []
+                for prim_prim_id, reg_prim_id in primary_primary.iter_sub_objects(prim_prims_ids):
+                    t = primary_primary[prim_prim_id][0][1]
+                    z = primary_primary[prim_prim_id][0][2]
+                    obj_idx = primary_primary[prim_prim_id][0][3]
+                    obj_id= primary_primary[prim_prim_id][0][0] 
+                    tmp = (t, position.get_cell(t, z, obj_idx, c))
+                    res.append(tmp)
+            
+                res.sort(cmp=lambda x,y: cmp(x[0],y[0]))
+                yield res
+                
+                    
         
 class Relation(object):
     def __init__(self, relation_name, h5_table, from_to_object_names):
@@ -366,8 +367,7 @@ class Relation(object):
     
     def map(self, idx):
         return self.h5_table_np_copy[idx,:]
-        
-        
+              
 
 class Objects(object):
     HDF5_OBJECT_EDGE_NAME = 'edge'
@@ -377,10 +377,10 @@ class Objects(object):
         self.name = name
         self._h5_object_group = h5_object_group
         self.relation_name = involveld_relation
-        self.relation = position.get_relation(self.relation_name)   
-        self.obj_ids = self.get_obj_ids()      
+        self.relation = position.get_relation(self.relation_name)     
         self.parent_positon_provider = position 
-        
+        self.sub_objects = None
+        self._obj_ids_np_copy = self._h5_object_group[self.HDF5_OBJECT_ID_NAME]['obj_id']
         
         object_edges = self._h5_object_group[self.HDF5_OBJECT_EDGE_NAME]
         object_id_edge_refs = self._h5_object_group[self.HDF5_OBJECT_ID_NAME]
@@ -395,7 +395,7 @@ class Objects(object):
                                  .view(numpy.uint32) \
                                  .reshape(len(object_edges), 2)
                                  
-        self.mapping, self.next_object_level = self.apply_relation(self.relation)
+        self.mapping, self.next_object_level = self.apply_relation(self.relation)   
         
     def __getitem__(self, obj_id):
         if isinstance(obj_id, (list, tuple)):
@@ -409,6 +409,18 @@ class Objects(object):
         for o in obj_ids:
             if len(self.mapping[o]) > 0:
                 yield o, self.mapping[o]
+                
+    def iter_sub_objects(self, obj_ids=None):
+        if obj_ids is None:
+            obj_ids = self.obj_ids
+        for o in obj_ids:
+            if len(self.mapping[o]) > 0:
+#                print ' getting event', o
+                temp = self.mapping[o]
+                start_node = temp[0,2]
+                start_node = start_node.reshape((1,))
+                rest_nodes =  temp[:,2]
+                yield o, numpy.concatenate((start_node, rest_nodes))
         
     def __str__(self):
         res =  'object: ' + self.name + '\n' 
@@ -421,16 +433,20 @@ class Objects(object):
                 res += ' - attributs: ' + attribs + '\n'
         return res
     
-    def get_obj_ids(self):
-        return list(self._h5_object_group[self.HDF5_OBJECT_ID_NAME]['obj_id'])
+    @property
+    def obj_ids(self):
+        return self._obj_ids_np_copy
     
-#    def get_obj_idx(self):
-#        return xrange(len(self._h5_object_group[self.HDF5_OBJECT_ID_NAME]))
-
+    def get_sub_objects(self):
+        if self.next_object_level:
+            self.sub_objects = self.parent_positon_provider.get_object(self.next_object_level)
+            return self.sub_objects
+        else:
+            raise RuntimeError('get_sub_objects() No sub objects available for objects of name %s' % self.name)
     
     def apply_relation(self, relation, obj_ids=None, position_provider=None):
         if obj_ids is None:
-            obj_ids = self.get_obj_ids()
+            obj_ids = self.obj_ids
             
 #        relation_idx = dict([(x[0], relation.map(self._object_edge_np_copy[x[1]:x[2], 1])) for x in self._object_id_edge_refs_np_copy])
 #        relation_idx = dict([(x[0], (self._object_edge_np_copy[x[1]:x[2], 1])) for x in self._object_id_edge_refs_np_copy if x[0] in obj_ids])
@@ -447,6 +463,9 @@ class Objects(object):
     
         self.mapping = related_obj
         return related_obj, relation.to_object
+    
+
+
 """
 #        Timing results for all obj_ids from primary__primary
 #        ====================================
@@ -513,15 +532,13 @@ class Objects(object):
             timeit_4()
 """
 
-
-             
-           
     
 class TerminalObjects(Objects):
     def __init__(self, name):
         super(TerminalObjects, self).__init__(name, None, [])
         
-    def get_obj_ids(self):
+    @property
+    def obj_ids(self):
         pass      
             
     
@@ -532,16 +549,19 @@ class TerminalObjects(Objects):
 
 if __name__ == '__main__':
     try:
-        m = Moo('/Users/miheld/data/Analysis/H2bTub_20x_hdf5_test1/dump/0037.hdf5')
+        t = File('/Users/miheld/data/Analysis/H2bTub_20x_hdf5_test1/dump/0037.hdf5')
     except:
         
-        m = Moo('C:/Users/sommerc/data/Chromatin-Microtubles/Analysis/H2b_aTub_MD20x_exp911/dump/0037.hdf5')
+        t = File('C:/Users/sommerc/data/Chromatin-Microtubles/Analysis/H2b_aTub_MD20x_exp911/dump/0037.hdf5')
         
-#    m.test()
-    import cProfile, pstats
-    cProfile.run('m.test()', 'profile-result')
-    ps = pstats.Stats('profile-result')
-    ps.strip_dirs().sort_stats('cumulative').print_stats()
+    for i, a in enumerate(t.traverse_objects('event')):
+        vigra.impex.writeImage(numpy.concatenate([b[1] for b in a], axis=0), '%03d.png'%i)
+
+    
+#    import cProfile, pstats
+#    cProfile.run('t.traverse_objects("event")', 'profile-result')
+#    ps = pstats.Stats('profile-result')
+#    ps.strip_dirs().sort_stats('cumulative').print_stats()
     
 
     
