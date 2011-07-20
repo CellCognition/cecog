@@ -15,6 +15,8 @@ __all__ = []
 # standard library imports:
 #
 import os
+import zlib
+import base64
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -100,7 +102,7 @@ class _DataProvider(object):
             # recurse one level up
             return self._parent.get_definition(definition_key)
                 
-    def get_object_definition(self):
+    def get_objects_definition(self):
         return self.get_definition('object')
         
     
@@ -132,7 +134,7 @@ class Position(_DataProvider):
                 z = int(z)
                 for c, co in zo['region'].iteritems():
                     c = int(c)
-                    self._terminal_objects_np_cache[c,t,z] = co['object'].value
+                    self._terminal_objects_np_cache[c,t,z] = co['object'].value, co['crack_contour'].value
 
     def get_events(self):
         object = self._hf_group['object']['event']
@@ -187,7 +189,7 @@ class Position(_DataProvider):
          
             obj_id =  relation_primary_primary[node_1_obj_id][-1]
             
-            obj =  self.get_object_from_id(node_1_time_id, node_1_zslice_id, obj_id)
+            obj =  self.get_objects_from_id(node_1_time_id, node_1_zslice_id, obj_id)
             print obj['upper_left'], obj['lower_right']
             
         
@@ -196,13 +198,13 @@ class Position(_DataProvider):
         plt.draw()
         plt.show()
         
-#    def get_object_from_id(self, time_id, zslice_id, object_id):
+#    def get_objects_from_id(self, time_id, zslice_id, object_id):
 #        objects = self._hf_group['time'][str(time_id)]['zslice'][str(zslice_id)]['region']['0']['object']
 #        
 #        return objects[objects["obj_id"]==object_id]
     
-    def get_object(self, object_name):
-        objects_description = self.get_object_definition()
+    def get_objects(self, object_name):
+        objects_description = self.get_objects_definition()
         object_name_found = False
         
         for o_desc in objects_description:
@@ -218,10 +220,10 @@ class Position(_DataProvider):
             # if a relation is involved with this objects
             # also an group must be specified under positions
             if not object_name_found:
-                raise KeyError('get_object() object "%s" not found in definition.' % object_name)
+                raise KeyError('get_objects() object "%s" not found in definition.' % object_name)
             
             if object_name not in self._hf_group['object']:
-                raise KeyError('get_object() no entries found for object "%s".' % object_name)
+                raise KeyError('get_objects() no entries found for object "%s".' % object_name)
             
             h5_object_group = self._hf_group['object'][object_name]
         
@@ -248,13 +250,16 @@ class Position(_DataProvider):
         return Relation(relation_name, h5_relation_group, (from_object_name, to_object_name))
                 
         
-    def get_bounding_box(self, t, z, o, c=0):
+    def get_bounding_box(self, t, z, obj_idx, c=0):
 #        obj = self._hf_group['time'][str(t)]['zslice'][str(z)]['region'][str(c)]['object']
-        obj = self._terminal_objects_np_cache[c,t,z]
-        return (obj['upper_left'][o], obj['lower_right'][o])
+        obj = self._terminal_objects_np_cache[c,t,z][0]
+        return (obj['upper_left'][obj_idx], obj['lower_right'][obj_idx])
     
-    def get_cell(self, t, z, o, c, min_bounding_box_size=50):
-        ul, lr = self.get_bounding_box(t, z, o, c)
+    def get_image(self, t, z, obj_idx, c, bounding_box=None, min_bounding_box_size=50):
+        if bounding_box is None:
+            ul, lr = self.get_bounding_box(t, z, obj_idx, c)
+        else:
+            ul, lr = bounding_box
         
         offset_0 = (min_bounding_box_size - lr[0] + ul[0])
         offset_1 = (min_bounding_box_size - lr[1] + ul[1]) 
@@ -265,7 +270,27 @@ class Position(_DataProvider):
         lr[0] = min(self._hf_group['image']['channel'].shape[4], lr[0] + offset_0/2) 
         lr[1] = min(self._hf_group['image']['channel'].shape[3], lr[1] + offset_1/2) 
         
-        return self._hf_group_np_copy[c, t, z, ul[1]:lr[1], ul[0]:lr[0]]
+        bounding_box = (ul, lr)
+        
+        return self._hf_group_np_copy[c, t, z, ul[1]:lr[1], ul[0]:lr[0]], bounding_box
+
+    def get_crack_contours(self, t, z, obj_idx, c):      
+#        print numpy.asarray( zlib.decompress( \
+#                              base64.b64decode(self._terminal_objects_np_cache[c,t,z][1] \
+#                                [obj_idx])).split(','), dtype=numpy.uint32).reshape(-1,2)[0,:]
+                                
+        return numpy.asarray( zlib.decompress(base64.b64decode(self._terminal_objects_np_cache[c,t,z][1][obj_idx])).split(','), dtype=numpy.float32).reshape(-1,2)
+        
+    def get_object_data(self, t, z, obj_idx, c):
+        bb = self.get_bounding_box(t, z, obj_idx, c)
+        img, new_bb = self.get_image(t, z, obj_idx, c, bb)
+        cc = self.get_crack_contours(t, z, obj_idx, c)
+        
+        
+        cc[:,0] -= new_bb[0][0]
+        cc[:,1] -= new_bb[0][1]
+        
+        return img, cc
         
     
         
@@ -335,7 +360,7 @@ class File(object):
             position = self[s, p, e, pos]
             c = position.get_definition('region')['channel_idx'][0]
     
-            events = position.get_object(object_name) 
+            events = position.get_objects(object_name) 
             primary_primary = events.get_sub_objects()
             
             for event_id, prim_prims_ids in events.iter_sub_objects():  
@@ -344,8 +369,9 @@ class File(object):
                     t = primary_primary[prim_prim_id][0][1]
                     z = primary_primary[prim_prim_id][0][2]
                     obj_idx = primary_primary[prim_prim_id][0][3]
-                    obj_id= primary_primary[prim_prim_id][0][0] 
-                    tmp = (t, position.get_cell(t, z, obj_idx, c))
+                    obj_id= primary_primary[prim_prim_id][0][0]
+                    img, cc = position.get_object_data(t, z, obj_idx, c) 
+                    tmp = (t, img, cc)
                     res.append(tmp)
             
                 res.sort(cmp=lambda x,y: cmp(x[0],y[0]))
@@ -439,7 +465,7 @@ class Objects(object):
     
     def get_sub_objects(self):
         if self.next_object_level:
-            self.sub_objects = self.parent_positon_provider.get_object(self.next_object_level)
+            self.sub_objects = self.parent_positon_provider.get_objects(self.next_object_level)
             return self.sub_objects
         else:
             raise RuntimeError('get_sub_objects() No sub objects available for objects of name %s' % self.name)
