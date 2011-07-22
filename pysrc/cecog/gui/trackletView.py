@@ -1,9 +1,9 @@
 from PyQt4 import QtGui, QtCore
-import numpy
+import numpy, vigra
 import sys
 import random
 import qimage2ndarray
-import vigra
+import getopt
 
 from cecog.io import dataprovider
 from cecog.gui.imageviewer import HoverPolygonItem
@@ -14,7 +14,7 @@ def argsorted(seq, cmp, reverse=False):
     temp_s = sorted(temp, cmp=lambda u,v: cmp(u[1],v[1]), reverse=reverse)
     return [x[0] for x in temp_s]
 
-class ContainterDialog(QtGui.QMainWindow):
+class MainWindow(QtGui.QMainWindow):
     def __init__(self, filename=None, parent=None):
         QtGui.QMainWindow.__init__(self, parent)
          
@@ -92,17 +92,12 @@ class TrackletBrowser(QtGui.QWidget):
         self.main_layout = QtGui.QHBoxLayout()
         self.setLayout(self.main_layout)
         
-#        self.navi_layout = QtGui.QVBoxLayout()
-        
         self.navi_widget = QtGui.QToolBox()
         self.navi_widget.addItem(QtGui.QPushButton('test'), 'Navigaton')
         self.navi_widget.setMaximumWidth(150)
-#        self.navi_widget.setLayout(self.navi_layout)
         
         self.main_layout.addWidget(self.navi_widget)
         self.main_layout.addWidget(self.view)
-        
-#        self.navi_layout.addWidget(QtGui.QToolBox('Navigation'))
         
         self.view_hud_layout = QtGui.QHBoxLayout(self.view)
         self.view_hud_btn_layout = QtGui.QVBoxLayout()
@@ -124,8 +119,6 @@ class TrackletBrowser(QtGui.QWidget):
  
         self.view_hud_layout.addStretch()
         
-        
-        
 #        self.view.setDragMode(self.view.ScrollHandDrag)
         
         
@@ -135,17 +128,15 @@ class TrackletBrowser(QtGui.QWidget):
         outer = []
         for t in fh.traverse_objects('event'):
             inner = []
-            for ti, data, cc in t:
+            for _, data, cc in t:
                 inner.append(TrackletItem(data, cc))
             outer.append(inner)
-            if len(outer) > 400:
+            if len(outer) > 120:
                 break
-        
         self.showTracklets(outer)
         
         
     def showTracklets(self, tracklets):
-
         self.all_tracks = []
         for row, t in enumerate(tracklets):
             trackGroup = TrackLetItemGroup(0, row)
@@ -172,18 +163,11 @@ class TrackletBrowser(QtGui.QWidget):
             self.all_tracks.append(trackGroup)
             
     def sortTracks(self, permutation):
-#        self.all_tracks = [self.all_tracks[i] for i in permutation]
         for new_row, perm_idx in enumerate(permutation):
-#            print 'track with intensity', self.all_tracks[perm_idx].mean_intensity, 'moves to', new_row
             self.all_tracks[perm_idx].moveToRow(new_row)
-
-#        for x in self.all_tracks:
-#            print x.mean_intensity
-        
-   
+ 
     def sortRandomly(self):
         perm = range(len(self.all_tracks))
-        import random
         random.shuffle(perm)
         self.sortTracks(perm)
         
@@ -195,8 +179,6 @@ class TrackletBrowser(QtGui.QWidget):
         perm = argsorted(self.all_tracks, cmp=lambda u,v: cmp(u.std, v.std), reverse=True)
         self.sortTracks(perm)
         
-        
-               
 
 class TrackLetItemGroup(QtGui.QGraphicsItemGroup):
     def __init__(self, column, row, parent=None):
@@ -212,59 +194,7 @@ class TrackLetItemGroup(QtGui.QGraphicsItemGroup):
         
     def moveToColumn(self, col):
         self.col = col
-        self.setPos(col * 50, self.row * 50)
-        
-
-                
-            
-class GraphicsTrackletWidget(QtGui.QGraphicsItem):
-    def __init__(self, parent=None):
-        QtGui.QGraphicsItem.__init__(self,parent=parent)
-        self.tracklet_item_list = []
-        self.current_col = 0
-        
-    def append(self, tracklet_item):
-        scene_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(tracklet_item.data)), parent=self)
-        self.tracklet_item_list.append(scene_item)
-        scene_item.setPos(self.current_col*tracklet_item.size, 0)
-        self.current_col += 1
-        
-
-    def extend(self, tracklet_list):
-        for t in tracklet_list:
-            self.append(t)
-            
-    def paint(self, *args):
-        print 'paint track'
-    
-    def boundingRect(self, *args):
-        return QtCore.QRectF(0,0,50,50)
-            
-class GraphicsTrackletsWidget(QtGui.QGraphicsItem):
-    def __init__(self, parent=None):
-        QtGui.QGraphicsItem.__init__(self)
-        self.tracklet_list = []
-        self.current_row = 0
-        
-    def paint(self, *args):
-        print 'paint tracklets'
-    
-    def boundingRect(self, *args):
-        return QtCore.QRectF(0,0,500,50)
-    
-    def append(self, tracklet):
-        tmp = GraphicsTrackletWidget(self)
-        self.tracklet_list.append(tmp)
-        
-        tmp.setPos(0, self.current_row*50)
-        self.current_row += 1
-        
-    def extend(self, tracklet_list):
-        for t in enumerate(tracklet_list):
-            self.append(t)
-
-        
-    
+        self.setPos(col * 50, self.row * 50)    
     
 class TrackletItem(object):
     def __init__(self, data, cc, size=50):
@@ -272,19 +202,16 @@ class TrackletItem(object):
         self.data = data
         self.cc = cc
         
-class Tracklet(list):
-    pass
-
-        
-        
-        
-
-        
-        
-        
+    
 
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv) 
-    mainwindow = ContainterDialog()
+    file, _ = getopt.getopt(sys.argv[1:], 'f:')
+    if len(file) == 1:
+        file = file[0][1]
+    else:
+        file = None
+        
+    mainwindow = MainWindow(file)
     mainwindow.show()
     app.exec_()
