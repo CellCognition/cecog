@@ -63,63 +63,68 @@ class ZoomedQGraphicsView(QtGui.QGraphicsView):
             
 
 class TrackletBrowser(QtGui.QWidget):
+    css = '''   QPushButton {background-color: none;
+                             border-style: outset;
+                             border-width: 2px;
+                             border-radius: 4px;
+                             border-color: white;
+                             color: white;
+                             font: bold 14px;
+                             min-width: 10em;
+                             padding: 2px;}
+                QPushButton:pressed {
+                             background-color: rgb(50, 50, 50);
+                             border-style: inset;}
+                     '''
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
-        
-        self.layout_1 = QtGui.QVBoxLayout(self)
-        self.layout_2 = QtGui.QHBoxLayout()
-        self.container_widget = QtGui.QWidget(self)
-        self.container_widget.setLayout(self.layout_2)
-        
         self.scene = QtGui.QGraphicsScene()
         self.scene.setBackgroundBrush(QtGui.QBrush(QtCore.Qt.black))
         
         self.view = ZoomedQGraphicsView(self.scene)
         self.view.setMouseTracking(True)
         
-        self.layout_1.addWidget(self.view)
-        self.layout_1.addWidget(self.container_widget)
+        self.view.setStyleSheet(self.css)
         
-        self.update_btn = QtGui.QPushButton('Reload')
-        self.view.setStyleSheet(''' QPushButton {background-color: none;
-                                                 border-style: outset;
-                                                 border-width: 2px;
-                                                 border-radius: 4px;
-                                                 border-color: white;
-                                                 color: white;
-                                                 font: bold 14px;
-                                                 min-width: 10em;
-                                                 padding: 2px;}
-                                    QPushButton:pressed {
-                                                 background-color: rgb(50, 50, 50);
-                                                 border-style: inset;}
-                                         ''')
-        self.update_btn.clicked.connect(self.update)
         
-#        self.layout_2.addStretch()
-#        self.layout_2.addWidget(self.update_btn)
         
-        self.hudh = QtGui.QHBoxLayout(self.view)
-        self.hudv = QtGui.QVBoxLayout()
-        self.hudh.addLayout(self.hudv)
         
-        self.hudv.addWidget(self.update_btn)
+        self.main_layout = QtGui.QHBoxLayout()
+        self.setLayout(self.main_layout)
+        
+#        self.navi_layout = QtGui.QVBoxLayout()
+        
+        self.navi_widget = QtGui.QToolBox()
+        self.navi_widget.addItem(QtGui.QPushButton('test'), 'Navigaton')
+        self.navi_widget.setMaximumWidth(150)
+#        self.navi_widget.setLayout(self.navi_layout)
+        
+        self.main_layout.addWidget(self.navi_widget)
+        self.main_layout.addWidget(self.view)
+        
+#        self.navi_layout.addWidget(QtGui.QToolBox('Navigation'))
+        
+        self.view_hud_layout = QtGui.QHBoxLayout(self.view)
+        self.view_hud_btn_layout = QtGui.QVBoxLayout()
+        self.view_hud_layout.addLayout(self.view_hud_btn_layout)
+        
         self.btn_sort1 = QtGui.QPushButton('Sort random')
         self.btn_sort2 = QtGui.QPushButton('Sort intensity')
         self.btn_sort3 = QtGui.QPushButton('Sort std')
-        self.hudv.addWidget(self.btn_sort1)
-        self.hudv.addWidget(self.btn_sort2)
-        self.hudv.addWidget(self.btn_sort3)
+        
+        self.view_hud_btn_layout.addWidget(self.btn_sort1)
+        self.view_hud_btn_layout.addWidget(self.btn_sort2)
+        self.view_hud_btn_layout.addWidget(self.btn_sort3)
+        self.view_hud_btn_layout.addStretch()
         
         self.btn_sort1.clicked.connect(self.sortRandomly)
         self.btn_sort2.clicked.connect(self.sortByIntensity)
         self.btn_sort3.clicked.connect(self.sortByStd)
-        self.hudv.addStretch()
+        
  
-        self.hudh.addStretch()
+        self.view_hud_layout.addStretch()
         
         
-        self.setLayout(self.layout_1)
         
 #        self.view.setDragMode(self.view.ScrollHandDrag)
         
