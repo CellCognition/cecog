@@ -15,15 +15,29 @@ def argsorted(seq, cmp, reverse=False):
     return [x[0] for x in temp_s]
 
 class ContainterDialog(QtGui.QMainWindow):
-    def __init__(self, parent=None):
+    def __init__(self, filename=None, parent=None):
         QtGui.QMainWindow.__init__(self, parent)
          
         self.setGeometry(100,100,1200,700)
-        self.setWindowTitle('tracklet playground')
+        self.setWindowTitle('tracklet browser')
         
-        tracklet_widget = TrackletBrowser(self)
+        self.mnu_open = QtGui.QAction('&Open', self)
+        self.mnu_open.triggered.connect(self.open_file)
+        file_menu = self.menuBar().addMenu('&File')
+        file_menu.addAction(self.mnu_open)
+
         
-        self.setCentralWidget(tracklet_widget)  
+        self.tracklet_widget = TrackletBrowser(self)
+        self.setCentralWidget(self.tracklet_widget)  
+        
+        if filename is not None:
+            self.tracklet_widget.open_file(filename)
+        
+    def open_file(self):
+        filename = str(QtGui.QFileDialog.getOpenFileName(self, 'Open hdf5 file', '.', 'hdf5 files (*.h5  *.hdf5)'))  
+        if filename:                                              
+            self.tracklet_widget.open_file(filename)
+        
         
 class ZoomedQGraphicsView(QtGui.QGraphicsView):
 
@@ -109,10 +123,9 @@ class TrackletBrowser(QtGui.QWidget):
         
 #        self.view.setDragMode(self.view.ScrollHandDrag)
         
-        self.load()
         
-    def load(self):
-        fh = dataprovider.File('C:/Users/sommerc/data/Chromatin-Microtubles/Analysis/H2b_aTub_MD20x_exp911/dump/0037.hdf5')
+    def open_file(self, filename):
+        fh = dataprovider.File(filename)
         self.scene.clear()
         outer = []
         for t in fh.traverse_objects('event'):
