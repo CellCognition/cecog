@@ -79,7 +79,14 @@ class FlatFileImporter(object):
         return impdata
 
 
-    def __call__(self, baseDir, plates=None):
+    def __call__(self, baseDir=None, plates=None):
+
+        if baseDir is None:
+            if not self.oSettings.baseDir is None:
+                baseDir = self.oSettings.baseDir
+            else:
+                raise ValueError("Please specify an input directory where the"
+                                 "Cellcognition results can be found.")
 
         if plates is None:
             try:
@@ -146,9 +153,18 @@ class FullDescriptionImporter(FlatFileImporter):
                     for feat in import_features:
                         if not (ch, reg, feat) in tempdict:
                             continue
-                        if not (ch,reg,feat) in impdata:
-                            impdata[(ch,reg,feat)] = []
-                        impdata[(ch,reg,feat)].append(self.getValue(tempdict[(ch,reg,feat)]))
+                        # NEW:
+                        if not ch in impdata:
+                            impdata[ch] = {}
+                        if not reg in impdata[ch]:
+                            impdata[ch][reg] = {}
+                        if not feat in impdata[ch][reg]:
+                            impdata[ch][reg][feat] = []
+                        impdata[ch][reg][feat].append(self.getValue(tempdict[(ch,reg,feat)]))
+#OLD:
+#                        if not (ch,reg,feat) in impdata:
+#                            impdata[(ch,reg,feat)] = []
+#                        impdata[(ch,reg,feat)].append(self.getValue(tempdict[(ch,reg,feat)]))
 
         return impdata
 
@@ -219,9 +235,18 @@ class EventDescriptionImporter(FlatFileImporter):
             for entry in import_features:
                 if not entry in tempdict:
                     continue
-                if not (channel, region, entry) in impdata:
-                    impdata[(channel, region, entry)] = []
-                impdata[(channel, region, entry)].append(self.getValue(tempdict[entry]))
+
+                # NEW:
+                if not channel in impdata:
+                    impdata[channel] = {}
+                if not region in impdata[channel]:
+                    impdata[channel][region] = {}
+                if not entry in impdata[channel][region]:
+                    impdata[channel][region][entry] = []
+                impdata[channel][region][entry].append(self.getValue(tempdict[entry]))
+                #if not (channel, region, entry) in impdata:
+                #    impdata[(channel, region, entry)] = []
+                #impdata[(channel, region, entry)].append(self.getValue(tempdict[entry]))
 
             # for common entries, the channel and region information
             # is dropped
