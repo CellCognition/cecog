@@ -33,12 +33,14 @@ import time as timing
 # cecog imports:
 #
 
+BOUNDING_BOX_SIZE = 51
+
 #-------------------------------------------------------------------------------
 # constants:
 #
 
 #-------------------------------------------------------------------------------
-# functions:
+# functions:get
 #
 
 def print_timing(func):
@@ -126,7 +128,7 @@ class Position(_DataProvider):
         z = len(self._hf_group['time']['0']['zslice'])
         c = len(self._hf_group['time']['0']['zslice']['0']['region'])
 
-        self._terminal_objects_np_cache = numpy.zeros((c, t, z), dtype=numpy.ndarray)
+        self._terminal_objects_np_cache = numpy.zeros((c, t, z), dtype=object)
         
         for t, tg in self._hf_group['time'].iteritems():
             t = int(t)
@@ -134,7 +136,8 @@ class Position(_DataProvider):
                 z = int(z)
                 for c, co in zo['region'].iteritems():
                     c = int(c)
-                    self._terminal_objects_np_cache[c,t,z] = co['object'].value, co['crack_contour'].value
+                    self._terminal_objects_np_cache[c,t,z] = {'object': co['object'].value, \
+                                                              'crack_contours' : co['crack_contour'].value}
 
     def get_events(self):
         object = self._hf_group['object']['event']
@@ -251,11 +254,10 @@ class Position(_DataProvider):
                 
         
     def get_bounding_box(self, t, z, obj_idx, c=0):
-#        obj = self._hf_group['time'][str(t)]['zslice'][str(z)]['region'][str(c)]['object']
-        obj = self._terminal_objects_np_cache[c,t,z][0]
-        return (obj['upper_left'][obj_idx], obj['lower_right'][obj_idx])
+        objects = self._terminal_objects_np_cache[c,t,z]['object']
+        return (objects['upper_left'][obj_idx], objects['lower_right'][obj_idx])
     
-    def get_image(self, t, z, obj_idx, c, bounding_box=None, min_bounding_box_size=50):
+    def get_image(self, t, z, obj_idx, c, bounding_box=None, min_bounding_box_size=BOUNDING_BOX_SIZE):
         if bounding_box is None:
             ul, lr = self.get_bounding_box(t, z, obj_idx, c)
         else:
@@ -272,14 +274,17 @@ class Position(_DataProvider):
         
         bounding_box = (ul, lr)
         
+        # TODO: get_iamge returns am image which might have a smaller shape than 
+        #       the requested BOUNDING_BOX_SIZE, I dont see a chance to really
+        #       fix it, without doing a copy...
+        
         return self._hf_group_np_copy[c, t, z, ul[1]:lr[1], ul[0]:lr[0]], bounding_box
 
-    def get_crack_contours(self, t, z, obj_idx, c):      
-#        print numpy.asarray( zlib.decompress( \
-#                              base64.b64decode(self._terminal_objects_np_cache[c,t,z][1] \
-#                                [obj_idx])).split(','), dtype=numpy.uint32).reshape(-1,2)[0,:]
-                                
-        return numpy.asarray( zlib.decompress(base64.b64decode(self._terminal_objects_np_cache[c,t,z][1][obj_idx])).split(','), dtype=numpy.float32).reshape(-1,2)
+    def get_crack_contours(self, t, z, obj_idx, c):  
+        crack_contours_string = self._terminal_objects_np_cache[c,t,z]['crack_contours'][obj_idx]                               
+        return numpy.asarray(zlib.decompress( \
+                             base64.b64decode(crack_contours_string)).split(','), \
+                            dtype=numpy.float32).reshape(-1,2)
         
     def get_object_data(self, t, z, obj_idx, c):
         bb = self.get_bounding_box(t, z, obj_idx, c)

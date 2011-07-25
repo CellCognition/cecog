@@ -8,6 +8,8 @@ import getopt
 from cecog.io import dataprovider
 from cecog.gui.imageviewer import HoverPolygonItem
 
+BOUNDING_BOX_SIZE = dataprovider.BOUNDING_BOX_SIZE
+
 
 def argsorted(seq, cmp, reverse=False):
     temp = enumerate(seq)
@@ -105,16 +107,16 @@ class TrackletBrowser(QtGui.QWidget):
         
         self.btn_sort1 = QtGui.QPushButton('Sort random')
         self.btn_sort2 = QtGui.QPushButton('Sort intensity')
-        self.btn_sort3 = QtGui.QPushButton('Sort std')
+        self.btn_toggle_contours = QtGui.QPushButton('Toggle contours')
         
         self.view_hud_btn_layout.addWidget(self.btn_sort1)
         self.view_hud_btn_layout.addWidget(self.btn_sort2)
-        self.view_hud_btn_layout.addWidget(self.btn_sort3)
+        self.view_hud_btn_layout.addWidget(self.btn_toggle_contours)
         self.view_hud_btn_layout.addStretch()
         
         self.btn_sort1.clicked.connect(self.sortRandomly)
         self.btn_sort2.clicked.connect(self.sortByIntensity)
-        self.btn_sort3.clicked.connect(self.sortByStd)
+        self.btn_toggle_contours.clicked.connect(self.toggle_contours)
         
  
         self.view_hud_layout.addStretch()
@@ -138,6 +140,7 @@ class TrackletBrowser(QtGui.QWidget):
         
     def showTracklets(self, tracklets):
         self.all_tracks = []
+        self._all_contours = []
         for row, t in enumerate(tracklets):
             trackGroup = TrackLetItemGroup(0, row)
             
@@ -145,20 +148,21 @@ class TrackletBrowser(QtGui.QWidget):
             for col, ti in enumerate(t):
                 average_int += ti.data.mean()
                 scene_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(ti.data)))
-                scene_item.setPos(col*50,row*50)
+                scene_item.setPos(col*BOUNDING_BOX_SIZE,row*BOUNDING_BOX_SIZE)
                 
-                scene_item_seg = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), ti.cc.clip(0,50).tolist())))
-                scene_item_seg.setPos(col*50,row*50)
+                scene_item_seg = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), ti.cc.clip(0,BOUNDING_BOX_SIZE).tolist())))
+                scene_item_seg.setPos(col*BOUNDING_BOX_SIZE,row*BOUNDING_BOX_SIZE)
                 
                 scene_item_seg.setPen(QtGui.QPen(QtGui.QColor(255,0,0)))
                 scene_item_seg.setAcceptHoverEvents(True)
+                
+                self._all_contours.append(scene_item_seg)
                 
                 trackGroup.addToGroup(scene_item)
                 trackGroup.addToGroup(scene_item_seg)
                 
             trackGroup.setHandlesChildEvents(False)
             trackGroup.mean_intensity = average_int / len(t)
-            trackGroup.std = numpy.concatenate(map(lambda g: g.data[..., None], t), axis=2).std(axis=2).mean()
             self.scene.addItem(trackGroup)
             self.all_tracks.append(trackGroup)
             
@@ -175,10 +179,11 @@ class TrackletBrowser(QtGui.QWidget):
         perm = argsorted(self.all_tracks, cmp=lambda u,v: cmp(u.mean_intensity, v.mean_intensity), reverse=True)
         self.sortTracks(perm)
         
-    def sortByStd(self):
-        perm = argsorted(self.all_tracks, cmp=lambda u,v: cmp(u.std, v.std), reverse=True)
-        self.sortTracks(perm)
-        
+    def toggle_contours(self):
+        is_visible = self._all_contours[0].isVisible()
+        toggle_visibility = lambda x: x.setVisible(not is_visible)
+        map(toggle_visibility, self._all_contours)
+
 
 class TrackLetItemGroup(QtGui.QGraphicsItemGroup):
     def __init__(self, column, row, parent=None):
@@ -190,14 +195,14 @@ class TrackLetItemGroup(QtGui.QGraphicsItemGroup):
     
     def moveToRow(self, row):
         self.row = row
-        self.setPos(self.column * 50, row * 50)
+        self.setPos(self.column * BOUNDING_BOX_SIZE, row * BOUNDING_BOX_SIZE)
         
     def moveToColumn(self, col):
         self.col = col
-        self.setPos(col * 50, self.row * 50)    
+        self.setPos(col * BOUNDING_BOX_SIZE, self.row * BOUNDING_BOX_SIZE)    
     
 class TrackletItem(object):
-    def __init__(self, data, cc, size=50):
+    def __init__(self, data, cc, size=BOUNDING_BOX_SIZE):
         self.size = size
         self.data = data
         self.cc = cc
