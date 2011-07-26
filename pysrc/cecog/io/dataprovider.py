@@ -276,7 +276,6 @@ class Position(_DataProvider):
         objects_description = self.get_objects_definition()
         object_name_found = False
         
-        involved_relation = []
         for o_desc in objects_description:
             if o_desc[0] == object_name:
                 object_name_found = True
@@ -285,7 +284,7 @@ class Position(_DataProvider):
         
         is_terminal = len(involved_relation) == 0
         if is_terminal:
-            return TerminalObjects(object_name, None, None, self)
+            return TerminalObjects(object_name)
         else:
             # if a relation is involved with this objects
             # also an group must be specified under positions
@@ -476,29 +475,25 @@ class Objects(object):
         self.name = name
         self._h5_object_group = h5_object_group
         self.relation_name = involveld_relation
+        self.relation = position.get_relation(self.relation_name)     
         self.parent_positon_provider = position 
         self.sub_objects = None
+        self._obj_ids_np_copy = self._h5_object_group[self.HDF5_OBJECT_ID_NAME]['obj_id']
         
-        if self.relation_name is not None:
-            self.relation = position.get_relation(self.relation_name)     
+        object_edges = self._h5_object_group[self.HDF5_OBJECT_EDGE_NAME]
+        object_id_edge_refs = self._h5_object_group[self.HDF5_OBJECT_ID_NAME]
         
-        if self._h5_object_group is not None:
-            self._obj_ids_np_copy = self._h5_object_group[self.HDF5_OBJECT_ID_NAME]['obj_id']
-            
-            object_edges = self._h5_object_group[self.HDF5_OBJECT_EDGE_NAME]
-            object_id_edge_refs = self._h5_object_group[self.HDF5_OBJECT_ID_NAME]
-            
-            _object_id_edge_refs_np_copy = object_id_edge_refs.value
-            self._object_id_edge_refs_np_copy = _object_id_edge_refs_np_copy \
-                                     .view(numpy.uint32) \
-                                     .reshape(len(_object_id_edge_refs_np_copy), 3)
-                                     
-            _object_edge_np_copy = object_edges.value
-            self._object_edge_np_copy = _object_edge_np_copy \
-                                     .view(numpy.uint32) \
-                                     .reshape(len(object_edges), 2)
-                                     
-            self.mapping, self.next_object_level = self.apply_relation(self.relation)   
+        _object_id_edge_refs_np_copy = object_id_edge_refs.value
+        self._object_id_edge_refs_np_copy = _object_id_edge_refs_np_copy \
+                                 .view(numpy.uint32) \
+                                 .reshape(len(_object_id_edge_refs_np_copy), 3)
+                                 
+        _object_edge_np_copy = object_edges.value
+        self._object_edge_np_copy = _object_edge_np_copy \
+                                 .view(numpy.uint32) \
+                                 .reshape(len(object_edges), 2)
+                                 
+        self.mapping, self.next_object_level = self.apply_relation(self.relation)   
         
     def __getitem__(self, obj_id):
         if isinstance(obj_id, (list, tuple)):
@@ -526,8 +521,15 @@ class Objects(object):
                 yield o, numpy.concatenate((start_node, rest_nodes))
         
     def __str__(self):
-        return 'object: ' + self.name + '\n' 
+        res =  'object: ' + self.name + '\n' 
         
+        if self.relation_name:
+            res += ' - relations: '+ self.relation_name + '\n' 
+        
+        for attribs in self._h5_object_group:
+            if attribs not in [self.HDF5_OBJECT_EDGE_NAME, self.HDF5_OBJECT_ID_NAME]:
+                res += ' - attributs: ' + attribs + '\n'
+        return res
     
     @property
     def obj_ids(self):
@@ -630,8 +632,8 @@ class Objects(object):
 
     
 class TerminalObjects(Objects):
-    def __init____init__(self, name, h5_object_group, involveld_relation, position):
-        super(TerminalObjects, self).__init____init__(self, name, h5_object_group, involveld_relation, position)
+    def __init__(self, name):
+        super(TerminalObjects, self).__init__(name, None, [])
         
     @property
     def obj_ids(self):

@@ -176,6 +176,7 @@ class TrackletBrowser(QtGui.QWidget):
     def open_file(self, filename):
         fh = dataprovider.File(filename)
         self.scene.clear()
+        self.all_tracks = []
         
         outer = []
         for t in fh.traverse_objects('event'):
