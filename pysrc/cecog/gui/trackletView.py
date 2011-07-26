@@ -11,6 +11,17 @@ from cecog.gui.imageviewer import HoverPolygonItem
 import copy
 
 BOUNDING_BOX_SIZE = dataprovider.BOUNDING_BOX_SIZE
+CLASS_TO_COLOR = { \
+                  0 : QtCore.Qt.red, \
+                  1 : QtCore.Qt.green,\
+                  2 : QtCore.Qt.blue,\
+                  3 : QtCore.Qt.yellow,\
+                  4 : QtCore.Qt.magenta,\
+                  5 : QtCore.Qt.cyan,\
+                  6 : QtCore.Qt.darkRed,\
+                  7 : QtCore.Qt.darkBlue,\
+                  8 : QtCore.Qt.darkGreen,\
+                  }
 
 
 def argsorted(seq, cmp=cmp, reverse=False):
@@ -134,10 +145,7 @@ class TrackletBrowser(QtGui.QWidget):
         self.navi_content_widget.setLayout(self.navi_content_layout)
         
         self.navi_widget.addItem(self.navi_content_widget, 'Navigaton')
-
-        
-        
-        
+      
         self.navi_widget.setMaximumWidth(150)
         
         self.main_layout.addWidget(self.navi_widget)
@@ -181,8 +189,8 @@ class TrackletBrowser(QtGui.QWidget):
         outer = []
         for t in fh.traverse_objects('event'):
             inner = []
-            for _, data, cc in t:
-                inner.append(TrackletItem(data, cc))
+            for _, data, cc, pred in t:
+                inner.append(TrackletItem(data, cc, pred))
             outer.append(inner)
             if len(outer) > 120:
                 break
@@ -201,8 +209,8 @@ class TrackletBrowser(QtGui.QWidget):
                 
                 scene_item_seg = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), ti.crack_contour.tolist())))
                 scene_item_seg.setPos(col*BOUNDING_BOX_SIZE,row*BOUNDING_BOX_SIZE)
+                scene_item_seg.setPen(QtGui.QPen(CLASS_TO_COLOR[ti.predicted_class[0]]))
                 
-                scene_item_seg.setPen(QtGui.QPen(QtGui.QColor(255,0,0)))
                 scene_item_seg.setAcceptHoverEvents(True)
                 
                 self._all_contours.append(scene_item_seg)
@@ -264,10 +272,11 @@ class TrackLetItemGroup(QtGui.QGraphicsItemGroup):
         self._features[key] = value
     
 class TrackletItem(object):
-    def __init__(self, data, cc, size=BOUNDING_BOX_SIZE):
+    def __init__(self, data, crack_contour, predicted_class, size=BOUNDING_BOX_SIZE):
         self.size = size
         self.data = data
-        self.crack_contour = cc.clip(0,BOUNDING_BOX_SIZE)
+        self.crack_contour = crack_contour.clip(0, BOUNDING_BOX_SIZE)
+        self.predicted_class = predicted_class
         
     
 

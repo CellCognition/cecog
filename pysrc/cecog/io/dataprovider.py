@@ -362,6 +362,11 @@ class Position(_DataProvider):
         cc[:,1] -= new_bb[0][1]
         
         return img, cc
+    
+    def get_additional_object_data(self, object_name, data_filed_name, index):
+        return self._hf_group['object'][object_name][data_filed_name][str(index)]
+        
+        
         
     
         
@@ -441,9 +446,10 @@ class File(object):
                     t = primary_primary[prim_prim_id][0][1]
                     z = primary_primary[prim_prim_id][0][2]
                     obj_idx = primary_primary[prim_prim_id][0][3]
+                    pred = position.get_additional_object_data(primary_primary.name, 'classifier', 0)['prediction'][prim_prim_id]
                     
                     img, cc = position.get_object_data(t, z, obj_idx, c) 
-                    tmp = (t, img, cc)
+                    tmp = (t, img, cc, pred)
                     res.append(tmp)
             
                 res.sort(cmp=lambda x,y: cmp(x[0],y[0]))
