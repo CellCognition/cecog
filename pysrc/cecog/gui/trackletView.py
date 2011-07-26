@@ -6,12 +6,14 @@ import qimage2ndarray
 import getopt
 
 from cecog.io import dataprovider
+from cecog.io.dataprovider import trajectory_features
 from cecog.gui.imageviewer import HoverPolygonItem
+import copy
 
 BOUNDING_BOX_SIZE = dataprovider.BOUNDING_BOX_SIZE
 
 
-def argsorted(seq, cmp, reverse=False):
+def argsorted(seq, cmp=cmp, reverse=False):
     temp = enumerate(seq)
     temp_s = sorted(temp, cmp=lambda u,v: cmp(u[1],v[1]), reverse=reverse)
     return [x[0] for x in temp_s]
@@ -89,13 +91,53 @@ class TrackletBrowser(QtGui.QWidget):
         self.view.setStyleSheet(self.css)
         
         
-        
+        self.all_tracks = []
         
         self.main_layout = QtGui.QHBoxLayout()
         self.setLayout(self.main_layout)
         
         self.navi_widget = QtGui.QToolBox()
-        self.navi_widget.addItem(QtGui.QPushButton('test'), 'Navigaton')
+        
+        self.sample_group_box_layout = QtGui.QVBoxLayout()
+        self.position_group_box_layout = QtGui.QVBoxLayout()
+        self.experiment_group_box_layout = QtGui.QVBoxLayout()
+        self.object_group_box_layout = QtGui.QVBoxLayout()
+        
+        self.sample_group_box = QtGui.QGroupBox('Sample')
+        self.sample_group_box.setLayout(self.sample_group_box_layout)
+        self.position_group_box = QtGui.QGroupBox('Position')
+        self.position_group_box.setLayout(self.position_group_box_layout)
+        self.experiment_group_box = QtGui.QGroupBox('Experiment')
+        self.experiment_group_box.setLayout(self.experiment_group_box_layout)
+        self.object_group_box = QtGui.QGroupBox('Objects')
+        self.object_group_box.setLayout(self.object_group_box_layout)
+        
+        self.drp_sample = QtGui.QSpinBox()
+        self.sample_group_box_layout.addWidget(self.drp_sample)
+        
+        self.drp_position = QtGui.QSpinBox()
+        self.position_group_box_layout.addWidget(self.drp_position)
+        
+        self.drp_experiment = QtGui.QSpinBox()
+        self.experiment_group_box_layout.addWidget(self.drp_experiment)
+        
+        self.drp_object = QtGui.QComboBox()
+        self.object_group_box_layout.addWidget(self.drp_object)
+        
+        self.navi_content_widget = QtGui.QWidget()
+        self.navi_content_layout = QtGui.QVBoxLayout()
+        self.navi_content_layout.addWidget(self.sample_group_box)
+        self.navi_content_layout.addWidget(self.position_group_box)
+        self.navi_content_layout.addWidget(self.experiment_group_box)
+        self.navi_content_layout.addWidget(self.object_group_box)
+        self.navi_content_layout.addStretch()
+        self.navi_content_widget.setLayout(self.navi_content_layout)
+        
+        self.navi_widget.addItem(self.navi_content_widget, 'Navigaton')
+
+        
+        
+        
         self.navi_widget.setMaximumWidth(150)
         
         self.main_layout.addWidget(self.navi_widget)
@@ -105,17 +147,24 @@ class TrackletBrowser(QtGui.QWidget):
         self.view_hud_btn_layout = QtGui.QVBoxLayout()
         self.view_hud_layout.addLayout(self.view_hud_btn_layout)
         
-        self.btn_sort1 = QtGui.QPushButton('Sort random')
-        self.btn_sort2 = QtGui.QPushButton('Sort intensity')
+        self.btn_sort_randomly = QtGui.QPushButton('Sort random')
+        self.btn_sort_randomly.clicked.connect(self.sortRandomly)
+        self.view_hud_btn_layout.addWidget(self.btn_sort_randomly)
+        
+        self.btns_sort = []
+        
+        for tf in trajectory_features:
+            temp = QtGui.QPushButton(tf.name)
+            temp.clicked.connect(lambda state, x=tf.name: self.sortTracksByFeature(x))
+            self.btns_sort.append(temp)
+            self.view_hud_btn_layout.addWidget(temp)
+            
         self.btn_toggle_contours = QtGui.QPushButton('Toggle contours')
         
-        self.view_hud_btn_layout.addWidget(self.btn_sort1)
-        self.view_hud_btn_layout.addWidget(self.btn_sort2)
+
         self.view_hud_btn_layout.addWidget(self.btn_toggle_contours)
         self.view_hud_btn_layout.addStretch()
         
-        self.btn_sort1.clicked.connect(self.sortRandomly)
-        self.btn_sort2.clicked.connect(self.sortByIntensity)
         self.btn_toggle_contours.clicked.connect(self.toggle_contours)
         
  
@@ -127,6 +176,7 @@ class TrackletBrowser(QtGui.QWidget):
     def open_file(self, filename):
         fh = dataprovider.File(filename)
         self.scene.clear()
+        
         outer = []
         for t in fh.traverse_objects('event'):
             inner = []
@@ -139,18 +189,16 @@ class TrackletBrowser(QtGui.QWidget):
         
         
     def showTracklets(self, tracklets):
-        self.all_tracks = []
         self._all_contours = []
         for row, t in enumerate(tracklets):
             trackGroup = TrackLetItemGroup(0, row)
             
-            average_int = 0
+
             for col, ti in enumerate(t):
-                average_int += ti.data.mean()
                 scene_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(ti.data)))
                 scene_item.setPos(col*BOUNDING_BOX_SIZE,row*BOUNDING_BOX_SIZE)
                 
-                scene_item_seg = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), ti.cc.clip(0,BOUNDING_BOX_SIZE).tolist())))
+                scene_item_seg = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), ti.crack_contour.tolist())))
                 scene_item_seg.setPos(col*BOUNDING_BOX_SIZE,row*BOUNDING_BOX_SIZE)
                 
                 scene_item_seg.setPen(QtGui.QPen(QtGui.QColor(255,0,0)))
@@ -161,15 +209,21 @@ class TrackletBrowser(QtGui.QWidget):
                 trackGroup.addToGroup(scene_item)
                 trackGroup.addToGroup(scene_item_seg)
                 
+            for tf in trajectory_features:
+                trackGroup[tf.name] =  tf.compute(t)
+                
             trackGroup.setHandlesChildEvents(False)
-            trackGroup.mean_intensity = average_int / len(t)
             self.scene.addItem(trackGroup)
             self.all_tracks.append(trackGroup)
             
-    def sortTracks(self, permutation):
+    def sortTracks(self, permutation):        
         for new_row, perm_idx in enumerate(permutation):
             self.all_tracks[perm_idx].moveToRow(new_row)
- 
+            
+    def sortTracksByFeature(self, feature_name):
+        permutation = argsorted([t[feature_name] for t in self.all_tracks], reverse=True)
+        self.sortTracks(permutation)
+    
     def sortRandomly(self):
         perm = range(len(self.all_tracks))
         random.shuffle(perm)
@@ -192,6 +246,7 @@ class TrackLetItemGroup(QtGui.QGraphicsItemGroup):
         self.column = column
         self.moveToRow(row)
         self.moveToColumn(column)
+        self._features = {}
     
     def moveToRow(self, row):
         self.row = row
@@ -200,12 +255,18 @@ class TrackLetItemGroup(QtGui.QGraphicsItemGroup):
     def moveToColumn(self, col):
         self.col = col
         self.setPos(col * BOUNDING_BOX_SIZE, self.row * BOUNDING_BOX_SIZE)    
+        
+    def __getitem__(self, key):
+        return self._features[key]
+    
+    def __setitem__(self, key, value):
+        self._features[key] = value
     
 class TrackletItem(object):
     def __init__(self, data, cc, size=BOUNDING_BOX_SIZE):
         self.size = size
         self.data = data
-        self.cc = cc
+        self.crack_contour = cc.clip(0,BOUNDING_BOX_SIZE)
         
     
 

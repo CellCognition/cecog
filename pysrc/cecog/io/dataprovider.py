@@ -24,7 +24,8 @@ import base64
 import h5py, \
        networkx, \
        numpy, \
-       vigra
+       vigra, \
+       random
 
 import matplotlib.pyplot as plt
 import time as timing
@@ -55,6 +56,71 @@ def print_timing(func):
 #-------------------------------------------------------------------------------
 # classes:
 #
+
+class TrajectoryFeatureBase(object):
+    def compute(self):
+        raise NotImplementedError('TrajectoryFeatureBase.compute() has to be implemented by its subclass')
+
+class TrajectoryFeatureMeanIntensity(TrajectoryFeatureBase):
+    name = 'Mean intensity'
+    
+    def compute(self, trajectory_seq):
+        value = 0
+        for t in trajectory_seq:
+            value += t.data.mean()
+        value /= len(trajectory_seq)
+        return value
+        
+class TrajectoryFeatureMedianIntensity(TrajectoryFeatureBase):
+    name = 'Madian intensity'
+    
+    def compute(self, trajectory_seq):
+        value = []
+        for t in trajectory_seq:
+            value.append(numpy.median(t.data))
+        value = numpy.median(value)
+        return value
+    
+class TrajectoryFeatureMeanArea(TrajectoryFeatureBase):
+    name = 'Mean area'
+    
+    def compute(self, trajectory_seq):
+        # Using the formula given in
+        # http://en.wikipedia.org/wiki/Polygon#Area_and_centroid
+        values = []
+        for t in trajectory_seq:
+            y_last, x_last = t.crack_contour[-1,:]
+            value = 0
+            for y, x in t.crack_contour:
+                value += x_last * y - x * y_last
+                x_last , y_last = x, y
+            value /= 2
+            values.append(value)
+        value = numpy.mean(values)
+
+        return value
+    
+class TrajectoryFeatureAreaVariance(TrajectoryFeatureBase):
+    name = 'Area variance'
+    
+    def compute(self, trajectory_seq):
+        # Using the formula given in
+        # http://en.wikipedia.org/wiki/Polygon#Area_and_centroid
+        values = []
+        for t in trajectory_seq:
+            y_last, x_last = t.crack_contour[-1,:]
+            value = 0
+            for y, x in t.crack_contour:
+                value += x_last * y - x * y_last
+                x_last , y_last = x, y
+            value /= 2
+            values.append(value)
+        value = numpy.std(values)
+
+        return value
+
+trajectory_features = [tf() for tf in TrajectoryFeatureBase.__subclasses__()]
+
 
 class _DataProvider(object):
 
@@ -210,6 +276,7 @@ class Position(_DataProvider):
         objects_description = self.get_objects_definition()
         object_name_found = False
         
+        involved_relation = []
         for o_desc in objects_description:
             if o_desc[0] == object_name:
                 object_name_found = True
@@ -218,7 +285,7 @@ class Position(_DataProvider):
         
         is_terminal = len(involved_relation) == 0
         if is_terminal:
-            return TerminalObjects(object_name)
+            return TerminalObjects(object_name, None, None, self)
         else:
             # if a relation is involved with this objects
             # also an group must be specified under positions
@@ -359,22 +426,23 @@ class File(object):
         return [(s, p, e, pos) for (s, p, e) in self.experiment for pos in self._data[s][p][e]]
              
     def traverse_objects(self, object_name): 
-        
         # loop over all positions
         for s, p, e, pos in self.positions:
             position = self[s, p, e, pos]
             c = position.get_definition('region')['channel_idx'][0]
     
             events = position.get_objects(object_name) 
+            
             primary_primary = events.get_sub_objects()
             
             for event_id, prim_prims_ids in events.iter_sub_objects():  
                 res = []
                 for prim_prim_id, reg_prim_id in primary_primary.iter_sub_objects(prim_prims_ids):
+                    obj_id= primary_primary[prim_prim_id][0][0]
                     t = primary_primary[prim_prim_id][0][1]
                     z = primary_primary[prim_prim_id][0][2]
                     obj_idx = primary_primary[prim_prim_id][0][3]
-                    obj_id= primary_primary[prim_prim_id][0][0]
+                    
                     img, cc = position.get_object_data(t, z, obj_idx, c) 
                     tmp = (t, img, cc)
                     res.append(tmp)
@@ -408,25 +476,29 @@ class Objects(object):
         self.name = name
         self._h5_object_group = h5_object_group
         self.relation_name = involveld_relation
-        self.relation = position.get_relation(self.relation_name)     
         self.parent_positon_provider = position 
         self.sub_objects = None
-        self._obj_ids_np_copy = self._h5_object_group[self.HDF5_OBJECT_ID_NAME]['obj_id']
         
-        object_edges = self._h5_object_group[self.HDF5_OBJECT_EDGE_NAME]
-        object_id_edge_refs = self._h5_object_group[self.HDF5_OBJECT_ID_NAME]
+        if self.relation_name is not None:
+            self.relation = position.get_relation(self.relation_name)     
         
-        _object_id_edge_refs_np_copy = object_id_edge_refs.value
-        self._object_id_edge_refs_np_copy = _object_id_edge_refs_np_copy \
-                                 .view(numpy.uint32) \
-                                 .reshape(len(_object_id_edge_refs_np_copy), 3)
-                                 
-        _object_edge_np_copy = object_edges.value
-        self._object_edge_np_copy = _object_edge_np_copy \
-                                 .view(numpy.uint32) \
-                                 .reshape(len(object_edges), 2)
-                                 
-        self.mapping, self.next_object_level = self.apply_relation(self.relation)   
+        if self._h5_object_group is not None:
+            self._obj_ids_np_copy = self._h5_object_group[self.HDF5_OBJECT_ID_NAME]['obj_id']
+            
+            object_edges = self._h5_object_group[self.HDF5_OBJECT_EDGE_NAME]
+            object_id_edge_refs = self._h5_object_group[self.HDF5_OBJECT_ID_NAME]
+            
+            _object_id_edge_refs_np_copy = object_id_edge_refs.value
+            self._object_id_edge_refs_np_copy = _object_id_edge_refs_np_copy \
+                                     .view(numpy.uint32) \
+                                     .reshape(len(_object_id_edge_refs_np_copy), 3)
+                                     
+            _object_edge_np_copy = object_edges.value
+            self._object_edge_np_copy = _object_edge_np_copy \
+                                     .view(numpy.uint32) \
+                                     .reshape(len(object_edges), 2)
+                                     
+            self.mapping, self.next_object_level = self.apply_relation(self.relation)   
         
     def __getitem__(self, obj_id):
         if isinstance(obj_id, (list, tuple)):
@@ -454,15 +526,8 @@ class Objects(object):
                 yield o, numpy.concatenate((start_node, rest_nodes))
         
     def __str__(self):
-        res =  'object: ' + self.name + '\n' 
+        return 'object: ' + self.name + '\n' 
         
-        if self.relation_name:
-            res += ' - relations: '+ self.relation_name + '\n' 
-        
-        for attribs in self._h5_object_group:
-            if attribs not in [self.HDF5_OBJECT_EDGE_NAME, self.HDF5_OBJECT_ID_NAME]:
-                res += ' - attributs: ' + attribs + '\n'
-        return res
     
     @property
     def obj_ids(self):
@@ -565,8 +630,8 @@ class Objects(object):
 
     
 class TerminalObjects(Objects):
-    def __init__(self, name):
-        super(TerminalObjects, self).__init__(name, None, [])
+    def __init____init__(self, name, h5_object_group, involveld_relation, position):
+        super(TerminalObjects, self).__init____init__(self, name, h5_object_group, involveld_relation, position)
         
     @property
     def obj_ids(self):
