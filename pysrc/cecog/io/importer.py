@@ -153,6 +153,8 @@ class AbstractImporter(object):
             image = ccore.readImage(filename_abs, index)
         elif self.meta_data.pixel_type == UINT16:
             image = ccore.readImageUInt16(filename_abs, index)
+        else:
+            image = ccore.readImageUInt16(filename_abs, index)
         return image
 
     def _build_dimension_lookup(self):
