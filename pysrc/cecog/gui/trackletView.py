@@ -102,8 +102,6 @@ class TrackletBrowser(QtGui.QWidget):
         
         self.view.setStyleSheet(self.css)
         
-        self.all_tracks = []
-        
         self.main_layout = QtGui.QHBoxLayout()
         self.setLayout(self.main_layout)
         
@@ -171,6 +169,15 @@ class TrackletBrowser(QtGui.QWidget):
         
 
         self.view_hud_btn_layout.addWidget(self.btn_toggle_contours)
+        
+        self.btn_selectTen = QtGui.QPushButton('Select 10')
+        self.btn_selectTen.clicked.connect(self.selectTenRandomTrajectories)
+        self.view_hud_btn_layout.addWidget(self.btn_selectTen)
+        
+        self.btn_selectAll = QtGui.QPushButton('Select All')
+        self.btn_selectAll.clicked.connect(self.selectAll)
+        self.view_hud_btn_layout.addWidget(self.btn_selectAll)
+        
         self.view_hud_btn_layout.addStretch()
         
         self.btn_toggle_contours.clicked.connect(self.toggle_contours)
@@ -183,48 +190,77 @@ class TrackletBrowser(QtGui.QWidget):
     def open_file(self, filename):
         fh = dataprovider.File(filename)
         self.scene.clear()
-        self.all_tracks = []
         
         outer = []
         for t in fh.traverse_objects('event'):
             inner = []
-            for _, data, cc, pred in t:
-                inner.append(TrackletItem(data, cc, pred))
+            for _, image, crack_contour, prediction in t:
+                inner.append(TrackletItem(image, crack_contour, prediction))
             outer.append(inner)
-            if len(outer) > 120:
-                break
-        self.showTracklets(outer)
+            
+        self.initTracks(outer)
         
         
-    def showTracklets(self, tracklets):
+    def initTracks(self, tracklets):
+        self._all_tracks = []
+        
         for row, trajectory in enumerate(tracklets):
-            trackGroup = GraphicsTrajectoryGroup(0, row, trajectory)
-            trackGroup.setHandlesChildEvents(False)
-            self.scene.addItem(trackGroup)
-            self.all_tracks.append(trackGroup)
+            trajectoryGroup = GraphicsTrajectoryGroup(0, row, trajectory)
+            trajectoryGroup.setHandlesChildEvents(False)
+            self.scene.addItem(trajectoryGroup)
+            self._all_tracks.append(trajectoryGroup)
+            
+        self._selected_tracks = [True] * len(self._all_tracks)
             
     def sortTracks(self, permutation):        
         for new_row, perm_idx in enumerate(permutation):
-            self.all_tracks[perm_idx].moveToRow(new_row)
+            self._all_tracks[perm_idx].moveToRow(new_row)
+        self.update()
             
     def sortTracksByFeature(self, feature_name):
-        permutation = argsorted([t[feature_name] for t in self.all_tracks], reverse=True)
+        permutation = argsorted([t[feature_name] for t in self._all_tracks], reverse=True)
         self.sortTracks(permutation)
     
     def sortRandomly(self):
-        perm = range(len(self.all_tracks))
+        perm = range(len(self._all_tracks))
         random.shuffle(perm)
         self.sortTracks(perm)
         
     def sortByIntensity(self):
-        perm = argsorted(self.all_tracks, cmp=lambda u,v: cmp(u.mean_intensity, v.mean_intensity), reverse=True)
+        perm = argsorted(self._all_tracks, cmp=lambda u,v: cmp(u.mean_intensity, v.mean_intensity), reverse=True)
         self.sortTracks(perm)
         
     def toggle_contours(self):
-        are_visible = self.all_tracks[0].areContoursVisible()
+        are_visible = self._all_tracks[0].areContoursVisible()
         toggle_visibility = lambda x: x.setContoursVisible(not are_visible)
-        map(toggle_visibility, self.all_tracks)
+        map(toggle_visibility, self._all_tracks)
+        
+    def selectTenRandomTrajectories(self):
+        self._selected_tracks = [False] * len(self._selected_tracks)
+        for r in random.sample(xrange(len(self._selected_tracks)), 10):
+            self._selected_tracks[r] = True
+        self.update()
+        
+    def selectAll(self):
+        self._selected_tracks = [True] * len(self._selected_tracks)
+        self.update()
 
+    def _cum_selected_tracks(self):
+        return numpy.cumsum(1 - numpy.asarray(self._selected_tracks))
+    
+    def update(self):
+        cum_selected_tracks = self._cum_selected_tracks()
+        self.reset()
+        for row, t in enumerate(self._all_tracks):
+            if self._selected_tracks[row]:
+                t.moveToRow(t.row - cum_selected_tracks[row])
+                t.setVisible(True)
+            else:
+                t.setVisible(False)
+                
+    def reset(self):
+        for t in self._all_tracks:
+            t.resetPos()
 
 class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
     class GraphicsTrajectoryItem(object):
@@ -235,7 +271,9 @@ class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
 
     def __init__(self, column, row, trajectory, parent=None):
         QtGui.QGraphicsItemGroup.__init__(self, parent)
+        self._row = row
         self.row = row
+        self._column = column
         self.column = column
         self._features = {}
         
@@ -293,6 +331,10 @@ class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
     
     def setContoursVisible(self, state):
         map(lambda x: x.contour_item.setVisible(state), self._items)
+        
+    def resetPos(self):
+        self.moveToColumn(self._column)
+        self.moveToRow(self._row)
     
 class TrackletItem(object):
     def __init__(self, data, crack_contour, predicted_class, size=BOUNDING_BOX_SIZE):
