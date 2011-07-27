@@ -8,9 +8,10 @@ import getopt
 from cecog.io import dataprovider
 from cecog.io.dataprovider import trajectory_features
 from cecog.gui.imageviewer import HoverPolygonItem
-import copy
 
 BOUNDING_BOX_SIZE = dataprovider.BOUNDING_BOX_SIZE
+PREDICTION_BAR_HEIGHT = 4
+PREDICTION_BAR_X_PADDING = 2
 CLASS_TO_COLOR = { \
                   0 : QtCore.Qt.red, \
                   1 : QtCore.Qt.green,\
@@ -101,54 +102,53 @@ class TrackletBrowser(QtGui.QWidget):
         
         self.view.setStyleSheet(self.css)
         
-        
         self.all_tracks = []
         
         self.main_layout = QtGui.QHBoxLayout()
         self.setLayout(self.main_layout)
         
-        self.navi_widget = QtGui.QToolBox()
-        
-        self.sample_group_box_layout = QtGui.QVBoxLayout()
-        self.position_group_box_layout = QtGui.QVBoxLayout()
-        self.experiment_group_box_layout = QtGui.QVBoxLayout()
-        self.object_group_box_layout = QtGui.QVBoxLayout()
-        
-        self.sample_group_box = QtGui.QGroupBox('Sample')
-        self.sample_group_box.setLayout(self.sample_group_box_layout)
-        self.position_group_box = QtGui.QGroupBox('Position')
-        self.position_group_box.setLayout(self.position_group_box_layout)
-        self.experiment_group_box = QtGui.QGroupBox('Experiment')
-        self.experiment_group_box.setLayout(self.experiment_group_box_layout)
-        self.object_group_box = QtGui.QGroupBox('Objects')
-        self.object_group_box.setLayout(self.object_group_box_layout)
-        
-        self.drp_sample = QtGui.QSpinBox()
-        self.sample_group_box_layout.addWidget(self.drp_sample)
-        
-        self.drp_position = QtGui.QSpinBox()
-        self.position_group_box_layout.addWidget(self.drp_position)
-        
-        self.drp_experiment = QtGui.QSpinBox()
-        self.experiment_group_box_layout.addWidget(self.drp_experiment)
-        
-        self.drp_object = QtGui.QComboBox()
-        self.object_group_box_layout.addWidget(self.drp_object)
-        
-        self.navi_content_widget = QtGui.QWidget()
-        self.navi_content_layout = QtGui.QVBoxLayout()
-        self.navi_content_layout.addWidget(self.sample_group_box)
-        self.navi_content_layout.addWidget(self.position_group_box)
-        self.navi_content_layout.addWidget(self.experiment_group_box)
-        self.navi_content_layout.addWidget(self.object_group_box)
-        self.navi_content_layout.addStretch()
-        self.navi_content_widget.setLayout(self.navi_content_layout)
-        
-        self.navi_widget.addItem(self.navi_content_widget, 'Navigaton')
-      
-        self.navi_widget.setMaximumWidth(150)
-        
-        self.main_layout.addWidget(self.navi_widget)
+#        self.navi_widget = QtGui.QToolBox()
+#        
+#        self.sample_group_box_layout = QtGui.QVBoxLayout()
+#        self.position_group_box_layout = QtGui.QVBoxLayout()
+#        self.experiment_group_box_layout = QtGui.QVBoxLayout()
+#        self.object_group_box_layout = QtGui.QVBoxLayout()
+#        
+#        self.sample_group_box = QtGui.QGroupBox('Sample')
+#        self.sample_group_box.setLayout(self.sample_group_box_layout)
+#        self.position_group_box = QtGui.QGroupBox('Position')
+#        self.position_group_box.setLayout(self.position_group_box_layout)
+#        self.experiment_group_box = QtGui.QGroupBox('Experiment')
+#        self.experiment_group_box.setLayout(self.experiment_group_box_layout)
+#        self.object_group_box = QtGui.QGroupBox('Objects')
+#        self.object_group_box.setLayout(self.object_group_box_layout)
+#        
+#        self.drp_sample = QtGui.QSpinBox()
+#        self.sample_group_box_layout.addWidget(self.drp_sample)
+#        
+#        self.drp_position = QtGui.QSpinBox()
+#        self.position_group_box_layout.addWidget(self.drp_position)
+#        
+#        self.drp_experiment = QtGui.QSpinBox()
+#        self.experiment_group_box_layout.addWidget(self.drp_experiment)
+#        
+#        self.drp_object = QtGui.QComboBox()
+#        self.object_group_box_layout.addWidget(self.drp_object)
+#        
+#        self.navi_content_widget = QtGui.QWidget()
+#        self.navi_content_layout = QtGui.QVBoxLayout()
+#        self.navi_content_layout.addWidget(self.sample_group_box)
+#        self.navi_content_layout.addWidget(self.position_group_box)
+#        self.navi_content_layout.addWidget(self.experiment_group_box)
+#        self.navi_content_layout.addWidget(self.object_group_box)
+#        self.navi_content_layout.addStretch()
+#        self.navi_content_widget.setLayout(self.navi_content_layout)
+#        
+#        self.navi_widget.addItem(self.navi_content_widget, 'Navigaton')
+#      
+#        self.navi_widget.setMaximumWidth(150)
+#        
+#        self.main_layout.addWidget(self.navi_widget)
         self.main_layout.addWidget(self.view)
         
         self.view_hud_layout = QtGui.QHBoxLayout(self.view)
@@ -175,10 +175,9 @@ class TrackletBrowser(QtGui.QWidget):
         
         self.btn_toggle_contours.clicked.connect(self.toggle_contours)
         
- 
         self.view_hud_layout.addStretch()
         
-#        self.view.setDragMode(self.view.ScrollHandDrag)
+        self.view.setDragMode(self.view.ScrollHandDrag)
         
         
     def open_file(self, filename):
@@ -198,29 +197,8 @@ class TrackletBrowser(QtGui.QWidget):
         
         
     def showTracklets(self, tracklets):
-        self._all_contours = []
-        for row, t in enumerate(tracklets):
-            trackGroup = TrackLetItemGroup(0, row)
-            
-
-            for col, ti in enumerate(t):
-                scene_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(ti.data)))
-                scene_item.setPos(col*BOUNDING_BOX_SIZE,row*BOUNDING_BOX_SIZE)
-                
-                scene_item_seg = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), ti.crack_contour.tolist())))
-                scene_item_seg.setPos(col*BOUNDING_BOX_SIZE,row*BOUNDING_BOX_SIZE)
-                scene_item_seg.setPen(QtGui.QPen(CLASS_TO_COLOR[ti.predicted_class[0]]))
-                
-                scene_item_seg.setAcceptHoverEvents(True)
-                
-                self._all_contours.append(scene_item_seg)
-                
-                trackGroup.addToGroup(scene_item)
-                trackGroup.addToGroup(scene_item_seg)
-                
-            for tf in trajectory_features:
-                trackGroup[tf.name] =  tf.compute(t)
-                
+        for row, trajectory in enumerate(tracklets):
+            trackGroup = GraphicsTrajectoryGroup(0, row, trajectory)
             trackGroup.setHandlesChildEvents(False)
             self.scene.addItem(trackGroup)
             self.all_tracks.append(trackGroup)
@@ -243,33 +221,78 @@ class TrackletBrowser(QtGui.QWidget):
         self.sortTracks(perm)
         
     def toggle_contours(self):
-        is_visible = self._all_contours[0].isVisible()
-        toggle_visibility = lambda x: x.setVisible(not is_visible)
-        map(toggle_visibility, self._all_contours)
+        are_visible = self.all_tracks[0].areContoursVisible()
+        toggle_visibility = lambda x: x.setContoursVisible(not are_visible)
+        map(toggle_visibility, self.all_tracks)
 
 
-class TrackLetItemGroup(QtGui.QGraphicsItemGroup):
-    def __init__(self, column, row, parent=None):
+class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
+    class GraphicsTrajectoryItem(object):
+        def __init__(self, gallery_item, contour_item, bar_item, is_visible=True):
+            self.gallery_item = gallery_item
+            self.contour_item = contour_item
+            self.bar_item = bar_item
+
+    def __init__(self, column, row, trajectory, parent=None):
         QtGui.QGraphicsItemGroup.__init__(self, parent)
         self.row = row
         self.column = column
+        self._features = {}
+        
+        self._items = []
+        
+        for col, t_item in enumerate(trajectory):
+            gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(t_item.data)))
+            gallery_item.setPos(col * BOUNDING_BOX_SIZE, PREDICTION_BAR_HEIGHT)
+            
+            bar_item = QtGui.QPixmap(BOUNDING_BOX_SIZE - 2 * PREDICTION_BAR_X_PADDING, PREDICTION_BAR_HEIGHT)
+            bar_item.fill(CLASS_TO_COLOR[t_item.predicted_class[0]])
+            bar_item = QtGui.QGraphicsPixmapItem(bar_item)
+            bar_item.setPos(col*BOUNDING_BOX_SIZE + PREDICTION_BAR_X_PADDING, 0) 
+            
+            contour_item = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), t_item.crack_contour.tolist())))
+            contour_item.setPos(col*BOUNDING_BOX_SIZE, PREDICTION_BAR_HEIGHT)
+            contour_item.setPen(QtGui.QPen(CLASS_TO_COLOR[t_item.predicted_class[0]]))
+            
+            contour_item.setAcceptHoverEvents(True)
+            
+            self.addToGroup(gallery_item)
+            self.addToGroup(bar_item)
+            self.addToGroup(contour_item)
+            
+            self._items.append(self.GraphicsTrajectoryItem(gallery_item, contour_item, bar_item))
+                
+            for tf in trajectory_features:
+                self[tf.name] =  tf.compute(trajectory)
+        
+        id_item = QtGui.QGraphicsTextItem('%03d' % row)
+        id_item.setPos( (col+1) * BOUNDING_BOX_SIZE, PREDICTION_BAR_HEIGHT)
+        id_item.setDefaultTextColor(QtCore.Qt.white)
+        id_item.setFont(QtGui.QFont('Helvetica', 24))
+        self.addToGroup(id_item)
+        
         self.moveToRow(row)
         self.moveToColumn(column)
-        self._features = {}
     
     def moveToRow(self, row):
         self.row = row
-        self.setPos(self.column * BOUNDING_BOX_SIZE, row * BOUNDING_BOX_SIZE)
+        self.setPos(self.column * BOUNDING_BOX_SIZE, row * (PREDICTION_BAR_HEIGHT + BOUNDING_BOX_SIZE))
         
     def moveToColumn(self, col):
         self.col = col
-        self.setPos(col * BOUNDING_BOX_SIZE, self.row * BOUNDING_BOX_SIZE)    
+        self.setPos(col * BOUNDING_BOX_SIZE, self.row * (PREDICTION_BAR_HEIGHT + BOUNDING_BOX_SIZE))    
         
     def __getitem__(self, key):
         return self._features[key]
     
     def __setitem__(self, key, value):
         self._features[key] = value
+        
+    def areContoursVisible(self):
+        return self._items[0].contour_item.isVisible()
+    
+    def setContoursVisible(self, state):
+        map(lambda x: x.contour_item.setVisible(state), self._items)
     
 class TrackletItem(object):
     def __init__(self, data, crack_contour, predicted_class, size=BOUNDING_BOX_SIZE):

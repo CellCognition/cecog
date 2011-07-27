@@ -34,7 +34,7 @@ import time as timing
 # cecog imports:
 #
 
-BOUNDING_BOX_SIZE = 51
+BOUNDING_BOX_SIZE = 61
 
 #-------------------------------------------------------------------------------
 # constants:
