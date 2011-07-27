@@ -178,6 +178,10 @@ class TrackletBrowser(QtGui.QWidget):
         self.btn_selectAll.clicked.connect(self.selectAll)
         self.view_hud_btn_layout.addWidget(self.btn_selectAll)
         
+        self.btn_selectTransition = QtGui.QPushButton('Select Transition 4,0')
+        self.btn_selectTransition.clicked.connect(self.selectTransition)
+        self.view_hud_btn_layout.addWidget(self.btn_selectTransition)
+        
         self.view_hud_btn_layout.addStretch()
         
         self.btn_toggle_contours.clicked.connect(self.toggle_contours)
@@ -212,7 +216,8 @@ class TrackletBrowser(QtGui.QWidget):
             
         self._selected_tracks = [True] * len(self._all_tracks)
             
-    def sortTracks(self, permutation):        
+    def sortTracks(self, permutation):  
+        self.reset()      
         for new_row, perm_idx in enumerate(permutation):
             self._all_tracks[perm_idx].moveToRow(new_row)
         self.update()
@@ -236,13 +241,25 @@ class TrackletBrowser(QtGui.QWidget):
         map(toggle_visibility, self._all_tracks)
         
     def selectTenRandomTrajectories(self):
+        self.reset()
         self._selected_tracks = [False] * len(self._selected_tracks)
         for r in random.sample(xrange(len(self._selected_tracks)), 10):
             self._selected_tracks[r] = True
         self.update()
         
     def selectAll(self):
+        self.reset()
         self._selected_tracks = [True] * len(self._selected_tracks)
+        self.update()
+        
+    def selectTransition(self):
+        self.reset()
+        self._selected_tracks = [False] * len(self._selected_tracks)
+        for row, t in enumerate(self._all_tracks):
+            trans_pos = reduce(lambda x,y: str(x) + str(y), t['prediction']).find('40')
+            if trans_pos > 0:
+                self._selected_tracks[row] = True
+                t.moveToColumn(t.column - trans_pos)
         self.update()
 
     def _cum_selected_tracks(self):
@@ -250,7 +267,6 @@ class TrackletBrowser(QtGui.QWidget):
     
     def update(self):
         cum_selected_tracks = self._cum_selected_tracks()
-        self.reset()
         for row, t in enumerate(self._all_tracks):
             if self._selected_tracks[row]:
                 t.moveToRow(t.row - cum_selected_tracks[row])
@@ -277,12 +293,15 @@ class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
         self.column = column
         self._features = {}
         
+        self['prediction'] = []
+        
         self._items = []
         
         for col, t_item in enumerate(trajectory):
             gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(t_item.data)))
             gallery_item.setPos(col * BOUNDING_BOX_SIZE, PREDICTION_BAR_HEIGHT)
             
+            self['prediction'].append(t_item.predicted_class[0])
             bar_item = QtGui.QPixmap(BOUNDING_BOX_SIZE - 2 * PREDICTION_BAR_X_PADDING, PREDICTION_BAR_HEIGHT)
             bar_item.fill(CLASS_TO_COLOR[t_item.predicted_class[0]])
             bar_item = QtGui.QGraphicsPixmapItem(bar_item)
@@ -317,7 +336,7 @@ class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
         self.setPos(self.column * BOUNDING_BOX_SIZE, row * (PREDICTION_BAR_HEIGHT + BOUNDING_BOX_SIZE))
         
     def moveToColumn(self, col):
-        self.col = col
+        self.column = col
         self.setPos(col * BOUNDING_BOX_SIZE, self.row * (PREDICTION_BAR_HEIGHT + BOUNDING_BOX_SIZE))    
         
     def __getitem__(self, key):
