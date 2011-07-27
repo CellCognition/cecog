@@ -214,6 +214,10 @@ class TrackletBrowser(QtGui.QWidget):
             self.scene.addItem(trajectoryGroup)
             self._all_tracks.append(trajectoryGroup)
             
+        zero_line = QtGui.QGraphicsLineItem(0, 0, 0, len(self._all_tracks) * (PREDICTION_BAR_HEIGHT + BOUNDING_BOX_SIZE))
+        zero_line.setPen(QtGui.QPen(QtGui.QBrush(QtCore.Qt.white), 1))
+        
+        self.scene.addItem(zero_line)
         self._selected_tracks = [True] * len(self._all_tracks)
             
     def sortTracks(self, permutation):  
@@ -259,7 +263,7 @@ class TrackletBrowser(QtGui.QWidget):
             trans_pos = reduce(lambda x,y: str(x) + str(y), t['prediction']).find('40')
             if trans_pos > 0:
                 self._selected_tracks[row] = True
-                t.moveToColumn(t.column - trans_pos)
+                t.moveToColumn(t.column - trans_pos -1)
         self.update()
 
     def _cum_selected_tracks(self):
