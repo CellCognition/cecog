@@ -368,7 +368,7 @@ class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
     def setContoursVisible(self, state):
         if self._show_gallery_image:
             for i in self._items:
-                i.setVisible(state)
+                i.contour_item.setVisible(state)
         
     def resetPos(self):
         self.moveToColumn(self._column)
