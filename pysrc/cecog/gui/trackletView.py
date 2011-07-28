@@ -11,17 +11,19 @@ from cecog.gui.imageviewer import HoverPolygonItem
 
 BOUNDING_BOX_SIZE = dataprovider.BOUNDING_BOX_SIZE
 PREDICTION_BAR_HEIGHT = 4
-PREDICTION_BAR_X_PADDING = 2
+    
+PREDICTION_BAR_X_PADDING = 0
+PREDICTION_BAR_Y_PADDING = 2
+
 CLASS_TO_COLOR = { \
-                  0 : QtCore.Qt.red, \
-                  1 : QtCore.Qt.green,\
-                  2 : QtCore.Qt.blue,\
-                  3 : QtCore.Qt.yellow,\
-                  4 : QtCore.Qt.magenta,\
-                  5 : QtCore.Qt.cyan,\
-                  6 : QtCore.Qt.darkRed,\
-                  7 : QtCore.Qt.darkBlue,\
-                  8 : QtCore.Qt.darkGreen,\
+                  0 : QtCore.Qt.green, \
+                  1 : QtCore.Qt.yellow,\
+                  2 : QtGui.QColor(255,165,0),\
+                  3 : QtCore.Qt.magenta,\
+                  4 : QtCore.Qt.darkMagenta,\
+                  5 : QtCore.Qt.blue,\
+                  6 : QtCore.Qt.darkGreen,\
+                  7 : QtCore.Qt.red,\
                   }
 
 
@@ -55,9 +57,7 @@ class MainWindow(QtGui.QMainWindow):
             self.tracklet_widget.open_file(filename)
         
         
-class ZoomedQGraphicsView(QtGui.QGraphicsView):
-
-      
+class ZoomedQGraphicsView(QtGui.QGraphicsView):  
     def wheelEvent(self, event):
         keys = QtGui.QApplication.keyboardModifiers()
         k_ctrl = (keys == QtCore.Qt.ControlModifier)
@@ -79,7 +79,7 @@ class ZoomedQGraphicsView(QtGui.QGraphicsView):
             
 
 class TrackletBrowser(QtGui.QWidget):
-    css = '''   QPushButton {background-color: none;
+    css = '''QPushButton {background-color: none;
                              border-style: outset;
                              border-width: 2px;
                              border-radius: 4px;
@@ -88,7 +88,7 @@ class TrackletBrowser(QtGui.QWidget):
                              font: bold 14px;
                              min-width: 10em;
                              padding: 2px;}
-                QPushButton:pressed {
+                QPushButton :pressed {
                              background-color: rgb(50, 50, 50);
                              border-style: inset;}
                      '''
@@ -166,7 +166,8 @@ class TrackletBrowser(QtGui.QWidget):
             self.view_hud_btn_layout.addWidget(temp)
             
         self.btn_toggle_contours = QtGui.QPushButton('Toggle contours')
-        
+        self.btn_toggle_contours.setCheckable(True)
+        self.btn_toggle_contours.setChecked(True)
 
         self.view_hud_btn_layout.addWidget(self.btn_toggle_contours)
         
@@ -178,19 +179,26 @@ class TrackletBrowser(QtGui.QWidget):
         self.btn_selectAll.clicked.connect(self.selectAll)
         self.view_hud_btn_layout.addWidget(self.btn_selectAll)
         
-        self.btn_selectTransition = QtGui.QPushButton('Select Transition 4,0')
+        self.btn_selectTransition = QtGui.QPushButton('Select Transition 0,1')
         self.btn_selectTransition.clicked.connect(self.selectTransition)
         self.view_hud_btn_layout.addWidget(self.btn_selectTransition)
         
+        self.btn_toggleBars = QtGui.QPushButton('Toggle Bars')
+        self.btn_toggleBars.setCheckable(True)
+        self.btn_toggleBars.setChecked(True)
+        self.btn_toggleBars.toggled.connect(self.showGalleryImage)
+        self.view_hud_btn_layout.addWidget(self.btn_toggleBars)
+        
         self.view_hud_btn_layout.addStretch()
         
-        self.btn_toggle_contours.clicked.connect(self.toggle_contours)
+        self.btn_toggle_contours.toggled.connect(self.toggle_contours)
         
         self.view_hud_layout.addStretch()
         
         self.view.setDragMode(self.view.ScrollHandDrag)
         
-        
+    
+           
     def open_file(self, filename):
         fh = dataprovider.File(filename)
         self.scene.clear()
@@ -204,6 +212,8 @@ class TrackletBrowser(QtGui.QWidget):
             
         self.initTracks(outer)
         
+    def total_height(self):
+        return sum([x.height for x in self._all_tracks])
         
     def initTracks(self, tracklets):
         self._all_tracks = []
@@ -214,70 +224,71 @@ class TrackletBrowser(QtGui.QWidget):
             self.scene.addItem(trajectoryGroup)
             self._all_tracks.append(trajectoryGroup)
             
-        zero_line = QtGui.QGraphicsLineItem(0, 0, 0, len(self._all_tracks) * (PREDICTION_BAR_HEIGHT + BOUNDING_BOX_SIZE))
+        zero_line = QtGui.QGraphicsLineItem(0, 0, 0, self.total_height())
         zero_line.setPen(QtGui.QPen(QtGui.QBrush(QtCore.Qt.white), 1))
         
         self.scene.addItem(zero_line)
-        self._selected_tracks = [True] * len(self._all_tracks)
-            
-    def sortTracks(self, permutation):  
-        self.reset()      
-        for new_row, perm_idx in enumerate(permutation):
-            self._all_tracks[perm_idx].moveToRow(new_row)
-        self.update()
-            
-    def sortTracksByFeature(self, feature_name):
-        permutation = argsorted([t[feature_name] for t in self._all_tracks], reverse=True)
-        self.sortTracks(permutation)
+        self.show()
+        
     
+        
+    def show(self):
+        row = 0
+        for ti in self._all_tracks:
+            if ti.is_selected:
+                ti.moveToRow(row)
+                row += 1
+                ti.setVisible(True)
+            else:
+                ti.setVisible(False)
+        
+        
+    def showGalleryImage(self, state):
+        for ti in self._all_tracks:
+            ti.showGalleryImage(state)
+            
+        self.show()
+            
+    def sortTracks(self):   
+        for new_row, perm_idx in enumerate(self._permutation):
+            self._all_tracks[perm_idx].moveToRow(new_row)
+            
     def sortRandomly(self):
-        perm = range(len(self._all_tracks))
-        random.shuffle(perm)
-        self.sortTracks(perm)
+        random.shuffle(self._all_tracks)
+        self.show()
         
-    def sortByIntensity(self):
-        perm = argsorted(self._all_tracks, cmp=lambda u,v: cmp(u.mean_intensity, v.mean_intensity), reverse=True)
-        self.sortTracks(perm)
         
-    def toggle_contours(self):
-        are_visible = self._all_tracks[0].areContoursVisible()
-        toggle_visibility = lambda x: x.setContoursVisible(not are_visible)
+    def sortTracksByFeature(self, feature_name):
+        self._all_tracks.sort(cmp=lambda x,y: cmp(x[feature_name],y[feature_name]))
+        self.show()
+    
+        
+    def toggle_contours(self, state):
+        toggle_visibility = lambda x: x.setContoursVisible(state)
         map(toggle_visibility, self._all_tracks)
         
     def selectTenRandomTrajectories(self):
-        self.reset()
-        self._selected_tracks = [False] * len(self._selected_tracks)
-        for r in random.sample(xrange(len(self._selected_tracks)), 10):
-            self._selected_tracks[r] = True
-        self.update()
+        for ti in self._all_tracks:
+            ti.is_selected = True
+        for r in random.sample(range(len(self._all_tracks)), len(self._all_tracks) - 10):
+            self._all_tracks[r].is_selected = False
+        self.show()
         
     def selectAll(self):
-        self.reset()
-        self._selected_tracks = [True] * len(self._selected_tracks)
-        self.update()
+        for ti in self._all_tracks:
+            ti.is_selected = True
+            ti.moveToColumn(0)
+        self.show()
         
     def selectTransition(self):
-        self.reset()
-        self._selected_tracks = [False] * len(self._selected_tracks)
-        for row, t in enumerate(self._all_tracks):
-            trans_pos = reduce(lambda x,y: str(x) + str(y), t['prediction']).find('40')
+        for ti in self._all_tracks:
+            ti.is_selected = False
+            trans_pos = reduce(lambda x,y: str(x) + str(y), ti['prediction']).find('01')
             if trans_pos > 0:
-                self._selected_tracks[row] = True
-                t.moveToColumn(t.column - trans_pos -1)
-        self.update()
-
-    def _cum_selected_tracks(self):
-        return numpy.cumsum(1 - numpy.asarray(self._selected_tracks))
+                ti.is_selected = True
+                ti.moveToColumn(- trans_pos -1)
+        self.show()
     
-    def update(self):
-        cum_selected_tracks = self._cum_selected_tracks()
-        for row, t in enumerate(self._all_tracks):
-            if self._selected_tracks[row]:
-                t.moveToRow(t.row - cum_selected_tracks[row])
-                t.setVisible(True)
-            else:
-                t.setVisible(False)
-                
     def reset(self):
         for t in self._all_tracks:
             t.resetPos()
@@ -295,9 +306,12 @@ class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
         self.row = row
         self._column = column
         self.column = column
+        
+        self.is_selected = True
         self._features = {}
         
         self['prediction'] = []
+        self._show_gallery_image = True
         
         self._items = []
         
@@ -327,21 +341,20 @@ class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
                 self[tf.name] =  tf.compute(trajectory)
         
         id_item = QtGui.QGraphicsTextItem('%03d' % row)
-        id_item.setPos( (col+1) * BOUNDING_BOX_SIZE, PREDICTION_BAR_HEIGHT)
+        id_item.setPos( (col+1) * BOUNDING_BOX_SIZE, 0)
         id_item.setDefaultTextColor(QtCore.Qt.white)
         id_item.setFont(QtGui.QFont('Helvetica', 24))
         self.addToGroup(id_item)
+        self.id_item = id_item
         
-        self.moveToRow(row)
-        self.moveToColumn(column)
     
     def moveToRow(self, row):
         self.row = row
-        self.setPos(self.column * BOUNDING_BOX_SIZE, row * (PREDICTION_BAR_HEIGHT + BOUNDING_BOX_SIZE))
+        self.setPos(self.column * BOUNDING_BOX_SIZE, row * self.height)
         
     def moveToColumn(self, col):
         self.column = col
-        self.setPos(col * BOUNDING_BOX_SIZE, self.row * (PREDICTION_BAR_HEIGHT + BOUNDING_BOX_SIZE))    
+        self.setPos(col * BOUNDING_BOX_SIZE, self.row * self.height)    
         
     def __getitem__(self, key):
         return self._features[key]
@@ -353,11 +366,28 @@ class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
         return self._items[0].contour_item.isVisible()
     
     def setContoursVisible(self, state):
-        map(lambda x: x.contour_item.setVisible(state), self._items)
+        if self._show_gallery_image:
+            for i in self._items:
+                i.setVisible(state)
         
     def resetPos(self):
         self.moveToColumn(self._column)
         self.moveToRow(self._row)
+        
+    @property
+    def height(self):
+        if self._show_gallery_image:
+            return PREDICTION_BAR_HEIGHT + BOUNDING_BOX_SIZE
+        else:
+            return PREDICTION_BAR_HEIGHT + PREDICTION_BAR_Y_PADDING
+        
+    def showGalleryImage(self, state):
+        self._show_gallery_image = state
+        for i in self._items:
+            i.gallery_item.setVisible(state)
+            i.contour_item.setVisible(state)
+        self.id_item.setFont(QtGui.QFont('Helvetica', [24 if state else 8][0])) 
+            
     
 class TrackletItem(object):
     def __init__(self, data, crack_contour, predicted_class, size=BOUNDING_BOX_SIZE):
