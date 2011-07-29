@@ -312,7 +312,7 @@ class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
         self._items = []
         
         for col, t_item in enumerate(trajectory):
-            #col = t_item.time
+#            col = t_item.time
             gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(t_item.data)))
             gallery_item.setPos(col * BOUNDING_BOX_SIZE, PREDICTION_BAR_HEIGHT)
             

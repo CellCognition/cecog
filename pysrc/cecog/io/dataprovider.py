@@ -455,11 +455,14 @@ class File(object):
                     t = primary_primary[prim_prim_id][0][1]
                     z = primary_primary[prim_prim_id][0][2]
                     obj_idx = primary_primary[prim_prim_id][0][3]
-                    predicted_class = position.get_additional_object_data(primary_primary.name, 'classifier', 0)['prediction'][prim_prim_id]
+                    predicted_class = position.get_additional_object_data(primary_primary.name, 'classifier', 1) \
+                                                ['prediction'][primary_primary.relation_idx[prim_prim_id][0]]
+                    print prim_prim_id, '-->', predicted_class
                     
                     image, crack_contour = position.get_object_data(t, z, obj_idx, c) 
                     tmp = TrackletItem(t, image, crack_contour, predicted_class)
                     res.append(tmp)
+                print ''
                 #res.sort(cmp=lambda x,y: cmp(x.time,y.time))
                 yield res
                  
