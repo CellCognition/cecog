@@ -79,7 +79,7 @@ class ZoomedQGraphicsView(QtGui.QGraphicsView):
             
 
 class TrackletBrowser(QtGui.QWidget):
-    css = '''QPushButton {background-color: none;
+    css = '''QPushButton, QComboBox {background-color: transparent;
                              border-style: outset;
                              border-width: 2px;
                              border-radius: 4px;
@@ -91,7 +91,11 @@ class TrackletBrowser(QtGui.QWidget):
                 QPushButton :pressed {
                              background-color: rgb(50, 50, 50);
                              border-style: inset;}
+            
                      '''
+    ALIGN_LEFT = 0
+    ALIGN_ABSOLUT_TIME = 1
+    ALIGN_CUSTOM = 2
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
         self.scene = QtGui.QGraphicsScene()
@@ -189,6 +193,11 @@ class TrackletBrowser(QtGui.QWidget):
         self.btn_toggleBars.toggled.connect(self.showGalleryImage)
         self.view_hud_btn_layout.addWidget(self.btn_toggleBars)
         
+        self.cmb_align = QtGui.QComboBox()
+        self.cmb_align.addItems(['Left', 'Absolute time', 'Custom'])
+        self.cmb_align.currentIndexChanged.connect(self.cb_change_vertical_alignment)        
+        self.view_hud_btn_layout.addWidget(self.cmb_align)
+        
         self.view_hud_btn_layout.addStretch()
         
         self.btn_toggle_contours.toggled.connect(self.toggle_contours)
@@ -197,7 +206,11 @@ class TrackletBrowser(QtGui.QWidget):
         
         self.view.setDragMode(self.view.ScrollHandDrag)
         
+        self._align_vertically = self.ALIGN_LEFT
     
+    def cb_change_vertical_alignment(self, index): 
+        self._align_vertically = index
+        self.update_()
            
     def open_file(self, filename):
         fh = dataprovider.File(filename)
@@ -239,6 +252,12 @@ class TrackletBrowser(QtGui.QWidget):
                 ti.setVisible(True)
             else:
                 ti.setVisible(False)
+            if self._align_vertically == self.ALIGN_LEFT:
+                ti.moveToColumn(0)
+            elif self._align_vertically == self.ALIGN_ABSOLUT_TIME:
+                ti.moveToColumn(ti.start_time)
+            elif self._align_vertically == self.ALIGN_CUSTOM:
+                ti.moveToColumn(ti.column)
         
     def showGalleryImage(self, state):
         for ti in self._all_tracks:
@@ -274,7 +293,7 @@ class TrackletBrowser(QtGui.QWidget):
         for ti in self._all_tracks:
             ti.is_selected = True
             ti.moveToColumn(0)
-        self.update_()
+        self._align_vertically = self.cmb_align.setCurrentIndex(self.ALIGN_LEFT)
         
     def selectTransition(self):
         for ti in self._all_tracks:
@@ -282,8 +301,8 @@ class TrackletBrowser(QtGui.QWidget):
             trans_pos = reduce(lambda x,y: str(x) + str(y), ti['prediction']).find('01')
             if trans_pos > 0:
                 ti.is_selected = True
-                ti.moveToColumn(- trans_pos -1)
-        self.update_()
+                ti.column = - (trans_pos + 1)
+        self._align_vertically = self.cmb_align.setCurrentIndex(self.ALIGN_CUSTOM)
     
     def reset(self):
         for t in self._all_tracks:
@@ -311,8 +330,10 @@ class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
         
         self._items = []
         
+        self.start_time = trajectory[0].time
+        
         for col, t_item in enumerate(trajectory):
-#            col = t_item.time
+
             gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(t_item.data)))
             gallery_item.setPos(col * BOUNDING_BOX_SIZE, PREDICTION_BAR_HEIGHT)
             
@@ -395,18 +416,13 @@ if __name__ == "__main__":
     else:
         file = None
         
-#    mainwindow = MainWindow(file)
+    mainwindow = MainWindow(file)
     
-    import cProfile, pstats
-    cProfile.run('mainwindow = MainWindow(file)', 'profile-result')
-    ps = pstats.Stats('profile-result')
-    ps.strip_dirs().sort_stats('cumulative').print_stats()
+#    import cProfile, pstats
+#    cProfile.run('mainwindow = MainWindow(file)', 'profile-result')
+#    ps = pstats.Stats('profile-result')
+#    ps.strip_dirs().sort_stats('cumulative').print_stats()
     
     mainwindow.show()
     app.exec_()
-    
 
-    
-
-    
-    app.exec_()

@@ -34,7 +34,7 @@ import time as timing
 # cecog imports:
 #
 
-BOUNDING_BOX_SIZE = 50
+BOUNDING_BOX_SIZE = 75
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -457,7 +457,6 @@ class File(object):
                     obj_idx = primary_primary[prim_prim_id][0][3]
                     predicted_class = position.get_additional_object_data(primary_primary.name, 'classifier', 1) \
                                                 ['prediction'][primary_primary.relation_idx[prim_prim_id][0]]
-                    print prim_prim_id, '-->', predicted_class
                     
                     image, crack_contour = position.get_object_data(t, z, obj_idx, c) 
                     tmp = TrackletItem(t, image, crack_contour, predicted_class)
