@@ -34,7 +34,7 @@ import time as timing
 # cecog imports:
 #
 
-BOUNDING_BOX_SIZE = 61
+BOUNDING_BOX_SIZE = 50
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -371,8 +371,8 @@ class Position(_DataProvider):
         
         return img, cc
     
-    def get_additional_object_data(self, object_name, data_filed_name, index):
-        return self._hf_group['object'][object_name][data_filed_name][str(index)]
+    def get_additional_object_data(self, object_name, data_fied_name, index):
+        return self._hf_group['object'][object_name][data_fied_name][str(index)]
         
         
         

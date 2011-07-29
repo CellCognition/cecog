@@ -313,7 +313,6 @@ class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
         
         for col, t_item in enumerate(trajectory):
             #col = t_item.time
-            print t_item.time, 
             gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(t_item.data)))
             gallery_item.setPos(col * BOUNDING_BOX_SIZE, PREDICTION_BAR_HEIGHT)
             
@@ -337,7 +336,6 @@ class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
                 
             for tf in trajectory_features:
                 self[tf.name] =  tf.compute(trajectory)
-        print ''
         
         id_item = QtGui.QGraphicsTextItem('%03d' % row)
         id_item.setPos( (col+1) * BOUNDING_BOX_SIZE, 0)
@@ -397,12 +395,12 @@ if __name__ == "__main__":
     else:
         file = None
         
-    mainwindow = MainWindow(file)
+#    mainwindow = MainWindow(file)
     
-#    import cProfile, pstats
-#    cProfile.run('mainwindow = MainWindow(file)', 'profile-result')
-#    ps = pstats.Stats('profile-result')
-#    ps.strip_dirs().sort_stats('cumulative').print_stats()
+    import cProfile, pstats
+    cProfile.run('mainwindow = MainWindow(file)', 'profile-result')
+    ps = pstats.Stats('profile-result')
+    ps.strip_dirs().sort_stats('cumulative').print_stats()
     
     mainwindow.show()
     app.exec_()
