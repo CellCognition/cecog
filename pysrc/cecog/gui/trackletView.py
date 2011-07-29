@@ -27,10 +27,10 @@ CLASS_TO_COLOR = { \
                   }
 
 
-def argsorted(seq, cmp=cmp, reverse=False):
-    temp = enumerate(seq)
-    temp_s = sorted(temp, cmp=lambda u,v: cmp(u[1],v[1]), reverse=reverse)
-    return [x[0] for x in temp_s]
+#def argsorted(seq, cmp=cmp, reverse=False):
+#    temp = enumerate(seq)
+#    temp_s = sorted(temp, cmp=lambda u,v: cmp(u[1],v[1]), reverse=reverse)
+#    return [x[0] for x in temp_s]
 
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, filename=None, parent=None):
@@ -204,10 +204,10 @@ class TrackletBrowser(QtGui.QWidget):
         self.scene.clear()
         
         outer = []
-        for t in fh.traverse_objects('event'):
+        for all_trajectories in fh.traverse_objects('event'):
             inner = []
-            for _, image, crack_contour, prediction in t:
-                inner.append(TrackletItem(image, crack_contour, prediction))
+            for trajectory_item in all_trajectories:
+                inner.append(trajectory_item)
             outer.append(inner)
             
         self.initTracks(outer)
@@ -228,11 +228,9 @@ class TrackletBrowser(QtGui.QWidget):
         zero_line.setPen(QtGui.QPen(QtGui.QBrush(QtCore.Qt.white), 1))
         
         self.scene.addItem(zero_line)
-        self.show()
+        self.update_()
         
-    
-        
-    def show(self):
+    def update_(self):
         row = 0
         for ti in self._all_tracks:
             if ti.is_selected:
@@ -242,12 +240,10 @@ class TrackletBrowser(QtGui.QWidget):
             else:
                 ti.setVisible(False)
         
-        
     def showGalleryImage(self, state):
         for ti in self._all_tracks:
             ti.showGalleryImage(state)
-            
-        self.show()
+        self.update_()
             
     def sortTracks(self):   
         for new_row, perm_idx in enumerate(self._permutation):
@@ -255,12 +251,12 @@ class TrackletBrowser(QtGui.QWidget):
             
     def sortRandomly(self):
         random.shuffle(self._all_tracks)
-        self.show()
+        self.update_()
         
         
     def sortTracksByFeature(self, feature_name):
         self._all_tracks.sort(cmp=lambda x,y: cmp(x[feature_name],y[feature_name]))
-        self.show()
+        self.update_()
     
         
     def toggle_contours(self, state):
@@ -272,13 +268,13 @@ class TrackletBrowser(QtGui.QWidget):
             ti.is_selected = True
         for r in random.sample(range(len(self._all_tracks)), len(self._all_tracks) - 10):
             self._all_tracks[r].is_selected = False
-        self.show()
+        self.update_()
         
     def selectAll(self):
         for ti in self._all_tracks:
             ti.is_selected = True
             ti.moveToColumn(0)
-        self.show()
+        self.update_()
         
     def selectTransition(self):
         for ti in self._all_tracks:
@@ -287,7 +283,7 @@ class TrackletBrowser(QtGui.QWidget):
             if trans_pos > 0:
                 ti.is_selected = True
                 ti.moveToColumn(- trans_pos -1)
-        self.show()
+        self.update_()
     
     def reset(self):
         for t in self._all_tracks:
@@ -316,6 +312,8 @@ class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
         self._items = []
         
         for col, t_item in enumerate(trajectory):
+            #col = t_item.time
+            print t_item.time, 
             gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(t_item.data)))
             gallery_item.setPos(col * BOUNDING_BOX_SIZE, PREDICTION_BAR_HEIGHT)
             
@@ -339,6 +337,7 @@ class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
                 
             for tf in trajectory_features:
                 self[tf.name] =  tf.compute(trajectory)
+        print ''
         
         id_item = QtGui.QGraphicsTextItem('%03d' % row)
         id_item.setPos( (col+1) * BOUNDING_BOX_SIZE, 0)
@@ -387,14 +386,6 @@ class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
             i.gallery_item.setVisible(state)
             i.contour_item.setVisible(state)
         self.id_item.setFont(QtGui.QFont('Helvetica', [24 if state else 8][0])) 
-            
-    
-class TrackletItem(object):
-    def __init__(self, data, crack_contour, predicted_class, size=BOUNDING_BOX_SIZE):
-        self.size = size
-        self.data = data
-        self.crack_contour = crack_contour.clip(0, BOUNDING_BOX_SIZE)
-        self.predicted_class = predicted_class
         
     
 
@@ -407,5 +398,17 @@ if __name__ == "__main__":
         file = None
         
     mainwindow = MainWindow(file)
+    
+#    import cProfile, pstats
+#    cProfile.run('mainwindow = MainWindow(file)', 'profile-result')
+#    ps = pstats.Stats('profile-result')
+#    ps.strip_dirs().sort_stats('cumulative').print_stats()
+    
     mainwindow.show()
+    app.exec_()
+    
+
+    
+
+    
     app.exec_()

@@ -57,6 +57,14 @@ def print_timing(func):
 # classes:
 #
 
+class TrackletItem(object):
+    def __init__(self, time, data, crack_contour, predicted_class, size=BOUNDING_BOX_SIZE):
+        self.time = time
+        self.size = size
+        self.data = data
+        self.crack_contour = crack_contour.clip(0, BOUNDING_BOX_SIZE)
+        self.predicted_class = predicted_class
+
 class TrajectoryFeatureBase(object):
     def compute(self):
         raise NotImplementedError('TrajectoryFeatureBase.compute() has to be implemented by its subclass')
@@ -71,53 +79,53 @@ class TrajectoryFeatureMeanIntensity(TrajectoryFeatureBase):
         value /= len(trajectory_seq)
         return value
         
-class TrajectoryFeatureMedianIntensity(TrajectoryFeatureBase):
-    name = 'Madian intensity'
+#class TrajectoryFeatureMedianIntensity(TrajectoryFeatureBase):
+#    name = 'Madian intensity'
+#    
+#    def compute(self, trajectory_seq):
+#        value = []
+#        for t in trajectory_seq:
+#            value.append(numpy.median(t.data))
+#        value = numpy.median(value)
+#        return value
     
-    def compute(self, trajectory_seq):
-        value = []
-        for t in trajectory_seq:
-            value.append(numpy.median(t.data))
-        value = numpy.median(value)
-        return value
-    
-class TrajectoryFeatureMeanArea(TrajectoryFeatureBase):
-    name = 'Mean area'
-    
-    def compute(self, trajectory_seq):
-        # Using the formula given in
-        # http://en.wikipedia.org/wiki/Polygon#Area_and_centroid
-        values = []
-        for t in trajectory_seq:
-            y_last, x_last = t.crack_contour[-1,:]
-            value = 0
-            for y, x in t.crack_contour:
-                value += x_last * y - x * y_last
-                x_last , y_last = x, y
-            value /= 2
-            values.append(value)
-        value = numpy.mean(values)
-
-        return value
-    
-class TrajectoryFeatureAreaVariance(TrajectoryFeatureBase):
-    name = 'Area variance'
-    
-    def compute(self, trajectory_seq):
-        # Using the formula given in
-        # http://en.wikipedia.org/wiki/Polygon#Area_and_centroid
-        values = []
-        for t in trajectory_seq:
-            y_last, x_last = t.crack_contour[-1,:]
-            value = 0
-            for y, x in t.crack_contour:
-                value += x_last * y - x * y_last
-                x_last , y_last = x, y
-            value /= 2
-            values.append(value)
-        value = numpy.std(values)
-
-        return value
+#class TrajectoryFeatureMeanArea(TrajectoryFeatureBase):
+#    name = 'Mean area'
+#    
+#    def compute(self, trajectory_seq):
+#        # Using the formula given in
+#        # http://en.wikipedia.org/wiki/Polygon#Area_and_centroid
+#        values = []
+#        for t in trajectory_seq:
+#            y_last, x_last = t.crack_contour[-1,:]
+#            value = 0
+#            for y, x in t.crack_contour:
+#                value += x_last * y - x * y_last
+#                x_last , y_last = x, y
+#            value /= 2
+#            values.append(value)
+#        value = numpy.mean(values)
+#
+#        return value
+#    
+#class TrajectoryFeatureAreaVariance(TrajectoryFeatureBase):
+#    name = 'Area variance'
+#    
+#    def compute(self, trajectory_seq):
+#        # Using the formula given in
+#        # http://en.wikipedia.org/wiki/Polygon#Area_and_centroid
+#        values = []
+#        for t in trajectory_seq:
+#            y_last, x_last = t.crack_contour[-1,:]
+#            value = 0
+#            for y, x in t.crack_contour:
+#                value += x_last * y - x * y_last
+#                x_last , y_last = x, y
+#            value /= 2
+#            values.append(value)
+#        value = numpy.std(values)
+#
+#        return value
 
 trajectory_features = [tf() for tf in TrajectoryFeatureBase.__subclasses__()]
 
@@ -432,6 +440,7 @@ class File(object):
     def traverse_objects(self, object_name): 
         # loop over all positions
         for s, p, e, pos in self.positions:
+            print 'In Sample %r plate %r, experiment %r and position %r' % (s, p, e, pos)
             position = self[s, p, e, pos]
             c = position.get_definition('region')['channel_idx'][0]
     
@@ -446,15 +455,14 @@ class File(object):
                     t = primary_primary[prim_prim_id][0][1]
                     z = primary_primary[prim_prim_id][0][2]
                     obj_idx = primary_primary[prim_prim_id][0][3]
-                    pred = position.get_additional_object_data(primary_primary.name, 'classifier', 0)['prediction'][prim_prim_id]
+                    predicted_class = position.get_additional_object_data(primary_primary.name, 'classifier', 0)['prediction'][prim_prim_id]
                     
-                    img, cc = position.get_object_data(t, z, obj_idx, c) 
-                    tmp = (t, img, cc, pred)
+                    image, crack_contour = position.get_object_data(t, z, obj_idx, c) 
+                    tmp = TrackletItem(t, image, crack_contour, predicted_class)
                     res.append(tmp)
-            
-                res.sort(cmp=lambda x,y: cmp(x[0],y[0]))
+                #res.sort(cmp=lambda x,y: cmp(x.time,y.time))
                 yield res
-                
+                 
                     
         
 class Relation(object):
@@ -518,12 +526,12 @@ class Objects(object):
         if obj_ids is None:
             obj_ids = self.obj_ids
         for o in obj_ids:
-            if len(self.mapping[o]) > 0:
+            map_ = self.mapping[o]
+            if len(map_) > 0:
 #                print ' getting event', o
-                temp = self.mapping[o]
-                start_node = temp[0,2]
+                start_node = map_[0,0]
                 start_node = start_node.reshape((1,))
-                rest_nodes =  temp[:,2]
+                rest_nodes =  map_[:,2]
                 yield o, numpy.concatenate((start_node, rest_nodes))
         
     def __str__(self):
