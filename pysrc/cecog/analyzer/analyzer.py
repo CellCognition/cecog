@@ -92,9 +92,9 @@ class TimeHolder(OrderedDict):
 
     HDF5_DTYPE_TERMINAL_RELATION = \
          numpy.dtype([('obj_id1', 'uint32'),
-                      ('obj_idx1', 'uint32', 3),
+                      ('obj_idx1', 'uint32', 2),
                       ('obj_id2', 'uint32'),
-                      ('obj_idx2', 'uint32', 3),])
+                      ('obj_idx2', 'uint32', 2),])
 
     HDF5_DTYPE_EDGE = \
         numpy.dtype([('obj_id', 'uint32'),
@@ -423,9 +423,7 @@ class TimeHolder(OrderedDict):
         grp_time = grp_cur_pos[self.HDF5_GRP_TIME]
         grp_name = str(self._frames_to_idx[self._iCurrentT])
         grp_cur_time = grp_time.require_group(grp_name)
-        grp_zslice = grp_cur_time.require_group(self.HDF5_GRP_ZSLICE)
-        grp_cur_zslice = grp_zslice.require_group(str(zslice))
-        grp_region = grp_cur_zslice.require_group(self.HDF5_GRP_REGION)
+        grp_region = grp_cur_time.require_group(self.HDF5_GRP_REGION)
         return grp_region
 
     def apply_features(self, channel):
@@ -590,8 +588,8 @@ class TimeHolder(OrderedDict):
                     # export unified objects and relations
                     idx_new = var_rel_offset + idx
                     new_obj_id = idx_new + 1
-                    coord = frame_idx, 0, obj_id
-                    coord2 = obj_id, (frame_idx, 0, idx)
+                    coord = frame_idx, obj_id
+                    coord2 = obj_id, (frame_idx, idx)
                     var_rel[idx_new] = coord2 + coord2
                     var_edge[idx_new] = (new_obj_id, idx_new)
                     var_id[idx_new] = (new_obj_id, idx_new, idx_new+1)
@@ -648,10 +646,10 @@ class TimeHolder(OrderedDict):
                     tracker.getComponentsFromNodeId(tail_id)[:2]
                 tail_frame_idx = self._frames_to_idx[tail_frame]
 
-                head_obj_id_meta = self._object_coord_to_id[(prefix, (head_frame_idx, 0, head_obj_id))]
-                head_obj_idx_meta = self._object_coord_to_idx[(prefix, (head_frame_idx, 0, head_obj_id))]
-                tail_obj_id_meta = self._object_coord_to_id[(prefix, (tail_frame_idx, 0, tail_obj_id))]
-                tail_obj_idx_meta = self._object_coord_to_idx[(prefix, (tail_frame_idx, 0, tail_obj_id))]
+                head_obj_id_meta = self._object_coord_to_id[(prefix, (head_frame_idx, head_obj_id))]
+                head_obj_idx_meta = self._object_coord_to_idx[(prefix, (head_frame_idx, head_obj_id))]
+                tail_obj_id_meta = self._object_coord_to_id[(prefix, (tail_frame_idx, tail_obj_id))]
+                tail_obj_idx_meta = self._object_coord_to_idx[(prefix, (tail_frame_idx, tail_obj_id))]
 
                 var_rel[idx] = (head_obj_id_meta, head_obj_idx_meta,
                                 tail_obj_id_meta, tail_obj_idx_meta)
@@ -816,7 +814,7 @@ class TimeHolder(OrderedDict):
             frame_idx = self._frames_to_idx[self._iCurrentT]
             for obj_id in region:
                 obj = region[obj_id]
-                obj_idx = self._object_coord_to_idx[(channel.PREFIX, (frame_idx, 0, obj_id))]
+                obj_idx = self._object_coord_to_idx[(channel.PREFIX, (frame_idx, obj_id))]
                 var_class[obj_idx] = (label_to_idx[obj.iLabel],)
                 var_class_probs[obj_idx] = obj.dctProb.values()
 
