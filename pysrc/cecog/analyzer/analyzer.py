@@ -606,12 +606,15 @@ class TimeHolder(OrderedDict):
                         # FIXME: VLEN(str) compression seems not to work in
                         #        h5py. 'external' compression is not nice
                         var_crack[idx] = base64.b64encode(zlib.compress(data))
-
+                
+                
+            
     def serialize_tracking(self, tracker):
         graph = tracker.get_graph()
+        
         # export full graph structure to .dot file
-        #path_out = self._settings.get('General', 'pathout')
-        #tracker.exportGraph(os.path.join(path_out, 'graph.dot'))
+        path_out = self._settings.get('General', 'pathout')
+        tracker.exportGraph(os.path.join(path_out, 'graph.dot'))
         if self._hdf5_create and self._hdf5_include_tracking:
             grp = self._grp_cur_position[self.HDF5_GRP_RELATION]
 
@@ -621,8 +624,8 @@ class TimeHolder(OrderedDict):
             nr_objects = len(head_nodes)
 
             # export graph structure of every head node to .dot file
-            #for node_id in head_nodes:
-            #    tracker.exportSubGraph(os.path.join(path_out, 'graph__%s.dot' % node_id), node_id)
+            for node_id in head_nodes:
+                tracker.exportSubGraph(os.path.join(path_out, 'graph__%s.dot' % node_id), node_id)
 
             var_rel = grp.create_dataset('tracking',
                                          (nr_edges, ),
@@ -651,13 +654,22 @@ class TimeHolder(OrderedDict):
                 var_rel[idx] = (head_obj_id_meta, head_obj_idx_meta,
                                 tail_obj_id_meta, tail_obj_idx_meta)
                 self._edge_to_idx[(head_id, tail_id)] = idx
-
+                
 
             # traverse the graph structure by head nodes and save one object per head node
             # (with all forward-reachable nodes)
             data = []
             for obj_idx, node_id in enumerate(head_nodes):
                 obj_id = obj_idx + 1
+                if obj_id == 104:
+                    try:
+                        import pydevd
+                        pydevd.connected = True
+                        pydevd.settrace(suspend=False)
+                        print 'debug'
+                    except:
+                        pass
+                
                 nl = [node_id]
                 edge_idx_start = len(data)
                 while len(nl) > 0:

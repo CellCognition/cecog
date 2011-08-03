@@ -22,19 +22,19 @@ import base64
 # extension module imports:
 #
 import h5py, \
-       networkx, \
+#       networkx, \
        numpy, \
        vigra, \
        random
 
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import time as timing
 
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
 
-BOUNDING_BOX_SIZE = 75
+BOUNDING_BOX_SIZE = 50
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -213,67 +213,67 @@ class Position(_DataProvider):
                     self._terminal_objects_np_cache[c,t,z] = {'object': co['object'].value, \
                                                               'crack_contours' : co['crack_contour'].value}
 
-    def get_events(self):
-        object = self._hf_group['object']['event']
-        relation = self._hf_group['relation']['tracking']
-        relation_primary_primary = self._hf_group['relation']['relation___primary__primary']
-        channel = self._hf_group['image']['channel']
-        time = self._hf_group['time']
-
-        ids = object['id']
-        graph = networkx.Graph()
-        for id in ids:
-            relation_idx = object['edge'][object['edge']['obj_id'] == id]['relation_idx']
-            edges = relation[list(relation_idx)]
-            for edge in edges:
-                node_id1 = tuple(edge)[:3]
-                node_id2 = tuple(edge)[3:]
-                graph.add_node(node_id1, {'time_idx': edge['time_idx1'], 'zslice_idx': edge['zslice_idx1'], 'obj_id': edge['obj_id1']})
-                graph.add_node(node_id2, {'time_idx': edge['time_idx2'], 'zslice_idx': edge['zslice_idx2'], 'obj_id': edge['obj_id2']})
-                graph.add_edge(node_id1, node_id2)
-                #print node_id1, '==', node_id2
-
-
-
-        sub_graph = networkx.connected_component_subgraphs(graph)[0]
-        
-        
-        # get start node
-        start_node = None
-        for node, in_degree in  sub_graph.degree_iter():
-            print node, in_degree
-            if in_degree == 1:
-                start_node = node
-                break
-                
-        assert start_node is not None, 'cyclic graph'
-        
-        print 'Start node', start_node
-        
-#        # convert to DiGraph
-#        di_sub_graph = networkx.algorithms.traversal.depth_first_search.dfs_tree(sub_graph)
-        networkx.drawing.nx_pylab.draw_spectral(sub_graph)
-        
-            
-        for node_1, node_2 in  networkx.algorithms.traversal.depth_first_search.dfs_edges(sub_graph, start_node):
-            node_1_time_id = node_1[0]
-            node_1_zslice_id = node_1[1]
-            node_1_obj_id = node_1[2]
-            
-            node_2_time_id = node_2[0]
-            node_2_zslice_id = node_2[1]
-            node_2_obj_id = node_2[2]
-         
-            obj_id =  relation_primary_primary[node_1_obj_id][-1]
-            
-            obj =  self.get_objects_from_id(node_1_time_id, node_1_zslice_id, obj_id)
-            print obj['upper_left'], obj['lower_right']
-            
-        
-            
-        
-        plt.draw()
-        plt.show()
+#    def get_events(self):
+#        object = self._hf_group['object']['event']
+#        relation = self._hf_group['relation']['tracking']
+#        relation_primary_primary = self._hf_group['relation']['relation___primary__primary']
+#        channel = self._hf_group['image']['channel']
+#        time = self._hf_group['time']
+#
+#        ids = object['id']
+#        graph = networkx.Graph()
+#        for id in ids:
+#            relation_idx = object['edge'][object['edge']['obj_id'] == id]['relation_idx']
+#            edges = relation[list(relation_idx)]
+#            for edge in edges:
+#                node_id1 = tuple(edge)[:3]
+#                node_id2 = tuple(edge)[3:]
+#                graph.add_node(node_id1, {'time_idx': edge['time_idx1'], 'zslice_idx': edge['zslice_idx1'], 'obj_id': edge['obj_id1']})
+#                graph.add_node(node_id2, {'time_idx': edge['time_idx2'], 'zslice_idx': edge['zslice_idx2'], 'obj_id': edge['obj_id2']})
+#                graph.add_edge(node_id1, node_id2)
+#                #print node_id1, '==', node_id2
+#
+#
+#
+#        sub_graph = networkx.connected_component_subgraphs(graph)[0]
+#        
+#        
+#        # get start node
+#        start_node = None
+#        for node, in_degree in  sub_graph.degree_iter():
+#            print node, in_degree
+#            if in_degree == 1:
+#                start_node = node
+#                break
+#                
+#        assert start_node is not None, 'cyclic graph'
+#        
+#        print 'Start node', start_node
+#        
+##        # convert to DiGraph
+##        di_sub_graph = networkx.algorithms.traversal.depth_first_search.dfs_tree(sub_graph)
+#        networkx.drawing.nx_pylab.draw_spectral(sub_graph)
+#        
+#            
+#        for node_1, node_2 in  networkx.algorithms.traversal.depth_first_search.dfs_edges(sub_graph, start_node):
+#            node_1_time_id = node_1[0]
+#            node_1_zslice_id = node_1[1]
+#            node_1_obj_id = node_1[2]
+#            
+#            node_2_time_id = node_2[0]
+#            node_2_zslice_id = node_2[1]
+#            node_2_obj_id = node_2[2]
+#         
+#            obj_id =  relation_primary_primary[node_1_obj_id][-1]
+#            
+#            obj =  self.get_objects_from_id(node_1_time_id, node_1_zslice_id, obj_id)
+#            print obj['upper_left'], obj['lower_right']
+#            
+#        
+#            
+#        
+#        plt.draw()
+#        plt.show()
         
 #    def get_objects_from_id(self, time_id, zslice_id, object_id):
 #        objects = self._hf_group['time'][str(time_id)]['zslice'][str(zslice_id)]['region']['0']['object']
@@ -537,8 +537,7 @@ class Objects(object):
                 yield o, numpy.concatenate((start_node, rest_nodes))
         
     def __str__(self):
-        res =  'object: ' + self.name + '\n' 
-        
+        res =  'object: ' + self.name + '\n'   
         if self.relation_name:
             res += ' - relations: '+ self.relation_name + '\n' 
         
@@ -578,8 +577,6 @@ class Objects(object):
         self.mapping = related_obj
         return related_obj, relation.to_object
     
-
-
 """
 #        Timing results for all obj_ids from primary__primary
 #        ====================================
@@ -645,7 +642,6 @@ class Objects(object):
         else:
             timeit_4()
 """
-
     
 class TerminalObjects(Objects):
     def __init__(self, name):
@@ -655,8 +651,6 @@ class TerminalObjects(Objects):
     def obj_ids(self):
         pass      
             
-    
-
 #-------------------------------------------------------------------------------
 # main:
 #
@@ -665,13 +659,11 @@ if __name__ == '__main__':
     try:
         t = File('/Users/miheld/data/Analysis/H2bTub_20x_hdf5_test1/dump/0037.hdf5')
     except:
-        
-        t = File('C:/Users/sommerc/data/Chromatin-Microtubles/Analysis/H2b_aTub_MD20x_exp911/dump/0037.hdf5')
+        t = File('C:/Users/sommerc/data/Chromatin-Microtubles/Analysis/H2b_aTub_MD20x_exp911_2_channels/dump/0037.hdf5')
         
     for i, a in enumerate(t.traverse_objects('event')):
-        vigra.impex.writeImage(numpy.concatenate([b[1] for b in a], axis=0), '%03d.png'%i)
+        vigra.impex.writeImage(numpy.concatenate([b.data for b in a], axis=0), '%03d.png'%i)
 
-    
 #    import cProfile, pstats
 #    cProfile.run('t.traverse_objects("event")', 'profile-result')
 #    ps = pstats.Stats('profile-result')
