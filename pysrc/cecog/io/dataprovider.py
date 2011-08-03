@@ -22,12 +22,12 @@ import base64
 # extension module imports:
 #
 import h5py, \
-#       networkx, \
+       networkx, \
        numpy, \
        vigra, \
        random
 
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import time as timing
 
 #-------------------------------------------------------------------------------

@@ -256,12 +256,12 @@ class TimeHolder(OrderedDict):
             # add the basic regions
             nr_objects += len(self._regions_to_idx)
 
-            dt = numpy.dtype([('name', '|S512'), ('relation', '|S512')])
+            dt = numpy.dtype([('name', '|S512'), ('relation', '|S512'), ('type', '|S512')])
             var_obj = grp_def.create_dataset(self.HDF5_GRP_OBJECT,
                                              (nr_objects,), dt)
             dt = numpy.dtype([('name', '|S512'),
-                              ('object1', '|S512'), ('type1', '|S64'),
-                              ('object2', '|S512'), ('type2', '|S64')])
+                              ('object1', '|S512'),
+                              ('object2', '|S512'),])
             var_rel = grp_def.create_dataset(self.HDF5_GRP_RELATION,
                                              (nr_relations,), dt)
             idx_obj = 0
@@ -276,7 +276,8 @@ class TimeHolder(OrderedDict):
                 obj_name = self._convert_region_name(channel_name,
                                                      region_name,
                                                      prefix='region')
-                var_obj[idx_obj] = (obj_name, rel_name)
+                var_obj[idx_obj] = (obj_name, rel_name, self.HDF5_OTYPE_OBJECT if channel_name != PrimaryChannel.PREFIX \
+                                                                               else self.HDF5_OTYPE_REGION)
                 #self._objectdef_to_idx[obj_name] = (idx, rel_name)
                 idx_obj += 1
 
@@ -286,30 +287,31 @@ class TimeHolder(OrderedDict):
                 obj_name = self._convert_region_name(channel_name,
                                                      region_name,
                                                      prefix='')
-                var_obj[idx_obj] = (obj_name, rel_name)
+                var_obj[idx_obj] = (obj_name, rel_name, self.HDF5_OTYPE_OBJECT if channel_name != PrimaryChannel.PREFIX \
+                                                                               else self.HDF5_OTYPE_REGION)
                 #self._objectdef_to_idx[obj_name] = (idx, rel_name)
                 idx_obj += 1
 
                 var_rel[idx_rel] = (rel_name,
-                                    combined, self.HDF5_OTYPE_REGION,
-                                    combined, self.HDF5_OTYPE_REGION)
+                                    combined,
+                                    combined)
                 idx_rel += 1
                 # relation between objects from different regions
                 # (in cecog 1:1 to primary only)
                 if channel_name != PrimaryChannel.PREFIX:
                     var_rel[idx_rel] = ('%s___to___%s' % (prim_obj_name, obj_name),
-                                        prim_obj_name, self.HDF5_OTYPE_OBJECT,
-                                        obj_name, self.HDF5_OTYPE_OBJECT)
+                                        prim_obj_name,
+                                        obj_name)
                     idx_rel += 1
             if self._hdf5_include_tracking:
-                var_obj[idx_obj] = ('track', 'tracking')
+                var_obj[idx_obj] = ('track', 'tracking', self.HDF5_OTYPE_OBJECT)
                 idx_obj += 1
                 var_rel[idx_rel] = ('tracking',
-                                    prim_obj_name, self.HDF5_OTYPE_OBJECT,
-                                    prim_obj_name, self.HDF5_OTYPE_OBJECT)
+                                    prim_obj_name,
+                                    prim_obj_name)
                 idx_rel += 1
             if self._hdf5_include_events:
-                var_obj[idx_obj] = ('event', 'tracking')
+                var_obj[idx_obj] = ('event', 'tracking', self.HDF5_OTYPE_OBJECT)
                 idx_obj += 1
 
 
