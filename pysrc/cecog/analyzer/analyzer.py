@@ -478,7 +478,20 @@ class TimeHolder(OrderedDict):
                     var_rel_offset = var_rel.shape[0]
                     var_rel.resize((var_rel_offset + nr_objects,))
 
-                grp_name = self._convert_region_name(channel_name, region_name, prefix='')
+                if channel.PREFIX != PrimaryChannel.PREFIX:
+                    var_name = "primary__primary___to___%s" % \
+                        self._convert_region_name(channel_name, region_name, prefix=None)
+                    if var_name not in grp_rel:
+                        var_rel_cross = grp_rel.create_dataset(var_name,
+                                                               (nr_objects,),
+                                                               self.HDF5_DTYPE_RELATION,
+                                                               compression=self._hdf5_compression,
+                                                               chunks=(1,))
+                    else:
+                        var_rel_cross = grp_rel[var_name]
+                        var_rel_cross.resize((var_rel_offset + nr_objects,))
+
+                grp_name = self._convert_region_name(channel_name, region_name, prefix=None)
                 grp_cur_obj = grp_obj.require_group(grp_name)
                 var_name = self.HDF5_NAME_EDGE
                 if var_name not in grp_cur_obj:
@@ -504,7 +517,7 @@ class TimeHolder(OrderedDict):
                             dt = numpy.dtype([('name', '|S512'),
                                               ('unit', '|S50'),
                                               ('object', '|S512'),
-                                              ('channel_nr', 'int32'),
+                                              ('channel_len', 'int32'),
                                               ('channel_idx', 'int32', channel_array_size),
                                               ('SMF_ID', '|S512'),
                                               ('SMF_name', '|S512'),
@@ -525,13 +538,15 @@ class TimeHolder(OrderedDict):
                         feature_idx_set = []
                         channel_idx = numpy.zeros((channel_array_size,))
                         channel_idx[0] = self._channels_to_idx[channel_name]
+                        object_name = self._convert_region_name(channel_name, region_name, prefix=None)
+                        
                         for idx, name in enumerate(feature_names):
                             long_name = self._convert_feature_name(name,
                                                                    channel_name,
                                                                    region_name)
                             idx2 = offset + idx
                             var_feature[idx2] = (long_name, '',
-                                                 combined_region_name,
+                                                 object_name,
                                                  1, channel_idx,
                                                  '', '', '', '')
                             self._feature_to_idx[long_name] = idx2
@@ -557,16 +572,6 @@ class TimeHolder(OrderedDict):
                                                 'float',
                                                 chunks=(1, nr_features),
                                                 compression=self._hdf5_compression)
-                            var_feature_idx = \
-                                grp_cur_obj.create_dataset('feature_idx', (nr_features,), 'int32')
-                            var_feature_idx.attrs[self.HDF5_ATTR_DESCRIPTION] = \
-                                'mapping column indices from feature data-set to indices in feature definition'
-
-                            var_feature_idx[:] = [self._feature_to_idx[self._convert_feature_name(name,
-                                                                       channel_name,
-                                                                       region_name)]
-                                                  for name in feature_names]
-
                         else:
                             var_feature = grp_cur_obj[var_name]
                             var_feature.resize((var_rel_offset + nr_objects,
@@ -593,6 +598,9 @@ class TimeHolder(OrderedDict):
                     var_rel[idx_new] = coord2 + coord2
                     var_edge[idx_new] = (new_obj_id, idx_new)
                     var_id[idx_new] = (new_obj_id, idx_new, idx_new+1)
+                    
+                    if channel.PREFIX != PrimaryChannel.PREFIX:
+                        var_rel_cross[idx_new] = (new_obj_id, idx_new,) * 2
 
                     self._object_coord_to_id[(channel.PREFIX, coord)] = new_obj_id
                     self._object_coord_to_idx[(channel.PREFIX, coord)] = idx_new
@@ -732,19 +740,20 @@ class TimeHolder(OrderedDict):
             channel = self[self._iCurrentT][channel_name]
             region = channel.get_region(region_name)
             combined_region_name = \
-                self._convert_region_name(channel_name, region_name)
-            feature_set = combined_region_name
+                self._convert_region_name(channel_name, region_name, prefix=None)
+            
             nr_classes = predictor.iClassNumber
 
             grp = self._grp_def.require_group(self.HDF5_GRP_CLASSIFICATION)
             var_name = predictor.name
             if not var_name in grp:
                 dt = numpy.dtype([('label', 'int32'),
-                                  ('name', '|S100')])
+                                  ('name', '|S100'),
+                                  ('color', '|S9')])
                 var = \
                     grp.create_dataset(var_name, (nr_classes,), dt)
                 var.attrs['description'] = 'a CellCognition classification schema'
-                var[:] = zip(predictor.lstClassLabels, predictor.lstClassNames)
+                var[:] = zip(predictor.lstClassLabels, predictor.lstClassNames, predictor.lstHexColors)
 
             var_name = self.HDF5_GRP_CLASSIFIER
             if not self._hdf5_features_complete:
@@ -765,6 +774,8 @@ class TimeHolder(OrderedDict):
                     var = self._grp_def[var_name]
                     offset = var.shape[0]
                     var.resize((offset+1,))
+                
+                feature_set = '%s___classifier_%02d' % (combined_region_name, offset)
                 var[offset] = (predictor.oClassifier.NAME,
                                predictor.oClassifier.METHOD,
                                '',
@@ -775,6 +786,14 @@ class TimeHolder(OrderedDict):
                                '')
                 key = (predictor.name, predictor.oClassifier.NAME)
                 self._classifier_to_idx[key] = offset
+
+                grp = self._grp_def.require_group(self.HDF5_GRP_FEATURE_SET)
+                feature_names = predictor.lstFeatureNames
+                var = grp.create_dataset(feature_set, (len(feature_names),), 'int32')
+                var[:] = [self._feature_to_idx[self._convert_feature_name(name, 
+                                                                          channel_name.lower(), 
+                                                                          region_name)]
+                          for name in feature_names]
 
             key = (predictor.name, predictor.oClassifier.NAME)
             classifier_idx = self._classifier_to_idx[key]

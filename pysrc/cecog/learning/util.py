@@ -151,7 +151,7 @@ class ArffReader(object):
                             i1 = line.find('{')
                             i2 = line.find('}')
                             assert i1 != i2 != -1
-                            lstHexColors = [self._convert_string(x)
+                            lstHexColors = [self._convert_string(x).upper()
                                             for x in
                                             line[i1+1:i2].split(',')]
 
