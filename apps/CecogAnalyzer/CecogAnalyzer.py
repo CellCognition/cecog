@@ -795,10 +795,10 @@ if __name__ == "__main__":
         set_package_path(package_path)
         log_path = os.path.join(package_path, 'log')
         safe_mkdirs(log_path)
-        sys.stdout = \
-            file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
-        sys.stderr = \
-            file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
+#        sys.stdout = \
+#            file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
+#        sys.stderr = \
+#            file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
 
     splash = QSplashScreen(QPixmap(':cecog_splash'))
     splash.show()
@@ -818,6 +818,7 @@ if __name__ == "__main__":
     else:
         #filename = '/Users/miheld/data/CellCognition/demo_data/cluster_test.conf'
         filename = '/Users/miheld/data/Analysis/H2bTub_20x_hdf5_test1/H2bTub20x_settings.conf'
+        filename = r"C:\Users\sommerc\data\Chromatin-Microtubles/exp911_2_channels.conf"
         #filename = '/Users/miheld/data/Fabrice/Analysis/Dataset/fabrice_test.conf'
         #filename = '/Users/miheld/data/CellCognition/demo_data/H2bTub20x_settings.conf'
         #filename = '/Users/miheld/data/Peter/Analysis/t2/peter_t2.conf'

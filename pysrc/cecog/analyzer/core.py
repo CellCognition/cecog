@@ -469,6 +469,10 @@ class PositionAnalyzer(object):
             self.oSettings.set_section('Tracking')
             if self.oSettings.get('Processing', 'tracking'):
 
+                self._oLogger.debug("--- serializing tracking start")
+                oTimeHolder.serialize_tracking(self.oCellTracker)
+                self._oLogger.debug("--- serializing tracking ok")
+
                 stage_info = {'stage': 0,
                               'meta': 'Motif selection:',
                               'text': 'find events...',
@@ -481,9 +485,8 @@ class PositionAnalyzer(object):
                         return 0
                     self._qthread.set_stage_info(stage_info)
 
-                oTimeHolder.serialize_tracking(self.oCellTracker)
-                self._oLogger.debug("--- serializing tracking ok")
 
+                self._oLogger.debug("--- visitor start")
                 self.oCellTracker.initVisitor()
                 self._oLogger.debug("--- visitor ok")
 

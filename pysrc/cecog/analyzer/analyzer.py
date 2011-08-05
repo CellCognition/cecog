@@ -76,6 +76,7 @@ class TimeHolder(OrderedDict):
     HDF5_GRP_FEATURE = "feature"
     HDF5_GRP_FEATURE_SET = "feature_set"
     HDF5_GRP_CLASSIFICATION = "classification"
+    HDF5_GRP_ANNOTATION = "annotation"
     HDF5_GRP_CLASSIFIER = "classifier"
     HDF5_GRP_REGION = "region"
     HDF5_NAME_ID = "id"
@@ -112,7 +113,7 @@ class TimeHolder(OrderedDict):
                  hdf5_include_raw_images=True,
                  hdf5_include_label_images=True, hdf5_include_features=True,
                  hdf5_include_classification=True, hdf5_include_crack=True,
-                 hdf5_include_tracking=True, hdf5_include_events=True):
+                 hdf5_include_tracking=True, hdf5_include_events=True, hdf5_include_annotation=True):
         super(TimeHolder, self).__init__()
         self.P = P
         self._iCurrentT = None
@@ -129,6 +130,7 @@ class TimeHolder(OrderedDict):
         self._hdf5_include_crack = hdf5_include_crack
         self._hdf5_include_tracking = hdf5_include_tracking
         self._hdf5_include_events = hdf5_include_events
+        self._hdf5_include_annotation = hdf5_include_annotation
         self._hdf5_compression = hdf5_compression
 
         self._hdf5_features_complete = False
@@ -621,8 +623,8 @@ class TimeHolder(OrderedDict):
         graph = tracker.get_graph()
         
         # export full graph structure to .dot file
-        path_out = self._settings.get('General', 'pathout')
-        tracker.exportGraph(os.path.join(path_out, 'graph.dot'))
+        #path_out = self._settings.get('General', 'pathout')
+        #tracker.exportGraph(os.path.join(path_out, 'graph.dot'))
         if self._hdf5_create and self._hdf5_include_tracking:
             grp = self._grp_cur_position[self.HDF5_GRP_RELATION]
 
@@ -632,8 +634,8 @@ class TimeHolder(OrderedDict):
             nr_objects = len(head_nodes)
 
             # export graph structure of every head node to .dot file
-            for node_id in head_nodes:
-                tracker.exportSubGraph(os.path.join(path_out, 'graph__%s.dot' % node_id), node_id)
+            #for node_id in head_nodes:
+            #    tracker.exportSubGraph(os.path.join(path_out, 'graph__%s.dot' % node_id), node_id)
 
             var_rel = grp.create_dataset('tracking',
                                          (nr_edges, ),
@@ -669,14 +671,14 @@ class TimeHolder(OrderedDict):
             data = []
             for obj_idx, node_id in enumerate(head_nodes):
                 obj_id = obj_idx + 1
-                if obj_id == 104:
-                    try:
-                        import pydevd
-                        pydevd.connected = True
-                        pydevd.settrace(suspend=False)
-                        print 'debug'
-                    except:
-                        pass
+#                if obj_id == 104:
+#                    try:
+#                        import pydevd
+#                        pydevd.connected = True
+#                        pydevd.settrace(suspend=False)
+#                        print 'debug'
+#                    except:
+#                        pass
                 
                 nl = [node_id]
                 edge_idx_start = len(data)
@@ -689,7 +691,8 @@ class TimeHolder(OrderedDict):
                         nl.append(tail_id)
                 var_id[obj_idx] = (obj_id, edge_idx_start, len(data))
 
-            var_edge = grp_cur_obj.create_dataset(self.HDF5_NAME_EDGE, (len(data),), self.HDF5_DTYPE_EDGE)
+            var_edge = grp_cur_obj.create_dataset(self.HDF5_NAME_EDGE, (len(data),), 
+                                                  self.HDF5_DTYPE_EDGE)
             var_edge[:] = data
 
     def serialize_events(self, tracker):
@@ -737,6 +740,38 @@ class TimeHolder(OrderedDict):
                         
                     var_id[obj_idx] = (obj_id, rel_idx_start, rel_idx)
                     obj_idx += 1
+                    
+    def serialize_annotation(self, channel_name, region_name, annotation):
+        if self._hdf5_create and self._hdf5_include_annotation:
+            channel = self[self._iCurrentT][channel_name]
+            region = channel.get_region(region_name)
+            combined_region_name = \
+                self._convert_region_name(channel_name, region_name, prefix=None)
+                
+            var_name = self.HDF5_GRP_ANNOTATION
+                
+            if not var_name in self._grp_def:
+                dt = numpy.dtype([('name', '|S512'),
+                                  ('user', '|S512'),
+                                  ('date_str', '|S16'),
+                                  ('object', '|S512'),
+                                  ('classification', '|S512'),
+                                  ('description', '|S512')])
+                var = self._grp_def.create_dataset(var_name, (1,), dt,
+                                                   chunks=(1,),
+                                                   compression=self._hdf5_compression)
+                offset = 0
+            else:
+                var = self._grp_def[var_name]
+                offset = var.shape[0]
+                var.resize((offset+1,))
+            
+            var[offset] = (annotation.name, annotation.user, annotation.date_str, 
+                           combined_region_name, annotation.classification_schema,
+                           annotation.description)
+            
+            # TODO: fisish this by implementing a annotation object which is generated by
+            # the browser and can be reused here...
 
 
     def serialize_classification(self, channel_name, region_name, predictor):
@@ -822,7 +857,7 @@ class TimeHolder(OrderedDict):
                 var_class_probs.resize((offset+nr_objects, nr_classes))
             var_name = 'prediction'
             if not var_name in grp_cur:
-                dt = numpy.dtype([('class_idx', 'int32')])
+                dt = numpy.dtype([('classication_idx', 'int32')])
                 var_class = \
                     grp_cur.create_dataset(var_name, (nr_objects, ), dt,
                                            chunks=(1,),
