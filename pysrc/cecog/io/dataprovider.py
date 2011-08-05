@@ -34,14 +34,14 @@ import time as timing
 # cecog imports:
 #
 
-BOUNDING_BOX_SIZE = 50
 
 #-------------------------------------------------------------------------------
 # constants:
 #
+BOUNDING_BOX_SIZE = 50
 
 #-------------------------------------------------------------------------------
-# functions:get
+# functions:
 #
 
 def print_timing(func):
@@ -199,18 +199,15 @@ class Position(_DataProvider):
         
     def _cache_terminal_objects(self):
         t = len(self._hf_group['time'])
-        z = len(self._hf_group['time']['0']['zslice'])
-        c = len(self._hf_group['time']['0']['zslice']['0']['region'])
+        c = len(self._hf_group['time']['0']['region'])
 
-        self._terminal_objects_np_cache = numpy.zeros((c, t, z), dtype=object)
+        self._terminal_objects_np_cache = numpy.zeros((c, t), dtype=object)
         
         for t, tg in self._hf_group['time'].iteritems():
             t = int(t)
-            for z, zo in tg['zslice'].iteritems():
-                z = int(z)
-                for c, co in zo['region'].iteritems():
-                    c = int(c)
-                    self._terminal_objects_np_cache[c,t,z] = {'object': co['object'].value, \
+            for c, co in tg['region'].iteritems():
+                c = int(c)
+                self._terminal_objects_np_cache[c,t] = {'object': co['object'].value, \
                                                               'crack_contours' : co['crack_contour'].value}
 
 #    def get_events(self):
@@ -314,7 +311,7 @@ class Position(_DataProvider):
             if rel[0] == relation_name:
                 releation_name_found = True
                 from_object_name = rel[1]
-                to_object_name = rel[3]
+                to_object_name = rel[2]
                 
         if not releation_name_found:
             raise KeyError('get_relation() releation "%s" not found in definition.' % relation_name)
@@ -327,13 +324,13 @@ class Position(_DataProvider):
         return Relation(relation_name, h5_relation_group, (from_object_name, to_object_name))
                 
         
-    def get_bounding_box(self, t, z, obj_idx, c=0):
-        objects = self._terminal_objects_np_cache[c,t,z]['object']
+    def get_bounding_box(self, t, obj_idx, c=0):
+        objects = self._terminal_objects_np_cache[c,t]['object']
         return (objects['upper_left'][obj_idx], objects['lower_right'][obj_idx])
     
-    def get_image(self, t, z, obj_idx, c, bounding_box=None, min_bounding_box_size=BOUNDING_BOX_SIZE):
+    def get_image(self, t, obj_idx, c, bounding_box=None, min_bounding_box_size=BOUNDING_BOX_SIZE):
         if bounding_box is None:
-            ul, lr = self.get_bounding_box(t, z, obj_idx, c)
+            ul, lr = self.get_bounding_box(t, obj_idx, c)
         else:
             ul, lr = bounding_box
         
@@ -352,20 +349,19 @@ class Position(_DataProvider):
         #       the requested BOUNDING_BOX_SIZE, I dont see a chance to really
         #       fix it, without doing a copy...
         
-        return self._hf_group_np_copy[c, t, z, ul[1]:lr[1], ul[0]:lr[0]], bounding_box
+        return self._hf_group_np_copy[c, t, 0, ul[1]:lr[1], ul[0]:lr[0]], bounding_box
 
-    def get_crack_contours(self, t, z, obj_idx, c):  
-        crack_contours_string = self._terminal_objects_np_cache[c,t,z]['crack_contours'][obj_idx]                               
+    def get_crack_contours(self, t, obj_idx, c):  
+        crack_contours_string = self._terminal_objects_np_cache[c,t]['crack_contours'][obj_idx]                               
         return numpy.asarray(zlib.decompress( \
                              base64.b64decode(crack_contours_string)).split(','), \
                             dtype=numpy.float32).reshape(-1,2)
         
-    def get_object_data(self, t, z, obj_idx, c):
-        bb = self.get_bounding_box(t, z, obj_idx, c)
-        img, new_bb = self.get_image(t, z, obj_idx, c, bb)
-        cc = self.get_crack_contours(t, z, obj_idx, c)
-        
-        
+    def get_object_data(self, t, obj_idx, c):
+        bb = self.get_bounding_box(t, obj_idx, c)
+        img, new_bb = self.get_image(t, obj_idx, c, bb)
+        cc = self.get_crack_contours(t, obj_idx, c)
+         
         cc[:,0] -= new_bb[0][0]
         cc[:,1] -= new_bb[0][1]
         
@@ -453,12 +449,11 @@ class File(object):
                 for prim_prim_id, reg_prim_id in primary_primary.iter_sub_objects(prim_prims_ids):
                     obj_id= primary_primary[prim_prim_id][0][0]
                     t = primary_primary[prim_prim_id][0][1]
-                    z = primary_primary[prim_prim_id][0][2]
-                    obj_idx = primary_primary[prim_prim_id][0][3]
+                    obj_idx = primary_primary[prim_prim_id][0][2]
                     predicted_class = position.get_additional_object_data(primary_primary.name, 'classifier', 1) \
                                                 ['prediction'][primary_primary.relation_idx[prim_prim_id][0]]
                     
-                    image, crack_contour = position.get_object_data(t, z, obj_idx, c) 
+                    image, crack_contour = position.get_object_data(t, obj_idx, c) 
                     tmp = TrackletItem(t, image, crack_contour, predicted_class)
                     res.append(tmp)
                 print ''
