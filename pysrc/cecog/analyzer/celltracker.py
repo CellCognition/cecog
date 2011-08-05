@@ -1717,6 +1717,9 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                                                         'eventId'  : strNodeId,
                                                         'maxLength': track_length,
                                                         'tracks'   : [track],
+                                                        # keep value at which index the two daugther
+                                                        # tracks differ due to a split event
+                                                        'splitIdx' : iSplitIdx + len(lstBackwardNodeIds),
                                                         }
                     else:
                         lstNodeIds = lstBackwardNodeIds + lstForwardNodeIds

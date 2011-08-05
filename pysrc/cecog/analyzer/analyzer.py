@@ -694,45 +694,49 @@ class TimeHolder(OrderedDict):
 
     def serialize_events(self, tracker):
         if self._hdf5_create and self._hdf5_include_events:
-            nr_events = 0
-            nr_edges = None
-#            nr_daughters = 0
-#            daughters = {}
+            event_lookup = {}
             for events in tracker.dctVisitorData.itervalues():
                 for start_id, event in events.iteritems():
                     if start_id[0] != '_':
-                        frame, obj_id = \
-                            tracker.getComponentsFromNodeId(start_id)[:2]
-#                        new_id = tracker.getNodeIdFromComponents(frame, obj_id)
-#                        if not new_id in daughters:
-#                            daughters[new_id] = []
-#                            nr_daughters += 1
-#                        daughters[new_id].append(start_id)
-                        nr_events += 1
-                        if nr_edges is None:
-                            nr_edges = event['maxLength']-1
+                        key = tracker.getComponentsFromNodeId(start_id)[:2]
+                        event_lookup.setdefault(key, []).append(event) 
+            nr_events = len(event_lookup)
+            nr_edges = 0
+            for events in event_lookup.itervalues():
+                if len(events) == 1:
+                    nr_edges += events[0]['maxLength'] - 1
+                elif len(events) == 2:
+                    splt = events[0]['splitIdx']
+                    nr_edges += events[0]['maxLength'] + events[1]['maxLength'] - splt - 2
+                else:
+                    raise ValueError("More than two daughter cell are not supported.")
 
             if nr_events > 0:
                 grp = self._grp_cur_position[self.HDF5_GRP_OBJECT]
                 grp_cur_obj = grp.create_group('event')
-                var_edge = grp_cur_obj.create_dataset(self.HDF5_NAME_EDGE, (nr_edges*nr_events,), self.HDF5_DTYPE_EDGE)
+                var_edge = grp_cur_obj.create_dataset(self.HDF5_NAME_EDGE, (nr_edges,), self.HDF5_DTYPE_EDGE)
                 var_id = grp_cur_obj.create_dataset(self.HDF5_NAME_ID, (nr_events,), self.HDF5_DTYPE_ID)
 
                 obj_idx = 0
                 rel_idx = 0
-                for events in tracker.dctVisitorData.itervalues():
-                    for start_id, event in events.iteritems():
-                        if start_id[0] != '_':
-                            # new event
-                            obj_id = obj_idx + 1
-                            track = event['tracks'][0]
-                            rel_idx_start = rel_idx
-                            for head_id, tail_id in zip(track, track[1:]):
-                                edge_idx = self._edge_to_idx[(head_id, tail_id)]
-                                var_edge[rel_idx] = (obj_id, edge_idx)
-                                rel_idx += 1
-                            var_id[obj_idx] = (obj_id, rel_idx_start, rel_idx)
-                            obj_idx += 1
+                for events in event_lookup.itervalues():
+                    obj_id = obj_idx + 1
+                    rel_idx_start = rel_idx
+                    track = events[0]['tracks'][0]
+                    for head_id, tail_id in zip(track, track[1:]):
+                        edge_idx = self._edge_to_idx[(head_id, tail_id)]
+                        var_edge[rel_idx] = (obj_id, edge_idx)
+                        rel_idx += 1
+                    if len(events) == 2:
+                        splt = events[1]['splitIdx']
+                        track = events[1]['tracks'][0][splt:]
+                        for head_id, tail_id in zip(track, track[1:]):
+                            edge_idx = self._edge_to_idx[(head_id, tail_id)]
+                            var_edge[rel_idx] = (obj_id, edge_idx)
+                            rel_idx += 1
+                        
+                    var_id[obj_idx] = (obj_id, rel_idx_start, rel_idx)
+                    obj_idx += 1
 
 
     def serialize_classification(self, channel_name, region_name, predictor):
