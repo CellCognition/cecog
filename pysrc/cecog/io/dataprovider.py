@@ -200,7 +200,82 @@ class Position(_DataProvider):
     def __init__(self, hf_group, parent=None):
         super(Position, self).__init__(hf_group, parent)
         self._hf_group_np_copy = self._hf_group['image']['channel'].value
-        self._cache_terminal_objects()
+        
+        self.objects = {}
+        self.regions= {}
+        channel_info = self.get_definition('channel')
+        for object_def_row in self.get_definition('object'):
+            if object_def_row[2] == 'object':
+                print 'Position: caching object', object_def_row[0] 
+                self.objects[object_def_row[0]] = {'cache' : self.get_objects(object_def_row[0]), 'type' : object_def_row[1]}
+            elif object_def_row[2] == 'region':
+                print 'Position: reading region objects', object_def_row[0]
+                for region_row in self.get_definition('region'):
+                    if region_row[0] == object_def_row[0]:
+                        channel_idx = region_row[1]
+                        self.regions[object_def_row[0]] = {'channel_idx' : channel_idx, 
+                                                           'channel_name' : channel_info[channel_idx][0],
+                                                           'description' : channel_info[channel_idx][1],
+                                                           'is_phydical' : channel_info[channel_idx][2],
+                                                           'voxel_size' : channel_info[channel_idx][3]}
+                        break
+                    
+        self.relation_inter = {}
+        self.relation_intra = {}
+        for relation_def_row in self.get_definition('relation'):
+            rel_name = relation_def_row[0]
+            obj_1 = relation_def_row[1]
+            obj_2 = relation_def_row[2]
+            if obj_1 in self.objects or obj_1 in self.regions:
+                if obj_1 == obj_2:
+                    print 'Position: found inter relation for', obj_1, ' : ', rel_name
+                    self.relation_inter[obj_1] = rel_name
+                else:
+                    print 'Position: found cross relation for', obj_1, ' : ', rel_name
+                    self.relation_intra[obj_1] = rel_name
+                    
+        self.object_feature = {}
+        last_feature_for_object = 'ham'
+        feature_group = self.get_definition('feature')
+        for feature_row in self.get_definition('feature'):
+            feature_for_object = feature_row[2]
+            if last_feature_for_object != feature_for_object:
+                #feature_uses_channels = feature_row[4][:feature_row[3]]
+                print 'Position: found features for object', feature_for_object
+                for f in feature_group[self.get_definition('feature_set')[feature_for_object]]:
+                    self.object_feature.setdefault(feature_for_object, []).append(f[0])
+                last_feature_for_object = feature_for_object
+                
+        self.object_classifier = {}
+        for classifier_idx, classifier_row in enumerate(self.get_definition('classifier')):
+            object_name = self.get_definition('feature')[self.get_definition('feature_set')[classifier_row[3]][0]][2]
+            print 'Position: found classifier for object', object_name, 'with schema: ', classifier_row[4]
+            self.object_classifier[(object_name, classifier_idx)] = {'name' : classifier_row[0],
+                                                                     'method' : classifier_row[1],
+                                                                     'version' : classifier_row[2],
+                                                                     'feature_set' : classifier_row[3],
+                                                                     'method' : self.get_definition('classification')[classifier_row[4]],
+                                                                     'parameter' : classifier_row[6],
+                                                                     'description' : classifier_row[7],
+                                                                     }
+            
+                    
+                    
+            
+        
+                    
+                    
+        
+            
+                
+            
+        
+        
+        
+
+        # inits and caches all found objects (track, primary_primary, events
+        # inits all the meta information, eg. classification, features
+        # delivers all objects and nows all about relations
         
     def _cache_terminal_objects(self):
         t = len(self._hf_group['time'])
@@ -376,33 +451,46 @@ class Relation(object):
     def get_cache(self):
         return self.h5_table.value.view(numpy.uint32).reshape(len(self.h5_table), -1)
     
-    
-
-
 class ObjectItemBase(object):
-    def __init__(self, id, position):
+    def __init__(self, id, object_cache):
+        self.is_terminal = False
         self.id = id
-        self.position
+        self.object_cache = object_cache
         
-        self.in_obj = []
-        self.out_obj = []
+        self.in_obj_ids = []
+        self.out_obj_ids = []
         
-        self.children = []
+        self.children_ids = []
         
-        self.sibling_obj = []
+        self.sibling_obj_ids = []
 
 class ObjectItem(ObjectItemBase):
-    def __init__(self, obj_id, position):
-        ObjectItemBase.__init__(self, obj_id, position)
-        
-class TerminalObjectItem(ObjectItem):
-    def __init__(self, obj_id, position):
-        ObjectItem.__init__(self, obj_id, position)        
+    def __init__(self, obj_id, object_cache):
+        ObjectItemBase.__init__(self, obj_id, object_cache)
+       
+    def get_additional_data(self):
+        # helper for subclass
+        pass
+    def get_children(self):
+        # gereric
+        pass
+    def get_children_expansion(self):
+        # gereric
+        pass
+    def get_siblings(self):
+        # gereric
+        pass
+    def get_data(self):
+        #abstract
+        pass
+    def get_display_settings(self):
+        #abstract
+        pass
+      
 
 class Objects(object):
     HDF5_OBJECT_EDGE_NAME = 'edge'
     HDF5_OBJECT_ID_NAME = 'id'
-    
     
     def __init__(self, name, position):
         self.name = name
@@ -428,9 +516,8 @@ class Objects(object):
         for x in self.object_np_cache['id_edge_refs']:
             self.object_np_cache['child_ids'][x[0]] = self.object_np_cache['relation'][self.object_np_cache['edges'][x[1]:x[2], 1]]
         
-        
     def __getitem__(self, obj_id):
-        return ObjectItem[]
+        return ObjectItem[obj_id, self]
             
     def __iter__(self, obj_ids=None):
         if obj_ids is None:
@@ -466,11 +553,6 @@ class Objects(object):
             return self.sub_objects
         else:
             raise RuntimeError('get_sub_objects() No sub objects available for objects of name %s' % self.name)
-    
- 
-    
-    
-
             
 #-------------------------------------------------------------------------------
 # main:
@@ -483,7 +565,7 @@ if __name__ == '__main__':
         t = File('C:/Users/sommerc/data/Chromatin-Microtubles/Analysis/H2b_aTub_MD20x_exp911_2_channels/dump/0037.hdf5')
         
     position = t[t.positions[0]]
-    objs = position.get_objects('secondary__expanded')
+    print ''
     
 
     
