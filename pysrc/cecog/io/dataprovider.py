@@ -199,29 +199,44 @@ class Position(_DataProvider):
     CHILDREN_PROVIDER_CLASS = None
     def __init__(self, hf_group, parent=None):
         super(Position, self).__init__(hf_group, parent)
-        self._hf_group_np_copy = self._hf_group['image']['channel'].value
+        #self._hf_group_np_copy = self._hf_group['image']['channel'].value
         
         self.objects = {}
+        self.sub_objects = {}
         self.regions= {}
         channel_info = self.get_definition('channel')
         for object_def_row in self.get_definition('object'):
-            if object_def_row[2] == 'object':
-                print 'Position: caching object', object_def_row[0] 
-                self.objects[object_def_row[0]] = {'cache' : self.get_objects(object_def_row[0]), 'type' : object_def_row[1]}
-            elif object_def_row[2] == 'region':
-                print 'Position: reading region objects', object_def_row[0]
+            object_name = object_def_row[0]
+            object_sub_rel = object_def_row[1]
+            object_type = object_def_row[2]
+            
+            self.sub_objects[object_name] = None
+            for rel_row in self.get_definition('relation'):
+                if rel_row[0] == object_sub_rel:
+                    self.sub_objects[object_name] = rel_row[1]
+                    break
+            
+            if object_type == 'object':
+                print 'Position: caching object', object_name
+                self.objects[object_name] = \
+                    {'cache' : self.init_objects(object_name), 
+                     'sub_relation' :object_sub_rel }
+                    
+            elif object_type == 'region':
+                print 'Position: reading region objects', object_name
                 for region_row in self.get_definition('region'):
-                    if region_row[0] == object_def_row[0]:
+                    if region_row[0] == object_name:
                         channel_idx = region_row[1]
-                        self.regions[object_def_row[0]] = {'channel_idx' : channel_idx, 
-                                                           'channel_name' : channel_info[channel_idx][0],
-                                                           'description' : channel_info[channel_idx][1],
-                                                           'is_phydical' : channel_info[channel_idx][2],
-                                                           'voxel_size' : channel_info[channel_idx][3]}
+                        self.regions[object_name] = \
+                          {'channel_idx' : channel_idx, 
+                           'channel_name' : channel_info[channel_idx][0],
+                           'description' : channel_info[channel_idx][1],
+                           'is_phydical' : channel_info[channel_idx][2],
+                           'voxel_size' : channel_info[channel_idx][3]}
                         break
                     
-        self.relation_inter = {}
-        self.relation_intra = {}
+        self.relation_compund = {}
+        self.relation_cross = {}
         for relation_def_row in self.get_definition('relation'):
             rel_name = relation_def_row[0]
             obj_1 = relation_def_row[1]
@@ -229,10 +244,12 @@ class Position(_DataProvider):
             if obj_1 in self.objects or obj_1 in self.regions:
                 if obj_1 == obj_2:
                     print 'Position: found inter relation for', obj_1, ' : ', rel_name
-                    self.relation_inter[obj_1] = rel_name
+                    self.relation_compund.setdefault(obj_1,[]).append({'relation_name': rel_name,
+                                                  'to': obj_2})
                 else:
                     print 'Position: found cross relation for', obj_1, ' : ', rel_name
-                    self.relation_intra[obj_1] = rel_name
+                    self.relation_cross.setdefault(obj_1,[]).append({'relation_name': rel_name,
+                                                  'to': obj_2})
                     
         self.object_feature = {}
         last_feature_for_object = 'ham'
@@ -250,32 +267,15 @@ class Position(_DataProvider):
         for classifier_idx, classifier_row in enumerate(self.get_definition('classifier')):
             object_name = self.get_definition('feature')[self.get_definition('feature_set')[classifier_row[3]][0]][2]
             print 'Position: found classifier for object', object_name, 'with schema: ', classifier_row[4]
-            self.object_classifier[(object_name, classifier_idx)] = {'name' : classifier_row[0],
-                                                                     'method' : classifier_row[1],
-                                                                     'version' : classifier_row[2],
-                                                                     'feature_set' : classifier_row[3],
-                                                                     'method' : self.get_definition('classification')[classifier_row[4]],
-                                                                     'parameter' : classifier_row[6],
-                                                                     'description' : classifier_row[7],
-                                                                     }
-            
-                    
-                    
-            
-        
-                    
-                    
-        
-            
-                
-            
-        
-        
-        
-
-        # inits and caches all found objects (track, primary_primary, events
-        # inits all the meta information, eg. classification, features
-        # delivers all objects and nows all about relations
+            self.object_classifier[(object_name, classifier_idx)] = \
+                    {'name' : classifier_row[0],
+                     'method' : classifier_row[1],
+                     'version' : classifier_row[2],
+                     'feature_set' : classifier_row[3],
+                     'schema' : self.get_definition('classification')[classifier_row[4]],
+                     'parameter' : classifier_row[6],
+                     'description' : classifier_row[7],
+                     }
         
     def _cache_terminal_objects(self):
         t = len(self._hf_group['time'])
@@ -290,8 +290,14 @@ class Position(_DataProvider):
                 self._terminal_objects_np_cache[c,t] = {'object': co['object'].value, \
                                                               'crack_contours' : co['crack_contour'].value}
     
-    def get_objects(self, object_name):
+    def init_objects(self, object_name):
         return Objects(object_name, self)
+    
+    def get_objects(self, object_name):
+        return self.objects[object_name]['cache']
+    
+    def get_objects_type(self, object_name):
+        return self.objects[object_name]['type']
     
     def get_object_group(self, name):
         return self._hf_group['object'][name]     
@@ -453,7 +459,6 @@ class Relation(object):
     
 class ObjectItemBase(object):
     def __init__(self, id, object_cache):
-        self.is_terminal = False
         self.id = id
         self.object_cache = object_cache
         
@@ -463,6 +468,26 @@ class ObjectItemBase(object):
         self.children_ids = []
         
         self.sibling_obj_ids = []
+    
+    def is_terminal(self):
+        return isinstance(self, TerminalObjectItem)
+    
+    def get_child_objects(self):
+        child_entries = self.object_cache.object_np_cache['child_ids'][self.id]
+        if len(child_entries) == 0:
+            return None
+        result = numpy.zeros(child_entries.shape[0]+1, dtype=numpy.uint32)
+        result[0] = child_entries[0,0]
+        result[1:] = child_entries[:,2]
+        return map(lambda id: self.object_cache.get_object_type_of_children()(id, self.object_cache), result)
+            
+    
+    def get_sibling_objects(self, sibling_name):
+        for sibling_rel in self.object_cache.position.relation_cross:
+            if sibling_name in sibling_rel['relation_name']:
+                sibling_id = self.object_cache.position.h5_group['relation'][sibling_rel['relation_name']][self.id-1][2]
+                return self.object_cache.get_object_type()(sibling_id, self.object_cache)
+                
 
 class ObjectItem(ObjectItemBase):
     def __init__(self, obj_id, object_cache):
@@ -486,6 +511,13 @@ class ObjectItem(ObjectItemBase):
     def get_display_settings(self):
         #abstract
         pass
+    
+class TerminalObjectItem(ObjectItemBase):
+    def __init__(self, obj_id, object_cache):
+        ObjectItemBase.__init__(self, obj_id, object_cache)
+    
+    def get_child_objects(self):
+        raise RuntimeError('Terminal objects have no childs')
       
 
 class Objects(object):
@@ -496,6 +528,7 @@ class Objects(object):
         self.name = name
         self.position = position        
         self._h5_object_group = position.get_object_group(name)
+        
         self.object_np_cache = {}    
         
         self._relation_name = position.get_object_relation(name)
@@ -515,9 +548,27 @@ class Objects(object):
         self.object_np_cache['child_ids'] = {}
         for x in self.object_np_cache['id_edge_refs']:
             self.object_np_cache['child_ids'][x[0]] = self.object_np_cache['relation'][self.object_np_cache['edges'][x[1]:x[2], 1]]
+            
+    @property
+    def ids(self):
+        return self.object_np_cache['id_edge_refs'][:,0] 
         
-    def __getitem__(self, obj_id):
-        return ObjectItem[obj_id, self]
+        
+    def get_object_type(self):
+        ItemType = ObjectItem
+        if self.position.sub_objects[self.name] in self.position.regions:
+            ItemType = TerminalObjectItem
+        return ItemType
+    
+    def get_object_type_of_children(self):
+        ItemType = ObjectItem
+        if self.position.sub_objects[self.position.sub_objects[self.name]] in self.position.regions:
+            ItemType = TerminalObjectItem
+        return ItemType
+    
+    def get(self, obj_id):
+        ItemType = self.get_object_type()
+        return ItemType(obj_id, self) 
             
     def __iter__(self, obj_ids=None):
         if obj_ids is None:
@@ -559,13 +610,26 @@ class Objects(object):
 #
 
 if __name__ == '__main__':
+    tic = timing.time()
     try:
         t = File('/Users/miheld/data/Analysis/H2bTub_20x_hdf5_test1/dump/0037.hdf5')
     except:
         t = File('C:/Users/sommerc/data/Chromatin-Microtubles/Analysis/H2b_aTub_MD20x_exp911_2_channels/dump/0037.hdf5')
         
+    print 'init time for position  == %5.3f msec' % (timing.time() - tic)
+    
+    object_name = 'event'
+    
+    
     position = t[t.positions[0]]
-    print ''
+    for object_name in ['primary__primary']:
+        pp = position.get_objects(object_name)
+        for id in pp.ids:
+            print id, '-->', pp.get(id).get_sibling_objects(position.relation_cross[object_name][0]['to'])
+        
+            
+    
+    
     
 
     
