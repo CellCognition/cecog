@@ -53,6 +53,27 @@ def print_timing(func):
         return res
     return wrapper
 
+import types
+def MixIn(pyClass, mixInClass, makeAncestor=0):
+    if makeAncestor:
+        if mixInClass not in pyClass.__bases__:
+            pyClass.__bases__ = (mixInClass,) + pyClass.__bases__
+    else:
+        # Recursively traverse the mix-in ancestor
+        # classes in order to support inheritance
+        baseClasses = list(mixInClass.__bases__)
+        baseClasses.reverse()
+        for baseClass in baseClasses:
+            MixIn(pyClass, baseClass)
+        # Install the mix-in methods into the class
+        for name in dir(mixInClass):
+            if not name.startswith('__'):
+            # skip private members
+                member = getattr(mixInClass, name)
+                if type(member) is types.MethodType:
+                    member = member.im_func
+                setattr(pyClass, name, member)
+
 #-------------------------------------------------------------------------------
 # classes:
 #
@@ -199,7 +220,7 @@ class Position(_DataProvider):
     CHILDREN_PROVIDER_CLASS = None
     def __init__(self, hf_group, parent=None):
         super(Position, self).__init__(hf_group, parent)
-        #self._hf_group_np_copy = self._hf_group['image']['channel'].value
+        self._hf_group_np_copy = self._hf_group['image']['channel'].value
         
         self.objects = {}
         self.sub_objects = {}
@@ -278,6 +299,7 @@ class Position(_DataProvider):
                      'parameter' : classifier_row[6],
                      'description' : classifier_row[7],
                      }
+        self._cache_terminal_objects()
         
     def _cache_terminal_objects(self):
         t = len(self._hf_group['time'])
@@ -325,51 +347,7 @@ class Position(_DataProvider):
         return Relation(relation_name, h5_relation_group, (from_object_name, to_object_name))
                 
         
-    def get_bounding_box(self, t, obj_idx, c=0):
-        objects = self._terminal_objects_np_cache[c,t]['object']
-        return (objects['upper_left'][obj_idx], objects['lower_right'][obj_idx])
     
-    def get_image(self, t, obj_idx, c, bounding_box=None, min_bounding_box_size=BOUNDING_BOX_SIZE):
-        if bounding_box is None:
-            ul, lr = self.get_bounding_box(t, obj_idx, c)
-        else:
-            ul, lr = bounding_box
-        
-        offset_0 = (min_bounding_box_size - lr[0] + ul[0])
-        offset_1 = (min_bounding_box_size - lr[1] + ul[1]) 
-        
-        ul[0] = max(0, ul[0] - offset_0/2 - cmp(offset_0%2,0) * offset_0 % 2) 
-        ul[1] = max(0, ul[1] - offset_1/2 - cmp(offset_1%2,0) * offset_1 % 2)  
-        
-        lr[0] = min(self._hf_group['image']['channel'].shape[4], lr[0] + offset_0/2) 
-        lr[1] = min(self._hf_group['image']['channel'].shape[3], lr[1] + offset_1/2) 
-        
-        bounding_box = (ul, lr)
-        
-        # TODO: get_iamge returns am image which might have a smaller shape than 
-        #       the requested BOUNDING_BOX_SIZE, I dont see a chance to really
-        #       fix it, without doing a copy...
-        
-        return self._hf_group_np_copy[c, t, 0, ul[1]:lr[1], ul[0]:lr[0]], bounding_box
-
-    def get_crack_contours(self, t, obj_idx, c):  
-        crack_contours_string = self._terminal_objects_np_cache[c,t]['crack_contours'][obj_idx]                               
-        return numpy.asarray(zlib.decompress( \
-                             base64.b64decode(crack_contours_string)).split(','), \
-                            dtype=numpy.float32).reshape(-1,2)
-        
-    def get_object_data(self, t, obj_idx, c):
-        bb = self.get_bounding_box(t, obj_idx, c)
-        img, new_bb = self.get_image(t, obj_idx, c, bb)
-        cc = self.get_crack_contours(t, obj_idx, c)
-         
-        cc[:,0] -= new_bb[0][0]
-        cc[:,1] -= new_bb[0][1]
-        
-        return img, cc
-    
-    def get_additional_object_data(self, object_name, data_fied_name, index):
-        return self._hf_group['object'][object_name][data_fied_name][str(index)]
         
         
 class Experiment(_DataProvider):
@@ -478,7 +456,7 @@ class ObjectItemBase(object):
         result = numpy.zeros(child_entries.shape[0]+1, dtype=numpy.uint32)
         result[0] = child_entries[0,0]
         result[1:] = child_entries[:,2]
-        return map(lambda id: self.object_cache.get_object_type_of_children()(id, self.object_cache), result)
+        return map(lambda id: self.object_cache.get_object_type_of_children()(id, self.sub_objects()), result)
             
     
     def get_siblings(self):
@@ -530,7 +508,7 @@ class ObjectItemBase(object):
             
         res = all_paths_of_tree(head_id)
         for i, r in enumerate(res):
-            res[i] = [self.object_cache.get_object_type_of_children()(id, self.object_cache) for id in r]
+            res[i] = [self.object_cache.get_object_type_of_children()(id, self.sub_objects()) for id in r]
         
             
         return res
@@ -546,8 +524,10 @@ class ObjectItemBase(object):
         
         result = pred + child_list + succs
         
-        return map(lambda id: self.object_cache.get_object_type_of_children()(id, self.object_cache), result)
+        return map(lambda id: self.object_cache.get_object_type_of_children()(id, self.sub_objects()), result)
                 
+    def sub_objects(self):
+        return self.object_cache.position.get_objects(self.object_cache.position.sub_objects[self.object_cache.name])
 
 class ObjectItem(ObjectItemBase):
     def __init__(self, obj_id, object_cache):
@@ -567,9 +547,88 @@ class ObjectItem(ObjectItemBase):
 class TerminalObjectItem(ObjectItemBase):
     def __init__(self, obj_id, object_cache):
         ObjectItemBase.__init__(self, obj_id, object_cache)
-    
+        
     def get_children(self):
         raise RuntimeError('Terminal objects have no childs')
+    
+    @property
+    def local_id(self):
+        return self.object_cache.object_np_cache['child_ids'][self.id][0][0]
+    @property
+    def _local_idx(self):
+        return self.object_cache.object_np_cache['child_ids'][self.id][0][1:3] # time, idx
+       
+class CellTerminalObjectItemMixin(object):
+    @property
+    def image(self):
+        image, self._bounding_box = self._get_image(self.time, self.local_idx, 0)
+        return image
+    @property
+    def crack_contour(self):
+        crack_contour = self._get_crack_contours(self.time, self.local_idx, 0)
+        crack_contour[:,0] -= self._bounding_box[0][0]
+        crack_contour[:,1] -= self._bounding_box[0][1]  
+        return crack_contour
+    @property
+    def predicted_class(self):
+        return self._get_additional_object_data(self.object_cache.name, 'classifier', 0) \
+                                    ['prediction'][self.idx]
+    @property
+    def time(self):
+        return self._local_idx[0]
+    @property
+    def local_idx(self):
+        return self._local_idx[1]
+        
+    
+    def _get_bounding_box(self, t, obj_idx, c=0):
+        objects = self.object_cache.position._terminal_objects_np_cache[c, t]['object']
+        return (objects['upper_left'][obj_idx], objects['lower_right'][obj_idx])
+    
+    def _get_image(self, t, obj_idx, c, bounding_box=None, min_bounding_box_size=BOUNDING_BOX_SIZE):
+        if bounding_box is None:
+            ul, lr = self._get_bounding_box(t, obj_idx, c)
+        else:
+            ul, lr = bounding_box
+        
+        offset_0 = (min_bounding_box_size - lr[0] + ul[0])
+        offset_1 = (min_bounding_box_size - lr[1] + ul[1]) 
+        
+        ul[0] = max(0, ul[0] - offset_0/2 - cmp(offset_0%2,0) * offset_0 % 2) 
+        ul[1] = max(0, ul[1] - offset_1/2 - cmp(offset_1%2,0) * offset_1 % 2)  
+        
+        lr[0] = min(self.object_cache.position._hf_group_np_copy.shape[4], lr[0] + offset_0/2) 
+        lr[1] = min(self.object_cache.position._hf_group_np_copy.shape[3], lr[1] + offset_1/2) 
+        
+        bounding_box = (ul, lr)
+        
+        # TODO: get_iamge returns am image which might have a smaller shape than 
+        #       the requested BOUNDING_BOX_SIZE, I dont see a chance to really
+        #       fix it, without doing a copy...
+        
+        return self.object_cache.position._hf_group_np_copy[c, t, 0, ul[1]:lr[1], ul[0]:lr[0]], bounding_box
+
+    def _get_crack_contours(self, t, obj_idx, c):  
+        crack_contours_string = self.object_cache.position._terminal_objects_np_cache[c, t]['crack_contours'][obj_idx]                               
+        return numpy.asarray(zlib.decompress( \
+                             base64.b64decode(crack_contours_string)).split(','), \
+                            dtype=numpy.float32).reshape(-1,2)
+        
+    def _get_object_data(self, t, obj_idx, c):
+        bb = self.get_bounding_box(t, obj_idx, c)
+        img, new_bb = self.get_image(t, obj_idx, c, bb)
+        cc = self.get_crack_contours(t, obj_idx, c)
+         
+        cc[:,0] -= new_bb[0][0]
+        cc[:,1] -= new_bb[0][1]
+        
+        return img, cc
+    
+    def _get_additional_object_data(self, object_name, data_fied_name, index):
+        return self.object_cache.position._hf_group['object'][object_name][data_fied_name][str(index)]
+
+MixIn(TerminalObjectItem, CellTerminalObjectItemMixin )
+    
       
 
 class Objects(object):
@@ -624,11 +683,8 @@ class Objects(object):
         return self._object_item_cache.setdefault(obj_id, ItemType(obj_id, self) )
             
     def __iter__(self, obj_ids=None):
-        if obj_ids is None:
-            obj_ids = self.obj_ids
-        for o in obj_ids:
-            if len(self.mapping[o]) > 0:
-                yield o, self.mapping[o]
+        for id in self.ids:
+            yield self.get(id)
                 
     def iter_sub_objects(self, obj_ids=None):
         if obj_ids is None:
@@ -641,15 +697,6 @@ class Objects(object):
                 rest_nodes =  map_[:,2]
                 yield o, numpy.concatenate((start_node, rest_nodes))
         
-    def __str__(self):
-        res =  'object: ' + self.name + '\n'   
-        if self.relation_name:
-            res += ' - relations: '+ self.relation_name + '\n' 
-        
-        for attribs in self._h5_object_group:
-            if attribs not in [self.HDF5_OBJECT_EDGE_NAME, self.HDF5_OBJECT_ID_NAME]:
-                res += ' - attributs: ' + attribs + '\n'
-        return res
     
     def get_sub_objects(self):
         if self.next_object_level:

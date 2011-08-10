@@ -217,12 +217,11 @@ class TrackletBrowser(QtGui.QWidget):
         self.scene.clear()
         
         outer = []
-        for all_trajectories in fh.traverse_objects('event'):
-            inner = []
-            for trajectory_item in all_trajectories:
-                inner.append(trajectory_item)
+        position = fh[fh.positions[0]]
+        events = position.get_objects('event')
+        for event in events:
+            inner = event.get_children_paths()[0]
             outer.append(inner)
-            
         self.initTracks(outer)
         
     def total_height(self):
@@ -333,8 +332,7 @@ class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
         self.start_time = trajectory[0].time
         
         for col, t_item in enumerate(trajectory):
-
-            gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(t_item.data)))
+            gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(t_item.image)))
             gallery_item.setPos(col * BOUNDING_BOX_SIZE, PREDICTION_BAR_HEIGHT)
             
             self['prediction'].append(t_item.predicted_class[0])
@@ -355,8 +353,8 @@ class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
             
             self._items.append(self.GraphicsTrajectoryItem(gallery_item, contour_item, bar_item))
                 
-            for tf in trajectory_features:
-                self[tf.name] =  tf.compute(trajectory)
+#            for tf in trajectory_features:
+#                self[tf.name] =  tf.compute(trajectory)
         
         id_item = QtGui.QGraphicsTextItem('%03d' % row)
         id_item.setPos( (col+1) * BOUNDING_BOX_SIZE, 0)
