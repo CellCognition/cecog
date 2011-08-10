@@ -222,9 +222,30 @@ class Position(_DataProvider):
         super(Position, self).__init__(hf_group, parent)
         self._hf_group_np_copy = self._hf_group['image']['channel'].value
         
+        
+        self.regions= {}
+        channel_info = self.get_definition('channel')
+        for object_def_row in self.get_definition('object'):
+            object_name = object_def_row[0]
+            object_sub_rel = object_def_row[1]
+            object_type = object_def_row[2]
+                    
+            if object_type == 'region':
+                print 'Position: reading region objects', object_name
+                for region_row in self.get_definition('region'):
+                    if region_row[0] == object_name:
+                        channel_idx = region_row[1]
+                        self.regions[object_name] = \
+                          {'channel_idx' : channel_idx, 
+                           'channel_name' : channel_info[channel_idx][0],
+                           'description' : channel_info[channel_idx][1],
+                           'is_phydical' : channel_info[channel_idx][2],
+                           'voxel_size' : channel_info[channel_idx][3]}
+                        break
+        
+        
         self.objects = {}
         self.sub_objects = {}
-        self.regions= {}
         channel_info = self.get_definition('channel')
         for object_def_row in self.get_definition('object'):
             object_name = object_def_row[0]
@@ -243,18 +264,6 @@ class Position(_DataProvider):
                     {'cache' : self.init_objects(object_name), 
                      'sub_relation' :object_sub_rel }
                     
-            elif object_type == 'region':
-                print 'Position: reading region objects', object_name
-                for region_row in self.get_definition('region'):
-                    if region_row[0] == object_name:
-                        channel_idx = region_row[1]
-                        self.regions[object_name] = \
-                          {'channel_idx' : channel_idx, 
-                           'channel_name' : channel_info[channel_idx][0],
-                           'description' : channel_info[channel_idx][1],
-                           'is_phydical' : channel_info[channel_idx][2],
-                           'voxel_size' : channel_info[channel_idx][3]}
-                        break
                     
         self.relation_compund = {}
         self.relation_cross = {}
@@ -287,6 +296,7 @@ class Position(_DataProvider):
                 last_feature_for_object = feature_for_object
                 
         self.object_classifier = {}
+        self.object_classifier_index = {}
         for classifier_idx, classifier_row in enumerate(self.get_definition('classifier')):
             object_name = self.get_definition('feature')[self.get_definition('feature_set')[classifier_row[3]][0]][2]
             print 'Position: found classifier for object', object_name, 'with schema: ', classifier_row[4]
@@ -299,20 +309,21 @@ class Position(_DataProvider):
                      'parameter' : classifier_row[6],
                      'description' : classifier_row[7],
                      }
-        self._cache_terminal_objects()
-        
-    def _cache_terminal_objects(self):
-        t = len(self._hf_group['time'])
-        c = len(self._hf_group['time']['0']['region'])
-
-        self._terminal_objects_np_cache = numpy.zeros((c, t), dtype=object)
-        
-        for t, tg in self._hf_group['time'].iteritems():
-            t = int(t)
-            for c, co in tg['region'].iteritems():
-                c = int(c)
-                self._terminal_objects_np_cache[c,t] = {'object': co['object'].value, \
-                                                              'crack_contours' : co['crack_contour'].value}
+            self.object_classifier_index[object_name] = classifier_idx
+#        self._cache_terminal_objects()
+#        
+#    def _cache_terminal_objects(self):
+#        t = len(self._hf_group['time'])
+#        c = len(self._hf_group['time']['0']['region'])
+#
+#        self._terminal_objects_np_cache = numpy.zeros((c, t), dtype=object)
+#        
+#        for t, tg in self._hf_group['time'].iteritems():
+#            t = int(t)
+#            for c, co in tg['region'].iteritems():
+#                c = int(c)
+#                self._terminal_objects_np_cache[c,t] = {'object': co['object'].value, \
+#                                                              'crack_contours' : co['crack_contour'].value}
     
     def init_objects(self, object_name):
         return Objects(object_name, self)
@@ -510,7 +521,6 @@ class ObjectItemBase(object):
         for i, r in enumerate(res):
             res[i] = [self.object_cache.get_object_type_of_children()(id, self.sub_objects()) for id in r]
         
-            
         return res
         
     def get_children_expansion(self):
@@ -556,8 +566,12 @@ class TerminalObjectItem(ObjectItemBase):
         return self.object_cache.object_np_cache['child_ids'][self.id][0][0]
     @property
     def _local_idx(self):
-        return self.object_cache.object_np_cache['child_ids'][self.id][0][1:3] # time, idx
-       
+        try:
+            tmp = self.object_cache.object_np_cache['child_ids'][self.id][0][1:3] # time, idx
+        except:
+            print self.object_cache.name
+            print self.id
+        return tmp
 class CellTerminalObjectItemMixin(object):
     @property
     def image(self):
@@ -568,10 +582,10 @@ class CellTerminalObjectItemMixin(object):
         crack_contour = self._get_crack_contours(self.time, self.local_idx, 0)
         crack_contour[:,0] -= self._bounding_box[0][0]
         crack_contour[:,1] -= self._bounding_box[0][1]  
-        return crack_contour
+        return crack_contour.clip(0, BOUNDING_BOX_SIZE)
     @property
     def predicted_class(self):
-        return self._get_additional_object_data(self.object_cache.name, 'classifier', 0) \
+        return self._get_additional_object_data(self.object_cache.name, 'classifier', 1) \
                                     ['prediction'][self.idx]
     @property
     def time(self):
@@ -582,7 +596,7 @@ class CellTerminalObjectItemMixin(object):
         
     
     def _get_bounding_box(self, t, obj_idx, c=0):
-        objects = self.object_cache.position._terminal_objects_np_cache[c, t]['object']
+        objects = self.object_cache.object_np_cache['terminals'][t]['object']
         return (objects['upper_left'][obj_idx], objects['lower_right'][obj_idx])
     
     def _get_image(self, t, obj_idx, c, bounding_box=None, min_bounding_box_size=BOUNDING_BOX_SIZE):
@@ -609,7 +623,7 @@ class CellTerminalObjectItemMixin(object):
         return self.object_cache.position._hf_group_np_copy[c, t, 0, ul[1]:lr[1], ul[0]:lr[0]], bounding_box
 
     def _get_crack_contours(self, t, obj_idx, c):  
-        crack_contours_string = self.object_cache.position._terminal_objects_np_cache[c, t]['crack_contours'][obj_idx]                               
+        crack_contours_string = self.object_cache.object_np_cache['terminals'][t]['crack_contours'][obj_idx]                               
         return numpy.asarray(zlib.decompress( \
                              base64.b64decode(crack_contours_string)).split(','), \
                             dtype=numpy.float32).reshape(-1,2)
@@ -626,6 +640,13 @@ class CellTerminalObjectItemMixin(object):
     
     def _get_additional_object_data(self, object_name, data_fied_name, index):
         return self.object_cache.position._hf_group['object'][object_name][data_fied_name][str(index)]
+    
+    @property
+    def CLASS_TO_COLOR(self):
+        if not hasattr(self, '_CLASS_TO_COLOR'):
+            classifier = self.object_cache.position.object_classifier[self.object_cache.name, self.object_cache.position.object_classifier_index[self.object_cache.name]]
+            self._CLASS_TO_COLOR = dict(enumerate(classifier['schema']['color'].tolist()))       
+        return self._CLASS_TO_COLOR
 
 MixIn(TerminalObjectItem, CellTerminalObjectItemMixin )
     
@@ -661,6 +682,22 @@ class Objects(object):
         for x in self.object_np_cache['id_edge_refs']:
             self.object_np_cache['child_ids'][x[0]] = self.object_np_cache['relation'][self.object_np_cache['edges'][x[1]:x[2], 1]]
             
+
+        t = len(self.position._hf_group['time'])
+        
+        if self.is_terminal():
+            c = self.position.regions[self.position.sub_objects[self.name]]['channel_idx']
+            self.object_np_cache['terminals'] = numpy.zeros((t), dtype=object)
+            for t, tg in self.position._hf_group['time'].iteritems():
+                t = int(t)
+                region = tg['region'][str(c)]
+                self.object_np_cache['terminals'][t] = {'object': region['object'].value, \
+                                                              'crack_contours' : region['crack_contour'].value}
+            
+            
+    def is_terminal(self):
+        return self.position.sub_objects[self.name] in self.position.regions
+        
     @property
     def ids(self):
         return self.object_np_cache['id_edge_refs'][:,0] 
@@ -668,7 +705,7 @@ class Objects(object):
         
     def get_object_type(self):
         ItemType = ObjectItem
-        if self.position.sub_objects[self.name] in self.position.regions:
+        if self.is_terminal():
             ItemType = TerminalObjectItem
         return ItemType
     

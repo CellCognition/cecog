@@ -96,6 +96,7 @@ class TrackletBrowser(QtGui.QWidget):
     ALIGN_LEFT = 0
     ALIGN_ABSOLUT_TIME = 1
     ALIGN_CUSTOM = 2
+    
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
         self.scene = QtGui.QGraphicsScene()
@@ -215,9 +216,9 @@ class TrackletBrowser(QtGui.QWidget):
     def open_file(self, filename):
         fh = dataprovider.File(filename)
         self.scene.clear()
+        position = fh[fh.positions[0]]
         
         outer = []
-        position = fh[fh.positions[0]]
         events = position.get_objects('event')
         for event in events:
             inner = event.get_children_paths()[0]
@@ -337,13 +338,13 @@ class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
             
             self['prediction'].append(t_item.predicted_class[0])
             bar_item = QtGui.QPixmap(BOUNDING_BOX_SIZE - 2 * PREDICTION_BAR_X_PADDING, PREDICTION_BAR_HEIGHT)
-            bar_item.fill(CLASS_TO_COLOR[t_item.predicted_class[0]])
+            bar_item.fill(QtGui.QColor(t_item.CLASS_TO_COLOR[t_item.predicted_class[0]]))
             bar_item = QtGui.QGraphicsPixmapItem(bar_item)
             bar_item.setPos(col*BOUNDING_BOX_SIZE + PREDICTION_BAR_X_PADDING, 0) 
             
             contour_item = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), t_item.crack_contour.tolist())))
             contour_item.setPos(col*BOUNDING_BOX_SIZE, PREDICTION_BAR_HEIGHT)
-            contour_item.setPen(QtGui.QPen(CLASS_TO_COLOR[t_item.predicted_class[0]]))
+            contour_item.setPen(QtGui.QPen(QtGui.QColor(t_item.CLASS_TO_COLOR[t_item.predicted_class[0]])))
             
             contour_item.setAcceptHoverEvents(True)
             
