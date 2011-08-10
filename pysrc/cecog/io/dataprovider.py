@@ -524,15 +524,14 @@ class ObjectItemBase(object):
         return res
         
     def get_children_expansion(self):
-        child_list = self.get_children()
-        head_id = child_list[0]
-        tail_id = child_list[1]
+        child_list = self.get_children_paths()[0]
+        head_id = child_list[0].id
+        tail_id = child_list[1].id
+         
+        succs = self._find_edges(tail_id)
+        pred  = self._find_edges(head_id, reverse=True)
         
-            
-        succs = self._find_edges(tail_id.id)
-        pred  = self._find_edges(tail_id.id, reverse=True)
-        
-        result = pred + child_list + succs
+        result = pred + [x.id for x in child_list] + succs
         
         return map(lambda id: self.object_cache.get_object_type_of_children()(id, self.sub_objects()), result)
                 
@@ -762,7 +761,7 @@ if __name__ == '__main__':
     for object_name in ['event']:
         pp = position.get_objects(object_name)
         for id in pp.ids:
-            print id, '-->', pp.get(id).get_children_paths()
+            print id, '-->', pp.get(id).get_children_expansion()
         
             
     

@@ -221,7 +221,7 @@ class TrackletBrowser(QtGui.QWidget):
         outer = []
         events = position.get_objects('event')
         for event in events:
-            inner = event.get_children_paths()[0]
+            inner = event.get_children_expansion()
             outer.append(inner)
         self.initTracks(outer)
         
