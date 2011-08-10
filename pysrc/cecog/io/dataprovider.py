@@ -245,11 +245,13 @@ class Position(_DataProvider):
                 if obj_1 == obj_2:
                     print 'Position: found inter relation for', obj_1, ' : ', rel_name
                     self.relation_compund.setdefault(obj_1,[]).append({'relation_name': rel_name,
-                                                  'to': obj_2})
+                                                  'to': obj_2,
+                                                  'cache': self._hf_group['relation'][rel_name].value})
                 else:
                     print 'Position: found cross relation for', obj_1, ' : ', rel_name
                     self.relation_cross.setdefault(obj_1,[]).append({'relation_name': rel_name,
-                                                  'to': obj_2})
+                                                  'to': obj_2,
+                                                  'cache': self._hf_group['relation'][rel_name].value})
                     
         self.object_feature = {}
         last_feature_for_object = 'ham'
@@ -444,7 +446,6 @@ class File(object):
                     image, crack_contour = position.get_object_data(t, obj_idx, c) 
                     tmp = TrackletItem(t, image, crack_contour, predicted_class)
                     res.append(tmp)
-                print ''
                 #res.sort(cmp=lambda x,y: cmp(x.time,y.time))
                 yield res
                  
@@ -462,17 +463,15 @@ class ObjectItemBase(object):
         self.id = id
         self.object_cache = object_cache
         
-        self.in_obj_ids = []
-        self.out_obj_ids = []
-        
-        self.children_ids = []
-        
-        self.sibling_obj_ids = []
+    
+    @property
+    def idx(self):
+        return self.id - 1
     
     def is_terminal(self):
         return isinstance(self, TerminalObjectItem)
     
-    def get_child_objects(self):
+    def get_children(self):
         child_entries = self.object_cache.object_np_cache['child_ids'][self.id]
         if len(child_entries) == 0:
             return None
@@ -482,11 +481,72 @@ class ObjectItemBase(object):
         return map(lambda id: self.object_cache.get_object_type_of_children()(id, self.object_cache), result)
             
     
-    def get_sibling_objects(self, sibling_name):
-        for sibling_rel in self.object_cache.position.relation_cross:
-            if sibling_name in sibling_rel['relation_name']:
-                sibling_id = self.object_cache.position.h5_group['relation'][sibling_rel['relation_name']][self.id-1][2]
-                return self.object_cache.get_object_type()(sibling_id, self.object_cache)
+    def get_siblings(self):
+        if self.object_cache.name in self.object_cache.position.relation_cross:
+            res = {}
+            for sibling in self.object_cache.position.relation_cross[object_name]:
+                sibling_object_name = sibling['to']
+                sibling_object_relation = sibling['cache']
+                res[sibling_object_name] = self.object_cache.position.get_objects(sibling_object_name).get(sibling_object_relation[self.idx][2])
+            return res
+        
+        
+    def _find_edges(self, id, succs=None, reverse=False, stop_id=-1):
+        if succs is None:
+            succs = []
+        ind1 = 0
+        ind2 = 2
+        if reverse:
+            ind1, ind2 = ind2, ind1
+        tmp = numpy.where(self.object_cache.object_np_cache['relation'][:, ind1] == id)[0]
+        if len(tmp) > 0:
+            succs.append(tmp[0])
+            return self._find_edges(self.object_cache.object_np_cache['relation'][tmp[0], ind2], succs)
+        else:
+            return succs
+        
+    def get_children_paths(self):
+        child_list = self.get_children()
+        child_id_list = [x.id for x in child_list]
+        head_id = child_list[0].id
+        #print child_id_list
+        
+        def all_paths_of_tree(id):
+           # print id,
+            found_ids = numpy.where(self.object_cache.object_np_cache['relation'][:, 0] == id)[0]
+            out_all_ids = [self.object_cache.object_np_cache['relation'][found_id, 2] for found_id in found_ids]
+            out_ids = [out_id for out_id in out_all_ids if out_id in child_id_list]
+            #print out_all_ids, ' / ', out_ids
+            
+            if len(out_ids) == 0:
+                return [[id]]
+            else:
+                all_paths_ = []
+                for out_id in out_ids:
+                    for path_ in all_paths_of_tree(out_id):
+                        all_paths_.append([id] + path_)
+
+                return all_paths_ 
+            
+        res = all_paths_of_tree(head_id)
+        for i, r in enumerate(res):
+            res[i] = [self.object_cache.get_object_type_of_children()(id, self.object_cache) for id in r]
+        
+            
+        return res
+        
+    def get_children_expansion(self):
+        child_list = self.get_children()
+        head_id = child_list[0]
+        tail_id = child_list[1]
+        
+            
+        succs = self._find_edges(tail_id.id)
+        pred  = self._find_edges(tail_id.id, reverse=True)
+        
+        result = pred + child_list + succs
+        
+        return map(lambda id: self.object_cache.get_object_type_of_children()(id, self.object_cache), result)
                 
 
 class ObjectItem(ObjectItemBase):
@@ -496,15 +556,7 @@ class ObjectItem(ObjectItemBase):
     def get_additional_data(self):
         # helper for subclass
         pass
-    def get_children(self):
-        # gereric
-        pass
-    def get_children_expansion(self):
-        # gereric
-        pass
-    def get_siblings(self):
-        # gereric
-        pass
+    
     def get_data(self):
         #abstract
         pass
@@ -516,7 +568,7 @@ class TerminalObjectItem(ObjectItemBase):
     def __init__(self, obj_id, object_cache):
         ObjectItemBase.__init__(self, obj_id, object_cache)
     
-    def get_child_objects(self):
+    def get_children(self):
         raise RuntimeError('Terminal objects have no childs')
       
 
@@ -529,7 +581,8 @@ class Objects(object):
         self.position = position        
         self._h5_object_group = position.get_object_group(name)
         
-        self.object_np_cache = {}    
+        self.object_np_cache = {}  
+        self._object_item_cache = {}  
         
         self._relation_name = position.get_object_relation(name)
         self.relation = position.get_relation(self._relation_name)
@@ -568,7 +621,7 @@ class Objects(object):
     
     def get(self, obj_id):
         ItemType = self.get_object_type()
-        return ItemType(obj_id, self) 
+        return self._object_item_cache.setdefault(obj_id, ItemType(obj_id, self) )
             
     def __iter__(self, obj_ids=None):
         if obj_ids is None:
@@ -622,10 +675,10 @@ if __name__ == '__main__':
     
     
     position = t[t.positions[0]]
-    for object_name in ['primary__primary']:
+    for object_name in ['event']:
         pp = position.get_objects(object_name)
         for id in pp.ids:
-            print id, '-->', pp.get(id).get_sibling_objects(position.relation_cross[object_name][0]['to'])
+            print id, '-->', pp.get(id).get_children_paths()
         
             
     

@@ -278,8 +278,7 @@ class TimeHolder(OrderedDict):
                 obj_name = self._convert_region_name(channel_name,
                                                      region_name,
                                                      prefix='region')
-                var_obj[idx_obj] = (obj_name, rel_name, self.HDF5_OTYPE_OBJECT if channel_name != PrimaryChannel.PREFIX \
-                                                                               else self.HDF5_OTYPE_REGION)
+                var_obj[idx_obj] = (obj_name, rel_name, self.HDF5_OTYPE_REGION)
                 #self._objectdef_to_idx[obj_name] = (idx, rel_name)
                 idx_obj += 1
 
@@ -289,8 +288,7 @@ class TimeHolder(OrderedDict):
                 obj_name = self._convert_region_name(channel_name,
                                                      region_name,
                                                      prefix='')
-                var_obj[idx_obj] = (obj_name, rel_name, self.HDF5_OTYPE_OBJECT if channel_name != PrimaryChannel.PREFIX \
-                                                                               else self.HDF5_OTYPE_REGION)
+                var_obj[idx_obj] = (obj_name, rel_name, self.HDF5_OTYPE_OBJECT)
                 #self._objectdef_to_idx[obj_name] = (idx, rel_name)
                 idx_obj += 1
 
@@ -710,7 +708,7 @@ class TimeHolder(OrderedDict):
                     nr_edges += events[0]['maxLength'] - 1
                 elif len(events) == 2:
                     splt = events[0]['splitIdx']
-                    nr_edges += events[0]['maxLength'] + events[1]['maxLength'] - splt - 2
+                    nr_edges += events[0]['maxLength'] + events[1]['maxLength'] - splt - 1
                 else:
                     raise ValueError("More than two daughter cell are not supported.")
 
@@ -732,7 +730,7 @@ class TimeHolder(OrderedDict):
                         rel_idx += 1
                     if len(events) == 2:
                         splt = events[1]['splitIdx']
-                        track = events[1]['tracks'][0][splt:]
+                        track = events[1]['tracks'][0][splt-1:]
                         for head_id, tail_id in zip(track, track[1:]):
                             edge_idx = self._edge_to_idx[(head_id, tail_id)]
                             var_edge[rel_idx] = (obj_id, edge_idx)
