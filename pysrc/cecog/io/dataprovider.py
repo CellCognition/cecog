@@ -38,7 +38,7 @@ import time as timing
 #-------------------------------------------------------------------------------
 # constants:
 #
-BOUNDING_BOX_SIZE = 50
+BOUNDING_BOX_SIZE = 100
 
 #-------------------------------------------------------------------------------
 # functions:
@@ -480,19 +480,22 @@ class ObjectItemBase(object):
             return res
         
         
-    def _find_edges(self, id, succs=None, reverse=False, stop_id=-1):
-        if succs is None:
-            succs = []
+    def _find_edges(self, id, expansion=None, max_length=5, reverse=False):
+        if expansion is None:
+            expansion = []
         ind1 = 0
         ind2 = 2
         if reverse:
             ind1, ind2 = ind2, ind1
         tmp = numpy.where(self.object_cache.object_np_cache['relation'][:, ind1] == id)[0]
-        if len(tmp) > 0:
-            succs.append(tmp[0])
-            return self._find_edges(self.object_cache.object_np_cache['relation'][tmp[0], ind2], succs)
+        if len(tmp) > 0 and max_length > 0:
+            next_id = self.object_cache.object_np_cache['relation'][tmp[0], ind2]
+            expansion.append(next_id)
+            return self._find_edges(next_id, expansion, max_length-1, reverse)
         else:
-            return succs
+            if reverse:
+                expansion.reverse()
+            return expansion
         
     def get_children_paths(self):
         child_list = self.get_children()
@@ -523,13 +526,15 @@ class ObjectItemBase(object):
         
         return res
         
-    def get_children_expansion(self):
+    def get_children_expansion(self, max_length=5):
         child_list = self.get_children_paths()[0]
-        head_id = child_list[0].id
-        tail_id = child_list[1].id
+        front_id = child_list[0].id
+        back_id = child_list[-1].id
+        
+        print back_id
          
-        succs = self._find_edges(tail_id)
-        pred  = self._find_edges(head_id, reverse=True)
+        succs = self._find_edges(back_id, max_length=max_length)
+        pred  = self._find_edges(front_id, max_length=max_length, reverse=True)
         
         result = pred + [x.id for x in child_list] + succs
         
