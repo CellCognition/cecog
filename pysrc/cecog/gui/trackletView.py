@@ -247,7 +247,7 @@ class TrackletBrowser(QtGui.QWidget):
             if self._align_vertically == self.ALIGN_LEFT:
                 ti.moveToColumn(0)
             elif self._align_vertically == self.ALIGN_ABSOLUT_TIME:
-                ti.moveToColumn(ti.start_time)
+                ti.moveToColumn(ti.sub_items[0].object_item.time)
             elif self._align_vertically == self.ALIGN_CUSTOM:
                 ti.moveToColumn(ti.column)
         
@@ -323,8 +323,11 @@ class GraphicsObjectItem(GraphicsObjectItemBase):
     def __init__(self, object_item, parent=None):
         GraphicsObjectItemBase.__init__(self, parent)
         self.object_item = object_item
-        for sub_item in object_item.get_children_paths()[0]:
+        self.sub_items = []
+        for col, sub_item in enumerate(object_item.get_children_paths()[0]):
             g_sub_item = GraphicsTerminalObjectItem(sub_item, self)
+            g_sub_item.moveToColumn(col)
+            self.sub_items.append(g_sub_item)
             self.addToGroup(g_sub_item)
         self.row = object_item.id
         self.column = 0
@@ -354,7 +357,7 @@ class GraphicsTerminalObjectItem(GraphicsObjectItemBase):
         self.row = 0 
         self.column = object_item.time
         self.height = BOUNDING_BOX_SIZE + PREDICTION_BAR_HEIGHT
-        self.moveToColumn(self.column)
+
         
         
         
