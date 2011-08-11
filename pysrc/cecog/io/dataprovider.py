@@ -8,6 +8,7 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+#from cecog.gui.trackletView import BOUNDING_BOX_SIZE
 
 __all__ = []
 
@@ -219,6 +220,8 @@ class Position(_DataProvider):
     CHILDREN_GROUP_NAME = None
     CHILDREN_PROVIDER_CLASS = None
     def __init__(self, hf_group, parent=None):
+        tic = timing.time()
+        
         super(Position, self).__init__(hf_group, parent)
         self._hf_group_np_copy = self._hf_group['image']['channel'].value
         
@@ -310,21 +313,8 @@ class Position(_DataProvider):
                      'description' : classifier_row[7],
                      }
             self.object_classifier_index[object_name] = classifier_idx
-#        self._cache_terminal_objects()
-#        
-#    def _cache_terminal_objects(self):
-#        t = len(self._hf_group['time'])
-#        c = len(self._hf_group['time']['0']['region'])
-#
-#        self._terminal_objects_np_cache = numpy.zeros((c, t), dtype=object)
-#        
-#        for t, tg in self._hf_group['time'].iteritems():
-#            t = int(t)
-#            for c, co in tg['region'].iteritems():
-#                c = int(c)
-#                self._terminal_objects_np_cache[c,t] = {'object': co['object'].value, \
-#                                                              'crack_contours' : co['crack_contour'].value}
-    
+        print '\ninit of position took %5.3f sec ' % (timing.time()-tic)
+
     def init_objects(self, object_name):
         return Objects(object_name, self)
     
@@ -411,32 +401,6 @@ class File(object):
     @property
     def positions(self):
         return [(s, p, e, pos) for (s, p, e) in self.experiment for pos in self._data[s][p][e]]
-             
-    def traverse_objects(self, object_name): 
-        # loop over all positions
-        for s, p, e, pos in self.positions:
-            print 'In Sample %r plate %r, experiment %r and position %r' % (s, p, e, pos)
-            position = self[s, p, e, pos]
-            c = position.get_definition('region')['channel_idx'][0]
-    
-            events = position.get_objects(object_name) 
-            
-            primary_primary = events.get_sub_objects()
-            
-            for event_id, prim_prims_ids in events.iter_sub_objects():  
-                res = []
-                for prim_prim_id, reg_prim_id in primary_primary.iter_sub_objects(prim_prims_ids):
-                    obj_id= primary_primary[prim_prim_id][0][0]
-                    t = primary_primary[prim_prim_id][0][1]
-                    obj_idx = primary_primary[prim_prim_id][0][2]
-                    predicted_class = position.get_additional_object_data(primary_primary.name, 'classifier', 1) \
-                                                ['prediction'][primary_primary.relation_idx[prim_prim_id][0]]
-                    
-                    image, crack_contour = position.get_object_data(t, obj_idx, c) 
-                    tmp = TrackletItem(t, image, crack_contour, predicted_class)
-                    res.append(tmp)
-                #res.sort(cmp=lambda x,y: cmp(x.time,y.time))
-                yield res
                  
 class Relation(object):
     def __init__(self, relation_name, h5_table, from_to_object_names):
@@ -587,8 +551,19 @@ class CellTerminalObjectItemMixin(object):
     @property
     def image(self):
         channel_idx = self.channel_idx()
-        image, self._bounding_box = self._get_image(self.time, self.local_idx, channel_idx)
-        return image
+        image_own, self._bounding_box = self._get_image(self.time, self.local_idx, channel_idx)
+        
+        sib = self.get_siblings()
+        if sib is not None:
+            image_sib = sib.image
+            new_shape = (BOUNDING_BOX_SIZE,)*2 + (3,)
+            image = numpy.zeros(new_shape, dtype=numpy.uint8)
+            image[0:image_own.shape[0],0:image_own.shape[1],0] = image_own
+            image[0:image_sib.shape[0],0:image_sib.shape[1],1] = image_sib
+        else:
+            image = image_own
+        
+        return image 
     @property
     def crack_contour(self):
         crack_contour = self._get_crack_contours(self.time, self.local_idx)
@@ -597,9 +572,12 @@ class CellTerminalObjectItemMixin(object):
         return crack_contour.clip(0, BOUNDING_BOX_SIZE)
     @property
     def predicted_class(self):
-        classifier_idx = self.classifier_idx()
-        return self._get_additional_object_data(self.name, 'classifier', classifier_idx) \
-                                    ['prediction'][self.idx]
+        # TODO: This can access can be cached by parent
+        if not hasattr(self, '_predicted_class'):
+            classifier_idx = self.classifier_idx()
+            self._predicted_class = self._get_additional_object_data(self.name, 'classifier', classifier_idx) \
+                                        ['prediction'][self.idx]
+        return self._predicted_class[0]
     @property
     def time(self):
         return self._local_idx[0]
@@ -613,7 +591,6 @@ class CellTerminalObjectItemMixin(object):
     def channel_idx(self):
         return self.get_position.regions[self.get_position.sub_objects[self.name]]['channel_idx']
         
-    
     def _get_bounding_box(self, t, obj_idx, c=0):
         objects = self.parent.object_np_cache['terminals'][t]['object']
         return (objects['upper_left'][obj_idx], objects['lower_right'][obj_idx])
@@ -659,17 +636,15 @@ class CellTerminalObjectItemMixin(object):
     
     def _get_additional_object_data(self, object_name, data_fied_name, index):
         return self.get_position._hf_group['object'][object_name][data_fied_name][str(index)]
-    
     @property
-    def CLASS_TO_COLOR(self):
+    def class_color(self):
         if not hasattr(self, '_CLASS_TO_COLOR'):
             classifier = self.get_position.object_classifier[self.name, self.get_position.object_classifier_index[self.name]]
-            self._CLASS_TO_COLOR = dict(enumerate(classifier['schema']['color'].tolist()))       
-        return self._CLASS_TO_COLOR
+            self._class_color = dict(enumerate(classifier['schema']['color'].tolist()))       
+        return self._class_color[self.predicted_class]
 
-MixIn(TerminalObjectItem, CellTerminalObjectItemMixin )
+MixIn(TerminalObjectItem, CellTerminalObjectItemMixin)
     
-      
 
 class Objects(object):
     HDF5_OBJECT_EDGE_NAME = 'edge'
@@ -720,8 +695,10 @@ class Objects(object):
     @property
     def ids(self):
         return self.object_np_cache['id_edge_refs'][:,0] 
-        
-        
+    
+    def __len__(self):
+        return len(self.ids)
+          
     def get_object_type(self):
         ItemType = ObjectItem
         if self.is_terminal():
@@ -740,19 +717,11 @@ class Objects(object):
             
     def __iter__(self, obj_ids=None):
         for id in self.ids:
+            yield self.get(id)    
+            
+    def iter_random(self, max_count = 100):
+        for id in random.sample(self.ids, min(max_count, len(self))):
             yield self.get(id)
-                
-    def iter_sub_objects(self, obj_ids=None):
-        if obj_ids is None:
-            obj_ids = self.obj_ids
-        for o in obj_ids:
-            map_ = self.mapping[o]
-            if len(map_) > 0:
-                start_node = map_[0,0]
-                start_node = start_node.reshape((1,))
-                rest_nodes =  map_[:,2]
-                yield o, numpy.concatenate((start_node, rest_nodes))
-        
     
     def get_sub_objects(self):
         if self.next_object_level:
@@ -783,9 +752,3 @@ if __name__ == '__main__':
         for id in pp.ids:
             print id, '-->', pp.get(id).get_children_expansion()
         
-            
-    
-    
-    
-
-    

@@ -7,8 +7,6 @@ import numpy
 import qimage2ndarray
 import random
 import sys
-import vigra
-
 
 BOUNDING_BOX_SIZE = dataprovider.BOUNDING_BOX_SIZE
 PREDICTION_BAR_HEIGHT = 4
@@ -16,22 +14,7 @@ PREDICTION_BAR_HEIGHT = 4
 PREDICTION_BAR_X_PADDING = 0
 PREDICTION_BAR_Y_PADDING = 2
 
-CLASS_TO_COLOR = { \
-                  0 : QtCore.Qt.green, \
-                  1 : QtCore.Qt.yellow,\
-                  2 : QtGui.QColor(255,165,0),\
-                  3 : QtCore.Qt.magenta,\
-                  4 : QtCore.Qt.darkMagenta,\
-                  5 : QtCore.Qt.blue,\
-                  6 : QtCore.Qt.darkGreen,\
-                  7 : QtCore.Qt.red,\
-                  }
 
-
-#def argsorted(seq, cmp=cmp, reverse=False):
-#    temp = enumerate(seq)
-#    temp_s = sorted(temp, cmp=lambda u,v: cmp(u[1],v[1]), reverse=reverse)
-#    return [x[0] for x in temp_s]
 
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, filename=None, parent=None):
@@ -218,18 +201,26 @@ class TrackletBrowser(QtGui.QWidget):
         fh = dataprovider.File(filename)
         self.scene.clear()
         position = fh[fh.positions[0]]
-        
+    
         outer = []
         events = position.get_objects('event')
         for event in events:
-            inner = event.get_children_expansion()
-            for i, item in enumerate(inner):
-                inner[i] = item#.get_siblings()
-            outer.append(inner)
+            for inner in event.get_children_paths():
+#                for i, item in enumerate(inner):
+#                    inner[i] = item.get_siblings()
+                outer.append(inner)
         self.initTracks(outer)
         
-    def total_height(self):
-        return sum([x.height for x in self._all_tracks])
+        
+#        outer = []
+#        pp = position.get_objects('primary__primary')
+#        inner = []
+#        for i, p in enumerate(pp.iter_random(200)):
+#            inner.append(p)
+#            if i % 10 == 0:
+#                outer.append(inner)
+#                inner = []
+#        self.initTracks(outer)
         
     def initTracks(self, tracklets):
         self._all_tracks = []
@@ -246,6 +237,9 @@ class TrackletBrowser(QtGui.QWidget):
         self.scene.addItem(zero_line)
         self.update_()
         
+    def total_height(self):
+        return sum([x.height for x in self._all_tracks])
+    
     def update_(self):
         row = 0
         for ti in self._all_tracks:
@@ -274,7 +268,6 @@ class TrackletBrowser(QtGui.QWidget):
     def sortRandomly(self):
         random.shuffle(self._all_tracks)
         self.update_()
-        
         
     def sortTracksByFeature(self, feature_name):
         self._all_tracks.sort(cmp=lambda x,y: cmp(x[feature_name],y[feature_name]))
@@ -339,15 +332,15 @@ class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
             gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(t_item.image)))
             gallery_item.setPos(col * BOUNDING_BOX_SIZE, PREDICTION_BAR_HEIGHT)
             
-            self['prediction'].append(t_item.predicted_class[0])
+            self['prediction'].append(t_item.predicted_class)
             bar_item = QtGui.QPixmap(BOUNDING_BOX_SIZE - 2 * PREDICTION_BAR_X_PADDING, PREDICTION_BAR_HEIGHT)
-            bar_item.fill(QtGui.QColor(t_item.CLASS_TO_COLOR[t_item.predicted_class[0]]))
+            bar_item.fill(QtGui.QColor(t_item.class_color))
             bar_item = QtGui.QGraphicsPixmapItem(bar_item)
             bar_item.setPos(col*BOUNDING_BOX_SIZE + PREDICTION_BAR_X_PADDING, 0) 
             
             contour_item = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), t_item.crack_contour.tolist())))
             contour_item.setPos(col*BOUNDING_BOX_SIZE, PREDICTION_BAR_HEIGHT)
-            contour_item.setPen(QtGui.QPen(QtGui.QColor(t_item.CLASS_TO_COLOR[t_item.predicted_class[0]])))
+            contour_item.setPen(QtGui.QPen(QtGui.QColor(t_item.class_color)))
             
             contour_item.setAcceptHoverEvents(True)
             
