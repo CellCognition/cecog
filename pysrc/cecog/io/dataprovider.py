@@ -448,9 +448,18 @@ class Relation(object):
         return self.h5_table.value.view(numpy.uint32).reshape(len(self.h5_table), -1)
     
 class ObjectItemBase(object):
-    def __init__(self, id, object_cache):
+    def __init__(self, id, parent):
         self.id = id
-        self.object_cache = object_cache
+        self.parent = parent
+        self.name = parent.name
+        
+    @property
+    def get_position(self):
+        return self.parent.position
+    
+    def get_child_objects_type(self):
+        return self.parent.get_object_type_of_children()
+        
         
     
     @property
@@ -461,22 +470,22 @@ class ObjectItemBase(object):
         return isinstance(self, TerminalObjectItem)
     
     def get_children(self):
-        child_entries = self.object_cache.object_np_cache['child_ids'][self.id]
+        child_entries = self.parent.object_np_cache['child_ids'][self.id]
         if len(child_entries) == 0:
             return None
         result = numpy.zeros(child_entries.shape[0]+1, dtype=numpy.uint32)
         result[0] = child_entries[0,0]
         result[1:] = child_entries[:,2]
-        return map(lambda id: self.object_cache.get_object_type_of_children()(id, self.sub_objects()), result)
+        return map(lambda id: self.get_child_objects_type()(id, self.sub_objects()), result)
             
     
     def get_siblings(self):
-        if self.object_cache.name in self.object_cache.position.relation_cross:
+        if self.name in self.get_position.relation_cross:
             res = {}
-            for sibling in self.object_cache.position.relation_cross[self.object_cache.name]:
+            for sibling in self.get_position.relation_cross[self.name]:
                 sibling_object_name = sibling['to']
                 sibling_object_relation = sibling['cache']
-                res[sibling_object_name] = self.object_cache.position.get_objects(sibling_object_name).get(sibling_object_relation[self.idx][2])
+                res[sibling_object_name] = self.get_position.get_objects(sibling_object_name).get(sibling_object_relation[self.idx][2])
             return res[sibling_object_name]
         
         
@@ -487,9 +496,9 @@ class ObjectItemBase(object):
         ind2 = 2
         if reverse:
             ind1, ind2 = ind2, ind1
-        tmp = numpy.where(self.object_cache.object_np_cache['relation'][:, ind1] == id)[0]
+        tmp = numpy.where(self.parent.object_np_cache['relation'][:, ind1] == id)[0]
         if len(tmp) > 0 and max_length > 0:
-            next_id = self.object_cache.object_np_cache['relation'][tmp[0], ind2]
+            next_id = self.parent.object_np_cache['relation'][tmp[0], ind2]
             expansion.append(next_id)
             return self._find_edges(next_id, expansion, max_length-1, reverse)
         else:
@@ -504,8 +513,8 @@ class ObjectItemBase(object):
         #print child_id_list
         
         def all_paths_of_tree(id):
-            found_ids = numpy.where(self.object_cache.object_np_cache['relation'][:, 0] == id)[0]
-            out_all_ids = [self.object_cache.object_np_cache['relation'][found_id, 2] for found_id in found_ids]
+            found_ids = numpy.where(self.parent.object_np_cache['relation'][:, 0] == id)[0]
+            out_all_ids = [self.parent.object_np_cache['relation'][found_id, 2] for found_id in found_ids]
             out_ids = [out_id for out_id in out_all_ids if out_id in child_id_list]
             #print out_all_ids, ' / ', out_ids
             
@@ -521,7 +530,7 @@ class ObjectItemBase(object):
             
         res = all_paths_of_tree(head_id)
         for i, r in enumerate(res):
-            res[i] = [self.object_cache.get_object_type_of_children()(id, self.sub_objects()) for id in r]
+            res[i] = [self.get_child_objects_type()(id, self.sub_objects()) for id in r]
         
         return res
         
@@ -535,14 +544,14 @@ class ObjectItemBase(object):
         
         result = pred + [x.id for x in child_list] + succs
         
-        return map(lambda id: self.object_cache.get_object_type_of_children()(id, self.sub_objects()), result)
+        return map(lambda id: self.get_child_objects_type()(id, self.sub_objects()), result)
                 
     def sub_objects(self):
-        return self.object_cache.position.get_objects(self.object_cache.position.sub_objects[self.object_cache.name])
+        return self.get_position.get_objects(self.get_position.sub_objects[self.name])
 
 class ObjectItem(ObjectItemBase):
-    def __init__(self, obj_id, object_cache):
-        ObjectItemBase.__init__(self, obj_id, object_cache)
+    def __init__(self, obj_id, parent):
+        ObjectItemBase.__init__(self, obj_id, parent)
        
     def get_additional_data(self):
         # helper for subclass
@@ -564,15 +573,16 @@ class TerminalObjectItem(ObjectItemBase):
     
     @property
     def local_id(self):
-        return self.object_cache.object_np_cache['child_ids'][self.id][0][0]
+        return self.parent.object_np_cache['child_ids'][self.id][0][0]
     @property
     def _local_idx(self):
         try:
-            tmp = self.object_cache.object_np_cache['child_ids'][self.id][0][1:3] # time, idx
+            tmp = self.parent.object_np_cache['child_ids'][self.id][0][1:3] # time, idx
         except:
-            print self.object_cache.name
+            print self.name
             print self.id
         return tmp
+    
 class CellTerminalObjectItemMixin(object):
     @property
     def image(self):
@@ -588,7 +598,7 @@ class CellTerminalObjectItemMixin(object):
     @property
     def predicted_class(self):
         classifier_idx = self.classifier_idx()
-        return self._get_additional_object_data(self.object_cache.name, 'classifier', classifier_idx) \
+        return self._get_additional_object_data(self.name, 'classifier', classifier_idx) \
                                     ['prediction'][self.idx]
     @property
     def time(self):
@@ -598,14 +608,14 @@ class CellTerminalObjectItemMixin(object):
         return self._local_idx[1]
     
     def classifier_idx(self):
-        return self.object_cache.position.object_classifier_index[self.object_cache.name]
+        return self.get_position.object_classifier_index[self.name]
     
     def channel_idx(self):
-        return self.object_cache.position.regions[self.object_cache.position.sub_objects[self.object_cache.name]]['channel_idx']
+        return self.get_position.regions[self.get_position.sub_objects[self.name]]['channel_idx']
         
     
     def _get_bounding_box(self, t, obj_idx, c=0):
-        objects = self.object_cache.object_np_cache['terminals'][t]['object']
+        objects = self.parent.object_np_cache['terminals'][t]['object']
         return (objects['upper_left'][obj_idx], objects['lower_right'][obj_idx])
     
     def _get_image(self, t, obj_idx, c, bounding_box=None, min_bounding_box_size=BOUNDING_BOX_SIZE):
@@ -620,8 +630,8 @@ class CellTerminalObjectItemMixin(object):
         ul[0] = max(0, ul[0] - offset_0/2 - cmp(offset_0%2,0) * offset_0 % 2) 
         ul[1] = max(0, ul[1] - offset_1/2 - cmp(offset_1%2,0) * offset_1 % 2)  
         
-        lr[0] = min(self.object_cache.position._hf_group_np_copy.shape[4], lr[0] + offset_0/2) 
-        lr[1] = min(self.object_cache.position._hf_group_np_copy.shape[3], lr[1] + offset_1/2) 
+        lr[0] = min(self.get_position._hf_group_np_copy.shape[4], lr[0] + offset_0/2) 
+        lr[1] = min(self.get_position._hf_group_np_copy.shape[3], lr[1] + offset_1/2) 
         
         bounding_box = (ul, lr)
         
@@ -629,10 +639,10 @@ class CellTerminalObjectItemMixin(object):
         #       the requested BOUNDING_BOX_SIZE, I dont see a chance to really
         #       fix it, without doing a copy...
         
-        return self.object_cache.position._hf_group_np_copy[c, t, 0, ul[1]:lr[1], ul[0]:lr[0]], bounding_box
+        return self.get_position._hf_group_np_copy[c, t, 0, ul[1]:lr[1], ul[0]:lr[0]], bounding_box
 
     def _get_crack_contours(self, t, obj_idx):  
-        crack_contours_string = self.object_cache.object_np_cache['terminals'][t]['crack_contours'][obj_idx]                               
+        crack_contours_string = self.parent.object_np_cache['terminals'][t]['crack_contours'][obj_idx]                               
         return numpy.asarray(zlib.decompress( \
                              base64.b64decode(crack_contours_string)).split(','), \
                             dtype=numpy.float32).reshape(-1,2)
@@ -648,12 +658,12 @@ class CellTerminalObjectItemMixin(object):
         return img, cc
     
     def _get_additional_object_data(self, object_name, data_fied_name, index):
-        return self.object_cache.position._hf_group['object'][object_name][data_fied_name][str(index)]
+        return self.get_position._hf_group['object'][object_name][data_fied_name][str(index)]
     
     @property
     def CLASS_TO_COLOR(self):
         if not hasattr(self, '_CLASS_TO_COLOR'):
-            classifier = self.object_cache.position.object_classifier[self.object_cache.name, self.object_cache.position.object_classifier_index[self.object_cache.name]]
+            classifier = self.get_position.object_classifier[self.name, self.get_position.object_classifier_index[self.name]]
             self._CLASS_TO_COLOR = dict(enumerate(classifier['schema']['color'].tolist()))       
         return self._CLASS_TO_COLOR
 
