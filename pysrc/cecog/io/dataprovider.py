@@ -273,7 +273,7 @@ class Position(_DataProvider):
             obj_2 = relation_def_row[2]
             if obj_1 in self.objects or obj_1 in self.regions:
                 if obj_1 == obj_2:
-                    print 'Position: found inter relation for', obj_1, ' : ', rel_name
+                    print 'Position: found compound relation for', obj_1, ' : ', rel_name
                     self.relation_compund.setdefault(obj_1,[]).append({'relation_name': rel_name,
                                                   'to': obj_2,
                                                   'cache': self._hf_group['relation'][rel_name].value})

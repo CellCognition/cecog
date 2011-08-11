@@ -224,7 +224,7 @@ class TrackletBrowser(QtGui.QWidget):
         for event in events:
             inner = event.get_children_expansion()
             for i, item in enumerate(inner):
-                inner[i] = item.get_siblings()
+                inner[i] = item#.get_siblings()
             outer.append(inner)
         self.initTracks(outer)
         
