@@ -1,13 +1,14 @@
 from PyQt4 import QtGui, QtCore
-import numpy, vigra
-import sys
-import random
-import qimage2ndarray
-import getopt
-
+from cecog.gui.imageviewer import HoverPolygonItem
 from cecog.io import dataprovider
 from cecog.io.dataprovider import trajectory_features
-from cecog.gui.imageviewer import HoverPolygonItem
+import getopt
+import numpy
+import qimage2ndarray
+import random
+import sys
+import vigra
+
 
 BOUNDING_BOX_SIZE = dataprovider.BOUNDING_BOX_SIZE
 PREDICTION_BAR_HEIGHT = 4
@@ -222,6 +223,8 @@ class TrackletBrowser(QtGui.QWidget):
         events = position.get_objects('event')
         for event in events:
             inner = event.get_children_expansion()
+            for i, item in enumerate(inner):
+                inner[i] = item.get_siblings()
             outer.append(inner)
         self.initTracks(outer)
         

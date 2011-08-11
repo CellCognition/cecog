@@ -473,11 +473,11 @@ class ObjectItemBase(object):
     def get_siblings(self):
         if self.object_cache.name in self.object_cache.position.relation_cross:
             res = {}
-            for sibling in self.object_cache.position.relation_cross[object_name]:
+            for sibling in self.object_cache.position.relation_cross[self.object_cache.name]:
                 sibling_object_name = sibling['to']
                 sibling_object_relation = sibling['cache']
                 res[sibling_object_name] = self.object_cache.position.get_objects(sibling_object_name).get(sibling_object_relation[self.idx][2])
-            return res
+            return res[sibling_object_name]
         
         
     def _find_edges(self, id, expansion=None, max_length=5, reverse=False):
@@ -504,7 +504,6 @@ class ObjectItemBase(object):
         #print child_id_list
         
         def all_paths_of_tree(id):
-           # print id,
             found_ids = numpy.where(self.object_cache.object_np_cache['relation'][:, 0] == id)[0]
             out_all_ids = [self.object_cache.object_np_cache['relation'][found_id, 2] for found_id in found_ids]
             out_ids = [out_id for out_id in out_all_ids if out_id in child_id_list]
@@ -531,8 +530,6 @@ class ObjectItemBase(object):
         front_id = child_list[0].id
         back_id = child_list[-1].id
         
-        print back_id
-         
         succs = self._find_edges(back_id, max_length=max_length)
         pred  = self._find_edges(front_id, max_length=max_length, reverse=True)
         
@@ -579,17 +576,19 @@ class TerminalObjectItem(ObjectItemBase):
 class CellTerminalObjectItemMixin(object):
     @property
     def image(self):
-        image, self._bounding_box = self._get_image(self.time, self.local_idx, 0)
+        channel_idx = self.channel_idx()
+        image, self._bounding_box = self._get_image(self.time, self.local_idx, channel_idx)
         return image
     @property
     def crack_contour(self):
-        crack_contour = self._get_crack_contours(self.time, self.local_idx, 0)
+        crack_contour = self._get_crack_contours(self.time, self.local_idx)
         crack_contour[:,0] -= self._bounding_box[0][0]
         crack_contour[:,1] -= self._bounding_box[0][1]  
         return crack_contour.clip(0, BOUNDING_BOX_SIZE)
     @property
     def predicted_class(self):
-        return self._get_additional_object_data(self.object_cache.name, 'classifier', 1) \
+        classifier_idx = self.classifier_idx()
+        return self._get_additional_object_data(self.object_cache.name, 'classifier', classifier_idx) \
                                     ['prediction'][self.idx]
     @property
     def time(self):
@@ -597,6 +596,12 @@ class CellTerminalObjectItemMixin(object):
     @property
     def local_idx(self):
         return self._local_idx[1]
+    
+    def classifier_idx(self):
+        return self.object_cache.position.object_classifier_index[self.object_cache.name]
+    
+    def channel_idx(self):
+        return self.object_cache.position.regions[self.object_cache.position.sub_objects[self.object_cache.name]]['channel_idx']
         
     
     def _get_bounding_box(self, t, obj_idx, c=0):
@@ -626,7 +631,7 @@ class CellTerminalObjectItemMixin(object):
         
         return self.object_cache.position._hf_group_np_copy[c, t, 0, ul[1]:lr[1], ul[0]:lr[0]], bounding_box
 
-    def _get_crack_contours(self, t, obj_idx, c):  
+    def _get_crack_contours(self, t, obj_idx):  
         crack_contours_string = self.object_cache.object_np_cache['terminals'][t]['crack_contours'][obj_idx]                               
         return numpy.asarray(zlib.decompress( \
                              base64.b64decode(crack_contours_string)).split(','), \
