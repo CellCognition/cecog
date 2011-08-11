@@ -201,26 +201,21 @@ class TrackletBrowser(QtGui.QWidget):
         fh = dataprovider.File(filename)
         self.scene.clear()
         position = fh[fh.positions[0]]
-    
-        outer = []
+        self._root_items = []
         events = position.get_objects('event')
         for event in events:
-            for inner in event.get_children_paths():
-#                for i, item in enumerate(inner):
-#                    inner[i] = item.get_siblings()
-                outer.append(inner)
-        self.initTracks(outer)
-        
-        
-#        outer = []
-#        pp = position.get_objects('primary__primary')
-#        inner = []
-#        for i, p in enumerate(pp.iter_random(200)):
-#            inner.append(p)
-#            if i % 10 == 0:
-#                outer.append(inner)
-#                inner = []
-#        self.initTracks(outer)
+            g_event = GraphicsObjectItemFactory(event)
+            g_event.setHandlesChildEvents(False)
+            self.scene.addItem(g_event)
+            self._root_items.append(g_event)
+            
+        self.update_()
+            
+#        zero_line = QtGui.QGraphicsLineItem(0, 0, 0, self.total_height())
+#        zero_line.setPen(QtGui.QPen(QtGui.QBrush(QtCore.Qt.white), 1))
+#        
+#        self.scene.addItem(zero_line)
+
         
     def initTracks(self, tracklets):
         self._all_tracks = []
@@ -242,7 +237,7 @@ class TrackletBrowser(QtGui.QWidget):
     
     def update_(self):
         row = 0
-        for ti in self._all_tracks:
+        for ti in self._root_items:
             if ti.is_selected:
                 ti.moveToRow(row)
                 row += 1
@@ -303,6 +298,66 @@ class TrackletBrowser(QtGui.QWidget):
     def reset(self):
         for t in self._all_tracks:
             t.resetPos()
+            
+            
+            
+def GraphicsObjectItemFactory(object_item):
+    return GraphicsTerminalObjectItem(object_item) if object_item.is_terminal() else GraphicsObjectItem(object_item)
+            
+            
+            
+class GraphicsObjectItemBase(QtGui.QGraphicsItemGroup):
+    def moveToRow(self, row):
+        self.row = row
+        self.setPos(self.column * BOUNDING_BOX_SIZE, row * self.height)
+        
+    def moveToColumn(self, col):
+        self.column = col
+        self.setPos(col * BOUNDING_BOX_SIZE, self.row * self.height)  
+        
+    @property
+    def is_selected(self):
+        return True
+
+class GraphicsObjectItem(GraphicsObjectItemBase):
+    def __init__(self, object_item, parent=None):
+        GraphicsObjectItemBase.__init__(self, parent)
+        self.object_item = object_item
+        for sub_item in object_item.get_children_paths()[0]:
+            g_sub_item = GraphicsTerminalObjectItem(sub_item, self)
+            self.addToGroup(g_sub_item)
+        self.row = object_item.id
+        self.column = 0
+        self.height = BOUNDING_BOX_SIZE + PREDICTION_BAR_HEIGHT
+             
+class GraphicsTerminalObjectItem(GraphicsObjectItemBase):
+    def __init__(self, object_item, parent=None):
+        GraphicsObjectItemBase.__init__(self, parent=None)
+        self.object_item = object_item
+        gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(object_item.image)))
+        
+        bar_item = QtGui.QPixmap(BOUNDING_BOX_SIZE - 2 * PREDICTION_BAR_X_PADDING, PREDICTION_BAR_HEIGHT)
+        bar_item.fill(QtGui.QColor(object_item.class_color))
+        bar_item = QtGui.QGraphicsPixmapItem(bar_item)
+        bar_item.setPos(PREDICTION_BAR_X_PADDING, 0) 
+        
+        contour_item = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), object_item.crack_contour.tolist())))
+        contour_item.setPos(0, PREDICTION_BAR_HEIGHT)
+        contour_item.setPen(QtGui.QPen(QtGui.QColor(object_item.class_color)))
+        
+        contour_item.setAcceptHoverEvents(True)
+        
+        self.addToGroup(gallery_item)
+        self.addToGroup(bar_item)
+        self.addToGroup(contour_item)
+        
+        self.row = 0 
+        self.column = object_item.time
+        self.height = BOUNDING_BOX_SIZE + PREDICTION_BAR_HEIGHT
+        self.moveToColumn(self.column)
+        
+        
+        
 
 class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
     class GraphicsTrajectoryItem(object):
@@ -350,8 +405,8 @@ class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
             
             self._items.append(self.GraphicsTrajectoryItem(gallery_item, contour_item, bar_item))
                 
-#            for tf in trajectory_features:
-#                self[tf.name] =  tf.compute(trajectory)
+            for tf in trajectory_features:
+                self[tf.name] =  tf.compute(trajectory)
         
         id_item = QtGui.QGraphicsTextItem('%03d' % row)
         id_item.setPos( (col+1) * BOUNDING_BOX_SIZE, 0)
@@ -361,13 +416,7 @@ class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
         self.id_item = id_item
         
     
-    def moveToRow(self, row):
-        self.row = row
-        self.setPos(self.column * BOUNDING_BOX_SIZE, row * self.height)
-        
-    def moveToColumn(self, col):
-        self.column = col
-        self.setPos(col * BOUNDING_BOX_SIZE, self.row * self.height)    
+      
         
     def __getitem__(self, key):
         return self._features[key]

@@ -97,7 +97,7 @@ class TrajectoryFeatureMeanIntensity(TrajectoryFeatureBase):
     def compute(self, trajectory_seq):
         value = 0
         for t in trajectory_seq:
-            value += t.data.mean()
+            value += t.image.mean()
         value /= len(trajectory_seq)
         return value
         
