@@ -111,6 +111,70 @@ class ZoomedQGraphicsView(QtGui.QGraphicsView):
             newGrviewCenter = grviewCenter + offset
             self.centerOn(newGrviewCenter)
             
+class PositonThumbnail(QtGui.QLabel):
+    item_length = 10
+    item_height = 3
+    css = 'background-color: black;'
+    
+    def __init__(self, position_key, position, parent=None):
+        QtGui.QLabel.__init__(self, parent)
+        self.parent = parent
+        events = position.get_objects('event')
+        self.position_key = position_key
+        thumbnail_pixmap = QtGui.QPixmap(20*self.item_length, len(events)*self.item_height)
+        thumbnail_pixmap.fill(QtCore.Qt.black)
+        painter = QtGui.QPainter()
+        painter.begin(thumbnail_pixmap)
+        for r, event in enumerate(events):
+            for c, pp in enumerate(event.children()):
+                line_pen = QtGui.QPen(QtGui.QColor(pp.class_color))
+                line_pen.setWidth(3)
+                painter.setPen(line_pen)
+                painter.drawLine(c*self.item_length, r*self.item_height, 
+                                 (c+1)*self.item_length, r*self.item_height)
+        painter.end()
+            
+        self.height = thumbnail_pixmap.height()
+        self.setPixmap(thumbnail_pixmap)
+        self.setStyleSheet(self.css)
+        self.setToolTip('Sample %s\nPlate %s \nExperiment %s\nPosition %s' % position_key)
+    
+    def mouseDoubleClickEvent(self, *args, **kwargs):
+        QtGui.QLabel.mouseDoubleClickEvent(self, *args, **kwargs)
+        self.parent.clicked.emit(self.position_key)
+        
+    
+            
+class TrackletThumbnailList(QtGui.QWidget):
+    css = '* {background-color: black;}'
+    clicked = QtCore.pyqtSignal(tuple)
+    
+    def __init__(self, data_provider, parent=None):
+        QtGui.QWidget.__init__(self, parent)
+        self.main_layout = QtGui.QHBoxLayout()
+        
+        for position_key in data_provider.positions:
+            tn_position = PositonThumbnail(position_key, data_provider[position_key], self)
+            self.main_layout.addWidget(tn_position)
+            tn_position = PositonThumbnail(position_key, data_provider[position_key], self)
+            self.main_layout.addWidget(tn_position)
+        self.main_layout.addStretch()
+        self.setLayout(self.main_layout)
+        self.setMinimumHeight(tn_position.height)
+
+        self.setStyleSheet(self.css)
+        
+    def paintEvent(self, event):
+        opt = QtGui.QStyleOption();
+        opt.init(self);
+        p = QtGui.QPainter(self);
+        self.style().drawPrimitive(QtGui.QStyle.PE_Widget, opt, p, self);
+
+        
+        
+        
+        
+        
 
 class TrackletBrowser(QtGui.QWidget):
     css = '''QPushButton, QComboBox {background-color: transparent;
@@ -141,7 +205,7 @@ class TrackletBrowser(QtGui.QWidget):
         
         self.view.setStyleSheet(self.css)
         
-        self.main_layout = QtGui.QHBoxLayout()
+        self.main_layout = QtGui.QVBoxLayout()
         self.setLayout(self.main_layout)
         
 #        self.navi_widget = QtGui.QToolBox()
@@ -242,15 +306,12 @@ class TrackletBrowser(QtGui.QWidget):
         self.view.setDragMode(self.view.ScrollHandDrag)
         
         self._align_vertically = self.ALIGN_LEFT
-    
-    def cb_change_vertical_alignment(self, index): 
-        self._align_vertically = index
-        self.update_()
-           
-    def open_file(self, filename):
-        fh = File(filename)
+        
+        
+    def show_position(self, position_key):
         self.scene.clear()
-        position = fh[fh.positions[0]]
+        position = self.data_provider[position_key]
+        
         self._root_items = []
         events = position.get_objects('event')
         for event in events:
@@ -260,6 +321,17 @@ class TrackletBrowser(QtGui.QWidget):
             self._root_items.append(g_event)
             
         self.update_()
+    
+    def cb_change_vertical_alignment(self, index): 
+        self._align_vertically = index
+        self.update_()
+           
+    def open_file(self, filename):
+        self.data_provider = File(filename)
+        self.thumbnails = TrackletThumbnailList(self.data_provider, self)
+        self.thumbnails.clicked.connect(self.show_position)
+        self.main_layout.addWidget(self.thumbnails)
+        
         
     def total_height(self):
         return sum([x.height for x in self._root_items])
@@ -352,7 +424,7 @@ class EventGraphicsItem(GraphicsObjectItem):
         GraphicsObjectItem.__init__(self, object_item, parent)
     
         self.sub_items = []
-        for col, sub_item in enumerate(object_item.get_children_paths()[0]):
+        for col, sub_item in enumerate(object_item.children()):
             g_sub_item = sub_item.GraphicsItemType(sub_item, self)
             g_sub_item.moveToColumn(col)
             self.sub_items.append(g_sub_item)
@@ -495,12 +567,9 @@ class CellTerminalObjectItemMixin(object):
 class EventObjectItemMixin(object):
     GraphicsItemType = EventGraphicsItem
     def compute_features(self):
-        print 'compute feature for event', self.id
         for feature in trajectory_features:
-            print ' ', feature.name, 
             if isinstance(self, feature.type):
-                print 'done'
-                self[feature.name] =  feature.compute(self.get_children_paths()[0])
+                self[feature.name] =  feature.compute(self.children())
 
 MixIn(TerminalObjectItem, CellTerminalObjectItemMixin)
 MixIn(ObjectItem, EventObjectItemMixin)

@@ -338,14 +338,22 @@ class ObjectItemBase(object):
     def is_terminal(self):
         return isinstance(self, TerminalObjectItem)
     
+    def children(self):
+        if not hasattr(self, '_children'):
+            self._children = self.get_children_paths()[0]
+        return self._children
+            
+    
     def get_children(self):
-        child_entries = self.parent.object_np_cache['child_ids'][self.id]
-        if len(child_entries) == 0:
-            return None
-        result = numpy.zeros(child_entries.shape[0]+1, dtype=numpy.uint32)
-        result[0] = child_entries[0,0]
-        result[1:] = child_entries[:,2]
-        return map(lambda id: self.get_child_objects_type()(id, self.sub_objects()), result)
+        if not hasattr(self, '_children'):
+            child_entries = self.parent.object_np_cache['child_ids'][self.id]
+            if len(child_entries) == 0:
+                return None
+            result = numpy.zeros(child_entries.shape[0]+1, dtype=numpy.uint32)
+            result[0] = child_entries[0,0]
+            result[1:] = child_entries[:,2]
+            self._children = map(lambda id: self.get_child_objects_type()(id, self.sub_objects()), result)
+        return self._children
             
     
     def get_siblings(self):
@@ -454,15 +462,7 @@ class TerminalObjectItem(ObjectItemBase):
         return self.parent.object_np_cache['child_ids'][self.id][0][0]
     @property
     def _local_idx(self):
-        try:
-            tmp = self.parent.object_np_cache['child_ids'][self.id][0][1:3] # time, idx
-        except:
-            print self.name
-            print self.id
-        return tmp
-    
-
-    
+        return self.parent.object_np_cache['child_ids'][self.id][0][1:3] # time, idx
 
 class Objects(object):
     HDF5_OBJECT_EDGE_NAME = 'edge'
