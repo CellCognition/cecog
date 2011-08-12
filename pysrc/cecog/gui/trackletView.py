@@ -1,18 +1,69 @@
-from PyQt4 import QtGui, QtCore
-from cecog.gui.imageviewer import HoverPolygonItem
-from cecog.io import dataprovider
-from cecog.io.dataprovider import trajectory_features
-import getopt
-import numpy
-import qimage2ndarray
-import random
-import sys
+"""
+                           The CellCognition Project
+                     Copyright (c) 2006 - 2011 Michael Held
+                      Gerlich Lab, ETH Zurich, Switzerland
+                              www.cellcognition.org
 
-BOUNDING_BOX_SIZE = dataprovider.BOUNDING_BOX_SIZE
+              CellCognition is distributed under the LGPL License.
+                        See trunk/LICENSE.txt for details.
+                 See trunk/AUTHORS.txt for author contributions.
+"""
+__all__ = []
+
+#-------------------------------------------------------------------------------
+# standard library imports:
+#
+from PyQt4 import QtGui, QtCore
+import zlib
+import base64
+
+#-------------------------------------------------------------------------------
+# extension module imports:
+#
+import random
+import getopt
+import qimage2ndarray
+import sys
+import numpy
+
+#-------------------------------------------------------------------------------
+# cecog imports:
+#
+from cecog.gui.imageviewer import HoverPolygonItem
+from cecog.io.dataprovider import BOUNDING_BOX_SIZE, File
+from cecog.io.dataprovider import trajectory_features, TerminalObjectItem, ObjectItem
+
+#-------------------------------------------------------------------------------
+# constants:
+#
 PREDICTION_BAR_HEIGHT = 4
-    
 PREDICTION_BAR_X_PADDING = 0
 PREDICTION_BAR_Y_PADDING = 2
+
+#-------------------------------------------------------------------------------
+# functions:
+#
+import types
+def MixIn(pyClass, mixInClass, makeAncestor=0):
+    if makeAncestor:
+        if mixInClass not in pyClass.__bases__:
+            pyClass.__bases__ = (mixInClass,) + pyClass.__bases__
+    else:
+        # Recursively traverse the mix-in ancestor
+        # classes in order to support inheritance
+        baseClasses = list(mixInClass.__bases__)
+        baseClasses.reverse()
+        for baseClass in baseClasses:
+            MixIn(pyClass, baseClass)
+        # Install the mix-in methods into the class
+        for name in dir(mixInClass):
+            if not name.startswith('__'):
+            # skip private members
+                member = getattr(mixInClass, name)
+                if type(member) is types.MethodType:
+                    member = member.im_func
+                setattr(pyClass, name, member)
+
 
 
 
@@ -39,7 +90,6 @@ class MainWindow(QtGui.QMainWindow):
         filename = str(QtGui.QFileDialog.getOpenFileName(self, 'Open hdf5 file', '.', 'hdf5 files (*.h5  *.hdf5)'))  
         if filename:                                              
             self.tracklet_widget.open_file(filename)
-        
         
 class ZoomedQGraphicsView(QtGui.QGraphicsView):  
     def wheelEvent(self, event):
@@ -198,42 +248,21 @@ class TrackletBrowser(QtGui.QWidget):
         self.update_()
            
     def open_file(self, filename):
-        fh = dataprovider.File(filename)
+        fh = File(filename)
         self.scene.clear()
         position = fh[fh.positions[0]]
         self._root_items = []
         events = position.get_objects('event')
         for event in events:
-            g_event = GraphicsObjectItemFactory(event)
+            g_event = event.GraphicsItemType(event)
             g_event.setHandlesChildEvents(False)
             self.scene.addItem(g_event)
             self._root_items.append(g_event)
             
         self.update_()
-            
-#        zero_line = QtGui.QGraphicsLineItem(0, 0, 0, self.total_height())
-#        zero_line.setPen(QtGui.QPen(QtGui.QBrush(QtCore.Qt.white), 1))
-#        
-#        self.scene.addItem(zero_line)
-
-        
-    def initTracks(self, tracklets):
-        self._all_tracks = []
-        
-        for row, trajectory in enumerate(tracklets):
-            trajectoryGroup = GraphicsTrajectoryGroup(0, row, trajectory)
-            trajectoryGroup.setHandlesChildEvents(False)
-            self.scene.addItem(trajectoryGroup)
-            self._all_tracks.append(trajectoryGroup)
-            
-        zero_line = QtGui.QGraphicsLineItem(0, 0, 0, self.total_height())
-        zero_line.setPen(QtGui.QPen(QtGui.QBrush(QtCore.Qt.white), 1))
-        
-        self.scene.addItem(zero_line)
-        self.update_()
         
     def total_height(self):
-        return sum([x.height for x in self._all_tracks])
+        return sum([x.height for x in self._root_items])
     
     def update_(self):
         row = 0
@@ -252,42 +281,41 @@ class TrackletBrowser(QtGui.QWidget):
                 ti.moveToColumn(ti.column)
         
     def showGalleryImage(self, state):
-        for ti in self._all_tracks:
+        for ti in self._root_items:
             ti.showGalleryImage(state)
         self.update_()
             
     def sortTracks(self):   
         for new_row, perm_idx in enumerate(self._permutation):
-            self._all_tracks[perm_idx].moveToRow(new_row)
+            self._root_items[perm_idx].moveToRow(new_row)
             
     def sortRandomly(self):
-        random.shuffle(self._all_tracks)
+        random.shuffle(self._root_items)
         self.update_()
         
     def sortTracksByFeature(self, feature_name):
-        self._all_tracks.sort(cmp=lambda x,y: cmp(x[feature_name],y[feature_name]))
+        self._root_items.sort(cmp=lambda x,y: cmp(x.object_item[feature_name],y.object_item[feature_name]))
         self.update_()
     
-        
     def toggle_contours(self, state):
         toggle_visibility = lambda x: x.setContoursVisible(state)
-        map(toggle_visibility, self._all_tracks)
+        map(toggle_visibility, self._root_items)
         
     def selectTenRandomTrajectories(self):
-        for ti in self._all_tracks:
+        for ti in self._root_items:
             ti.is_selected = True
-        for r in random.sample(range(len(self._all_tracks)), len(self._all_tracks) - 10):
-            self._all_tracks[r].is_selected = False
+        for r in random.sample(range(len(self._root_items)), len(self._root_items) - 10):
+            self._root_items[r].is_selected = False
         self.update_()
         
     def selectAll(self):
-        for ti in self._all_tracks:
+        for ti in self._root_items:
             ti.is_selected = True
             ti.moveToColumn(0)
         self._align_vertically = self.cmb_align.setCurrentIndex(self.ALIGN_LEFT)
         
     def selectTransition(self):
-        for ti in self._all_tracks:
+        for ti in self._root_items:
             ti.is_selected = False
             trans_pos = reduce(lambda x,y: str(x) + str(y), ti['prediction']).find('01')
             if trans_pos > 0:
@@ -296,15 +324,9 @@ class TrackletBrowser(QtGui.QWidget):
         self._align_vertically = self.cmb_align.setCurrentIndex(self.ALIGN_CUSTOM)
     
     def reset(self):
-        for t in self._all_tracks:
+        for t in self._root_items:
             t.resetPos()
-            
-            
-            
-def GraphicsObjectItemFactory(object_item):
-    return GraphicsTerminalObjectItem(object_item) if object_item.is_terminal() else GraphicsObjectItem(object_item)
-            
-            
+               
             
 class GraphicsObjectItemBase(QtGui.QGraphicsItemGroup):
     def moveToRow(self, row):
@@ -318,25 +340,36 @@ class GraphicsObjectItemBase(QtGui.QGraphicsItemGroup):
     @property
     def is_selected(self):
         return True
-
+    
 class GraphicsObjectItem(GraphicsObjectItemBase):
     def __init__(self, object_item, parent=None):
         GraphicsObjectItemBase.__init__(self, parent)
         self.object_item = object_item
+        
+    
+class EventGraphicsItem(GraphicsObjectItem):
+    def __init__(self, object_item, parent=None):
+        GraphicsObjectItem.__init__(self, object_item, parent)
+    
         self.sub_items = []
         for col, sub_item in enumerate(object_item.get_children_paths()[0]):
-            g_sub_item = GraphicsTerminalObjectItem(sub_item, self)
+            g_sub_item = sub_item.GraphicsItemType(sub_item, self)
             g_sub_item.moveToColumn(col)
             self.sub_items.append(g_sub_item)
             self.addToGroup(g_sub_item)
         self.row = object_item.id
         self.column = 0
         self.height = BOUNDING_BOX_SIZE + PREDICTION_BAR_HEIGHT
+        
              
 class GraphicsTerminalObjectItem(GraphicsObjectItemBase):
     def __init__(self, object_item, parent=None):
         GraphicsObjectItemBase.__init__(self, parent=None)
         self.object_item = object_item
+        
+class CellGraphicsItem(GraphicsTerminalObjectItem):
+    def __init__(self, object_item, parent=None):
+        GraphicsTerminalObjectItem.__init__(self, object_item, parent=None)
         gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(object_item.image)))
         
         bar_item = QtGui.QPixmap(BOUNDING_BOX_SIZE - 2 * PREDICTION_BAR_X_PADDING, PREDICTION_BAR_HEIGHT)
@@ -347,7 +380,6 @@ class GraphicsTerminalObjectItem(GraphicsObjectItemBase):
         contour_item = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), object_item.crack_contour.tolist())))
         contour_item.setPos(0, PREDICTION_BAR_HEIGHT)
         contour_item.setPen(QtGui.QPen(QtGui.QColor(object_item.class_color)))
-        
         contour_item.setAcceptHoverEvents(True)
         
         self.addToGroup(gallery_item)
@@ -356,105 +388,216 @@ class GraphicsTerminalObjectItem(GraphicsObjectItemBase):
         
         self.row = 0 
         self.column = object_item.time
-        self.height = BOUNDING_BOX_SIZE + PREDICTION_BAR_HEIGHT
-
+        self.height = BOUNDING_BOX_SIZE + PREDICTION_BAR_HEIGHT 
         
-        
-        
-
-class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
-    class GraphicsTrajectoryItem(object):
-        def __init__(self, gallery_item, contour_item, bar_item, is_visible=True):
-            self.gallery_item = gallery_item
-            self.contour_item = contour_item
-            self.bar_item = bar_item
-
-    def __init__(self, column, row, trajectory, parent=None):
-        QtGui.QGraphicsItemGroup.__init__(self, parent)
-        self._row = row
-        self.row = row
-        self._column = column
-        self.column = column
-        
-        self.is_selected = True
-        self._features = {}
-        
-        self['prediction'] = []
-        self._show_gallery_image = True
-        
-        self._items = []
-        
-        self.start_time = trajectory[0].time
-        
-        for col, t_item in enumerate(trajectory):
-            gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(t_item.image)))
-            gallery_item.setPos(col * BOUNDING_BOX_SIZE, PREDICTION_BAR_HEIGHT)
-            
-            self['prediction'].append(t_item.predicted_class)
-            bar_item = QtGui.QPixmap(BOUNDING_BOX_SIZE - 2 * PREDICTION_BAR_X_PADDING, PREDICTION_BAR_HEIGHT)
-            bar_item.fill(QtGui.QColor(t_item.class_color))
-            bar_item = QtGui.QGraphicsPixmapItem(bar_item)
-            bar_item.setPos(col*BOUNDING_BOX_SIZE + PREDICTION_BAR_X_PADDING, 0) 
-            
-            contour_item = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), t_item.crack_contour.tolist())))
-            contour_item.setPos(col*BOUNDING_BOX_SIZE, PREDICTION_BAR_HEIGHT)
-            contour_item.setPen(QtGui.QPen(QtGui.QColor(t_item.class_color)))
-            
-            contour_item.setAcceptHoverEvents(True)
-            
-            self.addToGroup(gallery_item)
-            self.addToGroup(bar_item)
-            self.addToGroup(contour_item)
-            
-            self._items.append(self.GraphicsTrajectoryItem(gallery_item, contour_item, bar_item))
-                
-            for tf in trajectory_features:
-                self[tf.name] =  tf.compute(trajectory)
-        
-        id_item = QtGui.QGraphicsTextItem('%03d' % row)
-        id_item.setPos( (col+1) * BOUNDING_BOX_SIZE, 0)
-        id_item.setDefaultTextColor(QtCore.Qt.white)
-        id_item.setFont(QtGui.QFont('Helvetica', 24))
-        self.addToGroup(id_item)
-        self.id_item = id_item
-        
-    
-      
-        
-    def __getitem__(self, key):
-        return self._features[key]
-    
-    def __setitem__(self, key, value):
-        self._features[key] = value
-        
-    def areContoursVisible(self):
-        return self._items[0].contour_item.isVisible()
-    
-    def setContoursVisible(self, state):
-        if self._show_gallery_image:
-            for i in self._items:
-                i.contour_item.setVisible(state)
-        
-    def resetPos(self):
-        self.moveToColumn(self._column)
-        self.moveToRow(self._row)
-        
+class CellTerminalObjectItemMixin(object):
+    GraphicsItemType = CellGraphicsItem
     @property
-    def height(self):
-        if self._show_gallery_image:
-            return PREDICTION_BAR_HEIGHT + BOUNDING_BOX_SIZE
+    def image(self):
+        channel_idx = self.channel_idx()
+        image_own, self._bounding_box = self._get_image(self.time, self.local_idx, channel_idx)
+        
+        sib = self.get_siblings()
+        if sib is not None:
+            image_sib = sib.image
+            new_shape = (BOUNDING_BOX_SIZE,)*2 + (3,)
+            image = numpy.zeros(new_shape, dtype=numpy.uint8)
+            image[0:image_own.shape[0],0:image_own.shape[1],0] = image_own
+            image[0:image_sib.shape[0],0:image_sib.shape[1],1] = image_sib
         else:
-            return PREDICTION_BAR_HEIGHT + PREDICTION_BAR_Y_PADDING
+            image = image_own
         
-    def showGalleryImage(self, state):
-        self._show_gallery_image = state
-        for i in self._items:
-            i.gallery_item.setVisible(state)
-            i.contour_item.setVisible(state)
-        self.id_item.setFont(QtGui.QFont('Helvetica', [24 if state else 8][0])) 
+        return image 
+    @property
+    def crack_contour(self):
+        crack_contour = self._get_crack_contours(self.time, self.local_idx)
+        crack_contour[:,0] -= self._bounding_box[0][0]
+        crack_contour[:,1] -= self._bounding_box[0][1]  
+        return crack_contour.clip(0, BOUNDING_BOX_SIZE)
+    @property
+    def predicted_class(self):
+        # TODO: This can access can be cached by parent
+        if not hasattr(self, '_predicted_class'):
+            classifier_idx = self.classifier_idx()
+            self._predicted_class = self._get_additional_object_data(self.name, 'classifier', classifier_idx) \
+                                        ['prediction'][self.idx]
+        return self._predicted_class[0]
+    @property
+    def time(self):
+        return self._local_idx[0]
+    @property
+    def local_idx(self):
+        return self._local_idx[1]
+    
+    def classifier_idx(self):
+        return self.get_position.object_classifier_index[self.name]
+    
+    def channel_idx(self):
+        return self.get_position.regions[self.get_position.sub_objects[self.name]]['channel_idx']
         
+    def _get_bounding_box(self, t, obj_idx, c=0):
+        objects = self.parent.object_np_cache['terminals'][t]['object']
+        return (objects['upper_left'][obj_idx], objects['lower_right'][obj_idx])
+    
+    def _get_image(self, t, obj_idx, c, bounding_box=None, min_bounding_box_size=BOUNDING_BOX_SIZE):
+        if bounding_box is None:
+            ul, lr = self._get_bounding_box(t, obj_idx, c)
+        else:
+            ul, lr = bounding_box
+        
+        offset_0 = (min_bounding_box_size - lr[0] + ul[0])
+        offset_1 = (min_bounding_box_size - lr[1] + ul[1]) 
+        
+        ul[0] = max(0, ul[0] - offset_0/2 - cmp(offset_0%2,0) * offset_0 % 2) 
+        ul[1] = max(0, ul[1] - offset_1/2 - cmp(offset_1%2,0) * offset_1 % 2)  
+        
+        lr[0] = min(self.get_position._hf_group_np_copy.shape[4], lr[0] + offset_0/2) 
+        lr[1] = min(self.get_position._hf_group_np_copy.shape[3], lr[1] + offset_1/2) 
+        
+        bounding_box = (ul, lr)
+        
+        # TODO: get_iamge returns am image which might have a smaller shape than 
+        #       the requested BOUNDING_BOX_SIZE, I dont see a chance to really
+        #       fix it, without doing a copy...
+        
+        return self.get_position._hf_group_np_copy[c, t, 0, ul[1]:lr[1], ul[0]:lr[0]], bounding_box
+
+    def _get_crack_contours(self, t, obj_idx):  
+        crack_contours_string = self.parent.object_np_cache['terminals'][t]['crack_contours'][obj_idx]                               
+        return numpy.asarray(zlib.decompress( \
+                             base64.b64decode(crack_contours_string)).split(','), \
+                            dtype=numpy.float32).reshape(-1,2)
+        
+    def _get_object_data(self, t, obj_idx, c):
+        bb = self.get_bounding_box(t, obj_idx, c)
+        img, new_bb = self.get_image(t, obj_idx, c, bb)
+        cc = self.get_crack_contours(t, obj_idx, c)
+         
+        cc[:,0] -= new_bb[0][0]
+        cc[:,1] -= new_bb[0][1]
+        
+        return img, cc
+    
+    def _get_additional_object_data(self, object_name, data_fied_name, index):
+        return self.get_position._hf_group['object'][object_name][data_fied_name][str(index)]
+    @property
+    def class_color(self):
+        if not hasattr(self, '_CLASS_TO_COLOR'):
+            classifier = self.get_position.object_classifier[self.name, self.get_position.object_classifier_index[self.name]]
+            self._class_color = dict(enumerate(classifier['schema']['color'].tolist()))       
+        return self._class_color[self.predicted_class]
+    
+    def compute_features(self):
+        pass
+    
     
 
+class EventObjectItemMixin(object):
+    GraphicsItemType = EventGraphicsItem
+    def compute_features(self):
+        print 'compute feature for event', self.id
+        for feature in trajectory_features:
+            print ' ', feature.name, 
+            if isinstance(self, feature.type):
+                print 'done'
+                self[feature.name] =  feature.compute(self.get_children_paths()[0])
+
+MixIn(TerminalObjectItem, CellTerminalObjectItemMixin)
+MixIn(ObjectItem, EventObjectItemMixin)
+
+#        
+#
+#class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
+#    class GraphicsTrajectoryItem(object):
+#        def __init__(self, gallery_item, contour_item, bar_item, is_visible=True):
+#            self.gallery_item = gallery_item
+#            self.contour_item = contour_item
+#            self.bar_item = bar_item
+#
+#    def __init__(self, column, row, trajectory, parent=None):
+#        QtGui.QGraphicsItemGroup.__init__(self, parent)
+#        self._row = row
+#        self.row = row
+#        self._column = column
+#        self.column = column
+#        
+#        self.is_selected = True
+#        self._features = {}
+#        
+#        self['prediction'] = []
+#        self._show_gallery_image = True
+#        
+#        self._items = []
+#        
+#        self.start_time = trajectory[0].time
+#        
+#        for col, t_item in enumerate(trajectory):
+#            gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(t_item.image)))
+#            gallery_item.setPos(col * BOUNDING_BOX_SIZE, PREDICTION_BAR_HEIGHT)
+#            
+#            self['prediction'].append(t_item.predicted_class)
+#            bar_item = QtGui.QPixmap(BOUNDING_BOX_SIZE - 2 * PREDICTION_BAR_X_PADDING, PREDICTION_BAR_HEIGHT)
+#            bar_item.fill(QtGui.QColor(t_item.class_color))
+#            bar_item = QtGui.QGraphicsPixmapItem(bar_item)
+#            bar_item.setPos(col*BOUNDING_BOX_SIZE + PREDICTION_BAR_X_PADDING, 0) 
+#            
+#            contour_item = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), t_item.crack_contour.tolist())))
+#            contour_item.setPos(col*BOUNDING_BOX_SIZE, PREDICTION_BAR_HEIGHT)
+#            contour_item.setPen(QtGui.QPen(QtGui.QColor(t_item.class_color)))
+#            
+#            contour_item.setAcceptHoverEvents(True)
+#            
+#            self.addToGroup(gallery_item)
+#            self.addToGroup(bar_item)
+#            self.addToGroup(contour_item)
+#            
+#            self._items.append(self.GraphicsTrajectoryItem(gallery_item, contour_item, bar_item))
+#                
+#            for tf in trajectory_features:
+#                self[tf.name] =  tf.compute(trajectory)
+#        
+#        id_item = QtGui.QGraphicsTextItem('%03d' % row)
+#        id_item.setPos( (col+1) * BOUNDING_BOX_SIZE, 0)
+#        id_item.setDefaultTextColor(QtCore.Qt.white)
+#        id_item.setFont(QtGui.QFont('Helvetica', 24))
+#        self.addToGroup(id_item)
+#        self.id_item = id_item
+#        
+#    
+#      
+#        
+#    def __getitem__(self, key):
+#        return self._features[key]
+#    
+#    def __setitem__(self, key, value):
+#        self._features[key] = value
+#        
+#    def areContoursVisible(self):
+#        return self._items[0].contour_item.isVisible()
+#    
+#    def setContoursVisible(self, state):
+#        if self._show_gallery_image:
+#            for i in self._items:
+#                i.contour_item.setVisible(state)
+#        
+#    def resetPos(self):
+#        self.moveToColumn(self._column)
+#        self.moveToRow(self._row)
+#        
+#    @property
+#    def height(self):
+#        if self._show_gallery_image:
+#            return PREDICTION_BAR_HEIGHT + BOUNDING_BOX_SIZE
+#        else:
+#            return PREDICTION_BAR_HEIGHT + PREDICTION_BAR_Y_PADDING
+#        
+#    def showGalleryImage(self, state):
+#        self._show_gallery_image = state
+#        for i in self._items:
+#            i.gallery_item.setVisible(state)
+#            i.contour_item.setVisible(state)
+#        self.id_item.setFont(QtGui.QFont('Helvetica', [24 if state else 8][0])) 
+        
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv) 
     file, _ = getopt.getopt(sys.argv[1:], 'f:')

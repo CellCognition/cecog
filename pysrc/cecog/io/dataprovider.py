@@ -8,8 +8,6 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
-#from cecog.gui.trackletView import BOUNDING_BOX_SIZE
-
 __all__ = []
 
 #-------------------------------------------------------------------------------
@@ -23,12 +21,10 @@ import base64
 # extension module imports:
 #
 import h5py, \
-       networkx, \
        numpy, \
        vigra, \
        random
 
-import matplotlib.pyplot as plt
 import time as timing
 
 #-------------------------------------------------------------------------------
@@ -54,102 +50,12 @@ def print_timing(func):
         return res
     return wrapper
 
-import types
-def MixIn(pyClass, mixInClass, makeAncestor=0):
-    if makeAncestor:
-        if mixInClass not in pyClass.__bases__:
-            pyClass.__bases__ = (mixInClass,) + pyClass.__bases__
-    else:
-        # Recursively traverse the mix-in ancestor
-        # classes in order to support inheritance
-        baseClasses = list(mixInClass.__bases__)
-        baseClasses.reverse()
-        for baseClass in baseClasses:
-            MixIn(pyClass, baseClass)
-        # Install the mix-in methods into the class
-        for name in dir(mixInClass):
-            if not name.startswith('__'):
-            # skip private members
-                member = getattr(mixInClass, name)
-                if type(member) is types.MethodType:
-                    member = member.im_func
-                setattr(pyClass, name, member)
+
 
 #-------------------------------------------------------------------------------
 # classes:
 #
 
-class TrackletItem(object):
-    def __init__(self, time, data, crack_contour, predicted_class, size=BOUNDING_BOX_SIZE):
-        self.time = time
-        self.size = size
-        self.data = data
-        self.crack_contour = crack_contour.clip(0, BOUNDING_BOX_SIZE)
-        self.predicted_class = predicted_class
-
-class TrajectoryFeatureBase(object):
-    def compute(self):
-        raise NotImplementedError('TrajectoryFeatureBase.compute() has to be implemented by its subclass')
-
-class TrajectoryFeatureMeanIntensity(TrajectoryFeatureBase):
-    name = 'Mean intensity'
-    
-    def compute(self, trajectory_seq):
-        value = 0
-        for t in trajectory_seq:
-            value += t.image.mean()
-        value /= len(trajectory_seq)
-        return value
-        
-#class TrajectoryFeatureMedianIntensity(TrajectoryFeatureBase):
-#    name = 'Madian intensity'
-#    
-#    def compute(self, trajectory_seq):
-#        value = []
-#        for t in trajectory_seq:
-#            value.append(numpy.median(t.data))
-#        value = numpy.median(value)
-#        return value
-    
-#class TrajectoryFeatureMeanArea(TrajectoryFeatureBase):
-#    name = 'Mean area'
-#    
-#    def compute(self, trajectory_seq):
-#        # Using the formula given in
-#        # http://en.wikipedia.org/wiki/Polygon#Area_and_centroid
-#        values = []
-#        for t in trajectory_seq:
-#            y_last, x_last = t.crack_contour[-1,:]
-#            value = 0
-#            for y, x in t.crack_contour:
-#                value += x_last * y - x * y_last
-#                x_last , y_last = x, y
-#            value /= 2
-#            values.append(value)
-#        value = numpy.mean(values)
-#
-#        return value
-#    
-#class TrajectoryFeatureAreaVariance(TrajectoryFeatureBase):
-#    name = 'Area variance'
-#    
-#    def compute(self, trajectory_seq):
-#        # Using the formula given in
-#        # http://en.wikipedia.org/wiki/Polygon#Area_and_centroid
-#        values = []
-#        for t in trajectory_seq:
-#            y_last, x_last = t.crack_contour[-1,:]
-#            value = 0
-#            for y, x in t.crack_contour:
-#                value += x_last * y - x * y_last
-#                x_last , y_last = x, y
-#            value /= 2
-#            values.append(value)
-#        value = numpy.std(values)
-#
-#        return value
-
-trajectory_features = [tf() for tf in TrajectoryFeatureBase.__subclasses__()]
 
 
 class _DataProvider(object):
@@ -416,6 +322,7 @@ class ObjectItemBase(object):
         self.id = id
         self.parent = parent
         self.name = parent.name
+        self.compute_features()
         
     @property
     def get_position(self):
@@ -424,8 +331,6 @@ class ObjectItemBase(object):
     def get_child_objects_type(self):
         return self.parent.get_object_type_of_children()
         
-        
-    
     @property
     def idx(self):
         return self.id - 1
@@ -512,8 +417,17 @@ class ObjectItemBase(object):
                 
     def sub_objects(self):
         return self.get_position.get_objects(self.get_position.sub_objects[self.name])
+    
+    def __getitem__(self, key):
+        return self._features[key]
+    
+    def __setitem__(self, key, value):
+        if not hasattr(self, '_features'):
+            self._features = {}
+        self._features[key] = value
 
 class ObjectItem(ObjectItemBase):
+    GraphicsItemType = None
     def __init__(self, obj_id, parent):
         ObjectItemBase.__init__(self, obj_id, parent)
        
@@ -547,103 +461,7 @@ class TerminalObjectItem(ObjectItemBase):
             print self.id
         return tmp
     
-class CellTerminalObjectItemMixin(object):
-    @property
-    def image(self):
-        channel_idx = self.channel_idx()
-        image_own, self._bounding_box = self._get_image(self.time, self.local_idx, channel_idx)
-        
-        sib = self.get_siblings()
-        if sib is not None:
-            image_sib = sib.image
-            new_shape = (BOUNDING_BOX_SIZE,)*2 + (3,)
-            image = numpy.zeros(new_shape, dtype=numpy.uint8)
-            image[0:image_own.shape[0],0:image_own.shape[1],0] = image_own
-            image[0:image_sib.shape[0],0:image_sib.shape[1],1] = image_sib
-        else:
-            image = image_own
-        
-        return image 
-    @property
-    def crack_contour(self):
-        crack_contour = self._get_crack_contours(self.time, self.local_idx)
-        crack_contour[:,0] -= self._bounding_box[0][0]
-        crack_contour[:,1] -= self._bounding_box[0][1]  
-        return crack_contour.clip(0, BOUNDING_BOX_SIZE)
-    @property
-    def predicted_class(self):
-        # TODO: This can access can be cached by parent
-        if not hasattr(self, '_predicted_class'):
-            classifier_idx = self.classifier_idx()
-            self._predicted_class = self._get_additional_object_data(self.name, 'classifier', classifier_idx) \
-                                        ['prediction'][self.idx]
-        return self._predicted_class[0]
-    @property
-    def time(self):
-        return self._local_idx[0]
-    @property
-    def local_idx(self):
-        return self._local_idx[1]
-    
-    def classifier_idx(self):
-        return self.get_position.object_classifier_index[self.name]
-    
-    def channel_idx(self):
-        return self.get_position.regions[self.get_position.sub_objects[self.name]]['channel_idx']
-        
-    def _get_bounding_box(self, t, obj_idx, c=0):
-        objects = self.parent.object_np_cache['terminals'][t]['object']
-        return (objects['upper_left'][obj_idx], objects['lower_right'][obj_idx])
-    
-    def _get_image(self, t, obj_idx, c, bounding_box=None, min_bounding_box_size=BOUNDING_BOX_SIZE):
-        if bounding_box is None:
-            ul, lr = self._get_bounding_box(t, obj_idx, c)
-        else:
-            ul, lr = bounding_box
-        
-        offset_0 = (min_bounding_box_size - lr[0] + ul[0])
-        offset_1 = (min_bounding_box_size - lr[1] + ul[1]) 
-        
-        ul[0] = max(0, ul[0] - offset_0/2 - cmp(offset_0%2,0) * offset_0 % 2) 
-        ul[1] = max(0, ul[1] - offset_1/2 - cmp(offset_1%2,0) * offset_1 % 2)  
-        
-        lr[0] = min(self.get_position._hf_group_np_copy.shape[4], lr[0] + offset_0/2) 
-        lr[1] = min(self.get_position._hf_group_np_copy.shape[3], lr[1] + offset_1/2) 
-        
-        bounding_box = (ul, lr)
-        
-        # TODO: get_iamge returns am image which might have a smaller shape than 
-        #       the requested BOUNDING_BOX_SIZE, I dont see a chance to really
-        #       fix it, without doing a copy...
-        
-        return self.get_position._hf_group_np_copy[c, t, 0, ul[1]:lr[1], ul[0]:lr[0]], bounding_box
 
-    def _get_crack_contours(self, t, obj_idx):  
-        crack_contours_string = self.parent.object_np_cache['terminals'][t]['crack_contours'][obj_idx]                               
-        return numpy.asarray(zlib.decompress( \
-                             base64.b64decode(crack_contours_string)).split(','), \
-                            dtype=numpy.float32).reshape(-1,2)
-        
-    def _get_object_data(self, t, obj_idx, c):
-        bb = self.get_bounding_box(t, obj_idx, c)
-        img, new_bb = self.get_image(t, obj_idx, c, bb)
-        cc = self.get_crack_contours(t, obj_idx, c)
-         
-        cc[:,0] -= new_bb[0][0]
-        cc[:,1] -= new_bb[0][1]
-        
-        return img, cc
-    
-    def _get_additional_object_data(self, object_name, data_fied_name, index):
-        return self.get_position._hf_group['object'][object_name][data_fied_name][str(index)]
-    @property
-    def class_color(self):
-        if not hasattr(self, '_CLASS_TO_COLOR'):
-            classifier = self.get_position.object_classifier[self.name, self.get_position.object_classifier_index[self.name]]
-            self._class_color = dict(enumerate(classifier['schema']['color'].tolist()))       
-        return self._class_color[self.predicted_class]
-
-MixIn(TerminalObjectItem, CellTerminalObjectItemMixin)
     
 
 class Objects(object):
@@ -729,6 +547,79 @@ class Objects(object):
             return self.sub_objects
         else:
             raise RuntimeError('get_sub_objects() No sub objects available for objects of name %s' % self.name)
+
+class TrackletItem(object):
+    def __init__(self, time, data, crack_contour, predicted_class, size=BOUNDING_BOX_SIZE):
+        self.time = time
+        self.size = size
+        self.data = data
+        self.crack_contour = crack_contour.clip(0, BOUNDING_BOX_SIZE)
+        self.predicted_class = predicted_class
+
+class TrajectoryFeatureBase(object):
+    def compute(self):
+        raise NotImplementedError('TrajectoryFeatureBase.compute() has to be implemented by its subclass')
+
+class TrajectoryFeatureMeanIntensity(TrajectoryFeatureBase):
+    name = 'Mean intensity'
+    type = ObjectItem
+    
+    def compute(self, trajectory_seq):
+        value = 0
+        for t in trajectory_seq:
+            value += t.image.mean()
+        value /= len(trajectory_seq)
+        return value
+        
+#class TrajectoryFeatureMedianIntensity(TrajectoryFeatureBase):
+#    name = 'Madian intensity'
+#    
+#    def compute(self, trajectory_seq):
+#        value = []
+#        for t in trajectory_seq:
+#            value.append(numpy.median(t.data))
+#        value = numpy.median(value)
+#        return value
+    
+#class TrajectoryFeatureMeanArea(TrajectoryFeatureBase):
+#    name = 'Mean area'
+#    
+#    def compute(self, trajectory_seq):
+#        # Using the formula given in
+#        # http://en.wikipedia.org/wiki/Polygon#Area_and_centroid
+#        values = []
+#        for t in trajectory_seq:
+#            y_last, x_last = t.crack_contour[-1,:]
+#            value = 0
+#            for y, x in t.crack_contour:
+#                value += x_last * y - x * y_last
+#                x_last , y_last = x, y
+#            value /= 2
+#            values.append(value)
+#        value = numpy.mean(values)
+#
+#        return value
+#    
+#class TrajectoryFeatureAreaVariance(TrajectoryFeatureBase):
+#    name = 'Area variance'
+#    
+#    def compute(self, trajectory_seq):
+#        # Using the formula given in
+#        # http://en.wikipedia.org/wiki/Polygon#Area_and_centroid
+#        values = []
+#        for t in trajectory_seq:
+#            y_last, x_last = t.crack_contour[-1,:]
+#            value = 0
+#            for y, x in t.crack_contour:
+#                value += x_last * y - x * y_last
+#                x_last , y_last = x, y
+#            value /= 2
+#            values.append(value)
+#        value = numpy.std(values)
+#
+#        return value
+
+trajectory_features = [tf() for tf in TrajectoryFeatureBase.__subclasses__()]
             
 #-------------------------------------------------------------------------------
 # main:
