@@ -425,7 +425,7 @@ class EventGraphicsItem(GraphicsObjectItem):
     
         self.sub_items = []
         for col, sub_item in enumerate(object_item.children()):
-            g_sub_item = sub_item.GraphicsItemType(sub_item, self)
+            g_sub_item = sub_item.GraphicsItemType(sub_item.get_siblings(), self)
             g_sub_item.moveToColumn(col)
             self.sub_items.append(g_sub_item)
             self.addToGroup(g_sub_item)
@@ -538,7 +538,7 @@ class CellTerminalObjectItemMixin(object):
         crack_contours_string = self.parent.object_np_cache['terminals'][t]['crack_contours'][obj_idx]                               
         return numpy.asarray(zlib.decompress( \
                              base64.b64decode(crack_contours_string)).split(','), \
-                            dtype=numpy.float32).reshape(-1,2)
+                             dtype=numpy.float32).reshape(-1,2)
         
     def _get_object_data(self, t, obj_idx, c):
         bb = self.get_bounding_box(t, obj_idx, c)
@@ -554,7 +554,7 @@ class CellTerminalObjectItemMixin(object):
         return self.get_position._hf_group['object'][object_name][data_fied_name][str(index)]
     @property
     def class_color(self):
-        if not hasattr(self, '_CLASS_TO_COLOR'):
+        if not hasattr(self, '_class_color'):
             classifier = self.get_position.object_classifier[self.name, self.get_position.object_classifier_index[self.name]]
             self._class_color = dict(enumerate(classifier['schema']['color'].tolist()))       
         return self._class_color[self.predicted_class]
@@ -562,7 +562,7 @@ class CellTerminalObjectItemMixin(object):
     def compute_features(self):
         pass
     
-    
+        
 
 class EventObjectItemMixin(object):
     GraphicsItemType = EventGraphicsItem
@@ -574,98 +574,6 @@ class EventObjectItemMixin(object):
 MixIn(TerminalObjectItem, CellTerminalObjectItemMixin)
 MixIn(ObjectItem, EventObjectItemMixin)
 
-#        
-#
-#class GraphicsTrajectoryGroup(QtGui.QGraphicsItemGroup):
-#    class GraphicsTrajectoryItem(object):
-#        def __init__(self, gallery_item, contour_item, bar_item, is_visible=True):
-#            self.gallery_item = gallery_item
-#            self.contour_item = contour_item
-#            self.bar_item = bar_item
-#
-#    def __init__(self, column, row, trajectory, parent=None):
-#        QtGui.QGraphicsItemGroup.__init__(self, parent)
-#        self._row = row
-#        self.row = row
-#        self._column = column
-#        self.column = column
-#        
-#        self.is_selected = True
-#        self._features = {}
-#        
-#        self['prediction'] = []
-#        self._show_gallery_image = True
-#        
-#        self._items = []
-#        
-#        self.start_time = trajectory[0].time
-#        
-#        for col, t_item in enumerate(trajectory):
-#            gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(t_item.image)))
-#            gallery_item.setPos(col * BOUNDING_BOX_SIZE, PREDICTION_BAR_HEIGHT)
-#            
-#            self['prediction'].append(t_item.predicted_class)
-#            bar_item = QtGui.QPixmap(BOUNDING_BOX_SIZE - 2 * PREDICTION_BAR_X_PADDING, PREDICTION_BAR_HEIGHT)
-#            bar_item.fill(QtGui.QColor(t_item.class_color))
-#            bar_item = QtGui.QGraphicsPixmapItem(bar_item)
-#            bar_item.setPos(col*BOUNDING_BOX_SIZE + PREDICTION_BAR_X_PADDING, 0) 
-#            
-#            contour_item = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), t_item.crack_contour.tolist())))
-#            contour_item.setPos(col*BOUNDING_BOX_SIZE, PREDICTION_BAR_HEIGHT)
-#            contour_item.setPen(QtGui.QPen(QtGui.QColor(t_item.class_color)))
-#            
-#            contour_item.setAcceptHoverEvents(True)
-#            
-#            self.addToGroup(gallery_item)
-#            self.addToGroup(bar_item)
-#            self.addToGroup(contour_item)
-#            
-#            self._items.append(self.GraphicsTrajectoryItem(gallery_item, contour_item, bar_item))
-#                
-#            for tf in trajectory_features:
-#                self[tf.name] =  tf.compute(trajectory)
-#        
-#        id_item = QtGui.QGraphicsTextItem('%03d' % row)
-#        id_item.setPos( (col+1) * BOUNDING_BOX_SIZE, 0)
-#        id_item.setDefaultTextColor(QtCore.Qt.white)
-#        id_item.setFont(QtGui.QFont('Helvetica', 24))
-#        self.addToGroup(id_item)
-#        self.id_item = id_item
-#        
-#    
-#      
-#        
-#    def __getitem__(self, key):
-#        return self._features[key]
-#    
-#    def __setitem__(self, key, value):
-#        self._features[key] = value
-#        
-#    def areContoursVisible(self):
-#        return self._items[0].contour_item.isVisible()
-#    
-#    def setContoursVisible(self, state):
-#        if self._show_gallery_image:
-#            for i in self._items:
-#                i.contour_item.setVisible(state)
-#        
-#    def resetPos(self):
-#        self.moveToColumn(self._column)
-#        self.moveToRow(self._row)
-#        
-#    @property
-#    def height(self):
-#        if self._show_gallery_image:
-#            return PREDICTION_BAR_HEIGHT + BOUNDING_BOX_SIZE
-#        else:
-#            return PREDICTION_BAR_HEIGHT + PREDICTION_BAR_Y_PADDING
-#        
-#    def showGalleryImage(self, state):
-#        self._show_gallery_image = state
-#        for i in self._items:
-#            i.gallery_item.setVisible(state)
-#            i.contour_item.setVisible(state)
-#        self.id_item.setFont(QtGui.QFont('Helvetica', [24 if state else 8][0])) 
         
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv) 
