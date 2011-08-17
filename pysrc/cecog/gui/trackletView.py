@@ -65,8 +65,6 @@ def MixIn(pyClass, mixInClass, makeAncestor=0):
                 setattr(pyClass, name, member)
 
 
-
-
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, filename=None, parent=None):
         QtGui.QMainWindow.__init__(self, parent)
@@ -85,6 +83,15 @@ class MainWindow(QtGui.QMainWindow):
         
         if filename is not None:
             self.tracklet_widget.open_file(filename)
+    def closeEvent(self, cevent):
+        try:
+            if self.tracklet_widget.data_provider is not None:
+                self.tracklet_widget.data_provider.close()
+                print 'Closing hdf5 file'
+        except:
+            print 'Could not close file or no file has been open'
+        finally:
+            cevent.accept()
         
     def open_file(self):
         filename = str(QtGui.QFileDialog.getOpenFileName(self, 'Open hdf5 file', '.', 'hdf5 files (*.h5  *.hdf5)'))  
@@ -168,13 +175,7 @@ class TrackletThumbnailList(QtGui.QWidget):
         opt = QtGui.QStyleOption();
         opt.init(self);
         p = QtGui.QPainter(self);
-        self.style().drawPrimitive(QtGui.QStyle.PE_Widget, opt, p, self);
-
-        
-        
-        
-        
-        
+        self.style().drawPrimitive(QtGui.QStyle.PE_Widget, opt, p, self)
 
 class TrackletBrowser(QtGui.QWidget):
     css = '''QPushButton, QComboBox {background-color: transparent;
@@ -197,6 +198,7 @@ class TrackletBrowser(QtGui.QWidget):
     
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
+        self.data_provider = None
         self.scene = QtGui.QGraphicsScene()
         self.scene.setBackgroundBrush(QtGui.QBrush(QtCore.Qt.black))
         
@@ -207,49 +209,7 @@ class TrackletBrowser(QtGui.QWidget):
         
         self.main_layout = QtGui.QVBoxLayout()
         self.setLayout(self.main_layout)
-        
-#        self.navi_widget = QtGui.QToolBox()
-#        
-#        self.sample_group_box_layout = QtGui.QVBoxLayout()
-#        self.position_group_box_layout = QtGui.QVBoxLayout()
-#        self.experiment_group_box_layout = QtGui.QVBoxLayout()
-#        self.object_group_box_layout = QtGui.QVBoxLayout()
-#        
-#        self.sample_group_box = QtGui.QGroupBox('Sample')
-#        self.sample_group_box.setLayout(self.sample_group_box_layout)
-#        self.position_group_box = QtGui.QGroupBox('Position')
-#        self.position_group_box.setLayout(self.position_group_box_layout)
-#        self.experiment_group_box = QtGui.QGroupBox('Experiment')
-#        self.experiment_group_box.setLayout(self.experiment_group_box_layout)
-#        self.object_group_box = QtGui.QGroupBox('Objects')
-#        self.object_group_box.setLayout(self.object_group_box_layout)
-#        
-#        self.drp_sample = QtGui.QSpinBox()
-#        self.sample_group_box_layout.addWidget(self.drp_sample)
-#        
-#        self.drp_position = QtGui.QSpinBox()
-#        self.position_group_box_layout.addWidget(self.drp_position)
-#        
-#        self.drp_experiment = QtGui.QSpinBox()
-#        self.experiment_group_box_layout.addWidget(self.drp_experiment)
-#        
-#        self.drp_object = QtGui.QComboBox()
-#        self.object_group_box_layout.addWidget(self.drp_object)
-#        
-#        self.navi_content_widget = QtGui.QWidget()
-#        self.navi_content_layout = QtGui.QVBoxLayout()
-#        self.navi_content_layout.addWidget(self.sample_group_box)
-#        self.navi_content_layout.addWidget(self.position_group_box)
-#        self.navi_content_layout.addWidget(self.experiment_group_box)
-#        self.navi_content_layout.addWidget(self.object_group_box)
-#        self.navi_content_layout.addStretch()
-#        self.navi_content_widget.setLayout(self.navi_content_layout)
-#        
-#        self.navi_widget.addItem(self.navi_content_widget, 'Navigaton')
-#      
-#        self.navi_widget.setMaximumWidth(150)
-#        
-#        self.main_layout.addWidget(self.navi_widget)
+ 
         self.main_layout.addWidget(self.view)
         
         self.view_hud_layout = QtGui.QHBoxLayout(self.view)
@@ -466,26 +426,31 @@ class CellTerminalObjectItemMixin(object):
     GraphicsItemType = CellGraphicsItem
     @property
     def image(self):
-        channel_idx = self.channel_idx()
-        image_own, self._bounding_box = self._get_image(self.time, self.local_idx, channel_idx)
+        if not hasattr(self, '_image'):
+            channel_idx = self.channel_idx
+            image_own = self._get_image(self.time, self.local_idx, channel_idx)
+            
+            sib = self.get_siblings()
+            if sib is not None:
+                image_sib = sib.image
+                new_shape = (BOUNDING_BOX_SIZE,)*2 + (3,)
+                image = numpy.zeros(new_shape, dtype=numpy.uint8)
+                image[0:image_own.shape[0],0:image_own.shape[1],0] = image_own
+                image[0:image_sib.shape[0],0:image_sib.shape[1],1] = image_sib
+            else:
+                image = image_own
+            self._image = image
         
-        sib = self.get_siblings()
-        if sib is not None:
-            image_sib = sib.image
-            new_shape = (BOUNDING_BOX_SIZE,)*2 + (3,)
-            image = numpy.zeros(new_shape, dtype=numpy.uint8)
-            image[0:image_own.shape[0],0:image_own.shape[1],0] = image_own
-            image[0:image_sib.shape[0],0:image_sib.shape[1],1] = image_sib
-        else:
-            image = image_own
-        
-        return image 
+        return self._image 
+    
     @property
     def crack_contour(self):
         crack_contour = self._get_crack_contours(self.time, self.local_idx)
-        crack_contour[:,0] -= self._bounding_box[0][0]
-        crack_contour[:,1] -= self._bounding_box[0][1]  
+        bb = self.bounding_box
+        crack_contour[:,0] -= bb[0][0]
+        crack_contour[:,1] -= bb[0][1]  
         return crack_contour.clip(0, BOUNDING_BOX_SIZE)
+    
     @property
     def predicted_class(self):
         # TODO: This can access can be cached by parent
@@ -494,9 +459,11 @@ class CellTerminalObjectItemMixin(object):
             self._predicted_class = self._get_additional_object_data(self.name, 'classifier', classifier_idx) \
                                         ['prediction'][self.idx]
         return self._predicted_class[0]
+    
     @property
     def time(self):
         return self._local_idx[0]
+    
     @property
     def local_idx(self):
         return self._local_idx[1]
@@ -504,35 +471,36 @@ class CellTerminalObjectItemMixin(object):
     def classifier_idx(self):
         return self.get_position.object_classifier_index[self.name]
     
+    @property
     def channel_idx(self):
-        return self.get_position.regions[self.get_position.sub_objects[self.name]]['channel_idx']
+        if not hasattr(self, '_channel_idx'):
+            self._channel_idx = self.get_position.regions[self.get_position.sub_objects[self.name]]['channel_idx']
+        return self._channel_idx
         
-    def _get_bounding_box(self, t, obj_idx, c=0):
-        objects = self.parent.object_np_cache['terminals'][t]['object']
-        return (objects['upper_left'][obj_idx], objects['lower_right'][obj_idx])
+    @property
+    def bounding_box(self):
+        if not hasattr(self, '_bounding_box'):   
+            objects = self.parent.object_np_cache['terminals'][self.time]['object']
+            self._bounding_box = (objects['upper_left'][self.local_idx], objects['lower_right'][self.local_idx])
+        return self._bounding_box
     
     def _get_image(self, t, obj_idx, c, bounding_box=None, min_bounding_box_size=BOUNDING_BOX_SIZE):
         if bounding_box is None:
-            ul, lr = self._get_bounding_box(t, obj_idx, c)
+            ul, lr = self.bounding_box
         else:
             ul, lr = bounding_box
-        
         offset_0 = (min_bounding_box_size - lr[0] + ul[0])
         offset_1 = (min_bounding_box_size - lr[1] + ul[1]) 
-        
         ul[0] = max(0, ul[0] - offset_0/2 - cmp(offset_0%2,0) * offset_0 % 2) 
-        ul[1] = max(0, ul[1] - offset_1/2 - cmp(offset_1%2,0) * offset_1 % 2)  
-        
+        ul[1] = max(0, ul[1] - offset_1/2 - cmp(offset_1%2,0) * offset_1 % 2)      
         lr[0] = min(self.get_position._hf_group_np_copy.shape[4], lr[0] + offset_0/2) 
         lr[1] = min(self.get_position._hf_group_np_copy.shape[3], lr[1] + offset_1/2) 
         
-        bounding_box = (ul, lr)
-        
+        self._bounding_box = (ul, lr)
         # TODO: get_iamge returns am image which might have a smaller shape than 
         #       the requested BOUNDING_BOX_SIZE, I dont see a chance to really
         #       fix it, without doing a copy...
-        
-        return self.get_position._hf_group_np_copy[c, t, 0, ul[1]:lr[1], ul[0]:lr[0]], bounding_box
+        return self.get_position._hf_group_np_copy[c, t, 0, ul[1]:lr[1], ul[0]:lr[0]]
 
     def _get_crack_contours(self, t, obj_idx):  
         crack_contours_string = self.parent.object_np_cache['terminals'][t]['crack_contours'][obj_idx]                               
@@ -544,14 +512,13 @@ class CellTerminalObjectItemMixin(object):
         bb = self.get_bounding_box(t, obj_idx, c)
         img, new_bb = self.get_image(t, obj_idx, c, bb)
         cc = self.get_crack_contours(t, obj_idx, c)
-         
         cc[:,0] -= new_bb[0][0]
         cc[:,1] -= new_bb[0][1]
-        
         return img, cc
     
     def _get_additional_object_data(self, object_name, data_fied_name, index):
         return self.get_position._hf_group['object'][object_name][data_fied_name][str(index)]
+    
     @property
     def class_color(self):
         if not hasattr(self, '_class_color'):
@@ -562,8 +529,6 @@ class CellTerminalObjectItemMixin(object):
     def compute_features(self):
         pass
     
-        
-
 class EventObjectItemMixin(object):
     GraphicsItemType = EventGraphicsItem
     def compute_features(self):
@@ -571,6 +536,12 @@ class EventObjectItemMixin(object):
             if isinstance(self, feature.type):
                 self[feature.name] =  feature.compute(self.children())
 
+
+class Hamster(CellTerminalObjectItemMixin):
+    @property
+    def image(self):
+        return (numpy.random.rand(BOUNDING_BOX_SIZE, BOUNDING_BOX_SIZE)*255).astype(numpy.uint8)
+    
 MixIn(TerminalObjectItem, CellTerminalObjectItemMixin)
 MixIn(ObjectItem, EventObjectItemMixin)
 
