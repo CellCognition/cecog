@@ -25,6 +25,7 @@ import getopt
 import qimage2ndarray
 import sys
 import numpy
+import time as timing
 
 #-------------------------------------------------------------------------------
 # cecog imports:
@@ -110,7 +111,9 @@ class MainWindow(QtGui.QMainWindow):
                                             max=1000)
         if ok:
             CellTerminalObjectItemMixin.BOUNDING_BOX_SIZE = val
-            self.tracklet_widget.show_position(self.tracklet_widget._current_position_key, True)
+            self.tracklet_widget.data_provider.clearObjectItemCache()
+                    
+            self.tracklet_widget.show_position(self.tracklet_widget._current_position_key)
         
     def open_file(self):
         filename = str(QtGui.QFileDialog.getOpenFileName(self, 'Open hdf5 file', '.', 'hdf5 files (*.h5  *.hdf5)'))  
@@ -298,27 +301,26 @@ class TrackletBrowser(QtGui.QWidget):
         
         
         
-    def show_position(self, position_key, clear_object_cache=False):
+    def show_position(self, position_key):
+        tic = timing.time()
         self.scene.clear()
         self._current_position_key = position_key
         position = self.data_provider[position_key]
         
         self._root_items = []
-        events = position.get_objects('primary__primary')
+        events = position.get_objects('event')
         
-        if clear_object_cache:
-            for objs in position.objects:
-                position.get_objects(objs)._object_item_cache = {}
-        
-        for event in events.iter_random(300):
+        for event in events.iter_random(500):
             g_event = event.GraphicsItemType(event)
             g_event.setHandlesChildEvents(False)
             self.scene.addItem(g_event)
             self._root_items.append(g_event)
+        print '  Loading events took %5.2f' % (timing.time() - tic)
             
         self.GraphicsItemLayouter = event.GraphicsItemLayouter(self._root_items, self)
             
         self.update_()
+        print '  Total Rendering of position took %5.2f' % (timing.time() - tic)
     
     def cb_change_vertical_alignment(self, index): 
         self.GraphicsItemLayouter._align_vertically = index
@@ -556,7 +558,7 @@ class CellTerminalObjectItemMixin():
             channel_idx = self.channel_idx
             image_own = self._get_image(self.time, self.local_idx, channel_idx)
             
-            sib = self.get_siblings()
+            #sib = self.get_siblings()
             if False:#sib is not None:
                 image_sib = sib.image
                 new_shape = (self.width,)*2 + (3,)
@@ -626,7 +628,8 @@ class CellTerminalObjectItemMixin():
         # TODO: get_iamge returns am image which might have a smaller shape than 
         #       the requested BOUNDING_BOX_SIZE, I dont see a chance to really
         #       fix it, without doing a copy...
-        return self.get_position._hf_group_np_copy[c, t, 0, ul[1]:lr[1], ul[0]:lr[0]]
+        res = self.get_position._hf_group_np_copy[c, t, 0, ul[1]:lr[1], ul[0]:lr[0]]
+        return res
 
     def _get_crack_contours(self, t, obj_idx):  
         crack_contours_string = self.parent.object_np_cache['terminals'][t]['crack_contours'][obj_idx]                               
@@ -653,13 +656,15 @@ class CellTerminalObjectItemMixin():
         return self._class_color[self.predicted_class]
     
     def compute_features(self):
-        pass  
+#        print 'compute feature call for', self.name, self.id  
+        pass
     
 
 class EventObjectItemMixin():
     GraphicsItemType = EventGraphicsItem
     GraphicsItemLayouter = EventGraphicsLayouter
     def compute_features(self):
+#        print 'compute feature call for', self.name, self.id  
         for feature in trajectory_features:
             if isinstance(self, feature.type):
                 self[feature.name] =  feature.compute(self.children())

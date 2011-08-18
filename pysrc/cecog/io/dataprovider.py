@@ -55,7 +55,24 @@ def print_timing(func):
 #-------------------------------------------------------------------------------
 # classes:
 #
-
+import threading, Queue
+class InputOutputThread(threading.Thread):
+    inQueue = Queue.Queue()
+    outDict = {}
+    dictLock = threading.Lock()
+    
+    def __init__(self, target):
+        threading.Thread.__init__(self) 
+        self.target = target
+        
+    def run(self):
+        temp = self.inQueue.get()
+        print 'started for positon', temp[0],
+        res = self.target(*temp[1:])
+        print 'done'
+        self.outDict[temp[0]] = res
+        self.inQueue.task_done()
+        
 
 
 class _DataProvider(object):
@@ -67,10 +84,23 @@ class _DataProvider(object):
         self._hf_group = hf_group
         self._children = {}
         self._parent = parent
-        if self.CHILDREN_GROUP_NAME is not None:
+        if self.CHILDREN_GROUP_NAME == 'this is a threading experiment ':
+            worker = [InputOutputThread(self.CHILDREN_PROVIDER_CLASS) for _ in range(3)]
+            for w in worker:
+                w.start()
+            
+            for name, group in self._hf_group[self.CHILDREN_GROUP_NAME].iteritems():
+                InputOutputThread.inQueue.put((name, group, self))
+                
+            InputOutputThread.inQueue.join()
+            for name, provider in InputOutputThread.outDict.iteritems():
+                self._children[name] = provider
+            
+        elif self.CHILDREN_GROUP_NAME is not None:
             for name, group in self._hf_group[self.CHILDREN_GROUP_NAME].iteritems():
                 self._children[name] = self.CHILDREN_PROVIDER_CLASS(group, parent=self)
-        #print self._children
+        
+        
 
     def __getitem__(self, name):
         return self._children[name]
@@ -130,7 +160,7 @@ class Position(_DataProvider):
         tic = timing.time()
         
         self._hf_group_np_copy = self._hf_group['image']['channel'].value
-        print '  reading image data', timing.time() - tic
+        print '  decompressing image data', timing.time() - tic
         
         self.regions= {}
         channel_info = self.get_definition('channel')
@@ -294,6 +324,11 @@ class File(object):
     def __getitem__(self, spepos):
         s, p, e, pos = spepos
         return self._data[s][p][e][pos]
+    
+    def clearObjectItemCache(self):
+        for pos_key in self.positions:
+            for object_name in self[pos_key].objects:
+                self[pos_key].get_objects(object_name)._object_item_cache = {}
     
     def close(self):
         self._data.close()
@@ -523,8 +558,10 @@ class Objects(object):
         return ItemType
     
     def get(self, obj_id):
-        ItemType = self.get_object_type()
-        return self._object_item_cache.setdefault(obj_id, ItemType(obj_id, self) )
+        if obj_id not in self._object_item_cache:
+            ItemType = self.get_object_type()
+            self._object_item_cache[obj_id] = ItemType(obj_id, self)
+        return self._object_item_cache[obj_id]
             
     def __iter__(self, obj_ids=None):
         for id in self.ids:
@@ -546,7 +583,7 @@ class TrajectoryFeatureBase(object):
     def compute(self):
         raise NotImplementedError('TrajectoryFeatureBase.compute() has to be implemented by its subclass')
 
-class TrajectoryFeatureMeanIntensity(TrajectoryFeatureBase):
+class TrajectoryFeatureMeanIntensity():
     name = 'Mean intensity'
     type = ObjectItem
     
