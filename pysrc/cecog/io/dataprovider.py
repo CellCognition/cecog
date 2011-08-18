@@ -35,7 +35,7 @@ import time as timing
 #-------------------------------------------------------------------------------
 # constants:
 #
-BOUNDING_BOX_SIZE = 100
+
 
 #-------------------------------------------------------------------------------
 # functions:
@@ -126,11 +126,11 @@ class Position(_DataProvider):
     CHILDREN_GROUP_NAME = None
     CHILDREN_PROVIDER_CLASS = None
     def __init__(self, hf_group, parent=None):
+        super(Position, self).__init__(hf_group, parent)
         tic = timing.time()
         
-        super(Position, self).__init__(hf_group, parent)
         self._hf_group_np_copy = self._hf_group['image']['channel'].value
-        
+        print '  reading image data', timing.time() - tic
         
         self.regions= {}
         channel_info = self.get_definition('channel')
@@ -151,7 +151,7 @@ class Position(_DataProvider):
                            'is_phydical' : channel_info[channel_idx][2],
                            'voxel_size' : channel_info[channel_idx][3]}
                         break
-        
+        print '  reading region information', timing.time() - tic
         
         self.objects = {}
         self.sub_objects = {}
@@ -172,7 +172,8 @@ class Position(_DataProvider):
                 self.objects[object_name] = \
                     {'cache' : self.init_objects(object_name), 
                      'sub_relation' :object_sub_rel }
-                    
+        
+        print '  init object caches', timing.time() - tic         
                     
         self.relation_compund = {}
         self.relation_cross = {}
@@ -191,6 +192,8 @@ class Position(_DataProvider):
                     self.relation_cross.setdefault(obj_1,[]).append({'relation_name': rel_name,
                                                   'to': obj_2,
                                                   'cache': self._hf_group['relation'][rel_name].value})
+        
+        print '  reading relation information', timing.time() - tic
                     
         self.object_feature = {}
         last_feature_for_object = 'ham'
@@ -203,7 +206,9 @@ class Position(_DataProvider):
                 for f in feature_group[self.get_definition('feature_set')[feature_for_object]]:
                     self.object_feature.setdefault(feature_for_object, []).append(f[0])
                 last_feature_for_object = feature_for_object
-                
+        
+        print '  reading feature sets', timing.time() - tic
+          
         self.object_classifier = {}
         self.object_classifier_index = {}
         for classifier_idx, classifier_row in enumerate(self.get_definition('classifier')):
@@ -219,7 +224,8 @@ class Position(_DataProvider):
                      'description' : classifier_row[7],
                      }
             self.object_classifier_index[object_name] = classifier_idx
-        print '\ninit of position took %5.3f sec ' % (timing.time()-tic)
+        print '   reading classifier information'
+        print '\n === init of position took %5.3f sec ' % (timing.time()-tic)
 
     def init_objects(self, object_name):
         return Objects(object_name, self)
@@ -317,7 +323,7 @@ class Relation(object):
     def get_cache(self):
         return self.h5_table.value.view(numpy.uint32).reshape(len(self.h5_table), -1)
     
-class ObjectItemBase(object):
+class ObjectItemBase():
     def __init__(self, id, parent):
         self.id = id
         self.parent = parent
@@ -342,18 +348,17 @@ class ObjectItemBase(object):
         if not hasattr(self, '_children'):
             self._children = self.get_children_paths()[0]
         return self._children
-            
-    
-    def get_children(self):
-        if not hasattr(self, '_children'):
+
+    def _get_children_nodes(self):
+        if not hasattr(self, '_children_nodes'):
             child_entries = self.parent.object_np_cache['child_ids'][self.id]
             if len(child_entries) == 0:
                 return None
             result = numpy.zeros(child_entries.shape[0]+1, dtype=numpy.uint32)
             result[0] = child_entries[0,0]
             result[1:] = child_entries[:,2]
-            self._children = map(lambda id: self.get_child_objects_type()(id, self.sub_objects()), result)
-        return self._children
+            self._children_nodes = map(lambda id: self.get_child_objects_type()(id, self.sub_objects()), result)
+        return self._children_nodes
             
     
     def get_siblings(self):
@@ -384,7 +389,7 @@ class ObjectItemBase(object):
             return expansion
         
     def get_children_paths(self):
-        child_list = self.get_children()
+        child_list = self._get_children_nodes()
         child_id_list = [x.id for x in child_list]
         head_id = child_list[0].id
         #print child_id_list
@@ -435,26 +440,14 @@ class ObjectItemBase(object):
         self._features[key] = value
 
 class ObjectItem(ObjectItemBase):
-    GraphicsItemType = None
     def __init__(self, obj_id, parent):
         ObjectItemBase.__init__(self, obj_id, parent)
-       
-    def get_additional_data(self):
-        # helper for subclass
-        pass
-    
-    def get_data(self):
-        #abstract
-        pass
-    def get_display_settings(self):
-        #abstract
-        pass
     
 class TerminalObjectItem(ObjectItemBase):
     def __init__(self, obj_id, object_cache):
         ObjectItemBase.__init__(self, obj_id, object_cache)
         
-    def get_children(self):
+    def _get_children_nodes(self):
         raise RuntimeError('Terminal objects have no childs')
     
     @property
@@ -548,13 +541,6 @@ class Objects(object):
         else:
             raise RuntimeError('get_sub_objects() No sub objects available for objects of name %s' % self.name)
 
-class TrackletItem(object):
-    def __init__(self, time, data, crack_contour, predicted_class, size=BOUNDING_BOX_SIZE):
-        self.time = time
-        self.size = size
-        self.data = data
-        self.crack_contour = crack_contour.clip(0, BOUNDING_BOX_SIZE)
-        self.predicted_class = predicted_class
 
 class TrajectoryFeatureBase(object):
     def compute(self):

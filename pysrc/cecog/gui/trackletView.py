@@ -30,15 +30,16 @@ import numpy
 # cecog imports:
 #
 from cecog.gui.imageviewer import HoverPolygonItem
-from cecog.io.dataprovider import BOUNDING_BOX_SIZE, File
+from cecog.io.dataprovider import File
 from cecog.io.dataprovider import trajectory_features, TerminalObjectItem, ObjectItem
+from pdk.datetimeutils import StopWatch
+
+
 
 #-------------------------------------------------------------------------------
 # constants:
 #
-PREDICTION_BAR_HEIGHT = 4
-PREDICTION_BAR_X_PADDING = 0
-PREDICTION_BAR_Y_PADDING = 2
+
 
 #-------------------------------------------------------------------------------
 # functions:
@@ -47,7 +48,7 @@ import types
 def MixIn(pyClass, mixInClass, makeAncestor=0):
     if makeAncestor:
         if mixInClass not in pyClass.__bases__:
-            pyClass.__bases__ = (mixInClass,) + pyClass.__bases__
+            pyClass.__bases__ = pyClass.__bases__ + (mixInClass,)
     else:
         # Recursively traverse the mix-in ancestor
         # classes in order to support inheritance
@@ -68,14 +69,20 @@ def MixIn(pyClass, mixInClass, makeAncestor=0):
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, filename=None, parent=None):
         QtGui.QMainWindow.__init__(self, parent)
-         
-        self.setGeometry(100,100,1200,700)
+        self.setStyleSheet('background-color: qlineargradient(x1: 0, y1: 0, x2: 500, y2: 500, stop: 0 #444444, stop: 1 #0A0A0A);') 
+        self.setGeometry(100,100,1200,800)
         self.setWindowTitle('tracklet browser')
         
         self.mnu_open = QtGui.QAction('&Open', self)
         self.mnu_open.triggered.connect(self.open_file)
+        
+        self.mnu_change_view = QtGui.QAction('&Change gallery size', self)
+        self.mnu_change_view.triggered.connect(self.change_gallery_size)
+        
         file_menu = self.menuBar().addMenu('&File')
+        view_menu = self.menuBar().addMenu('&View')
         file_menu.addAction(self.mnu_open)
+        view_menu.addAction(self.mnu_change_view)
 
         
         self.tracklet_widget = TrackletBrowser(self)
@@ -83,6 +90,9 @@ class MainWindow(QtGui.QMainWindow):
         
         if filename is not None:
             self.tracklet_widget.open_file(filename)
+            
+            
+            
     def closeEvent(self, cevent):
         try:
             if self.tracklet_widget.data_provider is not None:
@@ -92,6 +102,15 @@ class MainWindow(QtGui.QMainWindow):
             print 'Could not close file or no file has been open'
         finally:
             cevent.accept()
+        
+    def change_gallery_size(self):
+        val, ok = QtGui.QInputDialog.getInt(self, 'New gallery image size', 'Size', 
+                                            value=CellTerminalObjectItemMixin.BOUNDING_BOX_SIZE, 
+                                            min=10, 
+                                            max=1000)
+        if ok:
+            CellTerminalObjectItemMixin.BOUNDING_BOX_SIZE = val
+            self.tracklet_widget.show_position(self.tracklet_widget._current_position_key, True)
         
     def open_file(self):
         filename = str(QtGui.QFileDialog.getOpenFileName(self, 'Open hdf5 file', '.', 'hdf5 files (*.h5  *.hdf5)'))  
@@ -118,10 +137,10 @@ class ZoomedQGraphicsView(QtGui.QGraphicsView):
             newGrviewCenter = grviewCenter + offset
             self.centerOn(newGrviewCenter)
             
-class PositonThumbnail(QtGui.QLabel):
+class PositionThumbnail(QtGui.QLabel):
     item_length = 10
-    item_height = 3
-    css = 'background-color: black;'
+    item_height = 2
+    css = 'background-color: transparent;'
     
     def __init__(self, position_key, position, parent=None):
         QtGui.QLabel.__init__(self, parent)
@@ -145,6 +164,7 @@ class PositonThumbnail(QtGui.QLabel):
         self.setPixmap(thumbnail_pixmap)
         self.setStyleSheet(self.css)
         self.setToolTip('Sample %s\nPlate %s \nExperiment %s\nPosition %s' % position_key)
+        self.setMinimumHeight(self.height)
     
     def mouseDoubleClickEvent(self, *args, **kwargs):
         QtGui.QLabel.mouseDoubleClickEvent(self, *args, **kwargs)
@@ -153,21 +173,30 @@ class PositonThumbnail(QtGui.QLabel):
     
             
 class TrackletThumbnailList(QtGui.QWidget):
-    css = '* {background-color: black;}'
+    css = '''background-color: transparent; 
+             color: white; 
+             font: bold 12px;
+             min-width: 10em; 
+          '''
     clicked = QtCore.pyqtSignal(tuple)
     
     def __init__(self, data_provider, parent=None):
         QtGui.QWidget.__init__(self, parent)
         self.main_layout = QtGui.QHBoxLayout()
         
+        
         for position_key in data_provider.positions:
-            tn_position = PositonThumbnail(position_key, data_provider[position_key], self)
-            self.main_layout.addWidget(tn_position)
-            tn_position = PositonThumbnail(position_key, data_provider[position_key], self)
-            self.main_layout.addWidget(tn_position)
+            tn_position = PositionThumbnail(position_key, data_provider[position_key], self)
+            tn_widget = QtGui.QWidget(self)
+            tn_layout = QtGui.QVBoxLayout()
+            tn_layout.addWidget(QtGui.QLabel('%s %s' % (position_key[1], position_key[3])))
+            tn_layout.addWidget(tn_position)
+            tn_widget.setLayout(tn_layout)
+            self.main_layout.addWidget(tn_widget)
+            
         self.main_layout.addStretch()
         self.setLayout(self.main_layout)
-        self.setMinimumHeight(tn_position.height)
+        self.setMinimumHeight(tn_position.height + 20)
 
         self.setStyleSheet(self.css)
         
@@ -190,11 +219,13 @@ class TrackletBrowser(QtGui.QWidget):
                 QPushButton :pressed {
                              background-color: rgb(50, 50, 50);
                              border-style: inset;}
+                 QScrollBar:horizontal {
+                     border: 2px solid grey;
+                     background: black;
+                 }
+
             
                      '''
-    ALIGN_LEFT = 0
-    ALIGN_ABSOLUT_TIME = 1
-    ALIGN_CUSTOM = 2
     
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
@@ -259,31 +290,38 @@ class TrackletBrowser(QtGui.QWidget):
         
         self.view_hud_btn_layout.addStretch()
         
-        self.btn_toggle_contours.toggled.connect(self.toggle_contours)
+        self.btn_toggle_contours.toggled.connect(self.showContours)
         
         self.view_hud_layout.addStretch()
         
         self.view.setDragMode(self.view.ScrollHandDrag)
         
-        self._align_vertically = self.ALIGN_LEFT
         
         
-    def show_position(self, position_key):
+    def show_position(self, position_key, clear_object_cache=False):
         self.scene.clear()
+        self._current_position_key = position_key
         position = self.data_provider[position_key]
         
         self._root_items = []
-        events = position.get_objects('event')
-        for event in events:
+        events = position.get_objects('primary__primary')
+        
+        if clear_object_cache:
+            for objs in position.objects:
+                position.get_objects(objs)._object_item_cache = {}
+        
+        for event in events.iter_random(300):
             g_event = event.GraphicsItemType(event)
             g_event.setHandlesChildEvents(False)
             self.scene.addItem(g_event)
             self._root_items.append(g_event)
             
+        self.GraphicsItemLayouter = event.GraphicsItemLayouter(self._root_items, self)
+            
         self.update_()
     
     def cb_change_vertical_alignment(self, index): 
-        self._align_vertically = index
+        self.GraphicsItemLayouter._align_vertically = index
         self.update_()
            
     def open_file(self, filename):
@@ -297,20 +335,8 @@ class TrackletBrowser(QtGui.QWidget):
         return sum([x.height for x in self._root_items])
     
     def update_(self):
-        row = 0
-        for ti in self._root_items:
-            if ti.is_selected:
-                ti.moveToRow(row)
-                row += 1
-                ti.setVisible(True)
-            else:
-                ti.setVisible(False)
-            if self._align_vertically == self.ALIGN_LEFT:
-                ti.moveToColumn(0)
-            elif self._align_vertically == self.ALIGN_ABSOLUT_TIME:
-                ti.moveToColumn(ti.sub_items[0].object_item.time)
-            elif self._align_vertically == self.ALIGN_CUSTOM:
-                ti.moveToColumn(ti.column)
+        self.GraphicsItemLayouter()
+        
         
     def showGalleryImage(self, state):
         for ti in self._root_items:
@@ -329,9 +355,11 @@ class TrackletBrowser(QtGui.QWidget):
         self._root_items.sort(cmp=lambda x,y: cmp(x.object_item[feature_name],y.object_item[feature_name]))
         self.update_()
     
-    def toggle_contours(self, state):
-        toggle_visibility = lambda x: x.setContoursVisible(state)
-        map(toggle_visibility, self._root_items)
+    def showContours(self, state):
+        for ti in self._root_items:
+            if ti.is_selected:
+                ti.showContours(state)
+        self.update_()
         
     def selectTenRandomTrajectories(self):
         for ti in self._root_items:
@@ -343,17 +371,18 @@ class TrackletBrowser(QtGui.QWidget):
     def selectAll(self):
         for ti in self._root_items:
             ti.is_selected = True
-            ti.moveToColumn(0)
-        self._align_vertically = self.cmb_align.setCurrentIndex(self.ALIGN_LEFT)
+#            ti.moveToColumn(0)
+#        self.GraphicsItemLayouter._align_vertically = self.cmb_align.setCurrentIndex(self.GraphicsItemLayouter.ALIGN_LEFT)
+        self.update_()
         
     def selectTransition(self):
         for ti in self._root_items:
             ti.is_selected = False
-            trans_pos = reduce(lambda x,y: str(x) + str(y), ti['prediction']).find('01')
+            trans_pos = reduce(lambda x,y: str(x) + str(y), ti.object_item['prediction']).find('01')
             if trans_pos > 0:
                 ti.is_selected = True
                 ti.column = - (trans_pos + 1)
-        self._align_vertically = self.cmb_align.setCurrentIndex(self.ALIGN_CUSTOM)
+        self.GraphicsItemLayouter._align_vertically = self.cmb_align.setCurrentIndex(self.GraphicsItemLayouter.ALIGN_CUSTOM)
     
     def reset(self):
         for t in self._root_items:
@@ -361,17 +390,19 @@ class TrackletBrowser(QtGui.QWidget):
                
             
 class GraphicsObjectItemBase(QtGui.QGraphicsItemGroup):
+    def __init__(self, parent):
+        QtGui.QGraphicsItemGroup.__init__(self, parent)
+        self.is_selected = True
+        
     def moveToRow(self, row):
         self.row = row
-        self.setPos(self.column * BOUNDING_BOX_SIZE, row * self.height)
+        self.setPos(self.column * self.width, row * self.height)
         
     def moveToColumn(self, col):
         self.column = col
-        self.setPos(col * BOUNDING_BOX_SIZE, self.row * self.height)  
+        self.setPos(col * self.width, self.row * self.height)
+      
         
-    @property
-    def is_selected(self):
-        return True
     
 class GraphicsObjectItem(GraphicsObjectItemBase):
     def __init__(self, object_item, parent=None):
@@ -385,13 +416,26 @@ class EventGraphicsItem(GraphicsObjectItem):
     
         self.sub_items = []
         for col, sub_item in enumerate(object_item.children()):
-            g_sub_item = sub_item.GraphicsItemType(sub_item.get_siblings(), self)
+            g_sub_item = sub_item.GraphicsItemType(sub_item, self)
             g_sub_item.moveToColumn(col)
             self.sub_items.append(g_sub_item)
             self.addToGroup(g_sub_item)
         self.row = object_item.id
         self.column = 0
-        self.height = BOUNDING_BOX_SIZE + PREDICTION_BAR_HEIGHT
+        self.height = self.sub_items[0].height
+    
+    def showGalleryImage(self, state):
+        for sub_item in self.sub_items:
+            sub_item.showGalleryImage(state)
+        self.height = self.sub_items[0].height
+            
+    def showContours(self, state):
+        for sub_item in self.sub_items:
+            sub_item.showContours(state)
+            
+    @property
+    def width(self):
+        return sum([x.width for x in self.sub_items])
         
              
 class GraphicsTerminalObjectItem(GraphicsObjectItemBase):
@@ -400,17 +444,26 @@ class GraphicsTerminalObjectItem(GraphicsObjectItemBase):
         self.object_item = object_item
         
 class CellGraphicsItem(GraphicsTerminalObjectItem):
+    PREDICTION_BAR_HEIGHT = 4
+    PREDICTION_BAR_X_PADDING = 0
+    
+    @property
+    def width(self):
+        return self.object_item.BOUNDING_BOX_SIZE
+    
     def __init__(self, object_item, parent=None):
         GraphicsTerminalObjectItem.__init__(self, object_item, parent=None)
         gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(object_item.image)))
+        gallery_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
         
-        bar_item = QtGui.QPixmap(BOUNDING_BOX_SIZE - 2 * PREDICTION_BAR_X_PADDING, PREDICTION_BAR_HEIGHT)
-        bar_item.fill(QtGui.QColor(object_item.class_color))
-        bar_item = QtGui.QGraphicsPixmapItem(bar_item)
-        bar_item.setPos(PREDICTION_BAR_X_PADDING, 0) 
+        
+        bar_item = QtGui.QGraphicsLineItem(self.PREDICTION_BAR_X_PADDING, 0, self.width - self.PREDICTION_BAR_X_PADDING, 0)
+        bar_pen = QtGui.QPen(QtGui.QColor(object_item.class_color))
+        bar_pen.setWidth(self.PREDICTION_BAR_HEIGHT)
+        bar_item.setPen(bar_pen)
         
         contour_item = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), object_item.crack_contour.tolist())))
-        contour_item.setPos(0, PREDICTION_BAR_HEIGHT)
+        contour_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
         contour_item.setPen(QtGui.QPen(QtGui.QColor(object_item.class_color)))
         contour_item.setAcceptHoverEvents(True)
         
@@ -418,12 +471,85 @@ class CellGraphicsItem(GraphicsTerminalObjectItem):
         self.addToGroup(bar_item)
         self.addToGroup(contour_item)
         
+        self.bar_item = bar_item
+        self.contour_item = contour_item
+        self.gallery_item = gallery_item
+        
         self.row = 0 
         self.column = object_item.time
-        self.height = BOUNDING_BOX_SIZE + PREDICTION_BAR_HEIGHT 
+        self.height = self.width + self.PREDICTION_BAR_HEIGHT 
         
-class CellTerminalObjectItemMixin(object):
+    def showGalleryImage(self, state):
+        self.contour_item.setVisible(state)
+        self.gallery_item.setVisible(state)
+        if state:
+            self.height = self.width + self.PREDICTION_BAR_HEIGHT 
+        else:
+            self.height = self.PREDICTION_BAR_HEIGHT 
+            
+    def showContours(self, state):
+        self.contour_item.setVisible(state)
+        
+class GraphicsLayouterBase(QtGui.QWidget):
+    properties = {}
+    def __init__(self, items, parent):
+        QtGui.QWidget.__init__(self, parent)
+        self._items = items     
+    def __call__(self):
+        'print default layouting'   
+
+class EventGraphicsLayouter(GraphicsLayouterBase):
+    properties = {'alignment': 0}
+    ALIGN_LEFT = 0
+    ALIGN_ABSOLUT_TIME = 1
+    ALIGN_CUSTOM = 2
+    
+    def __init__(self, items, parent):
+        GraphicsLayouterBase.__init__(self, items, parent)
+        self._align_vertically = self.ALIGN_LEFT
+        
+    def __call__(self):
+        row = 0
+        for ti in self._items:
+            if ti.is_selected:
+                ti.moveToRow(row)
+                row += 1
+                ti.setVisible(True)
+            else:
+                ti.setVisible(False)
+            if self._align_vertically == self.ALIGN_LEFT:
+                ti.moveToColumn(0)
+            elif self._align_vertically == self.ALIGN_ABSOLUT_TIME:
+                ti.moveToColumn(ti.sub_items[0].object_item.time)
+            elif self._align_vertically == self.ALIGN_CUSTOM:
+                ti.moveToColumn(ti.column)
+        
+class CellGraphicsLayouter(GraphicsLayouterBase):
+    def __init__(self, items, parent):
+        GraphicsLayouterBase.__init__(self, items, parent)
+    
+    def __call__(self):
+        row = 0
+        col = 0
+        for ti in self._items:
+            if ti.is_selected:
+                ti.moveToRow(row)
+                ti.moveToColumn(col)
+                ti.setVisible(True)
+                col += 1
+            else:
+                ti.setVisible(False)
+            
+            if col > 26:
+                row += 1
+                col = 0
+        
+        
+class CellTerminalObjectItemMixin():
     GraphicsItemType = CellGraphicsItem
+    GraphicsItemLayouter = CellGraphicsLayouter
+    BOUNDING_BOX_SIZE = 100
+    
     @property
     def image(self):
         if not hasattr(self, '_image'):
@@ -431,9 +557,9 @@ class CellTerminalObjectItemMixin(object):
             image_own = self._get_image(self.time, self.local_idx, channel_idx)
             
             sib = self.get_siblings()
-            if sib is not None:
+            if False:#sib is not None:
                 image_sib = sib.image
-                new_shape = (BOUNDING_BOX_SIZE,)*2 + (3,)
+                new_shape = (self.width,)*2 + (3,)
                 image = numpy.zeros(new_shape, dtype=numpy.uint8)
                 image[0:image_own.shape[0],0:image_own.shape[1],0] = image_own
                 image[0:image_sib.shape[0],0:image_sib.shape[1],1] = image_sib
@@ -449,7 +575,7 @@ class CellTerminalObjectItemMixin(object):
         bb = self.bounding_box
         crack_contour[:,0] -= bb[0][0]
         crack_contour[:,1] -= bb[0][1]  
-        return crack_contour.clip(0, BOUNDING_BOX_SIZE)
+        return crack_contour.clip(0, self.BOUNDING_BOX_SIZE)
     
     @property
     def predicted_class(self):
@@ -484,13 +610,13 @@ class CellTerminalObjectItemMixin(object):
             self._bounding_box = (objects['upper_left'][self.local_idx], objects['lower_right'][self.local_idx])
         return self._bounding_box
     
-    def _get_image(self, t, obj_idx, c, bounding_box=None, min_bounding_box_size=BOUNDING_BOX_SIZE):
+    def _get_image(self, t, obj_idx, c, bounding_box=None):
         if bounding_box is None:
             ul, lr = self.bounding_box
         else:
             ul, lr = bounding_box
-        offset_0 = (min_bounding_box_size - lr[0] + ul[0])
-        offset_1 = (min_bounding_box_size - lr[1] + ul[1]) 
+        offset_0 = (self.BOUNDING_BOX_SIZE - lr[0] + ul[0])
+        offset_1 = (self.BOUNDING_BOX_SIZE - lr[1] + ul[1]) 
         ul[0] = max(0, ul[0] - offset_0/2 - cmp(offset_0%2,0) * offset_0 % 2) 
         ul[1] = max(0, ul[1] - offset_1/2 - cmp(offset_1%2,0) * offset_1 % 2)      
         lr[0] = min(self.get_position._hf_group_np_copy.shape[4], lr[0] + offset_0/2) 
@@ -527,23 +653,21 @@ class CellTerminalObjectItemMixin(object):
         return self._class_color[self.predicted_class]
     
     def compute_features(self):
-        pass
+        pass  
     
-class EventObjectItemMixin(object):
+
+class EventObjectItemMixin():
     GraphicsItemType = EventGraphicsItem
+    GraphicsItemLayouter = EventGraphicsLayouter
     def compute_features(self):
         for feature in trajectory_features:
             if isinstance(self, feature.type):
                 self[feature.name] =  feature.compute(self.children())
-
-
-class Hamster(CellTerminalObjectItemMixin):
-    @property
-    def image(self):
-        return (numpy.random.rand(BOUNDING_BOX_SIZE, BOUNDING_BOX_SIZE)*255).astype(numpy.uint8)
-    
-MixIn(TerminalObjectItem, CellTerminalObjectItemMixin)
-MixIn(ObjectItem, EventObjectItemMixin)
+                
+        self['prediction'] = [x.predicted_class for x in self.children()]
+        
+MixIn(TerminalObjectItem, CellTerminalObjectItemMixin, True)
+MixIn(ObjectItem, EventObjectItemMixin, True)
 
         
 if __name__ == "__main__":
@@ -563,4 +687,6 @@ if __name__ == "__main__":
     
     mainwindow.show()
     app.exec_()
+    
+
 
