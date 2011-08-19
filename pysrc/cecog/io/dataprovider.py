@@ -159,7 +159,11 @@ class Position(_DataProvider):
         super(Position, self).__init__(hf_group, parent)
         tic = timing.time()
         
+        # At some point the init of positions must be made lazy, cause we can not effort saving all this stuff 
+        # for many positions...
+        
         self._hf_group_np_copy = self._hf_group['image']['channel'].value
+#        self._hf_group_np_copy = self._hf_group['image']['channel']
         print '  decompressing image data', timing.time() - tic
         
         self.regions= {}
