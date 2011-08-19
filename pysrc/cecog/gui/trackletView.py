@@ -437,7 +437,7 @@ class EventGraphicsItem(GraphicsObjectItem):
             
     @property
     def width(self):
-        return sum([x.width for x in self.sub_items])
+        return self.sub_items[0].width#sum([x.width for x in self.sub_items])
         
              
 class GraphicsTerminalObjectItem(GraphicsObjectItemBase):
