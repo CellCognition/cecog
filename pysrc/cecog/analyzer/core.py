@@ -286,12 +286,20 @@ class PositionAnalyzer(object):
         for name in [SecondaryChannel.NAME, TertiaryChannel.NAME]:
             if self.oSettings.get('Processing', '%s_processchannel' % name.lower()):
                 channel_names.append(name)
+
+        create_nc = self.oSettings.get2('netcdf_create_file')
+        reuse_nc = self.oSettings.get2('netcdf_reuse_file')
+        # turn the reuse NetCDF4 option off in case the create option was switched off too
+        # FIXME: GUI and process logic differ here. create_nc is a GUI switch on a higher level than reuse_nc
+        if not create_nc:
+            reuse_nc = False
+
         oTimeHolder = TimeHolder(self.P,
                                  channel_names,
                                  filename_netcdf, filename_hdf5,
                                  self._meta_data, self.oSettings,
-                                 create_nc=self.oSettings.get2('netcdf_create_file'),
-                                 reuse_nc=self.oSettings.get2('netcdf_reuse_file'),
+                                 create_nc=create_nc,
+                                 reuse_nc=reuse_nc,
                                  hdf5_create=False,#self.oSettings.get2('hdf5_create_file'),
                                  hdf5_include_raw_images=self.oSettings.get2('hdf5_include_raw_images'),
                                  hdf5_include_label_images=self.oSettings.get2('hdf5_include_label_images'),
