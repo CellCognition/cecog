@@ -20,7 +20,8 @@ __source__ = '$URL$'
 import sys, \
        os, \
        logging, \
-       time
+       time, \
+       gc
 import cPickle as pickle
 
 #-------------------------------------------------------------------------------
@@ -543,7 +544,7 @@ class AnalyzerMainWindow(QMainWindow):
                     found_plates = [info[0] for info in infos
                                     if not info[3] is None]
                     missing_plates = [info[0] for info in infos
-                                    if info[3] is None]
+                                      if info[3] is None]
                     has_missing = len(missing_plates) > 0
                     txt = '%s plates were already scanned.\nDo you want ' \
                           'to rescan the file structure(s)? ' \
@@ -578,14 +579,11 @@ class AnalyzerMainWindow(QMainWindow):
                         btn = box.clickedButton()
                         if btn == btn1:
                             if has_missing:
-                                scan_plates = dict((id, True)
-                                                   for id in missing_plates)
+                                scan_plates = dict([(info[0], info[0] in missing_plates) for info in infos])
                             else:
-                                scan_plates = dict((id, False)
-                                                   for id in found_plates)
+                                scan_plates = dict((info[0], False) for info in infos)
                         else:
-                            scan_plates = dict((info[0], True)
-                                               for info in infos)
+                            scan_plates = dict((info[0], True) for info in infos)
                 else:
                     has_multiple = self._settings.get(SECTION_NAME_GENERAL,
                                                       "has_multiple_plates")
@@ -602,47 +600,43 @@ class AnalyzerMainWindow(QMainWindow):
 
     def _load_image_container(self, plate_infos, scan_plates):
 
+        self._clear_browser()
         imagecontainer = ImageContainer()
 
-        def load():
+        def load(dlg):
             iter = imagecontainer.iter_import_from_settings(self._settings, scan_plates)
             for idx, info in enumerate(iter):
-                pass
-
-            # close and delete the current browser instance
-            if not self._browser is None:
-                self._browser.close()
-                del self._browser
-                self._browser = None
+                dlg.targetSetValue.emit(idx+1)
 
             if len(imagecontainer.plates) > 0:
-                self._imagecontainer = imagecontainer
-                plate = self._imagecontainer.plates[0]
-                self._imagecontainer.set_plate(plate)
-                self._imagecontainer.check_dimensions()
-                channels = self._imagecontainer.channels
-                for prefix in ['primary', 'secondary', 'tertiary']:
-                    trait = self._settings.get_trait(SECTION_NAME_OBJECTDETECTION,
-                                                     '%s_channelid' % prefix)
-                    trait.set_list_data(channels)
-                    self._tabs[1].get_widget('%s_channelid' % prefix).update()
+                plate = imagecontainer.plates[0]
+                imagecontainer.set_plate(plate)
 
-                trait = self._settings.get_trait(SECTION_NAME_TRACKING,
-                                                 'tracking_duration_unit')
+        dlg = waitingProgressDialog('Please wait until the input structure is scanned\n'
+                                    'or the structure data loaded...', self, load, (0, len(scan_plates)))
+        dlg.exec_(passDialog=True)
 
-                # allow time-base tracking durations only if time-stamp
-                # information is present
-                meta_data = imagecontainer.get_meta_data()
-                if meta_data.has_timestamp_info:
-                    trait.set_list_data(TRACKING_DURATION_UNITS_TIMELAPSE)
-                else:
-                    trait.set_list_data(TRACKING_DURATION_UNITS_DEFAULT)
+        if len(imagecontainer.plates) > 0:
+            imagecontainer.check_dimensions()
+            channels = imagecontainer.channels
+            for prefix in ['primary', 'secondary', 'tertiary']:
+                trait = self._settings.get_trait(SECTION_NAME_OBJECTDETECTION,
+                                                 '%s_channelid' % prefix)
+                trait.set_list_data(channels)
+                self._tabs[1].get_widget('%s_channelid' % prefix).update()
 
+            trait = self._settings.get_trait(SECTION_NAME_TRACKING,
+                                             'tracking_duration_unit')
 
-        waitingProgressDialog('Please wait until the input structure is scanned\n'
-                              'or the structure data loaded...', self, load).exec_()
+            # allow time-base tracking durations only if time-stamp
+            # information is present
+            meta_data = imagecontainer.get_meta_data()
+            if meta_data.has_timestamp_info:
+                trait.set_list_data(TRACKING_DURATION_UNITS_TIMELAPSE)
+            else:
+                trait.set_list_data(TRACKING_DURATION_UNITS_DEFAULT)
 
-        if len(self._imagecontainer.plates) > 0:
+            self._imagecontainer = imagecontainer
             self.set_modules_active(state=True)
             information(self, "Plate(s) successfully loaded",
                         "%d plates loaded successfully." % len(imagecontainer.plates))
@@ -671,13 +665,9 @@ class AnalyzerMainWindow(QMainWindow):
             filename = QFileDialog.getOpenFileName(self, 'Open config file', dir, ';;'.join(self.NAME_FILTERS))
             if filename:
                 self._read_settings(filename)
+                self._clear_browser()
                 self.set_modules_active(state=False)
 
-                # close and delete the current browser instance
-                if not self._browser is None:
-                    self._browser.close()
-                    del self._browser
-                    self._browser = None
 
     @pyqtSlot()
     def _on_file_save(self):
@@ -686,6 +676,15 @@ class AnalyzerMainWindow(QMainWindow):
     @pyqtSlot()
     def _on_file_save_as(self):
         self.save_settings(True)
+
+    def _clear_browser(self):
+        # close and delete the current browser instance
+        if not self._browser is None:
+            self._browser.close()
+            del self._browser
+            # FIXME: necessary step to prevent crash after loading of new image container
+            gc.collect()
+            self._browser = None
 
     def _on_show_log_window(self):
         logger = logging.getLogger()
@@ -764,7 +763,7 @@ if __name__ == "__main__":
     splash.show()
     splash.raise_()
     app.setWindowIcon(QIcon(':cecog_analyzer_icon'))
-    time.sleep(.5)
+    time.sleep(.2)
     app.processEvents()
     main = AnalyzerMainWindow()
     main.raise_()
