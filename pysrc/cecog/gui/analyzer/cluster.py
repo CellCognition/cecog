@@ -42,8 +42,7 @@ from cecog.traits.config import (ANALYZER_CONFIG,
                                  map_path_to_os,
                                  is_path_mappable,
                                  )
-from cecog.gui.analyzer import (_BaseFrame,
-                                _ProcessorMixin,
+from cecog.gui.analyzer import (BaseFrame,
                                 AnalzyerThread,
                                 HmmThread,
                                 )
@@ -321,7 +320,7 @@ class ClusterDisplay(QGroupBox):
                 results.append(info)
         return results
 
-    def update_display(self):
+    def update_display(self, is_active):
         if self._connect():
             self._can_submit = True
             self._submit_settings = \
@@ -348,10 +347,10 @@ class ClusterDisplay(QGroupBox):
                 self._can_submit &= status
             self._table_info.resizeColumnsToContents()
             self._table_info.resizeRowsToContents()
-            self._btn_submit.setEnabled(self._can_submit)
-            self._btn_terminate.setEnabled(True)
-            self._btn_toogle.setEnabled(True)
-            self._btn_update.setEnabled(True)
+            self._btn_submit.setEnabled(self._can_submit and is_active)
+            self._btn_terminate.setEnabled(is_active)
+            self._btn_toogle.setEnabled(is_active)
+            self._btn_update.setEnabled(is_active)
         else:
             self._btn_submit.setEnabled(False)
             self._btn_terminate.setEnabled(False)
@@ -359,19 +358,17 @@ class ClusterDisplay(QGroupBox):
             self._btn_update.setEnabled(False)
 
 
-class ClusterFrame(_BaseFrame, _ProcessorMixin):
+class ClusterFrame(BaseFrame):
 
     SECTION_NAME = SECTION_NAME_CLUSTER
 
     def __init__(self, settings, parent):
-        _BaseFrame.__init__(self, settings, parent)
-        _ProcessorMixin.__init__(self)
+        super(ClusterFrame, self).__init__(settings, parent)
 
         self._cluster_display = self._add_frame()
         self.add_group(None,
                        [('position_granularity', (0,0,1,1)),
                         ], label='Cluster Settings')
-
 
     def _add_frame(self):
         frame = self._get_frame()
@@ -382,4 +379,4 @@ class ClusterFrame(_BaseFrame, _ProcessorMixin):
         return cluster_display
 
     def page_changed(self):
-        self._cluster_display.update_display()
+        self._cluster_display.update_display(self._is_active)

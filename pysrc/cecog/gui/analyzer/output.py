@@ -28,7 +28,7 @@ __all__ = ['OutputFrame']
 # cecog imports:
 #
 from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
-from cecog.gui.analyzer import _BaseFrame
+from cecog.gui.analyzer import BaseFrame
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -43,12 +43,12 @@ from cecog.gui.analyzer import _BaseFrame
 #-------------------------------------------------------------------------------
 # classes:
 #
-class OutputFrame(_BaseFrame):
+class OutputFrame(BaseFrame):
 
     SECTION_NAME = SECTION_NAME_OUTPUT
 
     def __init__(self, settings, parent):
-        _BaseFrame.__init__(self, settings, parent)
+        super(OutputFrame, self).__init__(settings, parent)
 
         self.add_group(None,
                        [('rendering_labels_discwrite', (0,0,1,1)),

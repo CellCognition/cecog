@@ -28,8 +28,7 @@ __all__ = ['ProcessingFrame']
 # cecog imports:
 #
 from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
-from cecog.gui.analyzer import (_BaseFrame,
-                                _ProcessorMixin,
+from cecog.gui.analyzer import (BaseProcessorFrame,
                                 AnalzyerThread,
                                 HmmThread,
                                 )
@@ -55,13 +54,12 @@ from cecog.analyzer.channel import (PrimaryChannel,
 #-------------------------------------------------------------------------------
 # classes:
 #
-class ProcessingFrame(_BaseFrame, _ProcessorMixin):
+class ProcessingFrame(BaseProcessorFrame):
 
     SECTION_NAME = SECTION_NAME_PROCESSING
 
     def __init__(self, settings, parent):
-        _BaseFrame.__init__(self, settings, parent)
-        _ProcessorMixin.__init__(self)
+        super(ProcessingFrame, self).__init__(settings, parent)
 
         self.register_control_button('process',
                                      [AnalzyerThread,
@@ -91,7 +89,7 @@ class ProcessingFrame(_BaseFrame, _ProcessorMixin):
 
     @classmethod
     def get_special_settings(cls, settings):
-        settings = _ProcessorMixin.get_special_settings(settings)
+        settings = BaseProcessorFrame.get_special_settings(settings)
 
         settings.set('General', 'rendering', {})
         settings.set('General', 'rendering_class', {})

@@ -87,7 +87,7 @@ from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
 # classes:
 #
 
-class _BaseFrame(QFrame, TraitDisplayMixin):
+class BaseFrame(QFrame, TraitDisplayMixin):
 
     ICON = ":cecog_analyzer_icon"
     TABS = None
@@ -99,6 +99,7 @@ class _BaseFrame(QFrame, TraitDisplayMixin):
         QFrame.__init__(self, parent)
         self._tab_lookup = {}
         self._tab_name = None
+        self._is_active = False
 
         self._control = QFrame(self)
         layout = QVBoxLayout(self)
@@ -142,6 +143,9 @@ class _BaseFrame(QFrame, TraitDisplayMixin):
 
     def set_tab_name(self, name):
         self._tab_name = name
+
+    def set_active(self, state=True):
+        self._is_active = state
 
     def _get_frame(self, name=None):
         if name is None:
@@ -736,6 +740,10 @@ class _ProcessorMixin(object):
             text = self._control_buttons[name]['labels'][idx]
         w_button.setText(text)
 
+    def enable_control_buttons(self, state=True):
+        for name in self._control_buttons:
+            w_button = self._control_buttons[name]['widget']
+            w_button.setEnabled(state)
 
     def _toggle_control_buttons(self, name=None):
         if name is None:
@@ -744,7 +752,6 @@ class _ProcessorMixin(object):
             if name != name2:
                 w_button = self._control_buttons[name2]['widget']
                 w_button.setEnabled(not w_button.isEnabled())
-
 
     def _on_process_start(self, name, start_again=False):
         if not self._is_running or start_again:
@@ -1155,4 +1162,16 @@ class _ProcessorMixin(object):
             if not qApp._image_dialog.isVisible():
                 qApp._image_dialog.show()
                 qApp._image_dialog.raise_()
+
+
+class BaseProcessorFrame(BaseFrame, _ProcessorMixin):
+
+    def __init__(self, settings, parent):
+        BaseFrame.__init__(self, settings, parent)
+        _ProcessorMixin.__init__(self)
+
+    def set_active(self, state):
+        # set internal state and enable/disable control buttons
+        super(BaseProcessorFrame, self).set_active(state)
+        self.enable_control_buttons(state)
 

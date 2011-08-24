@@ -28,9 +28,8 @@ __all__ = ['ErrorCorrectionFrame']
 # cecog imports:
 #
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
-from cecog.gui.analyzer import (_BaseFrame,
-                                _ProcessorMixin,
-                                HmmThread
+from cecog.gui.analyzer import (BaseProcessorFrame,
+                                HmmThread,
                                 )
 
 #-------------------------------------------------------------------------------
@@ -46,14 +45,13 @@ from cecog.gui.analyzer import (_BaseFrame,
 #-------------------------------------------------------------------------------
 # classes:
 #
-class ErrorCorrectionFrame(_BaseFrame, _ProcessorMixin):
+class ErrorCorrectionFrame(BaseProcessorFrame):
 
     SECTION_NAME = SECTION_NAME_ERRORCORRECTION
     DISPLAY_NAME = 'Error Correction'
 
     def __init__(self, settings, parent):
-        _BaseFrame.__init__(self, settings, parent)
-        _ProcessorMixin.__init__(self)
+        super(ErrorCorrectionFrame, self).__init__(settings, parent)
 
         self.register_control_button('hmm',
                                      HmmThread,
@@ -89,7 +87,7 @@ class ErrorCorrectionFrame(_BaseFrame, _ProcessorMixin):
         self._init_control(has_images=False)
 
     def _get_modified_settings(self, name):
-        settings = _ProcessorMixin._get_modified_settings(self, name)
+        settings = BaseProcessorFrame._get_modified_settings(self, name)
         settings.set_section('Processing')
         if settings.get2('primary_classification'):
             settings.set2('primary_errorcorrection', True)

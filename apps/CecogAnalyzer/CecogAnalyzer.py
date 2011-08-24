@@ -668,11 +668,7 @@ class AnalyzerMainWindow(QMainWindow):
 
     def set_modules_active(self, state=True):
         for name, (button, widget) in self._tab_lookup.iteritems():
-            if name != GeneralFrame.SECTION_NAME:
-                if state:
-                    button.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-                else:
-                    button.setFlags(Qt.NoItemFlags)
+            widget.set_active(state)
 
     @pyqtSlot()
     def _on_file_open(self):

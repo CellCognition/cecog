@@ -36,8 +36,7 @@ from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
 from cecog.gui.util import (information,
                             exception,
                             )
-from cecog.gui.analyzer import (_BaseFrame,
-                                _ProcessorMixin,
+from cecog.gui.analyzer import (BaseProcessorFrame,
                                 AnalzyerThread,
                                 TrainingThread,
                                 )
@@ -400,7 +399,7 @@ class ClassifierResultFrame(QGroupBox):
         self._update_conf_table(conf)
 
 
-class ClassificationFrame(_BaseFrame, _ProcessorMixin):
+class ClassificationFrame(BaseProcessorFrame):
 
     SECTION_NAME = SECTION_NAME_CLASSIFICATION
     TABS = ['Primary Channel', 'Secondary Channel', 'Tertiary Channel']
@@ -409,8 +408,7 @@ class ClassificationFrame(_BaseFrame, _ProcessorMixin):
     PROCESS_TESTING = 'PROCESS_TESTING'
 
     def __init__(self, settings, parent):
-        _BaseFrame.__init__(self, settings, parent)
-        _ProcessorMixin.__init__(self)
+        super(ClassificationFrame, self).__init__(settings, parent)
         self._result_frames = {}
 
         self.register_control_button(self.PROCESS_PICKING,
@@ -447,7 +445,7 @@ class ClassificationFrame(_BaseFrame, _ProcessorMixin):
         self._init_control()
 
     def _get_modified_settings(self, name):
-        settings = _ProcessorMixin._get_modified_settings(self, name)
+        settings = BaseProcessorFrame._get_modified_settings(self, name)
 
         settings.set_section('ObjectDetection')
         prim_id = PrimaryChannel.NAME
