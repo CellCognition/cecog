@@ -48,6 +48,7 @@ class GuiConfigSettings(ConfigSettings):
 
     def __init__(self, parent, section_registry):
         self._parent = parent
+        self._notify_change = True
         ConfigSettings.__init__(self, section_registry)
 
     def copy(self):
@@ -66,9 +67,12 @@ class GuiConfigSettings(ConfigSettings):
             pass
         return new2
 
+    def set_notify_change(self, state):
+        self._notify_change = state
+
     def set(self, section_name, trait_name, value):
         ConfigSettings.set(self, section_name, trait_name, value)
-        if not self._parent is None:
+        if not self._parent is None and self._notify_change:
             self._parent.settings_changed(True)
 
 

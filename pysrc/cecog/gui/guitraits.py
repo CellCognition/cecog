@@ -165,9 +165,11 @@ class SelectionTrait2(traits.SelectionTrait2, GuiTrait):
             self._widget.addItems(str_data)
             if text in str_data:
                 index = str_data.index(text)
+                self._widget.setCurrentIndex(index)
             else:
-                index = 0
-            self._widget.setCurrentIndex(index)
+                index = None
+        return index
+
 
 
 class MultiSelectionTrait(traits.MultiSelectionTrait, GuiTrait):

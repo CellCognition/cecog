@@ -186,7 +186,7 @@ class AnalyzerMainWindow(QMainWindow):
         self._selection.setIconSize(QSize(35, 35))
         self._selection.setGridSize(QSize(140,60))
         #self._selection.setWrapping(False)
-        #self._selection.setMovement(QListView.Static)
+        self._selection.setMovement(QListView.Static)
         #self._selection.setFlow(QListView.TopToBottom)
         #self._selection.setSpacing(12)
         self._selection.setMaximumWidth(self._selection.gridSize().width()+5)
@@ -197,9 +197,6 @@ class AnalyzerMainWindow(QMainWindow):
         self._pages = QStackedWidget(central_widget)
         self._pages.main_window = self
 
-        #pagesWidget->addWidget(new ConfigurationPage);
-        #pagesWidget->addWidget(new UpdatePage);
-        #pagesWidget->addWidget(new QueryPage);
         self._settings_filename = None
         self._settings = GuiConfigSettings(self, SECTION_REGISTRY)
 
@@ -619,11 +616,26 @@ class AnalyzerMainWindow(QMainWindow):
         if len(imagecontainer.plates) > 0:
             imagecontainer.check_dimensions()
             channels = imagecontainer.channels
+
+            # do not report value changes to the main window
+            self._settings.set_notify_change(False)
+
+            problems = []
             for prefix in ['primary', 'secondary', 'tertiary']:
                 trait = self._settings.get_trait(SECTION_NAME_OBJECTDETECTION,
                                                  '%s_channelid' % prefix)
-                trait.set_list_data(channels)
+                if trait.set_list_data(channels) is None:
+                    problems.append(prefix)
                 self._tabs[1].get_widget('%s_channelid' % prefix).update()
+
+            # report problems about a mismatch between channel IDs found in the data and specified by the user
+            if len(problems) > 0:
+                critical(self, "Selected channel IDs not valid",
+                         "The selected channel IDs for %s are not valid.\nValid IDs are %s." %
+                         (", ".join(["'%s Channel'" % s.capitalize() for s in problems]),
+                          ", ".join(["'%s'" % s for s in channels])))
+                # a mismatch between settings and data will cause changed settings
+                self.settings_changed(True)
 
             trait = self._settings.get_trait(SECTION_NAME_TRACKING,
                                              'tracking_duration_unit')
@@ -632,9 +644,17 @@ class AnalyzerMainWindow(QMainWindow):
             # information is present
             meta_data = imagecontainer.get_meta_data()
             if meta_data.has_timestamp_info:
-                trait.set_list_data(TRACKING_DURATION_UNITS_TIMELAPSE)
+                result = trait.set_list_data(TRACKING_DURATION_UNITS_TIMELAPSE)
             else:
-                trait.set_list_data(TRACKING_DURATION_UNITS_DEFAULT)
+                result = trait.set_list_data(TRACKING_DURATION_UNITS_DEFAULT)
+            if result is None:
+                critical(self, "Could not set tracking duration units",
+                         "The tracking duration units selected to match the load data. Please check your settings.")
+                # a mismatch between settings and data will cause changed settings
+                self.settings_changed(True)
+
+            # activate change notification again
+            self._settings.set_notify_change(True)
 
             self._imagecontainer = imagecontainer
             self.set_modules_active(state=True)
