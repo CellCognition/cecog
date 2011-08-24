@@ -270,6 +270,7 @@ class MyMessageBox(QMessageBox):
 class ProgressDialog(QProgressDialog):
 
     targetFinished = pyqtSignal()
+    targetSetValue = pyqtSignal(int)
 
     '''
     inherited QProgressDialog to ...
@@ -294,7 +295,12 @@ class ProgressDialog(QProgressDialog):
     def getTargetResult(self):
         return getattr(self, '_target_result', None)
 
-    def exec_(self, finished=None, started=None):
+    def _onSetValue(self, value):
+        self.setValue(value)
+
+    def exec_(self, finished=None, started=None, passDialog=False):
+        dlg_result = None
+        self.targetSetValue.connect(self._onSetValue)
         if hasattr(self, '_target'):
             t = QThread()
             if finished is None:
@@ -304,7 +310,11 @@ class ProgressDialog(QProgressDialog):
                 t.started.connect(started)
 
             def foo():
-                t.result = self._target(*self._args, **self._options)
+                # optional passing of this dialog instance to the target function
+                if passDialog:
+                    t.result = self._target(self, *self._args, **self._options)
+                else:
+                    t.result = self._target(*self._args, **self._options)
                 self.targetFinished.emit()
 
             t.result = None
