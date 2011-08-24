@@ -36,9 +36,9 @@ echo $dmgfile
 # copy template to temp image which will be modified
 cp CecogAnalyzer_template.sparseimage $tmp
 
-# resize and mount image. FIXME: 90 MB could be to small in the future. size should be determined from .app
-hdiutil resize -size 90m $tmp
-hdiutil attach $tmp
+# resize and mount image. FIXME: 120 MB could be to small in the future. size should be determined from .app
+hdiutil resize -size 120m $tmp
+hdiutil attach -noautoopen $tmp
 
 # rename volume to take version into account
 diskutil rename /Volumes/CecogAnalyzer $volname
@@ -62,4 +62,4 @@ hdiutil convert $tmp -ov -format UDBZ -o $dmgfile
 rm $tmp
 
 # open final image
-open $dmgfile
+#open $dmgfile
