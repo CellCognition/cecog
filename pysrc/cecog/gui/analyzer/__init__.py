@@ -703,7 +703,7 @@ class _ProcessorMixin(object):
                 self._set_control_button_text(name=name)
 
     @classmethod
-    def get_special_settings(cls, settings):
+    def get_special_settings(cls, settings, has_timelapse=True):
         settings = settings.copy()
 
         # try to resolve the paths relative to the package dir
@@ -721,8 +721,8 @@ class _ProcessorMixin(object):
             settings.set(section, option, convert_package_path(value))
         return settings
 
-    def _get_modified_settings(self, name):
-        return self.get_special_settings(self._settings)
+    def _get_modified_settings(self, name, has_timelapse):
+        return self.get_special_settings(self._settings, has_timelapse)
 
     def _on_tab_changed(self, idx):
         names = ['primary', 'secondary', 'tertiary']
@@ -842,11 +842,11 @@ class _ProcessorMixin(object):
                     self._set_control_button_text(idx=1)
                     self._toggle_control_buttons()
 
+                imagecontainer = self.parent().main_window._imagecontainer
                 if cls is AnalzyerThread:
 
-                    self._current_settings = self._get_modified_settings(name)
-                    self._analyzer = cls(self, self._current_settings,
-                                         self.parent().main_window._imagecontainer)
+                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
+                    self._analyzer = cls(self, self._current_settings, imagecontainer)
 
                     rendering = self._current_settings.get('General', 'rendering').keys()
                     rendering += self._current_settings.get('General', 'rendering_class').keys()
@@ -880,8 +880,7 @@ class _ProcessorMixin(object):
                 elif cls is TrainingThread:
                     self._current_settings = self._settings.copy()
 
-                    self._analyzer = cls(self, self._current_settings,
-                                         result_frame._learner)
+                    self._analyzer = cls(self, self._current_settings, result_frame._learner)
                     self._analyzer.setTerminationEnabled(True)
 
                     self._analyzer.conf_result.connect(result_frame.on_conf_result,
@@ -889,7 +888,7 @@ class _ProcessorMixin(object):
                     result_frame.reset()
 
                 elif cls is HmmThread:
-                    self._current_settings = self._get_modified_settings(name)
+                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
 
                     # FIXME: classifier handling needs revision!!!
                     learner_dict = {}

@@ -86,8 +86,8 @@ class ErrorCorrectionFrame(BaseProcessorFrame):
         self.add_expanding_spacer()
         self._init_control(has_images=False)
 
-    def _get_modified_settings(self, name):
-        settings = BaseProcessorFrame._get_modified_settings(self, name)
+    def _get_modified_settings(self, name, has_timelapse=True):
+        settings = BaseProcessorFrame._get_modified_settings(self, name, has_timelapse)
         settings.set_section('Processing')
         if settings.get2('primary_classification'):
             settings.set2('primary_errorcorrection', True)

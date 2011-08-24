@@ -88,8 +88,8 @@ class ProcessingFrame(BaseProcessorFrame):
         self._init_control()
 
     @classmethod
-    def get_special_settings(cls, settings):
-        settings = BaseProcessorFrame.get_special_settings(settings)
+    def get_special_settings(cls, settings, has_timelapse=True):
+        settings = BaseProcessorFrame.get_special_settings(settings, has_timelapse)
 
         settings.set('General', 'rendering', {})
         settings.set('General', 'rendering_class', {})
@@ -150,11 +150,20 @@ class ProcessingFrame(BaseProcessorFrame):
                 settings.set2('%s_classification' % prefix, False)
                 settings.set2('%s_errorcorrection' % prefix, False)
 
-        if settings.get('Output', 'events_export_gallery_images'):
-            settings.get('General', 'rendering').update({'primary' : {prim_id : {'raw': ('#FFFFFF', 1.0)}}})
-            for prefix in additional_prefixes:
-                if settings.get2('%s_processchannel' % prefix):
-                    sec_id = sec_ids[prefix]
-                    settings.get('General', 'rendering').update({prefix : {sec_id : {'raw': ('#FFFFFF', 1.0)}}})
+        if has_timelapse:
+            # generate raw images of selected channels (later used for gallery images)
+            if settings.get('Output', 'events_export_gallery_images'):
+                settings.get('General', 'rendering').update({'primary' : {prim_id : {'raw': ('#FFFFFF', 1.0)}}})
+                for prefix in additional_prefixes:
+                    if settings.get2('%s_processchannel' % prefix):
+                        sec_id = sec_ids[prefix]
+                        settings.get('General', 'rendering').update({prefix : {sec_id : {'raw': ('#FFFFFF', 1.0)}}})
+        else:
+            # disable some tracking related settings in case no time-lapse data is present
+            settings.set('Processing', 'tracking', False)
+            settings.set('Processing', 'tracking_synchronize_trajectories', False)
+            settings.set('Output', 'events_export_gallery_images', False)
+            settings.set('Output', 'events_export_all_features', False)
+            settings.set('Output', 'export_track_data', False)
 
         return settings

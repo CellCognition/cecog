@@ -178,8 +178,8 @@ class ObjectDetectionFrame(BaseProcessorFrame):
         self._init_control()
 
 
-    def _get_modified_settings(self, name):
-        settings = BaseProcessorFrame._get_modified_settings(self, name)
+    def _get_modified_settings(self, name, has_timelapse=True):
+        settings = BaseProcessorFrame._get_modified_settings(self, name, has_timelapse)
 
         settings.set_section('ObjectDetection')
         prim_id = PrimaryChannel.NAME

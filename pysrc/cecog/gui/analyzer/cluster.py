@@ -323,8 +323,13 @@ class ClusterDisplay(QGroupBox):
     def update_display(self, is_active):
         if self._connect():
             self._can_submit = True
-            self._submit_settings = \
-                ProcessingFrame.get_special_settings(self._settings)
+
+            imagecontainer = qApp._main_window._imagecontainer
+            if imagecontainer is None:
+                self._submit_settings = ProcessingFrame.get_special_settings(self._settings)
+            else:
+                self._submit_settings = ProcessingFrame.get_special_settings(self._settings,
+                                                                             imagecontainer.has_timelapse)
 
             self._label_hosturl.setText(self._host_url)
             self._label_status.setText(self._service.get_service_info())
