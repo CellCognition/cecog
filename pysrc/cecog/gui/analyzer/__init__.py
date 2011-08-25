@@ -200,7 +200,7 @@ class BaseFrame(QFrame, TraitDisplayMixin):
 class _ProcessingThread(QThread):
 
     stage_info = pyqtSignal(dict)
-    analyzer_error = pyqtSignal(str, int)
+    analyzer_error = pyqtSignal(str)
 
     def __init__(self, parent, settings):
         QThread.__init__(self, parent)
@@ -226,7 +226,7 @@ class _ProcessingThread(QThread):
             msg = traceback.format_exc()
             logger = logging.getLogger()
             logger.error(msg)
-            self.analyzer_error.emit(msg, 0)
+            self.analyzer_error.emit(msg)
             raise
 
     def set_abort(self, wait=False):
@@ -420,9 +420,9 @@ class HmmThread(_ProcessingThread):
                         lines[i] = "SORT_CLASSES_S = c(%s)\n" % secondary_sort
 
         input_filename = os.path.join(path_out_hmm, 'cecog_hmm_input.R')
-        input = file(input_filename, 'w')
-        input.writelines(lines)
-        input.close()
+        f = file(input_filename, 'w')
+        f.writelines(lines)
+        f.close()
 
         self._process = QProcess()
         #self._process.setStandardInputFile(input_filename)
@@ -439,7 +439,7 @@ class HmmThread(_ProcessingThread):
             self._process.setReadChannel(QProcess.StandardError)
             msg = str(self._process.readLine()).rstrip()
             msg = ''.join(list(self._process.readAll()))
-            self.analyzer_error.emit(msg, 0)
+            self.analyzer_error.emit(msg)
             self.set_abort()
 
     def _generate_graph(self, channel, wd, hmm_path, region_name):
@@ -682,7 +682,7 @@ class _ProcessorMixin(object):
             self._show_image.setChecked(True)
             layout.addWidget(self._show_image)
 
-        for i, name in enumerate(self._control_buttons):
+        for name in self._control_buttons:
             w_button = QPushButton('', self._control)
             layout.addWidget(w_button)
             handler = lambda x: lambda : self._on_process_start(x)
@@ -944,10 +944,9 @@ class _ProcessorMixin(object):
         except AttributeError:
             pass
 
-    def _on_error(self, msg, type=0):
+    def _on_error(self, msg):
         self._has_error = True
-        critical(self, 'An error occurred during processing.',
-                 detail=msg)
+        critical(self, 'An error occurred during processing.', detail=msg)
 
     def _on_process_finished(self):
 

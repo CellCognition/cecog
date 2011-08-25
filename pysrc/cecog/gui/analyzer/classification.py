@@ -43,13 +43,11 @@ from cecog.gui.analyzer import (BaseProcessorFrame,
 from cecog.analyzer import SECONDARY_REGIONS
 from cecog.analyzer.channel import (PrimaryChannel,
                                     SecondaryChannel,
-                                    TertiaryChannel,
                                     )
 from cecog.learning.learning import CommonClassPredictor
 from cecog.util.util import (hexToRgb,
                              convert_package_path,
                              )
-from cecog.gui.browser import Browser
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -176,7 +174,6 @@ class ClassifierResultFrame(QGroupBox):
                 msg += 'Sample images are only used for visualization and annotation control at the moment.'
 
                 txt = '%s classifier inspection results' % self._channel
-                widget = information(self, txt, info=msg)
 
             if result['has_arff']:
                 self._learner.importFromArff()
@@ -193,6 +190,7 @@ class ClassifierResultFrame(QGroupBox):
                 self._update_conf_table(conf)
             else:
                 conf = None
+                self._init_conf_table(conf)
             self._set_info_table(conf)
 
     def msg_pick_samples(self, parent):
@@ -346,28 +344,29 @@ class ClassifierResultFrame(QGroupBox):
         self._table_info.resizeColumnsToContents()
 
     def _init_conf_table(self, conf):
-        conf_array = conf.conf
-        rows, cols = conf_array.shape
         self._table_conf.clear()
-        self._table_conf.setColumnCount(cols)
-        self._table_conf.setRowCount(rows)
-        #names2cols = self._learner.dctHexColors
-        for c in range(cols):
-            self._table_conf.setColumnWidth(c, 20)
-            label = self._learner.nl2l[c]
-            name = self._learner.dctClassNames[label]
-            item = QTableWidgetItem(str(label))
-            item.setToolTip('%d : %s' % (label, name))
-            #item.setBackground(QBrush(QColor(*hexToRgb(names2cols[name]))))
-            self._table_conf.setHorizontalHeaderItem(c, item)
-        for r in range(rows):
-            self._table_conf.setRowHeight(r, 20)
-            label = self._learner.nl2l[r]
-            name = self._learner.dctClassNames[label]
-            item = QTableWidgetItem(str(label))
-            item.setToolTip('%d : %s' % (label, name))
-            #item.setForeground(QBrush(QColor(*hexToRgb(names2cols[name]))))
-            self._table_conf.setVerticalHeaderItem(r, item)
+        if not conf is None:
+            conf_array = conf.conf
+            rows, cols = conf_array.shape
+            self._table_conf.setColumnCount(cols)
+            self._table_conf.setRowCount(rows)
+            #names2cols = self._learner.dctHexColors
+            for c in range(cols):
+                self._table_conf.setColumnWidth(c, 20)
+                label = self._learner.nl2l[c]
+                name = self._learner.dctClassNames[label]
+                item = QTableWidgetItem(str(label))
+                item.setToolTip('%d : %s' % (label, name))
+                #item.setBackground(QBrush(QColor(*hexToRgb(names2cols[name]))))
+                self._table_conf.setHorizontalHeaderItem(c, item)
+            for r in range(rows):
+                self._table_conf.setRowHeight(r, 20)
+                label = self._learner.nl2l[r]
+                name = self._learner.dctClassNames[label]
+                item = QTableWidgetItem(str(label))
+                item.setToolTip('%d : %s' % (label, name))
+                #item.setForeground(QBrush(QColor(*hexToRgb(names2cols[name]))))
+                self._table_conf.setVerticalHeaderItem(r, item)
 
     def _update_conf_table(self, conf):
         conf_array = conf.conf
