@@ -97,9 +97,10 @@ class TraitDisplayMixin(object):
 
             w_group._input_cnt = 0
             if layout == 'grid':
-                QGridLayout(w_group)
+                l = QGridLayout(w_group)
             else:
-                QBoxLayout(QBoxLayout.LeftToRight, w_group)
+                l = QBoxLayout(QBoxLayout.LeftToRight, w_group)
+            l.setContentsMargins(10, 5, 10, 5)
             for info in items:
                 grid = None
                 alignment = None
