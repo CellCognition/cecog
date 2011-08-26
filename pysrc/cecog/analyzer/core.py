@@ -186,7 +186,6 @@ class PositionAnalyzer(object):
         self.channel_mapping_reversed = dict([(v,k) for k,v in self.channel_mapping.iteritems()])
 
         self.tplChannelIds = tuple(self.channel_mapping.values())
-        #print self.tplChannelIds
 
         self.classifier_infos = {}
         for channel in [self.PRIMARY_CHANNEL,
@@ -205,7 +204,6 @@ class PositionAnalyzer(object):
                                     'strRegionId' : self.oSettings.get2(self._resolve_name(channel, 'classification_regionname')),
                                     }
                 predictor = CommonClassPredictor(dctCollectSamples=classifier_infos)
-                #print predictor.getOption('strEnvPath')
                 predictor.importFromArff()
                 predictor.loadClassifier()
                 classifier_infos['predictor'] = predictor
@@ -702,7 +700,6 @@ class PositionAnalyzer(object):
         for frame, iter_channel in self._imagecontainer(coordinate,
                                                         interrupt_channel=True,
                                                         interrupt_zslice=True):
-            #print frame
 
             if not self._qthread is None:
                 if self._qthread.get_abort():
@@ -721,11 +718,9 @@ class PositionAnalyzer(object):
             oCellAnalyzer.initTimepoint(frame)
             # loop over the channels
             for channel_id, iter_zslice in iter_channel:
-                #print channel_id
 
                 zslice_images = []
                 for zslice, meta_image in iter_zslice:
-                    #print zslice
 
                     #P, iFrame, strC, iZ = oMetaImage.position, oMetaImage.time, oMetaImage.channel, oMetaImage.zslice
                     #self._oLogger.info("Image P %s, T %05d / %05d, C %s, Z %d" % (self.P, iFrame, iLastFrame, strC, iZ))
@@ -804,8 +799,6 @@ class PositionAnalyzer(object):
                                                                          feature)):
                                     lstFeatureCategories += FEATURE_MAP[feature]
 
-                        # temp: print fetures to be calculated
-                        #print 'features: ', lstFeatureCategories
 
                         dctFeatureParameters = {}
                         if feature_extraction:
@@ -926,7 +919,6 @@ class PositionAnalyzer(object):
                         # loop over the z-slices
                         for meta_image in zslice_images:
                             channel.append_zslice(meta_image)
-                        #print channel_section, channel_id, channel
                         oCellAnalyzer.register_channel(channel)
 
 
@@ -981,7 +973,6 @@ class PositionAnalyzer(object):
                     img_rgb, filename = oCellAnalyzer.render(strPathOutImages, dctRenderInfo=dctRenderInfo,
                                                              writeToDisc=self.oSettings.get('Output', 'rendering_class_discwrite'),
                                                              images=images)
-                    #print strType, self._qthread.get_renderer(), self.oSettings.get('Rendering', 'rendering_class')
 
                     if not self._qthread is None and not img_rgb is None:
                         self._qthread.set_image(strType,
@@ -993,7 +984,6 @@ class PositionAnalyzer(object):
 
                 prefixes = [PrimaryChannel.PREFIX, SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]
                 self.oSettings.set_section('General')
-                #print self.oSettings.get2('rendering')
                 for strType, dctRenderInfo in self.oSettings.get2('rendering').iteritems():
                     if not strType in prefixes:
                         strPathOutImages = os.path.join(self.strPathOutPositionImages, strType)
@@ -1001,9 +991,9 @@ class PositionAnalyzer(object):
                                                                  dctRenderInfo=dctRenderInfo,
                                                                  writeToDisc=self.oSettings.get('Output', 'rendering_contours_discwrite'),
                                                                  images=images)
+
                         if (not self._qthread is None and not img_rgb is None and
                             not strType in [PrimaryChannel.PREFIX, SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]):
-                            #print strType, self._qthread.get_renderer(), self.oSettings.get('Rendering', 'rendering')
                             self._qthread.set_image(strType,
                                                     img_rgb,
                                                     'PL %s - P %s - T %05d' % (self.plate_id, self.origP, frame),
@@ -1146,7 +1136,6 @@ class AnalyzerCore(object):
                 strSampleFilename = os.path.join(strAnnotationsPath, strFilename)
 
                 result = annotation_re.match(strFilename)
-                #print result
                 strFilenameExt = os.path.splitext(strSampleFilename)[1]
                 if (os.path.isfile(strSampleFilename) and
                     strFilenameExt == self.oSettings.get2(_resolve('classification_annotationfileext')) and
@@ -1154,7 +1143,6 @@ class AnalyzerCore(object):
                     not result is None and
                     (result.group('plate') is None or result.group('plate') == self.plate_id)):
 
-                    #print strSampleFilename, os.path.splitext(strSampleFilename)[1]
 
                     reference = self._meta_data.times
 
@@ -1175,12 +1163,7 @@ class AnalyzerCore(object):
                 if not self.dctSamplePositions[position] is None:
                     self.dctSamplePositions[position] = sorted(unique(self.dctSamplePositions[position]))
 
-            #self.oSettings.lstPositions = sorted(self.dctSamplePositions.keys())
-            #self.lstPositions = self.oSettings.lstPositions
             self.lstPositions = sorted(self.dctSamplePositions.keys())
-            #print self.oSettings.lstPositions
-            #print self.dctSamplePositions
-
 
         self.oClassPredictor = None
 
@@ -1188,19 +1171,14 @@ class AnalyzerCore(object):
     def _openImageContainer(self):
         self.oSettings.set_section('General')
         self.lstPositions = self.oSettings.get2('positions')
-        #print 'MOOO', self.lstPositions, type(self.lstPositions)
         if self.lstPositions == '' or not self.oSettings.get2('constrain_positions'):
             self.lstPositions = None
         else:
             self.lstPositions = self.lstPositions.split(',')
 
-
-        #if self._imagecontainer is None:
-        #    self._imagecontainer = ImageContainer.from_settings(self.oSettings)
         self._meta_data = self._imagecontainer.get_meta_data()
 
         # does a position selection exist?
-        #print self.lstPositions, self._meta_data.setP
         if not self.lstPositions is None:
             if not is_subset(self.lstPositions, self._meta_data.positions):
                 raise ValueError("The list of selected positions is not valid! %s\nValid values are %s" %\
@@ -1233,7 +1211,6 @@ class AnalyzerCore(object):
 
         # define range of frames to do analysis within
         lstFrames = list(self._meta_data.times)
-        #print lstFrames
 
         if self.oSettings.get2('frameRange'):
             frames_begin = self.oSettings.get2('frameRange_begin')
@@ -1248,16 +1225,12 @@ class AnalyzerCore(object):
             frames_end = lstFrames[-1]
 
         self.tplFrameRange = (frames_begin, frames_end)
-        #print self.tplFrameRange
 
         lstAnalysisFrames = lstFrames[lstFrames.index(self.tplFrameRange[0]):
                                       lstFrames.index(self.tplFrameRange[1])+1]
-        #print lstAnalysisFrames
 
         # take every n'th element from the list
         self.lstAnalysisFrames = lstAnalysisFrames[::self.oSettings.get2('frameincrement')]
-        #print self.lstAnalysisFrames
-
 
 
     def processPositions(self, qthread=None, myhack=None):

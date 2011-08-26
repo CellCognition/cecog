@@ -72,6 +72,10 @@ from cecog.gui.util import (ImageRatioDisplay,
 from cecog.analyzer import (CONTROL_1,
                             CONTROL_2,
                             )
+from cecog.analyzer.channel import (PrimaryChannel,
+                                    SecondaryChannel,
+                                    TertiaryChannel,
+                                    )
 from cecog.analyzer.core import AnalyzerCore, SECONDARY_REGIONS
 from cecog.io.imagecontainer import PIXEL_TYPES
 from cecog.traits.config import R_SOURCE_PATH
@@ -522,7 +526,6 @@ class HmmThread(_ProcessingThread):
     def _on_stdout(self):
         self._process.setReadChannel(QProcess.StandardOutput)
         msg = str(self._process.readLine()).rstrip()
-        #print msg
         self._logger.info(msg)
 
     def _get_path_out(self, path, prefix):
@@ -578,7 +581,6 @@ class AnalzyerThread(_ProcessingThread):
         self._mutex.unlock()
 
     def _emit(self, name):
-        print name, self._buffer.keys()
         if name in self._buffer:
             self.image_ready.emit(*self._buffer[name])
 
@@ -594,7 +596,7 @@ class TrainingThread(_ProcessingThread):
         self._learner = learner
 
     def _run(self):
-        print "training"
+        #print "training"
 
         # log2 settings (range and step size) for C and gamma
         c_begin, c_end, c_step = -5,  15, 2
@@ -893,26 +895,7 @@ class _ProcessorMixin(object):
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
                     self._analyzer = cls(self, self._current_settings, imagecontainer)
 
-                    rendering = self._current_settings.get('General', 'rendering').keys()
-                    rendering += self._current_settings.get('General', 'rendering_class').keys()
-                    rendering.sort()
-                    if hasattr(qApp, '_image_combo'):
-                        qApp._image_combo.clear()
-                        if len(rendering) > 1:
-                            for name in rendering:
-                                qApp._image_combo.addItem(str(name))
-                            qApp._image_combo.show()
-                            self.connect(qApp._image_combo, SIGNAL('currentIndexChanged(const QString &)'),
-                                         self._on_render_changed)
-                        else:
-                            qApp._image_combo.hide()
-
-
-                    if len(rendering) > 0:
-                        self._analyzer.set_renderer(rendering[0])
-                    else:
-                        self._analyzer.set_renderer(None)
-                    self._analyzer.image_ready.connect(self._on_update_image)
+                    self._set_display_renderer_info()
 
                     # clear the image display and raise the window
                     if not qApp._image_dialog is None:
@@ -985,7 +968,7 @@ class _ProcessorMixin(object):
     def _on_render_changed(self, name):
         #FIXME: proper sub-classing needed
         try:
-            self._analyzer.set_renderer(str(name))
+            self._analyzer.set_renderer(name)
         except AttributeError:
             pass
 
@@ -1049,7 +1032,6 @@ class _ProcessorMixin(object):
             self._process_items = None
 
     def _on_esc_pressed(self):
-        print 'ESC'
         if self._is_running:
             self._abort_processing()
 
@@ -1090,7 +1072,7 @@ class _ProcessorMixin(object):
                 if len(self._stage_infos) > 1:
                     total = self._stage_infos[1]['max']*self._stage_infos[2]['max']
                     current = (self._stage_infos[1]['progress']-1)*self._stage_infos[2]['max']+self._stage_infos[2]['progress']
-                    print current, total
+                    #print current, total
                     self._progress0.setRange(0, total)
                     self._progress0.setValue(current)
                     #info = self._stage_infos[2]
@@ -1136,28 +1118,22 @@ class _ProcessorMixin(object):
 
     def _on_update_image(self, image_rgb, info, filename):
         if self._show_image.isChecked():
-            print info, filename
             # FIXME:
             if image_rgb.width % 4 != 0:
                 image_rgb = ccore.subImage(image_rgb, ccore.Diff2D(0,0), ccore.Diff2D(image_rgb.width - (image_rgb.width % 4), image_rgb.height))
             qimage = numpy_to_qimage(image_rgb.toArray(copy=False))
-            #qimage = qimage.scaled(800, 800, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+
             if qApp._image_dialog is None:
-            #if True:
                 qApp._image_dialog = QFrame()
-                shortcut = QShortcut(QKeySequence(Qt.Key_Escape), qApp._image_dialog)
-                qApp._image_dialog.connect(shortcut, SIGNAL('activated()'), self._on_esc_pressed)
                 ratio = qimage.height()/float(qimage.width())
                 qApp._image_dialog.setGeometry(50, 50, 800, 800*ratio)
-                #self._image_dialog.setScaledContents(True)
-                #self._image_dialog.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
+
+                shortcut = QShortcut(QKeySequence(Qt.Key_Escape), qApp._image_dialog)
+                shortcut.activated.connect(self._on_esc_pressed)
+
                 layout = QVBoxLayout(qApp._image_dialog)
                 layout.setContentsMargins(0,0,0,0)
-#                qApp._graphics = QGraphicsScene()
-#                qApp._graphics_pixmap = qApp._graphics.addPixmap(QPixmap.fromImage(qimage))
-#                view = QGraphicsView(qApp._graphics, self._image_dialog)
-#                view.setViewportUpdateMode(QGraphicsView.MinimalViewportUpdate)
-                #size = qimage.size()
+
                 qApp._graphics = ImageRatioDisplay(qApp._image_dialog, ratio)
                 qApp._graphics.setScaledContents(True)
                 qApp._graphics.resize(800, 800*ratio)
@@ -1166,34 +1142,21 @@ class _ProcessorMixin(object):
                 policy.setHeightForWidth(True)
                 qApp._graphics.setSizePolicy(policy)
                 layout.addWidget(qApp._graphics)
-                #self._image_dialog.resize(qimage.size())
-                #self._image_dialog.setMinimumSize(QSize(100,100))
-                #size = self._image_dialog.size()
-                #self._image_dialog.setMaximumSize(size)
-                #self.connect(self._image_dialog, SIGNAL('hide()'),
-                #             self._on_close_image_window)
-                rendering = self._current_settings.get('General', 'rendering').keys()
-                rendering += self._current_settings.get('General', 'rendering_class').keys()
+
                 dummy = QFrame(qApp._image_dialog)
                 dymmy_layout = QHBoxLayout(dummy)
                 dymmy_layout.setContentsMargins(5,5,5,5)
+
                 qApp._image_combo = QComboBox(dummy)
                 qApp._image_combo.setSizePolicy(QSizePolicy(QSizePolicy.Expanding,
                                                             QSizePolicy.Fixed))
+                self._set_display_renderer_info()
+
                 dymmy_layout.addStretch()
                 dymmy_layout.addWidget(qApp._image_combo)
                 dymmy_layout.addStretch()
-                self.connect(qApp._image_combo, SIGNAL('currentIndexChanged(const QString &)'),
-                             self._on_render_changed)
-                for name in sorted(rendering):
-                    qApp._image_combo.addItem(str(name))
-                if len(rendering) > 1:
-                    qApp._image_combo.show()
-                else:
-                    qApp._image_combo.hide()
                 layout.addWidget(dummy)
                 layout.addStretch()
-                #view.fitInView(qApp._graphics.sceneRect(), Qt.KeepAspectRatio)
 
                 qApp._image_dialog.show()
                 qApp._image_dialog.raise_()
@@ -1206,6 +1169,33 @@ class _ProcessorMixin(object):
                 qApp._image_dialog.show()
                 qApp._image_dialog.raise_()
 
+
+    def _set_display_renderer_info(self):
+        rendering = [x for x in self._current_settings.get('General', 'rendering')
+                     if not x in [PrimaryChannel.PREFIX, SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]]
+        rendering += self._current_settings.get('General', 'rendering_class').keys()
+        rendering.sort()
+
+        if len(rendering) > 0:
+            self._analyzer.set_renderer(rendering[0])
+        else:
+            self._analyzer.set_renderer(None)
+
+        if not qApp._image_dialog is None:
+            widget = qApp._image_combo
+            current = widget.currentText()
+            widget.clear()
+            if len(rendering) > 1:
+                for name in rendering:
+                    widget.addItem(name)
+                widget.show()
+                widget.currentIndexChanged[str].connect(self._on_render_changed)
+                if current in rendering:
+                    widget.setCurrentIndex(widget.findText(current, Qt.MatchExactly))
+            else:
+                widget.hide()
+
+        self._analyzer.image_ready.connect(self._on_update_image)
 
 class BaseProcessorFrame(BaseFrame, _ProcessorMixin):
 

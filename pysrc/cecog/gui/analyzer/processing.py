@@ -166,4 +166,6 @@ class ProcessingFrame(BaseProcessorFrame):
             settings.set('Output', 'events_export_all_features', False)
             settings.set('Output', 'export_track_data', False)
 
+        print settings.get('General', 'rendering')
+        print settings.get('General', 'rendering_class')
         return settings
