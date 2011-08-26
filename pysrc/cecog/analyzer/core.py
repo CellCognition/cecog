@@ -833,7 +833,8 @@ class PositionAnalyzer(object):
                                 lstPostprocessingConditions.append('n2_avg <= %d' % self.oSettings.get2('primary_postprocessing_intensity_max'))
 
                             lstPostprocessingFeatureCategories = unique(lstPostprocessingFeatureCategories)
-                            if len(lstPostprocessingFeatureCategories) > 0:
+                            if len(lstPostprocessingFeatureCategories) > 0 and \
+                                self.oSettings.get2('primary_postprocessing'):
                                 bPostProcessing = True
                             strPostprocessingConditions = ' and '.join(lstPostprocessingConditions)
 
