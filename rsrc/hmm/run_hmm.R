@@ -28,17 +28,20 @@ source('hmm_report.R')
 
 #FILENAME_MAPPING
 #PATH_INPUT
-#PATH_OUTPUT
 #GROUP_BY_GENE
 #GROUP_BY_OLIGOID
 #TIMELAPSE
 #MAX_TIME
+#SINGLE_BRANCH
+#GALLERIES
 
+#PATH_OUT_P
 #FILENAME_GRAPH_P
 #REGION_NAME_P
 #SORT_CLASSES_P
 #CLASS_COLORS_P
 
+#PATH_OUT_S
 #FILENAME_GRAPH_S
 #REGION_NAME_S
 #SORT_CLASSES_S
@@ -47,7 +50,7 @@ source('hmm_report.R')
 if (!is.null(FILENAME_GRAPH_P))
 {
     graphP <- hmm.read.graph.structure(FILENAME_GRAPH_P)
-    screenP <- read.screen(PATH_INPUT, FILENAME_MAPPING, REGION_NAME_P, graphP)
+    screenP <- read.screen(PATH_INPUT, FILENAME_MAPPING, REGION_NAME_P, graphP, singleBranch=SINGLE_BRANCH)
 
     if (screenP$nrOfPositions > 0)
     {
@@ -56,7 +59,7 @@ if (!is.null(FILENAME_GRAPH_P))
 
         probP <- read.probabilities(screenP)
         res = write.hmm.report(screenP, probP,
-                         outdir=PATH_OUTPUT,
+                         outdir=PATH_OUT_P,
                          graphP,
                          sortClasses=SORT_CLASSES_P,
                          groupByGene=GROUP_BY_GENE,
@@ -65,14 +68,15 @@ if (!is.null(FILENAME_GRAPH_P))
                          timelapse=TIMELAPSE,
                          max_time=MAX_TIME,
                          write_decode=FALSE,
-                         write_decode2=FALSE
+                         write_decode2=FALSE,
+                         galleries=GALLERIES
                          )
 
 
 if (!is.null(FILENAME_GRAPH_S))
 {
     graphS <- hmm.read.graph.structure(FILENAME_GRAPH_S)
-    screenS <- read.screen(PATH_INPUT, FILENAME_MAPPING, REGION_NAME_S, graphS)
+    screenS <- read.screen(PATH_INPUT, FILENAME_MAPPING, REGION_NAME_S, graphS, singleBranch=SINGLE_BRANCH)
 
     if (screenS$nrOfPositions > 0)
     {
@@ -82,7 +86,7 @@ if (!is.null(FILENAME_GRAPH_S))
         probS <- read.probabilities(screenS)
         write.hmm.report(screenS, probS,
                 indices=res$overall_indices,
-                outdir=PATH_OUTPUT,
+                outdir=PATH_OUT_S,
                 graphS,
                 sortClasses=SORT_CLASSES_S,
                 groupByGene=GROUP_BY_GENE,
@@ -91,7 +95,8 @@ if (!is.null(FILENAME_GRAPH_S))
                 timelapse=TIMELAPSE,
                 max_time=MAX_TIME,
                 write_decode=FALSE,
-                write_decode2=FALSE
+                write_decode2=FALSE,
+                galleries=GALLERIES
         )
     }
 }

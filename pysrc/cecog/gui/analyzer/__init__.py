@@ -77,6 +77,7 @@ from cecog.io.imagecontainer import PIXEL_TYPES
 from cecog.traits.config import R_SOURCE_PATH
 from cecog import ccore
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
+from cecog.analyzer.gallery import compose_galleries
 
 #-------------------------------------------------------------------------------
 # functions:
@@ -341,6 +342,9 @@ class HmmThread(_ProcessingThread):
         region_name_primary = self._settings.get('Classification', 'primary_classification_regionname')
         region_name_secondary = self._settings.get('Classification', 'secondary_classification_regionname')
 
+        path_out_hmm_region = self._convert(self._get_path_out(path_out_hmm,
+                                                               '%s_%s' % ('primary', region_name_primary)))
+
         # take mapping file for plate or generate dummy mapping file for the R script
         if plate_id in self._mapping_files:
             # convert path for R
@@ -358,6 +362,14 @@ class HmmThread(_ProcessingThread):
                 raise ValueError("Plate '%s' has not time-lapse info.\n"
                                  "Please define (overwrite) the value manually." % plate_id)
 
+        if self._settings.get2('compose_galleries') and self._settings.get('Output', 'events_export_gallery_images'):
+            gallery_names = ['primary'] +\
+                            [x for x in ['secondary','tertiary']
+                             if self._settings.get('Processing', '%s_processchannel' % x)]
+        else:
+            gallery_names = None
+
+
         for i in range(len(lines)):
             line2 = lines[i].strip()
             if line2 == '#WORKING_DIR':
@@ -366,8 +378,6 @@ class HmmThread(_ProcessingThread):
                 lines[i] = "FILENAME_MAPPING = '%s'\n" % mapping_file
             elif line2 == '#PATH_INPUT':
                 lines[i] = "PATH_INPUT = '%s'\n" % path_analyzed
-            elif line2 == '#PATH_OUTPUT':
-                lines[i] = "PATH_OUTPUT = '%s'\n" % path_out_hmm
             elif line2 == '#GROUP_BY_GENE':
                 lines[i] = "GROUP_BY_GENE = %s\n" % str(self._settings.get2('groupby_genesymbol')).upper()
             elif line2 == '#GROUP_BY_OLIGOID':
@@ -376,6 +386,13 @@ class HmmThread(_ProcessingThread):
                 lines[i] = "TIMELAPSE = %s\n" % time_lapse
             elif line2 == '#MAX_TIME':
                 lines[i] = "MAX_TIME = %s\n" % self._settings.get2('max_time')
+            elif line2 == '#SINGLE_BRANCH':
+                lines[i] = "SINGLE_BRANCH = %s\n" % str(self._settings.get2('ignore_tracking_branches')).upper()
+            elif line2 == '#GALLERIES':
+                if gallery_names is None:
+                    lines[i] = "GALLERIES = NULL\n"
+                else:
+                    lines[i] = "GALLERIES = c(%s)\n" % ','.join(["'%s'" % x for x in gallery_names])
 
             if 'primary' in self._learner_dict:# and self._settings.get('Processing', 'primary_errorcorrection'):
 
@@ -397,6 +414,10 @@ class HmmThread(_ProcessingThread):
                         lines[i] = "SORT_CLASSES_P = c(%s)\n" % self._settings.get2('sorting_sequence')
                     else:
                         lines[i] = "SORT_CLASSES_P = NULL\n"
+                elif line2 == "#PATH_OUT_P":
+                    lines[i] = "PATH_OUT_P = '%s'\n" % path_out_hmm_region
+
+
 
             if 'secondary' in self._learner_dict:# and self._settings.get('Processing', 'secondary_errorcorrection'):
                 if self._settings.get2('constrain_graph'):
@@ -418,29 +439,35 @@ class HmmThread(_ProcessingThread):
                         lines[i] = "SORT_CLASSES_S = NULL\n"
                     else:
                         lines[i] = "SORT_CLASSES_S = c(%s)\n" % secondary_sort
+                elif line2 == "#PATH_OUT_S":
+                    lines[i] = "PATH_OUT_S = '%s'\n" % \
+                        self._convert(self._get_path_out(path_out_hmm, '%s_%s' % ('secondary', region_name_secondary)))
 
         input_filename = os.path.join(path_out_hmm, 'cecog_hmm_input.R')
         f = file(input_filename, 'w')
         f.writelines(lines)
         f.close()
 
-        self._process = QProcess()
-        #self._process.setStandardInputFile(input_filename)
-        self._process.setWorkingDirectory(wd)
-        self._process.start(cmd, ['BATCH', '--silent', '-f', input_filename])
-        self._process.readyReadStandardOutput.connect(self._on_stdout)
-        # we have to use the old-style signal here because of an error:
-        # QObject::connect: Cannot queue arguments of type 'QProcess::ExitStatus'
-        self.connect(self._process, SIGNAL("finished(int)"), self._on_finished)
-        self._process.waitForFinished(-1)
+        process = QProcess()
+        self._process = process
+        process.setWorkingDirectory(wd)
+        process.start(cmd, ['BATCH', '--silent', '-f', input_filename])
+        process.readyReadStandardOutput.connect(self._on_stdout)
+        process.waitForFinished(-1)
 
-    def _on_finished(self, exit_code):
-        if exit_code != 0:
-            self._process.setReadChannel(QProcess.StandardError)
-            msg = str(self._process.readLine()).rstrip()
-            msg = ''.join(list(self._process.readAll()))
+        if process.exitCode() != 0:
+            process.setReadChannel(QProcess.StandardError)
+            msg = str(process.readLine()).rstrip()
+            msg = ''.join(list(process.readAll()))
             self.analyzer_error.emit(msg)
             self.set_abort()
+
+        elif self._settings.get2('compose_galleries'):
+            sample = self._settings.get2('compose_galleries_sample')
+            if sample == -1:
+                sample = None
+            compose_galleries(path_out, path_out_hmm_region, one_daughter=False, sample=sample)
+
 
     def _generate_graph(self, channel, wd, hmm_path, region_name):
         f_in = file(os.path.join(wd, 'graph_template.txt'), 'rU')
@@ -490,6 +517,17 @@ class HmmThread(_ProcessingThread):
         #print msg
         logger = logging.getLogger()
         logger.info(msg)
+
+    def _get_path_out(self, path, prefix):
+        if self._settings.get2('groupby_oligoid'):
+            suffix = 'byoligo'
+        elif self._settings.get2('groupby_genesymbol'):
+            suffix = 'bysymbol'
+        else:
+            suffix = 'bypos'
+        path_out = os.path.join(path, '%s_%s' % (prefix, suffix))
+        safe_mkdirs(path_out)
+        return path_out
 
     def set_abort(self, wait=False):
         self._process.kill()

@@ -83,6 +83,11 @@ class ErrorCorrectionFrame(BaseProcessorFrame):
                        [('max_time',),
                         ], layout='flow', link='plot_parameter',
                         label='Plot parameter')
+        self.add_input('ignore_tracking_branches')
+        self.add_line()
+        self.add_group('compose_galleries',
+                       [('compose_galleries_sample',),
+                        ], layout='flow')
         self.add_expanding_spacer()
         self._init_control(has_images=False)
 

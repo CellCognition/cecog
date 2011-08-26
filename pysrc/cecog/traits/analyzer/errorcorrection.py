@@ -31,6 +31,7 @@ from cecog.traits.config import _Section
 from cecog.gui.guitraits import (StringTrait,
                                  FloatTrait,
                                  BooleanTrait,
+                                 IntTrait,
                                  )
 
 #-------------------------------------------------------------------------------
@@ -87,6 +88,8 @@ class SectionErrorcorrection(_Section):
         ('max_time',
             FloatTrait(100, 1, 2000, digits=2,
                        label='Max. time in plot [min]')),
+        ('ignore_tracking_branches',
+            BooleanTrait(False, label='Ignore tracking branches')),
         ('enable_sorting',
             BooleanTrait(False, label='Sort by phase duration')),
         ('sorting_sequence',
@@ -96,5 +99,9 @@ class SectionErrorcorrection(_Section):
             StringTrait('', 100)),
         ('secondary_sort',
             StringTrait('', 100)),
+        ('compose_galleries',
+            BooleanTrait(False, label='Compose gallery images')),
+        ('compose_galleries_sample',
+            IntTrait(-1, -1, 10000, label='Max. number of random samples')),
         ])
       ]
