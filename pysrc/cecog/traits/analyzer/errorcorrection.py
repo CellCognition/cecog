@@ -90,6 +90,8 @@ class SectionErrorcorrection(_Section):
                        label='Max. time in plot [min]')),
         ('ignore_tracking_branches',
             BooleanTrait(False, label='Ignore tracking branches')),
+        ('show_html',
+            BooleanTrait(True, label='Open in browser')),
         ('enable_sorting',
             BooleanTrait(False, label='Sort by phase duration')),
         ('sorting_sequence',

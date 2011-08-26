@@ -473,6 +473,9 @@ class HmmThread(_ProcessingThread):
                 if self._abort:
                     break
 
+        if self._settings.get2('show_html'):
+            QDesktopServices.openUrl(QUrl('file://'+os.path.join(path_out_hmm_region, 'index.html'), QUrl.TolerantMode))
+
 
     def _generate_graph(self, channel, wd, hmm_path, region_name):
         f_in = file(os.path.join(wd, 'graph_template.txt'), 'rU')

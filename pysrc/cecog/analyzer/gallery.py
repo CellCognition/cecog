@@ -35,8 +35,13 @@ def compose_galleries(path, path_hmm, quality="90", one_daughter=True, sample=30
     logger = logging.getLogger('compose_galleries')
     column_name = 'Trajectory'
     path_index = os.path.join(path_hmm, '_index')
+    if not os.path.isdir(path_index):
+        logger.warning("Index path '%s' does not exist. Make sure the error correction was executed successfully." %
+                       path_index)
+        return
+
     for filename in os.listdir(path_index):
-        logger.info('creating gallery overview for %s' % filename)
+        logger.info('Creating gallery overview for %s' % filename)
         group_name = os.path.splitext(filename)[0]
         t = read_table(os.path.join(path_index, filename))[1]
         t.reverse()
@@ -81,7 +86,9 @@ def compose_galleries(path, path_hmm, quality="90", one_daughter=True, sample=30
         for gallery_name in results:
             path_out = os.path.join(path_hmm, '_gallery', gallery_name)
             safe_mkdirs(path_out)
-            ccore.writeImage(results[gallery_name], os.path.join(path_out, '%s.jpg' % group_name), quality)
+            image_name = os.path.join(path_out, '%s.jpg' % group_name)
+            ccore.writeImage(results[gallery_name], image_name, quality)
+            logger.debug("Gallery image '%s' successfully written." % image_name)
 
         yield group_name
 
