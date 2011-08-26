@@ -263,6 +263,8 @@ class HmmThread(_ProcessingThread):
         self._convert = lambda x: x.replace('\\','/')
         self._join = lambda *x: self._convert('/'.join(x))
 
+        self._logger = logging.getLogger(self.__class__.__name__)
+
         qApp._log_window.show()
         qApp._log_window.raise_()
 
@@ -362,7 +364,7 @@ class HmmThread(_ProcessingThread):
                 raise ValueError("Plate '%s' has not time-lapse info.\n"
                                  "Please define (overwrite) the value manually." % plate_id)
 
-        if self._settings.get2('compose_galleries') and self._settings.get('Output', 'events_export_gallery_images'):
+        if self._settings.get2('compose_galleries'):# and self._settings.get('Output', 'events_export_gallery_images'):
             gallery_names = ['primary'] +\
                             [x for x in ['secondary','tertiary']
                              if self._settings.get('Processing', '%s_processchannel' % x)]
@@ -462,11 +464,14 @@ class HmmThread(_ProcessingThread):
             self.analyzer_error.emit(msg)
             self.set_abort()
 
-        elif self._settings.get2('compose_galleries'):
+        elif self._settings.get2('compose_galleries') and not self._abort:
             sample = self._settings.get2('compose_galleries_sample')
             if sample == -1:
                 sample = None
-            compose_galleries(path_out, path_out_hmm_region, one_daughter=False, sample=sample)
+            for group_name in compose_galleries(path_out, path_out_hmm_region, one_daughter=False, sample=sample):
+                self._logger.debug('gallery finished for group: %s' % group_name)
+                if self._abort:
+                    break
 
 
     def _generate_graph(self, channel, wd, hmm_path, region_name):
@@ -515,8 +520,7 @@ class HmmThread(_ProcessingThread):
         self._process.setReadChannel(QProcess.StandardOutput)
         msg = str(self._process.readLine()).rstrip()
         #print msg
-        logger = logging.getLogger()
-        logger.info(msg)
+        self._logger.info(msg)
 
     def _get_path_out(self, path, prefix):
         if self._settings.get2('groupby_oligoid'):

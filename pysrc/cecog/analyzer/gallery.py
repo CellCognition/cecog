@@ -7,7 +7,8 @@ Copyright (c) 2005-2007 by Michael Held
 #
 import os, \
        shutil, \
-       random
+       random, \
+       logging
 
 #------------------------------------------------------------------------------
 # extension module imports:
@@ -31,11 +32,11 @@ from cecog.util.util import read_table
 # functions:
 #
 def compose_galleries(path, path_hmm, quality="90", one_daughter=True, sample=30):
+    logger = logging.getLogger('compose_galleries')
     column_name = 'Trajectory'
     path_index = os.path.join(path_hmm, '_index')
-    final_groups = []
     for filename in os.listdir(path_index):
-        print filename
+        logger.info('creating gallery overview for %s' % filename)
         group_name = os.path.splitext(filename)[0]
         t = read_table(os.path.join(path_index, filename))[1]
         t.reverse()
@@ -82,10 +83,7 @@ def compose_galleries(path, path_hmm, quality="90", one_daughter=True, sample=30
             safe_mkdirs(path_out)
             ccore.writeImage(results[gallery_name], os.path.join(path_out, '%s.jpg' % group_name), quality)
 
-        if len(results) > 0:
-            final_groups.append(group_name)
-
-    return final_groups
+        yield group_name
 
 #------------------------------------------------------------------------------
 # classes:
