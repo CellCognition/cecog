@@ -40,7 +40,7 @@ from pdk.datetimeutils import StopWatch
 # cecog imports:
 #
 from cecog.gui.modules.module import Module
-from cecog.gui.colorbox import ColorBox
+from cecog.gui.widgets.colorbox import ColorBox
 from cecog.traits.config import RESOURCE_PATH
 from cecog.util.palette import (NucMedPalette,
                                 ZeissPalette,
@@ -376,7 +376,7 @@ class EnhancementFrame(QFrame):
         # FIXME: Just a workaround, the image comes with wrong strides
         #        fixed in master
         image2 = numpy.zeros(image.shape, dtype=numpy.float32, order='F')
-        image2[:] = image 
+        image2[:] = image
 
         # add a small value in case max == min
         image2 *= 255.0 / (s.maximum - s.minimum + 0.1)

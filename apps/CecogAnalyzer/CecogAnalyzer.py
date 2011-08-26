@@ -28,9 +28,10 @@ import cPickle as pickle
 # extension module imports:
 #
 import sip
-# set PyQt API version to 2.0 and disable QString
+# set PyQt API version to 2.0
 sip.setapi('QString', 2)
-#sip.setapi('QVariant', 2)
+sip.setapi('QVariant', 2)
+sip.setapi('QUrl', 2)
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
