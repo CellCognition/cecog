@@ -901,6 +901,7 @@ class _ProcessorMixin(object):
                     if not qApp._image_dialog is None:
                         pix = qApp._graphics.pixmap()
                         pix2 = QPixmap(pix.size())
+                        pix2.fill(Qt.black)
                         qApp._graphics.setPixmap(pix2)
                         qApp._image_dialog.raise_()
 
