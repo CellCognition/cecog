@@ -561,7 +561,8 @@ class AnalzyerThread(_ProcessingThread):
                                     copy.copy(self._imagecontainer),
                                     learner=learner)
             learner = analyzer.processPositions(self)
-        if not learner is None:
+        # make sure the learner data is only exported while we do sample picking
+        if self._settings.get('Classification', 'collectsamples') and not learner is None:
             learner.export()
 
     def set_renderer(self, name):
@@ -622,6 +623,7 @@ class TrainingThread(_ProcessingThread):
         best_conf = None
         is_abort = False
         stopwatch = StopWatch()
+        self._learner.filterData(apply=True)
         for info in self._learner.iterGridSearchSVM(c_info=c_info,
                                                     g_info=g_info):
             n, log2c, log2g, conf = info
@@ -938,12 +940,9 @@ class _ProcessorMixin(object):
                                          self.parent().main_window._imagecontainer)
                     self._analyzer.setTerminationEnabled(True)
 
-                self.connect(self._analyzer, SIGNAL('finished()'),
-                             self._on_process_finished)
-                self._analyzer.stage_info.connect(self._on_update_stage_info,
-                                                  Qt.QueuedConnection)
-                self._analyzer.analyzer_error.connect(self._on_error,
-                                                      Qt.QueuedConnection)
+                self._analyzer.finished.connect(self._on_process_finished)
+                self._analyzer.stage_info.connect(self._on_update_stage_info, Qt.QueuedConnection)
+                self._analyzer.analyzer_error.connect(self._on_error, Qt.QueuedConnection)
 
                 self._analyzer.start(QThread.LowestPriority)
                 if self._current_process_item == 0:
@@ -1004,6 +1003,9 @@ class _ProcessorMixin(object):
                               'newly picked samples.'
                         result_frame = self._get_result_frame(self._tab_name)
                         result_frame.load_classifier(check=False)
+                        nr_removed = len(result_frame._learner.filterData(apply=False))
+                        if nr_removed > 0:
+                            msg += '\n\n%d features contained NA values and will be removed from training.' % nr_removed
                     elif self._current_process == self.PROCESS_TRAINING:
                         msg = 'Classifier successfully trained.\n\n'\
                               'You can test the classifier performance here'\

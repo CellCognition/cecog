@@ -64,7 +64,7 @@ from cecog.util.util import (hexToRgb,
 #
 class ClassifierResultFrame(QGroupBox):
 
-    LABEL_FEATURES = '#Features: %d'
+    LABEL_FEATURES = '#Features: %d (%d)'
     LABEL_ACC = 'Overall accuracy: %.1f%%'
     LABEL_C = 'Log2(C) = %.1f'
     LABEL_G = 'Log2(g) = %.1f'
@@ -118,7 +118,7 @@ class ClassifierResultFrame(QGroupBox):
         layout_desc = QHBoxLayout(desc)
         self._label_acc = QLabel(self.LABEL_ACC % float('NAN'), desc)
         layout_desc.addWidget(self._label_acc, Qt.AlignLeft)
-        self._label_features = QLabel(self.LABEL_FEATURES % 0, desc)
+        self._label_features = QLabel(self.LABEL_FEATURES % (0,0), desc)
         layout_desc.addWidget(self._label_features, Qt.AlignLeft)
         self._label_c = QLabel(self.LABEL_C % float('NAN'), desc)
         layout_desc.addWidget(self._label_c, Qt.AlignLeft)
@@ -174,11 +174,16 @@ class ClassifierResultFrame(QGroupBox):
                 msg += 'Sample images are only used for visualization and annotation control at the moment.'
 
                 txt = '%s classifier inspection results' % self._channel
+                information(self, txt, info=msg)
 
             if result['has_arff']:
                 self._learner.importFromArff()
-                self._label_features.setText(self.LABEL_FEATURES %
-                                             len(self._learner.lstFeatureNames))
+                nr_features_prev = len(self._learner.lstFeatureNames)
+                removed_features = self._learner.filterData(apply=False)
+                nr_features = nr_features_prev - len(removed_features)
+                self._label_features.setText(self.LABEL_FEATURES % (nr_features, nr_features_prev))
+                self._label_features.setToolTip("removed %d features containing NA values:\n%s" %
+                                                (len(removed_features), "\n".join(removed_features)))
 
             if result['has_definition']:
                 self._learner.loadDefinition()
