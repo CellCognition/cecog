@@ -894,7 +894,7 @@ class AnnotationModule(Module):
             for item2 in item.childItems():
                 scene.removeItem(item2)
         item.set_pen_color(color)
-        obj_id = item.data(0).toInt()[0]
+        obj_id = item.data(0)
         return obj_id
 
     def _on_coordinates_changed(self, coordinate):

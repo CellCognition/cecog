@@ -271,14 +271,14 @@ class ImageViewer(QGraphicsView):
                 scene.removeItem(item2)
 
     def get_object_item(self, point):
+        found_item = None
         scene = self.scene()
-        item = scene.itemAt(point)
-        if isinstance(item, HoverPolygonItem):
-            found_item = item
-        elif isinstance(item.parentItem(), HoverPolygonItem):
-            found_item = item.parentItem()
-        else:
-            found_item = None
+        # mouse cursor and mapped scene position seem now to match exactly.
+        # increased the search radius from a point to a 3x3 square around the point to identify the scene item
+        items = scene.items(point.x()-1, point.y()-1, 3, 3, Qt.IntersectsItemShape)
+        items = [i for i in items if isinstance(i, HoverPolygonItem)]
+        if len(items) > 0:
+            found_item = items[0]
         return found_item
 
     # protected method overload
@@ -308,7 +308,8 @@ class ImageViewer(QGraphicsView):
     def mousePressEvent(self, ev):
         super(ImageViewer, self).mousePressEvent(ev)
         if not self._move_on:
-            point = self.mapToScene(ev.pos())
+            # mouse position and mapped scene point do not match exactly, correcting by 1 in x and y
+            point = self.mapToScene(ev.pos()-QPoint(1,1))
             self.image_mouse_pressed.emit(point, ev.button(), ev.modifiers())
 
     def resizeEvent(self, ev):
