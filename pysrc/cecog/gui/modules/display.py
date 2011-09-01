@@ -58,8 +58,7 @@ DEFAULT_COLORS_BY_NAME = {'rfp' : 'red',
                           'yfp' : 'yellow',
                           'cfp' : 'cyan',
                           }
-DEFAULT_LUT_COLORS = ['red', 'green', 'blue',
-                      'yellow', 'magenta', 'cyan', 'white']
+DEFAULT_LUT_COLORS = ['white', 'red', 'green', 'blue', 'yellow', 'magenta', 'cyan', ]
 
 COLOR_DEFINITIONS = {'red'    : '#FF0000',
                      'green'  : '#00FF00',
