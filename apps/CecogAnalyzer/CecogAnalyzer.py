@@ -562,9 +562,11 @@ class AnalyzerMainWindow(QMainWindow):
                     if not has_missing:
                         btn1 = QPushButton('No', box)
                         box.addButton(btn1, QMessageBox.NoRole)
+                        box.setDefaultButton(btn1)
                     elif len(found_plates) > 0:
                         btn1 = QPushButton('Rescan missing', box)
                         box.addButton(btn1, QMessageBox.YesRole)
+                        box.setDefaultButton(btn1)
                     else:
                         btn1 = None
 
@@ -742,6 +744,12 @@ if __name__ == "__main__":
     import time
     from pdk.fileutils import safe_mkdirs
     from cecog.util.util import get_appdata_path
+
+    #import argparse
+    #parser = argparse.ArgumentParser(description='CellCognition Analyzer GUI')
+    #args = parser.parse_args()
+
+
 #    log_path = 'log'
 #    safe_mkdirs(log_path)
 #    sys.stdout = \
@@ -785,25 +793,15 @@ if __name__ == "__main__":
     main = AnalyzerMainWindow()
     main.raise_()
 
-    if is_app:
-        filename = os.path.join(get_package_path(),
-                                'Data/Cecog_settings/demo_settings.conf')
-        if os.path.isfile(filename):
-            main._read_settings(filename)
-        show_html('_startup')
+
+    if len(sys.argv) > 1:
+        filename = sys.argv[1]
     else:
-        #filename = '/Users/miheld/data/CellCognition/demo_data/cluster_test.conf'
-        filename = '/Users/miheld/data/CellCognition/demo_data/H2bTub20x_settings.conf'
-        #filename = '/Users/miheld/data/for_michael/cecog_data/screen/settings/screen_settings.conf'
-        #filename = '/Users/miheld/data/Fabrice/Analysis/test/fabrice_test.conf'
-        #filename = '/Users/miheld/data/Peter/Analysis/t2/peter_t2.conf'
-        #filename = '/Users/miheld/data/Katja/EMBL_H2bIbb.conf'
-        #filename = '/Users/miheld/data/Fabrice/Analysis/test/fabrice_test.conf'
-        #filename = '/Users/miheld/data/Peter/Analysis/t2/peter_t2.conf'
-        #filename = '/Users/miheld/data/Katja/EMBL_H2bIbb.conf'
-        #filename = '/Users/miheld/data/CellCognition/Thomas/ANDRISETTINGS_local_HD.conf'
-        if os.path.isfile(filename):
-            main._read_settings(filename)
+        filename = os.path.join(get_package_path(), 'Data/Cecog_settings/demo_settings.conf')
+    if os.path.isfile(filename):
+        main._read_settings(filename)
+
+    if not is_app:
         main._debug = True
 
     splash.finish(main)

@@ -101,11 +101,11 @@ if sys.platform == 'darwin':
                      'excludes': EXCLUDES,
                      'dylib_excludes': ['R.framework',],
                      #'frameworks': ['R.framework',],
-                     'strip' : False,
+                     'strip' : True,
                      'packages': PACKAGES,
                      'resources': [],
-                     'optimize': 0,
-                     'compressed': False,
+                     'optimize': 2,
+                     'compressed': True,
                      'iconfile': 'resources/cecog_analyzer_icon.icns',
                     }
 elif sys.platform == 'win32':
