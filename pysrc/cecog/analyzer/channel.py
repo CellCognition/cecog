@@ -555,6 +555,9 @@ class SecondaryChannel(_Channel):
              iPropagateDeltaWidth =
                IntProperty(None, is_mandatory=True),
 
+             iConstrainedWatershedGaussFilterSize =
+               IntProperty(None, is_mandatory=True),
+
              bPresegmentation =
                BooleanProperty(None, is_mandatory=True),
              iPresegmentationMedianRadius =
@@ -600,6 +603,8 @@ class SecondaryChannel(_Channel):
 
                                                   fPropagateLambda = self.fPropagateLambda,
                                                   iPropagateDeltaWidth = self.iPropagateDeltaWidth,
+
+                                                  iConstrainedWatershedGaussFilterSize = self.iConstrainedWatershedGaussFilterSize,
 
                                                   bPresegmentation = self.bPresegmentation,
                                                   iPresegmentationMedianRadius = self.iPresegmentationMedianRadius,

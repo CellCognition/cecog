@@ -493,21 +493,10 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
                              hmm_initial_emission=NULL,
                              performDecode=TRUE,
                              truncate_from_front=NULL,
-                             motif_sequence=NULL)
+                             motif_sequence=NULL,
+                             galleries=NULL)
 {
-    if (!file.exists(outdir))
-        dir.create(outdir)
-
-    if (groupByOligoId)
-        suffix = 'byoligo'
-    else if (groupByGene)
-        suffix = 'bysymbol'
-    else
-        suffix = 'bypos'
-
-    outdir_region = paste(outdir, paste(screen$regionName, suffix, sep='_'), sep='/')
-    if (!file.exists(outdir_region))
-        dir.create(outdir_region)
+    outdir_region = outdir
 
     rel_sequences = '_sequences'
     outdir_sequences = paste(outdir_region, rel_sequences, sep='/')
@@ -544,6 +533,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
         L <- levels(screen$cell$oligoid)
         S <- length(L)
         groups <- S
+        grouping_name = 'OligoID'
         #sortedIndex <- seq(1,S)
         sortedIndex <- sort(L, index.return=TRUE, method="shell")$ix
     } else
@@ -552,11 +542,13 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
         L <- levels(screen$cell$gene)
         S <- length(L)
         groups <- S
+        grouping_name = 'GeneSymbol'
         #sortedIndex <- seq(1,S)
         sortedIndex <- sort(L, index.return=TRUE, method="shell")$ix
     } else
     {
         groups <- Spos
+        grouping_name = 'Position'
         pos.names <- vector(length=Spos)
         for (i in 1:Spos)
         {
@@ -574,7 +566,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
         #break
     }
 
-    T1 <- matrix("", nr=2, nc=groups)
+    T1 <- matrix("", nr=3, nc=groups)
   cat("groups=",groups,"\n")
 
     fn <- matrix("",nr=groups,nc=2)
@@ -741,6 +733,13 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             #T1[i,3] <- hwrite(hmm[[i]]$trans)
 
 
+            if (!is.null(galleries))
+            {
+                T1[3,i] <- hwrite(paste(galleries, 'gallery'), table=T,
+                                  link=paste('_gallery',galleries,sprintf("%s.jpg", pos.name), sep='/'),
+                                  border=0, center=T, cellspacing=10)
+            }
+
 #            sq <- Sequence[I,seq(1,T)]
             sq <- Sequence[I,]
             sq.raw <- Sequence.Raw[I,]
@@ -902,7 +901,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
                         row.names=FALSE, col.names=c("Trajectory", "Realign"))
 
             if (groupByOligoId | groupByGene)
-                plot_title = paste(gene.name, " n=", N.gene,"/",N.gene.old, " (", str.pos.list, ")", sep="")
+                plot_title = paste(gene.name, " n=", N.gene,"/",N.gene.old, "\n(", str.pos.list, ")", sep="")
             else
                 plot_title = paste(pos.name, " - ", gene.name, " n=", N.gene,"/",N.gene.old, sep="")
             print(plot_title)
@@ -958,7 +957,8 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             counts.time <- counts * timelapse
             #counts.time[counts.time == 0] = NA
             # export class counts per position/condition
-            dirCounts <- paste(outdir_region, "_counts", sep="/")
+            rel_dirCounts <- "_counts"
+            dirCounts <- paste(outdir_region, rel_dirCounts, sep="/")
             if (!file.exists(dirCounts))
                 dir.create(dirCounts, recursive=TRUE)
             write.table(t(counts.time), paste(dirCounts, "/", pos.name, ".txt", sep=""), quote=FALSE, sep="\t",
@@ -1113,6 +1113,57 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             }
         }
     }
+
+
+    count_files = matrix("", nr=2, nc=graph$K+1)
+    width=1850
+    height=400
+    for (k in 1:graph$K)
+    {
+        class_name = k
+
+        filename = paste('boxplot_', class_name, '.png', sep='')
+        count_files[1,k] = paste(rel_dirCounts, filename, sep='/')
+        png(paste(dirCounts, filename, sep='/'), width, height)
+        par(mar=c(9,3,2,1))
+        data = list()
+        for (i in 1:groups)
+            data[[i]] = counts.all[[i]][k,]
+        boxplot(data, col=class.colors.hmm[k], ylim=c(0,max_time), xaxt='n')
+        axis(1, seq(groups), names.all, las=2)
+        title(paste('Class', class_name))
+        dev.off()
+
+        filename = paste('barplot_', class_name, '.png', sep='')
+        count_files[2,k] = paste(rel_dirCounts, filename, sep='/')
+        png(paste(dirCounts, filename, sep='/'), width, height)
+        par(mar=c(9,3,2,1))
+        data2 = vector(length=groups)
+        for (i in 1:groups)
+            data2[i] = mean(counts.all[[i]][k,], na.rm=TRUE)
+        mp = barplot(data2, col=class.colors.hmm[k], xaxt='n')
+        axis(1, mp, names.all, las=2)
+        title(paste('Class', class_name))
+        dev.off()
+    }
+    filename = paste('_barplot_number_events.png', sep='')
+    count_files[1,graph$K+1] = paste(rel_dirCounts, filename, sep='/')
+    png(paste(dirCounts, filename, sep='/'), width, height)
+    par(mar=c(9,3,2,1))
+    data = vector(length=groups)
+    names = vector(length=groups)
+    for (i in 1:groups)
+    {
+        data[i] = ncol(counts.all[[i]])
+        names[i] = paste('(', data[i], ') ', names.all[[i]], sep='')
+    }
+    mp = barplot(data, col='#88888888', xaxt='n')
+    axis(1, mp, names, las=2)
+    title('Number of events')
+    dev.off()
+
+
+
     T3 <- hwriteImage(fn[,1], width=400, height=400, link=fn[,1])
     T4 <- hwriteImage(fn.raw[,1], width=400, height=400, link=fn.raw[,1])
     T5 <- hwriteImage(fn.f[,1], width=400, height=400, link=fn.f[,1])
@@ -1122,7 +1173,8 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
 
 # html-page
 
-    p <- openPage(paste(outdir_region,"/index.html",sep=""))
+    p <- openPage(paste(outdir_region,"/index.html",sep=""),
+                  title=paste('CellCognition HMM Summary'))
 
 #        plotTransitionGraph(graph, type="PS", filename=paste(outdir,"/graph_prior.ps",sep=""),loops=FALSE,weights=FALSE)
     plot.transition.graph(graph, type="PNG", filename=paste(outdir_sequences,"/graph_prior.png",sep=""),loops=FALSE,weights=FALSE)
@@ -1130,7 +1182,9 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
     plot.transition.graph(graph, type="PNG", filename=paste(outdir_sequences,"/graph_prior_loop.png",sep=""),loops=TRUE,weights=FALSE)
 #        #plotTransitionGraph(graph, type="PDF", filename=paste(outdir,"/graph_prior.pdf",sep=""),loops=FALSE,weights=FALSE)
     hwrite("Prior Selected Graph Structure",p,heading=3)
-    hwriteImage(paste(outdir_sequences, "/graph_prior.png",sep=""),p,link=paste(outdir_sequences,"/graph_prior.png",sep=""))
+    hwriteImage(paste(rel_sequences, "/graph_prior.png",sep=""),p,link=paste(rel_sequences,"/graph_prior.png",sep=""))
+
+    hwrite(paste("Summary per", grouping_name),p,heading=1)
 
     hwrite("Transition probabilities",p,heading=3)
     hwrite(T1,p)
@@ -1156,6 +1210,19 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
 
     hwrite("Single cell annotation (raw)",p,heading=3)
     hwrite(T4,p)
+
+    hwrite("",p,heading=2)
+    hwrite("Summary per class",p,heading=1)
+
+    hwrite("Boxplots",p,heading=3)
+    for (i in 1:graph$K)
+        hwriteImage(count_files[1,i], p, link=count_files[1,i])
+
+    hwrite("Barplots",p,heading=3)
+    for (i in 1:graph$K)
+        hwriteImage(count_files[2,i], p, link=count_files[2,i])
+
+    hwriteImage(count_files[1,graph$K+1], p, link=count_files[1,graph$K+1])
 
     closePage(p)
     if (openHTML) {

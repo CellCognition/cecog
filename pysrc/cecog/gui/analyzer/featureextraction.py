@@ -36,8 +36,7 @@ from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACT
 from cecog.gui.util import (information,
                             exception,
                             )
-from cecog.gui.analyzer import (_BaseFrame,
-                                _ProcessorMixin,
+from cecog.gui.analyzer import (BaseFrame,
                                 AnalzyerThread,
                                 TrainingThread,
                                 )
@@ -66,15 +65,14 @@ from cecog.util.util import (hexToRgb,
 # classes:
 #
 
-class FeatureExtractionFrame(_BaseFrame, _ProcessorMixin):
+class FeatureExtractionFrame(BaseFrame):
 
     SECTION_NAME = SECTION_NAME_FEATURE_EXTRACTION
     DISPLAY_NAME = 'Feature Extraction'
     TABS = ['Primary Channel', 'Secondary Channel', 'Tertiary Channel']
 
     def __init__(self, settings, parent):
-        _BaseFrame.__init__(self, settings, parent)
-        _ProcessorMixin.__init__(self)
+        super(FeatureExtractionFrame, self).__init__(settings, parent)
         self._result_frames = {}
 
         for tab_name, prefix in [('Primary Channel', 'primary'),

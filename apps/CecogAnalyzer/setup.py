@@ -101,11 +101,11 @@ if sys.platform == 'darwin':
                      'excludes': EXCLUDES,
                      'dylib_excludes': ['R.framework',],
                      #'frameworks': ['R.framework',],
-                     'strip' : False,
+                     'strip' : True,
                      'packages': PACKAGES,
                      'resources': [],
-                     'optimize': 0,
-                     'compressed': False,
+                     'optimize': 2,
+                     'compressed': True,
                      'iconfile': 'resources/cecog_analyzer_icon.icns',
                     }
 elif sys.platform == 'win32':
@@ -126,7 +126,7 @@ elif sys.platform == 'win32':
                      'packages': PACKAGES,
                      'optimize': 2,
                      'compressed': True,
-                     'bundle_files': 2,
+                     'bundle_files': 3,
 
                      #'ascii': True,
                      #'xref': True,
@@ -214,16 +214,16 @@ if sys.platform == 'darwin':
 
 
 elif sys.platform == 'win32':
-    import zipfile, glob
-    lib_filename = os.path.join('dist', FILENAME_ZIP)
-    # zfile = zipfile.PyZipFile(lib_filename, 'a')
-    # filenames = [r'C:\Source\Lib\libfftw3-3.dll',
-                 # ] +\
-                 # glob.glob(r'C:\Source\Microsoft.VC90.CRT\*.*')
-    # for filename in filenames:
-        # print "adding '%s' to '%s'" % (filename, lib_filename)
-        # zfile.write(filename, os.path.split(filename)[1])
-    # zfile.close()
+#    import zipfile, glob
+#    lib_filename = os.path.join('dist', FILENAME_ZIP)
+#    zfile = zipfile.PyZipFile(lib_filename, 'a')
+#    filenames = [r'C:\Source\Lib\libfftw3-3.dll',
+#                 ] +\
+#                 glob.glob(r'C:\Source\Microsoft.VC90.CRT\*.*')
+#    for filename in filenames:
+#        print "adding '%s' to '%s'" % (filename, lib_filename)
+#        zfile.write(filename, os.path.split(filename)[1])
+#    zfile.close()
 
     filenames = ['graph_template.txt',
                  'hmm.R',
@@ -242,8 +242,8 @@ elif sys.platform == 'win32':
         print filename
         shutil.copy(filename, resource_path)
 
-    # shutil.copytree(os.path.join(RESOURCE_PATH, 'palettes', 'zeiss'),
-                    # os.path.join(resource_path, 'palettes', 'zeiss'))
+    shutil.copytree(os.path.join(RESOURCE_PATH, 'palettes', 'zeiss'),
+                    os.path.join(resource_path, 'palettes', 'zeiss'))
 
     w9 = os.path.join('dist', 'w9xpopen.exe')
     if os.path.isfile(w9):

@@ -190,7 +190,6 @@ class PositionAnalyzer(object):
         self.channel_mapping_reversed = dict([(v,k) for k,v in self.channel_mapping.iteritems()])
 
         self.tplChannelIds = tuple(self.channel_mapping.values())
-        #print self.tplChannelIds
 
         self.classifier_infos = {}
         for channel in [self.PRIMARY_CHANNEL,
@@ -209,7 +208,6 @@ class PositionAnalyzer(object):
                                     'strRegionId' : self.oSettings.get2(self._resolve_name(channel, 'classification_regionname')),
                                     }
                 predictor = CommonClassPredictor(dctCollectSamples=classifier_infos)
-                #print predictor.getOption('strEnvPath')
                 predictor.importFromArff()
                 predictor.loadClassifier()
                 classifier_infos['predictor'] = predictor
@@ -288,7 +286,6 @@ class PositionAnalyzer(object):
             if self.oSettings.get('Processing', '%s_processchannel' % name.lower()):
                 channel_names.append(name)
         filename_hdf5 = os.path.join(self._path_dump, '%s.hdf5' % self.P)
-
 
         hdf5_include_tracking=self.oSettings.get2('hdf5_include_tracking')
         if not self.oSettings.get('Processing', 'tracking'):
@@ -392,7 +389,7 @@ class PositionAnalyzer(object):
                                      #oCellTracker=self.oCellTracker,
                                      P = self.P,
                                      bCreateImages = True,#self.oSettings.bCreateImages,
-                                     iBinningFactor = self.oSettings.get('General', 'binningFactor'),
+                                     iBinningFactor = 1,
                                      detect_objects = self.oSettings.get('Processing', 'objectdetection'),
                                      )
 
@@ -509,6 +506,10 @@ class PositionAnalyzer(object):
 
                 if self.oSettings.get('Output', 'export_track_data'):
                     self.oCellTracker.exportFullTracks()
+
+                if self.oSettings.get('Output', 'export_tracking_as_dot'):
+                    self.oCellTracker.exportGraph(os.path.join(strPathOutPositionStats,
+                                                               'tracking_graph___P%s.dot' % self.P))
 
                 if not self._qthread is None:
                     if self._qthread.get_abort():
@@ -673,7 +674,7 @@ class PositionAnalyzer(object):
 
     def _analyzePosition(self, oCellAnalyzer):
 
-        debug_mode = self.oSettings.get('General', 'debugMode')
+        debug_mode = False #self.oSettings.get('General', 'debugMode')
         if debug_mode:
             bMkdirsOk = safe_mkdirs(self.strPathOutPositionDebug)
             self._oLogger.info("strPathOutPositionDebug '%s', ok: %s" % (self.strPathOutPositionDebug,
@@ -718,7 +719,6 @@ class PositionAnalyzer(object):
         for frame, iter_channel in self._imagecontainer(coordinate,
                                                         interrupt_channel=True,
                                                         interrupt_zslice=True):
-            #print frame
 
             if not self._qthread is None:
                 if self._qthread.get_abort():
@@ -737,11 +737,9 @@ class PositionAnalyzer(object):
             oCellAnalyzer.initTimepoint(frame)
             # loop over the channels
             for channel_id, iter_zslice in iter_channel:
-                #print channel_id
 
                 zslice_images = []
                 for zslice, meta_image in iter_zslice:
-                    #print zslice
 
                     #P, iFrame, strC, iZ = oMetaImage.position, oMetaImage.time, oMetaImage.channel, oMetaImage.zslice
                     #self._oLogger.info("Image P %s, T %05d / %05d, C %s, Z %d" % (self.P, iFrame, iLastFrame, strC, iZ))
@@ -820,8 +818,6 @@ class PositionAnalyzer(object):
                                                                          feature)):
                                     lstFeatureCategories += FEATURE_MAP[feature]
 
-                        # temp: print fetures to be calculated
-                        #print 'features: ', lstFeatureCategories
 
                         dctFeatureParameters = {}
                         if feature_extraction:
@@ -849,7 +845,8 @@ class PositionAnalyzer(object):
                                 lstPostprocessingConditions.append('n2_avg <= %d' % self.oSettings.get2('primary_postprocessing_intensity_max'))
 
                             lstPostprocessingFeatureCategories = unique(lstPostprocessingFeatureCategories)
-                            if len(lstPostprocessingFeatureCategories) > 0:
+                            if len(lstPostprocessingFeatureCategories) > 0 and \
+                                self.oSettings.get2('primary_postprocessing'):
                                 bPostProcessing = True
                             strPostprocessingConditions = ' and '.join(lstPostprocessingConditions)
 
@@ -916,8 +913,11 @@ class PositionAnalyzer(object):
                                           iExpansionSeparationSizeOutside = self.oSettings.get2('%s_regions_outside_separationsize' % prefix),
                                           iExpansionSizeRim = self.oSettings.get2('%s_regions_rim_expansionsize' % prefix),
                                           iShrinkingSizeRim = self.oSettings.get2('%s_regions_rim_shrinkingsize' % prefix),
+
                                           fPropagateLambda = self.oSettings.get2('%s_regions_propagate_lambda' % prefix),
                                           iPropagateDeltaWidth = self.oSettings.get2('%s_regions_propagate_deltawidth' % prefix),
+
+                                          iConstrainedWatershedGaussFilterSize = self.oSettings.get2('%s_regions_constrained_watershed_gauss_filter_size' % prefix),
 
                                           bPresegmentation = self.oSettings.get2('%s_presegmentation' % prefix),
                                           iPresegmentationMedianRadius = self.oSettings.get2('%s_presegmentation_medianradius' % prefix),
@@ -938,7 +938,6 @@ class PositionAnalyzer(object):
                         # loop over the z-slices
                         for meta_image in zslice_images:
                             channel.append_zslice(meta_image)
-                        #print channel_section, channel_id, channel
                         oCellAnalyzer.register_channel(channel)
 
 
@@ -948,7 +947,7 @@ class PositionAnalyzer(object):
                                                        self.origP,
                                                        self.lstSampleReader,
                                                        self.oObjectLearner,
-                                                       byTime=self.oSettings.get('General', 'timelapsedata'))
+                                                       byTime=True)
 
                 if not img_rgb is None:
                     iNumberImages += 1
@@ -993,7 +992,6 @@ class PositionAnalyzer(object):
                     img_rgb, filename = oCellAnalyzer.render(strPathOutImages, dctRenderInfo=dctRenderInfo,
                                                              writeToDisc=self.oSettings.get('Output', 'rendering_class_discwrite'),
                                                              images=images)
-                    #print strType, self._qthread.get_renderer(), self.oSettings.get('Rendering', 'rendering_class')
 
                     if not self._qthread is None and not img_rgb is None:
                         self._qthread.set_image(strType,
@@ -1005,7 +1003,6 @@ class PositionAnalyzer(object):
 
                 prefixes = [PrimaryChannel.PREFIX, SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]
                 self.oSettings.set_section('General')
-                #print self.oSettings.get2('rendering')
                 for strType, dctRenderInfo in self.oSettings.get2('rendering').iteritems():
                     if not strType in prefixes:
                         strPathOutImages = os.path.join(self.strPathOutPositionImages, strType)
@@ -1013,9 +1010,9 @@ class PositionAnalyzer(object):
                                                                  dctRenderInfo=dctRenderInfo,
                                                                  writeToDisc=self.oSettings.get('Output', 'rendering_contours_discwrite'),
                                                                  images=images)
+
                         if (not self._qthread is None and not img_rgb is None and
                             not strType in [PrimaryChannel.PREFIX, SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]):
-                            #print strType, self._qthread.get_renderer(), self.oSettings.get('Rendering', 'rendering')
                             self._qthread.set_image(strType,
                                                     img_rgb,
                                                     'PL %s - P %s - T %05d' % (self.plate_id, self.origP, frame),
@@ -1153,7 +1150,6 @@ class AnalyzerCore(object):
                 strSampleFilename = os.path.join(strAnnotationsPath, strFilename)
 
                 result = annotation_re.match(strFilename)
-                #print result
                 strFilenameExt = os.path.splitext(strSampleFilename)[1]
                 if (os.path.isfile(strSampleFilename) and
                     strFilenameExt == self.oSettings.get2(_resolve('classification_annotationfileext')) and
@@ -1161,87 +1157,42 @@ class AnalyzerCore(object):
                     not result is None and
                     (result.group('plate') is None or result.group('plate') == self.plate_id)):
 
-                    #print strSampleFilename, os.path.splitext(strSampleFilename)[1]
 
-                    has_timelapse = self.oSettings.get('General', 'timelapsedata')
-
-                    if has_timelapse:
-                        reference = self._meta_data.times
-                    else:
-                        reference = self.lstPositions
+                    reference = self._meta_data.times
 
                     if strFilenameExt == '.xml':
                         clsReader = CellCounterReaderXML
                     else:
                         clsReader = CellCounterReader
-                    oReader = clsReader(result, strSampleFilename, reference,
-                                        scale=self.oSettings.get('General', 'binningfactor'),
-                                        timelapse=has_timelapse)
+                    oReader = clsReader(result, strSampleFilename, reference)
 
                     self.lstSampleReader.append(oReader)
 
-                    if has_timelapse:
-                        position = result.group('position')
-                        if not position in self.dctSamplePositions:
-                            self.dctSamplePositions[position] = []
-                        self.dctSamplePositions[position].extend(oReader.getTimePoints())
-                    else:
-                        for position in oReader.keys():
-                            self.dctSamplePositions[position] = [1]
+                    position = result.group('position')
+                    if not position in self.dctSamplePositions:
+                        self.dctSamplePositions[position] = []
+                    self.dctSamplePositions[position].extend(oReader.getTimePoints())
 
             for position in self.dctSamplePositions:
                 if not self.dctSamplePositions[position] is None:
                     self.dctSamplePositions[position] = sorted(unique(self.dctSamplePositions[position]))
 
-            #self.oSettings.lstPositions = sorted(self.dctSamplePositions.keys())
-            #self.lstPositions = self.oSettings.lstPositions
             self.lstPositions = sorted(self.dctSamplePositions.keys())
-            #print self.oSettings.lstPositions
-            #print self.dctSamplePositions
 
-
-
-        elif self.oSettings.get('General', 'qualityControl'):
-            strPathOutQualityControl = os.path.join(self.strPathOut, 'qc')
-            bMkdirsOk = safe_mkdirs(strPathOutQualityControl)
-            self._oLogger.info("strPathOutQualityControl '%s', ok: %s" % (strPathOutQualityControl, bMkdirsOk))
-
-#            self.oQualityControl = QualityControl(oPlate,
-#                                                  strPathOutQualityControl,
-#                                                  self._meta_data,
-#                                                  self.oSettings.dctQualityControl,
-#                                                  dctPlotterInfos={'bUseCairo' : True})
-#        else:
-#            self.oQualityControl = None
-
-
-#        if self.oSettings.bClassify:
-#            dctCollectSamples = self.oSettings.dctCollectSamples
-#            self.oClassPredictor = CommonClassPredictor(dctCollectSamples,
-#                                                        strEnvPath=dctCollectSamples['strEnvPath'],
-#                                                        strModelPrefix=dctCollectSamples['strModelPrefix'])
-#            self.oClassPredictor.importFromArff()
-#
-#        else:
         self.oClassPredictor = None
 
 
     def _openImageContainer(self):
         self.oSettings.set_section('General')
         self.lstPositions = self.oSettings.get2('positions')
-        #print 'MOOO', self.lstPositions, type(self.lstPositions)
         if self.lstPositions == '' or not self.oSettings.get2('constrain_positions'):
             self.lstPositions = None
         else:
             self.lstPositions = self.lstPositions.split(',')
 
-
-        #if self._imagecontainer is None:
-        #    self._imagecontainer = ImageContainer.from_settings(self.oSettings)
         self._meta_data = self._imagecontainer.get_meta_data()
 
         # does a position selection exist?
-        #print self.lstPositions, self._meta_data.setP
         if not self.lstPositions is None:
             if not is_subset(self.lstPositions, self._meta_data.positions):
                 raise ValueError("The list of selected positions is not valid! %s\nValid values are %s" %\
@@ -1272,12 +1223,8 @@ class AnalyzerCore(object):
             else:
                 self._oLogger.warning("Cannot redo failed positions without directory '%s'!" % strPathFinished)
 
-
-        self._oLogger.info("\n%s" % self._meta_data.format(time=self.oSettings.get2('timelapseData')))
-
         # define range of frames to do analysis within
         lstFrames = list(self._meta_data.times)
-        #print lstFrames
 
         if self.oSettings.get2('frameRange'):
             frames_begin = self.oSettings.get2('frameRange_begin')
@@ -1292,16 +1239,12 @@ class AnalyzerCore(object):
             frames_end = lstFrames[-1]
 
         self.tplFrameRange = (frames_begin, frames_end)
-        #print self.tplFrameRange
 
         lstAnalysisFrames = lstFrames[lstFrames.index(self.tplFrameRange[0]):
                                       lstFrames.index(self.tplFrameRange[1])+1]
-        #print lstAnalysisFrames
 
         # take every n'th element from the list
         self.lstAnalysisFrames = lstAnalysisFrames[::self.oSettings.get2('frameincrement')]
-        #print self.lstAnalysisFrames
-
 
 
     def processPositions(self, qthread=None, myhack=None):

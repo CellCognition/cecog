@@ -526,7 +526,7 @@ class ImageContainer(object):
             plate_id, path_plate_in, path_plate_out, filename = info
 
             # check whether this plate has to be rescanned
-            if not scan_plates is None and plate_id in scan_plates:
+            if not scan_plates is None:
                 scan_plate = scan_plates[plate_id]
             else:
                 scan_plate = False
@@ -550,8 +550,7 @@ class ImageContainer(object):
                 # scan the file structure
                 importer.scan()
 
-                # serialize importer and register plate only upon successful
-                # scan
+                # serialize importer and register plate only upon successful scan
                 if importer.is_valid:
                     filename = self._get_structure_filename(settings, plate_id,
                                                             path_plate_in,

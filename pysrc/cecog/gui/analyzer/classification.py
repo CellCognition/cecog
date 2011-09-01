@@ -36,21 +36,18 @@ from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
 from cecog.gui.util import (information,
                             exception,
                             )
-from cecog.gui.analyzer import (_BaseFrame,
-                                _ProcessorMixin,
+from cecog.gui.analyzer import (BaseProcessorFrame,
                                 AnalzyerThread,
                                 TrainingThread,
                                 )
 from cecog.analyzer import SECONDARY_REGIONS
 from cecog.analyzer.channel import (PrimaryChannel,
                                     SecondaryChannel,
-                                    TertiaryChannel,
                                     )
 from cecog.learning.learning import CommonClassPredictor
 from cecog.util.util import (hexToRgb,
                              convert_package_path,
                              )
-from cecog.gui.browser import Browser
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -67,7 +64,7 @@ from cecog.gui.browser import Browser
 #
 class ClassifierResultFrame(QGroupBox):
 
-    LABEL_FEATURES = '#Features: %d'
+    LABEL_FEATURES = '#Features: %d (%d)'
     LABEL_ACC = 'Overall accuracy: %.1f%%'
     LABEL_C = 'Log2(C) = %.1f'
     LABEL_G = 'Log2(g) = %.1f'
@@ -121,7 +118,7 @@ class ClassifierResultFrame(QGroupBox):
         layout_desc = QHBoxLayout(desc)
         self._label_acc = QLabel(self.LABEL_ACC % float('NAN'), desc)
         layout_desc.addWidget(self._label_acc, Qt.AlignLeft)
-        self._label_features = QLabel(self.LABEL_FEATURES % 0, desc)
+        self._label_features = QLabel(self.LABEL_FEATURES % (0,0), desc)
         layout_desc.addWidget(self._label_features, Qt.AlignLeft)
         self._label_c = QLabel(self.LABEL_C % float('NAN'), desc)
         layout_desc.addWidget(self._label_c, Qt.AlignLeft)
@@ -177,12 +174,16 @@ class ClassifierResultFrame(QGroupBox):
                 msg += 'Sample images are only used for visualization and annotation control at the moment.'
 
                 txt = '%s classifier inspection results' % self._channel
-                widget = information(self, txt, info=msg)
+                information(self, txt, info=msg)
 
             if result['has_arff']:
                 self._learner.importFromArff()
-                self._label_features.setText(self.LABEL_FEATURES %
-                                             len(self._learner.lstFeatureNames))
+                nr_features_prev = len(self._learner.lstFeatureNames)
+                removed_features = self._learner.filterData(apply=False)
+                nr_features = nr_features_prev - len(removed_features)
+                self._label_features.setText(self.LABEL_FEATURES % (nr_features, nr_features_prev))
+                self._label_features.setToolTip("removed %d features containing NA values:\n%s" %
+                                                (len(removed_features), "\n".join(removed_features)))
 
             if result['has_definition']:
                 self._learner.loadDefinition()
@@ -194,6 +195,7 @@ class ClassifierResultFrame(QGroupBox):
                 self._update_conf_table(conf)
             else:
                 conf = None
+                self._init_conf_table(conf)
             self._set_info_table(conf)
 
     def msg_pick_samples(self, parent):
@@ -347,28 +349,29 @@ class ClassifierResultFrame(QGroupBox):
         self._table_info.resizeColumnsToContents()
 
     def _init_conf_table(self, conf):
-        conf_array = conf.conf
-        rows, cols = conf_array.shape
         self._table_conf.clear()
-        self._table_conf.setColumnCount(cols)
-        self._table_conf.setRowCount(rows)
-        #names2cols = self._learner.dctHexColors
-        for c in range(cols):
-            self._table_conf.setColumnWidth(c, 20)
-            label = self._learner.nl2l[c]
-            name = self._learner.dctClassNames[label]
-            item = QTableWidgetItem(str(label))
-            item.setToolTip('%d : %s' % (label, name))
-            #item.setBackground(QBrush(QColor(*hexToRgb(names2cols[name]))))
-            self._table_conf.setHorizontalHeaderItem(c, item)
-        for r in range(rows):
-            self._table_conf.setRowHeight(r, 20)
-            label = self._learner.nl2l[r]
-            name = self._learner.dctClassNames[label]
-            item = QTableWidgetItem(str(label))
-            item.setToolTip('%d : %s' % (label, name))
-            #item.setForeground(QBrush(QColor(*hexToRgb(names2cols[name]))))
-            self._table_conf.setVerticalHeaderItem(r, item)
+        if not conf is None:
+            conf_array = conf.conf
+            rows, cols = conf_array.shape
+            self._table_conf.setColumnCount(cols)
+            self._table_conf.setRowCount(rows)
+            #names2cols = self._learner.dctHexColors
+            for c in range(cols):
+                self._table_conf.setColumnWidth(c, 20)
+                label = self._learner.nl2l[c]
+                name = self._learner.dctClassNames[label]
+                item = QTableWidgetItem(str(label))
+                item.setToolTip('%d : %s' % (label, name))
+                #item.setBackground(QBrush(QColor(*hexToRgb(names2cols[name]))))
+                self._table_conf.setHorizontalHeaderItem(c, item)
+            for r in range(rows):
+                self._table_conf.setRowHeight(r, 20)
+                label = self._learner.nl2l[r]
+                name = self._learner.dctClassNames[label]
+                item = QTableWidgetItem(str(label))
+                item.setToolTip('%d : %s' % (label, name))
+                #item.setForeground(QBrush(QColor(*hexToRgb(names2cols[name]))))
+                self._table_conf.setVerticalHeaderItem(r, item)
 
     def _update_conf_table(self, conf):
         conf_array = conf.conf
@@ -391,7 +394,6 @@ class ClassifierResultFrame(QGroupBox):
         self._label_g.setText(self.LABEL_G % g)
 
     def on_conf_result(self, c, g, conf):
-        print "moo", c, g
         self._set_info(c, g, conf)
 
         if not self._has_data:
@@ -401,7 +403,7 @@ class ClassifierResultFrame(QGroupBox):
         self._update_conf_table(conf)
 
 
-class ClassificationFrame(_BaseFrame, _ProcessorMixin):
+class ClassificationFrame(BaseProcessorFrame):
 
     SECTION_NAME = SECTION_NAME_CLASSIFICATION
     TABS = ['Primary Channel', 'Secondary Channel', 'Tertiary Channel']
@@ -410,8 +412,7 @@ class ClassificationFrame(_BaseFrame, _ProcessorMixin):
     PROCESS_TESTING = 'PROCESS_TESTING'
 
     def __init__(self, settings, parent):
-        _BaseFrame.__init__(self, settings, parent)
-        _ProcessorMixin.__init__(self)
+        super(ClassificationFrame, self).__init__(settings, parent)
         self._result_frames = {}
 
         self.register_control_button(self.PROCESS_PICKING,
@@ -447,8 +448,8 @@ class ClassificationFrame(_BaseFrame, _ProcessorMixin):
 
         self._init_control()
 
-    def _get_modified_settings(self, name):
-        settings = _ProcessorMixin._get_modified_settings(self, name)
+    def _get_modified_settings(self, name, has_timelapse=True):
+        settings = BaseProcessorFrame._get_modified_settings(self, name, has_timelapse)
 
         settings.set_section('ObjectDetection')
         prim_id = PrimaryChannel.NAME

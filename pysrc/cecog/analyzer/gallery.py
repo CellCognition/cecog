@@ -6,7 +6,9 @@ Copyright (c) 2005-2007 by Michael Held
 # standard library imports:
 #
 import os, \
-       shutil
+       shutil, \
+       random, \
+       logging
 
 #------------------------------------------------------------------------------
 # extension module imports:
@@ -20,6 +22,7 @@ from pdk.fileutils import (safe_mkdirs,
 # cecog module imports:
 #
 from cecog import ccore
+from cecog.util.util import read_table
 
 #------------------------------------------------------------------------------
 # constants:
@@ -28,6 +31,66 @@ from cecog import ccore
 #------------------------------------------------------------------------------
 # functions:
 #
+def compose_galleries(path, path_hmm, quality="90", one_daughter=True, sample=30):
+    logger = logging.getLogger('compose_galleries')
+    column_name = 'Trajectory'
+    path_index = os.path.join(path_hmm, '_index')
+    if not os.path.isdir(path_index):
+        logger.warning("Index path '%s' does not exist. Make sure the error correction was executed successfully." %
+                       path_index)
+        return
+
+    for filename in os.listdir(path_index):
+        logger.info('Creating gallery overview for %s' % filename)
+        group_name = os.path.splitext(filename)[0]
+        t = read_table(os.path.join(path_index, filename))[1]
+        t.reverse()
+
+        if one_daughter:
+            for record in t[:]:
+                if record[column_name].split('__')[4] != 'B01':
+                    t.remove(record)
+
+        n = len(t)
+        if not sample is None and sample <= n:
+            idx = random.sample(xrange(n), sample)
+            idx.sort()
+            d = [t[i] for i in idx]
+        else:
+            d = t
+
+        n = len(d)
+        results = {}
+        for idx, record in enumerate(d):
+            #print idx, record
+            traj = record[column_name]
+            items = traj.split('__')
+            pos = items[1][1:]
+            key = '__'.join(items[1:5])
+
+            gallery_path = os.path.join(path, 'analyzed', pos, 'gallery')
+            if os.path.isdir(gallery_path):
+                for gallery_name in os.listdir(gallery_path):
+
+                    img = ccore.readImageRGB(os.path.join(gallery_path, gallery_name, '%s.jpg' % key))
+
+                    if gallery_name not in results:
+                        results[gallery_name] = ccore.RGBImage(img.width, img.height*n)
+                    img_out = results[gallery_name]
+                    ccore.copySubImage(img,
+                                       ccore.Diff2D(0, 0),
+                                       ccore.Diff2D(img.width, img.height),
+                                       img_out,
+                                       ccore.Diff2D(0, img.height*idx))
+
+        for gallery_name in results:
+            path_out = os.path.join(path_hmm, '_gallery', gallery_name)
+            safe_mkdirs(path_out)
+            image_name = os.path.join(path_out, '%s.jpg' % group_name)
+            ccore.writeImage(results[gallery_name], image_name, quality)
+            logger.debug("Gallery image '%s' successfully written." % image_name)
+
+        yield group_name
 
 #------------------------------------------------------------------------------
 # classes:
@@ -214,4 +277,18 @@ class EventGalleryLabel(EventGallery):
     @staticmethod
     def read_image(name):
         return ccore.readImageInt16(name)
+
+
+#-------------------------------------------------------------------------------
+# main:
+#
+if __name__ == "__main__":
+    import sys
+    logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
+    x = compose_galleries("/Volumes/share-gerlich-2-$/claudia/Analysis/001782/110709",
+                          "/Volumes/share-gerlich-2-$/claudia/Analysis/001782/110709/_hmm/primary_primary_byoligo",
+                          one_daughter=False,
+                          sample=100)
+    for i in x:
+        break
 

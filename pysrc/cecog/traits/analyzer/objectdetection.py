@@ -170,7 +170,7 @@ class SectionObjectdetection(_Section):
 
       ('%s_segmentation' % prefix,
        [('%s_presegmentation' % prefix,
-            BooleanTrait(False, label='Pre-Segmentation')),
+            BooleanTrait(False, label='Pre-segmentation')),
         ('%s_presegmentation_medianradius' % prefix,
             IntTrait(1, 0, 1000, label='Median radius')),
         ('%s_presegmentation_alpha' % prefix,
@@ -207,6 +207,11 @@ class SectionObjectdetection(_Section):
             FloatTrait(0.05, 0, 4000, label='Lambda', digits=2)),
         ('%s_regions_propagate_deltawidth' % prefix,
             IntTrait(1, 0, 4000, label='Delta width')),
+
+        ('%s_regions_constrained_watershed' % prefix,
+            BooleanTrait(False, label='Constrained watershed')),
+        ('%s_regions_constrained_watershed_gauss_filter_size' % prefix,
+            IntTrait(2, 1, 4, label='Gauss filter size')),
        ])]
       for name, prefix in [('Secondary', 'secondary'),
                            ('Tertiary', 'tertiary')

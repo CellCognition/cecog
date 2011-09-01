@@ -361,7 +361,9 @@ class CellTracker(OptionManager):
             self._oGraph.add_node(strNodeId, oImageObject)
             dict_append_list(self._dctTimePoints, frame, iObjId)
         #if len(self._dctTimePoints) > 1:
-        prev_frame, success = self._connectTimePoints(frame)
+        # connect time point only if any object is present
+        if iT in self._dctTimePoints:
+            self._connectTimePoints(iT)
 
     def _getClosestPreviousT(self, iT):
         iResultT = None
@@ -509,7 +511,7 @@ class CellTracker(OptionManager):
                                                    radius, img_conn, col)
             current += 1
 
-        if not found:
+        if not found and iT in self._dctTimePoints:
             for objId in self._dctTimePoints[iT]:
                 nodeId = self.getNodeIdFromComponents(iT, objId)
                 obj = self._oGraph.node_data(nodeId)

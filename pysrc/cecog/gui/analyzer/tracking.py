@@ -28,8 +28,7 @@ __all__ = ['TrackingFrame']
 # cecog imports:
 #
 from cecog.traits.analyzer.tracking import SECTION_NAME_TRACKING
-from cecog.gui.analyzer import (_BaseFrame,
-                                _ProcessorMixin,
+from cecog.gui.analyzer import (BaseProcessorFrame,
                                 AnalzyerThread,
                                 )
 from cecog.analyzer.channel import (PrimaryChannel,
@@ -50,15 +49,14 @@ from cecog.analyzer.channel import (PrimaryChannel,
 #-------------------------------------------------------------------------------
 # classes:
 #
-class TrackingFrame(_BaseFrame, _ProcessorMixin):
+class TrackingFrame(BaseProcessorFrame):
 
     SECTION_NAME = SECTION_NAME_TRACKING
     PROCESS_TRACKING = 'PROCESS_TRACKING'
     PROCESS_SYNCING = 'PROCESS_SYNCING'
 
     def __init__(self, settings, parent):
-        _BaseFrame.__init__(self, settings, parent)
-        _ProcessorMixin.__init__(self)
+        super(TrackingFrame, self).__init__(settings, parent)
 
         self.register_control_button(self.PROCESS_TRACKING,
                                      AnalzyerThread,
@@ -94,8 +92,8 @@ class TrackingFrame(_BaseFrame, _ProcessorMixin):
 
         self._init_control()
 
-    def _get_modified_settings(self, name):
-        settings = _ProcessorMixin._get_modified_settings(self, name)
+    def _get_modified_settings(self, name, has_timelapse=True):
+        settings = BaseProcessorFrame._get_modified_settings(self, name, has_timelapse)
 
         settings.set_section('ObjectDetection')
         prim_id = PrimaryChannel.NAME

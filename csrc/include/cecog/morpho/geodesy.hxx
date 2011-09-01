@@ -203,7 +203,7 @@ namespace morpho {
     int maxLabel = resStack.size();
     int numberOfMinMax = maxLabel;
 
-    if(maxLabel > pow(2, 8* sizeof(typename Accessor2::value_type)) - 1)
+    if(maxLabel > pow(2.0, (int) (8* sizeof(typename Accessor2::value_type)) - 1))
     {
       cout << "warning in ImMinMaxLabel: unappropriate output image value type." << endl;
       maxLabel = 1;

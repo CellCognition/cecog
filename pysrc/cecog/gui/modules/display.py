@@ -19,7 +19,8 @@ __all__ = []
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
-import os
+import os, \
+       zipfile
 from pdk.ordereddict import OrderedDict
 
 #-------------------------------------------------------------------------------
@@ -38,7 +39,7 @@ from pdk.datetimeutils import StopWatch
 # cecog imports:
 #
 from cecog.gui.modules.module import Module
-from cecog.gui.colorbox import ColorBox
+from cecog.gui.widgets.colorbox import ColorBox
 from cecog.traits.config import RESOURCE_PATH
 from cecog.util.palette import (NucMedPalette,
                                 ZeissPalette,
@@ -55,8 +56,7 @@ DEFAULT_COLORS_BY_NAME = {'rfp' : 'red',
                           'yfp' : 'yellow',
                           'cfp' : 'cyan',
                           }
-DEFAULT_LUT_COLORS = ['red', 'green', 'blue',
-                      'yellow', 'magenta', 'cyan', 'white']
+DEFAULT_LUT_COLORS = ['white', 'red', 'green', 'blue', 'yellow', 'magenta', 'cyan', ]
 
 COLOR_DEFINITIONS = {'red'    : '#FF0000',
                      'green'  : '#00FF00',
@@ -365,15 +365,20 @@ class EnhancementFrame(QFrame):
     def transform_image(self, name, image):
         s = self._display_settings[name]
         s.set_image_minmax(image)
-        #print s.maximum, s.minimum
-        image = numpy.require(image, numpy.float)
+
+        # FIXME: Just a workaround, the image comes with wrong strides
+        #        fixed in master
+        image2 = numpy.zeros(image.shape, dtype=numpy.float32, order='F')
+        image2[:] = image
+
         # add a small value in case max == min
-        image *= 255.0 / (s.maximum - s.minimum + 0.1)
-        image -= s.minimum
-        image[image > 255] = 255
-        image[image < 0] = 0
-        image = numpy.require(image, numpy.uint8)
-        return image
+        image2 *= 255.0 / (s.maximum - s.minimum + 0.1)
+        image2 -= s.minimum
+
+        image2 = image2.clip(0, 255)
+
+        image2 = numpy.require(image2, numpy.uint8)
+        return image2
 
 
 class ObjectsFrame(QFrame):
@@ -532,9 +537,12 @@ class DisplayModule(Module):
                                                   COLOR_DEFINITIONS[name])
             palettes[p.name] = p
         path_zeiss = os.path.join(RESOURCE_PATH, 'palettes', 'zeiss')
-        for filename in collect_files(path_zeiss, ['.lut'], absolute=True):
-            filename = os.path.abspath(filename)
-            p = ZeissPalette(filename)
+        for filename in collect_files(path_zeiss, ['.zip'], absolute=True):
+            with zipfile.ZipFile(filename, 'r') as f:
+                name = f.namelist()[0]
+                data = f.read(name)
+            name = os.path.splitext(name)[0]
+            p = ZeissPalette(name, data)
             palettes[p.name] = p
         for palette in palettes.values():
             # FIXME: not optimal, mixin required for Qt purposes

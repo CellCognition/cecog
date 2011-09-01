@@ -28,8 +28,7 @@ __all__ = ['ProcessingFrame']
 # cecog imports:
 #
 from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
-from cecog.gui.analyzer import (_BaseFrame,
-                                _ProcessorMixin,
+from cecog.gui.analyzer import (BaseProcessorFrame,
                                 AnalzyerThread,
                                 HmmThread,
                                 )
@@ -55,13 +54,12 @@ from cecog.analyzer.channel import (PrimaryChannel,
 #-------------------------------------------------------------------------------
 # classes:
 #
-class ProcessingFrame(_BaseFrame, _ProcessorMixin):
+class ProcessingFrame(BaseProcessorFrame):
 
     SECTION_NAME = SECTION_NAME_PROCESSING
 
     def __init__(self, settings, parent):
-        _BaseFrame.__init__(self, settings, parent)
-        _ProcessorMixin.__init__(self)
+        super(ProcessingFrame, self).__init__(settings, parent)
 
         self.register_control_button('process',
                                      [AnalzyerThread,
@@ -90,8 +88,8 @@ class ProcessingFrame(_BaseFrame, _ProcessorMixin):
         self._init_control()
 
     @classmethod
-    def get_special_settings(cls, settings):
-        settings = _ProcessorMixin.get_special_settings(settings)
+    def get_special_settings(cls, settings, has_timelapse=True):
+        settings = BaseProcessorFrame.get_special_settings(settings, has_timelapse)
 
         settings.set('General', 'rendering', {})
         settings.set('General', 'rendering_class', {})
@@ -152,11 +150,22 @@ class ProcessingFrame(_BaseFrame, _ProcessorMixin):
                 settings.set2('%s_classification' % prefix, False)
                 settings.set2('%s_errorcorrection' % prefix, False)
 
-        if settings.get('Output', 'events_export_gallery_images'):
-            settings.get('General', 'rendering').update({'primary' : {prim_id : {'raw': ('#FFFFFF', 1.0)}}})
-            for prefix in additional_prefixes:
-                if settings.get2('%s_processchannel' % prefix):
-                    sec_id = sec_ids[prefix]
-                    settings.get('General', 'rendering').update({prefix : {sec_id : {'raw': ('#FFFFFF', 1.0)}}})
+        if has_timelapse:
+            # generate raw images of selected channels (later used for gallery images)
+            if settings.get('Output', 'events_export_gallery_images'):
+                settings.get('General', 'rendering').update({'primary' : {prim_id : {'raw': ('#FFFFFF', 1.0)}}})
+                for prefix in additional_prefixes:
+                    if settings.get2('%s_processchannel' % prefix):
+                        sec_id = sec_ids[prefix]
+                        settings.get('General', 'rendering').update({prefix : {sec_id : {'raw': ('#FFFFFF', 1.0)}}})
+        else:
+            # disable some tracking related settings in case no time-lapse data is present
+            settings.set('Processing', 'tracking', False)
+            settings.set('Processing', 'tracking_synchronize_trajectories', False)
+            settings.set('Output', 'events_export_gallery_images', False)
+            settings.set('Output', 'events_export_all_features', False)
+            settings.set('Output', 'export_track_data', False)
 
+        print settings.get('General', 'rendering')
+        print settings.get('General', 'rendering_class')
         return settings

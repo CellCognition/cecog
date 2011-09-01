@@ -30,7 +30,7 @@ from PyQt4.Qt import *
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog.gui.analyzer import _BaseFrame
+from cecog.gui.analyzer import BaseFrame
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 
 #-------------------------------------------------------------------------------
@@ -46,7 +46,7 @@ from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 #-------------------------------------------------------------------------------
 # classes:
 #
-class GeneralFrame(_BaseFrame):
+class GeneralFrame(BaseFrame):
 
     SECTION_NAME = SECTION_NAME_GENERAL
 

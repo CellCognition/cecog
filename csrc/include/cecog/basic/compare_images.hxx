@@ -26,6 +26,94 @@
 namespace cecog
 {
 
+
+template<class LabIterator, class LabAccessor,
+     class DestIterator, class DestAccessor>
+void ImReduceLabelsToPoints(
+         LabIterator labUpperLeft, LabIterator labLowerRight, LabAccessor laba,
+         DestIterator destUpperLeft, DestAccessor desta,
+         typename DestAccessor::value_type value)
+{
+  vigra::Diff2D imSize = labLowerRight - labUpperLeft;
+  vigra::Diff2D o0(0,0);
+
+  typedef typename LabAccessor::value_type label_type;
+
+  // max of the label image
+  vigra::FindMinMax<label_type> minmax;
+  vigra::inspectImage(vigra::triple<LabIterator, LabIterator, LabAccessor>(labUpperLeft, labLowerRight, laba), minmax);
+
+  std::vector<bool> done_vec(minmax.max, false);
+
+  for(o0.y = 0; o0.y < imSize.y; ++o0.y)
+  {
+    for(o0.x = 0; o0.x < imSize.x; ++o0.x)
+    {
+      label_type label = laba(labUpperLeft, o0);
+
+      if( (label > 0) && (!done_vec[label])) {
+        //std::cout << "(" << o0.x << ", " << o0.y << ") --> " << value << std::endl;
+        desta.set(value, destUpperLeft, o0);
+        done_vec[label] = true;
+      }
+    }
+  }
+}
+
+template<class LabIterator, class LabAccessor,
+     class DestIterator, class DestAccessor>
+void ImReduceLabelsToPoints(
+    vigra::triple<LabIterator, LabIterator, LabAccessor> imgLab,
+    vigra::pair<DestIterator, DestAccessor> imgRes,
+    typename DestAccessor::value_type value)
+{
+  ImReduceLabelsToPoints(imgLab.first, imgLab.second, imgLab.third,
+        imgRes.first, imgRes.second,
+        value);
+}
+
+  template<class Iterator1, class Accessor1,
+       class Iterator2, class Accessor2,
+       class Iterator3, class Accessor3>
+  void ImOverlayBinaryImage(Iterator1 srcUpperLeft1, Iterator1 srcLowerRight1, Accessor1 srca1,
+           Iterator2 srcUpperLeft2, Accessor2 srca2,
+           Iterator3 destUpperLeft, Accessor3 desta,
+           typename Accessor3::value_type value)
+  {
+    vigra::Diff2D imSize = srcLowerRight1 - srcUpperLeft1;
+    vigra::Diff2D o0(0,0);
+
+    for(o0.y = 0; o0.y < imSize.y; ++o0.y)
+    {
+      for(o0.x = 0; o0.x < imSize.x; ++o0.x)
+      {
+        if(srca2(srcUpperLeft2, o0) != 0)
+        {
+          desta.set(value, destUpperLeft, o0);
+        }
+        else
+        {
+          desta.set(srca1(srcUpperLeft1, o0), destUpperLeft, o0);
+        }
+      }
+    }
+  }
+
+  template<class Iterator1, class Accessor1,
+       class Iterator2, class Accessor2,
+       class Iterator3, class Accessor3>
+  void ImOverlayBinaryImage(
+      vigra::triple<Iterator1, Iterator1, Accessor1> imgIn,
+      vigra::pair<Iterator2, Accessor2> imgBin,
+      vigra::pair<Iterator3, Accessor3> imgRes,
+      typename Accessor3::value_type value)
+  {
+      ImOverlayBinaryImage(imgIn.first, imgIn.second, imgIn.third,
+          imgBin.first, imgBin.second,
+          imgRes.first, imgRes.second,
+          value);
+  }
+
   template<class Iterator1, class Accessor1,
        class Iterator2, class Accessor2,
        class Iterator3, class Accessor3,

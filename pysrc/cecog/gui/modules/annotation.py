@@ -503,7 +503,7 @@ class AnnotationModule(Module):
             class_names.remove(class_name)
 
             if len(class_name_new) == 0:
-                warning(None, "Invalid class name",
+                warning(self, "Invalid class name",
                         info="The class name must not be empty!")
             elif (not class_name_new in class_names and
                   not class_label_new in class_labels):
@@ -543,7 +543,7 @@ class AnnotationModule(Module):
                 self._activate_objects_for_image(False)
                 self._activate_objects_for_image(True)
             else:
-                warning(None, "Class names and labels must be unique!",
+                warning(self, "Class names and labels must be unique!",
                         info="Class name '%s' or label '%s' already used." %\
                              (class_name_new, class_label_new))
 
@@ -558,7 +558,7 @@ class AnnotationModule(Module):
         class_labels = set(learner.lstClassLabels)
         class_names = set(learner.lstClassNames)
         if len(class_name_new) == 0:
-            warning(None, "Invalid class name",
+            warning(self, "Invalid class name",
                     info="The class name must not be empty!")
         elif (not class_name_new in class_names and
               not class_label_new in class_labels):
@@ -585,7 +585,7 @@ class AnnotationModule(Module):
             self._class_table.resizeColumnsToContents()
             self._class_table.setCurrentItem(item)
         else:
-            warning(None, "Class names and labels must be unique!",
+            warning(self, "Class names and labels must be unique!",
                     info="Class name '%s' or label '%s' already used." %\
                          (class_name_new, class_label_new))
 
@@ -595,7 +595,7 @@ class AnnotationModule(Module):
         '''
         class_name = self._current_class
         if (not class_name is None and
-            question(None, "Do you really want to remove class '%s'?" % \
+            question(self, "Do you really want to remove class '%s'?" % \
                      class_name,
                      info="All %d annotations will be lost." % \
                      self._annotations.get_count_for_class(class_name))):
@@ -640,19 +640,16 @@ class AnnotationModule(Module):
         return learner
 
     def _on_new_classifier(self):
-        if question(None, 'New classifier',
+        if question(self, 'New classifier',
                     'Are you sure to setup a new classifer?\nAll annotations '
                     'will be lost.'):
             self._learner = self._init_new_classifier()
 
     def _on_open_classifier(self):
-        dialog = QFileDialog(self)
-        dialog.setFileMode(QFileDialog.Directory)
         path = self._learner.get_env_path()
-        dialog.setDirectory(os.path.abspath(path))
-        if dialog.exec_():
-            path = str(dialog.selectedFiles()[0])
-            learner = self._load_classifier(path)
+        result = QFileDialog.getExistingDirectory(self, 'Open classifier directory', os.path.abspath(path))
+        if result:
+            learner = self._load_classifier(result)
             if not learner is None:
                 self._learner = learner
                 class_table = self._class_table
@@ -684,7 +681,7 @@ class AnnotationModule(Module):
                                                                     learner.dctClassNames,
                                                                     self._imagecontainer)
                 except:
-                    exception(None, "Problems loading annotation data...")
+                    exception(self, "Problems loading annotation data...")
                     self._learner = self._init_new_classifier()
                 else:
                     self._activate_objects_for_image(True)
@@ -694,23 +691,19 @@ class AnnotationModule(Module):
                     else:
                         self._current_class = None
 
-                    information(None, "Classifier successfully loaded",
+                    information(self, "Classifier successfully loaded",
                                 "Class definitions and annotations "
-                                "successfully loaded from '%s'." % path)
+                                "successfully loaded from '%s'." % result)
                 finally:
                     coord = self.browser.get_coordinate()
                     self._imagecontainer.set_plate(coord.plate)
 
     def _on_saveas_classifier(self):
         learner = self._learner
-        dialog = QFileDialog(self)
-        dialog.setFileMode(QFileDialog.Directory)
         path = learner.get_env_path()
-        dialog.setDirectory(os.path.abspath(path))
-        dialog.setConfirmOverwrite(True)
-        if dialog.exec_():
-            path = str(dialog.selectedFiles()[0])
-            if self._save_classifier(path):
+        result = QFileDialog.getExistingDirectory(self, 'Save classifier directory', os.path.abspath(path))
+        if result:
+            if self._save_classifier(result):
                 try:
                     path2 = learner.getPath(learner.ANNOTATIONS)
                     filenames = os.listdir(path2)
@@ -727,11 +720,11 @@ class AnnotationModule(Module):
                                                     learner.dctClassLabels,
                                                     self._imagecontainer)
                 except:
-                    exception(None, "Problems saving annotation data...")
+                    exception(self, "Problems saving annotation data...")
                 else:
-                    information(None, "Classifier successfully saved",
+                    information(self, "Classifier successfully saved",
                                 "Class definitions and annotations "
-                                "successfully saved to '%s'." % path)
+                                "successfully saved to '%s'." % result)
                 finally:
                     coord = self.browser.get_coordinate()
                     self._imagecontainer.set_plate(coord.plate)
@@ -901,7 +894,7 @@ class AnnotationModule(Module):
             for item2 in item.childItems():
                 scene.removeItem(item2)
         item.set_pen_color(color)
-        obj_id = item.data(0).toInt()[0]
+        obj_id = item.data(0)
         return obj_id
 
     def _on_coordinates_changed(self, coordinate):
@@ -924,7 +917,7 @@ class AnnotationModule(Module):
             try:
                 self.browser.set_coordinate(coordinate)
             except:
-                exception(None, "Selected coordinate was not found. "
+                exception(self, "Selected coordinate was not found. "
                                 "Make sure the data and annotation match and "
                                 "that the data was scanned/imported correctly.")
 
@@ -971,7 +964,7 @@ class AnnotationModule(Module):
         try:
             learner = BaseLearner(strEnvPath=path)
         except:
-            exception(None, 'Error on loading classifier')
+            exception(self, 'Error on loading classifier')
         else:
             result = learner.check()
             #if result['has_arff']:
@@ -989,7 +982,7 @@ class AnnotationModule(Module):
             learner.initEnv()
             learner.saveDefinition()
         except:
-            exception(None, 'Error on saving classifier')
+            exception(self, 'Error on saving classifier')
             success = False
         return success
 

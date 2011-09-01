@@ -42,8 +42,7 @@ from cecog.traits.config import (ANALYZER_CONFIG,
                                  map_path_to_os,
                                  is_path_mappable,
                                  )
-from cecog.gui.analyzer import (_BaseFrame,
-                                _ProcessorMixin,
+from cecog.gui.analyzer import (BaseFrame,
                                 AnalzyerThread,
                                 HmmThread,
                                 )
@@ -56,6 +55,7 @@ from cecog.util.util import OS_LINUX
 from cecog.gui.util import (exception,
                             information,
                             warning,
+                            waitingProgressDialog,
                             )
 from cecog import (JOB_CONTROL_RESUME,
                    JOB_CONTROL_SUSPEND,
@@ -175,13 +175,13 @@ class ClusterDisplay(QGroupBox):
                                    QSizePolicy.Expanding|QSizePolicy.Maximum),
                        10, 0, 1, 5)
 
-    @pyqtSlot('QString')
     def _on_jobid_entered(self, txt):
         print txt
         self._jobid = str(txt)
 
     @pyqtSlot()
     def _on_submit_job(self):
+        self._submit_settings.set_section(SECTION_NAME_GENERAL)
         if not self._submit_settings.get2('constrain_positions'):
             # FIXME:
             imagecontainer = qApp._main_window._imagecontainer
@@ -193,20 +193,22 @@ class ClusterDisplay(QGroupBox):
             self._submit_settings.set2('positions', ','.join(positions))
             nr_items = len(positions)
         else:
-            positions = self._submit_settings.get(SECTION_NAME_GENERAL, 'positions')
+            positions = self._submit_settings.get2('positions')
             nr_items = len(positions.split(','))
 
         # FIXME: we need to get the current value for 'position_granularity'
         settings_dummy = ProcessingFrame.get_special_settings(self._settings)
         position_granularity = settings_dummy.get(SECTION_NAME_CLUSTER, 'position_granularity')
 
-        path_out = self._submit_settings.get(SECTION_NAME_GENERAL, 'pathout')
+        path_out = self._submit_settings.get2('pathout')
         emails = str(self._txt_mail.text()).split(',')
         try:
-            jobid = self._service.submit_job('cecog_batch',
-                                             self._submit_settings.to_string(),
-                                             path_out, emails, nr_items,
-                                             position_granularity, VERSION)
+            dlg = waitingProgressDialog('Please wait until the job has been submitted...', self)
+            dlg.setTarget(self._service.submit_job,
+                          'cecog_batch', self._submit_settings.to_string(), path_out, emails, nr_items,
+                          position_granularity, VERSION)
+            dlg.exec_()
+            jobid = dlg.getTargetResult()
         except:
             exception(self, 'Error on job submission')
         else:
@@ -218,14 +220,16 @@ class ClusterDisplay(QGroupBox):
                 self._jobid = str(jobid)
                 main_jobid = jobid
             self._txt_jobid.setText(self._jobid)
-            self._update_job_status(show=False)
-            information(None, 'Job submitted successfully',
+            self._update_job_status()
+            information(self, 'Job submitted successfully',
                         "Job successfully submitted to the cluster.\nJob ID: %s, items: %d" % (main_jobid, nr_items))
 
     @pyqtSlot()
     def _on_terminate_job(self):
         try:
-            self._service.control_job(self._jobid, JOB_CONTROL_TERMINATE)
+            dlg = waitingProgressDialog("Please wait until the job has been terminated...", self)
+            dlg.setTarget(self._service.control_job, self._jobid, JOB_CONTROL_TERMINATE)
+            dlg.exec_()
         except:
             exception(self, 'Error on job termination')
         else:
@@ -237,7 +241,9 @@ class ClusterDisplay(QGroupBox):
     @pyqtSlot()
     def _on_toggle_job(self):
         try:
-            self._service.control_job(self._jobid, self._toggle_state)
+            dlg = waitingProgressDialog("Please wait until the job has been suspended/resumed...", self)
+            dlg.setTarget(self._service.control_job, self._jobid, self._toggle_state)
+            dlg.exec_()
         except:
             self._toggle_state = JOB_CONTROL_SUSPEND
             self._btn_toogle.setChecked(False)
@@ -255,23 +261,26 @@ class ClusterDisplay(QGroupBox):
         txt = self._update_job_status()
         information(self, 'Cluster update', "Message: '%s'" % txt)
 
-    def _update_job_status(self, show):
+    def _update_job_status(self):
         try:
-            txt = self._service.get_job_status(self._jobid)
+            dlg = waitingProgressDialog('Please wait for the cluster update...', self)
+            dlg.setTarget(self._service.get_job_status, self._jobid)
+            dlg.exec_()
+            txt = dlg.getTargetResult()
         except:
             exception(self, 'Error on retrieve job status')
         else:
             self._label_jobstatus.setText(txt)
-            if show:
-                information(None, 'Cluster status update', txt)
         return txt
 
     def _connect(self):
         success = False
         try:
             client = RemotingService(self._host_url)
-            self._service = client.getService('clustercontrol')
-            print self._service.get_service_info()
+            dlg = waitingProgressDialog('Please wait for the cluster...', self)
+            dlg.setTarget(client.getService, 'clustercontrol')
+            dlg.exec_()
+            self._service = dlg.getTargetResult()
         except:
             exception(self, 'Error on connecting to cluster control service')
         else:
@@ -311,15 +320,16 @@ class ClusterDisplay(QGroupBox):
                 results.append(info)
         return results
 
-    def update_display(self):
+    def update_display(self, is_active):
         if self._connect():
             self._can_submit = True
-            self._submit_settings = \
-                ProcessingFrame.get_special_settings(self._settings)
 
-            self._submit_settings.set_section(SECTION_NAME_GENERAL)
-            self._submit_settings.set2('createimagecontainer', False)
-            self._submit_settings.set2('preferimagecontainer', False)
+            imagecontainer = qApp._main_window._imagecontainer
+            if imagecontainer is None:
+                self._submit_settings = ProcessingFrame.get_special_settings(self._settings)
+            else:
+                self._submit_settings = ProcessingFrame.get_special_settings(self._settings,
+                                                                             imagecontainer.has_timelapse)
 
             self._label_hosturl.setText(self._host_url)
             self._label_status.setText(self._service.get_service_info())
@@ -342,10 +352,10 @@ class ClusterDisplay(QGroupBox):
                 self._can_submit &= status
             self._table_info.resizeColumnsToContents()
             self._table_info.resizeRowsToContents()
-            self._btn_submit.setEnabled(self._can_submit)
-            self._btn_terminate.setEnabled(True)
-            self._btn_toogle.setEnabled(True)
-            self._btn_update.setEnabled(True)
+            self._btn_submit.setEnabled(self._can_submit and is_active)
+            self._btn_terminate.setEnabled(is_active)
+            self._btn_toogle.setEnabled(is_active)
+            self._btn_update.setEnabled(is_active)
         else:
             self._btn_submit.setEnabled(False)
             self._btn_terminate.setEnabled(False)
@@ -353,19 +363,17 @@ class ClusterDisplay(QGroupBox):
             self._btn_update.setEnabled(False)
 
 
-class ClusterFrame(_BaseFrame, _ProcessorMixin):
+class ClusterFrame(BaseFrame):
 
     SECTION_NAME = SECTION_NAME_CLUSTER
 
     def __init__(self, settings, parent):
-        _BaseFrame.__init__(self, settings, parent)
-        _ProcessorMixin.__init__(self)
+        super(ClusterFrame, self).__init__(settings, parent)
 
         self._cluster_display = self._add_frame()
         self.add_group(None,
                        [('position_granularity', (0,0,1,1)),
                         ], label='Cluster Settings')
-
 
     def _add_frame(self):
         frame = self._get_frame()
@@ -376,4 +384,4 @@ class ClusterFrame(_BaseFrame, _ProcessorMixin):
         return cluster_display
 
     def page_changed(self):
-        self._cluster_display.update_display()
+        self._cluster_display.update_display(self._is_active)

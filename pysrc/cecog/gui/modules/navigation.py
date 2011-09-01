@@ -36,6 +36,7 @@ import numpy
 from cecog.gui.modules.module import Module
 from cecog.util.util import yesno
 from cecog.io.imagecontainer import Coordinate
+from cecog.gui.util import waitingProgressDialog
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -345,15 +346,9 @@ class NavigationModule(Module):
         coordinate_old = self.browser.get_coordinate()
         plate = coordinate_new.plate
 
-        progress = QProgressDialog(None, Qt.Popup)
-        progress.setWindowModality(Qt.WindowModal)
-        progress.setLabelText("Please wait until the plate is loaded.")
-        progress.setCancelButton(None)
-        progress.setMinimumDuration(1000)
-        progress.setRange(0,0)
-        progress.show()
-        self._imagecontainer.set_plate(plate)
-        progress.reset()
+        dlg = waitingProgressDialog("Please wait until the plate has been loaded...", self)
+        dlg.setTarget(self._imagecontainer.set_plate, plate)
+        dlg.exec_()
 
         meta_data = self._imagecontainer.get_meta_data()
         if set_current:

@@ -275,6 +275,74 @@ namespace cecog
     OUT noVal_;
   };
 
+  template <class VALUETYPE>
+  class FindSquaredSum
+  {
+    public:
+    //typedef VALUETYPE argument_type;
+    //typedef typename NumericTraits<VALUETYPE>::Promote result_type;
+
+    //FindSquaredSum() : sum_(NumericTraits<result_type>::zero()) {}
+    FindSquaredSum() : sum_(0.0) {}
+
+    void reset() {
+      sum_ = 0.0; //NumericTraits<result_type>::zero();
+    }
+
+    void operator()(VALUETYPE const & v) {
+      sum_ += (double) (v * v);
+    }
+
+      /* void operator()(FindSquaredSum const & v)
+      {
+          sum_   += v.sum_;
+      } */
+
+    double sum() const {
+      return sum_;
+    }
+
+    double operator()() const {
+      return sum_;
+    }
+
+    double sum_;
+  };
+
+  template <class VALUETYPE>
+  class FindAbsSum
+  {
+    public:
+    //typedef VALUETYPE argument_type;
+    //typedef typename NumericTraits<VALUETYPE>::Promote result_type;
+
+    //FindSquaredSum() : sum_(NumericTraits<result_type>::zero()) {}
+    FindAbsSum() : sum_(0.0) {}
+
+    void reset() {
+      sum_ = 0.0; //NumericTraits<result_type>::zero();
+    }
+
+    void operator()(VALUETYPE const & v) {
+      sum_ += (double) abs(v);
+      //cout << "Absolute Sum :"<< (double)v << " " << (double)abs(v) << " " << sum_ << std::endl;
+    }
+
+      /* void operator()(FindSquaredSum const & v)
+      {
+          sum_   += v.sum_;
+      } */
+
+    double sum() const {
+      return sum_;
+    }
+
+    double operator()() const {
+      return sum_;
+    }
+
+    double sum_;
+  };
 
 };
 
