@@ -477,7 +477,7 @@ class HmmThread(_ProcessingThread):
                 if self._abort:
                     break
 
-        if self._settings.get2('show_html'):
+        if self._settings.get2('show_html') and not self._abort:
             QDesktopServices.openUrl(QUrl('file://'+os.path.join(path_out_hmm_region, 'index.html'), QUrl.TolerantMode))
 
 

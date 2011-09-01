@@ -34,8 +34,8 @@ read.screen <- function(dir,filenameLayout,regionName,graph,fuseClasses=NULL,sin
             pos.name = "Position"
         pos = screen$layout[i, pos.name]
         #print(paste(pos, pos.name))
-        if (is.numeric(pos))
-            str.pos <- sprintf("%04d", as.numeric(pos))
+        if (is.integer(pos))
+            str.pos <- sprintf("%04d", as.integer(pos))
         else
             str.pos = pos
         #path = paste(str.pos, "_tracking/_features_events", sep="/")
