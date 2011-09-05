@@ -14,7 +14,10 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = ['VERSION']
+__all__ = ['VERSION',
+           'VERSION_NUM',
+           'PLUGIN_MANAGERS',
+           ]
 
 #-------------------------------------------------------------------------------
 # standard library imports:
@@ -23,8 +26,8 @@ __all__ = ['VERSION']
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog.traits.config import (init_constants,
-                                 init_application_support_path)
+from cecog.config import (init_constants,
+                          init_application_support_path)
 #-------------------------------------------------------------------------------
 # constants:
 #
@@ -37,5 +40,8 @@ JOB_CONTROL_SUSPEND = 'Suspend'
 JOB_CONTROL_RESUME = 'Resume'
 JOB_CONTROL_TERMINATE = 'Terminate'
 
+PLUGIN_MANAGERS = []
+
 init_application_support_path()
 init_constants()
+

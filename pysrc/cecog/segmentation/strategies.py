@@ -29,7 +29,7 @@ from pdk.ordereddict import OrderedDict
 # cecog module imports:
 #
 from cecog import ccore
-from cecog.traits.traits import (BooleanTrait,
+from cecog.gui.guitraits import (BooleanTrait,
                                  IntTrait,
                                  FloatTrait,
                                  )
@@ -141,18 +141,17 @@ class ParamManager(object):
     GROUP_NAME = 'plugin'
 
     def __init__(self, plugin_cls, trait_name_template, settings, section):
+        self._settings = settings
+        self._section = section
         self._lookup = {}
         for param_name, trait in plugin_cls.PARAMS:
             trait_name = trait_name_template % (plugin_cls.NAME, param_name)
             self._lookup[param_name] = trait_name
             settings.register_trait(section, self.GROUP_NAME, trait_name, trait)
-        self._settings = settings
-        self._section = section
 
     def __del__(self):
         for trait_name in self._lookup.itervalues():
             self._settings.unregister_trait(self._section, self.GROUP_NAME, trait_name)
-            self._settings.remove_option(self._section, trait_name)
 
     def has_param(self, param_name):
         return param_name in self._lookup

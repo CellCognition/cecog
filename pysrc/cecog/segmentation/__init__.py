@@ -15,6 +15,7 @@ __all__ = ['PLUGIN_MANAGERS',
            'TERTIARY_PLUGIN_MANAGER',
            ]
 
+from cecog import PLUGIN_MANAGERS
 from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
 
 from cecog.segmentation.strategies import (PluginManager,
@@ -45,4 +46,4 @@ TERTIARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginRim)
 TERTIARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginPropagate)
 TERTIARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginConstrainedWatershed)
 
-PLUGIN_MANAGERS = [PRIMARY_SEGMENTATION_MANAGER, SECONDARY_SEGMENTATION_MANAGER, TERTIARY_SEGMENTATION_MANAGER]
+PLUGIN_MANAGERS.extend([PRIMARY_SEGMENTATION_MANAGER, SECONDARY_SEGMENTATION_MANAGER, TERTIARY_SEGMENTATION_MANAGER])

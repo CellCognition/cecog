@@ -37,11 +37,11 @@ from pyamf.remoting.client import RemotingService
 #
 from cecog.traits.analyzer.cluster import SECTION_NAME_CLUSTER
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
-from cecog.traits.config import (ANALYZER_CONFIG,
-                                 PATH_MAPPER,
-                                 map_path_to_os,
-                                 is_path_mappable,
-                                 )
+from cecog.config import (ANALYZER_CONFIG,
+                          PATH_MAPPER,
+                          map_path_to_os,
+                          is_path_mappable,
+                          )
 from cecog.gui.analyzer import (BaseFrame,
                                 AnalzyerThread,
                                 HmmThread,

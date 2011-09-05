@@ -52,9 +52,6 @@ import numpy
 from cecog.analyzer.object import (ImageObject,
                                    ObjectHolder,
                                    )
-from cecog.segmentation.strategies import (PrimarySegmentation,
-                                          SecondarySegmentation,
-                                          )
 from cecog import ccore
 from cecog.segmentation import (PRIMARY_SEGMENTATION_MANAGER,
                                 SECONDARY_SEGMENTATION_MANAGER,

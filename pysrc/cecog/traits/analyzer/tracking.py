@@ -27,7 +27,7 @@ __all__ = ['SectionTracking']
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog.traits.config import _Section
+from cecog.traits.settings import _Section
 from cecog.gui.guitraits import (StringTrait,
                                  IntTrait,
                                  FloatTrait,

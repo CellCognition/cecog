@@ -50,9 +50,9 @@ from cecog.analyzer import (R_LIBRARIES,
                             TRACKING_DURATION_UNITS_DEFAULT,
                             )
 from cecog.io.imagecontainer import ImageContainer
-from cecog.traits.config import (ANALYZER_CONFIG,
-                                 APPLICATION_SUPPORT_PATH,
-                                 )
+from cecog.config import (ANALYZER_CONFIG,
+                          APPLICATION_SUPPORT_PATH,
+                          )
 from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.gui.config import GuiConfigSettings
 from cecog.gui.analyzer.general import (GeneralFrame,

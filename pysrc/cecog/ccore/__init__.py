@@ -17,7 +17,7 @@ __source__ = '$URL$'
 import os
 import sys
 
-from cecog.traits.config import FONT12_FILENAME
+from cecog.config import FONT12_FILENAME
 
 # import all wrapped C++ classes and functions and make them part of this package
 from _cecog import *

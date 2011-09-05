@@ -28,7 +28,7 @@ import copy
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog.traits.config import ConfigSettings
+from cecog.traits.settings import ConfigSettings
 #-------------------------------------------------------------------------------
 # constants:
 #

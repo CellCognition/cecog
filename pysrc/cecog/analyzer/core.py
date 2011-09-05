@@ -54,7 +54,7 @@ from cecog.io.imagecontainer import (ImageContainer,
                                      )
 from cecog.learning.collector import CellCounterReader, CellCounterReaderXML
 from cecog.learning.learning import CommonObjectLearner, CommonClassPredictor
-from cecog.traits.config import NAMING_SCHEMAS
+from cecog.config import NAMING_SCHEMAS
 
 from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACTION
 from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING

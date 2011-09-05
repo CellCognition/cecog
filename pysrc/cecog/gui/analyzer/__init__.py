@@ -78,7 +78,7 @@ from cecog.analyzer.channel import (PrimaryChannel,
                                     )
 from cecog.analyzer.core import AnalyzerCore, SECONDARY_REGIONS
 from cecog.io.imagecontainer import PIXEL_TYPES
-from cecog.traits.config import R_SOURCE_PATH
+from cecog.config import R_SOURCE_PATH
 from cecog import ccore
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
 from cecog.analyzer.gallery import compose_galleries

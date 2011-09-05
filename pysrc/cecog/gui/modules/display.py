@@ -41,7 +41,7 @@ from pdk.datetimeutils import StopWatch
 #
 from cecog.gui.modules.module import Module
 from cecog.gui.widgets.colorbox import ColorBox
-from cecog.traits.config import RESOURCE_PATH
+from cecog.config import RESOURCE_PATH
 from cecog.util.palette import (NucMedPalette,
                                 ZeissPalette,
                                 SingleColorPalette,
