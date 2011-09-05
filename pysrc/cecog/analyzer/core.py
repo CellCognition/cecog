@@ -809,112 +809,27 @@ class PositionAnalyzer(object):
                                     dctFeatureParameters['haralick_distances'] = (1, 2, 4, 8)
 
                         if channel_section == self.PRIMARY_CHANNEL:
-                            lstPostprocessingFeatureCategories = []
-                            lstPostprocessingConditions = []
-                            bPostProcessing = False
-                            if self.oSettings.get2('primary_postprocessing_roisize_min') > -1:
-                                lstPostprocessingFeatureCategories.append('roisize')
-                                lstPostprocessingConditions.append('roisize >= %d' % self.oSettings.get2('primary_postprocessing_roisize_min'))
-                            if self.oSettings.get2('primary_postprocessing_roisize_max') > -1:
-                                lstPostprocessingFeatureCategories.append('roisize')
-                                lstPostprocessingConditions.append('roisize <= %d' % self.oSettings.get2('primary_postprocessing_roisize_max'))
-                            if self.oSettings.get2('primary_postprocessing_intensity_min') > -1:
-                                lstPostprocessingFeatureCategories.append('normbase2')
-                                lstPostprocessingConditions.append('n2_avg >= %d' % self.oSettings.get2('primary_postprocessing_intensity_min'))
-                            if self.oSettings.get2('primary_postprocessing_intensity_max') > -1:
-                                lstPostprocessingFeatureCategories.append('normbase2')
-                                lstPostprocessingConditions.append('n2_avg <= %d' % self.oSettings.get2('primary_postprocessing_intensity_max'))
-
-                            lstPostprocessingFeatureCategories = unique(lstPostprocessingFeatureCategories)
-                            if len(lstPostprocessingFeatureCategories) > 0 and \
-                                self.oSettings.get2('primary_postprocessing'):
-                                bPostProcessing = True
-                            strPostprocessingConditions = ' and '.join(lstPostprocessingConditions)
-
-                            if self.oSettings.get2('primary_lat2'):
-                                iLatWindowSize2 = self.oSettings.get2('primary_latwindowsize2')
-                                iLatLimit2 = self.oSettings.get2('primary_latlimit2')
-                            else:
-                                iLatWindowSize2 = None
-                                iLatLimit2 = None
                             channel_registration = (0,0)
-                            params = dict(oZSliceOrProjection = projection_info,
-                                          channelRegistration=channel_registration,
-                                          new_image_size=new_image_size,
-                                          registration_start=registration_start,
 
-                                          fNormalizeMin = self.oSettings.get2('primary_normalizemin'),
-                                          fNormalizeMax = self.oSettings.get2('primary_normalizemax'),
-                                          iMedianRadius = self.oSettings.get2('primary_medianradius'),
-                                          iLatWindowSize = self.oSettings.get2('primary_latwindowsize'),
-                                          iLatLimit = self.oSettings.get2('primary_latlimit'),
-                                          iLatWindowSize2 = iLatWindowSize2,
-                                          iLatLimit2 = iLatLimit2,
-                                          bDoShapeWatershed = self.oSettings.get2('primary_shapewatershed'),
-                                          iGaussSizeShape = self.oSettings.get2('primary_shapewatershed_gausssize'),
-                                          iMaximaSizeShape = self.oSettings.get2('primary_shapewatershed_maximasize'),
-                                          bDoIntensityWatershed = self.oSettings.get2('primary_intensitywatershed'),
-                                          iGaussSizeIntensity = self.oSettings.get2('primary_intensitywatershed_gausssize'),
-                                          iMaximaSizeIntensity = self.oSettings.get2('primary_intensitywatershed_maximasize'),
-                                          # FIXME:
-                                          lstAreaSelection = REGION_NAMES_PRIMARY,
-                                          # FIXME:
-                                          iMinMergeSize = self.oSettings.get2('primary_shapewatershed_minmergesize'),
-                                          bRemoveBorderObjects = self.oSettings.get2('primary_removeborderobjects'),
-                                          hole_filling = self.oSettings.get2('primary_holefilling'),
-                                          bPostProcessing = bPostProcessing,
-                                          lstPostprocessingFeatureCategories = lstPostprocessingFeatureCategories,
-                                          strPostprocessingConditions = strPostprocessingConditions,
-                                          bPostProcessDeleteObjects = True,
-                                          lstFeatureCategories = lstFeatureCategories,
-                                          dctFeatureParameters = dctFeatureParameters,
-                                          )
                         elif channel_section in [self.SECONDARY_CHANNEL,
                                                  self.TERTIARY_CHANNEL]:
                             prefix = cls.PREFIX
-                            if channel_section == self.SECONDARY_CHANNEL:
-                                regions_lookup = SECONDARY_REGIONS
-                            else:
-                                regions_lookup = TERTIARY_REGIONS
-                            regions = [v for k,v in regions_lookup.iteritems()
-                                       if self.oSettings.get2(k)]
                             channel_registration = (self.oSettings.get2('%s_channelregistration_x' % prefix),
                                                     self.oSettings.get2('%s_channelregistration_y' % prefix))
-                            params = dict(oZSliceOrProjection = projection_info,
-                                          channelRegistration=channel_registration,
-                                          new_image_size=new_image_size,
-                                          registration_start=registration_start,
-
-                                          fNormalizeMin = self.oSettings.get2('%s_normalizemin' % prefix),
-                                          fNormalizeMax = self.oSettings.get2('%s_normalizemax' % prefix),
-                                          #iMedianRadius = self.oSettings.get2('medianradius'),
-                                          iExpansionSizeExpanded = self.oSettings.get2('%s_regions_expanded_expansionsize' % prefix),
-                                          iShrinkingSizeInside = self.oSettings.get2('%s_regions_inside_shrinkingsize' % prefix),
-                                          iExpansionSizeOutside = self.oSettings.get2('%s_regions_outside_expansionsize' % prefix),
-                                          iExpansionSeparationSizeOutside = self.oSettings.get2('%s_regions_outside_separationsize' % prefix),
-                                          iExpansionSizeRim = self.oSettings.get2('%s_regions_rim_expansionsize' % prefix),
-                                          iShrinkingSizeRim = self.oSettings.get2('%s_regions_rim_shrinkingsize' % prefix),
-
-                                          fPropagateLambda = self.oSettings.get2('%s_regions_propagate_lambda' % prefix),
-                                          iPropagateDeltaWidth = self.oSettings.get2('%s_regions_propagate_deltawidth' % prefix),
-
-                                          iConstrainedWatershedGaussFilterSize = self.oSettings.get2('%s_regions_constrained_watershed_gauss_filter_size' % prefix),
-
-                                          bPresegmentation = self.oSettings.get2('%s_presegmentation' % prefix),
-                                          iPresegmentationMedianRadius = self.oSettings.get2('%s_presegmentation_medianradius' % prefix),
-                                          fPresegmentationAlpha = self.oSettings.get2('%s_presegmentation_alpha' % prefix),
-
-                                          # FIXME
-                                          fExpansionCostThreshold = 1.5,
-                                          lstAreaSelection = regions,
-                                          lstFeatureCategories = lstFeatureCategories,
-                                          dctFeatureParameters = dctFeatureParameters,
-                                          )
 
                         channel = cls(strChannelId=channel_id,
-                                      bDebugMode=debug_mode,
-                                      strPathOutDebug=self.strPathOutPositionDebug,
-                                      **params)
+                                      oZSliceOrProjection = projection_info,
+
+                                      channelRegistration = channel_registration,
+                                      new_image_size = new_image_size,
+                                      registration_start = registration_start,
+
+                                      fNormalizeMin = self.oSettings.get2('%s_normalizemin' % prefix),
+                                      fNormalizeMax = self.oSettings.get2('%s_normalizemax' % prefix),
+
+                                      lstFeatureCategories = lstFeatureCategories,
+                                      dctFeatureParameters = dctFeatureParameters,
+                                      )
 
                         # loop over the z-slices
                         for meta_image in zslice_images:

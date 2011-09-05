@@ -168,51 +168,7 @@ class SectionObjectdetection(_Section):
             IntTrait(0, -99999, 99999, label='Shift Y')),
        ]),
 
-      ('%s_segmentation' % prefix,
-       [('%s_presegmentation' % prefix,
-            BooleanTrait(False, label='Pre-segmentation')),
-        ('%s_presegmentation_medianradius' % prefix,
-            IntTrait(1, 0, 1000, label='Median radius')),
-        ('%s_presegmentation_alpha' % prefix,
-            FloatTrait(1.0, 0, 4000, label='Otsu factor', digits=2)),
-
-
-        ('%s_regions_expanded' % prefix,
-            BooleanTrait(False, label='Expanded')),
-        ('%s_regions_expanded_expansionsize' % prefix,
-            IntTrait(0, 0, 4000, label='Expansion size')),
-
-        ('%s_regions_inside' % prefix,
-            BooleanTrait(True, label='Inside')),
-        ('%s_regions_inside_shrinkingsize' % prefix,
-            IntTrait(0, 0, 4000, label='Shrinking size')),
-
-        ('%s_regions_outside' % prefix,
-            BooleanTrait(False, label='Outside')),
-        ('%s_regions_outside_expansionsize' % prefix,
-            IntTrait(0, 0, 4000, label='Expansion size')),
-        ('%s_regions_outside_separationsize' % prefix,
-            IntTrait(0, 0, 4000, label='Separation size')),
-
-        ('%s_regions_rim' % prefix,
-            BooleanTrait(False, label='Rim')),
-        ('%s_regions_rim_expansionsize' % prefix,
-            IntTrait(0, 0, 4000, label='Expansion size')),
-        ('%s_regions_rim_shrinkingsize' % prefix,
-            IntTrait(0, 0, 4000, label='Shrinking size')),
-
-        ('%s_regions_propagate' % prefix,
-            BooleanTrait(False, label='Propagate')),
-        ('%s_regions_propagate_lambda' % prefix,
-            FloatTrait(0.05, 0, 4000, label='Lambda', digits=2)),
-        ('%s_regions_propagate_deltawidth' % prefix,
-            IntTrait(1, 0, 4000, label='Delta width')),
-
-        ('%s_regions_constrained_watershed' % prefix,
-            BooleanTrait(False, label='Constrained watershed')),
-        ('%s_regions_constrained_watershed_gauss_filter_size' % prefix,
-            IntTrait(2, 1, 4, label='Gauss filter size')),
-       ])]
+       ]
       for name, prefix in [('Secondary', 'secondary'),
                            ('Tertiary', 'tertiary')
                            ]]

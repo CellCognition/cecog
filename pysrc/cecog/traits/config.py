@@ -55,6 +55,8 @@ from cecog.util.util import (read_table,
 from cecog.util.mapping import map_path_to_os as _map_path_to_os
 from cecog.traits.traits import StringTrait
 
+from cecog.segmentation import PLUGIN_MANAGERS
+
 #-------------------------------------------------------------------------------
 # constants:
 #
@@ -182,6 +184,14 @@ class ConfigSettings(RawConfigParser):
     def copy(self):
         return copy.deepcopy(self)
 
+    def register_trait(self, section_name, group_name, trait_name, trait):
+        section = self._section_registry.get_section(section_name)
+        section.register_trait(group_name, trait_name, trait)
+
+    def unregister_trait(self, section_name, group_name, trait_name):
+        section = self._section_registry.get_section(section_name)
+        section.unregister_trait(group_name, trait_name)
+
     def set_section(self, section_name):
         if self.has_section(section_name):
             self._current_section = section_name
@@ -231,15 +241,19 @@ class ConfigSettings(RawConfigParser):
                         # convert values according to traits
                         value = self.get_value(section_name, option_name)
                         self.set(section_name, option_name, value)
-                    else:
-                        print("Warning: option '%s' in section '%s' is not "
-                              "defined and will be deleted" %\
-                              (option_name, section_name))
-                        self.remove_option(section_name, option_name)
+#                    else:
+#                        print("Warning: option '%s' in section '%s' is not "
+#                              "defined and will be deleted" %\
+#                              (option_name, section_name))
+#                        self.remove_option(section_name, option_name)
             else:
                 print("Warning: section '%s' is not defined and will be "
                       "deleted" % section_name)
                 self.remove_section(section_name)
+
+        for plugin_manager in PLUGIN_MANAGERS:
+            plugin_manager.init_from_settings(self)
+
         return result
 
     def to_string(self):
@@ -306,6 +320,9 @@ class TraitGroup(object):
     def register_trait(self, name, trait):
         self._registry[name] = trait
 
+    def unregister_trait(self, name):
+        del self._registry[name]
+
     def get_trait(self, name):
         return self._registry[name]
 
@@ -322,16 +339,27 @@ class _Section(object):
         self._registry = OrderedDict()
         self._traitname_grpname = OrderedDict()
 
-        for grp_name, grp_items in self.OPTIONS:
-            grp = TraitGroup(grp_name)
-            self._registry[grp_name] = grp
+        for group_name, grp_items in self.OPTIONS:
+            grp = TraitGroup(group_name)
+            self._registry[group_name] = grp
             for trait_name, trait in grp_items:
                 trait_name = trait_name.lower()
-                grp.register_trait(trait_name, trait)
-                self._traitname_grpname[trait_name] = grp_name
+                self.register_trait(group_name, trait_name, trait)
 
     def get_group(self, name):
         return self._registry[name]
+
+    def register_trait(self, group_name, trait_name, trait):
+        if not group_name in self._registry:
+            self._registry[group_name] = TraitGroup(group_name)
+        grp = self._registry[group_name]
+        self._traitname_grpname[trait_name] = group_name
+        grp.register_trait(trait_name, trait)
+
+    def unregister_trait(self, group_name, trait_name):
+        grp = self._registry[group_name]
+        del self._traitname_grpname[trait_name]
+        grp.unregister_trait(trait_name)
 
     def get_group_names(self):
         return self._registry.keys()

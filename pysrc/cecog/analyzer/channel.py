@@ -56,6 +56,10 @@ from cecog.segmentation.strategies import (PrimarySegmentation,
                                           SecondarySegmentation,
                                           )
 from cecog import ccore
+from cecog.segmentation import (PRIMARY_SEGMENTATION_MANAGER,
+                                SECONDARY_SEGMENTATION_MANAGER,
+                                TERTIARY_SEGMENTATION_MANAGER,
+                                )
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -74,6 +78,8 @@ class _Channel(PropertyManager):
 
     RANK = None
 
+    SEGMENTATION = None
+
     PROPERTIES = \
         dict(strChannelId =
                  StringProperty(None,
@@ -90,28 +96,12 @@ class _Channel(PropertyManager):
              registration_start = TupleProperty(None),
              new_image_size = TupleProperty(None),
 
-             strChannelColor =
-                 StringProperty('#FFFFFF'),
-             iMedianRadius =
-                 IntProperty(0,
-                             doc='strength of median-filtering'),
-
              strImageOutCompression =
                  StringProperty('80'),
              strPathOutDebug =
                  StringProperty(None),
-             bDebugMode =
-                 BooleanProperty(False),
 
-             bDoClassification =
-                 BooleanProperty(False,
-                                 doc=''),
-             strClassificationEnv =
-                 StringProperty('',
-                                doc=''),
-             strClassificationModel =
-                 StringProperty('',
-                                doc=''),
+
              lstFeatureCategories =
                  ListProperty(None,
                               doc=''),
@@ -121,41 +111,11 @@ class _Channel(PropertyManager):
              lstFeatureNames =
                  ListProperty(None,
                               doc=''),
-             lstAreaSelection =
-                 ListProperty(None,
-                              is_mandatory=True),
-
-             dctAreaRendering =
-                 DictionaryProperty(None,
-                                    doc=''),
-
-             bPostProcessing =
-                 BooleanProperty(True,
-                                 doc='post-processing: filter objects by size, '
-                                     'shape, intensity, etc.'),
-             lstPostprocessingFeatureCategories =
-                 ListProperty(None,
-                              doc=''),
-             strPostprocessingConditions =
-                 StringProperty('roisize > 50',
-                                doc=''),
-             bPostProcessDeleteObjects =
-                 BooleanProperty(True,
-                                 doc=''),
-
-             tplScale =
-                TupleProperty(None, doc=''),
-
-             tplCropRegion =
-                TupleProperty(None, doc=''),
 
 
              bFlatfieldCorrection =
                  BooleanProperty(False,
                                  doc=''),
-             strImageType =
-                 StringProperty('UInt8',
-                                doc=''),
              strBackgroundImagePath =
                  StringProperty('',
                                 doc=''),
@@ -275,33 +235,14 @@ class _Channel(PropertyManager):
             meta_image = self._lstZSlices[self.oZSliceOrProjection-1]
             #print meta_image
 
-#        elif type(self.oZSliceOrProjection) == types.IntType:
-#            self._oLogger.debug("* selecting z-slice %d..." % self.oZSliceOrProjection)
-#            meta_image = self._lstZSlices[self.oZSliceOrProjection-1]
-#        else:
-#            raise ValueError("Wrong 'oZSliceOrProjection' value '%s' for channel Id '%s'" %\
-#                             (self.oZSliceOrProjection, self.strChannelId))
-
-#        if not self.channelRegistration is None:
-#            shift = self.channelRegistration.values()[0]
-#            w = meta_image.iWidth - shift[0]
-#            h = meta_image.iHeight - shift[1]
-#            if self.strChannelId in self.channelRegistration:
-#                s = (0,0)
-#            else:
-#                s = shift
-#            meta_image.image = ccore.subImage(meta_image.image,
-#                                              ccore.Diff2D(*s),
-#                                              ccore.Diff2D(w, h))
-
         self.meta_image = copy.copy(meta_image)
 
 
     def apply_binning(self, iFactor):
         self.meta_image.binning(iFactor)
 
-    def apply_segmentation(self):
-        raise NotImplementedMethodError()
+    def apply_segmentation(self, channel):
+        self.dctContainers = self.SEGMENTATION.run(self.meta_image, channel)
 
     def apply_registration(self):
         img_in = self.meta_image.image
@@ -405,11 +346,6 @@ class _Channel(PropertyManager):
 #            else:
             img_out = img_in
 
-#        if not self.tplCropRegion is None:
-#            x1, y1, x2, y2 = self.tplCropRegion
-#            imgOut2 = ccore.Image(x2-x1+1, y2-y1+1)
-#            ccore.copySubImage(imgOut, ccore.Diff2D(x1,y1), ccore.Diff2D(x2+1,y2+1), imgOut2, ccore.Diff2D(0,0))
-#            imgOut = imgOut2
         self.meta_image.set_image(img_out)
 
 
@@ -420,102 +356,7 @@ class PrimaryChannel(_Channel):
     PREFIX = 'primary'
 
     RANK = 1
-
-    PROPERTIES = \
-        dict(bSpeedup =
-                 BooleanProperty(False,
-                                 doc=''),
-             iLatWindowSize =
-                 IntProperty(None,
-                             doc='size of averaging window for '
-                                 'local adaptive thresholding.'),
-             iLatLimit =
-                 IntProperty(None,
-                             doc='lower threshold for '
-                                 'local adaptive thresholding.'),
-
-             iLatWindowSize2 =
-                 IntProperty(None,
-                             doc='size of averaging window for '
-                                 'local adaptive thresholding.'),
-             iLatLimit2 =
-                 IntProperty(None,
-                             doc='lower threshold for '
-                                 'local adaptive thresholding.'),
-
-             bDoShapeWatershed =
-                 BooleanProperty(True,
-                                 doc='shape-based watershed: '
-                                     'split objects by distance-transformation.'),
-             iGaussSizeShape =
-                 IntProperty(4,
-                             doc=''),
-             iMaximaSizeShape =
-                 IntProperty(12,
-                             doc=''),
-
-             bDoIntensityWatershed =
-                 BooleanProperty(False,
-                                 doc='intensity-based watershed: '
-                                     'split objects by intensity.'),
-             iGaussSizeIntensity =
-                 IntProperty(5,
-                             doc=''),
-             iMaximaSizeIntensity =
-                 IntProperty(11,
-                             doc=''),
-
-             iMinMergeSize = IntProperty(75,
-                                         doc='watershed merge size: '
-                                             'merge all objects below that size'),
-
-             bRemoveBorderObjects =
-                 BooleanProperty(True,
-                                 doc='remove all objects touching the image borders'),
-
-             hole_filling =
-                 BooleanProperty(False),
-
-             )
-
-    def __init__(self, **dctOptions):
-        super(PrimaryChannel, self).__init__(**dctOptions)
-
-    def apply_segmentation(self, oDummy):
-        oSegmentation = PrimarySegmentation(strImageOutCompression = self.strImageOutCompression,
-                                            strPathOutDebug = self.strPathOutDebug,
-                                            bDebugMode = self.bDebugMode,
-                                            iMedianRadius = self.iMedianRadius,
-                                            bSpeedup = self.bSpeedup,
-                                            iLatWindowSize = self.iLatWindowSize,
-                                            iLatLimit = self.iLatLimit,
-                                            iLatWindowSize2 = self.iLatWindowSize2,
-                                            iLatLimit2 = self.iLatLimit2,
-                                            bDoShapeWatershed = self.bDoShapeWatershed,
-                                            iGaussSizeShape = self.iGaussSizeShape,
-                                            iMaximaSizeShape = self.iMaximaSizeShape,
-                                            bDoIntensityWatershed = self.bDoIntensityWatershed,
-                                            iGaussSizeIntensity = self.iGaussSizeIntensity,
-                                            iMaximaSizeIntensity = self.iMaximaSizeIntensity,
-                                            iMinMergeSize = self.iMinMergeSize,
-                                            bRemoveBorderObjects = self.bRemoveBorderObjects,
-                                            bPostProcessing = self.bPostProcessing,
-                                            lstPostprocessingFeatureCategories = self.lstPostprocessingFeatureCategories,
-                                            strPostprocessingConditions = self.strPostprocessingConditions,
-                                            bPostProcessDeleteObjects = self.bPostProcessDeleteObjects,
-                                            bFlatfieldCorrection = self.bFlatfieldCorrection,
-                                            strImageType = self.strImageType,
-                                            strBackgroundImagePath = self.strBackgroundImagePath,
-                                            fBackgroundCorrection = self.fBackgroundCorrection,
-                                            fNormalizeMin = self.fNormalizeMin,
-                                            fNormalizeMax = self.fNormalizeMax,
-                                            fNormalizeRatio = self.fNormalizeRatio,
-                                            fNormalizeOffset = self.fNormalizeOffset,
-                                            tplCropRegion = self.tplCropRegion,
-                                            hole_filling = self.hole_filling,
-                                            )
-        oContainer = oSegmentation(self.meta_image)
-        self.dctContainers['primary'] = oContainer
+    SEGMENTATION = PRIMARY_SEGMENTATION_MANAGER
 
 
 class SecondaryChannel(_Channel):
@@ -524,103 +365,7 @@ class SecondaryChannel(_Channel):
     PREFIX = 'secondary'
 
     RANK = 2
-
-    PROPERTIES = \
-        dict(iExpansionSizeExpanded =
-               IntProperty(None, is_mandatory=True),
-             iShrinkingSizeInside =
-               IntProperty(None, is_mandatory=True),
-             iExpansionSizeOutside =
-               IntProperty(None, is_mandatory=True),
-             iExpansionSeparationSizeOutside =
-               IntProperty(None, is_mandatory=True),
-             iShrinkingSizeRim =
-               IntProperty(None, is_mandatory=True),
-             iExpansionSizeRim =
-               IntProperty(None, is_mandatory=True),
-
-             fExpansionCostThreshold =
-                 IntProperty(None,
-                             is_mandatory=True,
-                             doc=''),
-
-             fPropagateLambda =
-               FloatProperty(None, is_mandatory=True),
-             iPropagateDeltaWidth =
-               IntProperty(None, is_mandatory=True),
-
-             iConstrainedWatershedGaussFilterSize =
-               IntProperty(None, is_mandatory=True),
-
-             bPresegmentation =
-               BooleanProperty(None, is_mandatory=True),
-             iPresegmentationMedianRadius =
-               IntProperty(None, is_mandatory=True),
-             fPresegmentationAlpha =
-               FloatProperty(None, is_mandatory=True),
-
-             bEstimateBackground =
-                 BooleanProperty(False),
-             iBackgroundMedianRadius =
-                 IntProperty(None),
-             iBackgroundLatSize =
-                 IntProperty(None),
-             iBackgroundLatLimit =
-                 IntProperty(None),
-             )
-
-
-    __attributes__ = [Attribute('fBackgroundAverage'),
-                      Attribute('bSegmentationSuccessful'),
-                      ]
-
-    def __init__(self, **dctOptions):
-        super(SecondaryChannel, self).__init__(**dctOptions)
-        self.fBackgroundAverage = float('NAN')
-        self.bSegmentationSuccessful = False
-
-    def apply_segmentation(self, oChannel):
-        if 'primary' in oChannel.dctContainers:
-            oSegmentation = SecondarySegmentation(strImageOutCompression = self.strImageOutCompression,
-                                                  strPathOutDebug = self.strPathOutDebug,
-                                                  bDebugMode = self.bDebugMode,
-                                                  iMedianRadius = self.iMedianRadius,
-
-                                                  iExpansionSizeExpanded = self.iExpansionSizeExpanded,
-                                                  iShrinkingSizeInside = self.iShrinkingSizeInside,
-                                                  iExpansionSizeOutside = self.iExpansionSizeOutside,
-                                                  iExpansionSeparationSizeOutside = self.iExpansionSeparationSizeOutside,
-                                                  iExpansionSizeRim = self.iExpansionSizeRim,
-                                                  iShrinkingSizeRim = self.iShrinkingSizeRim,
-
-                                                  fExpansionCostThreshold = self.fExpansionCostThreshold,
-
-                                                  fPropagateLambda = self.fPropagateLambda,
-                                                  iPropagateDeltaWidth = self.iPropagateDeltaWidth,
-
-                                                  iConstrainedWatershedGaussFilterSize = self.iConstrainedWatershedGaussFilterSize,
-
-                                                  bPresegmentation = self.bPresegmentation,
-                                                  iPresegmentationMedianRadius = self.iPresegmentationMedianRadius,
-                                                  fPresegmentationAlpha = self.fPresegmentationAlpha,
-
-                                                  lstAreaSelection = self.lstAreaSelection,
-                                                  bFlatfieldCorrection = self.bFlatfieldCorrection,
-                                                  strImageType = self.strImageType,
-                                                  strBackgroundImagePath = self.strBackgroundImagePath,
-                                                  fBackgroundCorrection = self.fBackgroundCorrection,
-                                                  fNormalizeMin = self.fNormalizeMin,
-                                                  fNormalizeMax = self.fNormalizeMax,
-                                                  tplCropRegion = self.tplCropRegion,
-                                                  )
-            self.dctContainers = oSegmentation(self.meta_image, oChannel.dctContainers['primary'])
-
-            if self.bEstimateBackground:
-                self.fBackgroundAverage = oSegmentation.estimateBackground(self.meta_image,
-                                                                           self.iBackgroundMedianRadius,
-                                                                           self.iBackgroundLatSize,
-                                                                           self.iBackgroundLatLimit)
-            self.bSegmentationSuccessful = True
+    SEGMENTATION = SECONDARY_SEGMENTATION_MANAGER
 
 
 class TertiaryChannel(SecondaryChannel):
@@ -629,6 +374,7 @@ class TertiaryChannel(SecondaryChannel):
     PREFIX = 'tertiary'
 
     RANK = 3
+    SEGMENTATION = TERTIARY_SEGMENTATION_MANAGER
 
 
 #-------------------------------------------------------------------------------
