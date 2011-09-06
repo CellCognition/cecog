@@ -79,7 +79,6 @@ class ConfigSettings(RawConfigParser):
     def register_trait(self, section_name, group_name, trait_name, trait):
         section = self._section_registry.get_section(section_name)
         section.register_trait(group_name, trait_name, trait)
-        self.set(section_name, trait_name, trait.default_value)
 
     def unregister_trait(self, section_name, group_name, trait_name):
         section = self._section_registry.get_section(section_name)
@@ -125,6 +124,9 @@ class ConfigSettings(RawConfigParser):
         fp.close()
 
     def readfp(self, fp):
+        for section in self.sections():
+            self.remove_section(section)
+
         result = RawConfigParser.readfp(self, fp)
 
         for section_name in self.sections():

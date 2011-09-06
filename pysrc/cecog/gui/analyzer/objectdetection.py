@@ -42,6 +42,10 @@ from cecog.analyzer.channel import (PrimaryChannel,
                                     SecondaryChannel,
                                     TertiaryChannel,
                                     )
+from cecog.segmentation import (PRIMARY_SEGMENTATION_MANAGER,
+                                SECONDARY_SEGMENTATION_MANAGER,
+                                TERTIARY_SEGMENTATION_MANAGER,
+                                )
 #-------------------------------------------------------------------------------
 # constants:
 #
@@ -85,7 +89,9 @@ class ObjectDetectionFrame(BaseProcessorFrame):
                         ('primary_zslice_projection_end',),
                         ('primary_zslice_projection_step', None, None, True),
                         ], layout='flow')
-#        self.add_line()
+        self.add_line()
+        self.add_plugin_bay(PRIMARY_SEGMENTATION_MANAGER, settings)
+
 #        self.add_group(None,
 #                       [('primary_medianradius', (0,0,1,1)),
 #                        ('primary_latwindowsize', (0,1,1,1)),
@@ -136,6 +142,14 @@ class ObjectDetectionFrame(BaseProcessorFrame):
                             ('%s_zslice_projection_end' % prefix,),
                             ('%s_zslice_projection_step' % prefix, None, None, True),
                             ], layout='flow')
+
+            self.add_line()
+            if prefix == 'secondary':
+                self.add_plugin_bay(SECONDARY_SEGMENTATION_MANAGER, settings)
+            else:
+                self.add_plugin_bay(TERTIARY_SEGMENTATION_MANAGER, settings)
+
+
 #            self.add_line()
 #            self.add_pixmap(QPixmap(':cecog_secondary_regions'), Qt.AlignRight)
 #            self.add_group(None,
