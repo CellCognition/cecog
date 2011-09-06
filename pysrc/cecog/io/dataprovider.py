@@ -187,6 +187,7 @@ class Position(_DataProvider):
                         break
         print '  reading region information', timing.time() - tic
         
+        
         self.objects = {}
         self.sub_objects = {}
         channel_info = self.get_definition('channel')
