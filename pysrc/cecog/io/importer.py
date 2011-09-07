@@ -224,8 +224,7 @@ class AbstractImporter(object):
             if not zslice is None:
                 zslice = int(zslice)
             if not zslice in lookup[position][time][channel]:
-                lookup[position][time][channel][zslice] = 1
-                #result[position,time,channel,zslice] = item['filename']
+                lookup[position][time][channel][zslice] = item['filename']
 
             # allow to read timestamps from file if not present
             if META_INFO_TIMESTAMP in item:
