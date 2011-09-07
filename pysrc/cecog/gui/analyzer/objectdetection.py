@@ -92,29 +92,6 @@ class ObjectDetectionFrame(BaseProcessorFrame):
         self.add_line()
         self.add_plugin_bay(PRIMARY_SEGMENTATION_MANAGER, settings)
 
-#        self.add_group(None,
-#                       [('primary_medianradius', (0,0,1,1)),
-#                        ('primary_latwindowsize', (0,1,1,1)),
-#                        ('primary_latlimit', (0,2,1,1)),
-#                        ], link='primary_lat', label='Local adaptive threshold')
-#        self.add_group('primary_lat2',
-#                       [('primary_latwindowsize2', (0,0,1,1)),
-#                        ('primary_latlimit2', (0,1,1,1)),
-#                        ])
-#        self.add_input('primary_holefilling')
-#        self.add_input('primary_removeborderobjects')
-#        self.add_group('primary_shapewatershed',
-#                       [('primary_shapewatershed_gausssize', (0,0,1,1)),
-#                        ('primary_shapewatershed_maximasize', (0,1,1,1)),
-#                        ('primary_shapewatershed_minmergesize', (1,0,1,1)),
-#                        ])
-#        self.add_group('primary_postprocessing',
-#                        [('primary_postprocessing_roisize_min', (0,0,1,1)),
-#                          ('primary_postprocessing_roisize_max', (0,1,1,1)),
-#                          ('primary_postprocessing_intensity_min', (1,0,1,1)),
-#                          ('primary_postprocessing_intensity_max', (1,1,1,1)),
-#                        ])
-
         self.add_expanding_spacer()
 
         for tab_name, prefix in [('Secondary Channel', 'secondary'),

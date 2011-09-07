@@ -102,8 +102,8 @@ class BaseFrame(QFrame, TraitDisplayMixin):
 
     def __init__(self, settings, parent):
         QFrame.__init__(self, parent)
+        TraitDisplayMixin.__init__(self, settings)
         self._tab_lookup = {}
-        self._tab_name = None
         self._is_active = False
 
         self._control = QFrame(self)
@@ -140,8 +140,6 @@ class BaseFrame(QFrame, TraitDisplayMixin):
         layout.addWidget(scroll_area)
         layout.addWidget(self._control)
 
-        TraitDisplayMixin.__init__(self, settings)
-
     @pyqtSlot('int')
     def on_tab_changed(self, index):
         self.tab_changed(index)
@@ -161,34 +159,6 @@ class BaseFrame(QFrame, TraitDisplayMixin):
         else:
             frame = self._tab_lookup[name][1]
         return frame
-
-    def add_expanding_spacer(self):
-        frame = self._get_frame(name=self._tab_name)
-        dummy = QWidget(frame)
-        dummy.setMinimumSize(0,0)
-        dummy.setSizePolicy(QSizePolicy(QSizePolicy.Fixed,
-                                        QSizePolicy.Expanding))
-        frame.layout().addWidget(dummy, frame._input_cnt, 0)
-        frame._input_cnt += 1
-#        self._layout.addItem(QSpacerItem(0, 0,
-#                                         QSizePolicy.Fixed,
-#                                         QSizePolicy.Expanding),
-#                             self._input_cnt, 0, 1, self.WIDTH+2)
-
-
-    def add_line(self):
-        frame = self._get_frame(name=self._tab_name)
-        line = QFrame(frame)
-        line.setFrameShape(QFrame.HLine)
-        frame.layout().addWidget(line, frame._input_cnt, 0, 1, 2)
-        frame._input_cnt += 1
-
-    def add_pixmap(self, pixmap, align=Qt.AlignLeft):
-        frame = self._get_frame(name=self._tab_name)
-        label = QLabel(frame)
-        label.setPixmap(pixmap)
-        frame.layout().addWidget(label, frame._input_cnt, 0, 1, 2, align)
-        frame._input_cnt += 1
 
     def page_changed(self):
         '''

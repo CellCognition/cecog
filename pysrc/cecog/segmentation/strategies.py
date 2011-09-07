@@ -69,8 +69,9 @@ class PluginManager(object):
 
     PREFIX = 'plugin'
 
-    def __init__(self, name, section):
+    def __init__(self, name, label, section):
         self.name = name
+        self.label = label
         self.section = section
         self._plugins = OrderedDict()
         self._instances = OrderedDict()
@@ -128,11 +129,16 @@ class PluginManager(object):
         del self._instances[plugin_name]
 
     def _get_plugin_name(self, plugin_cls):
-        plugin_name = plugin_cls.NAME
-        cnt = 0
-        while plugin_name + str(cnt) in self._instances:
+        """
+        generate new plugin name which is not used yet. starting at the plugin class NAME and appending numbers from
+        2 to n, like 'primary', 'primary2', 'primary3'
+        """
+        cnt = 2
+        result = plugin_cls.NAME
+        while result in self._instances:
+            result = plugin_cls.NAME + str(cnt)
             cnt += 1
-        return plugin_name + str(cnt)
+        return result
 
     def _get_trait_name_template(self, plugin_cls_name, plugin_name):
         return '__'.join([self.PREFIX, self.name, plugin_cls_name, plugin_name, '%s'])
@@ -145,6 +151,9 @@ class PluginManager(object):
 
     def get_plugin_cls_names(self):
         return self._plugins.keys()
+
+    def get_plugin_labels(self):
+        return [(name, cls.LABEL) for name, cls in self._plugins.iteritems()]
 
     def get_plugin_names(self):
         return sorted(self._instances.keys())
@@ -183,6 +192,9 @@ class ParamManager(object):
 
     def has_param(self, param_name):
         return param_name in self._lookup
+
+    def get_trait_name(self, param_name):
+        return self._lookup[param_name]
 
     def get_params(self):
         return self._lookup.items()
@@ -227,6 +239,16 @@ class _Plugin(object):
     def run(self):
         pass
 
+    def render_to_gui(self, panel):
+        """
+        Defines how parameters are displayed to the GUI. panel is an instance of PluginParamFrame and implements the
+        TraitDisplayMixin, which dynamically displays traits on a frame, which are connected to the settings instance
+        (changes are traced and written to the .conf file)
+
+        If not implemented by a plugin the parameters are displayed in one column sorted by appearance in PARAMS
+        """
+        raise NotImplementedError('This method must be implemented.')
+
 
 class _SegmentationPlugin(_Plugin):
 
@@ -244,6 +266,7 @@ class _SegmentationPlugin(_Plugin):
 
 class SegmentationPluginPrimary(_SegmentationPlugin):
 
+    LABEL = 'Local adaptive threshold w/ split&merge'
     NAME = 'primary'
     COLOR = '#FF0000'
 
@@ -271,6 +294,31 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
               ('removeborderobjects', BooleanTrait(True, label='Remove border objects')),
               ('holefilling', BooleanTrait(True, label='Fill holes')),
               ]
+
+    def render_to_gui(self, panel):
+        #panel['advanced']
+        panel.add_group(None,
+                        [('medianradius', (0,0,1,1)),
+                         ('latwindowsize', (0,1,1,1)),
+                         ('latlimit', (0,2,1,1)),
+                         ], link='primary_lat', label='Local adaptive threshold')
+        panel.add_group('lat2',
+                        [('latwindowsize2', (0,0,1,1)),
+                         ('latlimit2', (0,1,1,1)),
+                         ])
+        panel.add_input('holefilling')
+        panel.add_input('removeborderobjects')
+        panel.add_group('shapewatershed',
+                        [('shapewatershed_gausssize', (0,0,1,1)),
+                         ('shapewatershed_maximasize', (0,1,1,1)),
+                         ('shapewatershed_minmergesize', (1,0,1,1)),
+                         ])
+        panel.add_group('postprocessing',
+                        [('postprocessing_roisize_min', (0,0,1,1)),
+                         ('postprocessing_roisize_max', (0,1,1,1)),
+                         ('postprocessing_intensity_min', (1,0,1,1)),
+                         ('postprocessing_intensity_max', (1,1,1,1)),
+                         ])
 
     @stopwatch('test')
     def prefilter(self, img_in, radius):
@@ -360,6 +408,7 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
 
 class SegmentationPluginExpanded(_SegmentationPlugin):
 
+    LABEL = 'Expanded region from primary'
     NAME = 'expanded'
     COLOR = '#00FFFF'
 
@@ -388,6 +437,7 @@ class SegmentationPluginExpanded(_SegmentationPlugin):
 
 class SegmentationPluginInside(_SegmentationPlugin):
 
+    LABEL = 'Shrinked region from primary'
     NAME = 'inside'
     COLOR = '#FFFF00'
 
@@ -413,6 +463,7 @@ class SegmentationPluginInside(_SegmentationPlugin):
 
 class SegmentationPluginOutside(_SegmentationPlugin):
 
+    LABEL = 'Ring around primary region'
     NAME = 'outside'
     COLOR = '#00FF00'
 
@@ -443,8 +494,10 @@ class SegmentationPluginOutside(_SegmentationPlugin):
 
 class SegmentationPluginRim(_SegmentationPlugin):
 
+    LABEL = 'Rim at primary region'
     NAME = 'rim'
     COLOR = '#FF00FF'
+    IMAGE = ":moo123"
 
     REQUIRES = 'primary'
 
@@ -485,6 +538,7 @@ class SegmentationPluginRim(_SegmentationPlugin):
 
 class SegmentationPluginPropagate(_SegmentationPlugin):
 
+    LABEL = 'Propagate region from primary'
     NAME = 'propagate'
     COLOR = '#FFFF99'
 
@@ -512,6 +566,7 @@ class SegmentationPluginPropagate(_SegmentationPlugin):
 
 class SegmentationPluginConstrainedWatershed(_SegmentationPlugin):
 
+    LABEL = 'Constrained watershed from primary'
     NAME = 'constrained_watershed'
     COLOR = '#FF99FF'
 

@@ -72,6 +72,8 @@ class TraitDisplayMixin(object):
         self._settings = settings
         self._extra_columns = 0
         self._final_handlers = {}
+        self._tab_name = None
+        self._input_cnt = 0
 
     def get_name(self):
         return self.SECTION_NAME if self.DISPLAY_NAME is None \
@@ -80,15 +82,37 @@ class TraitDisplayMixin(object):
     def add_handler(self, name, function):
         self._final_handlers[name] = function
 
+    def add_expanding_spacer(self):
+        frame = self._get_frame(name=self._tab_name)
+        dummy = QWidget(frame)
+        dummy.setMinimumSize(0,0)
+        dummy.setSizePolicy(QSizePolicy(QSizePolicy.Fixed,
+                                        QSizePolicy.Expanding))
+        frame.layout().addWidget(dummy, frame._input_cnt, 0)
+        frame._input_cnt += 1
+
+    def add_line(self):
+        frame = self._get_frame(name=self._tab_name)
+        line = QFrame(frame)
+        line.setFrameShape(QFrame.HLine)
+        frame.layout().addWidget(line, frame._input_cnt, 0, 1, 2)
+        frame._input_cnt += 1
+
+    def add_pixmap(self, pixmap, align=Qt.AlignLeft):
+        frame = self._get_frame(name=self._tab_name)
+        label = QLabel(frame)
+        label.setPixmap(pixmap)
+        frame.layout().addWidget(label, frame._input_cnt, 0, 1, 2, align)
+        frame._input_cnt += 1
+
     def add_plugin_bay(self, plugin_manager, settings):
         frame = self._get_frame(self._tab_name)
         frame_layout = frame.layout()
         frame_layout.addWidget(PluginBay(self, plugin_manager, settings),
-                               frame._input_cnt, 0)
+                               frame._input_cnt, 0, 1, 2)
         frame._input_cnt += 1
 
-    def add_group(self, trait_name, items, layout="grid",
-                  link=None, label=None):
+    def add_group(self, trait_name, items, layout="grid", link=None, label=None):
         frame = self._get_frame(self._tab_name)
         frame_layout = frame.layout()
 
@@ -153,7 +177,7 @@ class TraitDisplayMixin(object):
             if not trait is None:
                 w_group.setEnabled(self._get_value(trait_name))
                 handler = lambda x : w_group.setEnabled(w_input.isChecked())
-                self.connect(w_input, SIGNAL('toggled(bool)'), handler)
+                w_input.toggled.connect(handler)
 
         frame._input_cnt += 1
 
@@ -452,43 +476,63 @@ class TraitDisplayMixin(object):
 
 class PluginParamFrame(QFrame, TraitDisplayMixin):
 
-    def __init__(self, parent, settings, section):
+    def __init__(self, parent, param_manager):
         QFrame.__init__(self, parent)
-        self._tab_name = None
-        self._input_cnt = 0
-        TraitDisplayMixin.__init__(self, settings)
-        self.SECTION_NAME = section
+        TraitDisplayMixin.__init__(self, param_manager._settings)
+        self.SECTION_NAME = param_manager._section
+        self.param_manager = param_manager
         QGridLayout(self)
 
     def _get_frame(self, name=None):
         return self
 
+    def add_input(self, param_name, **options):
+        if self.param_manager.has_param(param_name):
+            trait_name = self.param_manager.get_trait_name(param_name)
+        else:
+            trait_name = param_name
+        return super(PluginParamFrame, self).add_input(trait_name, **options)
+
+    def add_group(self, param_name, items, **options):
+        if self.param_manager.has_param(param_name):
+            trait_name = self.param_manager.get_trait_name(param_name)
+        else:
+            trait_name = param_name
+        super(PluginParamFrame, self).add_group(trait_name, items, **options)
 
 
 class PluginItem(QFrame):
 
     remove_item = pyqtSignal()
 
-    def __init__(self, parent, name, plugin, settings):
+    def __init__(self, parent, plugin, settings):
         super(QFrame, self).__init__(parent)
-        self.name = name
 
-        layout = QHBoxLayout(self)
+        layout = QVBoxLayout(self)
+        #layout.setContentsMargins(5, 5, 5, 5)
 
         frame1 = QFrame(self)
-        frame2 = PluginParamFrame(self, settings, plugin.param_manager._section)
+        frame1.setStyleSheet("QFrame { background: #CCCCCC; }")
+        frame2 = PluginParamFrame(self, plugin.param_manager)
         layout.addWidget(frame1)
         layout.addWidget(frame2)
 
-        layout1 = QVBoxLayout(frame1)
-        label = QLabel(name, self)
+        layout = QHBoxLayout(frame1)
+        #layout.setContentsMargins(5, 5, 5, 5)
+        label = QLabel(plugin.LABEL, self)
+        label.setStyleSheet("font-weight: bold;")
+        txt = QLineEdit(plugin.name, self)
         btn = QPushButton('Remove', self)
         btn.clicked.connect(self._on_remove)
-        layout1.addWidget(label)
-        layout1.addWidget(btn)
+        layout.addWidget(label)
+        layout.addWidget(txt, 1)
+        layout.addWidget(btn)
 
-        for param_name, trait_name in plugin.param_manager.get_params():
-            frame2.add_input(trait_name)
+        try:
+            plugin.render_to_gui(frame2)
+        except NotImplementedError:
+            for info in plugin.param_manager.get_params():
+                frame2.add_input(info[1])
 
     def _on_remove(self):
         self.remove_item.emit()
@@ -504,37 +548,49 @@ class PluginBay(QFrame):
         self.settings = settings
         self._plugins = OrderedDict()
 
+        self.setStyleSheet("PluginItem { border: 1px solid black; background: white; }")
+
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
         frame1 = QFrame(self)
         self._frame2 = QFrame(self)
         layout.addWidget(frame1)
         layout.addWidget(self._frame2)
 
+        label = QLabel(plugin_manager.label, frame1)
+        label.setStyleSheet("font-weight: bold;")
         btn = QPushButton('Add', frame1)
         btn.clicked.connect(self._on_add_plugin)
         self._cb = QComboBox(frame1)
-        self._cb.addItems(self.plugin_manager.get_plugin_cls_names())
+        self._set_plugin_labels()
 
-        layout1 = QHBoxLayout(frame1)
-        layout1.addWidget(self._cb)
-        layout1.addWidget(btn)
+        layout = QHBoxLayout(frame1)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(label)
+        layout.addWidget(self._cb, 1)
+        layout.addWidget(btn)
 
-        QVBoxLayout(self._frame2)
+        layout = QVBoxLayout(self._frame2)
+        layout.setContentsMargins(0, 0, 0, 0)
 
     def init(self):
         self.reset()
         for plugin_name in self.plugin_manager.get_plugin_names():
             self.add_plugin(plugin_name)
 
-    def reset(self):
+    def _set_plugin_labels(self):
         self._cb.clear()
-        self._cb.addItems(self.plugin_manager.get_plugin_cls_names())
+        for name, label in self.plugin_manager.get_plugin_labels():
+            self._cb.addItem(label, name)
+
+    def reset(self):
+        self._set_plugin_labels()
         for plugin_name in self._plugins.keys():
             self.remove_plugin(plugin_name)
 
     def add_plugin(self, plugin_name):
         plugin = self.plugin_manager.get_plugin_instance(plugin_name)
-        item = PluginItem(self._frame2, plugin_name, plugin, self.settings)
+        item = PluginItem(self._frame2, plugin, self.settings)
         item.remove_item.connect(functools.partial(self._on_remove_plugin, plugin_name))
         layout = self._frame2.layout()
         layout.insertWidget(0, item)
@@ -548,7 +604,7 @@ class PluginBay(QFrame):
         del self._plugins[plugin_name]
 
     def _on_add_plugin(self):
-        name_cls = str(self._cb.currentText())
+        name_cls = self._cb.itemData(self._cb.currentIndex())
         plugin_name = self.plugin_manager.add_instance(name_cls, self.settings)
         self.add_plugin(plugin_name)
 
