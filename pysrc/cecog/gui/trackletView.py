@@ -13,6 +13,12 @@ __all__ = []
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
+import sip
+# set PyQt API version to 2.0
+sip.setapi('QString', 2)
+sip.setapi('QVariant', 2)
+sip.setapi('QUrl', 2)
+
 from PyQt4 import QtGui, QtCore
 import zlib
 import base64
@@ -114,6 +120,8 @@ class MainWindow(QtGui.QMainWindow):
             self.tracklet_widget.data_provider.clearObjectItemCache()
                     
             self.tracklet_widget.show_position(self.tracklet_widget._current_position_key)
+        
+    
         
     def open_file(self):
         filename = str(QtGui.QFileDialog.getOpenFileName(self, 'Open hdf5 file', '.', 'hdf5 files (*.h5  *.hdf5)'))  
@@ -288,8 +296,14 @@ class TrackletBrowser(QtGui.QWidget):
         
         self.cmb_align = QtGui.QComboBox()
         self.cmb_align.addItems(['Left', 'Absolute time', 'Custom'])
-        self.cmb_align.currentIndexChanged.connect(self.cb_change_vertical_alignment)        
+        self.cmb_align.currentIndexChanged.connect(self.cb_change_vertical_alignment)   
+        
+        self.cmb_object_type = QtGui.QComboBox()
+        self.cmb_object_type.addItems(['event', 'primary__primary'])
+        self.cmb_object_type.currentIndexChanged[str].connect(self.change_object_type) 
+             
         self.view_hud_btn_layout.addWidget(self.cmb_align)
+        self.view_hud_btn_layout.addWidget(self.cmb_object_type)
         
         self.view_hud_btn_layout.addStretch()
         
@@ -301,14 +315,14 @@ class TrackletBrowser(QtGui.QWidget):
         
         
         
-    def show_position(self, position_key):
+    def show_position(self, position_key, object_name='event'):
         tic = timing.time()
         self.scene.clear()
         self._current_position_key = position_key
         position = self.data_provider[position_key]
         
         self._root_items = []
-        events = position.get_objects('event')
+        events = position.get_objects(object_name)
         
         for event in events.iter_random(500):
             g_event = event.GraphicsItemType(event)
@@ -325,6 +339,9 @@ class TrackletBrowser(QtGui.QWidget):
     def cb_change_vertical_alignment(self, index): 
         self.GraphicsItemLayouter._align_vertically = index
         self.update_()
+        
+    def change_object_type(self, object_name):
+        self.show_position(self._current_position_key, object_name)
            
     def open_file(self, filename):
         self.data_provider = File(filename)
