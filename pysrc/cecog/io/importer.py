@@ -435,6 +435,11 @@ class IniFileImporter(AbstractImporter):
      - can be empty, in that case all directories are taken
      - example: ignore all directories with a leading underscore
 
+    allow_subfolder = NAME
+     - defines a sub-folder or path relative to the input path. in case no valid images are found in the
+       input path this sub-folder is searched next
+     - will be ignored if not specified or if the sub-folder does not exist
+
     regex_filename_substr = (.+?)\.
      - defines a part of the relative filename in which the dimension definition
        will be searched
@@ -501,18 +506,23 @@ class IniFileImporter(AbstractImporter):
 
         self.extensions = config_parser.get(section_name, 'file_extensions').split()
 
+        if config_parser.has_option(section_name, 'allow_subfolder'):
+            self.allow_subfolder = config_parser.get(section_name, 'allow_subfolder')
+        else:
+            self.allow_subfolder = None
+
     def __setstate__(self, state):
         super(IniFileImporter, self).__setstate__(state)
         if 'config_parser' in state:
             del self.config_parser
 
-    def _get_dimension_items(self):
+    def __get_token_list(self, path):
         token_list = []
 
         re_subwell_str = r"[a-zA-Z]\d{1,2}"
         re_subwell = re.compile(re_subwell_str)
 
-        for dirpath, dirnames, filenames in os.walk(self.path):
+        for dirpath, dirnames, filenames in os.walk(path):
             # prune filenames by file extension
             if len(self.extensions) > 0:
                 filenames = [x for x in filenames
@@ -525,7 +535,7 @@ class IniFileImporter(AbstractImporter):
 
             # extract dimension informations according to regex patterns from
             # relative filename (including extension)
-            path_rel = os.path.relpath(dirpath, self.path)
+            path_rel = os.path.relpath(dirpath, path)
             search_path = self._re_subdir.search(os.path.split(dirpath)[1])
 
             if not search_path is None:
@@ -586,6 +596,15 @@ class IniFileImporter(AbstractImporter):
 
                         result['filename'] = filename_rel
                         token_list.append(result)
+        return token_list
+
+    def _get_dimension_items(self):
+        token_list = self.__get_token_list(self.path)
+        # try a possible allowed sub-folder in case no results are found in the original path
+        if len(token_list) == 0 and not self.allow_subfolder is None:
+            path = os.path.join(self.path, self.allow_subfolder)
+            if os.path.isdir(path):
+                token_list = self.__get_token_list(path)
         return token_list
 
 
