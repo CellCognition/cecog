@@ -575,10 +575,10 @@ class CellTerminalObjectItemMixin():
             channel_idx = self.channel_idx
             image_own = self._get_image(self.time, self.local_idx, channel_idx)
             
-            #sib = self.get_siblings()
-            if False:#sib is not None:
+            sib = self.get_siblings()
+            if sib is not None:
                 image_sib = sib.image
-                new_shape = (self.width,)*2 + (3,)
+                new_shape = (self.BOUNDING_BOX_SIZE,)*2 + (3,)
                 image = numpy.zeros(new_shape, dtype=numpy.uint8)
                 image[0:image_own.shape[0],0:image_own.shape[1],0] = image_own
                 image[0:image_sib.shape[0],0:image_sib.shape[1],1] = image_sib
@@ -630,6 +630,8 @@ class CellTerminalObjectItemMixin():
         return self._bounding_box
     
     def _get_image(self, t, obj_idx, c, bounding_box=None):
+        self.get_position.read_image_data()
+        
         if bounding_box is None:
             ul, lr = self.bounding_box
         else:

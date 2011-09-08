@@ -84,7 +84,13 @@ class _DataProvider(object):
         self._hf_group = hf_group
         self._children = {}
         self._parent = parent
-        if self.CHILDREN_GROUP_NAME == 'this is a threading experiment ':
+        
+            
+        if self.CHILDREN_GROUP_NAME is not None and self.CHILDREN_GROUP_NAME != 'position' :
+            for name, group in self._hf_group[self.CHILDREN_GROUP_NAME].iteritems():
+                self._children[name] = self.CHILDREN_PROVIDER_CLASS(group, parent=self)
+                
+        if self.CHILDREN_GROUP_NAME == 'position':
             worker = [InputOutputThread(self.CHILDREN_PROVIDER_CLASS) for _ in range(3)]
             for w in worker:
                 w.start()
@@ -95,10 +101,6 @@ class _DataProvider(object):
             InputOutputThread.inQueue.join()
             for name, provider in InputOutputThread.outDict.iteritems():
                 self._children[name] = provider
-            
-        elif self.CHILDREN_GROUP_NAME is not None:
-            for name, group in self._hf_group[self.CHILDREN_GROUP_NAME].iteritems():
-                self._children[name] = self.CHILDREN_PROVIDER_CLASS(group, parent=self)
         
         
 
@@ -155,17 +157,18 @@ class Position(_DataProvider):
 
     CHILDREN_GROUP_NAME = None
     CHILDREN_PROVIDER_CLASS = None
+    
+    def read_image_data(self):
+        if not hasattr(self, '_hf_group_np_copy'):
+            tic = timing.time()
+            self._hf_group_np_copy = self._hf_group['image']['channel'].value
+            print '  decompressing image data', timing.time() - tic
+            
+    
     def __init__(self, hf_group, parent=None):
         super(Position, self).__init__(hf_group, parent)
+        
         tic = timing.time()
-        
-        # At some point the init of positions must be made lazy, cause we can not effort saving all this stuff 
-        # for many positions...
-        
-        self._hf_group_np_copy = self._hf_group['image']['channel'].value
-#        self._hf_group_np_copy = self._hf_group['image']['channel']
-        print '  decompressing image data', timing.time() - tic
-        
         self.regions= {}
         channel_info = self.get_definition('channel')
         for object_def_row in self.get_definition('object'):

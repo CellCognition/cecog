@@ -1247,7 +1247,7 @@ class AnalyzerCore(object):
         self.lstAnalysisFrames = lstAnalysisFrames[::self.oSettings.get2('frameincrement')]
 
 
-    def processPositions(self, qthread=None, myhack=None):
+    def processPositions(self, qthread=None, myhack=None, position_queue=None):
         # loop over positions
         lstJobInputs = []
         for oP in self.lstPositions:
@@ -1290,7 +1290,10 @@ class AnalyzerCore(object):
                 qthread.set_stage_info(stage_info)
 
             analyzer = PositionAnalyzer(*tplArgs, **dctOptions)
-            analyzer()
+#            analyzer()
+            
+            if position_queue is not None:
+                position_queue.append(analyzer)
 
         return self.oObjectLearner
 
