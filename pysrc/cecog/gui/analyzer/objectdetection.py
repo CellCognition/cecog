@@ -34,11 +34,11 @@ from cecog.gui.analyzer import (BaseProcessorFrame,
                                 AnalzyerThread,
                                 )
 from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
-from cecog.segmentation import (PRIMARY_SEGMENTATION_MANAGER,
-                                SECONDARY_SEGMENTATION_MANAGER,
-                                TERTIARY_SEGMENTATION_MANAGER,
-                                )
-from cecog.segmentation.strategies import REGION_INFO
+from cecog.plugin.segmentation import (PRIMARY_SEGMENTATION_MANAGER,
+                                       SECONDARY_SEGMENTATION_MANAGER,
+                                       TERTIARY_SEGMENTATION_MANAGER,
+                                       )
+from cecog.plugin.segmentation import REGION_INFO
 
 #-------------------------------------------------------------------------------
 # constants:

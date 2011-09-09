@@ -34,7 +34,7 @@ from pdk.iterator import is_subset
 # cecog module imports:
 #
 from cecog import ccore
-from cecog.segmentation.strategies import REGION_INFO
+from cecog.plugin.segmentation import REGION_INFO
 from cecog.analyzer import (TRACKING_DURATION_UNIT_FRAMES,
                             TRACKING_DURATION_UNIT_MINUTES,
                             TRACKING_DURATION_UNIT_SECONDS,

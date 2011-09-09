@@ -74,6 +74,7 @@ from cecog.config import R_SOURCE_PATH
 from cecog import ccore
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
 from cecog.analyzer.gallery import compose_galleries
+from cecog.plugin.display import PluginBay
 
 #-------------------------------------------------------------------------------
 # functions:
@@ -162,6 +163,12 @@ class BaseFrame(QFrame, TraitDisplayMixin):
     def tab_changed(self, index):
         pass
 
+    def add_plugin_bay(self, plugin_manager, settings):
+        frame = self._get_frame(self._tab_name)
+        frame_layout = frame.layout()
+        frame_layout.addWidget(PluginBay(self, plugin_manager, settings),
+                               frame._input_cnt, 0, 1, 2)
+        frame._input_cnt += 1
 
 
 class _ProcessingThread(QThread):

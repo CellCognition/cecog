@@ -53,10 +53,10 @@ from cecog.analyzer.object import (ImageObject,
                                    ObjectHolder,
                                    )
 from cecog import ccore
-from cecog.segmentation import (PRIMARY_SEGMENTATION_MANAGER,
-                                SECONDARY_SEGMENTATION_MANAGER,
-                                TERTIARY_SEGMENTATION_MANAGER,
-                                )
+from cecog.plugin.segmentation import (PRIMARY_SEGMENTATION_MANAGER,
+                                       SECONDARY_SEGMENTATION_MANAGER,
+                                       TERTIARY_SEGMENTATION_MANAGER,
+                                       )
 
 #-------------------------------------------------------------------------------
 # constants:

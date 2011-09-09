@@ -13,20 +13,26 @@ __all__ = ['PLUGIN_MANAGERS',
            'PRIMARY_PLUGIN_MANAGER',
            'SECONDARY_PLUGIN_MANAGER',
            'TERTIARY_PLUGIN_MANAGER',
+           'REGION_INFO',
            ]
 
 from cecog import PLUGIN_MANAGERS
 from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
 
-from cecog.segmentation.strategies import (SegmentationPluginManager,
-                                           SegmentationPluginPrimary,
-                                           SegmentationPluginExpanded,
-                                           SegmentationPluginInside,
-                                           SegmentationPluginOutside,
-                                           SegmentationPluginRim,
-                                           SegmentationPluginPropagate,
-                                           SegmentationPluginConstrainedWatershed,
-                                           )
+from cecog.plugin.segmentation.manager import (RegionInformation,
+                                               SegmentationPluginManager,
+                                               )
+from cecog.plugin.segmentation.strategies import (SegmentationPluginPrimary,
+                                                  SegmentationPluginExpanded,
+                                                  SegmentationPluginInside,
+                                                  SegmentationPluginOutside,
+                                                  SegmentationPluginRim,
+                                                  SegmentationPluginPropagate,
+                                                  SegmentationPluginConstrainedWatershed,
+                                                  )
+
+REGION_INFO = RegionInformation()
+
 PRIMARY_SEGMENTATION_MANAGER = SegmentationPluginManager('primary_segmentation',
                                                          SECTION_NAME_OBJECTDETECTION)
 PRIMARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginPrimary)
@@ -50,3 +56,4 @@ TERTIARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginPropagate)
 TERTIARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginConstrainedWatershed)
 
 PLUGIN_MANAGERS.extend([PRIMARY_SEGMENTATION_MANAGER, SECONDARY_SEGMENTATION_MANAGER, TERTIARY_SEGMENTATION_MANAGER])
+

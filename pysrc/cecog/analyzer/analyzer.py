@@ -51,7 +51,7 @@ from cecog.util.util import hexToRgb
 from cecog.io.imagecontainer import (Coordinate,
                                      MetaImage,
                                      )
-from cecog.segmentation.strategies import REGION_INFO
+from cecog.plugin.segmentation import REGION_INFO
 
 #-------------------------------------------------------------------------------
 # constants:

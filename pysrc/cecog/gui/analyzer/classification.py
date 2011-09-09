@@ -47,6 +47,7 @@ from cecog.learning.learning import CommonClassPredictor
 from cecog.util.util import (hexToRgb,
                              convert_package_path,
                              )
+from cecog.plugin.segmentation import REGION_INFO
 
 #-------------------------------------------------------------------------------
 # constants:
