@@ -64,21 +64,6 @@ SECONDARY_COLORS = {'inside' : '#FFFF00',
                     'constrained_watershed': '#FF99FF',
                     }
 
-SECONDARY_REGIONS = {'secondary_regions_expanded' : 'expanded',
-                     'secondary_regions_inside' : 'inside',
-                     'secondary_regions_outside' : 'outside',
-                     'secondary_regions_rim' : 'rim',
-                     'secondary_regions_propagate' : 'propagate',
-                     'secondary_regions_constrained_watershed' : 'constrained_watershed',
-                     }
-TERTIARY_REGIONS  = {'tertiary_regions_expanded' : 'expanded',
-                     'tertiary_regions_inside' : 'inside',
-                     'tertiary_regions_outside' : 'outside',
-                     'tertiary_regions_rim' : 'rim',
-                     'tertiary_regions_propagate' : 'propagate',
-                     'tertiary_regions_constrained_watershed' : 'constrained_watershed',
-                     }
-
 ZSLICE_PROJECTION_METHODS = ['maximum', 'average']
 
 COMPRESSION_FORMATS = ['raw', 'bz2', 'gz']

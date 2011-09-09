@@ -19,10 +19,7 @@ __all__ = ['ClusterFrame']
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
-import types, \
-       copy, \
-       traceback
-
+import types
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
@@ -38,19 +35,11 @@ from pyamf.remoting.client import RemotingService
 from cecog.traits.analyzer.cluster import SECTION_NAME_CLUSTER
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.config import (ANALYZER_CONFIG,
-                          PATH_MAPPER,
                           map_path_to_os,
-                          is_path_mappable,
                           )
 from cecog.gui.analyzer import (BaseFrame,
-                                AnalzyerThread,
-                                HmmThread,
                                 )
 from cecog.gui.analyzer.processing import ProcessingFrame
-from cecog.analyzer import (SECONDARY_REGIONS,
-                            SECONDARY_COLORS,
-                            )
-from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.util.util import OS_LINUX
 from cecog.gui.util import (exception,
                             information,

@@ -14,15 +14,7 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = ['REGION_NAMES_PRIMARY',
-           'REGION_NAMES_SECONDARY',
-           'SECONDARY_COLORS',
-           'ZSLICE_PROJECTION_METHODS',
-           'COMPRESSION_FORMATS',
-           'TRACKING_METHODS',
-           'R_LIBRARIES',
-           '_BaseFrame',
-           '_ProcessorMixin']
+__all__ = []
 
 #-------------------------------------------------------------------------------
 # standard library imports:
@@ -76,7 +68,7 @@ from cecog.analyzer.channel import (PrimaryChannel,
                                     SecondaryChannel,
                                     TertiaryChannel,
                                     )
-from cecog.analyzer.core import AnalyzerCore, SECONDARY_REGIONS
+from cecog.analyzer.core import AnalyzerCore
 from cecog.io.imagecontainer import PIXEL_TYPES
 from cecog.config import R_SOURCE_PATH
 from cecog import ccore
@@ -1148,16 +1140,14 @@ class _ProcessorMixin(object):
                      if not x in [PrimaryChannel.PREFIX, SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]]
         rendering += self._current_settings.get('General', 'rendering_class').keys()
         rendering.sort()
+        print rendering, qApp._image_dialog
 
-        if len(rendering) > 0:
-            self._analyzer.set_renderer(rendering[0])
-        else:
-            self._analyzer.set_renderer(None)
-
+        idx = 0
         if not qApp._image_dialog is None:
             widget = qApp._image_combo
             current = widget.currentText()
             widget.clear()
+            print current
             if len(rendering) > 1:
                 for name in rendering:
                     widget.addItem(name)
@@ -1165,10 +1155,17 @@ class _ProcessorMixin(object):
                 widget.currentIndexChanged[str].connect(self._on_render_changed)
                 if current in rendering:
                     widget.setCurrentIndex(widget.findText(current, Qt.MatchExactly))
+                    idx = rendering.index(current)
             else:
                 widget.hide()
 
+        if len(rendering) > 0:
+            self._analyzer.set_renderer(rendering[idx])
+        else:
+            self._analyzer.set_renderer(None)
+
         self._analyzer.image_ready.connect(self._on_update_image)
+
 
 class BaseProcessorFrame(BaseFrame, _ProcessorMixin):
 

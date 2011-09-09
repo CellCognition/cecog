@@ -33,6 +33,11 @@ from cecog.gui.guitraits import (BooleanTrait,
                                  IntTrait,
                                  FloatTrait,
                                  )
+
+#-------------------------------------------------------------------------------
+# constants:
+#
+
 #-------------------------------------------------------------------------------
 # functions:
 #
@@ -48,30 +53,36 @@ def convertImageMinMax(imgIn, maxValue=255.0):
     convertOffset = -minV
     return ccore.linearTransform(imgIn, convertRatio, convertOffset)
 
-def stopwatch(name=None):
-    def wrap(func):
-        def new_func(*args, **options):
-            func_name = func.__name__
-            s = StopWatch()
-            logger = logging.getLogger(name)
-            logger.debug('Start: %s' % func_name)
-            result = func(*args, **options)
-            logger.debug('Finish: %s, %s' % (func_name, s))
-            return result
-        return new_func
+def stopwatch(func):
+    def wrap(*args, **options):
+        func_name = func.__name__
+        s = StopWatch()
+        logger = logging.getLogger()
+        logger.debug('Start: %s' % func_name)
+        result = func(*args, **options)
+        logger.debug('Finish: %s, %s' % (func_name, s))
+        return result
     return wrap
 
 #-------------------------------------------------------------------------------
 # classes:
 #
 
+class RegionInformation(object):
+
+    names = {'primary': [], 'secondary': [], 'tertiary': []}
+    colors = {}
+
+REGION_INFO = RegionInformation()
+
+
 class PluginManager(object):
 
     PREFIX = 'plugin'
+    LABEL = ''
 
-    def __init__(self, name, label, section):
+    def __init__(self, name, section):
         self.name = name
-        self.label = label
         self.section = section
         self._plugins = OrderedDict()
         self._instances = OrderedDict()
@@ -104,6 +115,7 @@ class PluginManager(object):
                                            plugin_params[plugin_name])
             instance = plugin_cls(plugin_name, param_manager)
             self._instances[plugin_name] = instance
+            self.notify_instance_modified(plugin_name)
 
         for observer in self._observer:
             observer.init()
@@ -118,6 +130,7 @@ class PluginManager(object):
         param_manager = ParamManager(plugin_cls, trait_name_template, settings, self.section)
         instance = plugin_cls(plugin_name, param_manager)
         self._instances[plugin_name] = instance
+        self.notify_instance_modified(plugin_name)
         return plugin_name
 
     def remove_instance(self, plugin_name, settings):
@@ -127,6 +140,10 @@ class PluginManager(object):
         plugin = self._instances[plugin_name]
         plugin.close()
         del self._instances[plugin_name]
+        self.notify_instance_modified(plugin_name, True)
+
+    def notify_instance_modified(self, plugin_name, removed=False):
+        pass
 
     def _get_plugin_name(self, plugin_cls):
         """
@@ -166,9 +183,21 @@ class PluginManager(object):
 
     def run(self, *args, **options):
         results = OrderedDict()
-        for instance in self._instances:
+        for instance in self._instances.itervalues():
             results[instance.name] = instance.run(*args, **options)
         return results
+
+
+class SegmentationPluginManager(PluginManager):
+
+    LABEL = 'Segmentation plugins'
+
+    def notify_instance_modified(self, plugin_name, removed=False):
+        prefix = self.name.split('_')[0]
+
+        REGION_INFO.names[prefix] = self.get_plugin_names()
+        REGION_INFO.colors.update(dict([(name, self.get_plugin_instance(name).COLOR)
+                                        for name in self.get_plugin_names()]))
 
 
 class ParamManager(object):
@@ -224,6 +253,8 @@ class _Plugin(object):
 
     PARAMS = []
     NAME = None
+    IMAGE = None
+    DOC = None
 
     def __init__(self, name, param_manager):
         self.name = name
@@ -295,8 +326,12 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
               ('holefilling', BooleanTrait(True, label='Fill holes')),
               ]
 
+    DOC = \
+'''
+Some general documentation.
+'''
+
     def render_to_gui(self, panel):
-        #panel['advanced']
         panel.add_group(None,
                         [('medianradius', (0,0,1,1)),
                          ('latwindowsize', (0,1,1,1)),
@@ -320,7 +355,7 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
                          ('postprocessing_intensity_max', (1,1,1,1)),
                          ])
 
-    @stopwatch('test')
+    @stopwatch
     def prefilter(self, img_in, radius):
         img_out = ccore.disc_median(img_in, radius)
         return img_out
@@ -369,17 +404,17 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
     def _run(self, meta_image):
         image = meta_image.image
 
-        img_prefiltered = self.prefilter(image, self.params['median_radius'])
+        img_prefiltered = self.prefilter(image, self.params['medianradius'])
         img_bin = self.threshold(img_prefiltered, self.params['latwindowsize'], self.params['latlimit'])
 
-        if self.parmas['hole_filling']:
+        if self.params['holefilling']:
             ccore.fill_holes(img_bin, False)
 
         if self.params['lat2']:
-            img_bin2 = self.thresold(img_prefiltered, self.params['latwindowsize2'], self.params['latlimit2'])
+            img_bin2 = self.threshold(img_prefiltered, self.params['latwindowsize2'], self.params['latlimit2'])
             img_bin = ccore.projectImage([img_bin, img_bin2], ccore.ProjectionType.MaxProjection)
 
-        if self.parmas['shapewatershed']:
+        if self.params['shapewatershed']:
             img_bin = self.correct_segmetation(img_prefiltered, img_bin,
                                                self.params['latwindowsize'],
                                                self.params['shapewatershed_gausssize'],
@@ -387,7 +422,7 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
                                                self.params['shapewatershed_minmergesize'],
                                                kind='shape')
 
-        if self.parmas['intensitywatershed']:
+        if self.params['intensitywatershed']:
             img_bin = self.correct_segmetation(img_prefiltered, img_bin,
                                                self.params['latwindowsize'],
                                                self.params['intensitywatershed_gausssize'],
@@ -397,11 +432,11 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
 
         container = ccore.ImageMaskContainer(image, img_bin, self.params['removeborderobjects'])
 
-        self.postprocessing(container,
-                            self.params['postprocessing'],
-                            self.params['moo'],
-                            self.params['moo'],
-                            True)
+#        self.postprocessing(container,
+#                            self.params['postprocessing'],
+#                            self.params['moo'],
+#                            self.params['moo'],
+#                            True)
 
         return container
 
@@ -535,6 +570,49 @@ class SegmentationPluginRim(_SegmentationPlugin):
             raise ValueError("Parameters are not valid. Requirements: 'expansion_size' > 0 and/or "
                              "'shrinking_size' > 0")
 
+
+class SegmentationPluginModification(_SegmentationPlugin):
+
+    LABEL = 'Expansion/shrinking of primary region'
+    NAME = 'modification'
+    COLOR = '#FF00FF'
+    IMAGE = ":moo123"
+
+    REQUIRES = 'primary'
+
+    PARAMS = [('expansion_size', IntTrait(0, 0, 4000, label='Expansion size')),
+              ('shrinking_size', IntTrait(0, 0, 4000, label='Shrinking size')),
+              ]
+
+    @stopwatch
+    def _run(self, meta_image, container):
+        image = meta_image.image
+        if self.params['expansion_size'] > 0 or self.params['shrinking_size'] > 0:
+
+            nr_objects = container.img_labels.getMinmax()[1]+1
+            if self.params['shrinking_size'] > 0:
+                img_labelsA = ccore.seeded_region_shrinking(image,
+                                                            container.img_labels,
+                                                            nr_objects,
+                                                            self.params['shrinking_size'])
+            else:
+                img_labelsA = container.img_labels
+
+            if self.params['expansion_size'] > 0:
+                img_labelsB = ccore.seeded_region_expansion(image,
+                                                            container.img_labels,
+                                                            ccore.SrgType.KeepContours,
+                                                            nr_objects,
+                                                            0,
+                                                            self.params['expansion_size'],
+                                                            0)
+            else:
+                img_labelsB = container.img_labels
+            img_labels = ccore.substractImages(img_labelsB, img_labelsA)
+            return ccore.ImageMaskContainer(image, img_labels, False, True)
+        else:
+            raise ValueError("Parameters are not valid. Requirements: 'expansion_size' > 0 and/or "
+                             "'shrinking_size' > 0")
 
 class SegmentationPluginPropagate(_SegmentationPlugin):
 

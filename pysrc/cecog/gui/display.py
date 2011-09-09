@@ -47,6 +47,7 @@ from cecog.gui.guitraits import (StringTrait,
                                  )
 from cecog.util.util import convert_package_path
 from cecog.gui.util import show_html
+from cecog.gui.widgets.groupbox import QxtGroupBox
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -222,6 +223,9 @@ class TraitDisplayMixin(object):
             w_input.setMaxLength(trait.max_length)
             w_input.setSizePolicy(policy_expanding)
             w_input.setToolTip(value)
+            w_input.setAcceptDrops(True)
+            w_input.setDragEnabled(True)
+
             if not trait.mask is None:
                 regexp = QRegExp(trait.mask)
                 regexp.setPatternSyntax(QRegExp.RegExp2)
@@ -513,15 +517,28 @@ class PluginItem(QFrame):
 
         frame1 = QFrame(self)
         frame1.setStyleSheet("QFrame { background: #CCCCCC; }")
+
         frame2 = PluginParamFrame(self, plugin.param_manager)
         layout.addWidget(frame1)
         layout.addWidget(frame2)
+
+        if not plugin.DOC is None:
+            doc = QxtGroupBox('Documentation', self)
+            #doc.setExpanded(False)
+            #doc.setCollapsive(False)
+            #doc.set
+            layout.addWidget(doc)
+            l = QVBoxLayout(doc)
+            txt = QTextEdit(doc)
+            txt.setText(plugin.DOC)
+            l.addWidget(txt)
 
         layout = QHBoxLayout(frame1)
         #layout.setContentsMargins(5, 5, 5, 5)
         label = QLabel(plugin.LABEL, self)
         label.setStyleSheet("font-weight: bold;")
         txt = QLineEdit(plugin.name, self)
+        txt.setReadOnly(True)
         btn = QPushButton('Remove', self)
         btn.clicked.connect(self._on_remove)
         layout.addWidget(label)
@@ -557,7 +574,7 @@ class PluginBay(QFrame):
         layout.addWidget(frame1)
         layout.addWidget(self._frame2)
 
-        label = QLabel(plugin_manager.label, frame1)
+        label = QLabel(plugin_manager.LABEL, frame1)
         label.setStyleSheet("font-weight: bold;")
         btn = QPushButton('Add', frame1)
         btn.clicked.connect(self._on_add_plugin)

@@ -23,8 +23,6 @@ __all__ = ['FeatureExtractionFrame']
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
-import numpy
-
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
@@ -33,23 +31,8 @@ from PyQt4.Qt import *
 # cecog imports:
 #
 from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACTION
-from cecog.gui.util import (information,
-                            exception,
-                            )
 from cecog.gui.analyzer import (BaseFrame,
-                                AnalzyerThread,
-                                TrainingThread,
                                 )
-from cecog.analyzer import SECONDARY_REGIONS
-from cecog.analyzer.channel import (PrimaryChannel,
-                                    SecondaryChannel,
-                                    TertiaryChannel,
-                                    )
-from cecog.learning.learning import (CommonClassPredictor,
-                                     )
-from cecog.util.util import (hexToRgb,
-                             convert_package_path,
-                             )
 
 #-------------------------------------------------------------------------------
 # constants:

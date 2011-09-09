@@ -29,14 +29,11 @@ __all__ = ['SectionObjectdetection']
 #
 from cecog.traits.settings import _Section
 from cecog.gui.guitraits import (IntTrait,
-                                 FloatTrait,
                                  BooleanTrait,
                                  SelectionTrait,
                                  SelectionTrait2,
-                                 MultiSelectionTrait,
                                  )
-from cecog.analyzer import (ZSLICE_PROJECTION_METHODS,
-                            REGION_NAMES_PRIMARY,
+from cecog.analyzer import (ZSLICE_PROJECTION_METHODS
                             )
 from cecog.util.util import unlist
 

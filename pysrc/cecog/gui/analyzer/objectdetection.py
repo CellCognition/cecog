@@ -34,18 +34,12 @@ from cecog.gui.analyzer import (BaseProcessorFrame,
                                 AnalzyerThread,
                                 )
 from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
-from cecog.analyzer import (SECONDARY_COLORS,
-                            SECONDARY_REGIONS,
-                            TERTIARY_REGIONS,
-                            )
-from cecog.analyzer.channel import (PrimaryChannel,
-                                    SecondaryChannel,
-                                    TertiaryChannel,
-                                    )
 from cecog.segmentation import (PRIMARY_SEGMENTATION_MANAGER,
                                 SECONDARY_SEGMENTATION_MANAGER,
                                 TERTIARY_SEGMENTATION_MANAGER,
                                 )
+from cecog.segmentation.strategies import REGION_INFO
+
 #-------------------------------------------------------------------------------
 # constants:
 #
@@ -173,13 +167,6 @@ class ObjectDetectionFrame(BaseProcessorFrame):
         settings = BaseProcessorFrame._get_modified_settings(self, name, has_timelapse)
 
         settings.set_section('ObjectDetection')
-        prim_id = PrimaryChannel.NAME
-        sec_id = SecondaryChannel.NAME
-        sec_regions = [v for k,v in SECONDARY_REGIONS.iteritems()
-                       if settings.get2(k)]
-        tert_id = TertiaryChannel.NAME
-        tert_regions = [v for k,v in TERTIARY_REGIONS.iteritems()
-                       if settings.get2(k)]
 
         settings.set_section('Processing')
         for prefix in ['primary', 'secondary', 'tertiary']:
@@ -201,24 +188,26 @@ class ObjectDetectionFrame(BaseProcessorFrame):
 
 
         current_tab = self._tab.currentIndex()
-        print current_tab
         if current_tab == 0:
             settings.set('Processing', 'secondary_processchannel', False)
             settings.set('Processing', 'tertiary_processchannel', False)
-            settings.set('General', 'rendering', {'primary_contours': {prim_id: {'raw': ('#FFFFFF', 1.0), 'contours': {'primary': ('#FF0000', 1, show_ids)}}}})
+            prefix = 'primary'
         elif current_tab == 1:
             settings.set('Processing', 'secondary_processchannel', True)
             settings.set('Processing', 'tertiary_processchannel', False)
-            settings.set('General', 'rendering', dict([('secondary_contours_%s' % x, {sec_id: {'raw': ('#FFFFFF', 1.0),
-                                                                                                      'contours': [(x, SECONDARY_COLORS[x] , 1, show_ids)]
-                                                                                             }})
-                                                              for x in sec_regions]))
+            prefix = 'secondary'
         else:
             settings.set('Processing', 'secondary_processChannel', True)
             settings.set('Processing', 'tertiary_processchannel', True)
-            settings.set('General', 'rendering', dict([('tertiary_contours_%s' % x, {tert_id: {'raw': ('#FFFFFF', 1.0),
-                                                                                               'contours': [(x, SECONDARY_COLORS[x] , 1, show_ids)]
-                                                                                             }})
-                                                              for x in tert_regions]))
+            prefix = 'tertiary'
+
+        colors = REGION_INFO.colors
+        print 'REGION', prefix, REGION_INFO.names[prefix]
+        settings.set('General', 'rendering', dict([('%s_contours_%s' % (prefix, x),
+                                                    {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
+                                                                            'contours': [(x, colors[x] , 1, show_ids)]
+                                                    }})
+                                                  for x in REGION_INFO.names[prefix]]))
+
         return settings
 

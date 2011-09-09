@@ -30,11 +30,8 @@ __all__ = ['SectionClassification']
 from cecog.traits.settings import _Section
 from cecog.gui.guitraits import (StringTrait,
                                  BooleanTrait,
-                                 SelectionTrait,
+                                 SelectionTrait2,
                                  )
-from cecog.analyzer import (REGION_NAMES_PRIMARY,
-                            REGION_NAMES_SECONDARY,
-                            )
 from cecog.util.util import unlist
 
 #-------------------------------------------------------------------------------
@@ -61,8 +58,7 @@ class SectionClassification(_Section):
         StringTrait('', 1000, label='Classifier folder',
                     widget_info=StringTrait.STRING_PATH)),
       ('primary_classification_regionname',
-        SelectionTrait(REGION_NAMES_PRIMARY[0], REGION_NAMES_PRIMARY,
-                       label='Region name')),
+        SelectionTrait2(None, [], label='Region name')),
       ('primary_classification_annotationfileext',
         StringTrait('.xml', 50, label='Annotation ext.')),
       ]),
@@ -74,8 +70,7 @@ class SectionClassification(_Section):
        StringTrait('', 1000, label='Classifier folder',
                    widget_info=StringTrait.STRING_PATH)),
       ('%s_classification_regionname' % x,
-       SelectionTrait(REGION_NAMES_SECONDARY[0], REGION_NAMES_SECONDARY,
-                      label='Region name')),
+       SelectionTrait2(None, [], label='Region name')),
       ('%s_classification_annotationfileext' % x,
        StringTrait('.xml', 50, label='Annotation ext.')),
       ])]

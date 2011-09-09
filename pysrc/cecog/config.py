@@ -16,9 +16,12 @@ __source__ = '$URL$'
 
 __all__ = ['NAMING_SCHEMAS',
            'ANALYZER_CONFIG',
-           'PATH_MAPPER'
+           'PATH_MAPPER',
+           'RESOURCE_PATH',
            'map_path_to_os',
            'is_path_mappable',
+           'init_constants',
+           'init_application_support_path',
            ]
 
 #-------------------------------------------------------------------------------

@@ -40,7 +40,6 @@ from cecog.gui.analyzer import (BaseProcessorFrame,
                                 AnalzyerThread,
                                 TrainingThread,
                                 )
-from cecog.analyzer import SECONDARY_REGIONS
 from cecog.analyzer.channel import (PrimaryChannel,
                                     SecondaryChannel,
                                     )

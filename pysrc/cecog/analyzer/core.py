@@ -34,10 +34,8 @@ from pdk.iterator import is_subset
 # cecog module imports:
 #
 from cecog import ccore
-from cecog.analyzer import (REGION_NAMES_PRIMARY,
-                            SECONDARY_REGIONS,
-                            TERTIARY_REGIONS,
-                            TRACKING_DURATION_UNIT_FRAMES,
+from cecog.segmentation.strategies import REGION_INFO
+from cecog.analyzer import (TRACKING_DURATION_UNIT_FRAMES,
                             TRACKING_DURATION_UNIT_MINUTES,
                             TRACKING_DURATION_UNIT_SECONDS,
                             )
@@ -49,12 +47,9 @@ from cecog.analyzer.channel import (PrimaryChannel,
                                     TertiaryChannel,
                                     )
 from cecog.analyzer.celltracker import *
-from cecog.io.imagecontainer import (ImageContainer,
-                                     Coordinate,
-                                     )
+from cecog.io.imagecontainer import Coordinate
 from cecog.learning.collector import CellCounterReader, CellCounterReaderXML
 from cecog.learning.learning import CommonObjectLearner, CommonClassPredictor
-from cecog.config import NAMING_SCHEMAS
 
 from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACTION
 from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
@@ -388,19 +383,9 @@ class PositionAnalyzer(object):
         for name in [PrimaryChannel.NAME,
                      SecondaryChannel.NAME,
                      TertiaryChannel.NAME]:
-            #if self.oSettings.get('Classification', self._resolve_name(channel, 'featureextraction')):
-            region_features = {}
             prefix = name.lower()
-            if name == PrimaryChannel.NAME:
-                regions = self.oSettings.get('ObjectDetection', '%s_regions' % prefix)
-            elif name == SecondaryChannel.NAME:
-                regions = [v for k,v in SECONDARY_REGIONS.iteritems()
-                           if self.oSettings.get('ObjectDetection', k)]
-            elif name == TertiaryChannel.NAME:
-                regions = [v for k,v in TERTIARY_REGIONS.iteritems()
-                           if self.oSettings.get('ObjectDetection', k)]
-
-            for region in regions:
+            region_features = {}
+            for region in REGION_INFO.names[prefix]:
                 # export all features extracted per regions
                 if self.oSettings.get('Output', 'events_export_all_features'):
                     region_features[region] = None

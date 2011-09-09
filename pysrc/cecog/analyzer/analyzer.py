@@ -48,13 +48,10 @@ import netCDF4
 from cecog import ccore
 
 from cecog.util.util import hexToRgb
-from cecog.analyzer import (REGION_NAMES,
-                            REGION_NAMES_PRIMARY,
-                            REGION_NAMES_SECONDARY,
-                            )
 from cecog.io.imagecontainer import (Coordinate,
                                      MetaImage,
                                      )
+from cecog.segmentation.strategies import REGION_INFO
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -163,25 +160,17 @@ class TimeHolder(OrderedDict):
         self._idx_to_frames = dict([(i,f) for i, f in enumerate(frames)])
 
         channels = sorted(list(meta_data.channels))
-        region_names = REGION_NAMES_PRIMARY + REGION_NAMES_SECONDARY
-        region_channels = ['primary']*len(REGION_NAMES_PRIMARY) + \
-                          ['secondary']*len(REGION_NAMES_SECONDARY)
+        self._region_names = REGION_INFO.names['primary'] + REGION_INFO.names['secondary']
 
-        region_names2 = [('Primary', 'primary')]
-        #channel_names2 = [('Primary']
-        settings.set_section('ObjectDetection')
-        for prefix in ['secondary', 'tertiary']:
-            if settings.get('Processing', '%s_processchannel' % prefix):
-                for name in REGION_NAMES_SECONDARY:
-                    if settings.get2('%s_regions_%s' % (prefix, name)):
-                        region_names2.append((prefix.capitalize(), name))
-
-
+        region_names2 = []
+        for prefix in ['primary', 'secondary', 'tertiary']:
+            for name in REGION_INFO.names[prefix]:
+                region_names2.append((prefix.capitalize(), name))
 
         self._channels_to_idx = dict([(f,i) for i, f in enumerate(channels)])
         self._idx_to_channels = dict([(i,f) for i, f in enumerate(channels)])
 
-        self._regions_to_idx = dict([(n,i) for i, n in enumerate(region_names)])
+        self._regions_to_idx = dict([(n,i) for i, n in enumerate(self._region_names)])
         self._regions_to_idx2 = OrderedDict([(n,i) for i, n in enumerate(region_names2)])
 
         if self._hdf5_create:
@@ -236,16 +225,15 @@ class TimeHolder(OrderedDict):
             h = meta.real_image_height
 
             channels = sorted(list(meta.channels))
-            region_names = REGION_NAMES_PRIMARY + REGION_NAMES_SECONDARY
-            region_channels = ['primary']*len(REGION_NAMES_PRIMARY) + \
-                              ['secondary']*len(REGION_NAMES_SECONDARY)
+            region_channels = ['primary']*len(REGION_INFO.names['primary']) + \
+                              ['secondary']*len(REGION_INFO.names['primary'])
 
             dataset = netCDF4.Dataset(self._nc4_filename, 'w', format='NETCDF4')
             dataset.createDimension('frames', dim_t)
             dataset.createDimension('channels', dim_c)
             dataset.createDimension('height', h)
             dataset.createDimension('width', w)
-            dataset.createDimension('regions', len(region_names))
+            dataset.createDimension('regions', len(self._region_names))
             dataset.createDimension('one', 1)
 
             frames = sorted(list(meta.times))
@@ -282,11 +270,11 @@ class TimeHolder(OrderedDict):
                 var.valid = [0] * dim_t
                 #print channel_id, dim_t, var.valid
 
-            for channel_name in REGION_NAMES.keys():
+            for channel_name in REGION_INFO.names.keys():
                 channel_g = label_g.createGroup(channel_name)
                 grp1 = object_g.createGroup(channel_name)
                 grp2 = feature_g.createGroup(channel_name)
-                for region_name in REGION_NAMES[channel_name]:
+                for region_name in REGION_INFO.names[channel_name]:
                     var = channel_g.createVariable(region_name, 'i2',
                                                    ('frames', 'height',
                                                     'width'),
@@ -301,7 +289,7 @@ class TimeHolder(OrderedDict):
             var[:] = numpy.asarray(channels, 'O')
 
             var = dataset.createVariable('region_names', str, 'regions')
-            var[:] = numpy.asarray(region_names, 'O')
+            var[:] = numpy.asarray(self._region_names, 'O')
 
             var = dataset.createVariable('region_channels', str, 'regions')
             var[:] = numpy.asarray(region_channels, 'O')

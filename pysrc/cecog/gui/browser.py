@@ -50,7 +50,6 @@ from cecog.analyzer.channel import (PrimaryChannel,
                                     SecondaryChannel,
                                     TertiaryChannel,
                                     )
-from cecog.analyzer import REGION_NAMES_SECONDARY
 from cecog.analyzer.core import AnalyzerCore
 from cecog import ccore
 from cecog.util.util import (hexToRgb,
@@ -64,6 +63,9 @@ from cecog.gui.widgets.groupbox import QxtGroupBox
 from cecog.gui.modules.navigation import NavigationModule
 from cecog.gui.modules.display import DisplayModule
 from cecog.gui.modules.annotation import AnnotationModule
+
+from cecog.segmentation.strategies import REGION_INFO
+
 #-------------------------------------------------------------------------------
 # constants:
 #
@@ -250,13 +252,9 @@ class Browser(QMainWindow):
         toolbar.setMovable(False)
         toolbar.setFloatable(False)
 
-        region_names = ['Primary - primary']
-        self._settings.set_section('ObjectDetection')
-        for prefix in ['secondary', 'tertiary']:
-            if self._settings.get('Processing', '%s_processchannel' % prefix):
-                for name in REGION_NAMES_SECONDARY:
-                    if self._settings.get2('%s_regions_%s' % (prefix, name)):
-                        region_names.append('%s - %s' % (prefix.capitalize(), name))
+        region_names = []
+        for prefix in ['primary', 'secondary', 'tertiary']:
+            region_names.extend(['%s - %s' % (prefix.capitalize(), name) for name in REGION_INFO.names[prefix]])
 
         # FIXME: something went wrong with setting up the current region
         self._object_region = region_names[0].split(' - ')
@@ -267,8 +265,7 @@ class Browser(QMainWindow):
 
         NavigationModule(self._module_manager, self, self._imagecontainer)
 
-        DisplayModule(self._module_manager, self, self._imagecontainer,
-                      region_names)
+        DisplayModule(self._module_manager, self, self._imagecontainer, region_names)
 
         AnnotationModule(self._module_manager, self, self._settings,
                          self._imagecontainer)
