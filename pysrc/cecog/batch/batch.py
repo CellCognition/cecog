@@ -155,7 +155,9 @@ if __name__ ==  "__main__":
     imagecontainer.import_from_settings(settings)
 
     # FIXME: Could be more generally specified. SGE is setting the job item index via an environment variable
-    if index.isdigit():
+    if index is None:
+        pass
+    elif index.isdigit():
         index = int(index)
     else:
         if index == ENV_INDEX_SGE:
