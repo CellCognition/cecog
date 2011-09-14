@@ -120,44 +120,6 @@ class ObjectDetectionFrame(BaseProcessorFrame):
             else:
                 self.add_plugin_bay(TERTIARY_SEGMENTATION_MANAGER, settings)
 
-
-#            self.add_line()
-#            self.add_pixmap(QPixmap(':cecog_secondary_regions'), Qt.AlignRight)
-#            self.add_group(None,
-#                           [('%s_regions_expanded' % prefix, (0,0,1,1)),
-#                            ('%s_regions_expanded_expansionsize' % prefix, (0,1,1,1), None, True),
-#                            (None, (1,0,1,8)),
-#
-#                            ('%s_regions_inside' % prefix, (2,0,1,1)),
-#                            ('%s_regions_inside_shrinkingsize' % prefix, (2,1,1,1), None, True),
-#                            (None, (3,0,1,8)),
-#
-#                            ('%s_regions_outside' % prefix, (4,0,1,1)),
-#                            ('%s_regions_outside_expansionsize' % prefix, (4,1,1,1)),
-#                            ('%s_regions_outside_separationsize' % prefix, (4,2,1,1), None, True),
-#                            (None, (5,0,1,8)),
-#
-#                            ('%s_regions_rim' % prefix, (6,0,1,1)),
-#                            ('%s_regions_rim_expansionsize' % prefix, (6,1,1,1)),
-#                            ('%s_regions_rim_shrinkingsize' % prefix, (6,2,1,1), None, True),
-#                            (None, (7,0,1,8)),
-#
-#                            ], link='%s_region_definition' % prefix,
-#                            label='Region definition')
-#
-#            self.add_line()
-#            self.add_group('%s_regions_constrained_watershed' % prefix,
-#                           [('%s_regions_constrained_watershed_gauss_filter_size' % prefix, (0,0,1,1)),
-#                            ])
-#
-#            self.add_line()
-#            self.add_group('%s_regions_propagate' % prefix,
-#                           [('%s_presegmentation_medianradius' % prefix, (0,0,1,1)),
-#                            ('%s_presegmentation_alpha' % prefix, (0,1,1,1)),
-#                            ('%s_regions_propagate_lambda' % prefix, (0,2,1,1)),
-#                            ('%s_regions_propagate_deltawidth' % prefix, (0,3,1,1), None, True),
-#                            ])
-
             self.add_expanding_spacer()
 
         self._init_control()
@@ -183,7 +145,7 @@ class ObjectDetectionFrame(BaseProcessorFrame):
         show_ids = settings.get('Output', 'rendering_contours_showids')
 
 
-        current_tab = self._tab.currentIndex()
+        current_tab = self._tab.current_index
         if current_tab == 0:
             settings.set('Processing', 'secondary_processchannel', False)
             settings.set('Processing', 'tertiary_processchannel', False)

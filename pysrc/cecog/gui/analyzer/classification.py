@@ -463,7 +463,7 @@ class ClassificationFrame(BaseProcessorFrame):
 
         show_ids_class = settings.get('Output', 'rendering_class_showids')
 
-        current_tab = self._tab.currentIndex()
+        current_tab = self._tab.current_index
         if current_tab == 0:
             settings.set('Processing', 'primary_featureextraction', True)
             settings.set('Processing', 'secondary_featureextraction', False)
@@ -517,7 +517,7 @@ class ClassificationFrame(BaseProcessorFrame):
         return self._result_frames[name]
 
     def _update_classifier(self):
-        if self._tab.currentIndex() == 0:
+        if self._tab.current_index == 0:
             channel = 'primary'
         else:
             channel = 'secondary'

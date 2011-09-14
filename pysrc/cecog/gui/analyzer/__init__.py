@@ -25,7 +25,8 @@ import types, \
        sys, \
        os, \
        time, \
-       copy
+       copy, \
+       functools
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -75,6 +76,7 @@ from cecog import ccore
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
 from cecog.analyzer.gallery import compose_galleries
 from cecog.plugin.display import PluginBay
+from cecog.gui.widgets.tabcontrol import TabControl
 
 #-------------------------------------------------------------------------------
 # functions:
@@ -84,6 +86,8 @@ from cecog.plugin.display import PluginBay
 #-------------------------------------------------------------------------------
 # classes:
 #
+
+
 
 class BaseFrame(QFrame, TraitDisplayMixin):
 
@@ -96,41 +100,26 @@ class BaseFrame(QFrame, TraitDisplayMixin):
     def __init__(self, settings, parent):
         QFrame.__init__(self, parent)
         TraitDisplayMixin.__init__(self, settings)
-        self._tab_lookup = {}
         self._is_active = False
-
+        self._tab_name = None
         self._control = QFrame(self)
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
 
-        scroll_area = QScrollArea(self)
-        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setFrameShape(QFrame.NoFrame)
+        self._tab = TabControl(self)
 
-        if not self.TABS is None:
-            self._tab = QTabWidget(self)
-            #self._tab.setSizePolicy(QSizePolicy(QSizePolicy.Expanding|QSizePolicy.Maximum,
-            #                                    QSizePolicy.Expanding))
-            for name in self.TABS:
-                frame = QFrame(self._tab)
-                frame._input_cnt = 0
-                QGridLayout(frame)
-                idx = self._tab.addTab(frame, name)
-                self._tab_lookup[name] = (idx, frame)
-            scroll_area.setWidget(self._tab)
-            #layout.addWidget(self._tab)
-            self._tab.currentChanged.connect(self.on_tab_changed)
-        else:
-            self._frame = QFrame(self)
-            self._frame._input_cnt = 0
-            QGridLayout(self._frame)
-            #self._frame.setSizePolicy(QSizePolicy(QSizePolicy.Expanding|QSizePolicy.Maximum,
-            #                                    QSizePolicy.Expanding))
-            scroll_area.setWidget(self._frame)
-            #layout.addWidget(self._frame)
+        tabs = [self._tab_name] if self.TABS is None else self.TABS
+        for name in tabs:
+            frame = QFrame(self._tab)
+            frame._input_cnt = 0
+            layout2 = QGridLayout(frame)
+            layout2.setContentsMargins(20, 20, 20, 20)
+            self._tab.add_tab(name, frame)
 
-        layout.addWidget(scroll_area)
+        self._tab.set_active_index(0)
+        self._tab.current_changed.connect(self.on_tab_changed)
+
+        layout.addWidget(self._tab)
         layout.addWidget(self._control)
 
     @pyqtSlot('int')
@@ -145,13 +134,8 @@ class BaseFrame(QFrame, TraitDisplayMixin):
 
     def _get_frame(self, name=None):
         if name is None:
-            if len(self._tab_lookup) > 0:
-                frame = self._tab_lookup[self._tab_name][1]
-            else:
-                frame = self._frame
-        else:
-            frame = self._tab_lookup[name][1]
-        return frame
+            name = self._tab_name
+        return self._tab.get_frame(name)
 
     def page_changed(self):
         '''
@@ -714,7 +698,7 @@ class _ProcessorMixin(object):
         layout.addWidget(help_button)
 
         if not self.TABS is None:
-            self.connect(self._tab, SIGNAL('currentChanged(int)'), self._on_tab_changed)
+            self._tab.current_changed.connect(self._on_tab_changed)
             self._on_tab_changed(0)
         else:
             for name in self._control_buttons:
@@ -922,9 +906,7 @@ class _ProcessorMixin(object):
 
     def _toggle_tabs(self, state):
         if not self.TABS is None:
-            for i in range(self._tab.count()):
-                if i != self._tab.currentIndex():
-                    self._tab.setTabEnabled(i, state)
+            self._tab.enable_non_active(state)
 
     def _abort_processing(self):
         self.setCursor(Qt.BusyCursor)

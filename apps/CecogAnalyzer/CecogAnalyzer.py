@@ -114,6 +114,8 @@ class AnalyzerMainWindow(QMainWindow):
         QMainWindow.__init__(self)
         qApp._main_window = self
 
+        #self.setStyleSheet("QFrame {border: 1px solid #8f8f91;}")
+
         self._is_initialized = False
         self._debug = False
         self._imagecontainer = None
