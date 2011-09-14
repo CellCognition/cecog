@@ -598,10 +598,13 @@ class AnalyzerMainWindow(QMainWindow):
                 if not cancel:
                     self._load_image_container(infos, scan_plates)
 
-    def _load_image_container(self, plate_infos, scan_plates):
+    def _load_image_container(self, plate_infos, scan_plates=None, show_dlg=True):
 
         self._clear_browser()
         imagecontainer = ImageContainer()
+
+        if scan_plates is None:
+            scan_plates = dict((info[0], False) for info in plate_infos)
 
         def load(dlg):
             iter = imagecontainer.iter_import_from_settings(self._settings, scan_plates)
@@ -661,8 +664,9 @@ class AnalyzerMainWindow(QMainWindow):
 
             self._imagecontainer = imagecontainer
             self.set_modules_active(state=True)
-            information(self, "Plate(s) successfully loaded",
-                        "%d plates loaded successfully." % len(imagecontainer.plates))
+            if show_dlg:
+                information(self, "Plate(s) successfully loaded",
+                            "%d plates loaded successfully." % len(imagecontainer.plates))
         else:
             critical(self, "No valid image data found",
                      "The naming schema provided might not fit your image data"
@@ -745,10 +749,13 @@ if __name__ == "__main__":
     from pdk.fileutils import safe_mkdirs
     from cecog.util.util import get_appdata_path
 
-    #import argparse
-    #parser = argparse.ArgumentParser(description='CellCognition Analyzer GUI')
-    #args = parser.parse_args()
-
+    import argparse
+    parser = argparse.ArgumentParser(description='CellCognition Analyzer GUI')
+    parser.add_argument('--load', action='store_true', default=False,
+                        help='Load data from settings file.')
+    parser.add_argument('settings', nargs='?',
+                        help='Settings file.')
+    args = parser.parse_args()
 
 #    log_path = 'log'
 #    safe_mkdirs(log_path)
@@ -794,12 +801,17 @@ if __name__ == "__main__":
     main.raise_()
 
 
-    if len(sys.argv) > 1:
-        filename = sys.argv[1]
+    if not args.settings is None:
+        filename = args.settings
     else:
         filename = os.path.join(get_package_path(), 'Data/Cecog_settings/demo_settings.conf')
+
     if os.path.isfile(filename):
         main._read_settings(filename)
+
+        if args.load:
+            infos = list(ImageContainer.iter_check_plates(main._settings))
+            main._load_image_container(infos, show_dlg=False)
 
     if not is_app:
         main._debug = True
