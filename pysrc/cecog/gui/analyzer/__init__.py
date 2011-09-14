@@ -1054,7 +1054,7 @@ class _ProcessorMixin(object):
                                            self._stage_infos[1]['text'],
                                            sep,
                                            self._stage_infos[2]['text'])
-                    if current > 1:
+                    if current > 1 and 'interval' in info:
                         interval = info['interval']
                         self._intervals.append(interval.get_interval())
                         estimate = TimeInterval(numpy.average(self._intervals) *
