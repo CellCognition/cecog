@@ -17,6 +17,7 @@ __all__ = ['PluginManager',
 #
 import os, \
        logging
+from functools import wraps
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -39,6 +40,31 @@ from pdk.ordereddict import OrderedDict
 #-------------------------------------------------------------------------------
 # classes:
 #
+class stopwatch(object):
+    """
+    Decorator wrapping methods (e.g. of class _Plugin) by measuring its execution time and reporting to a logger.
+    The instance requires a 'name' attribute, e.g. the name of the current plugin instance
+    """
+
+    def __init__(self, level=logging.DEBUG):
+        self._level = level
+
+    def __call__(self, method):
+        @wraps(method)
+        def wrapped_f(*args, **options):
+            _self = args[0]
+            fname = method.__name__
+            class_name = _self.__class__.__name__
+            name = _self.name
+            s = StopWatch()
+            logger = logging.getLogger()
+            logger.log(self._level, '%s[%s].%s - start' % (class_name, name, fname))
+            result = method(*args, **options)
+            logger.log(self._level, '%s[%s].%s - finished in %s' % (class_name, name, fname, s))
+            return result
+        return wrapped_f
+
+
 class PluginManager(object):
 
     PREFIX = 'plugin'
@@ -144,6 +170,7 @@ class PluginManager(object):
     def get_plugin_instance(self, name):
         return self._instances[name]
 
+    @stopwatch(level=logging.INFO)
     def run(self, *args, **options):
         results = OrderedDict()
         for instance in self._instances.itervalues():
@@ -218,8 +245,15 @@ class _Plugin(object):
     def params(self):
         return self.param_manager
 
-    def run(self):
-        pass
+    def run(self, *args, **options):
+        """
+        """
+        raise NotImplementedError('This method must be implemented.')
+
+    def _run(self, *args, **options):
+        """
+        """
+        raise NotImplementedError('This method must be implemented.')
 
     def render_to_gui(self, panel):
         """
@@ -230,4 +264,3 @@ class _Plugin(object):
         If not implemented by a plugin the parameters are displayed in one column sorted by appearance in PARAMS
         """
         raise NotImplementedError('This method must be implemented.')
-

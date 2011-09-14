@@ -24,7 +24,7 @@ from cecog.gui.guitraits import (BooleanTrait,
                                  IntTrait,
                                  FloatTrait,
                                  )
-from cecog.util.decorator import stopwatch
+from cecog.plugin import stopwatch
 from cecog.plugin.segmentation.manager import _SegmentationPlugin
 
 #-------------------------------------------------------------------------------
@@ -98,17 +98,17 @@ Some general documentation.
                          ('postprocessing_intensity_max', (1,1,1,1)),
                          ])
 
-    @stopwatch
+    @stopwatch()
     def prefilter(self, img_in, radius):
         img_out = ccore.disc_median(img_in, radius)
         return img_out
 
-    @stopwatch
+    @stopwatch()
     def threshold(self, img_in, size, limit):
         img_out = ccore.window_average_threshold(img_in, size, limit)
         return img_out
 
-    @stopwatch
+    @stopwatch()
     def correct_segmetation(self, img_in, img_bin, border, gauss_size, max_dist, min_merge_size, kind='shape'):
         if kind == 'shape':
             f = ccore.segmentation_correction_shape
@@ -116,7 +116,7 @@ Some general documentation.
             f = ccore.segmentation_correction_intensity
         return f(img_in, img_bin, border, gauss_size, max_dist, min_merge_size)
 
-    @stopwatch
+    @stopwatch()
     def postprocessing(self, container, is_active, feature_categories, conditions, delete_objects):
         if is_active:
             # extract features
@@ -143,7 +143,7 @@ Some general documentation.
         container.lstGoodObjectIds = lstGoodObjectIds
         container.lstRejectedObjectIds = lstRejectedObjectIds
 
-    @stopwatch
+    @stopwatch()
     def _run(self, meta_image):
         image = meta_image.image
 
@@ -195,7 +195,7 @@ class SegmentationPluginExpanded(_SegmentationPlugin):
     PARAMS = [('expansion_size', IntTrait(0, 0, 4000, label='Expansion size')),
               ]
 
-    @stopwatch
+    @stopwatch()
     def _run(self, meta_image, container):
         image = meta_image.image
         if self.params['expansion_size'] > 0:
@@ -224,7 +224,7 @@ class SegmentationPluginInside(_SegmentationPlugin):
     PARAMS = [('shrinking_size', IntTrait(0, 0, 4000, label='Shrinking size')),
               ]
 
-    @stopwatch
+    @stopwatch()
     def _run(self, meta_image, container):
         image = meta_image.image
         if self.params['shrinking_size'] > 0:
@@ -251,7 +251,7 @@ class SegmentationPluginOutside(_SegmentationPlugin):
               ('separation_size', IntTrait(0, 0, 4000, label='Separation size')),
               ]
 
-    @stopwatch
+    @stopwatch()
     def _run(self, meta_image, container):
         image = meta_image.image
         if self.params['expansion_size'] > 0 and self.params['expansion_size'] > self.params['separation_size']:
@@ -283,7 +283,7 @@ class SegmentationPluginRim(_SegmentationPlugin):
               ('shrinking_size', IntTrait(0, 0, 4000, label='Shrinking size')),
               ]
 
-    @stopwatch
+    @stopwatch()
     def _run(self, meta_image, container):
         image = meta_image.image
         if self.params['expansion_size'] > 0 or self.params['shrinking_size'] > 0:
@@ -327,7 +327,7 @@ class SegmentationPluginModification(_SegmentationPlugin):
               ('shrinking_size', IntTrait(0, 0, 4000, label='Shrinking size')),
               ]
 
-    @stopwatch
+    @stopwatch()
     def _run(self, meta_image, container):
         image = meta_image.image
         if self.params['expansion_size'] > 0 or self.params['shrinking_size'] > 0:
@@ -371,7 +371,7 @@ class SegmentationPluginPropagate(_SegmentationPlugin):
               ('delta_width', IntTrait(1, 1, 4, label='Delta width')),
               ]
 
-    @stopwatch
+    @stopwatch()
     def _run(self, meta_image, container):
         image = meta_image.image
 

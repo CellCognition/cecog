@@ -32,14 +32,17 @@ from pdk.datetimeutils import StopWatch
 #-------------------------------------------------------------------------------
 # functions:
 #
-def stopwatch(func):
+def stopwatch(f):
+    """
+    Simple decorator wrapping a function by measuring its execution time and reporting to a logger
+    """
     def wrap(*args, **options):
-        func_name = func.__name__
+        fname = f.__name__
         s = StopWatch()
         logger = logging.getLogger()
-        logger.debug('Start: %s' % func_name)
-        result = func(*args, **options)
-        logger.debug('Finish: %s, %s' % (func_name, s))
+        logger.debug('%s start' % fname)
+        result = f(*args, **options)
+        logger.debug('%s finished: %s' % (fname, s))
         return result
     return wrap
 
