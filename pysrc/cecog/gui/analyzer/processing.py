@@ -91,20 +91,6 @@ class ProcessingFrame(BaseProcessorFrame):
         settings.set('General', 'rendering', {})
         settings.set('General', 'rendering_class', {})
 
-        additional_prefixes = [SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]
-        settings.set_section('Classification')
-        sec_class_regions = dict([(prefix,
-                                  settings.get2('%s_classification_regionname' % prefix))
-                                  for prefix in additional_prefixes])
-
-        settings.set_section('ObjectDetection')
-
-#        lookup = dict([(v,k) for k,v in SECONDARY_REGIONS.iteritems()])
-#        # FIXME: we should rather show a warning here!
-#        if not sec_region in sec_regions:
-#            sec_regions.append(sec_region)
-#            settings.set2(lookup[sec_region], True)
-
         show_ids = settings.get('Output', 'rendering_contours_showids')
         show_ids_class = settings.get('Output', 'rendering_class_showids')
 
@@ -124,7 +110,9 @@ class ProcessingFrame(BaseProcessorFrame):
                                                                           'contours': [(x, 'class_label', 1, False),
                                                                                        (x, '#000000' , 1, show_ids_class)]
                                                    }})
-                                                   for x in REGION_INFO.names[prefix]])
+                                                   for x in REGION_INFO.names[prefix]
+                                                   if x == settings.get('Classification',
+                                                                        '%s_classification_regionname' % prefix)])
                     settings.get('General', 'rendering_class').update(d)
             else:
                 settings.set('Processing', '%s_classification' % prefix, False)

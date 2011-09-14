@@ -178,13 +178,9 @@ class ObjectDetectionFrame(BaseProcessorFrame):
 
         settings.set_section('General')
         settings.set2('rendering_class', {})
-        #settings.set2('rendering_discwrite', True)
-        #settings.set2('rendering_class_discwrite', True)
 
         settings.set('Output', 'events_export_gallery_images', False)
         show_ids = settings.get('Output', 'rendering_contours_showids')
-        #settings.set('Output', 'export_object_details', False)
-        #settings.set('Output', 'export_object_counts', False)
 
 
         current_tab = self._tab.currentIndex()
@@ -197,12 +193,11 @@ class ObjectDetectionFrame(BaseProcessorFrame):
             settings.set('Processing', 'tertiary_processchannel', False)
             prefix = 'secondary'
         else:
-            settings.set('Processing', 'secondary_processChannel', True)
+            settings.set('Processing', 'secondary_processChannel', False)
             settings.set('Processing', 'tertiary_processchannel', True)
             prefix = 'tertiary'
 
         colors = REGION_INFO.colors
-        print 'REGION', prefix, REGION_INFO.names[prefix]
         settings.set('General', 'rendering', dict([('%s_contours_%s' % (prefix, x),
                                                     {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
                                                                             'contours': [(x, colors[x] , 1, show_ids)]
