@@ -23,7 +23,9 @@ __source__ = '$URL$'
 # standard library imports:
 #
 import sys, \
-       time
+       time, \
+       logging, \
+       logging.handlers
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
@@ -215,12 +217,17 @@ class PositionAnalyzer(object):
         self.strPathLog = os.path.join(self.strPathOut, 'log')
         safe_mkdirs(self.strPathLog)
         #self._oLogger = logging.getLogger('PositionAnalyzer')
-        oLogger = logging.getLogger(self.__class__.__name__)
+        oLogger = logging.getLogger(str(os.getpid()))
         oLogger.setLevel(logging.DEBUG)
         self._oLogHandler = logging.FileHandler(os.path.join(self.strPathLog, "%s.log" % self.P), 'w')
         self._oLogHandler.setLevel(logging.DEBUG)
         self._oLogHandler.setFormatter(logging.Formatter('%(asctime)s %(name)-24s %(levelname)-6s %(message)s'))
+        
+        self._socketHandler = logging.handlers.SocketHandler('localhost', logging.handlers.DEFAULT_TCP_LOGGING_PORT)
+        self._socketHandler.setFormatter(logging.Formatter('%(asctime)s %(name)-24s %(levelname)-6s %(message)s'))
+        
         oLogger.addHandler(self._oLogHandler)
+        oLogger.addHandler(self._socketHandler)
         return oLogger
 
     def __del__(self):

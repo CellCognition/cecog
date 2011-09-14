@@ -20,6 +20,9 @@ __all__ = ['ProcessingFrame']
 # standard library imports:
 #
 
+import threading, \
+        logging
+
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
@@ -41,6 +44,9 @@ from cecog.analyzer.channel import (PrimaryChannel,
                                     TertiaryChannel,
                                     )
 
+from PyQt4.QtGui import *
+from PyQt4.QtCore import *
+
 #-------------------------------------------------------------------------------
 # constants:
 #
@@ -54,6 +60,43 @@ from cecog.analyzer.channel import (PrimaryChannel,
 #-------------------------------------------------------------------------------
 # classes:
 #
+class SubProcessLogWindow(QFrame):
+    lock = threading.Lock()
+    on_msg_received = pyqtSignal(str, str, int)
+    
+    def __init__(self, parent):
+        QFrame.__init__(self)
+        self._layout = QHBoxLayout(self)
+        self.tab_widget = QTabWidget()
+        self._layout.addWidget(self.tab_widget)
+        self.on_msg_received.connect(self.on_show_msg)
+        
+    def init_process_list(self, sub_process_names):
+        self.tab_widget.clear()
+        self.items = {}
+        for p in sub_process_names:
+            lw = QPlainTextEdit(self.tab_widget)
+            self.items[p] = lw
+            self.tab_widget.addTab(lw, p)
+        
+    def on_show_msg(self, name, msg, level):
+        if level == logging.INFO:
+            msg = "<font color='blue'>" + msg + '</font>'
+            self.items[name].appendHtml(msg)
+        elif level == logging.DEBUG:
+            msg = "<font color='red'>" + msg + '</font>'
+            self.items[name].appendHtml(msg)
+        elif level >= logging.WARNING:
+            msg = "<font color='red'><b>" + msg + '</b></font>'
+            self.items[name].appendHtml(msg)
+        else:
+            self.items[name].appendPlainText(msg)
+            
+    def on_msg_received_emit(self, name, record):
+        self.on_msg_received.emit(name, record.getMessage(), record.levelno)
+
+        
+        
 class ProcessingFrame(BaseProcessorFrame):
 
     SECTION_NAME = SECTION_NAME_PROCESSING
@@ -86,6 +129,7 @@ class ProcessingFrame(BaseProcessorFrame):
         self.add_expanding_spacer()
 
         self._init_control()
+        self.process_log_window = SubProcessLogWindow(self)
 
     @classmethod
     def get_special_settings(cls, settings, has_timelapse=True):

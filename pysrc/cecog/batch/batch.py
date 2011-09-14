@@ -28,6 +28,9 @@ import sys, \
 # extension module imports:
 #
 
+import pickle
+from multiprocessing import Pool
+
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
@@ -47,6 +50,9 @@ ENV_INDEX_SGE = 'SGE_TASK_ID'
 #-------------------------------------------------------------------------------
 # functions:
 #
+# see http://stackoverflow.com/questions/3288595/multiprocessing-using-pool-map-on-a-function-defined-in-a-class
+
+
 
 
 #-------------------------------------------------------------------------------
@@ -209,33 +215,49 @@ if __name__ ==  "__main__":
         logger.info('Overwrite has_multiple_plates by %s' % multiple_plates)
 
     # group positions by plate
-    plates = {}
-    for item in positions:
-        compound = item.split('___')
-        if len(compound) == 2:
-            plate_id, pos = compound
-        elif len(compound) == 1:
-            if not multiple_plates:
-                plate_id = os.path.split(path_input)[1]
-                pos = compound[0]
-            else:
-                parser.error("Position must be of the form 'plateid___position'. Found '%s' instead." % item)
-        else:
-            parser.error("Position must be of the form 'position' or 'plateid___position'. Found '%s' instead." % item)
-
-        if not plate_id in plates:
-            plates[plate_id] = []
-        plates[plate_id].append(pos)
-
-    # start one analyzer per plate with the corresponding positions
-    for plate_id in plates:
-        # redefine the positions
-        settings.set(SECTION_NAME_GENERAL, 'constrain_positions', True)
-        settings.set(SECTION_NAME_GENERAL, 'positions', ','.join(plates[plate_id]))
-        logger.info("Launching analyzer for plate '%s' with positions %s" % (plate_id, plates[plate_id]))
-        # initialize and run the analyzer
-        analyzer = AnalyzerCore(plate_id, settings, imagecontainer)
-        analyzer.processPositions()
+#    plates = {}
+#    for item in positions:
+#        compound = item.split('___')
+#        if len(compound) == 2:
+#            plate_id, pos = compound
+#        elif len(compound) == 1:
+#            if not multiple_plates:
+#                plate_id = os.path.split(path_input)[1]
+#                pos = compound[0]
+#            else:
+#                parser.error("Position must be of the form 'plateid___position'. Found '%s' instead." % item)
+#        else:
+#            parser.error("Position must be of the form 'position' or 'plateid___position'. Found '%s' instead." % item)
+#
+#        if not plate_id in plates:
+#            plates[plate_id] = []
+#        plates[plate_id].append(pos)
+#
+#    # start one analyzer per plate with the corresponding positions
+#    for plate_id in plates:
+#        # redefine the positions
+#        settings.set(SECTION_NAME_GENERAL, 'constrain_positions', True)
+#        settings.set(SECTION_NAME_GENERAL, 'positions', ','.join(plates[plate_id]))
+#        logger.info("Launching analyzer for plate '%s' with positions %s" % (plate_id, plates[plate_id]))
+#        
+#        # initialize and run the analyzer
+#        analyzer = AnalyzerCore(plate_id, settings, imagecontainer)
+#        analyzer.processPositions()
+        
+    position_pool = Pool(4)
+    
+    #learner = None
+    arg_list = []
+    for plate_id in imagecontainer.plates:
+        imagecontainer.set_plate(plate_id)
+        meta_data = imagecontainer.get_meta_data()
+        for pos_id in meta_data.positions:
+            arg_list.append( (plate_id, settings, imagecontainer, pos_id))
+    
+    position_pool.map(AnalyzerCoreHelper, arg_list)
+    
+    position_pool.close()
+    position_pool.join()
 
     print 'BATCHPROCESSING DONE!'
 
