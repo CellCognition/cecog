@@ -792,8 +792,6 @@ class TrainingThread(_ProcessingThread):
 
 
 class _ProcessorMixin(object):
-
-
     def __init__(self):
         self._is_running = False
         self._is_abort = False
