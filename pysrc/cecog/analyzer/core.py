@@ -223,11 +223,9 @@ class PositionAnalyzer(object):
         self._oLogHandler.setLevel(logging.DEBUG)
         self._oLogHandler.setFormatter(logging.Formatter('%(asctime)s %(name)-24s %(levelname)-6s %(message)s'))
         
-        self._socketHandler = logging.handlers.SocketHandler('localhost', logging.handlers.DEFAULT_TCP_LOGGING_PORT)
-        self._socketHandler.setFormatter(logging.Formatter('%(asctime)s %(name)-24s %(levelname)-6s %(message)s'))
         
         oLogger.addHandler(self._oLogHandler)
-        oLogger.addHandler(self._socketHandler)
+        
         return oLogger
 
     def __del__(self):
@@ -1281,9 +1279,12 @@ class AnalyzerCore(object):
                                    'text': 'P %s (%d/%d)' % (tplArgs[0], idx+1, len(lstJobInputs)),
                                    })
                 qthread.set_stage_info(stage_info)
-
-            analyzer = PositionAnalyzer(*tplArgs, **dctOptions)
-            analyzer()
+            try:
+                analyzer = PositionAnalyzer(*tplArgs, **dctOptions)
+                analyzer()
+            except Exception, e:
+                logging.getLogger(str(os.getpid())).error(e.message)
+                raise
 
         return self.oObjectLearner
 

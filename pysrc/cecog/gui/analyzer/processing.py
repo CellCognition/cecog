@@ -80,6 +80,7 @@ class SubProcessLogWindow(QFrame):
             self.tab_widget.addTab(lw, p)
         
     def on_show_msg(self, name, msg, level):
+        print '+'*10, msg, level
         if level == logging.INFO:
             msg = "<font color='blue'>" + msg + '</font>'
             self.items[name].appendHtml(msg)
@@ -92,8 +93,8 @@ class SubProcessLogWindow(QFrame):
         else:
             self.items[name].appendPlainText(msg)
             
-    def on_msg_received_emit(self, name, record):
-        self.on_msg_received.emit(name, record.getMessage(), record.levelno)
+    def on_msg_received_emit(self, record, formated_msg):
+        self.on_msg_received.emit(record.name, formated_msg, record.levelno)
 
         
         
