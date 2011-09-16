@@ -892,7 +892,10 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
 
             #cell <- screen$cell[I,][I.indices,][I.sort,]
             export.data <- data.frame(name=screen$cell[I,][I.indices,][I.sort,]$name,
-                          realign=realign.starts[I.indices][I.sort])
+                                      realign=realign.starts[I.indices][I.sort])
+            # prevent empty filenames. this occurs only if the event folder is empty (no events found), but is behavior
+            # was requested so that groups without events are not lost in the HTML page
+            export.data <- export.data[export.data$name != '',]
             #print(export.data)
             dirHmm <- paste(outdir_region, '_index', sep="/")
             if (!file.exists(dirHmm))
