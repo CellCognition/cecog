@@ -23,7 +23,9 @@ class BatchProcessor(object):
 
         plates = self.oBatchSettings.plates
         if plates is None:
-            plates = os.listdir(self.oBatchSettings.raw_image_path)
+            plates = filter(lambda x:
+                            not self.oBatchSettings.plate_regex.match(x) is None,
+                            os.listdir(self.oBatchSettings.raw_image_path))
 
         # the path command is the first command to be executed in each single job
         # script. This is practical for setting environment variables,
@@ -125,116 +127,5 @@ if __name__ ==  "__main__":
 
     oSettings = Settings(os.path.abspath(options.batch_configuration_filename), dctGlobals=globals())
     bp = BatchProcessor(oSettings)
-    #lstExperiments = bp.getListOfExperiments()
-    #bp.exportPBSJobArray(lstExperiments)
+    bp.exportPBSJobArray()
 
-
-#if __name__ ==  "__main__":
-#
-#    parser = OptionParser()
-#    parser.add_option("-r", "--raw_image_path", dest="raw_image_path",
-#                      help="raw image directory (base directory)")
-#    parser.add_option("-o", "--out_path", dest="out_path",
-#                      help="base output path for galleries")
-#    parser.add_option("-e", "--event_path", dest="event_path",
-#                      help="folder containing the track data for the detected events")
-#    parser.add_option("-l", "--lt_file", dest="labtek_file",
-#                      help="text file containing all labteks to be analyzed")
-#    parser.add_option("-a", "--array_script_name", dest="array_script_name",
-#                      help="name of the array script")
-#    parser.add_option("-s", "--script_path", dest="script_path",
-#                      help="path that contains the scripts")
-#
-#    (options, args) = parser.parse_args()
-#
-#    if (options.raw_image_path is None or
-#        options.out_path is None or
-#        options.event_path is None or
-#        options.script_path is None):
-#        parser.error("incorrect number of arguments!")
-#
-#    if options.array_script_name is None:
-#        array_script_name = 'CUTTER'
-#    else:
-#        array_script_name = options.array_script_name
-#
-#    if not options.labtek_file is None:
-#        file = open(options.labtek_file, 'r')
-#        plates = [x.strip() for x in file.readlines()]
-#        file.close()
-#    else:
-#        plates = os.listdir(options.raw_image_path)
-#
-#    base_in = options.raw_image_path
-#    if not os.path.isdir(base_in):
-#        raise ValueError("input path '%s' not found!\n" % base_in)
-#
-#    base_out = options.out_path
-#    if not os.path.isdir(base_out):
-#        os.makedirs(base_out)
-#
-#    jobCount = 0
-#
-#    if not os.path.exists(options.script_path):
-#        os.makedirs(options.script_path)
-#
-#    hours=16
-#    minutes=0
-#
-#    for plate in plates:
-#        head = """#!/bin/bash
-##PBS -l walltime=%02i:%02i:00
-##PBS -M twalter@embl.de
-##PBS -m e
-##PBS -o /g/mitocheck/PBS/%s
-##PBS -e /g/mitocheck/PBS/%s
-#    """ % (hours, minutes, array_script_name, array_script_name)
-#
-#        # export LD_LIBRARY_PATH
-#        cmd  = """export LD_LIBRARY_PATH=/g/software/linux/pack/libboostpython-1.46.1/lib:/g/software/linux/pack/vigra-1.7.1/lib:/g/software/linux/pack/tiff-3.8.1/lib:/g/software/linux/pack/libjpeg-8/lib:/g/software/linux/pack/libpng-1.4.5/lib:/g/software/linux/pack/fftw-3.2.2/lib:/g/software/linux/pack/hdf5-1.8.4/lib:/g/software/linux/pack/szlib-2.1/lib"""
-#        cmd += """export PYTHONPATH=/g/software/linux/pack/cellcognition-1.2.2/SRC/cecog_git/pysrc"""
-#
-#
-#        cmd = """cd /g/mitocheck/software/dev/mito_svn/trunk/projects/EMBL\n"""
-#        cmd += """export PYTHONPATH=/g/mitocheck/Thomas/src:/g/mitocheck/software/bin\n"""
-#
-#        cmd += """python2.6 /g/mitocheck/software/dev/mito_svn/trunk/projects/EMBL/laminB_analysis_cutter.py -r "%s" -o %s -a %s -l %s -p %s -s %s -t %i""" % (options.raw_image_path,
-#                                                                                                    options.out_path,
-#                                                                                                    options.analysis_path,
-#                                                                                                    lt_id,
-#                                                                                                    pos,
-#                                                                                                    options.settings_filename,
-#                                                                                                    sleep_time)
-#
-#            # create array job files
-#            jobCount += 1
-#            script_name = os.path.join(script_dir, '%s%i.sh' % (array_script_name, jobCount))
-#            script_file = open(script_name, "w")
-#            script_file.write(head + cmd)
-#            script_file.close()
-#            os.system('chmod a+rwx %s' % script_name)
-#
-#    # create main file to be submitted to the pbs server.
-#    main_script_name = os.path.join(script_dir, '%s_main.sh' % array_script_name)
-#    main_script_file = open(main_script_name, 'w')
-#    main_content = """#!/bin/bash
-##PBS -J 1-%i
-##PBS -q clng_new
-##PBS -M twalter@embl.de
-##PBS -m e
-##PBS -o /g/mitocheck/PBS/laminB
-##PBS -e /g/mitocheck/PBS/laminB
-#%s/%s$PBS_ARRAY_INDEX.sh
-#"""
-#    main_content %= (jobCount, script_dir, array_script_name)
-#    main_script_file.write(main_content)
-#    main_script_file.close()
-#
-#    os.system('chmod a+rwx %s' % main_script_name)
-#
-#    sub_cmd = '/usr/pbs/bin/qsub -q clng_new -J 1-%i %s' % (jobCount, main_script_name)
-#    print sub_cmd
-#    print 'array containing %i jobs' % jobCount
-#    #os.system(sub_cmd)
-#
-#    print "* total positions: ", jobCount

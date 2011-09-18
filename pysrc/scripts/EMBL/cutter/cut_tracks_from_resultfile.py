@@ -1,6 +1,9 @@
 from cecog import ccore
 from cecog.io.imagecontainer import Coordinate
-import os, pickle
+
+import os, sys, re, time, pickle
+
+from optparse import OptionParser
 
 class Cutter(object):
 
@@ -21,13 +24,15 @@ class Cutter(object):
         img_container = pickle.load(img_cont_file)
         img_cont_file.close()
 
+        img_container.path = os.path.dirname(image_container_filename)
+
         return img_container
 
     def __call__(self, raw_img_dir, plate, track_data_filename,
                  positions=None, skip_done=True, post_analysis_settings_name=None):
 
         if not os.path.isfile(track_data_filename):
-            if not post_analysis_settings_filename is None:
+            if not post_analysis_settings_name is None:
 
                 from scripts.EMBL.io.flatfileimporter import EventDescriptionImporter
                 event_importer = EventDescriptionImporter(settings_filename=post_analysis_settings_name)
@@ -46,23 +51,28 @@ class Cutter(object):
                                  "or a settings file for the event description importer"
                                  "has to be provided.")
 
+        print 'importing data from pickle file: %s' % track_data_filename
         track_data_file = open(track_data_filename, 'r')
         track_data = pickle.load(track_data_file)
         track_data_file.close()
 
         img_in_dir = os.path.join(raw_img_dir, plate)
         img_container_filenames = filter(lambda x:
-                                         not self.img_container_regex(x) is None and
-                                         self.img_container_regex(x).groupdict()['plate'] == plate,
+                                         not self.img_container_regex.search(x) is None and
+                                         self.img_container_regex.search(x).groupdict()['plate'] == plate,
                                          os.listdir(img_in_dir))
 
         if len(img_container_filenames) == 0:
             raise ValueError("No container file found.")
-        if len(img_container_filenames) > 0:
+        if len(img_container_filenames) > 1:
+            print img_container_filenames
             raise ValueError("More than one container file found.")
 
         img_container_filename = img_container_filenames[0]
-        img_container = self.readImageContainer(img_container_filename)
+        print 'importing image container from %s' % os.path.join(img_in_dir,
+                                                                 img_container_filename)
+        img_container = self.readImageContainer(os.path.join(img_in_dir,
+                                                             img_container_filename))
 
         if positions is None:
             positions = img_container.meta_data.positions
@@ -71,9 +81,9 @@ class Cutter(object):
         for pos in positions:
             print
             print ' *** PROCESSING POSITION %s %s ***' % (plate, pos)
-            try:
+            if True:
                 self.cutTracks(track_data, img_container, plate, pos, skip_done=skip_done)
-            except:
+            else:
                 print 'a problem occurred while processing %s %s' % (plate, pos)
                 not_worked.append(pos)
                 continue
@@ -81,7 +91,7 @@ class Cutter(object):
         total = len(positions)
         worked = len(not_worked) - total
 
-        print 'processed %i out of %i positions' % (len(worked), len(total))
+        print 'processed %i out of %i positions' % (worked, total)
         print 'elapsed time: %02i:%02i:%02i' % ((diffTime/3600), ((diffTime%3600)/60), (diffTime%60))
         print 'DONE!'
 
@@ -109,7 +119,7 @@ class Cutter(object):
         for trackId in lstTracks:
             center_values = zip(full_track_data[plate][pos][trackId][self.track_channel][self.track_region]['tracking__center_x'],
                                 full_track_data[plate][pos][trackId][self.track_channel][self.track_region]['tracking__center_y'],
-                                full_track_data[plate][pos][trackId][self.track_channel][self.track_region]['Frame'])
+                                full_track_data[plate][pos][trackId]['Frame'])
 
             print 'cutting ', trackId
             imout_filename = os.path.join(imoutDir, 'Gallery--%s.png' % (trackId))
@@ -189,5 +199,6 @@ if __name__ == "__main__":
 
     cutter = Cutter(options.out_path)
     cutter(options.raw_image_path, options.plate, options.track_data_filename,
-           positions=positions, skip_done=options.skip_done)
+           positions=positions, skip_done=options.skip_done,
+           post_analysis_settings_name=options.settings_filename)
 

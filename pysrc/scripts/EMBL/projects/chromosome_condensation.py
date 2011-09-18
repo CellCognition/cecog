@@ -8,7 +8,9 @@ reload(scripts.EMBL.plotter.feature_timeseries_plotter)
 from scripts.EMBL.plotter.feature_timeseries_plotter import TimeseriesPlotter
 from scripts.EMBL.settings import Settings
 
-# export PYTHONPATH=/Users/twalter/workspace/cecog
+# export PYTHONPATH=/Users/twalter/workspace/cecog/pysrc
+# if rpy2 is going to be used: export PATH=/Users/twalter/software/R/R.framework/Resources/bin:${PATH}
+# This is necessary, because without that he finds the wrong R executable. 
 
 # works with the settings file scripts.EMBL/settings/settings_chrcond_postprocessing.py
 class FullAnalysis(object):

@@ -1,5 +1,13 @@
 # remote: baseDir = '/Volumes/mitocheck/Thomas/data/JKH/cecog_output'
-outDir = '/Users/twalter/data/JKH'
+
+settings_dir = os.path.join('..', 'settings_files', 'chromosome_condensation')
+
+if os.path.exists(os.path.join(settings_dir, 'CLUSTER')):
+    print 'CLUSTER VERSION'
+    outDir = '/g/mitocheck/Thomas/data/JKH'
+else:
+    outDir = '/Users/twalter/data/JKH'
+
 baseDir = os.path.join(outDir, 'cecog_output')
 importDir = os.path.join(outDir, 'imported_event_data')
 plotDir = os.path.join(outDir, 'plots')
