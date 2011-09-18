@@ -153,19 +153,20 @@ if __name__ ==  "__main__":
     imagecontainer.import_from_settings(settings)
 
     # FIXME: Could be more generally specified. SGE is setting the job item index via an environment variable
-    if index.isdigit():
-        index = int(index)
-    else:
-        if index == ENV_INDEX_SGE:
-            logger.info("Using SGE job item index: environment variable '%s'" % index)
-
-            if index not in os.environ:
-                parser.error("SGE environment variable '%s' not defined.")
-            index = int(os.environ[index])
-            # decrement index (index is in range of 1..n for SGE)
-            index -= 1
+    if index is not None:
+        if index.isdigit():
+            index = int(index)
         else:
-            parser.error("Only SGE supported at the moment (environment variable '%s')." % ENV_INDEX_SGE)
+            if index == ENV_INDEX_SGE:
+                logger.info("Using SGE job item index: environment variable '%s'" % index)
+
+                if index not in os.environ:
+                    parser.error("SGE environment variable '%s' not defined.")
+                index = int(os.environ[index])
+                # decrement index (index is in range of 1..n for SGE)
+                index -= 1
+            else:
+                parser.error("Only SGE supported at the moment (environment variable '%s')." % ENV_INDEX_SGE)
 
     # if no position list was specified via the program options get it from the settings file
     if  position_list is None:
