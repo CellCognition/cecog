@@ -100,8 +100,9 @@ FIND_PACKAGE(Boost COMPONENTS python REQUIRED)
 
 MESSAGE(STATUS "")
 MESSAGE(STATUS " ----------------------------------------")
-MESSAGE(STATUS " --- cecog-ccore Summary      -----------")
+MESSAGE(STATUS " --- cecog-ccore Summary   --------------")
 MESSAGE(STATUS " ----------------------------------------")
+MESSAGE(STATUS " running on " ${CMAKE_SYSTEM_NAME})
 MESSAGE(STATUS "")
 MESSAGE(STATUS " VIGRA_INCLUDE_DIR -> " ${VIGRA_INCLUDE_DIR})
 MESSAGE(STATUS " VIGRA_IMPEX_LIBRARY -> " ${VIGRA_IMPEX_LIBRARY})
@@ -135,7 +136,8 @@ MESSAGE(STATUS "")
 # SET(PYTHON_LIBRARY "c:/Python27/libs/python27.lib")
 
 
-IF(${CMAKE_SYSTEM_NAME} MATCHES "^windows$")
+
+IF(${CMAKE_SYSTEM_NAME} MATCHES "^Windows$")
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
 ENDIF()
 
