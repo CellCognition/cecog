@@ -134,7 +134,10 @@ MESSAGE(STATUS "")
 # SET(VIGRA_IMPEX_LIBRARY "C:/Program Files/vigra/lib/vigraimpex.lib")
 # SET(PYTHON_LIBRARY "c:/Python27/libs/python27.lib")
 
-# SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
+
+IF(${CMAKE_SYSTEM_NAME} MATCHES "^windows$")
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
+ENDIF()
 
 SET(CMAKE_BUILD_TYPE Release)
 
@@ -144,10 +147,6 @@ ADD_LIBRARY(cecog-lib SHARED
     cecog.cxx) 
     
 TARGET_LINK_LIBRARIES(cecog-lib ${TIFF_LIBRARY} ${Boost_PYTHON_LIBRARY} ${VIGRA_IMPEX_LIBRARY} ${PYTHON_LIBRARY})
-
-
-MESSAGE(STATUS "asdf" ${lib_name})
-
 
 GET_TARGET_PROPERTY(LIB_NAME cecog-lib LOCATION)
 
