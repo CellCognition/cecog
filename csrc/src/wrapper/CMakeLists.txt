@@ -134,7 +134,7 @@ MESSAGE(STATUS "")
 # SET(VIGRA_IMPEX_LIBRARY "C:/Program Files/vigra/lib/vigraimpex.lib")
 # SET(PYTHON_LIBRARY "c:/Python27/libs/python27.lib")
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
+# SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
 
 SET(CMAKE_BUILD_TYPE Release)
 
@@ -145,13 +145,25 @@ ADD_LIBRARY(cecog-lib SHARED
     
 TARGET_LINK_LIBRARIES(cecog-lib ${TIFF_LIBRARY} ${Boost_PYTHON_LIBRARY} ${VIGRA_IMPEX_LIBRARY} ${PYTHON_LIBRARY})
 
+
+MESSAGE(STATUS "asdf" ${lib_name})
+
+
+GET_TARGET_PROPERTY(LIB_NAME cecog-lib LOCATION)
+
+IF(${CMAKE_SYSTEM_NAME} MATCHES "^windows$")
+    SET(NEW_LIB_NAME ${cecog_ccore_SOURCE_DIR}/../../../pysrc/cecog/ccore/_cecog.pyd)
+#ELSEIF(${CMAKE_SYSTEM_NAME} MATCHES "^Linux$")
+ELSE()
+    SET(NEW_LIB_NAME ${cecog_ccore_SOURCE_DIR}/../../../pysrc/cecog/ccore/_cecog.so)
+ENDIF()
+
+
 ADD_CUSTOM_COMMAND(
     TARGET cecog-lib
     POST_BUILD
-    IF(PYTHON_PLATFORM MATCHES "^windows$")
-         COMMAND COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}/cecog-lib.dll ${cecog_ccore_SOURCE_DIR}/../../../pysrc/cecog/ccore/_cecog.pyd
-    ELSE()
-         COMMAND COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/libcecog-lib.so ${cecog_ccore_SOURCE_DIR}/../../../pysrc/cecog/ccore/_cecog.so
-    ENDIF()
-   
+    COMMAND ${CMAKE_COMMAND} -E copy ${LIB_NAME} ${NEW_LIB_NAME}
+    COMMENT "copying ${LIB_NAME} ${NEW_LIB_NAME}"
 )
+
+
