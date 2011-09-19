@@ -8,6 +8,7 @@ IF (NOT CMAKE_BUILD_TYPE)
     SET(CMAKE_BUILD_TYPE "Release")
 ENDIF()
 
+
 ########################################################################
 # ADD DEPENDENCY_SEARCH_PREFIX TO CMAKES'FIND_PACKAGE PATH
 ########################################################################
@@ -147,5 +148,10 @@ TARGET_LINK_LIBRARIES(cecog-lib ${TIFF_LIBRARY} ${Boost_PYTHON_LIBRARY} ${VIGRA_
 ADD_CUSTOM_COMMAND(
     TARGET cecog-lib
     POST_BUILD
-    COMMAND COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}/cecog-lib.dll ${cecog_ccore_SOURCE_DIR}/../../../pysrc/cecog/ccore/_cecog.pyd
+    IF(PYTHON_PLATFORM MATCHES "^windows$")
+         COMMAND COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}/cecog-lib.dll ${cecog_ccore_SOURCE_DIR}/../../../pysrc/cecog/ccore/_cecog.pyd
+    ELSE()
+         COMMAND COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/libcecog-lib.so ${cecog_ccore_SOURCE_DIR}/../../../pysrc/cecog/ccore/_cecog.so
+    ENDIF()
+   
 )
