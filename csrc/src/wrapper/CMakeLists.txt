@@ -8,6 +8,7 @@ IF (NOT CMAKE_BUILD_TYPE)
     SET(CMAKE_BUILD_TYPE "Release")
 ENDIF()
 
+
 ########################################################################
 # ADD DEPENDENCY_SEARCH_PREFIX TO CMAKES'FIND_PACKAGE PATH
 ########################################################################
@@ -99,8 +100,9 @@ FIND_PACKAGE(Boost COMPONENTS python REQUIRED)
 
 MESSAGE(STATUS "")
 MESSAGE(STATUS " ----------------------------------------")
-MESSAGE(STATUS " --- cecog-ccore Summary      -----------")
+MESSAGE(STATUS " --- cecog-ccore Summary   --------------")
 MESSAGE(STATUS " ----------------------------------------")
+MESSAGE(STATUS " running on " ${CMAKE_SYSTEM_NAME})
 MESSAGE(STATUS "")
 MESSAGE(STATUS " VIGRA_INCLUDE_DIR -> " ${VIGRA_INCLUDE_DIR})
 MESSAGE(STATUS " VIGRA_IMPEX_LIBRARY -> " ${VIGRA_IMPEX_LIBRARY})
@@ -133,7 +135,11 @@ MESSAGE(STATUS "")
 # SET(VIGRA_IMPEX_LIBRARY "C:/Program Files/vigra/lib/vigraimpex.lib")
 # SET(PYTHON_LIBRARY "c:/Python27/libs/python27.lib")
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
+
+
+IF(${CMAKE_SYSTEM_NAME} MATCHES "^Windows$")
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
+ENDIF()
 
 SET(CMAKE_BUILD_TYPE Release)
 
@@ -144,8 +150,21 @@ ADD_LIBRARY(cecog-lib SHARED
     
 TARGET_LINK_LIBRARIES(cecog-lib ${TIFF_LIBRARY} ${Boost_PYTHON_LIBRARY} ${VIGRA_IMPEX_LIBRARY} ${PYTHON_LIBRARY})
 
+GET_TARGET_PROPERTY(LIB_NAME cecog-lib LOCATION)
+
+IF(${CMAKE_SYSTEM_NAME} MATCHES "^windows$")
+    SET(NEW_LIB_NAME ${cecog_ccore_SOURCE_DIR}/../../../pysrc/cecog/ccore/_cecog.pyd)
+#ELSEIF(${CMAKE_SYSTEM_NAME} MATCHES "^Linux$")
+ELSE()
+    SET(NEW_LIB_NAME ${cecog_ccore_SOURCE_DIR}/../../../pysrc/cecog/ccore/_cecog.so)
+ENDIF()
+
+
 ADD_CUSTOM_COMMAND(
     TARGET cecog-lib
     POST_BUILD
-    COMMAND COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}/cecog-lib.dll ${cecog_ccore_SOURCE_DIR}/../../../pysrc/cecog/ccore/_cecog.pyd
+    COMMAND ${CMAKE_COMMAND} -E copy ${LIB_NAME} ${NEW_LIB_NAME}
+    COMMENT "copying ${LIB_NAME} ${NEW_LIB_NAME}"
 )
+
+
