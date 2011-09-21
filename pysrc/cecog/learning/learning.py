@@ -37,7 +37,7 @@ from pdk.optionmanagers import OptionManager
 #from pdk.containers.tableio import exportTable
 from pdk.ordereddict import OrderedDict
 from pdk.fileutils import safe_mkdirs
-from pdk.iterator import flatten
+from pdk.iterator import flatten, unique
 from pdk.map import dict_append_list
 from pdk.attributemanagers import (get_attribute_values,
                                    set_attribute_values)
@@ -324,7 +324,7 @@ class BaseLearner(LoggerMixin, OptionManager):
         if strFilePath is None:
             strFilePath = self.dctEnvPaths['data']
 
-        print self.hasZeroInsert
+        #print self.hasZeroInsert
         oWriter = ArffWriter(os.path.join(strFilePath, strFileName),
                              self.lstFeatureNames,
                              self.dctClassLabels,
@@ -547,6 +547,23 @@ class ClassPredictor(BaseLearner):
         samples = samples.tolist()
         return labels, samples
 
+    def filterData(self, apply=False):
+        """
+        find features with NA values in the data set and remove features from the data and corresponding feature names
+        returns the list of removed feature names
+        """
+        filter_idx = numpy.array([], numpy.int32)
+        features = numpy.asarray(self.lstFeatureNames)
+        feature_idx = numpy.arange(len(features))
+        for data in self.dctFeatureData.itervalues():
+            filter_idx = numpy.append(filter_idx, feature_idx[numpy.any(numpy.isnan(data), 0)])
+        filter_idx = numpy.unique(filter_idx)
+        if apply:
+            for name in self.dctFeatureData:
+                self.dctFeatureData[name] = numpy.delete(self.dctFeatureData[name], filter_idx, 1)
+            self.lstFeatureNames = numpy.delete(features, filter_idx).tolist()
+        return features[filter_idx]
+
     def train(self, c, g, probability=True, compensation=True,
               path=None, filename=None, save=True):
         if filename is None:
@@ -740,6 +757,7 @@ class ConfusionMatrix(object):
         assert conf.ndim == 2
         assert conf.shape[0] == conf.shape[1]
         self.conf = conf
+        reg = 0.0000000001
 
         # true-positives
         self.tp = numpy.diag(self.conf)
@@ -751,24 +769,24 @@ class ConfusionMatrix(object):
         self.tn = numpy.sum(self.conf) - self.tp - self.fn - self.fp
 
         # sensitivity
-        self.se = self.tp / numpy.asarray(self.tp + self.fn, numpy.float)
+        self.se = self.tp / numpy.asarray(self.tp + self.fn + reg, numpy.float)
         self.sensitivity = self.se
 
         # specificity
-        self.sp = self.tn / numpy.asarray(self.tn + self.fp, numpy.float)
+        self.sp = self.tn / numpy.asarray(self.tn + self.fp + reg, numpy.float)
         self.specificity = self.sp
 
         # accuracy
         self.ac = (self.tp + self.tn) / \
-                  numpy.asarray(self.tp + self.tn + self.fp + self.fn,
+                  numpy.asarray(self.tp + self.tn + self.fp + self.fn + reg,
                                 numpy.float)
 
         # positive prediction value (also precision)
-        self.ppv = self.tp / numpy.asarray(self.tp + self.fp, numpy.float)
+        self.ppv = self.tp / numpy.asarray(self.tp + self.fp + reg, numpy.float)
         self.precision = self.ppv
 
         # negative prediction value
-        self.npv = self.tn / numpy.asarray(self.tn + self.fn, numpy.float)
+        self.npv = self.tn / numpy.asarray(self.tn + self.fn + reg, numpy.float)
         # samples
         self.samples = self.tp + self.fn
 
@@ -795,7 +813,7 @@ class ConfusionMatrix(object):
         self.ac_class = self.av_ac
 
         # accuracy per item (true-positives divided by all decisions)
-        self.ac_sample = numpy.sum(self.tp) / numpy.sum(self.samples,
+        self.ac_sample = numpy.sum(self.tp) / numpy.sum(self.samples + reg,
                                                         dtype=numpy.float)
 
     def __len__(self):

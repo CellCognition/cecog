@@ -493,21 +493,10 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
                              hmm_initial_emission=NULL,
                              performDecode=TRUE,
                              truncate_from_front=NULL,
-                             motif_sequence=NULL)
+                             motif_sequence=NULL,
+                             galleries=NULL)
 {
-    if (!file.exists(outdir))
-        dir.create(outdir)
-
-    if (groupByOligoId)
-        suffix = 'byoligo'
-    else if (groupByGene)
-        suffix = 'bysymbol'
-    else
-        suffix = 'bypos'
-
-    outdir_region = paste(outdir, paste(screen$regionName, suffix, sep='_'), sep='/')
-    if (!file.exists(outdir_region))
-        dir.create(outdir_region)
+    outdir_region = outdir
 
     rel_sequences = '_sequences'
     outdir_sequences = paste(outdir_region, rel_sequences, sep='/')
@@ -577,7 +566,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
         #break
     }
 
-    T1 <- matrix("", nr=2, nc=groups)
+    T1 <- matrix("", nr=3, nc=groups)
   cat("groups=",groups,"\n")
 
     fn <- matrix("",nr=groups,nc=2)
@@ -744,6 +733,13 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             #T1[i,3] <- hwrite(hmm[[i]]$trans)
 
 
+            if (!is.null(galleries))
+            {
+                T1[3,i] <- hwrite(paste(galleries, 'gallery'), table=T,
+                                  link=paste('_gallery',galleries,sprintf("%s.jpg", pos.name), sep='/'),
+                                  border=0, center=T, cellspacing=10)
+            }
+
 #            sq <- Sequence[I,seq(1,T)]
             sq <- Sequence[I,]
             sq.raw <- Sequence.Raw[I,]
@@ -896,7 +892,10 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
 
             #cell <- screen$cell[I,][I.indices,][I.sort,]
             export.data <- data.frame(name=screen$cell[I,][I.indices,][I.sort,]$name,
-                          realign=realign.starts[I.indices][I.sort])
+                                      realign=realign.starts[I.indices][I.sort])
+            # prevent empty filenames. this occurs only if the event folder is empty (no events found), but is behavior
+            # was requested so that groups without events are not lost in the HTML page
+            export.data <- export.data[export.data$name != '',]
             #print(export.data)
             dirHmm <- paste(outdir_region, '_index', sep="/")
             if (!file.exists(dirHmm))

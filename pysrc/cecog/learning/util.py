@@ -18,7 +18,7 @@ __source__ = '$URL$'
 # standard library imports:
 #
 
-from numpy import asarray
+import numpy
 
 #-------------------------------------------------------------------------------
 # cecog module imports:
@@ -181,8 +181,7 @@ class ArffReader(object):
                     self.dctFeatureData[strClassName].append(lstFeatureData)
 
         for strClassName in self.dctFeatureData:
-            self.dctFeatureData[strClassName] = \
-                asarray(self.dctFeatureData[strClassName], 'O')
+            self.dctFeatureData[strClassName] = numpy.array(self.dctFeatureData[strClassName], numpy.float)
 
         for iClassLabel, strClassName in zip(lstClassLabels, lstClassNames):
             self.dctClassLabels[strClassName] = iClassLabel

@@ -28,9 +28,8 @@ __all__ = ['ErrorCorrectionFrame']
 # cecog imports:
 #
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
-from cecog.gui.analyzer import (_BaseFrame,
-                                _ProcessorMixin,
-                                HmmThread
+from cecog.gui.analyzer import (BaseProcessorFrame,
+                                HmmThread,
                                 )
 
 #-------------------------------------------------------------------------------
@@ -46,14 +45,13 @@ from cecog.gui.analyzer import (_BaseFrame,
 #-------------------------------------------------------------------------------
 # classes:
 #
-class ErrorCorrectionFrame(_BaseFrame, _ProcessorMixin):
+class ErrorCorrectionFrame(BaseProcessorFrame):
 
     SECTION_NAME = SECTION_NAME_ERRORCORRECTION
     DISPLAY_NAME = 'Error Correction'
 
     def __init__(self, settings, parent):
-        _BaseFrame.__init__(self, settings, parent)
-        _ProcessorMixin.__init__(self)
+        super(ErrorCorrectionFrame, self).__init__(settings, parent)
 
         self.register_control_button('hmm',
                                      HmmThread,
@@ -85,11 +83,17 @@ class ErrorCorrectionFrame(_BaseFrame, _ProcessorMixin):
                        [('max_time',),
                         ], layout='flow', link='plot_parameter',
                         label='Plot parameter')
+        self.add_input('ignore_tracking_branches')
+        self.add_input('show_html')
+        self.add_line()
+        self.add_group('compose_galleries',
+                       [('compose_galleries_sample',),
+                        ], layout='flow')
         self.add_expanding_spacer()
         self._init_control(has_images=False)
 
-    def _get_modified_settings(self, name):
-        settings = _ProcessorMixin._get_modified_settings(self, name)
+    def _get_modified_settings(self, name, has_timelapse=True):
+        settings = BaseProcessorFrame._get_modified_settings(self, name, has_timelapse)
         settings.set_section('Processing')
         if settings.get2('primary_classification'):
             settings.set2('primary_errorcorrection', True)

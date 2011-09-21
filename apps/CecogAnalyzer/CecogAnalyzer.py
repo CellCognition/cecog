@@ -20,16 +20,18 @@ __source__ = '$URL$'
 import sys, \
        os, \
        logging, \
-       time
+       time, \
+       gc
 import cPickle as pickle
 
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
 import sip
-# set PyQt API version to 2.0 and disable QString
+# set PyQt API version to 2.0
 sip.setapi('QString', 2)
-#sip.setapi('QVariant', 2)
+sip.setapi('QVariant', 2)
+sip.setapi('QUrl', 2)
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
@@ -83,7 +85,7 @@ from cecog.gui.util import (status,
                             exception,
                             information,
                             warning,
-                            ProgressDialog,
+                            waitingProgressDialog,
                             )
 
 import resource
@@ -185,7 +187,7 @@ class AnalyzerMainWindow(QMainWindow):
         self._selection.setIconSize(QSize(35, 35))
         self._selection.setGridSize(QSize(140,60))
         #self._selection.setWrapping(False)
-        #self._selection.setMovement(QListView.Static)
+        self._selection.setMovement(QListView.Static)
         #self._selection.setFlow(QListView.TopToBottom)
         #self._selection.setSpacing(12)
         self._selection.setMaximumWidth(self._selection.gridSize().width()+5)
@@ -196,9 +198,6 @@ class AnalyzerMainWindow(QMainWindow):
         self._pages = QStackedWidget(central_widget)
         self._pages.main_window = self
 
-        #pagesWidget->addWidget(new ConfigurationPage);
-        #pagesWidget->addWidget(new UpdatePage);
-        #pagesWidget->addWidget(new QueryPage);
         self._settings_filename = None
         self._settings = GuiConfigSettings(self, SECTION_REGISTRY)
 
@@ -543,7 +542,7 @@ class AnalyzerMainWindow(QMainWindow):
                     found_plates = [info[0] for info in infos
                                     if not info[3] is None]
                     missing_plates = [info[0] for info in infos
-                                    if info[3] is None]
+                                      if info[3] is None]
                     has_missing = len(missing_plates) > 0
                     txt = '%s plates were already scanned.\nDo you want ' \
                           'to rescan the file structure(s)? ' \
@@ -563,9 +562,11 @@ class AnalyzerMainWindow(QMainWindow):
                     if not has_missing:
                         btn1 = QPushButton('No', box)
                         box.addButton(btn1, QMessageBox.NoRole)
+                        box.setDefaultButton(btn1)
                     elif len(found_plates) > 0:
                         btn1 = QPushButton('Rescan missing', box)
                         box.addButton(btn1, QMessageBox.YesRole)
+                        box.setDefaultButton(btn1)
                     else:
                         btn1 = None
 
@@ -578,14 +579,11 @@ class AnalyzerMainWindow(QMainWindow):
                         btn = box.clickedButton()
                         if btn == btn1:
                             if has_missing:
-                                scan_plates = dict((id, True)
-                                                   for id in missing_plates)
+                                scan_plates = dict([(info[0], info[0] in missing_plates) for info in infos])
                             else:
-                                scan_plates = dict((id, False)
-                                                   for id in found_plates)
+                                scan_plates = dict((info[0], False) for info in infos)
                         else:
-                            scan_plates = dict((info[0], True)
-                                               for info in infos)
+                            scan_plates = dict((info[0], True) for info in infos)
                 else:
                     has_multiple = self._settings.get(SECTION_NAME_GENERAL,
                                                       "has_multiple_plates")
@@ -601,39 +599,46 @@ class AnalyzerMainWindow(QMainWindow):
                     self._load_image_container(infos, scan_plates)
 
     def _load_image_container(self, plate_infos, scan_plates):
-        dlg = ProgressDialog(self, Qt.CustomizeWindowHint | Qt.WindowTitleHint)
-        dlg.setWindowModality(Qt.WindowModal)
-        dlg.setLabelText('Please wait until the input structure is scanned\n'
-                         'or the structure data loaded...')
-        dlg.setCancelButton(None)
-        dlg.setRange(0,0)
 
-        thread = ImageContainerThread(self._settings, scan_plates)
-        thread.next_plate.connect(lambda x: dlg.setValue(x))
-        fct = lambda x,y : lambda : self._on_load_finished(x,y)
-        thread.finished.connect(fct(dlg, thread))
-        thread.start()
-        dlg.exec_()
+        self._clear_browser()
+        imagecontainer = ImageContainer()
 
-    def _on_load_finished(self, dlg, thread):
-        # close and delete the current browser instance
-        if not self._browser is None:
-            self._browser.close()
-            del self._browser
-            self._browser = None
+        def load(dlg):
+            iter = imagecontainer.iter_import_from_settings(self._settings, scan_plates)
+            for idx, info in enumerate(iter):
+                dlg.targetSetValue.emit(idx+1)
 
-        imagecontainer = thread.imagecontainer
-        if len(imagecontainer.plates) > 0 and thread.error_message is None:
-            self._imagecontainer = imagecontainer
-            plate = self._imagecontainer.plates[0]
-            self._imagecontainer.set_plate(plate)
-            self._imagecontainer.check_dimensions()
-            channels = self._imagecontainer.channels
+            if len(imagecontainer.plates) > 0:
+                plate = imagecontainer.plates[0]
+                imagecontainer.set_plate(plate)
+
+        dlg = waitingProgressDialog('Please wait until the input structure is scanned\n'
+                                    'or the structure data loaded...', self, load, (0, len(scan_plates)))
+        dlg.exec_(passDialog=True)
+
+        if len(imagecontainer.plates) > 0:
+            imagecontainer.check_dimensions()
+            channels = imagecontainer.channels
+
+            # do not report value changes to the main window
+            self._settings.set_notify_change(False)
+
+            problems = []
             for prefix in ['primary', 'secondary', 'tertiary']:
                 trait = self._settings.get_trait(SECTION_NAME_OBJECTDETECTION,
                                                  '%s_channelid' % prefix)
-                trait.set_list_data(channels)
+                if trait.set_list_data(channels) is None:
+                    problems.append(prefix)
                 self._tabs[1].get_widget('%s_channelid' % prefix).update()
+
+            # report problems about a mismatch between channel IDs found in the data and specified by the user
+            if len(problems) > 0:
+                critical(self, "Selected channel IDs not valid",
+                         "The selected channel IDs for %s are not valid.\nValid IDs are %s." %
+                         (", ".join(["'%s Channel'" % s.capitalize() for s in problems]),
+                          ", ".join(["'%s'" % s for s in channels])))
+                # a mismatch between settings and data will cause changed settings
+                self.settings_changed(True)
 
             trait = self._settings.get_trait(SECTION_NAME_TRACKING,
                                              'tracking_duration_unit')
@@ -642,29 +647,31 @@ class AnalyzerMainWindow(QMainWindow):
             # information is present
             meta_data = imagecontainer.get_meta_data()
             if meta_data.has_timestamp_info:
-                trait.set_list_data(TRACKING_DURATION_UNITS_TIMELAPSE)
+                result = trait.set_list_data(TRACKING_DURATION_UNITS_TIMELAPSE)
             else:
-                trait.set_list_data(TRACKING_DURATION_UNITS_DEFAULT)
+                result = trait.set_list_data(TRACKING_DURATION_UNITS_DEFAULT)
+            if result is None:
+                critical(self, "Could not set tracking duration units",
+                         "The tracking duration units selected to match the load data. Please check your settings.")
+                # a mismatch between settings and data will cause changed settings
+                self.settings_changed(True)
 
+            # activate change notification again
+            self._settings.set_notify_change(True)
+
+            self._imagecontainer = imagecontainer
             self.set_modules_active(state=True)
-            dlg.reset()
             information(self, "Plate(s) successfully loaded",
                         "%d plates loaded successfully." % len(imagecontainer.plates))
         else:
-            dlg.reset()
             critical(self, "No valid image data found",
                      "The naming schema provided might not fit your image data"
                      "or the coordinate file is not correct.\n\nPlease modify "
-                     "the values and scan the structure again.",
-                     detail = thread.error_message)
+                     "the values and scan the structure again.")
 
     def set_modules_active(self, state=True):
         for name, (button, widget) in self._tab_lookup.iteritems():
-            if name != GeneralFrame.SECTION_NAME:
-                if state:
-                    button.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-                else:
-                    button.setFlags(Qt.NoItemFlags)
+            widget.set_active(state)
 
     @pyqtSlot()
     def _on_file_open(self):
@@ -677,13 +684,9 @@ class AnalyzerMainWindow(QMainWindow):
             filename = QFileDialog.getOpenFileName(self, 'Open config file', dir, ';;'.join(self.NAME_FILTERS))
             if filename:
                 self._read_settings(filename)
+                self._clear_browser()
                 self.set_modules_active(state=False)
 
-                # close and delete the current browser instance
-                if not self._browser is None:
-                    self._browser.close()
-                    del self._browser
-                    self._browser = None
 
     @pyqtSlot()
     def _on_file_save(self):
@@ -692,6 +695,15 @@ class AnalyzerMainWindow(QMainWindow):
     @pyqtSlot()
     def _on_file_save_as(self):
         self.save_settings(True)
+
+    def _clear_browser(self):
+        # close and delete the current browser instance
+        if not self._browser is None:
+            self._browser.close()
+            del self._browser
+            # FIXME: necessary step to prevent crash after loading of new image container
+            gc.collect()
+            self._browser = None
 
     def _on_show_log_window(self):
         logger = logging.getLogger()
@@ -710,28 +722,6 @@ class AnalyzerMainWindow(QMainWindow):
 
     def _on_help_startup(self):
         show_html('_startup')
-
-
-class ImageContainerThread(QThread):
-
-    next_plate = pyqtSignal(int)
-
-    def __init__(self, settings, scan_plates):
-        super(ImageContainerThread, self).__init__()
-        self._settings = settings
-        self.scan_plates = scan_plates
-        self.imagecontainer = None
-        self.error_message = None
-
-    def run(self):
-        self.imagecontainer = ImageContainer()
-        iter = self.imagecontainer.iter_import_from_settings(self._settings,
-                                                             self.scan_plates)
-        try:
-            for idx, info in enumerate(iter):
-                self.next_plate.emit(idx+1)
-        except Exception as e:
-            self.error_message = e.message
 
 
 def handle_exception(exc_type, exc_value, exc_traceback):
@@ -753,6 +743,13 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 if __name__ == "__main__":
     import time
     from pdk.fileutils import safe_mkdirs
+    from cecog.util.util import get_appdata_path
+
+    #import argparse
+    #parser = argparse.ArgumentParser(description='CellCognition Analyzer GUI')
+    #args = parser.parse_args()
+
+
 #    log_path = 'log'
 #    safe_mkdirs(log_path)
 #    sys.stdout = \
@@ -775,12 +772,12 @@ if __name__ == "__main__":
             package_path = working_path[:idx]
             is_app = True
     else:
-        package_path = working_path
+        package_path = get_appdata_path()
         is_app = True
 
     if not package_path is None:
         set_package_path(package_path)
-        log_path = os.path.join(package_path, 'log')
+        log_path = os.path.join(get_appdata_path(), 'log')
         safe_mkdirs(log_path)
         sys.stdout = \
             file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
@@ -791,30 +788,20 @@ if __name__ == "__main__":
     splash.show()
     splash.raise_()
     app.setWindowIcon(QIcon(':cecog_analyzer_icon'))
-    time.sleep(.5)
+    time.sleep(.2)
     app.processEvents()
     main = AnalyzerMainWindow()
     main.raise_()
 
-    if is_app:
-        filename = os.path.join(get_package_path(),
-                                'Data/Cecog_settings/demo_settings.conf')
-        if os.path.isfile(filename):
-            main._read_settings(filename)
-        show_html('_startup')
+
+    if len(sys.argv) > 1:
+        filename = sys.argv[1]
     else:
-        #filename = '/Users/miheld/data/CellCognition/demo_data/cluster_test.conf'
-        filename = '/Users/miheld/data/CellCognition/demo_data/H2bTub20x_settings.conf'
-        #filename = '/Users/miheld/data/for_michael/cecog_data/screen/settings/screen_settings.conf'
-        #filename = '/Users/miheld/data/Fabrice/Analysis/test/fabrice_test.conf'
-        #filename = '/Users/miheld/data/Peter/Analysis/t2/peter_t2.conf'
-        #filename = '/Users/miheld/data/Katja/EMBL_H2bIbb.conf'
-        #filename = '/Users/miheld/data/Fabrice/Analysis/test/fabrice_test.conf'
-        #filename = '/Users/miheld/data/Peter/Analysis/t2/peter_t2.conf'
-        #filename = '/Users/miheld/data/Katja/EMBL_H2bIbb.conf'
-        #filename = '/Users/miheld/data/CellCognition/Thomas/ANDRISETTINGS_local_HD.conf'
-        if os.path.isfile(filename):
-            main._read_settings(filename)
+        filename = os.path.join(get_package_path(), 'Data/Cecog_settings/demo_settings.conf')
+    if os.path.isfile(filename):
+        main._read_settings(filename)
+
+    if not is_app:
         main._debug = True
 
     splash.finish(main)

@@ -85,7 +85,7 @@ class ColorBox(QComboBox):
         painter.end()
         icon = QIcon(pixmap)
         index = self._base_count+self._user_count
-        self.insertItem(index, icon, '  '+name.capitalize(), QVariant(name))
+        self.insertItem(index, icon, '  '+name.capitalize(), name)
 #            if self._user_count == 0:
 #                self.insertSeparator(index+1)
 #            self._user_count += 1
@@ -96,7 +96,7 @@ class ColorBox(QComboBox):
         return index
 
     def _on_current_changed(self, idx):
-        name = str(self.itemData(idx).toString())
+        name = self.itemData(idx)
         self.selection_changed.emit(name)
 
 #    def on_activated(self, index):

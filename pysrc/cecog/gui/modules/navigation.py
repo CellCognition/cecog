@@ -36,6 +36,7 @@ import numpy
 from cecog.gui.modules.module import Module
 from cecog.util.util import yesno
 from cecog.io.imagecontainer import Coordinate
+from cecog.gui.util import waitingProgressDialog
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -337,7 +338,7 @@ class NavigationModule(Module):
     def _on_plate_changed(self, current, previous):
         coordinate_new = self.browser.get_coordinate()
         item = self._table_plate.item(current.row(), 0)
-        plate = item.data(0).toPyObject()
+        plate = item.data(0)
         coordinate_new.plate = plate
         self._set_plate(coordinate_new)
 
@@ -345,15 +346,9 @@ class NavigationModule(Module):
         coordinate_old = self.browser.get_coordinate()
         plate = coordinate_new.plate
 
-        progress = QProgressDialog(self, Qt.Sheet)
-        progress.setWindowModality(Qt.WindowModal)
-        progress.setLabelText("Please wait until the plate is loaded.")
-        progress.setCancelButton(None)
-        progress.setMinimumDuration(1000)
-        progress.setRange(0,0)
-        progress.show()
-        self._imagecontainer.set_plate(plate)
-        progress.reset()
+        dlg = waitingProgressDialog("Please wait until the plate has been loaded...", self)
+        dlg.setTarget(self._imagecontainer.set_plate, plate)
+        dlg.exec_()
 
         meta_data = self._imagecontainer.get_meta_data()
         if set_current:
@@ -371,7 +366,7 @@ class NavigationModule(Module):
     def _on_position_changed(self, current, previous):
         coordinate = self.browser.get_coordinate()
         item = self._table_position.item(current.row(), 0)
-        position = item.data(0).toPyObject()
+        position = item.data(0)
         coordinate.position = position
         self._set_position(coordinate)
 
@@ -387,7 +382,7 @@ class NavigationModule(Module):
     def _on_time_changed(self, current, previous):
         coordinate = self.browser.get_coordinate()
         item = self._table_time.item(current.row(), 0)
-        time = int(item.data(0).toPyObject())
+        time = int(item.data(0))
         coordinate.time = time
         self._set_time(coordinate)
 

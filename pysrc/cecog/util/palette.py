@@ -70,9 +70,9 @@ class _Palette(object):
     Abstract lookup table class providing a 3x256 uint8 numpy array and a name.
     """
 
-    def __init__(self):
+    def __init__(self, name):
         self.lut = numpy.zeros((256,3), dtype=numpy.uint8)
-        self.name = None
+        self.name = name
 
     def apply_to_numpy(self, array):
         '''
@@ -83,19 +83,25 @@ class _Palette(object):
         return self.lut[array,:]
 
 
-class NucMedPalette(_Palette):
+class _FilePalette(_Palette):
+
+    @classmethod
+    def from_file(cls, filename, size=50000):
+        f = file(filename, 'rb')
+        data = f.read(size)
+        f.close()
+        name = os.path.splitext(os.path.split(filename)[1])[0]
+        return cls(name, data)
+
+
+class NucMedPalette(_FilePalette):
 
     """
     Importer for NucMed / ImageJ lookup table files.
     """
 
-    def __init__(self, filename):
-        super(NucMedPalette, self).__init__()
-        self._filename = filename
-
-        f = file(filename, 'rb')
-        data = f.read(50000)
-        f.close()
+    def __init__(self, name, data):
+        super(NucMedPalette, self).__init__(name)
 
         if data.find('ICOL') != 0:
             raise ValueError('Not a valid NucMed/ImageJ LUT definition file.')
@@ -105,24 +111,18 @@ class NucMedPalette(_Palette):
             self.lut[:,c] = s.unpack_at(data, 32 + c*256)
 
 
-class ZeissPalette(_Palette):
+class ZeissPalette(_FilePalette):
 
     """
     Importer for Zeiss AIM / ZEN lookup table files.
     Inspired from http://imagejdocu.tudor.lu/doku.php?id=macro:importzeisslut
     """
 
-    def __init__(self, filename):
-        super(ZeissPalette, self).__init__()
-
-        f = file(filename, 'rb')
-        data = f.read(50000)
-        f.close()
-
-        self.name = os.path.splitext(os.path.split(filename)[1])[0]
+    def __init__(self, name, data):
+        super(ZeissPalette, self).__init__(name)
 
         if data.find('CZ - LSM510 Color Palette , Version 1.00') != 0:
-            raise ValueError('Not a valid Zeiss LUT definition file.')
+            raise ValueError('Not a valid Zeiss LUT definition.')
 
         size = unpack_at('i', data, 41)[0]
         self.name = data[45:(45+size)]
@@ -144,7 +144,7 @@ class SingleColorPalette(_Palette):
     """
 
     def __init__(self, name, color):
-        super(SingleColorPalette, self).__init__()
+        super(SingleColorPalette, self).__init__(name)
         self.name = name
 
         assert len(color) == 3, 'RGB color tuple is not valid.'
@@ -162,11 +162,11 @@ class SingleColorPalette(_Palette):
 #
 if __name__ == "__main__":
 
-    z = ZeissPalette('/Users/miheld/src/cecog_svn/trunk/apps/CecogAnalyzer/resources/palettes/Zeiss/004_Magenta.lut')
+    z = ZeissPalette.from_file('/Users/miheld/src/cecog_svn/trunk/apps/CecogAnalyzer/resources/palettes/Zeiss/004_Magenta.lut')
     print '"%s"' % z.name
     print z.lut
 
-    z = NucMedPalette('/Users/miheld/src/cecog_svn/trunk/apps/CecogAnalyzer/resources/palettes/NucMed/gray.lut')
+    z = NucMedPalette.from_file('/Users/miheld/src/cecog_svn/trunk/apps/CecogAnalyzer/resources/palettes/NucMed/gray.lut')
     print '"%s"' % z.name
     print z.lut
 

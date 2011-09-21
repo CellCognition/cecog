@@ -268,49 +268,96 @@ class MyMessageBox(QMessageBox):
         #self.setFixedSize(400, 100)
 
 class ProgressDialog(QProgressDialog):
+
+    targetFinished = pyqtSignal()
+    targetSetValue = pyqtSignal(int)
+
     '''
-    inherited QProgressDialog to ignore the ESC key during dialog exec_()
+    inherited QProgressDialog to ...
+       ... ignore the ESC key during dialog exec_()
+       ... to provide mechanism to show the dialog only
+           while a target function is running
     '''
 
+    def setCancelButton(self, cancelButton):
+        self.hasCancelButton = cancelButton is not None
+        super(ProgressDialog, self).setCancelButton(cancelButton)
+
     def keyPressEvent(self, event):
-        if event.key() != Qt.Key_Escape:
+        if event.key() != Qt.Key_Escape or getattr(self, 'hasCancelButton', False):
             QProgressDialog.keyPressEvent(self, event)
-            
-    def setTarget(self, target, *args):
-        self.target = target
-        self.args = args
-        
-    def exec_(self):
-        if hasattr(self, 'target'):
-            self.setCancelButton(None)
-                    
+
+    def setTarget(self, target, *args, **options):
+        self._target = target
+        self._args = args
+        self._options = options
+
+    def getTargetResult(self):
+        return getattr(self, '_target_result', None)
+
+    def _onSetValue(self, value):
+        self.setValue(value)
+
+    def exec_(self, finished=None, started=None, passDialog=False):
+        dlg_result = None
+        self.targetSetValue.connect(self._onSetValue)
+        if hasattr(self, '_target'):
             t = QThread()
-            t.finished.connect(self.close)
-            
+            if finished is None:
+                finished = self.close
+            t.finished.connect(finished)
+            if started is not None:
+                t.started.connect(started)
+
             def foo():
-                t.result = self.target(*self.args)                 
+                # optional passing of this dialog instance to the target function
+                if passDialog:
+                    t.result = self._target(self, *self._args, **self._options)
+                else:
+                    t.result = self._target(*self._args, **self._options)
+                self.targetFinished.emit()
+
+            t.result = None
             t.run = foo
             t.start()
-            super(QProgressDialog, self).exec_()
+            dlg_result = super(QProgressDialog, self).exec_()
             t.wait()
-            return t.result
+            self._target_result = t.result
         else:
-            return super(QProgressDialog, self).exec_()
-            
-    
+            dlg_result = super(QProgressDialog, self).exec_()
+        return dlg_result
+
+
+def waitingProgressDialog(msg, parent=None, target=None, range=(0,0)):
+    dlg = ProgressDialog(parent, Qt.CustomizeWindowHint | Qt.WindowTitleHint)
+    dlg.setWindowModality(Qt.WindowModal)
+    dlg.setLabelText(msg)
+    dlg.setCancelButton(None)
+    dlg.setRange(*range)
+    if target is not None:
+        dlg.setTarget(target)
+    return dlg
+
+
 if __name__ == '__main__':
     app = QApplication([''])
-    
+
     import time
-    a = ProgressDialog('still running...', 'Cancel', 0, 0, None)
-    def foo():
-        print 'running long long target function'
-        time.sleep(4)
-        print 'finish'
+    dlg = ProgressDialog('still running...', 'Cancel', 0, 0, None)
+
+    def foo(t):
+        print 'running long long target function for %d seconds' % t,
+        time.sleep(t)
+        print ' ...finished'
         return 42
-    a.setTarget(foo)
-    print 'result of dialog:', a.exec_()
-    
+
+    # This is optional.
+    # If not specified, the standard ProgressDialog is used
+    dlg.setTarget(foo, 3)
+
+    res = dlg.exec_()
+    print 'result of dialog target function is:', res
+
     app.exec_()
-    
+
 

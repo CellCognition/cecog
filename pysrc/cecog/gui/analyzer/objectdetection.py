@@ -30,9 +30,8 @@ from PyQt4.Qt import *
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog.gui.analyzer import (_BaseFrame,
-                                _ProcessorMixin,
-                                AnalzyerThread
+from cecog.gui.analyzer import (BaseProcessorFrame,
+                                AnalzyerThread,
                                 )
 from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
 from cecog.analyzer import (SECONDARY_COLORS,
@@ -56,15 +55,14 @@ from cecog.analyzer.channel import (PrimaryChannel,
 #-------------------------------------------------------------------------------
 # classes:
 #
-class ObjectDetectionFrame(_BaseFrame, _ProcessorMixin):
+class ObjectDetectionFrame(BaseProcessorFrame):
 
     SECTION_NAME = SECTION_NAME_OBJECTDETECTION
     DISPLAY_NAME = 'Object Detection'
     TABS = ['Primary Channel', 'Secondary Channel', 'Tertiary Channel']
 
     def __init__(self, settings, parent):
-        _BaseFrame.__init__(self, settings, parent)
-        _ProcessorMixin.__init__(self)
+        super(ObjectDetectionFrame, self).__init__(settings, parent)
 
         self.register_control_button('detect',
                                      AnalzyerThread,
@@ -180,8 +178,8 @@ class ObjectDetectionFrame(_BaseFrame, _ProcessorMixin):
         self._init_control()
 
 
-    def _get_modified_settings(self, name):
-        settings = _ProcessorMixin._get_modified_settings(self, name)
+    def _get_modified_settings(self, name, has_timelapse=True):
+        settings = BaseProcessorFrame._get_modified_settings(self, name, has_timelapse)
 
         settings.set_section('ObjectDetection')
         prim_id = PrimaryChannel.NAME

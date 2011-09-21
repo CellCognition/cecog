@@ -14,7 +14,3 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL:: $'
 
-
-# this folder contains extensions which do NOT belong to this project,
-# they are NOT written by the authors of this project and are subject to
-# individual licenses.

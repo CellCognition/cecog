@@ -123,6 +123,19 @@ class AbstractImporter(object):
         self.dimension_lookup = {}
         self.meta_data = MetaData()
 
+    def __setstate__(self, state):
+#        self.dimension_lookup2 = {}
+#        if 'dimension_lookup' in state:
+#            self.dimension_lookup2.clear()
+#            for p in state['meta_data'].positions:
+#                for t in state['meta_data'].times:
+#                    for c in state['meta_data'].channels:
+#                        for z in state['meta_data'].zslices:
+#                            self.dimension_lookup2[p,t,c,z] = state['dimension_lookup'][p][t][c][z]
+#            del state['dimension_lookup']
+        for k,v in state.iteritems():
+            self.__dict__[k] = v
+
     def scan(self):
         self.dimension_lookup = self._build_dimension_lookup()
         self.meta_data.setup()
@@ -153,11 +166,14 @@ class AbstractImporter(object):
             image = ccore.readImage(filename_abs, index)
         elif self.meta_data.pixel_type == UINT16:
             image = ccore.readImageUInt16(filename_abs, index)
+        else:
+            image = ccore.readImageUInt16(filename_abs, index)
         return image
 
     def _build_dimension_lookup(self):
         s = StopWatch()
         lookup = {}
+        #result = {}
         has_xy = False
         positions = []
         times = []
@@ -419,6 +435,11 @@ class IniFileImporter(AbstractImporter):
      - can be empty, in that case all directories are taken
      - example: ignore all directories with a leading underscore
 
+    allow_subfolder = NAME
+     - defines a sub-folder or path relative to the input path. in case no valid images are found in the
+       input path this sub-folder is searched next
+     - will be ignored if not specified or if the sub-folder does not exist
+
     regex_filename_substr = (.+?)\.
      - defines a part of the relative filename in which the dimension definition
        will be searched
@@ -457,52 +478,55 @@ class IniFileImporter(AbstractImporter):
 
     def __init__(self, path, config_parser, section_name):
         super(IniFileImporter, self).__init__(path)
-        self.config_parser = config_parser
-        self.section_name = section_name
+        config_parser = config_parser
+        section_name = section_name
 
-        regex_subdirectories = self.config_parser.get(self.section_name,
-                                                      'regex_subdirectories')
+        regex_subdirectories = config_parser.get(section_name, 'regex_subdirectories')
         # take all sub-directories if parameter is empty
         if regex_subdirectories == '':
             regex_subdirectories = '.*'
         self._re_subdir = re.compile(regex_subdirectories)
 
-        regex_filename_substr = self.config_parser.get(self.section_name,
-                                                      'regex_filename_substr')
+        regex_filename_substr = config_parser.get(section_name, 'regex_filename_substr')
         # take the entire filename if parameter is empty
         if regex_filename_substr == '':
             regex_filename_substr = '(.*)'
         self._re_substr = re.compile(regex_filename_substr)
 
-        self._re_dim = re.compile(self.config_parser.get(self.section_name,
-                                                         'regex_dimensions'))
-        if self.config_parser.has_option(self.section_name,
-                                         'timestamps_from_file'):
+        self._re_dim = re.compile(config_parser.get(section_name, 'regex_dimensions'))
+        if config_parser.has_option(section_name, 'timestamps_from_file'):
             self.timestamps_from_file = \
-                self.config_parser.get(self.section_name,
-                                       'timestamps_from_file')
+                config_parser.get(section_name, 'timestamps_from_file')
 
-        if self.config_parser.has_option(self.section_name,
-                                         'reformat_well'):
+        if config_parser.has_option(section_name, 'reformat_well'):
             self.reformat_well = \
-                eval(self.config_parser.get(self.section_name,
-                                            'reformat_well'))
+                eval(config_parser.get(section_name, 'reformat_well'))
         else:
             self.reformat_well = True
 
-    def _get_dimension_items(self):
+        self.extensions = config_parser.get(section_name, 'file_extensions').split()
+
+        if config_parser.has_option(section_name, 'allow_subfolder'):
+            self.allow_subfolder = config_parser.get(section_name, 'allow_subfolder')
+        else:
+            self.allow_subfolder = None
+
+    def __setstate__(self, state):
+        super(IniFileImporter, self).__setstate__(state)
+        if 'config_parser' in state:
+            del self.config_parser
+
+    def __get_token_list(self, path):
         token_list = []
-        extensions = self.config_parser.get(self.section_name,
-                                            'file_extensions').split()
 
         re_subwell_str = r"[a-zA-Z]\d{1,2}"
         re_subwell = re.compile(re_subwell_str)
 
-        for dirpath, dirnames, filenames in os.walk(self.path):
+        for dirpath, dirnames, filenames in os.walk(path):
             # prune filenames by file extension
-            if len(extensions) > 0:
+            if len(self.extensions) > 0:
                 filenames = [x for x in filenames
-                             if os.path.splitext(x)[1].lower() in extensions]
+                             if os.path.splitext(x)[1].lower() in self.extensions]
             # prune dirnames by regex search for next iteration of os.walk
             # dirnames must be removed in-place!
             for dirname in dirnames[:]:
@@ -511,7 +535,7 @@ class IniFileImporter(AbstractImporter):
 
             # extract dimension informations according to regex patterns from
             # relative filename (including extension)
-            path_rel = os.path.relpath(dirpath, self.path)
+            path_rel = os.path.relpath(dirpath, path)
             search_path = self._re_subdir.search(os.path.split(dirpath)[1])
 
             if not search_path is None:
@@ -572,6 +596,15 @@ class IniFileImporter(AbstractImporter):
 
                         result['filename'] = filename_rel
                         token_list.append(result)
+        return token_list
+
+    def _get_dimension_items(self):
+        token_list = self.__get_token_list(self.path)
+        # try a possible allowed sub-folder in case no results are found in the original path
+        if len(token_list) == 0 and not self.allow_subfolder is None:
+            path = os.path.join(self.path, self.allow_subfolder)
+            if os.path.isdir(path):
+                token_list = self.__get_token_list(path)
         return token_list
 
 

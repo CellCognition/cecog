@@ -75,10 +75,12 @@ if __name__ ==  "__main__":
 
     group1 = OptionGroup(parser, "Overwrite options",
                          "These options overwrite definitions from SETTINGS_FILE.")
-    group1.add_option("-i", "--input", default=None,
-                      help="", metavar="INPUT_PATH")
-    group1.add_option("-o", "--output", default=None,
-                      help="", metavar="OUTPUT_PATH")
+    group1.add_option("-i", "--input", metavar="INPUT_PATH",
+                      help="Input path pointing to a directory that is one plate or a directory containing "
+                      "multiple plates as sub-directories, see MULTIPLE_PLATES.")
+    group1.add_option("-o", "--output", metavar="OUTPUT_PATH",
+                      help="Output path where analysis results are written. Depending on MULTIPLE_PLATES either "
+                      "one directory for one plate or the parent directory for multiple plates.")
     group1.add_option("--multiple_plates", action="store_true", dest="multiple_plates",
                       help="Multiple plates are expected in INPUT_PATH.")
     group1.add_option("--no_multiple_plates", action="store_false", dest="multiple_plates",
@@ -153,20 +155,21 @@ if __name__ ==  "__main__":
     imagecontainer.import_from_settings(settings)
 
     # FIXME: Could be more generally specified. SGE is setting the job item index via an environment variable
-    if index is not None:
-        if index.isdigit():
-            index = int(index)
-        else:
-            if index == ENV_INDEX_SGE:
-                logger.info("Using SGE job item index: environment variable '%s'" % index)
+    if index is None:
+        pass
+    elif index.isdigit():
+        index = int(index)
+    else:
+        if index == ENV_INDEX_SGE:
+            logger.info("Using SGE job item index: environment variable '%s'" % index)
 
-                if index not in os.environ:
-                    parser.error("SGE environment variable '%s' not defined.")
-                index = int(os.environ[index])
-                # decrement index (index is in range of 1..n for SGE)
-                index -= 1
-            else:
-                parser.error("Only SGE supported at the moment (environment variable '%s')." % ENV_INDEX_SGE)
+            if index not in os.environ:
+                parser.error("SGE environment variable '%s' not defined.")
+            index = int(os.environ[index])
+            # decrement index (index is in range of 1..n for SGE)
+            index -= 1
+        else:
+            parser.error("Only SGE supported at the moment (environment variable '%s')." % ENV_INDEX_SGE)
 
     # if no position list was specified via the program options get it from the settings file
     if  position_list is None:
