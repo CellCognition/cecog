@@ -275,6 +275,7 @@ cd %s
 
         lstExperiments = []
         for plate in plates:
+            imagecontainer.set_plate(plate)
             meta_data = imagecontainer.get_meta_data(plate)
             positions = meta_data.positions
 
