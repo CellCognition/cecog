@@ -238,8 +238,8 @@ class _Channel(PropertyManager):
     def apply_binning(self, iFactor):
         self.meta_image.binning(iFactor)
 
-    def apply_segmentation(self, channel):
-        self.dctContainers = self.SEGMENTATION.run(self.meta_image, channel)
+#    def apply_segmentation(self, channel):
+#        raise NotImplementedError()
 
     def apply_registration(self):
         img_in = self.meta_image.image
@@ -345,6 +345,18 @@ class _Channel(PropertyManager):
 
         self.meta_image.set_image(img_out)
 
+    def get_requirement(self, name):
+        '''
+        Deliver required data for PluginManager to resolve plugin inter-dependencies.
+        '''
+        return self.dctContainers[name]
+
+    def apply_segmentation(self, *args):
+        '''
+        Performs the actual segmentation tasks for this channel by calling the defined plugin instances (managed via
+        the PluginManger of this channel).
+        '''
+        self.dctContainers = self.SEGMENTATION.run(self.meta_image, requirements=args)
 
 
 class PrimaryChannel(_Channel):

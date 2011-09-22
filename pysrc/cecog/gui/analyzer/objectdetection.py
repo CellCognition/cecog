@@ -155,14 +155,14 @@ class ObjectDetectionFrame(BaseProcessorFrame):
             settings.set('Processing', 'tertiary_processchannel', False)
             prefix = 'secondary'
         else:
-            settings.set('Processing', 'secondary_processChannel', False)
+            settings.set('Processing', 'secondary_processChannel', True)
             settings.set('Processing', 'tertiary_processchannel', True)
             prefix = 'tertiary'
 
         colors = REGION_INFO.colors
         settings.set('General', 'rendering', dict([('%s_contours_%s' % (prefix, x),
                                                     {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
-                                                                            'contours': [(x, colors[x] , 1, show_ids)]
+                                                                           'contours': [(x, colors[x] , 1, show_ids)]
                                                     }})
                                                   for x in REGION_INFO.names[prefix]]))
 

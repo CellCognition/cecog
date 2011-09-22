@@ -16,6 +16,8 @@
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
+import numpy
+
 #-------------------------------------------------------------------------------
 # cecog module imports:
 #
@@ -190,7 +192,7 @@ class SegmentationPluginExpanded(_SegmentationPlugin):
     NAME = 'expanded'
     COLOR = '#00FFFF'
 
-    REQUIRES = 'primary'
+    REQUIRES = ['primary_segmentation']
 
     PARAMS = [('expansion_size', IntTrait(0, 0, 4000, label='Expansion size')),
               ]
@@ -219,7 +221,7 @@ class SegmentationPluginInside(_SegmentationPlugin):
     NAME = 'inside'
     COLOR = '#FFFF00'
 
-    REQUIRES = 'primary'
+    REQUIRES = ['primary_segmentation']
 
     PARAMS = [('shrinking_size', IntTrait(0, 0, 4000, label='Shrinking size')),
               ]
@@ -245,7 +247,7 @@ class SegmentationPluginOutside(_SegmentationPlugin):
     NAME = 'outside'
     COLOR = '#00FF00'
 
-    REQUIRES = 'primary'
+    REQUIRES = ['primary_segmentation']
 
     PARAMS = [('expansion_size', IntTrait(0, 0, 4000, label='Expansion size')),
               ('separation_size', IntTrait(0, 0, 4000, label='Separation size')),
@@ -277,7 +279,7 @@ class SegmentationPluginRim(_SegmentationPlugin):
     COLOR = '#FF00FF'
     IMAGE = ":moo123"
 
-    REQUIRES = 'primary'
+    REQUIRES = ['primary_segmentation']
 
     PARAMS = [('expansion_size', IntTrait(0, 0, 4000, label='Expansion size')),
               ('shrinking_size', IntTrait(0, 0, 4000, label='Shrinking size')),
@@ -321,7 +323,7 @@ class SegmentationPluginModification(_SegmentationPlugin):
     COLOR = '#FF00FF'
     IMAGE = ":moo123"
 
-    REQUIRES = 'primary'
+    REQUIRES = ['primary_segmentation']
 
     PARAMS = [('expansion_size', IntTrait(0, 0, 4000, label='Expansion size')),
               ('shrinking_size', IntTrait(0, 0, 4000, label='Shrinking size')),
@@ -357,13 +359,14 @@ class SegmentationPluginModification(_SegmentationPlugin):
             raise ValueError("Parameters are not valid. Requirements: 'expansion_size' > 0 and/or "
                              "'shrinking_size' > 0")
 
+
 class SegmentationPluginPropagate(_SegmentationPlugin):
 
     LABEL = 'Propagate region from primary'
     NAME = 'propagate'
     COLOR = '#FFFF99'
 
-    REQUIRES = 'primary'
+    REQUIRES = ['primary_segmentation']
 
     PARAMS = [('presegmentation_median_radius', IntTrait(1, 0, 100, label='Median radius')),
               ('presegmentation_alpha', FloatTrait(1.0, 0, 4000, label='Otsu factor', digits=2)),
@@ -391,7 +394,7 @@ class SegmentationPluginConstrainedWatershed(_SegmentationPlugin):
     NAME = 'constrained_watershed'
     COLOR = '#FF99FF'
 
-    REQUIRES = 'primary'
+    REQUIRES = ['primary_segmentation']
 
     PARAMS = [('gauss_filter_size', IntTrait(2, 1, 4, label='Gauss filter size')),
               ]
@@ -435,4 +438,29 @@ class SegmentationPluginConstrainedWatershed(_SegmentationPlugin):
         img_out = ccore.relabelImage(img_bin2, img_temp)
 
         return img_out
+
+
+class SegmentationPluginDifference(_SegmentationPlugin):
+
+    LABEL = 'Difference of primary and secondary'
+    NAME = 'difference'
+    COLOR = '#FF00FF'
+
+    REQUIRES = ['primary_segmentation', 'secondary_segmentation']
+
+    PARAMS = [('reverse', BooleanTrait(False, label='Reverse subtraction')),
+              ]
+
+    @stopwatch()
+    def _run(self, meta_image, container_prim, container_sec):
+        image = meta_image.image
+        if not self.params['reverse']:
+            img_labels = ccore.substractImages(container_prim.img_labels, container_sec.img_labels)
+        else:
+            img_labels = ccore.substractImages(container_sec.img_labels, container_prim.img_labels)
+
+        #array = img_labels.toArray()
+        #array = numpy.abs(array)
+        #img_labels = ccore.numpy_to_image(array, copy=True)
+        return ccore.ImageMaskContainer(image, img_labels, False, True)
 

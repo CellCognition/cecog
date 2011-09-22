@@ -28,6 +28,8 @@ from pdk.ordereddict import OrderedDict
 #-------------------------------------------------------------------------------
 # cecog module imports:
 #
+from cecog import PLUGIN_MANAGERS
+from cecog.gui.guitraits import SelectionTrait2
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -155,6 +157,18 @@ class PluginManager(object):
     def register_observer(self, observer):
         self._observer.append(observer)
 
+    def add_referee_to_instance(self, plugin_name, referee):
+        instance = self.get_plugin_instance(plugin_name)
+        instance.add_referee(referee)
+
+    def remove_referee_from_instance(self, plugin_name, referee):
+        instance = self.get_plugin_instance(plugin_name)
+        instance.remove_referee(referee)
+
+    def get_referees_for_instance(self, plugin_name):
+        instance = self.get_plugin_instance(plugin_name)
+        return instance.referees
+
     def get_plugin_cls_names(self):
         return self._plugins.keys()
 
@@ -174,7 +188,17 @@ class PluginManager(object):
     def run(self, *args, **options):
         results = OrderedDict()
         for instance in self._instances.itervalues():
-            results[instance.name] = instance.run(*args, **options)
+            inst_args = list(args)
+            if not instance.REQUIRES is None:
+                if not 'requirements' in options:
+                    raise ValueError("PluginManager(%s).run needs 'requirements' options, because Plugin instances "
+                                     "'%s' defines requirements." % (self.name, instance.name))
+                requirements = options['requirements']
+                for idx in range(len(instance.REQUIRES)):
+                    value = instance.get_requirement_info(idx)[1]
+                    data = requirements[idx].get_requirement(value)
+                    inst_args.append(data)
+            results[instance.name] = instance.run(*inst_args)
         return results
 
 
@@ -186,11 +210,18 @@ class ParamManager(object):
         self._settings = settings
         self._section = section
         self._lookup = {}
-        for param_name, trait in plugin_cls.PARAMS:
+        params = plugin_cls.PARAMS
+        managers = dict([(manager.name, manager) for manager in PLUGIN_MANAGERS])
+        if not plugin_cls.REQUIRES is None:
+            for idx, require in enumerate(plugin_cls.REQUIRES):
+                names = managers[require].get_plugin_names()
+                params.append(('require%02d' % idx, SelectionTrait2(names[0], names, label=require)))
+
+        for param_name, trait in params:
             trait_name = trait_name_template % param_name
             self._lookup[param_name] = trait_name
             settings.register_trait(section, self.GROUP_NAME, trait_name, trait)
-            if set_default:
+            if set_default or not settings.has_option(section, trait_name):
                 settings.set(section, trait_name, trait.default_value)
 
     def remove_all(self):
@@ -233,25 +264,44 @@ class _Plugin(object):
     NAME = None
     IMAGE = None
     DOC = None
+    REQUIRES = None
 
     def __init__(self, name, param_manager):
         self.name = name
         self.param_manager = param_manager
+        self._referees = []
 
     def close(self):
         self.param_manager.remove_all()
+
+    def add_referee(self, referee):
+        self._referees.append(referee)
+
+    def remove_referee(self, referee):
+        self._referees.remove(referee)
+
+    @property
+    def referees(self):
+        return self._referees[:]
 
     @property
     def params(self):
         return self.param_manager
 
+    def get_requirement_info(self, idx):
+        name = 'require%02d' % idx
+        return name, self.params[name]
+
     def run(self, *args, **options):
         """
+        Method wrapping the _run method, which is re-implemented in every plugin.
         """
-        raise NotImplementedError('This method must be implemented.')
+        return self._run(*args, **options)
 
     def _run(self, *args, **options):
         """
+        The actual code of a plugin normally executed by the PluginManager for all instances.
+        The parameter and result handling is done by the PluginManager as well.
         """
         raise NotImplementedError('This method must be implemented.')
 

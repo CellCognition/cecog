@@ -16,7 +16,10 @@ __all__ = ['PLUGIN_MANAGERS',
            'REGION_INFO',
            ]
 
-from cecog import PLUGIN_MANAGERS
+from cecog import (PLUGIN_MANAGERS,
+                   SEGMENTATION_MANAGERS,
+                   )
+
 from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
 
 from cecog.plugin.segmentation.manager import (RegionInformation,
@@ -29,6 +32,7 @@ from cecog.plugin.segmentation.strategies import (SegmentationPluginPrimary,
                                                   SegmentationPluginRim,
                                                   SegmentationPluginPropagate,
                                                   SegmentationPluginConstrainedWatershed,
+                                                  SegmentationPluginDifference,
                                                   )
 
 REGION_INFO = RegionInformation()
@@ -54,6 +58,11 @@ TERTIARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginOutside)
 TERTIARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginRim)
 TERTIARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginPropagate)
 TERTIARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginConstrainedWatershed)
+TERTIARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginDifference)
 
-PLUGIN_MANAGERS.extend([PRIMARY_SEGMENTATION_MANAGER, SECONDARY_SEGMENTATION_MANAGER, TERTIARY_SEGMENTATION_MANAGER])
+SEGMENTATION_MANAGERS.extend([PRIMARY_SEGMENTATION_MANAGER,
+                              SECONDARY_SEGMENTATION_MANAGER,
+                              TERTIARY_SEGMENTATION_MANAGER])
+
+PLUGIN_MANAGERS.extend(SEGMENTATION_MANAGERS)
 

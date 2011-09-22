@@ -362,7 +362,7 @@ class TimeHolder(OrderedDict):
         self[iT][oChannel.NAME] = oChannel
         self[iT].sort(key = lambda x: self[iT][x])
 
-    def apply_segmentation(self, channel, primary_channel=None):
+    def apply_segmentation(self, channel, *args):
         self.create_nc4()
         valid = False
         desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
@@ -387,7 +387,7 @@ class TimeHolder(OrderedDict):
                     valid = False
                     break
         if not valid:
-            channel.apply_segmentation(primary_channel)
+            channel.apply_segmentation(*args)
             if self._create_nc:
                 for region_name in channel.lstAreaSelection:
                     var = grp.variables[region_name]
@@ -713,18 +713,25 @@ class CellAnalyzer(PropertyManager):
         # sort by Channel `RANK`
         channels = sorted(self._channel_registry.values())
         primary_channel = None
+        secondary_channel = None
         for channel in channels:
 
             self.time_holder.prepare_raw_image(channel)
 
             if self.detect_objects:
-                self.time_holder.apply_segmentation(channel, primary_channel)
+                if channel.NAME == 'Primary':
+                    self.time_holder.apply_segmentation(channel)
+                    primary_channel = channel
+                elif channel.NAME == 'Secondary':
+                    self.time_holder.apply_segmentation(channel, primary_channel)
+                    secondary_channel = channel
+                elif channel.NAME == 'Tertiary':
+                    self.time_holder.apply_segmentation(channel, primary_channel, secondary_channel)
+                else:
+                    raise ValueError("Channel with name '%s' not supported." % channel.NAME)
+
                 if extract_features:
                     self.time_holder.apply_features(channel)
-
-                if primary_channel is None:
-                    assert channel.RANK == 1
-                    primary_channel = channel
 
         if apply:
             for channel in channels:

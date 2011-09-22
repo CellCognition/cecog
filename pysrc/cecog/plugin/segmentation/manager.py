@@ -28,6 +28,7 @@ __all__ = ['RegionInformation',
 from cecog.plugin import (PluginManager,
                           _Plugin,
                           )
+from cecog import SEGMENTATION_MANAGERS
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -63,15 +64,6 @@ class SegmentationPluginManager(PluginManager):
 class _SegmentationPlugin(_Plugin):
 
     COLOR = '#FFFFFF'
-    REQUIRES = None
-
-    def run(self, meta_image, channel=None):
-        if not self.REQUIRES is None:
-            required_container = channel.dctContainers[self.REQUIRES]
-            result_container = self._run(meta_image, required_container)
-        else:
-            result_container =  self._run(meta_image)
-        return result_container
 
 
 #-------------------------------------------------------------------------------

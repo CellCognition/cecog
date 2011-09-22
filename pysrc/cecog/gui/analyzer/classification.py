@@ -482,7 +482,7 @@ class ClassificationFrame(BaseProcessorFrame):
             settings.set('Processing', 'primary_featureextraction', False)
             settings.set('Processing', 'secondary_featureextraction', False)
             settings.set('Processing', 'tertiary_featureextraction', True)
-            settings.set('Processing', 'secondary_processchannel', False)
+            settings.set('Processing', 'secondary_processchannel', True)
             settings.set('Processing', 'tertiary_processchannel', True)
             prefix = 'tertiary'
 
