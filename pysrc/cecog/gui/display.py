@@ -299,14 +299,15 @@ class TraitDisplayMixin(object):
 
         elif isinstance(trait, SelectionTrait2):
             w_input = QComboBox(parent)
+            w_input.currentIndexChanged[str].connect(trait.on_update_observer)
             for item in trait.list_data:
                 w_input.addItem(str(item))
             trait.set_widget(w_input)
             trait.set_value(w_input, value)
             w_input.setSizePolicy(policy_fixed)
             handler = lambda n: lambda v: self._on_current_index(n, v)
-            self.connect(w_input, SIGNAL('currentIndexChanged(int)'),
-                         handler(trait_name))
+            w_input.currentIndexChanged[int].connect(handler(trait_name))
+
 
         elif isinstance(trait, DictTrait):
             w_input = QTextEdit(parent)

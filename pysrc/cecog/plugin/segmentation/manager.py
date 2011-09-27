@@ -52,6 +52,7 @@ class SegmentationPluginManager(PluginManager):
     LABEL = 'Segmentation plugins'
 
     def notify_instance_modified(self, plugin_name, removed=False):
+        super(SegmentationPluginManager, self).notify_instance_modified(plugin_name, removed)
         #FIXME: should not be imported here
         from cecog.plugin.segmentation import REGION_INFO
         prefix = self.name.split('_')[0]

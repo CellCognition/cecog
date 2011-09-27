@@ -37,11 +37,13 @@ from cecog.plugin.segmentation.strategies import (SegmentationPluginPrimary,
 
 REGION_INFO = RegionInformation()
 
-PRIMARY_SEGMENTATION_MANAGER = SegmentationPluginManager('primary_segmentation',
+PRIMARY_SEGMENTATION_MANAGER = SegmentationPluginManager('Primary segmentation',
+                                                         'primary_segmentation',
                                                          SECTION_NAME_OBJECTDETECTION)
 PRIMARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginPrimary)
 
-SECONDARY_SEGMENTATION_MANAGER = SegmentationPluginManager('secondary_segmentation',
+SECONDARY_SEGMENTATION_MANAGER = SegmentationPluginManager('Secondary segmentation',
+                                                           'secondary_segmentation',
                                                            SECTION_NAME_OBJECTDETECTION)
 SECONDARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginExpanded)
 SECONDARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginInside)
@@ -50,7 +52,8 @@ SECONDARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginRim)
 SECONDARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginPropagate)
 SECONDARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginConstrainedWatershed)
 
-TERTIARY_SEGMENTATION_MANAGER = SegmentationPluginManager('tertiary_segmentation',
+TERTIARY_SEGMENTATION_MANAGER = SegmentationPluginManager('Tertiary segmentation',
+                                                          'tertiary_segmentation',
                                                           SECTION_NAME_OBJECTDETECTION)
 TERTIARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginExpanded)
 TERTIARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginInside)

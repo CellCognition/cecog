@@ -32,6 +32,7 @@ from pdk.ordereddict import OrderedDict
 #
 from cecog.gui.display import TraitDisplayMixin
 from cecog.gui.widgets.groupbox import QxtGroupBox
+from cecog.gui.util import question
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -112,11 +113,19 @@ class PluginItem(QFrame):
         layout.addWidget(txt, 1)
         layout.addWidget(btn)
 
+        requirements = plugin.requirements
         try:
             plugin.render_to_gui(frame2)
         except NotImplementedError:
             for info in plugin.param_manager.get_params():
-                frame2.add_input(info[1])
+                if info[0] not in requirements:
+                    frame2.add_input(info[1])
+
+        # add requirements in special group
+        frame2.add_group(None,
+                         [(name, (idx, 0, 1, 1)) for idx, name in enumerate(requirements)],
+                         link='requirements', label='Plugin dependencies')
+
 
     def _on_remove(self):
         self.remove_item.emit()
@@ -139,9 +148,10 @@ class PluginBay(QFrame):
         frame1 = QFrame(self)
         self._frame2 = QFrame(self)
         layout.addWidget(frame1)
+        layout.addSpacing(10)
         layout.addWidget(self._frame2)
 
-        label = QLabel(plugin_manager.LABEL, frame1)
+        label = QLabel('%s plugins' % plugin_manager.display_name, frame1)
         label.setStyleSheet("font-weight: bold;")
         btn = QPushButton('Add', frame1)
         btn.clicked.connect(self._on_add_plugin)
@@ -161,6 +171,9 @@ class PluginBay(QFrame):
         self.reset()
         for plugin_name in self.plugin_manager.get_plugin_names():
             self.add_plugin(plugin_name)
+
+    def notify(self, plugin_name, removed):
+        pass
 
     def _set_plugin_labels(self):
         self._cb.clear()
@@ -193,8 +206,9 @@ class PluginBay(QFrame):
         self.add_plugin(plugin_name)
 
     def _on_remove_plugin(self, plugin_name):
-        self.remove_plugin(plugin_name)
-        self.plugin_manager.remove_instance(plugin_name, self.settings)
+        if question(None, "Removing a plugin", "Are you sure to remove the plugin %s?" % plugin_name):
+            self.remove_plugin(plugin_name)
+            self.plugin_manager.remove_instance(plugin_name, self.settings)
 
 
 #-------------------------------------------------------------------------------

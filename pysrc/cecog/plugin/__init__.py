@@ -72,7 +72,8 @@ class PluginManager(object):
     PREFIX = 'plugin'
     LABEL = ''
 
-    def __init__(self, name, section):
+    def __init__(self, display_name, name, section):
+        self.display_name = display_name
         self.name = name
         self.section = section
         self._plugins = OrderedDict()
@@ -100,10 +101,8 @@ class PluginManager(object):
         for plugin_name in plugin_params:
             plugin_cls_name = plugin_cls_names[plugin_name]
             plugin_cls = self._plugins[plugin_cls_name]
-            trait_name_template = self._get_trait_name_template(plugin_cls_name, plugin_name)
             param_manager = \
-                ParamManager.from_settings(plugin_cls, trait_name_template, settings, self.section,
-                                           plugin_params[plugin_name])
+                ParamManager.from_settings(plugin_cls, plugin_name, settings, self, plugin_params[plugin_name])
             instance = plugin_cls(plugin_name, param_manager)
             self._instances[plugin_name] = instance
             self.notify_instance_modified(plugin_name)
@@ -117,8 +116,7 @@ class PluginManager(object):
 
         plugin_cls = self._plugins[plugin_cls_name]
         plugin_name = self._get_plugin_name(plugin_cls)
-        trait_name_template = self._get_trait_name_template(plugin_cls_name, plugin_name)
-        param_manager = ParamManager(plugin_cls, trait_name_template, settings, self.section)
+        param_manager = ParamManager(plugin_cls, plugin_name, settings, self)
         instance = plugin_cls(plugin_name, param_manager)
         self._instances[plugin_name] = instance
         self.notify_instance_modified(plugin_name)
@@ -134,7 +132,8 @@ class PluginManager(object):
         self.notify_instance_modified(plugin_name, True)
 
     def notify_instance_modified(self, plugin_name, removed=False):
-        pass
+        for observer in self._observer:
+            observer.notify(plugin_name, removed)
 
     def _get_plugin_name(self, plugin_cls):
         """
@@ -148,7 +147,7 @@ class PluginManager(object):
             cnt += 1
         return result
 
-    def _get_trait_name_template(self, plugin_cls_name, plugin_name):
+    def get_trait_name_template(self, plugin_cls_name, plugin_name):
         return '__'.join([self.PREFIX, self.name, plugin_cls_name, plugin_name, '%s'])
 
     def register_plugin(self, plugin_cls):
@@ -164,6 +163,13 @@ class PluginManager(object):
     def remove_referee_from_instance(self, plugin_name, referee):
         instance = self.get_plugin_instance(plugin_name)
         instance.remove_referee(referee)
+
+    def handle_referee(self, plugin_name_new, plugin_name_old, referee):
+        print self.name, plugin_name_new, plugin_name_old, referee
+        if plugin_name_old in self._instances:
+            self.remove_referee_from_instance(plugin_name_old, referee)
+        if plugin_name_new in self._instances:
+            self.add_referee_to_instance(plugin_name_new, referee)
 
     def get_referees_for_instance(self, plugin_name):
         instance = self.get_plugin_instance(plugin_name)
@@ -206,23 +212,32 @@ class ParamManager(object):
 
     GROUP_NAME = 'plugin'
 
-    def __init__(self, plugin_cls, trait_name_template, settings, section, set_default=True):
+    def __init__(self, plugin_cls, plugin_name, settings, manager, set_default=True):
         self._settings = settings
-        self._section = section
+        self._section = manager.section
         self._lookup = {}
         params = plugin_cls.PARAMS
+        trait_name_template = manager.get_trait_name_template(plugin_cls.NAME, plugin_name)
+
+        # inject traits controlling plugin requirements dynamically
         managers = dict([(manager.name, manager) for manager in PLUGIN_MANAGERS])
         if not plugin_cls.REQUIRES is None:
             for idx, require in enumerate(plugin_cls.REQUIRES):
-                names = managers[require].get_plugin_names()
-                params.append(('require%02d' % idx, SelectionTrait2(names[0], names, label=require)))
+                foreign_manager = managers[require]
+                names = foreign_manager.get_plugin_names()
+                update_callback = lambda referee: lambda new, old: foreign_manager.handle_referee(new, old, referee)
+                trait = SelectionTrait2(None if len(names) < 1 else names[0], names, label=foreign_manager.display_name,
+                                        update_callback=update_callback((manager.name, plugin_name)))
+                # register this trait to the manager which controls the dependency for change notifications
+                foreign_manager.register_observer(trait)
+                params.append((plugin_cls._REQUIRE_STR % idx, trait))
 
         for param_name, trait in params:
             trait_name = trait_name_template % param_name
             self._lookup[param_name] = trait_name
-            settings.register_trait(section, self.GROUP_NAME, trait_name, trait)
-            if set_default or not settings.has_option(section, trait_name):
-                settings.set(section, trait_name, trait.default_value)
+            settings.register_trait(self._section, self.GROUP_NAME, trait_name, trait)
+            if set_default or not settings.has_option(self._section, trait_name):
+                settings.set(self._section, trait_name, trait.default_value)
 
     def remove_all(self):
         for trait_name in self._lookup.itervalues():
@@ -238,15 +253,15 @@ class ParamManager(object):
         return self._lookup.items()
 
     @classmethod
-    def from_settings(cls, plugin_cls, trait_name_template, settings, section, param_info):
+    def from_settings(cls, plugin_cls, plugin_name, settings, manager, param_info):
         """
         register all traits for the given params to the settings manager
         """
-        instance = cls(plugin_cls, trait_name_template, settings, section, False)
+        instance = cls(plugin_cls, plugin_name, settings, manager, False)
         for trait_name, param_name in param_info:
             if instance.has_param(param_name):
-                value = settings.get_value(section, trait_name)
-                settings.set(section, trait_name, value)
+                value = settings.get_value(manager.section, trait_name)
+                settings.set(manager.section, trait_name, value)
             else:
                 raise ValueError("Parameter '%s' not specified." % param_name)
         return instance
@@ -266,6 +281,9 @@ class _Plugin(object):
     DOC = None
     REQUIRES = None
 
+    # do not overwrite
+    _REQUIRE_STR = 'require%02d'
+
     def __init__(self, name, param_manager):
         self.name = name
         self.param_manager = param_manager
@@ -276,9 +294,12 @@ class _Plugin(object):
 
     def add_referee(self, referee):
         self._referees.append(referee)
+        print self.name, 'added', referee, self._referees
 
     def remove_referee(self, referee):
-        self._referees.remove(referee)
+        if referee in self._referees:
+            self._referees.remove(referee)
+        print self.name, 'removed', referee, self._referees
 
     @property
     def referees(self):
@@ -289,8 +310,21 @@ class _Plugin(object):
         return self.param_manager
 
     def get_requirement_info(self, idx):
-        name = 'require%02d' % idx
+        name = self._REQUIRE_STR % idx
         return name, self.params[name]
+
+    @property
+    def requirements(self):
+        result = []
+        idx = 0
+        while True:
+            name = self._REQUIRE_STR % idx
+            if self.param_manager.has_param(name):
+                result.append(name)
+                idx += 1
+            else:
+                break
+        return result
 
     def run(self, *args, **options):
         """

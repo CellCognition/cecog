@@ -142,9 +142,11 @@ class SelectionTrait(traits.SelectionTrait, GuiTrait):
 
 class SelectionTrait2(traits.SelectionTrait2, GuiTrait):
 
-    def __init__(self, default_value, list_data, label=None, tooltip=None, doc=None):
+    def __init__(self, default_value, list_data, label=None, tooltip=None, doc=None, update_callback=None):
         traits.SelectionTrait2.__init__(self, default_value, list_data)
         GuiTrait.__init__(self, label, tooltip=tooltip, doc=doc)
+        self._update_callback = update_callback
+        self._previous_value = None
 
     def set_value(self, widget, value):
         if not value is None:
@@ -155,8 +157,10 @@ class SelectionTrait2(traits.SelectionTrait2, GuiTrait):
                 index = widget.count() - 1
             widget.setCurrentIndex(index)
 
-    def set_list_data(self, list_data):
-        traits.SelectionTrait2.set_list_data(self, list_data)
+    def set_list_data(self, list_data=None):
+        if not list_data is None:
+            traits.SelectionTrait2.set_list_data(self, list_data)
+        list_data = self.list_data
         if not self._widget is None:
             current_idx = self._widget.currentIndex()
             text = str(self._widget.itemText(current_idx))
@@ -170,6 +174,20 @@ class SelectionTrait2(traits.SelectionTrait2, GuiTrait):
                 index = None
         return index
 
+    def init(self):
+        pass
+
+    def notify(self, name, removed):
+        if removed:
+            self.list_data.remove(name)
+        else:
+            self.list_data.append(name)
+        self.set_list_data()
+
+    def on_update_observer(self, value):
+        if not self._update_callback is None:
+            self._update_callback(value, self._previous_value)
+            self._previous_value = value
 
 
 class MultiSelectionTrait(traits.MultiSelectionTrait, GuiTrait):
