@@ -13,8 +13,8 @@ ENDIF()
 ########################################################################
 
 FOREACH(path ${DEPENDENCY_SEARCH_PREFIX})  
-    SET(CMAKE_INCLUDE_PATH ${path}/include)
-    SET(CMAKE_LIBRARY_PATH ${path}/lib)       
+    SET(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH};${path}/include)
+    SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH};${path}/lib)       
 ENDFOREACH(path)
 
 ########################################################################
@@ -78,11 +78,22 @@ ENDIF()
 ########################################################################
 
 IF(NOT VIGRA_INCLUDE_DIR)
-    MESSAGE(SEND_ERROR "VIGRA_INCLUDE_DIR not given. Use -DVIGRA_INCLUDE_DIR=<path-to-vigra-include>")
+    FIND_PATH(VIGRA_INCLUDE_DIR vigra/impex.hxx)
+    IF (VIGRA_INCLUDE_DIR)
+        MESSAGE(STATUS "Found vigra in " ${VIGRA_INCLUDE_DIR})
+    ELSE()
+        MESSAGE(SEND_ERROR "VIGRA_INCLUDE_DIR not found. Try -DVIGRA_INCLUDE_DIR=<path-to-vigra-include>")
+    ENDIF()
 ENDIF()
 
 IF(NOT VIGRA_IMPEX_LIBRARY)
-    MESSAGE(SEND_ERROR "VIGRA_IMPEX_LIBRARY not given. Use -DVIGRA_IMPEX_LIBRARY=<vigra-impex-library>")
+    FIND_LIBRARY(VIGRA_IMPEX_LIBRARY vigraimpex)
+    IF (VIGRA_IMPEX_LIBRARY)
+        MESSAGE(STATUS "Found vigra impex " ${VIGRA_IMPEX_LIBRARY})
+    ELSE()
+        MESSAGE(SEND_ERROR "VIGRA_IMPEX_LIBRARY not found. Try -DVIGRA_IMPEX_LIBRARY=<vigra-impex-library>")
+    ENDIF()
+    
 ENDIF()
 
 ########################################################################
