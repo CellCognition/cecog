@@ -84,13 +84,7 @@ class _DataProvider(object):
         self._hf_group = hf_group
         self._children = {}
         self._parent = parent
-        
-            
-        if self.CHILDREN_GROUP_NAME is not None and self.CHILDREN_GROUP_NAME != 'position' :
-            for name, group in self._hf_group[self.CHILDREN_GROUP_NAME].iteritems():
-                self._children[name] = self.CHILDREN_PROVIDER_CLASS(group, parent=self)
-                
-        if self.CHILDREN_GROUP_NAME == 'position':
+        if self.CHILDREN_GROUP_NAME == 'this is a threading experiment ':
             worker = [InputOutputThread(self.CHILDREN_PROVIDER_CLASS) for _ in range(3)]
             for w in worker:
                 w.start()
@@ -101,6 +95,10 @@ class _DataProvider(object):
             InputOutputThread.inQueue.join()
             for name, provider in InputOutputThread.outDict.iteritems():
                 self._children[name] = provider
+            
+        elif self.CHILDREN_GROUP_NAME is not None:
+            for name, group in self._hf_group[self.CHILDREN_GROUP_NAME].iteritems():
+                self._children[name] = self.CHILDREN_PROVIDER_CLASS(group, parent=self)
         
         
 
