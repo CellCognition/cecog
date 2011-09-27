@@ -13,8 +13,8 @@ ENDIF()
 ########################################################################
 
 FOREACH(path ${DEPENDENCY_SEARCH_PREFIX})  
-    SET(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH};${path}/include)
-    SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH};${path}/lib)       
+    SET(CMAKE_INCLUDE_PATH ${path}/include;${CMAKE_INCLUDE_PATH})
+    SET(CMAKE_LIBRARY_PATH ${path}/lib;${CMAKE_LIBRARY_PATH})       
 ENDFOREACH(path)
 
 ########################################################################
