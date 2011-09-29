@@ -5,6 +5,9 @@ from optparse import OptionParser
 
 from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
+from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
+from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
+
 from cecog.traits.config import ConfigSettings
 from cecog.io.imagecontainer import ImageContainer
 
@@ -55,7 +58,74 @@ class BatchProcessor(object):
 
         return
 
+    def writeRenderingSettingsToConfigFile(self, filename_settings=None,
+                                           mod_filename=None):
+
+        if filename_settings is None:
+            filename_settings = self.oBatchSettings.settingsFilename
+
+        if mod_filename is None:
+            mod_filename = os.path.join(os.path.dirname(filename_settings),
+                                        'mod_%s' % os.path.basename(filename_settings))
+
+        settings = ConfigSettings(SECTION_REGISTRY)
+        settings.read(filename_settings)
+
+        settings.set_section(SECTION_NAME_GENERAL)
+        settings.set2('rendering_class', self.oBatchSettings.rendering_class)
+        settings.set2('rendering', self.oBatchSettings.rendering)
+
+        oFile = open(mod_filename, 'w')
+        settings.write(oFile)
+        oFile.close()
+
+        return
+
+
+    def writePathSettingsToConfigFile(self, filename_settings=None,
+                                      mod_filename=None):
+        if filename_settings is None:
+            filename_settings = self.oBatchSettings.settingsFilename
+
+        if mod_filename is None:
+            mod_filename = os.path.join(os.path.dirname(filename_settings),
+                                        'mod_%s' % os.path.basename(filename_settings))
+
+        settings = ConfigSettings(SECTION_REGISTRY)
+        settings.read(filename_settings)
+
+        settings.set_section(SECTION_NAME_ERRORCORRECTION)
+        if 'filename_to_r' in dir(self.oBatchSettings) and not self.oBatchSettings.filename_to_r is None:
+            settings.set2('filename_to_r', self.oBatchSettings.filename_to_r)
+        if 'primary_graph' in dir(self.oBatchSettings) and not self.oBatchSettings.primary_graph is None:
+            settings.set2('primary_graph', self.oBatchSettings.primary_graph)
+        if 'secondary_graph' in dir(self.oBatchSettings) and not self.oBatchSettings.secondary_graph is None:
+            settings.set2('secondary_graph', self.oBatchSettings.secondary_graph)
+
+        settings.set_section(SECTION_NAME_CLASSIFICATION)
+        if 'primary_classification_envpath' in dir(self.oBatchSettings) and not self.oBatchSettings.primary_classification_envpath is None:
+            settings.set2('primary_classification_envpath',
+                          self.oBatchSettings.primary_classification_envpath)
+        if 'secondary_classification_envpath' in dir(self.oBatchSettings) and not self.oBatchSettings.secondary_classification_envpath is None:
+            settings.set2('secondary_classification_envpath',
+                          self.oBatchSettings.secondary_classification_envpath)
+
+        #SECTION_NAME_CLASSIFICATION
+        oFile = open(mod_filename, 'w')
+        settings.write(oFile)
+        oFile.close()
+
+        return
+
     def exportPBSJobArray(self, lstExperiments):
+
+        filename_settings = self.oBatchSettings.settingsFilename
+
+        mod_filename = os.path.join(os.path.dirname(filename_settings),
+                                    'mod_%s' % os.path.basename(filename_settings))
+
+        self.writeRenderingSettingsToConfigFile(filename_settings, mod_filename)
+        self.writePathSettingsToConfigFile(mod_filename, mod_filename)
 
         hours = self.oBatchSettings.hours
         minutes = self.oBatchSettings.minutes
@@ -87,6 +157,8 @@ cd %s
 """ % (path_command, self.oBatchSettings.batchScriptDirectory)
 
         additional_options = ''
+        for attribute in self.oBatchSettings.additional_flags:
+            additional_options += ' --%s' % attribute
         for attribute, value in self.oBatchSettings.additional_attributes.iteritems():
             additional_options += ' --%s %s' % (attribute, str(value))
 
@@ -100,12 +172,13 @@ cd %s
 
                 # command to be executed on the cluster
                 temp_cmd = """
-%s %s -s %s -i %s -o %s -p %s %s"""
+%s %s -s %s -i "%s" -o "%s" --position_list %s %s"""
 
                 temp_cmd %= (
                         self.oBatchSettings.pythonBinary,
                         self.oBatchSettings.batchScript,
-                        self.oBatchSettings.settingsFilename,
+                        #self.oBatchSettings.settingsFilename,
+                        mod_filename,
                         self.oBatchSettings.baseInDir,
                         self.oBatchSettings.baseOutDir,
                         '___'.join([plate, pos]),
@@ -199,7 +272,7 @@ cd %s
 
                 # command to be executed on the cluster
                 temp_cmd = """
-%s %s -s %s -i %s -o %s -p %s %s"""
+%s %s -s %s -i %s -o %s --position_list %s %s"""
 
                 temp_cmd %= (
                         self.oBatchSettings.pythonBinary,
@@ -276,14 +349,16 @@ cd %s
         lstExperiments = []
         for plate in plates:
             imagecontainer.set_plate(plate)
-            meta_data = imagecontainer.get_meta_data(plate)
+            meta_data = imagecontainer.get_meta_data()
             positions = meta_data.positions
 
             if self.oBatchSettings.omit_processed_positions:
-                finished_pos = [os.path.splitext(x)[0].split('__')[0] for x in
-                                os.listdir(os.path.join(self.oBatchSettings.baseOutDir,
-                                                        plate, 'log', '_finished'))]
-                positions = filter(lambda x: x not in finished_pos, positions)
+                if os.path.exists(os.path.join(self.oBatchSettings.baseOutDir,
+                                               plate, 'log', '_finished')):
+                    finished_pos = [os.path.splitext(x)[0].split('__')[0] for x in
+                                    os.listdir(os.path.join(self.oBatchSettings.baseOutDir,
+                                                            plate, 'log', '_finished'))]
+                    positions = filter(lambda x: x not in finished_pos, positions)
 
             lstExperiments.extend([(x,y) for x,y in zip([plate for i in positions],
                                                         positions) ])
