@@ -377,7 +377,7 @@ class SecondaryChannel(_Channel):
     SEGMENTATION = SECONDARY_SEGMENTATION_MANAGER
 
 
-class TertiaryChannel(SecondaryChannel):
+class TertiaryChannel(_Channel):
 
     NAME = 'Tertiary'
     PREFIX = 'tertiary'

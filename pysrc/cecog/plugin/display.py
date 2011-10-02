@@ -32,7 +32,9 @@ from pdk.ordereddict import OrderedDict
 #
 from cecog.gui.display import TraitDisplayMixin
 from cecog.gui.widgets.groupbox import QxtGroupBox
-from cecog.gui.util import question
+from cecog.gui.util import (question,
+                            warning,
+                            )
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -206,7 +208,18 @@ class PluginBay(QFrame):
         self.add_plugin(plugin_name)
 
     def _on_remove_plugin(self, plugin_name):
-        if question(None, "Removing a plugin", "Are you sure to remove the plugin %s?" % plugin_name):
+        instance = self.plugin_manager.get_plugin_instance(plugin_name)
+        result = False
+        n = len(instance.referees)
+        if n == 0:
+            result = question(None, 'Removing the plugin "%s"' % plugin_name, "Are you sure to remove this plugin?")
+        elif n > 0:
+            detail = '\n'.join(['%s (%s)' % x[:2] for x in instance.referees])
+            result = question(None, 'Removing the plugin "%s"' % plugin_name,
+                             '%d other plugin%s require%s this plugin.\n\nAre you sure to remove this plugin?' %
+                             (n, 's' if n > 1 else '', 's' if n == 1 else ''),
+                             detail=detail, icon=QMessageBox.Warning)
+        if result:
             self.remove_plugin(plugin_name)
             self.plugin_manager.remove_instance(plugin_name, self.settings)
 

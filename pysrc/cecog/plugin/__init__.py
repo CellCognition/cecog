@@ -165,7 +165,7 @@ class PluginManager(object):
         instance.remove_referee(referee)
 
     def handle_referee(self, plugin_name_new, plugin_name_old, referee):
-        print self.name, plugin_name_new, plugin_name_old, referee
+        # remove old and add new referee to instance
         if plugin_name_old in self._instances:
             self.remove_referee_from_instance(plugin_name_old, referee)
         if plugin_name_new in self._instances:
@@ -220,15 +220,19 @@ class ParamManager(object):
         trait_name_template = manager.get_trait_name_template(plugin_cls.NAME, plugin_name)
 
         # inject traits controlling plugin requirements dynamically
-        managers = dict([(manager.name, manager) for manager in PLUGIN_MANAGERS])
+        foreign_managers = dict([(mngr.name, mngr) for mngr in PLUGIN_MANAGERS])
         if not plugin_cls.REQUIRES is None:
             for idx, require in enumerate(plugin_cls.REQUIRES):
-                foreign_manager = managers[require]
+                # get the foreign manager that controls the requirement
+                foreign_manager = foreign_managers[require]
+                # get the names of plugin instances of the foreign manager
                 names = foreign_manager.get_plugin_names()
+                # define an update callback which is triggered every time the requirement (plugin instance) is changed
                 update_callback = lambda referee: lambda new, old: foreign_manager.handle_referee(new, old, referee)
+                # define a new trait for the current requirement
                 trait = SelectionTrait2(None if len(names) < 1 else names[0], names, label=foreign_manager.display_name,
                                         update_callback=update_callback((manager.name, plugin_name)))
-                # register this trait to the manager which controls the dependency for change notifications
+                # register this trait to the foreign manager which controls the dependency for change notifications
                 foreign_manager.register_observer(trait)
                 params.append((plugin_cls._REQUIRE_STR % idx, trait))
 
@@ -294,12 +298,10 @@ class _Plugin(object):
 
     def add_referee(self, referee):
         self._referees.append(referee)
-        print self.name, 'added', referee, self._referees
 
     def remove_referee(self, referee):
         if referee in self._referees:
             self._referees.remove(referee)
-        print self.name, 'removed', referee, self._referees
 
     @property
     def referees(self):

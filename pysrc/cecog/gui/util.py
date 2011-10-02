@@ -114,7 +114,7 @@ def information(parent, text, info=None, detail=None, modal=True):
                    buttons=QMessageBox.Ok, default=QMessageBox.Ok)
 
 def question(parent, text, info=None, detail=None, modal=True,
-             show_cancel=False, default=None, escape=None):
+             show_cancel=False, default=None, escape=None, icon=QMessageBox.Question):
     buttons = QMessageBox.Yes|QMessageBox.No
     if default is None:
         default = QMessageBox.No
@@ -122,7 +122,7 @@ def question(parent, text, info=None, detail=None, modal=True,
         escape = default
     if show_cancel:
         buttons |= QMessageBox.Cancel
-    result = message(QMessageBox.Question,
+    result = message(icon,
                      text, parent, info=info, detail=detail, modal=modal,
                      buttons=buttons, default=default, escape=escape)
     if show_cancel:
