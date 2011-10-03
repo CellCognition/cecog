@@ -31,9 +31,11 @@ from pdk.ordereddict import OrderedDict
 # cecog imports:
 #
 from cecog.gui.display import TraitDisplayMixin
-from cecog.gui.widgets.groupbox import QxtGroupBox
+from cecog.gui.widgets.collapsible import CollapsibleFrame
+from cecog.gui.widgets.tabcontrol import TAB_STYLE
 from cecog.gui.util import (question,
                             warning,
+                            load_qrc_text,
                             )
 
 #-------------------------------------------------------------------------------
@@ -50,12 +52,17 @@ from cecog.gui.util import (question,
 
 class PluginParamFrame(QFrame, TraitDisplayMixin):
 
+    label_clicked = pyqtSignal(str)
+
     def __init__(self, parent, param_manager):
         QFrame.__init__(self, parent)
-        TraitDisplayMixin.__init__(self, param_manager._settings)
+        TraitDisplayMixin.__init__(self, param_manager._settings, label_click_callback=self._show_help)
         self.SECTION_NAME = param_manager._section
         self.param_manager = param_manager
         QGridLayout(self)
+
+    def _show_help(self, trait_name):
+        self.label_clicked.emit(trait_name)
 
     def _get_frame(self, name=None):
         return self
@@ -75,6 +82,59 @@ class PluginParamFrame(QFrame, TraitDisplayMixin):
         super(PluginParamFrame, self).add_group(trait_name, items, **options)
 
 
+class PluginDocumentation(CollapsibleFrame):
+
+    def __init__(self, parent, plugin):
+        CollapsibleFrame.__init__(self, parent, 'Documentation')
+        self._plugin = plugin
+
+        frame = QFrame(self)
+        self.set_frame(frame)
+        l = QHBoxLayout(frame)
+        l.setContentsMargins(0, 0, 0, 0)
+        self.txt = None
+
+        pixmap = self.get_pixmap(plugin)
+        if not pixmap.isNull():
+            label = QLabel(frame)
+            label.setPixmap(pixmap)
+            l.addWidget(label)
+
+        if not plugin.DOC is None:
+            txt = QTextBrowser(self)
+            txt.setMinimumHeight(300)
+            s = plugin.DOC
+            if len(s) > 0 and s[0] == ':':
+                s = load_qrc_text('plugins/%s/%s' % (plugin.QRC_PREFIX or '', s[1:]))
+            txt.setHtml(s)
+            txt.setOpenLinks(True)
+            txt.setOpenExternalLinks(True)
+            l.addWidget(txt, stretch=1)
+            self.txt = txt
+
+        self.btn.setObjectName('tab')
+        self.setStyleSheet(TAB_STYLE)
+
+    def on_label_clicked(self, trait_name):
+        if not self.txt is None:
+            self.show_doc(True)
+            param_name = self._plugin.param_manager.get_param_name(str(trait_name))
+            self.txt.scrollToAnchor(param_name or trait_name)
+
+    def show_doc(self, state=True):
+        if self.btn.isChecked() != state:
+            self.btn.setChecked(state)
+
+    @classmethod
+    def has_content(cls, plugin):
+        pixmap = cls.get_pixmap(plugin)
+        return not plugin.DOC is None or not pixmap.isNull()
+
+    @classmethod
+    def get_pixmap(cls, plugin):
+        return QPixmap(':plugins/%s/%s' % (plugin.QRC_PREFIX or '', plugin.IMAGE))
+
+
 class PluginItem(QFrame):
 
     remove_item = pyqtSignal()
@@ -92,16 +152,11 @@ class PluginItem(QFrame):
         layout.addWidget(frame1)
         layout.addWidget(frame2)
 
-        if not plugin.DOC is None:
-            doc = QxtGroupBox('Documentation', self)
-            #doc.setExpanded(False)
-            #doc.setCollapsive(False)
-            #doc.set
+        # add a collapsible documentation to the plugin (image and/or html-compatible text)
+        if PluginDocumentation.has_content(plugin):
+            doc = PluginDocumentation(self, plugin)
+            frame2.label_clicked.connect(doc.on_label_clicked)
             layout.addWidget(doc)
-            l = QVBoxLayout(doc)
-            txt = QTextEdit(doc)
-            txt.setText(plugin.DOC)
-            l.addWidget(txt)
 
         layout = QHBoxLayout(frame1)
         #layout.setContentsMargins(5, 5, 5, 5)
@@ -124,9 +179,10 @@ class PluginItem(QFrame):
                     frame2.add_input(info[1])
 
         # add requirements in special group
-        frame2.add_group(None,
-                         [(name, (idx, 0, 1, 1)) for idx, name in enumerate(requirements)],
-                         link='requirements', label='Plugin dependencies')
+        if len(requirements) > 0:
+            frame2.add_group(None,
+                             [(name, (idx, 0, 1, 1)) for idx, name in enumerate(requirements)],
+                             link='requirements', label='Plugin dependencies')
 
 
     def _on_remove(self):

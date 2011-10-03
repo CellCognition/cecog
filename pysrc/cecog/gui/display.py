@@ -20,7 +20,8 @@ __all__ = ['TraitDisplayMixin']
 # standard library imports:
 #
 import os, \
-       types
+       types, \
+       functools
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -64,13 +65,15 @@ class TraitDisplayMixin(object):
     SECTION_NAME = None
     DISPLAY_NAME = None
 
-    def __init__(self, settings):
+    def __init__(self, settings, has_label_link=True, label_click_callback=None):
         self._registry = {}
         self._settings = settings
         self._extra_columns = 0
         self._final_handlers = {}
         self._tab_name = None
         self._input_cnt = 0
+        self._has_label_link = has_label_link
+        self._label_click_callback = label_click_callback
 
     def get_name(self):
         return self.SECTION_NAME if self.DISPLAY_NAME is None \
@@ -175,16 +178,19 @@ class TraitDisplayMixin(object):
         if link is None:
             link = label
         w_label = QLabel(parent)
-        w_label.setTextFormat(Qt.AutoText)
-        #w_label.setOpenExternalLinks(True)
-        w_label.setStyleSheet("*:hover { border:none; background: #e8ff66; text-decoration: underline;}")
-        w_label.setText('<style>a { color: black; text-decoration: none;}</style>'
-                        '<a href="%s">%s</a>' % (link, label))
-        self.connect(w_label, SIGNAL('linkActivated(const QString&)'),
-                     self._on_show_help)
-        w_label.setSizePolicy(QSizePolicy(QSizePolicy.Fixed,
-                                          QSizePolicy.Fixed))
-        w_label.setToolTip('Click on the label for help.')
+
+        if self._has_label_link:
+            w_label.setTextFormat(Qt.AutoText)
+            w_label.setStyleSheet("*:hover { border:none; background: #e8ff66; text-decoration: underline;}")
+            w_label.setText('<style>a { color: black; text-decoration: none;}</style>'
+                            '<a href="%s">%s</a>' % (link, label))
+            w_label.setToolTip('Click on the label for help.')
+            if self._label_click_callback is None:
+                w_label.linkActivated.connect(self._on_show_help)
+            else:
+                w_label.linkActivated.connect(functools.partial(self._label_click_callback, link))
+        else:
+            w_label.setText(label)
         return w_label
 
     def add_input(self, trait_name, parent=None, grid=None, alignment=None,

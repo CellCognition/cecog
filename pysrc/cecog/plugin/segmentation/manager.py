@@ -65,6 +65,7 @@ class SegmentationPluginManager(PluginManager):
 class _SegmentationPlugin(_Plugin):
 
     COLOR = '#FFFFFF'
+    QRC_PREFIX = 'segmentation'
 
 
 #-------------------------------------------------------------------------------

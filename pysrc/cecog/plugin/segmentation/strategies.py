@@ -71,17 +71,15 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
               ('holefilling', BooleanTrait(True, label='Fill holes')),
               ]
 
-    DOC = \
-'''
-Some general documentation.
-'''
+    # the : at the beginning indicates a QRC link with alias 'plugins/segmentation/local_adaptive_threshold'
+    DOC = ':local_adaptive_threshold'
 
     def render_to_gui(self, panel):
         panel.add_group(None,
                         [('medianradius', (0,0,1,1)),
                          ('latwindowsize', (0,1,1,1)),
                          ('latlimit', (0,2,1,1)),
-                         ], link='primary_lat', label='Local adaptive threshold')
+                         ], link='lat', label='Local adaptive threshold')
         panel.add_group('lat2',
                         [('latwindowsize2', (0,0,1,1)),
                          ('latlimit2', (0,1,1,1)),
@@ -191,6 +189,11 @@ class SegmentationPluginExpanded(_SegmentationPlugin):
     LABEL = 'Expanded region from primary'
     NAME = 'expanded'
     COLOR = '#00FFFF'
+    IMAGE = 'expanded'
+    DOC = \
+'''
+Non-overlapping expansion of the primary segmentation by a certain number of steps given as 'Expansion size'.
+'''
 
     REQUIRES = ['primary_segmentation']
 
@@ -220,6 +223,7 @@ class SegmentationPluginInside(_SegmentationPlugin):
     LABEL = 'Shrinked region from primary'
     NAME = 'inside'
     COLOR = '#FFFF00'
+    IMAGE = ':moo'
 
     REQUIRES = ['primary_segmentation']
 

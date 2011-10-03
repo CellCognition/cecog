@@ -37,6 +37,24 @@ from pdk.ordereddict import OrderedDict
 #-------------------------------------------------------------------------------
 # constants:
 #
+TAB_STYLE = \
+'''
+    QPushButton#tab {
+        border: 1px solid #8f8f91;
+        border-radius: 2px;
+        padding: 3px;
+        min-width: 120px;
+    }
+
+    QPushButton#tab:checked, QPushButton#tab:pressed {
+        background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                          stop: 0 #9a9b9e, stop: 1 #babbbe);
+    }
+
+    QStackedWidget#stacked {
+        border: 1px solid #8f8f91;
+    }
+'''
 
 #-------------------------------------------------------------------------------
 # functions:
@@ -57,23 +75,7 @@ class TabControl(QFrame):
     def __init__(self, parent, hide_one=True):
         QFrame.__init__(self, parent)
 
-        self.setStyleSheet('''
-            QPushButton#tab {
-                border: 1px solid #8f8f91;
-                border-radius: 2px;
-                padding: 3px;
-                min-width: 120px;
-            }
-
-            QPushButton#tab:checked, QPushButton#tab:pressed {
-                background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                                  stop: 0 #9a9b9e, stop: 1 #babbbe);
-            }
-
-            QStackedWidget#stacked {
-                border: 1px solid #8f8f91;
-            }
-            ''')
+        self.setStyleSheet(TAB_STYLE)
 
         self._hide_one = hide_one
         self._tabs = OrderedDict()

@@ -216,6 +216,7 @@ class ParamManager(object):
         self._settings = settings
         self._section = manager.section
         self._lookup = {}
+        self._lookup_reverse = {}
         params = plugin_cls.PARAMS
         trait_name_template = manager.get_trait_name_template(plugin_cls.NAME, plugin_name)
 
@@ -239,6 +240,7 @@ class ParamManager(object):
         for param_name, trait in params:
             trait_name = trait_name_template % param_name
             self._lookup[param_name] = trait_name
+            self._lookup_reverse[trait_name] = param_name
             settings.register_trait(self._section, self.GROUP_NAME, trait_name, trait)
             if set_default or not settings.has_option(self._section, trait_name):
                 settings.set(self._section, trait_name, trait.default_value)
@@ -252,6 +254,9 @@ class ParamManager(object):
 
     def get_trait_name(self, param_name):
         return self._lookup[param_name]
+
+    def get_param_name(self, trait_name):
+        return self._lookup_reverse.get(trait_name)
 
     def get_params(self):
         return self._lookup.items()
@@ -284,6 +289,7 @@ class _Plugin(object):
     IMAGE = None
     DOC = None
     REQUIRES = None
+    QRC_PREFIX = None
 
     # do not overwrite
     _REQUIRE_STR = 'require%02d'
