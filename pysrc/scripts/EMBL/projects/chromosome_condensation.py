@@ -10,9 +10,9 @@ from scripts.EMBL.settings import Settings
 
 # export PYTHONPATH=/Users/twalter/workspace/cecog/pysrc
 # if rpy2 is going to be used: export PATH=/Users/twalter/software/R/R.framework/Resources/bin:${PATH}
-# This is necessary, because without that he finds the wrong R executable. 
+# This is necessary, because without that he finds the wrong R executable.
 
-# works with the settings file scripts.EMBL/settings/settings_chrcond_postprocessing.py
+# works with the settings file scripts.EMBL/settings_files/chromosome_condensation_postprocessing.py
 class FullAnalysis(object):
     def __init__(self, settings_filename=None, settings=None):
         if settings is None and settings_filename is None:

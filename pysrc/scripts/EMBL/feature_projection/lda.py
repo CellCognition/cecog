@@ -6,6 +6,9 @@ import mlpy
 
 from cecog.learning.util import SparseWriter, ArffWriter, ArffReader
 
+from scikits.learn.lda import LDA
+
+
 class TrainingSet(object):
     def init(self):
         self._ar = None
@@ -246,14 +249,16 @@ class TrainingSet(object):
 
         return normmat, y
 
-from rpy2.robjects import r
-from rpy2.robjects import IntVector, Formula
-from rpy2.robjects.packages import importr
-import rpy2.robjects as robjects
-
 class Rpy2LDA(object):
     def __init__(self):
         print 'Rpy2LDA'
+
+        # import rpy2
+        from rpy2.robjects import r
+        from rpy2.robjects import IntVector, Formula
+        from rpy2.robjects.packages import importr
+        import rpy2.robjects as robjects
+
         r.require("MASS")
         self._calc = False
         self.model = None
@@ -318,10 +323,10 @@ class Rpy2LDA(object):
 # - scikit
 class ScikitLDA(object):
     def __init__(self):
-        from scikits.learn.lda import LDA
         self.clf = LDA()
         self.realpred = None
         self._calc = False
+
         #w = predictor.weights(X, y)
         #predictions = predictor.predict(X)
         #realvals = predictor.realpred
@@ -425,12 +430,6 @@ class LDA(object):
         w = predictor.weights(X, y)
         return w
 
-
-
-
-#    def make
-#class LDA(object):
-    #def __init__(self):
 
 
 
