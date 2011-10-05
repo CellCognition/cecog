@@ -313,17 +313,24 @@ class ProgressDialog(QProgressDialog):
 
             def foo():
                 # optional passing of this dialog instance to the target function
-                if passDialog:
-                    t.result = self._target(self, *self._args, **self._options)
+                try:
+                    if passDialog:
+                        t.result = self._target(self, *self._args, **self._options)
+                    else:
+                        t.result = self._target(*self._args, **self._options)
+                except Exception, e:
+                    t.exception = e
                 else:
-                    t.result = self._target(*self._args, **self._options)
-                self.targetFinished.emit()
+                    self.targetFinished.emit()
 
             t.result = None
             t.run = foo
             t.start()
             dlg_result = super(QProgressDialog, self).exec_()
             t.wait()
+            # that doesn't feel right to raise the thread exception again in the GUI thread
+            if hasattr(t, 'exception'):
+                raise t.exception
             self._target_result = t.result
         else:
             dlg_result = super(QProgressDialog, self).exec_()
