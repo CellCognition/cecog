@@ -264,22 +264,28 @@ class ClusterDisplay(QGroupBox):
 
     def _connect(self):
         success = False
+        msg = 'Error on connecting to cluster control service on %s' % self._host_url
         try:
             client = RemotingService(self._host_url)
-            dlg = waitingProgressDialog('Please wait for the cluster...', self)
+            dlg = waitingProgressDialog('Trying to connect to cluster on %s...' % self._host_url, self)
             dlg.setTarget(client.getService, 'clustercontrol')
             dlg.exec_()
             self._service = dlg.getTargetResult()
         except:
-            exception(self, 'Error on connecting to cluster control service')
+            exception(self, msg)
         else:
-            cluster_versions = self._service.get_cecog_versions()
-            if not VERSION in set(cluster_versions):
-                warning(self, 'Cecog version %s not supported by the cluster' %
-                        VERSION, 'Valid versions are: %s' %
-                        ', '.join(cluster_versions))
+            try:
+                dlg.setTarget(self._service.get_cecog_versions)
+                dlg.exec_()
+                cluster_versions = dlg.getTargetResult()
+            except:
+                exception(self, msg)
             else:
-                success = True
+                if not VERSION in set(cluster_versions):
+                    warning(self, 'Cecog version %s not supported by the cluster' %
+                            VERSION, 'Valid versions are: %s' % ', '.join(cluster_versions))
+                else:
+                    success = True
         return success
 
     def _get_mappable_paths(self):
