@@ -216,7 +216,7 @@ class PluginBay(QFrame):
 
     def reset(self):
         self._set_plugin_labels()
-        for plugin_name in self._plugins.keys():
+        for plugin_name in self._plugins.keys()[:]:
             self.remove_plugin(plugin_name)
 
     def add_plugin(self, plugin_name):

@@ -84,8 +84,6 @@ class PluginManager(object):
         plugin_params = {}
         plugin_cls_names = {}
 
-        self._instances.clear()
-
         for option_name in settings.options(self.section):
             items = option_name.split('__')
             if len(items) > 4 and items[0] == self.PREFIX and items[1] == self.name:
@@ -105,10 +103,16 @@ class PluginManager(object):
                 ParamManager.from_settings(plugin_cls, plugin_name, settings, self, plugin_params[plugin_name])
             instance = plugin_cls(plugin_name, param_manager)
             self._instances[plugin_name] = instance
-            self.notify_instance_modified(plugin_name)
+            #self.notify_instance_modified(plugin_name)
 
         for observer in self._observer:
             observer.init()
+
+    def clear(self):
+        for plugin_name, instance in self._instances.iteritems():
+            instance.close()
+            #self.notify_instance_modified(plugin_name, True)
+        self._instances.clear()
 
     def add_instance(self, plugin_cls_name, settings):
         if not plugin_cls_name in self._plugins:
@@ -156,6 +160,9 @@ class PluginManager(object):
     def register_observer(self, observer):
         self._observer.append(observer)
 
+    def unregister_observer(self, observer):
+        self._observer.remove(observer)
+
     def add_referee_to_instance(self, plugin_name, referee):
         instance = self.get_plugin_instance(plugin_name)
         instance.add_referee(referee)
@@ -166,6 +173,7 @@ class PluginManager(object):
 
     def handle_referee(self, plugin_name_new, plugin_name_old, referee):
         # remove old and add new referee to instance
+        #print self.name, plugin_name_new, plugin_name_old, referee
         if plugin_name_old in self._instances:
             self.remove_referee_from_instance(plugin_name_old, referee)
         if plugin_name_new in self._instances:
@@ -217,6 +225,8 @@ class ParamManager(object):
         self._section = manager.section
         self._lookup = {}
         self._lookup_reverse = {}
+        self._observer_traits = []
+        self._plugin_name = plugin_name
         params = plugin_cls.PARAMS
         trait_name_template = manager.get_trait_name_template(plugin_cls.NAME, plugin_name)
 
@@ -235,6 +245,7 @@ class ParamManager(object):
                                         update_callback=update_callback((manager.name, plugin_name)))
                 # register this trait to the foreign manager which controls the dependency for change notifications
                 foreign_manager.register_observer(trait)
+                self._observer_traits.append((foreign_manager, trait))
                 params.append((plugin_cls._REQUIRE_STR % idx, trait))
 
         for param_name, trait in params:
@@ -245,7 +256,12 @@ class ParamManager(object):
             if set_default or not settings.has_option(self._section, trait_name):
                 settings.set(self._section, trait_name, trait.default_value)
 
-    def remove_all(self):
+    def clear(self):
+        for foreign_manager, trait in self._observer_traits:
+            # enforce a 'handle_referee' on the foreign_manager by setting the requirement to an empty string
+            trait.set_list_data([])
+            # unregister the trait as an observer of the foreign_manager
+            foreign_manager.unregister_observer(trait)
         for trait_name in self._lookup.itervalues():
             self._settings.unregister_trait(self._section, self.GROUP_NAME, trait_name)
 
@@ -299,7 +315,7 @@ class _Plugin(object):
         self._referees = []
 
     def close(self):
-        self.param_manager.remove_all()
+        self.param_manager.clear()
 
     def add_referee(self, referee):
         self._referees.append(referee)

@@ -124,6 +124,9 @@ class ConfigSettings(RawConfigParser):
         fp.close()
 
     def readfp(self, fp):
+        for plugin_manager in PLUGIN_MANAGERS:
+            plugin_manager.clear()
+
         for section in self.sections():
             self.remove_section(section)
 
@@ -137,6 +140,8 @@ class ConfigSettings(RawConfigParser):
                         # convert values according to traits
                         value = self.get_value(section_name, option_name)
                         self.set(section_name, option_name, value)
+                    elif option_name.find('plugin') == 0:
+                        pass
 #                    else:
 #                        print("Warning: option '%s' in section '%s' is not "
 #                              "defined and will be deleted" %\
