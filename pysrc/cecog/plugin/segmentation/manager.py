@@ -28,7 +28,6 @@ __all__ = ['RegionInformation',
 from cecog.plugin import (PluginManager,
                           _Plugin,
                           )
-from cecog import SEGMENTATION_MANAGERS
 
 #-------------------------------------------------------------------------------
 # constants:

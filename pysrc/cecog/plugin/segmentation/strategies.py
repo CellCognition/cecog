@@ -189,7 +189,6 @@ class SegmentationPluginExpanded(_SegmentationPlugin):
     LABEL = 'Expanded region from primary'
     NAME = 'expanded'
     COLOR = '#00FFFF'
-    IMAGE = 'expanded'
     DOC = \
 '''
 Non-overlapping expansion of the primary segmentation by a certain number of steps given as 'Expansion size'.
@@ -223,7 +222,6 @@ class SegmentationPluginInside(_SegmentationPlugin):
     LABEL = 'Shrinked region from primary'
     NAME = 'inside'
     COLOR = '#FFFF00'
-    IMAGE = ':moo'
 
     REQUIRES = ['primary_segmentation']
 
@@ -281,7 +279,6 @@ class SegmentationPluginRim(_SegmentationPlugin):
     LABEL = 'Rim at primary region'
     NAME = 'rim'
     COLOR = '#FF00FF'
-    IMAGE = ":moo123"
 
     REQUIRES = ['primary_segmentation']
 
@@ -325,7 +322,6 @@ class SegmentationPluginModification(_SegmentationPlugin):
     LABEL = 'Expansion/shrinking of primary region'
     NAME = 'modification'
     COLOR = '#FF00FF'
-    IMAGE = ":moo123"
 
     REQUIRES = ['primary_segmentation']
 

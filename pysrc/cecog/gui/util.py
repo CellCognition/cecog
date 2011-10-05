@@ -167,8 +167,7 @@ def load_qrc_text(name):
     return text
 
 
-def show_html(name, link='_top', title=None,
-              header='_header', footer='_footer'):
+def show_html(name, link='_top', title=None, header='_header', footer='_footer', html_text=None):
     if not hasattr(qApp, 'cecog_help_dialog'):
         dialog = QFrame()
         if title is None:
@@ -179,8 +178,7 @@ def show_html(name, link='_top', title=None,
         w_text = QTextBrowser(dialog)
         w_text.setOpenLinks(False)
         w_text.setOpenExternalLinks(False)
-        w_text.connect(w_text, SIGNAL('anchorClicked ( const QUrl & )'),
-                       on_anchor_clicked)
+        w_text.anchorClicked.connect(on_anchor_clicked)
         layout.addWidget(w_text)
         dialog.setMinimumSize(QSize(900,600))
         qApp.cecog_help_dialog = dialog
@@ -190,19 +188,23 @@ def show_html(name, link='_top', title=None,
         w_text = qApp.cecog_help_wtext
 
     w_text.clear()
-    html_text = load_qrc_text('help/%s.html' % name.lower())
+
+    # if no content was given try to load the context via the name
+    if html_text is None:
+        html_text = load_qrc_text('help/%s.html' % name.lower())
+
     if not html_text is None:
         css_text = load_qrc_text('help/help.css')
 
         if not header is None:
             header_text = load_qrc_text('help/%s.html' % header)
             if not header_text is None:
-                html_text = html_text.replace('<!-- HEADER -->', header_text)
+                html_text = header_text + html_text
 
         if not footer is None:
             footer_text = load_qrc_text('help/%s.html' % footer)
             if not footer_text is None:
-                html_text = html_text.replace('<!-- FOOTER -->', footer_text)
+                html_text = html_text + footer_text
 
         doc = QTextDocument()
         if not css_text is None:

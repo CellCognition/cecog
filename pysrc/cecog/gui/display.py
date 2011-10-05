@@ -416,7 +416,6 @@ class TraitDisplayMixin(object):
     # event methods
 
     def _on_show_help(self, link):
-        print self.SECTION_NAME, link
         show_html(self.SECTION_NAME, link=link,
                   header='_header', footer='_footer')
 

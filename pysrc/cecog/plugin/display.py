@@ -36,6 +36,7 @@ from cecog.gui.widgets.tabcontrol import TAB_STYLE
 from cecog.gui.util import (question,
                             warning,
                             load_qrc_text,
+                            show_html,
                             )
 
 #-------------------------------------------------------------------------------
@@ -82,57 +83,31 @@ class PluginParamFrame(QFrame, TraitDisplayMixin):
         super(PluginParamFrame, self).add_group(trait_name, items, **options)
 
 
-class PluginDocumentation(CollapsibleFrame):
+class PluginDocumentation(QFrame):
 
     def __init__(self, parent, plugin):
-        CollapsibleFrame.__init__(self, parent, 'Documentation')
+        QFrame.__init__(self, parent)
         self._plugin = plugin
 
-        frame = QFrame(self)
-        self.set_frame(frame)
-        l = QHBoxLayout(frame)
-        l.setContentsMargins(0, 0, 0, 0)
-        self.txt = None
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
 
-        pixmap = self.get_pixmap(plugin)
-        if not pixmap.isNull():
-            label = QLabel(frame)
-            label.setPixmap(pixmap)
-            l.addWidget(label)
+        help_button = QToolButton(self)
+        help_button.setIcon(QIcon(':question_mark'))
+        help_button.clicked.connect(self.on_label_clicked)
+        layout.addWidget(help_button)
 
-        if not plugin.DOC is None:
-            txt = QTextBrowser(self)
-            txt.setMinimumHeight(300)
-            s = plugin.DOC
-            if len(s) > 0 and s[0] == ':':
-                s = load_qrc_text('plugins/%s/%s' % (plugin.QRC_PREFIX or '', s[1:]))
-            txt.setHtml(s)
-            txt.setOpenLinks(True)
-            txt.setOpenExternalLinks(True)
-            l.addWidget(txt, stretch=1)
-            self.txt = txt
+        self._content = plugin.DOC
+        if len(self._content) > 0 and self._content[0] == ':':
+            self._content = load_qrc_text('plugins/%s/%s' % (plugin.QRC_PREFIX or '', self._content[1:]))
 
-        self.btn.setObjectName('tab')
-        self.setStyleSheet(TAB_STYLE)
-
-    def on_label_clicked(self, trait_name):
-        if not self.txt is None:
-            self.show_doc(True)
-            param_name = self._plugin.param_manager.get_param_name(str(trait_name))
-            self.txt.scrollToAnchor(param_name or trait_name)
-
-    def show_doc(self, state=True):
-        if self.btn.isChecked() != state:
-            self.btn.setChecked(state)
+    def on_label_clicked(self, trait_name=None):
+        param_name = self._plugin.param_manager.get_param_name(str(trait_name))
+        show_html(self._plugin.name, html_text=self._content, link=param_name)
 
     @classmethod
     def has_content(cls, plugin):
-        pixmap = cls.get_pixmap(plugin)
-        return not plugin.DOC is None or not pixmap.isNull()
-
-    @classmethod
-    def get_pixmap(cls, plugin):
-        return QPixmap(':plugins/%s/%s' % (plugin.QRC_PREFIX or '', plugin.IMAGE))
+        return not plugin.DOC is None and len(plugin.DOC) > 0
 
 
 class PluginItem(QFrame):
@@ -152,12 +127,6 @@ class PluginItem(QFrame):
         layout.addWidget(frame1)
         layout.addWidget(frame2)
 
-        # add a collapsible documentation to the plugin (image and/or html-compatible text)
-        if PluginDocumentation.has_content(plugin):
-            doc = PluginDocumentation(self, plugin)
-            frame2.label_clicked.connect(doc.on_label_clicked)
-            layout.addWidget(doc)
-
         layout = QHBoxLayout(frame1)
         #layout.setContentsMargins(5, 5, 5, 5)
         label = QLabel(plugin.LABEL, self)
@@ -168,6 +137,13 @@ class PluginItem(QFrame):
         btn.clicked.connect(self._on_remove)
         layout.addWidget(label)
         layout.addWidget(txt, 1)
+
+        # add a collapsible documentation to the plugin (image and/or html-compatible text)
+        if PluginDocumentation.has_content(plugin):
+            doc = PluginDocumentation(self, plugin)
+            frame2.label_clicked.connect(doc.on_label_clicked)
+            layout.addWidget(doc)
+
         layout.addWidget(btn)
 
         requirements = plugin.requirements

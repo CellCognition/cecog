@@ -286,7 +286,6 @@ class _Plugin(object):
 
     PARAMS = []
     NAME = None
-    IMAGE = None
     DOC = None
     REQUIRES = None
     QRC_PREFIX = None
