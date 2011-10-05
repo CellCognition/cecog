@@ -32,6 +32,7 @@ from PyQt4.Qt import *
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
+from cecog import CHANNEL_PREFIX
 from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
 from cecog.gui.util import (information,
                             exception,
@@ -52,7 +53,6 @@ from cecog.plugin.segmentation import REGION_INFO
 #-------------------------------------------------------------------------------
 # constants:
 #
-CHANNEL_PREFIX = ['primary', 'secondary', 'tertiary']
 
 #-------------------------------------------------------------------------------
 # functions:

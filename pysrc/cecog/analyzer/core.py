@@ -366,7 +366,8 @@ class PositionAnalyzer(object):
                                           **tracker_options)
 
             primary_channel_id = PrimaryChannel.NAME
-            self.oCellTracker.initTrackingAtTimepoint(primary_channel_id, 'primary')
+            region_name = self.oSettings.get2('tracking_regionname')
+            self.oCellTracker.initTrackingAtTimepoint(primary_channel_id, region_name)
 
         else:
             self.oCellTracker = None

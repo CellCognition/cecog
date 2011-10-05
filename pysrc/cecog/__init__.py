@@ -43,6 +43,8 @@ JOB_CONTROL_TERMINATE = 'Terminate'
 SEGMENTATION_MANAGERS = []
 PLUGIN_MANAGERS = []
 
+CHANNEL_PREFIX = ['primary', 'secondary', 'tertiary']
+
 init_application_support_path()
 init_constants()
 

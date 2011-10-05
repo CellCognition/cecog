@@ -67,6 +67,7 @@ class TrackingFrame(BaseProcessorFrame):
                                      ('Apply event selection',
                                       'Stop event selection'))
 
+        self.add_input('tracking_regionname')
         self.add_group(None,
                        [('tracking_maxobjectdistance', (0,0,1,1)),
                         ('tracking_maxtrackinggap', (0,1,1,1)),
@@ -103,11 +104,10 @@ class TrackingFrame(BaseProcessorFrame):
         settings.set2('tracking', True)
         settings.set2('tracking_synchronize_trajectories', False)
         settings.set_section('Tracking')
+        region_name = settings.get2('tracking_regionname')
         settings.set_section('General')
         settings.set2('rendering_class', {})
         settings.set2('rendering', {})
-        #settings.set2('rendering_discwrite', True)
-        #settings.set2('rendering_class_discwrite', True)
         settings.set_section('Classification')
         settings.set2('collectsamples', False)
         sec_region = settings.get2('secondary_classification_regionname')
@@ -123,8 +123,9 @@ class TrackingFrame(BaseProcessorFrame):
             settings.set2('secondary_classification', False)
             settings.set2('secondary_processChannel', False)
             settings.set('Output', 'events_export_gallery_images', False)
-            settings.set('General', 'rendering', {'primary_contours': {prim_id: {'raw': ('#FFFFFF', 1.0),
-                                                                                 'contours': {'primary': ('#FF0000', 1, show_ids)}}}})
+            settings.set('General', 'rendering', {'primary_contours':
+                                                  {prim_id: {'raw': ('#FFFFFF', 1.0),
+                                                             'contours': {region_name: ('#FF0000', 1, show_ids)}}}})
         else:
             settings.set_section('Processing')
             settings.set2('primary_featureextraction', True)
@@ -145,3 +146,12 @@ class TrackingFrame(BaseProcessorFrame):
                                                                                                               }
                                                                    })
         return settings
+
+    def page_changed(self):
+        self.settings_loaded()
+
+    def settings_loaded(self):
+        # FIXME: set the trait list data to plugin instances of the current channel
+        prefix = 'primary'
+        trait = self._settings.get_trait(SECTION_NAME_TRACKING, 'tracking_regionname')
+        trait.set_list_data(REGION_INFO.names[prefix])

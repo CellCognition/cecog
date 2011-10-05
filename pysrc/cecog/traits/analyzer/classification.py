@@ -27,6 +27,7 @@ __all__ = ['SectionClassification']
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
+from cecog import CHANNEL_PREFIX
 from cecog.traits.settings import _Section
 from cecog.gui.guitraits import (StringTrait,
                                  BooleanTrait,
@@ -59,7 +60,7 @@ class SectionClassification(_Section):
       ('%s_classification_regionname' % x, SelectionTrait2(None, [], label='Region name')),
       ('%s_classification_annotationfileext' % x, StringTrait('.xml', 50, label='Annotation ext.')),
       ])]
-      for x in ['primary', 'secondary', 'tertiary']]
+      for x in CHANNEL_PREFIX]
       ) + \
       [
       ('collectsamples',
