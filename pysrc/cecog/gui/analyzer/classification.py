@@ -52,7 +52,7 @@ from cecog.plugin.segmentation import REGION_INFO
 #-------------------------------------------------------------------------------
 # constants:
 #
-
+CHANNEL_PREFIX = ['primary', 'secondary', 'tertiary']
 
 #-------------------------------------------------------------------------------
 # functions:
@@ -425,15 +425,8 @@ class ClassificationFrame(BaseProcessorFrame):
                                      AnalzyerThread,
                                      ('Test classifier', 'Stop testing'))
 
-        self.set_tab_name('Primary Channel')
-
-        self.add_input('primary_classification_envpath')
-
-        frame_results = self._add_result_frame('primary')
-        self.add_handler('primary_classification_envpath',
-                         frame_results.on_load)
-
-        for tab_name, prefix in [('Secondary Channel', 'secondary'),
+        for tab_name, prefix in [('Primary Channel', 'primary'),
+                                 ('Secondary Channel', 'secondary'),
                                  ('Tertiary Channel', 'tertiary'),
                                  ]:
             self.set_tab_name(tab_name)
@@ -526,6 +519,14 @@ class ClassificationFrame(BaseProcessorFrame):
 
     def page_changed(self):
         self._update_classifier()
+        self.settings_loaded()
+
+    def settings_loaded(self):
+        # FIXME: set the trait list data to plugin instances of the current channel
+        prefix = CHANNEL_PREFIX[self._tab.current_index]
+        trait = self._settings.get_trait(SECTION_NAME_CLASSIFICATION, '%s_classification_regionname' % prefix)
+        trait.set_list_data(REGION_INFO.names[prefix])
 
     def tab_changed(self, index):
-        self._update_classifier()
+        self.page_changed()
+

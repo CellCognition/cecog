@@ -51,37 +51,19 @@ class SectionClassification(_Section):
 
     SECTION_NAME = SECTION_NAME_CLASSIFICATION
 
-    OPTIONS = [
-
-    ('primary_classification',
-     [('primary_classification_envpath',
-        StringTrait('', 1000, label='Classifier folder',
-                    widget_info=StringTrait.STRING_PATH)),
-      ('primary_classification_regionname',
-        SelectionTrait2(None, [], label='Region name')),
-      ('primary_classification_annotationfileext',
-        StringTrait('.xml', 50, label='Annotation ext.')),
-      ]),
-
-    ] + \
+    OPTIONS = \
     unlist(
     [[('%s_classification' % x,
-     [('%s_classification_envpath' % x,
-       StringTrait('', 1000, label='Classifier folder',
-                   widget_info=StringTrait.STRING_PATH)),
-      ('%s_classification_regionname' % x,
-       SelectionTrait2(None, [], label='Region name')),
-      ('%s_classification_annotationfileext' % x,
-       StringTrait('.xml', 50, label='Annotation ext.')),
+     [('%s_classification_envpath' % x, StringTrait('', 1000, label='Classifier folder',
+                                                    widget_info=StringTrait.STRING_PATH)),
+      ('%s_classification_regionname' % x, SelectionTrait2(None, [], label='Region name')),
+      ('%s_classification_annotationfileext' % x, StringTrait('.xml', 50, label='Annotation ext.')),
       ])]
-      for x in ['secondary', 'tertiary']]
-
+      for x in ['primary', 'secondary', 'tertiary']]
       ) + \
       [
       ('collectsamples',
-       [('collectsamples',
-            BooleanTrait(False)),
-        ('collectsamples_prefix',
-            StringTrait('',100)),
+       [('collectsamples', BooleanTrait(False)),
+        ('collectsamples_prefix', StringTrait('',100)),
         ])
       ]

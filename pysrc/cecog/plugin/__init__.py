@@ -103,7 +103,7 @@ class PluginManager(object):
                 ParamManager.from_settings(plugin_cls, plugin_name, settings, self, plugin_params[plugin_name])
             instance = plugin_cls(plugin_name, param_manager)
             self._instances[plugin_name] = instance
-            #self.notify_instance_modified(plugin_name)
+            self.notify_instance_modified(plugin_name)
 
         for observer in self._observer:
             observer.init()
@@ -111,7 +111,7 @@ class PluginManager(object):
     def clear(self):
         for plugin_name, instance in self._instances.iteritems():
             instance.close()
-            #self.notify_instance_modified(plugin_name, True)
+            self.notify_instance_modified(plugin_name, True)
         self._instances.clear()
 
     def add_instance(self, plugin_cls_name, settings):

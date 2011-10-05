@@ -122,7 +122,6 @@ class BaseFrame(QFrame, TraitDisplayMixin):
         layout.addWidget(self._tab)
         layout.addWidget(self._control)
 
-    @pyqtSlot('int')
     def on_tab_changed(self, index):
         self.tab_changed(index)
 
@@ -141,6 +140,12 @@ class BaseFrame(QFrame, TraitDisplayMixin):
         '''
         Abstract method. Invoked by the AnalyzerMainWindow when this frame
         is activated for display.
+        '''
+        pass
+
+    def settings_loaded(self):
+        '''
+        change notification called after a settings file is loaded
         '''
         pass
 

@@ -319,16 +319,6 @@ class AnalyzerMainWindow(QMainWindow):
         button.setIcon(QIcon(widget.ICON))
         button.setText(widget.get_name())
         button.setTextAlignment(Qt.AlignHCenter)
-        #button.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-
-        #self.connect(button, )
-#        scroll_area = QScrollArea(self._pages)
-#        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-#        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-#        scroll_area.setWidgetResizable(True)
-#        scroll_area.setWidget(widget)
-#
-#        self._pages.addWidget(scroll_area)
         self._pages.addWidget(widget)
 
         widget.toggle_tabs.connect(self._on_toggle_tabs)
@@ -443,8 +433,13 @@ class AnalyzerMainWindow(QMainWindow):
                          info = "Fix the problem in file '%s' and load the "\
                                 "settings file again." % filename,
                          detail_tb = True)
-            self.settings_changed(False)
-            status('Settings successfully loaded.')
+            else:
+                # set settings to not-changed (assume no changed since loaded from file)
+                self.settings_changed(False)
+                # notify tabs about new settings loaded
+                for tab in self._tabs:
+                    tab.settings_loaded()
+                status('Settings successfully loaded.')
 
     def _write_settings(self, filename):
         try:
