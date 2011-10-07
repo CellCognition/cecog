@@ -117,31 +117,48 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
         return f(img_in, img_bin, border, gauss_size, max_dist, min_merge_size)
 
     @stopwatch()
-    def postprocessing(self, container, is_active, feature_categories, conditions, delete_objects):
+    def postprocessing(self, container, is_active, roisize_minmax, intensity_minmax, delete_objects=True):
+
+        valid_ids = container.getObjects().keys()
+        rejected_ids = []
+
         if is_active:
-            # extract features
-            for strFeature in feature_categories:
-                container.applyFeature(strFeature)
-            dctObjects = container.getObjects()
+            feature_categories = set()
+            conditions = []
+            for idx, (roisize, intensity) in enumerate(zip(roisize_minmax, intensity_minmax)):
+                cmprt = '>=' if idx == 0 else '<='
+                if roisize > -1:
+                    feature_categories.add('roisize')
+                    conditions.append('roisize %s %d' % (cmprt, roisize))
+                if intensity > -1:
+                    feature_categories.add('normbase2')
+                    conditions.append('n2_avg %s %d' % (cmprt, intensity))
 
-            lstGoodObjectIds = []
-            lstRejectedObjectIds = []
+            if len(conditions) > 0:
+                conditions_str = ' and '.join(conditions)
 
-            for iObjectId in dctObjects.keys()[:]:
-                dctObjectFeatures = dctObjects[iObjectId].getFeatures()
-                if not eval(conditions, dctObjectFeatures):
-                    if delete_objects:
-                        del dctObjects[iObjectId]
-                        container.delObject(iObjectId)
-                    lstRejectedObjectIds.append(iObjectId)
-                else:
-                    lstGoodObjectIds.append(iObjectId)
-        else:
-            lstGoodObjectIds = container.getObjects().keys()
-            lstRejectedObjectIds = []
+                # extract features needed for the filter
+                # FIXME: features are currently kept in the ObjectContainer and used for classification automatically
+                for feature in feature_categories:
+                    container.applyFeature(feature)
 
-        container.lstGoodObjectIds = lstGoodObjectIds
-        container.lstRejectedObjectIds = lstRejectedObjectIds
+                valid_ids = []
+                rejected_ids = []
+
+                # get a dict copy, because we delete elements from the dict
+                objects = container.getObjects()
+                for obj_id, obj in objects.iteritems():
+                    # eval condition string based on the feature dict (provides values for the features above)
+                    if not eval(conditions_str, obj.getFeatures()):
+                        if delete_objects:
+                            container.delObject(obj_id)
+                        rejected_ids.append(obj_id)
+                    else:
+                        valid_ids.append(obj_id)
+
+        # store valid and rejected object IDs to the container
+        container.valid_ids = valid_ids
+        container.rejected_ids = rejected_ids
 
     @stopwatch()
     def _run(self, meta_image):
@@ -175,11 +192,9 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
 
         container = ccore.ImageMaskContainer(image, img_bin, self.params['removeborderobjects'])
 
-#        self.postprocessing(container,
-#                            self.params['postprocessing'],
-#                            self.params['moo'],
-#                            self.params['moo'],
-#                            True)
+        self.postprocessing(container, self.params['postprocessing'],
+                            (self.params['postprocessing_roisize_min'], self.params['postprocessing_roisize_max']),
+                            (self.params['postprocessing_intensity_min'], self.params['postprocessing_intensity_max']))
 
         return container
 

@@ -270,45 +270,22 @@ class _Channel(PropertyManager):
                             oContainer.haralick_distance = iHaralickDistance
                             oContainer.applyFeature(strHaralickCategory)
 
-                lstValidObjectIds = []
-                lstRejectedObjectIds = []
-
                 for iObjectId, oObject in oContainer.getObjects().iteritems():
                     dctFeatures = oObject.getFeatures()
 
-                    bAcceptObject = True
+                    # build a new ImageObject
+                    oImageObject = ImageObject(oObject)
+                    oImageObject.iId = iObjectId
 
-#                    # post-processing
-#                    if self.bPostProcessing:
-#
-#                        if not eval(self.strPostprocessingConditions, dctFeatures):
-#                            if self.bPostProcessDeleteObjects:
-#                                #del dctObjects[iObjectId]
-#                                oContainer.delObject(iObjectId)
-#                                bAcceptObject = False
-#                            lstRejectedObjectIds.append(iObjectId)
-#                        else:
-#                            lstValidObjectIds.append(iObjectId)
-#                    else:
-#                        lstValidObjectIds.append(iObjectId)
-#
-#                    oContainer.lstValidObjectIds = lstValidObjectIds
-#                    oContainer.lstRejectedObjectIds = lstRejectedObjectIds
+                    if self.lstFeatureNames is None:
+                        self.lstFeatureNames = sorted(dctFeatures.keys())
 
-                    if bAcceptObject:
-                        # build a new ImageObject
-                        oImageObject = ImageObject(oObject)
-                        oImageObject.iId = iObjectId
+                    # assign feature values in sorted order as NumPy array
+                    oImageObject.aFeatures = \
+                        numpy.asarray(dict_values(dctFeatures,
+                                                  self.lstFeatureNames))
 
-                        if self.lstFeatureNames is None:
-                            self.lstFeatureNames = sorted(dctFeatures.keys())
-
-                        # assign feature values in sorted order as NumPy array
-                        oImageObject.aFeatures = \
-                            numpy.asarray(dict_values(dctFeatures,
-                                                      self.lstFeatureNames))
-
-                        oObjectHolder[iObjectId] = oImageObject
+                    oObjectHolder[iObjectId] = oImageObject
 
             if not self.lstFeatureNames is None:
                 oObjectHolder.setFeatureNames(self.lstFeatureNames)
