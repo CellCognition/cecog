@@ -27,6 +27,7 @@ __all__ = ['ProcessingFrame']
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
+from cecog import CHANNEL_PREFIX
 from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
 from cecog.gui.analyzer import (BaseProcessorFrame,
                                 AnalzyerThread,
@@ -85,7 +86,7 @@ class ProcessingFrame(BaseProcessorFrame):
         self._init_control()
 
     @classmethod
-    def get_special_settings(cls, settings, has_timelapse=True):
+    def get_export_settings(cls, settings, has_timelapse=True):
         settings = BaseProcessorFrame.get_special_settings(settings, has_timelapse)
 
         settings.set('General', 'rendering', {})
@@ -95,7 +96,7 @@ class ProcessingFrame(BaseProcessorFrame):
         show_ids_class = settings.get('Output', 'rendering_class_showids')
 
         colors = REGION_INFO.colors
-        for prefix in ['primary', 'secondary', 'tertiary']:
+        for prefix in CHANNEL_PREFIX:
             if prefix == 'primary' or settings.get('Processing', '%s_processchannel' % prefix):
                 d = dict([('%s_contours_%s' % (prefix, x),
                                                {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
@@ -106,26 +107,37 @@ class ProcessingFrame(BaseProcessorFrame):
 
                 if settings.get('Processing', '%s_classification' % prefix):
                     d = dict([('%s_classification_%s' % (prefix, x),
-                                                   {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
-                                                                          'contours': [(x, 'class_label', 1, False),
-                                                                                       (x, '#000000' , 1, show_ids_class)]
-                                                   }})
-                                                   for x in REGION_INFO.names[prefix]
-                                                   if x == settings.get('Classification',
-                                                                        '%s_classification_regionname' % prefix)])
+                               {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
+                                                      'contours': [(x, 'class_label', 1, False),
+                                                                   (x, '#000000' , 1, show_ids_class)]
+                               }})
+                               for x in REGION_INFO.names[prefix]
+                               if x == settings.get('Classification',
+                                                    '%s_classification_regionname' % prefix)])
                     settings.get('General', 'rendering_class').update(d)
-            else:
-                settings.set('Processing', '%s_classification' % prefix, False)
-                settings.set('Processing', '%s_errorcorrection' % prefix, False)
 
         if has_timelapse:
             # generate raw images of selected channels (later used for gallery images)
             if settings.get('Output', 'events_export_gallery_images'):
-                for prefix in ['primary', 'secondary', 'tertiary']:
+                for prefix in CHANNEL_PREFIX:
                     if prefix == 'primary' or settings.get('Processing', '%s_processchannel' % prefix):
                         settings.get('General', 'rendering').update({prefix : {prefix.capitalize() :
                                                                                {'raw': ('#FFFFFF', 1.0)}}})
-        else:
+
+        return settings
+
+
+    @classmethod
+    def get_special_settings(cls, settings, has_timelapse=True):
+        settings = cls.get_export_settings(settings, has_timelapse)
+
+        settings.set_section('Processing')
+        for prefix in CHANNEL_PREFIX[1:]:
+            if not settings.get2('%s_processchannel' % prefix):
+                settings.set2('%s_classification' % prefix, False)
+                settings.set2('%s_errorcorrection' % prefix, False)
+
+        if not has_timelapse:
             # disable some tracking related settings in case no time-lapse data is present
             settings.set('Processing', 'tracking', False)
             settings.set('Processing', 'tracking_synchronize_trajectories', False)

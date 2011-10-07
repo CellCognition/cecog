@@ -338,7 +338,7 @@ class NavigationModule(Module):
     def _on_plate_changed(self, current, previous):
         coordinate_new = self.browser.get_coordinate()
         item = self._table_plate.item(current.row(), 0)
-        plate = item.data(0).toPyObject()
+        plate = item.data(0)
         coordinate_new.plate = plate
         self._set_plate(coordinate_new)
 
@@ -366,7 +366,7 @@ class NavigationModule(Module):
     def _on_position_changed(self, current, previous):
         coordinate = self.browser.get_coordinate()
         item = self._table_position.item(current.row(), 0)
-        position = item.data(0).toPyObject()
+        position = item.data(0)
         coordinate.position = position
         self._set_position(coordinate)
 
@@ -382,7 +382,7 @@ class NavigationModule(Module):
     def _on_time_changed(self, current, previous):
         coordinate = self.browser.get_coordinate()
         item = self._table_time.item(current.row(), 0)
-        time = int(item.data(0).toPyObject())
+        time = int(item.data(0))
         coordinate.time = time
         self._set_time(coordinate)
 

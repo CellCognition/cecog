@@ -444,7 +444,9 @@ class AnalyzerMainWindow(QMainWindow):
     def _write_settings(self, filename):
         try:
             f = file(filename, 'w')
-            self._settings.write(f)
+            # create a new version (copy) of the current settings which add the needed rendering information
+            settings_dummy = ProcessingFrame.get_export_settings(self._settings)
+            settings_dummy.write(f)
             f.close()
         except:
             critical(self,

@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 2.6)
 
 PROJECT(cecog_ccore)
 
-
 IF (NOT CMAKE_BUILD_TYPE)
     MESSAGE(STATUS "Build type -> Release")
     SET(CMAKE_BUILD_TYPE "Release")
@@ -14,10 +13,9 @@ ENDIF()
 ########################################################################
 
 FOREACH(path ${DEPENDENCY_SEARCH_PREFIX})  
-    SET(CMAKE_INCLUDE_PATH ${path}/include)
-    SET(CMAKE_LIBRARY_PATH ${path}/lib)       
+    SET(CMAKE_INCLUDE_PATH ${path}/include;${CMAKE_INCLUDE_PATH})
+    SET(CMAKE_LIBRARY_PATH ${path}/lib;${CMAKE_LIBRARY_PATH})       
 ENDFOREACH(path)
-
 
 ########################################################################
 # SEARCH FOR PYTHON AND NUMPY
@@ -48,7 +46,6 @@ IF(NOT PYTHONLIBS_FOUND)
        MESSAGE(STATUS " failed")
     ENDIF()
 ENDIF()
-
 
 IF(PYTHONINTERP_FOUND)
     IF(NOT NUMPY_INCLUDE_DIR)
@@ -81,11 +78,22 @@ ENDIF()
 ########################################################################
 
 IF(NOT VIGRA_INCLUDE_DIR)
-    MESSAGE(SEND_ERROR "VIGRA_INCLUDE_DIR not given. Use -DVIGRA_INCLUDE_DIR=<path-to-vigra-include>")
+    FIND_PATH(VIGRA_INCLUDE_DIR vigra/impex.hxx)
+    IF (VIGRA_INCLUDE_DIR)
+        MESSAGE(STATUS "Found vigra in " ${VIGRA_INCLUDE_DIR})
+    ELSE()
+        MESSAGE(SEND_ERROR "VIGRA_INCLUDE_DIR not found. Try -DVIGRA_INCLUDE_DIR=<path-to-vigra-include>")
+    ENDIF()
 ENDIF()
 
 IF(NOT VIGRA_IMPEX_LIBRARY)
-    MESSAGE(SEND_ERROR "VIGRA_IMPEX_LIBRARY not given. Use -DVIGRA_IMPEX_LIBRARY=<vigra-impex-library>")
+    FIND_LIBRARY(VIGRA_IMPEX_LIBRARY vigraimpex)
+    IF (VIGRA_IMPEX_LIBRARY)
+        MESSAGE(STATUS "Found vigra impex " ${VIGRA_IMPEX_LIBRARY})
+    ELSE()
+        MESSAGE(SEND_ERROR "VIGRA_IMPEX_LIBRARY not found. Try -DVIGRA_IMPEX_LIBRARY=<vigra-impex-library>")
+    ENDIF()
+    
 ENDIF()
 
 ########################################################################
@@ -99,8 +107,9 @@ FIND_PACKAGE(Boost COMPONENTS python REQUIRED)
 
 MESSAGE(STATUS "")
 MESSAGE(STATUS " ----------------------------------------")
-MESSAGE(STATUS " --- cecog-ccore Summary      -----------")
+MESSAGE(STATUS " --- cecog-ccore Summary   --------------")
 MESSAGE(STATUS " ----------------------------------------")
+MESSAGE(STATUS " running on " ${CMAKE_SYSTEM_NAME})
 MESSAGE(STATUS "")
 MESSAGE(STATUS " VIGRA_INCLUDE_DIR -> " ${VIGRA_INCLUDE_DIR})
 MESSAGE(STATUS " VIGRA_IMPEX_LIBRARY -> " ${VIGRA_IMPEX_LIBRARY})
@@ -113,29 +122,13 @@ MESSAGE(STATUS " PYTHON_LIBRARY -> " ${PYTHON_LIBRARY})
 MESSAGE(STATUS " NUMPY_INCLUDE_DIR ->" ${NUMPY_INCLUDE_DIR})
 MESSAGE(STATUS "")
 MESSAGE(STATUS " ----------------------------------------")
-MESSAGE(STATUS " ccore will be installed to " ${cecog_ccore_SOURCE_DIR}/../../../pysrc/cecog/ccore/_cecog.pyd)
+MESSAGE(STATUS " ccore will be installed to " ${cecog_ccore_SOURCE_DIR}/../../../pysrc/cecog/ccore/)
 MESSAGE(STATUS "")
 
 
-
-
-
-
-
-# SET(VIGRA_INCLUDE_DIR "C:/Users/sommerc/src/vigra-hg/include")
-# SET(TIFF_INCLUDE_DIR "c:/depend64/include")
-# SET(BOOST_INCLUDE_DIR "c:/depend64/include")
-# SET(PYTHON_INCLUDE_DIR "c:/Python27/include")
-# SET(NUMPY_INCLUDE_DIR "C:/Python27/Lib/site-packages/numpy/core/include")
-
-# SET(TIFF_LIBRARY "c:/depend64/lib/libtiff_i.lib")
-# SET(Boost_PYTHON_LIBRARY "c:/depend64/lib/boost_python-vc100-mt-1_45.lib")
-# SET(VIGRA_IMPEX_LIBRARY "C:/Program Files/vigra/lib/vigraimpex.lib")
-# SET(PYTHON_LIBRARY "c:/Python27/libs/python27.lib")
-
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
-
-SET(CMAKE_BUILD_TYPE Release)
+IF(${CMAKE_SYSTEM_NAME} MATCHES "^Windows$")
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
+ENDIF()
 
 INCLUDE_DIRECTORIES(${cecog_ccore_SOURCE_DIR}/../../include ${VIGRA_INCLUDE_DIR} ${TIFF_INCLUDE_DIR} ${BOOST_INCLUDE_DIR} ${PYTHON_INCLUDE_DIR} ${NUMPY_INCLUDE_DIR})
 
@@ -144,8 +137,26 @@ ADD_LIBRARY(cecog-lib SHARED
     
 TARGET_LINK_LIBRARIES(cecog-lib ${TIFF_LIBRARY} ${Boost_PYTHON_LIBRARY} ${VIGRA_IMPEX_LIBRARY} ${PYTHON_LIBRARY})
 
+GET_TARGET_PROPERTY(LIB_NAME cecog-lib LOCATION)
+
+
+
+IF(${CMAKE_SYSTEM_NAME} MATCHES "^Windows$")
+    SET(PLATFORM_LIBRARY_POSTFIX ".pyd")
+#ELSEIF(${CMAKE_SYSTEM_NAME} MATCHES "^Linux$")
+ELSE()
+    SET(PLATFORM_LIBRARY_POSTFIX ".so")
+ENDIF()
+
+SET(NEW_LIB_NAME _cecog${PLATFORM_LIBRARY_POSTFIX})
+
 ADD_CUSTOM_COMMAND(
     TARGET cecog-lib
     POST_BUILD
-    COMMAND COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}/cecog-lib.dll ${cecog_ccore_SOURCE_DIR}/../../../pysrc/cecog/ccore/_cecog.pyd
+    COMMAND ${CMAKE_COMMAND} -E copy ${LIB_NAME} ../${NEW_LIB_NAME}
+    COMMENT "copying ${LIB_NAME} ${NEW_LIB_NAME}"
 )
+
+INSTALL(FILES ${NEW_LIB_NAME} DESTINATION ${cecog_ccore_SOURCE_DIR}/../../../pysrc/cecog/ccore/)
+
+
