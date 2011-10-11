@@ -29,7 +29,7 @@ namespace cecog
   struct Error_Trait_Type {};
 
   template <int>
-  struct PixelTypeTraits
+  struct PixelTypeTraitsStruct
   {
     typedef Error_Trait_Type RequiredPixelType;
     typedef Error_Trait_Type greylevels;
@@ -37,7 +37,7 @@ namespace cecog
   };
 
   template<>
-  struct PixelTypeTraits<8>
+  struct PixelTypeTraitsStruct<8>
   {
     typedef unsigned char RequiredPixelType;
     static const unsigned greylevels = 256;
@@ -45,7 +45,7 @@ namespace cecog
   };
 
   template<>
-  struct PixelTypeTraits<12>
+  struct PixelTypeTraitsStruct<12>
   {
     typedef signed short RequiredPixelType;
     static const unsigned greylevels = 4096;
@@ -53,7 +53,7 @@ namespace cecog
   };
 
   template<>
-  struct PixelTypeTraits<120>
+  struct PixelTypeTraitsStruct<120>
   {
     typedef signed short RequiredPixelType;
     static const unsigned greylevels = 4096;
@@ -61,7 +61,7 @@ namespace cecog
   };
 
   template<>
-  struct PixelTypeTraits<16>
+  struct PixelTypeTraitsStruct<16>
   {
     typedef unsigned short RequiredPixelType;
     static const unsigned greylevels = 65536;
@@ -69,7 +69,7 @@ namespace cecog
   };
 
   template<>
-  struct PixelTypeTraits<32>
+  struct PixelTypeTraitsStruct<32>
   {
     typedef unsigned long RequiredPixelType;
     // attention: this is not the number of greyleves, but the
@@ -84,11 +84,11 @@ namespace cecog
    * i.e. the type of image.
    * Image inherits from the vigra-class BasicImage (also a template);
    * the type is:
-   * PixelTypeTraits<BIT_DEPTH>::RequiredPixelType
+   * PixelTypeTraitsStruct<BIT_DEPTH>::RequiredPixelType
    * which is defined above.
    */
   template <int BIT_DEPTH>
-  class Image : public vigra::BasicImage<typename PixelTypeTraits<BIT_DEPTH>::RequiredPixelType>
+  class Image : public vigra::BasicImage<typename PixelTypeTraitsStruct<BIT_DEPTH>::RequiredPixelType>
   {
   public:
 
@@ -96,7 +96,7 @@ namespace cecog
     // - RequiredPixelType (the type of the pixels)
     // - greyLevels (the number of grey levels for the given type)
     // - offset (the difference to 0 for the given type)
-    typedef PixelTypeTraits<BIT_DEPTH> PixelTypeTraits;
+    typedef PixelTypeTraitsStruct<BIT_DEPTH> PixelTypeTraits;
 
     // BaseType: abbreviation for the image type.
     typedef vigra::BasicImage<typename PixelTypeTraits::RequiredPixelType> BaseType;
