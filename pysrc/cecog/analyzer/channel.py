@@ -379,40 +379,19 @@ class _Channel(PropertyManager):
     def normalize_image(self):
         img_in = self.meta_image.image
         if self.bFlatfieldCorrection:
-            pass
-#
-#            if self.strImageType == 'UInt16':
-#                imgBackground = ccore.readImageUInt16(self.strBackgroundImagePath)
-#            else:
-#                imgBackground = ccore.readImage(self.strBackgroundImagePath)
-#            imgF = ccore.flatfieldCorrection(imgIn, imgBackground, self.fBackgroundCorrection, True)
-#            #print imgF.getMinmax()
-#            #imgOut = convertImageMinMax(imgF)
-#            imgOut = ccore.linearTransform2(imgF, self.fNormalizeMin, self.fNormalizeMax, 0, 255, 0, 255)
-#            #print imgOut.getMinmax()
-#
-#            #if imgOut == ccore.ImageUInt16:
-#            #    imgOut = convertImageUInt12(imgOut)
-        if type(img_in) == ccore.UInt16Image:
-            img_out = ccore.linearTransform3(img_in, int(self.fNormalizeMin),
-                                             int(self.fNormalizeMax),
-                                             0, 255, 0, 255)
+            imgBackground = ccore.readImageFloat(self.strBackgroundImagePath)
+
+            img_in = ccore.flatfieldCorrection(img_in, imgBackground, 0.0, True)
+            img_out = ccore.linearTransform2(img_in, self.fNormalizeMin, self.fNormalizeMax, 0, 255, 0, 255)
         else:
-#            #FIXME:
-#            #if not self.fNormalizeMin is None and not self.fNormalizeMax is None:
-#            #    imgOut = ccore.linearTransform2(imgIn, int(self.fNormalizeMin), int(self.fNormalizeMax), 0, 255, 0, 255)
-#            if not self.fNormalizeRatio is None and not self.fNormalizeOffset is None:
-#                imgOut = ccore.linearTransform(imgIn, self.fNormalizeRatio, int(self.fNormalizeOffset))
-#            else:
-            img_out = img_in
+            if type(img_in) == ccore.UInt16Image:
+                img_out = ccore.linearTransform3(img_in, int(self.fNormalizeMin),
+                                                 int(self.fNormalizeMax),
+                                                 0, 255, 0, 255)
+            else:
+                img_out = img_in
 
-#        if not self.tplCropRegion is None:
-#            x1, y1, x2, y2 = self.tplCropRegion
-#            imgOut2 = ccore.Image(x2-x1+1, y2-y1+1)
-#            ccore.copySubImage(imgOut, ccore.Diff2D(x1,y1), ccore.Diff2D(x2+1,y2+1), imgOut2, ccore.Diff2D(0,0))
-#            imgOut = imgOut2
         self.meta_image.set_image(img_out)
-
 
 
 class PrimaryChannel(_Channel):
