@@ -825,6 +825,12 @@ class PositionAnalyzer(object):
                                 lstPostprocessingFeatureCategories.append('normbase2')
                                 lstPostprocessingConditions.append('n2_avg <= %d' % self.oSettings.get2('primary_postprocessing_intensity_max'))
 
+                            if self.oSettings.get2('primary_flat_field_correction') and \
+                               os.path.exists(self.oSettings.get2('primary_flat_field_correction_image_file')):
+                                strBackgroundImagePath = self.oSettings.get2('primary_flat_field_correction_image_file')
+                            else:
+                                strBackgroundImagePath = None
+                                 
                             lstPostprocessingFeatureCategories = unique(lstPostprocessingFeatureCategories)
                             if len(lstPostprocessingFeatureCategories) > 0 and \
                                 self.oSettings.get2('primary_postprocessing'):
@@ -868,6 +874,8 @@ class PositionAnalyzer(object):
                                           bPostProcessDeleteObjects = True,
                                           lstFeatureCategories = lstFeatureCategories,
                                           dctFeatureParameters = dctFeatureParameters,
+                                          strBackgroundImagePath = strBackgroundImagePath,
+                                          bFlatfieldCorrection = self.oSettings.get2('primary_flat_field_correction'),
                                           )
                         elif channel_section in [self.SECONDARY_CHANNEL,
                                                  self.TERTIARY_CHANNEL]:

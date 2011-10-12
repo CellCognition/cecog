@@ -378,7 +378,8 @@ class _Channel(PropertyManager):
 
     def normalize_image(self):
         img_in = self.meta_image.image
-#        if self.bFlatfieldCorrection:
+        if self.bFlatfieldCorrection:
+            pass
 #
 #            if self.strImageType == 'UInt16':
 #                imgBackground = ccore.readImageUInt16(self.strBackgroundImagePath)
