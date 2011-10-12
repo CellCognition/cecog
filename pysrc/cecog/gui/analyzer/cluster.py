@@ -311,6 +311,8 @@ class ClusterDisplay(QGroupBox):
                    (('Classification', 'secondary_classification_envpath'),
                     [('Processing', 'secondary_processchannel'),
                      ('Processing', 'secondary_classification')]),
+                   (('ObjectDetection', 'primary_flat_field_correction_image_file'),
+                    [('ObjectDetection', 'primary_flat_field_correction')]),
                    ]
         for info, const in targets:
             passed = reduce(lambda x,y: x and y,
