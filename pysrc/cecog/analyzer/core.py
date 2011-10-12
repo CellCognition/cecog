@@ -888,6 +888,12 @@ class PositionAnalyzer(object):
                                        if self.oSettings.get2(k)]
                             channel_registration = (self.oSettings.get2('%s_channelregistration_x' % prefix),
                                                     self.oSettings.get2('%s_channelregistration_y' % prefix))
+                            if self.oSettings.get2('%s_flat_field_correction' % prefix) and \
+                               os.path.exists(self.oSettings.get2('%s_flat_field_correction_image_file' % prefix)):
+                                strBackgroundImagePath = self.oSettings.get2('%s_flat_field_correction_image_file' % prefix)
+                            else:
+                                strBackgroundImagePath = None
+                            
                             params = dict(oZSliceOrProjection = projection_info,
                                           channelRegistration=channel_registration,
                                           new_image_size=new_image_size,
@@ -917,6 +923,9 @@ class PositionAnalyzer(object):
                                           lstAreaSelection = regions,
                                           lstFeatureCategories = lstFeatureCategories,
                                           dctFeatureParameters = dctFeatureParameters,
+                                          
+                                          strBackgroundImagePath = strBackgroundImagePath,
+                                          bFlatfieldCorrection = self.oSettings.get2('%s_flat_field_correction' % prefix),
                                           )
 
                         channel = cls(strChannelId=channel_id,

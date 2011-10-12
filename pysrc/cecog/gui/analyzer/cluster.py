@@ -311,9 +311,14 @@ class ClusterDisplay(QGroupBox):
                    (('Classification', 'secondary_classification_envpath'),
                     [('Processing', 'secondary_processchannel'),
                      ('Processing', 'secondary_classification')]),
-                   (('ObjectDetection', 'primary_flat_field_correction_image_file'),
-                    [('ObjectDetection', 'primary_flat_field_correction')]),
                    ]
+        targets.extend([(('ObjectDetection', '%s_flat_field_correction_image_file' % prefix),
+                          [('ObjectDetection', '%s_flat_field_correction' % prefix)],
+                           ('Processing', '%s_processchannel' % prefix)) for prefix in ['primary',
+                                                                                        'secondary',
+                                                                                        'tertiary']]
+                       
+                       )
         for info, const in targets:
             passed = reduce(lambda x,y: x and y,
                             map(lambda z: self._settings.get(*z), const),
