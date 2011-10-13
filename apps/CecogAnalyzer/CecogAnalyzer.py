@@ -777,7 +777,7 @@ if __name__ == "__main__":
         package_path = get_appdata_path()
         is_app = True
 
-    if False: #not package_path is None:
+    if not package_path is None:
         set_package_path(package_path)
         log_path = os.path.join(get_appdata_path(), 'log')
         safe_mkdirs(log_path)
