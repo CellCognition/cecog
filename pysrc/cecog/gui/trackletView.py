@@ -8,6 +8,7 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+import time as timeit
 __all__ = []
 
 #-------------------------------------------------------------------------------
@@ -606,6 +607,14 @@ class CellTerminalObjectItemMixin():
         return self._predicted_class[0]
     
     @property
+    def features(self):
+        # TODO: This can access can be cached by parent
+        if not hasattr(self, '_features'):
+            self._features = self._get_additional_object_data(self.name, 'feature')[self.idx,:]
+            self._features.shape = (1,) + self._features.shape
+        return self._features
+    
+    @property
     def time(self):
         return self._local_idx[0]
     
@@ -664,8 +673,11 @@ class CellTerminalObjectItemMixin():
         cc[:,1] -= new_bb[0][1]
         return img, cc
     
-    def _get_additional_object_data(self, object_name, data_fied_name, index):
-        return self.get_position._hf_group['object'][object_name][data_fied_name][str(index)]
+    def _get_additional_object_data(self, object_name, data_fied_name, index=None):
+        if index is None:
+            return self.get_position._hf_group['object'][object_name][data_fied_name]
+        else:
+            return self.get_position._hf_group['object'][object_name][data_fied_name][str(index)]
     
     @property
     def class_color(self):
@@ -684,17 +696,27 @@ class EventObjectItemMixin():
     GraphicsItemLayouter = EventGraphicsLayouter
     def compute_features(self):
 #        print 'compute feature call for', self.name, self.id  
-        for feature in trajectory_features:
-            if isinstance(self, feature.type):
-                self[feature.name] =  feature.compute(self.children())
-                
-        self['prediction'] = [x.predicted_class for x in self.children()]
+#        for feature in trajectory_features:
+#            if isinstance(self, feature.type):
+#                self[feature.name] =  feature.compute(self.children())
+#                
+#        self['prediction'] = [x.predicted_class for x in self.children()]
+        pass
+        
+    @property
+    def item_features(self):
+        children = self.children()
+        if children is not None:
+            return numpy.concatenate([c.features for c in children], axis=0)
+        else:
+            return None
         
 MixIn(TerminalObjectItem, CellTerminalObjectItemMixin, True)
 MixIn(ObjectItem, EventObjectItemMixin, True)
 
         
-if __name__ == "__main__":
+        
+def main():
     app = QtGui.QApplication(sys.argv) 
     file, _ = getopt.getopt(sys.argv[1:], 'f:')
     if len(file) == 1:
@@ -712,5 +734,21 @@ if __name__ == "__main__":
     mainwindow.show()
     app.exec_()
     
+def test():
+    # read tracking information
+    f = File('C:/Users/sommerc/data/Chromatin-Microtubles/Analysis/H2b_aTub_MD20x_exp911_2_channels_nozip/dump/0013.hdf5')
+    tic = timeit.time()
+    pos = f[f.positions[0]]
+    track = pos.get_objects('track')
+    for t in track.iter_random():
+        if t.item_features is not None:
+            a = t.item_features
+            print t.id, a.shape
+    print timeit.time() - tic, 'seconds'
+        
+        
+if __name__ == "__main__":
+    #main()
+    test()
 
 

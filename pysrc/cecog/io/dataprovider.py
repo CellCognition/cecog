@@ -394,7 +394,7 @@ class ObjectItemBase():
         if not hasattr(self, '_children_nodes'):
             child_entries = self.parent.object_np_cache['child_ids'][self.id]
             if len(child_entries) == 0:
-                return None
+                return []
             result = numpy.zeros(child_entries.shape[0]+1, dtype=numpy.uint32)
             result[0] = child_entries[0,0]
             result[1:] = child_entries[:,2]
@@ -432,30 +432,32 @@ class ObjectItemBase():
     def get_children_paths(self):
         child_list = self._get_children_nodes()
         child_id_list = [x.id for x in child_list]
-        head_id = child_list[0].id
-        #print child_id_list
-        
-        def all_paths_of_tree(id):
-            found_ids = numpy.where(self.parent.object_np_cache['relation'][:, 0] == id)[0]
-            out_all_ids = [self.parent.object_np_cache['relation'][found_id, 2] for found_id in found_ids]
-            out_ids = [out_id for out_id in out_all_ids if out_id in child_id_list]
-            #print out_all_ids, ' / ', out_ids
+        if len(child_id_list) == 0:
+            return [None]
+        else:
+            head_id = child_list[0].id
             
-            if len(out_ids) == 0:
-                return [[id]]
-            else:
-                all_paths_ = []
-                for out_id in out_ids:
-                    for path_ in all_paths_of_tree(out_id):
-                        all_paths_.append([id] + path_)
-
-                return all_paths_ 
+            def all_paths_of_tree(id):
+                found_ids = numpy.where(self.parent.object_np_cache['relation'][:, 0] == id)[0]
+                out_all_ids = [self.parent.object_np_cache['relation'][found_id, 2] for found_id in found_ids]
+                out_ids = [out_id for out_id in out_all_ids if out_id in child_id_list]
+                #print out_all_ids, ' / ', out_ids
+                
+                if len(out_ids) == 0:
+                    return [[id]]
+                else:
+                    all_paths_ = []
+                    for out_id in out_ids:
+                        for path_ in all_paths_of_tree(out_id):
+                            all_paths_.append([id] + path_)
+    
+                    return all_paths_ 
+                
+            res = all_paths_of_tree(head_id)
+            for i, r in enumerate(res):
+                res[i] = [self.get_child_objects_type()(id, self.sub_objects()) for id in r]
             
-        res = all_paths_of_tree(head_id)
-        for i, r in enumerate(res):
-            res[i] = [self.get_child_objects_type()(id, self.sub_objects()) for id in r]
-        
-        return res
+            return res
         
     def get_children_expansion(self, max_length=5):
         child_list = self.get_children_paths()[0]
