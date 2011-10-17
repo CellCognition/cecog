@@ -379,11 +379,13 @@ class _Channel(PropertyManager):
     def normalize_image(self):
         img_in = self.meta_image.image
         if self.bFlatfieldCorrection:
+            self._oLogger.debug("* using flat field correction with image %s" % self.strBackgroundImagePath)
             imgBackground = ccore.readImageFloat(self.strBackgroundImagePath)
 
             img_in = ccore.flatfieldCorrection(img_in, imgBackground, 0.0, True)
             img_out = ccore.linearTransform2(img_in, self.fNormalizeMin, self.fNormalizeMax, 0, 255, 0, 255)
         else:
+            self._oLogger.debug("* not using flat field correction")
             if type(img_in) == ccore.UInt16Image:
                 img_out = ccore.linearTransform3(img_in, int(self.fNormalizeMin),
                                                  int(self.fNormalizeMax),
