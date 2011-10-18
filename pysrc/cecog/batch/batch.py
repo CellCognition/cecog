@@ -119,12 +119,6 @@ if __name__ ==  "__main__":
     logger.info("*** CellCognition - Batch Analyzer - Version %s ***" % VERSION)
     logger.info("*************************************************" + '*'*len(VERSION))
     logger.info('argv: %s' % sys.argv)
-    
-    from cecog.ccore import _cecog
-    import sys
-    logger.info(_cecog.__file__)
-    logger.info(sys.path)
-
 
     if options.settings is None:
         parser.error('Settings filename required.')
