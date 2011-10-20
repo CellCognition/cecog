@@ -68,6 +68,7 @@ class SubProcessLogWindow(QFrame):
         QFrame.__init__(self)
         self._layout = QHBoxLayout(self)
         self.tab_widget = QTabWidget()
+        self.tab_widget.setUsesScrollButtons(True)
         self._layout.addWidget(self.tab_widget)
         self.on_msg_received.connect(self.on_show_msg)
         
