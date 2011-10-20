@@ -66,7 +66,10 @@ class SubProcessLogWindow(QFrame):
     
     def __init__(self, parent):
         QFrame.__init__(self)
-        self._layout = QHBoxLayout(self)
+        self.setWindowTitle('Process log window')
+        self.setGeometry(100,100,700,400)
+        self._layout = QVBoxLayout(self)
+        self._layout.addWidget(QLabel('Process logs for each child process'))
         self.tab_widget = QTabWidget()
         self.tab_widget.setUsesScrollButtons(True)
         self._layout.addWidget(self.tab_widget)
@@ -83,14 +86,16 @@ class SubProcessLogWindow(QFrame):
     def on_show_msg(self, name, msg, level):
         print '+'*10, msg, level
         if level == logging.INFO:
-            msg = "<font color='blue'>" + msg + '</font>'
+            msg = "<font color='black'>" + msg + '</font>'
             self.items[name].appendHtml(msg)
         elif level == logging.DEBUG:
-            msg = "<font color='red'>" + msg + '</font>'
+            msg = "<font color='green'>" + msg + '</font>'
             self.items[name].appendHtml(msg)
-        elif level >= logging.WARNING:
-            msg = "<font color='red'><b>" + msg + '</b></font>'
+        elif level == logging.WARNING:
+            msg = "<font color='blue'><b>" + msg + '</b></font>'
             self.items[name].appendHtml(msg)
+        elif level > logging.WARNING:
+            msg = "<font color='red'><b>" + msg + '</b></font>' 
         else:
             self.items[name].appendPlainText(msg)
             
