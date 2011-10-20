@@ -615,9 +615,9 @@ class AnalyzerMainWindow(QMainWindow):
                 plate = imagecontainer.plates[0]
                 imagecontainer.set_plate(plate)
 
-        dlg = waitingProgressDialog('Please wait until the input structure is scanned\n'
+        self.dlg = waitingProgressDialog('Please wait until the input structure is scanned\n'
                                     'or the structure data loaded...', self, load, (0, len(scan_plates)))
-        dlg.exec_(passDialog=True)
+        self.dlg.exec_(passDialog=True)
 
         if len(imagecontainer.plates) > 0:
             imagecontainer.check_dimensions()

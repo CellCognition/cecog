@@ -346,9 +346,9 @@ class NavigationModule(Module):
         coordinate_old = self.browser.get_coordinate()
         plate = coordinate_new.plate
 
-        dlg = waitingProgressDialog("Please wait until the plate has been loaded...", self)
-        dlg.setTarget(self._imagecontainer.set_plate, plate)
-        dlg.exec_()
+        self.dlg = waitingProgressDialog("Please wait until the plate has been loaded...", self)
+        self.dlg.setTarget(self._imagecontainer.set_plate, plate)
+        self.dlg.exec_()
 
         meta_data = self._imagecontainer.get_meta_data()
         if set_current:
