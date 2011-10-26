@@ -563,8 +563,7 @@ class CellGraphicsLayouter(GraphicsLayouterBase):
             if col > 26:
                 row += 1
                 col = 0
-        
-        
+               
 class CellTerminalObjectItemMixin():
     GraphicsItemType = CellGraphicsItem
     GraphicsItemLayouter = CellGraphicsLayouter
@@ -613,6 +612,10 @@ class CellTerminalObjectItemMixin():
             self._features = self._get_additional_object_data(self.name, 'feature')[self.idx,:]
             self._features.shape = (1,) + self._features.shape
         return self._features
+    
+    @property
+    def feature_names(self):
+        return self.get_position.object_feature[self.name]
     
     @property
     def time(self):
@@ -711,6 +714,10 @@ class EventObjectItemMixin():
         else:
             return None
         
+    @property
+    def item_feature_names(self):
+        return self.get_position.object_feature[self.get_position.sub_objects[self.name]]
+        
 MixIn(TerminalObjectItem, CellTerminalObjectItemMixin, True)
 MixIn(ObjectItem, EventObjectItemMixin, True)
 
@@ -736,14 +743,19 @@ def main():
     
 def test():
     # read tracking information
-    f = File('C:/Users/sommerc/data/Chromatin-Microtubles/Analysis/H2b_aTub_MD20x_exp911_2_channels_nozip/dump/0013.hdf5')
+    f = File('C:/Users/sommerc/data/Chromatin-Microtubles/Analysis/H2b_aTub_MD20x_exp911_2_channels_nozip/dump/two_plates.hdf5')
     tic = timeit.time()
     pos = f[f.positions[0]]
-    track = pos.get_objects('track')
-    for t in track.iter_random():
-        if t.item_features is not None:
-            a = t.item_features
-            print t.id, a.shape
+    track = pos.get_objects('event')
+    feature_matrix = []
+    for t in track.iter_random(50):
+        item_features = t.item_features 
+        if item_features is not None:
+            feature_matrix.append(item_features)
+    
+    feature_matrix = numpy.concatenate(feature_matrix)
+    print feature_matrix.shape
+            
     print timeit.time() - tic, 'seconds'
         
         
