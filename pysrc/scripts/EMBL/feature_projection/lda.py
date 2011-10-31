@@ -2,7 +2,7 @@ import os, sys, time, re, pickle
 import types
 
 import numpy
-import mlpy
+#import mlpy
 
 from cecog.learning.util import SparseWriter, ArffWriter, ArffReader
 
@@ -178,6 +178,7 @@ class TrainingSet(object):
         if features is None:
             all_features = numpy.array(self._ar.lstFeatureNames)
             features = all_features[indices]
+        features = filter(lambda x: x in self._ar.lstFeatureNames, features)
         if indices is None:
             indices = [self._ar.lstFeatureNames.index(x) for x in features]
             features = numpy.array(features)
@@ -240,12 +241,15 @@ class TrainingSet(object):
             avg = numpy.average(mat, axis=0)
             stdev = numpy.std(mat, axis=0, dtype=numpy.float64)
             normmat = (mat - avg) / stdev
+            self._avg = avg
+            self._stdev = stdev
 
         if method == 'minmax':
             maxvals = numpy.max(mat, axis=0)
             minvals = numpy.min(mat, axis=0)
             normmat = 2.0 * (mat - minvals) / (maxvals - minvals) - 1.0
-
+            self._minvals = minvals
+            self._maxvals = maxvals
 
         return normmat, y
 
@@ -351,7 +355,7 @@ class ScikitLDA(object):
         return weights
 
 
-class LDA(object):
+class LDAClassifier(object):
 
     def __init__(self):
         self._weights = None

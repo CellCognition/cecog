@@ -60,12 +60,12 @@ class FlatFileImporter(object):
             track_id = '__'.join(['T' + dctRegex['Time'], 'O' + dctRegex['Object']])
             if not track_id in impdata:
                 impdata[track_id] = {}
-            if True:
+            try:
                 impdata[track_id].update(self.importSingleObjectTrackData(os.path.join(in_dir,
                                                                                   filename),
                                                                                   channel,
                                                                                   region))
-            else:
+            except:
                 not_imported.append(track_id)
                 if track_id in impdata:
                     del(impdata[track_id])
@@ -79,7 +79,7 @@ class FlatFileImporter(object):
         return impdata
 
 
-    def __call__(self, baseDir=None, plates=None):
+    def __call__(self, baseDir=None, plates=None, positions=None):
 
         if baseDir is None:
             if not self.oSettings.baseDir is None:
@@ -99,7 +99,7 @@ class FlatFileImporter(object):
         for plate in plates:
             in_dir = os.path.join(baseDir, plate)
             print 'importing %s from %s' % (plate, in_dir)
-            impdata[plate] = self.importLabtekData(in_dir)
+            impdata[plate] = self.importLabtekData(in_dir, positions)
 
         return impdata
 
@@ -198,6 +198,7 @@ class EventDescriptionImporter(FlatFileImporter):
         self.entries = self.oSettings.import_entries_event
         self.pos_regex = self.oSettings.pos_regex
 
+        # features__PA01_01__T00010__O0213__B01__CSecondary__Rpropagate.txt
         self.channel_region_regex = re.compile('C(?P<Channel>.+)__R(?P<Region>.+)')
         self.common_entries = [
                                'Frame',
@@ -287,10 +288,25 @@ class EventDescriptionImporter(FlatFileImporter):
 
         return cr_filenames
 
-    def importLabtekData(self, in_dir):
 
+    def getPositionsForPlate(self, plate):
+
+        in_dir = os.path.join(self.oSettings.baseDir, plate)
         positions = filter(lambda x: self.pos_regex.search(x),
-                           os.listdir(os.path.join(in_dir, 'analyzed')))
+                   os.listdir(os.path.join(in_dir, 'analyzed')))
+        return positions
+
+    def importLabtekData(self, in_dir, positions=None):
+
+        if positions is None:
+            positions = filter(lambda x: self.pos_regex.search(x),
+                               os.listdir(os.path.join(in_dir, 'analyzed')))
+        else:
+            positions = filter(lambda x: self.pos_regex.search(x),
+                               positions)
+
+        #positions = filter(lambda x: self.pos_regex.search(x),
+        #                   os.listdir(os.path.join(in_dir, 'analyzed')))
         print 'found %i positions in %s' % (len(positions), in_dir)
 
         impdata = {}
@@ -300,9 +316,19 @@ class EventDescriptionImporter(FlatFileImporter):
                                      'statistics', 'events')
             impdata[pos] = {}
             cr_filenames = self.getFilenamesForChannelsAndRegions(posfolder)
+
             for ch, r in cr_filenames.keys():
                 filenames = sorted(cr_filenames[(ch, r)])
-                impdata[pos].update(self.importMovieData(posfolder, filenames, ch, r))
+                movie_data = self.importMovieData(posfolder, filenames, ch, r)
+
+                tracks = sorted(movie_data.keys())
+                for track in tracks:
+                    if track in impdata[pos]:
+                        if not ch in impdata[pos][track]:
+                            impdata[pos][track][ch] = {}
+                        impdata[pos][track][ch].update(movie_data[track][ch])
+                    else:
+                        impdata[pos][track] = movie_data[track]
 
         return impdata
 

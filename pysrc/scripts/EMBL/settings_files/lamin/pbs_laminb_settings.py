@@ -17,7 +17,8 @@ baseScriptDir = '/g/mitocheck/Thomas/data/Moritz_analysis_cecog/scripts'
 scriptPrefix = 'LAMINLDA'
 
 # settingsfile
-settingsFilename = '/g/mitocheck/Thomas/data/Moritz_analysis_cecog/cecog_settings/settings2011-09-26.conf'
+#settingsFilename = '/g/mitocheck/Thomas/data/Moritz_analysis_cecog/cecog_settings/settings2011-09-26.conf'
+settingsFilename = '/g/mitocheck/Thomas/data/Moritz_analysis_cecog/cecog_settings/settings2011-10-28.conf'
 
 # plates=None means that all plates found in baseInDir are going to be processed.
 # plates = None #['plate1_2_006']
@@ -81,8 +82,8 @@ primary_graph = '/g/mitocheck/Thomas/data/Moritz_analysis_cecog/cecog_settings/g
 secondary_graph = '/g/mitocheck/Thomas/data/Moritz_analysis_cecog/cecog_settings/graph_secondary.txt'
 filename_to_r = '/g/software/bin/R-2.13.0'
 
-primary_classification_envpath = '/g/mitocheck/Thomas/data/Moritz_analysis_cecog/classifiers/23092011_H2B-LB1_TRFX_H2B'
-secondary_classification_envpath = '/g/mitocheck/Thomas/data/Moritz_analysis_cecog/classifiers/01102011_H2B-LB1_TRFX_LB1'
+primary_classification_envpath = '/g/mitocheck/Thomas/data/Moritz_analysis_cecog/cecog_classifiers/23092011_H2B-LB1_TRFX_H2B'
+secondary_classification_envpath = '/g/mitocheck/Thomas/data/Moritz_analysis_cecog/cecog_classifiers/01102011_H2B-LB1_TRFX_LB1'
 
 #filename_to_r = '/Users/twalter/software/R/R.framework/Versions/2.13/Resources/bin/R'
 #primary_graph = '/Users/twalter/data/Moritz_cecog/cecog_settings/graph_primary.txt'
