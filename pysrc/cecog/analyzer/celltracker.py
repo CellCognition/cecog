@@ -351,15 +351,15 @@ class CellTracker(OptionManager):
         self._regionName = strRegionName
         self._oGraph = Graph()
         self._dctTimePoints = OrderedDict()
-
-    def trackAtTimepoint(self, frame):
-        oChannel = self._dctTimeChannels[frame][self._channelId]
+            
+    def trackAtTimepoint(self, iT):
+        oChannel = self._dctTimeChannels[iT][self._channelId]
         self.lstFeatureNames = oChannel.lstFeatureNames
         oObjectHolder = oChannel._dctRegions[self._regionName]
         for iObjId, oImageObject in oObjectHolder.iteritems():
-            strNodeId = self.getNodeIdFromComponents(frame, iObjId)
+            strNodeId = self.getNodeIdFromComponents(iT, iObjId)
             self._oGraph.add_node(strNodeId, oImageObject)
-            dict_append_list(self._dctTimePoints, frame, iObjId)
+            dict_append_list(self._dctTimePoints, iT, iObjId)
         #if len(self._dctTimePoints) > 1:
         # connect time point only if any object is present
         if iT in self._dctTimePoints:
