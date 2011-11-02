@@ -85,6 +85,9 @@ class ObjectDetectionFrame(BaseProcessorFrame):
                         ('primary_zslice_projection_end',),
                         ('primary_zslice_projection_step', None, None, True),
                         ], layout='flow')
+        self.add_group('primary_flat_field_correction',
+                       [('primary_flat_field_correction_image_file',),
+                        ], layout='flow')
         self.add_line()
         self.add_group(None,
                        [('primary_medianradius', (0,0,1,1)),
@@ -136,6 +139,9 @@ class ObjectDetectionFrame(BaseProcessorFrame):
                             ('%s_zslice_projection_end' % prefix,),
                             ('%s_zslice_projection_step' % prefix, None, None, True),
                             ], layout='flow')
+            self.add_group('%s_flat_field_correction' % prefix,
+                       [('%s_flat_field_correction_image_file' % prefix,),
+                        ], layout='flow')
             self.add_line()
             self.add_pixmap(QPixmap(':cecog_secondary_regions'), Qt.AlignRight)
             self.add_group(None,

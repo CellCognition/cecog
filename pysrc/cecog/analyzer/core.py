@@ -844,6 +844,12 @@ class PositionAnalyzer(object):
                                 lstPostprocessingFeatureCategories.append('normbase2')
                                 lstPostprocessingConditions.append('n2_avg <= %d' % self.oSettings.get2('primary_postprocessing_intensity_max'))
 
+                            if self.oSettings.get2('primary_flat_field_correction') and \
+                               os.path.exists(self.oSettings.get2('primary_flat_field_correction_image_file')):
+                                strBackgroundImagePath = self.oSettings.get2('primary_flat_field_correction_image_file')
+                            else:
+                                strBackgroundImagePath = None
+                                 
                             lstPostprocessingFeatureCategories = unique(lstPostprocessingFeatureCategories)
                             if len(lstPostprocessingFeatureCategories) > 0 and \
                                 self.oSettings.get2('primary_postprocessing'):
@@ -887,6 +893,8 @@ class PositionAnalyzer(object):
                                           bPostProcessDeleteObjects = True,
                                           lstFeatureCategories = lstFeatureCategories,
                                           dctFeatureParameters = dctFeatureParameters,
+                                          strBackgroundImagePath = strBackgroundImagePath,
+                                          bFlatfieldCorrection = self.oSettings.get2('primary_flat_field_correction'),
                                           )
                         elif channel_section in [self.SECONDARY_CHANNEL,
                                                  self.TERTIARY_CHANNEL]:
@@ -899,6 +907,12 @@ class PositionAnalyzer(object):
                                        if self.oSettings.get2(k)]
                             channel_registration = (self.oSettings.get2('%s_channelregistration_x' % prefix),
                                                     self.oSettings.get2('%s_channelregistration_y' % prefix))
+                            if self.oSettings.get2('%s_flat_field_correction' % prefix) and \
+                               os.path.exists(self.oSettings.get2('%s_flat_field_correction_image_file' % prefix)):
+                                strBackgroundImagePath = self.oSettings.get2('%s_flat_field_correction_image_file' % prefix)
+                            else:
+                                strBackgroundImagePath = None
+                            
                             params = dict(oZSliceOrProjection = projection_info,
                                           channelRegistration=channel_registration,
                                           new_image_size=new_image_size,
@@ -928,6 +942,9 @@ class PositionAnalyzer(object):
                                           lstAreaSelection = regions,
                                           lstFeatureCategories = lstFeatureCategories,
                                           dctFeatureParameters = dctFeatureParameters,
+                                          
+                                          strBackgroundImagePath = strBackgroundImagePath,
+                                          bFlatfieldCorrection = self.oSettings.get2('%s_flat_field_correction' % prefix),
                                           )
 
                         channel = cls(strChannelId=channel_id,

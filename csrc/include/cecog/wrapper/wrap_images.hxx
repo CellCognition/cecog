@@ -679,8 +679,10 @@ PyObject * pyFlatfieldCorrection(Image1 const & imgIn, Image2 const & imgBack, f
   if (normalizeBackground)
   {
     vigra::FindMinMax<typename Image2::value_type> minmax;
+	vigra::FindAverage<typename Image2::value_type> average;
     inspectImage(srcImageRange(imgBack), minmax);
-    normV = (float)minmax.max;
+	inspectImage(srcImageRange(imgBack), average);
+	normV = (float)average();
   }
 
   Image3 imgBack2(imgIn.size());
@@ -1732,6 +1734,8 @@ static void wrap_images()
   def("flatfieldCorrection", pyFlatfieldCorrection< vigra::UInt8Image, vigra::UInt8Image >);
   def("flatfieldCorrection", pyFlatfieldCorrection< vigra::UInt16Image, vigra::UInt16Image >);
   def("flatfieldCorrection", pyFlatfieldCorrection< vigra::Int16Image, vigra::Int16Image >);
+  def("flatfieldCorrection", pyFlatfieldCorrection< vigra::UInt8Image, vigra::FImage >);
+  def("flatfieldCorrection", pyFlatfieldCorrection< vigra::UInt16Image, vigra::FImage >);
 
   def("drawLine", pyDrawLine< vigra::BImage >, (arg("p1"), arg("p2"), arg("image"), arg("color"), arg("thick")=false), "Draws a line from p1 to p2.");
   def("drawLine", pyDrawLine< vigra::Int16Image >, (arg("p1"), arg("p2"), arg("image"), arg("color"), arg("thick")=false), "Draws a line from p1 to p2.");

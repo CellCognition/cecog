@@ -88,7 +88,7 @@ class ProcessingFrame(BaseProcessorFrame):
         self._init_control()
 
     @classmethod
-    def get_special_settings(cls, settings, has_timelapse=True):
+    def get_export_settings(cls, settings, has_timelapse=True):
         settings = BaseProcessorFrame.get_special_settings(settings, has_timelapse)
 
         settings.set('General', 'rendering', {})
@@ -103,20 +103,13 @@ class ProcessingFrame(BaseProcessorFrame):
 
         settings.set_section('ObjectDetection')
         prim_id = PrimaryChannel.NAME
-        sec_ids = dict([(x.PREFIX, x.NAME)
-                        for x in [SecondaryChannel, TertiaryChannel]])
-        sec_regions = dict([(prefix, [v for k,v in regions.iteritems()
-                                      if settings.get2(k)])
-                            for prefix, regions in
-                            [(SecondaryChannel.PREFIX, SECONDARY_REGIONS),
-                             (TertiaryChannel.PREFIX, TERTIARY_REGIONS),
-                             ]])
+        sec_ids = dict([(x.PREFIX, x.NAME) for x in [SecondaryChannel, TertiaryChannel]])
+        sec_regions = dict([(prefix, [v for k,v in regions.iteritems() if settings.get2(k)])
+                            for prefix, regions in [(SecondaryChannel.PREFIX, SECONDARY_REGIONS),
+                                                    (TertiaryChannel.PREFIX, TERTIARY_REGIONS),
+                                                    ]
+                            ])
 
-#        lookup = dict([(v,k) for k,v in SECONDARY_REGIONS.iteritems()])
-#        # FIXME: we should rather show a warning here!
-#        if not sec_region in sec_regions:
-#            sec_regions.append(sec_region)
-#            settings.set2(lookup[sec_region], True)
 
         show_ids = settings.get('Output', 'rendering_contours_showids')
         show_ids_class = settings.get('Output', 'rendering_class_showids')
@@ -142,14 +135,11 @@ class ProcessingFrame(BaseProcessorFrame):
                 if settings.get2('%s_classification' % prefix):
                     sec_id = sec_ids[prefix]
                     sec_region = sec_class_regions[prefix]
-                    settings.get('General', 'rendering_class').update({'%s_classification_%s' % (prefix, sec_region): {sec_id: {'raw': ('#FFFFFF', 1.0),
-                                                                                                                             'contours': [(sec_region, 'class_label', 1, False),
-                                                                                                                                          (sec_region, '#000000', 1, show_ids_class),
-                                                                                                                                          ]}}})
-            else:
-                settings.set2('%s_classification' % prefix, False)
-                settings.set2('%s_errorcorrection' % prefix, False)
-
+                    settings.get('General', 'rendering_class').update({'%s_classification_%s' % (prefix, sec_region):
+                                                                       {sec_id: {'raw': ('#FFFFFF', 1.0),
+                                                                                 'contours': [(sec_region, 'class_label', 1, False),
+                                                                                              (sec_region, '#000000', 1, show_ids_class),
+                                                                                              ]}}})
         if has_timelapse:
             # generate raw images of selected channels (later used for gallery images)
             if settings.get('Output', 'events_export_gallery_images'):
@@ -158,7 +148,21 @@ class ProcessingFrame(BaseProcessorFrame):
                     if settings.get2('%s_processchannel' % prefix):
                         sec_id = sec_ids[prefix]
                         settings.get('General', 'rendering').update({prefix : {sec_id : {'raw': ('#FFFFFF', 1.0)}}})
-        else:
+
+        return settings
+
+
+    @classmethod
+    def get_special_settings(cls, settings, has_timelapse=True):
+        settings = cls.get_export_settings(settings, has_timelapse)
+
+        settings.set_section('Processing')
+        for prefix in [SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]:
+            if not settings.get2('%s_processchannel' % prefix):
+                settings.set2('%s_classification' % prefix, False)
+                settings.set2('%s_errorcorrection' % prefix, False)
+
+        if not has_timelapse:
             # disable some tracking related settings in case no time-lapse data is present
             settings.set('Processing', 'tracking', False)
             settings.set('Processing', 'tracking_synchronize_trajectories', False)
@@ -166,6 +170,4 @@ class ProcessingFrame(BaseProcessorFrame):
             settings.set('Output', 'events_export_all_features', False)
             settings.set('Output', 'export_track_data', False)
 
-        print settings.get('General', 'rendering')
-        print settings.get('General', 'rendering_class')
         return settings

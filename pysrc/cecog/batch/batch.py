@@ -120,7 +120,6 @@ if __name__ ==  "__main__":
     logger.info("*************************************************" + '*'*len(VERSION))
     logger.info('argv: %s' % sys.argv)
 
-
     if options.settings is None:
         parser.error('Settings filename required.')
 
@@ -151,6 +150,13 @@ if __name__ ==  "__main__":
     else:
         path_output = settings.get2('pathout')
 
+
+    if multiple_plates is None:
+        multiple_plates = settings.get(SECTION_NAME_GENERAL, 'has_multiple_plates')
+    else:
+        logger.info('Overwrite has_multiple_plates by %s' % multiple_plates)
+
+
     imagecontainer = ImageContainer()
     imagecontainer.import_from_settings(settings)
 
@@ -171,14 +177,23 @@ if __name__ ==  "__main__":
         else:
             parser.error("Only SGE supported at the moment (environment variable '%s')." % ENV_INDEX_SGE)
 
+
     # if no position list was specified via the program options get it from the settings file
     if  position_list is None:
-        position_list = settings.get(SECTION_NAME_GENERAL, 'positions') or None
+        if settings.get(SECTION_NAME_GENERAL, 'constrain_positions'):
+            position_list = settings.get(SECTION_NAME_GENERAL, 'positions') or None
 
+
+    # construct a dummy string containing all plates and positions known to imagecontainer
     if position_list is None:
-        parser.error("A position list must be specified in the settings file or as program option!")
+        positions = []
+        for plate_id in imagecontainer.plates:
+            imagecontainer.set_plate(plate_id)
+            meta_data = imagecontainer.get_meta_data()
+            positions += ['%s___%s' % (plate_id, pos) for pos in meta_data.positions]
+    else:
+        positions = position_list.split(',')
 
-    positions = position_list.split(',')
 
     if index is not None and (index < 0 or index >= len(positions)):
         parser.error("Cluster index %s does not match number of positions %d." % (index, len(positions)))
@@ -203,10 +218,6 @@ if __name__ ==  "__main__":
                           'rendering_contours_discwrite']:
             settings.set(SECTION_NAME_OUTPUT, rendering, create_images)
 
-    if multiple_plates is None:
-        multiple_plates = settings.get(SECTION_NAME_GENERAL, 'has_multiple_plates')
-    else:
-        logger.info('Overwrite has_multiple_plates by %s' % multiple_plates)
 
     # group positions by plate
     plates = {}
