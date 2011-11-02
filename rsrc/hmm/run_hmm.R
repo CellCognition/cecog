@@ -67,7 +67,7 @@ if (!is.null(FILENAME_GRAPH_P))
                          openHTML=FALSE,
                          timelapse=TIMELAPSE,
                          max_time=MAX_TIME,
-                         write_decode=FALSE,
+                         write_decode=TRUE,
                          write_decode2=FALSE,
                          galleries=GALLERIES
                          )
@@ -94,7 +94,7 @@ if (!is.null(FILENAME_GRAPH_S))
                 openHTML=FALSE,
                 timelapse=TIMELAPSE,
                 max_time=MAX_TIME,
-                write_decode=FALSE,
+                write_decode=TRUE,
                 write_decode2=FALSE,
                 galleries=GALLERIES
         )
