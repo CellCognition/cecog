@@ -84,24 +84,10 @@ class _DataProvider(object):
         self._hf_group = hf_group
         self._children = {}
         self._parent = parent
-        if self.CHILDREN_GROUP_NAME == 'this is a threading experiment ':
-            worker = [InputOutputThread(self.CHILDREN_PROVIDER_CLASS) for _ in range(3)]
-            for w in worker:
-                w.start()
-            
-            for name, group in self._hf_group[self.CHILDREN_GROUP_NAME].iteritems():
-                InputOutputThread.inQueue.put((name, group, self))
-                
-            InputOutputThread.inQueue.join()
-            for name, provider in InputOutputThread.outDict.iteritems():
-                self._children[name] = provider
-            
-        elif self.CHILDREN_GROUP_NAME is not None:
+        if self.CHILDREN_GROUP_NAME is not None:
             for name, group in self._hf_group[self.CHILDREN_GROUP_NAME].iteritems():
                 self._children[name] = self.CHILDREN_PROVIDER_CLASS(group, parent=self)
         
-        
-
     def __getitem__(self, name):
         return self._children[name]
 
