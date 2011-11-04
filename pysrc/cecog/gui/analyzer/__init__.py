@@ -1077,6 +1077,14 @@ class _ProcessorMixin(object):
                              "Make sure that the R-project is installed.\n\n"\
                              "See README.txt for details." % cmd)
                     is_valid = False
+                    
+            elif cls is MultiAnalzyerThread:
+                ncpu = cpu_count()
+                (ncpu, ok) = QInputDialog.getInt(None, "On your machine are %d processers available." % ncpu, \
+                                             "Select the number of processors", \
+                                              ncpu, 1, ncpu*2)
+                if not ok:
+                    is_valid = False
 
 
             if is_valid:
@@ -1113,15 +1121,11 @@ class _ProcessorMixin(object):
                         qApp._image_dialog.raise_()
                         
                 elif cls is MultiAnalzyerThread:
-                    ncpu = cpu_count()
-                    (ncpu, ok) = QInputDialog.getInt(None, "On your machine are %d processers available." % ncpu, \
-                                                 "Select the number of processors", \
-                                                  ncpu, 1, ncpu*2)
-                    if ok:
-                        self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
-                        self._analyzer = cls(self, self._current_settings, imagecontainer, ncpu)
-                        
-                        self._set_display_renderer_info()
+                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
+                    self._analyzer = cls(self, self._current_settings, imagecontainer, ncpu)
+                    
+                    self._set_display_renderer_info()
+
                     
                     
 
