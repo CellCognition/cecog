@@ -46,7 +46,6 @@ import types, \
 # extension module imports:
 #
 import numpy
-
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
@@ -617,12 +616,13 @@ class MultiProcessingAnalyzerMixin(ParallelProcessThreadMixinBase):
             self._timer = StopWatch()
             
             
-        def notify_execution(self, job_list):
+        def notify_execution(self, job_list, ncpu):
             self.job_count = len(job_list)
+            self.ncpu = ncpu
             stage_info = {'stage': 0,
                       'progress': 0,
                       'text': '',
-                      'meta': 'Parallel processing %d / %d positions (%d cores)' % (0, self.job_count, cpu_count()),
+                      'meta': 'Parallel processing %d / %d positions (%d cores)' % (0, self.job_count, self.ncpu),
                       'min': 0,
                       'max': self.job_count,
                        }
@@ -635,7 +635,7 @@ class MultiProcessingAnalyzerMixin(ParallelProcessThreadMixinBase):
             stage_info = {'progress': self.cnt,
                           'meta': 'Parallel processing %d / %d positions (%d cores)' % (self.cnt, 
                                                                                         self.job_count, 
-                                                                                        cpu_count()),
+                                                                                        self.ncpu),
                           'text': 'finished %s - %s' % (str(plate), str(pos)),
                           'stage': 0,
                           'min': 0,
@@ -646,10 +646,13 @@ class MultiProcessingAnalyzerMixin(ParallelProcessThreadMixinBase):
             self.parent.set_stage_info(stage_info)
             self._timer.reset()  
             
-    def setup(self):
+    def setup(self, ncpu=None):
+        if ncpu is None:
+            ncpu = cpu_count()
+        self.ncpu = ncpu
         self.log_receiver = LoggingReceiver(port=0)
         port = self.log_receiver.server_address[1]
-        self.pool = Pool(cpu_count(), initializer=process_initialyzer, initargs=(port,))
+        self.pool = Pool(self.ncpu, initializer=process_initialyzer, initargs=(port,))
         self.parent.process_log_window.init_process_list([str(p.pid) for p in self.pool._pool])
         self.parent.process_log_window.show()
         
@@ -694,48 +697,40 @@ class MultiProcessingAnalyzerMixin(ParallelProcessThreadMixinBase):
                 multi_exception = MultiprocessingException(exception_list)
                 raise multi_exception
                         
-        self.finish()
-        
+        self.finish()   
     
     @property
     def target(self):
         return AnalyzerCoreHelper
     
     def submit_jobs(self, job_list):
-        self.process_callback.notify_execution(job_list)
+        self.process_callback.notify_execution(job_list, self.ncpu)
         self.job_result = [self.pool.apply_async(self.target, args, callback=self.process_callback) for args in job_list]
         
 class MultiprocessingException(Exception):
     def __init__(self, exception_list):
         self.msg = '\n-----------\nError in job item:\n'.join([str(x) for x in exception_list])
 
-class MultiAnalzyerThread(_ProcessingThread, MultiProcessingAnalyzerMixin):
+class AnalzyerThread(_ProcessingThread):
+
     image_ready = pyqtSignal(ccore.RGBImage, str, str)
+
     def __init__(self, parent, settings, imagecontainer):
         _ProcessingThread.__init__(self, parent, settings)
         self._renderer = None
         self._imagecontainer = imagecontainer
         self._buffer = {}
-        self.setup()
-        self._abort = False
-        
-    def set_abort(self, wait=False):
-        self._abort = True
-        self.abort()
-        if wait:
-            self.wait()
 
     def _run(self):
-        self._abort = False
-        settings_str = self._settings.to_string()
-        job_list = []
+        learner = None
         for plate_id in self._imagecontainer.plates:
-            self._imagecontainer.set_plate(plate_id)
-            meta_data = self._imagecontainer.get_meta_data()
-            for pos_id in meta_data.positions:
-                job_list.append((plate_id, settings_str, self._imagecontainer, pos_id))
-        self.submit_jobs(job_list)
-        self.join()
+            analyzer = AnalyzerCore(plate_id, self._settings,
+                                    copy.copy(self._imagecontainer),
+                                    learner=learner)
+            learner = analyzer.processPositions(self)
+        # make sure the learner data is only exported while we do sample picking
+        if self._settings.get('Classification', 'collectsamples') and not learner is None:
+            learner.export()
 
     def set_renderer(self, name):
         self._mutex.lock()
@@ -756,6 +751,46 @@ class MultiAnalzyerThread(_ProcessingThread, MultiProcessingAnalyzerMixin):
     def _emit(self, name):
         if name in self._buffer:
             self.image_ready.emit(*self._buffer[name])
+
+class MultiAnalzyerThread(AnalzyerThread, MultiProcessingAnalyzerMixin):
+    image_ready = pyqtSignal(ccore.RGBImage, str, str)
+    def __init__(self, parent, settings, imagecontainer, ncpu):
+        AnalzyerThread.__init__(self, parent, settings, imagecontainer)
+        self.setup(ncpu)
+        self._abort = False
+        
+    def set_abort(self, wait=False):
+        self._abort = True
+        self.abort()
+        if wait:
+            self.wait()
+
+    def _run(self):
+        self._abort = False
+        settings_str = self._settings.to_string()
+        
+        self._settings.set_section('General')
+        self.lstPositions = self._settings.get2('positions')
+        if self.lstPositions == '' or not self._settings.get2('constrain_positions'):
+            self.lstPositions = None
+        else:
+            self.lstPositions = self.lstPositions.split(',')
+        
+        job_list = []
+        
+        for plate_id in self._imagecontainer.plates:
+            self._imagecontainer.set_plate(plate_id)
+            meta_data = self._imagecontainer.get_meta_data()
+            for pos_id in meta_data.positions:
+                if self.lstPositions is None:
+                    job_list.append((plate_id, settings_str, self._imagecontainer, pos_id))
+                else:
+                    if pos_id in self.lstPositions:
+                        job_list.append((plate_id, settings_str, self._imagecontainer, pos_id))
+                        
+        self.submit_jobs(job_list)
+        self.join()
+
 
 
 
@@ -1076,6 +1111,19 @@ class _ProcessorMixin(object):
                         pix2.fill(Qt.black)
                         qApp._graphics.setPixmap(pix2)
                         qApp._image_dialog.raise_()
+                        
+                elif cls is MultiAnalzyerThread:
+                    ncpu = cpu_count()
+                    (ncpu, ok) = QInputDialog.getInt(None, "On your machine are %d processers available." % ncpu, \
+                                                 "Select the number of processors", \
+                                                  ncpu, 1, ncpu*2)
+                    if ok:
+                        self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
+                        self._analyzer = cls(self, self._current_settings, imagecontainer, ncpu)
+                        
+                        self._set_display_renderer_info()
+                    
+                    
 
                 elif cls is TrainingThread:
                     self._current_settings = self._settings.copy()

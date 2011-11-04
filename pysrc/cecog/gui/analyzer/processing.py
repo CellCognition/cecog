@@ -34,6 +34,7 @@ from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
 from cecog.gui.analyzer import (BaseProcessorFrame,
                                 AnalzyerThread,
                                 HmmThread,
+                                MultiAnalzyerThread,
                                 )
 from cecog.analyzer import (SECONDARY_REGIONS,
                             TERTIARY_REGIONS,
@@ -67,7 +68,7 @@ class SubProcessLogWindow(QFrame):
     def __init__(self, parent):
         QFrame.__init__(self)
         self.setWindowTitle('Process log window')
-        self.setGeometry(100,100,700,400)
+        self.setGeometry(50,50,800,400)
         self._layout = QVBoxLayout(self)
         self._layout.addWidget(QLabel('Process logs for each child process'))
         self.tab_widget = QTabWidget()

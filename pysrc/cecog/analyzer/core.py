@@ -167,7 +167,7 @@ class PositionAnalyzer(object):
         else:
             self.strPathOutPosition = self.strPathOutAnalyzed
         bMkdirsOk = safe_mkdirs(self.strPathOutPosition)
-        self._oLogger.info("strPathOutPosition '%s', ok: %s" % (self.strPathOutPosition, bMkdirsOk))
+        self._oLogger.debug("Starting analysis for '%s', ok: %s" % (self.strPathOutPosition, bMkdirsOk))
 
         self.strPathOutPositionImages = os.path.join(self.strPathOutPosition, "images")
         self.strPathOutPositionDebug = os.path.join(self.strPathOutPosition, "debug")
@@ -275,10 +275,9 @@ class PositionAnalyzer(object):
         strPathOutPositionStats = os.path.join(self.strPathOutPosition,
                                                'statistics')
         bMkdirsOk = safe_mkdirs(strPathOutPositionStats)
-        self._oLogger.info("strPathOutPositionStats '%s', ok: %s, cleared: %s" %\
+        self._oLogger.debug("Creating '%s', ok: %s" %\
                            (strPathOutPositionStats,
-                            bMkdirsOk,
-                            'DISABLED FOR NOW'))
+                            bMkdirsOk))
                             #self.oSettings.bClearTrackingPath))
 
         #max_frames = max(self.lstAnalysisFrames)
@@ -642,7 +641,7 @@ class PositionAnalyzer(object):
 
         if iNumberImages > 0:
             oInterval = oStopWatchPos.stop_interval() / iNumberImages
-            self._oLogger.info("* %d image sets analyzed, %s / image set" %
+            self._oLogger.info(" - %d image sets analyzed, %s / image set" %
                                (iNumberImages, oInterval.format(msec=True)))
 
         # write an empty file to mark this position as finished
@@ -659,16 +658,8 @@ class PositionAnalyzer(object):
         return str(pos).zfill(self.POSITION_LENGTH)
 
     def _analyzePosition(self, oCellAnalyzer):
-
         debug_mode = False #self.oSettings.get('General', 'debugMode')
-        if debug_mode:
-            bMkdirsOk = safe_mkdirs(self.strPathOutPositionDebug)
-            self._oLogger.info("strPathOutPositionDebug '%s', ok: %s" % (self.strPathOutPositionDebug,
-                                                                         bMkdirsOk))
-        else:
-            strPathOutPositionDebug = ""
-
-
+        
         if (self.oSettings.get('Output', 'rendering_labels_discwrite') or
             self.oSettings.get('Output', 'rendering_contours_discwrite') or
             self.oSettings.get('Output', 'rendering_class_discwrite')):
@@ -1038,8 +1029,9 @@ class PositionAnalyzer(object):
                     strPathOutImages = os.path.join(self.strPathOutPositionImages, '_labels')
                     safe_mkdirs(strPathOutImages)
                     oCellAnalyzer.exportLabelImages(strPathOutImages)
+                    
 
-            self._oLogger.info("* duration: %s" % stopwatch.current_interval().format(msec=True))
+            self._oLogger.info(" - Frame %d, duration: %s" % (frame, stopwatch.current_interval().format(msec=True)))
 
             oCellAnalyzer.purge(features=self.export_features)
 
