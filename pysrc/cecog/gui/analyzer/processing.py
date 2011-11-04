@@ -115,6 +115,12 @@ class ProcessingFrame(BaseProcessorFrame):
                                      [AnalzyerThread,
                                       HmmThread],
                                      ('Start processing', 'Stop processing'))
+        
+        self.register_control_button('multi_process',
+                                     [MultiAnalzyerThread,
+                                      HmmThread],
+                                     ('Start multi processing', 'Stop multi processing'))
+        
 
         self.add_group(None,
                        [('primary_featureextraction', (0,0,1,1)),

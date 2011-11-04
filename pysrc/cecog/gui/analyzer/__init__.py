@@ -709,7 +709,7 @@ class MultiprocessingException(Exception):
     def __init__(self, exception_list):
         self.msg = '\n-----------\nError in job item:\n'.join([str(x) for x in exception_list])
 
-class AnalzyerThread(_ProcessingThread, MultiProcessingAnalyzerMixin):
+class MultiAnalzyerThread(_ProcessingThread, MultiProcessingAnalyzerMixin):
     image_ready = pyqtSignal(ccore.RGBImage, str, str)
     def __init__(self, parent, settings, imagecontainer):
         _ProcessingThread.__init__(self, parent, settings)
