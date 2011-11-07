@@ -34,6 +34,8 @@ import sys
 import numpy
 import time as timing
 
+
+from functools import partial
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
@@ -74,60 +76,7 @@ def MixIn(pyClass, mixInClass, makeAncestor=0):
                 setattr(pyClass, name, member)
 
 
-class MainWindow(QtGui.QMainWindow):
-    def __init__(self, filename=None, parent=None):
-        QtGui.QMainWindow.__init__(self, parent)
-        self.setStyleSheet('background-color: qlineargradient(x1: 0, y1: 0, x2: 500, y2: 500, stop: 0 #444444, stop: 1 #0A0A0A);') 
-        self.setGeometry(100,100,1200,800)
-        self.setWindowTitle('tracklet browser')
-        
-        self.mnu_open = QtGui.QAction('&Open', self)
-        self.mnu_open.triggered.connect(self.open_file)
-        
-        self.mnu_change_view = QtGui.QAction('&Change gallery size', self)
-        self.mnu_change_view.triggered.connect(self.change_gallery_size)
-        
-        file_menu = self.menuBar().addMenu('&File')
-        view_menu = self.menuBar().addMenu('&View')
-        file_menu.addAction(self.mnu_open)
-        view_menu.addAction(self.mnu_change_view)
 
-        
-        self.tracklet_widget = TrackletBrowser(self)
-        self.setCentralWidget(self.tracklet_widget)  
-        
-        if filename is not None:
-            self.tracklet_widget.open_file(filename)
-            
-            
-            
-    def closeEvent(self, cevent):
-        try:
-            if self.tracklet_widget.data_provider is not None:
-                self.tracklet_widget.data_provider.close()
-                print 'Closing hdf5 file'
-        except:
-            print 'Could not close file or no file has been open'
-        finally:
-            cevent.accept()
-        
-    def change_gallery_size(self):
-        val, ok = QtGui.QInputDialog.getInt(self, 'New gallery image size', 'Size', 
-                                            value=CellTerminalObjectItemMixin.BOUNDING_BOX_SIZE, 
-                                            min=10, 
-                                            max=1000)
-        if ok:
-            CellTerminalObjectItemMixin.BOUNDING_BOX_SIZE = val
-            self.tracklet_widget.data_provider.clearObjectItemCache()
-                    
-            self.tracklet_widget.show_position(self.tracklet_widget._current_position_key)
-        
-    
-        
-    def open_file(self):
-        filename = str(QtGui.QFileDialog.getOpenFileName(self, 'Open hdf5 file', '.', 'hdf5 files (*.h5  *.hdf5)'))  
-        if filename:                                              
-            self.tracklet_widget.open_file(filename)
         
 class ZoomedQGraphicsView(QtGui.QGraphicsView):  
     def wheelEvent(self, event):
@@ -152,12 +101,14 @@ class ZoomedQGraphicsView(QtGui.QGraphicsView):
 class PositionThumbnailBase(QtGui.QLabel):
     item_length = 10
     item_height = 2
-    css = 'background-color: transparent;'
+    css = 'background-color: transparent; font: white;'
+    
     
     def __init__(self, parent=None):
         QtGui.QLabel.__init__(self, parent)
         self.parent = parent
         self.setText('Position thumbnail base')
+        self.setStyleSheet(self.css)
     
     def mouseDoubleClickEvent(self, *args, **kwargs):
         QtGui.QLabel.mouseDoubleClickEvent(self, *args, **kwargs)
@@ -166,13 +117,13 @@ class PositionThumbnailBase(QtGui.QLabel):
 class PositionThumbnailEvents(PositionThumbnailBase):
     item_length = 10
     item_height = 2
-    css = 'background-color: transparent;'
+    name = 'Standard'
     
     def __init__(self, position_key, position, parent=None):
         PositionThumbnailBase.__init__(self, parent)
         self.parent = parent
         self.position_key = position_key
-        events = position.get_sorted_objects('event', 'state_periods', 3,4,5)
+        events = position.get_sorted_objects('event', 'state_periods', 2,3,4)
         
         thumbnail_pixmap = QtGui.QPixmap(20*self.item_length, len(events)*self.item_height)
         thumbnail_pixmap.fill(QtCore.Qt.black)
@@ -199,6 +150,31 @@ class PositionThumbnailEvents(PositionThumbnailBase):
         QtGui.QLabel.mouseDoubleClickEvent(self, *args, **kwargs)
         self.parent.clicked.emit(self.position_key)
         
+class PositionThumbnailEvents2(PositionThumbnailBase):
+    item_length = 10
+    item_height = 2
+    name = 'Metaphase count'
+    
+    def __init__(self, position_key, position, parent=None):
+        PositionThumbnailBase.__init__(self, parent)
+        self.parent = parent
+        self.position_key = position_key
+        
+        events = position.get_objects('event')
+        cnt = 0
+        for event in events:
+            for pp in event.children():
+                if pp.predicted_class == 3:
+                    cnt += 1
+                
+        self.setText('Metaphase count:<br/> <span style=" font-size:32pt; font-weight:600; color: white;">%03d</span>' % cnt)
+            
+        self.setToolTip('Sample %s\nPlate %s \nExperiment %s\nPosition %s' % position_key)
+    
+    def mouseDoubleClickEvent(self, *args, **kwargs):
+        QtGui.QLabel.mouseDoubleClickEvent(self, *args, **kwargs)
+        self.parent.clicked.emit(self.position_key)
+        
         
     
             
@@ -210,13 +186,16 @@ class TrackletThumbnailList(QtGui.QWidget):
           '''
     clicked = QtCore.pyqtSignal(tuple)
     
-    def __init__(self, data_provider, parent=None):
+    def __init__(self, data_provider, ThumbClass=None, parent=None):
         QtGui.QWidget.__init__(self, parent)
         self.main_layout = QtGui.QHBoxLayout()
         
+        if ThumbClass is None:
+            ThumbClass = PositionThumbnailEvents
+        
         
         for position_key in data_provider.positions:
-            tn_position = PositionThumbnailEvents(position_key, data_provider[position_key], self)
+            tn_position = ThumbClass(position_key, data_provider[position_key], self)
             tn_widget = QtGui.QWidget(self)
             tn_layout = QtGui.QVBoxLayout()
             tn_layout.addWidget(QtGui.QLabel('%s %s' % (position_key[1], position_key[3])))
@@ -272,6 +251,9 @@ class TrackletBrowser(QtGui.QWidget):
         self.setLayout(self.main_layout)
  
         self.main_layout.addWidget(self.view)
+        
+        self.thumbnails_scroll = None
+        self.thumbnails = None
         
         self.view_hud_layout = QtGui.QHBoxLayout(self.view)
         self.view_hud_btn_layout = QtGui.QVBoxLayout()
@@ -364,17 +346,30 @@ class TrackletBrowser(QtGui.QWidget):
            
     def open_file(self, filename):
         self.data_provider = File(filename)
+        self.make_thumbnails()
+        
+    def remove_thumbnails(self):
+        if self.thumbnails_scroll is not None:
+            print 'remove_thumbnail()'
+            self.main_layout.removeWidget(self.thumbnails_scroll)
+            self.thumbnails_scroll.hide()
+            self.thumbnails.hide()
+            del self.thumbnails_scroll
+            del self.thumbnails
+            
+    def make_thumbnails(self, ThumbClass=None):
+        self.remove_thumbnails()
+        
         self.thumbnails_scroll = QtGui.QScrollArea(self)
         self.thumbnails_scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
         self.thumbnails_scroll.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         
-        self.thumbnails = TrackletThumbnailList(self.data_provider, self)
+        self.thumbnails = TrackletThumbnailList(self.data_provider, ThumbClass, self.thumbnails_scroll)
         self.thumbnails.clicked.connect(self.show_position)
         self.thumbnails_scroll.setWidget(self.thumbnails)
         
         self.thumbnails_scroll.setMaximumHeight(200)
         self.thumbnails_scroll.setMinimumHeight(200)
-
         
         self.main_layout.addWidget(self.thumbnails_scroll)
         
@@ -749,7 +744,67 @@ class EventObjectItemMixin():
 MixIn(TerminalObjectItem, CellTerminalObjectItemMixin, True)
 MixIn(ObjectItem, EventObjectItemMixin, True)
 
+class MainWindow(QtGui.QMainWindow):
+    def __init__(self, filename=None, parent=None):
+        QtGui.QMainWindow.__init__(self, parent)
+        self.setStyleSheet('background-color: qlineargradient(x1: 0, y1: 0, x2: 500, y2: 500, stop: 0 #444444, stop: 1 #0A0A0A);') 
+        self.setGeometry(100,100,1200,800)
+        self.setWindowTitle('tracklet browser')
         
+        self.mnu_open = QtGui.QAction('&Open', self)
+        self.mnu_open.triggered.connect(self.open_file)
+        
+        self.mnu_change_view = QtGui.QAction('&Change gallery size', self)
+        self.mnu_change_view.triggered.connect(self.change_gallery_size)
+        
+        file_menu = self.menuBar().addMenu('&File')
+        view_menu = self.menuBar().addMenu('&View')
+        file_menu.addAction(self.mnu_open)
+        view_menu.addAction(self.mnu_change_view)
+        
+        thumb_menu = view_menu.addMenu('&Thumbnails')
+        
+
+        self.tracklet_widget = TrackletBrowser(self)
+        self.setCentralWidget(self.tracklet_widget)  
+        
+        for ThumbClass in PositionThumbnailBase.__subclasses__():
+            a = QtGui.QAction(ThumbClass.name, self)
+            a.triggered.connect(partial(self.tracklet_widget.make_thumbnails, ThumbClass))
+            thumb_menu.addAction(a)
+        
+        if filename is not None:
+            self.tracklet_widget.open_file(filename)
+            
+            
+            
+    def closeEvent(self, cevent):
+        try:
+            if self.tracklet_widget.data_provider is not None:
+                self.tracklet_widget.data_provider.close()
+                print 'Closing hdf5 file'
+        except:
+            print 'Could not close file or no file has been open'
+        finally:
+            cevent.accept()
+        
+    def change_gallery_size(self):
+        val, ok = QtGui.QInputDialog.getInt(self, 'New gallery image size', 'Size', 
+                                            value=CellTerminalObjectItemMixin.BOUNDING_BOX_SIZE, 
+                                            min=10, 
+                                            max=1000)
+        if ok:
+            CellTerminalObjectItemMixin.BOUNDING_BOX_SIZE = val
+            self.tracklet_widget.data_provider.clearObjectItemCache()
+                    
+            self.tracklet_widget.show_position(self.tracklet_widget._current_position_key)
+        
+    
+        
+    def open_file(self):
+        filename = str(QtGui.QFileDialog.getOpenFileName(self, 'Open hdf5 file', '.', 'hdf5 files (*.h5  *.hdf5)'))  
+        if filename:                                              
+            self.tracklet_widget.open_file(filename)  
         
 def main():
     app = QtGui.QApplication(sys.argv) 

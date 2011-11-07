@@ -410,7 +410,8 @@ class TimeHolder(OrderedDict):
                                        (nr_channels, t, z, h, w),
                                        'uint8',
                                        chunks=(1, 1, 1, h, w),
-                                       compression=self._hdf5_compression)
+#                                       compression=self._hdf5_compression)
+                                       )
 
             frame_idx = self._frames_to_idx[self._iCurrentT]
             channel_idx = self._channels_to_idx[channel.PREFIX]
