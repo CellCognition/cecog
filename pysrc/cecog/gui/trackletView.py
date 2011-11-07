@@ -615,7 +615,7 @@ class CellTerminalObjectItemMixin():
     
     @property
     def feature_names(self):
-        return self.get_position.object_feature[self.name]
+        return self.get_position().object_feature[self.name]
     
     @property
     def time(self):
@@ -626,12 +626,12 @@ class CellTerminalObjectItemMixin():
         return self._local_idx[1]
     
     def classifier_idx(self):
-        return self.get_position.object_classifier_index[self.name]
+        return self.get_plate().object_classifier_index[self.name]
     
     @property
     def channel_idx(self):
         if not hasattr(self, '_channel_idx'):
-            self._channel_idx = self.get_position.regions[self.get_position.sub_objects[self.name]]['channel_idx']
+            self._channel_idx = self.get_plate().regions[self.get_position().sub_objects[self.name]]['channel_idx']
         return self._channel_idx
         
     @property
@@ -642,7 +642,7 @@ class CellTerminalObjectItemMixin():
         return self._bounding_box
     
     def _get_image(self, t, obj_idx, c, bounding_box=None):
-        self.get_position.read_image_data()
+        self.get_position().read_image_data()
         
         if bounding_box is None:
             ul, lr = self.bounding_box
@@ -652,14 +652,14 @@ class CellTerminalObjectItemMixin():
         offset_1 = (self.BOUNDING_BOX_SIZE - lr[1] + ul[1]) 
         ul[0] = max(0, ul[0] - offset_0/2 - cmp(offset_0%2,0) * offset_0 % 2) 
         ul[1] = max(0, ul[1] - offset_1/2 - cmp(offset_1%2,0) * offset_1 % 2)      
-        lr[0] = min(self.get_position._hf_group_np_copy.shape[4], lr[0] + offset_0/2) 
-        lr[1] = min(self.get_position._hf_group_np_copy.shape[3], lr[1] + offset_1/2) 
+        lr[0] = min(self.get_position()._hf_group_np_copy.shape[4], lr[0] + offset_0/2) 
+        lr[1] = min(self.get_position()._hf_group_np_copy.shape[3], lr[1] + offset_1/2) 
         
         self._bounding_box = (ul, lr)
         # TODO: get_iamge returns am image which might have a smaller shape than 
         #       the requested BOUNDING_BOX_SIZE, I dont see a chance to really
         #       fix it, without doing a copy...
-        res = self.get_position._hf_group_np_copy[c, t, 0, ul[1]:lr[1], ul[0]:lr[0]]
+        res = self.get_position()._hf_group_np_copy[c, t, 0, ul[1]:lr[1], ul[0]:lr[0]]
         return res
 
     def _get_crack_contours(self, t, obj_idx):  
@@ -678,14 +678,14 @@ class CellTerminalObjectItemMixin():
     
     def _get_additional_object_data(self, object_name, data_fied_name, index=None):
         if index is None:
-            return self.get_position._hf_group['object'][object_name][data_fied_name]
+            return self.get_position()._hf_group['object'][object_name][data_fied_name]
         else:
-            return self.get_position._hf_group['object'][object_name][data_fied_name][str(index)]
+            return self.get_position()._hf_group['object'][object_name][data_fied_name][str(index)]
     
     @property
     def class_color(self):
         if not hasattr(self, '_class_color'):
-            classifier = self.get_position.object_classifier[self.name, self.get_position.object_classifier_index[self.name]]
+            classifier = self.get_plate().object_classifier[self.name, self.get_plate().object_classifier_index[self.name]]
             self._class_color = dict(enumerate(classifier['schema']['color'].tolist()))       
         return self._class_color[self.predicted_class]
     
@@ -716,7 +716,7 @@ class EventObjectItemMixin():
         
     @property
     def item_feature_names(self):
-        return self.get_position.object_feature[self.get_position.sub_objects[self.name]]
+        return self.get_plate().object_feature[self.get_position.sub_objects[self.name]]
         
 MixIn(TerminalObjectItem, CellTerminalObjectItemMixin, True)
 MixIn(ObjectItem, EventObjectItemMixin, True)
@@ -729,7 +729,7 @@ def main():
     if len(file) == 1:
         file = file[0][1]
     else:
-        file = None
+        file = r'C:\Users\sommerc\data\Chromatin-Microtubles\Analysis\H2b_aTub_MD20x_exp911_2_channels_nozip\dump\_all_positions.hdf5'
         
     mainwindow = MainWindow(file)
     
@@ -743,8 +743,9 @@ def main():
     
 def test():
     # read tracking information
-    f = File('C:/Users/sommerc/data/Chromatin-Microtubles/Analysis/H2b_aTub_MD20x_exp911_2_channels_nozip/dump/two_plates.hdf5')
     tic = timeit.time()
+    f = File('C:/Users/sommerc/data/Chromatin-Microtubles/Analysis/H2b_aTub_MD20x_exp911_2_channels_nozip/dump/_all_positions.hdf5')
+
     pos = f[f.positions[0]]
     track = pos.get_objects('event')
     feature_matrix = []

@@ -42,11 +42,12 @@ import time as timing
 #
 
 def print_timing(func):
-    def wrapper(*arg):
+    def wrapper(*arg, **kwargs):
         t1 = timing.time()
-        res = func(*arg)
+        res = func(*arg, **kwargs)
         t2 = timing.time()
-        print '%s took %0.3f ms' % (func.func_name, (t2-t1)*1000.0)
+        name = str(func.__class__) + ' :: ' + func.func_name if hasattr(func, '__class__') else func.func_name
+        print '%s took %0.3f ms' % (name, (t2-t1)*1000.0)
         return res
     return wrapper
 
@@ -84,9 +85,15 @@ class _DataProvider(object):
         self._hf_group = hf_group
         self._children = {}
         self._parent = parent
+        
+        self._init()
+        
         if self.CHILDREN_GROUP_NAME is not None:
             for name, group in self._hf_group[self.CHILDREN_GROUP_NAME].iteritems():
                 self._children[name] = self.CHILDREN_PROVIDER_CLASS(group, parent=self)
+                
+    def _init(self):
+        pass
         
     def __getitem__(self, name):
         return self._children[name]
@@ -152,32 +159,15 @@ class Position(_DataProvider):
     def __init__(self, hf_group, parent=None):
         super(Position, self).__init__(hf_group, parent)
         
-        tic = timing.time()
-        self.regions= {}
-        channel_info = self.get_definition('channel')
-        for object_def_row in self.get_definition('object'):
-            object_name = object_def_row[0]
-            object_sub_rel = object_def_row[1]
-            object_type = object_def_row[2]
-                    
-            if object_type == 'region':
-                print 'Position: reading region objects', object_name
-                for region_row in self.get_definition('region'):
-                    if region_row[0] == object_name:
-                        channel_idx = region_row[1]
-                        self.regions[object_name] = \
-                          {'channel_idx' : channel_idx, 
-                           'channel_name' : channel_info[channel_idx][0],
-                           'description' : channel_info[channel_idx][1],
-                           'is_phydical' : channel_info[channel_idx][2],
-                           'voxel_size' : channel_info[channel_idx][3]}
-                        break
-        print '  reading region information', timing.time() - tic
+    def _init(self):
+        print ' Position: *** reading ', self._hf_group.name
+        self.plate = self._parent._parent
+        self._read_objects()
+        self._read_relations()
         
-         
+    def _read_objects(self):
         self.objects = {}
         self.sub_objects = {}
-        channel_info = self.get_definition('channel')
         for object_def_row in self.get_definition('object'):
             object_name = object_def_row[0]
             object_sub_rel = object_def_row[1]
@@ -190,64 +180,31 @@ class Position(_DataProvider):
                     break
             
             if object_type == 'object':
-                print 'Position: caching object', object_name
+                print ' Position: caching object', object_name
                 self.objects[object_name] = \
                     {'cache' : self.init_objects(object_name), 
                      'sub_relation' :object_sub_rel }
-        
-        print '  init object caches', timing.time() - tic         
+            
                     
+    def _read_relations(self):
         self.relation_compund = {}
         self.relation_cross = {}
         for relation_def_row in self.get_definition('relation'):
             rel_name = relation_def_row[0]
             obj_1 = relation_def_row[1]
             obj_2 = relation_def_row[2]
-            if obj_1 in self.objects or obj_1 in self.regions:
+            if obj_1 in self.objects or obj_1 in self.plate.regions:
                 if obj_1 == obj_2:
-                    print 'Position: found compound relation for', obj_1, ' : ', rel_name
+                    print ' Position: found compound relation for', obj_1, ' : ', rel_name
                     self.relation_compund.setdefault(obj_1,[]).append({'relation_name': rel_name,
                                                   'to': obj_2,
                                                   'cache': self._hf_group['relation'][rel_name].value})
                 else:
-                    print 'Position: found cross relation for', obj_1, ' : ', rel_name
+                    print ' Position: found cross relation for', obj_1, ' : ', rel_name
                     self.relation_cross.setdefault(obj_1,[]).append({'relation_name': rel_name,
                                                   'to': obj_2,
-                                                  'cache': self._hf_group['relation'][rel_name].value})
-        
-        print '  reading relation information', timing.time() - tic
-                    
-        self.object_feature = {}
-        last_feature_for_object = 'ham'
-        feature_group = self.get_definition('feature')
-        for feature_row in self.get_definition('feature'):
-            feature_for_object = feature_row[2]
-            if last_feature_for_object != feature_for_object:
-                #feature_uses_channels = feature_row[4][:feature_row[3]]
-                print 'Position: found features for object', feature_for_object
-                for f in feature_group[self.get_definition('feature_set')[feature_for_object]]:
-                    self.object_feature.setdefault(feature_for_object, []).append(f[0])
-                last_feature_for_object = feature_for_object
-        
-        print '  reading feature sets', timing.time() - tic
-          
-        self.object_classifier = {}
-        self.object_classifier_index = {}
-        for classifier_idx, classifier_row in enumerate(self.get_definition('classifier')):
-            object_name = self.get_definition('feature')[self.get_definition('feature_set')[classifier_row[3]][0]][2]
-            print 'Position: found classifier for object', object_name, 'with schema: ', classifier_row[4]
-            self.object_classifier[(object_name, classifier_idx)] = \
-                    {'name' : classifier_row[0],
-                     'method' : classifier_row[1],
-                     'version' : classifier_row[2],
-                     'feature_set' : classifier_row[3],
-                     'schema' : self.get_definition('classification')[classifier_row[4]],
-                     'parameter' : classifier_row[6],
-                     'description' : classifier_row[7],
-                     }
-            self.object_classifier_index[object_name] = classifier_idx
-        print '   reading classifier information'
-        print '\n === init of position took %5.3f sec ' % (timing.time()-tic)
+                                                  'cache': self._hf_group['relation'][rel_name].value})     
+
 
     def init_objects(self, object_name):
         return Objects(object_name, self)
@@ -295,6 +252,64 @@ class Plate(_DataProvider):
 
     CHILDREN_GROUP_NAME = 'experiment'
     CHILDREN_PROVIDER_CLASS = Experiment
+    
+    def __init__(self, hf_group, parent=None):
+        super(Plate, self).__init__(hf_group, parent)
+    
+    def _init(self):
+        self._read_channel_region_info()
+        self._read_feature_set_info()
+        self._read_classification_info()
+        
+    def _read_channel_region_info(self):
+        self.regions = {}
+        channel_info = self.get_definition('channel')
+        for object_def_row in self.get_definition('object'):
+            object_name = object_def_row[0]
+            object_type = object_def_row[2]
+                    
+            if object_type == 'region':
+                print 'Plate: reading region objects', object_name
+                for region_row in self.get_definition('region'):
+                    if region_row[0] == object_name:
+                        channel_idx = region_row[1]
+                        self.regions[object_name] = \
+                          {'channel_idx' : channel_idx, 
+                           'channel_name' : channel_info[channel_idx][0],
+                           'description' : channel_info[channel_idx][1],
+                           'is_phydical' : channel_info[channel_idx][2],
+                           'voxel_size' : channel_info[channel_idx][3]}
+                        break
+        
+    def _read_feature_set_info(self):
+        self.object_feature = {}
+        last_feature_for_object = 'ham'
+        feature_group = self.get_definition('feature')
+        for feature_row in self.get_definition('feature'):
+            feature_for_object = feature_row[2]
+            if last_feature_for_object != feature_for_object:
+                #feature_uses_channels = feature_row[4][:feature_row[3]]
+                print 'Plate: found features for object', feature_for_object
+                for f in feature_group[self.get_definition('feature_set')[feature_for_object]]:
+                    self.object_feature.setdefault(feature_for_object, []).append(f[0])
+                last_feature_for_object = feature_for_object
+        
+    def _read_classification_info(self):
+        self.object_classifier = {}
+        self.object_classifier_index = {}
+        for classifier_idx, classifier_row in enumerate(self.get_definition('classifier')):
+            object_name = self.get_definition('feature')[self.get_definition('feature_set')[classifier_row[3]][0]][2]
+            print 'Plate: found classifier for object', object_name, 'with schema: ', classifier_row[4]
+            self.object_classifier[(object_name, classifier_idx)] = \
+                    {'name' : classifier_row[0],
+                     'method' : classifier_row[1],
+                     'version' : classifier_row[2],
+                     'feature_set' : classifier_row[3],
+                     'schema' : self.get_definition('classification')[classifier_row[4]],
+                     'parameter' : classifier_row[6],
+                     'description' : classifier_row[7],
+                     }
+            self.object_classifier_index[object_name] = classifier_idx
 
 
 class Sample(_DataProvider):
@@ -357,9 +372,11 @@ class ObjectItemBase():
         self.name = parent.name
         self.compute_features()
         
-    @property
     def get_position(self):
         return self.parent.position
+    
+    def get_plate(self):
+        return self.parent.position.plate
     
     def get_child_objects_type(self):
         return self.parent.get_object_type_of_children()
@@ -389,12 +406,12 @@ class ObjectItemBase():
             
     
     def get_siblings(self):
-        if self.name in self.get_position.relation_cross:
+        if self.name in self.get_position().relation_cross:
             res = {}
-            for sibling in self.get_position.relation_cross[self.name]:
+            for sibling in self.get_position().relation_cross[self.name]:
                 sibling_object_name = sibling['to']
                 sibling_object_relation = sibling['cache']
-                res[sibling_object_name] = self.get_position.get_objects(sibling_object_name).get(sibling_object_relation[self.idx][2])
+                res[sibling_object_name] = self.get_position().get_objects(sibling_object_name).get(sibling_object_relation[self.idx][2])
             return res[sibling_object_name]
         
         
@@ -458,7 +475,7 @@ class ObjectItemBase():
         return map(lambda id: self.get_child_objects_type()(id, self.sub_objects()), result)
                 
     def sub_objects(self):
-        return self.get_position.get_objects(self.get_position.sub_objects[self.name])
+        return self.get_position().get_objects(self.get_position().sub_objects[self.name])
     
     def __getitem__(self, key):
         return self._features[key]
@@ -520,7 +537,7 @@ class Objects(object):
         t = len(self.position._hf_group['time'])
         
         if self.is_terminal():
-            c = self.position.regions[self.position.sub_objects[self.name]]['channel_idx']
+            c = self.position.plate.regions[self.position.sub_objects[self.name]]['channel_idx']
             self.object_np_cache['terminals'] = numpy.zeros((t), dtype=object)
             for t, tg in self.position._hf_group['time'].iteritems():
                 t = int(t)
@@ -530,7 +547,7 @@ class Objects(object):
             
             
     def is_terminal(self):
-        return self.position.sub_objects[self.name] in self.position.regions
+        return self.position.sub_objects[self.name] in self.position.plate.regions
         
     @property
     def ids(self):
@@ -547,7 +564,7 @@ class Objects(object):
     
     def get_object_type_of_children(self):
         ItemType = ObjectItem
-        if self.position.sub_objects[self.position.sub_objects[self.name]] in self.position.regions:
+        if self.position.sub_objects[self.position.sub_objects[self.name]] in self.position.plate.regions:
             ItemType = TerminalObjectItem
         return ItemType
     
