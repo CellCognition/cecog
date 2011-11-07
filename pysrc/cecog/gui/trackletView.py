@@ -151,7 +151,7 @@ class ZoomedQGraphicsView(QtGui.QGraphicsView):
             
 class PositionThumbnail(QtGui.QLabel):
     item_length = 10
-    item_height = 2
+    item_height = 3
     css = 'background-color: transparent;'
     
     def __init__(self, position_key, position, parent=None):
@@ -162,7 +162,18 @@ class PositionThumbnail(QtGui.QLabel):
         thumbnail_pixmap = QtGui.QPixmap(20*self.item_length, len(events)*self.item_height)
         thumbnail_pixmap.fill(QtCore.Qt.black)
         painter = QtGui.QPainter()
-        painter.begin(thumbnail_pixmap)
+        
+        
+        
+        for r, event in enumerate(events):
+            for c, pp in enumerate(event.children()):
+                predicted_class = QtGui.QPen(QtGui.QColor(pp.class_color))
+                line_pen.setWidth(3)
+                painter.setPen(line_pen)
+                painter.drawLine(c*self.item_length, r*self.item_height, 
+                                 (c+1)*self.item_length, r*self.item_height)
+        painter.end()
+        
         for r, event in enumerate(events):
             for c, pp in enumerate(event.children()):
                 line_pen = QtGui.QPen(QtGui.QColor(pp.class_color))
@@ -181,6 +192,8 @@ class PositionThumbnail(QtGui.QLabel):
     def mouseDoubleClickEvent(self, *args, **kwargs):
         QtGui.QLabel.mouseDoubleClickEvent(self, *args, **kwargs)
         self.parent.clicked.emit(self.position_key)
+        
+    def _sort_trajoectories_by_state_progression(self):
         
     
             
@@ -203,12 +216,12 @@ class TrackletThumbnailList(QtGui.QWidget):
             tn_layout = QtGui.QVBoxLayout()
             tn_layout.addWidget(QtGui.QLabel('%s %s' % (position_key[1], position_key[3])))
             tn_layout.addWidget(tn_position)
+            tn_layout.addStretch()
             tn_widget.setLayout(tn_layout)
             self.main_layout.addWidget(tn_widget)
             
         self.main_layout.addStretch()
         self.setLayout(self.main_layout)
-        self.setMinimumHeight(tn_position.height + 20)
 
         self.setStyleSheet(self.css)
         
@@ -346,9 +359,19 @@ class TrackletBrowser(QtGui.QWidget):
            
     def open_file(self, filename):
         self.data_provider = File(filename)
+        self.thumbnails_scroll = QtGui.QScrollArea(self)
+        self.thumbnails_scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
+        self.thumbnails_scroll.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        
         self.thumbnails = TrackletThumbnailList(self.data_provider, self)
         self.thumbnails.clicked.connect(self.show_position)
-        self.main_layout.addWidget(self.thumbnails)
+        self.thumbnails_scroll.setWidget(self.thumbnails)
+        
+        self.thumbnails_scroll.setMaximumHeight(200)
+        self.thumbnails_scroll.setMinimumHeight(200)
+
+        
+        self.main_layout.addWidget(self.thumbnails_scroll)
         
         
     def total_height(self):
