@@ -36,6 +36,7 @@ import time as timing
 # constants:
 #
 
+MAX_OBJECT_ITEM_CACHE_SIZE = 3
 
 #-------------------------------------------------------------------------------
 # functions:
@@ -183,7 +184,7 @@ class Position(_DataProvider):
                 print ' Position: caching object', object_name
                 self.objects[object_name] = \
                     {'cache' : self.init_objects(object_name), 
-                     'sub_relation' :object_sub_rel }
+                     'sub_relation' : object_sub_rel }
             
                     
     def _read_relations(self):
@@ -211,6 +212,44 @@ class Position(_DataProvider):
     
     def get_objects(self, object_name):
         return self.objects[object_name]['cache']
+    
+    def get_sorted_objects(self, object_name, criteria, *critera_options):
+        if criteria == 'state_periods':
+            objects = self.objects[object_name]['cache']
+            
+            result = []
+            for obj in objects:
+                state_periods = {}
+                pc_old = 0
+                cnt = 0
+                for i in obj.children():
+                    pc = i.predicted_class
+                    if pc_old == pc: 
+                        cnt += 1
+                    else:
+                        if cnt > state_periods.setdefault(pc_old, 0):
+                            state_periods[pc_old] = cnt   
+                        cnt = 0
+                    pc_old = pc 
+                if cnt > state_periods.setdefault(pc_old, 0):
+                    state_periods[pc_old] = cnt
+                result.append(sum([state_periods.setdefault(j,0) for j in critera_options]))
+                
+            tmp = zip(result, objects)
+            tmp.sort()
+            
+            result = []
+            for obj in tmp:
+                result.append(obj[-1])
+                
+            return result
+                
+        else:
+            raise NotImplementedError('The sort criteria %s is not implemented', criteria)
+                
+            
+            
+            
     
     def get_objects_type(self, object_name):
         return self.objects[object_name]['type']
@@ -568,9 +607,20 @@ class Objects(object):
             ItemType = TerminalObjectItem
         return ItemType
     
+    def _shrink_object_item_cache(self):
+        for cnt, obj_id_ in enumerate(self._object_item_cache.keys()):
+            cache_size =len(self._object_item_cache.keys())
+            if cnt >= cache_size - MAX_OBJECT_ITEM_CACHE_SIZE:
+                break
+            self._object_item_cache[obj_id_] = None
+            del self._object_item_cache[obj_id_]
+            cache_size -= 1
+    
     def get(self, obj_id):
         if obj_id not in self._object_item_cache:
             ItemType = self.get_object_type()
+            self._shrink_object_item_cache()
+                       
             self._object_item_cache[obj_id] = ItemType(obj_id, self)
         return self._object_item_cache[obj_id]
             
