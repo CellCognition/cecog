@@ -1084,6 +1084,7 @@ class _ProcessorMixin(object):
                                              "Select the number of processors", \
                                               ncpu, 1, ncpu*2)
                 if not ok:
+                    self._process_items = None
                     is_valid = False
 
 
