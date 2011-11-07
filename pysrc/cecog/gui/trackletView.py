@@ -149,35 +149,41 @@ class ZoomedQGraphicsView(QtGui.QGraphicsView):
             newGrviewCenter = grviewCenter + offset
             self.centerOn(newGrviewCenter)
             
-class PositionThumbnail(QtGui.QLabel):
+class PositionThumbnailBase(QtGui.QLabel):
     item_length = 10
-    item_height = 3
+    item_height = 2
+    css = 'background-color: transparent;'
+    
+    def __init__(self, parent=None):
+        QtGui.QLabel.__init__(self, parent)
+        self.parent = parent
+        self.setText('Position thumbnail base')
+    
+    def mouseDoubleClickEvent(self, *args, **kwargs):
+        QtGui.QLabel.mouseDoubleClickEvent(self, *args, **kwargs)
+        self.parent.clicked.emit(self.position_key)
+        
+class PositionThumbnailEvents(PositionThumbnailBase):
+    item_length = 10
+    item_height = 2
     css = 'background-color: transparent;'
     
     def __init__(self, position_key, position, parent=None):
-        QtGui.QLabel.__init__(self, parent)
+        PositionThumbnailBase.__init__(self, parent)
         self.parent = parent
-        events = position.get_objects('event')
         self.position_key = position_key
+        events = position.get_sorted_objects('event', 'state_periods', 3,4,5)
+        
         thumbnail_pixmap = QtGui.QPixmap(20*self.item_length, len(events)*self.item_height)
         thumbnail_pixmap.fill(QtCore.Qt.black)
         painter = QtGui.QPainter()
         
-        
-        
-        for r, event in enumerate(events):
-            for c, pp in enumerate(event.children()):
-                predicted_class = QtGui.QPen(QtGui.QColor(pp.class_color))
-                line_pen.setWidth(3)
-                painter.setPen(line_pen)
-                painter.drawLine(c*self.item_length, r*self.item_height, 
-                                 (c+1)*self.item_length, r*self.item_height)
-        painter.end()
+        painter.begin(thumbnail_pixmap)
         
         for r, event in enumerate(events):
             for c, pp in enumerate(event.children()):
                 line_pen = QtGui.QPen(QtGui.QColor(pp.class_color))
-                line_pen.setWidth(3)
+                line_pen.setWidth(self.item_height)
                 painter.setPen(line_pen)
                 painter.drawLine(c*self.item_length, r*self.item_height, 
                                  (c+1)*self.item_length, r*self.item_height)
@@ -193,7 +199,6 @@ class PositionThumbnail(QtGui.QLabel):
         QtGui.QLabel.mouseDoubleClickEvent(self, *args, **kwargs)
         self.parent.clicked.emit(self.position_key)
         
-    def _sort_trajoectories_by_state_progression(self):
         
     
             
@@ -211,7 +216,7 @@ class TrackletThumbnailList(QtGui.QWidget):
         
         
         for position_key in data_provider.positions:
-            tn_position = PositionThumbnail(position_key, data_provider[position_key], self)
+            tn_position = PositionThumbnailEvents(position_key, data_provider[position_key], self)
             tn_widget = QtGui.QWidget(self)
             tn_layout = QtGui.QVBoxLayout()
             tn_layout.addWidget(QtGui.QLabel('%s %s' % (position_key[1], position_key[3])))
@@ -752,7 +757,8 @@ def main():
     if len(file) == 1:
         file = file[0][1]
     else:
-        file = r'C:\Users\sommerc\data\Chromatin-Microtubles\Analysis\H2b_aTub_MD20x_exp911_2_channels_nozip\dump\_all_positions.hdf5'
+#        file = r'C:\Users\sommerc\data\Chromatin-Microtubles\Analysis\H2b_aTub_MD20x_exp911_2_channels_nozip\dump\_all_positions.hdf5'
+        file = r'C:\Users\sommerc\data\Chromatin-Microtubles\Analysis\H2b_aTub_MD20x_exp911_2_channels_nozip\dump_save\_all_positions.hdf5'
         
     mainwindow = MainWindow(file)
     
@@ -767,7 +773,8 @@ def main():
 def test():
     # read tracking information
     tic = timeit.time()
-    f = File('C:/Users/sommerc/data/Chromatin-Microtubles/Analysis/H2b_aTub_MD20x_exp911_2_channels_nozip/dump/_all_positions.hdf5')
+#    f = File('C:/Users/sommerc/data/Chromatin-Microtubles/Analysis/H2b_aTub_MD20x_exp911_2_channels_nozip/dump/_all_positions.hdf5')
+    f = File('C:/Users/sommerc/data/Chromatin-Microtubles/Analysis/H2b_aTub_MD20x_exp911_2_channels_nozip/dump_save/two_positions.hdf5')
 
     pos = f[f.positions[0]]
     track = pos.get_objects('event')
