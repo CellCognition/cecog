@@ -14,11 +14,11 @@ baseOutDir = '/g/mitocheck/Thomas/data/Moritz_analysis_cecog/cecog_output'
 
 # settings for scripts
 baseScriptDir = '/g/mitocheck/Thomas/data/Moritz_analysis_cecog/scripts'
-scriptPrefix = 'LAMINLDA'
+scriptPrefix = 'NEWSECCLASSIFIER'
 
 # settingsfile
 #settingsFilename = '/g/mitocheck/Thomas/data/Moritz_analysis_cecog/cecog_settings/settings2011-09-26.conf'
-settingsFilename = '/g/mitocheck/Thomas/data/Moritz_analysis_cecog/cecog_settings/settings2011-10-28.conf'
+settingsFilename = '/g/mitocheck/Thomas/data/Moritz_analysis_cecog/cecog_settings/settings2011-11-07.conf'
 
 # plates=None means that all plates found in baseInDir are going to be processed.
 # plates = None #['plate1_2_006']

@@ -8,6 +8,71 @@ import os, sys, time, re
 
 import colors
 
+from collections import OrderedDict
+
+class Barplot(object):
+
+    # dctData is an ordered dictionary (OrderedDict),
+    # each entry is a list of values.
+    def prepareDataForSingleBarplot(self, dctData):
+        bartitles = dctData.keys()
+        datavec = [numpy.mean(dctData[x]) for x in bartitles]
+        errorvec = [numpy.std(dctData[x]) for x in bartitles]
+        prep = {
+                'bartitles': bartitles,
+                'datavec': datavec,
+                'errorvec': errorvec,
+                }
+        return prep
+
+    def singleBarplot(self, datavec, filename,
+                      color=None, errorvec=None,
+                      width=0.7, bartitles=None,
+                      title = 'Barplot', xlab='x', ylab='y',
+                      xlim=None, ylim=None):
+
+        nb_bars = len(datavec)
+        ind = numpy.array(range(nb_bars))
+
+        if bartitles is None:
+            bartitles = ind
+
+        # new figure
+        fig = plt.figure(1)
+        ax = plt.subplot(1,1,1)
+
+        if color is None:
+            color = (0.8, 0.05, 0.35)
+
+        rects = plt.bar(ind, datavec, width=width, color=color,
+                        yerr=errorvec)
+        if xlim is None:
+            xmin = min(ind)
+            xmax = max(ind)
+            xlim = (xmin - (xmax-xmin) * 0.05,
+                    xmax + (xmax-xmin) * (0.05 + 1.0 / nb_bars) )
+
+        if ylim is None:
+            ymin = 0 #min(datavec)
+            ymax = max(datavec)
+            ylim = (ymin, ymax + (ymax - ymin) * 0.05)
+
+        axis = (xlim[0], xlim[1], ylim[0], ylim[1])
+        plt.axis(axis)
+
+        plt.xticks(ind+.5*width, bartitles, rotation="vertical",
+                   fontsize='small', ha='center')
+        plt.title(title)
+        plt.xlabel(xlab)
+        plt.ylabel(ylab)
+
+        # write and close
+        plt.savefig(filename)
+        plt.close(1)
+
+        return
+
+
 class Histogram(object):
     def __call__(self, datamatrix, filename,
                  colorvec=None, alpha=0.8,

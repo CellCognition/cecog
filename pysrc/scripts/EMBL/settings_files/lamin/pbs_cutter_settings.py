@@ -21,7 +21,7 @@ plate_regex = re.compile('^plate')
 
 baseScriptDir = os.path.join(base_analysis_dir, 'scripts')
 track_data_dir = os.path.join(base_analysis_dir, 'track_data')
-scriptPrefix = 'LaminCutter'
+scriptPrefix = 'RIBBON'
 
 additional_attributes = {
                          'raw_image_path': '"%s"' % raw_image_path,
@@ -58,6 +58,8 @@ minutes = 0
 ncpus = 1
 mem = 7
 jobSize = 1
+
+processWholePlates = False
 
 # folders to be generated
 lstFolders = [pbsOutDir, pbsErrDir, baseScriptDir,

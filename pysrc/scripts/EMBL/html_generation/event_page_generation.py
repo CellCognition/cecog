@@ -5,12 +5,7 @@ from collections import OrderedDict
 
 from scripts.EMBL.settings import Settings
 
-class ValueCounter(object):
-    def __init__(self, value):
-        self.value = value
-    def __call__(self, vec):
-        res = vec.count(self.value)
-        return res
+from scripts.EMBL.utilities import *
 
 
 class HTMLGenerator(object):
@@ -24,6 +19,7 @@ class HTMLGenerator(object):
         if not os.path.exists(self.oSettings.htmlDir):
             print 'making %s' % self.oSettings.htmlDir
             os.makedirs(self.oSettings.htmlDir)
+        self.PLOT_HEIGHT = 202
 
     def getGraphFilenames(self, baseDir, plate, pos, feat_regex=None):
         if feat_regex is None:
@@ -65,7 +61,14 @@ class HTMLGenerator(object):
         for track in lstTracks:
             res[track] = {}
             for feature, proc_tuple in self.oSettings.value_extraction.iteritems():
-                res[track][feature] = proc_tuple[0](full_track_data[plate][pos][track][proc_tuple[1]][proc_tuple[2]][proc_tuple[3]])
+                if len(proc_tuple) == 1:
+                    res[track][feature] = full_track_data[plate][pos][track][proc_tuple[0]]
+                elif len(proc_tuple) == 4:
+                    res[track][feature] = proc_tuple[0](full_track_data[plate][pos][track][proc_tuple[1]][proc_tuple[2]][proc_tuple[3]])
+                elif len(proc_tuple) == 7:
+                    res[track][feature] = proc_tuple[0](full_track_data[plate][pos][track][proc_tuple[1]][proc_tuple[2]][proc_tuple[3]],
+                                                        full_track_data[plate][pos][track][proc_tuple[4]][proc_tuple[5]][proc_tuple[6]])
+
         return res
 
 
@@ -92,6 +95,8 @@ class HTMLGenerator(object):
         # the columns of the html page
         plot_keys = self.oSettings.html_plot_col_title.keys()
         value_keys = self.oSettings.value_extraction.keys()
+        print plot_keys
+        print value_keys
 
         # plots
         dctRelSingleTrackPlots = {}
@@ -182,7 +187,7 @@ class HTMLGenerator(object):
       <td align="left" valign="center" nowrap> <font size=3> %f </td>""" % trackAttributes[track][key]
             for key in plot_keys:
                 strRow += """
-      <td align="center"><img src="%s" border="0" height=202></td>""" % dctRelSingleTrackPlots[key][track]
+      <td align="center"><img src="%s" border="0" height=%i></td>""" % (dctRelSingleTrackPlots[key][track], self.PLOT_HEIGHT)
 
             strRow += """
       <td align="center"><img src="%s" border="0"></td>""" % dctRelFilenames[track]

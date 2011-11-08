@@ -5,6 +5,8 @@ import os, sys, re, time, pickle
 
 from optparse import OptionParser
 
+from collections import OrderedDict
+
 class Cutter(object):
 
     def __init__(self, imoutDir, width=50, img_container_regex=None):
@@ -35,6 +37,8 @@ class Cutter(object):
     def __call__(self, raw_img_dir, plate, track_data_filename,
                  positions=None, skip_done=True, post_analysis_settings_name=None,
                  img_container_filename=None):
+
+        startTime = time.time()
 
         if not os.path.isfile(track_data_filename):
             if not post_analysis_settings_name is None:
@@ -101,7 +105,7 @@ class Cutter(object):
 
         total = len(positions)
         worked = len(not_worked) - total
-
+        diffTime = time.time() - startTime
         print 'processed %i out of %i positions' % (worked, total)
         print 'elapsed time: %02i:%02i:%02i' % ((diffTime/3600), ((diffTime%3600)/60), (diffTime%60))
         print 'DONE!'

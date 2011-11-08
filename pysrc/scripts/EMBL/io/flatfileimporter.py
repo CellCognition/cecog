@@ -1,5 +1,9 @@
 import os, sys, time, re
+
+from scripts.EMBL.utilities import *
 from scripts.EMBL.settings import Settings
+
+from collections import OrderedDict
 
 class FlatFileImporter(object):
 
@@ -199,7 +203,7 @@ class EventDescriptionImporter(FlatFileImporter):
         self.pos_regex = self.oSettings.pos_regex
 
         # features__PA01_01__T00010__O0213__B01__CSecondary__Rpropagate.txt
-        self.channel_region_regex = re.compile('C(?P<Channel>.+)__R(?P<Region>.+)')
+        self.channel_region_regex = re.compile('__C(?P<Channel>.+)__R(?P<Region>.+)')
         self.common_entries = [
                                'Frame',
                                'Timestamp',
@@ -316,6 +320,7 @@ class EventDescriptionImporter(FlatFileImporter):
                                      'statistics', 'events')
             impdata[pos] = {}
             cr_filenames = self.getFilenamesForChannelsAndRegions(posfolder)
+
 
             for ch, r in cr_filenames.keys():
                 filenames = sorted(cr_filenames[(ch, r)])

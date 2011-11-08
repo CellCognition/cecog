@@ -1,6 +1,7 @@
 import os, re, time, sys
 from optparse import OptionParser
 
+from collections import OrderedDict
 
 from scripts.EMBL.settings import Settings
 
@@ -121,10 +122,28 @@ cd %s
                             os.listdir(self.oBatchSettings.raw_image_path))
 
         dctExperiments = {}
+        total_job_count = 0
         for plate in plates:
-            platedir = os.path.join(self.oBatchSettings.base_analysis_dir, 'analyzed')
-            dctExperiments[plate] = filter(lambda x: os.path.isdir(os.path.join(platedir, x)),
-                                           os.listdir(platedir) )
+            platedir = os.path.join(self.oBatchSettings.base_analysis_dir, 'cecog_output',
+                                    plate, 'analyzed')
+            dctExperiments[plate] = sorted(filter(lambda x: os.path.isdir(os.path.join(platedir, x)),
+                                                  os.listdir(platedir) ))
+            total_job_count += len(dctExperiments[plate])
+
+        dctJobs = {1: []}
+        i = 1
+        for plate in plates:
+            if len(dctJobs[i]) > 0:
+                i += 1
+                dctJobs[i] = []
+            nbpos = len(dctExperiments[plate])
+            for k in range(nbpos):
+                dctJobs[i].append((plate, dctExperiments[plate][k]))
+                if i % self.oBatchSettings.jobSize == 0 and k < nbpos - 1:
+                    i += 1
+                    dctJobs[i] = []
+
+        print dctJobs
 
         # the path command is the first command to be executed in each single job
         # script. This is practical for setting environment variables,
@@ -146,28 +165,32 @@ cd %s
             for attribute, value in self.oBatchSettings.additional_attributes.iteritems():
                 additional_options += ' --%s %s' % (attribute, str(value))
 
-                # loop: job array scripts
-        for plate in plates:
-            jobCount += 1
+        # loop: job array scripts
+        keys = sorted(dctJobs.keys())
+        jobCount = len(keys)
+        for key in keys:
+            #jobCount += 1
 
-            track_data_filename = os.path.join(self.oBatchSettings.track_data_dir,
-                                               'track_data_%s.pickle' % plate)
-
-            # command to be executed on the cluster
-            cmd = """%s %s --plate %s --track_data_filename %s %s"""
-            cmd %= (
-                    self.oBatchSettings.pythonBinary,
-                    self.oBatchSettings.batchScript,
-                    plate,
-                    track_data_filename,
-                    additional_options
-                    )
-
-            # this is now written to a script file (simple text file)
             # the script file is called ltarray<x>.sh, where x is 1, 2, 3, 4, ... and corresponds to the job index.
-            script_name = os.path.join(self.oBatchSettings.baseScriptDir, '%s%i.sh' % (self.oBatchSettings.scriptPrefix, jobCount))
-            script_file = file(script_name, "w")
-            script_file.write(head + cmd)
+            script_name = os.path.join(self.oBatchSettings.baseScriptDir, '%s%i.sh' % (self.oBatchSettings.scriptPrefix, key))
+            script_file = open(script_name, "w")
+
+            for plate, pos in dctJobs[key]:
+                track_data_filename = os.path.join(self.oBatchSettings.track_data_dir,
+                                                   'track_data_%s_%s.pickle' % (plate, pos))
+
+                # command to be executed on the cluster
+                cmd = """%s %s --plate %s --positions %s --track_data_filename %s %s"""
+                cmd %= (
+                        self.oBatchSettings.pythonBinary,
+                        self.oBatchSettings.batchScript,
+                        plate,
+                        pos,
+                        track_data_filename,
+                        additional_options
+                        )
+
+                script_file.write(head + cmd)
             script_file.close()
 
             # make the script executable (without this, the cluster node cannot call it)
@@ -226,5 +249,8 @@ if __name__ ==  "__main__":
 
     oSettings = Settings(os.path.abspath(options.batch_configuration_filename), dctGlobals=globals())
     bp = BatchProcessor(oSettings)
-    bp.exportPBSJobArray()
+    if oSettings.processWholePlates:
+        bp.exportPBSJobArray()
+    else:
+        bp.exportPBSJobArrayNew()
 

@@ -2,7 +2,13 @@ import os, sys, time, re, pickle
 
 from optparse import OptionParser
 
-from scripts.EMBL.projects.lamin_analysis import FeatureProjectionAnalysis
+from scripts.EMBL.projects.lamin_analysis import *
+from scripts.EMBL.projects.chromosome_condensation import *
+from scripts.EMBL.projects.lamin_analysis import *
+
+
+#export LD_LIBRARY_PATH=/g/software/linux/pack/libboostpython-1.46.1/lib:/g/software/linux/pack/vigra-1.7.1/lib:/g/software/linux/pack/tiff-3.8.1/lib:/g/software/linux/pack/libjpeg-8/lib:/g/software/linux/pack/libpng-1.4.5/lib:/g/software/linux/pack/fftw-3.2.2/lib:/g/software/linux/pack/hdf5-1.8.4/lib:/g/software/linux/pack/szlib-2.1/lib
+#export PYTHONPATH=/g/software/linux/pack/cellcognition-1.2.4/SRC/cecog_git/pysrc
 
 if __name__ ==  "__main__":
 
@@ -31,12 +37,12 @@ and the generated single cell plots. The scripts just links existing information
     if plot_generation is None:
         plot_generation = False
 
-    fpa = FeatureProjectionAnalysis(options.settings_file)
+    la = LaminAnalysis(options.settings_file)
 
     # plot generation
     if plot_generation:
-        fpa.batchPlotGeneration()
+        la.batchPlotGeneration()
 
     # make HTML pages
-    fpa.makeHTMLDataForPlate()
+    la.batchHTMLPageGeneration()
 

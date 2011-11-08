@@ -1,6 +1,15 @@
 # remote: baseDir = '/Volumes/mitocheck/Thomas/data/JKH/cecog_output'
 
-settings_dir = os.path.join('..', 'settings_files', 'lamin')
+#settings_dir = os.path.join('..', 'settings_files', 'lamin')
+#settings_dir = os.path.abspath(__file__)
+
+#print ' *** INSPECT RESULTS: ', inspect.getfile( inspect.currentframe() )
+
+#print ' *** settings directory ', settings_dir
+
+import inspect
+
+settings_dir = os.path.abspath(os.path.dirname(inspect.getfile( inspect.currentframe() )))
 
 if os.path.exists(os.path.join(settings_dir, 'CLUSTER')):
     print 'CLUSTER VERSION'
@@ -53,6 +62,8 @@ import_entries_event = {
 
                         'secondary': {
                                       'propagate': 'all',
+                                      #'propagate': ['tracking__center_x', 'tracking__center_y',
+                                      #              'class__name', 'class__label', 'class__probability'],
                                       },
                         'tertiary': {
                                      'inside': ['feature__n2_avg'],
@@ -62,7 +73,9 @@ import_entries_event = {
                         }
 
 single_cell_plot_settings = {
-                             'featureData': [('secondary', 'propagate', 'lda_projection')],
+                             'featureData': [#('secondary', 'propagate', 'lda_projection'),
+                                             ('tertiary', 'diff_out_in', 'feature__avg_norm'),
+                                             ],
                              'classificationData': [('primary', 'primary'),
                                                     ('secondary', 'propagate')]
                              }
@@ -115,17 +128,12 @@ legend_titles = {
 obj_regex = re.compile('__T(?P<Time>\d+)__O(?P<Object>\d+)')
 #pos_regex = re.compile('W(?P<Well>\d+)--P(?P<Position>\d+)')
 pos_regex = re.compile('(?P<Position>\d+)')
+subpos_regex = re.compile('(?P<Well>[A-Za-z0-9]+)_(?P<Subwell>[0-9]+)')
 track_id_regex = re.compile('T(?P<Time>\d+)__O(?P<Object>\d+)')
 remove_empty_fields = False
 
 ###############################################################
 # FEATURE PROJECTION
-
-#classifier_basedir = '/Users/twalter/data/Moritz Classifier'
-
-#plotDir = '/Users/twalter/data/LDA_study/LaminB'
-
-#makefolders = []
 
 trainingset_filename = os.path.join(outDir, 'cecog_classifiers/01102011_H2B-LB1_TRFX_LB1/data/features.arff')
 
@@ -161,11 +169,20 @@ colordict = {
 
 # HTML SETTINGS
 value_extraction = OrderedDict([
-                                ('len(disass)', (ValueCounter('disassembling'), 'secondary', 'propagate', 'class__name')),
+                                ('count(disass)', (ValueCounter('disassembling'), 'secondary', 'propagate', 'class__name')),
+                                ('dis count > meta', (ConditionalValueCounter('disassembling', 'meta'),
+                                                      'secondary', 'propagate', 'class__name',
+                                                      'primary', 'primary', 'class__name')),
+                                ('dis count > dis', (ConditionalValueCounter('disassembling', 'disassembled'),
+                                                     'secondary', 'propagate', 'class__name',
+                                                     'secondary', 'propagate', 'class__name')),
+
+                                ('expr', ['expression_level'])
                                 ])
 
 html_plot_col_title = OrderedDict([
-                                   ('lda_projection', 'LDA'),
+                                   #('lda_projection', 'LDA'),
+                                   ('avg_norm', 'Transloc'),
                                    ])
 
 #value_extraction = {

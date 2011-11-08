@@ -133,6 +133,7 @@ class TimeseriesPlotter(object):
         if colorvec is None and not color_code is None and not classificationvec is None:
             colorvec = [color_code[x] for x in classificationvec]
 
+        print colorvec
         if not colorvec is None:
 
             # get y-coordinate/modify axis
@@ -150,6 +151,7 @@ class TimeseriesPlotter(object):
             a = numpy.floor(width_points  / xrange)
             if a > 0.1 * height_points:
                 a = numpy.floor(0.1 * height_points)
+            print width_points, a
 
             # make plot
             plt.scatter(timevec, [y_coord for i in timevec],
@@ -260,9 +262,17 @@ class TimeseriesPlotter(object):
             #          current_axis[2] - 0.1 * yrange, current_axis[3]))
 
             small_delta = 0.5
-            a = numpy.floor(width_points  / xrange)
+            a = 0.8 * numpy.floor(width_points  / xrange)
             if a > 0.1 * height_points:
                 a = numpy.floor(0.1 * height_points)
+
+#            print 'pos.width: ', pos.width
+#            print 'fig.get_figwidth: ', fig.get_figwidth()
+#            print 'fig.get_dpi: ', fig.get_dpi()
+#            print 'wdith_points: ', width_points
+#            print 'xrange: ', xrange
+#            print 'a: ', a
+#            print 'fig.get_size_inches: ', fig.get_size_inches()
 
             a_yc = a / height_points * yrange
 
@@ -297,12 +307,19 @@ class TimeseriesPlotter(object):
                              markerfacecolor=col, markeredgecolor='none',
                              markersize=a, clip_on=False, label=label,
                              )
-                plt.text(timevec[0] - 2, y_coord, str(cur_row),
-                         fontsize=9,
-                         horizontalalignment='left', verticalalignment='center',
-                         )
+
+                if not classification_legends is None:
+                    #############################################
+                    # PLOT ANNOTATION (only if there is a legend)
+                    plt.text(timevec[0] - 2, y_coord, str(cur_row),
+                             fontsize=9,
+                             horizontalalignment='left', verticalalignment='center',
+                             )
+
                 cur_row += 1
 
+            ##########
+            # LEGEND
             if not classification_legends is None:
 
                 # increase figure size
@@ -347,7 +364,7 @@ class TimeseriesPlotter(object):
                                                      prop=prop,
                                                      numpoints=1,
                                                      scatterpoints=1,
-                                                     markerscale=1.0,
+                                                     markerscale=0.75,
                                                      ))
                     ind += 1
 
@@ -357,7 +374,7 @@ class TimeseriesPlotter(object):
                     plt.gca().add_artist(leg)
 
         # write and close
-        fig.savefig(filename)
+        fig.savefig(filename, dpi=fig.get_dpi())
         plt.close(1)
 
         return
