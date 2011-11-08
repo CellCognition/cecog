@@ -285,7 +285,7 @@ class TrackletBrowser(QtGui.QWidget):
         self.btn_selectAll.clicked.connect(self.selectAll)
         self.view_hud_btn_layout.addWidget(self.btn_selectAll)
         
-        self.btn_selectTransition = QtGui.QPushButton('Select Transition 0,1')
+        self.btn_selectTransition = QtGui.QPushButton('Select Transition 1,2')
         self.btn_selectTransition.clicked.connect(self.selectTransition)
         self.view_hud_btn_layout.addWidget(self.btn_selectTransition)
         
@@ -300,7 +300,7 @@ class TrackletBrowser(QtGui.QWidget):
         self.cmb_align.currentIndexChanged.connect(self.cb_change_vertical_alignment)   
         
         self.cmb_object_type = QtGui.QComboBox()
-        self.cmb_object_type.addItems(['event', 'primary__primary'])
+        self.cmb_object_type.addItems(['event', 'primary__primary','secondary__expanded'])
         self.cmb_object_type.currentIndexChanged[str].connect(self.change_object_type) 
              
         self.view_hud_btn_layout.addWidget(self.cmb_align)
@@ -430,8 +430,7 @@ class TrackletBrowser(QtGui.QWidget):
     def reset(self):
         for t in self._root_items:
             t.resetPos()
-               
-            
+                    
 class GraphicsObjectItemBase(QtGui.QGraphicsItemGroup):
     def __init__(self, parent):
         QtGui.QGraphicsItemGroup.__init__(self, parent)
@@ -444,8 +443,6 @@ class GraphicsObjectItemBase(QtGui.QGraphicsItemGroup):
     def moveToColumn(self, col):
         self.column = col
         self.setPos(col * self.width, self.row * self.height)
-      
-        
     
 class GraphicsObjectItem(GraphicsObjectItemBase):
     def __init__(self, object_item, parent=None):
@@ -463,9 +460,16 @@ class EventGraphicsItem(GraphicsObjectItem):
             g_sub_item.moveToColumn(col)
             self.sub_items.append(g_sub_item)
             self.addToGroup(g_sub_item)
+            
         self.row = object_item.id
         self.column = 0
         self.height = self.sub_items[0].height
+        self.item_length = self.sub_items[0].width
+        
+        f_item = self.make_feature_plot()
+        self.addToGroup(f_item)
+        
+        
     
     def showGalleryImage(self, state):
         for sub_item in self.sub_items:
@@ -479,12 +483,62 @@ class EventGraphicsItem(GraphicsObjectItem):
     @property
     def width(self):
         return self.sub_items[0].width#sum([x.width for x in self.sub_items])
+    
+    def make_feature_plot(self, feature_idx = 222):
+        features = self.object_item.item_features[:, feature_idx]
+        min_, max_ = self.object_item.item_feature_min_max(feature_idx)
+
+        self.item_cnt = features.shape[0]
+        width = self.item_length*self.item_cnt
+        
+        pixmap = QtGui.QPixmap(width, self.height)
+        
+        pixmap.fill(QtCore.Qt.transparent)
+        painter = QtGui.QPainter()
+  
+        painter.begin(pixmap)
+        line_pen = QtGui.QPen(QtGui.QColor('#FFFFFF'))
+        line_pen.setWidth(2)
+        painter.setPen(line_pen)
+        painter.drawLine(0, 0, self.width, 0)
+        
+        features = ((1 - (features-min_)/(max_ - min_)) * self.height).astype(numpy.uint8)
+        
+        for col, (f1, f2, obj) in enumerate(zip(features, numpy.roll(features, -1), self.object_item.children())):
+            color_ = QtGui.QColor(obj.class_color)
+            color_.setAlpha(188)
+            line_pen = QtGui.QPen(color_)
+            line_pen.setWidth(3)
+            painter.setPen(line_pen)
+            painter.drawLine(col*self.item_length, f1, 
+                                 (col+1)*self.item_length -1, f2)
+            
+        painter.end()
+        
+        g_item = QtGui.QGraphicsPixmapItem(pixmap)
+        return g_item
+    
+
         
              
 class GraphicsTerminalObjectItem(GraphicsObjectItemBase):
     def __init__(self, object_item, parent=None):
         GraphicsObjectItemBase.__init__(self, parent=None)
         self.object_item = object_item
+        
+        
+class CellGraphicsItemSettings(object):
+    def __init__(self, name):
+        self.name = name
+        self.enabled = True
+        self.show_gallery_image = True
+        self.gallery_image_min = 0
+        self.gallery_image_max = 255
+        self.show_contours = True
+        self.show_class_bar = True
+        
+        self.color = 0
+        
         
 class CellGraphicsItem(GraphicsTerminalObjectItem):
     PREDICTION_BAR_HEIGHT = 4
@@ -496,6 +550,8 @@ class CellGraphicsItem(GraphicsTerminalObjectItem):
     
     def __init__(self, object_item, parent=None):
         GraphicsTerminalObjectItem.__init__(self, object_item, parent=None)
+        
+        
         gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(object_item.image)))
         gallery_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
         
@@ -511,7 +567,7 @@ class CellGraphicsItem(GraphicsTerminalObjectItem):
         contour_item.setAcceptHoverEvents(True)
         
         self.addToGroup(gallery_item)
-        self.addToGroup(bar_item)
+        #self.addToGroup(bar_item)
         self.addToGroup(contour_item)
         
         self.bar_item = bar_item
@@ -532,6 +588,8 @@ class CellGraphicsItem(GraphicsTerminalObjectItem):
             
     def showContours(self, state):
         self.contour_item.setVisible(state)
+        
+
         
 class GraphicsLayouterBase(QtGui.QWidget):
     properties = {}
@@ -596,18 +654,18 @@ class CellTerminalObjectItemMixin():
     def image(self):
         if not hasattr(self, '_image'):
             channel_idx = self.channel_idx
-            image_own = self._get_image(self.time, self.local_idx, channel_idx)
+            self._image = self._get_image(self.time, self.local_idx, channel_idx)
             
-            sib = self.get_siblings()
-            if sib is not None:
-                image_sib = sib.image
-                new_shape = (self.BOUNDING_BOX_SIZE,)*2 + (3,)
-                image = numpy.zeros(new_shape, dtype=numpy.uint8)
-                image[0:image_own.shape[0],0:image_own.shape[1],0] = image_own
-                image[0:image_sib.shape[0],0:image_sib.shape[1],1] = image_sib
-            else:
-                image = image_own
-            self._image = image
+#            sib = self.get_siblings()
+#            if sib is not None:
+#                image_sib = sib.image
+#                new_shape = (self.BOUNDING_BOX_SIZE,)*2 + (3,)
+#                image = numpy.zeros(new_shape, dtype=numpy.uint8)
+#                image[0:image_own.shape[0],0:image_own.shape[1],0] = image_own
+#                image[0:image_sib.shape[0],0:image_sib.shape[1],1] = image_sib
+#            else:
+#                image = image_own
+#            self._image = image
         
         return self._image 
     
@@ -726,8 +784,7 @@ class EventObjectItemMixin():
 #            if isinstance(self, feature.type):
 #                self[feature.name] =  feature.compute(self.children())
 #                
-#        self['prediction'] = [x.predicted_class for x in self.children()]
-        pass
+        self['prediction'] = [x.predicted_class for x in self.children()]
         
     @property
     def item_features(self):
@@ -739,7 +796,33 @@ class EventObjectItemMixin():
         
     @property
     def item_feature_names(self):
-        return self.get_plate().object_feature[self.get_position.sub_objects[self.name]]
+        return self.get_plate().object_feature[self.get_position().sub_objects[self.name]]
+    
+    def item_feature_min_max(self, feature_idx):
+        if not hasattr(self.parent, 'feature_min_max'):
+            self.parent.feature_min_max = {}
+        
+        min_ = 1000000
+        max_ = - 1000000
+        if feature_idx not in self.parent.feature_min_max.keys():
+            for p in self.parent:
+                tmin = p.item_features[:,feature_idx].min()
+                tmax = p.item_features[:,feature_idx].max()
+                
+                if tmin < min_:
+                    min_ = tmin 
+                    
+                if tmax > max_:
+                    max_ = tmax 
+                     
+            self.parent.feature_min_max[feature_idx] = min_, max_
+            
+        return self.parent.feature_min_max[feature_idx]
+            
+            
+        
+        
+        
         
 MixIn(TerminalObjectItem, CellTerminalObjectItemMixin, True)
 MixIn(ObjectItem, EventObjectItemMixin, True)
@@ -813,7 +896,7 @@ def main():
         file = file[0][1]
     else:
 #        file = r'C:\Users\sommerc\data\Chromatin-Microtubles\Analysis\H2b_aTub_MD20x_exp911_2_channels_nozip\dump\_all_positions.hdf5'
-        file = r'C:\Users\sommerc\data\Chromatin-Microtubles\Analysis\H2b_aTub_MD20x_exp911_2_channels_nozip\dump_save\_all_positions.hdf5'
+        file = r'C:\Users\sommerc\data\Chromatin-Microtubles\Analysis\H2b_aTub_MD20x_exp911_2_channels_nozip\dump_save\two_positions.hdf5'
         
     mainwindow = MainWindow(file)
     
