@@ -23,6 +23,10 @@ sip.setapi('QUrl', 2)
 from PyQt4 import QtGui, QtCore
 import zlib
 import base64
+from scipy.cluster.vq import kmeans
+from matplotlib import mlab
+from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -314,6 +318,14 @@ class TrackletBrowser(QtGui.QWidget):
         
         self.view.setDragMode(self.view.ScrollHandDrag)
         
+    def export_to_file(self, filename):
+        rect = self.scene.itemsBoundingRect()
+        image = QtGui.QImage(rect.width(), rect.height(), QtGui.QImage.Format_RGB32)
+        painter = QtGui.QPainter(image);
+        self.scene.setSceneRect(rect)
+        self.scene.render(painter);
+        painter.end()   
+        image.save(filename);
         
         
     def show_position(self, position_key, object_name='event'):
@@ -795,6 +807,14 @@ class EventObjectItemMixin():
             return None
         
     @property
+    def item_colors(self):
+        children = self.children()
+        if children is not None:
+            return [c.class_color for c in children]
+        else:
+            return None
+        
+    @property
     def item_feature_names(self):
         return self.get_plate().object_feature[self.get_position().sub_objects[self.name]]
     
@@ -842,6 +862,17 @@ class MainWindow(QtGui.QMainWindow):
         
         file_menu = self.menuBar().addMenu('&File')
         view_menu = self.menuBar().addMenu('&View')
+        export_menu = self.menuBar().addMenu('&Export')
+        plugin_menu = self.menuBar().addMenu('&Plugin')
+        
+        pca_comopute = QtGui.QAction('Export scene to file', self)
+        pca_comopute.triggered.connect(self.cb_compute_pca)
+        plugin_menu.addAction(pca_comopute)
+        
+        exportSceneAction = QtGui.QAction('Export scene to file', self)
+        exportSceneAction.triggered.connect(self.cb_export_scene_to_file)
+        export_menu.addAction(exportSceneAction)
+        
         file_menu.addAction(self.mnu_open)
         view_menu.addAction(self.mnu_change_view)
         
@@ -860,6 +891,19 @@ class MainWindow(QtGui.QMainWindow):
             self.tracklet_widget.open_file(filename)
             
             
+    def cb_export_scene_to_file(self):
+        filename = QtGui.QFileDialog.getSaveFileName(parent=self, caption='Select image file...')
+        if filename:
+            self.tracklet_widget.export_to_file(filename)
+            
+    def cb_compute_pca(self):
+        print " *** called ***"
+        self._temp_pca = EventPCAPlugin(self.tracklet_widget.data_provider)
+        self.setGeometry(100,100,1000,1000)
+        self._temp_pca.show()
+        self._temp_pca.raise_()
+        
+        
             
     def closeEvent(self, cevent):
         try:
@@ -888,6 +932,73 @@ class MainWindow(QtGui.QMainWindow):
         filename = str(QtGui.QFileDialog.getOpenFileName(self, 'Open hdf5 file', '.', 'hdf5 files (*.h5  *.hdf5)'))  
         if filename:                                              
             self.tracklet_widget.open_file(filename)  
+            
+            
+class EventPCAPlugin(FigureCanvas):
+    def __init__(self, data_provider, parent=None, width=8, height=8):
+        self.data_provider = data_provider
+        
+        self.fig = Figure(figsize=(width, height))
+        
+
+#        self.axes.hold(False)
+
+        self._run_pca()
+
+        #
+        FigureCanvas.__init__(self, self.fig)
+        self.setParent(parent)
+
+        FigureCanvas.setSizePolicy(self,
+                                   QtGui.QSizePolicy.Expanding,
+                                   QtGui.QSizePolicy.Expanding)
+        FigureCanvas.updateGeometry(self)
+        
+ 
+    def _run_pca(self):
+        self.feature_matrix = []
+        self.item_colors = []
+        for position_key in self.data_provider.positions:
+            position = self.data_provider[position_key]
+            events = position.get_objects('event')
+            for t in events.iter_random(500):
+                item_features = t.item_features 
+                if item_features is not None:
+                    self.feature_matrix.append(item_features)
+                    
+                item_colors = t.item_colors 
+                if item_colors is not None:
+                    self.item_colors.extend(item_colors)
+    
+        self.feature_matrix = numpy.concatenate(self.feature_matrix)
+            
+        nan_index = ~numpy.isnan(self.feature_matrix).any(1)
+        self.feature_matrix = self.feature_matrix[nan_index,:]
+        self.item_colors = numpy.asarray(self.item_colors)[nan_index]
+        print self.feature_matrix.shape, self.item_colors.shape
+        
+        temp_pca = mlab.PCA(self.feature_matrix)
+        result = temp_pca.project(self.feature_matrix)[:,:4]
+        
+        for cnt, (i,j) in enumerate([(1,2), (1,3), (2,3), (1,4)]):
+            self.axes = self.fig.add_subplot(221+cnt)
+            
+            
+            means = kmeans(result[:,[i-1,j-1]], 7)[0]
+            
+            self.axes.scatter(result[:,i-1], result[:,j-1], c=self.item_colors)
+            self.axes.plot(means[:,0], means[:,1], 'or', markeredgecolor='r', markerfacecolor='None', markersize=12, markeredgewidth=3)
+            self.axes.set_xlabel('Principle component %d'%i)
+            self.axes.set_ylabel('Principle component %d'%j)
+            self.axes.set_title('Events in PCA Subspace %d' % (cnt+1))
+
+            
+            
+            
+            
+            
+            
+        
         
 def main():
     app = QtGui.QApplication(sys.argv) 
@@ -896,7 +1007,7 @@ def main():
         file = file[0][1]
     else:
 #        file = r'C:\Users\sommerc\data\Chromatin-Microtubles\Analysis\H2b_aTub_MD20x_exp911_2_channels_nozip\dump\_all_positions.hdf5'
-        file = r'C:\Users\sommerc\data\Chromatin-Microtubles\Analysis\H2b_aTub_MD20x_exp911_2_channels_nozip\dump_save\two_positions.hdf5'
+        file = r'C:\Users\sommerc\data\Chromatin-Microtubles\Analysis\H2b_aTub_MD20x_exp911_2_channels_nozip\dump_save\_all_positions.hdf5'
         
     mainwindow = MainWindow(file)
     
