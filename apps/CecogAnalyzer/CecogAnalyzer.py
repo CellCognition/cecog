@@ -23,6 +23,7 @@ import sys, \
        time, \
        gc
 import cPickle as pickle
+from multiprocessing import freeze_support
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -745,6 +746,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 # main:
 #
 if __name__ == "__main__":
+    freeze_support()
     import time
     from pdk.fileutils import safe_mkdirs
     from cecog.util.util import get_appdata_path
