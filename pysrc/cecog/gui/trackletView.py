@@ -9,6 +9,7 @@
                  See trunk/AUTHORS.txt for author contributions.
 """
 import time as timeit
+from twisted.python.components import __init__
 __all__ = []
 
 #-------------------------------------------------------------------------------
@@ -220,7 +221,10 @@ class TrackletThumbnailList(QtGui.QWidget):
         self.style().drawPrimitive(QtGui.QStyle.PE_Widget, opt, p, self)
 
 class TrackletBrowser(QtGui.QWidget):
-    css = '''QPushButton, QComboBox {background-color: transparent;
+    css = '''
+                QMenu {color: white;}
+                QAction {color: white;}
+                QPushButton, QComboBox {background-color: black;
                              border-style: outset;
                              border-width: 2px;
                              border-radius: 4px;
@@ -232,13 +236,18 @@ class TrackletBrowser(QtGui.QWidget):
                 QPushButton :pressed {
                              background-color: rgb(50, 50, 50);
                              border-style: inset;}
-                 QScrollBar:horizontal {
-                     border: 2px solid grey;
-                     background: black;
-                 }
-
-            
-                     '''
+                QScrollBar:horizontal {
+                             border: 2px solid grey;
+                             background: black;}
+                QGroupBox {background-color: transparent;
+                             color: white;
+                             font: italic 12px;
+                             border-radius: 4px;
+                             border-style: dotted;
+                             border-width: 2px;
+                             border-color: #777777;
+                             padding: 6px;}
+            '''
     
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
@@ -260,63 +269,126 @@ class TrackletBrowser(QtGui.QWidget):
         self.thumbnails = None
         
         self.view_hud_layout = QtGui.QHBoxLayout(self.view)
+        self.view_hud_layout.addStretch()
         self.view_hud_btn_layout = QtGui.QVBoxLayout()
         self.view_hud_layout.addLayout(self.view_hud_btn_layout)
         
-        self.btn_sort_randomly = QtGui.QPushButton('Sort random')
-        self.btn_sort_randomly.clicked.connect(self.sortRandomly)
-        self.view_hud_btn_layout.addWidget(self.btn_sort_randomly)
         
-        self.btns_sort = []
-        
-        for tf in trajectory_features:
-            temp = QtGui.QPushButton(tf.name)
-            temp.clicked.connect(lambda state, x=tf.name: self.sortTracksByFeature(x))
-            self.btns_sort.append(temp)
-            self.view_hud_btn_layout.addWidget(temp)
-            
-        self.btn_toggle_contours = QtGui.QPushButton('Toggle contours')
-        self.btn_toggle_contours.setCheckable(True)
-        self.btn_toggle_contours.setChecked(True)
-
-        self.view_hud_btn_layout.addWidget(self.btn_toggle_contours)
-        
-        self.btn_selectTen = QtGui.QPushButton('Select 10')
-        self.btn_selectTen.clicked.connect(self.selectTenRandomTrajectories)
-        self.view_hud_btn_layout.addWidget(self.btn_selectTen)
-        
-        self.btn_selectAll = QtGui.QPushButton('Select All')
-        self.btn_selectAll.clicked.connect(self.selectAll)
-        self.view_hud_btn_layout.addWidget(self.btn_selectAll)
-        
-        self.btn_selectTransition = QtGui.QPushButton('Select Transition 1,2')
-        self.btn_selectTransition.clicked.connect(self.selectTransition)
-        self.view_hud_btn_layout.addWidget(self.btn_selectTransition)
-        
-        self.btn_toggleBars = QtGui.QPushButton('Toggle Bars')
-        self.btn_toggleBars.setCheckable(True)
-        self.btn_toggleBars.setChecked(True)
-        self.btn_toggleBars.toggled.connect(self.showGalleryImage)
-        self.view_hud_btn_layout.addWidget(self.btn_toggleBars)
-        
-        self.cmb_align = QtGui.QComboBox()
-        self.cmb_align.addItems(['Left', 'Absolute time', 'Custom'])
-        self.cmb_align.currentIndexChanged.connect(self.cb_change_vertical_alignment)   
-        
+        # Objects
+        gb2 = QtGui.QGroupBox('Objects')
+        gb2_layout = QtGui.QVBoxLayout()
         self.cmb_object_type = QtGui.QComboBox()
         self.cmb_object_type.addItems(['event', 'primary__primary','secondary__expanded'])
         self.cmb_object_type.currentIndexChanged[str].connect(self.change_object_type) 
-             
-        self.view_hud_btn_layout.addWidget(self.cmb_align)
-        self.view_hud_btn_layout.addWidget(self.cmb_object_type)
+        gb2_layout.addWidget(self.cmb_object_type)
+        gb2.setLayout(gb2_layout)
+        self.view_hud_btn_layout.addWidget(gb2)
+        
+        # Sorting
+        gb1 = QtGui.QGroupBox('Sorting')
+        gb1_layout = QtGui.QVBoxLayout()
+        self.btn_sort_randomly = QtGui.QPushButton('Sort random')
+        self.btn_sort_randomly.clicked.connect(self.sortRandomly)
+        gb1_layout.addWidget(self.btn_sort_randomly)
+        gb1.setLayout(gb1_layout)
+        self.view_hud_btn_layout.addWidget(gb1)
+        
+#        self.btns_sort = []
+#        
+#        for tf in trajectory_features:
+#            temp = QtGui.QPushButton(tf.name)
+#            temp.clicked.connect(lambda state, x=tf.name: self.sortTracksByFeature(x))
+#            self.btns_sort.append(temp)
+#            self.view_hud_btn_layout.addWidget(temp)
+            
+        
+        
+        # Galleries
+        gb2 = QtGui.QGroupBox('Galleries')
+        gb2_layout = QtGui.QVBoxLayout()
+        self.cmb_galleries = QtGui.QComboBox()
+        self.cmb_galleries.addItems(['primary', 'secondary', 'all', 'off'])
+        self.cmb_galleries.currentIndexChanged[str].connect(self.cb_change_gallery_view)   
+        gb2_layout.addWidget(self.cmb_galleries)
+        gb2.setLayout(gb2_layout)
+        self.view_hud_btn_layout.addWidget(gb2)
+        
+        # Contours
+        gb3 = QtGui.QGroupBox('Contours')
+        gb3_layout = QtGui.QVBoxLayout()
+        
+        self.cmb_contours = QtGui.QComboBox()
+        self.cmb_contours.addItems(['primary', 'secondary', 'all', 'off'])
+        self.cmb_contours.currentIndexChanged[str].connect(self.cb_change_contour_view) 
+        gb3_layout.addWidget(self.cmb_contours)
+        gb3.setLayout(gb3_layout)
+        self.view_hud_btn_layout.addWidget(gb3)
+        
+        # Selection
+        gb4 = QtGui.QGroupBox('Select')
+        gb4_layout = QtGui.QVBoxLayout()
+        self.cmb_galleries = QtGui.QComboBox()
+        self.cmb_galleries.addItems(['all', '10', 'transition 1,2'])
+        self.cmb_galleries.currentIndexChanged[str].connect(self.cb_select_trajectories)   
+        gb4_layout.addWidget(self.cmb_galleries)
+        gb4.setLayout(gb4_layout)
+        self.view_hud_btn_layout.addWidget(gb4)
+        
+        # Class Bars
+        gb2 = QtGui.QGroupBox('Bars')
+        gb2_layout = QtGui.QVBoxLayout()
+        
+        self.btn_toggleBars = QtGui.QComboBox()
+        self.btn_toggleBars.addItems(['off', 'top', 'secondary intensity'])
+        self.btn_toggleBars.currentIndexChanged[str].connect(self.cb_select_bar_type)  
+        gb2_layout.addWidget(self.btn_toggleBars)
+        gb2.setLayout(gb2_layout)
+        self.view_hud_btn_layout.addWidget(gb2)
+        
+        # alignment
+        gb2 = QtGui.QGroupBox('Alignment')
+        gb2_layout = QtGui.QVBoxLayout()
+        self.cmb_align = QtGui.QComboBox()
+        self.cmb_align.addItems(['Left', 'Absolute time', 'Custom'])
+        self.cmb_align.currentIndexChanged.connect(self.cb_change_vertical_alignment)   
+        gb2_layout.addWidget(self.cmb_align)
+        gb2.setLayout(gb2_layout)
+        self.view_hud_btn_layout.addWidget(gb2)
         
         self.view_hud_btn_layout.addStretch()
         
-        self.btn_toggle_contours.toggled.connect(self.showContours)
         
-        self.view_hud_layout.addStretch()
         
         self.view.setDragMode(self.view.ScrollHandDrag)
+        
+    def cb_change_gallery_view(self, type):
+        if self._root_items is not None:
+            for ti in self._root_items:
+                ti.set_gallery_view(type)
+            self.update_()
+            
+            
+    def cb_change_contour_view(self, type):
+        if self._root_items is not None:
+            for ti in self._root_items:
+                ti.set_contour_view(type)
+            self.update_()
+            
+    def cb_select_bar_type(self, type):
+        if self._root_items is not None:
+            for ti in self._root_items:
+                ti.set_bar_view(type)
+            self.update_()
+            
+        
+        
+    def cb_select_trajectories(self, type):
+        if type == 'all':
+            self.selectAll()
+        elif type == '10':
+            self.selectTenRandomTrajectories()
+        elif type == 'transition 1,2':
+            self.selectTransition()
         
     def export_to_file(self, filename):
         rect = self.scene.itemsBoundingRect()
@@ -337,7 +409,7 @@ class TrackletBrowser(QtGui.QWidget):
         self._root_items = []
         events = position.get_objects(object_name)
         
-        for event in events.iter_random(500):
+        for event in events.iter(500):
             g_event = event.GraphicsItemType(event)
             g_event.setHandlesChildEvents(False)
             self.scene.addItem(g_event)
@@ -392,12 +464,7 @@ class TrackletBrowser(QtGui.QWidget):
     def update_(self):
         self.GraphicsItemLayouter()
         
-        
-    def showGalleryImage(self, state):
-        for ti in self._root_items:
-            ti.showGalleryImage(state)
-        self.update_()
-            
+     
     def sortTracks(self):   
         for new_row, perm_idx in enumerate(self._permutation):
             self._root_items[perm_idx].moveToRow(new_row)
@@ -462,43 +529,67 @@ class GraphicsObjectItem(GraphicsObjectItemBase):
         self.object_item = object_item
         
     
+    
+    
 class EventGraphicsItem(GraphicsObjectItem):
     def __init__(self, object_item, parent=None):
         GraphicsObjectItem.__init__(self, object_item, parent)
-    
+        
+        self.id = CellGraphicsTextItem()
+        self.id.setHtml("<span style='color:white; font:bold 32px'> %r </span>" % self.object_item.id)
+        
+        self.addToGroup(self.id)
         self.sub_items = []
+        self.sub_items.append(self.id)
         for col, sub_item in enumerate(object_item.children()):
             g_sub_item = sub_item.GraphicsItemType(sub_item, self)
-            g_sub_item.moveToColumn(col)
+            g_sub_item.moveToColumn(col+1)
             self.sub_items.append(g_sub_item)
             self.addToGroup(g_sub_item)
             
         self.row = object_item.id
         self.column = 0
-        self.height = self.sub_items[0].height
-        self.item_length = self.sub_items[0].width
+        self.height = self.sub_items[1].height
+        self.item_length = self.sub_items[1].width
         
-        f_item = self.make_feature_plot()
-        self.addToGroup(f_item)
+        self.bar_feature_item = self.make_feature_plot()
+        self.bar_feature_item.setZValue(4)
+        self.bar_feature_item.setPos(self.sub_items[1].width, 0)
+        self.addToGroup(self.bar_feature_item)
         
+        self.set_bar_view('top')
         
-    
-    def showGalleryImage(self, state):
-        for sub_item in self.sub_items:
-            sub_item.showGalleryImage(state)
-        self.height = self.sub_items[0].height
+    def set_gallery_view(self, type):
+        for o in self.sub_items:
+            o.set_gallery_view(type)
             
-    def showContours(self, state):
-        for sub_item in self.sub_items:
-            sub_item.showContours(state)
+    def set_contour_view(self, type):
+        for o in self.sub_items:
+            o.set_contour_view(type)
+            
+    def set_bar_view(self, type):
+        self.bar_feature_item.setVisible(False)
+        for o in self.sub_items:
+            o.set_bar_view('off')
+            
+        if type == 'top':
+            for o in self.sub_items:
+                o.set_bar_view('top')
+        elif type == 'secondary intensity':
+            self.bar_feature_item.setVisible(True)
+        
+            
+        
+            
+            
             
     @property
     def width(self):
-        return self.sub_items[0].width#sum([x.width for x in self.sub_items])
+        return self.sub_items[1].width#sum([x.width for x in self.sub_items])
     
     def make_feature_plot(self, feature_idx = 222):
-        features = self.object_item.item_features[:, feature_idx]
-        min_, max_ = self.object_item.item_feature_min_max(feature_idx)
+        features = self.object_item.sibling_item_features[:, feature_idx]
+        min_, max_ = self.object_item.sibling_item_feature_min_max(feature_idx)
 
         self.item_cnt = features.shape[0]
         width = self.item_length*self.item_cnt
@@ -509,16 +600,12 @@ class EventGraphicsItem(GraphicsObjectItem):
         painter = QtGui.QPainter()
   
         painter.begin(pixmap)
-        line_pen = QtGui.QPen(QtGui.QColor('#FFFFFF'))
-        line_pen.setWidth(2)
-        painter.setPen(line_pen)
-        painter.drawLine(0, 0, self.width, 0)
+
         
         features = ((1 - (features-min_)/(max_ - min_)) * self.height).astype(numpy.uint8)
         
         for col, (f1, f2, obj) in enumerate(zip(features, numpy.roll(features, -1), self.object_item.children())):
             color_ = QtGui.QColor(obj.class_color)
-            color_.setAlpha(188)
             line_pen = QtGui.QPen(color_)
             line_pen.setWidth(3)
             painter.setPen(line_pen)
@@ -534,10 +621,20 @@ class EventGraphicsItem(GraphicsObjectItem):
         
              
 class GraphicsTerminalObjectItem(GraphicsObjectItemBase):
-    def __init__(self, object_item, parent=None):
+    def __init__(self, text, parent=None):
         GraphicsObjectItemBase.__init__(self, parent=None)
-        self.object_item = object_item
         
+        
+    @property
+    def width(self):
+        return self.object_item.BOUNDING_BOX_SIZE
+        
+    def set_bar_view(self, type):
+        pass
+    def set_contour_view(self, type):
+        pass
+    def set_gallery_view(self, type):
+        pass
         
 class CellGraphicsItemSettings(object):
     def __init__(self, name):
@@ -560,46 +657,117 @@ class CellGraphicsItem(GraphicsTerminalObjectItem):
     def width(self):
         return self.object_item.BOUNDING_BOX_SIZE
     
+    def set_gallery_view(self, type):
+        self.primary_gallery_item.setVisible(False)
+        self.secondary_gallery_item.setVisible(False)
+        self.composed_gallery_item.setVisible(False)
+        self.gallery_view_type = type
+#        if type != 'off':
+#            self.height = self.width + self.PREDICTION_BAR_HEIGHT 
+#        else:
+#            self.height = self.PREDICTION_BAR_HEIGHT
+            
+        if type == 'primary':
+            self.primary_gallery_item.setVisible(True)
+        elif type == 'secondary':
+            self.secondary_gallery_item.setVisible(True)
+        elif type == 'all':
+            self.composed_gallery_item.setVisible(True)
+            
+    def set_contour_view(self, type):
+        self.primary_contour_item.setVisible(False)
+        self.secondary_contour_item.setVisible(False)
+
+        self.contour_view_type = type
+#        if type != 'off':
+#            self.height = self.width + self.PREDICTION_BAR_HEIGHT 
+#        else:
+#            self.height = self.PREDICTION_BAR_HEIGHT
+            
+        if type == 'primary':
+            self.primary_contour_item.setVisible(True)
+        elif type == 'secondary':
+            self.secondary_contour_item.setVisible(True)
+        elif type == 'all':
+            self.primary_contour_item.setVisible(True)
+            self.secondary_contour_item.setVisible(True)
+            
+    def set_bar_view(self, type):
+        self.bar_item.setVisible(False)
+        if type == 'top':
+            self.bar_item.setVisible(True)
+
+    
     def __init__(self, object_item, parent=None):
         GraphicsTerminalObjectItem.__init__(self, object_item, parent=None)
+        self.object_item = object_item
         
         
-        gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(object_item.image)))
-        gallery_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
+        primary_gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(object_item.image)))
+        primary_gallery_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
+        self.primary_gallery_item = primary_gallery_item
         
+        primary_contour_item = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), object_item.crack_contour.tolist())))
+        primary_contour_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
+        primary_contour_item.setPen(QtGui.QPen(QtGui.QColor(object_item.class_color)))
+        primary_contour_item.setAcceptHoverEvents(True)
+        primary_contour_item.setZValue(3)
+        
+        self.primary_contour_item = primary_contour_item
+        self.addToGroup(primary_contour_item)
+        
+        sib_object_item = object_item.get_siblings()
+        if sib_object_item is not None:
+            secondary_gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(sib_object_item.image)))
+            secondary_gallery_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
+            self.secondary_gallery_item = secondary_gallery_item
+            
+            image_sib = sib_object_item.image
+            image_own = object_item.image
+            new_shape = (object_item.BOUNDING_BOX_SIZE,)*2 + (3,)
+            composed_image = numpy.zeros(new_shape, dtype=numpy.uint8)
+            composed_image[0:image_own.shape[0],0:image_own.shape[1],0] = image_own
+            composed_image[0:image_sib.shape[0],0:image_sib.shape[1],1] = image_sib
+
+            composed_gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(composed_image)))
+            composed_gallery_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
+            self.composed_gallery_item = composed_gallery_item
+            
+            secondary_contour_item = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), sib_object_item.crack_contour.tolist())))
+            secondary_contour_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
+            secondary_contour_item.setPen(QtGui.QPen(QtGui.QColor(sib_object_item.class_color)))
+            secondary_contour_item.setAcceptHoverEvents(True)
+            secondary_contour_item.setZValue(3)
+            
+            self.secondary_contour_item = secondary_contour_item
+            self.addToGroup(secondary_contour_item)
+        
+        
+        self.addToGroup(primary_gallery_item)
+        self.addToGroup(secondary_gallery_item)
+        self.addToGroup(composed_gallery_item)
         
         bar_item = QtGui.QGraphicsLineItem(self.PREDICTION_BAR_X_PADDING, 0, self.width - self.PREDICTION_BAR_X_PADDING, 0)
         bar_pen = QtGui.QPen(QtGui.QColor(object_item.class_color))
         bar_pen.setWidth(self.PREDICTION_BAR_HEIGHT)
         bar_item.setPen(bar_pen)
-        
-        contour_item = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), object_item.crack_contour.tolist())))
-        contour_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
-        contour_item.setPen(QtGui.QPen(QtGui.QColor(object_item.class_color)))
-        contour_item.setAcceptHoverEvents(True)
-        
-        self.addToGroup(gallery_item)
-        #self.addToGroup(bar_item)
-        self.addToGroup(contour_item)
-        
         self.bar_item = bar_item
-        self.contour_item = contour_item
-        self.gallery_item = gallery_item
+        self.addToGroup(bar_item)
+        
+        
+        
+        
+        
+        
+        
         
         self.row = 0 
         self.column = object_item.time
         self.height = self.width + self.PREDICTION_BAR_HEIGHT 
         
-    def showGalleryImage(self, state):
-        self.contour_item.setVisible(state)
-        self.gallery_item.setVisible(state)
-        if state:
-            self.height = self.width + self.PREDICTION_BAR_HEIGHT 
-        else:
-            self.height = self.PREDICTION_BAR_HEIGHT 
-            
-    def showContours(self, state):
-        self.contour_item.setVisible(state)
+        self.set_gallery_view('primary')
+        self.set_contour_view('primary')
+        
         
 
         
@@ -633,7 +801,7 @@ class EventGraphicsLayouter(GraphicsLayouterBase):
             if self._align_vertically == self.ALIGN_LEFT:
                 ti.moveToColumn(0)
             elif self._align_vertically == self.ALIGN_ABSOLUT_TIME:
-                ti.moveToColumn(ti.sub_items[0].object_item.time)
+                ti.moveToColumn(ti.sub_items[1].object_item.time)
             elif self._align_vertically == self.ALIGN_CUSTOM:
                 ti.moveToColumn(ti.column)
         
@@ -807,6 +975,14 @@ class EventObjectItemMixin():
             return None
         
     @property
+    def sibling_item_features(self):
+        children = self.children()
+        if children is not None:
+            return numpy.concatenate([c.get_siblings().features for c in children], axis=0)
+        else:
+            return None
+        
+    @property
     def item_colors(self):
         children = self.children()
         if children is not None:
@@ -838,6 +1014,27 @@ class EventObjectItemMixin():
             self.parent.feature_min_max[feature_idx] = min_, max_
             
         return self.parent.feature_min_max[feature_idx]
+    
+    def sibling_item_feature_min_max(self, feature_idx):
+        if not hasattr(self.parent, 'sibling_feature_min_max'):
+            self.parent.sibling_feature_min_max = {}
+        
+        min_ = 1000000
+        max_ = - 1000000
+        if feature_idx not in self.parent.sibling_feature_min_max.keys():
+            for p in self.parent:
+                tmin = p.sibling_item_features[:,feature_idx].min()
+                tmax = p.sibling_item_features[:,feature_idx].max()
+                
+                if tmin < min_:
+                    min_ = tmin 
+                    
+                if tmax > max_:
+                    max_ = tmax 
+                     
+            self.parent.sibling_feature_min_max[feature_idx] = min_, max_
+            
+        return self.parent.sibling_feature_min_max[feature_idx]
             
             
         
@@ -847,6 +1044,16 @@ class EventObjectItemMixin():
 MixIn(TerminalObjectItem, CellTerminalObjectItemMixin, True)
 MixIn(ObjectItem, EventObjectItemMixin, True)
 
+
+class CellGraphicsTextItem(QtGui.QGraphicsTextItem, GraphicsTerminalObjectItem):
+    def __init__(self, parent=None):
+        QtGui.QGraphicsTextItem.__init__(self, parent)
+    @property
+    def width(self):
+        return self.textWidth()
+        
+        
+        
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, filename=None, parent=None):
         QtGui.QMainWindow.__init__(self, parent)
@@ -865,7 +1072,7 @@ class MainWindow(QtGui.QMainWindow):
         export_menu = self.menuBar().addMenu('&Export')
         plugin_menu = self.menuBar().addMenu('&Plugin')
         
-        pca_comopute = QtGui.QAction('Export scene to file', self)
+        pca_comopute = QtGui.QAction('PCA Plots', self)
         pca_comopute.triggered.connect(self.cb_compute_pca)
         plugin_menu.addAction(pca_comopute)
         

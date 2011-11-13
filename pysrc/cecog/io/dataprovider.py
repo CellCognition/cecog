@@ -624,9 +624,14 @@ class Objects(object):
             self._object_item_cache[obj_id] = ItemType(obj_id, self)
         return self._object_item_cache[obj_id]
             
-    def __iter__(self, obj_ids=None):
+    def __iter__(self, max_count=None):
         for id in self.ids:
             yield self.get(id)    
+            
+            
+    def iter(self, max_count = 100):
+        for id in self.ids[: (min(max_count, len(self)))]:
+            yield self.get(id)
             
     def iter_random(self, max_count = 100):
         for id in random.sample(self.ids, min(max_count, len(self))):
