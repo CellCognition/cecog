@@ -339,7 +339,7 @@ class TrackletBrowser(QtGui.QWidget):
         gb2_layout = QtGui.QVBoxLayout()
         
         self.btn_toggleBars = QtGui.QComboBox()
-        self.btn_toggleBars.addItems(['off', 'top', 'secondary intensity'])
+        self.btn_toggleBars.addItems(['top', 'off', 'secondary intensity'])
         self.btn_toggleBars.currentIndexChanged[str].connect(self.cb_select_bar_type)  
         gb2_layout.addWidget(self.btn_toggleBars)
         gb2.setLayout(gb2_layout)
