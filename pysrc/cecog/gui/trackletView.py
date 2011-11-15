@@ -9,7 +9,6 @@
                  See trunk/AUTHORS.txt for author contributions.
 """
 import time as timeit
-from twisted.python.components import __init__
 __all__ = []
 
 #-------------------------------------------------------------------------------
