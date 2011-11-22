@@ -76,7 +76,7 @@ IMAGECONTAINER_FILENAME_OLD = '.cecog_imagecontainer___PL%s.pkl'
 #
 def importer_pickle(obj, filename):
     f = open(filename, 'wb')
-    pickle.dump(obj, f, protocol=1)
+    pickle.dump(obj, f, protocol=pickle.HIGHEST_PROTOCOL)
     f.close()
 
 def importer_unpickle(filename):

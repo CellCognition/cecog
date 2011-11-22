@@ -23,7 +23,9 @@ __source__ = '$URL$'
 # standard library imports:
 #
 import sys, \
-       time
+       time, \
+       logging, \
+       logging.handlers
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
@@ -165,7 +167,7 @@ class PositionAnalyzer(object):
         else:
             self.strPathOutPosition = self.strPathOutAnalyzed
         bMkdirsOk = safe_mkdirs(self.strPathOutPosition)
-        self._oLogger.info("strPathOutPosition '%s', ok: %s" % (self.strPathOutPosition, bMkdirsOk))
+        self._oLogger.debug("Starting analysis for '%s', ok: %s" % (self.strPathOutPosition, bMkdirsOk))
 
         self.strPathOutPositionImages = os.path.join(self.strPathOutPosition, "images")
         self.strPathOutPositionDebug = os.path.join(self.strPathOutPosition, "debug")
@@ -215,12 +217,15 @@ class PositionAnalyzer(object):
         self.strPathLog = os.path.join(self.strPathOut, 'log')
         safe_mkdirs(self.strPathLog)
         #self._oLogger = logging.getLogger('PositionAnalyzer')
-        oLogger = logging.getLogger(self.__class__.__name__)
+        oLogger = logging.getLogger(str(os.getpid()))
         oLogger.setLevel(logging.DEBUG)
         self._oLogHandler = logging.FileHandler(os.path.join(self.strPathLog, "%s.log" % self.P), 'w')
         self._oLogHandler.setLevel(logging.DEBUG)
         self._oLogHandler.setFormatter(logging.Formatter('%(asctime)s %(name)-24s %(levelname)-6s %(message)s'))
+        
+        
         oLogger.addHandler(self._oLogHandler)
+        
         return oLogger
 
     def __del__(self):
@@ -270,10 +275,9 @@ class PositionAnalyzer(object):
         strPathOutPositionStats = os.path.join(self.strPathOutPosition,
                                                'statistics')
         bMkdirsOk = safe_mkdirs(strPathOutPositionStats)
-        self._oLogger.info("strPathOutPositionStats '%s', ok: %s, cleared: %s" %\
+        self._oLogger.debug("Creating '%s', ok: %s" %\
                            (strPathOutPositionStats,
-                            bMkdirsOk,
-                            'DISABLED FOR NOW'))
+                            bMkdirsOk))
                             #self.oSettings.bClearTrackingPath))
 
         #max_frames = max(self.lstAnalysisFrames)
@@ -637,7 +641,7 @@ class PositionAnalyzer(object):
 
         if iNumberImages > 0:
             oInterval = oStopWatchPos.stop_interval() / iNumberImages
-            self._oLogger.info("* %d image sets analyzed, %s / image set" %
+            self._oLogger.info(" - %d image sets analyzed, %s / image set" %
                                (iNumberImages, oInterval.format(msec=True)))
 
         # write an empty file to mark this position as finished
@@ -654,16 +658,8 @@ class PositionAnalyzer(object):
         return str(pos).zfill(self.POSITION_LENGTH)
 
     def _analyzePosition(self, oCellAnalyzer):
-
         debug_mode = False #self.oSettings.get('General', 'debugMode')
-        if debug_mode:
-            bMkdirsOk = safe_mkdirs(self.strPathOutPositionDebug)
-            self._oLogger.info("strPathOutPositionDebug '%s', ok: %s" % (self.strPathOutPositionDebug,
-                                                                         bMkdirsOk))
-        else:
-            strPathOutPositionDebug = ""
-
-
+        
         if (self.oSettings.get('Output', 'rendering_labels_discwrite') or
             self.oSettings.get('Output', 'rendering_contours_discwrite') or
             self.oSettings.get('Output', 'rendering_class_discwrite')):
@@ -1050,8 +1046,9 @@ class PositionAnalyzer(object):
                     strPathOutImages = os.path.join(self.strPathOutPositionImages, '_labels')
                     safe_mkdirs(strPathOutImages)
                     oCellAnalyzer.exportLabelImages(strPathOutImages)
+                    
 
-            self._oLogger.info("* duration: %s" % stopwatch.current_interval().format(msec=True))
+            self._oLogger.info(" - Frame %d, duration: %s" % (frame, stopwatch.current_interval().format(msec=True)))
 
             oCellAnalyzer.purge(features=self.export_features)
 
@@ -1291,9 +1288,12 @@ class AnalyzerCore(object):
                                    'text': 'P %s (%d/%d)' % (tplArgs[0], idx+1, len(lstJobInputs)),
                                    })
                 qthread.set_stage_info(stage_info)
-
-            analyzer = PositionAnalyzer(*tplArgs, **dctOptions)
-            analyzer()
+            try:
+                analyzer = PositionAnalyzer(*tplArgs, **dctOptions)
+                analyzer()
+            except Exception, e:
+                logging.getLogger(str(os.getpid())).error(e.message)
+                raise
 
         return self.oObjectLearner
 

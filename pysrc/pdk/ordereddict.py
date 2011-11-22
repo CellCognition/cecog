@@ -28,6 +28,17 @@ class OrderedDict(dict):
             v2 = copy.deepcopy(v, memo)
             dup[k2] = v2
         return dup
+    
+    def __reduce__(self):
+        'Return state information for pickling'
+        items = [[k, self[k]] for k in self]
+        tmp = self.__key_list
+        del self.__key_list
+        inst_dict = vars(self).copy()
+        self.__key_list = tmp
+        if inst_dict:
+            return (self.__class__, (items,), inst_dict)
+        return self.__class__, (items,)
 
     def __setitem__(self, key, value):
         if key not in self:

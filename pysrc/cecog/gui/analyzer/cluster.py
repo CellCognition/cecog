@@ -203,12 +203,12 @@ class ClusterDisplay(QGroupBox):
         path_out = self._submit_settings.get2('pathout')
         emails = str(self._txt_mail.text()).split(',')
         try:
-            dlg = waitingProgressDialog('Please wait until the job has been submitted...', self)
-            dlg.setTarget(self._service.submit_job,
+            self.dlg = waitingProgressDialog('Please wait until the job has been submitted...', self)
+            self.dlg.setTarget(self._service.submit_job,
                           'cecog_batch', self._submit_settings.to_string(), path_out, emails, nr_items,
                           position_granularity, VERSION)
-            dlg.exec_()
-            jobid = dlg.getTargetResult()
+            self.dlg.exec_()
+            jobid = self.dlg.getTargetResult()
         except:
             exception(self, 'Error on job submission')
         else:
@@ -227,9 +227,9 @@ class ClusterDisplay(QGroupBox):
     @pyqtSlot()
     def _on_terminate_job(self):
         try:
-            dlg = waitingProgressDialog("Please wait until the job has been terminated...", self)
-            dlg.setTarget(self._service.control_job, self._jobid, JOB_CONTROL_TERMINATE)
-            dlg.exec_()
+            self.dlg = waitingProgressDialog("Please wait until the job has been terminated...", self)
+            self.dlg.setTarget(self._service.control_job, self._jobid, JOB_CONTROL_TERMINATE)
+            self.dlg.exec_()
         except:
             exception(self, 'Error on job termination')
         else:
@@ -241,9 +241,9 @@ class ClusterDisplay(QGroupBox):
     @pyqtSlot()
     def _on_toggle_job(self):
         try:
-            dlg = waitingProgressDialog("Please wait until the job has been suspended/resumed...", self)
-            dlg.setTarget(self._service.control_job, self._jobid, self._toggle_state)
-            dlg.exec_()
+            self.dlg = waitingProgressDialog("Please wait until the job has been suspended/resumed...", self)
+            self.dlg.setTarget(self._service.control_job, self._jobid, self._toggle_state)
+            self.dlg.exec_()
         except:
             self._toggle_state = JOB_CONTROL_SUSPEND
             self._btn_toogle.setChecked(False)
@@ -263,10 +263,10 @@ class ClusterDisplay(QGroupBox):
 
     def _update_job_status(self):
         try:
-            dlg = waitingProgressDialog('Please wait for the cluster update...', self)
-            dlg.setTarget(self._service.get_job_status, self._jobid)
-            dlg.exec_()
-            txt = dlg.getTargetResult()
+            self.dlg = waitingProgressDialog('Please wait for the cluster update...', self)
+            self.dlg.setTarget(self._service.get_job_status, self._jobid)
+            self.dlg.exec_()
+            txt = self.dlg.getTargetResult()
         except:
             exception(self, 'Error on retrieve job status')
         else:
@@ -277,10 +277,10 @@ class ClusterDisplay(QGroupBox):
         success = False
         try:
             client = RemotingService(self._host_url)
-            dlg = waitingProgressDialog('Please wait for the cluster...', self)
-            dlg.setTarget(client.getService, 'clustercontrol')
-            dlg.exec_()
-            self._service = dlg.getTargetResult()
+            self.dlg = waitingProgressDialog('Please wait for the cluster...', self)
+            self.dlg.setTarget(client.getService, 'clustercontrol')
+            self.dlg.exec_()
+            self._service = self.dlg.getTargetResult()
         except:
             exception(self, 'Error on connecting to cluster control service')
         else:

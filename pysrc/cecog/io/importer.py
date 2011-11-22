@@ -481,19 +481,17 @@ class IniFileImporter(AbstractImporter):
         config_parser = config_parser
         section_name = section_name
 
-        regex_subdirectories = config_parser.get(section_name, 'regex_subdirectories')
+        self._regex_subdirectories = config_parser.get(section_name, 'regex_subdirectories')
         # take all sub-directories if parameter is empty
-        if regex_subdirectories == '':
-            regex_subdirectories = '.*'
-        self._re_subdir = re.compile(regex_subdirectories)
+        if self._regex_subdirectories == '':
+            self._regex_subdirectories = '.*'
 
-        regex_filename_substr = config_parser.get(section_name, 'regex_filename_substr')
+        self._regex_filename_substr = config_parser.get(section_name, 'regex_filename_substr')
         # take the entire filename if parameter is empty
-        if regex_filename_substr == '':
-            regex_filename_substr = '(.*)'
-        self._re_substr = re.compile(regex_filename_substr)
+        if self._regex_filename_substr == '':
+            self._regex_filename_substr = '(.*)'
 
-        self._re_dim = re.compile(config_parser.get(section_name, 'regex_dimensions'))
+        self._regex_dimensions = config_parser.get(section_name, 'regex_dimensions')
         if config_parser.has_option(section_name, 'timestamps_from_file'):
             self.timestamps_from_file = \
                 config_parser.get(section_name, 'timestamps_from_file')
@@ -519,6 +517,10 @@ class IniFileImporter(AbstractImporter):
     def __get_token_list(self, path):
         token_list = []
 
+        re_subdir = re.compile(self._regex_subdirectories)
+        re_substr = re.compile(self._regex_filename_substr)
+        re_dim = re.compile(self._regex_dimensions)
+        
         re_subwell_str = r"[a-zA-Z]\d{1,2}"
         re_subwell = re.compile(re_subwell_str)
 
@@ -530,13 +532,13 @@ class IniFileImporter(AbstractImporter):
             # prune dirnames by regex search for next iteration of os.walk
             # dirnames must be removed in-place!
             for dirname in dirnames[:]:
-                if self._re_subdir.search(dirname) is None:
+                if re_subdir.search(dirname) is None:
                     dirnames.remove(dirname)
 
             # extract dimension informations according to regex patterns from
             # relative filename (including extension)
             path_rel = os.path.relpath(dirpath, path)
-            search_path = self._re_subdir.search(os.path.split(dirpath)[1])
+            search_path = re_subdir.search(os.path.split(dirpath)[1])
 
             if not search_path is None:
                 result_path = search_path.groupdict()
@@ -548,12 +550,12 @@ class IniFileImporter(AbstractImporter):
 
                 # search substring to reduce relative filename for
                 # dimension search
-                search = self._re_substr.search(filename)
+                search = re_substr.search(filename)
                 if not search is None and len(search.groups()) > 0:
                     found_name = search.groups()[0]
                     # check substring according to regex pattern
                     # extract dimension information
-                    search2 = self._re_dim.search(found_name)
+                    search2 = re_dim.search(found_name)
                     if not search2 is None:
                         result = search2.groupdict()
 

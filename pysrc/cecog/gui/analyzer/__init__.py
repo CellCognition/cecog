@@ -22,7 +22,8 @@ __all__ = ['REGION_NAMES_PRIMARY',
            'TRACKING_METHODS',
            'R_LIBRARIES',
            '_BaseFrame',
-           '_ProcessorMixin']
+           '_ProcessorMixin',
+           'callit']
 
 #-------------------------------------------------------------------------------
 # standard library imports:
@@ -33,13 +34,18 @@ import types, \
        sys, \
        os, \
        time, \
-       copy
+       copy, \
+       SocketServer, \
+       cPickle as pickle, \
+       struct, \
+       threading, \
+       socket
+       
 
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
 import numpy
-
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
@@ -47,6 +53,8 @@ from PyQt4.Qt import *
 from pdk.ordereddict import OrderedDict
 from pdk.datetimeutils import TimeInterval, StopWatch
 from pdk.fileutils import safe_mkdirs
+
+from multiprocessing import Pool, Queue, cpu_count
 
 #-------------------------------------------------------------------------------
 # cecog imports:
@@ -81,12 +89,36 @@ from cecog.io.imagecontainer import PIXEL_TYPES
 from cecog.traits.config import R_SOURCE_PATH
 from cecog import ccore
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
+from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.analyzer.gallery import compose_galleries
+from cecog.traits.config import ConfigSettings
+from cecog.traits.analyzer import SECTION_REGISTRY
 
 #-------------------------------------------------------------------------------
 # functions:
 #
 
+
+# see http://stackoverflow.com/questions/3288595/multiprocessing-using-pool-map-on-a-function-defined-in-a-class
+def AnalyzerCoreHelper(plate_id, settings_str, imagecontainer, position):
+    print ' analyzing plate', plate_id, 'and position', position, 'in process', os.getpid()
+    settings = ConfigSettings(SECTION_REGISTRY)
+    settings.from_string(settings_str)
+    
+    settings.set(SECTION_NAME_GENERAL, 'constrain_positions', True)
+    settings.set(SECTION_NAME_GENERAL, 'positions', position)
+    analyzer = AnalyzerCore(plate_id, settings,imagecontainer)         
+    analyzer.processPositions()
+    
+    return plate_id, position
+
+def process_initialyzer(port):
+    oLogger = logging.getLogger(str(os.getpid()))
+    oLogger.setLevel(logging.NOTSET)
+    socketHandler = logging.handlers.SocketHandler('localhost', port)
+    socketHandler.setLevel(logging.NOTSET)
+    oLogger.addHandler(socketHandler)
+    oLogger.info('logger init')
 
 #-------------------------------------------------------------------------------
 # classes:
@@ -216,6 +248,7 @@ class _ProcessingThread(QThread):
                             'progress': 0,
                             'max': 0,
                             }
+        self.parent = parent
 
     def __del__(self):
         #self._mutex.lock()
@@ -227,6 +260,12 @@ class _ProcessingThread(QThread):
     def run(self):
         try:
             self._run()
+        except MultiprocessingException, e:
+            msg = e.msg
+            logger = logging.getLogger()
+            logger.error(msg)
+            self.analyzer_error.emit(msg)
+            raise
         except:
             msg = traceback.format_exc()
             logger = logging.getLogger()
@@ -542,7 +581,135 @@ class HmmThread(_ProcessingThread):
     def set_abort(self, wait=False):
         self._process.kill()
         _ProcessingThread.set_abort(self, wait=wait)
+        
+        
 
+        
+class ParallelProcessThreadMixinBase(object):
+    class ProcessCallback(object):
+        def __init__(self):
+            pass
+        def __call__(self):
+            pass
+    def setup(self):
+        pass
+    
+    def finish(self):
+        pass
+    
+    def abort(self):
+        pass
+    
+    @property
+    def target(self):
+        pass
+    
+    def submit_jobs(self, job_list):
+        pass
+    
+class MultiProcessingAnalyzerMixin(ParallelProcessThreadMixinBase):
+    class ProcessCallback(object):
+        def __init__(self, parent):
+            self.cnt = 0
+            self.parent = parent
+            self.job_count = None
+            self._timer = StopWatch()
+            
+            
+        def notify_execution(self, job_list, ncpu):
+            self.job_count = len(job_list)
+            self.ncpu = ncpu
+            stage_info = {'stage': 0,
+                      'progress': 0,
+                      'text': '',
+                      'meta': 'Parallel processing %d / %d positions (%d cores)' % (0, self.job_count, self.ncpu),
+                      'min': 0,
+                      'max': self.job_count,
+                       }
+            self.parent.set_stage_info(stage_info)
+            
+        def __call__(self, args):
+            print 'args', args
+            plate, pos = args
+            self.cnt += 1
+            stage_info = {'progress': self.cnt,
+                          'meta': 'Parallel processing %d / %d positions (%d cores)' % (self.cnt, 
+                                                                                        self.job_count, 
+                                                                                        self.ncpu),
+                          'text': 'finished %s - %s' % (str(plate), str(pos)),
+                          'stage': 0,
+                          'min': 0,
+                          'item_name': 'position',
+                          'interval': self._timer.current_interval(),
+                          'max': self.job_count,
+                          }
+            self.parent.set_stage_info(stage_info)
+            self._timer.reset()  
+            
+    def setup(self, ncpu=None):
+        if ncpu is None:
+            ncpu = cpu_count()
+        self.ncpu = ncpu
+        self.log_receiver = LoggingReceiver(port=0)
+        port = self.log_receiver.server_address[1]
+        self.pool = Pool(self.ncpu, initializer=process_initialyzer, initargs=(port,))
+        self.parent.process_log_window.init_process_list([str(p.pid) for p in self.pool._pool])
+        self.parent.process_log_window.show()
+        
+        SocketServer.ThreadingTCPServer.allow_reuse_address = True
+        
+        for p in self.pool._pool:
+            logger = logging.getLogger(str(p.pid))
+            handler = NicePidHandler(self.parent.process_log_window)
+            handler.setFormatter(logging.Formatter('%(asctime)s %(name)-24s %(levelname)-6s %(message)s'))
+            logger.addHandler(handler)
+        
+        self.log_receiver.handler.log_window = self.parent.process_log_window
+               
+        self.log_receiver_thread = threading.Thread(target=self.log_receiver.serve_forever)
+        self.log_receiver_thread.start()
+        
+        self.process_callback = self.ProcessCallback(self)
+        
+    def finish(self):
+        self.log_receiver.shutdown()
+        self.log_receiver.server_close()        
+        self.log_receiver_thread.join()
+        
+        
+    def abort(self):
+        self._abort = True
+        self.pool.terminate()
+        self.parent.process_log_window.close()
+        
+    def join(self):
+        self.pool.close()
+        self.pool.join()
+        if not self._abort:
+            exception_list = []
+            for r in self.job_result:
+                if not r.successful():
+                    try:
+                        r.get()
+                    except Exception, e:
+                        exception_list.append(e)
+            if len(exception_list) > 0:
+                multi_exception = MultiprocessingException(exception_list)
+                raise multi_exception
+                        
+        self.finish()   
+    
+    @property
+    def target(self):
+        return AnalyzerCoreHelper
+    
+    def submit_jobs(self, job_list):
+        self.process_callback.notify_execution(job_list, self.ncpu)
+        self.job_result = [self.pool.apply_async(self.target, args, callback=self.process_callback) for args in job_list]
+        
+class MultiprocessingException(Exception):
+    def __init__(self, exception_list):
+        self.msg = '\n-----------\nError in job item:\n'.join([str(x) for x in exception_list])
 
 class AnalzyerThread(_ProcessingThread):
 
@@ -584,6 +751,46 @@ class AnalzyerThread(_ProcessingThread):
     def _emit(self, name):
         if name in self._buffer:
             self.image_ready.emit(*self._buffer[name])
+
+class MultiAnalzyerThread(AnalzyerThread, MultiProcessingAnalyzerMixin):
+    image_ready = pyqtSignal(ccore.RGBImage, str, str)
+    def __init__(self, parent, settings, imagecontainer, ncpu):
+        AnalzyerThread.__init__(self, parent, settings, imagecontainer)
+        self.setup(ncpu)
+        self._abort = False
+        
+    def set_abort(self, wait=False):
+        self._abort = True
+        self.abort()
+        if wait:
+            self.wait()
+
+    def _run(self):
+        self._abort = False
+        settings_str = self._settings.to_string()
+        
+        self._settings.set_section('General')
+        self.lstPositions = self._settings.get2('positions')
+        if self.lstPositions == '' or not self._settings.get2('constrain_positions'):
+            self.lstPositions = None
+        else:
+            self.lstPositions = self.lstPositions.split(',')
+        
+        job_list = []
+        
+        for plate_id in self._imagecontainer.plates:
+            self._imagecontainer.set_plate(plate_id)
+            meta_data = self._imagecontainer.get_meta_data()
+            for pos_id in meta_data.positions:
+                if self.lstPositions is None:
+                    job_list.append((plate_id, settings_str, self._imagecontainer, pos_id))
+                else:
+                    if pos_id in self.lstPositions:
+                        job_list.append((plate_id, settings_str, self._imagecontainer, pos_id))
+                        
+        self.submit_jobs(job_list)
+        self.join()
+
 
 
 
@@ -663,8 +870,6 @@ class TrainingThread(_ProcessingThread):
 
 
 class _ProcessorMixin(object):
-
-
     def __init__(self):
         self._is_running = False
         self._is_abort = False
@@ -872,6 +1077,15 @@ class _ProcessorMixin(object):
                              "Make sure that the R-project is installed.\n\n"\
                              "See README.txt for details." % cmd)
                     is_valid = False
+                    
+            elif cls is MultiAnalzyerThread:
+                ncpu = cpu_count()
+                (ncpu, ok) = QInputDialog.getInt(None, "On your machine are %d processers available." % ncpu, \
+                                             "Select the number of processors", \
+                                              ncpu, 1, ncpu*2)
+                if not ok:
+                    self._process_items = None
+                    is_valid = False
 
 
             if is_valid:
@@ -906,7 +1120,15 @@ class _ProcessorMixin(object):
                         pix2.fill(Qt.black)
                         qApp._graphics.setPixmap(pix2)
                         qApp._image_dialog.raise_()
+                        
+                elif cls is MultiAnalzyerThread:
+                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
+                    self._analyzer = cls(self, self._current_settings, imagecontainer, ncpu)
+                    
+                    self._set_display_renderer_info()
 
+                    
+                    
 
                 elif cls is TrainingThread:
                     self._current_settings = self._settings.copy()
@@ -960,9 +1182,9 @@ class _ProcessorMixin(object):
     def _abort_processing(self):
         self.setCursor(Qt.BusyCursor)
         self._is_abort = True
-        dlg = waitingProgressDialog('Please wait until the processing has been terminated...', self)
-        dlg.setTarget(self._analyzer.set_abort, wait=True)
-        dlg.exec_()
+        self.dlg = waitingProgressDialog('Please wait until the processing has been terminated...', self)
+        self.dlg.setTarget(self._analyzer.set_abort, wait=True)
+        self.dlg.exec_()
         self.setCursor(Qt.ArrowCursor)
 
     def _on_render_changed(self, name):
@@ -1058,10 +1280,11 @@ class _ProcessorMixin(object):
                     if info['progress'] > info['min'] and 'interval' in info:
                         interval = info['interval']
                         self._intervals.append(interval.get_interval())
-                        estimate = TimeInterval(numpy.average(self._intervals) *
-                                                float(info['max']-info['progress']))
-                        msg += '%s%.1fs / %s%s%s remaining' % (sep,
-                                                               interval.get_interval(),
+                        avg = numpy.average(self._intervals)
+                        estimate = TimeInterval(avg * float(info['max']-info['progress']))
+                        msg += '%s~ %.1fs / %s%s%s remaining' % (sep,
+                                                               #interval.get_interval(),
+                                                               avg,
                                                                info['item_name'],
                                                                sep,
                                                                estimate.format())
@@ -1199,6 +1422,75 @@ class _ProcessorMixin(object):
                 widget.hide()
 
         self._analyzer.image_ready.connect(self._on_update_image)
+        
+        
+class LogRecordStreamHandler(SocketServer.BaseRequestHandler):
+    'Handler for a streaming logging request'
+    
+    def handle(self):
+        '''
+        Handle multiple requests - each expected to be a 4-byte length,
+        followed by the LogRecord in pickle format.
+        '''
+        while 1:
+            try:
+                chunk = self.request.recv(4)
+                if len(chunk) < 4:
+                    break
+                slen = struct.unpack('>L', chunk)[0]
+                chunk = self.request.recv(slen)
+                while len(chunk) < slen:
+                    chunk = chunk + self.request.recv(slen - len(chunk))
+                obj = self.unPickle(chunk)
+                record = logging.makeLogRecord(obj)
+                self.handleLogRecord(record)
+            
+            except socket.error:
+                print 'socket handler abort'
+                break
+                  
+        
+    def unPickle(self, data):
+        return pickle.loads(data)
+
+    def handleLogRecord(self, record):
+        # if a name is specified, we use the named logger rather than the one
+        # implied by the record.
+        if self.server.logname is not None:
+            name = self.server.logname
+        else:
+            name = record.name
+        logger = logging.getLogger(name)
+        # N.B. EVERY record gets logged. This is because Logger.handle
+        # is normally called AFTER logger-level filtering. If you want
+        # to do filtering, do it at the client end to save wasting
+        # cycles and network bandwidth!
+        logger.handle(record)
+
+
+class NicePidHandler(logging.Handler):
+    
+    def __init__(self, log_window, level=logging.NOTSET):
+        logging.Handler.__init__(self, level)
+        self.log_window = log_window
+        
+    def emit(self, record):
+        self.log_window.on_msg_received_emit(record, self.format(record))
+
+
+class LoggingReceiver(SocketServer.ThreadingTCPServer):
+    'Simple TCP socket-based logging receiver'
+
+    logname = None
+
+    def __init__(self, host='localhost',
+                 port=None,
+                 handler=LogRecordStreamHandler):
+        self.handler = handler
+        if port is None:
+            port = logging.handlers.DEFAULT_TCP_LOGGING_PORT
+        SocketServer.ThreadingTCPServer.__init__(self, (host, port), handler)
+
 
 class BaseProcessorFrame(BaseFrame, _ProcessorMixin):
 
