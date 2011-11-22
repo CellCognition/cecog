@@ -392,6 +392,14 @@ class AnnotationModule(Module):
         class_table.setStyleSheet('font-size: 10px;')
         layout.addWidget(class_table)
         self._class_table = class_table
+        
+        frame2 = QFrame(grp_box)
+        layout2 = QBoxLayout(QBoxLayout.LeftToRight, frame2)
+        layout2.setContentsMargins(0,0,0,0)
+        self._import_class_definitions_btn = QPushButton('Import class definitions')
+        layout2.addWidget(self._import_class_definitions_btn)
+        self._import_class_definitions_btn.clicked.connect(self._on_import_class_definitions)
+        layout.addWidget(frame2)
 
         frame2 = QFrame(grp_box)
         layout2 = QBoxLayout(QBoxLayout.LeftToRight, frame2)
@@ -459,7 +467,7 @@ class AnnotationModule(Module):
         layout_frame.addWidget(btn)
         #layout_frame.addSpacing(5)
         btn = QPushButton('Save as', frame)
-        btn.clicked.connect(self._on_saveas_classifier)
+        btn.pressed.connect(self._on_saveas_classifier)
         layout_frame.addWidget(btn)
         layout.addWidget(frame)
 
@@ -487,6 +495,42 @@ class AnnotationModule(Module):
     def _find_items_in_class_table(self, value, column, match=Qt.MatchExactly):
         items = self._class_table.findItems(value, match)
         return [item for item in items if item.column() == column]
+    
+    def _on_import_class_definitions(self):
+        if self._on_new_classifier():
+            path = self._learner.get_env_path()
+            result = QFileDialog.getExistingDirectory(self, 'Open classifier directory', os.path.abspath(path))
+            if result:
+                learner = self._load_classifier(result)
+                if not learner is None:
+                    self._learner = learner
+                    self._update_class_definition_table()
+                    self._learner.set_env_path('.')
+        
+    def _update_class_definition_table(self):
+        class_table = self._class_table
+        class_table.clearContents()
+        class_table.setRowCount(len(self._learner.dctClassLabels))
+        select_item = None
+        for idx, class_name in enumerate(self._learner.lstClassNames):
+            samples = 0
+            class_label = self._learner.dctClassLabels[class_name]
+            item = QTableWidgetItem(class_name)
+            class_table.setItem(idx, self.COLUMN_CLASS_NAME, item)
+            if select_item is None:
+                select_item = item
+            class_table.setItem(idx, self.COLUMN_CLASS_LABEL,
+                                QTableWidgetItem(str(class_label)))
+            class_table.setItem(idx, self.COLUMN_CLASS_COUNT,
+                                QTableWidgetItem(str(samples)))
+            item = QTableWidgetItem(' ')
+            item.setBackground(
+                QBrush(QColor(self._learner.dctHexColors[class_name])))
+            class_table.setItem(idx, self.COLUMN_CLASS_COLOR, item)
+        class_table.resizeColumnsToContents()
+        class_table.resizeRowsToContents()
+
+        self._activate_objects_for_image(False, clear=True)
 
     def _on_class_apply(self):
         '''
@@ -644,10 +688,15 @@ class AnnotationModule(Module):
         return learner
 
     def _on_new_classifier(self):
+        ok = False
         if question(self, 'New classifier',
                     'Are you sure to setup a new classifer?\nAll annotations '
                     'will be lost.'):
             self._learner = self._init_new_classifier()
+            ok = True
+            
+        return ok
+            
 
     def _on_open_classifier(self):
         path = self._learner.get_env_path()
@@ -656,27 +705,7 @@ class AnnotationModule(Module):
             learner = self._load_classifier(result)
             if not learner is None:
                 self._learner = learner
-                class_table = self._class_table
-                class_table.clearContents()
-                class_table.setRowCount(len(self._learner.dctClassLabels))
-                select_item = None
-                for idx, class_name in enumerate(self._learner.lstClassNames):
-                    samples = 0
-                    class_label = self._learner.dctClassLabels[class_name]
-                    item = QTableWidgetItem(class_name)
-                    class_table.setItem(idx, self.COLUMN_CLASS_NAME, item)
-                    if select_item is None:
-                        select_item = item
-                    class_table.setItem(idx, self.COLUMN_CLASS_LABEL,
-                                        QTableWidgetItem(str(class_label)))
-                    class_table.setItem(idx, self.COLUMN_CLASS_COUNT,
-                                        QTableWidgetItem(str(samples)))
-                    item = QTableWidgetItem(' ')
-                    item.setBackground(
-                        QBrush(QColor(self._learner.dctHexColors[class_name])))
-                    class_table.setItem(idx, self.COLUMN_CLASS_COLOR, item)
-                class_table.resizeColumnsToContents()
-                class_table.resizeRowsToContents()
+                self._update_class_definition_table()
 
                 self._activate_objects_for_image(False, clear=True)
                 path2 = learner.getPath(learner.ANNOTATIONS)
@@ -690,8 +719,8 @@ class AnnotationModule(Module):
                 else:
                     self._activate_objects_for_image(True)
                     self._update_class_table()
-                    if class_table.rowCount() > 0:
-                        class_table.setCurrentCell(0, self.COLUMN_CLASS_NAME)
+                    if self._class_table.rowCount() > 0:
+                        self._class_table.setCurrentCell(0, self.COLUMN_CLASS_NAME)
                     else:
                         self._current_class = None
 
@@ -710,6 +739,7 @@ class AnnotationModule(Module):
         self._on_saveas_classifier(path)
 
     def _on_saveas_classifier(self, path=None):
+        print 'asdfasdf', path
         learner = self._learner
         if path is None:
             path = learner.get_env_path()
