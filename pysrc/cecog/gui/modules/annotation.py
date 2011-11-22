@@ -466,7 +466,7 @@ class AnnotationModule(Module):
         btn.clicked.connect(self._on_save_classifier)
         layout_frame.addWidget(btn)
         #layout_frame.addSpacing(5)
-        btn = QPushButton('Save as', frame)
+        btn = QPushButton('Save as', frame) 
         btn.pressed.connect(self._on_saveas_classifier)
         layout_frame.addWidget(btn)
         layout.addWidget(frame)
