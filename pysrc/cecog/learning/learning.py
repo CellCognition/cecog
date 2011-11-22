@@ -217,7 +217,10 @@ class BaseLearner(LoggerMixin, OptionManager):
                        }
 
     def getPath(self, strName):
-        return self.dctEnvPaths[strName]
+        path = self.dctEnvPaths[strName]
+        if not os.path.exists(path):
+            os.mkdir(path)
+        return path
 
     def get_env_path(self):
         return self.getOption('strEnvPath')
