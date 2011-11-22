@@ -98,6 +98,21 @@ class SectionGeneral(_Section):
         ('positions',
             StringTrait('', 1000, label='Positions',
                                    mask='(\w+,)*\w+')),
+        ('crop_image',
+            BooleanTrait(False, label='Crop image')),
+        ('crop_image_x0',
+            IntTrait(-1, -1, 4000, label='Upper left X')),
+        ('crop_image_y0',
+            IntTrait(-1, -1, 4000, label='Upper left Y')),
+        ('crop_image_x1',
+            IntTrait(-1, -1, 4000, label='Lower right X')),
+        ('crop_image_y1',
+            IntTrait(-1, -1, 4000, label='Lower right Y')),
+        
+        ('crop_image',
+            BooleanTrait(False, label='Crop image')),
+        
+        
         ('redofailedonly',
             BooleanTrait(True, label='Skip processed positions')),
         ('framerange',

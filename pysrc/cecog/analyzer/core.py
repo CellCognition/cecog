@@ -64,6 +64,8 @@ from cecog.traits.analyzer.tracking import SECTION_NAME_TRACKING
 
 from cecog.analyzer.gallery import EventGallery
 
+from cecog.io.imagecontainer import MetaImage
+
 #-------------------------------------------------------------------------------
 # constants:
 #
@@ -1100,9 +1102,18 @@ class AnalyzerCore(object):
         bMkdirsOk = safe_mkdirs(self.strPathOutLog)
         self._oLogger.info("strPathOutLog '%s', ok: %s" % (self.strPathOutLog, bMkdirsOk))
 
-        # FIXME:
-        #if self.oSettings.bCollectSamples:
-        #    self.oSettings.tplFrameRange = None
+        ci = self.oSettings.get('General', 'crop_image')
+        x0 = self.oSettings.get('General', 'crop_image_x0')
+        y0 = self.oSettings.get('General', 'crop_image_y0')
+        x1 = self.oSettings.get('General', 'crop_image_x1')
+        y1 = self.oSettings.get('General', 'crop_image_y1')
+        print ci, x0, y0,x1,y1
+        if ci:
+            MetaImage.enable_cropping(x0, y0, x1-x0, y1-y0)
+        else:
+            MetaImage.disable_cropping()
+            
+        print MetaImage._crop_coordinates
 
         self._imagecontainer = imagecontainer
         self.lstAnalysisFrames = []

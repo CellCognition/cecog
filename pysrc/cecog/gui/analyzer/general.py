@@ -75,6 +75,14 @@ class GeneralFrame(BaseFrame):
                                       ('framerange_end',)],
                        layout='flow')
         self.add_input('frameincrement')
+        self.add_line()
+        self.add_group('crop_image', [('crop_image_x0',),
+                                      ('crop_image_y0',),
+                                      ('crop_image_x1',),
+                                      ('crop_image_y1',),],
+                       layout='flow')
+        
+        
         self.add_expanding_spacer()
 
         layout = QHBoxLayout(self._control)

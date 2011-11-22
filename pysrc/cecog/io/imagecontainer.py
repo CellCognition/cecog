@@ -47,6 +47,7 @@ from pdk.fileutils import safe_mkdirs
 from cecog.traits.config import NAMING_SCHEMAS
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.util.util import convert_package_path
+from cecog import ccore
 
 #------------------------------------------------------------------------------
 # constants:
@@ -269,31 +270,87 @@ class MetaImage(object):
     Simple container to hold an image and its dimensions.
     Image reading is implemented lazy.
     """
+    _crop_coordinates = None
 
     def __init__(self, image_container=None, coordinate=None,
                  height=None, width=None, format=UINT8):
         self.coordinate = coordinate
-        self.height = height
-        self.width = width
+        self.img_height = height
+        self.img_width = width
         self.format = format
         self.image_container = image_container
         self._img = None
+        self._img_c = None
 
-#    def __str__(self):
-#        return "%s(P=%s,T=%s,C=%s,Z=%s,H=%s,W=%s)" % \
-#               (self.__class__.__name__, self.position, self.time, self.channel,
-#                self.zslice, self.height, self.width)
+    @property
+    def width(self):
+        return self.image.width
+    
+    @property
+    def height(self):
+        return self.image.height
+    
+    @property
+    def raw_width(self):
+        return self._raw_image.width
+    
+    @property
+    def raw_height(self):
+        return self._raw_image.height
 
     @property
     def image(self):
+        if MetaImage._crop_coordinates is None:
+            return self._raw_image
+        else:
+            return self._cropped_image
+    
+    @property
+    def _raw_image(self):
         if self._img is None:
             self._img = self.image_container.get_image(self.coordinate)
         return self._img
+    
+    @property  
+    def _cropped_image(self):
+        print 'cropping',
+        if self._img_c is None:
+            self._img_c = ccore.subImage(self._raw_image,
+                                    ccore.Diff2D(MetaImage._crop_coordinates[0], MetaImage._crop_coordinates[1]),
+                                    ccore.Diff2D(MetaImage._crop_coordinates[2], MetaImage._crop_coordinates[3]))
+            print '(%d,%d)' % (MetaImage._crop_coordinates[0], MetaImage._crop_coordinates[1]), 'widht', MetaImage._crop_coordinates[2], 'height', MetaImage._crop_coordinates[3]
+        return self._img_c
 
-    def set_image(self, img):
+    def set_raw_image(self, img):
         self._img = img
-        self.width = img.width
-        self.height = img.height
+        
+    def set_cropped_image(self, img):
+        self._img_c = img
+        
+    def set_image(self, img):
+        self.set_cropped_image(img)
+      
+    @classmethod    
+    def _check_crop_coordinates(cls, x0, y0, width, height):
+        ok = True
+        if x0 < 0 or y0 < 0 or width < 0 or height < 0:
+            ok = False
+        return ok
+        
+    @classmethod
+    def enable_cropping(cls, x0, y0, width, height):
+        if cls._check_crop_coordinates(x0, y0, width, height):
+            cls._crop_coordinates = (x0, y0, width, height)
+        else:
+            raise RuntimeError('wrong crop coordinates')
+     
+    @classmethod    
+    def disable_cropping(cls):
+        MetaImage._crop_coordinates = None
+      
+    
+
+
 
 #    def format_info(self, suffix=None, show_position=True, show_time=True,
 #                    show_channel=True, show_zslice=True, sep='_'):
