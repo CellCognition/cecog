@@ -444,25 +444,29 @@ class AnnotationModule(Module):
         splitter.addWidget(grp_box)
 
 
-        frame = QFrame(self)
+        frame = QFrame(grp_box)
         layout_frame = QBoxLayout(QBoxLayout.LeftToRight, frame)
         layout_frame.setContentsMargins(0, 0, 0, 0)
-        btn = QPushButton('New...', frame)
+        btn = QPushButton('New', frame)
         btn.clicked.connect(self._on_new_classifier)
         layout_frame.addWidget(btn)
         #layout_frame.addSpacing(5)
-        btn = QPushButton('Open...', frame)
+        btn = QPushButton('Open', frame)
         btn.clicked.connect(self._on_open_classifier)
         layout_frame.addWidget(btn)
+        btn = QPushButton('Save', frame)
+        btn.clicked.connect(self._on_save_classifier)
+        layout_frame.addWidget(btn)
         #layout_frame.addSpacing(5)
-        btn = QPushButton('Save As...', frame)
+        btn = QPushButton('Save as', frame)
         btn.clicked.connect(self._on_saveas_classifier)
         layout_frame.addWidget(btn)
+        layout.addWidget(frame)
 
         layout = QBoxLayout(QBoxLayout.TopToBottom, self)
         layout.setContentsMargins(5, 5, 5, 5)
         layout.addWidget(splitter)
-        layout.addWidget(frame)
+
 
         self._learner = self._init_new_classifier()
 
@@ -697,11 +701,22 @@ class AnnotationModule(Module):
                 finally:
                     coord = self.browser.get_coordinate()
                     self._imagecontainer.set_plate(coord.plate)
-
-    def _on_saveas_classifier(self):
+                    
+    def _on_save_classifier(self):
         learner = self._learner
         path = learner.get_env_path()
-        result = QFileDialog.getExistingDirectory(self, 'Save classifier directory', os.path.abspath(path))
+        if path == '.':
+            path = None
+        self._on_saveas_classifier(path)
+
+    def _on_saveas_classifier(self, path=None):
+        learner = self._learner
+        if path is None:
+            path = learner.get_env_path()
+            result = QFileDialog.getExistingDirectory(self, 'Save to classifier directory', os.path.abspath(path))
+        else:
+            result = path
+            
         if result:
             if self._save_classifier(result):
                 try:
