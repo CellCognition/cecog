@@ -213,6 +213,7 @@ class TraitDisplayMixin(object):
                 w_input.setSingleStep(trait.step)
             self.connect(w_input, SIGNAL('valueChanged(int)'),
                          handler(trait_name))
+            trait.set_widget(w_input)
 #            w_input = CecogSpinBox(parent, trait.checkable)
 #            w_input.setRange(trait.min_value, trait.max_value)
 #            w_input.setSizePolicy(policy_fixed)
