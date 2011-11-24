@@ -605,6 +605,7 @@ class AnalyzerMainWindow(QMainWindow):
 
         self._clear_browser()
         imagecontainer = ImageContainer()
+        self._imagecontainer = imagecontainer
 
         if scan_plates is None:
             scan_plates = dict((info[0], False) for info in plate_infos)
@@ -628,6 +629,8 @@ class AnalyzerMainWindow(QMainWindow):
 
             # do not report value changes to the main window
             self._settings.set_notify_change(False)
+            
+            self.set_image_size()
 
             problems = []
             for prefix in ['primary', 'secondary', 'tertiary']:
@@ -665,7 +668,7 @@ class AnalyzerMainWindow(QMainWindow):
             # activate change notification again
             self._settings.set_notify_change(True)
 
-            self._imagecontainer = imagecontainer
+            
             self.set_modules_active(state=True)
             if show_dlg:
                 information(self, "Plate(s) successfully loaded",
@@ -675,6 +678,37 @@ class AnalyzerMainWindow(QMainWindow):
                      "The naming schema provided might not fit your image data"
                      "or the coordinate file is not correct.\n\nPlease modify "
                      "the values and scan the structure again.")
+            
+    def set_image_size(self):
+        x0, y0, x1, y1 = self._settings.get('General', 'crop_image_x0'), \
+                         self._settings.get('General', 'crop_image_y0'), \
+                         self._settings.get('General', 'crop_image_x1'), \
+                         self._settings.get('General', 'crop_image_y1')
+        if True:#-1 in (x0, y0, x1, y1):  
+            # invalid value found, reset all 
+            x0, y0, x1, y1 = 0, \
+                             0, \
+                             self._imagecontainer.get_meta_data().dim_x,\
+                             self._imagecontainer.get_meta_data().dim_y
+        
+            trait_x0 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_x0' )
+            trait_y0 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_y0' )
+            trait_x1 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_x1' )
+            trait_y1 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_y1' )
+    
+            trait_x0.set_value(trait_x0.get_widget(), x0)
+            trait_y0.set_value(trait_y0.get_widget(), y0)
+            trait_x1.set_value(trait_x1.get_widget(), x1)
+            trait_y0.set_value(trait_y1.get_widget(), y1)
+            
+            trait_x0.set_min_value(x0)
+            trait_x0.set_max_value(x1)
+            trait_y0.set_min_value(y0)
+            trait_y0.set_max_value(y1)
+            trait_x1.set_min_value(x0)
+            trait_x1.set_max_value(x1)
+            trait_y1.set_min_value(y0)
+            trait_y1.set_max_value(y1)
 
     def set_modules_active(self, state=True):
         for name, (button, widget) in self._tab_lookup.iteritems():

@@ -66,6 +66,12 @@ class NumberTrait(Trait):
         super(NumberTrait, self).__init__(default_value)
         self.min_value = min_value
         self.max_value = max_value
+        
+    def set_min_value(self, min_value):
+        self.min_value = min_value
+        
+    def set_max_value(self, max_value):
+        self.max_value = max_value
 
 class IntTrait(NumberTrait):
 
