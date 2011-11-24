@@ -8,6 +8,7 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from cecog.io.imagecontainer import MetaImage
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
@@ -56,6 +57,7 @@ from cecog.segmentation.strategies import (PrimarySegmentation,
                                           SecondarySegmentation,
                                           )
 from cecog import ccore
+from cecog.io.imagecontainer import MetaImage
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -381,6 +383,14 @@ class _Channel(PropertyManager):
         if self.bFlatfieldCorrection:
             self._oLogger.debug("* using flat field correction with image %s" % self.strBackgroundImagePath)
             imgBackground = ccore.readImageFloat(self.strBackgroundImagePath)
+            
+            crop_coordinated = MetaImage.get_crop_coordinates()
+            if crop_coordinated is not None:
+                self._oLogger.debug("* applying cropping to background image")
+                imgBackground = ccore.subImage(imgBackground, ccore.Diff2D(crop_coordinated[0],
+                                                                           crop_coordinated[1]),
+                                                              ccore.Diff2D(crop_coordinated[2],
+                                                                           crop_coordinated[3]))
 
             img_in = ccore.flatfieldCorrection(img_in, imgBackground, 0.0, True)
             img_out = ccore.linearTransform2(img_in, self.fNormalizeMin, self.fNormalizeMax, 0, 255, 0, 255)
