@@ -1743,6 +1743,7 @@ static void wrap_images()
   def("subImage", pySubImage< vigra::Int16Image >);
   def("subImage", pySubImage< vigra::UInt16Image >);
   def("subImage", pySubImage< vigra::UInt8RGBImage >);
+  def("subImage", pySubImage< vigra::FImage >);
 
   def("addImages", pyAddImages< vigra::UInt8Image, vigra::UInt8Image, vigra::UInt8Image>);
   def("addImages", pyAddImages< vigra::UInt16Image, vigra::UInt16Image, vigra::UInt16Image>);
