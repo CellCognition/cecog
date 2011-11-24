@@ -271,6 +271,10 @@ class MetaImage(object):
     Image reading is implemented lazy.
     """
     _crop_coordinates = None
+    
+    @classmethod
+    def get_crop_coordinates(cls):
+        return cls._crop_coordinates
 
     def __init__(self, image_container=None, coordinate=None,
                  height=None, width=None, format=UINT8):
