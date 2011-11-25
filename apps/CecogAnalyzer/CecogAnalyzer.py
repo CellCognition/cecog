@@ -630,7 +630,7 @@ class AnalyzerMainWindow(QMainWindow):
             # do not report value changes to the main window
             self._settings.set_notify_change(False)
             
-            self.set_image_size()
+            self.set_image_crop_size()
 
             problems = []
             for prefix in ['primary', 'secondary', 'tertiary']:
@@ -679,36 +679,39 @@ class AnalyzerMainWindow(QMainWindow):
                      "or the coordinate file is not correct.\n\nPlease modify "
                      "the values and scan the structure again.")
             
-    def set_image_size(self):
+    def set_image_crop_size(self):
         x0, y0, x1, y1 = self._settings.get('General', 'crop_image_x0'), \
                          self._settings.get('General', 'crop_image_y0'), \
                          self._settings.get('General', 'crop_image_x1'), \
                          self._settings.get('General', 'crop_image_y1')
-        if True:#-1 in (x0, y0, x1, y1):  
-            # invalid value found, reset all 
-            x0, y0, x1, y1 = 0, \
+
+        x0_, y0_, x1_, y1_ = 0, \
                              0, \
                              self._imagecontainer.get_meta_data().dim_x,\
                              self._imagecontainer.get_meta_data().dim_y
+                         
+        trait_x0 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_x0' )
+        trait_y0 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_y0' )
+        trait_x1 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_x1' )
+        trait_y1 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_y1' )
         
-            trait_x0 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_x0' )
-            trait_y0 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_y0' )
-            trait_x1 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_x1' )
-            trait_y1 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_y1' )
-    
+        # Check if the crop values are valid
+        if x0 < 0 or y0 < 0 or x1 > x1_ or y1 > y1 or x0 == x1 or y0 == y1:
+            # Set to default values
             trait_x0.set_value(trait_x0.get_widget(), x0)
             trait_y0.set_value(trait_y0.get_widget(), y0)
             trait_x1.set_value(trait_x1.get_widget(), x1)
             trait_y0.set_value(trait_y1.get_widget(), y1)
             
-            trait_x0.set_min_value(x0)
-            trait_x0.set_max_value(x1)
-            trait_y0.set_min_value(y0)
-            trait_y0.set_max_value(y1)
-            trait_x1.set_min_value(x0)
-            trait_x1.set_max_value(x1)
-            trait_y1.set_min_value(y0)
-            trait_y1.set_max_value(y1)
+        # Set GUI widget valid ranges
+        trait_x0.set_min_value(x0_)
+        trait_x0.set_max_value(x1_)
+        trait_y0.set_min_value(y0_)
+        trait_y0.set_max_value(y1_)
+        trait_x1.set_min_value(x0_)
+        trait_x1.set_max_value(x1_)
+        trait_y1.set_min_value(y0_)
+        trait_y1.set_max_value(y1_)
 
     def set_modules_active(self, state=True):
         for name, (button, widget) in self._tab_lookup.iteritems():

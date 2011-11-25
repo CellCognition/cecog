@@ -322,7 +322,7 @@ class MetaImage(object):
             self._img_c = ccore.subImage(self._raw_image,
                                     ccore.Diff2D(MetaImage._crop_coordinates[0], MetaImage._crop_coordinates[1]),
                                     ccore.Diff2D(MetaImage._crop_coordinates[2], MetaImage._crop_coordinates[3]))
-            print '(%d,%d)' % (MetaImage._crop_coordinates[0], MetaImage._crop_coordinates[1]), 'widht', MetaImage._crop_coordinates[2], 'height', MetaImage._crop_coordinates[3]
+           
         return self._img_c
 
     def set_raw_image(self, img):
