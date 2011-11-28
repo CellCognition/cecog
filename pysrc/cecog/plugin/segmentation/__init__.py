@@ -33,6 +33,7 @@ from cecog.plugin.segmentation.strategies import (SegmentationPluginPrimary,
                                                   SegmentationPluginPropagate,
                                                   SegmentationPluginConstrainedWatershed,
                                                   SegmentationPluginDifference,
+                                                  SegmentationPluginIlastik,
                                                   )
 
 REGION_INFO = RegionInformation()
@@ -41,6 +42,7 @@ PRIMARY_SEGMENTATION_MANAGER = SegmentationPluginManager('Primary segmentation',
                                                          'primary_segmentation',
                                                          SECTION_NAME_OBJECTDETECTION)
 PRIMARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginPrimary)
+PRIMARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginIlastik)
 
 SECONDARY_SEGMENTATION_MANAGER = SegmentationPluginManager('Secondary segmentation',
                                                            'secondary_segmentation',

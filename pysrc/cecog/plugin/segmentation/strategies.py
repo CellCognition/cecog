@@ -25,7 +25,9 @@ from cecog import ccore
 from cecog.gui.guitraits import (BooleanTrait,
                                  IntTrait,
                                  FloatTrait,
-                                 )
+                                 StringTrait)
+
+
 from cecog.plugin import stopwatch
 from cecog.plugin.segmentation.manager import _SegmentationPlugin
 
@@ -76,40 +78,43 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
 
     def render_to_gui(self, panel):
         panel.add_group(None,
-                        [('medianradius', (0,0,1,1)),
-                         ('latwindowsize', (0,1,1,1)),
-                         ('latlimit', (0,2,1,1)),
+                        [('medianradius', (0, 0, 1, 1)),
+                         ('latwindowsize', (0, 1, 1, 1)),
+                         ('latlimit', (0, 2, 1, 1)),
                          ], link='lat', label='Local adaptive threshold')
         panel.add_group('lat2',
-                        [('latwindowsize2', (0,0,1,1)),
-                         ('latlimit2', (0,1,1,1)),
+                        [('latwindowsize2', (0, 0, 1, 1)),
+                         ('latlimit2', (0, 1, 1, 1)),
                          ])
         panel.add_input('holefilling')
         panel.add_input('removeborderobjects')
         panel.add_group('shapewatershed',
-                        [('shapewatershed_gausssize', (0,0,1,1)),
-                         ('shapewatershed_maximasize', (0,1,1,1)),
-                         ('shapewatershed_minmergesize', (1,0,1,1)),
+                        [('shapewatershed_gausssize', (0, 0, 1, 1)),
+                         ('shapewatershed_maximasize', (0, 1, 1, 1)),
+                         ('shapewatershed_minmergesize', (1, 0, 1, 1)),
                          ])
         panel.add_group('postprocessing',
-                        [('postprocessing_roisize_min', (0,0,1,1)),
-                         ('postprocessing_roisize_max', (0,1,1,1)),
-                         ('postprocessing_intensity_min', (1,0,1,1)),
-                         ('postprocessing_intensity_max', (1,1,1,1)),
+                        [('postprocessing_roisize_min', (0, 0, 1, 1)),
+                         ('postprocessing_roisize_max', (0, 1, 1, 1)),
+                         ('postprocessing_intensity_min', (1, 0, 1, 1)),
+                         ('postprocessing_intensity_max', (1, 1, 1, 1)),
                          ])
 
     @stopwatch()
-    def prefilter(self, img_in, radius):
+    def prefilter(self, img_in):
+        radius = self.params['medianradius']
         img_out = ccore.disc_median(img_in, radius)
         return img_out
 
     @stopwatch()
     def threshold(self, img_in, size, limit):
+        print type(img_in)
         img_out = ccore.window_average_threshold(img_in, size, limit)
         return img_out
 
     @stopwatch()
     def correct_segmetation(self, img_in, img_bin, border, gauss_size, max_dist, min_merge_size, kind='shape'):
+        print type(img_in), type(img_bin)
         if kind == 'shape':
             f = ccore.segmentation_correction_shape
         else:
@@ -163,16 +168,19 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
     @stopwatch()
     def _run(self, meta_image):
         image = meta_image.image
-
-        img_prefiltered = self.prefilter(image, self.params['medianradius'])
+        
+        img_prefiltered = self.prefilter(image)
         img_bin = self.threshold(img_prefiltered, self.params['latwindowsize'], self.params['latlimit'])
+
 
         if self.params['holefilling']:
             ccore.fill_holes(img_bin, False)
 
+
         if self.params['lat2']:
             img_bin2 = self.threshold(img_prefiltered, self.params['latwindowsize2'], self.params['latlimit2'])
             img_bin = ccore.projectImage([img_bin, img_bin2], ccore.ProjectionType.MaxProjection)
+
 
         if self.params['shapewatershed']:
             img_bin = self.correct_segmetation(img_prefiltered, img_bin,
@@ -181,7 +189,6 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
                                                self.params['shapewatershed_maximasize'],
                                                self.params['shapewatershed_minmergesize'],
                                                kind='shape')
-
         if self.params['intensitywatershed']:
             img_bin = self.correct_segmetation(img_prefiltered, img_bin,
                                                self.params['latwindowsize'],
@@ -190,13 +197,72 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
                                                self.params['intensitywatershed_minmergesize'],
                                                kind='intensity')
 
+        print type(image), type(img_bin), self.params['removeborderobjects']
         container = ccore.ImageMaskContainer(image, img_bin, self.params['removeborderobjects'])
-
+        
+        
         self.postprocessing(container, self.params['postprocessing'],
                             (self.params['postprocessing_roisize_min'], self.params['postprocessing_roisize_max']),
                             (self.params['postprocessing_intensity_min'], self.params['postprocessing_intensity_max']))
 
         return container
+    
+    
+class SegmentationPluginIlastik(SegmentationPluginPrimary):
+
+    LABEL = 'Local adaptive threshold w/ split&merge using trained ilastik classifier'
+    NAME = 'primary_ilastik'
+    COLOR = '#FF0000'
+
+    REQUIRES = None
+
+    PARAMS = [('ilastik_classifier', StringTrait('', 1000, label='Ilastik classifier file',
+                                                 widget_info=StringTrait.STRING_FILE)),
+              ('medianradius', IntTrait(2, 0, 1000, label='Median radius')),
+              ('latwindowsize', IntTrait(20, 1, 1000, label='Window size')),
+              ('latlimit', IntTrait(1, 0, 255, label='Min. contrast')),
+              ('lat2', BooleanTrait(False, label='Local adaptive threshold 2')),
+              ('latwindowsize2', IntTrait(20, 1, 1000, label='Window size')),
+              ('latlimit2', IntTrait(1, 0, 255, label='Min. contrast')),
+              ('shapewatershed', BooleanTrait(False, label='Split & merge by shape')),
+              ('shapewatershed_gausssize', IntTrait(1, 0, 10000, label='Gauss radius')),
+              ('shapewatershed_maximasize', IntTrait(1, 0, 10000, label='Min. seed distance')),
+              ('shapewatershed_minmergesize', IntTrait(1, 0, 10000, label='Object size threshold')),
+              ('intensitywatershed', BooleanTrait(False, label='Split & merge by intensity')),
+              ('intensitywatershed_gausssize', IntTrait(1, 0, 10000, label='Gauss radius')),
+              ('intensitywatershed_maximasize', IntTrait(1, 0, 10000, label='Min. seed distance')),
+              ('intensitywatershed_minmergesize', IntTrait(1, 0, 10000, label='Object size threshold')),
+              ('postprocessing', BooleanTrait(False, label='Object filter')),
+              ('postprocessing_roisize_min', IntTrait(-1, -1, 10000, label='Min. object size')),
+              ('postprocessing_roisize_max', IntTrait(-1, -1, 10000, label='Max. object size')),
+              ('postprocessing_intensity_min', IntTrait(-1, -1, 10000, label='Min. average intensity')),
+              ('postprocessing_intensity_max', IntTrait(-1, -1, 10000, label='Max. average intensity')),
+              ('removeborderobjects', BooleanTrait(True, label='Remove border objects')),
+              ('holefilling', BooleanTrait(True, label='Fill holes')),
+              ]
+
+    # the : at the beginning indicates a QRC link with alias 'plugins/segmentation/local_adaptive_threshold'
+    DOC = ':local_adaptive_threshold'
+    
+    @stopwatch()
+    def prefilter(self, img_in):
+        radius = self.params['medianradius']
+        img_out = ccore.disc_median(img_in, radius)
+        print 'here comes ilastik'
+        img = img_out.toArray()
+        img_n = numpy.zeros(img.shape, img.dtype)
+        img_n[:] = img[:]
+        img = img_n.T
+        img = img + 10
+        print 'a'
+        img_out = ccore.numpy_to_image(img, True)
+        print type(img_out)
+        return img_out
+    
+    def render_to_gui(self, panel):
+        panel.add_group(None, [('ilastik_classifier', (0, 0, 1, 1))])
+        SegmentationPluginPrimary.render_to_gui(self, panel)
+        
 
 
 class SegmentationPluginExpanded(_SegmentationPlugin):
@@ -218,7 +284,7 @@ Non-overlapping expansion of the primary segmentation by a certain number of ste
     def _run(self, meta_image, container):
         image = meta_image.image
         if self.params['expansion_size'] > 0:
-            nr_objects = container.img_labels.getMinmax()[1]+1
+            nr_objects = container.img_labels.getMinmax()[1] + 1
             img_labels = ccore.seeded_region_expansion(image,
                                                        container.img_labels,
                                                        ccore.SrgType.KeepContours,
@@ -247,7 +313,7 @@ class SegmentationPluginInside(_SegmentationPlugin):
     def _run(self, meta_image, container):
         image = meta_image.image
         if self.params['shrinking_size'] > 0:
-            nr_objects = container.img_labels.getMinmax()[1]+1
+            nr_objects = container.img_labels.getMinmax()[1] + 1
             img_labels = ccore.seeded_region_shrinking(image,
                                                        container.img_labels,
                                                        nr_objects,
@@ -274,7 +340,7 @@ class SegmentationPluginOutside(_SegmentationPlugin):
     def _run(self, meta_image, container):
         image = meta_image.image
         if self.params['expansion_size'] > 0 and self.params['expansion_size'] > self.params['separation_size']:
-            nr_objects = container.img_labels.getMinmax()[1]+1
+            nr_objects = container.img_labels.getMinmax()[1] + 1
             img_labels = ccore.seeded_region_expansion(image,
                                                        container.img_labels,
                                                        ccore.SrgType.KeepContours,
@@ -306,7 +372,7 @@ class SegmentationPluginRim(_SegmentationPlugin):
         image = meta_image.image
         if self.params['expansion_size'] > 0 or self.params['shrinking_size'] > 0:
 
-            nr_objects = container.img_labels.getMinmax()[1]+1
+            nr_objects = container.img_labels.getMinmax()[1] + 1
             if self.params['shrinking_size'] > 0:
                 img_labelsA = ccore.seeded_region_shrinking(image,
                                                             container.img_labels,
@@ -349,7 +415,7 @@ class SegmentationPluginModification(_SegmentationPlugin):
         image = meta_image.image
         if self.params['expansion_size'] > 0 or self.params['shrinking_size'] > 0:
 
-            nr_objects = container.img_labels.getMinmax()[1]+1
+            nr_objects = container.img_labels.getMinmax()[1] + 1
             if self.params['shrinking_size'] > 0:
                 img_labelsA = ccore.seeded_region_shrinking(image,
                                                             container.img_labels,
@@ -393,7 +459,7 @@ class SegmentationPluginPropagate(_SegmentationPlugin):
     def _run(self, meta_image, container):
         image = meta_image.image
 
-        img_prefiltered = ccore.disc_median(image, self.params['presegmentation_median_radius'])
+        img_red = ccore.disc_median(image, self.params['presegmentation_median_radius'])
         t = int(ccore.get_otsu_threshold(img_prefiltered) * self.params['presegmentation_alpha'])
         img_bin = ccore.threshold_image(img_prefiltered, t)
         img_labels = ccore.segmentation_propagate(img_prefiltered, img_bin,
