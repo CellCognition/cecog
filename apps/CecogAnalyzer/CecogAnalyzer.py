@@ -785,10 +785,10 @@ if __name__ == "__main__":
         set_package_path(package_path)
         log_path = os.path.join(get_appdata_path(), 'log')
         safe_mkdirs(log_path)
-        sys.stdout = \
-            file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
-        sys.stderr = \
-            file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
+#        sys.stdout = \
+#            file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
+#        sys.stderr = \
+#            file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
 
     splash = QSplashScreen(QPixmap(':cecog_splash'))
     splash.show()
