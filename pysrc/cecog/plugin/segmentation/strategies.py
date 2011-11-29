@@ -246,17 +246,13 @@ class SegmentationPluginIlastik(SegmentationPluginPrimary):
     
     @stopwatch()
     def prefilter(self, img_in):
-        radius = self.params['medianradius']
-        img_out = ccore.disc_median(img_in, radius)
-        print 'here comes ilastik'
-        img = img_out.toArray()
-        img_n = numpy.zeros(img.shape, img.dtype)
-        img_n[:] = img[:]
-        img = img_n.T
+        print 'here comes ilastik stuff'
+        img = img_in.toArray(copy=True)
+        print '1'
         img = img + 10
-        print 'a'
+        print '2'
         img_out = ccore.numpy_to_image(img, True)
-        print type(img_out)
+        print '3'
         return img_out
     
     def render_to_gui(self, panel):
