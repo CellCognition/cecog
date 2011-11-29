@@ -329,7 +329,7 @@ template <class IMAGE>
 numeric::array
 pyRgbImageToArray(IMAGE & img, bool copy=true)
 {
-  npy_intp dims[] = npy_intp dims[] = {img.height(), img.width(), 3 };
+  npy_intp dims[] =  {img.height(), img.width(), 3 };
   if (copy)
   {
     object obj(handle<>(PyArray_SimpleNew(3, &dims[0],
