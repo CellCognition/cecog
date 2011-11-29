@@ -191,8 +191,13 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(pyOverloads_ImageToArray, pyImageToArray, 1, 2)
       npy_intp dims[] = { img.width(), img.height() };
       if(copy)
       {
-        object obj(handle<>(PyArray_SimpleNew(2, &dims[0],
-                            TypeAsNumPyType<typename IMAGE::PixelType>::result())));
+        object obj(handle<>(PyArray_NewFromDescr(&PyArray_Type, 
+												PyArray_DescrFromType(TypeAsNumPyType<typename IMAGE::PixelType>::result()),
+												2,
+												dims,
+												NULL,
+												NULL,
+												NPY_FORTRAN, NULL)));
         void* arr_data = PyArray_DATA((PyArrayObject*) obj.ptr());
         ((PyArrayObject*) obj.ptr())->strides[0] = sizeof(typename IMAGE::PixelType);
         ((PyArrayObject*) obj.ptr())->strides[1] = img.width() * sizeof(typename IMAGE::PixelType);
@@ -203,11 +208,14 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(pyOverloads_ImageToArray, pyImageToArray, 1, 2)
       }
       else
       {
-        object obj(handle<>(PyArray_SimpleNewFromData(2, &dims[0],
-                            TypeAsNumPyType<typename IMAGE::PixelType>::result(), (char*)img[0])));
-        ((PyArrayObject*) obj.ptr())->strides[0] = sizeof(typename IMAGE::PixelType);
-        ((PyArrayObject*) obj.ptr())->strides[1] = img.width() * sizeof(typename IMAGE::PixelType);
-        ((PyArrayObject*) obj.ptr())->nd = 2;
+        npy_intp strides[] = {sizeof(typename IMAGE::PixelType), img.width() * sizeof(typename IMAGE::PixelType)};
+        object obj(handle<>(PyArray_NewFromDescr(&PyArray_Type, 
+												PyArray_DescrFromType(TypeAsNumPyType<typename IMAGE::PixelType>::result()),
+												2,
+												dims,
+												strides,
+												(char*)img[0],
+												NPY_FORTRAN, NULL)));
         return extract<numeric::array>(obj);
       }
     }
