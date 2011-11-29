@@ -61,27 +61,33 @@ QRC_TOKEN = 'qrc:/'
 # functions:
 #
 def numpy_to_qimage(data, colors=None):
-    w, h = data.shape[:2]
+    h, w = data.shape[:2]
     #print data.dtype, data.ndim, data.shape
     if data.dtype == numpy.uint8:
         if data.ndim == 2:
-            image = data
+            shape = (h, w / 4 * 4)
+            if shape != data.shape:
+                h, w = shape
+                image = data[:,:w]
+            else:
+                image = data
+            image = numpy.require(image, numpy.uint8, 'C')
             format = QImage.Format_Indexed8
             if colors is None:
                 colors = [QColor(i,i,i) for i in range(256)]
-        elif data.ndim == 3:
-            if data.shape[2] == 3:
-                c = data.shape[2]
-                shape = (int(numpy.ceil(w / 4.) * 4), h, c)
-                if shape != data.shape:
-                    image = numpy.zeros(shape, numpy.uint8)
-                else:
-                    image = data
-                format = QImage.Format_RGB888
-            elif data.shape[0] == 3:
-                w, h = data.shape[1:3]
-                image = data
-                format = QImage.Format_RGB32
+#        elif data.ndim == 3:
+#            if data.shape[2] == 3:
+#                c = data.shape[2]
+#                shape = (int(numpy.ceil(w / 4.) * 4), h, c)
+#                if shape != data.shape:
+#                    image = numpy.zeros(shape, numpy.uint8)
+#                else:
+#                    image = data
+#                format = QImage.Format_RGB888
+#            elif data.shape[0] == 3:
+#                w, h = data.shape[1:3]
+#                image = data
+#                format = QImage.Format_RGB32
     qimage = QImage(image, w, h, format)
     qimage.ndarray = image
     if not colors is None:

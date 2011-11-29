@@ -188,26 +188,25 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(pyOverloads_ImageToArray, pyImageToArray, 1, 2)
     numeric::array
     pyImageToArray(IMAGE const & img, bool copy=false)
     {
-      npy_intp dims[] = { img.width(), img.height() };
+      npy_intp dims[] = { img.height(), img.width() };
       if(copy)
       {
-        object obj(handle<>(PyArray_SimpleNew(2, dims,
-                            TypeAsNumPyType<typename IMAGE::PixelType>::result())));
+    	object obj(handle<>(PyArray_SimpleNew(2, &dims[0],
+    	                               TypeAsNumPyType<typename IMAGE::PixelType>::result())));
         void* arr_data = PyArray_DATA((PyArrayObject*) obj.ptr());
-        ((PyArrayObject*) obj.ptr())->strides[0] = sizeof(typename IMAGE::PixelType);
-        ((PyArrayObject*) obj.ptr())->strides[1] = img.width() * sizeof(typename IMAGE::PixelType);
-        ((PyArrayObject*) obj.ptr())->nd = 2;
+        ((PyArrayObject*) obj.ptr())->strides[0] = img.width() * sizeof(typename IMAGE::PixelType);
+        ((PyArrayObject*) obj.ptr())->strides[1] = sizeof(typename IMAGE::PixelType);
         npy_intp n = img.width() * img.height();
         memcpy(arr_data, (void*)img[0], sizeof(typename IMAGE::PixelType) * n);
         return extract<numeric::array>(obj);
       }
       else
       {
-        object obj(handle<>(PyArray_SimpleNewFromData(2, dims,
-                            TypeAsNumPyType<typename IMAGE::PixelType>::result(), (void*)img[0])));
-        ((PyArrayObject*) obj.ptr())->strides[0] = sizeof(typename IMAGE::PixelType);
-        ((PyArrayObject*) obj.ptr())->strides[1] = img.width() * sizeof(typename IMAGE::PixelType);
-        ((PyArrayObject*) obj.ptr())->nd = 2;
+        npy_intp strides[] = {sizeof(typename IMAGE::PixelType), img.width() * sizeof(typename IMAGE::PixelType)};
+        object obj(handle<>(PyArray_SimpleNewFromData(2, &dims[0],
+                                     TypeAsNumPyType<typename IMAGE::PixelType>::result(), (char*)img[0])));
+        ((PyArrayObject*) obj.ptr())->strides[0] = img.width() * sizeof(typename IMAGE::PixelType);
+        ((PyArrayObject*) obj.ptr())->strides[1] = sizeof(typename IMAGE::PixelType);
         return extract<numeric::array>(obj);
       }
     }
@@ -330,16 +329,15 @@ template <class IMAGE>
 numeric::array
 pyRgbImageToArray(IMAGE & img, bool copy=true)
 {
-  npy_intp dims[] = { img.width(), img.height(), 3 };
+  npy_intp dims[] =  {img.height(), img.width(), 3 };
   if (copy)
   {
     object obj(handle<>(PyArray_SimpleNew(3, &dims[0],
                                           TypeAsNumPyType<typename IMAGE::PixelType::value_type>::result())));
     char *arr_data = ((PyArrayObject*) obj.ptr())->data;
+    ((PyArrayObject*) obj.ptr())->strides[0] = sizeof(typename IMAGE::PixelType::value_type) * sizeof(typename IMAGE::PixelType) * img.width();
+    ((PyArrayObject*) obj.ptr())->strides[1] = sizeof(typename IMAGE::PixelType::value_type) * sizeof(typename IMAGE::PixelType);
     ((PyArrayObject*) obj.ptr())->strides[2] = sizeof(typename IMAGE::PixelType::value_type);
-    ((PyArrayObject*) obj.ptr())->strides[0] = sizeof(typename IMAGE::PixelType::value_type) * sizeof(typename IMAGE::PixelType);
-    ((PyArrayObject*) obj.ptr())->strides[1] = sizeof(typename IMAGE::PixelType::value_type) * sizeof(typename IMAGE::PixelType) * img.width();
-    ((PyArrayObject*) obj.ptr())->nd = 3;
     memcpy(arr_data, img[0], sizeof(typename IMAGE::PixelType::value_type) * sizeof(typename IMAGE::PixelType) * img.width() * img.height());
     return extract<numeric::array>(obj);
   }
@@ -347,9 +345,9 @@ pyRgbImageToArray(IMAGE & img, bool copy=true)
   {
     object obj(handle<>(PyArray_SimpleNewFromData(3, &dims[0],
                                                   TypeAsNumPyType<typename IMAGE::PixelType::value_type>::result(), (char *)img[0])));
+    ((PyArrayObject*) obj.ptr())->strides[0] = sizeof(typename IMAGE::PixelType::value_type) * sizeof(typename IMAGE::PixelType) * img.width();
+    ((PyArrayObject*) obj.ptr())->strides[1] = sizeof(typename IMAGE::PixelType::value_type) * sizeof(typename IMAGE::PixelType);
     ((PyArrayObject*) obj.ptr())->strides[2] = sizeof(typename IMAGE::PixelType::value_type);
-    ((PyArrayObject*) obj.ptr())->strides[0] = sizeof(typename IMAGE::PixelType::value_type) * sizeof(typename IMAGE::PixelType);
-    ((PyArrayObject*) obj.ptr())->strides[1] = sizeof(typename IMAGE::PixelType::value_type) * sizeof(typename IMAGE::PixelType) * img.width();
     ((PyArrayObject*) obj.ptr())->nd = 3;
     return extract<numeric::array>(obj);
   }
@@ -704,8 +702,10 @@ PyObject * pyFlatfieldCorrection(Image1 const & imgIn, Image2 const & imgBack, f
   if (normalizeBackground)
   {
     vigra::FindMinMax<typename Image2::value_type> minmax;
+	vigra::FindAverage<typename Image2::value_type> average;
     inspectImage(srcImageRange(imgBack), minmax);
-    normV = (float)minmax.max;
+	inspectImage(srcImageRange(imgBack), average);
+	normV = (float)average();
   }
 
   Image3 imgBack2(imgIn.size());
@@ -1757,6 +1757,8 @@ static void wrap_images()
   def("flatfieldCorrection", pyFlatfieldCorrection< vigra::UInt8Image, vigra::UInt8Image >);
   def("flatfieldCorrection", pyFlatfieldCorrection< vigra::UInt16Image, vigra::UInt16Image >);
   def("flatfieldCorrection", pyFlatfieldCorrection< vigra::Int16Image, vigra::Int16Image >);
+  def("flatfieldCorrection", pyFlatfieldCorrection< vigra::UInt8Image, vigra::FImage >);
+  def("flatfieldCorrection", pyFlatfieldCorrection< vigra::UInt16Image, vigra::FImage >);
 
   def("drawLine", pyDrawLine< vigra::BImage >, (arg("p1"), arg("p2"), arg("image"), arg("color"), arg("thick")=false), "Draws a line from p1 to p2.");
   def("drawLine", pyDrawLine< vigra::Int16Image >, (arg("p1"), arg("p2"), arg("image"), arg("color"), arg("thick")=false), "Draws a line from p1 to p2.");

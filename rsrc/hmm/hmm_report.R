@@ -417,7 +417,7 @@ write.decode <- function(screen, cell, hmm)
             nCells = 1
             colNames <- c("class__B__label")
             v <- array(0, c(nCells, T))
-            v[1,] <- t$class__B__probability
+            v[1,] <- t$class__probability
         }
 
         fuseClasses <- screen$fuseClasses

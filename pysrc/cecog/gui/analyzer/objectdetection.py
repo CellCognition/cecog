@@ -83,6 +83,9 @@ class ObjectDetectionFrame(BaseProcessorFrame):
                         ('primary_zslice_projection_end',),
                         ('primary_zslice_projection_step', None, None, True),
                         ], layout='flow')
+        self.add_group('primary_flat_field_correction',
+                       [('primary_flat_field_correction_image_file',),
+                        ], layout='flow')
         self.add_line()
         self.add_plugin_bay(PRIMARY_SEGMENTATION_MANAGER, settings)
 

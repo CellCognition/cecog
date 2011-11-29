@@ -120,7 +120,6 @@ if __name__ ==  "__main__":
     logger.info("*************************************************" + '*'*len(VERSION))
     logger.info('argv: %s' % sys.argv)
 
-
     if options.settings is None:
         parser.error('Settings filename required.')
 
