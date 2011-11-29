@@ -75,19 +75,19 @@ def numpy_to_qimage(data, colors=None):
             format = QImage.Format_Indexed8
             if colors is None:
                 colors = [QColor(i,i,i) for i in range(256)]
-#        elif data.ndim == 3:
-#            if data.shape[2] == 3:
-#                c = data.shape[2]
-#                shape = (int(numpy.ceil(w / 4.) * 4), h, c)
-#                if shape != data.shape:
-#                    image = numpy.zeros(shape, numpy.uint8)
-#                else:
-#                    image = data
-#                format = QImage.Format_RGB888
-#            elif data.shape[0] == 3:
-#                w, h = data.shape[1:3]
-#                image = data
-#                format = QImage.Format_RGB32
+        elif data.ndim == 3:
+            if data.shape[2] == 3:
+                c = data.shape[2]
+                shape = (h, w / 4 * 4, c)
+                if shape != data.shape:
+                    image = numpy.zeros(shape, numpy.uint8)
+                else:
+                    image = data
+                format = QImage.Format_RGB888
+            elif data.shape[0] == 3:
+                w, h = data.shape[1:3]
+                image = data
+                format = QImage.Format_RGB32
     qimage = QImage(image, w, h, format)
     qimage.ndarray = image
     if not colors is None:
