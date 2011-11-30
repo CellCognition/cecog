@@ -191,7 +191,7 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(pyOverloads_ImageToArray, pyImageToArray, 1, 2)
       npy_intp dims[] = { img.height(), img.width() };
       if(copy)
       {
-    	object obj(handle<>(PyArray_SimpleNew(2, &dims[0],
+    	object obj(handle<>(PyArray_SimpleNew(2, dims,
     	                               TypeAsNumPyType<typename IMAGE::PixelType>::result())));
         void* arr_data = PyArray_DATA((PyArrayObject*) obj.ptr());
         ((PyArrayObject*) obj.ptr())->strides[0] = img.width() * sizeof(typename IMAGE::PixelType);
@@ -227,6 +227,14 @@ _numpyToImage(PyArrayObject *array)
   std::auto_ptr< IMAGEVIEW > res(new IMAGEVIEW(array->dimensions[1], array->dimensions[0],
                                                (typename IMAGEVIEW::PixelType*) array->data));
   return incref(object(res).ptr());
+}
+
+
+template <class IMAGE>
+PyObject * pyImageCopy(IMAGE const &imgIn)
+{
+    std::auto_ptr< IMAGE > imgPtr(new IMAGE(imgIn));
+    return incref(object(imgPtr).ptr());
 }
 
 static inline PyObject*
@@ -1350,7 +1358,8 @@ static void wrapImage(const char * name)
     .def("getMean", &pyImageMean< ImageType >)
     .def("getMinmax", &pyImageMinmax< ImageType >)
     .def("getHistogram", &pyImageHistogram< ImageType >)
-    .def("toArray", &pyImageToArray< ImageType >, (arg("img"), arg("copy")=false), "Export image to numpy.array");
+    .def("toArray", &pyImageToArray< ImageType >, (arg("img"), arg("copy")=false), "Export image to numpy.array")
+    .def("copy", &pyImageCopy< ImageType >, (arg("img")), "Copy Imgage");
   baseImageWrapper(oImageWrapper);
 }
 
