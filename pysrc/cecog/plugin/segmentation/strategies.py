@@ -246,18 +246,90 @@ class SegmentationPluginIlastik(SegmentationPluginPrimary):
     
     @stopwatch()
     def prefilter(self, img_in):
-        print 'here comes ilastik stuff'
-        img = img_in.toArray(copy=True)
-        print '1'
-        img = img + 10
-        print '2'
-        img_out = ccore.numpy_to_image(img, True)
-        print '3'
+        img = SegmentationPluginPrimary.prefilter(self, img_in)
+        np_img = img.toArray(True)
+        img_out = self._predict_image_with_ilastik(np_img)
         return img_out
     
     def render_to_gui(self, panel):
         panel.add_group(None, [('ilastik_classifier', (0, 0, 1, 1))])
         SegmentationPluginPrimary.render_to_gui(self, panel)
+    
+    def _predict_image_with_ilastik(self, image_):
+        import ilastik
+        from ilastik.core.dataMgr import DataMgr, DataItemImage
+        from ilastik.modules.classification.core.featureMgr import FeatureMgr
+        from ilastik.modules.classification.core.classificationMgr import ClassificationMgr
+        from ilastik.modules.classification.core.features.featureBase import FeatureBase
+        from ilastik.modules.classification.core.classifiers.classifierRandomForest import ClassifierRandomForest
+        from ilastik.modules.classification.core.classificationMgr import ClassifierPredictThread
+        from ilastik.core.volume import DataAccessor
+        import numpy, h5py
+        
+        dataMgr = DataMgr()
+        
+        # Transform input image to ilastik convention s
+        # 3D = (time,x,y,z,channel) 
+        # 2D = (time,1,x,y,channel)
+        # Note, this work for 2D images right now. Is there a need for 3D
+        image_.shape = (1,1) + image_.shape
+        
+        # Check if image_ has channels, if not add singelton dimension
+        if len(image_.shape) == 4:
+            image_.shape = image_.shape + (1,)
+        
+        # Add data item di to dataMgr
+        di = DataItemImage('')
+        di.setDataVol(DataAccessor(image_))
+        dataMgr.append(di, alreadyLoaded=True)
+        
+        fileName = self.params["ilastik_classifier"]
+        
+        hf = h5py.File(fileName,'r')
+        temp = hf['classifiers'].keys()
+        # If hf is not closed this leads to an error in win64 and mac os x
+        hf.close()
+        del hf
+        
+        classifiers = []
+        for cid in temp:
+            cidpath = 'classifiers/' + cid
+            classifiers.append(ClassifierRandomForest.loadRFfromFile(fileName, str(cidpath)))
+            
+        dataMgr.module["Classification"]["classificationMgr"].classifiers = classifiers
+        
+        # Restore user selection of feature items from hdf5
+        featureItems = []
+        f = h5py.File(fileName,'r')
+        for fgrp in f['features'].values():
+            featureItems.append(FeatureBase.deserialize(fgrp))
+        f.close()
+        del f
+        fm = FeatureMgr(dataMgr, featureItems)
+        
+        
+
+        # Create FeatureMgr
+       
+        
+        # Compute features
+
+        fm.prepareCompute(dataMgr)
+        fm.triggerCompute()
+        fm.joinCompute(dataMgr)
+        
+        # Predict with loaded classifier
+        
+        classificationPredict = ClassifierPredictThread(dataMgr)
+        classificationPredict.start()
+        classificationPredict.wait()
+        
+        # Produce output image and select the probability map
+        probMap = (classificationPredict._prediction[0][0,0,:,:, 1] *255).astype(numpy.uint8)
+        
+        img_out = ccore.numpy_to_image(probMap, True)
+        return img_out
+        
         
 
 
