@@ -220,7 +220,7 @@ class SegmentationPluginPrimaryLoadFromFile(SegmentationPluginPrimary):
 
     PARAMS = [('segmentation_folder', StringTrait('', 1000, label='Segmentation folder',
                                                  widget_info=StringTrait.STRING_FILE)),
-              ('loader_regex', StringTrait('%(plate)s/%(pos)s/.*P%(pos)s_T%(time)05d_C%(channel)s_Z%(zslice)d_S1.tif', 1000, label='Regex for loading')),
+              ('loader_regex', StringTrait('^%(plate)s$/^%(pos)s$/.*P%(pos)s_T%(time)05d_C%(channel)s_Z%(zslice)d_S1.tif', 1000, label='Regex for loading')),
               ]
 
     # the : at the beginning indicates a QRC link with alias 'plugins/segmentation/local_adaptive_threshold'
@@ -244,7 +244,7 @@ class SegmentationPluginPrimaryLoadFromFile(SegmentationPluginPrimary):
             )
         
         main_folder = self.params['segmentation_folder']
-        
+        #FIXME: This is useful enought to put into an reusable function, maybe in utils?
         locator = self.params["loader_regex"] % coords
         locator_split = locator.split('/')
         locator_match = '/'
