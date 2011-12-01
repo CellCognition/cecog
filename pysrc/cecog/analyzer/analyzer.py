@@ -214,7 +214,7 @@ class TimeHolder(OrderedDict):
                 nr_frames = len(frames)
                 var = grp_def_pos.create_dataset(self.HDF5_GRP_TIME,
                                             (nr_frames,), dtype,
-                                            chunks=(1,),
+                                            chunks=(nr_frames,),
                                             compression=self._hdf5_compression)
                 for frame in frames:
                     idx = self._frames_to_idx[frame]
@@ -374,7 +374,7 @@ class TimeHolder(OrderedDict):
                     grp.create_dataset(var_name,
                                        (nr_labels, t, z, h, w),
                                        'int32',
-                                       chunks=(1, 1, 1, h, w),
+                                       chunks=(1, 5, 1, h/5, w/5),
                                        compression=self._hdf5_compression)
 
             frame_idx = self._frames_to_idx[self._iCurrentT]
@@ -409,7 +409,7 @@ class TimeHolder(OrderedDict):
                     grp.create_dataset(var_name,
                                        (nr_channels, t, z, h, w),
                                        'uint8',
-                                       chunks=(1, 1, 1, h, w),
+                                       chunks=(1, 5, 1, h/5, w/5),
 #                                       compression=self._hdf5_compression)
                                        )
 
@@ -472,7 +472,7 @@ class TimeHolder(OrderedDict):
                                                      (nr_objects,),
                                                      self.HDF5_DTYPE_TERMINAL_RELATION,
                                                      compression=self._hdf5_compression,
-                                                     chunks=(1,))
+                                                     chunks=(nr_objects,))
                     var_rel_offset = 0
                 else:
                     var_rel = grp_rel[var_name]
@@ -487,7 +487,7 @@ class TimeHolder(OrderedDict):
                                                                (nr_objects,),
                                                                self.HDF5_DTYPE_RELATION,
                                                                compression=self._hdf5_compression,
-                                                               chunks=(1,))
+                                                               chunks=(nr_objects,))
                     else:
                         var_rel_cross = grp_rel[var_name]
                         var_rel_cross.resize((var_rel_offset + nr_objects,))
@@ -496,14 +496,14 @@ class TimeHolder(OrderedDict):
                 grp_cur_obj = grp_obj.require_group(grp_name)
                 var_name = self.HDF5_NAME_EDGE
                 if var_name not in grp_cur_obj:
-                    var_edge = grp_cur_obj.create_dataset(var_name, (nr_objects,), self.HDF5_DTYPE_EDGE, chunks=(1,))
+                    var_edge = grp_cur_obj.create_dataset(var_name, (nr_objects,), self.HDF5_DTYPE_EDGE, chunks=(nr_objects,))
                 else:
                     var_edge = grp_cur_obj[var_name]
                     var_edge.resize((var_rel_offset + nr_objects,))
 
                 var_name = self.HDF5_NAME_ID
                 if var_name not in grp_cur_obj:
-                    var_id = grp_cur_obj.create_dataset(var_name, (nr_objects,), self.HDF5_DTYPE_ID, chunks=(1,))
+                    var_id = grp_cur_obj.create_dataset(var_name, (nr_objects,), self.HDF5_DTYPE_ID, chunks=(nr_objects,))
                 else:
                     var_id = grp_cur_obj[var_name]
                     var_id.resize((var_rel_offset + nr_objects,))
@@ -528,7 +528,7 @@ class TimeHolder(OrderedDict):
                             var_feature = \
                                 self._grp_def.create_dataset(self.HDF5_GRP_FEATURE,
                                                              (nr_features,), dt,
-                                                             chunks=(1,),
+                                                             chunks=(nr_features,),
                                                              compression=self._hdf5_compression)
                             offset = 0
                         else:
@@ -571,7 +571,7 @@ class TimeHolder(OrderedDict):
                                 grp_cur_obj.create_dataset(var_name,
                                                 (nr_objects, nr_features),
                                                 'float',
-                                                chunks=(1, nr_features),
+                                                chunks=(nr_objects, nr_features),
                                                 compression=self._hdf5_compression)
                         else:
                             var_feature = grp_cur_obj[var_name]
@@ -583,7 +583,7 @@ class TimeHolder(OrderedDict):
                     var_crack = \
                         grp_current_region.create_dataset('crack_contour',
                                             (nr_objects, ), dt,
-                                            chunks=(1, ),
+                                            chunks=(nr_objects, ),
                                             compression=self._hdf5_compression)
                 frame_idx = self._frames_to_idx[self._iCurrentT]
                 for idx, obj_id in enumerate(region):
@@ -639,7 +639,7 @@ class TimeHolder(OrderedDict):
             var_rel = grp.create_dataset('tracking',
                                          (nr_edges, ),
                                          self.HDF5_DTYPE_RELATION,
-                                         chunks=(1,),
+                                         chunks=(nr_edges,),
                                          compression=self._hdf5_compression)
             grp = self._grp_cur_position[self.HDF5_GRP_OBJECT]
             grp_cur_obj = grp.create_group('track')
@@ -847,7 +847,7 @@ class TimeHolder(OrderedDict):
                 var_class_probs = \
                     grp_cur.create_dataset(var_name, (nr_objects, nr_classes),
                                            'float',
-                                           chunks=(1, nr_classes),
+                                           chunks=(nr_objects, nr_classes),
                                            compression=self._hdf5_compression)
                 offset = 0
             else:
@@ -859,7 +859,7 @@ class TimeHolder(OrderedDict):
                 dt = numpy.dtype([('classication_idx', 'int32')])
                 var_class = \
                     grp_cur.create_dataset(var_name, (nr_objects, ), dt,
-                                           chunks=(1,),
+                                           chunks=(nr_objects,),
                                            compression=self._hdf5_compression)
             else:
                 var_class = grp_cur[var_name]
