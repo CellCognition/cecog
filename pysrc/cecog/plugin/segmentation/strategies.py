@@ -17,6 +17,7 @@
 # extension module imports:
 #
 import numpy
+import os, re
 
 #-------------------------------------------------------------------------------
 # cecog module imports:
@@ -101,8 +102,9 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
                          ])
 
     @stopwatch()
-    def prefilter(self, img_in):
-        radius = self.params['medianradius']
+    def prefilter(self, img_in, radius):
+        if radius is None:
+            radius = self.params['medianradius']
         img_out = ccore.disc_median(img_in, radius)
         return img_out
 
@@ -208,6 +210,71 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
         return container
     
     
+class SegmentationPluginPrimaryLoadFromFile(SegmentationPluginPrimary):
+
+    LABEL = 'Load from file'
+    NAME = 'primary'
+    COLOR = '#FF00FF'
+
+    REQUIRES = None
+
+    PARAMS = [('segmentation_folder', StringTrait('', 1000, label='Segmentation folder',
+                                                 widget_info=StringTrait.STRING_FILE)),
+              ('loader_regex', StringTrait('%(plate)s/%(pos)s/.*P%(pos)s_T%(time)05d_C%(channel)s_Z%(zslice)d_S1.tif', 1000, label='Regex for loading')),
+              ]
+
+    # the : at the beginning indicates a QRC link with alias 'plugins/segmentation/local_adaptive_threshold'
+    DOC = ':local_adaptive_threshold'
+
+    def render_to_gui(self, panel):
+        panel.add_group(None, [('segmentation_folder', (0, 0, 1, 1))])
+        panel.add_group(None, [('loader_regex', (0, 0, 1, 1))])
+
+    
+    @stopwatch()
+    def _run(self, meta_image):
+        image = meta_image.image 
+        
+        coords = dict(
+            plate = meta_image.image_container.current_plate,
+            pos = meta_image.coordinate.position,
+            time = meta_image.coordinate.time,
+            zslice = meta_image.coordinate.zslice,
+            channel = meta_image.coordinate.channel,
+            )
+        
+        main_folder = self.params['segmentation_folder']
+        
+        locator = self.params["loader_regex"] % coords
+        locator_split = locator.split('/')
+        locator_match = '/'
+        for loc in locator_split[:-1]:
+            try:
+                match_candidates = os.listdir(main_folder + locator_match)
+                if len(match_candidates) == 0:
+                    raise RuntimeError
+            except:
+                raise RuntimeError('No files found in ' + main_folder + locator_match)
+            match_results = [m.group() for l in match_candidates for m in [re.search(loc, l)] if m]
+            if len(match_results) != 1:
+                raise RuntimeError('Could not match ' + match_candidates[0] + ' with ' + loc)
+            locator_match += match_results[0] + '/'
+            
+        match_candidates = os.listdir(main_folder + locator_match)
+        
+        match_results = [m.group() for l in match_candidates for m in [re.search(locator_split[-1], l)] if m]
+        if len(match_results) == 0:
+            raise RuntimeError('Could not match ', match_candidates[0], 'with', locator_split[-1])
+        
+        match_result = match_results[0]
+            
+        img = ccore.readImage(main_folder + locator_match + match_result)
+        img_pre = SegmentationPluginPrimary.prefilter(self, img, 2)
+        img_bin = SegmentationPluginPrimary.threshold(self, img_pre, 20, 3)    
+         
+        container = ccore.ImageMaskContainer(image, img_bin, False)
+        return container
+    
 class SegmentationPluginIlastik(SegmentationPluginPrimary):
 
     LABEL = 'Local adaptive threshold w/ split&merge using trained ilastik classifier'
@@ -255,8 +322,6 @@ class SegmentationPluginIlastik(SegmentationPluginPrimary):
         np_img = img_in.toArray(True) 
         return ccore.numpy_to_image((np_img > 128).astype(numpy.uint8), True)
 
-        
-    
     def render_to_gui(self, panel):
         panel.add_group(None, [('ilastik_classifier', (0, 0, 1, 1))])
         SegmentationPluginPrimary.render_to_gui(self, panel)
