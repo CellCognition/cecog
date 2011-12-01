@@ -108,7 +108,6 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
 
     @stopwatch()
     def threshold(self, img_in, size, limit):
-        print type(img_in)
         img_out = ccore.window_average_threshold(img_in, size, limit)
         return img_out
 
@@ -170,8 +169,9 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
         image = meta_image.image
         
         img_prefiltered = self.prefilter(image)
+        print type(img_prefiltered)
         img_bin = self.threshold(img_prefiltered, self.params['latwindowsize'], self.params['latlimit'])
-
+        print type(img_bin)
 
         if self.params['holefilling']:
             ccore.fill_holes(img_bin, False)
@@ -247,9 +247,15 @@ class SegmentationPluginIlastik(SegmentationPluginPrimary):
     @stopwatch()
     def prefilter(self, img_in):
         img = SegmentationPluginPrimary.prefilter(self, img_in)
-        np_img = img.toArray(True)
-        img_out = self._predict_image_with_ilastik(np_img)
-        return img_out
+        np_img = img.toArray(True) 
+        return self._predict_image_with_ilastik(np_img)
+
+    
+    def threshold(self, img_in, *args):
+        np_img = img_in.toArray(True) 
+        return ccore.numpy_to_image((np_img > 128).astype(numpy.uint8), True)
+
+        
     
     def render_to_gui(self, panel):
         panel.add_group(None, [('ilastik_classifier', (0, 0, 1, 1))])
@@ -325,8 +331,7 @@ class SegmentationPluginIlastik(SegmentationPluginPrimary):
         classificationPredict.wait()
         
         # Produce output image and select the probability map
-        probMap = (classificationPredict._prediction[0][0,0,:,:, 1] *255).astype(numpy.uint8)
-        
+        probMap = (classificationPredict._prediction[0][0,0,:,:, 1] * 255).astype(numpy.uint8)
         img_out = ccore.numpy_to_image(probMap, True)
         return img_out
         
