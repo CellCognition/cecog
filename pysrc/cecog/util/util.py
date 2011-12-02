@@ -22,7 +22,10 @@ import logging, \
        types, \
        os, \
        bz2, \
-       gzip
+       gzip, \
+       psutil
+       
+import time as timing
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -179,6 +182,28 @@ def get_appdata_path():
     else:
         path = os.path.expanduser("~")
     return os.path.abspath(path)
+
+def print_timing(func):
+    def wrapper(*arg, **kwargs):
+        t1 = timing.time()
+        res = func(*arg, **kwargs)
+        t2 = timing.time()
+        name = str(func.__class__) + ' :: ' + func.func_name if hasattr(func, '__class__') else func.func_name
+        print '%s took %0.3f ms' % (name, (t2-t1)*1000.0)
+        return res
+    return wrapper
+
+def print_memory_increase(func):
+    pid = os.getpid()
+    p = psutil.Process(pid)
+    def wrapper(*arg, **kwargs):
+        m1 = p.get_memory_info().rss/1024.0/1024.0
+        res = func(*arg, **kwargs)
+        m2 = p.get_memory_info().rss/1024.0/1024.0
+        name = str(func.__class__) + '\t' + func.func_name if hasattr(func, '__class__') else func.func_name
+        print '%s\t%6.2f\t%6.2f\t%6.2f' % (name, (m2-m1), m1, m2)
+        return res
+    return wrapper
 
 #-------------------------------------------------------------------------------
 # classes:
