@@ -225,6 +225,13 @@ class _Channel(PropertyManager):
         self._lstZSlices = []
         for x in self.dctContainers.keys():
             del self.dctContainers[x]
+            
+        # remove crack_contours
+        for regionName in self.region_names():
+            region = self.get_region(regionName)
+            for obj in region.values():
+                    obj.crack_contour = None
+
 
         # purge features
         if not features is None:
