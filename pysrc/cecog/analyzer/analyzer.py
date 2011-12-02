@@ -1090,8 +1090,8 @@ class CellAnalyzer(PropertyManager):
     @print_memory_increase
     def purge(self, features=None):
         for oChannel in self._channel_registry.values():
-            if not features is None and oChannel.strChannelId in features:
-                channelFeatures = features[oChannel.strChannelId]
+            if not features is None and oChannel.NAME in features:
+                channelFeatures = features[oChannel.NAME]
             else:
                 channelFeatures = None
             oChannel.purge(features=channelFeatures)
