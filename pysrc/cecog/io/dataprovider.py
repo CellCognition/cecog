@@ -129,6 +129,16 @@ class _DataProvider(object):
         else:
             # recurse one level up
             return self._parent.get_definition(key)
+        
+    def has_definition(self, key):
+        has_key = False
+        try:
+            self.get_definition(key)
+            has_key = True
+        except KeyError:
+            pass
+        return has_key
+            
                 
     def get_object_definition(self, name):
         objects_definition = self.get_definition('object')
@@ -336,6 +346,10 @@ class Plate(_DataProvider):
     def _read_classification_info(self):
         self.object_classifier = {}
         self.object_classifier_index = {}
+        
+        if not self.has_definition('classifier'):
+            return
+        
         for classifier_idx, classifier_row in enumerate(self.get_definition('classifier')):
             object_name = self.get_definition('feature')[self.get_definition('feature_set')[classifier_row[3]][0]][2]
             print 'Plate: found classifier for object', object_name, 'with schema: ', classifier_row[4]
