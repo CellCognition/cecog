@@ -482,7 +482,7 @@ class TimeHolder(OrderedDict):
                                                      (nr_objects,),
                                                      self.HDF5_DTYPE_TERMINAL_RELATION,
                                                      compression=self._hdf5_compression,
-                                                     chunks=(nr_objects,))
+                                                     chunks=(1,))
                     var_rel_offset = 0
                 else:
                     var_rel = grp_rel[var_name]
@@ -497,7 +497,7 @@ class TimeHolder(OrderedDict):
                                                                (nr_objects,),
                                                                self.HDF5_DTYPE_RELATION,
                                                                compression=self._hdf5_compression,
-                                                               chunks=(nr_objects,))
+                                                               chunks=(1,))
                     else:
                         var_rel_cross = grp_rel[var_name]
                         var_rel_cross.resize((var_rel_offset + nr_objects,))
@@ -506,14 +506,14 @@ class TimeHolder(OrderedDict):
                 grp_cur_obj = grp_obj.require_group(grp_name)
                 var_name = self.HDF5_NAME_EDGE
                 if var_name not in grp_cur_obj:
-                    var_edge = grp_cur_obj.create_dataset(var_name, (nr_objects,), self.HDF5_DTYPE_EDGE, chunks=(nr_objects,))
+                    var_edge = grp_cur_obj.create_dataset(var_name, (nr_objects,), self.HDF5_DTYPE_EDGE, chunks=(1,))
                 else:
                     var_edge = grp_cur_obj[var_name]
                     var_edge.resize((var_rel_offset + nr_objects,))
 
                 var_name = self.HDF5_NAME_ID
                 if var_name not in grp_cur_obj:
-                    var_id = grp_cur_obj.create_dataset(var_name, (nr_objects,), self.HDF5_DTYPE_ID, chunks=(nr_objects,))
+                    var_id = grp_cur_obj.create_dataset(var_name, (nr_objects,), self.HDF5_DTYPE_ID, chunks=(1,))
                 else:
                     var_id = grp_cur_obj[var_name]
                     var_id.resize((var_rel_offset + nr_objects,))
@@ -538,7 +538,7 @@ class TimeHolder(OrderedDict):
                             var_feature = \
                                 self._grp_def.create_dataset(self.HDF5_GRP_FEATURE,
                                                              (nr_features,), dt,
-                                                             chunks=(nr_features,),
+                                                             chunks=(1,),
                                                              compression=self._hdf5_compression)
                             offset = 0
                         else:
@@ -581,7 +581,7 @@ class TimeHolder(OrderedDict):
                                 grp_cur_obj.create_dataset(var_name,
                                                 (nr_objects, nr_features),
                                                 'float',
-                                                chunks=(nr_objects, nr_features),
+                                                chunks=(1, nr_features),
                                                 compression=self._hdf5_compression)
                         else:
                             var_feature = grp_cur_obj[var_name]
