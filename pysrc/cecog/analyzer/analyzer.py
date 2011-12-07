@@ -476,7 +476,8 @@ class TimeHolder(OrderedDict):
                                                      (nr_objects,),
                                                      self.HDF5_DTYPE_TERMINAL_RELATION,
                                                      compression=self._hdf5_compression,
-                                                     chunks=(1,))
+                                                     chunks=(nr_objects,),
+                                                     maxshape=(None,))
                     var_rel_offset = 0
                 else:
                     var_rel = grp_rel[var_name]
