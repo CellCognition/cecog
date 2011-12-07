@@ -843,7 +843,7 @@ class TimeHolder(OrderedDict):
                 var_class_probs = \
                     grp_cur.create_dataset(var_name, (nr_objects, nr_classes),
                                            'float',
-                                           chunks=(nr_objects, nr_classes),
+                                           chunks=(1, nr_classes),
                                            compression=self._hdf5_compression)
                 offset = 0
             else:
@@ -855,7 +855,7 @@ class TimeHolder(OrderedDict):
                 dt = numpy.dtype([('classication_idx', 'int32')])
                 var_class = \
                     grp_cur.create_dataset(var_name, (nr_objects, ), dt,
-                                           chunks=(nr_objects,),
+                                           chunks=(1,),
                                            compression=self._hdf5_compression)
             else:
                 var_class = grp_cur[var_name]
