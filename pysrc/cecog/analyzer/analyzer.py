@@ -663,6 +663,7 @@ class TimeHolder(OrderedDict):
             var_id = grp_cur_obj.create_dataset(self.HDF5_NAME_ID, (nr_objects,), self.HDF5_DTYPE_ID)
 
             prefix = PrimaryChannel.PREFIX
+            data = []
             for idx, edge in enumerate(graph.edges.itervalues()):
                 head_id, tail_id = edge[:2]
                 head_frame, head_obj_id = \
@@ -677,11 +678,11 @@ class TimeHolder(OrderedDict):
                 tail_obj_id_meta = self._object_coord_to_id[(prefix, (tail_frame_idx, tail_obj_id))]
                 tail_obj_idx_meta = self._object_coord_to_idx[(prefix, (tail_frame_idx, tail_obj_id))]
 
-                var_rel[idx] = (head_obj_id_meta, head_obj_idx_meta,
-                                tail_obj_id_meta, tail_obj_idx_meta)
+                data.append(head_obj_id_meta, head_obj_idx_meta,
+                            tail_obj_id_meta, tail_obj_idx_meta)
                 self._edge_to_idx[(head_id, tail_id)] = idx
                 
-
+            var_rel[:] = data
             # traverse the graph structure by head nodes and save one object per head node
             # (with all forward-reachable nodes)
             data = []
