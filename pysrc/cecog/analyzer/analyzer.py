@@ -373,7 +373,7 @@ class TimeHolder(OrderedDict):
                 var_labels = \
                     grp.create_dataset(var_name,
                                        (nr_labels, t, z, h, w),
-                                       'int32',
+                                       'uint16',
                                        chunks=(1, 5, 1, h/5, w/5),
                                        compression=self._hdf5_compression)
 
@@ -383,7 +383,7 @@ class TimeHolder(OrderedDict):
                         self._convert_region_name(channel.PREFIX, region_name)]
                 container = channel.dctContainers[region_name]
                 array = container.img_labels.toArray(copy=False)
-                var_labels[idx, frame_idx, 0] = numpy.require(array, 'int32')
+                var_labels[idx, frame_idx, 0] = numpy.require(array, 'uint16')
 
 
     def prepare_raw_image(self, channel):
@@ -678,8 +678,8 @@ class TimeHolder(OrderedDict):
                 tail_obj_id_meta = self._object_coord_to_id[(prefix, (tail_frame_idx, tail_obj_id))]
                 tail_obj_idx_meta = self._object_coord_to_idx[(prefix, (tail_frame_idx, tail_obj_id))]
 
-                data.append(head_obj_id_meta, head_obj_idx_meta,
-                            tail_obj_id_meta, tail_obj_idx_meta)
+                data.append((head_obj_id_meta, head_obj_idx_meta,
+                            tail_obj_id_meta, tail_obj_idx_meta))
                 self._edge_to_idx[(head_id, tail_id)] = idx
                 
             var_rel[:] = data
