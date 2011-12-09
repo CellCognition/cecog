@@ -645,7 +645,7 @@ class TimeHolder(OrderedDict):
             grp = self._grp_cur_position[self.HDF5_GRP_RELATION]
 
             head_nodes = [node_id for node_id in graph.node_list()
-                          if graph.in_degree(node_id) == 0]
+                          if graph.in_degree(node_id) == 0 and graph.out_degree(node_id) > 0]
             nr_edges = graph.number_of_edges()
             nr_objects = len(head_nodes)
 
@@ -685,19 +685,15 @@ class TimeHolder(OrderedDict):
             # traverse the graph structure by head nodes and save one object per head node
             # (with all forward-reachable nodes)
             data = []
-            for obj_idx, node_id in enumerate(head_nodes):
+            for obj_idx, head_id in enumerate(head_nodes):
                 obj_id = obj_idx + 1
-
-                
-                nl = [node_id]
                 edge_idx_start = len(data)
-                while len(nl) > 0:
-                    node_id2 = nl.pop()
-                    for edge in graph.out_arcs(node_id2):
-                        tail_id = graph.tail(edge)
-                        rel_idx = self._edge_to_idx[(node_id2, tail_id)]
-                        data.append((obj_id, rel_idx))
-                        nl.append(tail_id)
+                edge_list = graph.dfs_edges(head_id)
+                
+                for head, tail in edge_list:
+                    rel_idx = self._edge_to_idx[(head, tail)]
+                    data.append((obj_id, rel_idx))
+                
                 var_id[obj_idx] = (obj_id, edge_idx_start, len(data))
 
             var_edge = grp_cur_obj.create_dataset(self.HDF5_NAME_EDGE, (len(data),), 
