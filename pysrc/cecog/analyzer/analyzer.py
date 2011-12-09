@@ -413,7 +413,7 @@ class TimeHolder(OrderedDict):
                     grp.create_dataset(var_name,
                                        (nr_channels, t, z, h, w),
                                        'uint8',
-                                       chunks=(1, 5, 1, h/5, w/5),
+                                       chunks=(1, 1, 1, h/5, w/5),
 #                                       compression=self._hdf5_compression)
                                        )
 
@@ -719,11 +719,11 @@ class TimeHolder(OrderedDict):
                 else:
                     raise ValueError("More than two daughter cell are not supported.")
 
+            grp = self._grp_cur_position[self.HDF5_GRP_OBJECT]
+            grp_cur_obj = grp.create_group('event')
+            var_edge = grp_cur_obj.create_dataset(self.HDF5_NAME_EDGE, (nr_edges,), self.HDF5_DTYPE_EDGE)
+            var_id = grp_cur_obj.create_dataset(self.HDF5_NAME_ID, (nr_events,), self.HDF5_DTYPE_ID)
             if nr_events > 0:
-                grp = self._grp_cur_position[self.HDF5_GRP_OBJECT]
-                grp_cur_obj = grp.create_group('event')
-                var_edge = grp_cur_obj.create_dataset(self.HDF5_NAME_EDGE, (nr_edges,), self.HDF5_DTYPE_EDGE)
-                var_id = grp_cur_obj.create_dataset(self.HDF5_NAME_ID, (nr_events,), self.HDF5_DTYPE_ID)
 
                 obj_idx = 0
                 rel_idx = 0
