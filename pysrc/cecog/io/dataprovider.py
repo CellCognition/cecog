@@ -497,7 +497,6 @@ class ObjectItemBase():
                 found_ids = numpy.where(self.parent.object_np_cache['relation'][:, 0] == id)[0]
                 out_all_ids = [self.parent.object_np_cache['relation'][found_id, 2] for found_id in found_ids]
                 out_ids = [out_id for out_id in out_all_ids if out_id in child_id_list]
-                #print out_all_ids, ' / ', out_ids
                 
                 if len(out_ids) == 0:
                     return [[id]]
