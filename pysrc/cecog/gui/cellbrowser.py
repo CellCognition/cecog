@@ -409,7 +409,7 @@ class TrackletBrowser(QtGui.QWidget):
         self._root_items = []
         events = position.get_objects(object_name)
         
-        for event in events.iter(500):
+        for event in events.iter(200):
             g_event = event.GraphicsItemType(event)
             g_event.setHandlesChildEvents(False)
             self.scene.addItem(g_event)
