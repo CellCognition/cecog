@@ -722,10 +722,11 @@ class TimeHolder(OrderedDict):
 
             grp = self._grp_cur_position[self.HDF5_GRP_OBJECT]
             grp_cur_obj = grp.create_group('event')
-            var_edge = grp_cur_obj.create_dataset(self.HDF5_NAME_EDGE, (nr_edges,), self.HDF5_DTYPE_EDGE)
-            var_id = grp_cur_obj.create_dataset(self.HDF5_NAME_ID, (nr_events,), self.HDF5_DTYPE_ID)
+            
             if nr_events > 0:
-
+                var_edge = grp_cur_obj.create_dataset(self.HDF5_NAME_EDGE, (nr_edges,), self.HDF5_DTYPE_EDGE, maxshape=(None,))
+                var_id = grp_cur_obj.create_dataset(self.HDF5_NAME_ID, (nr_events,), self.HDF5_DTYPE_ID, maxshape=(None,))
+                
                 obj_idx = 0
                 rel_idx = 0
                 for events in event_lookup.itervalues():
@@ -746,6 +747,13 @@ class TimeHolder(OrderedDict):
                         
                     var_id[obj_idx] = (obj_id, rel_idx_start, rel_idx)
                     obj_idx += 1
+            else:
+                var_edge = grp_cur_obj.create_dataset(self.HDF5_NAME_EDGE, (0,), 
+                                                      self.HDF5_DTYPE_EDGE, 
+                                                      chunks=(1,), maxshape=(None,))
+                var_id = grp_cur_obj.create_dataset(self.HDF5_NAME_ID, (0,), 
+                                                    self.HDF5_DTYPE_ID, 
+                                                    chunks=(1,), maxshape=(None,))
                    
     def serialize_annotation(self, channel_name, region_name, annotation):
         if self._hdf5_create and self._hdf5_include_annotation:
