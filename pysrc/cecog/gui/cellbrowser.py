@@ -278,7 +278,7 @@ class TrackletBrowser(QtGui.QWidget):
         gb2 = QtGui.QGroupBox('Objects')
         gb2_layout = QtGui.QVBoxLayout()
         self.cmb_object_type = QtGui.QComboBox()
-        self.cmb_object_type.addItems(['event', 'primary__primary','secondary__expanded'])
+        self.cmb_object_type.addItems(['event', 'track', 'primary__primary','secondary__expanded'])
         self.cmb_object_type.currentIndexChanged[str].connect(self.change_object_type) 
         gb2_layout.addWidget(self.cmb_object_type)
         gb2.setLayout(gb2_layout)
