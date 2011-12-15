@@ -42,17 +42,6 @@ MAX_OBJECT_ITEM_CACHE_SIZE = 3
 # functions:
 #
 
-def print_timing(func):
-    def wrapper(*arg, **kwargs):
-        t1 = timing.time()
-        res = func(*arg, **kwargs)
-        t2 = timing.time()
-        name = str(func.__class__) + ' :: ' + func.func_name if hasattr(func, '__class__') else func.func_name
-        print '%s took %0.3f ms' % (name, (t2-t1)*1000.0)
-        return res
-    return wrapper
-
-
 
 #-------------------------------------------------------------------------------
 # classes:
@@ -163,7 +152,7 @@ class Position(_DataProvider):
     def read_image_data(self):
         if not hasattr(self, '_hf_group_np_copy'):
             tic = timing.time()
-            self._hf_group_np_copy = self._hf_group['image']['channel'].value
+            self._hf_group_np_copy = self._hf_group['image']['channel']
             print '  decompressing image data', timing.time() - tic
             
     
@@ -418,12 +407,15 @@ class Relation(object):
     def get_cache(self):
         return self.h5_table.value.view(numpy.uint32).reshape(len(self.h5_table), -1)
     
-class ObjectItemBase():
+class ObjectItemBase(object):
     def __init__(self, id, parent):
         self.id = id
         self.parent = parent
         self.name = parent.name
         self.compute_features()
+        
+    def compute_features(self):
+        pass
         
     def get_position(self):
         return self.parent.position
@@ -571,15 +563,24 @@ class Objects(object):
         self.relation = position.get_relation(self._relation_name)
         self.object_np_cache['relation'] = self.relation.get_cache()
         
-        edge_table = self._h5_object_group[self.HDF5_OBJECT_EDGE_NAME].value
+        if self._h5_object_group[self.HDF5_OBJECT_EDGE_NAME].shape[0] == 0:
+            edge_table = numpy.zeros((0,0), dtype=numpy.uint32)
+            nr_cols = 0
+        else:
+            edge_table = self._h5_object_group[self.HDF5_OBJECT_EDGE_NAME].value
+            nr_cols = -1 # determined by numpy
         self.object_np_cache['edges'] = edge_table \
-                                 .view(numpy.uint32) \
-                                 .reshape(len(edge_table), -1)
+                                 .reshape(len(edge_table), nr_cols)
                                  
-        id_refs_table = self._h5_object_group[self.HDF5_OBJECT_ID_NAME].value
+        if self._h5_object_group[self.HDF5_OBJECT_ID_NAME].shape[0] == 0:
+            id_refs_table = numpy.zeros((0,0), dtype=numpy.uint32)
+            nr_cols = 0
+        else:
+            id_refs_table = self._h5_object_group[self.HDF5_OBJECT_ID_NAME].value
+            nr_cols = -1
         self.object_np_cache['id_edge_refs']  = id_refs_table \
                                  .view(numpy.uint32) \
-                                 .reshape(len(id_refs_table), -1)
+                                 .reshape(len(id_refs_table), nr_cols)
                                                         
         self.object_np_cache['child_ids'] = {}
         for x in self.object_np_cache['id_edge_refs']:
@@ -603,7 +604,7 @@ class Objects(object):
         
     @property
     def ids(self):
-        return self.object_np_cache['id_edge_refs'][:,0] 
+        return self.object_np_cache['id_edge_refs'][:,0] if self.object_np_cache['id_edge_refs'].shape[1] > 0 else [] 
     
     def __len__(self):
         return len(self.ids)
@@ -658,20 +659,11 @@ class Objects(object):
             raise RuntimeError('get_sub_objects() No sub objects available for objects of name %s' % self.name)
 
 
-class TrajectoryFeatureBase(object):
-    def compute(self):
-        raise NotImplementedError('TrajectoryFeatureBase.compute() has to be implemented by its subclass')
 
-class TrajectoryFeatureMeanIntensity():
-    name = 'Mean intensity'
-    type = ObjectItem
-    
-    def compute(self, trajectory_seq):
-        value = 0
-        for t in trajectory_seq:
-            value += t.image.mean()
-        value /= len(trajectory_seq)
-        return value
+
+
+
+
         
 #class TrajectoryFeatureMedianIntensity(TrajectoryFeatureBase):
 #    name = 'Madian intensity'
@@ -721,7 +713,7 @@ class TrajectoryFeatureMeanIntensity():
 #
 #        return value
 
-trajectory_features = [tf() for tf in TrajectoryFeatureBase.__subclasses__()]
+
             
 #-------------------------------------------------------------------------------
 # main:
@@ -732,7 +724,7 @@ if __name__ == '__main__':
     try:
         t = File('/Users/miheld/data/Analysis/H2bTub_20x_hdf5_test1/dump/0037.hdf5')
     except:
-        t = File('C:/Users/sommerc/data/Chromatin-Microtubles/Analysis/H2b_aTub_MD20x_exp911_2_channels/dump/0037.hdf5')
+        t = File('C:/Users/sommerc/data/Chromatin-Microtubles/Analysis/H2b_aTub_MD20x_exp911_2_channels_nozip/dump_save/two_positions.hdf5')
         
     print 'init time for position  == %5.3f msec' % (timing.time() - tic)
     
