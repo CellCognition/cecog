@@ -102,7 +102,7 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
                          ])
 
     @stopwatch()
-    def prefilter(self, img_in, radius):
+    def prefilter(self, img_in, radius=None):
         if radius is None:
             radius = self.params['medianradius']
         img_out = ccore.disc_median(img_in, radius)
@@ -213,7 +213,7 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
 class SegmentationPluginPrimaryLoadFromFile(SegmentationPluginPrimary):
 
     LABEL = 'Load from file'
-    NAME = 'primary'
+    NAME = 'primary_from_file'
     COLOR = '#FF00FF'
 
     REQUIRES = None
@@ -269,10 +269,10 @@ class SegmentationPluginPrimaryLoadFromFile(SegmentationPluginPrimary):
         match_result = match_results[0]
             
         img = ccore.readImage(main_folder + locator_match + match_result)
-        img_pre = SegmentationPluginPrimary.prefilter(self, img, 2)
-        img_bin = SegmentationPluginPrimary.threshold(self, img_pre, 20, 3)    
+#        img_pre = SegmentationPluginPrimary.prefilter(self, img, 2)
+#        img_bin = SegmentationPluginPrimary.threshold(self, img_pre, 20, 3)    
          
-        container = ccore.ImageMaskContainer(image, img_bin, False)
+        container = ccore.ImageMaskContainer(image, img, False)
         return container
     
 class SegmentationPluginIlastik(SegmentationPluginPrimary):
