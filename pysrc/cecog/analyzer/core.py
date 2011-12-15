@@ -731,8 +731,8 @@ class PositionAnalyzer(object):
                         diff_x.append(abs(xs[i]-xs[j]))
                         diff_y.append(abs(ys[i]-ys[j]))
                 # new image size after registration of all images
-                new_image_size = (meta_image.width - max(diff_x),
-                                  meta_image.height - max(diff_y))
+                new_image_size = (meta_image.image.width - max(diff_x),
+                                  meta_image.image.height - max(diff_y))
 
                 self._meta_data.real_image_width = new_image_size[0]
                 self._meta_data.real_image_height = new_image_size[1]
