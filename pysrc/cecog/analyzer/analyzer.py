@@ -413,7 +413,7 @@ class TimeHolder(OrderedDict):
                     grp.create_dataset(var_name,
                                        (nr_channels, t, z, h, w),
                                        'uint8',
-                                       chunks=(1, 1, 1, h/5, w/5),
+                                       chunks=(1, 1, 1, h/10, w/10),
 #                                       compression=self._hdf5_compression)
                                        )
 
@@ -1150,7 +1150,10 @@ class CellAnalyzer(PropertyManager):
                     oChannel = self._channel_registry[channel_name]
                     if 'raw' in dctChannelInfo:
                         strHexColor, fAlpha = dctChannelInfo['raw']
-                        lstImages.append((oChannel.meta_image.image, strHexColor, fAlpha))
+                        imgRaw = oChannel.meta_image.image
+                        imgCon = ccore.Image(imgRaw.width, imgRaw.height)
+                        imgCon.init(0)
+                        lstImages.append((imgCon, strHexColor, 1.0))
 
                     if 'contours' in dctChannelInfo:
                         # transform the old dict-style to the new tuple-style,
@@ -1187,7 +1190,7 @@ class CellAnalyzer(PropertyManager):
                                     imgCon2 = ccore.Image(imgRaw.width, imgRaw.height)
                                     for iLabel, lstObjIds in dctLabels.iteritems():
                                         imgCon = ccore.Image(imgRaw.width, imgRaw.height)
-                                        oContainer.drawContoursByIds(lstObjIds, 255, imgCon, bThickContours, False)
+                                        oContainer.drawContoursByIds(lstObjIds, 255, imgCon, bThickContours, True)
                                         lstImages.append((imgCon, dctColors[iLabel], fAlpha))
 
                                         if type(bShowLabels) == types.BooleanType and bShowLabels:
