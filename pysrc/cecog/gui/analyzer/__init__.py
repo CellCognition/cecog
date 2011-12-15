@@ -184,6 +184,14 @@ class _ProcessingThread(QThread):
 
     def run(self):
         try:
+            import pydevd
+            pydevd.connected = True
+            pydevd.settrace(suspend=False)
+            print 'debug'
+        except:
+            pass
+        
+        try:
             self._run()
         except:
             msg = traceback.format_exc()

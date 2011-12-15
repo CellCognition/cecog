@@ -971,9 +971,9 @@ class CellAnalyzer(PropertyManager):
                     strFilenameImg = os.path.join(strPathOutLabel, '%s___img.png' % strFilenameBase)
                     strFilenameMsk = os.path.join(strPathOutLabel, '%s___msk.png' % strFilenameBase)
                     #print strFilenameImg, strFilenameMsk
-                    oContainer.exportObject(obj_id,
-                                            strFilenameImg,
-                                            strFilenameMsk)
+#                    oContainer.exportObject(obj_id,
+#                                            strFilenameImg,
+#                                            strFilenameMsk)
 
                     oContainer.markObjects([obj_id], rgb_value, False, True)
 
