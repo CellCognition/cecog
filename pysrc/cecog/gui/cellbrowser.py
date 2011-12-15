@@ -45,7 +45,7 @@ from functools import partial
 #
 from cecog.gui.imageviewer import HoverPolygonItem
 from cecog.io.dataprovider import File
-from cecog.io.dataprovider import trajectory_features, TerminalObjectItem, ObjectItem
+from cecog.gui.cellbroser_core import TerminalObjectItem, ObjectItem
 from pdk.datetimeutils import StopWatch
 from cecog.gui.cellbrowser_plugins import EventPCAPlugin
 
@@ -59,26 +59,7 @@ from cecog.gui.cellbrowser_plugins import EventPCAPlugin
 #-------------------------------------------------------------------------------
 # functions:
 #
-import types
-def MixIn(pyClass, mixInClass, makeAncestor=0):
-    if makeAncestor:
-        if mixInClass not in pyClass.__bases__:
-            pyClass.__bases__ = pyClass.__bases__ + (mixInClass,)
-    else:
-        # Recursively traverse the mix-in ancestor
-        # classes in order to support inheritance
-        baseClasses = list(mixInClass.__bases__)
-        baseClasses.reverse()
-        for baseClass in baseClasses:
-            MixIn(pyClass, baseClass)
-        # Install the mix-in methods into the class
-        for name in dir(mixInClass):
-            if not name.startswith('__'):
-            # skip private members
-                member = getattr(mixInClass, name)
-                if type(member) is types.MethodType:
-                    member = member.im_func
-                setattr(pyClass, name, member)
+
 
 
 
@@ -129,27 +110,29 @@ class PositionThumbnailEvents(PositionThumbnailBase):
         self.parent = parent
         self.position_key = position_key
         events = position.get_sorted_objects('event', 'state_periods', 2,3,4)
-        
-        thumbnail_pixmap = QtGui.QPixmap(20*self.item_length, len(events)*self.item_height)
-        thumbnail_pixmap.fill(QtCore.Qt.black)
-        painter = QtGui.QPainter()
-        
-        painter.begin(thumbnail_pixmap)
-        
-        for r, event in enumerate(events):
-            for c, pp in enumerate(event.children()):
-                line_pen = QtGui.QPen(QtGui.QColor(pp.class_color))
-                line_pen.setWidth(self.item_height)
-                painter.setPen(line_pen)
-                painter.drawLine(c*self.item_length, r*self.item_height, 
-                                 (c+1)*self.item_length, r*self.item_height)
-        painter.end()
+        if len(events) > 0:
+            thumbnail_pixmap = QtGui.QPixmap(20*self.item_length, len(events)*self.item_height)
+            thumbnail_pixmap.fill(QtCore.Qt.black)
+            painter = QtGui.QPainter()
             
-        self.height = thumbnail_pixmap.height()
-        self.setPixmap(thumbnail_pixmap)
-        self.setStyleSheet(self.css)
-        self.setToolTip('Sample %s\nPlate %s \nExperiment %s\nPosition %s' % position_key)
-        self.setMinimumHeight(self.height)
+            painter.begin(thumbnail_pixmap)
+            
+            for r, event in enumerate(events):
+                for c, pp in enumerate(event.children()):
+                    line_pen = QtGui.QPen(QtGui.QColor(pp.class_color))
+                    line_pen.setWidth(self.item_height)
+                    painter.setPen(line_pen)
+                    painter.drawLine(c*self.item_length, r*self.item_height, 
+                                     (c+1)*self.item_length, r*self.item_height)
+            painter.end()
+                
+            self.height = thumbnail_pixmap.height()
+            self.setPixmap(thumbnail_pixmap)
+            self.setStyleSheet(self.css)
+            self.setToolTip('Sample %s\nPlate %s \nExperiment %s\nPosition %s' % position_key)
+            self.setMinimumHeight(self.height)
+        else:
+            self.setText('No thumbnail\navailable...')
     
     def mouseDoubleClickEvent(self, *args, **kwargs):
         QtGui.QLabel.mouseDoubleClickEvent(self, *args, **kwargs)
@@ -219,6 +202,23 @@ class TrackletThumbnailList(QtGui.QWidget):
         opt.init(self);
         p = QtGui.QPainter(self);
         self.style().drawPrimitive(QtGui.QStyle.PE_Widget, opt, p, self)
+        
+        
+def GraphicsItemType(object_item):
+    if type(object_item) == TerminalObjectItem:
+        return CellGraphicsItem(object_item)
+    elif type(object_item) == ObjectItem:
+        return EventGraphicsItem(object_item)
+    else:
+        raise RuntimeError('GraphicsItemType(): No graphics item type specified for object item %s' % type(object_item))
+    
+def GraphicsItemLayouter(object_type):
+    if object_type == TerminalObjectItem:
+        return CellGraphicsLayouter
+    elif object_type == ObjectItem:
+        return EventGraphicsLayouter
+    else:
+        raise RuntimeError('GraphicsItemLayouter(): No graphics layouter specified for object type %s' % object_type)
 
 class TrackletBrowser(QtGui.QWidget):
     css = '''
@@ -409,14 +409,14 @@ class TrackletBrowser(QtGui.QWidget):
         self._root_items = []
         events = position.get_objects(object_name)
         
-        for event in events.iter(200):
-            g_event = event.GraphicsItemType(event)
+        for event in events.iter(50):
+            g_event = GraphicsItemType(event)
             g_event.setHandlesChildEvents(False)
             self.scene.addItem(g_event)
             self._root_items.append(g_event)
         print '  Loading events took %5.2f' % (timing.time() - tic)
             
-        self.GraphicsItemLayouter = event.GraphicsItemLayouter(self._root_items, self)
+        self.GraphicsItemLayouter = GraphicsItemLayouter(events.get_object_type)(self)
             
         self.update_()
         print '  Total Rendering of position took %5.2f' % (timing.time() - tic)
@@ -510,6 +510,60 @@ class TrackletBrowser(QtGui.QWidget):
         for t in self._root_items:
             t.resetPos()
                     
+class GraphicsLayouterBase(QtGui.QWidget):
+    properties = {}
+    def __init__(self, parent):
+        QtGui.QWidget.__init__(self, parent)
+        self._items = parent._root_items     
+    def __call__(self):
+        print 'print default layouting'   
+
+class EventGraphicsLayouter(GraphicsLayouterBase):
+    properties = {'alignment': 0}
+    ALIGN_LEFT = 0
+    ALIGN_ABSOLUT_TIME = 1
+    ALIGN_CUSTOM = 2
+    
+    def __init__(self, parent):
+        GraphicsLayouterBase.__init__(self, parent)
+        self._align_vertically = self.ALIGN_LEFT
+        
+    def __call__(self):
+        row = 0
+        for ti in self._items:
+            if ti.is_selected:
+                ti.moveToRow(row)
+                row += 1
+                ti.setVisible(True)
+            else:
+                ti.setVisible(False)
+            if self._align_vertically == self.ALIGN_LEFT:
+                ti.moveToColumn(0)
+            elif self._align_vertically == self.ALIGN_ABSOLUT_TIME:
+                ti.moveToColumn(ti.sub_items[1].object_item.time)
+            elif self._align_vertically == self.ALIGN_CUSTOM:
+                ti.moveToColumn(ti.column)
+        
+class CellGraphicsLayouter(GraphicsLayouterBase):
+    def __init__(self, items, parent):
+        GraphicsLayouterBase.__init__(self, parent)
+    
+    def __call__(self):
+        row = 0
+        col = 0
+        for ti in self._items:
+            if ti.is_selected:
+                ti.moveToRow(row)
+                ti.moveToColumn(col)
+                ti.setVisible(True)
+                col += 1
+            else:
+                ti.setVisible(False)
+            
+            if col > 26:
+                row += 1
+                col = 0                    
+
 class GraphicsObjectItemBase(QtGui.QGraphicsItemGroup):
     def __init__(self, parent):
         QtGui.QGraphicsItemGroup.__init__(self, parent)
@@ -542,7 +596,7 @@ class EventGraphicsItem(GraphicsObjectItem):
         self.sub_items = []
         self.sub_items.append(self.id)
         for col, sub_item in enumerate(object_item.children()):
-            g_sub_item = sub_item.GraphicsItemType(sub_item, self)
+            g_sub_item = GraphicsItemType(sub_item)
             g_sub_item.moveToColumn(col+1)
             self.sub_items.append(g_sub_item)
             self.addToGroup(g_sub_item)
@@ -605,7 +659,10 @@ class EventGraphicsItem(GraphicsObjectItem):
         features = ((1 - (features-min_)/(max_ - min_)) * self.height).astype(numpy.uint8)
         
         for col, (f1, f2, obj) in enumerate(zip(features, numpy.roll(features, -1), self.object_item.children())):
-            color_ = QtGui.QColor(obj.class_color)
+            if obj.class_color is None:
+                color_ = QtCore.Qt.white
+            else:
+                color_ = QtGui.QColor()
             line_pen = QtGui.QPen(color_)
             line_pen.setWidth(3)
             painter.setPen(line_pen)
@@ -709,7 +766,8 @@ class CellGraphicsItem(GraphicsTerminalObjectItem):
         
         primary_contour_item = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), object_item.crack_contour.tolist())))
         primary_contour_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
-        primary_contour_item.setPen(QtGui.QPen(QtGui.QColor(object_item.class_color)))
+        if object_item.class_color is not None:
+            primary_contour_item.setPen(QtGui.QPen(QtGui.QColor(object_item.class_color)))
         primary_contour_item.setAcceptHoverEvents(True)
         primary_contour_item.setZValue(3)
         
@@ -735,7 +793,8 @@ class CellGraphicsItem(GraphicsTerminalObjectItem):
             
             secondary_contour_item = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), sib_object_item.crack_contour.tolist())))
             secondary_contour_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
-            secondary_contour_item.setPen(QtGui.QPen(QtGui.QColor(sib_object_item.class_color)))
+            if sib_object_item.class_color is not None:
+                secondary_contour_item.setPen(QtGui.QPen(QtGui.QColor(sib_object_item.class_color)))
             secondary_contour_item.setAcceptHoverEvents(True)
             secondary_contour_item.setZValue(3)
             
@@ -754,304 +813,13 @@ class CellGraphicsItem(GraphicsTerminalObjectItem):
         self.bar_item = bar_item
         self.addToGroup(bar_item)
         
-        
-        
-        
-        
-        
-        
-        
+ 
         self.row = 0 
         self.column = object_item.time
         self.height = self.width + self.PREDICTION_BAR_HEIGHT 
         
         self.set_gallery_view('primary')
         self.set_contour_view('primary')
-        
-        
-
-        
-class GraphicsLayouterBase(QtGui.QWidget):
-    properties = {}
-    def __init__(self, items, parent):
-        QtGui.QWidget.__init__(self, parent)
-        self._items = items     
-    def __call__(self):
-        'print default layouting'   
-
-class EventGraphicsLayouter(GraphicsLayouterBase):
-    properties = {'alignment': 0}
-    ALIGN_LEFT = 0
-    ALIGN_ABSOLUT_TIME = 1
-    ALIGN_CUSTOM = 2
-    
-    def __init__(self, items, parent):
-        GraphicsLayouterBase.__init__(self, items, parent)
-        self._align_vertically = self.ALIGN_LEFT
-        
-    def __call__(self):
-        row = 0
-        for ti in self._items:
-            if ti.is_selected:
-                ti.moveToRow(row)
-                row += 1
-                ti.setVisible(True)
-            else:
-                ti.setVisible(False)
-            if self._align_vertically == self.ALIGN_LEFT:
-                ti.moveToColumn(0)
-            elif self._align_vertically == self.ALIGN_ABSOLUT_TIME:
-                ti.moveToColumn(ti.sub_items[1].object_item.time)
-            elif self._align_vertically == self.ALIGN_CUSTOM:
-                ti.moveToColumn(ti.column)
-        
-class CellGraphicsLayouter(GraphicsLayouterBase):
-    def __init__(self, items, parent):
-        GraphicsLayouterBase.__init__(self, items, parent)
-    
-    def __call__(self):
-        row = 0
-        col = 0
-        for ti in self._items:
-            if ti.is_selected:
-                ti.moveToRow(row)
-                ti.moveToColumn(col)
-                ti.setVisible(True)
-                col += 1
-            else:
-                ti.setVisible(False)
-            
-            if col > 26:
-                row += 1
-                col = 0
-               
-class CellTerminalObjectItemMixin():
-    GraphicsItemType = CellGraphicsItem
-    GraphicsItemLayouter = CellGraphicsLayouter
-    BOUNDING_BOX_SIZE = 100
-    
-    @property
-    def image(self):
-        if not hasattr(self, '_image'):
-            channel_idx = self.channel_idx
-            self._image = self._get_image(self.time, self.local_idx, channel_idx)
-            
-#            sib = self.get_siblings()
-#            if sib is not None:
-#                image_sib = sib.image
-#                new_shape = (self.BOUNDING_BOX_SIZE,)*2 + (3,)
-#                image = numpy.zeros(new_shape, dtype=numpy.uint8)
-#                image[0:image_own.shape[0],0:image_own.shape[1],0] = image_own
-#                image[0:image_sib.shape[0],0:image_sib.shape[1],1] = image_sib
-#            else:
-#                image = image_own
-#            self._image = image
-        
-        return self._image 
-    
-    @property
-    def crack_contour(self):
-        crack_contour = self._get_crack_contours(self.time, self.local_idx)
-        bb = self.bounding_box
-        crack_contour[:,0] -= bb[0][0]
-        crack_contour[:,1] -= bb[0][1]  
-        return crack_contour.clip(0, self.BOUNDING_BOX_SIZE)
-    
-    @property
-    def predicted_class(self):
-        # TODO: This can access can be cached by parent
-        if not hasattr(self, '_predicted_class'):
-            classifier_idx = self.classifier_idx()
-            self._predicted_class = self._get_additional_object_data(self.name, 'classifier', classifier_idx) \
-                                        ['prediction'][self.idx]
-        return self._predicted_class[0]
-    
-    @property
-    def features(self):
-        # TODO: This can access can be cached by parent
-        if not hasattr(self, '_features'):
-            self._features = self._get_additional_object_data(self.name, 'feature')[self.idx,:]
-            self._features.shape = (1,) + self._features.shape
-        return self._features
-    
-    @property
-    def feature_names(self):
-        return self.get_position().object_feature[self.name]
-    
-    @property
-    def time(self):
-        return self._local_idx[0]
-    
-    @property
-    def local_idx(self):
-        return self._local_idx[1]
-    
-    def classifier_idx(self):
-        return self.get_plate().object_classifier_index[self.name]
-    
-    @property
-    def channel_idx(self):
-        if not hasattr(self, '_channel_idx'):
-            self._channel_idx = self.get_plate().regions[self.get_position().sub_objects[self.name]]['channel_idx']
-        return self._channel_idx
-        
-    @property
-    def bounding_box(self):
-        if not hasattr(self, '_bounding_box'):   
-            objects = self.parent.object_np_cache['terminals'][self.time]['object']
-            self._bounding_box = (objects['upper_left'][self.local_idx], objects['lower_right'][self.local_idx])
-        return self._bounding_box
-    
-    def _get_image(self, t, obj_idx, c, bounding_box=None):
-        self.get_position().read_image_data()
-        
-        if bounding_box is None:
-            ul, lr = self.bounding_box
-        else:
-            ul, lr = bounding_box
-        offset_0 = (self.BOUNDING_BOX_SIZE - lr[0] + ul[0])
-        offset_1 = (self.BOUNDING_BOX_SIZE - lr[1] + ul[1]) 
-        ul[0] = max(0, ul[0] - offset_0/2 - cmp(offset_0%2,0) * offset_0 % 2) 
-        ul[1] = max(0, ul[1] - offset_1/2 - cmp(offset_1%2,0) * offset_1 % 2)      
-        lr[0] = min(self.get_position()._hf_group_np_copy.shape[4], lr[0] + offset_0/2) 
-        lr[1] = min(self.get_position()._hf_group_np_copy.shape[3], lr[1] + offset_1/2) 
-        
-        self._bounding_box = (ul, lr)
-        # TODO: get_iamge returns am image which might have a smaller shape than 
-        #       the requested BOUNDING_BOX_SIZE, I dont see a chance to really
-        #       fix it, without doing a copy...
-        res = self.get_position()._hf_group_np_copy[c, t, 0, ul[1]:lr[1], ul[0]:lr[0]]
-        return res
-
-    def _get_crack_contours(self, t, obj_idx):  
-        crack_contours_string = self.parent.object_np_cache['terminals'][t]['crack_contours'][obj_idx]                               
-        return numpy.asarray(zlib.decompress( \
-                             base64.b64decode(crack_contours_string)).split(','), \
-                             dtype=numpy.float32).reshape(-1,2)
-        
-    def _get_object_data(self, t, obj_idx, c):
-        bb = self.get_bounding_box(t, obj_idx, c)
-        img, new_bb = self.get_image(t, obj_idx, c, bb)
-        cc = self.get_crack_contours(t, obj_idx, c)
-        cc[:,0] -= new_bb[0][0]
-        cc[:,1] -= new_bb[0][1]
-        return img, cc
-    
-    def _get_additional_object_data(self, object_name, data_fied_name, index=None):
-        if index is None:
-            return self.get_position()._hf_group['object'][object_name][data_fied_name]
-        else:
-            return self.get_position()._hf_group['object'][object_name][data_fied_name][str(index)]
-    
-    @property
-    def class_color(self):
-        if not hasattr(self, '_class_color'):
-            classifier = self.get_plate().object_classifier[self.name, self.get_plate().object_classifier_index[self.name]]
-            self._class_color = dict(enumerate(classifier['schema']['color'].tolist()))       
-        return self._class_color[self.predicted_class]
-    
-    def compute_features(self):
-#        print 'compute feature call for', self.name, self.id  
-        pass
-    
-
-class EventObjectItemMixin():
-    GraphicsItemType = EventGraphicsItem
-    GraphicsItemLayouter = EventGraphicsLayouter
-    def compute_features(self):
-#        print 'compute feature call for', self.name, self.id  
-#        for feature in trajectory_features:
-#            if isinstance(self, feature.type):
-#                self[feature.name] =  feature.compute(self.children())
-#                
-        self['prediction'] = [x.predicted_class for x in self.children()]
-        
-    @property
-    def item_features(self):
-        children = self.children()
-        if children is not None:
-            return numpy.concatenate([c.features for c in children], axis=0)
-        else:
-            return None
-            
-    @property
-    def item_labels(self):
-        children = self.children()
-        if children is not None:
-            return [c.predicted_class for c in children]
-        else:
-            return None
-        
-    @property
-    def sibling_item_features(self):
-        children = self.children()
-        if children is not None:
-            return numpy.concatenate([c.get_siblings().features for c in children], axis=0)
-        else:
-            return None
-        
-    @property
-    def item_colors(self):
-        children = self.children()
-        if children is not None:
-            return [c.class_color for c in children]
-        else:
-            return None
-        
-    @property
-    def item_feature_names(self):
-        return self.get_plate().object_feature[self.get_position().sub_objects[self.name]]
-    
-    def item_feature_min_max(self, feature_idx):
-        if not hasattr(self.parent, 'feature_min_max'):
-            self.parent.feature_min_max = {}
-        
-        min_ = 1000000
-        max_ = - 1000000
-        if feature_idx not in self.parent.feature_min_max.keys():
-            for p in self.parent:
-                tmin = p.item_features[:,feature_idx].min()
-                tmax = p.item_features[:,feature_idx].max()
-                
-                if tmin < min_:
-                    min_ = tmin 
-                    
-                if tmax > max_:
-                    max_ = tmax 
-                     
-            self.parent.feature_min_max[feature_idx] = min_, max_
-            
-        return self.parent.feature_min_max[feature_idx]
-    
-    def sibling_item_feature_min_max(self, feature_idx):
-        if not hasattr(self.parent, 'sibling_feature_min_max'):
-            self.parent.sibling_feature_min_max = {}
-        
-        min_ = 1000000
-        max_ = - 1000000
-        if feature_idx not in self.parent.sibling_feature_min_max.keys():
-            for p in self.parent:
-                tmin = p.sibling_item_features[:,feature_idx].min()
-                tmax = p.sibling_item_features[:,feature_idx].max()
-                
-                if tmin < min_:
-                    min_ = tmin 
-                    
-                if tmax > max_:
-                    max_ = tmax 
-                     
-            self.parent.sibling_feature_min_max[feature_idx] = min_, max_
-            
-        return self.parent.sibling_feature_min_max[feature_idx]
-            
-            
-        
-        
-        
-        
-MixIn(TerminalObjectItem, CellTerminalObjectItemMixin, True)
-MixIn(ObjectItem, EventObjectItemMixin, True)
-
 
 class CellGraphicsTextItem(QtGui.QGraphicsTextItem, GraphicsTerminalObjectItem):
     def __init__(self, parent=None):
@@ -1132,11 +900,11 @@ class MainWindow(QtGui.QMainWindow):
         
     def change_gallery_size(self):
         val, ok = QtGui.QInputDialog.getInt(self, 'New gallery image size', 'Size', 
-                                            value=CellTerminalObjectItemMixin.BOUNDING_BOX_SIZE, 
+                                            value=CellTerminalObjectItem.BOUNDING_BOX_SIZE, 
                                             min=10, 
                                             max=1000)
         if ok:
-            CellTerminalObjectItemMixin.BOUNDING_BOX_SIZE = val
+            CellTerminalObjectItem.BOUNDING_BOX_SIZE = val
             self.tracklet_widget.data_provider.clearObjectItemCache()
                     
             self.tracklet_widget.show_position(self.tracklet_widget._current_position_key)
@@ -1158,8 +926,8 @@ def main():
         file = file[0][1]
     else:
 #        file = r'C:\Users\sommerc\data\Chromatin-Microtubles\Analysis\H2b_aTub_MD20x_exp911_2_channels_nozip\dump\_all_positions.hdf5'
-        file = r'C:\Users\sommerc\data\Chromatin-Microtubles\Analysis\H2b_aTub_MD20x_exp911_2_channels_nozip\dump_save\two_positions.hdf5'
-        
+#        file = r'C:\Users\sommerc\data\Chromatin-Microtubles\Analysis\H2b_aTub_MD20x_exp911_2_channels_nozip\dump_save\two_positions.hdf5'
+        file = r'Y:\christoph\data\Analysis\mimics_secondary_screening_H2B_tub\001620\dump\0005.hdf5'
     mainwindow = MainWindow(file)
     
 #    import cProfile, pstats

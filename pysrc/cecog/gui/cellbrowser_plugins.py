@@ -38,6 +38,7 @@ from PyQt4 import QtGui, QtCore
 # cecog imports:
 #
 from cecog.io.dataprovider import File
+import cecog.gui.cellbroser_core
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -69,7 +70,10 @@ def get_test_data():
     feature_matrix = pca.project(feature_matrix)
     feature_matrix = feature_matrix.reshape(len(events), len(item_features), -1)
     f.close()
-    return feature_matrix, numpy.asarray(labels)
+    labels2 = numpy.asarray(labels)
+    labels2[labels2==7] = 1
+    labels2 += 1
+    return feature_matrix, labels2 
 
 #-------------------------------------------------------------------------------
 # classes:
@@ -160,7 +164,7 @@ class DynamicTimeWarping(object):
             s += " ".join(map(str, [x for x in self.dtw[i,:]])) + '\n'
         return s
         
-    def run(self, index):
+    def run(self, index=0):
         for i in range(1, self.dtw.shape[0]):
             for j in range(1, self.dtw.shape[1]): 
                 own_cost = 1
@@ -176,18 +180,18 @@ class DynamicTimeWarping(object):
                 acc+=1
         return float(acc)/len(prediction)
                 
-    def run_oracle(self, index):
+    def run_oracle(self, index=0):
         for i in range(1, self.dtw.shape[0]):
             for j in range(1, self.dtw.shape[1]): 
                 own_cost = self._cost_oracle(i,j, index)
                 self.dtw[i,j].cost = own_cost + min(self.dtw[i,j-1].cost, self.dtw[i-1,j-1].cost)
     
-    def _cost_oracle(self, i,j, index):
+    def _cost_oracle(self, i,j, index=0):
         if i==8:
             i=1
         return int(i!=self.labels[index, j-1])
         
-    def _cost_feature_space_dist(self, i, j, index):
+    def _cost_feature_space_dist(self, i, j, index=0):
         f_pre = self.features[index,j-2,:]
         f_now = self.features[index,j-1,:]
         dist = numpy.sqrt(numpy.sum(numpy.square(f_pre - f_now)))
