@@ -121,7 +121,7 @@ class AnalyzerMainWindow(QMainWindow):
         self._meta_data = None
         self._browser = None
 
-        self.setWindowTitle(self.TITLE+'[*]')
+        self.setWindowTitle(self.TITLE + '[*]')
 
         central_widget = QFrame(self)
         self.setCentralWidget(central_widget)
@@ -148,7 +148,7 @@ class AnalyzerMainWindow(QMainWindow):
                                             slot=self._on_file_save_as
                                             )
         menu_file = self.menuBar().addMenu('&File')
-        self.add_actions(menu_file, (action_about,  action_pref,
+        self.add_actions(menu_file, (action_about, action_pref,
                                      None, action_open,
                                      None, action_save, action_save_as,
                                      None, action_quit))
@@ -186,12 +186,12 @@ class AnalyzerMainWindow(QMainWindow):
         self._selection.setViewMode(QListView.IconMode)
         #self._selection.setUniformItemSizes(True)
         self._selection.setIconSize(QSize(35, 35))
-        self._selection.setGridSize(QSize(140,60))
+        self._selection.setGridSize(QSize(140, 60))
         #self._selection.setWrapping(False)
         self._selection.setMovement(QListView.Static)
         #self._selection.setFlow(QListView.TopToBottom)
         #self._selection.setSpacing(12)
-        self._selection.setMaximumWidth(self._selection.gridSize().width()+5)
+        self._selection.setMaximumWidth(self._selection.gridSize().width() + 5)
         self._selection.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._selection.setSizePolicy(QSizePolicy(QSizePolicy.Fixed,
                                                   QSizePolicy.Expanding))
@@ -220,7 +220,7 @@ class AnalyzerMainWindow(QMainWindow):
             size = self._add_page(tab)
             widths.append(size.width())
         self.set_modules_active(state=False)
-        self._pages.setMinimumWidth(max(widths)+45)
+        self._pages.setMinimumWidth(max(widths) + 45)
 
         self._selection.currentItemChanged.connect(self._on_change_page)
 
@@ -231,12 +231,12 @@ class AnalyzerMainWindow(QMainWindow):
 
         layout = QGridLayout(central_widget)
         layout.addWidget(self._selection, 0, 0)
-        layout.addWidget(w_logo, 1, 0, Qt.AlignBottom|Qt.AlignHCenter)
+        layout.addWidget(w_logo, 1, 0, Qt.AlignBottom | Qt.AlignHCenter)
         layout.addWidget(self._pages, 0, 1, 2, 1)
 
         qApp._log_handler = GuiLogHandler(self)
         qApp._log_window = LogWindow(qApp._log_handler)
-        qApp._log_window.setGeometry(50,50,600,300)
+        qApp._log_window.setGeometry(50, 50, 600, 300)
 
         logger = logging.getLogger()
         qApp._log_handler.setLevel(logging.NOTSET)
@@ -249,7 +249,7 @@ class AnalyzerMainWindow(QMainWindow):
         qApp._graphics = None
 
         self.setGeometry(0, 0, 1100, 750)
-        self.setMinimumSize(QSize(700,600))
+        self.setMinimumSize(QSize(700, 600))
         self.show()
         self.center()
         self.raise_()
@@ -271,7 +271,7 @@ class AnalyzerMainWindow(QMainWindow):
             # some tests
             x = robjects.r['pi']
             v = robjects.FloatVector([1.1, 2.2, 3.3, 4.4, 5.5, 6.6])
-            m = robjects.r['matrix'](v, nrow = 2)
+            m = robjects.r['matrix'](v, nrow=2)
             has_R_version = True
             version = '%s.%s' % (robjects.r['version'][5][0],
                                  robjects.r['version'][6][0])
@@ -386,9 +386,9 @@ class AnalyzerMainWindow(QMainWindow):
 
     def center(self):
         screen = QDesktopWidget().screenGeometry()
-        size =  self.geometry()
-        self.move((screen.width()-size.width())/2,
-        (screen.height()-size.height())/2)
+        size = self.geometry()
+        self.move((screen.width() - size.width()) / 2,
+        (screen.height() - size.height()) / 2)
 
     def add_actions(self, target, actions):
         for action in actions:
@@ -439,9 +439,9 @@ class AnalyzerMainWindow(QMainWindow):
                     widget.update_input()
             except:
                 critical(self, "Problem loading settings file.",
-                         info = "Fix the problem in file '%s' and load the "\
+                         info="Fix the problem in file '%s' and load the "\
                                 "settings file again." % filename,
-                         detail_tb = True)
+                         detail_tb=True)
             self.settings_changed(False)
             status('Settings successfully loaded.')
 
@@ -471,9 +471,9 @@ class AnalyzerMainWindow(QMainWindow):
         dialog.setStyleSheet('background: #000000; '
                              'background-image: url(:cecog_about)')
         dialog.setWindowTitle('About CecogAnalyzer')
-        dialog.setFixedSize(400,300)
+        dialog.setFixedSize(400, 300)
         layout = QGridLayout()
-        layout.setContentsMargins(0,0,0,0)
+        layout.setContentsMargins(0, 0, 0, 0)
         #image = QImage(':cecog_splash')
         #label1 = QLabel(dialog)
         #label1.setStyleSheet('background-image: url(:cecog_splash)')
@@ -496,7 +496,7 @@ class AnalyzerMainWindow(QMainWindow):
                        '<a href="http://cellcognition.org">cellcognition.org</a><br>')
         layout.addWidget(label2, 1, 0)
         layout.addWidget(label3, 2, 0)
-        layout.setAlignment(Qt.AlignCenter|
+        layout.setAlignment(Qt.AlignCenter | 
                             Qt.AlignBottom)
         dialog.setLayout(layout)
         dialog.show()
@@ -559,7 +559,7 @@ class AnalyzerMainWindow(QMainWindow):
                     box.setInformativeText(txt)
                     box.setDetailedText('Plates with scanned structure: \n%s\n'
                                         '\nPlates without scanned structure: '
-                                        '\n%s' %
+                                        '\n%s' % 
                                         ('\n'.join(found_plates),
                                          '\n'.join(missing_plates)))
                     if not has_missing:
@@ -593,7 +593,7 @@ class AnalyzerMainWindow(QMainWindow):
                     if not question(self, "No structure data found",
                                     "Are you sure to scan %s?\n\nThis can take "
                                     "several minutes depending on the number of"
-                                    " images." %
+                                    " images." % 
                                     ("%d plates" % len(infos) if has_multiple
                                      else "one plate")):
                         cancel = True
@@ -613,7 +613,7 @@ class AnalyzerMainWindow(QMainWindow):
         def load(dlg):
             iter = imagecontainer.iter_import_from_settings(self._settings, scan_plates)
             for idx, info in enumerate(iter):
-                dlg.targetSetValue.emit(idx+1)
+                dlg.targetSetValue.emit(idx + 1)
 
             if len(imagecontainer.plates) > 0:
                 plate = imagecontainer.plates[0]
@@ -643,7 +643,7 @@ class AnalyzerMainWindow(QMainWindow):
             # report problems about a mismatch between channel IDs found in the data and specified by the user
             if len(problems) > 0:
                 critical(self, "Selected channel IDs not valid",
-                         "The selected channel IDs for %s are not valid.\nValid IDs are %s." %
+                         "The selected channel IDs for %s are not valid.\nValid IDs are %s." % 
                          (", ".join(["'%s Channel'" % s.capitalize() for s in problems]),
                           ", ".join(["'%s'" % s for s in channels])))
                 # a mismatch between settings and data will cause changed settings
@@ -687,21 +687,27 @@ class AnalyzerMainWindow(QMainWindow):
 
         x0_, y0_, x1_, y1_ = 0, \
                              0, \
-                             self._imagecontainer.get_meta_data().dim_x,\
+                             self._imagecontainer.get_meta_data().dim_x, \
                              self._imagecontainer.get_meta_data().dim_y
                          
-        trait_x0 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_x0' )
-        trait_y0 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_y0' )
-        trait_x1 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_x1' )
-        trait_y1 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_y1' )
+        trait_x0 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_x0')
+        trait_y0 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_y0')
+        trait_x1 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_x1')
+        trait_y1 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_y1')
         
         # Check if the crop values are valid
-        if x0 < 0 or y0 < 0 or x1 > x1_ or y1 > y1 or x0 == x1 or y0 == y1:
+        if x0 < 0 or y0 < 0 or x1 > x1_ or y1 > y1 or x0 != x1 or y0 != y1:
             # Set to default values
             trait_x0.set_value(trait_x0.get_widget(), x0)
             trait_y0.set_value(trait_y0.get_widget(), y0)
             trait_x1.set_value(trait_x1.get_widget(), x1)
             trait_y0.set_value(trait_y1.get_widget(), y1)
+        else:
+            trait_x0.set_value(trait_x0.get_widget(), x0_)
+            trait_y0.set_value(trait_y0.get_widget(), y0_)
+            trait_x1.set_value(trait_x1.get_widget(), x1_)
+            trait_y0.set_value(trait_y1.get_widget(), y1_)
+            
             
         # Set GUI widget valid ranges
         trait_x0.set_min_value(x0_)
