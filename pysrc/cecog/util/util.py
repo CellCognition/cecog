@@ -22,8 +22,7 @@ import logging, \
        types, \
        os, \
        bz2, \
-       gzip,\
-       psutil
+       gzip
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -182,16 +181,20 @@ def get_appdata_path():
     return os.path.abspath(path)
 
 def print_memory_increase(func):
-    pid = os.getpid()
-    p = psutil.Process(pid)
-    def wrapper(*arg, **kwargs):
-        m1 = p.get_memory_info().rss/1024.0/1024.0
-        res = func(*arg, **kwargs)
-        m2 = p.get_memory_info().rss/1024.0/1024.0
-        name = str(func.__class__) + '\t' + func.func_name if hasattr(func, '__class__') else func.func_name
-        print '%s\t%6.2f\t%6.2f\t%6.2f' % (name, (m2-m1), m1, m2)
-        return res
-    return wrapper
+    try:
+        import psutil
+        pid = os.getpid()
+        p = psutil.Process(pid)
+        def wrapper(*arg, **kwargs):
+            m1 = p.get_memory_info().rss/1024.0/1024.0
+            res = func(*arg, **kwargs)
+            m2 = p.get_memory_info().rss/1024.0/1024.0
+            name = str(func.__class__) + '\t' + func.func_name if hasattr(func, '__class__') else func.func_name
+            print '%s\t%6.2f\t%6.2f\t%6.2f' % (name, (m2-m1), m1, m2)
+            return res
+        return wrapper
+    except:
+        return runc
 
 #-------------------------------------------------------------------------------
 # classes:
