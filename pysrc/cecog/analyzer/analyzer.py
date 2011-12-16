@@ -600,7 +600,7 @@ class TimeHolder(OrderedDict):
         for frame, channels in self.iteritems():
 
             items = []
-            prim_region = channels.values()[0].get_region('primary')
+            prim_region = channels.values()[0].get_region(REGION_INFO.names['primary'][0])
 
             for obj_id in prim_region:
 
