@@ -696,7 +696,7 @@ class AnalyzerMainWindow(QMainWindow):
         trait_y1 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_y1')
         
         # Check if the crop values are valid
-        if x0 < 0 or y0 < 0 or x1 > x1_ or y1 > y1 or x0 != x1 or y0 != y1:
+        if x0 > 0 and y0 > 0 and x1 <= x1_ and y1 <= y1_ and x0 != x1 and y0 != y1:
             # Set to default values
             trait_x0.set_value(trait_x0.get_widget(), x0)
             trait_y0.set_value(trait_y0.get_widget(), y0)
@@ -707,8 +707,7 @@ class AnalyzerMainWindow(QMainWindow):
             trait_y0.set_value(trait_y0.get_widget(), y0_)
             trait_x1.set_value(trait_x1.get_widget(), x1_)
             trait_y0.set_value(trait_y1.get_widget(), y1_)
-            
-            
+                        
         # Set GUI widget valid ranges
         trait_x0.set_min_value(x0_)
         trait_x0.set_max_value(x1_)
