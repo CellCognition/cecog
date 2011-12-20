@@ -52,7 +52,7 @@ from cecog.analyzer import (R_LIBRARIES,
                             )
 from cecog.io.imagecontainer import ImageContainer
 from cecog.traits.config import (ANALYZER_CONFIG,
-                                 APPLICATION_SUPPORT_PATH,
+                                 get_application_support_path,
                                  )
 from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.gui.config import GuiConfigSettings
@@ -75,7 +75,7 @@ from cecog.gui.browser import Browser
 from cecog.gui.log import (GuiLogHandler,
                            LogWindow,
                            )
-from cecog.util.util import (convert_package_path,
+from cecog.traits.config import (convert_package_path,
                              set_package_path,
                              get_package_path,
                              )
@@ -531,7 +531,8 @@ class AnalyzerMainWindow(QMainWindow):
         path_in = self._settings.get(SECTION_NAME_GENERAL, 'pathin')
         if path_in == '':
             critical(self, txt, "Image path must be defined.")
-        elif not os.path.isdir(path_in):
+        elif not os.path.isdir(path_in) and \
+             not os.path.isdir(os.path.join(get_package_path(), path_in)):
             critical(self, txt, "Image path '%s' not found." % path_in)
         else:
             try:
@@ -793,7 +794,6 @@ if __name__ == "__main__":
     freeze_support()
     import time
     from pdk.fileutils import safe_mkdirs
-    from cecog.util.util import get_appdata_path
 
     import argparse
     parser = argparse.ArgumentParser(description='CellCognition Analyzer GUI')
@@ -815,27 +815,18 @@ if __name__ == "__main__":
 
     working_path = os.path.abspath(os.path.dirname(sys.argv[0]))
     program_name = os.path.split(sys.argv[0])[1]
-    package_path = None
+    
+    log_path = os.path.join(get_application_support_path(), 'log')
+    safe_mkdirs(log_path)
 
-    is_app = False
-
-    if sys.platform == 'darwin':
-        idx = working_path.find('/CecogAnalyzer.app/Contents/Resources')
-        if idx > -1:
-            package_path = working_path[:idx]
-            is_app = True
-    else:
-        package_path = get_appdata_path()
-        is_app = True
-
-    if not package_path is None:
+    is_app = hasattr(sys, 'frozen')
+    if is_app:
+        package_path = os.path.join(get_application_support_path(), 'Data')
         set_package_path(package_path)
-        log_path = os.path.join(get_appdata_path(), 'log')
-        safe_mkdirs(log_path)
-#        sys.stdout = \
-#            file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
-#        sys.stderr = \
-#            file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
+        sys.stdout = \
+            file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
+        sys.stderr = \
+            file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
 
     splash = QSplashScreen(QPixmap(':cecog_splash'))
     splash.show()
@@ -850,7 +841,8 @@ if __name__ == "__main__":
     if not args.settings is None:
         filename = args.settings
     else:
-        filename = os.path.join(get_package_path(), 'Data/Cecog_settings/demo_settings.conf')
+        filename = os.path.join(get_package_path(), 'Cecog_settings/demo_settings.conf')
+    filename = os.path.join(get_package_path(), 'Cecog_settings/demo_settings.conf')
 
     if os.path.isfile(filename):
         main._read_settings(filename)
