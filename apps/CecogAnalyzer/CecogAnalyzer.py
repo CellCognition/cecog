@@ -773,7 +773,6 @@ class AnalyzerMainWindow(QMainWindow):
     def _on_help_startup(self):
         show_html('_startup')
 
-
 def handle_exception(exc_type, exc_value, exc_traceback):
   import traceback
   filename, line, dummy, dummy = \

@@ -293,3 +293,9 @@ elif sys.platform.startswith('linux'):
     w9 = os.path.join('dist', 'w9xpopen.exe')
     if os.path.isfile(w9):
         os.remove(w9)
+        
+try:
+    shutil.copytree(os.path.join(RESOURCE_PATH, 'Data'),
+                    os.path.join(resource_path, 'Data'))
+except:
+    print 'No demo data found in resource folder to include in dist package. Try adding "Data" folder...'
