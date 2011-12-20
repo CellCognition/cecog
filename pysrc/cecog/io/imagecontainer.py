@@ -317,12 +317,10 @@ class MetaImage(object):
     
     @property  
     def _cropped_image(self):
-        print 'cropping',
         if self._img_c is None:
             self._img_c = ccore.subImage(self._raw_image,
                                     ccore.Diff2D(MetaImage._crop_coordinates[0], MetaImage._crop_coordinates[1]),
                                     ccore.Diff2D(MetaImage._crop_coordinates[2], MetaImage._crop_coordinates[3]))
-           
         return self._img_c
 
     def set_raw_image(self, img):
