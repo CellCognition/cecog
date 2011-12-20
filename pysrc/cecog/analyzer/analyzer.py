@@ -453,6 +453,7 @@ class TimeHolder(OrderedDict):
 
             img = ccore.numpy_to_image(var[frame_idx], copy=True)
             meta_image.set_image(img)
+            meta_image.set_raw_image(img)
             channel.meta_image = meta_image
             self._logger.debug('Raw image %s loaded from nc4 file.' % desc)
         else:
