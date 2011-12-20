@@ -66,8 +66,6 @@ from cecog.learning.learning import (CommonObjectLearner,
                                      )
 from cecog.util.util import (hexToRgb,
                              write_table,
-                             convert_package_path,
-                             PACKAGE_PATH,
                              )
 from cecog.gui.util import (ImageRatioDisplay,
                             numpy_to_qimage,
@@ -86,7 +84,9 @@ from cecog.analyzer.channel import (PrimaryChannel,
                                     )
 from cecog.analyzer.core import AnalyzerCore, SECONDARY_REGIONS
 from cecog.io.imagecontainer import PIXEL_TYPES
-from cecog.traits.config import R_SOURCE_PATH
+from cecog.traits.config import R_SOURCE_PATH, \
+                                convert_package_path, \
+                                PACKAGE_PATH
 from cecog import ccore
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL

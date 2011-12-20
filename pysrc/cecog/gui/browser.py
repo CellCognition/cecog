@@ -52,11 +52,7 @@ from cecog.analyzer.channel import (PrimaryChannel,
                                     )
 from cecog.analyzer import REGION_NAMES_SECONDARY
 from cecog.analyzer.core import AnalyzerCore
-from cecog import ccore
-from cecog.util.util import (hexToRgb,
-                             convert_package_path,
-                             singleton,
-                             )
+from cecog.traits.config import convert_package_path
 from cecog.io.imagecontainer import Coordinate
 from cecog.learning.learning import BaseLearner
 from cecog.gui.widgets.groupbox import QxtGroupBox

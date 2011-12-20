@@ -42,7 +42,7 @@ from cecog.gui.guitraits import (StringTrait,
                                  DictTrait,
                                  ListTrait
                                  )
-from cecog.util.util import convert_package_path
+from cecog.traits.config import convert_package_path
 from cecog.gui.util import show_html
 
 #-------------------------------------------------------------------------------

@@ -44,9 +44,8 @@ from pdk.fileutils import safe_mkdirs
 #------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog.traits.config import NAMING_SCHEMAS
+from cecog.traits.config import NAMING_SCHEMAS, convert_package_path
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
-from cecog.util.util import convert_package_path
 from cecog import ccore
 
 #------------------------------------------------------------------------------

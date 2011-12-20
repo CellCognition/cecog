@@ -47,9 +47,8 @@ from cecog.analyzer.channel import (PrimaryChannel,
                                     )
 from cecog.learning.learning import (CommonClassPredictor,
                                      )
-from cecog.util.util import (hexToRgb,
-                             convert_package_path,
-                             )
+from cecog.util.util import hexToRgb
+from cecog.traits.config import convert_package_path
 
 #-------------------------------------------------------------------------------
 # constants:
