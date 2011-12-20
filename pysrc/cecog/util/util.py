@@ -31,11 +31,12 @@ import logging, \
 from pdk.options import Option
 from pdk.optionmanagers import OptionManager
 from pdk.platform import is_linux, is_mac, is_windows
+from pdk.fileutils import safe_mkdirs
+
 
 #-------------------------------------------------------------------------------
 # constants:
 #
-PACKAGE_PATH = ''
 
 OS_WINDOWS = 'windows'
 OS_MAC = 'mac'
@@ -139,15 +140,7 @@ def write_table(filename, rows, column_names=None, sep='\t',
             f.write('%s\n' % sep.join(map(str, func(row))))
     f.close()
 
-def get_package_path():
-    return PACKAGE_PATH
 
-def set_package_path(name):
-    global PACKAGE_PATH
-    PACKAGE_PATH = name
-
-def convert_package_path(path):
-    return os.path.normpath(os.path.join(PACKAGE_PATH, path))
 
 def unlist(a):
     b = []
