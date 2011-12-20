@@ -58,6 +58,7 @@ from cecog.traits.traits import StringTrait
 #-------------------------------------------------------------------------------
 # constants:
 #
+PACKAGE_PATH = ''
 RESOURCE_PATH            = 'resources'
 if not os.path.isdir(RESOURCE_PATH):
     RESOURCE_PATH = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir, 'apps',
@@ -88,9 +89,9 @@ is_path_mappable = None
 #-------------------------------------------------------------------------------
 # functions:
 #
-def init_application_support_path():
+def init_application_support_path(version=''):
     global APPLICATION_SUPPORT_PATH
-    folder = 'CellCognition'
+    folder = 'CellCognition%s' % version
     if APPLICATION_SUPPORT_PATH is None:
         path = get_appdata_path()
         if is_mac or is_windows:
@@ -99,6 +100,8 @@ def init_application_support_path():
             path = os.path.join(path, '.%s' % folder.lower())
         safe_mkdirs(path)
         APPLICATION_SUPPORT_PATH = path
+
+def get_application_support_path():
     return APPLICATION_SUPPORT_PATH
 
 def init_constants():
@@ -139,6 +142,19 @@ def _copy_check_file(path_in, path_out, filename):
     if not os.path.isfile(fn_out):
         shutil.copy2(fn_in, fn_out)
     return fn_out
+
+def get_package_path():
+    return PACKAGE_PATH
+
+def set_package_path(dest_path):
+    global PACKAGE_PATH
+    demo_data_src_path = os.path.join(RESOURCE_PATH, 'Data')
+    if not os.path.isdir(dest_path) and os.path.isdir(demo_data_src_path):
+        shutil.copytree(demo_data_src_path, dest_path)
+    PACKAGE_PATH = dest_path
+
+def convert_package_path(path):
+    return os.path.normpath(os.path.join(PACKAGE_PATH, path))
 
 #-------------------------------------------------------------------------------
 # classes:
