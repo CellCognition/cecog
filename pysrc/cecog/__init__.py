@@ -24,7 +24,8 @@ __all__ = ['VERSION']
 # cecog imports:
 #
 from cecog.traits.config import (init_constants,
-                                 init_application_support_path)
+                                 init_application_support_path,
+                                 APPLICATION_SUPPORT_PATH)
 #-------------------------------------------------------------------------------
 # constants:
 #
@@ -37,5 +38,5 @@ JOB_CONTROL_SUSPEND = 'Suspend'
 JOB_CONTROL_RESUME = 'Resume'
 JOB_CONTROL_TERMINATE = 'Terminate'
 
-init_application_support_path()
+init_application_support_path(VERSION)
 init_constants()
