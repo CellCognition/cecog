@@ -131,11 +131,30 @@ elif sys.platform == 'win32':
                      #'ascii': True,
                      #'xref': True,
                     }
+                    
+elif sys.platform.startswith('linux'):
+    from cx_Freeze import setup, Executable
+    FILENAME_ZIP = 'data.zip'
+    #FILENAME_ZIP = 'CecogAnalyzer.exe'
+    OPTIONS = {'executables':[Executable(MAIN_SCRIPT,initScript = None,)]}
+    SYSTEM = 'cx_Freeze'
+    DATA_FILES = []
+    EXTRA_OPTIONS = {'includes': INCLUDES,
+                     'excludes': EXCLUDES,
+                     'packages': PACKAGES,
+                     'optimize': 2,
+                     'compressed': True,
+                     'bundle_files': 3,
+
+                     #'ascii': True,
+                     #'xref': True,
+                    }
 
 
 setup(
     data_files=DATA_FILES,
     options={SYSTEM: EXTRA_OPTIONS},
+    includes=['sip', 'netCDF4_utils', 'netcdftime'],
     setup_requires=[SYSTEM],
     name=pkginfo.name,
     version=pkginfo.version,
@@ -249,3 +268,28 @@ elif sys.platform == 'win32':
     if os.path.isfile(w9):
         os.remove(w9)
 
+elif sys.platform.startswith('linux'):
+    filenames = ['graph_template.txt',
+                 'hmm.R',
+                 'hmm_report.R',
+                 'run_hmm.R',
+                 ]
+    resource_path = os.path.join('build/exe.linux-x86_64-2.7', 'resources')
+    target = os.path.join(resource_path, 'rsrc', 'hmm')
+    safe_mkdirs(target)
+    for filename in filenames:
+        print target
+        shutil.copy(os.path.join('../../rsrc/hmm', filename), target)
+
+    for filename in RESOURCE_FILES:
+        # make sure we use the unchanged versions from the repository
+        filename = os.path.join('resources', os.path.split(filename)[1])
+        print filename
+        shutil.copy(filename, resource_path)
+
+    shutil.copytree(os.path.join(RESOURCE_PATH, 'palettes', 'zeiss'),
+                    os.path.join(resource_path, 'palettes', 'zeiss'))
+
+    w9 = os.path.join('dist', 'w9xpopen.exe')
+    if os.path.isfile(w9):
+        os.remove(w9)
