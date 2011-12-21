@@ -820,7 +820,7 @@ if __name__ == "__main__":
 
     is_app = hasattr(sys, 'frozen')
     if is_app:
-        package_path = os.path.join(get_application_support_path(), 'Data')
+        package_path = os.path.join(get_application_support_path(), 'battery_package')
         set_package_path(package_path)
         sys.stdout = \
             file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')

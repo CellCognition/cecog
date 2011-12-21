@@ -295,7 +295,7 @@ elif sys.platform.startswith('linux'):
         os.remove(w9)
         
 try:
-    shutil.copytree(os.path.join(RESOURCE_PATH, 'Data'),
-                    os.path.join(resource_path, 'Data'))
+    shutil.copytree(os.path.join(RESOURCE_PATH, 'battery_package'),
+                    os.path.join(resource_path, 'battery_package'))
 except:
-    print 'No demo data found in resource folder to include in dist package. Try adding "Data" folder...'
+    print 'No battery_package data found in resource folder to include in dist package.\nTry adding "git submodule update --init"'

@@ -148,7 +148,7 @@ def get_package_path():
 
 def set_package_path(dest_path):
     global PACKAGE_PATH
-    demo_data_src_path = os.path.join(RESOURCE_PATH, 'Data')
+    demo_data_src_path = os.path.join(RESOURCE_PATH, 'battery_package')
     if not os.path.isdir(dest_path) and os.path.isdir(demo_data_src_path):
         shutil.copytree(demo_data_src_path, dest_path)
     PACKAGE_PATH = dest_path
