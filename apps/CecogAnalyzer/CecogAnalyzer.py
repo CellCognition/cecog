@@ -819,6 +819,7 @@ if __name__ == "__main__":
     safe_mkdirs(log_path)
 
     is_app = hasattr(sys, 'frozen')
+    #is_app = True
     if is_app:
         package_path = os.path.join(get_application_support_path(), 'battery_package')
         set_package_path(package_path)
@@ -840,13 +841,13 @@ if __name__ == "__main__":
     if not args.settings is None:
         filename = args.settings
     else:
-        filename = os.path.join(get_package_path(), 'Cecog_settings/demo_settings.conf')
-    filename = os.path.join(get_package_path(), 'Cecog_settings/demo_settings.conf')
-
+        filename = os.path.join(get_package_path(), 'Settings/demo_settings.conf')
+    #filename = os.path.join(get_package_path(), 'Settings/demo_settings.conf')
+    
     if os.path.isfile(filename):
         main._read_settings(filename)
 
-        if args.load:
+        if args.load or is_app:
             infos = list(ImageContainer.iter_check_plates(main._settings))
             main._load_image_container(infos, show_dlg=False)
 
