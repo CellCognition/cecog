@@ -295,7 +295,11 @@ elif sys.platform.startswith('linux'):
         os.remove(w9)
         
 try:
-    shutil.copytree(os.path.join(RESOURCE_PATH, 'battery_package'),
-                    os.path.join(resource_path, 'battery_package'))
+    shutil.copytree(os.path.join(RESOURCE_PATH, 'battery_package', 'Classifier'),
+                    os.path.join(resource_path, 'battery_package', 'Classifier'))
+    shutil.copytree(os.path.join(RESOURCE_PATH, 'battery_package', 'Images'),
+                    os.path.join(resource_path, 'battery_package', 'Images'))
+    shutil.copytree(os.path.join(RESOURCE_PATH, 'battery_package', 'Settings'),
+                    os.path.join(resource_path, 'battery_package', 'Settings'))
 except:
     print 'No battery_package data found in resource folder to include in dist package.\nTry adding "git submodule update --init"'
