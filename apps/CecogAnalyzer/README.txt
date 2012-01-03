@@ -33,7 +33,7 @@ Package data
 
 The package contains a sub-folder Data with
 
-    * Cecog_settings
+    * Settings
           o demo_settings.conf, the settings file which is loaded on startup
           o graph_primary.txt, an example for a graph definition file (H2b)
           o graph_secondary.txt, an example for a graph definition file
@@ -45,10 +45,10 @@ The package contains a sub-folder Data with
             larger data set, feature and SVM models to test (or train) the H2b
             and aTubulin classifiers
 
-    * Demo_data
+    * Images
           o the input folder of the raw images
 
-    * Demo_output
+    * Analysis
           o the output folder where results are written to
 
 Note
