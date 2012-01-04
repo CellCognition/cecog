@@ -259,6 +259,14 @@ class _ProcessingThread(QThread):
 
     def run(self):
         try:
+            import pydevd
+            pydevd.connected = True
+            pydevd.settrace(suspend=False)
+            print 'Thread enabled interactive eclipse debuging...'
+        except:
+            pass
+        
+        try:
             self._run()
         except MultiprocessingException, e:
             msg = e.msg
