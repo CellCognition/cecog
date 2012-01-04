@@ -519,7 +519,7 @@ class HmmThread(_ProcessingThread):
             sample = self._settings.get2('compose_galleries_sample')
             if sample == -1:
                 sample = None
-            for group_name in compose_galleries(path_out, path_out_hmm_region, one_daughter=False, sample=sample):
+            for group_name in compose_galleries(path_out, path_out_hmm_region, sample=sample):
                 self._logger.debug('gallery finished for group: %s' % group_name)
                 if self._abort:
                     break
