@@ -133,7 +133,7 @@ class ChannelItem(QFrame):
             # seems to be not necessary although result is Index8
             #qimage = qimage.convertToFormat(QImage.Format_ARGB32_Premultiplied)
         else:
-            width, height = image.shape
+            height, width = image.shape
             qimage = QImage(width, height, QImage.Format_ARGB32_Premultiplied)
             qimage.fill(0)
         return qimage
