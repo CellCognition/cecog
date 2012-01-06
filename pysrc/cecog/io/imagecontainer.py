@@ -329,7 +329,10 @@ class MetaImage(object):
         self._img_c = img
         
     def set_image(self, img):
-        self.set_cropped_image(img)
+        if self._crop_coordinates is None:
+            self.set_raw_image(img)
+        else:
+            self.set_cropped_image(img)
       
     @classmethod    
     def _check_crop_coordinates(cls, x0, y0, width, height):
