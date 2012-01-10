@@ -800,7 +800,7 @@ if __name__ == "__main__":
                         help='Load data from settings file.')
     parser.add_argument('settings', nargs='?',
                         help='Settings file.')
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
 
 #    log_path = 'log'
 #    safe_mkdirs(log_path)
