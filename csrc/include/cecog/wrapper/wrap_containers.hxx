@@ -174,7 +174,7 @@ void wrap_containers()
   class_< _ImageMaskContainer, bases<_ObjectContainerBase> >
     ("ImageMaskContainer", init< std::string, std::string >())
     .def(init<vigra::BImage, vigra::BImage, bool>())
-    .def(init<vigra::BImage, vigra::Int16Image, bool, bool>())
+    .def(init<vigra::BImage, vigra::Int16Image, bool, bool, bool=true>())
   ;
   register_ptr_to_python< std::auto_ptr<_ImageMaskContainer> >();
 

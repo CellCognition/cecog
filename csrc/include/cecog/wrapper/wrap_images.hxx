@@ -77,6 +77,7 @@ namespace vigra
   typedef BasicImageView< Int32 >  Int32ImageView;
   typedef BasicImageView< float >  FImageView;
   typedef BasicImageView< double > DImageView;
+  typedef BasicImageView< bool > BImageView;
 
   typedef BasicImageView< RGBValue < UInt8 > >  UInt8RGBImageView;
   typedef BasicImageView< RGBValue < Int8 > >   Int8RGBImageView;
@@ -262,6 +263,8 @@ pyNumpyToImage(PyObject *obj, bool copy=false)
         return _numpyToImage< vigra::FImage >(array);
       else if (descr->type_num == NPY_DOUBLE)
         return _numpyToImage< vigra::DImage >(array);
+	  else if (descr->type_num == NPY_BOOL)
+        return _numpyToImage< vigra::BImage >(array);
     } else
     {
       if (descr->type_num == NPY_UBYTE)
@@ -280,6 +283,8 @@ pyNumpyToImage(PyObject *obj, bool copy=false)
         return _numpyToImageView< vigra::FImageView >(array);
       else if (descr->type_num == NPY_DOUBLE)
         return _numpyToImageView< vigra::DImageView >(array);
+	  else if (descr->type_num == NPY_BOOL)
+        return _numpyToImageView< vigra::BImageView >(array);
     }
   } else if (array->nd == 3 && array->dimensions[2] == 3)
   // convert 3D arrays to 2D RGB images/views

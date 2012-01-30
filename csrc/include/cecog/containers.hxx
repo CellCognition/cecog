@@ -1011,7 +1011,7 @@ namespace cecog
      * create the object list (ObjectMap) from the label image.
      * ObjectMap(key, value) -> (object ID, object)
      */
-    void _buildObjects(bool findCrack=true)
+    void _buildObjects(bool findCrack=true, bool removeSinglePixel=true)
     {
       vigra::ArrayOfRegionStatistics< vigra::FindBoundingRectangle >
         bounds(this->total_labels);
@@ -1047,7 +1047,8 @@ namespace cecog
         vigra::Diff2D diff = lr - ul;
 
         // check for border and size greater 1 pixel
-        if (diff.x > 1 && diff.y > 1 &&
+        if ((!removeSinglePixel ||
+			 diff.x > 1 && diff.y > 1) &&
             (!bRemoveBorderObjects ||
              (ul.x > this->region_size &&
               ul.y > this->region_size &&
@@ -1477,7 +1478,8 @@ namespace cecog
     ImageMaskContainer(vigra::BImage const & imgIn,
                        label_type const & imgLabel,
                        bool bRemoveBorderObjects=true,
-                       bool findCrack=true
+                       bool findCrack=true,
+					   bool removeSinglePixel=true
                        )
         : Base()
     {
@@ -1509,7 +1511,7 @@ namespace cecog
                        Param(static_cast<typename binary_type::value_type>(FOREGROUND))
                        );
 
-      this->_buildObjects(findCrack);
+      this->_buildObjects(findCrack, removeSinglePixel);
     }
 
 
