@@ -433,7 +433,7 @@ class SecondarySegmentation(_Segmentation):
             else:
                 imgLabelsOut = container.img_labels
             containers['expanded'] =\
-                ccore.ImageMaskContainer(image, imgLabelsOut, False, True)
+                ccore.ImageMaskContainer(image, imgLabelsOut, False, True, True)
             self._logger.debug("         --- expanded region ok, %s" %
                                stopwatch.current_interval())
 
@@ -449,7 +449,7 @@ class SecondarySegmentation(_Segmentation):
             else:
                 imgLabelsOut = container.img_labels
             containers['inside'] =\
-                ccore.ImageMaskContainer(image, imgLabelsOut, False, True)
+                ccore.ImageMaskContainer(image, imgLabelsOut, False, True, True)
             self._logger.debug("         --- inside region ok, %s" %
                                stopwatch.current_interval())
 
@@ -469,7 +469,7 @@ class SecondarySegmentation(_Segmentation):
                                                          )
             imgLabelsOut = ccore.substractImages(imgLabelsOut, container.img_labels)
             containers['outside'] =\
-                ccore.ImageMaskContainer(image, imgLabelsOut, False, True)
+                ccore.ImageMaskContainer(image, imgLabelsOut, False, True, True)
             self._logger.debug("         --- outside region ok, %s" %
                                stopwatch.current_interval())
 
@@ -498,7 +498,7 @@ class SecondarySegmentation(_Segmentation):
                 imgLabelsOutB = container.img_labels
             imgLabelsOut = ccore.substractImages(imgLabelsOutB, imgLabelsOutA)
             containers['rim'] =\
-                ccore.ImageMaskContainer(image, imgLabelsOut, False, True)
+                ccore.ImageMaskContainer(image, imgLabelsOut, False, True, True)
             self._logger.debug("         --- rim region ok, %s" %
                                stopwatch.current_interval())
 
@@ -521,7 +521,7 @@ class SecondarySegmentation(_Segmentation):
                                                       self.fPropagateLambda,
                                                       self.iPropagateDeltaWidth)
             containers['propagate'] =\
-                ccore.ImageMaskContainer(image, labels_out, False, True)
+                ccore.ImageMaskContainer(image, labels_out, False, True, True)
             self._logger.debug("         --- propagate region ok, %s" %
                                stopwatch.current_interval())
 
@@ -530,7 +530,7 @@ class SecondarySegmentation(_Segmentation):
                                                            iGaussFilterSize=self.iConstrainedWatershedGaussFilterSize)
 
             containers['constrained_watershed'] =\
-                ccore.ImageMaskContainer(image, labels_out, False, True)
+                ccore.ImageMaskContainer(image, labels_out, False, True, True)
             self._logger.debug("         --- constrained_watershed region ok, %s",
                                stopwatch.current_interval())
 

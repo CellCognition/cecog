@@ -392,7 +392,7 @@ class TimeHolder(OrderedDict):
                                                      copy=True)
                     img_xy = channel.meta_image.image
                     container = ccore.ImageMaskContainer(img_xy, img_label,
-                                                         False, True)
+                                                         False, True, True)
                     channel.dctContainers[region_name] = container
                     valid = True
                 else:
