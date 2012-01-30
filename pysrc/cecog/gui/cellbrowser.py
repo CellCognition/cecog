@@ -416,7 +416,7 @@ class TrackletBrowser(QtGui.QWidget):
             self._root_items.append(g_event)
         print '  Loading events took %5.2f' % (timing.time() - tic)
             
-        self.GraphicsItemLayouter = GraphicsItemLayouter(events.get_object_type)(self)
+        self.GraphicsItemLayouter = GraphicsItemLayouter(events.get_object_type())(self)
             
         self.update_()
         print '  Total Rendering of position took %5.2f' % (timing.time() - tic)
@@ -641,7 +641,7 @@ class EventGraphicsItem(GraphicsObjectItem):
     def width(self):
         return self.sub_items[1].width#sum([x.width for x in self.sub_items])
     
-    def make_feature_plot(self, feature_idx = 222):
+    def make_feature_plot(self, feature_idx = 5):
         features = self.object_item.sibling_item_features[:, feature_idx]
         min_, max_ = self.object_item.sibling_item_feature_min_max(feature_idx)
 
@@ -928,7 +928,7 @@ def main():
 #        file = r'C:\Users\sommerc\data\Chromatin-Microtubles\Analysis\H2b_aTub_MD20x_exp911_2_channels_nozip\dump\_all_positions.hdf5'
 #        file = r'C:\Users\sommerc\data\Chromatin-Microtubles\Analysis\H2b_aTub_MD20x_exp911_2_channels_nozip\dump_save\two_positions.hdf5'
         file = r'Y:\christoph\data\Analysis\mimics_secondary_screening_H2B_tub\001620\dump\0005.hdf5'
-    mainwindow = MainWindow(file)
+    mainwindow = MainWindow()
     
 #    import cProfile, pstats
 #    cProfile.run('mainwindow = MainWindow(file)', 'profile-result')

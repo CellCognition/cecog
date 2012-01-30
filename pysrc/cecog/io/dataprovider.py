@@ -569,18 +569,15 @@ class Objects(object):
         else:
             edge_table = self._h5_object_group[self.HDF5_OBJECT_EDGE_NAME].value
             nr_cols = -1 # determined by numpy
-        self.object_np_cache['edges'] = edge_table \
-                                 .reshape(len(edge_table), nr_cols)
+        self.object_np_cache['edges'] = edge_table.view((numpy.uint32, len(edge_table.dtype.names)))
                                  
         if self._h5_object_group[self.HDF5_OBJECT_ID_NAME].shape[0] == 0:
             id_refs_table = numpy.zeros((0,0), dtype=numpy.uint32)
             nr_cols = 0
         else:
             id_refs_table = self._h5_object_group[self.HDF5_OBJECT_ID_NAME].value
-            nr_cols = -1
-        self.object_np_cache['id_edge_refs']  = id_refs_table \
-                                 .view(numpy.uint32) \
-                                 .reshape(len(id_refs_table), nr_cols)
+            nr_cols = 2
+        self.object_np_cache['id_edge_refs']  = id_refs_table.view((numpy.uint32, len(id_refs_table.dtype.names)))
                                                         
         self.object_np_cache['child_ids'] = {}
         for x in self.object_np_cache['id_edge_refs']:
