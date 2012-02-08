@@ -976,7 +976,9 @@ class CellAnalyzer(PropertyManager):
 
                     strFilenameImg = os.path.join(strPathOutLabel, '%s___img.png' % strFilenameBase)
                     strFilenameMsk = os.path.join(strPathOutLabel, '%s___msk.png' % strFilenameBase)
-                    #print strFilenameImg, strFilenameMsk
+                    # FIXME: export Objects is segfaulting for objects
+                    #        where its bounding box is touching the border
+                    #        i.e. one corner point equals zero!
                     oContainer.exportObject(obj_id,
                                             strFilenameImg,
                                             strFilenameMsk)
@@ -984,6 +986,7 @@ class CellAnalyzer(PropertyManager):
                     oContainer.markObjects([obj_id], rgb_value, False, True)
 
                     #print obj_id, obj.oCenterAbs, iCenterX, iCenterY
+                    print '*** CSdebug: drawFilledCircle', iCenterX, iCenterY
                     ccore.drawFilledCircle(ccore.Diff2D(iCenterX, iCenterY),
                                            3, oContainer.img_rgb, rgb_value)
 
