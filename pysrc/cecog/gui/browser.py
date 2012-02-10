@@ -336,6 +336,9 @@ class Browser(QMainWindow):
         """
         self.coordinate = coordinate.copy()
         self._t_slider.blockSignals(True)
+        self._imagecontainer.set_plate(coordinate.plate)
+        meta_data = self._imagecontainer.get_meta_data()
+        self._t_slider.setMaximum(meta_data.dim_t)
         self._t_slider.setValue(coordinate.time)
         self._t_slider.blockSignals(False)
         self._process_image()
