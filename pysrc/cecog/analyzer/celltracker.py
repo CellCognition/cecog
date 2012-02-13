@@ -24,6 +24,7 @@ import os, \
        re, \
        shutil
 from types import ListType, FloatType
+from csv import DictWriter
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -543,6 +544,9 @@ class CellTracker(OptionManager):
         dot = DotWriter(strDotFilePath, oTracker)
         if bRunDot:
             self.callGraphviz(strDotFilePath)
+            
+    def _exportGraphFeatures(self):
+        pass
 
     def getSubTracker(self, strNodeId, iMaxLevel=None, channelId=None):
         oTrackerCopy = self.copy(channelId=channelId)
@@ -551,6 +555,7 @@ class CellTracker(OptionManager):
 
     def exportGraph(self, strDotFilePath, bRunDot=False):
         self._exportGraph(self, strDotFilePath, bRunDot=bRunDot)
+        self.exportChannelDataFlat(strDotFilePath.split('.')[0] + '_features.txt', 'Primary', 'primary', None)
 
     def exportSubGraph(self, strDotFilePath, strStartId, iMaxLevel=None, bRunDot=False, channelId=None):
         tracker = self.getSubTracker(strStartId, iMaxLevel=iMaxLevel, channelId=channelId)
@@ -979,14 +984,12 @@ class PlotCellTracker(CellTracker):
                                              'upperleft_x', 'upperleft_y',
                                              'lowerright_x', 'lowerright_y']
 
-                        oTable = newTable(['Frame', 'ObjectID'] +
+                        oTable = DictWriter(open(strFilename,'wb'), ['Frame', 'ObjectID'] +
                                           [self.FEATURE_FLAT_PATTERN % f for f in lstFeatureNames] +
                                           [self.CLASS_FLAT_PATTERN % x for x in ['name', 'label', 'probability']] +
                                           [self.TRACKING_FLAT_PATTERN % x for x in tracking_features],
-                                          typeCodes=['i','i'] +
-                                                    ['f']*len(lstFeatureNames) +
-                                                    ['c','i','f'] +
-                                                    ['i'] * len(tracking_features))
+                                          delimiter='\t')
+                        oTable.writeheader()
 
                     for iObjId, oObj in oRegion.iteritems():
                         dctData = {'Frame' : iT,
@@ -1007,16 +1010,7 @@ class PlotCellTracker(CellTracker):
                         dctData[self.TRACKING_FLAT_PATTERN % 'lowerright_x'] = oObj.oRoi.lowerRight[0]
                         dctData[self.TRACKING_FLAT_PATTERN % 'lowerright_y'] = oObj.oRoi.lowerRight[1]
 
-                        oTable.append(dctData)
-
-        if not oTable is None:
-            oTable.sort(['Frame', 'ObjectID'])
-            exportTable(oTable,
-                        strFilename,
-                        fieldDelimiter='\t',
-                        typeFormatting={FloatType: lambda x: "%E" % x},
-                        detectCompression=True,
-                        stringDelimiter='')
+                        oTable.writerow(dctData)
 
 
     def exportChannelData(self, dctEventData, strFilename, strChannelId, strRegionId, lstFeatureNames):
@@ -1771,6 +1765,12 @@ class ClassificationCellTracker2(ClassificationCellTracker):
         feature_lookup['mean'] = 'n2_avg'
         feature_lookup['sd'] = 'n2_stddev'
         feature_lookup['size'] = 'roisize'
+        
+        lstFeatureNames = sorted(self.lstFeatureNames)
+        
+        for name, real_name in zip([self.FEATURE_FLAT_PATTERN % f for f in lstFeatureNames],
+                                   lstFeatureNames):
+            feature_lookup[name] = real_name
 
         for start_id, data in self.dctVisitorData.iteritems():
 
