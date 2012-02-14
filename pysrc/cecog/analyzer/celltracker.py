@@ -544,9 +544,6 @@ class CellTracker(OptionManager):
         dot = DotWriter(strDotFilePath, oTracker)
         if bRunDot:
             self.callGraphviz(strDotFilePath)
-            
-    def _exportGraphFeatures(self):
-        pass
 
     def getSubTracker(self, strNodeId, iMaxLevel=None, channelId=None):
         oTrackerCopy = self.copy(channelId=channelId)
