@@ -514,7 +514,7 @@ class IniFileImporter(AbstractImporter):
         if 'config_parser' in state:
             del self.config_parser
 
-    def __get_token_list(self, path):
+    def __get_token_list(self, path, sub_folder=None):
         token_list = []
 
         re_subdir = re.compile(self._regex_subdirectories)
@@ -595,8 +595,10 @@ class IniFileImporter(AbstractImporter):
                                                     "'well' information "
                                                     "required in naming schema."
                                                     )
-
-                        result['filename'] = filename_rel
+                        if sub_folder is None:
+                            result['filename'] = filename_rel
+                        else:
+                            result['filename'] = os.path.join(sub_folder, filename_rel)
                         token_list.append(result)
         return token_list
 
@@ -606,7 +608,7 @@ class IniFileImporter(AbstractImporter):
         if len(token_list) == 0 and not self.allow_subfolder is None:
             path = os.path.join(self.path, self.allow_subfolder)
             if os.path.isdir(path):
-                token_list = self.__get_token_list(path)
+                token_list = self.__get_token_list(path, self.allow_subfolder)
         return token_list
 
 

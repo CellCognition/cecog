@@ -737,7 +737,6 @@ class AnnotationModule(Module):
         self._on_saveas_classifier(path)
 
     def _on_saveas_classifier(self, path=None):
-        print 'asdfasdf', path
         learner = self._learner
         if path is None:
             path = learner.get_env_path()
