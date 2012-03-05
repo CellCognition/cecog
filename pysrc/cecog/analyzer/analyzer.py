@@ -338,7 +338,10 @@ class TimeHolder(OrderedDict):
     @staticmethod
     def nc_valid_set(var, idx, value):
         helper = var.valid
-        helper[idx] = value
+        if len(helper.shape) == 0:
+            helper = value
+        else:
+            helper[idx] = value
         var.valid = helper
 
     def close_all(self):
@@ -387,7 +390,11 @@ class TimeHolder(OrderedDict):
         if self._reuse_nc:
             for region_name in channel.lstAreaSelection:
                 var = grp.variables[region_name]
-                if var.valid[frame_idx]:
+                if len(var.valid.shape) == 0:
+                    frame_valid = var.valid
+                else:
+                    frame_valid = var.valid[frame_idx]
+                if frame_valid:
                     img_label = ccore.numpy_to_image(var[frame_idx],
                                                      copy=True)
                     img_xy = channel.meta_image.image
@@ -446,7 +453,13 @@ class TimeHolder(OrderedDict):
             grp = self._dataset.groups[self.NC_GROUP_RAW]
             var = grp.variables[channel.strChannelId]
             frame_idx = self._frames_to_idx[self._iCurrentT]
-        if self._reuse_nc and var.valid[frame_idx]:
+            
+        if len(var.valid.shape) == 0:
+            frame_valid = var.valid
+        else:
+            frame_valid = var.valid[frame_idx]
+                    
+        if self._reuse_nc and frame_valid:
             coordinate = Coordinate(position=self.P, time=self._iCurrentT,
                                     channel=channel.strChannelId, zslice=1)
             meta_image = MetaImage(image_container=None, coordinate=coordinate)
