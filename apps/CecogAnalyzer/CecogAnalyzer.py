@@ -790,6 +790,13 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 # main:
 #
 if __name__ == "__main__":
+    try:
+        import pydevd
+        pydevd.connected = True
+        pydevd.settrace(suspend=False)
+        print 'Thread enabled interactive eclipse debuging...'
+    except:
+        pass
     freeze_support()
     import time
     from pdk.fileutils import safe_mkdirs
