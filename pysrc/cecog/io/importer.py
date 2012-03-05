@@ -516,13 +516,23 @@ class IniFileImporter(AbstractImporter):
 
     def __get_token_list(self, path, sub_folder=None):
         token_list = []
+        try:
+            import pydevd
+            pydevd.connected = True
+            pydevd.settrace(suspend=False)
+            print 'Thread enabled interactive eclipse debuging...'
+        except:
+            pass
 
         re_subdir = re.compile(self._regex_subdirectories)
         re_substr = re.compile(self._regex_filename_substr)
         re_dim = re.compile(self._regex_dimensions)
         
-        re_subwell_str = r"[a-zA-Z]\d{1,2}"
-        re_subwell = re.compile(re_subwell_str)
+        re_well_str = r"[a-zA-Z]\d{1,5}"
+        re_well = re.compile(re_well_str)
+        
+        re_well_str2 = r"\d{1,5}"
+        re_well2 = re.compile(re_well_str2)
 
         for dirpath, dirnames, filenames in os.walk(path):
             # prune filenames by file extension
@@ -570,12 +580,15 @@ class IniFileImporter(AbstractImporter):
                             # reformat well information
                             if self.reformat_well:
                                 well = result[META_INFO_WELL]
-                                if re_subwell.match(well) is None:
-                                    raise MetaDataError("Well data '%s' not "
-                                                        "valid.\nValid are '%s'"
-                                                        % (re_subwell_str, well))
-                                result[META_INFO_WELL] = "%s%02d" % \
-                                    (well[0].upper(), int(well[1:]))
+                                if re_well.match(well) is None:
+                                    if re_well2.match(well) is None:
+                                        raise MetaDataError("Well data '%s' not "
+                                                            "valid.\nValid are '%s' or '%s'"
+                                                            % (well, re_well_str, re_well_str2))
+                                    else:
+                                        result[META_INFO_WELL] = "%05d" % int(well)
+                                else:
+                                    result[META_INFO_WELL] = "%s%02d" % (well[0].upper(), int(well[1:]))
 
                             # subwell is converted to int (default 1)
                             if not META_INFO_SUBWELL in result:
