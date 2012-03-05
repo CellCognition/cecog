@@ -591,6 +591,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
                 pos.name = L[sortedIndex[i]]
                 gene.name = L[sortedIndex[i]]
                 gene.symbol = screen$cell$gene[I][1]
+                gene.oligo = screen$cell$oligoid[I][1]
                 pos.list = levels(factor(screen$cell$position[I]))
                 str.pos.list = paste(pos.list, collapse=',')
             #I <- (screen$cell$oligoid == L[sortedIndex[i]] && screen$cell$valid == TRUE)
@@ -602,6 +603,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
                 pos.name = L[sortedIndex[i]]
                 gene.name = L[sortedIndex[i]]
                 gene.symbol = screen$cell$gene[I][1]
+                gene.oligo = screen$cell$oligoid[I][1]
                 pos.list = levels(factor(screen$cell$position[I]))
                 str.pos.list = paste(pos.list, collapse=',')
                 str.pos.filename = paste(pos.list, collapse='_')
@@ -613,6 +615,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             I <- screen$cell$position == Lpos[sortedIndex[i]]
                 pos.name <- Lpos[sortedIndex[i]]
                 gene.name <- pos.names[sortedIndex[i]]
+                gene.oligo = screen$cell$oligoid[I][1]
                 str.pos.list = pos.name
                 str.pos.filename = str.pos.list
                 gene.symbol = screen$cell$gene[I][1]
@@ -903,10 +906,12 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             write.table(export.data, paste(dirHmm, "/", pos.name, ".txt", sep=""), quote=FALSE, sep="\t",
                         row.names=FALSE, col.names=c("Trajectory", "Realign"))
 
-            if (groupByOligoId | groupByGene)
-                plot_title = paste(gene.name, " n=", N.gene,"/",N.gene.old, "\n(", str.pos.list, ")", sep="")
-            else
-                plot_title = paste(pos.name, " - ", gene.name, " n=", N.gene,"/",N.gene.old, sep="")
+            if (groupByGene){ 
+                plot_title = paste(gene.name, " n=", N.gene,"/",N.gene.old, "\n(", str.pos.list, ")", sep="")}
+            else if (groupByOligoId){
+                plot_title = paste(gene.oligo, " n=", N.gene,"/",N.gene.old, "\n(", str.pos.list, ")", sep="")}
+            else{
+                plot_title = paste(pos.name, " - ", gene.name, " n=", N.gene,"/",N.gene.old, sep="")}
             print(plot_title)
             T1[1,i] <- plot_title
 
@@ -968,7 +973,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
                 row.names=FALSE, col.names=1:k)
 
             counts.all[[i]] = counts.time
-            names.all[[i]] = gene.name
+            names.all[[i]] = paste(gene.oligo, "(", pos.name, ")", sep="")
             symbols.all[[i]] = gene.symbol
 
 ###MICHIO####
