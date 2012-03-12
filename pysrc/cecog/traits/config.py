@@ -151,6 +151,7 @@ def set_package_path(dest_path):
     demo_data_src_path = os.path.join(RESOURCE_PATH, 'battery_package')
     if not os.path.isdir(dest_path) and os.path.isdir(demo_data_src_path):
         shutil.copytree(demo_data_src_path, dest_path)
+        os.mkdir(os.path.join(dest_path, 'Analysis'))
     PACKAGE_PATH = dest_path
 
 def convert_package_path(path):
