@@ -454,10 +454,10 @@ class TimeHolder(OrderedDict):
             var = grp.variables[channel.strChannelId]
             frame_idx = self._frames_to_idx[self._iCurrentT]
             
-        if len(var.valid.shape) == 0:
-            frame_valid = var.valid
-        else:
-            frame_valid = var.valid[frame_idx]
+            if len(var.valid.shape) == 0:
+                frame_valid = var.valid
+            else:
+                frame_valid = var.valid[frame_idx]
                     
         if self._reuse_nc and frame_valid:
             coordinate = Coordinate(position=self.P, time=self._iCurrentT,
