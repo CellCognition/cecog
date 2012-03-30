@@ -397,69 +397,71 @@ write.decode <- function(screen, cell, hmm)
     for (f in 1:dim(cell)[1])
     {
         #cat("Read file ", paste(screen$dir, cell$filename[f], sep="/"), "\n")
-        t <- read.delim(paste(screen$dir, cell$filename[f], sep="/"), as.is=TRUE)
-        if (!is.null(t$class__A__probability) && !is.null(t$class__B__probability))
-        {
-            nCells = 2
-            colNames <- c("class__A__label", "class__B__label")
-            v <- array(0, c(nCells, T))
-            v[1,] <- t$class__A__probability
-            v[2,] <- t$class__B__probability
-        } else
-        if (!is.null(t$class__A__probability))
-        {
-            nCells = 1
-            colNames <- c("class__A__label")
-            v <- array(0, c(nCells, T))
-            v[1,] <- t$class__A__probability
-        } else
-        {
-            nCells = 1
-            colNames <- c("class__B__label")
-            v <- array(0, c(nCells, T))
-            v[1,] <- t$class__probability
-        }
-
-        fuseClasses <- screen$fuseClasses
-        prob2 <- array(0,dim = c(nCells,T,K))
-        n <- 0
-        for (ic in 1:nCells)
-        {
-
-            for (j in 1:T)
-            {
-                Cstr <- v[ic,j]
-                Cstr2 <- strsplit(Cstr,split=",")[[1]]
-                C <- strsplit(Cstr2, split=":")
-                Cs <- rep(0, K)
-                for (n in 1:length(C))
-                    Cs[as.numeric(C[[n]][1])] <- as.numeric(C[[n]][2])
-                p = rep(0,K)
-                #k <- length(C)
-                #if (k != K) {
-                #    cat("ERROR: The number of classes in file ", screen$cell$filename[i], " number of classes is ", k,". Expected number of classes is ",K,"\n")
-                #    stop()
-                #}
-                for (k in 1:K)
-                {
-                    if (!is.null(fuseClasses) && k %in% fuseClasses[,2])
-                        k2 = fuseClasses[which(fuseClasses[,2] == k), 2]
-                    else
-                        k2 = k
-                    p[k2] <- p[k2] + Cs[k]
-                }
-                prob2[ic,j,] <- p
-            }
-        }
-        Sequence2 <- hmm.decode(prob2, hmm)
-        #print(Sequence2)
-        dirHmm <- paste(screen$dir, cell$tracking[f], "_hmm", sep="/")
-        if (!file.exists(dirHmm))
-            dir.create(dirHmm)
-        write.table(t(Sequence2), paste(dirHmm, cell$name[f], sep="/"), quote=FALSE, sep="\t",
-                row.names=FALSE,
-                col.names=colNames)
-        #write.table(Sequence2, paste(dirHmm, cell$name[f], sep="/"), quote=FALSE, sep="\t")
+        if (cell$valid[f]) {
+	        t <- read.delim(paste(screen$dir, cell$filename[f], sep="/"), as.is=TRUE)
+	        if (!is.null(t$class__A__probability) && !is.null(t$class__B__probability))
+	        {
+	            nCells = 2
+	            colNames <- c("class__A__label", "class__B__label")
+	            v <- array(0, c(nCells, T))
+	            v[1,] <- t$class__A__probability
+	            v[2,] <- t$class__B__probability
+	        } else
+	        if (!is.null(t$class__A__probability))
+	        {
+	            nCells = 1
+	            colNames <- c("class__A__label")
+	            v <- array(0, c(nCells, T))
+	            v[1,] <- t$class__A__probability
+	        } else
+	        {
+	            nCells = 1
+	            colNames <- c("class__B__label")
+	            v <- array(0, c(nCells, T))
+	            v[1,] <- t$class__probability
+	        }
+	
+	        fuseClasses <- screen$fuseClasses
+	        prob2 <- array(0,dim = c(nCells,T,K))
+	        n <- 0
+	        for (ic in 1:nCells)
+	        {
+	
+	            for (j in 1:T)
+	            {
+	                Cstr <- v[ic,j]
+	                Cstr2 <- strsplit(Cstr,split=",")[[1]]
+	                C <- strsplit(Cstr2, split=":")
+	                Cs <- rep(0, K)
+	                for (n in 1:length(C))
+	                    Cs[as.numeric(C[[n]][1])] <- as.numeric(C[[n]][2])
+	                p = rep(0,K)
+	                #k <- length(C)
+	                #if (k != K) {
+	                #    cat("ERROR: The number of classes in file ", screen$cell$filename[i], " number of classes is ", k,". Expected number of classes is ",K,"\n")
+	                #    stop()
+	                #}
+	                for (k in 1:K)
+	                {
+	                    if (!is.null(fuseClasses) && k %in% fuseClasses[,2])
+	                        k2 = fuseClasses[which(fuseClasses[,2] == k), 2]
+	                    else
+	                        k2 = k
+	                    p[k2] <- p[k2] + Cs[k]
+	                }
+	                prob2[ic,j,] <- p
+	            }
+	        }
+	        Sequence2 <- hmm.decode(prob2, hmm)
+	        #print(Sequence2)
+	        dirHmm <- paste(screen$dir, cell$tracking[f], "_hmm", sep="/")
+	        if (!file.exists(dirHmm))
+	            dir.create(dirHmm)
+	        write.table(t(Sequence2), paste(dirHmm, cell$name[f], sep="/"), quote=FALSE, sep="\t",
+	                row.names=FALSE,
+	                col.names=colNames)
+	        #write.table(Sequence2, paste(dirHmm, cell$name[f], sep="/"), quote=FALSE, sep="\t")
+	    }
     }
 
 }
