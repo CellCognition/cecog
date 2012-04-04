@@ -88,7 +88,12 @@ class ClusterDisplay(QGroupBox):
         self._service = None
 
         self._host_url = ANALYZER_CONFIG.get('Cluster', 'host_url')
-        self._host_url_fallback = ANALYZER_CONFIG.get('Cluster', 'host_url_fallback')
+        try:
+            self._host_url_fallback = ANALYZER_CONFIG.get('Cluster', 'host_url_fallback')
+        except:
+            # old config file
+            self._host_url_fallback = self._host_url
+            
 
         self.setTitle('ClusterControl')
         label1 = QLabel('Cluster URL:', self)
