@@ -21,7 +21,9 @@ __all__ = ['ClusterFrame']
 #
 import types, \
        copy, \
-       traceback
+       traceback,\
+       socket,\
+       urlparse
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -86,6 +88,7 @@ class ClusterDisplay(QGroupBox):
         self._service = None
 
         self._host_url = ANALYZER_CONFIG.get('Cluster', 'host_url')
+        self._host_url_fallback = ANALYZER_CONFIG.get('Cluster', 'host_url_fallback')
 
         self.setTitle('ClusterControl')
         label1 = QLabel('Cluster URL:', self)
@@ -273,7 +276,25 @@ class ClusterDisplay(QGroupBox):
             self._label_jobstatus.setText(txt)
         return txt
 
+    def _check_host_url(self):
+        url = urlparse.urlparse(self._host_url)
+        try:
+            test_sock = socket.create_connection((url.hostname, url.port), timeout=1)
+            test_sock.shutdown(2)
+            test_sock.close()
+        except:
+            try:
+                url = urlparse.urlparse(self._host_url_fallback)
+                test_sock = socket.create_connection((url.hostname, url.port), timeout=1)
+                test_sock.shutdown(2)
+                test_sock.close()
+                self._host_url = self._host_url_fallback
+            except:
+                exception(self, 'Error on connecting to cluster control service. Please check your config.ini')
+        
     def _connect(self):
+        self._check_host_url()
+        
         success = False
         try:
             client = RemotingService(self._host_url)
