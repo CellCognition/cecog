@@ -3,3 +3,4 @@ mac	windows	linux
 /Volumes/share-gerlich-2-$	Y:	/BIOL/share-gerlich-2
 /Volumes/share-gr-peter-1-$	Z:	/BIOL/share-peter
 /Volumes/share-kutay-analysis-1-$	W:	/BIOL/share-kutay-analysis
+/Volumes/dgedata	V:	/projects/gerlich
