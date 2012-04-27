@@ -688,6 +688,27 @@ class TimeHolder(OrderedDict):
                 f.write('%s\n' % sep.join(map(str, prefix + items)))
 
         f.close()
+        
+    def extportImageFileNames(self, output_path, position_str, imagecontainer, channel_mapping):
+        channel_mapping_reversed = dict([(v,k) for k,v in channel_mapping.iteritems()])
+        filename = os.path.join(output_path, 'P%s__image_files.txt' % self.P)
+        importer = imagecontainer._importer
+        table = {}
+        for c in channel_mapping:
+            table[c] = []
+        for t in importer.dimension_lookup[position_str]:
+            for c in importer.dimension_lookup[position_str][t]:
+                for z in importer.dimension_lookup[position_str][t][c]:
+                    c_name = channel_mapping_reversed[c]
+                    table[c_name].append(os.path.join(importer.path, importer.dimension_lookup[position_str][t][c][z]))
+                    
+        f = open(filename, 'w')
+        f.write("\t".join(table.keys()) + "\n")
+        for image_file_names in zip(*table.values()):
+            f.write("\t".join(image_file_names) + "\n")
+        f.close()
+            
+        
 
 
 class CellAnalyzer(PropertyManager):

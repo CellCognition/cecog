@@ -455,6 +455,9 @@ class PositionAnalyzer(object):
                 filename = os.path.join(strPathOutPositionStats,
                                         'P%s__object_details_excel.txt' % self.P)
                 oTimeHolder.extportObjectDetails(filename, excel_style=True)
+                
+            if self.oSettings.get('Output', 'export_file_names'):
+                oTimeHolder.extportImageFileNames(strPathOutPositionStats, self.P, self._imagecontainer, self.channel_mapping)
 
 
             self.oSettings.set_section('Tracking')

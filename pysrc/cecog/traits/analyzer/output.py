@@ -65,6 +65,8 @@ class SectionOutput(_Section):
             BooleanTrait(False, label='Export object counts')),
         ('export_object_details',
             BooleanTrait(False, label='Export detailed object data')),
+        ('export_file_names',
+            BooleanTrait(False, label='Export raw image file names')),
         ('export_tracking_as_dot',
             BooleanTrait(False, label='Export tracking as GraphViz .dot')),
         ('export_track_data',
