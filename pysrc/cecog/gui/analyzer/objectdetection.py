@@ -210,6 +210,7 @@ class ObjectDetectionFrame(BaseProcessorFrame):
         #settings.set2('rendering_class_discwrite', True)
 
         settings.set('Output', 'events_export_gallery_images', False)
+        settings.set('Output', 'hdf5_create_file', False)
         show_ids = settings.get('Output', 'rendering_contours_showids')
         #settings.set('Output', 'export_object_details', False)
         #settings.set('Output', 'export_object_counts', False)

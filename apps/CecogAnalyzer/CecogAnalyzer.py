@@ -830,10 +830,10 @@ if __name__ == "__main__":
     if is_app:
         package_path = os.path.join(get_application_support_path(), 'battery_package')
         set_package_path(package_path)
-        sys.stdout = \
-            file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
-        sys.stderr = \
-            file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
+#        sys.stdout = \
+#            file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
+#        sys.stderr = \
+#            file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
 
     splash = QSplashScreen(QPixmap(':cecog_splash'))
     splash.show()
@@ -843,7 +843,6 @@ if __name__ == "__main__":
     app.processEvents()
     main = AnalyzerMainWindow()
     main.raise_()
-
 
     if not args.settings is None:
         filename = args.settings

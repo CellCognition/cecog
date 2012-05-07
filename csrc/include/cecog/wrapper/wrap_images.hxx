@@ -156,35 +156,6 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(pyOverloads_ImageToArray, pyImageToArray, 1, 2)
       static int result() { return NPY_DOUBLE; }
     };
 
-
-
-//template <class IMAGE>
-//object pyImageToArray(IMAGE const & img, bool copy=false)
-//{
-//  npy_intp n = img.width() * img.height();
-//  npy_intp dims[] = { img.height(), img.width() };
-//  if(copy)
-//  {
-//    object obj(handle<>(PyArray_SimpleNew(2, &dims[0],
-//           TypeAsNumPyType<typename IMAGE::PixelType>::result())));
-//    char *arr_data = ((PyArrayObject*) obj.ptr())->data;
-//    ((PyArrayObject*) obj.ptr())->strides[0] = img.width() * sizeof(typename IMAGE::PixelType);
-//    ((PyArrayObject*) obj.ptr())->strides[1] = sizeof(typename IMAGE::PixelType);
-//    ((PyArrayObject*) obj.ptr())->nd = 2;
-//    memcpy(arr_data, img[0], sizeof(typename IMAGE::PixelType) * n);
-//    return obj;
-//  }
-//  else
-//  {
-//    object obj(handle<>(PyArray_SimpleNewFromData(2, &dims[0],
-//            TypeAsNumPyType<typename IMAGE::PixelType>::result(), (char *)img[0])));
-//    ((PyArrayObject*) obj.ptr())->strides[0] = img.width() * sizeof(typename IMAGE::PixelType);
-//    ((PyArrayObject*) obj.ptr())->strides[1] = sizeof(typename IMAGE::PixelType);
-//    ((PyArrayObject*) obj.ptr())->nd = 2;
-//    return obj;
-//  }
-//}
-
     template <class IMAGE>
     numeric::array
     pyImageToArray(IMAGE const & img, bool copy=false)

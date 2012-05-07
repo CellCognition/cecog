@@ -21,7 +21,6 @@ __all__ = []
 #
 import os, \
        zipfile
-#from collections import OrderedDict
 from pdk.ordereddict import OrderedDict
 
 #-------------------------------------------------------------------------------

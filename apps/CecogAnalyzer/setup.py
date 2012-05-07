@@ -43,7 +43,7 @@ from cecog.traits.config import (ANALYZER_CONFIG_FILENAME,
 MAIN_SCRIPT = 'CecogAnalyzer.py'
 
 APP = [MAIN_SCRIPT]
-INCLUDES = ['sip', 'netCDF4_utils', 'netcdftime']
+INCLUDES = ['sip',]
 EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
             'PyQt4.QtOpenGL', 'PyQt4.QtScript',
             'PyQt4.QtSql', 'PyQt4.QtTest',
@@ -52,7 +52,7 @@ EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
             'scipy', 'rpy',
             'Tkconstants', 'Tkinter', 'tcl',
             ]
-PACKAGES = ['cecog', ]
+PACKAGES = ['cecog', 'h5py']
 
 RESOURCE_FILES = [ANALYZER_CONFIG_FILENAME,
                   FONT12_FILENAME,

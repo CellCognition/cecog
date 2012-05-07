@@ -359,16 +359,17 @@ class StopWatch(object):
     (from start to any time point) and the stop time.
     """
 
-    def __init__(self):
+    def __init__(self, name=''):
         """
         Start the stop watch.
         """
+        self._name = name
         self._start_time = None
         self._stop_time = None
         self.reset()
 
     def __str__(self):
-        return str(self.current_interval())
+        return self._name + str(self.current_interval())
 
     def reset(self):
         """

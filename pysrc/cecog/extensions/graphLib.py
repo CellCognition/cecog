@@ -256,14 +256,14 @@ class Graph(object):
   Return a list of the node id's of all visible nodes in the graph.
         """
         nl=self.nodes.keys()
-        return nl[:]
+        return nl
 
     #-- Similar to above.
     def edge_list(self):
         """
         """
         el=self.edges.keys()
-        return el[:]
+        return el
 
     def number_of_hidden_edges(self):
         return len(self.hidden_edges)
@@ -424,6 +424,28 @@ class Graph(object):
                 if not self.tail(edge) in nodes_already_stacked:
                     nodes_already_stacked[self.tail(edge)]=0
                     dfs_stack.push(self.tail(edge))
+        return dfs_list
+    
+    def dfs_edges(self, source_id):
+        """
+        Returns a list of nodes in some DFS order.
+        """
+        nodes_already_stacked={source_id:0}
+        dfs_list=[]
+
+        dfs_stack=GraphStack()
+        dfs_stack.push(source_id)
+
+  
+        while not dfs_stack.empty():
+            current_node=dfs_stack.pop()
+            
+            out_edges=self.out_arcs(current_node)
+            for edge in out_edges:
+                if not self.tail(edge) in nodes_already_stacked:
+                    nodes_already_stacked[self.tail(edge)]=0
+                    dfs_stack.push(self.tail(edge))
+                    dfs_list.append((current_node,self.tail(edge)))
         return dfs_list
 
     def bfs(self, source_id):

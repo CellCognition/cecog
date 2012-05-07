@@ -30,7 +30,7 @@ from cecog.traits.config import (init_constants,
 # constants:
 #
 VERSION_NUM = (1, 2, 5)
-VERSION = '.'.join([str(digit) for digit in VERSION_NUM])
+VERSION = '.'.join([str(digit) for digit in VERSION_NUM]) + '_hdf5'
 
 HAS_GUI = False
 

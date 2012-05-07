@@ -107,7 +107,7 @@ class DotWriter(object):
         self.oDotFile.write("node%s;\n" % self.NODE_STYLE)
 
         iStart, iEnd = oTracker.getValidTimeLimits()
-#        print iStart, iEnd, oTracker.getTimePoints(), oTracker.getGraph().node_list()
+#        print iStart, iEnd, oTracker.getTimePoints(), oTracker.get_graph().node_list()
 
         for iT, lstNodeIds in oTracker.getTimePoints().iteritems():
             for iObjId in lstNodeIds:
@@ -121,7 +121,7 @@ class DotWriter(object):
 
         # write nodes
         strTmpNode = '"%s" [%s];\n'
-        oGraph = self.oTracker.getGraph()
+        oGraph = self.oTracker.get_graph()
 
         for strNodeId, strLabel in self._dctKnownNodeIds.iteritems():
             node = oGraph.node_data(strNodeId)
@@ -178,7 +178,7 @@ class DotWriter(object):
 
 
     def _traverseGraph(self, strNodeId, level=0):
-        oGraph = self.oTracker.getGraph()
+        oGraph = self.oTracker.get_graph()
         node = oGraph.node_data(strNodeId)
         if strNodeId not in self._dctKnownNodeIds:
 #            self.labelD[node_id] = "%s - %d%%\\n%s" %\
@@ -301,7 +301,7 @@ class CellTracker(OptionManager):
             iEnd = -1
         return iStart, iEnd
 
-    def getGraph(self):
+    def get_graph(self):
         return self._oGraph
 
     def getTimePoints(self):
@@ -352,7 +352,7 @@ class CellTracker(OptionManager):
         self._regionName = strRegionName
         self._oGraph = Graph()
         self._dctTimePoints = OrderedDict()
-
+            
     def trackAtTimepoint(self, iT):
         oChannel = self._dctTimeChannels[iT][self._channelId]
         self.lstFeatureNames = oChannel.lstFeatureNames
@@ -471,7 +471,7 @@ class CellTracker(OptionManager):
 #            for dist, node_id in node_idTL[:self.iMaxMergeObjects]:
 #                self.add_edge(node_id_prev, node_id)
 
-        return bReturnSuccess
+        return iPreviousT, bReturnSuccess
 
     def visualizeTracks(self, iT, size, n=5, thick=True, radius=3):
         img_conn = ccore.Image(*size)
@@ -1710,6 +1710,9 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                                                         'eventId'  : strNodeId,
                                                         'maxLength': track_length,
                                                         'tracks'   : [track],
+                                                        # keep value at which index the two daugther
+                                                        # tracks differ due to a split event
+                                                        'splitIdx' : iSplitIdx + len(lstBackwardNodeIds),
                                                         }
                     else:
                         lstNodeIds = lstBackwardNodeIds + lstForwardNodeIds
