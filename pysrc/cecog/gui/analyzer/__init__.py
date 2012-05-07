@@ -299,6 +299,20 @@ class _ProcessingThread(QThread):
 
 
 
+class HmmThreadPython(_ProcessingThread):
+    def __init__(self, parent, settings, learner_dict, imagecontainer, oChannel):
+        _ProcessingThread.__init__(self, parent, settings)
+        # Read out relavent hmm data from given objects
+        pass
+        
+    def _run(self):
+        # do processing
+        pass
+    
+    def _run_plate(self):
+        # do processing per plate
+        pass
+
 class HmmThread(_ProcessingThread):
 
     DEFAULT_CMD_MAC = 'R32'
