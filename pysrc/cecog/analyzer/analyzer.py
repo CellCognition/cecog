@@ -314,27 +314,6 @@ class TimeHolder(OrderedDict):
                 var_obj[idx_obj] = ('event', 'tracking', self.HDF5_OTYPE_OBJECT)
                 idx_obj += 1
 
-
-
-            dataset.createVariable('label_images', 'i2',
-                                   ('frames', 'regions', 'height', 'width'),
-                                   zlib='True',
-                                   shuffle=False,
-                                   chunksizes=(1, 1, h, w)
-                                   )
-            finished = dataset.createVariable('label_images_finished', 'i1',
-                                              ('frames', 'regions'))
-
-            finished[:] = 0
-        else:
-            dataset = None
-
-        if not dataset is None:
-            # update the settings to the current version
-            var = dataset.variables['settings']
-            var[:] = numpy.asarray(settings.to_string(), 'O')
-            self._dataset = dataset
-
     @staticmethod
     def nc_valid_set(var, idx, value):
         helper = var.valid
@@ -385,11 +364,11 @@ class TimeHolder(OrderedDict):
         desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
                                          channel.strChannelId)
         name = channel.NAME.lower()
-        if self._create_nc or self._reuse_nc:
+        if False:#self._create_nc or self._reuse_nc:
             grp = self._dataset.groups[self.NC_GROUP_LABEL]
             grp = grp.groups[name]
             frame_idx = self._frames_to_idx[self._iCurrentT]
-        if self._reuse_nc:
+        if False:#self._reuse_nc:
             for region_name in channel.lstAreaSelection:
                 var = grp.variables[region_name]
                 if len(var.valid.shape) == 0:
@@ -407,20 +386,8 @@ class TimeHolder(OrderedDict):
                 else:
                     valid = False
                     break
-        if not valid:
-            channel.apply_segmentation(primary_channel)
-            if self._create_nc:
-                for region_name in channel.lstAreaSelection:
-                    var = grp.variables[region_name]
-                    container = channel.dctContainers[region_name]
-                    var[frame_idx] = \
-                        container.img_labels.toArray(copy=False)
-                    self.nc_valid_set(var, frame_idx, 1)
-                self._logger.debug('Label images %s written to nc4 file.' %\
-                                   desc)
-        else:
-            self._logger.debug('Label images %s loaded from nc4 file.' %\
-                   desc)
+
+        channel.apply_segmentation(primary_channel)
 
         if self._hdf5_create and self._hdf5_include_label_images:
             meta = self._meta_data
@@ -453,7 +420,7 @@ class TimeHolder(OrderedDict):
     def prepare_raw_image(self, channel):
         desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
                                          channel.strChannelId)
-        if self._create_nc or self._reuse_nc:
+        if False:#self._create_nc or self._reuse_nc:
             grp = self._dataset.groups[self.NC_GROUP_RAW]
             var = grp.variables[channel.strChannelId]
             frame_idx = self._frames_to_idx[self._iCurrentT]
@@ -463,7 +430,7 @@ class TimeHolder(OrderedDict):
             else:
                 frame_valid = var.valid[frame_idx]
                     
-        if self._reuse_nc and frame_valid:
+        if False:#self._reuse_nc and frame_valid:
             coordinate = Coordinate(position=self.P, time=self._iCurrentT,
                                     channel=channel.strChannelId, zslice=1)
             meta_image = MetaImage(image_container=None, coordinate=coordinate)
@@ -477,7 +444,7 @@ class TimeHolder(OrderedDict):
             channel.apply_zselection()
             channel.normalize_image()
             channel.apply_registration()
-            if self._create_nc:
+            if False:#self._create_nc:
                 img = channel.meta_image.image
                 grp = self._dataset.groups[self.NC_GROUP_RAW]
                 var = grp.variables[channel.strChannelId]
