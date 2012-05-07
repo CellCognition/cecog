@@ -697,7 +697,6 @@ class TimeHolder(OrderedDict):
         for c in channel_mapping:
             table[c] = []
         for t in self.keys():
-#            for c in importer.dimension_lookup[position_str][t]:
             for c in channel_mapping.values():
                 for z in importer.dimension_lookup[position_str][t][c]:
                     c_name = channel_mapping_reversed[c]
