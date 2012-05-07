@@ -57,6 +57,7 @@ from pdk.fileutils import safe_mkdirs
 from multiprocessing import Pool, Queue, cpu_count
 import sklearn.hmm as hmm
 
+
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
@@ -334,6 +335,9 @@ class HmmThreadPython(_ProcessingThread):
     
     def _run_plate(self):
         # do processing per plate
+        pass
+    
+    def _produce_txt_output(self):
         pass
 
 class HmmThread(_ProcessingThread):
