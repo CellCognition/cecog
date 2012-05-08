@@ -55,6 +55,8 @@ from pdk.datetimeutils import TimeInterval, StopWatch
 from pdk.fileutils import safe_mkdirs
 
 from multiprocessing import Pool, Queue, cpu_count
+import sklearn.hmm as hmm
+
 
 #-------------------------------------------------------------------------------
 # cecog imports:
@@ -97,6 +99,28 @@ from cecog.traits.analyzer import SECTION_REGISTRY
 #-------------------------------------------------------------------------------
 # functions:
 #
+def mk_stochastic(k):   
+    '''  function [T,Z] = mk_stochastic(T)
+    MK_STOCHASTIC ensure the matrix is a stochastic matrix, 
+    i.e., the sum over the last dimension is 1.'''
+    raw_A = numpy.random.uniform( size = k * k ).reshape( ( k, k ) )
+    return ( raw_A.T / raw_A.T.sum( 0 ) ).T 
+
+def dhmm_correction(n_clusters, labels):
+    trans = mk_stochastic(n_clusters)
+    eps = numpy.spacing(1)
+    sprob = numpy.array([1-eps,eps,eps,eps,eps,eps])
+    dhmm = hmm.MultinomialHMM(n_components=n_clusters,transmat = trans,startprob=sprob)
+    eps = 1e-3;
+    dhmm.emissionprob = numpy.array([[1-eps, eps, eps, eps, eps, eps],
+                    [eps, 1-eps, eps, eps, eps, eps],
+                    [eps, eps, 1-eps, eps, eps, eps],
+                    [eps, eps, eps, 1-eps, eps, eps],
+                    [eps, eps, eps, eps, 1-eps, eps],
+                    [eps, eps, eps, eps, eps, 1-eps]]);
+    dhmm.fit([labels], init_params ='')
+    labels_dhmm = dhmm.predict(labels) # vector format [1 x num_tracks *num_frames]
+    return labels_dhmm
 
 
 # see http://stackoverflow.com/questions/3288595/multiprocessing-using-pool-map-on-a-function-defined-in-a-class
@@ -365,6 +389,9 @@ class HmmThread(_ProcessingThread):
         return ""
     
     
+    
+    def _produce_txt_output(self):
+        pass
 
 class HmmThread__R_version(_ProcessingThread):
 
