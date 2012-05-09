@@ -400,6 +400,11 @@ class _Channel(PropertyManager):
                 img_out = ccore.linearTransform3(img_in, int(self.fNormalizeMin),
                                                  int(self.fNormalizeMax),
                                                  0, 255, 0, 255)
+            elif type(img_in) == ccore.Image:
+                img_out = ccore.linearTransform2(img_in, int(self.fNormalizeMin),
+                                                 int(self.fNormalizeMax),
+                                                 0, 255, 0, 255)
+                
             else:
                 img_out = img_in
 

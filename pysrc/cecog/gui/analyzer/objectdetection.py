@@ -75,7 +75,7 @@ class ObjectDetectionFrame(BaseProcessorFrame):
                        [('primary_normalizemin',),
                         ('primary_normalizemax',),
                         ], layout='flow', link='primary_channel_conversion',
-                        label='16 to 8 bit conversion')
+                        label='Gray-value normalization')
         self.add_line()
         self.add_group('primary_zslice_selection',
                        [('primary_zslice_selection_slice',)], layout='flow')
@@ -124,7 +124,7 @@ class ObjectDetectionFrame(BaseProcessorFrame):
                            [('%s_normalizemin' % prefix,),
                             ('%s_normalizemax' % prefix,),
                             ], layout='flow', link='%s_channel_conversion' % prefix,
-                            label='16 to 8 bit conversion')
+                            label='Gray-value normalization')
             self.add_group(None,
                            [('%s_channelregistration_x' % prefix,),
                             ('%s_channelregistration_y' % prefix,),
