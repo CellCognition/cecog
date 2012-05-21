@@ -38,32 +38,34 @@ class IBBAnalysis(object):
     PLOT_IDS =    ['nebd_to_sep_time', 'sep_to__ibb_time', 'prophase_to_nebd']
     PLOT_LABELS = ['nebd_to_sep_time', 'sep_to__ibb_time', 'prophase_to_nebd']
     
-    def __init__(self, path_in, plate_name, mapping_file, class_colors):
+    def __init__(self, path_in, path_out, plate_name, mapping_file, class_colors):
         self.plate_name = plate_name
         self.path_in = path_in
-        self.path_out = os.path.join(path_in, '..')
+        self.path_out = path_out
         self.mapping_file = mapping_file
         self.class_colors = class_colors
         self._multi_page_pdf_handle = None
         self._pylab_fig = None
-        self._readScreen()
+        
     
     def _readScreen(self):
-        self.plate = Plate.load(self.path_in, self.plate_name)
+        #self.plate = Plate.load(self.path_in, self.plate_name)
+        self.plate = Plate(self.plate_name, self.path_in, self.mapping_file)
     
-    def _run(self):
+    def run(self):
         try:
-            grouped_positions = self.plate.get_events(2)
+            self._readScreen()
+            grouped_positions = self.plate.get_events(1)
             self._multi_page_pdf_handle = {}
             for group_name in grouped_positions:
                 self._multi_page_pdf_handle[group_name] = PdfPages(os.path.join(self.path_out, 'ibb__PL%s__%s__single_plots.pdf' % (self.plate_name, group_name)))
-            self._run_plate(self.plate_name, grouped_positions)
+            self._run(self.plate_name, grouped_positions)
         finally:
             if self._multi_page_pdf_handle is not None:
                 for f in self._multi_page_pdf_handle.values():
                     f.close()  
                  
-    def _run_plate(self, plate_id, grouped_positions):
+    def _run(self, plate_id, grouped_positions):
         result = {}
         for group_name, pos_list in grouped_positions.items():
             result[group_name] = {}
@@ -107,7 +109,7 @@ class IBBAnalysis(object):
                                                     prophase_last_frame,
                                                     event_id, pos.position)
                                                    
-            break
+            
         self._plot(result, "nebd_to_sep_time")                        
                 
     
@@ -130,7 +132,6 @@ class IBBAnalysis(object):
             return rejection_code, None
         
         rejection_code, prophase_last_frame = self._find_prophase_last_frame(h2b, nebd_onset_frame)
-        print "prophase_last_frame", prophase_last_frame
         if rejection_code != IBBAnalysis.REJECTION.OK:
             return rejection_code, None
         
@@ -138,10 +139,9 @@ class IBBAnalysis(object):
               
               
     def _find_prophase_last_frame(self, h2b, nebd_onset_frame):
-        for x in reversed(range(nebd_onset_frame+1)):
+        for x in reversed(range(nebd_onset_frame+2)):
             label = h2b['class__label'][x]
             if label == 1:
-                break
                 return IBBAnalysis.REJECTION.OK, x
         return IBBAnalysis.REJECTION.BY_NEBD_ONSET, None
     
@@ -228,13 +228,13 @@ class IBBAnalysis(object):
         
         time = h2b['timestamp'] 
         time = time - time[0]
-        time /= 60
+        time /= 60.0
         
         pylab.plot(time, ratio, 'k.-', label="Ibb ratio")
         pylab.plot([time[separation_frame], time[separation_frame]], [ratio.min(), ratio.max()], 'r', label="Sep")
         pylab.plot([time[ibb_onset_frame], time[ibb_onset_frame]], [ratio.min(), ratio.max()], 'g', label="Ibb onset")
         pylab.plot([time[nebd_onset_frame], time[nebd_onset_frame]], [ratio.min(), ratio.max()], 'b', label="Nebd")
-        pylab.plot([time[prophase_last_frame], time[prophase_last_frame]], [ratio.min(), ratio.max()], 'y', label="Nebd")
+        pylab.plot([time[prophase_last_frame], time[prophase_last_frame]], [ratio.min(), ratio.max()], 'y', label="Pro")
         
         
         pylab.ylim(ratio.min(),ratio.max())
@@ -251,9 +251,15 @@ class IBBAnalysis(object):
         class_labels = h2b['class__label']
         
         for t in xrange(len(time)-1):
-            pylab.plot([time[t], time[t+1]], [ratio.min() ,ratio.min()], color=self.class_colors[class_labels[t]], linewidth=10)
-        
-        
+#            pylab.axvspan(time[t], time[t+1], ratio.min(), (ratio.max()-ratio.min())/20.0, color=self.class_colors[class_labels[t]])
+#            pylab.axvspan(time[t], time[t+1], ratio.min(), (ratio.max()-ratio.min())/20.0, color=self.class_colors[class_labels[t]])
+            pylab.gca().add_patch(pylab.Rectangle((time[t], ratio.min()),
+                                                  time[t+1]-time[t],
+                                                  (ratio.max()-ratio.min())/20.0, 
+                                                  fill=True, 
+                                                  color=self.class_colors[class_labels[t]]))
+            
+            
         #fig.savefig(os.path.join(self.path_out, '___ibb_plot_%s_%s.png' % (pos_name, event_id)))
         fig.savefig(self._multi_page_pdf_handle[group_name], format='pdf')
         
@@ -372,7 +378,7 @@ class Plate(object):
         
         for pos_idx, pos_name in enumerate(self.mapping['position']):
             if isinstance(pos_name, int):
-                pos_name = '%04d' % pos_name
+                pos_name = '%03d' % pos_name
                     
             if pos_name not in self.pos_list:
 #                raise RuntimeError("Position from Mapping file %s not found in in path %s" % (pos_name, self.path_in))

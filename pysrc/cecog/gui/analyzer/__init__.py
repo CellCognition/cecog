@@ -89,10 +89,12 @@ from cecog.traits.config import R_SOURCE_PATH, \
                                 PACKAGE_PATH
 from cecog import ccore
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
+from cecog.traits.analyzer.postprocessing import SECTION_NAME_POST_PROCESSING
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.analyzer.gallery import compose_galleries
 from cecog.traits.config import ConfigSettings
 from cecog.traits.analyzer import SECTION_REGISTRY
+from cecog.analyzer.ibb import IBBAnalysis
 
 #-------------------------------------------------------------------------------
 # functions:
@@ -729,6 +731,55 @@ class PostProcessingThread(_ProcessingThread):
         
     def _run(self):
         print 'run postprocessing'
+        plates = self._imagecontainer.plates
+        self._settings.set_section(SECTION_NAME_POST_PROCESSING)
+
+        path_mapping = self._settings.get2('mappingfile_path')
+        for plate_id in plates:
+            mapping_file = os.path.join(path_mapping, '%s.tsv' % plate_id)
+            if not os.path.isfile(mapping_file):
+                mapping_file = os.path.join(path_mapping, '%s.txt' % plate_id)
+                if not os.path.isfile(mapping_file):
+                    raise IOError("Mapping file '%s' for plate '%s' not found." %
+                                  (mapping_file, plate_id))
+            self._mapping_files[plate_id] = os.path.abspath(mapping_file)
+
+        info = {'min' : 0,
+                'max' : len(plates),
+                'stage': 0,
+                'meta': 'Post processing...',
+                'progress': 0}
+        
+        for idx, plate_id in enumerate(plates):
+            if not self._abort:
+                info['text'] = "Plate: '%s' (%d / %d)" % (plate_id, idx+1, len(plates))
+                self.set_stage_info(info)
+                self._imagecontainer.set_plate(plate_id)
+                self._run_plate(plate_id)
+                info['progress'] = idx+1
+                self.set_stage_info(info)
+            else:
+                break
+            
+    def _run_plate(self, plate_id):
+        path_out = self._imagecontainer.get_path_out()
+
+
+        path_analyzed = os.path.join(path_out, 'analyzed')
+        path_out_ibb = os.path.join(path_out, 'ibb')
+
+        safe_mkdirs(path_analyzed)
+        safe_mkdirs(path_out_ibb)
+     
+        print 'for ', plate_id
+        mapping_file = self._mapping_files[plate_id]
+        class_colors = {}
+        
+        for i, name in self._learner_dict['primary'].dctClassNames.items():
+            class_colors[i] = self._learner_dict['primary'].dctHexColors[name]
+            
+        ibb_analyzer = IBBAnalysis(path_analyzed, path_out_ibb, plate_id, mapping_file, class_colors)
+        ibb_analyzer.run()
 
 class AnalzyerThread(_ProcessingThread):
 

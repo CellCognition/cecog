@@ -73,6 +73,8 @@ class PostProcessingFrame(BaseProcessorFrame):
         self.register_control_button('post_processing',
                                      PostProcessingThread,
                                      ('Start', 'Stop'))
+        
+        self.add_group(None, [('mappingfile_path',)])
 
         self.add_group('ibb_analysis',
                        [('ibb_export_single_events', (0,0,1,1)),

@@ -56,6 +56,10 @@ class SectionPostProcessing(_Section):
        [
         ('ibb_analysis',
             BooleanTrait(True, label='IBB analysis')),
+
+        ('mappingfile_path',
+            StringTrait('', 1000, label='Mapping filename',
+                                   widget_info=StringTrait.STRING_PATH)),
         
         ('ibb_export_single_events',
             BooleanTrait(True, label='Export single event plots',)),
