@@ -52,10 +52,16 @@ class SectionPostProcessing(_Section):
     SECTION_NAME = SECTION_NAME_POST_PROCESSING
 
     OPTIONS = [
-
-    ('IBB analysis',
-     [('Generate single event plots',
-       BooleanTrait(True, label="test"))
-      ]),
-
+      ('post_processing',
+       [
+        ('ibb_groupby_position',
+            BooleanTrait(True, label='Position',
+                         widget_info=BooleanTrait.RADIOBUTTON)),
+        ('ibb_groupby_oligoid',
+            BooleanTrait(False, label='Oligo ID',
+                         widget_info=BooleanTrait.RADIOBUTTON)),
+        ('ibb_groupby_genesymbol',
+            BooleanTrait(False, label='Gene symbol',                        widget_info=BooleanTrait.RADIOBUTTON))
+        ]
+       )
     ]

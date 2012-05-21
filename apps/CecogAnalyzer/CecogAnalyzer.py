@@ -63,6 +63,7 @@ from cecog.gui.analyzer.objectdetection import (ObjectDetectionFrame,
                                                 SECTION_NAME_OBJECTDETECTION,
                                                 )
 from cecog.gui.analyzer.featureextraction import FeatureExtractionFrame
+from cecog.gui.analyzer.postprocessing import PostProcessingFrame
 from cecog.gui.analyzer.classification import ClassificationFrame
 from cecog.gui.analyzer.tracking import (TrackingFrame,
                                          SECTION_NAME_TRACKING,
@@ -209,6 +210,7 @@ class AnalyzerMainWindow(QMainWindow):
                       ClassificationFrame(self._settings, self._pages),
                       TrackingFrame(self._settings, self._pages),
                       ErrorCorrectionFrame(self._settings, self._pages),
+                      PostProcessingFrame(self._settings, self._pages),
                       OutputFrame(self._settings, self._pages),
                       ProcessingFrame(self._settings, self._pages),
                       ]
