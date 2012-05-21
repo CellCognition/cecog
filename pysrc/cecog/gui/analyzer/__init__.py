@@ -719,6 +719,10 @@ class MultiprocessingException(Exception):
     def __init__(self, exception_list):
         self.msg = '\n-----------\nError in job item:\n'.join([str(x) for x in exception_list])
 
+class PostProcessingThread(_ProcessingThread):
+    def _run(self):
+        print 'run postprocessing'
+
 class AnalzyerThread(_ProcessingThread):
 
     image_ready = pyqtSignal(ccore.RGBImage, str, str)
@@ -1169,6 +1173,11 @@ class _ProcessorMixin(object):
                                          learner_dict,
                                          self.parent().main_window._imagecontainer)
                     self._analyzer.setTerminationEnabled(True)
+                    
+                elif cls is PostProcessingThread:
+                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
+                    self._analyzer = cls(self, self._current_settings,)
+                    self._analyzer.setTerminationEnabled(True)
 
                 self._analyzer.finished.connect(self._on_process_finished)
                 self._analyzer.stage_info.connect(self._on_update_stage_info, Qt.QueuedConnection)
@@ -1252,6 +1261,8 @@ class _ProcessorMixin(object):
                     msg = 'HMM error correction successfully finished.'
                 elif self.SECTION_NAME == 'Processing':
                     msg = 'Processing successfully finished.'
+                elif self.SECTION_NAME == "PostProcessing":
+                    msg = 'Postprocessing successfully finished'
 
                 information(self, 'Process finished', msg)
                 status(msg)

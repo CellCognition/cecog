@@ -37,8 +37,7 @@ from cecog.gui.util import (information,
                             exception,
                             )
 from cecog.gui.analyzer import (BaseProcessorFrame,
-                                AnalzyerThread,
-                                TrainingThread,
+                                PostProcessingThread,
                                 )
 from cecog.analyzer import SECONDARY_REGIONS
 from cecog.analyzer.channel import (PrimaryChannel,
@@ -72,7 +71,7 @@ class PostProcessingFrame(BaseProcessorFrame):
     def __init__(self, settings, parent):
         super(PostProcessingFrame, self).__init__(settings, parent)
         self.register_control_button('post_processing',
-                                     None,
+                                     PostProcessingThread,
                                      ('Start', 'Stop'))
 
         self.add_group('ibb_analysis',
