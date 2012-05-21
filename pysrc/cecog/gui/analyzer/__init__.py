@@ -720,6 +720,13 @@ class MultiprocessingException(Exception):
         self.msg = '\n-----------\nError in job item:\n'.join([str(x) for x in exception_list])
 
 class PostProcessingThread(_ProcessingThread):
+    
+    def __init__(self, parent, settings, learner_dict, imagecontainer):
+        _ProcessingThread.__init__(self, parent, settings)
+        self._learner_dict = learner_dict
+        self._imagecontainer = imagecontainer
+        self._mapping_files = {}    
+        
     def _run(self):
         print 'run postprocessing'
 
@@ -1175,8 +1182,21 @@ class _ProcessorMixin(object):
                     self._analyzer.setTerminationEnabled(True)
                     
                 elif cls is PostProcessingThread:
+                    learner_dict = {}
+                    for kind in ['primary', 'secondary']:
+                        _resolve = lambda x,y: self._settings.get(x, '%s_%s' % (kind, y))
+                        env_path = convert_package_path(_resolve('Classification', 'classification_envpath'))
+                        if (_resolve('Processing', 'classification') and
+                            (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))):
+                            classifier_infos = {'strEnvPath' : env_path,
+                                                'strChannelId' : _resolve('ObjectDetection', 'channelid'),
+                                                'strRegionId' : _resolve('Classification', 'classification_regionname'),
+                                                }
+                            learner = CommonClassPredictor(dctCollectSamples=classifier_infos)
+                            learner.importFromArff()
+                            learner_dict[kind] = learner
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
-                    self._analyzer = cls(self, self._current_settings,)
+                    self._analyzer = cls(self, self._current_settings, learner_dict, imagecontainer)
                     self._analyzer.setTerminationEnabled(True)
 
                 self._analyzer.finished.connect(self._on_process_finished)
