@@ -54,6 +54,12 @@ class SectionPostProcessing(_Section):
     OPTIONS = [
       ('post_processing',
        [
+        ('ibb_analysis',
+            BooleanTrait(True, label='IBB analysis')),
+        
+        ('ibb_export_single_events',
+            BooleanTrait(True, label='Export single event plots',)),
+        
         ('ibb_groupby_position',
             BooleanTrait(True, label='Position',
                          widget_info=BooleanTrait.RADIOBUTTON)),
@@ -61,7 +67,8 @@ class SectionPostProcessing(_Section):
             BooleanTrait(False, label='Oligo ID',
                          widget_info=BooleanTrait.RADIOBUTTON)),
         ('ibb_groupby_genesymbol',
-            BooleanTrait(False, label='Gene symbol',                        widget_info=BooleanTrait.RADIOBUTTON))
+            BooleanTrait(False, label='Gene symbol',
+                         widget_info=BooleanTrait.RADIOBUTTON))
         ]
        )
     ]

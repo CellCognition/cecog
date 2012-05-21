@@ -67,17 +67,21 @@ from cecog.traits.config import convert_package_path
 class PostProcessingFrame(BaseProcessorFrame):
 
     SECTION_NAME = SECTION_NAME_POST_PROCESSING
-    DISPLAY_NAME = r'Post-processing Plots'
+    DISPLAY_NAME = 'Plots and Postprocessing'
 
     def __init__(self, settings, parent):
         super(PostProcessingFrame, self).__init__(settings, parent)
+        self.register_control_button('post_processing',
+                                     None,
+                                     ('Start', 'Stop'))
 
-        self.add_group(None,
-                       [('ibb_groupby_position',),
-                        ('ibb_groupby_oligoid',),
-                        ('ibb_groupby_genesymbol',),
-                        ], layout='flow', link='groupby', label='Group by')
+        self.add_group('ibb_analysis',
+                       [('ibb_export_single_events', (0,0,1,1)),
+                       ('ibb_groupby_position', (1,0,1,1)),
+                        ('ibb_groupby_oligoid', (2,0,1,1)),
+                        ('ibb_groupby_genesymbol', (3,0,1,1)),
+                        ], layout='grid', link='groupby', label='Group by')
         self.add_expanding_spacer()
 
-        #self._init_control()
+        self._init_control(has_images=False)
 
