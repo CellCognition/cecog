@@ -12,6 +12,7 @@ import matplotlib as mpl
 #mpl.rcParams["axes.facecolor"] = 'k'
 #mpl.rcParams["axes.edgecolor"] = 'w'
 #mpl.rcParams["axes.labelcolor"] = 'w'
+mpl.rcParams["figure.facecolor"] = 'w'
 
 
 
@@ -19,8 +20,33 @@ def enum(*sequential, **named):
     enums = dict(zip(sequential, range(len(sequential))), **named)
     return type('Enum', (), enums)
 
-class Plotter(object):
-    pass
+class EventPlotterPdf(object):
+    def __init__(self, figsize):
+        self.figure = pylab.figure(figsize)
+        self.axes = self.figure.add_subplot(111)
+        self._pdf_handle = None
+        
+    def clear(self):
+        self.figure.clf()
+    
+    def open(self, filename):
+        self._pdf_handle = PdfPages(filename)
+    
+    def close(self):
+        if self._pdf_handle is not None:
+            self._pdf_handle.close()
+    
+    def save(self):
+        self.figure.savefig(self._pdf_handle, format='pdf')
+    
+    def __del__(self):
+        self.close()
+              
+class GalleryDecorationPlotter(EventPlotterPdf):
+    def add_gallery_deco(self):
+        
+        
+        
 
 
 class IBBAnalysis(object):
@@ -33,7 +59,7 @@ class IBBAnalysis(object):
     IBB_ONSET_FACTOR_THRESHOLD   = 1.2
     NEBD_ONSET_FACTOR_THRESHOLD  = 1.2
     
-    SINGLE_PLOT = True
+    SINGLE_PLOT = False
     
     PLOT_IDS =    ['nebd_to_sep_time', 'sep_to__ibb_time', 'prophase_to_nebd']
     PLOT_LABELS = ['nebd_to_sep_time', 'sep_to__ibb_time', 'prophase_to_nebd']
@@ -44,26 +70,25 @@ class IBBAnalysis(object):
         self.path_out = path_out
         self.mapping_file = mapping_file
         self.class_colors = class_colors
-        self._multi_page_pdf_handle = None
+        self._plotter = {}
         self._pylab_fig = None
         
     
     def _readScreen(self):
-        #self.plate = Plate.load(self.path_in, self.plate_name)
-        self.plate = Plate(self.plate_name, self.path_in, self.mapping_file)
+        self.plate = Plate.load(self.path_in, self.plate_name)
+        #self.plate = Plate(self.plate_name, self.path_in, self.mapping_file)
     
     def run(self):
         try:
             self._readScreen()
-            grouped_positions = self.plate.get_events(1)
-            self._multi_page_pdf_handle = {}
+            grouped_positions = self.plate.get_events(2)
             for group_name in grouped_positions:
-                self._multi_page_pdf_handle[group_name] = PdfPages(os.path.join(self.path_out, 'ibb__PL%s__%s__single_plots.pdf' % (self.plate_name, group_name)))
+                self._plotter[group_name] = GalleryDecorationPlotter()
+                self._plotter[group_name].open(os.path.join(self.path_out, 'ibb__PL%s__%s__single_plots.pdf' % (self.plate_name, group_name)))
             self._run(self.plate_name, grouped_positions)
         finally:
-            if self._multi_page_pdf_handle is not None:
-                for f in self._multi_page_pdf_handle.values():
-                    f.close()  
+            for pl in self._plotter.values():
+                pl.close()  
                  
     def _run(self, plate_id, grouped_positions):
         result = {}
@@ -245,7 +270,7 @@ class IBBAnalysis(object):
 #        pylab.text(time[separation_frame]+0.5, ratio.max(), "Sep", verticalalignment='top', color='r')
 #        pylab.text(time[ibb_onset_frame]+0.5, ratio.max(), "Ibb", verticalalignment='top', color='g')
 #        pylab.text(time[nebd_onset_frame]+0.5, ratio.max(), "Nebd", verticalalignment='top', color='b')
-        pylab.legend(loc="lower right")
+        pylab.legend(loc="lower right", prop={'size':6})
         pylab.grid('on')
         
         class_labels = h2b['class__label']
@@ -263,7 +288,7 @@ class IBBAnalysis(object):
         #fig.savefig(os.path.join(self.path_out, '___ibb_plot_%s_%s.png' % (pos_name, event_id)))
         fig.savefig(self._multi_page_pdf_handle[group_name], format='pdf')
         
-    def _plot(self, result, id, color_sort_by="gene_symbol"):
+    def _plot(self, result, id, color_sort_by="group"):
         data = []
         names = []
         colors = []
@@ -277,7 +302,7 @@ class IBBAnalysis(object):
             new_id = result[group_name]['positions'][0].__getattribute__(color_sort_by)
             print new_id
             
-            data.append(result[group_name][id])
+            data.append(numpy.array(result[group_name][id])/60.0)
             
             if isinstance(group_name, int):
                 names.append("%s (%04d)" % (new_id, group_name))
@@ -303,12 +328,14 @@ class IBBAnalysis(object):
         bp = pylab.boxplot(data_list, patch_artist=True)
         pylab.setp(bp['boxes'], color='black')
         pylab.setp(bp['whiskers'], color='black')
-        pylab.setp(bp['fliers'], color='black', marker='o')
+        pylab.setp(bp['fliers'], markerfacecolor='w', marker='o', markeredgecolor='k')
         for b, c in zip(bp['boxes'], colors):
             pylab.setp(b, facecolor=rgb_to_hex(*c))
         
         xtickNames = pylab.setp(ax1, xticklabels=names)
         pylab.setp(xtickNames, rotation=45, fontsize=12)
+        pylab.ylim(0,100)
+        
         pylab.show()
         
         
@@ -378,7 +405,7 @@ class Plate(object):
         
         for pos_idx, pos_name in enumerate(self.mapping['position']):
             if isinstance(pos_name, int):
-                pos_name = '%03d' % pos_name
+                pos_name = '%04d' % pos_name
                     
             if pos_name not in self.pos_list:
 #                raise RuntimeError("Position from Mapping file %s not found in in path %s" % (pos_name, self.path_in))
@@ -516,8 +543,13 @@ def test_ibb():
                     8: '#FF0000',
                     9: '#ff00ff',}
 
-    ibb = IBBAnalysis(r"Y:\amalie\Analysis\001872_2_longer\analyzed", 'plate_name', r"C:\Users\sommerc\data\cecog\Mappings\plate_name.txt", class_colors)
-    ibb._run()
+    ibb = IBBAnalysis("Y:/amalie/Analysis/001872_2_longer/analyzed", 
+                      "Y:/amalie/Analysis/001872_2_longer", 
+                      'plate_name', 
+                      r"C:\Users\sommerc\data\cecog\Mappings\plate_name.txt", 
+                      class_colors)
+    
+    ibb.run()
     
 if __name__ == "__main__":
     test_ibb()
