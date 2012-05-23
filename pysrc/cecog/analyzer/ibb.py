@@ -26,9 +26,12 @@ class EventPlotterPdf(object):
         self.figure = pylab.figure(figsize=figsize)
         self.axes = self.figure.add_subplot(111)
         self._pdf_handle = None
+        self.add_axes = {}
         
     def clear(self):
         self.axes.cla()
+        for a in self.add_axes.values():
+            a.cla()
     
     def open(self, filename):
         self._pdf_handle = PdfPages(filename)
@@ -42,17 +45,17 @@ class EventPlotterPdf(object):
     
               
 class GalleryDecorationPlotter(EventPlotterPdf):
-    def add_gallery_deco(self, event_id, pos_name, path_in, time, class_labels, class_colors):
-        min_, max_ = self.axes.get_ylim()
-        for t in xrange(len(time)-1):
-            self.axes.add_patch(pylab.Rectangle((time[t], min_),
-                                                  time[t+1]-time[t],
-                                                  (max_-min_)/25.0, 
-                                                  fill=True, 
-                                                  color=class_colors[class_labels[t]]))
+    def add_gallery_deco(self, event_id, pos_name, path_in, time, class_labels, class_colors):         
+        if 'gallery' not in self.add_axes:
+            bb = self.axes.get_position()
+            self.axes.set_position((bb.x0, bb.y0+0.2, bb.width, bb.height -0.2)) 
+            new_axes = self.figure.add_axes((bb.x0, bb.y0, bb.width, 0.3))
+            self.add_axes['gallery'] = new_axes
+        else:
+            new_axes = self.add_axes['gallery']
             
         x_min = 0
-        x_max = time[-1]
+        x_max = time[-1]+time[1]
             
         gallery_path = os.path.join(path_in, pos_name, 'gallery', 'primary')
         event_re = re.search(r"^T(?P<time>\d+)_O(?P<obj>\d+)_B(?P<branch>\d+)", event_id)
@@ -70,17 +73,29 @@ class GalleryDecorationPlotter(EventPlotterPdf):
             aspect = img.shape[0] / float(img.shape[1])
             offset = x_max*aspect
             
-            self.axes.imshow(img, extent=(x_min, x_max, min_-offset, min_), cmap=pylab.get_cmap('gray'))
-            self.axes.set_ylim(min_-offset, max_)
+            new_axes.imshow(img, extent=(x_min, x_max, 0, offset), cmap=pylab.get_cmap('gray'))
             
-        print self.figure.get_figheight()
-        self.figure.set_figheight(50)
-        pylab.show()
+        for t in xrange(len(time)):
             
-        
-        
-        
+            if t >= len(time)-1:
+                w = time[1]
+            else:
+                w = time[t+1]-time[t]
+            new_axes.add_patch(pylab.Rectangle((time[t], offset),
+                                                  w,
+                                                  offset*1.1, 
+                                                  fill=True, 
+                                                  color=class_colors[class_labels[t]]))
+            
+        new_axes.set_ylim(0, offset*1.1)
+        new_axes.set_xlim(0, time[-1]+time[1])
+        new_axes.set_xlabel("Time [min]")
+        self.axes.set_xlabel("")
 
+        self.axes.set_xticklabels([])
+        new_axes.set_yticklabels([])   
+        new_axes.set_yticks([])
+            
 
 class IBBAnalysis(object):
     REJECTION = enum('OK', "BY_SIGNAL", "BY_SPLIT", "BY_IBB_ONSET", "BY_NEBD_ONSET")
@@ -114,7 +129,7 @@ class IBBAnalysis(object):
             self._readScreen()
             grouped_positions = self.plate.get_events(2)
             for group_name in grouped_positions:
-                self._plotter[group_name] = GalleryDecorationPlotter((10,10))
+                self._plotter[group_name] = GalleryDecorationPlotter((10,5))
                 self._plotter[group_name].open(os.path.join(self.path_out, 'ibb__PL%s__%s__single_plots.pdf' % (self.plate_name, group_name)))
             self._run(self.plate_name, grouped_positions)
         finally:
@@ -163,7 +178,7 @@ class IBBAnalysis(object):
                                                     ibb_onset_frame, 
                                                     nebd_onset_frame, 
                                                     prophase_last_frame,
-                                                    event_id, pos.position)
+                                                    event_id, pos.position, ylim=(1,5))
                                                    
             
         self._plot(result, "nebd_to_sep_time")                        
@@ -275,7 +290,14 @@ class IBBAnalysis(object):
                            ibb_onset_frame, 
                            nebd_onset_frame,
                            prophase_last_frame, 
-                           event_id, pos_name):
+                           event_id, pos_name,
+                           ylim=None):
+        
+        if ylim is None:
+            ya, yb = ratio.min(), ratio.max()
+        else:
+            ya, yb = ylim
+        
         
         self._plotter[group_name].clear()
         figure = self._plotter[group_name].figure
@@ -286,14 +308,15 @@ class IBBAnalysis(object):
         time /= 60.0
         
         axes.plot(time, ratio, 'k.-', label="Ibb ratio", axes=axes)
-        axes.plot([time[separation_frame], time[separation_frame]], [ratio.min(), ratio.max()], 'r', label="Sep",)
-        axes.plot([time[ibb_onset_frame], time[ibb_onset_frame]], [ratio.min(), ratio.max()], 'g', label="Ibb onset",)
-        axes.plot([time[nebd_onset_frame], time[nebd_onset_frame]], [ratio.min(), ratio.max()], 'b', label="Nebd",)
-        axes.plot([time[prophase_last_frame], time[prophase_last_frame]], [ratio.min(), ratio.max()], 'y', label="Pro",)
+        axes.plot([time[separation_frame], time[separation_frame]], [ya, yb], 'r', label="Sep",)
+        axes.plot([time[ibb_onset_frame], time[ibb_onset_frame]], [ya, yb], 'g', label="Ibb onset",)
+        axes.plot([time[nebd_onset_frame], time[nebd_onset_frame]], [ya, yb], 'b', label="Nebd",)
+        axes.plot([time[prophase_last_frame], time[prophase_last_frame]], [ya, yb], 'y', label="Pro",)
         
         
-        axes.set_ylim(ratio.min(),ratio.max())
-        axes.set_xlim(0, time[-1])
+            
+        axes.set_ylim(ya, yb)
+        axes.set_xlim(0, time[-1]+time[1])
         axes.set_title("%s - %s" % (group_name, event_id))
         axes.set_ylabel("IBB ratio")
         axes.set_xlabel("Time [min]")
