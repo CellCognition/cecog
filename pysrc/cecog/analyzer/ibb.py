@@ -1,5 +1,7 @@
 import numpy
 import csv
+import matplotlib as mpl
+mpl.use('QT4Agg')
 import pylab
 import re
 import os
@@ -8,7 +10,6 @@ import colorbrewer
 from itertools import cycle
 from cecog.util.color import rgb_to_hex
 from matplotlib.backends.backend_pdf import PdfPages
-import matplotlib as mpl
 from vigra.impex import readImage
 #mpl.rcParams["axes.facecolor"] = 'k'
 #mpl.rcParams["axes.edgecolor"] = 'w'
@@ -45,7 +46,7 @@ class EventPlotterPdf(object):
     
               
 class GalleryDecorationPlotter(EventPlotterPdf):
-    def add_gallery_deco(self, event_id, pos_name, path_in, time, class_labels, class_colors):         
+    def add_gallery_deco(self, event_id, pos_name, path_in, time, class_labels, class_colors, channel='primary'):         
         if 'gallery' not in self.add_axes:
             bb = self.axes.get_position()
             self.axes.set_position((bb.x0, bb.y0+0.2, bb.width, bb.height -0.2)) 
@@ -57,7 +58,7 @@ class GalleryDecorationPlotter(EventPlotterPdf):
         x_min = 0
         x_max = time[-1]+time[1]
             
-        gallery_path = os.path.join(path_in, pos_name, 'gallery', 'primary')
+        gallery_path = os.path.join(path_in, pos_name, 'gallery', channel)
         event_re = re.search(r"^T(?P<time>\d+)_O(?P<obj>\d+)_B(?P<branch>\d+)", event_id)
         t = int(event_re.groupdict()['time'])
         o = int(event_re.groupdict()['obj'])
@@ -88,7 +89,7 @@ class GalleryDecorationPlotter(EventPlotterPdf):
                                                   color=class_colors[class_labels[t]]))
             
         new_axes.set_ylim(0, offset*1.1)
-        new_axes.set_xlim(0, time[-1]+time[1])
+        new_axes.set_xlim(0, x_max)
         new_axes.set_xlabel("Time [min]")
         self.axes.set_xlabel("")
 
