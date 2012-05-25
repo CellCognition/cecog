@@ -108,7 +108,7 @@ class IBBAnalysis(object):
     IBB_ONSET_FACTOR_THRESHOLD   = 1.2
     NEBD_ONSET_FACTOR_THRESHOLD  = 1.2
     
-    SINGLE_PLOT = True
+    SINGLE_PLOT = False
     
     PLOT_IDS =    ['nebd_to_sep_time', 'sep_to__ibb_time', 'prophase_to_nebd']
     PLOT_LABELS = ['nebd_to_sep_time', 'sep_to__ibb_time', 'prophase_to_nebd']
@@ -180,8 +180,9 @@ class IBBAnalysis(object):
                                                     nebd_onset_frame, 
                                                     prophase_last_frame,
                                                     event_id, pos.position, ylim=(1,5))
+                            
                                                    
-            
+        self._plot_valid_bars(result)
         self._plot(result, "nebd_to_sep_time")                        
                 
     
@@ -361,6 +362,57 @@ class IBBAnalysis(object):
             
         self._boxplot(data, names, colors)
         
+    def _plot_valid_bars(self, result, color_sort_by="group"):
+        data = []
+        names = []
+        bar_labels = ('vali8d', 'signal', 'split', 'ibb_onset', 'nebd_onset')
+        bar_colors = map(lambda x:rgb_to_hex(*x), [colorbrewer.Greens[7][2],] + colorbrewer.RdBu[11][0:4])
+        
+        
+        def mycmp(x, y):
+            return cmp(result[x]['positions'][0].__getattribute__(color_sort_by).lower(), 
+                       result[y]['positions'][0].__getattribute__(color_sort_by).lower())
+        
+        for group_name in sorted(result, cmp=mycmp):
+            data.append(result[group_name]['valid'])
+            names.append(group_name)
+            
+        self._plot_multi_bars(data, bar_labels, bar_colors, names, show_number=True)
+        
+    def _plot_multi_bars(self, data, bar_labels, bar_colors, names, show_number=True): 
+        """plot_valid_bars([(10, 4, 1), (11,3,2), (7,6, 4), (14,3,1)], ('valied', 'bad', 'distgusting'), ('r', 'g', 'b'), ('G1', 'G2', 'G3', 'G4','G5'))
+        """
+        def autolabel(rects):
+        # attach some text labels
+            for rect in rects:
+                height = rect.get_height()
+                rect.get_axes().text(rect.get_x()+rect.get_width()/2., 1.05*height, '%d'%int(height),
+                        ha='center', va='bottom')
+        fig = pylab.figure()
+        ax = fig.add_subplot(111)
+    
+        data_t = zip(*data)
+        N = len(data)
+        ind = numpy.arange(N).astype(numpy.float32)    
+        width = 0.9 / len(data[0])  
+    
+        for i, d in enumerate(data_t):
+            print ind, d
+            rect = ax.bar(ind, d, width, color=bar_colors[i], label=bar_labels[i])
+            if show_number:
+                autolabel(rect)
+            ind += width
+            
+        ax.set_ylabel('Count')
+        ax.set_xticks(numpy.arange(N).astype(numpy.float32)+0.5    )
+        ax.set_xticklabels( names )
+        ax.legend(loc=1)
+        
+        fig.savefig(os.path.join(self.path_out, '_valid_events.pdf'), format='pdf')
+        
+    
+    
+        
     def _boxplot(self, data_list, names, colors):
         fig = pylab.figure(figsize=(10,6))
         fig.canvas.set_window_title('Ibb Analysis')
@@ -375,6 +427,7 @@ class IBBAnalysis(object):
         xtickNames = pylab.setp(ax1, xticklabels=names)
         pylab.setp(xtickNames, rotation=45, fontsize=12)
         pylab.ylim(0,100)
+        fig.savefig(os.path.join(self.path_out, '_timing_ibb_events.pdf'), format='pdf')
     
 class Position(dict):
     def __init__(self, plate,
