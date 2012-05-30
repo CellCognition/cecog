@@ -116,7 +116,12 @@ class IBBAnalysis(object):
                        ibb_zero_correction=0.025,
                        ibb_onset_factor_threshold=1.2,
                        nebd_onset_factor_threshold=1.2,
-                       single_plot=True
+                       single_plot=True,
+                       single_plot_ylim_range=(1,5),
+                       group_by = 1,
+                       color_sort_by = 'gene_symbol',
+                       timeing_ylim_range=(1,100)
+                       
                        ):
         self.plate_name = plate_name
         self.path_in = path_in
@@ -131,6 +136,10 @@ class IBBAnalysis(object):
         self.ibb_onset_factor_threshold = ibb_onset_factor_threshold
         self.nebd_onset_factor_threshold = nebd_onset_factor_threshold
         self.single_plot = single_plot
+        self.single_plot_ylim_range = single_plot_ylim_range,
+        self.group_by = group_by,
+        self.color_sort_by = color_sort_by,
+        self.timeing_ylim_range = timeing_ylim_range
     
     def _readScreen(self):
         #self.plate = Plate.load(self.path_in, self.plate_name)
@@ -410,18 +419,18 @@ class IBBAnalysis(object):
         
         self._plotter[group_name].save()
         
-    def _plot(self, result, id, color_sort_by="gene_symbol"):
+    def _plot(self, result, id):
         data = []
         names = []
         colors = []
         base_colors = cycle(colorbrewer.Set3[8])
         def mycmp(x, y):
-            return cmp(result[x]['positions'][0].__getattribute__(color_sort_by).lower(), 
-                       result[y]['positions'][0].__getattribute__(color_sort_by).lower())
+            return cmp(result[x]['positions'][0].__getattribute__(self.color_sort_by).lower(), 
+                       result[y]['positions'][0].__getattribute__(self.color_sort_by).lower())
         
         last_id = 'hamster'
         for group_name in sorted(result, cmp=mycmp):
-            new_id = result[group_name]['positions'][0].__getattribute__(color_sort_by)
+            new_id = result[group_name]['positions'][0].__getattribute__(self.color_sort_by)
             print new_id
             
             data.append(numpy.array(result[group_name][id])/60.0)
@@ -433,12 +442,12 @@ class IBBAnalysis(object):
 
             if last_id != new_id:
                 color = base_colors.next()
-                last_id = result[group_name]['positions'][0].__getattribute__(color_sort_by)
+                last_id = result[group_name]['positions'][0].__getattribute__(self.color_sort_by)
             colors.append(color)
             
         self._boxplot(data, names, colors)
         
-    def _plot_valid_bars(self, result, color_sort_by="gene_symbol"):
+    def _plot_valid_bars(self, result):
         data = []
         names = []
         bar_labels = ('vali8d', 'signal', 'split', 'ibb_onset', 'nebd_onset')
@@ -446,8 +455,8 @@ class IBBAnalysis(object):
         
         
         def mycmp(x, y):
-            return cmp(result[x]['positions'][0].__getattribute__(color_sort_by).lower(), 
-                       result[y]['positions'][0].__getattribute__(color_sort_by).lower())
+            return cmp(result[x]['positions'][0].__getattribute__(self.color_sort_by).lower(), 
+                       result[y]['positions'][0].__getattribute__(self.color_sort_by).lower())
         
         for group_name in sorted(result, cmp=mycmp):
             data.append(result[group_name]['valid'])
@@ -647,19 +656,19 @@ class Plate(object):
             
         return pos_list
     
-    def get_events(self, group_by=1):
+    def get_events(self):
         res = {}
         for pos in self._positions.values():
-            if group_by == self.GROUP_BY_POS:
+            if self.group_by == self.GROUP_BY_POS:
                 group_key = pos.position
-            elif group_by == self.GROUP_BY_OLIGO:
+            elif self.group_by == self.GROUP_BY_OLIGO:
                 group_key = pos.oligoid
-            elif group_by == self.GROUP_BY_GENE:
+            elif self.group_by == self.GROUP_BY_GENE:
                 group_key = pos.gene_symbol
-            elif group_by == self.GROUP_BY_GROUP:
+            elif self.group_by == self.GROUP_BY_GROUP:
                 group_key = pos.group
             else:
-                raise AttributeError("group_by argument not understood %r" % group_by)
+                raise AttributeError("group_by argument not understood %r" % self.group_by)
         
             if pos.position not in res:
                 res[group_key] = []
