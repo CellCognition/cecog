@@ -76,12 +76,32 @@ class PostProcessingFrame(BaseProcessorFrame):
         
         self.add_group(None, [('mappingfile_path',)])
 
-        self.add_group('ibb_analysis',
-                       [('ibb_export_single_events', (0,0,1,1)),
-                       ('ibb_groupby_position', (1,0,1,1)),
-                        ('ibb_groupby_oligoid', (2,0,1,1)),
-                        ('ibb_groupby_genesymbol', (3,0,1,1)),
-                        ], layout='grid', link='groupby', label='Group by')
+        self.add_group('ibb_analysis', [], 
+                       layout='flow', link='groupby', label='Group by')
+        self.add_group(None,
+                       [
+                        ('group_by_position', (1,0,1,1)),
+                        ('group_by_oligoid', (1,1,1,1)),
+                        ('group_by_genesymbol', (1,2,1,1)),
+                       ], 
+                       layout='grid', link='groupby', label='Group by')
+        
+        self.add_group(None,
+                       [
+                        ('color_sort_by_position', (1,0,1,1)),
+                        ('color_sort_by_oligoid', (1,1,1,1)),
+                        ('color_sort_by_genesymbol', (1,2,1,1)),
+                       ], 
+                       layout='grid', link='colorsort', label='Color sorting')
+                        
+        self.add_group('single_plot',
+                       [
+                        ('ibb_ratio_signal_threshold', (3,1,1,1)),
+                        ('ibb_range_signal_threshold', (3,2,1,1)),
+                        ('ibb_onset_factor_threshold', (4,1,1,1)),
+                        ('nebd_onset_factor_threshold', (4,2,1,1)),
+                        ], 
+                       layout='grid', link='groupby', label='Group by')
         self.add_expanding_spacer()
 
         self._init_control(has_images=False)

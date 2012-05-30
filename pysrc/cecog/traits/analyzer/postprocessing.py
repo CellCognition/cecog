@@ -30,6 +30,7 @@ __all__ = ['SectionPostProcessing']
 from cecog.traits.config import _Section
 from cecog.gui.guitraits import (StringTrait,
                                  BooleanTrait,
+                                 FloatTrait
                                  )
 
 #-------------------------------------------------------------------------------
@@ -58,21 +59,46 @@ class SectionPostProcessing(_Section):
             BooleanTrait(True, label='IBB analysis')),
 
         ('mappingfile_path',
-            StringTrait('', 1000, label='Mapping filename',
+            StringTrait('', 1000, label='Mapping file path',
                                    widget_info=StringTrait.STRING_PATH)),
         
-        ('ibb_export_single_events',
+        ('single_plot',
             BooleanTrait(True, label='Export single event plots',)),
         
-        ('ibb_groupby_position',
+        ('ibb_ratio_signal_threshold',
+            FloatTrait(1.2, 1, 5, label='IBB minimum ratio signal threshold',)),    
+        
+        ('ibb_range_signal_threshold',
+            FloatTrait(3, 1, 5, label='IBB minimum range threshold',)),   
+        
+        ('ibb_onset_factor_threshold',
+            FloatTrait(1.2, 1, 5, label='IBB onset slope threshold',)),   
+        
+        ('nebd_onset_factor_threshold',
+            FloatTrait(1.2, 1, 5, label='NEBD onset slope threshold',)),   
+        
+        
+        
+        ('group_by_position',
             BooleanTrait(True, label='Position',
                          widget_info=BooleanTrait.RADIOBUTTON)),
-        ('ibb_groupby_oligoid',
+        ('group_by_oligoid',
             BooleanTrait(False, label='Oligo ID',
                          widget_info=BooleanTrait.RADIOBUTTON)),
-        ('ibb_groupby_genesymbol',
+        ('group_by_genesymbol',
+            BooleanTrait(False, label='Gene symbol',
+                         widget_info=BooleanTrait.RADIOBUTTON)),
+        
+        ('color_sort_by_position',
+            BooleanTrait(True, label='Position',
+                         widget_info=BooleanTrait.RADIOBUTTON)),
+        ('color_sort_by_oligoid',
+            BooleanTrait(False, label='Oligo ID',
+                         widget_info=BooleanTrait.RADIOBUTTON)),
+        ('color_sort_by_genesymbol',
             BooleanTrait(False, label='Gene symbol',
                          widget_info=BooleanTrait.RADIOBUTTON))
+        
         ]
        )
     ]

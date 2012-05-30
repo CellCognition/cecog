@@ -1,7 +1,7 @@
 import numpy
 import csv
 import matplotlib as mpl
-mpl.use('QT4Agg')
+#mpl.use('QT4Agg')
 import pylab
 import re
 import os

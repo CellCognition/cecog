@@ -782,7 +782,19 @@ class PostProcessingThread(_ProcessingThread):
         for i, name in self._learner_dict['primary'].dctClassNames.items():
             class_names[i] = name
             
+        self._settings.set_section(SECTION_NAME_POST_PROCESSING)
+        
         ibb_options = {}
+        ibb_options['ibb_ratio_signal_threshold'] = self._settings.get2('ibb_ratio_signal_threshold')
+        ibb_options['ibb_range_signal_threshold'] = self._settings.get2('ibb_range_signal_threshold')
+        ibb_options['ibb_onset_factor_threshold'] = self._settings.get2('ibb_onset_factor_threshold')
+        ibb_options['nebd_onset_factor_threshold'] = self._settings.get2('nebd_onset_factor_threshold')
+        ibb_options['single_plot'] = self._settings.get2('single_plot')
+        #ibb_options['single_plot_ylim_range'] = self._settings.get2('single_plot_ylim_range')
+        #ibb_options['group_by'] = self._settings.get2('group_by')
+        #ibb_options['color_sort_by'] = self._settings.get2('color_sort_by')
+        #ibb_options['timeing_ylim_range'] = self._settings.get2('timeing_ylim_range')
+        
             
         ibb_analyzer = IBBAnalysis(path_analyzed, 
                                    path_out_ibb, 
