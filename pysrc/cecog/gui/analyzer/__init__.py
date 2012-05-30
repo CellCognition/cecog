@@ -773,12 +773,24 @@ class PostProcessingThread(_ProcessingThread):
      
         print 'for ', plate_id
         mapping_file = self._mapping_files[plate_id]
-        class_colors = {}
         
+        class_colors = {}       
         for i, name in self._learner_dict['primary'].dctClassNames.items():
             class_colors[i] = self._learner_dict['primary'].dctHexColors[name]
             
-        ibb_analyzer = IBBAnalysis(path_analyzed, path_out_ibb, plate_id, mapping_file, class_colors)
+        class_names = {}       
+        for i, name in self._learner_dict['primary'].dctClassNames.items():
+            class_names[i] = name
+            
+        ibb_options = {}
+            
+        ibb_analyzer = IBBAnalysis(path_analyzed, 
+                                   path_out_ibb, 
+                                   plate_id, 
+                                   mapping_file, 
+                                   class_colors, 
+                                   class_names,
+                                   **ibb_options)
         ibb_analyzer.run()
 
 class AnalzyerThread(_ProcessingThread):

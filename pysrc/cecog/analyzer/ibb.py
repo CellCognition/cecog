@@ -100,26 +100,37 @@ class GalleryDecorationPlotter(EventPlotterPdf):
 
 class IBBAnalysis(object):
     REJECTION = enum('OK', "BY_SIGNAL", "BY_SPLIT", "BY_IBB_ONSET", "BY_NEBD_ONSET")
-    
-    IBB_RATIO_SIGNAL_THRESHOLD = 1.0
-    IBB_RANGE_SIGNAL_THRESHOLD = 0.5
     IBB_ZERO_CORRECTION = 0.025
-    
-    IBB_ONSET_FACTOR_THRESHOLD   = 1.2
-    NEBD_ONSET_FACTOR_THRESHOLD  = 1.2
-    
-    SINGLE_PLOT = False
-    
+
     PLOT_IDS =    ['nebd_to_sep_time', 'sep_to__ibb_time', 'prophase_to_nebd']
     PLOT_LABELS = ['nebd_to_sep_time', 'sep_to__ibb_time', 'prophase_to_nebd']
     
-    def __init__(self, path_in, path_out, plate_name, mapping_file, class_colors):
+    def __init__(self, path_in, 
+                       path_out, 
+                       plate_name, 
+                       mapping_file, 
+                       class_colors, 
+                       class_names,
+                       ibb_ratio_signal_threshold=1.0,
+                       ibb_range_signal_threshold=0.5,
+                       ibb_zero_correction=0.025,
+                       ibb_onset_factor_threshold=1.2,
+                       nebd_onset_factor_threshold=1.2,
+                       single_plot=True
+                       ):
         self.plate_name = plate_name
         self.path_in = path_in
         self.path_out = path_out
         self.mapping_file = mapping_file
         self.class_colors = class_colors
+        self.class_names = class_colors
         self._plotter = {}
+        
+        self.ibb_ratio_signal_threshold = ibb_ratio_signal_threshold
+        self.ibb_range_signal_threshold = ibb_range_signal_threshold
+        self.ibb_onset_factor_threshold = ibb_onset_factor_threshold
+        self.nebd_onset_factor_threshold = nebd_onset_factor_threshold
+        self.single_plot = single_plot
     
     def _readScreen(self):
         #self.plate = Plate.load(self.path_in, self.plate_name)
@@ -128,7 +139,7 @@ class IBBAnalysis(object):
     def run(self):
         try:
             self._readScreen()
-            grouped_positions = self.plate.get_events(2)
+            grouped_positions = self.plate.get_events(1)
             for group_name in grouped_positions:
                 self._plotter[group_name] = GalleryDecorationPlotter((10,5))
                 self._plotter[group_name].open(os.path.join(self.path_out, 'ibb__PL%s__%s__single_plots.pdf' % (self.plate_name, group_name)))
@@ -147,6 +158,7 @@ class IBBAnalysis(object):
             result[group_name]['sep_to__ibb_time'] = []
             result[group_name]['prophase_to_nebd'] = []
             result[group_name]['valid'] = [0,0,0,0,0] 
+            result[group_name]['timing'] = []
             
             for pos in pos_list:
                 result[group_name]['positions'].append(pos)
@@ -166,6 +178,7 @@ class IBBAnalysis(object):
                     time = h2b['timestamp'] 
                     time = time - time[0]
                     
+                    
                     if rejection_code == IBBAnalysis.REJECTION.OK:
                         separation_frame, ibb_onset_frame, nebd_onset_frame, prophase_last_frame = ibb_result
                         
@@ -173,7 +186,9 @@ class IBBAnalysis(object):
                         result[group_name]['sep_to__ibb_time'].append(time[ibb_onset_frame] - time[separation_frame])
                         result[group_name]['prophase_to_nebd'].append(time[nebd_onset_frame] - time[prophase_last_frame])
                         
-                        if IBBAnalysis.SINGLE_PLOT:
+                        result[group_name]['timing'].append(self._find_class_timing(h2b, time[1]))
+                        
+                        if IBBAnalysis.single_plot:
                             self._plot_single_event(group_name, ibb_ratio, h2b, 
                                                     separation_frame, 
                                                     ibb_onset_frame, 
@@ -181,9 +196,57 @@ class IBBAnalysis(object):
                                                     prophase_last_frame,
                                                     event_id, pos.position, ylim=(1,5))
                             
+                                     
                                                    
         self._plot_valid_bars(result)
-        self._plot(result, "nebd_to_sep_time")                        
+        self._plot(result, "nebd_to_sep_time")
+        self._plot_timing(result)
+        
+    def _plot_timing(self, result, ylim=(0,100)):
+        f_handle = PdfPages(os.path.join(self.path_out, '_class_timing.pdf' ))
+        
+        for class_index, class_name in sorted(self.class_colors.items()):
+            data = []
+            names = []
+        
+            for group_name in sorted(result):
+                group_data = []
+                names.append(group_name)
+                tmp_data = result[group_name]['timing']
+                for class_counts in tmp_data:
+                    if class_index in class_counts:
+                        tmp = class_counts[class_index]
+                        if isinstance(tmp, list):
+                            group_data.extend(class_counts[class_index])
+                        else:
+                            group_data.append(class_counts[class_index])
+                            
+                data.append(group_data)
+                    
+            self._plot_single_class_timing(data, names, class_name, self.class_colors[class_index], f_handle, ylim)
+            
+                
+            
+        f_handle.close()
+            
+    
+    def _plot_single_class_timing(self, data, names, class_name, class_color, f_handle, ylim=(0,100)):
+        fig = pylab.figure()
+        ax = fig.add_subplot(111)
+        ax.bar(range(len(data)), map(numpy.mean, numpy.array(data)),
+               width=0.6, 
+               yerr=map(numpy.std, numpy.array(data)), 
+               color=class_color,
+               ecolor='k',
+               )
+        ax.set_xticks(range(len(data)))
+        ax.set_xticklabels(names)
+        ax.set_title(class_name)
+        ax.set_ylabel('Time [min]')
+        ax.set_ylim(ylim)
+        fig.savefig(f_handle, format='pdf')
+        
+                                
                 
     
     def _analyze_ibb(self, h2b, ibb_ratio):
@@ -219,11 +282,7 @@ class IBBAnalysis(object):
         return IBBAnalysis.REJECTION.BY_NEBD_ONSET, None
     
     def _get_relative_time(self, h2b, frame_idx):
-        return h2b['timestamp'][frame_idx] - h2b['timestamp'][0]
-        
-    def _find_class_timing(self, h2b):
-        pass
-            
+        return h2b['timestamp'][frame_idx] - h2b['timestamp'][0]          
         
     def _find_separation_event(self, h2b):
         # separation event found by isplit entry
@@ -244,8 +303,8 @@ class IBBAnalysis(object):
         return IBBAnalysis.REJECTION.BY_SPLIT, None
     
     def _check_signal(self, ibb_ratio):
-        if ibb_ratio.mean() < IBBAnalysis.IBB_RATIO_SIGNAL_THRESHOLD or \
-           (ibb_ratio.max() - ibb_ratio.min()) < IBBAnalysis.IBB_RANGE_SIGNAL_THRESHOLD:
+        if ibb_ratio.mean() < IBBAnalysis.ibb_ratio_signal_threshold or \
+           (ibb_ratio.max() - ibb_ratio.min()) < IBBAnalysis.ibb_range_signal_threshold:
             return IBBAnalysis.REJECTION.BY_SIGNAL
         
         return IBBAnalysis.REJECTION.OK 
@@ -254,7 +313,7 @@ class IBBAnalysis(object):
     def _find_ibb_onset_event(self, ibb_ratio, separation_frame):
         ibb_onset_frame = separation_frame - 1
         while True:
-            if ibb_ratio[ibb_onset_frame] >= ibb_ratio[separation_frame] * IBBAnalysis.IBB_ONSET_FACTOR_THRESHOLD:
+            if ibb_ratio[ibb_onset_frame] >= ibb_ratio[separation_frame] * IBBAnalysis.ibb_onset_factor_threshold:
                 ibb_onset_frame -= 1
                 break
             elif ibb_onset_frame >= len(ibb_ratio)-2:
@@ -267,6 +326,23 @@ class IBBAnalysis(object):
         
         return IBBAnalysis.REJECTION.OK, ibb_onset_frame
         
+    def _find_class_timing(self, h2b, time_lapse):
+        class_labels = h2b['class__label']
+        
+        class_timing = {}
+        for c in class_labels:
+            if c not in class_timing:
+                class_timing[c] = 0
+            class_timing[c] += 1
+            
+        for c in class_timing:
+            class_timing[c] = class_timing[c] * time_lapse / 60.0
+            
+        return class_timing
+            
+        
+        
+         
     
     def _find_nebd_onset_event(self, ibb_ratio, separation_frame):
         nebd_onset_frame = ibb_ratio.argmin() + 1
@@ -276,7 +352,7 @@ class IBBAnalysis(object):
     
         while True:
             nebd_onset_frame -= 1
-            if ibb_ratio[nebd_onset_frame] / ibb_ratio[nebd_onset_frame+1] >= IBBAnalysis.NEBD_ONSET_FACTOR_THRESHOLD:
+            if ibb_ratio[nebd_onset_frame] / ibb_ratio[nebd_onset_frame+1] >= IBBAnalysis.nebd_onset_factor_threshold:
                 break
             elif nebd_onset_frame <= 0:
                 nebd_onset_frame = None
@@ -334,7 +410,7 @@ class IBBAnalysis(object):
         
         self._plotter[group_name].save()
         
-    def _plot(self, result, id, color_sort_by="group"):
+    def _plot(self, result, id, color_sort_by="gene_symbol"):
         data = []
         names = []
         colors = []
@@ -351,7 +427,7 @@ class IBBAnalysis(object):
             data.append(numpy.array(result[group_name][id])/60.0)
             
             if isinstance(group_name, int):
-                names.append("%s (%03d)" % (new_id, group_name))
+                names.append("%s (%43d)" % (new_id, group_name))
             else:
                 names.append("%s (%s)" % (new_id, group_name))
 
@@ -362,7 +438,7 @@ class IBBAnalysis(object):
             
         self._boxplot(data, names, colors)
         
-    def _plot_valid_bars(self, result, color_sort_by="group"):
+    def _plot_valid_bars(self, result, color_sort_by="gene_symbol"):
         data = []
         names = []
         bar_labels = ('vali8d', 'signal', 'split', 'ibb_onset', 'nebd_onset')
@@ -490,7 +566,7 @@ class Plate(object):
         
         for pos_idx, pos_name in enumerate(self.mapping['position']):
             if isinstance(pos_name, int):
-                pos_name = '%03d' % pos_name
+                pos_name = '%04d' % pos_name
                     
             if pos_name not in self.pos_list:
 #                raise RuntimeError("Position from Mapping file %s not found in in path %s" % (pos_name, self.path_in))
@@ -527,7 +603,7 @@ class Plate(object):
                     
                     if pos_name not in self._positions.keys():
                         self._positions[pos_name] = Position(plate=self.plate_id,
-                                                            position='%03d' % self.mapping[pos_idx]['position'],
+                                                            position='%04d' % self.mapping[pos_idx]['position'],
                                                             well=self.mapping[pos_idx]['well'],
                                                             site=self.mapping[pos_idx]['site'],
                                                             row=self.mapping[pos_idx]['row'],
