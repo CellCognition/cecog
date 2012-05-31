@@ -30,7 +30,8 @@ __all__ = ['SectionPostProcessing']
 from cecog.traits.config import _Section
 from cecog.gui.guitraits import (StringTrait,
                                  BooleanTrait,
-                                 FloatTrait
+                                 FloatTrait,
+                                 IntTrait
                                  )
 
 #-------------------------------------------------------------------------------
@@ -57,28 +58,27 @@ class SectionPostProcessing(_Section):
        [
         ('ibb_analysis',
             BooleanTrait(True, label='IBB analysis')),
-
         ('mappingfile_path',
             StringTrait('', 1000, label='Mapping file path',
-                                   widget_info=StringTrait.STRING_PATH)),
-        
+                                   widget_info=StringTrait.STRING_PATH)), 
         ('single_plot',
             BooleanTrait(True, label='Export single event plots',)),
-        
         ('ibb_ratio_signal_threshold',
             FloatTrait(1.2, 1, 5, label='IBB minimum ratio signal threshold',)),    
-        
         ('ibb_range_signal_threshold',
             FloatTrait(3, 1, 5, label='IBB minimum range threshold',)),   
-        
         ('ibb_onset_factor_threshold',
             FloatTrait(1.2, 1, 5, label='IBB onset slope threshold',)),   
-        
         ('nebd_onset_factor_threshold',
             FloatTrait(1.2, 1, 5, label='NEBD onset slope threshold',)),   
-        
-        
-        
+        ('plot_ylim1_low',
+            IntTrait(0, 0, 2000, label='Y-axis limit (low)',)),  
+        ('plot_ylim1_high',
+            IntTrait(100, 1, 4000, label='Y-axis limit (high)',)),  
+        ('single_plot_ylim_low',
+            FloatTrait(1, 0, 10, label='Y-axis ratio range (low)',)),  
+        ('single_plot_ylim_high',
+            IntTrait(5, 1, 30, label='Y-axis ratio range (high)',)),  
         ('group_by_position',
             BooleanTrait(True, label='Position',
                          widget_info=BooleanTrait.RADIOBUTTON)),
