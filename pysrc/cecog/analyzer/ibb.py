@@ -101,7 +101,8 @@ class GalleryDecorationPlotter(EventPlotterPdf):
 class IBBAnalysis(object):
     REJECTION = enum('OK', "BY_SIGNAL", "BY_SPLIT", "BY_IBB_ONSET", "BY_NEBD_ONSET")
     IBB_ZERO_CORRECTION = 0.025
-
+    COLOR_SORT_BY = ['position', 'oligoid', 'gene_symbol', 'group']
+    
     PLOT_IDS =    ['nebd_to_sep_time', 'sep_to__ibb_time', 'prophase_to_nebd']
     PLOT_LABELS = ['nebd_to_sep_time', 'sep_to__ibb_time', 'prophase_to_nebd']
     
@@ -119,7 +120,7 @@ class IBBAnalysis(object):
                        single_plot=True,
                        single_plot_ylim_range=(1,5),
                        group_by=0,
-                       color_sort_by = 'gene_symbol',
+                       color_sort_by='gene_symbol',
                        timeing_ylim_range=(1,100)
                        
                        ):

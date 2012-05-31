@@ -795,22 +795,30 @@ class PostProcessingThread(_ProcessingThread):
         ibb_options['single_plot_ylim_range'] = self._settings.get2('single_plot_ylim_low'), \
                                                 self._settings.get2('single_plot_ylim_high')
         
-        tmp = (self._settings.get2('group_by_position'),
-               self._settings.get2('group_by_oligoid'),
+        tmp = (self._settings.get2('group_by_group'),
                self._settings.get2('group_by_genesymbol'),
-               self._settings.get2('group_by_group'),
+               self._settings.get2('group_by_oligoid'),
+               self._settings.get2('group_by_position'),
                )
-        ibb_options['group_by'] = int(numpy.log2(int(reduce(lambda x,y: str(x)+str(y), numpy.array(tmp).astype(numpy.uint8)),2)))
-
-        tmp = (self._settings.get2('color_sort_by_position'),
-               self._settings.get2('color_sort_by_oligoid'),
-               self._settings.get2('color_sort_by_genesymbol'),
-               self._settings.get2('color_sort_by_group'),
-               )
-        ibb_options['color_sort_by'] = int(numpy.log2(int(reduce(lambda x,y: str(x)+str(y), numpy.array(tmp).astype(numpy.uint8)),2)))
         
-        if not ibb_options['group_by'] > ibb_options['color_sort_by']:
-            raise AttributeError('Group by selection must be more general than the color sorting!')
+        ibb_options['group_by'] = int(numpy.log2(int(reduce(lambda x,y: str(x)+str(y), 
+                                                            numpy.array(tmp).astype(numpy.uint8)),2))+0.5)
+
+
+        tmp = (self._settings.get2('color_sort_by_group'),
+               self._settings.get2('color_sort_by_genesymbol'),
+               self._settings.get2('color_sort_by_oligoid'),
+               self._settings.get2('color_sort_by_position'),
+               )
+        
+        ibb_options['color_sort_by'] = int(numpy.log2(int(reduce(lambda x,y: str(x)+str(y), 
+                                                                 numpy.array(tmp).astype(numpy.uint8)),2))+0.5)
+        
+        if not ibb_options['group_by'] < ibb_options['color_sort_by']:
+            raise AttributeError('Group by selection must be more general than the color sorting! (%d !> %d)' % (
+                                                            ibb_options['group_by'], ibb_options['color_sort_by']))
+        
+        ibb_options['color_sort_by'] = IBBAnalysis.COLOR_SORT_BY[ibb_options['color_sort_by']]
         
         ibb_options['timeing_ylim_range'] = self._settings.get2('plot_ylim1_low'), \
                                             self._settings.get2('plot_ylim1_high')

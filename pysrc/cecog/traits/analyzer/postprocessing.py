@@ -89,7 +89,7 @@ class SectionPostProcessing(_Section):
             BooleanTrait(False, label='Gene symbol',
                          widget_info=BooleanTrait.RADIOBUTTON)),
         ('group_by_group',
-            BooleanTrait(False, label='Gene symbol',
+            BooleanTrait(False, label='Group',
                          widget_info=BooleanTrait.RADIOBUTTON)),
         
         ('color_sort_by_position',
@@ -102,7 +102,7 @@ class SectionPostProcessing(_Section):
             BooleanTrait(False, label='Gene symbol',
                          widget_info=BooleanTrait.RADIOBUTTON)),
         ('color_sort_by_group',
-            BooleanTrait(False, label='Gene symbol',
+            BooleanTrait(False, label='Group',
                          widget_info=BooleanTrait.RADIOBUTTON))
         ]
        )
