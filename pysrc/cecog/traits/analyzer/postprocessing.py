@@ -98,7 +98,6 @@ class SectionPostProcessing(_Section):
         ('color_sort_by_genesymbol',
             BooleanTrait(False, label='Gene symbol',
                          widget_info=BooleanTrait.RADIOBUTTON))
-        
         ]
        )
     ]

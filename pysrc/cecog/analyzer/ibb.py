@@ -118,7 +118,7 @@ class IBBAnalysis(object):
                        nebd_onset_factor_threshold=1.2,
                        single_plot=True,
                        single_plot_ylim_range=(1,5),
-                       group_by = 1,
+                       group_by=0,
                        color_sort_by = 'gene_symbol',
                        timeing_ylim_range=(1,100)
                        
@@ -136,19 +136,19 @@ class IBBAnalysis(object):
         self.ibb_onset_factor_threshold = ibb_onset_factor_threshold
         self.nebd_onset_factor_threshold = nebd_onset_factor_threshold
         self.single_plot = single_plot
-        self.single_plot_ylim_range = single_plot_ylim_range,
-        self.group_by = group_by,
-        self.color_sort_by = color_sort_by,
+        self.single_plot_ylim_range = single_plot_ylim_range
+        self.group_by = group_by
+        self.color_sort_by = color_sort_by
         self.timeing_ylim_range = timeing_ylim_range
     
     def _readScreen(self):
         #self.plate = Plate.load(self.path_in, self.plate_name)
-        self.plate = Plate(self.plate_name, self.path_in, self.mapping_file)
+        self.plate = Plate(self.plate_name, self.path_in, self.mapping_file, self.group_by)
     
     def run(self):
         try:
             self._readScreen()
-            grouped_positions = self.plate.get_events(1)
+            grouped_positions = self.plate.get_events()
             for group_name in grouped_positions:
                 self._plotter[group_name] = GalleryDecorationPlotter((10,5))
                 self._plotter[group_name].open(os.path.join(self.path_out, 'ibb__PL%s__%s__single_plots.pdf' % (self.plate_name, group_name)))
@@ -197,13 +197,13 @@ class IBBAnalysis(object):
                         
                         result[group_name]['timing'].append(self._find_class_timing(h2b, time[1]))
                         
-                        if IBBAnalysis.single_plot:
+                        if self.single_plot:
                             self._plot_single_event(group_name, ibb_ratio, h2b, 
                                                     separation_frame, 
                                                     ibb_onset_frame, 
                                                     nebd_onset_frame, 
                                                     prophase_last_frame,
-                                                    event_id, pos.position, ylim=(1,5))
+                                                    event_id, pos.position)
                             
                                      
                                                    
@@ -211,7 +211,7 @@ class IBBAnalysis(object):
         self._plot(result, "nebd_to_sep_time")
         self._plot_timing(result)
         
-    def _plot_timing(self, result, ylim=(0,100)):
+    def _plot_timing(self, result):
         f_handle = PdfPages(os.path.join(self.path_out, '_class_timing.pdf' ))
         
         for class_index, class_name in sorted(self.class_colors.items()):
@@ -232,14 +232,14 @@ class IBBAnalysis(object):
                             
                 data.append(group_data)
                     
-            self._plot_single_class_timing(data, names, class_name, self.class_colors[class_index], f_handle, ylim)
+            self._plot_single_class_timing(data, names, class_name, self.class_colors[class_index], f_handle)
             
                 
             
         f_handle.close()
             
     
-    def _plot_single_class_timing(self, data, names, class_name, class_color, f_handle, ylim=(0,100)):
+    def _plot_single_class_timing(self, data, names, class_name, class_color, f_handle):
         fig = pylab.figure()
         ax = fig.add_subplot(111)
         ax.bar(range(len(data)), map(numpy.mean, numpy.array(data)),
@@ -252,7 +252,7 @@ class IBBAnalysis(object):
         ax.set_xticklabels(names)
         ax.set_title(class_name)
         ax.set_ylabel('Time [min]')
-        ax.set_ylim(ylim)
+        ax.set_ylim(*self.timeing_ylim_range)
         fig.savefig(f_handle, format='pdf')
         
                                 
@@ -312,8 +312,8 @@ class IBBAnalysis(object):
         return IBBAnalysis.REJECTION.BY_SPLIT, None
     
     def _check_signal(self, ibb_ratio):
-        if ibb_ratio.mean() < IBBAnalysis.ibb_ratio_signal_threshold or \
-           (ibb_ratio.max() - ibb_ratio.min()) < IBBAnalysis.ibb_range_signal_threshold:
+        if ibb_ratio.mean() < self.ibb_ratio_signal_threshold or \
+           (ibb_ratio.max() - ibb_ratio.min()) < self.ibb_range_signal_threshold:
             return IBBAnalysis.REJECTION.BY_SIGNAL
         
         return IBBAnalysis.REJECTION.OK 
@@ -322,7 +322,7 @@ class IBBAnalysis(object):
     def _find_ibb_onset_event(self, ibb_ratio, separation_frame):
         ibb_onset_frame = separation_frame - 1
         while True:
-            if ibb_ratio[ibb_onset_frame] >= ibb_ratio[separation_frame] * IBBAnalysis.ibb_onset_factor_threshold:
+            if ibb_ratio[ibb_onset_frame] >= ibb_ratio[separation_frame] * self.ibb_onset_factor_threshold:
                 ibb_onset_frame -= 1
                 break
             elif ibb_onset_frame >= len(ibb_ratio)-2:
@@ -331,7 +331,7 @@ class IBBAnalysis(object):
             ibb_onset_frame += 1
         
         if ibb_onset_frame is None:
-            return IBBAnalysis.REJECTION.BY_IBB_ONSET, None
+            return self.REJECTION.BY_IBB_ONSET, None
         
         return IBBAnalysis.REJECTION.OK, ibb_onset_frame
         
@@ -361,7 +361,7 @@ class IBBAnalysis(object):
     
         while True:
             nebd_onset_frame -= 1
-            if ibb_ratio[nebd_onset_frame] / ibb_ratio[nebd_onset_frame+1] >= IBBAnalysis.nebd_onset_factor_threshold:
+            if ibb_ratio[nebd_onset_frame] / ibb_ratio[nebd_onset_frame+1] >= self.nebd_onset_factor_threshold:
                 break
             elif nebd_onset_frame <= 0:
                 nebd_onset_frame = None
@@ -377,13 +377,9 @@ class IBBAnalysis(object):
                            ibb_onset_frame, 
                            nebd_onset_frame,
                            prophase_last_frame, 
-                           event_id, pos_name,
-                           ylim=None):
+                           event_id, pos_name):
         
-        if ylim is None:
-            ya, yb = ratio.min(), ratio.max()
-        else:
-            ya, yb = ylim
+        ya, yb = self.single_plot_ylim_range
         
         
         self._plotter[group_name].clear()
@@ -450,7 +446,7 @@ class IBBAnalysis(object):
     def _plot_valid_bars(self, result):
         data = []
         names = []
-        bar_labels = ('vali8d', 'signal', 'split', 'ibb_onset', 'nebd_onset')
+        bar_labels = ('valid', 'signal', 'split', 'ibb_onset', 'nebd_onset')
         bar_colors = map(lambda x:rgb_to_hex(*x), [colorbrewer.Greens[7][2],] + colorbrewer.RdBu[11][0:4])
         
         
@@ -511,7 +507,7 @@ class IBBAnalysis(object):
         
         xtickNames = pylab.setp(ax1, xticklabels=names)
         pylab.setp(xtickNames, rotation=45, fontsize=12)
-        pylab.ylim(0,100)
+        pylab.ylim(*self.timeing_ylim_range)
         fig.savefig(os.path.join(self.path_out, '_timing_ibb_events.pdf'), format='pdf')
     
 class Position(dict):
@@ -542,19 +538,17 @@ class Position(dict):
         return "p %s, o %s, g %s, g %s" % ( self.position, self.oligoid, self.gene_symbol, self.group)
     
 class Plate(object):
-    GROUP_BY_POS = 1
-    GROUP_BY_OLIGO = 2
-    GROUP_BY_GENE = 3
-    GROUP_BY_GROUP = 4
+    GROUP_BY = enum('POS', "OLIGO", "GENE", "GROUP")
     
     POSITION_REGEXP = re.compile(r"^[A-Z]\d{1,5}_\d{1,5}$|^\d{1,6}$")
     EVENT_REGEXP = re.compile(r"features__P(?P<pos>\d+|[A-Z]\d+_\d+)__T(?P<time>\d+)"
                                "__O(?P<obj>\d+)__B(?P<branch>\d+)__C(?P<channel>.+?)__R(?P<region>.*)\.txt")
-    def __init__(self, plate_id, path_in, mapping_file):
+    def __init__(self, plate_id, path_in, mapping_file, group_by=0):
         self.plate_id = plate_id
         self.path_in = path_in
         self.mapping_file = mapping_file
         self._positions = {}
+        self.group_by = group_by
         self.readEvents()
         
     def __str__(self):
@@ -575,7 +569,7 @@ class Plate(object):
         
         for pos_idx, pos_name in enumerate(self.mapping['position']):
             if isinstance(pos_name, int):
-                pos_name = '%04d' % pos_name
+                pos_name = '%03d' % pos_name
                     
             if pos_name not in self.pos_list:
 #                raise RuntimeError("Position from Mapping file %s not found in in path %s" % (pos_name, self.path_in))
@@ -612,7 +606,7 @@ class Plate(object):
                     
                     if pos_name not in self._positions.keys():
                         self._positions[pos_name] = Position(plate=self.plate_id,
-                                                            position='%04d' % self.mapping[pos_idx]['position'],
+                                                            position='%03d' % self.mapping[pos_idx]['position'],
                                                             well=self.mapping[pos_idx]['well'],
                                                             site=self.mapping[pos_idx]['site'],
                                                             row=self.mapping[pos_idx]['row'],
@@ -659,13 +653,13 @@ class Plate(object):
     def get_events(self):
         res = {}
         for pos in self._positions.values():
-            if self.group_by == self.GROUP_BY_POS:
+            if self.group_by == self.GROUP_BY.POS:
                 group_key = pos.position
-            elif self.group_by == self.GROUP_BY_OLIGO:
+            elif self.group_by == self.GROUP_BY.OLIGO:
                 group_key = pos.oligoid
-            elif self.group_by == self.GROUP_BY_GENE:
+            elif self.group_by == self.GROUP_BY.GENE:
                 group_key = pos.gene_symbol
-            elif self.group_by == self.GROUP_BY_GROUP:
+            elif self.group_by == self.GROUP_BY.GROUP:
                 group_key = pos.group
             else:
                 raise AttributeError("group_by argument not understood %r" % self.group_by)

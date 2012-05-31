@@ -790,10 +790,15 @@ class PostProcessingThread(_ProcessingThread):
         ibb_options['ibb_onset_factor_threshold'] = self._settings.get2('ibb_onset_factor_threshold')
         ibb_options['nebd_onset_factor_threshold'] = self._settings.get2('nebd_onset_factor_threshold')
         ibb_options['single_plot'] = self._settings.get2('single_plot')
-        #ibb_options['single_plot_ylim_range'] = self._settings.get2('single_plot_ylim_range')
+        
+        
+        ibb_options['single_plot_ylim_range'] = self._settings.get2('single_plot_ylim_low'), \
+                                                self._settings.get2('single_plot_ylim_high')
+        
         #ibb_options['group_by'] = self._settings.get2('group_by')
         #ibb_options['color_sort_by'] = self._settings.get2('color_sort_by')
-        #ibb_options['timeing_ylim_range'] = self._settings.get2('timeing_ylim_range')
+        ibb_options['timeing_ylim_range'] = self._settings.get2('plot_ylim1_low'), \
+                                            self._settings.get2('plot_ylim1_high')
         
             
         ibb_analyzer = IBBAnalysis(path_analyzed, 
