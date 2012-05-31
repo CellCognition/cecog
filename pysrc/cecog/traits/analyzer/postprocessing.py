@@ -88,14 +88,20 @@ class SectionPostProcessing(_Section):
         ('group_by_genesymbol',
             BooleanTrait(False, label='Gene symbol',
                          widget_info=BooleanTrait.RADIOBUTTON)),
+        ('group_by_group',
+            BooleanTrait(False, label='Gene symbol',
+                         widget_info=BooleanTrait.RADIOBUTTON)),
         
         ('color_sort_by_position',
-            BooleanTrait(True, label='Position',
+            BooleanTrait(False, label='Position',
                          widget_info=BooleanTrait.RADIOBUTTON)),
         ('color_sort_by_oligoid',
-            BooleanTrait(False, label='Oligo ID',
+            BooleanTrait(True, label='Oligo ID',
                          widget_info=BooleanTrait.RADIOBUTTON)),
         ('color_sort_by_genesymbol',
+            BooleanTrait(False, label='Gene symbol',
+                         widget_info=BooleanTrait.RADIOBUTTON)),
+        ('color_sort_by_group',
             BooleanTrait(False, label='Gene symbol',
                          widget_info=BooleanTrait.RADIOBUTTON))
         ]

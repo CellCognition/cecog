@@ -90,12 +90,14 @@ class PostProcessingFrame(BaseProcessorFrame):
                         ('group_by_position', (0,0,1,1)),
                         ('group_by_oligoid', (0,1,1,1)),
                         ('group_by_genesymbol', (0,2,1,1)),
+                        ('group_by_group', (0,3,1,1)),
                         ], 
                        layout='grid', link='groupby', label='Group by')
         self.add_group(None, [
                         ('color_sort_by_position', (0,0,1,1)),
                         ('color_sort_by_oligoid', (0,1,1,1)),
                         ('color_sort_by_genesymbol', (0,2,1,1)),
+                        ('color_sort_by_group', (0,3,1,1)),
                         ], 
                        layout='grid', link='groupby', label='Color sort')
         self.add_group(None, [
