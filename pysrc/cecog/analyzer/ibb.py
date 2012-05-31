@@ -136,6 +136,9 @@ class IBBAnalysis(object):
         self.ibb_range_signal_threshold = ibb_range_signal_threshold
         self.ibb_onset_factor_threshold = ibb_onset_factor_threshold
         self.nebd_onset_factor_threshold = nebd_onset_factor_threshold
+        
+        print 'ratio', self.ibb_ratio_signal_threshold
+        print 'range', self.ibb_range_signal_threshold
         self.single_plot = single_plot
         self.single_plot_ylim_range = single_plot_ylim_range
         self.group_by = group_by
