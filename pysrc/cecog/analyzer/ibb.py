@@ -2,6 +2,7 @@ import numpy
 import csv
 import matplotlib as mpl
 mpl.use('QT4Agg')
+from matplotlib.mlab import rec_append_fields
 import pylab
 import re
 import os
@@ -15,6 +16,7 @@ from vigra.impex import readImage
 #mpl.rcParams["axes.edgecolor"] = 'w'
 #mpl.rcParams["axes.labelcolor"] = 'w'
 mpl.rcParams["figure.facecolor"] = 'w'
+mpl.rcParams["pdf.compression"] = 0
 
 
 
@@ -25,7 +27,8 @@ def enum(*sequential, **named):
 class EventPlotterPdf(object):
     def __init__(self, figsize):
         self.figure = pylab.figure(figsize=figsize)
-        self.axes = self.figure.add_subplot(111)
+        self.figure.set_dpi(600)
+        self.axes = self.figure.add_axes((0.1,0.1,0.8,0.8))
         self._pdf_handle = None
         self.add_axes = {}
         
@@ -46,56 +49,82 @@ class EventPlotterPdf(object):
     
               
 class GalleryDecorationPlotter(EventPlotterPdf):
-    def add_gallery_deco(self, event_id, pos_name, path_in, time, class_labels, class_colors, channel='primary'):         
-        if 'gallery' not in self.add_axes:
-            bb = self.axes.get_position()
-            self.axes.set_position((bb.x0, bb.y0+0.2, bb.width, bb.height -0.2)) 
-            new_axes = self.figure.add_axes((bb.x0, bb.y0, bb.width, 0.3))
-            self.add_axes['gallery'] = new_axes
-        else:
-            new_axes = self.add_axes['gallery']
+    def set_positions(self):
+        bb = self.axes.get_position()
+        self.axes.set_position((0.05, 0.05*len(self.add_axes)+0.15, 0.9, 0.95-0.15*len(self.add_axes))) 
+        for i, an in enumerate(sorted(self.add_axes)):
+            ag = self.add_axes[an]
+            ag.set_position((0.05, (len(self.add_axes)-i-1)*0.05+0.15, 0.9, 0.05))
+            ag.set_frame_on(False)
             
-        x_min = 0
-        x_max = time[-1]+time[1]
-            
-        gallery_path = os.path.join(path_in, pos_name, 'gallery', channel)
-        event_re = re.search(r"^T(?P<time>\d+)_O(?P<obj>\d+)_B(?P<branch>\d+)", event_id)
-        t = int(event_re.groupdict()['time'])
-        o = int(event_re.groupdict()['obj'])
-        b = int(event_re.groupdict()['branch'])
-        
-        gallery_file = os.path.join(gallery_path, 'P%s__T%05d__O%04d__B%02d.jpg' % (pos_name, t, o , b))
-        
- 
-        
-            
-        if os.path.exists(gallery_file):
-            img = readImage(gallery_file)[:,:,0].view(numpy.ndarray).astype(numpy.uint8).swapaxes(1,0)
-            aspect = img.shape[0] / float(img.shape[1])
-            offset = x_max*aspect
-            
-            new_axes.imshow(img, extent=(x_min, x_max, 0, offset), cmap=pylab.get_cmap('gray'))
-            
-        for t in xrange(len(time)):
-            
-            if t >= len(time)-1:
-                w = time[1]
-            else:
-                w = time[t+1]-time[t]
-            new_axes.add_patch(pylab.Rectangle((time[t], offset),
-                                                  w,
-                                                  offset*1.1, 
-                                                  fill=True, 
-                                                  color=class_colors[class_labels[t]]))
-            
-        new_axes.set_ylim(0, offset*1.1)
-        new_axes.set_xlim(0, x_max)
-        new_axes.set_xlabel("Time [min]")
-        self.axes.set_xlabel("")
+            print 'main', ag.get_position()
+            print 'gallery', ag.get_position()
 
-        self.axes.set_xticklabels([])
-        new_axes.set_yticklabels([])   
-        new_axes.set_yticks([])
+        
+    
+    def add_gallery_deco(self, event_id, pos_name, path_in, time, class_labels, class_colors, channel=('primary', 'secondary')):     
+        for j, c in enumerate(channel):    
+            if 'gallery__%s' % c not in self.add_axes:
+                bb = self.axes.get_position()
+                self.axes.set_position((bb.x0, bb.y0+0.2*len(channel), bb.width, bb.height-0.2*len(channel))) 
+                new_axes = self.figure.add_axes((bb.x0, bb.y0, bb.width, 0.2*len(channel)))
+                new_axes.set_position((bb.x0, bb.y0, bb.width, 0.2*len(channel)))
+                self.add_axes['gallery__%s' % c] = new_axes
+            else:
+                new_axes = self.add_axes['gallery__%s' % c]
+            
+            #self.figure.show()
+                
+            x_min = 0
+            x_max = time[-1]+time[1]
+                
+            gallery_path = os.path.join(path_in, pos_name, 'gallery', c) 
+            event_re = re.search(r"^T(?P<time>\d+)_O(?P<obj>\d+)_B(?P<branch>\d+)", event_id)
+            t_ = int(event_re.groupdict()['time'])
+            o_ = int(event_re.groupdict()['obj'])
+            b_ = int(event_re.groupdict()['branch'])
+            
+            
+            gallery_file = os.path.join(gallery_path, 'P%s__T%05d__O%04d__B%02d.jpg' % (pos_name, t_, o_ , b_))
+            
+            if os.path.exists(gallery_file):
+                img = readImage(gallery_file)[:,:,0].view(numpy.ndarray).astype(numpy.uint8).swapaxes(1,0)
+                aspect = img.shape[0] / float(img.shape[1])
+                offset = x_max*aspect
+                
+                new_axes.imshow(img, extent=(x_min, x_max, 0, offset), cmap=pylab.get_cmap('gray'))
+                new_axes.set_yticklabels([])
+                if j == 0:
+                    new_axes.set_xlabel("")
+                    new_axes.set_xticklabels([])
+                    new_axes.set_xticks([])
+                    
+                    for t in xrange(len(time)):
+                        if t >= len(time)-1:
+                            w = time[1]
+                        else:
+                            w = time[t+1]-time[t]
+                        new_axes.add_patch(pylab.Rectangle((time[t], offset),
+                                                              w,
+                                                              offset*1.3, 
+                                                              fill=True, 
+                                                              color=class_colors[class_labels[t]]))
+                    new_axes.set_ylim(0, offset*1.3)
+                    new_axes.set_xlim(0, x_max)
+                else:
+                    new_axes.set_ylim(0, offset)
+                    new_axes.set_xlim(0, x_max)
+                    new_axes.set_xlabel("Time [min]")
+                    
+                
+            
+            self.axes.set_xlabel("")
+            self.axes.set_xticks([])
+    
+            
+            new_axes.set_yticklabels([])   
+            new_axes.set_yticks([])
+        self.set_positions()
             
 
 class IBBAnalysis(object):
@@ -122,7 +151,6 @@ class IBBAnalysis(object):
                        group_by=0,
                        color_sort_by='gene_symbol',
                        timeing_ylim_range=(1,100)
-                       
                        ):
         self.plate_name = plate_name
         self.path_in = path_in
@@ -137,13 +165,13 @@ class IBBAnalysis(object):
         self.ibb_onset_factor_threshold = ibb_onset_factor_threshold
         self.nebd_onset_factor_threshold = nebd_onset_factor_threshold
         
-        print 'ratio', self.ibb_ratio_signal_threshold
-        print 'range', self.ibb_range_signal_threshold
         self.single_plot = single_plot
         self.single_plot_ylim_range = single_plot_ylim_range
         self.group_by = group_by
         self.color_sort_by = color_sort_by
         self.timeing_ylim_range = timeing_ylim_range
+        
+        self.class__label_selectoor = 'class__label'
     
     def _readScreen(self):
         #self.plate = Plate.load(self.path_in, self.plate_name)
@@ -154,7 +182,7 @@ class IBBAnalysis(object):
             self._readScreen()
             grouped_positions = self.plate.get_events()
             for group_name in grouped_positions:
-                self._plotter[group_name] = GalleryDecorationPlotter((10,5))
+                self._plotter[group_name] = GalleryDecorationPlotter((15, 5))
                 self._plotter[group_name].open(os.path.join(self.path_out, 'ibb__PL%s__%s__single_plots.pdf' % (self.plate_name, group_name)))
             self._run(self.plate_name, grouped_positions)
         finally:
@@ -208,8 +236,6 @@ class IBBAnalysis(object):
                                                     nebd_onset_frame, 
                                                     prophase_last_frame,
                                                     event_id, pos.position)
-                            
-                                     
                                                    
         self._plot_valid_bars(result)
         self._plot(result, "nebd_to_sep_time")
@@ -238,13 +264,10 @@ class IBBAnalysis(object):
                     
             self._plot_single_class_timing(data, names, class_name, self.class_colors[class_index], f_handle)
             
-                
-            
         f_handle.close()
             
-    
     def _plot_single_class_timing(self, data, names, class_name, class_color, f_handle):
-        fig = pylab.figure()
+        fig = pylab.figure(figsize=(len(data), 10))
         ax = fig.add_subplot(111)
         ax.bar(range(len(data)), map(numpy.mean, numpy.array(data)),
                width=0.6, 
@@ -253,15 +276,13 @@ class IBBAnalysis(object):
                ecolor='k',
                )
         ax.set_xticks(range(len(data)))
-        ax.set_xticklabels(names)
+        xtick_labels = ax.set_xticklabels(names)
+        pylab.setp(xtick_labels, rotation=45,  horizontalalignment='right', fontsize=12)
         ax.set_title(class_name)
         ax.set_ylabel('Time [min]')
         ax.set_ylim(*self.timeing_ylim_range)
-        fig.savefig(f_handle, format='pdf')
+        fig.savefig(f_handle, format='pdf', dpi=600)
         
-                                
-                
-    
     def _analyze_ibb(self, h2b, ibb_ratio):
         rejection_code, separation_frame = self._find_separation_event(h2b)
         if rejection_code != IBBAnalysis.REJECTION.OK:
@@ -285,11 +306,10 @@ class IBBAnalysis(object):
             return rejection_code, None
         
         return IBBAnalysis.REJECTION.OK, (separation_frame, ibb_onset_frame, nebd_onset_frame, prophase_last_frame)
-              
-              
+                            
     def _find_prophase_last_frame(self, h2b, nebd_onset_frame):
         for x in reversed(range(nebd_onset_frame+2)):
-            label = h2b['class__label'][x]
+            label = h2b[self.plate.class__label_selectoor][x]
             if label == 1:
                 return IBBAnalysis.REJECTION.OK, x
         return IBBAnalysis.REJECTION.BY_NEBD_ONSET, None
@@ -304,12 +324,12 @@ class IBBAnalysis(object):
             return IBBAnalysis.REJECTION.OK, separation_frame[0]
         
         # try first early ana phase
-        separation_frame = h2b['class__label'].nonzero()[0]
+        separation_frame = h2b[self.plate.class__label_selectoor].nonzero()[0]
         if len(separation_frame) == 1:
             return IBBAnalysis.REJECTION.OK, separation_frame[0]
         
         # try meta -> late ana transition
-        transition = ''.join(map(str, h2b['class__label'])).find('46') + 1
+        transition = ''.join(map(str, h2b[self.plate.class__label_selectoor])).find('46') + 1
         if transition > 1:
             return IBBAnalysis.REJECTION.OK, transition
         
@@ -322,7 +342,6 @@ class IBBAnalysis(object):
         
         return IBBAnalysis.REJECTION.OK 
             
-    
     def _find_ibb_onset_event(self, ibb_ratio, separation_frame):
         ibb_onset_frame = separation_frame - 1
         while True:
@@ -340,7 +359,7 @@ class IBBAnalysis(object):
         return IBBAnalysis.REJECTION.OK, ibb_onset_frame
         
     def _find_class_timing(self, h2b, time_lapse):
-        class_labels = h2b['class__label']
+        class_labels = h2b[self.plate.class__label_selectoor]
         
         class_timing = {}
         for c in class_labels:
@@ -352,11 +371,7 @@ class IBBAnalysis(object):
             class_timing[c] = class_timing[c] * time_lapse / 60.0
             
         return class_timing
-            
-        
-        
-         
-    
+   
     def _find_nebd_onset_event(self, ibb_ratio, separation_frame):
         nebd_onset_frame = ibb_ratio.argmin() + 1
         
@@ -374,6 +389,7 @@ class IBBAnalysis(object):
         if nebd_onset_frame is None:
             return IBBAnalysis.REJECTION.BY_NEBD_ONSET, None
         
+        nebd_onset_frame += 1
         return IBBAnalysis.REJECTION.OK, nebd_onset_frame
         
     def _plot_single_event(self, group_name, ratio, h2b, 
@@ -399,9 +415,7 @@ class IBBAnalysis(object):
         axes.plot([time[ibb_onset_frame], time[ibb_onset_frame]], [ya, yb], 'g', label="Ibb onset",)
         axes.plot([time[nebd_onset_frame], time[nebd_onset_frame]], [ya, yb], 'b', label="Nebd",)
         axes.plot([time[prophase_last_frame], time[prophase_last_frame]], [ya, yb], 'y', label="Pro",)
-        
-        
-            
+           
         axes.set_ylim(ya, yb)
         axes.set_xlim(0, time[-1]+time[1])
         axes.set_title("%s - %s" % (group_name, event_id))
@@ -413,7 +427,7 @@ class IBBAnalysis(object):
         axes.legend(loc="lower right", prop={'size': 6})
         axes.grid('on')
         
-        class_labels = h2b['class__label']
+        class_labels = h2b[self.plate.class__label_selectoor]
         
         self._plotter[group_name].add_gallery_deco(event_id, pos_name, self.path_in, time, class_labels, self.class_colors)
         
@@ -462,7 +476,7 @@ class IBBAnalysis(object):
             data.append(result[group_name]['valid'])
             names.append(group_name)
             
-        self._plot_multi_bars(data, bar_labels, bar_colors, names, show_number=True)
+        self._plot_multi_bars(data, bar_labels, bar_colors, names, show_number=False)
         
     def _plot_multi_bars(self, data, bar_labels, bar_colors, names, show_number=True): 
         """plot_valid_bars([(10, 4, 1), (11,3,2), (7,6, 4), (14,3,1)], ('valied', 'bad', 'distgusting'), ('r', 'g', 'b'), ('G1', 'G2', 'G3', 'G4','G5'))
@@ -473,13 +487,13 @@ class IBBAnalysis(object):
                 height = rect.get_height()
                 rect.get_axes().text(rect.get_x()+rect.get_width()/2., 1.05*height, '%d'%int(height),
                         ha='center', va='bottom')
-        fig = pylab.figure()
+        fig = pylab.figure(figsize=(len(data),8))
         ax = fig.add_subplot(111)
     
         data_t = zip(*data)
         N = len(data)
         ind = numpy.arange(N).astype(numpy.float32)    
-        width = 0.9 / len(data[0])  
+        width = 0.8 / len(data[0])  
     
         for i, d in enumerate(data_t):
             print ind, d
@@ -489,8 +503,9 @@ class IBBAnalysis(object):
             ind += width
             
         ax.set_ylabel('Count')
-        ax.set_xticks(numpy.arange(N).astype(numpy.float32)+0.5    )
-        ax.set_xticklabels( names )
+        ax.set_xticks(numpy.arange(N).astype(numpy.float32)+0.5)
+        xtick_labels = ax.set_xticklabels(names)
+        pylab.setp(xtick_labels, rotation=45, horizontalalignment='right', fontsize=12)
         ax.legend(loc=1)
         
         fig.savefig(os.path.join(self.path_out, '_valid_events.pdf'), format='pdf')
@@ -499,7 +514,7 @@ class IBBAnalysis(object):
     
         
     def _boxplot(self, data_list, names, colors):
-        fig = pylab.figure(figsize=(10,6))
+        fig = pylab.figure(figsize=(len(data_list),10))
         fig.canvas.set_window_title('Ibb Analysis')
         ax1 = fig.add_subplot(111)
         bp = pylab.boxplot(data_list, patch_artist=True)
@@ -510,7 +525,7 @@ class IBBAnalysis(object):
             pylab.setp(b, facecolor=rgb_to_hex(*c))
         
         xtickNames = pylab.setp(ax1, xticklabels=names)
-        pylab.setp(xtickNames, rotation=45, fontsize=12)
+        pylab.setp(xtickNames, rotation=45, horizontalalignment='right', fontsize=12)
         pylab.ylim(*self.timeing_ylim_range)
         fig.savefig(os.path.join(self.path_out, '_timing_ibb_events.pdf'), format='pdf')
     
@@ -554,6 +569,7 @@ class Plate(object):
         self._positions = {}
         self.group_by = group_by
         self.readEvents()
+        self.class__label_selectoor = 'class__label'
         
     def __str__(self):
         res = ""
@@ -573,7 +589,7 @@ class Plate(object):
         
         for pos_idx, pos_name in enumerate(self.mapping['position']):
             if isinstance(pos_name, int):
-                pos_name = '%03d' % pos_name
+                pos_name = '%04d' % pos_name
                     
             if pos_name not in self.pos_list:
 #                raise RuntimeError("Position from Mapping file %s not found in in path %s" % (pos_name, self.path_in))
@@ -590,6 +606,15 @@ class Plate(object):
                 continue
             
             print "Reading Events for position '%s' (%d files)" % (pos_name, len(event_file_list))
+            
+            hmm_correction_available = False
+            if '_hmm' in event_file_list:
+                hmm_correction_available = True
+                event_file_list.remove('_hmm')
+                
+            
+            
+            k = 0
             for event_file in event_file_list:
                 res = self.EVENT_REGEXP.search(event_file)
                 if res is None:
@@ -610,7 +635,7 @@ class Plate(object):
                     
                     if pos_name not in self._positions.keys():
                         self._positions[pos_name] = Position(plate=self.plate_id,
-                                                            position='%03d' % self.mapping[pos_idx]['position'],
+                                                            position='%04d' % self.mapping[pos_idx]['position'],
                                                             well=self.mapping[pos_idx]['well'],
                                                             site=self.mapping[pos_idx]['site'],
                                                             row=self.mapping[pos_idx]['row'],
@@ -628,7 +653,29 @@ class Plate(object):
                         self._positions[pos_name][event_id][channel] = {}
                         
                     filename = os.path.join(event_path, event_file)
-                    self._positions[pos_name][event_id][channel][region] = numpy.recfromcsv(filename, delimiter='\t') 
+                    self._positions[pos_name][event_id][channel][region] = numpy.recfromcsv(filename, delimiter='\t')
+                    
+                    if hmm_correction_available and region == 'primary':
+                        
+                        filename = os.path.join(event_path, '_hmm', event_file)
+                        if not os.path.exists(filename):
+                            raise RuntimeError('HMM correction folder is there but event file not found %s' % filename)
+                        class__label__hmm = numpy.recfromcsv(filename, delimiter='\t')['class__b__label']
+                        self._positions[pos_name][event_id][channel][region] = \
+                            rec_append_fields(self._positions[pos_name][event_id][channel][region], 
+                                              'class__label__hmm', 
+                                              class__label__hmm, 
+                                              numpy.uint8)
+                        
+                        self.class__label_selectoor = 'class__label__hmm'
+                        
+                        
+                    
+                    
+                    if k > 4:
+                        break
+                    k += 1
+                    
                     
                            
     def _readMappingFile(self):
