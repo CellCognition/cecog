@@ -33,7 +33,6 @@ class EventPlotterPdf(object):
         self.add_axes = {}
         
     def clear(self):
-        self.figure.clf()
         self.axes.cla()
         for a in self.add_axes.values():
             a.cla()
@@ -44,6 +43,7 @@ class EventPlotterPdf(object):
     def close(self):
         if self._pdf_handle is not None:
             self._pdf_handle.close()
+            self._pdf_handle = None
     
     def save(self):
         self.figure.savefig(self._pdf_handle, format='pdf')
@@ -207,7 +207,7 @@ class IBBAnalysis(object):
             
             for pos in pos_list:
                 result[group_name]['positions'].append(pos)
-                print pos.position
+                print pos.position, ":::"
                 for event_idx, (event_id, event_dicts) in enumerate(sorted(pos.items())):
                     print event_idx, 
                     h2b = event_dicts['Primary']['primary']
@@ -235,7 +235,7 @@ class IBBAnalysis(object):
                         
                         result[group_name]['timing'].append(self._find_class_timing(h2b, time[1]))
                         
-                        if self.single_plot and event_idx < 11:
+                        if self.single_plot and event_idx < 30:
                             self._plot_single_event(group_name, ibb_ratio, h2b, 
                                                     separation_frame, 
                                                     ibb_onset_frame, 
@@ -243,6 +243,8 @@ class IBBAnalysis(object):
                                                     prophase_onset,
                                                     prophase_last_prophase,
                                                     event_id, pos.position)
+                print ""
+            self._plotter[group_name].close()
                                                    
         self._plot_valid_bars(result)
         self._plot(result, "nebd_to_sep_time")
