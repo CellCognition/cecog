@@ -56,11 +56,7 @@ class GalleryDecorationPlotter(EventPlotterPdf):
             ag = self.add_axes[an]
             ag.set_position((0.05, (len(self.add_axes)-i-1)*0.05+0.15, 0.9, 0.05))
             ag.set_frame_on(False)
-            
-            print 'main', ag.get_position()
-            print 'gallery', ag.get_position()
-
-        
+       
     
     def add_gallery_deco(self, event_id, pos_name, path_in, time, class_labels, class_colors, channel=('primary', 'secondary')):     
         for j, c in enumerate(channel):    
@@ -132,8 +128,8 @@ class IBBAnalysis(object):
     IBB_ZERO_CORRECTION = 0.025
     COLOR_SORT_BY = ['position', 'oligoid', 'gene_symbol', 'group']
     
-    PLOT_IDS =    ['nebd_to_sep_time', 'sep_to__ibb_time', 'prophase_to_nebd']
-    PLOT_LABELS = ['nebd_to_sep_time', 'sep_to__ibb_time', 'prophase_to_nebd']
+    PLOT_IDS =    ['nebd_to_sep_time', 'sep_to__ibb_time', 'prophase_to_nebd', 'nebd_to_last_prophase']
+    PLOT_LABELS = ['nebd_to_sep_time', 'sep_to__ibb_time', 'prophase_to_nebd','nebd_to_last_prophase']
     
     def __init__(self, path_in, 
                        path_out, 
@@ -174,8 +170,9 @@ class IBBAnalysis(object):
         self.class__label_selectoor = 'class__label'
     
     def _readScreen(self):
-        #self.plate = Plate.load(self.path_in, self.plate_name)
-        self.plate = Plate(self.plate_name, self.path_in, self.mapping_file, self.group_by)
+        self.plate = Plate.load(self.path_in, self.plate_name)
+        if self.plate is None:
+            self.plate = Plate(self.plate_name, self.path_in, self.mapping_file, self.group_by)
     
     def run(self):
         try:
@@ -198,6 +195,7 @@ class IBBAnalysis(object):
             result[group_name]['nebd_to_sep_time'] = []
             result[group_name]['sep_to__ibb_time'] = []
             result[group_name]['prophase_to_nebd'] = []
+            result[group_name]['nebd_to_last_prophase'] = []
             result[group_name]['valid'] = [0,0,0,0,0] 
             result[group_name]['timing'] = []
             
@@ -221,11 +219,12 @@ class IBBAnalysis(object):
                     
                     
                     if rejection_code == IBBAnalysis.REJECTION.OK:
-                        separation_frame, ibb_onset_frame, nebd_onset_frame, prophase_last_frame = ibb_result
+                        separation_frame, ibb_onset_frame, nebd_onset_frame, prophase_onset, prophase_last_prophase = ibb_result
                         
                         result[group_name]['nebd_to_sep_time'].append(time[separation_frame] - time[nebd_onset_frame])
                         result[group_name]['sep_to__ibb_time'].append(time[ibb_onset_frame] - time[separation_frame])
-                        result[group_name]['prophase_to_nebd'].append(time[nebd_onset_frame] - time[prophase_last_frame])
+                        result[group_name]['prophase_to_nebd'].append(time[nebd_onset_frame] - time[prophase_onset])
+                        result[group_name]['prophase_to_nebd'].append(time[nebd_onset_frame] - time[prophase_last_prophase])
                         
                         result[group_name]['timing'].append(self._find_class_timing(h2b, time[1]))
                         
@@ -234,7 +233,8 @@ class IBBAnalysis(object):
                                                     separation_frame, 
                                                     ibb_onset_frame, 
                                                     nebd_onset_frame, 
-                                                    prophase_last_frame,
+                                                    prophase_onset,
+                                                    prophase_last_prophase,
                                                     event_id, pos.position)
                                                    
         self._plot_valid_bars(result)
@@ -301,17 +301,36 @@ class IBBAnalysis(object):
         if rejection_code != IBBAnalysis.REJECTION.OK:
             return rejection_code, None
         
+        rejection_code, prophase_onset = self._find_prophase_onset(h2b, nebd_onset_frame)
+        if rejection_code != IBBAnalysis.REJECTION.OK:
+            return rejection_code, None
+        
         rejection_code, prophase_last_frame = self._find_prophase_last_frame(h2b, nebd_onset_frame)
         if rejection_code != IBBAnalysis.REJECTION.OK:
             return rejection_code, None
         
-        return IBBAnalysis.REJECTION.OK, (separation_frame, ibb_onset_frame, nebd_onset_frame, prophase_last_frame)
+        return IBBAnalysis.REJECTION.OK, (separation_frame, ibb_onset_frame, nebd_onset_frame, prophase_onset, prophase_last_frame)
                             
-    def _find_prophase_last_frame(self, h2b, nebd_onset_frame):
+    def _find_prophase_onset(self, h2b, nebd_onset_frame):
         for x in reversed(range(nebd_onset_frame+2)):
             label = h2b[self.plate.class__label_selectoor][x]
             if label == 1:
+                return IBBAnalysis.REJECTION.OK, x + 1
+        return IBBAnalysis.REJECTION.BY_NEBD_ONSET, None
+    
+    def _find_prophase_last_frame(self, h2b, nebd_onset_frame):
+        for x in range(nebd_onset_frame, len(h2b)-1):
+            label = h2b[self.plate.class__label_selectoor][x]
+            label_next = h2b[self.plate.class__label_selectoor][x+1]
+            if label == 2 and label_next != 2:
+                return IBBAnalysis.REJECTION.OK, x+1
+            
+        for x in range(nebd_onset_frame, 1, -1):
+            label = h2b[self.plate.class__label_selectoor][x]
+            label_next = h2b[self.plate.class__label_selectoor][x-1]
+            if label_next == 2 and label != 2:
                 return IBBAnalysis.REJECTION.OK, x
+            
         return IBBAnalysis.REJECTION.BY_NEBD_ONSET, None
     
     def _get_relative_time(self, h2b, frame_idx):
@@ -396,7 +415,8 @@ class IBBAnalysis(object):
                            separation_frame, 
                            ibb_onset_frame, 
                            nebd_onset_frame,
-                           prophase_last_frame, 
+                           prophase_onset, 
+                           prophase_last_frame,
                            event_id, pos_name):
         
         ya, yb = self.single_plot_ylim_range
@@ -411,10 +431,11 @@ class IBBAnalysis(object):
         time /= 60.0
         
         axes.plot(time, ratio, 'k.-', label="Ibb ratio", axes=axes)
-        axes.plot([time[separation_frame], time[separation_frame]], [ya, yb], 'r', label="Sep",)
-        axes.plot([time[ibb_onset_frame], time[ibb_onset_frame]], [ya, yb], 'g', label="Ibb onset",)
-        axes.plot([time[nebd_onset_frame], time[nebd_onset_frame]], [ya, yb], 'b', label="Nebd",)
-        axes.plot([time[prophase_last_frame], time[prophase_last_frame]], [ya, yb], 'y', label="Pro",)
+        axes.plot([time[separation_frame], time[separation_frame]], [ya, yb], 'r', label="Split",)
+        axes.plot([time[ibb_onset_frame], time[ibb_onset_frame]], [ya, yb], 'g', label="IBB Onset",)
+        axes.plot([time[nebd_onset_frame], time[nebd_onset_frame]], [ya, yb], 'b', label="NEBD",)
+        axes.plot([time[prophase_onset], time[prophase_onset]], [ya, yb/2.0], 'y', label="Pro Onset",)
+        axes.plot([time[prophase_last_frame], time[prophase_last_frame]], [ya, yb/2.0], 'c', label="Pro End",)
            
         axes.set_ylim(ya, yb)
         axes.set_xlim(0, time[-1]+time[1])
@@ -541,6 +562,8 @@ class Position(dict):
                         group):
         dict.__init__(self)
         self.plate = plate
+        if isinstance(position, int):
+            position = '%04d' % position
         self.position = position
         self.well = well
         self.site = site
@@ -635,13 +658,13 @@ class Plate(object):
                     
                     if pos_name not in self._positions.keys():
                         self._positions[pos_name] = Position(plate=self.plate_id,
-                                                            position='%04d' % self.mapping[pos_idx]['position'],
+                                                            position=self.mapping[pos_idx]['position'],
                                                             well=self.mapping[pos_idx]['well'],
                                                             site=self.mapping[pos_idx]['site'],
                                                             row=self.mapping[pos_idx]['row'],
                                                             column=self.mapping[pos_idx]['column'],
                                                             gene_symbol=self.mapping[pos_idx]['gene_symbol'],
-                                                            oligoid=self.mapping[pos_idx]['oligoid'],
+                                                            oligoid=self.mapping[pos_idx]['sirna_id'],
                                                             group=self.mapping[pos_idx]['group'], 
                                                             )
                         
@@ -672,9 +695,10 @@ class Plate(object):
                         
                     
                     
-                    if k > 4:
-                        break
-                    k += 1
+#                    if k > 4:
+#                        break
+#                    k += 1
+        self.save()
                     
                     
                            
@@ -686,6 +710,7 @@ class Plate(object):
         
         if len(mapping) == 0:
             raise RuntimeError("Mapping file is empty %s" % self.mapping_file)
+        print 'Found mapping file', self.mapping_file
         
         return mapping
         
@@ -721,7 +746,9 @@ class Plate(object):
                 
         return res
     
-    def save(self):
+    def save(self, overwrite=False):
+        if os.path.exists(os.path.join(self.path_in, self.plate_id + ".pkl")) and not overwrite:
+            return
         f = open(os.path.join(self.path_in, self.plate_id + ".pkl"), 'w')
         pickle.dump(self, f)
         f.close()
@@ -729,10 +756,13 @@ class Plate(object):
     
     @staticmethod
     def load(path_in, plate_id):
-        f = open(os.path.join(path_in, plate_id + ".pkl"), 'r')
-        plate = pickle.load(f)
-        f.close()
-        return plate
+        try:
+            f = open(os.path.join(path_in, plate_id + ".pkl"), 'r')
+            plate = pickle.load(f)
+            f.close()
+            return plate
+        except:
+            return None
                
 def test_plate():
     Plate("plate_name", r"C:\Users\sommerc\data\cecog\Analysis\H2b_aTub_MD20x_exp911_2_channels_zip\analyzed", 
