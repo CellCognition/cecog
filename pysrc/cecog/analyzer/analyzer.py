@@ -1185,8 +1185,8 @@ class CellAnalyzer(PropertyManager):
                 
     def purge(self, features=None):
         for oChannel in self._channel_registry.values():
-            if not features is None and oChannel.NAME in features:
-                channelFeatures = features[oChannel.NAME]
+            if not features is None and oChannel.strChannelId in features:
+                channelFeatures = features[oChannel.strChannelId]
             else:
                 channelFeatures = None
             oChannel.purge(features=channelFeatures)
