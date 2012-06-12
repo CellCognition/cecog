@@ -1231,10 +1231,12 @@ class CellAnalyzer(PropertyManager):
                     oChannel = self._channel_registry[channel_name]
                     if 'raw' in dctChannelInfo:
                         strHexColor, fAlpha = dctChannelInfo['raw']
-                        imgRaw = oChannel.meta_image.image
-                        imgCon = ccore.Image(imgRaw.width, imgRaw.height)
-                        imgCon.init(0)
-                        lstImages.append((imgCon, strHexColor, 1.0))
+                        ### Flip this and use drawContours with fill option enables to get black background 
+#                        imgRaw = oChannel.meta_image.image
+#                        imgCon = ccore.Image(imgRaw.width, imgRaw.height)
+#                        imgCon.init(0)
+#                        lstImages.append((imgCon, strHexColor, 1.0))
+                        lstImages.append((oChannel.meta_image.image, strHexColor, 1.0))
 
                     if 'contours' in dctChannelInfo:
                         # transform the old dict-style to the new tuple-style,
@@ -1271,7 +1273,9 @@ class CellAnalyzer(PropertyManager):
                                     imgCon2 = ccore.Image(imgRaw.width, imgRaw.height)
                                     for iLabel, lstObjIds in dctLabels.iteritems():
                                         imgCon = ccore.Image(imgRaw.width, imgRaw.height)
-                                        oContainer.drawContoursByIds(lstObjIds, 255, imgCon, bThickContours, True)
+                                         ### Flip this and use drawContours with fill option enables to get black background 
+                                        oContainer.drawContoursByIds(lstObjIds, 255, imgCon, bThickContours, False)
+#                                        oContainer.drawContoursByIds(lstObjIds, 255, imgCon, bThickContours, True)
                                         lstImages.append((imgCon, dctColors[iLabel], fAlpha))
 
                                         if type(bShowLabels) == types.BooleanType and bShowLabels:
