@@ -207,7 +207,7 @@ class IBBAnalysis(object):
             
             for pos in pos_list:
                 result[group_name]['positions'].append(pos)
-                print pos.position, ":::"
+                print pos.position, ":::",
                 for event_idx, (event_id, event_dicts) in enumerate(sorted(pos.items())):
                     print event_idx, 
                     h2b = event_dicts['Primary']['primary']
@@ -231,7 +231,7 @@ class IBBAnalysis(object):
                         result[group_name]['nebd_to_sep_time'].append(time[separation_frame] - time[nebd_onset_frame])
                         result[group_name]['sep_to__ibb_time'].append(time[ibb_onset_frame] - time[separation_frame])
                         result[group_name]['prophase_to_nebd'].append(time[nebd_onset_frame] - time[prophase_onset])
-                        result[group_name]['prophase_to_nebd'].append(time[nebd_onset_frame] - time[prophase_last_prophase])
+                        result[group_name]['nebd_to_last_prophase'].append(time[nebd_onset_frame] - time[prophase_last_prophase])
                         
                         result[group_name]['timing'].append(self._find_class_timing(h2b, time[1]))
                         
@@ -244,13 +244,14 @@ class IBBAnalysis(object):
                                                     prophase_last_prophase,
                                                     event_id, pos.position)
                 print ""
-            self._plotter[group_name].close()
+            if group_name in self._plotter:
+                self._plotter[group_name].close()
                                                    
         self._plot_valid_bars(result)
         self._plot(result, "nebd_to_sep_time")
         self._plot(result, "sep_to__ibb_time")
         self._plot(result, "prophase_to_nebd")
-        self._plot(result, "prophase_to_nebd")
+        self._plot(result, "nebd_to_last_prophase")
         self._plot_timing(result)
         
     def _plot_timing(self, result):
