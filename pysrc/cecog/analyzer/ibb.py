@@ -2,7 +2,7 @@ import numpy
 import csv
 import matplotlib as mpl
 mpl.use('QT4Agg')
-from matplotlib.mlab import rec_append_fields
+from matplotlib.mlab import rec_append_fields, FormatFloat, rec2csv
 import pylab
 import re
 import os
@@ -158,7 +158,7 @@ class IBBAnalysis(object):
         self.path_out = path_out
         self.mapping_file = mapping_file
         self.class_colors = class_colors
-        self.class_names = class_colors
+        self.class_names = class_names
         self._plotter = {}
         
         self.ibb_ratio_signal_threshold = ibb_ratio_signal_threshold
@@ -172,7 +172,7 @@ class IBBAnalysis(object):
         self.color_sort_by = color_sort_by
         self.timeing_ylim_range = timeing_ylim_range
         
-        self.class__label_selectoor = 'class__label'
+        self.class_label_selector = 'class__label'
     
     def _readScreen(self):
         self.plate = Plate.load(self.path_in, self.plate_name)
@@ -246,6 +246,12 @@ class IBBAnalysis(object):
                 print ""
             if group_name in self._plotter:
                 self._plotter[group_name].close()
+                
+        self.export_class_timing(result)
+        self.export_timing(result, "nebd_to_sep_time")
+        self.export_timing(result, "sep_to__ibb_time")
+        self.export_timing(result, "prophase_to_nebd")
+        self.export_timing(result, "nebd_to_last_prophase")
                                                    
         self._plot_valid_bars(result)
         self._plot(result, "nebd_to_sep_time")
@@ -253,6 +259,62 @@ class IBBAnalysis(object):
         self._plot(result, "prophase_to_nebd")
         self._plot(result, "nebd_to_last_prophase")
         self._plot_timing(result)
+        
+    def export_class_timing(self, result):
+        for class_index, class_name in sorted(self.class_names.items()):
+            filename = os.path.join(self.path_out, '_class_timing_%02d_%s.txt' % (class_index, class_name)  )
+            data = []
+            names = []
+        
+            for group_name in sorted(result):
+                group_data = []
+                names.append(group_name)
+                tmp_data = result[group_name]['timing']
+                for class_counts in tmp_data:
+                    if class_index in class_counts:
+                        tmp = class_counts[class_index]
+                        if isinstance(tmp, list):
+                            group_data.extend(class_counts[class_index])
+                        else:
+                            group_data.append(class_counts[class_index])
+                            
+                data.append(group_data)
+                    
+            self._export_data_list(filename, data, names)
+
+    def _export_data_list(self, filename, data, names):
+
+        class FormatFloatNaN(FormatFloat):
+            def tostr(self, val):
+                result = FormatFloat.tostr(self, val)
+                if result == 'nan':
+                    return ''
+                return result
+            
+        dtype = [(n, 'float') for n in names]    
+        fnan = FormatFloatNaN()
+        formatd = dict([(n, fnan) for n in names])
+            
+        data_t = numpy.array(map(None, *data), dtype=dtype)
+        mpl.mlab.rec2csv(data_t, filename, formatd=formatd, delimiter='\t')
+        
+        
+    
+    def export_timing(self, result, id_):
+        data = []
+        names = []
+
+        for group_name in sorted(result):
+            
+            data.append(numpy.array(result[group_name][id_])/60.0)
+            if isinstance(group_name, int):
+                names.append("%04d" % group_name)
+            else:
+                names.append("%s" % group_name)
+
+        filename = os.path.join(self.path_out, '_timing_ibb_events_%s.txt' % id_)
+        self._export_data_list(filename, data, names)
+
         
     def _plot_timing(self, result):
         f_handle = PdfPages(os.path.join(self.path_out, '_class_timing.pdf' ))
@@ -280,7 +342,7 @@ class IBBAnalysis(object):
         f_handle.close()
             
     def _plot_single_class_timing(self, data, names, class_name, class_color, f_handle):
-        fig = pylab.figure(figsize=(len(data), 10))
+        fig = pylab.figure(figsize=(len(data)+5, 10))
         ax = fig.add_subplot(111)
         ax.bar(range(len(data)), map(numpy.mean, numpy.array(data)),
                width=0.6, 
@@ -294,7 +356,7 @@ class IBBAnalysis(object):
         ax.set_title(class_name)
         ax.set_ylabel('Time [min]')
         ax.set_ylim(*self.timeing_ylim_range)
-        fig.savefig(f_handle, format='pdf', dpi=600)
+        fig.savefig(f_handle, format='pdf')
         
     def _analyze_ibb(self, h2b, ibb_ratio):
         rejection_code, separation_frame = self._find_separation_event(h2b)
@@ -326,21 +388,21 @@ class IBBAnalysis(object):
                             
     def _find_prophase_onset(self, h2b, nebd_onset_frame):
         for x in reversed(range(nebd_onset_frame+2)):
-            label = h2b[self.plate.class__label_selectoor][x]
+            label = h2b[self.plate.class_label_selector][x]
             if label == 1:
                 return IBBAnalysis.REJECTION.OK, x + 1
         return IBBAnalysis.REJECTION.BY_NEBD_ONSET, None
     
     def _find_prophase_last_frame(self, h2b, nebd_onset_frame, separation_frame):
         for x in range(nebd_onset_frame, separation_frame):
-            label = h2b[self.plate.class__label_selectoor][x]
-            label_next = h2b[self.plate.class__label_selectoor][x+1]
+            label = h2b[self.plate.class_label_selector][x]
+            label_next = h2b[self.plate.class_label_selector][x+1]
             if label == 2 and label_next != 2:
                 return IBBAnalysis.REJECTION.OK, x+1
             
         for x in range(nebd_onset_frame, 1, -1):
-            label = h2b[self.plate.class__label_selectoor][x]
-            label_next = h2b[self.plate.class__label_selectoor][x-1]
+            label = h2b[self.plate.class_label_selector][x]
+            label_next = h2b[self.plate.class_label_selector][x-1]
             if label_next == 2 and label != 2:
                 return IBBAnalysis.REJECTION.OK, x
             
@@ -356,12 +418,12 @@ class IBBAnalysis(object):
             return IBBAnalysis.REJECTION.OK, separation_frame[0]
         
         # try first early ana phase
-        separation_frame = h2b[self.plate.class__label_selectoor].nonzero()[0]
+        separation_frame = h2b[self.plate.class_label_selector].nonzero()[0]
         if len(separation_frame) == 1:
             return IBBAnalysis.REJECTION.OK, separation_frame[0]
         
         # try meta -> late ana transition
-        transition = ''.join(map(str, h2b[self.plate.class__label_selectoor])).find('46') + 1
+        transition = ''.join(map(str, h2b[self.plate.class_label_selector])).find('46') + 1
         if transition > 1:
             return IBBAnalysis.REJECTION.OK, transition
         
@@ -391,7 +453,7 @@ class IBBAnalysis(object):
         return IBBAnalysis.REJECTION.OK, ibb_onset_frame
         
     def _find_class_timing(self, h2b, time_lapse):
-        class_labels = h2b[self.plate.class__label_selectoor]
+        class_labels = h2b[self.plate.class_label_selector]
         
         class_timing = {}
         for c in class_labels:
@@ -464,7 +526,7 @@ class IBBAnalysis(object):
         axes.legend(loc="lower right", prop={'size': 6})
         axes.grid('on')
         
-        class_labels = h2b[self.plate.class__label_selectoor]
+        class_labels = h2b[self.plate.class_label_selector]
         
         self._plotter[group_name].add_gallery_deco(event_id, pos_name, self.path_in, time, class_labels, self.class_colors)
         
@@ -528,7 +590,7 @@ class IBBAnalysis(object):
                 height = rect.get_height()
                 rect.get_axes().text(rect.get_x()+rect.get_width()/2., 1.05*height, '%d'%int(height),
                         ha='center', va='bottom')
-        fig = pylab.figure(figsize=(len(data),8))
+        fig = pylab.figure(figsize=(len(data)+5,10))
         ax = fig.add_subplot(111)
     
         data_t = zip(*data)
@@ -553,7 +615,7 @@ class IBBAnalysis(object):
         
     
     def _barplot(self, data_list, names, colors, id_, neg_ctrl):
-        fig = pylab.figure(figsize=(len(data_list)/3, 20))
+        fig = pylab.figure(figsize=(len(data_list)/3+5, 20))
         ax1 = fig.add_subplot(111)
         ax1.set_title('IBB Analysis %s' % self.PLOT_LABELS[id_])
         ax1.bar(range(len(data_list)), map(numpy.mean, numpy.array(data_list)),
@@ -580,7 +642,7 @@ class IBBAnalysis(object):
         fig.savefig(os.path.join(self.path_out, '_timing_ibb_events_%s_bar.pdf' % id_), format='pdf')
         
     def _boxplot(self, data_list, names, colors, id_, neg_ctrl):
-        fig = pylab.figure(figsize=(len(data_list)/3, 20))
+        fig = pylab.figure(figsize=(len(data_list)/3+5, 20))
         ax1 = fig.add_subplot(111)
         ax1.set_title('IBB Analysis %s' % self.PLOT_LABELS[id_])
         bp = pylab.boxplot(data_list, patch_artist=True)
@@ -622,15 +684,18 @@ class Position(dict):
         dict.__init__(self)
         self.plate = plate
         if isinstance(position, int):
-            position = '%04d' % position
-        self.position = position
-        self.well = well
+            position = '%03d' % position
+        self.position = str(position)
+        self.well = str(well)
         self.site = site
         self.row = row
         self.column = column
-        self.gene_symbol = gene_symbol
-        self.oligoid = oligoid
-        self.group = group  
+        self.gene_symbol = str(gene_symbol)
+        self.oligoid = str(oligoid)
+        self.group = str(group)  
+        
+        
+        
         
     def __str__(self):
         return "p %s, o %s, g %s, g %s" % ( self.position, self.oligoid, self.gene_symbol, self.group)
@@ -645,13 +710,14 @@ class Plate(object):
     EVENT_REGEXP = re.compile(r"features__P(?P<pos>\d+|[A-Z]\d+_\d+)__T(?P<time>\d+)"
                                "__O(?P<obj>\d+)__B(?P<branch>\d+)__C(?P<channel>.+?)__R(?P<region>.*)\.txt")
     def __init__(self, plate_id, path_in, mapping_file, group_by=0):
+        self.class_label_selector = 'class__label'
         self.plate_id = plate_id
         self.path_in = path_in
         self.mapping_file = mapping_file
         self._positions = {}
         self.group_by = group_by
         self.readEvents()
-        self.class__label_selectoor = 'class__label'
+        
         
     def __str__(self):
         res = ""
@@ -671,7 +737,7 @@ class Plate(object):
         
         for pos_idx, pos_name in enumerate(self.mapping['position']):
             if isinstance(pos_name, int):
-                pos_name = '%04d' % pos_name
+                pos_name = '%03d' % pos_name
                     
             if pos_name not in self.pos_list:
 #                raise RuntimeError("Position from Mapping file %s not found in in path %s" % (pos_name, self.path_in))
@@ -716,6 +782,13 @@ class Plate(object):
                 if branch == 1:
                     
                     if pos_name not in self._positions.keys():
+                        if 'oligoid' in self.mapping.dtype.fields.keys():
+                            self.oligo_header_name = 'oligoid'
+                        elif 'sirna_id' in self.mapping.dtype.fields.keys():
+                            self.oligo_header_name = 'sirna_id'
+                        else:
+                            raise RuntimeError('Mapping file has no header: oligoid or siRNA_id missing')
+                        
                         self._positions[pos_name] = Position(plate=self.plate_id,
                                                             position=self.mapping[pos_idx]['position'],
                                                             well=self.mapping[pos_idx]['well'],
@@ -723,7 +796,7 @@ class Plate(object):
                                                             row=self.mapping[pos_idx]['row'],
                                                             column=self.mapping[pos_idx]['column'],
                                                             gene_symbol=self.mapping[pos_idx]['gene_symbol'],
-                                                            oligoid=self.mapping[pos_idx]['sirna_id'],
+                                                            oligoid=self.mapping[pos_idx][self.oligo_header_name],
                                                             group=self.mapping[pos_idx]['group'], 
                                                             )
                         
@@ -736,6 +809,13 @@ class Plate(object):
                         
                     filename = os.path.join(event_path, event_file)
                     self._positions[pos_name][event_id][channel][region] = numpy.recfromcsv(filename, delimiter='\t')
+                    a = self._positions[pos_name][event_id][channel][region]
+                    
+                    if '|S0' in map(str, map(lambda x: x[0], a.dtype.fields.values())):
+                        print pos_name, event_id, channel, region
+                        print filename
+                        raise RuntimeError('Argh')
+                        
                     
                     if hmm_correction_available and region == 'primary':
                         
@@ -749,7 +829,7 @@ class Plate(object):
                                               class__label__hmm, 
                                               numpy.uint8)
                         
-                        self.class__label_selectoor = 'class__label__hmm'
+                        self.class_label_selector = 'class__label__hmm'
                         
                         
                     
@@ -809,35 +889,35 @@ class Plate(object):
         if os.path.exists(os.path.join(self.path_in, self.plate_id + ".pkl")) and not overwrite:
             return
         f = open(os.path.join(self.path_in, self.plate_id + ".pkl"), 'w')
+        print 'Saving position...'
         pickle.dump(self, f)
         f.close()
         
     
     @staticmethod
     def load(path_in, plate_id):
-        return None
         try:
+            print 'Loading of %s...' % os.path.join(path_in, plate_id + ".pkl"),
             f = open(os.path.join(path_in, plate_id + ".pkl"), 'r')
             plate = pickle.load(f)
             f.close()
-            return plate
+            print 'done'
         except Exception as e:
-            print 'Loading of %s failed' % os.path.join(path_in, plate_id + ".pkl")
+            print 'failed'
             print str(e)
-            return None
+            plate = None
+        return plate
                
 def test_plate():
     Plate("plate_name", r"C:\Users\sommerc\data\cecog\Analysis\H2b_aTub_MD20x_exp911_2_channels_zip\analyzed", 
                             r"C:\Users\sommerc\data\cecog\Mappings\plate_name.txt")
-    print 'done'
+
     
 def test_plate_2():
     a = Plate("plate_name", r"Y:\amalie\Analysis\001872_2_longer\analyzed", 
                             r"Y:\amalie\Mappings\001872\001872.txt")
     
     a.save()
-    print 'done'
-    
     
 def test_ibb():
     class_colors = {1: '#00ff00',
