@@ -231,7 +231,7 @@ class IBBAnalysis(object):
                         result[group_name]['nebd_to_sep_time'].append(time[separation_frame] - time[nebd_onset_frame])
                         result[group_name]['sep_to__ibb_time'].append(time[ibb_onset_frame] - time[separation_frame])
                         result[group_name]['prophase_to_nebd'].append(time[nebd_onset_frame] - time[prophase_onset])
-                        result[group_name]['nebd_to_last_prophase'].append(time[nebd_onset_frame] - time[prophase_last_frame])
+                        result[group_name]['nebd_to_last_prophase'].append(time[prophase_last_frame] - time[nebd_onset_frame])
                         
                         result[group_name]['timing'].append(self._find_class_timing(h2b, time[1]))
                         
