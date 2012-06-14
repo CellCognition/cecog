@@ -226,12 +226,12 @@ class IBBAnalysis(object):
                     
                     
                     if rejection_code == IBBAnalysis.REJECTION.OK:
-                        separation_frame, ibb_onset_frame, nebd_onset_frame, prophase_onset, prophase_last_prophase = ibb_result
+                        separation_frame, ibb_onset_frame, nebd_onset_frame, prophase_onset, prophase_last_frame = ibb_result
                         
                         result[group_name]['nebd_to_sep_time'].append(time[separation_frame] - time[nebd_onset_frame])
                         result[group_name]['sep_to__ibb_time'].append(time[ibb_onset_frame] - time[separation_frame])
                         result[group_name]['prophase_to_nebd'].append(time[nebd_onset_frame] - time[prophase_onset])
-                        result[group_name]['nebd_to_last_prophase'].append(time[nebd_onset_frame] - time[prophase_last_prophase])
+                        result[group_name]['nebd_to_last_prophase'].append(time[nebd_onset_frame] - time[prophase_last_frame])
                         
                         result[group_name]['timing'].append(self._find_class_timing(h2b, time[1]))
                         
@@ -241,7 +241,7 @@ class IBBAnalysis(object):
                                                     ibb_onset_frame, 
                                                     nebd_onset_frame, 
                                                     prophase_onset,
-                                                    prophase_last_prophase,
+                                                    prophase_last_frame,
                                                     event_id, pos.position)
                 print ""
             if group_name in self._plotter:
@@ -684,7 +684,7 @@ class Position(dict):
         dict.__init__(self)
         self.plate = plate
         if isinstance(position, int):
-            position = '%03d' % position
+            position = '%04d' % position
         self.position = str(position)
         self.well = str(well)
         self.site = site
@@ -737,7 +737,7 @@ class Plate(object):
         
         for pos_idx, pos_name in enumerate(self.mapping['position']):
             if isinstance(pos_name, int):
-                pos_name = '%03d' % pos_name
+                pos_name = '%04d' % pos_name
                     
             if pos_name not in self.pos_list:
 #                raise RuntimeError("Position from Mapping file %s not found in in path %s" % (pos_name, self.path_in))
@@ -898,10 +898,15 @@ class Plate(object):
     def load(path_in, plate_id):
         try:
             print 'Loading of %s...' % os.path.join(path_in, plate_id + ".pkl"),
-            f = open(os.path.join(path_in, plate_id + ".pkl"), 'r')
-            plate = pickle.load(f)
-            f.close()
-            print 'done'
+            filename = os.path.join(path_in, plate_id + ".pkl")
+            if os.path.exists(filename):
+                f = open(filename, 'r')
+                plate = pickle.load(f)
+                f.close()
+                print 'done'
+            else:
+                print 'pkl file not found'
+                plate = None
         except Exception as e:
             print 'failed'
             print str(e)
