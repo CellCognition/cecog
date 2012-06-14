@@ -84,7 +84,7 @@ class PostProcessingFrame(BaseProcessorFrame):
                         ('ibb_onset_factor_threshold', (1,0,1,1)),
                         ('nebd_onset_factor_threshold', (1,1,1,1)),
                         ], 
-                       layout='grid', link='groupby', label='Group by')
+                       layout='grid', link='ibb_analysis_params', label='Group by')
         
         self.add_group(None, [
                         ('group_by_position', (0,0,1,1)),
@@ -99,7 +99,7 @@ class PostProcessingFrame(BaseProcessorFrame):
                         ('color_sort_by_genesymbol', (0,2,1,1)),
                         ('color_sort_by_group', (0,3,1,1)),
                         ], 
-                       layout='grid', link='groupby', label='Color sort')
+                       layout='grid', link='color_sort', label='Color sort')
         self.add_group(None, [
                         ('single_plot', (0,0,1,1)),
                         ('single_plot_ylim_low', (0,1,1,1)),
@@ -107,7 +107,7 @@ class PostProcessingFrame(BaseProcessorFrame):
                         ('plot_ylim1_low', (1,0,1,1)),
                         ('plot_ylim1_high', (1,1,1,1)),
                         ], 
-                       layout='grid', link='groupby', label='Plotting')
+                       layout='grid', link='plot_params', label='Plotting')
         
         self.add_line()
         self.add_expanding_spacer()
