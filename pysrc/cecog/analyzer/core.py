@@ -419,7 +419,8 @@ class PositionAnalyzer(object):
 
             for region in regions:
                 # export all features extracted per regions
-                if self.oSettings.get('Output', 'events_export_all_features'):
+                if self.oSettings.get('Output', 'events_export_all_features') or \
+                    self.oSettings.get('Output', 'export_track_data'):
                     region_features[region] = None
                 # export selected features from settings
                 else:
