@@ -176,11 +176,6 @@ class TimeHolder(OrderedDict):
             self._hdf5_create_file_structure()
             self._hdf5_write_global_definition()
             
-            
-
-
-
-            
     def _hdf5_write_global_definition(self):
         """
         """
@@ -230,43 +225,33 @@ class TimeHolder(OrderedDict):
         for channel_name, combined, region_name in self._region_infos: 
             obj_name = self._convert_region_name(channel_name, region_name, prefix='')
             global_object_desc = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset(obj_name, (1,), global_object_dtype)
-            
-            ### TODO: name of abstract channel_region name is for now hard coded
             global_object_desc[0] = (obj_name, self.HDF5_OTYPE_REGION, '', '')
 
-
-
-        
-        
         # add basic relation objects (primary -> secondary etc)
-        
-        # add special relation objects (events, tracking, etc)
-
         prim_obj_name = self._convert_region_name(self._region_infos[0][0], self._region_infos[0][2], prefix='')
-        #prim_obj_name_region = self._convert_region_name(self._region_infos[0][0], self._region_infos[0][2])
-        #self._objectdef_to_idx = OrderedDict()
-        for info in self._region_infos:
-            
-            idx_rel += 1
+        for channel_name, combined, region_name in self._region_infos[1:]:
             # relation between objects from different regions
-            # (in cecog 1:1 to primary only)
+            # (in cecog 1:1 from primary only)
             if channel_name != PrimaryChannel.PREFIX:
-                var_rel[idx_rel] = ('%s___to___%s' % (prim_obj_name, obj_name),
-                                    prim_obj_name,
-                                    obj_name)
-                idx_rel += 1
+                obj_name = self._convert_region_name(channel_name, region_name, prefix='')
+                obj_name = '%s___to___%s' % (prim_obj_name, obj_name)
+                global_object_desc = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset(obj_name, (1,), global_object_dtype)
+                global_object_desc[0] =  (obj_name, self.HDF5_OTYPE_OBJECT,
+                                          prim_obj_name,
+                                          obj_name)
+ 
+        # add special relation objects (events, tracking, etc)
         if self._hdf5_include_tracking:
-            var_obj[idx_obj] = ('track', 'tracking', self.HDF5_OTYPE_OBJECT)
-            idx_obj += 1
-            var_rel[idx_rel] = ('tracking',
-                                prim_obj_name,
-                                prim_obj_name)
-            idx_rel += 1
+            obj_name = 'tracking'
+            global_object_desc = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset(obj_name, (1,), global_object_dtype)
+            global_object_desc[0] = (obj_name, self.HDF5_OTYPE_REGION, prim_obj_name, prim_obj_name)
+            
         if self._hdf5_include_events:
-            var_obj[idx_obj] = ('event', 'tracking', self.HDF5_OTYPE_OBJECT)
-            idx_obj += 1
-                
-                
+            obj_name = 'event'
+            global_object_desc = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset(obj_name, (1,), global_object_dtype)
+            global_object_desc[0] = (obj_name, self.HDF5_OTYPE_REGION, prim_obj_name, prim_obj_name)
+
+                       
     def _hdf5_create_file_structure(self):
         f = h5py.File(self.hdf5_filename, 'w')
         self._hdf5_file = f
@@ -304,7 +289,7 @@ class TimeHolder(OrderedDict):
 
         
     
-    def _hdf5_save_image(self):
+    def _hdf5_write_image(self):
         pass
 
     @staticmethod
