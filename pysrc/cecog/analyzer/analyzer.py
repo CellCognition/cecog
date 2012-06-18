@@ -451,9 +451,8 @@ class TimeHolder(OrderedDict):
                     grp.create_dataset(var_name,
                                        (nr_channels, t, z, h, w),
                                        'uint8',
-                                       chunks=(1, 1, 1, h/10, w/10),
-#                                       compression=self._hdf5_compression)
-                                       )
+                                       chunks=None,
+                                       compression=self._hdf5_compression)
 
             frame_idx = self._frames_to_idx[self._iCurrentT]
             channel_idx = self._channels_to_idx[channel.PREFIX]
