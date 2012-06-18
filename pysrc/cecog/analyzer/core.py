@@ -137,6 +137,8 @@ class PositionAnalyzer(object):
         self.oSettings = oSettings
 
         self._path_dump = os.path.join(self.strPathOut, 'dump')
+        self._path_hdf5 = os.path.join(self.strPathOut, 'hdf5')
+        safe_mkdirs(self._path_hdf5)
         self._imagecontainer = image_container
 
         # FIXME: a bit of a hack but the entire ImageContainer path is mapped to the current OS
@@ -291,7 +293,7 @@ class PositionAnalyzer(object):
         for name in [SecondaryChannel.NAME, TertiaryChannel.NAME]:
             if self.oSettings.get('Processing', '%s_processchannel' % name.lower()):
                 channel_names.append(name)
-        filename_hdf5 = os.path.join(self._path_dump, '%s.hdf5' % self.P)
+        filename_hdf5 = os.path.join(self._path_hdf5, '%s.hdf5' % self.P)
 
         hdf5_include_tracking=self.oSettings.get2('hdf5_include_tracking')
         if not self.oSettings.get('Processing', 'tracking'):
