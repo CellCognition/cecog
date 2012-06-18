@@ -482,80 +482,106 @@ class TimeHolder(OrderedDict):
                 
                 grp_region_features = grp_feature.require_group(combined_region_name)
                 
+                # create object mapping tables
+                if combined_region_name not in grp_cur_pos[self.HDF5_GRP_OBJECT]:
+                    dtype = numpy.dtype([('time_idx', 'int32'),
+                                         ('obj_label_id', 'int32'),
+                                         ])
+    
+                    dset_idx_relation = grp_cur_pos[self.HDF5_GRP_OBJECT].create_dataset(combined_region_name,
+                                                          (nr_objects,),
+                                                          dtype,
+                                                          chunks=(nr_objects,),
+                                                          compression=self._hdf5_compression,
+                                                          maxshape=(None,))
+                    offset = 0
+                else:
+                    dset_idx_relation = grp_cur_pos[self.HDF5_GRP_OBJECT][combined_region_name]
+                    offset = len(dset_idx_relation)
+                    dset_idx_relation.resize((nr_objects + offset,))
+                
                 # Create dataset for bounding box
-                dset_bounding_box = grp_region_features.create_dataset('bounding_box',
-                                                      (nr_objects,),
-                                                      dtype,
-                                                      chunks=(nr_objects,),
-                                                      compression=self._hdf5_compression)
+                if 'bounding_box' not in grp_region_features:
+                    dtype = numpy.dtype([('left', 'int32'),
+                                         ('right', 'int32'),
+                                         ('top', 'int32'),
+                                         ('bottom', 'int32'),
+                                         ])
+                    
+                    dset_bounding_box = grp_region_features.create_dataset('bounding_box',
+                                                          (nr_objects,),
+                                                          dtype,
+                                                          chunks=(nr_objects,),
+                                                          compression=self._hdf5_compression,
+                                                          maxshape=(None,))
+                else:
+                    dset_bounding_box = grp_region_features['bounding_box']
+                    dset_bounding_box.resize((nr_objects + offset,))
                 
                 # Create dataset for center
-                dtype = numpy.dtype([('x', 'int32'),
-                                     ('y', 'int32'),])
-                
-                dset_center = grp_region_features.create_dataset('center',
-                                                      (nr_objects,),
-                                                      dtype,
-                                                      chunks=(nr_objects,),
-                                                      compression=self._hdf5_compression)
-
-
+                if 'center' not in grp_region_features:
+                    dtype = numpy.dtype([('x', 'int32'),
+                                         ('y', 'int32'),])
+                    
+                    dset_center = grp_region_features.create_dataset('center',
+                                                          (nr_objects,),
+                                                          dtype,
+                                                          chunks=(nr_objects,),
+                                                          compression=self._hdf5_compression,
+                                                          maxshape=(None,))
+                else:
+                    dset_center = grp_region_features['center']
+                    dset_center.resize((nr_objects + offset,))
 
                 if (self._hdf5_include_features or self._hdf5_include_classification):
                     # Create dataset for center
-                   
-                    dset_object_features = grp_region_features.create_dataset('object_features',
-                                                          chunks=(nr_objects, nr_features),
-                                                          numpy.float64,
-                                                          chunks=None,
-                                                          compression=self._hdf5_compression)
-
+                    if 'object_features' not in grp_region_features:
+                        dset_object_features = grp_region_features.create_dataset('object_features',
+                                                          (nr_objects, nr_features),
+                                                          dtype='float',
+                                                          compression=self._hdf5_compression,
+                                                          maxshape=(None, nr_features))
+                    else:
+                        dset_object_features = grp_region_features['object_features']
+                        dset_object_features.resize((nr_objects + offset, nr_features))
+                    
                 if self._hdf5_include_crack:
-                    dt = h5py.new_vlen(str)
-                    dset_crack_contour = grp_region_features.create_dataset('crack_contour',
-                                            (nr_objects, ), dt,
-                                            chunks=(nr_objects, ),
-                                            compression=self._hdf5_compression)
+                    if 'crack_contour' not in grp_region_features:
+                        dt = h5py.new_vlen(str)
+                        dset_crack_contour = grp_region_features.create_dataset('crack_contour',
+                                                (nr_objects, ), dt,
+                                                chunks=(nr_objects, ),
+                                                compression=self._hdf5_compression,
+                                                maxshape=(None,))
+                    else:
+                        dset_crack_contour = grp_region_features['crack_contour']
+                        dset_crack_contour.resize((nr_objects + offset, ))
                     
                     
                 frame_idx = self._frames_to_idx[self._iCurrentT]       
                 for idx, obj_id in enumerate(region):
                     obj = region[obj_id]
 
-                    dset_bounding_box[idx] = obj.oRoi.upperLeft[0], obj.oRoi.lowerRight[0], obj.oRoi.upperLeft[1], obj.oRoi.lowerRight[1]
-                    dset_center[idx] = obj.oCenterAbs
+                    dset_bounding_box[idx + offset] = obj.oRoi.upperLeft[0], obj.oRoi.lowerRight[0], obj.oRoi.upperLeft[1], obj.oRoi.lowerRight[1]
+                    dset_center[idx + offset] = obj.oCenterAbs
 
-                    # export unified objects and relations
-#                    idx_new = var_rel_offset + idx
-#                    new_obj_id = idx_new + 1
-#                    coord = frame_idx, obj_id
-#                    coord2 = obj_id, (frame_idx, idx)
-#                    var_rel[idx_new] = coord2 + coord2
-#                    var_edge[idx_new] = (new_obj_id, idx_new)
-#                    var_id[idx_new] = (new_obj_id, idx_new, idx_new+1)
-#                    
-#                    if channel.PREFIX != PrimaryChannel.PREFIX:
-#                        var_rel_cross[idx_new] = (new_obj_id, idx_new,) * 2
-#
-#                    self._object_coord_to_id[(channel.PREFIX, coord)] = new_obj_id
-#                    self._object_coord_to_idx[(channel.PREFIX, coord)] = idx_new
+                    dset_idx_relation[idx + offset] = frame_idx, obj_id
 
                     if self._hdf5_include_features:
-                        dset_object_features[idx_new] = obj.aFeatures
+                        dset_object_features[idx + offset] = obj.aFeatures
 
                     if self._hdf5_include_crack:
                         data = ','.join(map(str, flatten(obj.crack_contour)))
-                        dset_crack_contour[idx] = base64.b64encode(zlib.compress(data))
+                        dset_crack_contour[idx + offset] = base64.b64encode(zlib.compress(data))
                 
-                
-            
+
     def serialize_tracking(self, tracker):
         graph = tracker.get_graph()
         
         # export full graph structure to .dot file
         #path_out = self._settings.get('General', 'pathout')
         #tracker.exportGraph(os.path.join(path_out, 'graph.dot'))
-        if self._hdf5_create and self._hdf5_include_tracking:
+        if False:#self._hdf5_create and self._hdf5_include_tracking:
             grp = self._grp_cur_position[self.HDF5_GRP_RELATION]
 
             head_nodes = [node_id for node_id in graph.node_list()
@@ -616,7 +642,7 @@ class TimeHolder(OrderedDict):
             var_edge[:] = data
 
     def serialize_events(self, tracker):
-        if self._hdf5_create and self._hdf5_include_events:
+        if False:#self._hdf5_create and self._hdf5_include_events:
             event_lookup = {}
             for events in tracker.dctVisitorData.itervalues():
                 for start_id, event in events.iteritems():
@@ -670,7 +696,7 @@ class TimeHolder(OrderedDict):
                                                     chunks=(1,), maxshape=(None,))
                    
     def serialize_annotation(self, channel_name, region_name, annotation):
-        if self._hdf5_create and self._hdf5_include_annotation:
+        if False:#self._hdf5_create and self._hdf5_include_annotation:
             channel = self[self._iCurrentT][channel_name]
             region = channel.get_region(region_name)
             combined_region_name = \
@@ -703,7 +729,7 @@ class TimeHolder(OrderedDict):
             # the browser and can be reused here...
 
     def serialize_classification(self, channel_name, region_name, predictor):
-        if self._hdf5_create and self._hdf5_include_classification:
+        if False:#self._hdf5_create and self._hdf5_include_classification:
             channel = self[self._iCurrentT][channel_name]
             region = channel.get_region(region_name)
             combined_region_name = \
