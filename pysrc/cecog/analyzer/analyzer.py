@@ -460,45 +460,40 @@ class TimeHolder(OrderedDict):
             array = img.toArray(copy=False)
             var_images[channel_idx, frame_idx, 0] = array
 
-    def _get_region_group(self, zslice=0):
-        grp_cur_pos = self._grp_cur_position
-        grp_time = grp_cur_pos[self.HDF5_GRP_TIME]
-        grp_name = str(self._frames_to_idx[self._iCurrentT])
-        grp_cur_time = grp_time.require_group(grp_name)
-        grp_region = grp_cur_time.require_group(self.HDF5_GRP_REGION)
-        return grp_region
+    def _get_feature_group(self):
+        grp_object_features = self._grp_cur_position.require_group(self.HDF5_GRP_FEATURE)
+        return grp_object_features
 
     def apply_features(self, channel):
-        desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
-                                         channel.strChannelId)
         channel_name = channel.NAME.lower()
         channel.apply_features()
 
         if self._hdf5_create:
             grp_cur_pos = self._grp_cur_position
-            grp_obj = grp_cur_pos.require_group(self.HDF5_GRP_OBJECT)
-            grp_rel = grp_cur_pos.require_group(self.HDF5_GRP_RELATION)
-            grp_region = self._get_region_group()
-
+            grp_feature = self._get_feature_group()
             for region_name in channel.region_names():
-
-                combined_region_name = \
-                        self._convert_region_name(channel_name, region_name)
+                combined_region_name = self._convert_region_name(channel_name, region_name)
                 region_idx = self._regions_to_idx[combined_region_name]
-                grp_name = str(region_idx)
-                grp_current_region = grp_region.create_group(grp_name)
 
                 region = channel.get_region(region_name)
                 feature_names = region.getFeatureNames()
                 nr_features = len(feature_names)
                 nr_objects = len(region)
-
-                dtype = numpy.dtype([('obj_id', 'int32'),
-                                     ('upper_left', 'int32', 2),
-                                     ('lower_right', 'int32', 2),
-                                     ('center', 'int32', 2)])
-                var_objects = \
-                    grp_current_region.create_dataset(self.HDF5_GRP_OBJECT,
+                
+                grp_region_features = grp_feature.require_group(combined_region_name)
+                
+                # Create dataset for bounding box
+                dset_bounding_box = grp_region_features.create_dataset('bounding_box',
+                                                      (nr_objects,),
+                                                      dtype,
+                                                      chunks=(nr_objects,),
+                                                      compression=self._hdf5_compression)
+                
+                # Create dataset for center
+                dtype = numpy.dtype([('x', 'int32'),
+                                     ('y', 'int32'),])
+                
+                dset_center = grp_region_features.create_dataset('center',
                                                       (nr_objects,),
                                                       dtype,
                                                       chunks=(nr_objects,),
@@ -506,169 +501,51 @@ class TimeHolder(OrderedDict):
 
 
 
-                var_name = self._convert_region_name(channel_name, region_name,
-                                                     prefix='relation')
-                if var_name not in grp_rel:
-                    var_rel = grp_rel.create_dataset(var_name,
-                                                     (nr_objects,),
-                                                     self.HDF5_DTYPE_TERMINAL_RELATION,
-                                                     compression=self._hdf5_compression,
-                                                     chunks=(nr_objects,),
-                                                     maxshape=(None,))
-                    var_rel_offset = 0
-                else:
-                    var_rel = grp_rel[var_name]
-                    var_rel_offset = var_rel.shape[0]
-                    var_rel.resize((var_rel_offset + nr_objects,))
-
-                if channel.PREFIX != PrimaryChannel.PREFIX:
-                    var_name = "primary__primary___to___%s" % \
-                        self._convert_region_name(channel_name, region_name, prefix=None)
-                    if var_name not in grp_rel:
-                        var_rel_cross = grp_rel.create_dataset(var_name,
-                                                               (nr_objects,),
-                                                               self.HDF5_DTYPE_RELATION,
-                                                               compression=self._hdf5_compression,
-                                                               chunks=(nr_objects,),
-                                                               maxshape=(None,))
-                    else:
-                        var_rel_cross = grp_rel[var_name]
-                        var_rel_cross.resize((var_rel_offset + nr_objects,))
-
-                grp_name = self._convert_region_name(channel_name, region_name, prefix=None)
-                grp_cur_obj = grp_obj.require_group(grp_name)
-                var_name = self.HDF5_NAME_EDGE
-                if var_name not in grp_cur_obj:
-                    var_edge = grp_cur_obj.create_dataset(var_name, 
-                                                          (nr_objects,), 
-                                                          self.HDF5_DTYPE_EDGE, 
-                                                          chunks=(nr_objects,),
-                                                          maxshape=(None,)
-                                                          )
-                else:
-                    var_edge = grp_cur_obj[var_name]
-                    var_edge.resize((var_rel_offset + nr_objects,))
-
-                var_name = self.HDF5_NAME_ID
-                if var_name not in grp_cur_obj:
-                    var_id = grp_cur_obj.create_dataset(var_name, 
-                                                        (nr_objects,), 
-                                                        self.HDF5_DTYPE_ID, 
-                                                        chunks=(nr_objects,),
-                                                        maxshape=(None,))
-                else:
-                    var_id = grp_cur_obj[var_name]
-                    var_id.resize((var_rel_offset + nr_objects,))
-
-
-                if (self._hdf5_include_features or
-                    self._hdf5_include_classification):
-                    channel_array_size = 100
-
-                    if not self._hdf5_features_complete:
-                        if not self.HDF5_GRP_FEATURE in self._grp_def:
-                            dt = numpy.dtype([('name', '|S512'),
-                                              ('unit', '|S50'),
-                                              ('object', '|S512'),
-                                              ('channel_len', 'int32'),
-                                              ('channel_idx', 'int32', channel_array_size),
-                                              ('SMF_ID', '|S512'),
-                                              ('SMF_name', '|S512'),
-                                              ('SMF_category', '|S512'),
-                                              ('SMF_parameter', '|S512'),
-                                              ])
-                            var_feature = \
-                                self._grp_def.create_dataset(self.HDF5_GRP_FEATURE,
-                                                             (nr_features,), dt,
-                                                             chunks=(nr_features,),
-                                                             compression=self._hdf5_compression,
-                                                             maxshape=(None,))
-                            offset = 0
-                        else:
-                            var_feature = self._grp_def[self.HDF5_GRP_FEATURE]
-                            offset = var_feature.shape[0]
-                            var_feature.resize((offset + nr_features,))
-
-                        feature_idx_set = []
-                        channel_idx = numpy.zeros((channel_array_size,))
-                        channel_idx[0] = self._channels_to_idx[channel_name]
-                        object_name = self._convert_region_name(channel_name, region_name, prefix=None)
-                        
-                        for idx, name in enumerate(feature_names):
-                            long_name = self._convert_feature_name(name,
-                                                                   channel_name,
-                                                                   region_name)
-                            idx2 = offset + idx
-                            var_feature[idx2] = (long_name, '',
-                                                 object_name,
-                                                 1, channel_idx,
-                                                 '', '', '', '')
-                            self._feature_to_idx[long_name] = idx2
-                            feature_idx_set.append(idx2)
-
-                        grp_feature_set = \
-                            self._grp_def.require_group(self.HDF5_GRP_FEATURE_SET)
-                        var_name = self._convert_region_name(channel_name,
-                                                             region_name,
-                                                             prefix=None)
-                        var_feature_set = \
-                            grp_feature_set.create_dataset(var_name,
-                                                           (nr_features,), 'int32')
-                        var_feature_set[:] = feature_idx_set
-
-
-                    if self._hdf5_include_features:
-                        var_name = self.HDF5_GRP_FEATURE
-                        if var_name not in grp_cur_obj:
-                            var_feature = \
-                                grp_cur_obj.create_dataset(var_name,
-                                                (nr_objects, nr_features),
-                                                'float',
-                                                chunks=(nr_objects, nr_features),
-                                                compression=self._hdf5_compression,
-                                                maxshape=(None, nr_features))
-                        else:
-                            var_feature = grp_cur_obj[var_name]
-                            var_feature.resize((var_rel_offset + nr_objects,
-                                                nr_features))
+                if (self._hdf5_include_features or self._hdf5_include_classification):
+                    # Create dataset for center
+                   
+                    dset_object_features = grp_region_features.create_dataset('object_features',
+                                                          chunks=(nr_objects, nr_features),
+                                                          numpy.float64,
+                                                          chunks=None,
+                                                          compression=self._hdf5_compression)
 
                 if self._hdf5_include_crack:
                     dt = h5py.new_vlen(str)
-                    var_crack = \
-                        grp_current_region.create_dataset('crack_contour',
+                    dset_crack_contour = grp_region_features.create_dataset('crack_contour',
                                             (nr_objects, ), dt,
                                             chunks=(nr_objects, ),
                                             compression=self._hdf5_compression)
-                frame_idx = self._frames_to_idx[self._iCurrentT]
+                    
+                    
+                frame_idx = self._frames_to_idx[self._iCurrentT]       
                 for idx, obj_id in enumerate(region):
                     obj = region[obj_id]
 
-                    var_objects[idx] = obj_id, obj.oRoi.upperLeft, obj.oRoi.lowerRight, obj.oCenterAbs
+                    dset_bounding_box[idx] = obj.oRoi.upperLeft[0], obj.oRoi.lowerRight[0], obj.oRoi.upperLeft[1], obj.oRoi.lowerRight[1]
+                    dset_center[idx] = obj.oCenterAbs
 
                     # export unified objects and relations
-                    idx_new = var_rel_offset + idx
-                    new_obj_id = idx_new + 1
-                    coord = frame_idx, obj_id
-                    coord2 = obj_id, (frame_idx, idx)
-                    var_rel[idx_new] = coord2 + coord2
-                    var_edge[idx_new] = (new_obj_id, idx_new)
-                    var_id[idx_new] = (new_obj_id, idx_new, idx_new+1)
-                    
-                    if channel.PREFIX != PrimaryChannel.PREFIX:
-                        var_rel_cross[idx_new] = (new_obj_id, idx_new,) * 2
-
-                    self._object_coord_to_id[(channel.PREFIX, coord)] = new_obj_id
-                    self._object_coord_to_idx[(channel.PREFIX, coord)] = idx_new
+#                    idx_new = var_rel_offset + idx
+#                    new_obj_id = idx_new + 1
+#                    coord = frame_idx, obj_id
+#                    coord2 = obj_id, (frame_idx, idx)
+#                    var_rel[idx_new] = coord2 + coord2
+#                    var_edge[idx_new] = (new_obj_id, idx_new)
+#                    var_id[idx_new] = (new_obj_id, idx_new, idx_new+1)
+#                    
+#                    if channel.PREFIX != PrimaryChannel.PREFIX:
+#                        var_rel_cross[idx_new] = (new_obj_id, idx_new,) * 2
+#
+#                    self._object_coord_to_id[(channel.PREFIX, coord)] = new_obj_id
+#                    self._object_coord_to_idx[(channel.PREFIX, coord)] = idx_new
 
                     if self._hdf5_include_features:
-                        var_feature[idx_new] = obj.aFeatures
-                    #    var_features[idx] = region[obj_id].aFeatures
+                        dset_object_features[idx_new] = obj.aFeatures
 
                     if self._hdf5_include_crack:
                         data = ','.join(map(str, flatten(obj.crack_contour)))
-                        # FIXME: VLEN(str) compression seems not to work in
-                        #        h5py. 'external' compression is not nice
-                        var_crack[idx] = base64.b64encode(zlib.compress(data))
+                        dset_crack_contour[idx] = base64.b64encode(zlib.compress(data))
                 
                 
             
