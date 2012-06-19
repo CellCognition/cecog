@@ -770,8 +770,6 @@ class TimeHolder(OrderedDict):
                 var[:] = feature_names
             
             ### 2) write prediction and probablilities
-            
-            
             current_classification_grp = self._grp_cur_position.require_group('object_classification')
             
             if 'prediction' not in current_classification_grp:
@@ -805,84 +803,6 @@ class TimeHolder(OrderedDict):
                 obj = region[obj_id]
                 dset_prediction[obj_idx + offset] = (obj.iLabel,)
                 dset_pobability[obj_idx + offset] = obj.dctProb.values()
-
-#            return
-#
-#            var_name = self.HDF5_GRP_CLASSIFIER
-#            if not self._hdf5_features_complete:
-#                if not var_name in self._grp_def:
-#                    
-#                    offset = 0
-#                else:
-#                    var = self._grp_def[var_name]
-#                    offset = var.shape[0]
-#                    var.resize((offset+1,))
-#                
-#                feature_set = '%s___classifier_%02d' % (combined_region_name, offset)
-#                var[offset] = (predictor.oClassifier.NAME,
-#                               predictor.oClassifier.METHOD,
-#                               '',
-#                               feature_set,
-#                               predictor.name,
-#                               -1,
-#                               '',
-#                               '')
-#                key = (predictor.name, predictor.oClassifier.NAME)
-#                self._classifier_to_idx[key] = offset
-#
-#                grp = self._grp_def.require_group(self.HDF5_GRP_FEATURE_SET)
-#                feature_names = predictor.lstFeatureNames
-#                var = grp.create_dataset(feature_set, (len(feature_names),), 'int32')
-#                var[:] = [self._feature_to_idx[self._convert_feature_name(name, 
-#                                                                          channel_name.lower(), 
-#                                                                          region_name)]
-#                          for name in feature_names]
-#
-#            key = (predictor.name, predictor.oClassifier.NAME)
-#            classifier_idx = self._classifier_to_idx[key]
-#
-#            grp = self._grp_cur_position[self.HDF5_GRP_OBJECT]
-#            grp_obj = grp[self._convert_region_name(channel_name, region_name,
-#                                                    prefix='')]
-#            grp_classifier = grp_obj.require_group(self.HDF5_GRP_CLASSIFIER)
-#            grp_cur = grp_classifier.require_group(str(classifier_idx))
-#            nr_objects = len(region)
-#            var_name = 'probability'
-#            if not var_name in grp_cur:
-#                var_class_probs = \
-#                    grp_cur.create_dataset(var_name, (nr_objects, nr_classes),
-#                                           'float',
-#                                           chunks=(nr_objects, nr_classes),
-#                                           compression=self._hdf5_compression,
-#                                           maxshape=(None, nr_classes)
-#                                           )
-#                offset = 0
-#            else:
-#                var_class_probs = grp_cur[var_name]
-#                offset = var_class_probs.shape[0]
-#                var_class_probs.resize((offset+nr_objects, nr_classes))
-#            var_name = 'prediction'
-#            if not var_name in grp_cur:
-#                dt = numpy.dtype([('classication_idx', 'int32')])
-#                var_class = \
-#                    grp_cur.create_dataset(var_name, (nr_objects, ), dt,
-#                                           chunks=(nr_objects,),
-#                                           compression=self._hdf5_compression,
-#                                           maxshape=(None,))
-#            else:
-#                var_class = grp_cur[var_name]
-#                var_class.resize((offset+nr_objects,))
-#
-#            label_to_idx = dict([(label, i)
-#                                 for i, label in
-#                                 enumerate(predictor.lstClassLabels)])
-#            frame_idx = self._frames_to_idx[self._iCurrentT]
-#            for obj_id in region:
-#                obj = region[obj_id]
-#                obj_idx = self._object_coord_to_idx[(channel.PREFIX, (frame_idx, obj_id))]
-#                var_class[obj_idx] = (label_to_idx[obj.iLabel],)
-#                var_class_probs[obj_idx] = obj.dctProb.values()
-
 
     def extportObjectCounts(self, filename, P, meta_data, prim_info=None,
                             sec_info=None, sep='\t'):
