@@ -680,9 +680,14 @@ class TimeHolder(OrderedDict):
                     track = events[0]['tracks'][0]
                     for head_id, tail_id in zip(track, track[1:]):
 #                        edge_idx = self._edge_to_idx[(head_id, tail_id)]
-                        head_id_ = tracker.getComponentsFromNodeId(head_id)[1]
-                        tail_id_ = tracker.getComponentsFromNodeId(tail_id)[1]
-                        print head_id, tail_id, 'asdf', head_id_, tail_id_
+                        head_frame, head_obj_id = tracker.getComponentsFromNodeId(head_id)[:2]
+                        haed_frame_idx = self._frames_to_idx[head_frame]
+                        head_id_ = self._object_coord_to_idx[('primary', (haed_frame_idx, head_obj_id))]
+                        
+                        tail_frame, tail_obj_id = tracker.getComponentsFromNodeId(tail_id)[:2]
+                        tail_frame_idx = self._frames_to_idx[tail_frame]
+                        tail_id_ = self._object_coord_to_idx[('primary', (tail_frame_idx, tail_obj_id))]
+
                         var_event[rel_idx] = (obj_id, head_id_, tail_id_)
                         rel_idx += 1
                     if len(events) == 2:
@@ -690,9 +695,13 @@ class TimeHolder(OrderedDict):
                         track = events[1]['tracks'][0][splt-1:]
                         for head_id, tail_id in zip(track, track[1:]):
 #                            edge_idx = self._edge_to_idx[(head_id, tail_id)]
-                            print head_id, tail_id
-                            head_id_ = tracker.getComponentsFromNodeId(head_id)[1]
-                            tail_id_ = tracker.getComponentsFromNodeId(tail_id)[1]
+                            head_frame, head_obj_id = tracker.getComponentsFromNodeId(head_id)[:2]
+                            haed_frame_idx = self._frames_to_idx[head_frame]
+                            head_id_ = self._object_coord_to_idx[('primary', (haed_frame_idx, head_obj_id))]
+                            
+                            tail_frame, tail_obj_id = tracker.getComponentsFromNodeId(tail_id)[:2]
+                            tail_frame_idx = self._frames_to_idx[tail_frame]
+                            tail_id_ = self._object_coord_to_idx[('primary', (tail_frame_idx, tail_obj_id))]
                             var_event[rel_idx] = (obj_id, head_id_, tail_id_)
                             rel_idx += 1
                         
