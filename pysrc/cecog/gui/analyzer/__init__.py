@@ -8,7 +8,7 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
-
+from __future__ import division
 __author__ = 'Michael Held'
 __date__ = '$Date$'
 __revision__ = '$Rev$'
@@ -41,6 +41,31 @@ import types, \
        threading, \
        socket
        
+#-------------------------------------------------------------------------------
+# Sklearn imports:
+#
+from sklearn import mixture, utils
+def mylogsumexp(A, axis=None):
+    """Computes the sum of A assuming A is in the log domain.
+
+    Returns log(sum(exp(A), axis)) while minimizing the possibility of
+    over/underflow.
+    """
+    Amax = A.max(axis)
+    if axis and A.ndim > 1:
+        shape = list(A.shape)
+        shape[axis] = 1
+        Amax.shape = shape
+    Asum = numpy.log(numpy.sum(numpy.exp(A - Amax), axis))
+    Asum += Amax.reshape(Asum.shape)
+    if axis:
+        # Look out for underflow.
+        Asum[numpy.isnan(Asum)] = - numpy.Inf
+    return Asum
+# overwrite the existing logsumexp with new mylogsumexp
+utils.extmath.logsumexp = mylogsumexp
+
+import sklearn.hmm as hmm
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -55,8 +80,6 @@ from pdk.datetimeutils import TimeInterval, StopWatch
 from pdk.fileutils import safe_mkdirs
 
 from multiprocessing import Pool, Queue, cpu_count
-import sklearn.hmm as hmm
-
 
 #-------------------------------------------------------------------------------
 # cecog imports:
@@ -91,7 +114,6 @@ from cecog.traits.config import R_SOURCE_PATH, \
                                 PACKAGE_PATH
 from cecog import ccore
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
-from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.analyzer.gallery import compose_galleries
 from cecog.traits.config import ConfigSettings
 from cecog.traits.analyzer import SECTION_REGISTRY
@@ -99,29 +121,57 @@ from cecog.traits.analyzer import SECTION_REGISTRY
 #-------------------------------------------------------------------------------
 # functions:
 #
-def mk_stochastic(k):   
-    '''  function [T,Z] = mk_stochastic(T)
-    MK_STOCHASTIC ensure the matrix is a stochastic matrix, 
-    i.e., the sum over the last dimension is 1.'''
-    raw_A = numpy.random.uniform( size = k * k ).reshape( ( k, k ) )
-    return ( raw_A.T / raw_A.T.sum( 0 ) ).T 
+def read_labels(path,num_frames,col,name):
+    listing = os.listdir(path)
+    num_tracks = 0
+    Y = numpy.array(0)
+    infiles = []
+    for infile in listing:
+        if (infile.find(name)!=-1) : # only *_B01_*.tsv files will be considered
+            num_tracks += 1
+            infiles.append(infile)
+            data = numpy.genfromtxt(path+infile,delimiter='\t',dtype='int')
+            labels = data[1:,col]
+            if (Y.any()==0) :
+                Y = labels
+            else :
+                Y = numpy.vstack((Y,labels))
+    return Y,num_tracks,infiles
 
-def dhmm_correction(n_clusters, labels):
-    trans = mk_stochastic(n_clusters)
-    eps = numpy.spacing(1)
-    sprob = numpy.array([1-eps,eps,eps,eps,eps,eps])
+def dhmm_correction(n_clusters, labels, dim, apoptosis=0):
+    if (not apoptosis) : # apoptosis not considered in HMM correction
+        labels[labels == 8] = 7; # [1 2 3 4 5 6 7]
+        n_clusters -= 1 
+    if (min(labels.flatten()) == 1) :
+        labels -= 1; # begins with 0, [0 1 2 3 4 5 6]
+    # small error term
+    eps = 0.01
+    # estimate initial transition matrix
+    trans = numpy.zeros((n_clusters,n_clusters))
+    hist, bin_edges = numpy.histogram(labels, bins=n_clusters)
+    for i in range(0,n_clusters) :
+        if (i<n_clusters-1) :
+            trans[i,i:i+2] += [hist[i]/(hist[i]+hist[i+1]), hist[i+1]/(hist[i]+hist[i+1])]
+        else :
+            trans[i,0] += hist[i]/(hist[i]+hist[0])
+            trans[i,-1] += hist[0]/(hist[i]+hist[0])                                                                                                             
+    trans = trans + eps
+    trans /= trans.sum(axis=1)[:, numpy.newaxis]
+    # start probability: [1, 0, 0, ...]
+    sprob = numpy.zeros((1,n_clusters)).flatten()+eps/(n_clusters-1)
+    sprob[0] = 1-eps
+    # initialize DHMM
     dhmm = hmm.MultinomialHMM(n_components=n_clusters,transmat = trans,startprob=sprob)
-    eps = 1e-3;
-    dhmm.emissionprob = numpy.array([[1-eps, eps, eps, eps, eps, eps],
-                    [eps, 1-eps, eps, eps, eps, eps],
-                    [eps, eps, 1-eps, eps, eps, eps],
-                    [eps, eps, eps, 1-eps, eps, eps],
-                    [eps, eps, eps, eps, 1-eps, eps],
-                    [eps, eps, eps, eps, eps, 1-eps]]);
-    dhmm.fit([labels], init_params ='')
-    labels_dhmm = dhmm.predict(labels) # vector format [1 x num_tracks *num_frames]
-    return labels_dhmm
-
+    # emission probability, identity matrix with predefined small errors.
+    emis = numpy.eye(n_clusters) + eps/(n_clusters-1)
+    emis[range(n_clusters),range(n_clusters)] = 1-eps;
+    dhmm.emissionprob = emis;                         
+    # learning the DHMM parameters
+    dhmm.fit([labels.flatten()], init_params ='') # default n_iter=10, thresh=1e-2
+    dhmm.emissionprob = emis # with EM update
+    labels_dhmm_vec = dhmm.predict(labels.flatten()) # vector format
+    labels_dhmm_matrix = labels_dhmm_vec.reshape(dim[1],dim[0]) # matrix format
+    return labels_dhmm_vec, labels_dhmm_matrix
 
 # see http://stackoverflow.com/questions/3288595/multiprocessing-using-pool-map-on-a-function-defined-in-a-class
 def AnalyzerCoreHelper(plate_id, settings_str, imagecontainer, position):
@@ -332,13 +382,10 @@ class _ProcessingThread(QThread):
 #        self.plates = self._imagecontainer.plates
 #        self._mapping_files = {}
 #        self._logger = logging.getLogger(self.__class__.__name__)
-#        
+#        self._convert = lambda x: x.replace('\\','/')
+#        self._join = lambda *x: self._convert('/'.join(x))
 #        # Read Events from event txt files
-#        self.events = self._readEvents()
-#        
-#    def _readEvents(self):
-#        "Reads all events written by the CellCognition tracking."
-#        pass
+#        # self.events = self._readEvents()
 #    
 #    def _setMappingFile(self):
 #        if self._settings.get2('position_labels'):
@@ -353,6 +400,9 @@ class _ProcessingThread(QThread):
 #                self._mapping_files[plate_id] = os.path.abspath(mapping_file)
 #        
 #    def _run(self):
+#
+#        self._settings.set_section(SECTION_NAME_ERRORCORRECTION)
+#        print 'ALL POSITONS AVAILABLE', self._imagecontainer.get_meta_data().positions
 #        # Initialize GUI Progress bar
 #        info = {'min' : 0,
 #                'max' : len(self.plates),
@@ -369,11 +419,47 @@ class _ProcessingThread(QThread):
 #                self._run_plate(plate_id)
 #                info['progress'] = idx+1
 #                self.set_stage_info(info)
+#                # self._produce_txt_output()
 #            else:
 #                break
 #    
 #    def _run_plate(self, plate_id):
 #        print "processing", plate_id
+#        path_out = self._imagecontainer.get_path_out()
+#        path_analyzed = self._join(path_out, 'analyzed')
+#        print path_analyzed
+#        
+#        "Reads all events written by the CellCognition tracking."
+#        if self._settings.get('General', 'constrain_positions'):
+#            pos = self._settings.get('General', 'positions')  
+#        
+#        #self._settings.set_section(SECTION_NAME_TRACKING)
+#        num_frames = int(self._settings.get('Tracking', 'tracking_forwardrange') + self._settings.get('Tracking', 'tracking_backwardrange'))
+#
+#        path_pos = self._join(path_analyzed, pos)
+#        path_data = self._join(path_pos, 'statistics/events/')
+#        print 'path_data', path_data
+#        col = 6 # column position of svm_labels, should be retrieved from variable
+#        name = 'B01__CPrimary'
+#        labels_svm, num_tracks, infiles = read_labels(path_data,num_frames,col,name) # SVM labels
+#        # print infiles
+#        dim = [num_frames, num_tracks] # data dimension
+#        
+#        k = numpy.unique(labels_svm).shape[0]
+#        print k
+#        labels_dhmm_vec, labels_dhmm_matrix = dhmm_correction(k, labels_svm, dim)
+#        print labels_dhmm_matrix
+#
+#        path_out_hmm2 = self._join(path_data, '_hmm2')
+#        print 'path_out_hmm2', path_out_hmm2
+#        safe_mkdirs(path_out_hmm2)
+#        path_out_labelmatrix = self._join(path_out_hmm2, 'labels.txt')
+#        numpy.savetxt(path_out_labelmatrix, labels_dhmm_matrix,fmt='%d',delimiter='\t')
+#        cnt = 0
+#        for infile in infiles:
+#            path_out_sf = self._join(path_out_hmm2, infile)
+#            numpy.savetxt(path_out_sf, labels_dhmm_matrix[cnt,:],fmt='%d',delimiter='\t')   
+#            cnt += 1
 #    
 #    def set_abort(self, wait=False):
 #        pass
@@ -388,10 +474,17 @@ class _ProcessingThread(QThread):
 #        "mock interface method"
 #        return ""
 #    
-#    
-#    
-#    def _produce_txt_output(self):
-#        pass
+#    def _get_path_out(self, path, prefix):
+#        if self._settings.get2('groupby_oligoid'):
+#            suffix = 'byoligo'
+#        elif self._settings.get2('groupby_genesymbol'):
+#            suffix = 'bysymbol'
+#        else:
+#            suffix = 'bypos'
+#        path_out = os.path.join(path, '%s_%s' % (prefix, suffix))
+#        safe_mkdirs(path_out)
+#        return path_out
+        
 
 class HmmThread(_ProcessingThread): #__R_version
 
@@ -435,7 +528,6 @@ class HmmThread(_ProcessingThread): #__R_version
     def _run(self):
         plates = self._imagecontainer.plates
         self._settings.set_section(SECTION_NAME_ERRORCORRECTION)
-
         # mapping files (mapping between plate well/position and experimental condition) can be defined by a directory
         # which must contain all mapping files for all plates in the form <plate_id>.txt or .tsv
         # if the option 'position_labels' is not enabled a dummy mapping file is generated
