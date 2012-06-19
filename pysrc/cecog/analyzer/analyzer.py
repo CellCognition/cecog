@@ -479,6 +479,26 @@ class TimeHolder(OrderedDict):
                 nr_features = len(feature_names)
                 nr_objects = len(region)
                 
+                ### write global definition
+                self._grp_def[self.HDF5_GRP_FEATURE]
+                global_feature_group = self._grp_def.require_group(self.HDF5_GRP_FEATURE)
+                global_def_group = global_feature_group.require_group(combined_region_name)
+                if 'bounding_box' not in global_def_group:
+                    dset_tmp = global_def_group.create_dataset('bounding_box', (4,), [('name', '|S16')])
+                    dset_tmp[:] = ['left', 'right', 'top', 'bottom']
+                if 'center' not in global_def_group:
+                    dset_tmp = global_def_group.create_dataset('center', (2,), [('name', '|S16')])
+                    dset_tmp[:] = ['x', 'y']
+                if 'object_features' not in global_def_group:
+                    dset_tmp = global_def_group.create_dataset('object_features', (len(feature_names),), [('name', '|S512')])
+                    dset_tmp[:] = feature_names
+                if 'crack_contour' not in global_def_group:
+                    dset_tmp = global_def_group.create_dataset('crack_contour', (1,), [('name', '|S512')])
+                    dset_tmp[:] = ('contour_polygon',)
+                
+
+                ### write bounding-box, center, etc per object
+                
                 grp_region_features = grp_feature.require_group(combined_region_name)
                 
                 # create object mapping tables
@@ -676,10 +696,8 @@ class TimeHolder(OrderedDict):
                 rel_idx = 0
                 for events in event_lookup.itervalues():
                     obj_id = obj_idx + 1
-                    rel_idx_start = rel_idx
                     track = events[0]['tracks'][0]
                     for head_id, tail_id in zip(track, track[1:]):
-#                        edge_idx = self._edge_to_idx[(head_id, tail_id)]
                         head_frame, head_obj_id = tracker.getComponentsFromNodeId(head_id)[:2]
                         haed_frame_idx = self._frames_to_idx[head_frame]
                         head_id_ = self._object_coord_to_idx[('primary', (haed_frame_idx, head_obj_id))]
@@ -694,7 +712,6 @@ class TimeHolder(OrderedDict):
                         splt = events[1]['splitIdx']
                         track = events[1]['tracks'][0][splt-1:]
                         for head_id, tail_id in zip(track, track[1:]):
-#                            edge_idx = self._edge_to_idx[(head_id, tail_id)]
                             head_frame, head_obj_id = tracker.getComponentsFromNodeId(head_id)[:2]
                             haed_frame_idx = self._frames_to_idx[head_frame]
                             head_id_ = self._object_coord_to_idx[('primary', (haed_frame_idx, head_obj_id))]
@@ -704,46 +721,11 @@ class TimeHolder(OrderedDict):
                             tail_id_ = self._object_coord_to_idx[('primary', (tail_frame_idx, tail_obj_id))]
                             var_event[rel_idx] = (obj_id, head_id_, tail_id_)
                             rel_idx += 1
-                        
-#                    var_event[obj_idx] = (obj_id, rel_idx_start, rel_idx)
                     obj_idx += 1
             else:
                 var_event = object_group.create_dataset('event', (0,), 
                                                       self.HDF5_DTYPE_EDGE, 
                                                       chunks=(1,), maxshape=(None,))
-                   
-    def serialize_annotation(self, channel_name, region_name, annotation):
-        if False:#self._hdf5_create and self._hdf5_include_annotation:
-            channel = self[self._iCurrentT][channel_name]
-            region = channel.get_region(region_name)
-            combined_region_name = \
-                self._convert_region_name(channel_name, region_name, prefix=None)
-                
-            var_name = self.HDF5_GRP_ANNOTATION
-                
-            if not var_name in self._grp_def:
-                dt = numpy.dtype([('name', '|S512'),
-                                  ('user', '|S512'),
-                                  ('date_str', '|S16'),
-                                  ('object', '|S512'),
-                                  ('classification', '|S512'),
-                                  ('description', '|S512')])
-                var = self._grp_def.create_dataset(var_name, (1,), dt,
-                                                   chunks=(1,),
-                                                   compression=self._hdf5_compression,
-                                                   maxshape=(None,))
-                offset = 0
-            else:
-                var = self._grp_def[var_name]
-                offset = var.shape[0]
-                var.resize((offset+1,))
-            
-            var[offset] = (annotation.name, annotation.user, annotation.date_str, 
-                           combined_region_name, annotation.classification_schema,
-                           annotation.description)
-            
-            # TODO: fisish this by implementing a annotation object which is generated by
-            # the browser and can be reused here...
 
     def serialize_classification(self, channel_name, region_name, predictor):
         if self._hdf5_create and self._hdf5_include_classification:
@@ -787,7 +769,8 @@ class TimeHolder(OrderedDict):
                 var[:] = feature_names
             
             ### 2) write prediction and probablilities
-            current_classification_grp = self._grp_cur_position.require_group('object_classification')
+            current_classification_grp = self._grp_cur_position[self.HDF5_GRP_FEATURE].require_group(combined_region_name)
+            current_classification_grp = current_classification_grp.require_group('object_classification')
             
             if 'prediction' not in current_classification_grp:
                 dt = numpy.dtype([('label_idx', 'int32')])
