@@ -86,9 +86,7 @@ class TimeHolder(OrderedDict):
     HDF5_OTYPE_OBJECT = 'object'
 
     HDF5_DTYPE_RELATION = \
-         numpy.dtype([('obj_id1', 'uint32'),
-                      ('obj_idx1', 'uint32'),
-                      ('obj_id2', 'uint32'),
+         numpy.dtype([('obj_idx1', 'uint32'),
                       ('obj_idx2', 'uint32'),])
 
     HDF5_DTYPE_TERMINAL_RELATION = \
@@ -581,7 +579,7 @@ class TimeHolder(OrderedDict):
         #path_out = self._settings.get('General', 'pathout')
         #tracker.exportGraph(os.path.join(path_out, 'graph.dot'))
         if self._hdf5_create and self._hdf5_include_tracking:
-            grp = self._grp_cur_position[self.HDF5_GRP_RELATION]
+            grp = self._grp_cur_position[self.HDF5_GRP_OBJECT]
 
             head_nodes = [node_id for node_id in graph.node_list()
                           if graph.in_degree(node_id) == 0 and graph.out_degree(node_id) > 0]
@@ -597,9 +595,9 @@ class TimeHolder(OrderedDict):
                                          self.HDF5_DTYPE_RELATION,
                                          chunks=(nr_edges,),
                                          compression=self._hdf5_compression)
-            grp = self._grp_cur_position[self.HDF5_GRP_OBJECT]
-            grp_cur_obj = grp.create_group('track')
-            var_id = grp_cur_obj.create_dataset(self.HDF5_NAME_ID, (nr_objects,), self.HDF5_DTYPE_ID)
+#            grp = self._grp_cur_position[self.HDF5_GRP_OBJECT]
+#            grp_cur_obj = grp.create_group('track')
+#            var_id = grp_cur_obj.create_dataset(self.HDF5_NAME_ID, (nr_objects,), self.HDF5_DTYPE_ID)
 
             prefix = PrimaryChannel.PREFIX
             data = []
@@ -612,33 +610,33 @@ class TimeHolder(OrderedDict):
                     tracker.getComponentsFromNodeId(tail_id)[:2]
                 tail_frame_idx = self._frames_to_idx[tail_frame]
 
-                head_obj_id_meta = self._object_coord_to_id[(prefix, (head_frame_idx, head_obj_id))]
+                #head_obj_id_meta = self._object_coord_to_id[(prefix, (head_frame_idx, head_obj_id))]
                 head_obj_idx_meta = self._object_coord_to_idx[(prefix, (head_frame_idx, head_obj_id))]
-                tail_obj_id_meta = self._object_coord_to_id[(prefix, (tail_frame_idx, tail_obj_id))]
+                #tail_obj_id_meta = self._object_coord_to_id[(prefix, (tail_frame_idx, tail_obj_id))]
                 tail_obj_idx_meta = self._object_coord_to_idx[(prefix, (tail_frame_idx, tail_obj_id))]
 
-                data.append((head_obj_id_meta, head_obj_idx_meta,
-                            tail_obj_id_meta, tail_obj_idx_meta))
+                data.append((head_obj_idx_meta,
+                             tail_obj_idx_meta))
                 self._edge_to_idx[(head_id, tail_id)] = idx
                 
             var_rel[:] = data
             # traverse the graph structure by head nodes and save one object per head node
             # (with all forward-reachable nodes)
-            data = []
-            for obj_idx, head_id in enumerate(head_nodes):
-                obj_id = obj_idx + 1
-                edge_idx_start = len(data)
-                edge_list = graph.dfs_edges(head_id)
-                
-                for head, tail in edge_list:
-                    rel_idx = self._edge_to_idx[(head, tail)]
-                    data.append((obj_id, rel_idx))
-                
-                var_id[obj_idx] = (obj_id, edge_idx_start, len(data))
-
-            var_edge = grp_cur_obj.create_dataset(self.HDF5_NAME_EDGE, (len(data),), 
-                                                  self.HDF5_DTYPE_EDGE)
-            var_edge[:] = data
+#            data = []
+#            for obj_idx, head_id in enumerate(head_nodes):
+#                obj_id = obj_idx + 1
+#                edge_idx_start = len(data)
+#                edge_list = graph.dfs_edges(head_id)
+#                
+#                for head, tail in edge_list:
+#                    rel_idx = self._edge_to_idx[(head, tail)]
+#                    data.append((obj_id, rel_idx))
+#                
+#                var_id[obj_idx] = (obj_id, edge_idx_start, len(data))
+#
+#            var_edge = grp_cur_obj.create_dataset(self.HDF5_NAME_EDGE, (len(data),), 
+#                                                  self.HDF5_DTYPE_EDGE)
+#            var_edge[:] = data
 
     def serialize_events(self, tracker):
         if False:#self._hdf5_create and self._hdf5_include_events:
