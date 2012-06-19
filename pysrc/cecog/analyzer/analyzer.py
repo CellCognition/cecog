@@ -558,6 +558,15 @@ class TimeHolder(OrderedDict):
                 frame_idx = self._frames_to_idx[self._iCurrentT]       
                 for idx, obj_id in enumerate(region):
                     obj = region[obj_id]
+                    
+                    # export unified objects and relations
+                    idx_new = offset + idx
+                    new_obj_id = idx_new + 1
+                    coord = frame_idx, obj_id
+
+                    self._object_coord_to_id[(channel.PREFIX, coord)] = new_obj_id
+                    self._object_coord_to_idx[(channel.PREFIX, coord)] = idx_new
+                    
 
                     dset_bounding_box[idx + offset] = obj.oRoi.upperLeft[0], obj.oRoi.lowerRight[0], obj.oRoi.upperLeft[1], obj.oRoi.lowerRight[1]
                     dset_center[idx + offset] = obj.oCenterAbs
