@@ -472,8 +472,7 @@ class TimeHolder(OrderedDict):
             grp_cur_pos = self._grp_cur_position
             grp_feature = self._get_feature_group()
             for region_name in channel.region_names():
-                combined_region_name = self._convert_region_name(channel_name, region_name)
-                region_idx = self._regions_to_idx[combined_region_name]
+                combined_region_name = self._convert_region_name(channel_name, region_name, '')
 
                 region = channel.get_region(region_name)
                 feature_names = region.getFeatureNames()
@@ -581,7 +580,7 @@ class TimeHolder(OrderedDict):
         # export full graph structure to .dot file
         #path_out = self._settings.get('General', 'pathout')
         #tracker.exportGraph(os.path.join(path_out, 'graph.dot'))
-        if False:#self._hdf5_create and self._hdf5_include_tracking:
+        if self._hdf5_create and self._hdf5_include_tracking:
             grp = self._grp_cur_position[self.HDF5_GRP_RELATION]
 
             head_nodes = [node_id for node_id in graph.node_list()
@@ -773,7 +772,7 @@ class TimeHolder(OrderedDict):
             current_classification_grp = self._grp_cur_position.require_group('object_classification')
             
             if 'prediction' not in current_classification_grp:
-                dt = numpy.dtype([('label', 'int32')])
+                dt = numpy.dtype([('label_idx', 'int32')])
                 dset_prediction = current_classification_grp.create_dataset('prediction', 
                                                                             (nr_objects, ), dt,
                                                                             chunks=(nr_objects,),
@@ -799,9 +798,13 @@ class TimeHolder(OrderedDict):
                 offset = len(dset_pobability)
                 dset_pobability.resize((offset+nr_objects, nr_classes))
 
+            label_to_idx = dict([(label, i)
+                                 for i, label in
+                                 enumerate(predictor.lstClassLabels)])
+            
             for obj_idx, obj_id in enumerate(region):
                 obj = region[obj_id]
-                dset_prediction[obj_idx + offset] = (obj.iLabel,)
+                dset_prediction[obj_idx + offset] = (label_to_idx[obj.iLabel],)
                 dset_pobability[obj_idx + offset] = obj.dctProb.values()
 
     def extportObjectCounts(self, filename, P, meta_data, prim_info=None,
