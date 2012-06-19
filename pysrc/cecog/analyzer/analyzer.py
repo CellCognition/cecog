@@ -97,7 +97,9 @@ class TimeHolder(OrderedDict):
 
     HDF5_DTYPE_EDGE = \
         numpy.dtype([('obj_id', 'uint32'),
-                     ('relation_idx', 'uint32'),])
+                     ('idx1', 'uint32'),
+                     ('idx2', 'uint32'),
+                     ])
 
     HDF5_DTYPE_ID = \
         numpy.dtype([('obj_id', 'uint32'),
@@ -559,7 +561,7 @@ class TimeHolder(OrderedDict):
                 for idx, obj_id in enumerate(region):
                     obj = region[obj_id]
                     
-                    # export unified objects and relations
+                    ### Important: save unified objects and relations lookup into _object_coord_to_id
                     idx_new = offset + idx
                     new_obj_id = idx_new + 1
                     coord = frame_idx, obj_id
@@ -567,7 +569,6 @@ class TimeHolder(OrderedDict):
                     self._object_coord_to_id[(channel.PREFIX, coord)] = new_obj_id
                     self._object_coord_to_idx[(channel.PREFIX, coord)] = idx_new
                     
-
                     dset_bounding_box[idx + offset] = obj.oRoi.upperLeft[0], obj.oRoi.lowerRight[0], obj.oRoi.upperLeft[1], obj.oRoi.lowerRight[1]
                     dset_center[idx + offset] = obj.oCenterAbs
 
@@ -648,7 +649,7 @@ class TimeHolder(OrderedDict):
 #            var_edge[:] = data
 
     def serialize_events(self, tracker):
-        if False:#self._hdf5_create and self._hdf5_include_events:
+        if self._hdf5_create and self._hdf5_include_events:
             event_lookup = {}
             for events in tracker.dctVisitorData.itervalues():
                 for start_id, event in events.iteritems():
@@ -666,12 +667,10 @@ class TimeHolder(OrderedDict):
                 else:
                     raise ValueError("More than two daughter cell are not supported.")
 
-            grp = self._grp_cur_position[self.HDF5_GRP_OBJECT]
-            grp_cur_obj = grp.create_group('event')
+            object_group = self._grp_cur_position[self.HDF5_GRP_OBJECT]
             
             if nr_events > 0:
-                var_edge = grp_cur_obj.create_dataset(self.HDF5_NAME_EDGE, (nr_edges,), self.HDF5_DTYPE_EDGE, maxshape=(None,))
-                var_id = grp_cur_obj.create_dataset(self.HDF5_NAME_ID, (nr_events,), self.HDF5_DTYPE_ID, maxshape=(None,))
+                var_event = object_group.create_dataset('event', (nr_edges,), self.HDF5_DTYPE_EDGE, maxshape=(None,))
                 
                 obj_idx = 0
                 rel_idx = 0
@@ -680,26 +679,29 @@ class TimeHolder(OrderedDict):
                     rel_idx_start = rel_idx
                     track = events[0]['tracks'][0]
                     for head_id, tail_id in zip(track, track[1:]):
-                        edge_idx = self._edge_to_idx[(head_id, tail_id)]
-                        var_edge[rel_idx] = (obj_id, edge_idx)
+#                        edge_idx = self._edge_to_idx[(head_id, tail_id)]
+                        head_id_ = tracker.getComponentsFromNodeId(head_id)[1]
+                        tail_id_ = tracker.getComponentsFromNodeId(tail_id)[1]
+                        print head_id, tail_id, 'asdf', head_id_, tail_id_
+                        var_event[rel_idx] = (obj_id, head_id_, tail_id_)
                         rel_idx += 1
                     if len(events) == 2:
                         splt = events[1]['splitIdx']
                         track = events[1]['tracks'][0][splt-1:]
                         for head_id, tail_id in zip(track, track[1:]):
-                            edge_idx = self._edge_to_idx[(head_id, tail_id)]
-                            var_edge[rel_idx] = (obj_id, edge_idx)
+#                            edge_idx = self._edge_to_idx[(head_id, tail_id)]
+                            print head_id, tail_id
+                            head_id_ = tracker.getComponentsFromNodeId(head_id)[1]
+                            tail_id_ = tracker.getComponentsFromNodeId(tail_id)[1]
+                            var_event[rel_idx] = (obj_id, head_id_, tail_id_)
                             rel_idx += 1
                         
-                    var_id[obj_idx] = (obj_id, rel_idx_start, rel_idx)
+#                    var_event[obj_idx] = (obj_id, rel_idx_start, rel_idx)
                     obj_idx += 1
             else:
-                var_edge = grp_cur_obj.create_dataset(self.HDF5_NAME_EDGE, (0,), 
+                var_event = object_group.create_dataset('event', (0,), 
                                                       self.HDF5_DTYPE_EDGE, 
                                                       chunks=(1,), maxshape=(None,))
-                var_id = grp_cur_obj.create_dataset(self.HDF5_NAME_ID, (0,), 
-                                                    self.HDF5_DTYPE_ID, 
-                                                    chunks=(1,), maxshape=(None,))
                    
     def serialize_annotation(self, channel_name, region_name, annotation):
         if False:#self._hdf5_create and self._hdf5_include_annotation:
