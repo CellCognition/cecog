@@ -39,7 +39,7 @@ from pdk.ordereddict import OrderedDict
 
 import numpy
 #import h5py
-#import netCDF4
+import netCDF4
 
 #-------------------------------------------------------------------------------
 # cecog module imports:
