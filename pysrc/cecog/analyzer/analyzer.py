@@ -287,10 +287,6 @@ class TimeHolder(OrderedDict):
         self._grp_def.create_group(self.HDF5_GRP_FEATURE)
         self._grp_def.create_group(self.HDF5_GRP_OBJECT)
 
-        
-    
-    def _hdf5_write_image(self):
-        pass
 
     @staticmethod
     def nc_valid_set(var, idx, value):
@@ -518,6 +514,24 @@ class TimeHolder(OrderedDict):
                     dset_idx_relation = grp_cur_pos[self.HDF5_GRP_OBJECT][combined_region_name]
                     offset = len(dset_idx_relation)
                     dset_idx_relation.resize((nr_objects + offset,))
+                    
+                # create mapping from primary to secondary, tertiary, etc
+                if channel_name != PrimaryChannel.PREFIX:
+                    prim_obj_name = self._convert_region_name(self._region_infos[0][0], self._region_infos[0][2], prefix='')
+                    obj_name = self._convert_region_name(channel_name, region_name, prefix='')
+                    obj_name = '%s___to___%s' % (prim_obj_name, obj_name)
+                    if obj_name not in grp_cur_pos[self.HDF5_GRP_OBJECT]:
+                        dt = [('idx1', 'int32'),('idx2', 'int32')]
+                        dset_cross_rel = grp_cur_pos[self.HDF5_GRP_OBJECT].create_dataset(obj_name, 
+                                                                                      (nr_objects,), 
+                                                                                      dt,
+                                                                                      chunks=(nr_objects,),
+                                                                                      compression=self._hdf5_compression,
+                                                                                      maxshape=(None,))
+
+                    else:
+                        dset_cross_rel = grp_cur_pos[self.HDF5_GRP_OBJECT][obj_name]
+                        dset_cross_rel.resize((nr_objects + offset,))   
                 
                 # Create dataset for bounding box
                 if 'bounding_box' not in grp_region_features:
@@ -600,6 +614,10 @@ class TimeHolder(OrderedDict):
                     if self._hdf5_include_crack:
                         data = ','.join(map(str, flatten(obj.crack_contour)))
                         dset_crack_contour[idx + offset] = base64.b64encode(zlib.compress(data))
+                        
+                    if channel_name != PrimaryChannel.PREFIX:
+                        dset_cross_rel[idx + offset] = (idx, idx)
+                        
                 
 
     def serialize_tracking(self, tracker):
