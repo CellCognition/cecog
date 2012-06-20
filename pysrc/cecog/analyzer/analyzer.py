@@ -255,7 +255,7 @@ class TimeHolder(OrderedDict):
         if self._hdf5_include_tracking:
             obj_name = 'tracking'
             global_object_desc = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset(obj_name, (1,), global_object_dtype)
-            global_object_desc[0] = (obj_name, self.HDF5_OTYPE_REGION, prim_obj_name, prim_obj_name)
+            global_object_desc[0] = (obj_name, self.HDF5_OTYPE_OBJECT, prim_obj_name, prim_obj_name)
             
         if self._hdf5_include_events:
             obj_name = 'event'
