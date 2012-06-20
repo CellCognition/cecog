@@ -70,7 +70,7 @@ class TimeHolder(OrderedDict):
     HDF5_GRP_DEFINITION = "definition"
     HDF5_GRP_RELATION = "relation"
     HDF5_GRP_IMAGE = "image"
-    HDF5_GRP_TIME = "time"
+    HDF5_GRP_TIME = "time_lapse"
     HDF5_GRP_ZSLICE = "zslice"
     HDF5_GRP_OBJECT = "object"
     HDF5_GRP_FEATURE = "feature"
@@ -206,19 +206,30 @@ class TimeHolder(OrderedDict):
             channel_idx = self._channels_to_idx[channel_name]
             global_region_desc[idx] = (combined, channel_idx)
 
-#        # number of region (terminal objects)
-#        nr_objects = len(self._regions_to_idx)
-#        
-#        # plus number of relation object mappings
-#        
-#        nr_objects += (nr_objects - 1)
-#        if self._hdf5_include_tracking:
-#            nr_objects += 1
-#        if self._hdf5_include_events:
-#            nr_objects += 1
-
-        ### global object definition
+        ### time-lapse definition 
+        # global definition
+        if self._meta_data.has_timelapse:
+            var = self._grp_def[self.HDF5_GRP_IMAGE].create_dataset(self.HDF5_GRP_TIME,
+                                        (3,), '|S12')
+            var[:] = ['frame', 'timestamp_abs', 'timestamp_rel']
             
+            # actual values
+            dtype = numpy.dtype([('frame', 'i'), ('timestamp_abs', 'i'),
+                                 ('timestamp_rel', 'i')])
+            frames = sorted(self._analysis_frames)
+            nr_frames = len(frames)
+            var = self._grp_cur_position[self.HDF5_GRP_IMAGE].create_dataset(self.HDF5_GRP_TIME,
+                                        (nr_frames,), dtype,
+                                        chunks=(nr_frames,),
+                                        compression=self._hdf5_compression)
+            for frame in frames:
+                idx = self._frames_to_idx[frame]
+                coord = Coordinate(position=self.P, time=frame)
+                ts_abs = self._meta_data.get_timestamp_absolute(coord)
+                ts_rel = self._meta_data.get_timestamp_relative(coord)
+                var[idx] = (frame, ts_abs, ts_rel)
+        
+        ### global object definition
         # add the basic regions
         global_object_dtype = numpy.dtype([('name', '|S512'), ('type', '|S512'), ('source1', '|S512'), ('source2', '|S512')])
         
@@ -617,8 +628,6 @@ class TimeHolder(OrderedDict):
                         
                     if channel_name != PrimaryChannel.PREFIX:
                         dset_cross_rel[idx + offset] = (idx, idx)
-                        
-                
 
     def serialize_tracking(self, tracker):
         graph = tracker.get_graph()
@@ -754,10 +763,8 @@ class TimeHolder(OrderedDict):
             nr_classes = predictor.iClassNumber
             nr_objects = len(region)
             
-            ### 1) write global classifier definition
-            
-            global_def_group = self._grp_def[self.HDF5_GRP_FEATURE].require_group(combined_region_name)
-            
+            ### 1) write global classifier definition            
+            global_def_group = self._grp_def[self.HDF5_GRP_FEATURE].require_group(combined_region_name)           
             classification_group = global_def_group.require_group('object_classification')
             
             # class labels
@@ -811,10 +818,8 @@ class TimeHolder(OrderedDict):
                                            compression=self._hdf5_compression,
                                            maxshape=(None, nr_classes)
                                            )
-                offset = 0
             else:
                 dset_pobability = current_classification_grp[var_name]
-                offset = len(dset_pobability)
                 dset_pobability.resize((offset+nr_objects, nr_classes))
 
             label_to_idx = dict([(label, i)
@@ -936,9 +941,6 @@ class TimeHolder(OrderedDict):
                                               for key in keys]
 
                             obj = region[obj_id]
-                            #print feature_lookup2.keys(), feature_lookup2.values()
-                            #fn = region.getFeatureNames()
-                            #print zip(fn, obj.aFeatures)
                             features = region.getFeaturesByNames(obj_id, feature_lookup2.values())
                             values = [x if not x is None else '' for x in [obj.iLabel, obj.strClassName]]
                             if channel.NAME == 'Primary':
@@ -982,11 +984,7 @@ class TimeHolder(OrderedDict):
             f.write("\t".join(image_file_names) + "\n")
         f.close()
             
-        
-
-
 class CellAnalyzer(PropertyManager):
-
     PROPERTIES = \
         dict(P =
                  StringProperty(True, doc=''),
@@ -1036,11 +1034,8 @@ class CellAnalyzer(PropertyManager):
         primary_channel = None
         
         
-        
         for channel in channels:
-
             self.time_holder.prepare_raw_image(channel)
-
             if self.detect_objects:
                 self.time_holder.apply_segmentation(channel, primary_channel)
                 if extract_features:
@@ -1144,7 +1139,7 @@ class CellAnalyzer(PropertyManager):
                                     imgCon2 = ccore.Image(imgRaw.width, imgRaw.height)
                                     for iLabel, lstObjIds in dctLabels.iteritems():
                                         imgCon = ccore.Image(imgRaw.width, imgRaw.height)
-                                         ### Flip this and use drawContours with fill option enables to get black background 
+                                        ### Flip this and use drawContours with fill option enables to get black background 
                                         oContainer.drawContoursByIds(lstObjIds, 255, imgCon, bThickContours, False)
 #                                        oContainer.drawContoursByIds(lstObjIds, 255, imgCon, bThickContours, True)
                                         lstImages.append((imgCon, dctColors[iLabel], fAlpha))
@@ -1342,18 +1337,4 @@ class CellAnalyzer(PropertyManager):
         
         
         
-####### Old style of writing time-lapse information  
-#        if self._meta_data.has_timelapse:
-#            dtype = numpy.dtype([('frame', 'i'), ('timestamp_abs', 'i'),
-#                                 ('timestamp_rel', 'i')])
-#            nr_frames = len(frames)
-#            var = grp_def_pos.create_dataset(self.HDF5_GRP_TIME,
-#                                        (nr_frames,), dtype,
-#                                        chunks=(nr_frames,),
-#                                        compression=self._hdf5_compression)
-#            for frame in frames:
-#                idx = self._frames_to_idx[frame]
-#                coord = Coordinate(position=self.P, time=frame)
-#                ts_abs = meta_data.get_timestamp_absolute(coord)
-#                ts_rel = meta_data.get_timestamp_relative(coord)
-#                var[idx] = (frame, ts_abs, ts_rel)
+
