@@ -497,7 +497,7 @@ class TimeHolder(OrderedDict):
         var.valid = helper
 
     def close_all(self):
-        if self._hdf5_create:
+        if self._hdf5_create and isinstance(self._hdf5_file, h5py._hl.files.File):
             self._hdf5_file.close()
 
     def initTimePoint(self, iT):
@@ -544,7 +544,7 @@ class TimeHolder(OrderedDict):
         
         label_images_valid = False
 
-        name = channel.NAME.lower()
+        channel_name = channel.NAME.lower()
             
         if self._hdf5_create:
             if self._hdf5_include_label_images:
@@ -555,11 +555,11 @@ class TimeHolder(OrderedDict):
                         dset_label_image = self._grp_cur_position[self.HDF5_GRP_IMAGE]['region']
                         frame_valid = dset_label_image.attrs['valid'][frame_idx]
                         if frame_valid:
-                            region_idx = self._regions_to_idx[region_name]
-                            img_label = ccore.numpy_to_image(dset_label_image[region_idx, frame_idx, 0, :, :], copy=True)
+                            combined_region_name = self._convert_region_name(channel_name, region_name)
+                            region_idx = self._regions_to_idx[combined_region_name]
+                            img_label = ccore.numpy_to_image(dset_label_image[region_idx, frame_idx, 0, :, :].astype('int16'), copy=True)
                             img_xy = channel.meta_image.image
-                            container = ccore.ImageMaskContainer(img_xy, img_label,
-                                                                 False, True, True)
+                            container = ccore.ImageMaskContainer(img_xy, img_label, False, True, True)
                             channel.dctContainers[region_name] = container
                             label_images_valid = True
                         else:
@@ -590,7 +590,7 @@ class TimeHolder(OrderedDict):
                                            'uint16',
                                            #chunks=(1, 5, 1, h/5, w/5),
                                            compression=self._hdf5_compression)
-                    var_labels.attrs['valid'] = [False for kk in range(t)]
+                    var_labels.attrs['valid'] = numpy.zeros(t)
     
                 frame_idx = self._frames_to_idx[self._iCurrentT]
                 for region_name in channel.lstAreaSelection:
@@ -599,7 +599,10 @@ class TimeHolder(OrderedDict):
                     container = channel.dctContainers[region_name]
                     array = container.img_labels.toArray(copy=False)
                     var_labels[idx, frame_idx, 0] = numpy.require(array, 'uint16')
-                    var_labels.attrs['valid'][frame_idx] = True
+                    ### Workaround... h5py attributes do not support transparent list types...
+                    tmp = var_labels.attrs['valid']
+                    tmp[frame_idx] = 1
+                    var_labels.attrs['valid'] = tmp
         else:
             self._logger.debug('Label images %s loaded from nc4 file.' %\
                    desc)

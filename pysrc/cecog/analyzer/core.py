@@ -320,6 +320,7 @@ class PositionAnalyzer(object):
                                  hdf5_include_events=hdf5_include_events,
                                  hdf5_compression=hdf5_compression,
                                  )
+        self.oTimeHolder = oTimeHolder
 
         self.oSettings.set_section('Tracking')
         # structure and logic to handle object trajectories
@@ -1323,6 +1324,7 @@ class AnalyzerCore(object):
                 analyzer = PositionAnalyzer(*tplArgs, **dctOptions)
                 analyzer()
             except Exception, e:
+                analyzer.oTimeHolder.close_all()
                 logging.getLogger(str(os.getpid())).error(e.message)
                 raise
 
