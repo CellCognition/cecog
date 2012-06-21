@@ -497,57 +497,70 @@ class TimeHolder(OrderedDict):
         desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
                                          channel.strChannelId)
         name = channel.NAME.lower()
-        if False:#self._create_nc or self._reuse_nc:
-            grp = self._dataset.groups[self.NC_GROUP_LABEL]
-            grp = grp.groups[name]
-            frame_idx = self._frames_to_idx[self._iCurrentT]
-        if False:#self._reuse_nc:
-            for region_name in channel.lstAreaSelection:
-                var = grp.variables[region_name]
-                if len(var.valid.shape) == 0:
-                    frame_valid = var.valid
+        
+        ### Check if labels are there 
+        
+        ### Check if reuse is enabled
+        
+        label_images_valid = False
+
+        name = channel.NAME.lower()
+            
+        if self._hdf5_create:
+            if self._hdf5_include_label_images:
+                ### Try to load them
+                frame_idx = self._frames_to_idx[self._iCurrentT]
+                for region_name in channel.lstAreaSelection:
+                    dset_label_image = self._grp_cur_position[self.HDF5_GRP_IMAGE]['region']
+                    frame_valid = dset_label_image.attrs['valid'][frame_idx]
+                    if frame_valid:
+                        region_idx = self._regions_to_idx[region_name]
+                        img_label = ccore.numpy_to_image(dset_label_image[region_idx, frame_idx, 0, :, :], copy=True)
+                        img_xy = channel.meta_image.image
+                        container = ccore.ImageMaskContainer(img_xy, img_label,
+                                                             False, True, True)
+                        channel.dctContainers[region_name] = container
+                        label_images_valid = True
+                    else:
+                        label_images_valid = False
+                        break     
+     
+                
+        if not label_images_valid:
+            channel.apply_segmentation(primary_channel)
+            if self._hdf5_create and self._hdf5_include_label_images:
+                meta = self._meta_data
+                w = meta.real_image_width
+                h = meta.real_image_height
+                z = meta.dim_z
+                t = len(self._frames_to_idx)
+                var_name = 'region'
+                grp = self._grp_cur_position[self.HDF5_GRP_IMAGE]
+                if var_name in grp:
+                    var_labels = grp[var_name]
                 else:
-                    frame_valid = var.valid[frame_idx]
-                if frame_valid:
-                    img_label = ccore.numpy_to_image(var[frame_idx],
-                                                     copy=True)
-                    img_xy = channel.meta_image.image
-                    container = ccore.ImageMaskContainer(img_xy, img_label,
-                                                         False, True, True)
-                    channel.dctContainers[region_name] = container
-                    valid = True
-                else:
-                    valid = False
-                    break
+                    nr_labels = len(self._regions_to_idx)
+                    var_labels = \
+                        grp.create_dataset(var_name,
+                                           (nr_labels, t, z, h, w),
+                                           'uint16',
+                                           #chunks=(1, 5, 1, h/5, w/5),
+                                           compression=self._hdf5_compression)
+                    var_labels.attrs['valid'] = [False for kk in range(t)]
+    
+                frame_idx = self._frames_to_idx[self._iCurrentT]
+                for region_name in channel.lstAreaSelection:
+                    idx = self._regions_to_idx[
+                            self._convert_region_name(channel.PREFIX, region_name)]
+                    container = channel.dctContainers[region_name]
+                    array = container.img_labels.toArray(copy=False)
+                    var_labels[idx, frame_idx, 0] = numpy.require(array, 'uint16')
+                    var_labels.attrs['valid'][frame_idx] = True
+        else:
+            self._logger.debug('Label images %s loaded from nc4 file.' %\
+                   desc)
 
-        channel.apply_segmentation(primary_channel)
-
-        if self._hdf5_create and self._hdf5_include_label_images:
-            meta = self._meta_data
-            w = meta.real_image_width
-            h = meta.real_image_height
-            z = meta.dim_z
-            t = len(self._frames_to_idx)
-            var_name = 'region'
-            grp = self._grp_cur_position[self.HDF5_GRP_IMAGE]
-            if var_name in grp:
-                var_labels = grp[var_name]
-            else:
-                nr_labels = len(self._regions_to_idx)
-                var_labels = \
-                    grp.create_dataset(var_name,
-                                       (nr_labels, t, z, h, w),
-                                       'uint16',
-                                       chunks=(1, 5, 1, h/5, w/5),
-                                       compression=self._hdf5_compression)
-
-            frame_idx = self._frames_to_idx[self._iCurrentT]
-            for region_name in channel.lstAreaSelection:
-                idx = self._regions_to_idx[
-                        self._convert_region_name(channel.PREFIX, region_name)]
-                container = channel.dctContainers[region_name]
-                array = container.img_labels.toArray(copy=False)
-                var_labels[idx, frame_idx, 0] = numpy.require(array, 'uint16')
+        
 
 
     def prepare_raw_image(self, channel):
