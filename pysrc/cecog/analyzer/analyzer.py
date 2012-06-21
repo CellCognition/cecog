@@ -321,7 +321,43 @@ class TimeHolder(OrderedDict):
         self._feature_to_idx = OrderedDict()
 
         if self._hdf5_create:
-            self._hdf5_create_file_structure()
+            label_image_cpy = None
+            label_image_str = None
+            label_image_valid = None
+            
+            if os.path.exists(self.hdf5_filename):
+                # hdf5 file already there?                 
+                try:
+                    f = h5py.File(self.hdf5_filename, 'r')
+                
+                    meta_data = self._meta_data
+                    # Check for being wellbased or old style (B01_03 vs. 0037)
+                    if meta_data.has_well_info:
+                        well, subwell = meta_data.get_well_and_subwell(self.P)
+                        position = str(subwell)
+                    else:
+                        well = "0"
+                        position = self.P
+                    
+                    label_image_str = '/sample/0/plate/%s/experiment/%s/position/%s/%s/region' % (self.plate_id, 
+                                                                                              well, 
+                                                                                              position, 
+                                                                                              self.HDF5_GRP_IMAGE)
+                    
+                    # check if label images are there and if reuse is enabled
+                    if label_image_str in f:
+                        label_image_cpy = f[label_image_str].value
+                        label_image_valid = f[label_image_str].attrs['valid']
+                except:
+                    print 'hdf file corrupt'
+                    label_image_cpy = None
+                    label_image_str = None
+                    label_image_valid = None
+                finally:
+                    if isinstance(f, h5py._hl.files.File):
+                        f.close()
+                
+            self._hdf5_create_file_structure(self.hdf5_filename, label_image_str, label_image_cpy, label_image_valid)
             self._hdf5_write_global_definition()
             
     def _hdf5_write_global_definition(self):
@@ -411,8 +447,8 @@ class TimeHolder(OrderedDict):
             global_object_desc[0] = (obj_name, self.HDF5_OTYPE_REGION, prim_obj_name, prim_obj_name)
 
                        
-    def _hdf5_create_file_structure(self):
-        f = h5py.File(self.hdf5_filename, 'w')
+    def _hdf5_create_file_structure(self, filename, label_image_str=None, label_image_cpy=None, label_image_valid=None):
+        f = h5py.File(filename, 'w')
         self._hdf5_file = f
 
         grp_sample = f.create_group('sample')
@@ -445,6 +481,10 @@ class TimeHolder(OrderedDict):
         self._grp_def.create_group(self.HDF5_GRP_IMAGE)
         self._grp_def.create_group(self.HDF5_GRP_FEATURE)
         self._grp_def.create_group(self.HDF5_GRP_OBJECT)
+        
+        if label_image_cpy is not None:
+            self._hdf5_file[label_image_str] = label_image_cpy
+            self._hdf5_file[label_image_str].attrs['valid'] = label_image_valid
 
 
     @staticmethod
@@ -511,19 +551,23 @@ class TimeHolder(OrderedDict):
                 ### Try to load them
                 frame_idx = self._frames_to_idx[self._iCurrentT]
                 for region_name in channel.lstAreaSelection:
-                    dset_label_image = self._grp_cur_position[self.HDF5_GRP_IMAGE]['region']
-                    frame_valid = dset_label_image.attrs['valid'][frame_idx]
-                    if frame_valid:
-                        region_idx = self._regions_to_idx[region_name]
-                        img_label = ccore.numpy_to_image(dset_label_image[region_idx, frame_idx, 0, :, :], copy=True)
-                        img_xy = channel.meta_image.image
-                        container = ccore.ImageMaskContainer(img_xy, img_label,
-                                                             False, True, True)
-                        channel.dctContainers[region_name] = container
-                        label_images_valid = True
-                    else:
+                    if 'region' in self._grp_cur_position[self.HDF5_GRP_IMAGE]:
+                        dset_label_image = self._grp_cur_position[self.HDF5_GRP_IMAGE]['region']
+                        frame_valid = dset_label_image.attrs['valid'][frame_idx]
+                        if frame_valid:
+                            region_idx = self._regions_to_idx[region_name]
+                            img_label = ccore.numpy_to_image(dset_label_image[region_idx, frame_idx, 0, :, :], copy=True)
+                            img_xy = channel.meta_image.image
+                            container = ccore.ImageMaskContainer(img_xy, img_label,
+                                                                 False, True, True)
+                            channel.dctContainers[region_name] = container
+                            label_images_valid = True
+                        else:
+                            label_images_valid = False
+                            break   
+                    else:  
                         label_images_valid = False
-                        break     
+                        break  
      
                 
         if not label_images_valid:
