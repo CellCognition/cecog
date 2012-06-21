@@ -105,6 +105,154 @@ class TimeHolder(OrderedDict):
         numpy.dtype([('obj_id', 'uint32'),
                      ('edge_idx1', 'uint32'),
                      ('edge_idx2', 'uint32'),])
+        
+    def create_nc4(self):
+        import netCDF4
+        settings = self._settings
+        if (self._create_nc and self._reuse_nc and self._dataset is None and
+            os.path.isfile(self._nc4_filename)):
+            dataset = netCDF4.Dataset(self._nc4_filename, 'a')
+
+            # decide which parts need to be reprocessed based on changes
+            # between the saved (from nc4) and the current settings
+
+            # load settings from nc4 file
+            #var = str(dataset.variables['settings'][:][0])
+            #settings2 = settings.copy()
+            #settings2.from_string(var)
+
+            # compare current and saved settings and decide which data is to
+            # process again by setting the *_finished variables to zero
+
+#            valid = {'primary'   : [True, True],
+#                     'secondary' : [True, True],
+#                     }
+#            for name in ['primary', 'secondary']:
+#                channel_id = settings2.get(SECTION_NAME_OBJECTDETECTION,
+#                                           '%s_channelid' % name)
+#                idx = dataset.variables['channels_idx'][:] == channel_id
+#                if (not settings.compare(settings2, SECTION_NAME_OBJECTDETECTION,
+#                                         '%s_image' % name) or
+#                    not settings.compare(settings2, SECTION_NAME_OBJECTDETECTION,
+#                                         'secondary_registration') or
+#                    not valid[name][0]):
+#                    dataset.variables['raw_images_finished'][:,idx] = 0
+#                    valid['primary'] = [False, False]
+#                    valid['secondary'] = [False, False]
+#                idx = dataset.variables['region_channels'][:] == name
+#                if (not settings.compare(settings2, SECTION_NAME_OBJECTDETECTION,
+#                                        '%s_segmentation' % name) or
+#                    not valid[name][1]):
+#                    dataset.variables['label_images_finished'][:,idx] = 0
+#                    valid['primary'] = [False, False]
+#                    valid['secondary'] = [False, False]
+
+        elif self._create_nc and self._dataset is None:
+            meta = self._meta_data
+            dim_t = meta.dim_t
+            dim_c = meta.dim_c
+            w = meta.real_image_width
+            h = meta.real_image_height
+
+            channels = sorted(list(meta.channels))
+            region_names = REGION_NAMES_PRIMARY + REGION_NAMES_SECONDARY
+            region_channels = ['primary']*len(REGION_NAMES_PRIMARY) + \
+                              ['secondary']*len(REGION_NAMES_SECONDARY)
+
+            dataset = netCDF4.Dataset(self._nc4_filename, 'w', format='NETCDF4')
+            dataset.createDimension('frames', dim_t)
+            dataset.createDimension('channels', dim_c)
+            dataset.createDimension('height', h)
+            dataset.createDimension('width', w)
+            dataset.createDimension('regions', len(region_names))
+            dataset.createDimension('one', 1)
+
+            frames = sorted(list(meta.times))
+            var = dataset.createVariable('frames_idx', 'u4', 'frames')
+            var.description = 'Mapping from indices to frames.'
+            var[:] = frames
+
+            var = dataset.createVariable('settings', str, 'one')
+            var.description = 'Cecog settings used for the generation of this '\
+                              'netCDF file. Current cecog and this settings '\
+                              'are compared hierarchically leading to a '\
+                              'stepwise invalidation of preprocessed values.'
+
+            raw_g = dataset.createGroup(self.NC_GROUP_RAW)
+            raw_g.description = 'Converted raw images as processed by cecog '\
+                                'after 8bit conversion, registration, and '\
+                                'z-projection/selection.'
+            label_g = dataset.createGroup(self.NC_GROUP_LABEL)
+            label_g.description = 'Label images as a result of object '\
+                                  'detection.'
+
+            object_g = dataset.createGroup('object')
+            object_g.description = 'General object values and mapping'
+            feature_g = dataset.createGroup(self.NC_GROUP_FEATURE)
+            feature_g.description = 'Feature values'
+
+            for channel_id in meta.channels:
+                var = raw_g.createVariable(channel_id, 'u1',
+                                           ('frames', 'height', 'width'),
+                                           zlib=self.NC_ZLIB,
+                                           shuffle=self.NC_SHUFFLE,
+                                           chunksizes=(1, h, w))
+                # FIXME: not working for dim_t == 1 (no timelapse data)
+                var.valid = [0] * dim_t
+                #print channel_id, dim_t, var.valid
+
+            for channel_name in REGION_NAMES.keys():
+                channel_g = label_g.createGroup(channel_name)
+                grp1 = object_g.createGroup(channel_name)
+                grp2 = feature_g.createGroup(channel_name)
+                for region_name in REGION_NAMES[channel_name]:
+                    var = channel_g.createVariable(region_name, 'i2',
+                                                   ('frames', 'height',
+                                                    'width'),
+                                                   zlib=self.NC_ZLIB,
+                                                   shuffle=self.NC_SHUFFLE,
+                                                   chunksizes=(1, h, w))
+                    var.valid = [0] * dim_t
+                    grp1.createGroup(region_name)
+                    grp2.createGroup(region_name)
+
+            var = dataset.createVariable('channels_idx', str, 'channels')
+            var[:] = numpy.asarray(channels, 'O')
+
+            var = dataset.createVariable('region_names', str, 'regions')
+            var[:] = numpy.asarray(region_names, 'O')
+
+            var = dataset.createVariable('region_channels', str, 'regions')
+            var[:] = numpy.asarray(region_channels, 'O')
+
+            dataset.createVariable('raw_images', 'u1',
+                                   ('frames', 'channels', 'height', 'width'),
+                                   zlib='True',
+                                   shuffle=False,
+                                   chunksizes=(1, 1, h, w)
+                                   )
+            finished = dataset.createVariable('raw_images_finished', 'i1',
+                                              ('frames', 'channels'))
+            finished[:] = 0
+
+            dataset.createVariable('label_images', 'i2',
+                                   ('frames', 'regions', 'height', 'width'),
+                                   zlib='True',
+                                   shuffle=False,
+                                   chunksizes=(1, 1, h, w)
+                                   )
+            finished = dataset.createVariable('label_images_finished', 'i1',
+                                              ('frames', 'regions'))
+
+            finished[:] = 0
+        else:
+            dataset = None
+
+        if not dataset is None:
+            # update the settings to the current version
+            var = dataset.variables['settings']
+            var[:] = numpy.asarray(settings.to_string(), 'O')
+            self._dataset = dataset
 
 
     def __init__(self, P, channels, filename_hdf5, meta_data, settings,
