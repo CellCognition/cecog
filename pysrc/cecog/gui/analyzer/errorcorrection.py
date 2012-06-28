@@ -30,6 +30,7 @@ __all__ = ['ErrorCorrectionFrame']
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
 from cecog.gui.analyzer import (BaseProcessorFrame,
                                 HmmThread,
+                                HmmThreadPython
                                 )
 
 #-------------------------------------------------------------------------------
@@ -56,6 +57,10 @@ class ErrorCorrectionFrame(BaseProcessorFrame):
         self.register_control_button('hmm',
                                      HmmThread,
                                      ('Correct errors', 'Stop correction'))
+        
+        self.register_control_button('hmm2',
+                                     HmmThreadPython,
+                                     ('Correct errors (python)', 'Stop correction (python)'))
 
         self.add_input('filename_to_r')
         self.add_line()

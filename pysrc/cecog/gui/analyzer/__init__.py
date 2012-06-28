@@ -9,7 +9,7 @@
                  See trunk/AUTHORS.txt for author contributions.
 """
 from __future__ import division
-__author__ = 'Michael Held'
+__author__ = 'Michael Held & Qing Zhong'
 __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
@@ -45,26 +45,10 @@ import types, \
 # Sklearn imports:
 #
 from sklearn import mixture, utils
-def mylogsumexp(A, axis=None):
-    """Computes the sum of A assuming A is in the log domain.
 
-    Returns log(sum(exp(A), axis)) while minimizing the possibility of
-    over/underflow.
-    """
-    Amax = A.max(axis)
-    if axis and A.ndim > 1:
-        shape = list(A.shape)
-        shape[axis] = 1
-        Amax.shape = shape
-    Asum = numpy.log(numpy.sum(numpy.exp(A - Amax), axis))
-    Asum += Amax.reshape(Asum.shape)
-    if axis:
-        # Look out for underflow.
-        Asum[numpy.isnan(Asum)] = - numpy.Inf
-    return Asum
-# overwrite the existing logsumexp with new mylogsumexp
+# change sklearn logsumexp function by corrected version
+from cecog.util.sklearn import mylogsumexp
 utils.extmath.logsumexp = mylogsumexp
-
 import sklearn.hmm as hmm
 
 #-------------------------------------------------------------------------------
@@ -121,57 +105,7 @@ from cecog.traits.analyzer import SECTION_REGISTRY
 #-------------------------------------------------------------------------------
 # functions:
 #
-def read_labels(path,num_frames,col,name):
-    listing = os.listdir(path)
-    num_tracks = 0
-    Y = numpy.array(0)
-    infiles = []
-    for infile in listing:
-        if (infile.find(name)!=-1) : # only *_B01_*.tsv files will be considered
-            num_tracks += 1
-            infiles.append(infile)
-            data = numpy.genfromtxt(path+infile,delimiter='\t',dtype='int')
-            labels = data[1:,col]
-            if (Y.any()==0) :
-                Y = labels
-            else :
-                Y = numpy.vstack((Y,labels))
-    return Y,num_tracks,infiles
 
-def dhmm_correction(n_clusters, labels, dim, apoptosis=0):
-    if (not apoptosis) : # apoptosis not considered in HMM correction
-        labels[labels == 8] = 7; # [1 2 3 4 5 6 7]
-        n_clusters -= 1 
-    if (min(labels.flatten()) == 1) :
-        labels -= 1; # begins with 0, [0 1 2 3 4 5 6]
-    # small error term
-    eps = 0.01
-    # estimate initial transition matrix
-    trans = numpy.zeros((n_clusters,n_clusters))
-    hist, bin_edges = numpy.histogram(labels, bins=n_clusters)
-    for i in range(0,n_clusters) :
-        if (i<n_clusters-1) :
-            trans[i,i:i+2] += [hist[i]/(hist[i]+hist[i+1]), hist[i+1]/(hist[i]+hist[i+1])]
-        else :
-            trans[i,0] += hist[i]/(hist[i]+hist[0])
-            trans[i,-1] += hist[0]/(hist[i]+hist[0])                                                                                                             
-    trans = trans + eps
-    trans /= trans.sum(axis=1)[:, numpy.newaxis]
-    # start probability: [1, 0, 0, ...]
-    sprob = numpy.zeros((1,n_clusters)).flatten()+eps/(n_clusters-1)
-    sprob[0] = 1-eps
-    # initialize DHMM
-    dhmm = hmm.MultinomialHMM(n_components=n_clusters,transmat = trans,startprob=sprob)
-    # emission probability, identity matrix with predefined small errors.
-    emis = numpy.eye(n_clusters) + eps/(n_clusters-1)
-    emis[range(n_clusters),range(n_clusters)] = 1-eps;
-    dhmm.emissionprob = emis;                         
-    # learning the DHMM parameters
-    dhmm.fit([labels.flatten()], init_params ='') # default n_iter=10, thresh=1e-2
-    dhmm.emissionprob = emis # with EM update
-    labels_dhmm_vec = dhmm.predict(labels.flatten()) # vector format
-    labels_dhmm_matrix = labels_dhmm_vec.reshape(dim[1],dim[0]) # matrix format
-    return labels_dhmm_vec, labels_dhmm_matrix
 
 # see http://stackoverflow.com/questions/3288595/multiprocessing-using-pool-map-on-a-function-defined-in-a-class
 def AnalyzerCoreHelper(plate_id, settings_str, imagecontainer, position):
@@ -373,117 +307,217 @@ class _ProcessingThread(QThread):
 
 
 
-#class HmmThread(_ProcessingThread):
-#    def __init__(self, parent, settings, learner_dict, imagecontainer):
-#        _ProcessingThread.__init__(self, parent, settings)
-#        self._settings.set_section(SECTION_NAME_ERRORCORRECTION)
-#        self._learner_dict = learner_dict
-#        self._imagecontainer = imagecontainer
-#        self.plates = self._imagecontainer.plates
-#        self._mapping_files = {}
-#        self._logger = logging.getLogger(self.__class__.__name__)
-#        self._convert = lambda x: x.replace('\\','/')
-#        self._join = lambda *x: self._convert('/'.join(x))
-#        # Read Events from event txt files
-#        # self.events = self._readEvents()
-#    
-#    def _setMappingFile(self):
-#        if self._settings.get2('position_labels'):
-#            path_mapping = self._convert(self._settings.get2('mappingfile_path'))
-#            for plate_id in self.plates:
-#                mapping_file = os.path.join(path_mapping, '%s.tsv' % plate_id)
-#                if not os.path.isfile(mapping_file):
-#                    mapping_file = os.path.join(path_mapping, '%s.txt' % plate_id)
-#                    if not os.path.isfile(mapping_file):
-#                        raise IOError("Mapping file '%s' for plate '%s' not found." %
-#                                      (mapping_file, plate_id))
-#                self._mapping_files[plate_id] = os.path.abspath(mapping_file)
-#        
-#    def _run(self):
-#
-#        self._settings.set_section(SECTION_NAME_ERRORCORRECTION)
-#        print 'ALL POSITONS AVAILABLE', self._imagecontainer.get_meta_data().positions
-#        # Initialize GUI Progress bar
-#        info = {'min' : 0,
-#                'max' : len(self.plates),
-#                'stage': 0,
-#                'meta': 'Error correction...',
-#                'progress': 0}
-#        
-#        # Process each plate and update Progressbar (if not aborted by user)
-#        for idx, plate_id in enumerate(self.plates):
-#            if not self._abort:
-#                info['text'] = "Plate: '%s' (%d / %d)" % (plate_id, idx+1, len(self.plates))
-#                self.set_stage_info(info)
-#                self._imagecontainer.set_plate(plate_id)
-#                self._run_plate(plate_id)
-#                info['progress'] = idx+1
-#                self.set_stage_info(info)
-#                # self._produce_txt_output()
-#            else:
-#                break
-#    
-#    def _run_plate(self, plate_id):
-#        print "processing", plate_id
-#        path_out = self._imagecontainer.get_path_out()
-#        path_analyzed = self._join(path_out, 'analyzed')
-#        print path_analyzed
-#        
-#        "Reads all events written by the CellCognition tracking."
-#        if self._settings.get('General', 'constrain_positions'):
-#            pos = self._settings.get('General', 'positions')  
-#        
-#        #self._settings.set_section(SECTION_NAME_TRACKING)
-#        num_frames = int(self._settings.get('Tracking', 'tracking_forwardrange') + self._settings.get('Tracking', 'tracking_backwardrange'))
-#
-#        path_pos = self._join(path_analyzed, pos)
-#        path_data = self._join(path_pos, 'statistics/events/')
-#        print 'path_data', path_data
-#        col = 6 # column position of svm_labels, should be retrieved from variable
-#        name = 'B01__CPrimary'
-#        labels_svm, num_tracks, infiles = read_labels(path_data,num_frames,col,name) # SVM labels
-#        # print infiles
-#        dim = [num_frames, num_tracks] # data dimension
-#        
-#        k = numpy.unique(labels_svm).shape[0]
-#        print k
-#        labels_dhmm_vec, labels_dhmm_matrix = dhmm_correction(k, labels_svm, dim)
-#        print labels_dhmm_matrix
-#
-#        path_out_hmm2 = self._join(path_data, '_hmm2')
-#        print 'path_out_hmm2', path_out_hmm2
-#        safe_mkdirs(path_out_hmm2)
-#        path_out_labelmatrix = self._join(path_out_hmm2, 'labels.txt')
-#        numpy.savetxt(path_out_labelmatrix, labels_dhmm_matrix,fmt='%d',delimiter='\t')
-#        cnt = 0
-#        for infile in infiles:
-#            path_out_sf = self._join(path_out_hmm2, infile)
-#            numpy.savetxt(path_out_sf, labels_dhmm_matrix[cnt,:],fmt='%d',delimiter='\t')   
-#            cnt += 1
-#    
-#    def set_abort(self, wait=False):
-#        pass
-#    
-#    @classmethod
-#    def test_executable(cls, filename):
-#        "mock interface method"
-#        return True, ""
-#    
-#    @classmethod
-#    def get_cmd(cls, filename):
-#        "mock interface method"
-#        return ""
-#    
-#    def _get_path_out(self, path, prefix):
-#        if self._settings.get2('groupby_oligoid'):
-#            suffix = 'byoligo'
-#        elif self._settings.get2('groupby_genesymbol'):
-#            suffix = 'bysymbol'
-#        else:
-#            suffix = 'bypos'
-#        path_out = os.path.join(path, '%s_%s' % (prefix, suffix))
-#        safe_mkdirs(path_out)
-#        return path_out
+class HmmThreadPython(_ProcessingThread):
+    def __init__(self, parent, settings, learner_dict, imagecontainer):
+        _ProcessingThread.__init__(self, parent, settings)
+        self._settings.set_section(SECTION_NAME_ERRORCORRECTION)
+        self._learner_dict = learner_dict
+        self._imagecontainer = imagecontainer
+        self.plates = self._imagecontainer.plates
+        self._mapping_files = {}
+        self._logger = logging.getLogger(self.__class__.__name__)
+        self._convert = lambda x: x.replace('\\','/')
+        self._join = lambda *x: self._convert('/'.join(x))
+        
+    @classmethod
+    def get_cmd(cls, filename):
+        filename = filename.strip()
+        if filename != '':
+            cmd = filename
+        elif sys.platform == 'darwin':
+            cmd = cls.DEFAULT_CMD_MAC
+        else:
+            cmd = cls.DEFAULT_CMD_WIN
+        return cmd
+    
+    def _setMappingFile(self):
+        if self._settings.get2('position_labels'):
+            path_mapping = self._convert(self._settings.get2('mappingfile_path'))
+            for plate_id in self.plates:
+                mapping_file = os.path.join(path_mapping, '%s.tsv' % plate_id)
+                if not os.path.isfile(mapping_file):
+                    mapping_file = os.path.join(path_mapping, '%s.txt' % plate_id)
+                    if not os.path.isfile(mapping_file):
+                        raise IOError("Mapping file '%s' for plate '%s' not found." %
+                                      (mapping_file, plate_id))
+                self._mapping_files[plate_id] = os.path.abspath(mapping_file)
+        
+    def _run(self):
+
+        self._settings.set_section(SECTION_NAME_ERRORCORRECTION)
+        print 'ALL POSITONS AVAILABLE', self._imagecontainer.get_meta_data().positions
+        # Initialize GUI Progress bar
+        info = {'min' : 0,
+                'max' : len(self.plates),
+                'stage': 0,
+                'meta': 'Error correction...',
+                'progress': 0}
+        
+        # Process each plate and update Progressbar (if not aborted by user)
+        for idx, plate_id in enumerate(self.plates):
+            if not self._abort:
+                info['text'] = "Plate: '%s' (%d / %d)" % (plate_id, idx+1, len(self.plates))
+                self.set_stage_info(info)
+                self._imagecontainer.set_plate(plate_id)
+                self._run_plate(plate_id)
+                info['progress'] = idx+1
+                self.set_stage_info(info)
+            else:
+                break
+    
+    def _run_plate(self, plate_id):
+        print "processing", plate_id
+        path_out = self._imagecontainer.get_path_out()
+        path_analyzed = self._join(path_out, 'analyzed')
+        path_out_hmm_html = self._join(path_out, 'hmm2')
+        safe_mkdirs(path_out_hmm_html)
+        region_name_primary = self._settings.get('Classification', 'primary_classification_regionname')
+        region_name_secondary = self._settings.get('Classification', 'secondary_classification_regionname')
+        
+        # don't do anything if the 'hmm' folder already exists and the skip-option is on
+        if os.path.isdir(path_out_hmm_html) and self._settings.get('ErrorCorrection','skip_processed_plates'):
+            return
+        
+        "Reads all events written by the CellCognition tracking."
+        if self._settings.get('General', 'constrain_positions'):
+            pos = self._settings.get('General', 'positions')  
+        
+        num_frames = int(self._settings.get('Tracking', 'tracking_forwardrange') + self._settings.get('Tracking', 'tracking_backwardrange'))
+        path_pos = self._join(path_analyzed, pos)
+        path_data = self._join(path_pos, 'statistics/events/')
+        print 'path_data', path_data
+        class_col = 6 # column position of svm_labels, should be retrieved from variable
+        
+        # directory of hmm corrected labels
+        path_out_hmm2 = self._join(path_data, '_hmm2')
+        safe_mkdirs(path_out_hmm2)
+        text = 'Trajectory'
+        
+        if self._settings.get('ErrorCorrection', 'ignore_tracking_branches') : 
+            branch = '__'
+        else: 
+            branch = 'B01__'
+            
+        if self._settings.get('Processing', 'secondary_processchannel') :
+            channels = ['CPrimary','CSecondary']
+            path_out_hmm_regions = [self._convert(self._get_path_out(path_out_hmm_html,'%s_%s' % ('primary', region_name_primary))),
+                                    self._convert(self._get_path_out(path_out_hmm_html,'%s_%s' % ('secondary', region_name_secondary)))]                                        
+        else :
+            channels = ['CPrimary']
+            path_out_hmm_regions = [self._convert(self._get_path_out(path_out_hmm_html,'%s_%s' % ('primary', region_name_primary)))]
+        
+        print channels 
+        freq_matrix = []   
+        for channel in channels :
+            labels_svm, num_tracks, infiles = self.read_labels(path_data,num_frames,class_col,branch+channel) # SVM labels
+            dim = [num_frames, num_tracks] # data dimension
+            k = numpy.unique(labels_svm).shape[0]
+            print k
+            print channel
+            labels_dhmm_vec, labels_dhmm_matrix = self.dhmm_correction(k, labels_svm, dim)
+            labels_dhmm_matrix = labels_dhmm_matrix + 1 # labels starts with 1, not 0!
+            path_out_labelmatrix = self._join(path_out_hmm2, 'labels'+channel+'.txt')
+            numpy.savetxt(path_out_labelmatrix, labels_dhmm_matrix,fmt='%d',delimiter='\t')          
+            for (counter, infile) in enumerate(infiles):
+                path_out_sf = self._join(path_out_hmm2, infile)
+                numpy.savetxt(path_out_sf, labels_dhmm_matrix[counter,:],fmt='%d',delimiter='\t')   
+                if channel in infile :
+                    text = text+'\n'+infile
+#            for track_index in dim[1] :
+#                hist, bin_edges = numpy.histogram(labels_dhmm_matrix[track_index,:], bins=k)
+#                freq_matrix [track_index,:] = hist
+                
+        print freq_matrix
+       
+        # compose gallery images: both channels will be composed by compose_gallerie()
+        path_out_composed_gallery = self._join(path_out_hmm_regions[0], '_index/')
+        safe_mkdirs(path_out_composed_gallery)
+        print path_out_composed_gallery
+            
+        f = open(path_out_composed_gallery+pos+'.txt', 'w')
+        for line in text:
+            f.write(line)
+        f.close()
+        
+        if self._settings.get('ErrorCorrection','compose_galleries') and not self._abort:
+            sample = self._settings.get2('compose_galleries_sample')
+            if sample == -1:
+                sample = None
+            for group_name in compose_galleries(path_out, path_out_hmm_regions[0], sample=sample):
+                self._logger.debug('gallery finished for group: %s' % group_name)
+                if self._abort:
+                    break
+    
+    def set_abort(self, wait=False):
+        pass
+    
+    @classmethod
+    def test_executable(cls, filename):
+        "mock interface method"
+        return True, ""
+    
+    def _get_path_out(self, path, prefix):
+        if self._settings.get2('groupby_oligoid'):
+            suffix = 'byoligo'
+        elif self._settings.get2('groupby_genesymbol'):
+            suffix = 'bysymbol'
+        else:
+            suffix = 'bypos'
+        path_out = os.path.join(path, '%s_%s' % (prefix, suffix))
+        safe_mkdirs(path_out)
+        return path_out
+    
+    @staticmethod
+    def read_labels(path,num_frames,col,name):
+        listing = os.listdir(path)
+        num_tracks = 0
+        Y = numpy.array(0)
+        infiles = []
+        for infile in listing:
+            infile_lower = infile.lower() # case insensitive
+            if (infile_lower.find(name.lower())!=-1) :
+                num_tracks += 1
+                infiles.append(infile)
+                data = numpy.genfromtxt(path+infile,delimiter='\t',dtype='int')
+                labels = data[1:,col]
+                if (Y.any()==0) :
+                    Y = labels
+                else :
+                    Y = numpy.vstack((Y,labels))
+        return Y,num_tracks,infiles
+    
+    @staticmethod
+    def dhmm_correction(n_clusters, labels, dim):
+        if min(labels.flatten()) == 1 :
+            labels -= 1; # begins with 0, [0 1 2 3 4 5 6]
+        # a small error term
+        eps = 0.01
+        # estimate initial transition matrix
+        trans = numpy.zeros((n_clusters,n_clusters))
+        hist, bin_edges = numpy.histogram(labels, bins=n_clusters)
+        for i in range(0,n_clusters) :
+            if (i<n_clusters-1) :
+                trans[i,i:i+2] += [hist[i]/(hist[i]+hist[i+1]), hist[i+1]/(hist[i]+hist[i+1])]
+            else :
+                trans[i,0] += hist[i]/(hist[i]+hist[0])
+                trans[i,-1] += hist[0]/(hist[i]+hist[0])                                                                                                             
+        trans = trans + eps
+        trans /= trans.sum(axis=1)[:, numpy.newaxis]
+        # start probability: [1, 0, 0, ...]
+        sprob = numpy.zeros((1,n_clusters)).flatten()+eps/(n_clusters-1)
+        sprob[0] = 1-eps
+        # initialize DHMM
+        dhmm = hmm.MultinomialHMM(n_components=n_clusters,transmat = trans,startprob=sprob)
+        # emission probability, identity matrix with predefined small errors.
+        emis = numpy.eye(n_clusters) + eps/(n_clusters-1)
+        emis[range(n_clusters),range(n_clusters)] = 1-eps;
+        dhmm.emissionprob = emis;                         
+        # learning the DHMM parameters
+        dhmm.fit([labels.flatten()], init_params ='') # default n_iter=10, thresh=1e-2
+        dhmm.emissionprob = emis # with EM update
+        labels_dhmm_vec = dhmm.predict(labels.flatten()) # vector format
+        labels_dhmm_matrix = labels_dhmm_vec.reshape(dim[1],dim[0]) # matrix format
+        return labels_dhmm_vec, labels_dhmm_matrix
         
 
 class HmmThread(_ProcessingThread): #__R_version
@@ -560,6 +594,7 @@ class HmmThread(_ProcessingThread): #__R_version
 
     def _run_plate(self, plate_id):
         filename = self._settings.get2('filename_to_R')
+        print filename
         cmd = self.get_cmd(filename)
 
         path_out = self._imagecontainer.get_path_out()
@@ -706,6 +741,9 @@ class HmmThread(_ProcessingThread): #__R_version
             if sample == -1:
                 sample = None
             for group_name in compose_galleries(path_out, path_out_hmm_region, sample=sample):
+                print path_out
+                print path_out_hmm_region
+                print group_name
                 self._logger.debug('gallery finished for group: %s' % group_name)
                 if self._abort:
                     break
@@ -1223,6 +1261,13 @@ class _ProcessorMixin(object):
                              (self._settings.get('Processing', 'secondary_errorcorrection') and
                               self._settings.get('Processing', 'secondary_processchannel')))):
                         self._process_items.remove(HmmThread)
+                        
+                    if (HmmThreadPython in self._process_items and
+                        self._process_items.index(HmmThreadPython) > 0 and
+                        not (self._settings.get('Processing', 'primary_errorcorrection') or
+                             (self._settings.get('Processing', 'secondary_errorcorrection') and
+                              self._settings.get('Processing', 'secondary_processchannel')))):
+                        self._process_items.remove(HmmThreadPython)
 
                 else:
                     self._process_items = None
@@ -1338,6 +1383,26 @@ class _ProcessorMixin(object):
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
 
                     # FIXME: classifier handling needs revision!!!
+                    learner_dict = {}
+                    for kind in ['primary', 'secondary']:
+                        _resolve = lambda x,y: self._settings.get(x, '%s_%s' % (kind, y))
+                        env_path = convert_package_path(_resolve('Classification', 'classification_envpath'))
+                        if (_resolve('Processing', 'classification') and
+                            (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))):
+                            classifier_infos = {'strEnvPath' : env_path,
+                                                'strChannelId' : _resolve('ObjectDetection', 'channelid'),
+                                                'strRegionId' : _resolve('Classification', 'classification_regionname'),
+                                                }
+                            learner = CommonClassPredictor(dctCollectSamples=classifier_infos)
+                            learner.importFromArff()
+                            learner_dict[kind] = learner
+                    self._analyzer = cls(self, self._current_settings,
+                                         learner_dict,
+                                         self.parent().main_window._imagecontainer)
+                    self._analyzer.setTerminationEnabled(True)
+                elif cls is HmmThreadPython:
+                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
+
                     learner_dict = {}
                     for kind in ['primary', 'secondary']:
                         _resolve = lambda x,y: self._settings.get(x, '%s_%s' % (kind, y))

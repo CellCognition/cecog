@@ -282,13 +282,13 @@ class EventGalleryLabel(EventGallery):
 #-------------------------------------------------------------------------------
 # main:
 #
-if __name__ == "__main__":
-    import sys
-    logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
-    x = compose_galleries("/Volumes/share-gerlich-2-$/claudia/Analysis/001782/110709",
-                          "/Volumes/share-gerlich-2-$/claudia/Analysis/001782/110709/_hmm/primary_primary_byoligo",
-                          one_daughter=False,
-                          sample=100)
-    for i in x:
-        break
+#if __name__ == "__main__":
+#    import sys
+#    logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
+#    x = compose_galleries("/Volumes/share-gerlich-2-$/claudia/Analysis/001782/110709",
+#                          "/Volumes/share-gerlich-2-$/claudia/Analysis/001782/110709/_hmm/primary_primary_byoligo",
+#                          one_daughter=False,
+#                          sample=100)
+#    for i in x:
+#        break
 
