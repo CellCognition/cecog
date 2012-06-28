@@ -98,9 +98,12 @@ from cecog.traits.config import R_SOURCE_PATH, \
                                 PACKAGE_PATH
 from cecog import ccore
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
+from cecog.traits.analyzer.postprocessing import SECTION_NAME_POST_PROCESSING
+from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.analyzer.gallery import compose_galleries
 from cecog.traits.config import ConfigSettings
 from cecog.traits.analyzer import SECTION_REGISTRY
+from cecog.analyzer.ibb import IBBAnalysis
 
 #-------------------------------------------------------------------------------
 # functions:
@@ -943,6 +946,118 @@ class MultiprocessingException(Exception):
     def __init__(self, exception_list):
         self.msg = '\n-----------\nError in job item:\n'.join([str(x) for x in exception_list])
 
+class PostProcessingThread(_ProcessingThread):
+    
+    def __init__(self, parent, settings, learner_dict, imagecontainer):
+        _ProcessingThread.__init__(self, parent, settings)
+        self._learner_dict = learner_dict
+        self._imagecontainer = imagecontainer
+        self._mapping_files = {}    
+        
+    def _run(self):
+        print 'run postprocessing'
+        plates = self._imagecontainer.plates
+        self._settings.set_section(SECTION_NAME_POST_PROCESSING)
+
+        path_mapping = self._settings.get2('mappingfile_path')
+        for plate_id in plates:
+            mapping_file = os.path.join(path_mapping, '%s.tsv' % plate_id)
+            if not os.path.isfile(mapping_file):
+                mapping_file = os.path.join(path_mapping, '%s.txt' % plate_id)
+                if not os.path.isfile(mapping_file):
+                    raise IOError("Mapping file '%s' for plate '%s' not found." %
+                                  (mapping_file, plate_id))
+            self._mapping_files[plate_id] = os.path.abspath(mapping_file)
+
+        info = {'min' : 0,
+                'max' : len(plates),
+                'stage': 0,
+                'meta': 'Post processing...',
+                'progress': 0}
+        
+        for idx, plate_id in enumerate(plates):
+            if not self._abort:
+                info['text'] = "Plate: '%s' (%d / %d)" % (plate_id, idx+1, len(plates))
+                self.set_stage_info(info)
+                self._imagecontainer.set_plate(plate_id)
+                self._run_plate(plate_id)
+                info['progress'] = idx+1
+                self.set_stage_info(info)
+            else:
+                break
+            
+    def _run_plate(self, plate_id):
+        path_out = self._imagecontainer.get_path_out()
+
+
+        path_analyzed = os.path.join(path_out, 'analyzed')
+        path_out_ibb = os.path.join(path_out, 'ibb')
+
+        safe_mkdirs(path_analyzed)
+        safe_mkdirs(path_out_ibb)
+     
+        print 'for ', plate_id
+        mapping_file = self._mapping_files[plate_id]
+        
+        class_colors = {}       
+        for i, name in self._learner_dict['primary'].dctClassNames.items():
+            class_colors[i] = self._learner_dict['primary'].dctHexColors[name]
+            
+        class_names = {}       
+        for i, name in self._learner_dict['primary'].dctClassNames.items():
+            class_names[i] = name
+            
+        self._settings.set_section(SECTION_NAME_POST_PROCESSING)
+        
+        ibb_options = {}
+        ibb_options['ibb_ratio_signal_threshold'] = self._settings.get2('ibb_ratio_signal_threshold')
+        ibb_options['ibb_range_signal_threshold'] = self._settings.get2('ibb_range_signal_threshold')
+        ibb_options['ibb_onset_factor_threshold'] = self._settings.get2('ibb_onset_factor_threshold')
+        ibb_options['nebd_onset_factor_threshold'] = self._settings.get2('nebd_onset_factor_threshold')
+        ibb_options['single_plot'] = self._settings.get2('single_plot')
+        
+        
+        ibb_options['single_plot_ylim_range'] = self._settings.get2('single_plot_ylim_low'), \
+                                                self._settings.get2('single_plot_ylim_high')
+        
+        tmp = (self._settings.get2('group_by_group'),
+               self._settings.get2('group_by_genesymbol'),
+               self._settings.get2('group_by_oligoid'),
+               self._settings.get2('group_by_position'),
+               )
+        
+        ibb_options['group_by'] = int(numpy.log2(int(reduce(lambda x,y: str(x)+str(y), 
+                                                            numpy.array(tmp).astype(numpy.uint8)),2))+0.5)
+
+
+        tmp = (self._settings.get2('color_sort_by_group'),
+               self._settings.get2('color_sort_by_genesymbol'),
+               self._settings.get2('color_sort_by_oligoid'),
+               self._settings.get2('color_sort_by_position'),
+               )
+        
+        ibb_options['color_sort_by'] = int(numpy.log2(int(reduce(lambda x,y: str(x)+str(y), 
+                                                                 numpy.array(tmp).astype(numpy.uint8)),2))+0.5)
+        
+        if not ibb_options['group_by'] < ibb_options['color_sort_by']:
+            raise AttributeError('Group by selection must be more general than the color sorting! (%d !> %d)' % (
+                                                            ibb_options['group_by'], ibb_options['color_sort_by']))
+        
+        ibb_options['color_sort_by'] = IBBAnalysis.COLOR_SORT_BY[ibb_options['color_sort_by']]
+        
+        ibb_options['timeing_ylim_range'] = self._settings.get2('plot_ylim1_low'), \
+                                            self._settings.get2('plot_ylim1_high')
+        
+            
+        ibb_analyzer = IBBAnalysis(path_analyzed, 
+                                   path_out_ibb, 
+                                   plate_id, 
+                                   mapping_file, 
+                                   class_colors, 
+                                   class_names,
+                                   **ibb_options)
+        ibb_analyzer.run()
+
 class AnalzyerThread(_ProcessingThread):
 
     image_ready = pyqtSignal(ccore.RGBImage, str, str)
@@ -1400,6 +1515,25 @@ class _ProcessorMixin(object):
                                          learner_dict,
                                          self.parent().main_window._imagecontainer)
                     self._analyzer.setTerminationEnabled(True)
+                    
+                elif cls is PostProcessingThread:
+                    learner_dict = {}
+                    for kind in ['primary', 'secondary']:
+                        _resolve = lambda x,y: self._settings.get(x, '%s_%s' % (kind, y))
+                        env_path = convert_package_path(_resolve('Classification', 'classification_envpath'))
+                        if (_resolve('Processing', 'classification') and
+                            (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))):
+                            classifier_infos = {'strEnvPath' : env_path,
+                                                'strChannelId' : _resolve('ObjectDetection', 'channelid'),
+                                                'strRegionId' : _resolve('Classification', 'classification_regionname'),
+                                                }
+                            learner = CommonClassPredictor(dctCollectSamples=classifier_infos)
+                            learner.importFromArff()
+                            learner_dict[kind] = learner
+                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
+                    self._analyzer = cls(self, self._current_settings, learner_dict, imagecontainer)
+                    self._analyzer.setTerminationEnabled(True)
+
                 elif cls is HmmThreadPython:
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
 
@@ -1503,6 +1637,8 @@ class _ProcessorMixin(object):
                     msg = 'HMM error correction successfully finished.'
                 elif self.SECTION_NAME == 'Processing':
                     msg = 'Processing successfully finished.'
+                elif self.SECTION_NAME == "PostProcessing":
+                    msg = 'Postprocessing successfully finished'
 
                 information(self, 'Process finished', msg)
                 status(msg)
