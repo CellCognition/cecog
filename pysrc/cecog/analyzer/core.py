@@ -311,6 +311,7 @@ class PositionAnalyzer(object):
                                  self.lstAnalysisFrames,
                                  self.plate_id,
                                  hdf5_create=self.oSettings.get2('hdf5_create_file'),
+                                 hdf5_reuse=self.oSettings.get2('hdf5_reuse'),
                                  hdf5_include_raw_images=self.oSettings.get2('hdf5_include_raw_images'),
                                  hdf5_include_label_images=self.oSettings.get2('hdf5_include_label_images'),
                                  hdf5_include_features=self.oSettings.get2('hdf5_include_features'),
