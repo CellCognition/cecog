@@ -516,13 +516,6 @@ class IniFileImporter(AbstractImporter):
 
     def __get_token_list(self, path, sub_folder=None):
         token_list = []
-        try:
-            import pydevd
-            pydevd.connected = True
-            pydevd.settrace(suspend=False)
-            print 'Thread enabled interactive eclipse debuging...'
-        except:
-            pass
 
         re_subdir = re.compile(self._regex_subdirectories)
         re_substr = re.compile(self._regex_filename_substr)

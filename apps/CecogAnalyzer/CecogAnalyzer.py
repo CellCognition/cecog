@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+             Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -9,7 +9,7 @@
                  See trunk/AUTHORS.txt for author contributions.
 """
 
-__author__ = 'Michael Held'
+__author__ = 'Michael Held, Christoph Sommer'
 __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
