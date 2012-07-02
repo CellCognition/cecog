@@ -21,7 +21,8 @@ import sys, \
        os, \
        logging, \
        time, \
-       gc
+       gc, \
+       argparse
 import cPickle as pickle
 from multiprocessing import freeze_support
 
@@ -90,6 +91,8 @@ from cecog.gui.util import (status,
                             )
 
 import resource
+
+from pdk.fileutils import safe_mkdirs
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -798,10 +801,7 @@ if __name__ == "__main__":
     except:
         pass
     freeze_support()
-    import time
-    from pdk.fileutils import safe_mkdirs
 
-    import argparse
     parser = argparse.ArgumentParser(description='CellCognition Analyzer GUI')
     parser.add_argument('--load', action='store_true', default=False,
                         help='Load data from settings file.')
