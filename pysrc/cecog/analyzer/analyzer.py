@@ -520,7 +520,7 @@ class TimeHolder(OrderedDict):
         if raw_image_cpy is not None:
             self._hdf5_file.create_dataset(raw_image_str,
                                            raw_image_cpy.shape,
-                                           'uint16',
+                                           'uint8',
                                            data=raw_image_cpy,
                                            compression=self._hdf5_compression)
             self._hdf5_file[raw_image_str].attrs['valid'] = raw_image_valid
