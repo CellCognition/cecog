@@ -1325,7 +1325,8 @@ class AnalyzerCore(object):
                 analyzer = PositionAnalyzer(*tplArgs, **dctOptions)
                 analyzer()
             except Exception, e:
-                analyzer.oTimeHolder.close_all()
+                if hasattr(analyzer, 'oTimeHolder'):
+                    analyzer.oTimeHolder.close_all()
                 logging.getLogger(str(os.getpid())).error(e.message)
                 raise
 

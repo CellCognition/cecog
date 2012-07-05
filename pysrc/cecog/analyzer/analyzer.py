@@ -331,52 +331,53 @@ class TimeHolder(OrderedDict):
             raw_image_valid = None
             
             if os.path.exists(self.hdf5_filename):
-                # hdf5 file already there?                 
-                try:
-                    f = h5py.File(self.hdf5_filename, 'r')
-                
-                    meta_data = self._meta_data
-                    # Check for being wellbased or old style (B01_03 vs. 0037)
-                    if meta_data.has_well_info:
-                        well, subwell = meta_data.get_well_and_subwell(self.P)
-                        position = str(subwell)
-                    else:
-                        well = "0"
-                        position = self.P
+                # hdf5 file already there?  
+                if self._hdf5_reuse:               
+                    try:
+                        f = h5py.File(self.hdf5_filename, 'r')
                     
-                    label_image_str = '/sample/0/plate/%s/experiment/%s/position/%s/%s/region' % (self.plate_id, 
-                                                                                              well, 
-                                                                                              position, 
-                                                                                              self.HDF5_GRP_IMAGE)
-                    
-                    raw_image_str = '/sample/0/plate/%s/experiment/%s/position/%s/%s/channel' % (self.plate_id, 
-                                                                                              well, 
-                                                                                              position, 
-                                                                                              self.HDF5_GRP_IMAGE)
-                    
-                    
-                    # check if label images are there and if reuse is enabled
-                    if label_image_str in f:
-                        label_image_cpy = f[label_image_str].value
-                        label_image_valid = f[label_image_str].attrs['valid']
-                    
-                    if raw_image_str in f:
-                        raw_image_cpy = f[raw_image_str].value
-                        raw_image_valid = f[raw_image_str].attrs['valid']
-                except:
-                    print 'Loading of Hdf5 failed... '
-                    self._logger.info('Loading of Hdf5 failed... ')
-                    self._hdf5_reuse = False
-                    label_image_cpy = None
-                    label_image_str = None
-                    label_image_valid = None
-                    
-                    raw_image_cpy = None
-                    raw_image_str = None
-                    raw_image_valid = None
-                finally:
-                    if isinstance(f, h5py._hl.files.File):
-                        f.close()
+                        meta_data = self._meta_data
+                        # Check for being wellbased or old style (B01_03 vs. 0037)
+                        if meta_data.has_well_info:
+                            well, subwell = meta_data.get_well_and_subwell(self.P)
+                            position = str(subwell)
+                        else:
+                            well = "0"
+                            position = self.P
+                        
+                        label_image_str = '/sample/0/plate/%s/experiment/%s/position/%s/%s/region' % (self.plate_id, 
+                                                                                                  well, 
+                                                                                                  position, 
+                                                                                                  self.HDF5_GRP_IMAGE)
+                        
+                        raw_image_str = '/sample/0/plate/%s/experiment/%s/position/%s/%s/channel' % (self.plate_id, 
+                                                                                                  well, 
+                                                                                                  position, 
+                                                                                                  self.HDF5_GRP_IMAGE)
+                        
+                        
+                        # check if label images are there and if reuse is enabled
+                        if label_image_str in f:
+                            label_image_cpy = f[label_image_str].value
+                            label_image_valid = f[label_image_str].attrs['valid']
+                        
+                        if raw_image_str in f:
+                            raw_image_cpy = f[raw_image_str].value
+                            raw_image_valid = f[raw_image_str].attrs['valid']
+                    except:
+                        print 'Loading of Hdf5 failed... '
+                        self._logger.info('Loading of Hdf5 failed... ')
+                        self._hdf5_reuse = False
+                        label_image_cpy = None
+                        label_image_str = None
+                        label_image_valid = None
+                        
+                        raw_image_cpy = None
+                        raw_image_str = None
+                        raw_image_valid = None
+                    finally:
+                        if isinstance(f, h5py._hl.files.File):
+                            f.close()
                 
             self._hdf5_create_file_structure(self.hdf5_filename, (label_image_str, label_image_cpy, label_image_valid), 
                                                                  (raw_image_str, raw_image_cpy, raw_image_valid))
@@ -508,11 +509,20 @@ class TimeHolder(OrderedDict):
         self._grp_def.create_group(self.HDF5_GRP_OBJECT)
         
         if label_image_cpy is not None:
-            self._hdf5_file[label_image_str] = label_image_cpy
+            self._hdf5_file.create_dataset(label_image_str,
+                                           label_image_cpy.shape,
+                                           'uint16',
+                                           data=label_image_cpy,
+                                           compression=self._hdf5_compression)
+             
             self._hdf5_file[label_image_str].attrs['valid'] = label_image_valid
             
         if raw_image_cpy is not None:
-            self._hdf5_file[raw_image_str] = raw_image_cpy
+            self._hdf5_file.create_dataset(raw_image_str,
+                                           raw_image_cpy.shape,
+                                           'uint16',
+                                           data=raw_image_cpy,
+                                           compression=self._hdf5_compression)
             self._hdf5_file[raw_image_str].attrs['valid'] = raw_image_valid
 
 
