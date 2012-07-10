@@ -178,9 +178,10 @@ class CH5File(object):
 
 
     
-def test():
+if __name__ == "__main__":
     start = time.time()
-    filename = r'C:\Users\sommerc\R\biohdf\0038-cs.h5'
+    #filename = r'C:\Users\sommerc\R\biohdf\0038-cs.h5'
+    filename = r'V:\JuanPabloFededa\Analysis\001658\hdf5\_all_positions.h5'
     ceh5 = CH5File(filename)
     post_tracks = {}
     for well, pos_list in ceh5.positions.items():
@@ -201,12 +202,6 @@ def test():
             post_tracks[(well, pos)].append(class_labels)
             print class_labels_str
             
-#            if '7' in class_labels_str:
-#                fig = mpl.figure(figsize=(20,10))
-#                mpl.imshow(track_image, cmap=mpl.gray())
-#                mpl.show()
-    
-    
     def compute_class_freq(tracks_, class_label_):
         data = []
         for t in tracks_:
@@ -234,8 +229,6 @@ def test():
         multi_means.append(m)
         multi_yerr.append(e)
         
-        
-    
 #    width = 0.25
 #    ax = mpl.gca()
 #    ind = numpy.arange(len(apo_means))
@@ -252,7 +245,4 @@ def test():
     ceh5.close()
     print (time.time() - start)
             
-
-if __name__ == "__main__":
-    cProfile.run('test()')
     
