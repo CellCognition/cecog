@@ -2,10 +2,84 @@ import numpy
 import matplotlib.pyplot as mpl
 import h5py
 import collections
+import functools
+import time
+import cProfile
+
 
 GALLERY_SIZE = 50
+    
+  
+class memoize(object):
+    """cache the return value of a method
+    
+    This class is meant to be used as a decorator of methods. The return value
+    from a given method invocation will be cached on the instance whose method
+    was invoked. All arguments passed to a method decorated with memoize must
+    be hashable.
+    
+    If a memoized method is invoked directly on its class the result will not
+    be cached. Instead the method will be invoked like a static method:
+    class Obj(object):
+        @memoize
+        def add_to(self, arg):
+            return self + arg
+    Obj.add_to(1) # not enough arguments
+    Obj.add_to(1, 2) # returns 3, result is not cached
+    """
+    def __init__(self, func):
+        self.func = func
+    def __get__(self, obj, objtype=None):
+        if obj is None:
+            return self.func
+        return functools.partial(self, obj)
+    def __call__(self, *args, **kw):
+        obj = args[0]
+        try:
+            cache = obj.__cache
+        except AttributeError:
+            cache = obj.__cache = {}
+        key = (self.func, args[1:], frozenset(kw.items()))
+        if key in cache:
+            res = cache[key]
+        else:
+            res = cache[key] = self.func(*args, **kw)
+        return res
+    
 
-class CecogHDF(object):
+class CH5Position(object):
+    def __init__(self, plate, well, pos, grp_pos):
+        self.plate = plate
+        self.well = well
+        self.pos = pos
+        self.grp_pos = grp_pos
+        
+    def __getitem__(self, key):
+        return self.grp_pos[key]
+    
+    def get_tracking(self):
+        return self.grp_pos['object']['tracking'].value
+    
+    def get_class_prediction(self):
+        return self['feature'] \
+                   ['primary__primary'] \
+                   ['object_classification'] \
+                   ['prediction'].value
+
+class CH5CachedPosition(CH5Position):
+    def __init__(self, *args, **kwargs):
+        super(CH5CachedPosition, self).__init__(*args, **kwargs)
+    
+    @memoize
+    def get_tracking(self, *args, **kwargs):
+        return super(CH5CachedPosition, self).get_tracking(*args, **kwargs)
+    
+    @memoize
+    def get_class_prediction(self, *args, **kwargs):
+        return super(CH5CachedPosition, self).get_class_prediction(*args, **kwargs)
+
+class CH5File(object):
+    POSITION_CLS = CH5CachedPosition
     def __init__(self, filename):
         self._file_handle = h5py.File(filename, 'r')
         self.plate = self._get_group_members('/sample/0/plate/')[0]
@@ -20,9 +94,8 @@ class CecogHDF(object):
         for w, pos_list in self.positions.items():
             for p in pos_list:
                 print '/sample/0/plate/%s/experiment/%s/position/%s' % (self.plate, w, p)
-                self._position_group[(w,p)] = self._file_handle['/sample/0/plate/%s/experiment/%s/position/%s' % (self.plate, w, p)]
+                self._position_group[(w,p)] = CH5File.POSITION_CLS(self.plate, w, p, self._file_handle['/sample/0/plate/%s/experiment/%s/position/%s' % (self.plate, w, p)])
         self.current_pos = self._position_group.values()[0]
-        self._cache = {}
         
     def get_position(self, well, pos):
         return self._position_group[(well, pos)]
@@ -57,16 +130,9 @@ class CecogHDF(object):
     def get_class_label(self, index):
         if not isinstance(index, list):
             index = [index]
-        result = []
-        for ind in index:
-            result.append(self.current_pos['feature'] 
-                                          ['primary__primary']
-                                          ['object_classification']
-                                          ['prediction'][ind][0] + 1)
-        if len(result) == 1:
-            return result
-        else:
-            return result
+        return self.current_pos.get_class_prediction()['label_idx'][index] + 1
+         
+
         
     def get_class_color(self, class_labels, object='primary__primary'):
         class_mapping = self._file_handle['/definition/feature/%s/object_classification/class_label' % object].value
@@ -77,7 +143,7 @@ class CecogHDF(object):
         return [class_mapping['name'][col-1] for col in class_labels]
         
     def get_events(self):
-        dset_event = ceh5.current_pos['object']['event'].value
+        dset_event = self.current_pos['object']['event'].value
         events = []
         for event_id in range(1,dset_event['obj_id'].max()):
             idx = numpy.where(dset_event['obj_id'] == event_id)
@@ -97,22 +163,25 @@ class CecogHDF(object):
     def track_first(self, start_idx):
         ### follow last cell
         idx_list = []
-        dset_tracking = ceh5.current_pos['object']['tracking'].value
+        dset_tracking = self.current_pos.get_tracking()
 
-            
         idx = start_idx
         while True:
-            next_p_idx = numpy.where(dset_tracking['obj_idx1']==idx)[0]
+            next_p_idx = (dset_tracking['obj_idx1']==idx).nonzero()[0]
             if len(next_p_idx) == 0:
                 break
             idx = dset_tracking['obj_idx2'][next_p_idx[0]]
             idx_list.append(idx)
         return idx_list
+    
 
 
-if __name__ == "__main__":
-    filename = 'V:/JuanPabloFededa/Analysis/001658/hdf5/_all_positions.h5'
-    ceh5 = CecogHDF(filename)
+
+    
+def test():
+    start = time.time()
+    filename = r'C:\Users\sommerc\R\biohdf\0038-cs.h5'
+    ceh5 = CH5File(filename)
     post_tracks = {}
     for well, pos_list in ceh5.positions.items():
         pos = pos_list[0]
@@ -167,21 +236,23 @@ if __name__ == "__main__":
         
         
     
-    width = 0.25
-    ax = mpl.gca()
-    ind = numpy.arange(len(apo_means))
-    
-    bp = mpl.bar(ind, inter_means, width, yerr=inter_yerr, color='g', ecolor='k')
-    bp = mpl.bar(ind+width, multi_means, width, yerr=multi_yerr, color='b', ecolor='k')
-    bp = mpl.bar(ind+2*width, apo_means, width, yerr=apo_yerr, color='r', ecolor='k')
-    
-    ax.set_xticks(ind+(3.0*width)/2)
-    ax.set_xticklabels(names, rotation='vertical')
-    ax.set_title('Post-mitotic apo frequencies')
-    mpl.show()
+#    width = 0.25
+#    ax = mpl.gca()
+#    ind = numpy.arange(len(apo_means))
+#    
+#    bp = mpl.bar(ind, inter_means, width, yerr=inter_yerr, color='g', ecolor='k')
+#    bp = mpl.bar(ind+width, multi_means, width, yerr=multi_yerr, color='b', ecolor='k')
+#    bp = mpl.bar(ind+2*width, apo_means, width, yerr=apo_yerr, color='r', ecolor='k')
+#    
+#    ax.set_xticks(ind+(3.0*width)/2)
+#    ax.set_xticklabels(names, rotation='vertical')
+#    ax.set_title('Post-mitotic apo frequencies')
+    #mpl.show()
     
     ceh5.close()
+    print (time.time() - start)
             
 
-    
+if __name__ == "__main__":
+    cProfile.run('test()')
     
