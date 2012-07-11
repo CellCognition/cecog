@@ -25,7 +25,8 @@ __source__ = '$URL$'
 import sys, \
        time, \
        logging, \
-       logging.handlers
+       logging.handlers, \
+       h5py
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -679,7 +680,8 @@ class PositionAnalyzer(object):
         oFile = file(os.path.join(strPathFinished, '%s__finished.txt' % self.P), 'w')
         oFile.close()
 
-        return iNumberImages
+        return {'iNumberImages': iNumberImages, 
+                'filename_hdf5': filename_hdf5}
 
     def _adjustPositionLength(self, pos):
         #if pos.isdigit() and len(pos) < self.POSITION_LENGTH:
@@ -1311,8 +1313,8 @@ class AnalyzerCore(object):
                       'min': 1,
                       'max': len(lstJobInputs),
                        }
+        post_hdf5_link_list = []
         for idx, (tplArgs, dctOptions) in enumerate(lstJobInputs):
-
             if not qthread is None:
                 if qthread.get_abort():
                     break
@@ -1323,24 +1325,43 @@ class AnalyzerCore(object):
                 qthread.set_stage_info(stage_info)
             try:
                 analyzer = PositionAnalyzer(*tplArgs, **dctOptions)
-                analyzer()
+                result_dct = analyzer()
             except Exception, e:
                 if hasattr(analyzer, 'oTimeHolder'):
                     analyzer.oTimeHolder.close_all()
                 logging.getLogger(str(os.getpid())).error(e.message)
                 raise
-
+            post_hdf5_link_list.append(result_dct['filename_hdf5'])
+            
+        if self.oSettings.get('Output', 'hdf5_create_file'):
+            self.link_hdf5_files(sorted(post_hdf5_link_list))
+        
         return self.oObjectLearner
+    
+    def link_hdf5_files(self, post_hdf5_link_list):
+        PLATE_PREFIX = '/sample/0/plate/'
+        WELL_PREFIX = PLATE_PREFIX + '%s/experiment/'
+        POSITION_PREFIX = WELL_PREFIX + '%s/position/'
+        
+        def get_plate_and_postion(hf_file):
+            plate = hf_file[PLATE_PREFIX].keys()[0]
+            well = hf_file[WELL_PREFIX % plate].keys()[0]
+            position = hf_file[POSITION_PREFIX % (plate, well)].keys()[0]
+            return plate, well, position
+        
+        
+        f = h5py.File(os.path.join(self._path_hdf5, '_all_positions.h5'), 'w')
+        
+        f['definition'] = h5py.ExternalLink(post_hdf5_link_list[0],'/definition')
+        
+        for fname in post_hdf5_link_list:
+            fh = h5py.File(fname, 'r')
+            fplate, fwell, fpos = get_plate_and_postion(fh)
+            fh.close()
+            print (POSITION_PREFIX + '%s') % (fplate, fwell, fpos)
+            f[(POSITION_PREFIX + '%s') % (fplate, fwell, fpos)] = h5py.ExternalLink(fname, (POSITION_PREFIX + '%s') % (fplate, fwell, fpos))
+        
+        f.close()
 
-#        if self.oSettings.get('Classification', 'collectsamples'):
-#            self.oObjectLearner.export()
-
-            #f = file(os.path.join(self.oObjectLearner.dctEnvPaths['data'],
-            #                      self.oObjectLearner.getOption('filename_pickle')), 'wb')
-            #pickle.dump(self.oObjectLearner, f)
-            #f.close()
-
-#            stage_info['progress'] = len(lstJobInputs)
-#            qthread.set_stage_info(stage_info)
 
 

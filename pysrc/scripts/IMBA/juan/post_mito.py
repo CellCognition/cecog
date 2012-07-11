@@ -131,9 +131,7 @@ class CH5File(object):
         if not isinstance(index, list):
             index = [index]
         return self.current_pos.get_class_prediction()['label_idx'][index] + 1
-         
-
-        
+          
     def get_class_color(self, class_labels, object='primary__primary'):
         class_mapping = self._file_handle['/definition/feature/%s/object_classification/class_label' % object].value
         return [class_mapping['color'][col-1] for col in class_labels]
@@ -178,18 +176,20 @@ class CH5File(object):
 
 
     
-if __name__ == "__main__":
+def do_post_mito():
     start = time.time()
     #filename = r'C:\Users\sommerc\R\biohdf\0038-cs.h5'
     filename = r'V:\JuanPabloFededa\Analysis\001658\hdf5\_all_positions.h5'
     ceh5 = CH5File(filename)
+    fh_res = open(r'V:\JuanPabloFededa\Analysis\001658\post_mito_class_labels.txt', 'w')
     post_tracks = {}
     for well, pos_list in ceh5.positions.items():
         pos = pos_list[0]
         ceh5.set_current_pos(well, pos)
         events = ceh5.get_events()
         post_tracks[(well, pos)] = []
-        print well, '+'*12
+        fh_res.write('[%s]\n' % well)
+        print well
         cnt = 0
         for event in events:
             cnt += 1
@@ -200,8 +200,27 @@ if __name__ == "__main__":
                 continue
             class_labels_str = ''.join(map(str, class_labels))
             post_tracks[(well, pos)].append(class_labels)
-            print class_labels_str
+            fh_res.write('%s\n' % class_labels_str)
+            print cnt, class_labels_str
+    fh_res.close()
+    
+    ceh5.close()
+    print (time.time() - start)
+    
+def plot_post_mito():
+    fh_res = open('post_mito_class_labels.txt', 'r')
+    data_dct = {}
+    well = ''
+    print 'reading file',
+    for line in fh_res:
+        if line.startswith('['):
+            well = line[1:4]
+            data_dct[well] = []
+        else:
+            data_dct[well].append(map(int, [line[i:i+1] for i in range(len(line)-1)]))
             
+    fh_res.close()
+    print 'done'
     def compute_class_freq(tracks_, class_label_):
         data = []
         for t in tracks_:
@@ -217,8 +236,9 @@ if __name__ == "__main__":
     multi_yerr = []
     
     names = []
-    for (well, pos), tracks in post_tracks.items():
-        names.append('%s_%s' % (well, pos))
+    for well in sorted(data_dct):
+        tracks = data_dct[well]
+        names.append('%s' % well)
         m, e = compute_class_freq(tracks, 8)
         apo_means.append(m)
         apo_yerr.append(e)
@@ -229,20 +249,25 @@ if __name__ == "__main__":
         multi_means.append(m)
         multi_yerr.append(e)
         
-#    width = 0.25
-#    ax = mpl.gca()
-#    ind = numpy.arange(len(apo_means))
-#    
-#    bp = mpl.bar(ind, inter_means, width, yerr=inter_yerr, color='g', ecolor='k')
-#    bp = mpl.bar(ind+width, multi_means, width, yerr=multi_yerr, color='b', ecolor='k')
-#    bp = mpl.bar(ind+2*width, apo_means, width, yerr=apo_yerr, color='r', ecolor='k')
-#    
-#    ax.set_xticks(ind+(3.0*width)/2)
-#    ax.set_xticklabels(names, rotation='vertical')
-#    ax.set_title('Post-mitotic apo frequencies')
-    #mpl.show()
+    width = 0.2
+    fig = mpl.figure(figsize=(30,10))
+    ax = mpl.gca()
+    ind = numpy.arange(len(apo_means))
     
-    ceh5.close()
-    print (time.time() - start)
+    bp = mpl.bar(ind, inter_means, width, yerr=inter_yerr, color='g', ecolor='k', label='inter')
+    bp = mpl.bar(ind+width, multi_means, width, yerr=multi_yerr, color='b', ecolor='k',label='multi')
+    bp = mpl.bar(ind+2*width, apo_means, width, yerr=apo_yerr, color='r', ecolor='k', label='apo')
+    
+    ax.set_xticks(ind+(3.0*width)/2)
+    ax.set_xticklabels(names, rotation=45)
+    ax.set_title('Post-mitotic apo frequencies')
+    ax.set_ylim((0,1))
+    mpl.legend(loc=1)
+    mpl.show()
+            
+
+if __name__ == "__main__":
+    plot_post_mito()
+    
             
     
