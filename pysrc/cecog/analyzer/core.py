@@ -1350,7 +1350,7 @@ class AnalyzerCore(object):
             return plate, well, position
         
         
-        f = h5py.File(os.path.join(self._path_hdf5, '_all_positions.h5'), 'w')
+        f = h5py.File(os.path.join(os.path.split(post_hdf5_link_list[0])[0], '_all_positions.h5'), 'w')
         
         f['definition'] = h5py.ExternalLink(post_hdf5_link_list[0],'/definition')
         
