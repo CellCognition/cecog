@@ -73,6 +73,7 @@ class TimeHolder(OrderedDict):
     HDF5_GRP_TIME = "time_lapse"
     HDF5_GRP_ZSLICE = "zslice"
     HDF5_GRP_OBJECT = "object"
+    HDF5_OTYPE_RELATION = 'relation'
     HDF5_GRP_FEATURE = "feature"
     HDF5_GRP_FEATURE_SET = "feature_set"
     HDF5_GRP_CLASSIFICATION = "classification"
@@ -454,7 +455,7 @@ class TimeHolder(OrderedDict):
                 obj_name = self._convert_region_name(channel_name, region_name, prefix='')
                 obj_name = '%s___to___%s' % (prim_obj_name, obj_name)
                 global_object_desc = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset(obj_name, (1,), global_object_dtype)
-                global_object_desc[0] =  (obj_name, self.HDF5_OTYPE_OBJECT,
+                global_object_desc[0] =  (obj_name, self.HDF5_OTYPE_RELATION,
                                           prim_obj_name,
                                           obj_name)
  
@@ -462,12 +463,12 @@ class TimeHolder(OrderedDict):
         if self._hdf5_include_tracking:
             obj_name = 'tracking'
             global_object_desc = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset(obj_name, (1,), global_object_dtype)
-            global_object_desc[0] = (obj_name, self.HDF5_OTYPE_OBJECT, prim_obj_name, prim_obj_name)
+            global_object_desc[0] = (obj_name, self.HDF5_OTYPE_RELATION, prim_obj_name, prim_obj_name)
             
         if self._hdf5_include_events:
             obj_name = 'event'
             global_object_desc = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset(obj_name, (1,), global_object_dtype)
-            global_object_desc[0] = (obj_name, self.HDF5_OTYPE_REGION, prim_obj_name, prim_obj_name)
+            global_object_desc[0] = (obj_name, self.HDF5_OTYPE_OBJECT, prim_obj_name, prim_obj_name)
 
                        
     def _hdf5_create_file_structure(self, filename, label_info=(None, None, None), raw_info=(None, None, None)):
@@ -957,7 +958,7 @@ class TimeHolder(OrderedDict):
                 obj_idx = 0
                 rel_idx = 0
                 for events in event_lookup.itervalues():
-                    obj_id = obj_idx + 1
+                    obj_id = obj_idx
                     track = events[0]['tracks'][0]
                     for head_id, tail_id in zip(track, track[1:]):
                         head_frame, head_obj_id = tracker.getComponentsFromNodeId(head_id)[:2]
