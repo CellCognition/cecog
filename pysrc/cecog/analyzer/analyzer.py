@@ -733,8 +733,9 @@ class TimeHolder(OrderedDict):
                     dset_tmp = global_def_group.create_dataset('center', (2,), [('name', '|S16')])
                     dset_tmp[:] = ['x', 'y']
                 if 'object_features' not in global_def_group:
-                    dset_tmp = global_def_group.create_dataset('object_features', (len(feature_names),), [('name', '|S512')])
-                    dset_tmp[:] = feature_names
+                    dset_tmp = global_def_group.create_dataset('object_features', (nr_features,), [('name', '|S512')])
+                    if nr_features > 0:
+                        dset_tmp[:] = feature_names
                 if 'crack_contour' not in global_def_group:
                     dset_tmp = global_def_group.create_dataset('crack_contour', (1,), [('name', '|S512')])
                     dset_tmp[:] = ('contour_polygon',)
@@ -856,7 +857,8 @@ class TimeHolder(OrderedDict):
                     dset_idx_relation[idx + offset] = frame_idx, obj_id
 
                     if self._hdf5_include_features:
-                        dset_object_features[idx + offset] = obj.aFeatures
+                        if len(obj.aFeatures) > 0:
+                            dset_object_features[idx + offset] = obj.aFeatures
 
                     if self._hdf5_include_crack:
                         data = ','.join(map(str, flatten(obj.crack_contour)))
