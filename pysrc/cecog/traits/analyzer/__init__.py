@@ -38,6 +38,7 @@ from cecog.traits.analyzer.errorcorrection import SectionErrorcorrection
 from cecog.traits.analyzer.output import SectionOutput
 from cecog.traits.analyzer.processing import SectionProcessing
 from cecog.traits.analyzer.cluster import SectionCluster
+from cecog.traits.analyzer.postprocessing import SectionPostProcessing
 
 from cecog.extensions.graphLib import Graph
 
@@ -51,6 +52,7 @@ SECTION_REGISTRY.register_section(SectionFeatureExtraction())
 SECTION_REGISTRY.register_section(SectionClassification())
 SECTION_REGISTRY.register_section(SectionTracking())
 SECTION_REGISTRY.register_section(SectionErrorcorrection())
+SECTION_REGISTRY.register_section(SectionPostProcessing())
 SECTION_REGISTRY.register_section(SectionOutput())
 SECTION_REGISTRY.register_section(SectionProcessing())
 SECTION_REGISTRY.register_section(SectionCluster())
