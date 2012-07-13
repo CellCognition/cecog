@@ -3,7 +3,7 @@ import csv
 #import matplotlib as mpl
 #mpl.use('QT4Agg')
 #from matplotlib.mlab import rec_append_fields, FormatFloat, rec2csv
-import pylab
+#import pylab
 import re
 import os
 import cPickle as pickle
