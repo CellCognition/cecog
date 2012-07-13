@@ -1,19 +1,19 @@
 import numpy
 import csv
-#import matplotlib as mpl
-#mpl.use('QT4Agg')
-#from matplotlib.mlab import rec_append_fields, FormatFloat, rec2csv
-#import pylab
+import matplotlib as mpl
+mpl.use('QT4Agg')
+from matplotlib.mlab import rec_append_fields, FormatFloat, rec2csv
+import pylab
 import re
 import os
 import cPickle as pickle
 import colorbrewer
 from itertools import cycle
 from cecog.util.color import rgb_to_hex
-#from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib.backends.backend_pdf import PdfPages
 from vigra.impex import readImage
-#mpl.rcParams["axes.facecolor"] = 'k'
-#mpl.rcParams["axes.edgecolor"] = 'w'
+mpl.rcParams["axes.facecolor"] = 'k'
+mpl.rcParams["axes.edgecolor"] = 'w'
 #mpl.rcParams["axes.labelcolor"] = 'w'
 #mpl.rcParams["figure.facecolor"] = 'w'
 #mpl.rcParams["pdf.compression"] = 0
