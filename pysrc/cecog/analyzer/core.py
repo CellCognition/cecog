@@ -1093,6 +1093,7 @@ def analyzePosition(*tplArgs, **dctOptions):
     return oPositionAnalyzer()
 
 
+
 class AnalyzerCore(object):
 
     def __init__(self, plate_id, settings, imagecontainer, learner=None):
@@ -1331,23 +1332,15 @@ class AnalyzerCore(object):
                     analyzer.oTimeHolder.close_all()
                 logging.getLogger(str(os.getpid())).error(e.message)
                 raise
-            post_hdf5_link_list.append(result_dct['filename_hdf5'])
+            if self.oSettings.get('Output', 'hdf5_create_file') and self.oSettings.get('Output', 'hdf5_merge_positions'):
+                post_hdf5_link_list.append(result_dct['filename_hdf5'])
             
-        if self.oSettings.get('Output', 'hdf5_create_file') and self.oSettings.get('Output', 'hdf5_merge_positions'):
-            self.link_hdf5_files(sorted(post_hdf5_link_list))
         
-        return self.oObjectLearner
+        
+        return {'ObjectLearner': self.oObjectLearner, 
+                'post_hdf5_link_list': post_hdf5_link_list}
     
-    def link_hdf5_files(self, post_hdf5_link_list):
-        PLATE_PREFIX = '/sample/0/plate/'
-        WELL_PREFIX = PLATE_PREFIX + '%s/experiment/'
-        POSITION_PREFIX = WELL_PREFIX + '%s/position/'
-        
-        def get_plate_and_postion(hf_file):
-            plate = hf_file[PLATE_PREFIX].keys()[0]
-            well = hf_file[WELL_PREFIX % plate].keys()[0]
-            position = hf_file[POSITION_PREFIX % (plate, well)].keys()[0]
-            return plate, well, position
+    
         
         
         f = h5py.File(os.path.join(os.path.split(post_hdf5_link_list[0])[0], '_all_positions.h5'), 'w')

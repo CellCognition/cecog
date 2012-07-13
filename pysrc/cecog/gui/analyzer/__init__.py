@@ -41,11 +41,12 @@ import types, \
        threading, \
        socket
        
+       
 
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
-import numpy
+import numpy, h5py, copy
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
@@ -124,6 +125,29 @@ def dhmm_correction(n_clusters, labels):
     labels_dhmm = dhmm.predict(labels) # vector format [1 x num_tracks *num_frames]
     return labels_dhmm
 
+def link_hdf5_files(post_hdf5_link_list):
+    PLATE_PREFIX = '/sample/0/plate/'
+    WELL_PREFIX = PLATE_PREFIX + '%s/experiment/'
+    POSITION_PREFIX = WELL_PREFIX + '%s/position/'
+    
+    def get_plate_and_postion(hf_file):
+        plate = hf_file[PLATE_PREFIX].keys()[0]
+        well = hf_file[WELL_PREFIX % plate].keys()[0]
+        position = hf_file[POSITION_PREFIX % (plate, well)].keys()[0]
+        return plate, well, position
+    
+    f = h5py.File(os.path.join(os.path.split(post_hdf5_link_list[0])[0], '_all_positions.h5'), 'w')
+        
+    f['definition'] = h5py.ExternalLink(post_hdf5_link_list[0],'/definition')
+    
+    for fname in post_hdf5_link_list:
+        fh = h5py.File(fname, 'r')
+        fplate, fwell, fpos = get_plate_and_postion(fh)
+        fh.close()
+        print (POSITION_PREFIX + '%s') % (fplate, fwell, fpos)
+        f[(POSITION_PREFIX + '%s') % (fplate, fwell, fpos)] = h5py.ExternalLink(fname, (POSITION_PREFIX + '%s') % (fplate, fwell, fpos))
+    
+    f.close()
 
 # see http://stackoverflow.com/questions/3288595/multiprocessing-using-pool-map-on-a-function-defined-in-a-class
 def AnalyzerCoreHelper(plate_id, settings_str, imagecontainer, position):
@@ -134,9 +158,8 @@ def AnalyzerCoreHelper(plate_id, settings_str, imagecontainer, position):
     settings.set(SECTION_NAME_GENERAL, 'constrain_positions', True)
     settings.set(SECTION_NAME_GENERAL, 'positions', position)
     analyzer = AnalyzerCore(plate_id, settings,imagecontainer)         
-    analyzer.processPositions()
-    
-    return plate_id, position
+    result = analyzer.processPositions()
+    return plate_id, position, copy.deepcopy(result['post_hdf5_link_list'])
 
 def process_initialyzer(port):
     oLogger = logging.getLogger(str(os.getpid()))
@@ -733,8 +756,7 @@ class MultiProcessingAnalyzerMixin(ParallelProcessThreadMixinBase):
             self.parent.set_stage_info(stage_info)
             
         def __call__(self, args):
-            print 'args', args
-            plate, pos = args
+            plate, pos, hdf_files = args
             self.cnt += 1
             stage_info = {'progress': self.cnt,
                           'meta': 'Parallel processing %d / %d positions (%d cores)' % (self.cnt, 
@@ -749,6 +771,8 @@ class MultiProcessingAnalyzerMixin(ParallelProcessThreadMixinBase):
                           }
             self.parent.set_stage_info(stage_info)
             self._timer.reset()  
+            
+            return args
             
     def setup(self, ncpu=None):
         if ncpu is None:
@@ -780,6 +804,10 @@ class MultiProcessingAnalyzerMixin(ParallelProcessThreadMixinBase):
         self.log_receiver.server_close()        
         self.log_receiver_thread.join()
         
+        post_hdf5_link_list = reduce(lambda x,y: x + y, self.post_hdf5_link_list)
+        if len(post_hdf5_link_list) > 0:
+            link_hdf5_files(sorted(post_hdf5_link_list))
+        
         
     def abort(self):
         self._abort = True
@@ -789,17 +817,23 @@ class MultiProcessingAnalyzerMixin(ParallelProcessThreadMixinBase):
     def join(self):
         self.pool.close()
         self.pool.join()
+        self.post_hdf5_link_list = []
         if not self._abort:
-            exception_list = []
+            exception_list = []      
             for r in self.job_result:
                 if not r.successful():
                     try:
                         r.get()
                     except Exception, e:
                         exception_list.append(e)
+                else: 
+                    plate, pos, hdf_files = r.get()
+                    if len(hdf_files) > 0:
+                        self.post_hdf5_link_list.append(hdf_files)
             if len(exception_list) > 0:
                 multi_exception = MultiprocessingException(exception_list)
                 raise multi_exception
+            
                         
         self.finish()   
     
@@ -943,7 +977,14 @@ class AnalzyerThread(_ProcessingThread):
             analyzer = AnalyzerCore(plate_id, self._settings,
                                     copy.copy(self._imagecontainer),
                                     learner=learner)
-            learner = analyzer.processPositions(self)
+            result = analyzer.processPositions(self)
+            learner = result['ObjectLearner']
+            post_hdf5_link_list = result['post_hdf5_link_list']
+            post_hdf5_link_list = reduce(lambda x,y: x + y, post_hdf5_link_list)
+            if len(post_hdf5_link_list) > 0:
+                link_hdf5_files(sorted(post_hdf5_link_list))
+            
+            
         # make sure the learner data is only exported while we do sample picking
         if self._settings.get('Classification', 'collectsamples') and not learner is None:
             learner.export()
