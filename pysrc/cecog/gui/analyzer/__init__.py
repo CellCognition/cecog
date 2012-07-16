@@ -136,18 +136,39 @@ def link_hdf5_files(post_hdf5_link_list):
         position = hf_file[POSITION_PREFIX % (plate, well)].keys()[0]
         return plate, well, position
     
-    f = h5py.File(os.path.join(os.path.split(post_hdf5_link_list[0])[0], '_all_positions.h5'), 'w')
+    all_pos_hdf5_filename = os.path.join(os.path.split(post_hdf5_link_list[0])[0], '_all_positions.h5')
+    
+    if os.path.exists(all_pos_hdf5_filename):
+        f = h5py.File(all_pos_hdf5_filename, 'a')
         
-    f['definition'] = h5py.ExternalLink(post_hdf5_link_list[0],'/definition')
-    
-    for fname in post_hdf5_link_list:
-        fh = h5py.File(fname, 'r')
-        fplate, fwell, fpos = get_plate_and_postion(fh)
-        fh.close()
-        print (POSITION_PREFIX + '%s') % (fplate, fwell, fpos)
-        f[(POSITION_PREFIX + '%s') % (fplate, fwell, fpos)] = h5py.ExternalLink(fname, (POSITION_PREFIX + '%s') % (fplate, fwell, fpos))
-    
-    f.close()
+        if 'definition' in f:
+            del f['definition'] 
+            f['definition'] = h5py.ExternalLink(post_hdf5_link_list[0],'/definition')
+            
+        for fname in post_hdf5_link_list:
+            fh = h5py.File(fname, 'r')
+            fplate, fwell, fpos = get_plate_and_postion(fh)
+            fh.close()
+            print 'Adding to _all_positons.hdf', (POSITION_PREFIX + '%s') % (fplate, fwell, fpos)
+            if (POSITION_PREFIX + '%s') % (fplate, fwell, fpos) in f:
+                del f[(POSITION_PREFIX + '%s') % (fplate, fwell, fpos)]
+            f[(POSITION_PREFIX + '%s') % (fplate, fwell, fpos)] = h5py.ExternalLink(fname, (POSITION_PREFIX + '%s') % (fplate, fwell, fpos))
+        
+        f.close()
+        
+    else:
+        f = h5py.File(all_pos_hdf5_filename, 'w')
+            
+        f['definition'] = h5py.ExternalLink(post_hdf5_link_list[0],'/definition')
+        
+        for fname in post_hdf5_link_list:
+            fh = h5py.File(fname, 'r')
+            fplate, fwell, fpos = get_plate_and_postion(fh)
+            fh.close()
+            print 'Adding to _all_positons.hdf', (POSITION_PREFIX + '%s') % (fplate, fwell, fpos)
+            f[(POSITION_PREFIX + '%s') % (fplate, fwell, fpos)] = h5py.ExternalLink(fname, (POSITION_PREFIX + '%s') % (fplate, fwell, fpos))
+        
+        f.close()
 
 # see http://stackoverflow.com/questions/3288595/multiprocessing-using-pool-map-on-a-function-defined-in-a-class
 def AnalyzerCoreHelper(plate_id, settings_str, imagecontainer, position):
