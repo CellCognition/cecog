@@ -140,6 +140,7 @@ def link_hdf5_files(post_hdf5_link_list):
     
     if os.path.exists(all_pos_hdf5_filename):
         f = h5py.File(all_pos_hdf5_filename, 'a')
+        ### This is dangerous, several processes open the file for writing...
         
         if 'definition' in f:
             del f['definition'] 
@@ -301,8 +302,6 @@ class BaseFrame(QFrame, TraitDisplayMixin):
 
     def tab_changed(self, index):
         pass
-
-
 
 class _ProcessingThread(QThread):
 
