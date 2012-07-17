@@ -1004,7 +1004,6 @@ class AnalzyerThread(_ProcessingThread):
             result = analyzer.processPositions(self)
             learner = result['ObjectLearner']
             post_hdf5_link_list = result['post_hdf5_link_list']
-            post_hdf5_link_list = reduce(lambda x,y: x + y, post_hdf5_link_list)
             if len(post_hdf5_link_list) > 0:
                 link_hdf5_files(sorted(post_hdf5_link_list))
             
