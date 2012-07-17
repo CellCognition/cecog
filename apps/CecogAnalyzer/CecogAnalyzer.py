@@ -25,6 +25,9 @@ import sys, \
 import cPickle as pickle
 from multiprocessing import freeze_support
 
+import matplotlib as mpl
+mpl.use('QT4Agg')
+
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
