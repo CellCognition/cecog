@@ -22,8 +22,7 @@ import logging, \
        types, \
        os, \
        bz2, \
-       gzip, \
-       psutil
+       gzip
        
 import time as timing
 

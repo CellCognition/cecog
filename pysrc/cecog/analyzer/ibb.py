@@ -1,9 +1,8 @@
 import numpy
 import csv
 import matplotlib as mpl
-mpl.use('QT4Agg')
 from matplotlib.mlab import rec_append_fields, FormatFloat, rec2csv
-import pylab
+from matplotlib import pyplot
 import re
 import os
 import cPickle as pickle
@@ -26,7 +25,7 @@ def enum(*sequential, **named):
 
 class EventPlotterPdf(object):
     def __init__(self, figsize):
-        self.figure = pylab.figure(figsize=figsize)
+        self.figure = pyplot.figure(figsize=figsize)
         self.figure.set_dpi(400)
         self.axes = self.figure.add_axes((0.1,0.1,0.8,0.8))
         self._pdf_handle = None
@@ -89,7 +88,7 @@ class GalleryDecorationPlotter(EventPlotterPdf):
                 aspect = img.shape[0] / float(img.shape[1])
                 offset = x_max*aspect
                 
-                new_axes.imshow(img, extent=(x_min, x_max, 0, offset), cmap=pylab.get_cmap('gray'))
+                new_axes.imshow(img, extent=(x_min, x_max, 0, offset), cmap=pyplot.get_cmap('gray'))
                 new_axes.set_yticklabels([])
                 if j == 0:
                     new_axes.set_xlabel("")
@@ -101,7 +100,7 @@ class GalleryDecorationPlotter(EventPlotterPdf):
                             w = time[1]
                         else:
                             w = time[t+1]-time[t]
-                        new_axes.add_patch(pylab.Rectangle((time[t], offset),
+                        new_axes.add_patch(pyplot.Rectangle((time[t], offset),
                                                               w,
                                                               offset*1.1, 
                                                               fill=True, 
@@ -342,7 +341,7 @@ class IBBAnalysis(object):
         f_handle.close()
             
     def _plot_single_class_timing(self, data, names, class_name, class_color, f_handle):
-        fig = pylab.figure(figsize=(len(data)+5, 10))
+        fig = pyplot.figure(figsize=(len(data)+5, 10))
         ax = fig.add_subplot(111)
         ax.bar(range(len(data)), map(numpy.mean, numpy.array(data)),
                width=0.6, 
@@ -352,7 +351,7 @@ class IBBAnalysis(object):
                )
         ax.set_xticks(range(len(data)))
         xtick_labels = ax.set_xticklabels(names)
-        pylab.setp(xtick_labels, rotation=45,  horizontalalignment='right', fontsize=12)
+        pyplot.setp(xtick_labels, rotation=45,  horizontalalignment='right', fontsize=12)
         ax.set_title(class_name)
         ax.set_ylabel('Time [min]')
         ax.set_ylim(*self.timeing_ylim_range)
@@ -590,7 +589,7 @@ class IBBAnalysis(object):
                 height = rect.get_height()
                 rect.get_axes().text(rect.get_x()+rect.get_width()/2., 1.05*height, '%d'%int(height),
                         ha='center', va='bottom')
-        fig = pylab.figure(figsize=(len(data)+5,10))
+        fig = pyplot.figure(figsize=(len(data)+5,10))
         ax = fig.add_subplot(111)
     
         data_t = zip(*data)
@@ -608,14 +607,14 @@ class IBBAnalysis(object):
         ax.set_ylabel('Count')
         ax.set_xticks(numpy.arange(N).astype(numpy.float32)+0.5)
         xtick_labels = ax.set_xticklabels(names)
-        pylab.setp(xtick_labels, rotation=45, horizontalalignment='right', fontsize=12)
+        pyplot.setp(xtick_labels, rotation=45, horizontalalignment='right', fontsize=12)
         ax.legend(loc=1)
         
         fig.savefig(os.path.join(self.path_out, '_valid_events.pdf'), format='pdf')
         
     
     def _barplot(self, data_list, names, colors, id_, neg_ctrl):
-        fig = pylab.figure(figsize=(len(data_list)/3+5, 20))
+        fig = pyplot.figure(figsize=(len(data_list)/3+5, 20))
         ax1 = fig.add_subplot(111)
         ax1.set_title('IBB Analysis %s' % self.PLOT_LABELS[id_])
         ax1.bar(range(len(data_list)), map(numpy.mean, numpy.array(data_list)),
@@ -629,45 +628,45 @@ class IBBAnalysis(object):
         if len(neg_ctrl) > 0:
             neg_line = numpy.concatenate(neg_ctrl).mean()
             ax1.plot([0, len(data_list)],[neg_line, neg_line], 'k--', label="Neg. Ctrl.")
-        xtickNames = pylab.setp(ax1, xticklabels=names)
-        pylab.setp(xtickNames, rotation=45, horizontalalignment='right', fontsize=10)
-        pylab.ylim(*self.timeing_ylim_range)
+        xtickNames = pyplot.setp(ax1, xticklabels=names)
+        pyplot.setp(xtickNames, rotation=45, horizontalalignment='right', fontsize=10)
+        pyplot.ylim(*self.timeing_ylim_range)
         
         data_max = numpy.nanmax(numpy.array(map(numpy.mean, numpy.array(data_list))))
         if data_max < 0.5 * self.timeing_ylim_range[1]:
-            pylab.ylim(self.timeing_ylim_range[0], self.timeing_ylim_range[1]/2.0)
+            pyplot.ylim(self.timeing_ylim_range[0], self.timeing_ylim_range[1]/2.0)
         if data_max < 0.25 * self.timeing_ylim_range[1]:
-            pylab.ylim(self.timeing_ylim_range[0], self.timeing_ylim_range[1]/4.0)
+            pyplot.ylim(self.timeing_ylim_range[0], self.timeing_ylim_range[1]/4.0)
             
         fig.savefig(os.path.join(self.path_out, '_timing_ibb_events_%s_bar.pdf' % id_), format='pdf')
         
     def _boxplot(self, data_list, names, colors, id_, neg_ctrl):
-        fig = pylab.figure(figsize=(len(data_list)/3+5, 20))
+        fig = pyplot.figure(figsize=(len(data_list)/3+5, 20))
         ax1 = fig.add_subplot(111)
         ax1.set_title('IBB Analysis %s' % self.PLOT_LABELS[id_])
-        bp = pylab.boxplot(data_list, patch_artist=True)
-        pylab.setp(bp['boxes'], color='black')
-        pylab.setp(bp['whiskers'], color='black')
-        pylab.setp(bp['fliers'], markerfacecolor='w', marker='o', markeredgecolor='k')
+        bp = pyplot.boxplot(data_list, patch_artist=True)
+        pyplot.setp(bp['boxes'], color='black')
+        pyplot.setp(bp['whiskers'], color='black')
+        pyplot.setp(bp['fliers'], markerfacecolor='w', marker='o', markeredgecolor='k')
         i = 0
         for c, d in zip(colors, data_list):
             if len(d) > 0:
                 b = bp['boxes'][i]
-                pylab.setp(b, facecolor=rgb_to_hex(*c))
+                pyplot.setp(b, facecolor=rgb_to_hex(*c))
                 i += 1
                 
         ax1.set_xticks([x+0.8 for x in range(len(data_list))])
         if len(neg_ctrl) > 0:
             neg_line = numpy.concatenate(neg_ctrl).mean()
             ax1.plot([0, len(data_list)],[neg_line, neg_line], 'k--', label="Neg. Ctrl.")
-        xtickNames = pylab.setp(ax1, xticklabels=names)
-        pylab.setp(xtickNames, rotation=45, horizontalalignment='right', fontsize=10)
+        xtickNames = pyplot.setp(ax1, xticklabels=names)
+        pyplot.setp(xtickNames, rotation=45, horizontalalignment='right', fontsize=10)
         
         data_max = numpy.nanmax(numpy.array(map(numpy.mean, numpy.array(data_list))))
         if data_max < 0.4 * self.timeing_ylim_range[1]:
-            pylab.ylim(self.timeing_ylim_range[0], self.timeing_ylim_range[1]/2.0)
+            pyplot.ylim(self.timeing_ylim_range[0], self.timeing_ylim_range[1]/2.0)
         if data_max < 0.3 * self.timeing_ylim_range[1]:
-            pylab.ylim(self.timeing_ylim_range[0], self.timeing_ylim_range[1]/4.0)
+            pyplot.ylim(self.timeing_ylim_range[0], self.timeing_ylim_range[1]/4.0)
         
         fig.savefig(os.path.join(self.path_out, '_timing_ibb_events_%s_box.pdf' % id_), format='pdf')
     

@@ -125,6 +125,8 @@ Section "CecogAnalyzer" SecDummy
 
   SectionIn RO
   SetOutPath "$INSTDIR"
+  SetShellVarContext all
+  RMDir /r "$%APPDATA%\CellCognition${mver}"
   
   FILE /r dist\*.*
   
@@ -179,6 +181,8 @@ Section "Uninstall"
   Delete "$INSTDIR\Uninstall.exe"
 
   RMDir /r "$INSTDIR"
+  SetShellVarContext all
+  RMDir /r "$%APPDATA%\CellCognition${mver}"
   
   !insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder
     

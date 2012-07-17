@@ -56,7 +56,11 @@ from pdk.datetimeutils import TimeInterval, StopWatch
 from pdk.fileutils import safe_mkdirs
 
 from multiprocessing import Pool, Queue, cpu_count
-import sklearn.hmm as hmm
+
+import warnings
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    import sklearn.hmm as hmm
 
 
 #-------------------------------------------------------------------------------
