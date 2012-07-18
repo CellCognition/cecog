@@ -130,6 +130,8 @@ def dhmm_correction(n_clusters, labels):
     return labels_dhmm
 
 def link_hdf5_files(post_hdf5_link_list):
+    logger = logging.getLogger()
+    
     PLATE_PREFIX = '/sample/0/plate/'
     WELL_PREFIX = PLATE_PREFIX + '%s/experiment/'
     POSITION_PREFIX = WELL_PREFIX + '%s/position/'
@@ -145,6 +147,7 @@ def link_hdf5_files(post_hdf5_link_list):
     if os.path.exists(all_pos_hdf5_filename):
         f = h5py.File(all_pos_hdf5_filename, 'a')
         ### This is dangerous, several processes open the file for writing...
+        logger.info("_all_positons.hdf file found, trying to reuse it by overwrite old external links...")
         
         if 'definition' in f:
             del f['definition'] 
@@ -154,7 +157,10 @@ def link_hdf5_files(post_hdf5_link_list):
             fh = h5py.File(fname, 'r')
             fplate, fwell, fpos = get_plate_and_postion(fh)
             fh.close()
-            print 'Adding to _all_positons.hdf', (POSITION_PREFIX + '%s') % (fplate, fwell, fpos)
+            
+            msg = "Linking into _all_positons.hdf:" + ((POSITION_PREFIX + '%s') % (fplate, fwell, fpos))
+            logger.info(msg)
+            print msg
             if (POSITION_PREFIX + '%s') % (fplate, fwell, fpos) in f:
                 del f[(POSITION_PREFIX + '%s') % (fplate, fwell, fpos)]
             f[(POSITION_PREFIX + '%s') % (fplate, fwell, fpos)] = h5py.ExternalLink(fname, (POSITION_PREFIX + '%s') % (fplate, fwell, fpos))
@@ -163,14 +169,18 @@ def link_hdf5_files(post_hdf5_link_list):
         
     else:
         f = h5py.File(all_pos_hdf5_filename, 'w')
-            
+        logger.info("_all_positons.hdf file created...") 
+           
         f['definition'] = h5py.ExternalLink(post_hdf5_link_list[0],'/definition')
         
         for fname in post_hdf5_link_list:
             fh = h5py.File(fname, 'r')
             fplate, fwell, fpos = get_plate_and_postion(fh)
             fh.close()
-            print 'Adding to _all_positons.hdf', (POSITION_PREFIX + '%s') % (fplate, fwell, fpos)
+            msg = "Linking into _all_positons.hdf:" + ((POSITION_PREFIX + '%s') % (fplate, fwell, fpos))
+            logger.info(msg)
+            print msg
+            
             f[(POSITION_PREFIX + '%s') % (fplate, fwell, fpos)] = h5py.ExternalLink(fname, (POSITION_PREFIX + '%s') % (fplate, fwell, fpos))
         
         f.close()
