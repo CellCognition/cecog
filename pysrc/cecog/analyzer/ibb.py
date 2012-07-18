@@ -1,5 +1,5 @@
 import numpy
-import csv
+import logging
 import matplotlib as mpl
 from matplotlib.mlab import rec_append_fields, FormatFloat, rec2csv
 from matplotlib import pyplot
@@ -152,6 +152,8 @@ class IBBAnalysis(object):
                        color_sort_by='gene_symbol',
                        timeing_ylim_range=(1,100)
                        ):
+        self._logger = self._logger = logging.getLogger(self.__class__.__name__)
+        
         self.plate_name = plate_name
         self.path_in = path_in
         self.path_out = path_out
@@ -709,6 +711,7 @@ class Plate(object):
     EVENT_REGEXP = re.compile(r"features__P(?P<pos>\d+|[A-Z]\d+_\d+)__T(?P<time>\d+)"
                                "__O(?P<obj>\d+)__B(?P<branch>\d+)__C(?P<channel>.+?)__R(?P<region>.*)\.txt")
     def __init__(self, plate_id, path_in, mapping_file, group_by=0):
+        self._logger =  self._logger = logging.getLogger(self.__class__.__name__)
         self.class_label_selector = 'class__label'
         self.plate_id = plate_id
         self.path_in = path_in
@@ -740,7 +743,7 @@ class Plate(object):
                     
             if pos_name not in self.pos_list:
 #                raise RuntimeError("Position from Mapping file %s not found in in path %s" % (pos_name, self.path_in))
-                print "Position from Mapping file %s not found in in path %s" % (pos_name, self.path_in)
+                self._logger.warning("Position from Mapping file %s not found in in path %s" % (pos_name, self.path_in))
                 continue
             
             event_path = os.path.join(self.path_in, pos_name, 'statistics' , 'events')
@@ -749,10 +752,10 @@ class Plate(object):
             
             event_file_list = sorted(os.listdir(event_path))
             if len(event_file_list) == 0:
-                print "WARNING: No events found for position", pos_name
+                self._logger.warning("No events found for position %s" % pos_name)
                 continue
             
-            print "Reading Events for position '%s' (%d files)" % (pos_name, len(event_file_list))
+            self._logger.info("Reading Events for position '%s' (%d files)" % (pos_name, len(event_file_list)))
             
             hmm_correction_available = False
             if '_hmm' in event_file_list:
@@ -765,11 +768,12 @@ class Plate(object):
             for event_file in event_file_list:
                 res = self.EVENT_REGEXP.search(event_file)
                 if res is None:
-                    print "WARNING: Could not parse event file name '%s' for position %s" % (event_file, pos_name) 
+                    self._logger.warning("Could not parse event file name '%s' for position %s" % (event_file, pos_name)) 
                     continue
                 
                 res = res.groupdict()
                 if pos_name != res['pos']:
+                    self._logger.error("Event file %s has different pos identifier than %s" % (event_file, pos_name))
                     raise RuntimeError("Event file %s has different pos identifier than %s" % (event_file, pos_name))
             
                 channel = res["channel"]
@@ -810,10 +814,10 @@ class Plate(object):
                     self._positions[pos_name][event_id][channel][region] = numpy.recfromcsv(filename, delimiter='\t')
                     a = self._positions[pos_name][event_id][channel][region]
                     
-                    if '|S0' in map(str, map(lambda x: x[0], a.dtype.fields.values())):
-                        print pos_name, event_id, channel, region
-                        print filename
-                        raise RuntimeError('Argh')
+#                    if '|S0' in map(str, map(lambda x: x[0], a.dtype.fields.values())):
+#                        print pos_name, event_id, channel, region
+#                        print filename
+#                        raise RuntimeError('Argh')
                         
                     
                     if hmm_correction_available and region == 'primary':
@@ -848,7 +852,7 @@ class Plate(object):
         
         if len(mapping) == 0:
             raise RuntimeError("Mapping file is empty %s" % self.mapping_file)
-        print 'Found mapping file', self.mapping_file
+        self._logger.info('Found mapping file: ' % self.mapping_file)
         
         return mapping
         
@@ -888,7 +892,7 @@ class Plate(object):
         if os.path.exists(os.path.join(self.path_in, self.plate_id + ".pkl")) and not overwrite:
             return
         f = open(os.path.join(self.path_in, self.plate_id + ".pkl"), 'w')
-        print 'Saving position...'
+        self._logger.info('Saving plate %s to disk...' % self.plate_id)
         pickle.dump(self, f)
         f.close()
         
