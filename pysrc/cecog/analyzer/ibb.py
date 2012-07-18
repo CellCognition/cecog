@@ -11,11 +11,11 @@ from itertools import cycle
 from cecog.util.color import rgb_to_hex
 from matplotlib.backends.backend_pdf import PdfPages
 from vigra.impex import readImage
-mpl.rcParams["axes.facecolor"] = 'k'
-mpl.rcParams["axes.edgecolor"] = 'w'
+#mpl.rcParams["axes.facecolor"] = 'k'
+#mpl.rcParams["axes.edgecolor"] = 'w'
 #mpl.rcParams["axes.labelcolor"] = 'w'
-#mpl.rcParams["figure.facecolor"] = 'w'
-#mpl.rcParams["pdf.compression"] = 0
+mpl.rcParams["figure.facecolor"] = 'w'
+mpl.rcParams["pdf.compression"] = 0
 
 
 
