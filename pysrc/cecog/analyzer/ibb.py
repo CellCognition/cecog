@@ -546,7 +546,6 @@ class IBBAnalysis(object):
         neg_ctrl = []
         for group_name in sorted(result, cmp=mycmp):
             new_id = result[group_name]['positions'][0].__getattribute__(self.color_sort_by)
-            print new_id
             
             data.append(numpy.array(result[group_name][id_])/60.0)
             if result[group_name]['positions'][0].group == 'neg ctrl':
@@ -762,9 +761,6 @@ class Plate(object):
                 hmm_correction_available = True
                 event_file_list.remove('_hmm')
                 
-            
-            
-            k = 0
             for event_file in event_file_list:
                 res = self.EVENT_REGEXP.search(event_file)
                 if res is None:
@@ -813,13 +809,7 @@ class Plate(object):
                     filename = os.path.join(event_path, event_file)
                     self._positions[pos_name][event_id][channel][region] = numpy.recfromcsv(filename, delimiter='\t')
                     a = self._positions[pos_name][event_id][channel][region]
-                    
-#                    if '|S0' in map(str, map(lambda x: x[0], a.dtype.fields.values())):
-#                        print pos_name, event_id, channel, region
-#                        print filename
-#                        raise RuntimeError('Argh')
-                        
-                    
+                              
                     if hmm_correction_available and region == 'primary':
                         
                         filename = os.path.join(event_path, '_hmm', event_file)
@@ -832,18 +822,9 @@ class Plate(object):
                                               class__label__hmm, 
                                               numpy.uint8)
                         
-                        self.class_label_selector = 'class__label__hmm'
-                        
-                        
-                    
-                    
-#                    if k > 4:
-#                        break
-#                    k += 1
+                        self.class_label_selector = 'class__label__hmm'                       
         self.save(True)
-                    
-                    
-                           
+                                            
     def _readMappingFile(self):
         if os.path.exists(self.mapping_file):
             mapping = numpy.recfromcsv(self.mapping_file, delimiter='\t')
@@ -884,8 +865,7 @@ class Plate(object):
         
             if pos.position not in res:
                 res[group_key] = []
-            res[group_key].append(pos)
-                
+            res[group_key].append(pos)   
         return res
     
     def save(self, overwrite=False):
@@ -896,7 +876,6 @@ class Plate(object):
         pickle.dump(self, f)
         f.close()
         
-    
     @staticmethod
     def load(path_in, plate_id):
         try:
