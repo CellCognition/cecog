@@ -952,6 +952,7 @@ class PostProcessingThread(_ProcessingThread):
         ibb_options['ibb_onset_factor_threshold'] = self._settings.get2('ibb_onset_factor_threshold')
         ibb_options['nebd_onset_factor_threshold'] = self._settings.get2('nebd_onset_factor_threshold')
         ibb_options['single_plot'] = self._settings.get2('single_plot')
+        ibb_options['single_plot_max_plots'] = self._settings.get2('single_plot_max_plots')
         
         
         ibb_options['single_plot_ylim_range'] = self._settings.get2('single_plot_ylim_low'), \

@@ -142,6 +142,7 @@ class IBBAnalysis(object):
                        ibb_onset_factor_threshold=1.2,
                        nebd_onset_factor_threshold=1.2,
                        single_plot=True,
+                       single_plot_max_plots=1,
                        single_plot_ylim_range=(1,5),
                        group_by=0,
                        color_sort_by='gene_symbol',
@@ -163,6 +164,7 @@ class IBBAnalysis(object):
         self.nebd_onset_factor_threshold = nebd_onset_factor_threshold
         
         self.single_plot = single_plot
+        self.single_plot_max_plots = single_plot_max_plots
         self.single_plot_ylim_range = single_plot_ylim_range
         self.group_by = group_by
         self.color_sort_by = color_sort_by
@@ -204,6 +206,7 @@ class IBBAnalysis(object):
             for pos in pos_list:
                 result[group_name]['positions'].append(pos)
                 print pos.position, ":::",
+                cnt_single_plot = 0
                 for event_idx, (event_id, event_dicts) in enumerate(sorted(pos.items())):
                     print event_idx, 
                     h2b = event_dicts['Primary']['primary']
@@ -231,7 +234,7 @@ class IBBAnalysis(object):
                         
                         result[group_name]['timing'].append(self._find_class_timing(h2b, time[1]))
                         
-                        if self.single_plot:
+                        if self.single_plot and cnt_single_plot < self.single_plot_max_plots:
                             self._plot_single_event(group_name, ibb_ratio, h2b, 
                                                     separation_frame, 
                                                     ibb_onset_frame, 
@@ -239,6 +242,7 @@ class IBBAnalysis(object):
                                                     prophase_onset,
                                                     prophase_last_frame,
                                                     event_id, pos.position)
+                            cnt_single_plot += 1
                 print ""
             if group_name in self._plotter:
                 self._plotter[group_name].close()
