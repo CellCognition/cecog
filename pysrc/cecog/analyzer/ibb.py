@@ -115,71 +115,7 @@ class GalleryDecorationPlotter(EventPlotterPdf):
 
 
         self.set_positions()
-        return
-
- 
-        for j, c in enumerate(channel):    
-            if 'gallery__%s' % c not in self.add_axes:
-                bb = self.axes.get_position()
-                self.axes.set_position((bb.x0, bb.y0+0.2*len(channel), bb.width, bb.height-0.2*len(channel))) 
-                new_axes = self.figure.add_axes((bb.x0, bb.y0, bb.width, 0.2*len(channel)))
-                new_axes.set_position((bb.x0, bb.y0, bb.width, 0.2*len(channel)))
-                self.add_axes['gallery__%s' % c] = new_axes
-            else:
-                new_axes = self.add_axes['gallery__%s' % c]
-            
-            #self.figure.show()
-                
-            x_min = 0
-            x_max = time[-1]+time[1]
-                
-            gallery_path = os.path.join(path_in, pos_name, 'gallery', c) 
-            event_re = re.search(r"^T(?P<time>\d+)_O(?P<obj>\d+)_B(?P<branch>\d+)", event_id)
-            t_ = int(event_re.groupdict()['time'])
-            o_ = int(event_re.groupdict()['obj'])
-            b_ = int(event_re.groupdict()['branch'])
-            
-            
-            gallery_file = os.path.join(gallery_path, 'P%s__T%05d__O%04d__B%02d.jpg' % (pos_name, t_, o_ , b_))
-            
-            if os.path.exists(gallery_file):
-                img = readImage(gallery_file)[:,:,0].view(numpy.ndarray).astype(numpy.uint8).swapaxes(1,0)
-                aspect = img.shape[0] / float(img.shape[1])
-                offset = x_max*aspect
-                
-                new_axes.imshow(img, extent=(x_min, x_max, 0, offset), cmap=pyplot.get_cmap('gray'))
-                new_axes.set_yticklabels([])
-                if j == 0:
-                    new_axes.set_xlabel("")
-                    new_axes.set_xticklabels([])
-                    new_axes.set_xticks([])
-                    
-                    for t in xrange(len(time)):
-                        if t >= len(time)-1:
-                            w = time[1]
-                        else:
-                            w = time[t+1]-time[t]
-                        new_axes.add_patch(pyplot.Rectangle((time[t], offset),
-                                                              w,
-                                                              offset*1.1, 
-                                                              fill=True, 
-                                                              color=class_colors[class_labels[t]]))
-                    new_axes.set_ylim(0, offset*1.1)
-                    new_axes.set_xlim(0, x_max)
-                else:
-                    new_axes.set_ylim(0, offset)
-                    new_axes.set_xlim(0, x_max)
-                    new_axes.set_xlabel("Time [min]")
-                    
-                
-            
-            self.axes.set_xlabel("")
-            self.axes.set_xticks([])
-    
-            
-            new_axes.set_yticklabels([])   
-            new_axes.set_yticks([])
-        self.set_positions()
+        
             
 
 class IBBAnalysis(object):
@@ -295,7 +231,7 @@ class IBBAnalysis(object):
                         
                         result[group_name]['timing'].append(self._find_class_timing(h2b, time[1]))
                         
-                        if self.single_plot and event_idx < 30:
+                        if self.single_plot:
                             self._plot_single_event(group_name, ibb_ratio, h2b, 
                                                     separation_frame, 
                                                     ibb_onset_frame, 
@@ -729,10 +665,12 @@ class IBBAnalysis(object):
         pyplot.setp(xtickNames, rotation=45, horizontalalignment='right', fontsize=10)
         
         data_max = numpy.nanmax(numpy.array(map(numpy.mean, numpy.array(data_list))))
-        if data_max < 0.4 * self.timeing_ylim_range[1]:
+        if data_max < 0.5 * self.timeing_ylim_range[1]:
             pyplot.ylim(self.timeing_ylim_range[0], self.timeing_ylim_range[1]/2.0)
-        if data_max < 0.3 * self.timeing_ylim_range[1]:
+        if data_max < 0.25 * self.timeing_ylim_range[1]:
             pyplot.ylim(self.timeing_ylim_range[0], self.timeing_ylim_range[1]/4.0)
+        if data_max < 0.125 * self.timeing_ylim_range[1]:
+            pyplot.ylim(self.timeing_ylim_range[0], self.timeing_ylim_range[1]/8.0)
         
         fig.savefig(os.path.join(self.path_out, '_timing_ibb_events_%s_box.pdf' % id_), format='pdf')
     
