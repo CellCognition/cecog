@@ -25,9 +25,8 @@ __source__ = '$URL$'
 import sys, \
        time, \
        logging, \
-       logging.handlers, \
        h5py
-
+logging.basicConfig()
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
