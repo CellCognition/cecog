@@ -17,6 +17,7 @@ from vigra.impex import readImage
 mpl.rcParams["figure.facecolor"] = 'w'
 mpl.rcParams["pdf.compression"] = 0
 
+import pylab
 
 
 def enum(*sequential, **named):
@@ -27,7 +28,7 @@ class EventPlotterPdf(object):
     def __init__(self, figsize):
         self.figure = pyplot.figure(figsize=figsize)
         self.figure.set_dpi(400)
-        self.axes = self.figure.add_axes((0.1,0.1,0.8,0.8))
+        self.axes = self.figure.add_axes((0.1, 0.5, 0.8, 0.4))
         self._pdf_handle = None
         self.add_axes = {}
         
@@ -50,15 +51,73 @@ class EventPlotterPdf(object):
               
 class GalleryDecorationPlotter(EventPlotterPdf):
     def set_positions(self):
-        bb = self.axes.get_position()
-        self.axes.set_position((0.05, 0.05*len(self.add_axes)+0.18, 0.9, 0.95-0.15*len(self.add_axes))) 
-        for i, an in enumerate(sorted(self.add_axes)):
-            ag = self.add_axes[an]
-            ag.set_position((0.05, (len(self.add_axes)-i-1)*0.06+0.15, 0.9, 0.06))
-            ag.set_frame_on(False)
+        self.axes.set_position((0.1, 0.5, 0.8, 0.4)) 
+
+        self.add_axes['gallery'].set_position((0.1, 0.1, 0.8, 0.4))
+        self.add_axes['gallery'].set_frame_on(False)
+        
        
     
-    def add_gallery_deco(self, event_id, pos_name, path_in, time, class_labels, class_colors, channel=('primary', 'secondary')):     
+    def add_gallery_deco(self, event_id, pos_name, path_in, time, class_labels, class_colors, channel=('primary', 'secondary')):   
+        if 'gallery' not in self.add_axes:
+            self.add_axes['gallery'] = self.figure.add_axes((0.1, 0.1, 0.8, 0.4))
+        
+        new_axes = self.add_axes['gallery']
+
+        x_min = 0
+        x_max = time[-1]+time[1]
+            
+        
+        event_re = re.search(r"^T(?P<time>\d+)_O(?P<obj>\d+)_B(?P<branch>\d+)", event_id)
+        t_ = int(event_re.groupdict()['time'])
+        o_ = int(event_re.groupdict()['obj'])
+        b_ = int(event_re.groupdict()['branch'])
+        
+        gallery_path = os.path.join(path_in, pos_name, 'gallery', 'primary') 
+        prim_gallery_file = os.path.join(gallery_path, 'P%s__T%05d__O%04d__B%02d.jpg' % (pos_name, t_, o_ , b_))
+        
+        gallery_path = os.path.join(path_in, pos_name, 'gallery', 'secondary') 
+        sec_gallery_file = os.path.join(gallery_path, 'P%s__T%05d__O%04d__B%02d.jpg' % (pos_name, t_, o_ , b_))
+        
+        if os.path.exists(prim_gallery_file):
+            prim_img = readImage(prim_gallery_file)[:,:,0].view(numpy.ndarray).astype(numpy.uint8).swapaxes(1,0)
+            
+            img = prim_img
+                
+            if os.path.exists(sec_gallery_file):
+                sec_img = readImage(sec_gallery_file)[:,:,0].view(numpy.ndarray).astype(numpy.uint8).swapaxes(1,0)
+                img = numpy.concatenate((prim_img, sec_img), axis=0)
+                
+            aspect = img.shape[0] / float(img.shape[1])
+            offset = x_max*aspect
+                
+            new_axes.imshow(img, extent=(x_min, x_max, 0, offset), cmap=pyplot.get_cmap('gray'))
+            
+            new_axes.set_yticklabels([])
+            
+            for t in xrange(len(time)):
+                if t >= len(time)-1:
+                    w = time[1]
+                else:
+                    w = time[t+1]-time[t]
+                new_axes.add_patch(pyplot.Rectangle((time[t], offset),
+                                                      w,
+                                                      offset*1.05, 
+                                                      fill=True, 
+                                                      color=class_colors[class_labels[t]]))
+            new_axes.set_ylim(0, offset*1.05)
+            new_axes.set_xlim(0, x_max)
+            new_axes.set_xlabel("Time [min]")
+            
+            self.axes.set_xlabel("")
+            self.axes.set_xticklabels([])
+            self.axes.set_xticks([])
+
+
+        self.set_positions()
+        return
+
+ 
         for j, c in enumerate(channel):    
             if 'gallery__%s' % c not in self.add_axes:
                 bb = self.axes.get_position()
@@ -320,7 +379,7 @@ class IBBAnalysis(object):
     def _plot_timing(self, result):
         f_handle = PdfPages(os.path.join(self.path_out, '_class_timing.pdf' ))
         
-        for class_index, class_name in sorted(self.class_colors.items()):
+        for class_index, class_name in sorted(self.class_names.items()):
             data = []
             names = []
         
@@ -350,6 +409,7 @@ class IBBAnalysis(object):
                yerr=map(numpy.std, numpy.array(data)), 
                color=class_color,
                ecolor='k',
+               align='center',
                )
         ax.set_xticks(range(len(data)))
         xtick_labels = ax.set_xticklabels(names)
@@ -599,14 +659,13 @@ class IBBAnalysis(object):
         width = 0.8 / len(data[0])  
     
         for i, d in enumerate(data_t):
-            print ind, d
             rect = ax.bar(ind, d, width, color=bar_colors[i], label=bar_labels[i])
             if show_number:
                 autolabel(rect)
             ind += width
             
         ax.set_ylabel('Count')
-        ax.set_xticks(numpy.arange(N).astype(numpy.float32)+0.5)
+        ax.set_xticks(numpy.arange(N).astype(numpy.float32)+0.4)
         xtick_labels = ax.set_xticklabels(names)
         pyplot.setp(xtick_labels, rotation=45, horizontalalignment='right', fontsize=12)
         ax.legend(loc=1)
@@ -619,18 +678,22 @@ class IBBAnalysis(object):
         ax1 = fig.add_subplot(111)
         ax1.set_title('IBB Analysis %s' % self.PLOT_LABELS[id_])
         ax1.bar(range(len(data_list)), map(numpy.mean, numpy.array(data_list)),
-               width=0.6, 
                yerr=map(numpy.std, numpy.array(data_list)), 
                color=map(lambda x:rgb_to_hex(*x), colors),
                ecolor='k',
+               align='center',
                )
-        ax1.set_xticks([x+0.8 for x in range(len(data_list))]) 
+        #ax1.set_xticks([x+0.8 for x in range(len(data_list))]) 
         
         if len(neg_ctrl) > 0:
             neg_line = numpy.concatenate(neg_ctrl).mean()
             ax1.plot([0, len(data_list)],[neg_line, neg_line], 'k--', label="Neg. Ctrl.")
-        xtickNames = pyplot.setp(ax1, xticklabels=names)
-        pyplot.setp(xtickNames, rotation=45, horizontalalignment='right', fontsize=10)
+        #xtickNames = pyplot.setp(ax1, xticklabels=names)
+        #pyplot.setp(xtickNames, rotation=45, horizontalalignment='right', fontsize=10)
+        ax1.set_xticks(range(len(data_list)))
+        xticks = ax1.set_xticklabels(names)
+        pyplot.setp(xticks, rotation=45,  horizontalalignment='right')
+        
         pyplot.ylim(*self.timeing_ylim_range)
         
         data_max = numpy.nanmax(numpy.array(map(numpy.mean, numpy.array(data_list))))
@@ -638,6 +701,8 @@ class IBBAnalysis(object):
             pyplot.ylim(self.timeing_ylim_range[0], self.timeing_ylim_range[1]/2.0)
         if data_max < 0.25 * self.timeing_ylim_range[1]:
             pyplot.ylim(self.timeing_ylim_range[0], self.timeing_ylim_range[1]/4.0)
+        if data_max < 0.125 * self.timeing_ylim_range[1]:
+            pyplot.ylim(self.timeing_ylim_range[0], self.timeing_ylim_range[1]/8.0)
             
         fig.savefig(os.path.join(self.path_out, '_timing_ibb_events_%s_bar.pdf' % id_), format='pdf')
         
@@ -656,7 +721,7 @@ class IBBAnalysis(object):
                 pyplot.setp(b, facecolor=rgb_to_hex(*c))
                 i += 1
                 
-        ax1.set_xticks([x+0.8 for x in range(len(data_list))])
+        #ax1.set_xticks([x+0.8 for x in range(len(data_list))])
         if len(neg_ctrl) > 0:
             neg_line = numpy.concatenate(neg_ctrl).mean()
             ax1.plot([0, len(data_list)],[neg_line, neg_line], 'k--', label="Neg. Ctrl.")
@@ -742,6 +807,7 @@ class Plate(object):
                     
             if pos_name not in self.pos_list:
 #                raise RuntimeError("Position from Mapping file %s not found in in path %s" % (pos_name, self.path_in))
+                print "Position from Mapping file %s not found in in path %s" % (pos_name, self.path_in)
                 self._logger.warning("Position from Mapping file %s not found in in path %s" % (pos_name, self.path_in))
                 continue
             
@@ -833,7 +899,7 @@ class Plate(object):
         
         if len(mapping) == 0:
             raise RuntimeError("Mapping file is empty %s" % self.mapping_file)
-        self._logger.info('Found mapping file: ' % self.mapping_file)
+        self._logger.info('Found mapping file: %s' % self.mapping_file)
         
         return mapping
         
