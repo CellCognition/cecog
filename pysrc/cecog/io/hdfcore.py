@@ -6,7 +6,7 @@ import functools
 import time
 import cProfile
 
-GALLERY_SIZE = 50    
+GALLERY_SIZE = 100    
   
 class memoize(object):
     """cache the return value of a method
@@ -66,8 +66,8 @@ class CH5Position(object):
                    ['prediction'].value
                    
     def get_gallery_image(self, index, object='primary__primary'):
-        if not isinstance(index, list):
-            index = [index]
+        if not isinstance(index, (list, tuple)):
+            index = (index,)
         image_list = []
         for ind in index:
             time_idx = self['object'][object][ind]['time_idx']
@@ -94,10 +94,92 @@ class CH5Position(object):
     def get_class_name(self, class_labels, object):
         class_mapping = self.definitions.class_definition(object)
         return [class_mapping['name'][col-1] for col in class_labels]
+    
+    def _get_object_table(self, object):
+        return self['object'][object].value
+    
+    def get_events(self):
+        dset_event = self._get_object_table('event')
+        events = []
+        for event_id in range(1,dset_event['obj_id'].max()):
+            idx = numpy.where(dset_event['obj_id'] == event_id)
+            idx1 = dset_event[idx]['idx1']
+            idx2 = dset_event[idx]['idx2']
+            
+            event_list = []
+            for p1, _ in zip(idx1, idx2):
+                if p1 in event_list:
+                    # branch ends
+                    break
+                else:
+                    event_list.append(p1)
+            events.append(event_list)
+        return events
+    
+    def _track_single(self, start_idx, type):
+        if type == 'first':
+            sel = 0
+        elif type == 'last':
+            sel = -1
+        else:
+            raise NotImplementedError('type not supported')
+            
+        
+        ### follow last cell
+        idx_list = []
+        dset_tracking = self.get_tracking()
+
+        idx = start_idx
+        while True:
+            next_p_idx = (dset_tracking['obj_idx1']==idx).nonzero()[0]
+            if len(next_p_idx) == 0:
+                break
+            idx = dset_tracking['obj_idx2'][next_p_idx[sel]]
+            idx_list.append(idx)
+        return idx_list
+    
+    def track_first(self, start_idx):
+        return self._track_single(start_idx, 'first')
+    
+    def track_last(self, start_idx):
+        return self._track_single(start_idx, 'last')
+        
+    def track_all(self, start_idx):
+        dset_tracking = self.get_tracking()
+        next_p_idx = (dset_tracking['obj_idx1']==start_idx).nonzero()[0]
+        if len(next_p_idx) == 0:
+            return [None]
+        else:
+            def all_paths_of_tree(id):
+                found_ids = dset_tracking['obj_idx2'][(dset_tracking['obj_idx1']==id).nonzero()[0]]
+                
+                if len(found_ids) == 0:
+                    return [[id]]
+                else:
+                    all_paths_ = []
+                    for out_id in found_ids:
+                        for path_ in all_paths_of_tree(out_id):
+                            all_paths_.append([id] + path_)
+        
+                    return all_paths_ 
+                
+            head_ids = dset_tracking['obj_idx2'][(dset_tracking['obj_idx1']==start_idx).nonzero()[0]]
+            res = []
+            for head_id in head_ids:
+                res.extend(all_paths_of_tree(head_id)   )
+            return res
 
 class CH5CachedPosition(CH5Position):
     def __init__(self, *args, **kwargs):
         super(CH5CachedPosition, self).__init__(*args, **kwargs)
+        
+    @memoize
+    def get_events(self, *args, **kwargs):
+        return super(CH5CachedPosition, self).get_events(*args, **kwargs)
+    
+    @memoize
+    def _get_object_table(self, *args, **kwargs):
+        return super(CH5CachedPosition, self)._get_object_table(*args, **kwargs)
     
     @memoize
     def get_tracking(self, *args, **kwargs):
@@ -152,39 +234,8 @@ class CH5File(object):
         return self._file_handle['/definition/feature/%s/object_classification/class_labels' % object].value
     
     def close(self):
-        self._file_handle.close()
-
-    def get_events(self):
-        dset_event = self.current_pos['object']['event'].value
-        events = []
-        for event_id in range(1,dset_event['obj_id'].max()):
-            idx = numpy.where(dset_event['obj_id'] == event_id)
-            idx1 = dset_event[idx]['idx1']
-            idx2 = dset_event[idx]['idx2']
-            
-            event_list = []
-            for p1, _ in zip(idx1, idx2):
-                if p1 in event_list:
-                    # branch ends
-                    break
-                else:
-                    event_list.append(p1)
-            events.append(event_list)
-        return events
+        self._file_handle.close()    
     
-    def track_first(self, start_idx):
-        ### follow last cell
-        idx_list = []
-        dset_tracking = self.current_pos.get_tracking()
-
-        idx = start_idx
-        while True:
-            next_p_idx = (dset_tracking['obj_idx1']==idx).nonzero()[0]
-            if len(next_p_idx) == 0:
-                break
-            idx = dset_tracking['obj_idx2'][next_p_idx[0]]
-            idx_list.append(idx)
-        return idx_list
     
 import unittest
 class CH5TestBase(unittest.TestCase):
@@ -207,6 +258,31 @@ class TestCH5Basic(CH5TestBase):
         self.assertTrue(numpy.all(a1 == a2))
         self.assertFalse(numpy.all(a1 == b1))
         
+    def testGallery2(self):
+        event = self.fh.get_position(self.well_str, self.pos_str).track_first(5)
+        a1 = self.fh.get_position(self.well_str, self.pos_str).get_gallery_image(tuple(event))
+#        import vigra
+#        vigra.impex.writeImage(a1.swapaxes(1,0), 'c:/Users/sommerc/Desktop/bla.png')
+        
+    def testGallery3(self):
+        event = self.fh.get_position(self.well_str, self.pos_str).get_events()[42][0]
+        tracks = self.fh.get_position(self.well_str, self.pos_str).track_all(event)
+        w = numpy.array(map(len, tracks)).max()*GALLERY_SIZE
+        img = numpy.zeros((GALLERY_SIZE * len(tracks), w), dtype=numpy.uint8)
+        
+        for k, t in enumerate(tracks):
+            a = self.fh.get_position(self.well_str, self.pos_str).get_gallery_image(tuple(t))
+            print a.shape
+            img[k*GALLERY_SIZE:(k+1)*GALLERY_SIZE, 0:a.shape[1]] = a
+#        import vigra
+#        vigra.impex.writeImage(img.swapaxes(1,0), 'c:/Users/sommerc/Desktop/foo.png')
+        
+    def testGallery4(self):
+        event = self.fh.get_position(self.well_str, self.pos_str).get_events()[42]
+        a1 = self.fh.get_position(self.well_str, self.pos_str).get_gallery_image(tuple(event))
+#        import vigra
+#        vigra.impex.writeImage(a1.swapaxes(1,0), 'c:/Users/sommerc/Desktop/blub.png')   
+              
     def testClassNames(self):
         for x in ['inter', 'pro', 'earlyana']:
             self.assertTrue(x in self.fh.get_position(self.well_str, self.pos_str).get_class_name((1,2,5)))
@@ -214,6 +290,21 @@ class TestCH5Basic(CH5TestBase):
     def testClassColors(self):
         for x in ['#FF8000', '#D28DCE', '#FF0000']:
             self.assertTrue(x in self.fh.get_position(self.well_str, self.pos_str).get_class_color((3,4,8)))   
+         
+    def testEvents(self):
+        self.assertTrue(len(self.fh.get_position(self.well_str, self.pos_str).get_events()) > 0)
+        self.assertTrue(len(self.fh.get_position(self.well_str, self.pos_str).get_events()[0]) > 0)
+        
+    def testTrack(self):
+        self.assertTrue(len(self.fh.get_position(self.well_str, self.pos_str).track_first(42)) > 0)
+        
+    def testTrackFirst(self):
+        self.assertListEqual(self.fh.get_position(self.well_str, self.pos_str).track_first(42), 
+                             self.fh.get_position(self.well_str, self.pos_str).track_all(42)[0])
+        
+    def testTrackLast(self):  
+        self.assertListEqual(self.fh.get_position(self.well_str, self.pos_str).track_last(1111), 
+                             self.fh.get_position(self.well_str, self.pos_str).track_all(1111)[-1])
         
     def tearDown(self):
         self.fh.close()
