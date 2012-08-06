@@ -145,6 +145,8 @@ Section "CecogAnalyzer" SecDummy
     CreateShortCut "$SMPROGRAMS\$StartMenuFolder\CecogAnalyzer-${mver}.lnk" "$INSTDIR\CecogAnalyzer.exe" "" "$INSTDIR\CecogAnalyzer.exe"  
     CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
   
+  AccessControl::GrantOnFile "$INSTDIR" "(S-1-5-32-545)" "FullAccess"
+  
   !insertmacro MUI_STARTMENU_WRITE_END
 
 SectionEnd
