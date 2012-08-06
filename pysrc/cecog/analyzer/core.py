@@ -26,7 +26,7 @@ import sys, \
        time, \
        logging, \
        h5py
-logging.basicConfig()
+
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
