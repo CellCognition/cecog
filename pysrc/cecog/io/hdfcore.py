@@ -5,6 +5,8 @@ import collections
 import functools
 import time
 import cProfile
+import base64
+import zlib
 
 GALLERY_SIZE = 100    
   
@@ -64,6 +66,26 @@ class CH5Position(object):
                    ['primary__primary'] \
                    ['object_classification'] \
                    ['prediction'].value
+                   
+    def get_crack_contour(self, index, object='primary__primary', bb_corrected=True):
+        if not isinstance(index, (list, tuple)):
+            index = (index,)
+        crack_list = []
+        for ind in index:
+            crack_str = self['feature'][object]['crack_contour'][ind]
+            crack = numpy.asarray(zlib.decompress( \
+                             base64.b64decode(crack_str)).split(','), \
+                             dtype=numpy.float32).reshape(-1,2)
+            
+            if bb_corrected:
+                bb = self['feature'][object]['center'][ind]
+                crack[:,0] -= bb[0] + GALLERY_SIZE/2
+                crack[:,1] -= bb[1] - GALLERY_SIZE/2 
+                crack.clip(0, GALLERY_SIZE)
+                
+            crack_list.append(crack)
+ 
+        return crack_list
                    
     def get_gallery_image(self, index, object='primary__primary'):
         if not isinstance(index, (list, tuple)):
