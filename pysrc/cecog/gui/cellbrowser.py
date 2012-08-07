@@ -119,7 +119,7 @@ class PositionThumbnailEvents(PositionThumbnailBase):
             
             for r, event in enumerate(events):
                 for c, pp in enumerate(event):
-                    line_pen = QtGui.QPen(QtGui.QColor(str(position.get_class_color(tuple(position.get_class_label(pp)))[0])))
+                    line_pen = QtGui.QPen(QtGui.QColor(position.get_class_color(pp)))
                     line_pen.setWidth(self.item_height)
                     painter.setPen(line_pen)
                     painter.drawLine(c*self.item_length, r*self.item_height, 
@@ -771,7 +771,7 @@ class CellGraphicsItem(GraphicsTerminalObjectItem):
         
         primary_contour_item = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), self.position.get_crack_contour(object_item)[0])))
         primary_contour_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
-        primary_contour_item.setPen(QtGui.QPen(QtGui.QColor(str(self.position.get_class_color(tuple(self.position.get_class_label(object_item)))[0]))))
+        primary_contour_item.setPen(QtGui.QPen(QtGui.QColor(self.position.get_class_color(object_item))))
         primary_contour_item.setAcceptHoverEvents(True)
         primary_contour_item.setZValue(4)
         
@@ -811,7 +811,7 @@ class CellGraphicsItem(GraphicsTerminalObjectItem):
 #        self.addToGroup(composed_gallery_item)
         
         bar_item = QtGui.QGraphicsLineItem(self.PREDICTION_BAR_X_PADDING, 0, self.width - self.PREDICTION_BAR_X_PADDING, 0)
-        bar_pen = QtGui.QPen(QtGui.QColor(str(self.position.get_class_color(tuple(self.position.get_class_label(object_item)))[0])))
+        bar_pen = QtGui.QPen(QtGui.QColor(self.position.get_class_color(object_item)))
         bar_pen.setWidth(self.PREDICTION_BAR_HEIGHT)
         bar_item.setPen(bar_pen)
         self.bar_item = bar_item

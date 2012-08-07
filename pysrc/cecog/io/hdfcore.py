@@ -79,7 +79,7 @@ class CH5Position(object):
             
             if bb_corrected:
                 bb = self['feature'][object]['center'][ind]
-                crack[:,0] -= bb[0] + GALLERY_SIZE/2
+                crack[:,0] -= bb[0] - GALLERY_SIZE/2
                 crack[:,1] -= bb[1] - GALLERY_SIZE/2 
                 crack.clip(0, GALLERY_SIZE)
                 
@@ -108,12 +108,24 @@ class CH5Position(object):
         if not isinstance(index, list):
             index = [index]
         return self.get_class_prediction()['label_idx'][index] + 1
+    
+    def get_class_color(self, index):
+        res = map(str, self.class_color_def(tuple(self.get_class_label(index))))
+        if len(res) == 1:
+            return res[0]
+        return res
+    
+    def get_class_name(self, index):
+        res = map(str, self.class_name_def(tuple(self.get_class_label(index))))
+        if len(res) == 1:
+            return res[0]
+        return res
           
-    def get_class_color(self, class_labels, object):
+    def class_color_def(self, class_labels, object):
         class_mapping = self.definitions.class_definition(object)
         return [class_mapping['color'][col-1] for col in class_labels]
     
-    def get_class_name(self, class_labels, object):
+    def class_name_def(self, class_labels, object):
         class_mapping = self.definitions.class_definition(object)
         return [class_mapping['name'][col-1] for col in class_labels]
     
@@ -216,12 +228,12 @@ class CH5CachedPosition(CH5Position):
         return super(CH5CachedPosition, self).get_gallery_image(*args, **kwargs)
     
     @memoize
-    def get_class_name(self, class_labels, object='primary__primary'):
-        return super(CH5CachedPosition, self).get_class_name(class_labels, object)
+    def class_name_def(self, class_labels, object='primary__primary'):
+        return super(CH5CachedPosition, self).class_name_def(class_labels, object)
     
     @memoize
-    def get_class_color(self, class_labels, object='primary__primary'):
-        return super(CH5CachedPosition, self).get_class_color(class_labels, object)
+    def class_color_def(self, class_labels, object='primary__primary'):
+        return super(CH5CachedPosition, self).class_color_def(class_labels, object)
 
 class CH5File(object):
     POSITION_CLS = CH5CachedPosition
@@ -307,11 +319,11 @@ class TestCH5Basic(CH5TestBase):
               
     def testClassNames(self):
         for x in ['inter', 'pro', 'earlyana']:
-            self.assertTrue(x in self.fh.get_position(self.well_str, self.pos_str).get_class_name((1,2,5)))
+            self.assertTrue(x in self.fh.get_position(self.well_str, self.pos_str).class_name_def((1,2,5)))
      
     def testClassColors(self):
         for x in ['#FF8000', '#D28DCE', '#FF0000']:
-            self.assertTrue(x in self.fh.get_position(self.well_str, self.pos_str).get_class_color((3,4,8)))   
+            self.assertTrue(x in self.fh.get_position(self.well_str, self.pos_str).class_color_def((3,4,8)))   
          
     def testEvents(self):
         self.assertTrue(len(self.fh.get_position(self.well_str, self.pos_str).get_events()) > 0)
