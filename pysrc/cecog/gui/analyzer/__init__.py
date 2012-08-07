@@ -9,7 +9,7 @@
                  See trunk/AUTHORS.txt for author contributions.
 """
 from __future__ import division
-__author__ = 'Michael Held & Qing Zhong'
+__author__ = 'Michael Held & Christoph Sommer & Qing Zhong'
 __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
@@ -42,7 +42,7 @@ import types, \
        socket
        
 #-------------------------------------------------------------------------------
-# Sklearn imports:
+# sklearn, scipy, matplotlib imports:
 #
 from sklearn import mixture, utils
 
@@ -50,6 +50,18 @@ from sklearn import mixture, utils
 from cecog.util.sklearn import mylogsumexp
 utils.extmath.logsumexp = mylogsumexp
 import sklearn.hmm as hmm
+import scipy.stats.stats as sss
+import scipy.cluster.vq as scv
+from matplotlib import mlab
+import matplotlib.pyplot as plt
+import scipy
+from PIL import Image
+
+#-------------------------------------------------------------------------------
+# tc3 imports:
+#
+import cecog.learning.unsupervised as unsup
+from cecog.learning.constants import CLASS_COLORS, CLASS_COLORS_LIST
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -388,7 +400,6 @@ class HmmThreadPython(_ProcessingThread):
         num_frames = int(self._settings.get('Tracking', 'tracking_forwardrange') + self._settings.get('Tracking', 'tracking_backwardrange'))
         path_pos = self._join(path_analyzed, pos)
         path_data = self._join(path_pos, 'statistics/events/')
-        print 'path_data', path_data
         class_col = 6 # column position of svm_labels, should be retrieved from variable
         
         # directory of hmm corrected labels
@@ -397,9 +408,9 @@ class HmmThreadPython(_ProcessingThread):
         text = 'Trajectory'
         
         if self._settings.get('ErrorCorrection', 'ignore_tracking_branches') : 
-            branch = '__'
-        else: 
             branch = 'B01__'
+        else: 
+            branch = '__'
             
         if self._settings.get('Processing', 'secondary_processchannel') :
             channels = ['CPrimary','CSecondary']
@@ -407,49 +418,83 @@ class HmmThreadPython(_ProcessingThread):
                                     self._convert(self._get_path_out(path_out_hmm_html,'%s_%s' % ('secondary', region_name_secondary)))]                                        
         else :
             channels = ['CPrimary']
-            path_out_hmm_regions = [self._convert(self._get_path_out(path_out_hmm_html,'%s_%s' % ('primary', region_name_primary)))]
-        
-        print channels 
-        freq_matrix = []   
-        for channel in channels :
+            path_out_hmm_regions = [self._convert(self._get_path_out(path_out_hmm_html,'%s_%s' % ('primary', region_name_primary)))] 
+
+        for (counter,channel) in enumerate(channels) :
             labels_svm, num_tracks, infiles = self.read_labels(path_data,num_frames,class_col,branch+channel) # SVM labels
+            print labels_svm[0,]
+            path_out_hmm = self._join(path_pos, 'statistics/events/_hmm/')
+            labels_svm_hmm, num_tracks2, infiles2 = self.read_labels(path_out_hmm,num_frames,0,branch+channel) # R version SVM+HMM
             dim = [num_frames, num_tracks] # data dimension
             k = numpy.unique(labels_svm).shape[0]
             print k
-            print channel
-            labels_dhmm_vec, labels_dhmm_matrix = self.dhmm_correction(k, labels_svm, dim)
-            labels_dhmm_matrix = labels_dhmm_matrix + 1 # labels starts with 1, not 0!
+            labels_dhmm_vec, labels_dhmm_matrix = self.dhmm_correction(k, labels_svm-1, dim)
             path_out_labelmatrix = self._join(path_out_hmm2, 'labels'+channel+'.txt')
-            numpy.savetxt(path_out_labelmatrix, labels_dhmm_matrix,fmt='%d',delimiter='\t')          
-            for (counter, infile) in enumerate(infiles):
-                path_out_sf = self._join(path_out_hmm2, infile)
-                numpy.savetxt(path_out_sf, labels_dhmm_matrix[counter,:],fmt='%d',delimiter='\t')   
-                if channel in infile :
-                    text = text+'\n'+infile
+            path_out_labelhmm = self._join(path_out_hmm, 'labels'+channel+'.txt')
+            numpy.savetxt(path_out_labelmatrix, labels_dhmm_matrix+1,fmt='%d',delimiter='\t') # labels starts with 1, not 0!   
+            numpy.savetxt(path_out_labelhmm, labels_svm_hmm,fmt='%d',delimiter='\t')  
+            print 'Agreement in %: ', (labels_svm_hmm.flatten() == labels_dhmm_vec+1).sum() / (dim[0] * dim[1])   
+            if self._settings.get('ErrorCorrection','compose_galleries'):
+                if channel == 'CPrimary': # backwards naming compatibility
+                    channel = 'primary'
+                else :
+                    channel = 'secondary'
+                path_out_composed_gallery = self._join(path_out_hmm_regions[counter], '_gallery/'+channel+'/')
+                safe_mkdirs(path_out_composed_gallery)
+                path_out_gallery_image, list_of_images = self.make_galleries(branch,channel,pos,path_pos,path_out_hmm_regions[counter])
+                print list_of_images
+
+                img = plt.imread(path_out_gallery_image)
+                plt.imshow(img)
+                imgsize = 100
+                offset = 10
+                frac = 1/dim[0]
+                print frac
+                label_matrices = [labels_svm-1, labels_svm_hmm-1, labels_dhmm_matrix]
+                for (i, label_matrix) in enumerate(label_matrices) :
+                    for track_index in range(dim[1]) :
+                        if track_index == 0 :
+                            print label_matrix[track_index,]
+                        for frame_index in range(dim[0]): 
+                            color_index = label_matrix[track_index,frame_index]
+                            plt.axhline(y=(track_index)*imgsize+offset, xmin=frame_index*frac, xmax=(frame_index+1)*frac, color=CLASS_COLORS[color_index])            
+                    plt.savefig(self._join(path_out_composed_gallery, pos+'_'+str(i)+'.png')  , dpi = 200)  
+                print i
+                print counter
+#            for (counter, infile) in enumerate(infiles) :
+#                path_out_sf = self._join(path_out_hmm2, infile)
+#                numpy.savetxt(path_out_sf, labels_dhmm_matrix[counter,:],fmt='%d',delimiter='\t')   
+#                if channel in infile :
+#                    text = text+'\n'+infile
 #            for track_index in dim[1] :
 #                hist, bin_edges = numpy.histogram(labels_dhmm_matrix[track_index,:], bins=k)
-#                freq_matrix [track_index,:] = hist
-                
-        print freq_matrix
-       
-        # compose gallery images: both channels will be composed by compose_gallerie()
-        path_out_composed_gallery = self._join(path_out_hmm_regions[0], '_index/')
-        safe_mkdirs(path_out_composed_gallery)
-        print path_out_composed_gallery
+#                freq_matrix [track_index,:] = hist       
+#        f = open(path_out_composed_gallery+pos+'.txt', 'w')
+#        for line in text:
+#            f.write(line)
+#        f.close()
+    
+
             
-        f = open(path_out_composed_gallery+pos+'.txt', 'w')
-        for line in text:
-            f.write(line)
-        f.close()
+    def make_galleries(self,branch,channel2,pos,path_pos,path_out_hmm_regions):
+        path_out_gallery_image = self._join(path_out_hmm_regions, '_gallery/'+channel2+'/'+pos+'.png')
+        gallery_path = self._join(path_pos, 'gallery/'+channel2+'/')
+        list_of_images = []
+        if os.path.isdir(gallery_path):
+            for gallery_name in os.listdir(gallery_path):
+                if gallery_name.find('B01') >= 0: # only one branch is use for plotting
+                    list_of_images.append(gallery_path+gallery_name)
+        images = map(Image.open, list_of_images)
+        w = images[0].size[0]
+        h = sum(i.size[1] for i in images)
+        result = Image.new("RGBA", (w, h))
         
-        if self._settings.get('ErrorCorrection','compose_galleries') and not self._abort:
-            sample = self._settings.get2('compose_galleries_sample')
-            if sample == -1:
-                sample = None
-            for group_name in compose_galleries(path_out, path_out_hmm_regions[0], sample=sample):
-                self._logger.debug('gallery finished for group: %s' % group_name)
-                if self._abort:
-                    break
+        x = 0
+        for i in images:
+            result.paste(i, (0, x))
+            x += i.size[1]   
+        result.save(path_out_gallery_image, format='PNG') 
+        return path_out_gallery_image, list_of_images
     
     def set_abort(self, wait=False):
         pass
@@ -482,7 +527,10 @@ class HmmThreadPython(_ProcessingThread):
                 num_tracks += 1
                 infiles.append(infile)
                 data = numpy.genfromtxt(path+infile,delimiter='\t',dtype='int')
-                labels = data[1:,col]
+                if (col == 0) :
+                    labels = data[1:]
+                else :
+                    labels = data[1:,col]
                 if (Y.any()==0) :
                     Y = labels
                 else :
@@ -492,7 +540,8 @@ class HmmThreadPython(_ProcessingThread):
     @staticmethod
     def dhmm_correction(n_clusters, labels, dim):
         if min(labels.flatten()) == 1 :
-            labels -= 1; # begins with 0, [0 1 2 3 4 5 6]
+            print 'labels must begin with 0 !'
+            return
         # a small error term
         eps = 0.01
         # estimate initial transition matrix
@@ -945,6 +994,7 @@ class MultiProcessingAnalyzerMixin(ParallelProcessThreadMixinBase):
 class MultiprocessingException(Exception):
     def __init__(self, exception_list):
         self.msg = '\n-----------\nError in job item:\n'.join([str(x) for x in exception_list])
+        
 
 class PostProcessingThread(_ProcessingThread):
     
@@ -953,13 +1003,90 @@ class PostProcessingThread(_ProcessingThread):
         self._learner_dict = learner_dict
         self._imagecontainer = imagecontainer
         self._mapping_files = {}    
+        self._convert = lambda x: x.replace('\\','/')
+        self._join = lambda *x: self._convert('/'.join(x))
         
     def _run(self):
+        
         print 'run postprocessing'
         plates = self._imagecontainer.plates
+        self.plates = plates
         self._settings.set_section(SECTION_NAME_POST_PROCESSING)
+        
+        if self._settings.get2('ibb_analysis'):
+            self.do_ibb_analysis(self)
+            
+        if self._settings.get2('tc3_analysis'):
+            self.do_tc3_analysis()
 
+    def do_tc3_analysis(self):
+        print 'in tc3 analysis'
+        path_out = self._imagecontainer.get_path_out()
+        path_analyzed = self._join(path_out, 'analyzed')
+#        path_out_hmm_html = self._join(path_out, 'hmm2')
+#        safe_mkdirs(path_out_hmm_html)
+
+        "Reads all events written by the CellCognition tracking."
+        if self._settings.get('General', 'constrain_positions'):
+            pos = self._settings.get('General', 'positions')
+        num_frames = int(self._settings.get('Tracking', 'tracking_forwardrange') + self._settings.get('Tracking', 'tracking_backwardrange'))
+        path_pos = self._join(path_analyzed, pos)
+        path_data = self._join(path_pos, 'statistics/events/')
+        path_out_tc3 = self._join(path_pos, 'statistics/tc3')
+        safe_mkdirs(path_out_tc3)
+        feature_col = 8 # starting column position of features
+        
+        k=self._settings.get2('num_clusters') # a predefined number of classes, given in GUI
+        variance_explained = 0.99 # use 99% variance explained
+        m = self._settings.get2('min_cluster_size') # a predefined minimal cluster size
+        
+        # Read data
+        data,num_tracks = self.read_data(path_data,num_frames,feature_col,'B01')
+        dim = [num_frames, num_tracks] # data dimension
+        num_samples = num_frames*num_tracks # number of data points
+        
+        # Zscore and PCA data
+        data_zscore = sss.zscore(self.remove_constant_columns(data))
+        pca = mlab.PCA(data_zscore)
+        num_features = numpy.nonzero(numpy.cumsum(pca.fracs) > variance_explained)[0][0] 
+        data_pca = pca.project(data_zscore)[:,0:num_features]
+        print data_pca.shape
+        
+        # Binary clustering 
+        binary_matrix = self.binary_clustering(data_pca, dim)
+        # deleting any row containing a mitotic subgraph whose length 
+        # is shorter than the specified number of clusters
+        for i in range(num_tracks):
+            if (sum(binary_matrix[i,:] == 1) < k-2) :
+                binary_matrix = scipy.delete(binary_matrix, i, 0) 
+                data_pca = scipy.delete(data_pca,numpy.arange(i*num_frames, (i+1)*num_frames),0)
+                num_tracks -= 1;
+        path_out_binary_matrix = self._join(path_out_tc3, 'binary.txt')
+        numpy.savetxt(path_out_binary_matrix,binary_matrix,fmt='%d',delimiter='\t')   
+        dim = [num_frames, num_tracks] # update num_tracks
+        
+        # Diverse TC3 algorithms
+        tc = unsup.TemporalClustering(dim,k,binary_matrix)
+        tc3 = tc.tc3_clustering(data_pca,m)
+        tc3_gmm = tc.tc3_gmm(data_pca,tc3['labels'])
+        tc3_gmm_dhmm = tc.tc3_gmm_dhmm(tc3_gmm['labels']) 
+        tc3_gmm_chmm = tc.tc3_gmm_chmm(data_pca, tc3_gmm['model'], tc3_gmm_dhmm['model']) 
+        
+        algorithms = {'TC3': tc3,
+                      'TC3+GMM': tc3_gmm, 
+                      'TC3+GMM+DHMM': tc3_gmm_dhmm, 
+                      'TC3+GMM+CHMM': tc3_gmm_chmm,
+                      }
+        
+        algorithm = self._settings.get(SECTION_NAME_POST_PROCESSING,'tc3_algorithms')
+        result = algorithms[algorithm]
+        
+        path_out_tc3 = self._join(path_out_tc3, algorithm+'.txt')
+        numpy.savetxt(path_out_tc3,result['label_matrix'],fmt='%d',delimiter='\t') 
+            
+    def do_ibb_analysis(self):
         path_mapping = self._settings.get2('mappingfile_path')
+        plates = self.plates
         for plate_id in plates:
             mapping_file = os.path.join(path_mapping, '%s.tsv' % plate_id)
             if not os.path.isfile(mapping_file):
@@ -1057,6 +1184,58 @@ class PostProcessingThread(_ProcessingThread):
                                    class_names,
                                    **ibb_options)
         ibb_analyzer.run()
+        
+    @staticmethod
+    def read_data(path,num_frames,col,name):  
+        listing = os.listdir(path)
+        num_tracks = 0
+        X = numpy.array(0)      
+        #infiles = [] 
+        for infile in listing:
+            infile_lower = infile.lower() # case insensitive
+            if (infile_lower.find(name.lower())!=-1) :
+                num_tracks += 1
+                #infiles.append(infile)
+                data = numpy.genfromtxt(path+infile,delimiter='\t',dtype='float')
+                #header = data[0,:]
+                data_matrix = data[1:,col:]
+                if (X.any()==0):
+                    X = data_matrix
+                else :
+                    X = numpy.vstack((X,data_matrix))
+        return X,num_tracks
+    
+    @staticmethod    
+    def remove_constant_columns(A):
+        ''' A function to remove constant columns from a 2D matrix'''
+        return A[:, numpy.sum(numpy.abs(numpy.diff(A, axis=0)), axis=0) != 0]
+
+    @staticmethod
+    def binary_clustering(data,dim):
+    
+        m, idx = scv.kmeans2(data,2)
+        w = numpy.array([sum(idx==0)/float(len(idx)),sum(idx==1)/float(len(idx))]);
+    
+        c1 = numpy.cov(data[idx==0,:].T)
+        c2 = numpy.cov(data[idx==1,:].T)
+        c = numpy.dstack((c1,c2)).T
+        
+        g = mixture.GMM(n_components=2, cvtype = 'full')
+        g.weights = w
+        g.means = m
+        g.covars = c
+       
+        g.fit(data,init_params='')
+        labels = g.predict(data)
+        labels = labels.reshape(dim[1],dim[0]).copy() 
+        
+        # map clusters to lables
+        if (labels[1,1] == 1) :
+            labels[labels==1]=2
+            labels[labels==0]=1
+            labels[labels==2]=0
+            
+        return labels
 
 class AnalzyerThread(_ProcessingThread):
 
