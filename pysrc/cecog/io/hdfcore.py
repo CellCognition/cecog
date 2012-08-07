@@ -8,7 +8,7 @@ import cProfile
 import base64
 import zlib
 
-GALLERY_SIZE = 50    
+GALLERY_SIZE = 100    
   
 class memoize(object):
     """cache the return value of a method
@@ -100,22 +100,23 @@ class CH5Position(object):
             time_idx = self['object'][object][ind]['time_idx']
             cen1 = self['feature'][object]['center'][ind]
             image = numpy.zeros((GALLERY_SIZE,GALLERY_SIZE))
+            channel_idx = self.definitions.image_definition['region']['channel_idx'][self.definitions.image_definition['region']['region_name'] == 'region___%s' % object]
             tmp_img = self['image'] \
                              ['channel'] \
-                             [0, time_idx, 0,
+                             [channel_idx, time_idx, 0,
                               max(0, cen1[1]-GALLERY_SIZE/2):min(1040,cen1[1]+GALLERY_SIZE/2), 
                               max(0, cen1[0]-GALLERY_SIZE/2):min(1389,cen1[0]+GALLERY_SIZE/2)]
             image[:tmp_img.shape[0],:tmp_img.shape[1]] = tmp_img
             image_list.append(image)
         return numpy.concatenate(image_list, axis=1)
     
-    def get_class_label(self, index):
+    def get_class_label(self, index, object='primary__primary'):
         if not isinstance(index, (list, tuple)):
             index = [index]
-        return self.get_class_prediction()['label_idx'][[x for x in index]] + 1
+        return self.get_class_prediction(object)['label_idx'][[x for x in index]] + 1
     
     def get_class_color(self, index, object='primary__primary'):
-        res = map(str, self.class_color_def(tuple(self.get_class_label(index)), object))
+        res = map(str, self.class_color_def(tuple(self.get_class_label(index, object)), object))
         if len(res) == 1:
             return res[0]
         return res
@@ -135,7 +136,7 @@ class CH5Position(object):
         return [class_mapping['name'][col-1] for col in class_labels]
     
     def object_feature_def(self, object='primary__primary'):
-        return map(lambda x:x[0], self.definitions.feature_definition['%s/object_features' % object].value)
+        return map(lambda x: str(x[0]), self.definitions.feature_definition['%s/object_features' % object].value)
     
     def _get_object_table(self, object):
         return self['object'][object].value
@@ -299,6 +300,10 @@ class CH5File(object):
     def feature_definition(self):
         return self._file_handle['/definition/feature']
     
+    @property
+    def image_definition(self):
+        return self._file_handle['/definition/image']
+    
     def close(self):
         self._file_handle.close()    
     
@@ -327,8 +332,10 @@ class TestCH5Basic(CH5TestBase):
     def testGallery2(self):
         event = self.fh.get_position(self.well_str, self.pos_str).track_first(5)
         a1 = self.fh.get_position(self.well_str, self.pos_str).get_gallery_image(tuple(event))
+        a2 = self.fh.get_position(self.well_str, self.pos_str).get_gallery_image(tuple(event), 'secondary__expanded')
 #        import vigra
 #        vigra.impex.writeImage(a1.swapaxes(1,0), 'c:/Users/sommerc/Desktop/bla.png')
+#        vigra.impex.writeImage(a2.swapaxes(1,0), 'c:/Users/sommerc/Desktop/foo.png')
         
     def testGallery3(self):
         event = self.fh.get_position(self.well_str, self.pos_str).get_events()[42][0]

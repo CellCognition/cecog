@@ -723,38 +723,38 @@ class CellGraphicsItem(GraphicsTerminalObjectItem):
     
     def set_gallery_view(self, type):
         self.primary_gallery_item.setVisible(False)
-#        self.secondary_gallery_item.setVisible(False)
-#        self.composed_gallery_item.setVisible(False)
+        self.secondary_gallery_item.setVisible(False)
+        self.composed_gallery_item.setVisible(False)
         self.gallery_view_type = type
-#        if type != 'off':
-#            self.height = self.width + self.PREDICTION_BAR_HEIGHT 
-#        else:
-#            self.height = self.PREDICTION_BAR_HEIGHT
+        if type != 'off':
+            self.height = self.width + self.PREDICTION_BAR_HEIGHT 
+        else:
+            self.height = self.PREDICTION_BAR_HEIGHT
             
         if type == 'primary':
             self.primary_gallery_item.setVisible(True)
-#        elif type == 'secondary':
-#            self.secondary_gallery_item.setVisible(True)
-#        elif type == 'all':
-#            self.composed_gallery_item.setVisible(True)
+        elif type == 'secondary':
+            self.secondary_gallery_item.setVisible(True)
+        elif type == 'all':
+            self.composed_gallery_item.setVisible(True)
             
     def set_contour_view(self, type):
         self.primary_contour_item.setVisible(False)
 #        self.secondary_contour_item.setVisible(False)
 
         self.contour_view_type = type
-#        if type != 'off':
-#            self.height = self.width + self.PREDICTION_BAR_HEIGHT 
-#        else:
-#            self.height = self.PREDICTION_BAR_HEIGHT
+        if type != 'off':
+            self.height = self.width + self.PREDICTION_BAR_HEIGHT 
+        else:
+            self.height = self.PREDICTION_BAR_HEIGHT
             
         if type == 'primary':
             self.primary_contour_item.setVisible(True)
-#        elif type == 'secondary':
-#            self.secondary_contour_item.setVisible(True)
-#        elif type == 'all':
-#            self.primary_contour_item.setVisible(True)
-#            self.secondary_contour_item.setVisible(True)
+        elif type == 'secondary':
+            self.secondary_contour_item.setVisible(True)
+        elif type == 'all':
+            self.primary_contour_item.setVisible(True)
+            self.secondary_contour_item.setVisible(True)
             
     def set_bar_view(self, type):
         self.bar_item.setVisible(False)
@@ -766,8 +766,8 @@ class CellGraphicsItem(GraphicsTerminalObjectItem):
         GraphicsTerminalObjectItem.__init__(self, object_item, position, parent=None)
         self.object_item = object_item
         
-        
-        primary_gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(self.position.get_gallery_image(object_item))))
+        image_own = self.position.get_gallery_image(object_item)
+        primary_gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(image_own)))
         primary_gallery_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
         self.primary_gallery_item = primary_gallery_item
         
@@ -780,37 +780,35 @@ class CellGraphicsItem(GraphicsTerminalObjectItem):
         self.primary_contour_item = primary_contour_item
         self.addToGroup(primary_contour_item)
         
-#        sib_object_item = object_item.get_siblings()
-#        if sib_object_item is not None:
-#            secondary_gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(sib_object_item.image)))
-#            secondary_gallery_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
-#            self.secondary_gallery_item = secondary_gallery_item
-#            
-#            image_sib = sib_object_item.image
-#            image_own = object_item.image
-#            new_shape = (object_item.BOUNDING_BOX_SIZE,)*2 + (3,)
-#            composed_image = numpy.zeros(new_shape, dtype=numpy.uint8)
-#            composed_image[0:image_own.shape[0],0:image_own.shape[1],0] = image_own
-#            composed_image[0:image_sib.shape[0],0:image_sib.shape[1],1] = image_sib
-#
-#            composed_gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(composed_image)))
-#            composed_gallery_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
-#            self.composed_gallery_item = composed_gallery_item
-#            
-#            secondary_contour_item = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), sib_object_item.crack_contour.tolist())))
-#            secondary_contour_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
-#            if sib_object_item.class_color is not None:
-#                secondary_contour_item.setPen(QtGui.QPen(QtGui.QColor(sib_object_item.class_color)))
-#            secondary_contour_item.setAcceptHoverEvents(True)
-#            secondary_contour_item.setZValue(3)
-#            
-#            self.secondary_contour_item = secondary_contour_item
-#            self.addToGroup(secondary_contour_item)
+        if True:
+            image_sib = self.position.get_gallery_image(object_item, 'secondary__expanded')
+            secondary_gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(image_sib)))
+            secondary_gallery_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
+            self.secondary_gallery_item = secondary_gallery_item
+            
+            new_shape = (GALLERY_SIZE,)*2 + (3,)
+            composed_image = numpy.zeros(new_shape, dtype=numpy.uint8)
+            composed_image[0:image_own.shape[0],0:image_own.shape[1],0] = image_own
+            composed_image[0:image_sib.shape[0],0:image_sib.shape[1],1] = image_sib
+
+            composed_gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(composed_image)))
+            composed_gallery_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
+            self.composed_gallery_item = composed_gallery_item
+            
+            secondary_contour_item = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), self.position.get_crack_contour(object_item, 'secondary__expanded')[0])))
+            secondary_contour_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
+            
+            secondary_contour_item.setPen(QtGui.QPen(QtGui.QColor(self.position.get_class_color(object_item, 'secondary__expanded'))))
+            secondary_contour_item.setAcceptHoverEvents(True)
+            secondary_contour_item.setZValue(3)
+            
+            self.secondary_contour_item = secondary_contour_item
+            self.addToGroup(secondary_contour_item)
         
         
         self.addToGroup(primary_gallery_item)
-#        self.addToGroup(secondary_gallery_item)
-#        self.addToGroup(composed_gallery_item)
+        self.addToGroup(secondary_gallery_item)
+        self.addToGroup(composed_gallery_item)
         
         bar_item = QtGui.QGraphicsLineItem(self.PREDICTION_BAR_X_PADDING, 0, self.width - self.PREDICTION_BAR_X_PADDING, 0)
         bar_pen = QtGui.QPen(QtGui.QColor(self.position.get_class_color(object_item)))
