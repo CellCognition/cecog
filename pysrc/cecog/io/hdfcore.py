@@ -61,9 +61,9 @@ class CH5Position(object):
     def get_tracking(self):
         return self.grp_pos['object']['tracking'].value
     
-    def get_class_prediction(self):
+    def get_class_prediction(self, object='primary__primary'):
         return self['feature'] \
-                   ['primary__primary'] \
+                   [object] \
                    ['object_classification'] \
                    ['prediction'].value
                    
@@ -86,10 +86,13 @@ class CH5Position(object):
             crack_list.append(crack)
  
         return crack_list
+    
+    def get_object_features(self, object='primary__primary'):
+        return self['feature'] \
+                   [object] \
+                   ['object_features'].value
                    
     def get_gallery_image(self, index, object='primary__primary'):
-        print 'GALLERY_SIZE', GALLERY_SIZE
-        
         if not isinstance(index, (list, tuple)):
             index = (index,)
         image_list = []
@@ -130,6 +133,9 @@ class CH5Position(object):
     def class_name_def(self, class_labels, object):
         class_mapping = self.definitions.class_definition(object)
         return [class_mapping['name'][col-1] for col in class_labels]
+    
+    def object_feature_def(self, object='primary__primary'):
+        return map(lambda x:x[0], self.definitions.feature_definition['%s/object_features' % object].value)
     
     def _get_object_table(self, object):
         return self['object'][object].value
@@ -222,9 +228,13 @@ class CH5CachedPosition(CH5Position):
         return super(CH5CachedPosition, self).get_tracking(*args, **kwargs)
     
     @memoize
-    def get_class_prediction(self, *args, **kwargs):
-        return super(CH5CachedPosition, self).get_class_prediction(*args, **kwargs)
+    def get_class_prediction(self, object='primary__primary'):
+        return super(CH5CachedPosition, self).get_class_prediction(object)
 
+    @memoize
+    def get_object_features(self, object='primary__primary'):
+        return super(CH5CachedPosition, self).get_object_features(object)
+    
     @memoize
     def get_gallery_image(self, *args, **kwargs):
         return super(CH5CachedPosition, self).get_gallery_image(*args, **kwargs)
@@ -236,6 +246,10 @@ class CH5CachedPosition(CH5Position):
     @memoize
     def class_color_def(self, class_labels, object='primary__primary'):
         return super(CH5CachedPosition, self).class_color_def(class_labels, object)
+    
+    @memoize
+    def object_feature_def(self, object='primary__primary'):
+        return super(CH5CachedPosition, self).object_feature_def(object)
     
     @memoize
     def get_class_name(self, class_labels, object='primary__primary'):
@@ -280,6 +294,10 @@ class CH5File(object):
     @memoize
     def class_definition(self, object):
         return self._file_handle['/definition/feature/%s/object_classification/class_labels' % object].value
+    
+    @property
+    def feature_definition(self):
+        return self._file_handle['/definition/feature']
     
     def close(self):
         self._file_handle.close()    
@@ -357,6 +375,11 @@ class TestCH5Basic(CH5TestBase):
     def testTrackLast(self):  
         self.assertListEqual(self.fh.get_position(self.well_str, self.pos_str).track_last(1111), 
                              self.fh.get_position(self.well_str, self.pos_str).track_all(1111)[-1])
+        
+    def testObjectFeature(self):
+        self.assertTrue('n2_avg' in  self.fh.get_position(self.well_str, self.pos_str).object_feature_def())
+        self.assertTrue( self.fh.get_position(self.well_str, self.pos_str).get_object_features().shape[1] == 239)
+        
         
     def tearDown(self):
         self.fh.close()
