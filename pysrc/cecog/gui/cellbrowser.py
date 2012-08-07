@@ -45,6 +45,8 @@ from functools import partial
 #
 from cecog.gui.imageviewer import HoverPolygonItem
 from cecog.io.hdfcore import CH5File, GALLERY_SIZE
+import cecog.io.hdfcore
+
 from cecog.gui.cellbroser_core import TerminalObjectItem, ObjectItem
 from pdk.datetimeutils import StopWatch
 from cecog.gui.cellbrowser_plugins import EventPCAPlugin
@@ -903,14 +905,16 @@ class MainWindow(QtGui.QMainWindow):
             cevent.accept()
         
     def change_gallery_size(self):
+        global GALLERY_SIZE
+        
         val, ok = QtGui.QInputDialog.getInt(self, 'New gallery image size', 'Size', 
-                                            value=CellTerminalObjectItem.BOUNDING_BOX_SIZE, 
+                                            value=GALLERY_SIZE, 
                                             min=10, 
                                             max=1000)
         if ok:
-            CellTerminalObjectItem.BOUNDING_BOX_SIZE = val
-            self.tracklet_widget.data_provider.clearObjectItemCache()
-                    
+            GALLERY_SIZE = val
+            cecog.io.hdfcore.GALLERY_SIZE = GALLERY_SIZE
+            self.tracklet_widget.data_provider.current_pos.clear_cache()
             self.tracklet_widget.show_position(self.tracklet_widget._current_position_key)
         
     

@@ -8,7 +8,7 @@ import cProfile
 import base64
 import zlib
 
-GALLERY_SIZE = 100    
+GALLERY_SIZE = 50    
   
 class memoize(object):
     """cache the return value of a method
@@ -88,6 +88,8 @@ class CH5Position(object):
         return crack_list
                    
     def get_gallery_image(self, index, object='primary__primary'):
+        print 'GALLERY_SIZE', GALLERY_SIZE
+        
         if not isinstance(index, (list, tuple)):
             index = (index,)
         image_list = []
@@ -105,18 +107,18 @@ class CH5Position(object):
         return numpy.concatenate(image_list, axis=1)
     
     def get_class_label(self, index):
-        if not isinstance(index, list):
+        if not isinstance(index, (list, tuple)):
             index = [index]
-        return self.get_class_prediction()['label_idx'][index] + 1
+        return self.get_class_prediction()['label_idx'][[x for x in index]] + 1
     
-    def get_class_color(self, index):
-        res = map(str, self.class_color_def(tuple(self.get_class_label(index))))
+    def get_class_color(self, index, object='primary__primary'):
+        res = map(str, self.class_color_def(tuple(self.get_class_label(index)), object))
         if len(res) == 1:
             return res[0]
         return res
     
-    def get_class_name(self, index):
-        res = map(str, self.class_name_def(tuple(self.get_class_label(index))))
+    def get_class_name(self, index, object='primary__primary'):
+        res = map(str, self.class_name_def(tuple(self.get_class_label(index)), object))
         if len(res) == 1:
             return res[0]
         return res
@@ -234,7 +236,19 @@ class CH5CachedPosition(CH5Position):
     @memoize
     def class_color_def(self, class_labels, object='primary__primary'):
         return super(CH5CachedPosition, self).class_color_def(class_labels, object)
-
+    
+    @memoize
+    def get_class_name(self, class_labels, object='primary__primary'):
+        return super(CH5CachedPosition, self).get_class_name(class_labels, object)
+        
+    @memoize
+    def get_class_color(self, class_labels, object='primary__primary'):
+        return super(CH5CachedPosition, self).get_class_color(class_labels, object)
+    
+    def clear_cache(self):
+        if hasattr(self, '_memoize__cache'):
+            self._memoize__cache = {}
+    
 class CH5File(object):
     POSITION_CLS = CH5CachedPosition
     def __init__(self, filename):
@@ -324,6 +338,10 @@ class TestCH5Basic(CH5TestBase):
     def testClassColors(self):
         for x in ['#FF8000', '#D28DCE', '#FF0000']:
             self.assertTrue(x in self.fh.get_position(self.well_str, self.pos_str).class_color_def((3,4,8)))   
+            
+    def testClassColors2(self):
+        self.fh.get_position(self.well_str, self.pos_str).get_class_color((1,221,3233,44244)) 
+        self.fh.get_position(self.well_str, self.pos_str).get_class_name((1,221,3233,44244)) 
          
     def testEvents(self):
         self.assertTrue(len(self.fh.get_position(self.well_str, self.pos_str).get_events()) > 0)
