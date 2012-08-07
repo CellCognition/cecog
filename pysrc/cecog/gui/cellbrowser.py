@@ -279,14 +279,14 @@ class TrackletBrowser(QtGui.QWidget):
         
         
         # Objects
-        gb2 = QtGui.QGroupBox('Objects')
-        gb2_layout = QtGui.QVBoxLayout()
-        self.cmb_object_type = QtGui.QComboBox()
-        self.cmb_object_type.addItems(['event', 'track', 'primary__primary','secondary__expanded'])
-        self.cmb_object_type.currentIndexChanged[str].connect(self.change_object_type) 
-        gb2_layout.addWidget(self.cmb_object_type)
-        gb2.setLayout(gb2_layout)
-        self.view_hud_btn_layout.addWidget(gb2)
+#        gb2 = QtGui.QGroupBox('Objects')
+#        gb2_layout = QtGui.QVBoxLayout()
+#        self.cmb_object_type = QtGui.QComboBox()
+#        self.cmb_object_type.addItems(['event', 'track', 'primary__primary','secondary__expanded'])
+#        self.cmb_object_type.currentIndexChanged[str].connect(self.change_object_type) 
+#        gb2_layout.addWidget(self.cmb_object_type)
+#        gb2.setLayout(gb2_layout)
+#        self.view_hud_btn_layout.addWidget(gb2)
         
         # Sorting
         gb1 = QtGui.QGroupBox('Sorting')
@@ -424,6 +424,7 @@ class TrackletBrowser(QtGui.QWidget):
         self.GraphicsItemLayouter = EventGraphicsLayouter(self)
             
         self.update_()
+        self.position = position
         print '  Total Rendering of position took %5.2f' % (timing.time() - tic)
     
     def cb_change_vertical_alignment(self, index): 
@@ -431,7 +432,7 @@ class TrackletBrowser(QtGui.QWidget):
         self.update_()
         
     def change_object_type(self, object_name):
-        self.show_position(self._current_position_key, object_name)
+        pass
            
     def open_file(self, filename):
         self.data_provider = CH5File(filename)
@@ -505,7 +506,7 @@ class TrackletBrowser(QtGui.QWidget):
     def selectTransition(self):
         for ti in self._root_items:
             ti.is_selected = False
-            trans_pos = reduce(lambda x,y: str(x) + str(y), ti.object_item['prediction']).find('01')
+            trans_pos = reduce(lambda x,y: str(x) + str(y), self.position.get_class_prediction()[ti.object_item]['label_idx']).find('01')
             if trans_pos > 0:
                 ti.is_selected = True
                 ti.column = - (trans_pos + 1)
@@ -519,7 +520,8 @@ class GraphicsLayouterBase(QtGui.QWidget):
     properties = {}
     def __init__(self, parent):
         QtGui.QWidget.__init__(self, parent)
-        self._items = parent._root_items     
+        self._items = parent._root_items    
+        self.parent = parent 
     def __call__(self):
         print 'print default layouting'   
 
@@ -545,7 +547,7 @@ class EventGraphicsLayouter(GraphicsLayouterBase):
             if self._align_vertically == self.ALIGN_LEFT:
                 ti.moveToColumn(0)
             elif self._align_vertically == self.ALIGN_ABSOLUT_TIME:
-                ti.moveToColumn(ti.sub_items[1].object_item.time)
+                ti.moveToColumn(self.parent.data_provider.current_pos.get_time_idx(ti.sub_items[1].object_item))
             elif self._align_vertically == self.ALIGN_CUSTOM:
                 ti.moveToColumn(ti.column)
         
@@ -597,6 +599,7 @@ class EventGraphicsItem(GraphicsObjectItem):
         
         self.id = CellGraphicsTextItem()
         self.id.setHtml("<span style='color:white; font:bold 32px'> %r </span>" % idx)
+        self.position = position
         
         self.addToGroup(self.id)
         self.sub_items = []
@@ -612,12 +615,12 @@ class EventGraphicsItem(GraphicsObjectItem):
         self.height = self.sub_items[1].height
         self.item_length = self.sub_items[1].width
         
-#        self.bar_feature_item = self.make_feature_plot()
-#        self.bar_feature_item.setZValue(4)
-#        self.bar_feature_item.setPos(self.sub_items[1].width, 0)
-#        self.addToGroup(self.bar_feature_item)
+        self.bar_feature_item = self.make_feature_plot()
+        self.bar_feature_item.setZValue(4)
+        self.bar_feature_item.setPos(self.sub_items[1].width, 0)
+        self.addToGroup(self.bar_feature_item)
         
-#        self.set_bar_view('top')
+        self.set_bar_view('top')
         
     def set_gallery_view(self, type):
         for o in self.sub_items:
@@ -647,9 +650,11 @@ class EventGraphicsItem(GraphicsObjectItem):
     def width(self):
         return self.sub_items[1].width#sum([x.width for x in self.sub_items])
     
-    def make_feature_plot(self, feature_idx = 5):
-        features = self.object_item.sibling_item_features[:, feature_idx]
-        min_, max_ = self.object_item.sibling_item_feature_min_max(feature_idx)
+    def make_feature_plot(self, feature_idx=222):
+        features = self.position.get_object_features()
+        min_, max_ = features[:,feature_idx].min(), features[:,feature_idx].max() 
+        
+        features = features[self.object_item, feature_idx]
 
         self.item_cnt = features.shape[0]
         width = self.item_length*self.item_cnt
@@ -664,11 +669,12 @@ class EventGraphicsItem(GraphicsObjectItem):
         
         features = ((1 - (features-min_)/(max_ - min_)) * self.height).astype(numpy.uint8)
         
-        for col, (f1, f2, obj) in enumerate(zip(features, numpy.roll(features, -1), self.object_item.children())):
-            if obj.class_color is None:
+        for col, (f1, f2, obj) in enumerate(zip(features, numpy.roll(features, -1), self.object_item)):
+            class_color = self.position.get_class_color(obj, 'secondary__expanded')
+            if class_color is None:
                 color_ = QtCore.Qt.white
             else:
-                color_ = QtGui.QColor()
+                color_ = QtGui.QColor(class_color)
             line_pen = QtGui.QPen(color_)
             line_pen.setWidth(3)
             painter.setPen(line_pen)
@@ -740,7 +746,7 @@ class CellGraphicsItem(GraphicsTerminalObjectItem):
             
     def set_contour_view(self, type):
         self.primary_contour_item.setVisible(False)
-#        self.secondary_contour_item.setVisible(False)
+        self.secondary_contour_item.setVisible(False)
 
         self.contour_view_type = type
         if type != 'off':

@@ -121,6 +121,9 @@ class CH5Position(object):
             return res[0]
         return res
     
+    def get_time_idx(self, index, object='primary__primary'):
+        return self['object'][object][index]['time_idx']
+    
     def get_class_name(self, index, object='primary__primary'):
         res = map(str, self.class_name_def(tuple(self.get_class_label(index)), object))
         if len(res) == 1:
