@@ -382,7 +382,7 @@ class _ProcessingThread(QThread):
 
 
 
-class HmmThread(_ProcessingThread):
+class HmmThread_Python_Scafold(_ProcessingThread):
     def __init__(self, parent, settings, learner_dict, imagecontainer):
         _ProcessingThread.__init__(self, parent, settings)
         self._settings.set_section(SECTION_NAME_ERRORCORRECTION)
@@ -452,7 +452,7 @@ class HmmThread(_ProcessingThread):
     def _produce_txt_output(self):
         pass
 
-class HmmThread__R_version(_ProcessingThread):
+class HmmThread(_ProcessingThread):
 
     DEFAULT_CMD_MAC = 'R32'
     DEFAULT_CMD_WIN = r'C:\Program Files\R\R-2.10.0\bin\R.exe'
