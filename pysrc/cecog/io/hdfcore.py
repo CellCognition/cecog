@@ -439,6 +439,7 @@ class TestCH5Examples(CH5TestBase):
         self.pos = self.fh.get_position(self.well_str, self.pos_str)
         
     def testReadAnImage(self):
+        """Read an raw image an write a sub image to disk"""
         # read the images at time point 1
         h2b = self.pos.get_image(0, 0)
         tub = self.pos.get_image(0, 1)
@@ -448,35 +449,40 @@ class TestCH5Examples(CH5TestBase):
         vigra.impex.writeImage(tub[400:600, 400:600].swapaxes(1,0), 'img2.png')   
         
     def testPrintTrackingTrace(self):
+        """Show the cell movement over time by showing the trace of each cell colorcoded 
+           overlayed on of the first image"""
         h2b = self.pos.get_image(0, 0)
         
         tracking = self.pos.get_object_table('tracking')
         nucleus = self.pos.get_object_table('primary__primary')
         center = self.pos.get_feature_table('primary__primary', 'center')
         
+        # prepare image plot
         fig = mpl.figure(frameon=False)
         ax = mpl.Axes(fig, [0., 0., 1., 1.])
         ax.set_axis_off()
         fig.add_axes(ax)
-        
         ax.imshow(h2b, cmap='gray')
         
+        # on top of the image a white circle is plotted for each center of nucleus.
         I = numpy.nonzero(nucleus[tracking['obj_idx1']]['time_idx'] == 0)[0]
         for x, y in center[I]:
             ax.plot(x,y,'w.', markersize=7.0, scaley=False, scalex=False)
             
         ax.axis([0, h2b.shape[1], h2b.shape[0], 0])
         
+        # a line is plotted between nucleus center of each pair of connected nuclei. The color is the mitotic phase
         for idx1, idx2 in zip(tracking['obj_idx1'], 
                               tracking['obj_idx2']):
             color = self.pos.get_class_color(idx1)
             (x0, y0), (x1, y1) = center[idx1], center[idx2]
             ax.plot([x0, x1],[y0, y1], color=color)
             
-        mpl.show()
         fig.savefig('tracking.png', format='png')
         
     def testComputeTheMitoticIndex(self):
+        """Read the classification results and compute the mitotic index"""
+        
         nucleus = self.pos.get_object_table('primary__primary')
         predictions = self.pos.get_class_prediction('primary__primary')
         
@@ -486,9 +492,11 @@ class TestCH5Examples(CH5TestBase):
         n_classes = len(names)
         time_max = nucleus['time_idx'].max()
         
+        # compute mitotic index by counting the number cell per class label over all times
         mitotic_index =  numpy.array(map(lambda x: [len(numpy.nonzero(x==class_idx)[0]) for class_idx in range(n_classes)], 
             [predictions[nucleus['time_idx'] == time_idx]['label_idx'] for time_idx in range(time_max)]))
         
+        # plot it
         fig = mpl.figure()
         ax = fig.add_subplot(111)
         
@@ -503,6 +511,7 @@ class TestCH5Examples(CH5TestBase):
         fig.savefig('mitotic_index.pdf', format='pdf')
              
     def testShowMitoticEvents(self):
+        """Extract the mitotic events and write them as gellery images"""
         events = self.pos.get_events()
         
         image = []
