@@ -17,11 +17,12 @@ import matplotlib.pyplot as mpl
 import h5py
 import collections
 import functools
-import time
-import cProfile
 import base64
 import zlib
-import vigra
+try:
+    import vigra
+except ImportError:
+    print 'VIGRA is not installed. Please, install from source of download binary at http://www.lfd.uci.edu/~gohlke/pythonlibs/'
 
 #-------------------------------------------------------------------------------
 # Constants:
@@ -316,12 +317,12 @@ class CH5File(object):
         for w in sorted(self.wells):
             self.positions[w] = self._get_group_members('/sample/0/plate/%s/experiment/%s/position/' % (self.plate, w))
                                                         
-        print 'Plate', self.plate
-        print 'Positions', self.positions
+#        print 'Plate', self.plate
+#        print 'Positions', self.positions
         self._position_group = {}
         for w, pos_list in self.positions.items():
             for p in pos_list:
-                print '/sample/0/plate/%s/experiment/%s/position/%s' % (self.plate, w, p)
+                #print '/sample/0/plate/%s/experiment/%s/position/%s' % (self.plate, w, p)
                 self._position_group[(w,p)] = CH5File.POSITION_CLS(self.plate, w, p, self._file_handle['/sample/0/plate/%s/experiment/%s/position/%s' % (self.plate, w, p)], self)
         self.current_pos = self._position_group.values()[0]
         
@@ -351,19 +352,21 @@ class CH5File(object):
     
     
 import unittest
-class CH5TestBase(unittest.TestCase):
-    pass
 
-class TestCH5Basic(): 
+class CH5TestBase(unittest.TestCase):
     def setUp(self):
         self.fh = CH5File('0038-cs.h5')
         self.well_str = '0'
         self.pos_str = self.fh.positions[self.well_str][0]
+        self.pos = self.fh.get_position(self.well_str, self.pos_str)
         
+    def tearDown(self):
+        self.fh.close()
+class TestCH5Basic(CH5TestBase): 
     def testGallery(self):
-        a1 = self.fh.get_position(self.well_str, self.pos_str).get_gallery_image(1)
-        b1 = self.fh.get_position(self.well_str, self.pos_str).get_gallery_image(2)
-        a2 = self.fh.get_position(self.well_str, self.pos_str).get_gallery_image(1)
+        a1 = self.pos.get_gallery_image(1)
+        b1 = self.pos.get_gallery_image(2)
+        a2 = self.pos.get_gallery_image(1)
         
         self.assertTrue(a1.shape == (GALLERY_SIZE, GALLERY_SIZE))
         self.assertTrue(b1.shape == (GALLERY_SIZE, GALLERY_SIZE))
@@ -371,83 +374,81 @@ class TestCH5Basic():
         self.assertFalse(numpy.all(a1 == b1))
         
     def testGallery2(self):
-        event = self.fh.get_position(self.well_str, self.pos_str).track_first(5)
-        a1 = self.fh.get_position(self.well_str, self.pos_str).get_gallery_image(tuple(event))
-        a2 = self.fh.get_position(self.well_str, self.pos_str).get_gallery_image(tuple(event), 'secondary__expanded')
-#        import vigra
+        event = self.pos.track_first(5)
+        a1 = self.pos.get_gallery_image(tuple(event))
+        a2 = self.pos.get_gallery_image(tuple(event), 'secondary__expanded')
 #        vigra.impex.writeImage(a1.swapaxes(1,0), 'c:/Users/sommerc/Desktop/bla.png')
 #        vigra.impex.writeImage(a2.swapaxes(1,0), 'c:/Users/sommerc/Desktop/foo.png')
         
     def testGallery3(self):
-        event = self.fh.get_position(self.well_str, self.pos_str).get_events()[42][0]
-        tracks = self.fh.get_position(self.well_str, self.pos_str).track_all(event)
+        event = self.pos.get_events()[42][0]
+        tracks = self.pos.track_all(event)
         w = numpy.array(map(len, tracks)).max()*GALLERY_SIZE
         img = numpy.zeros((GALLERY_SIZE * len(tracks), w), dtype=numpy.uint8)
         
         for k, t in enumerate(tracks):
-            a = self.fh.get_position(self.well_str, self.pos_str).get_gallery_image(tuple(t))
-            print a.shape
+            a = self.pos.get_gallery_image(tuple(t))
             img[k*GALLERY_SIZE:(k+1)*GALLERY_SIZE, 0:a.shape[1]] = a
-#        import vigra
 #        vigra.impex.writeImage(img.swapaxes(1,0), 'c:/Users/sommerc/Desktop/foo.png')
         
     def testGallery4(self):
-        event = self.fh.get_position(self.well_str, self.pos_str).get_events()[42]
-        a1 = self.fh.get_position(self.well_str, self.pos_str).get_gallery_image(tuple(event))
-#        import vigra
+        event = self.pos.get_events()[42]
+        a1 = self.pos.get_gallery_image(tuple(event))
 #        vigra.impex.writeImage(a1.swapaxes(1,0), 'c:/Users/sommerc/Desktop/blub.png')   
               
     def testClassNames(self):
         for x in ['inter', 'pro', 'earlyana']:
-            self.assertTrue(x in self.fh.get_position(self.well_str, self.pos_str).class_name_def((1,2,5)))
+            self.assertTrue(x in self.pos.class_name_def((1,2,5)))
      
     def testClassColors(self):
         for x in ['#FF8000', '#D28DCE', '#FF0000']:
-            self.assertTrue(x in self.fh.get_position(self.well_str, self.pos_str).class_color_def((3,4,8)))   
+            self.assertTrue(x in self.pos.class_color_def((3,4,8)))   
             
     def testClassColors2(self):
-        self.fh.get_position(self.well_str, self.pos_str).get_class_color((1,221,3233,44244)) 
-        self.fh.get_position(self.well_str, self.pos_str).get_class_name((1,221,3233,44244)) 
+        self.pos.get_class_color((1,221,3233,44244)) 
+        self.pos.get_class_name((1,221,3233,44244)) 
          
     def testEvents(self):
-        self.assertTrue(len(self.fh.get_position(self.well_str, self.pos_str).get_events()) > 0)
-        self.assertTrue(len(self.fh.get_position(self.well_str, self.pos_str).get_events()[0]) > 0)
+        self.assertTrue(len(self.pos.get_events()) > 0)
+        self.assertTrue(len(self.pos.get_events()[0]) > 0)
         
     def testTrack(self):
-        self.assertTrue(len(self.fh.get_position(self.well_str, self.pos_str).track_first(42)) > 0)
+        self.assertTrue(len(self.pos.track_first(42)) > 0)
         
     def testTrackFirst(self):
-        self.assertListEqual(self.fh.get_position(self.well_str, self.pos_str).track_first(42), 
-                             self.fh.get_position(self.well_str, self.pos_str).track_all(42)[0])
+        self.assertListEqual(self.pos.track_first(42), 
+                             self.pos.track_all(42)[0])
         
     def testTrackLast(self):  
-        self.assertListEqual(self.fh.get_position(self.well_str, self.pos_str).track_last(1111), 
-                             self.fh.get_position(self.well_str, self.pos_str).track_all(1111)[-1])
+        self.assertListEqual(self.pos.track_last(1111), 
+                             self.pos.track_all(1111)[-1])
         
     def testObjectFeature(self):
-        self.assertTrue('n2_avg' in  self.fh.get_position(self.well_str, self.pos_str).object_feature_def())
-        self.assertTrue( self.fh.get_position(self.well_str, self.pos_str).get_object_features().shape[1] == 239)
-           
-    def tearDown(self):
-        self.fh.close()
-        
-class TestCH5Examples(CH5TestBase): 
-    def setUp(self):
-        self.fh = CH5File('0038-cs.h5')
-        self.well_str = '0'
-        self.pos_str = self.fh.positions[self.well_str][0]
-        self.pos = self.fh.get_position(self.well_str, self.pos_str)
-        
+        self.assertTrue('n2_avg' in  self.pos.object_feature_def())
+        self.assertTrue(self.pos.get_object_features().shape[1] == 239)
+ 
+class TestCH5Examples(CH5TestBase):   
     def testReadAnImage(self):
         """Read an raw image an write a sub image to disk"""
         # read the images at time point 1
         h2b = self.pos.get_image(0, 0)
         tub = self.pos.get_image(0, 1)
+
+        # Print part of the images
+        # prepare image plot
+        fig = mpl.figure(frameon=False)
+        ax = mpl.Axes(fig, [0., 0., 1., 1.])
+        ax.set_axis_off()
+        fig.add_axes(ax)
+        ax.imshow(h2b[400:600, 400:600], cmap='gray')
+        fig.savefig('img1.png', format='png')
+        ax.imshow(tub[400:600, 400:600], cmap='gray')
+        fig.savefig('img2.png', format='png')
         
-        # Print part of the images to a le.
-        vigra.impex.writeImage(h2b[400:600, 400:600].swapaxes(1,0), 'img1.png')   
-        vigra.impex.writeImage(tub[400:600, 400:600].swapaxes(1,0), 'img2.png')   
+#        vigra.impex.writeImage(h2b[400:600, 400:600].swapaxes(1,0), 'img1.png')   
+#        vigra.impex.writeImage(tub[400:600, 400:600].swapaxes(1,0), 'img2.png')   
         
+#    unittest.skip('ploting so many lines is very slow in matplotlib')
     def testPrintTrackingTrace(self):
         """Show the cell movement over time by showing the trace of each cell colorcoded 
            overlayed on of the first image"""
@@ -456,6 +457,7 @@ class TestCH5Examples(CH5TestBase):
         tracking = self.pos.get_object_table('tracking')
         nucleus = self.pos.get_object_table('primary__primary')
         center = self.pos.get_feature_table('primary__primary', 'center')
+        
         
         # prepare image plot
         fig = mpl.figure(frameon=False)
@@ -518,9 +520,6 @@ class TestCH5Examples(CH5TestBase):
         for event in events[:5]:
             image.append(self.pos.get_gallery_image(tuple(event)))
         vigra.impex.writeImage(numpy.concatenate(image, axis=0).swapaxes(1,0), 'mitotic_events.png')
-        
-    def tearDown(self):
-        self.fh.close()
 
 if __name__ == '__main__':
     unittest.main()
