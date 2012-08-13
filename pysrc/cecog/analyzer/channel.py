@@ -262,7 +262,7 @@ class _Channel(PropertyManager):
 
         for region_name, container in self.dctContainers.iteritems():
 
-            object_holder = ObjectHolder(region_name)
+            oObjectHolder = ObjectHolder(region_name)
 
             if not container is None:
 
@@ -279,8 +279,8 @@ class _Channel(PropertyManager):
                             container.haralick_distance = iHaralickDistance
                             container.applyFeature(strHaralickCategory)
 
-                for obj_id, c_obj in container.getObjects().iteritems():
-                    dctFeatures = c_obj.getFeatures()
+                for iObjectId, oObject in container.getObjects().iteritems():
+                    dctFeatures = oObject.getFeatures()
 
                     # build a new ImageObject
                     oImageObject = ImageObject(oObject)
@@ -289,30 +289,31 @@ class _Channel(PropertyManager):
                     if self.lstFeatureNames is None:
                         self.lstFeatureNames = sorted(dctFeatures.keys())
 
-                    if bAcceptObject:
-                        # build a new ImageObject
-                        obj = ImageObject(c_obj)
-                        obj.iId = obj_id
+                    # assign feature values in sorted order as NumPy array
+                    oImageObject.aFeatures = \
+                        numpy.asarray(dict_values(dctFeatures,
+                                                  self.lstFeatureNames))
 
-                        ul = obj.oRoi.upperLeft
-                        crack = [(pos[0] + ul[0], pos[1] + ul[1])
-                                 for pos in
-                                 container.getCrackCoordinates(obj_id)
-                                 ]
-                        obj.crack_contour = crack
+                    oObjectHolder[iObjectId] = oImageObject
 
-                        if self.lstFeatureNames is None:
-                            self.lstFeatureNames = sorted(dctFeatures.keys())
 
-                        # assign feature values in sorted order as NumPy array
-                        obj.aFeatures = \
-                            numpy.asarray(dict_values(dctFeatures,
-                                                      self.lstFeatureNames))
-                        object_holder[obj_id] = obj
+                    ul = oImageObject.oRoi.upperLeft
+                    crack = [(pos[0] + ul[0], pos[1] + ul[1])
+                             for pos in
+                             container.getCrackCoordinates(iObjectId)
+                             ]
+                    ImageObject.crack_contour = crack
+
+
+                    # assign feature values in sorted order as NumPy array
+                    oImageObject.aFeatures = \
+                        numpy.asarray(dict_values(dctFeatures,
+                                                  self.lstFeatureNames))
+                    oObjectHolder[iObjectId] = oImageObject
 
             if not self.lstFeatureNames is None:
-                object_holder.setFeatureNames(self.lstFeatureNames)
-            self._dctRegions[region_name] = object_holder
+                oObjectHolder.setFeatureNames(self.lstFeatureNames)
+            self._dctRegions[region_name] = oObjectHolder
 
     def normalize_image(self):
         img_in = self.meta_image.image
