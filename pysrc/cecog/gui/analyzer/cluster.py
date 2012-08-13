@@ -39,20 +39,12 @@ from pyamf.remoting.client import RemotingService
 #
 from cecog.traits.analyzer.cluster import SECTION_NAME_CLUSTER
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
-from cecog.traits.config import (ANALYZER_CONFIG,
-                                 PATH_MAPPER,
-                                 map_path_to_os,
-                                 is_path_mappable,
-                                 )
+from cecog.config import (ANALYZER_CONFIG,
+                          map_path_to_os,
+                          )
 from cecog.gui.analyzer import (BaseFrame,
-                                AnalzyerThread,
-                                HmmThread,
                                 )
 from cecog.gui.analyzer.processing import ProcessingFrame
-from cecog.analyzer import (SECONDARY_REGIONS,
-                            SECONDARY_COLORS,
-                            )
-from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.util.util import OS_LINUX
 from cecog.gui.util import (exception,
                             information,
@@ -301,6 +293,7 @@ class ClusterDisplay(QGroupBox):
         self._check_host_url()
         
         success = False
+        msg = 'Error on connecting to cluster control service on %s' % self._host_url
         try:
             client = RemotingService(self._host_url)
             self.dlg = waitingProgressDialog('Please wait for the cluster...', self)
@@ -308,15 +301,20 @@ class ClusterDisplay(QGroupBox):
             self.dlg.exec_()
             self._service = self.dlg.getTargetResult()
         except:
-            exception(self, 'Error on connecting to cluster control service')
+            exception(self, msg)
         else:
-            cluster_versions = self._service.get_cecog_versions()
-            if not VERSION in set(cluster_versions):
-                warning(self, 'Cecog version %s not supported by the cluster' %
-                        VERSION, 'Valid versions are: %s' %
-                        ', '.join(cluster_versions))
+            try:
+                dlg.setTarget(self._service.get_cecog_versions)
+                dlg.exec_()
+                cluster_versions = dlg.getTargetResult()
+            except:
+                exception(self, msg)
             else:
-                success = True
+                if not VERSION in set(cluster_versions):
+                    warning(self, 'Cecog version %s not supported by the cluster' %
+                            VERSION, 'Valid versions are: %s' % ', '.join(cluster_versions))
+                else:
+                    success = True
         return success
 
     def _get_mappable_paths(self):

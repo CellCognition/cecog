@@ -30,20 +30,18 @@ import threading, \
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
+from cecog import CHANNEL_PREFIX
 from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
 from cecog.gui.analyzer import (BaseProcessorFrame,
                                 AnalzyerThread,
                                 HmmThread,
                                 MultiAnalzyerThread,
                                 )
-from cecog.analyzer import (SECONDARY_REGIONS,
-                            TERTIARY_REGIONS,
-                            SECONDARY_COLORS,
-                            )
 from cecog.analyzer.channel import (PrimaryChannel,
                                     SecondaryChannel,
                                     TertiaryChannel,
                                     )
+from cecog.plugin.segmentation import REGION_INFO
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
@@ -152,60 +150,37 @@ class ProcessingFrame(BaseProcessorFrame):
         settings.set('General', 'rendering', {})
         settings.set('General', 'rendering_class', {})
 
-        additional_prefixes = [SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]
-
-        settings.set_section('Classification')
-        sec_class_regions = dict([(prefix,
-                                  settings.get2('%s_classification_regionname' % prefix))
-                                  for prefix in additional_prefixes])
-
-        settings.set_section('ObjectDetection')
-        prim_id = PrimaryChannel.NAME
-        sec_ids = dict([(x.PREFIX, x.NAME) for x in [SecondaryChannel, TertiaryChannel]])
-        sec_regions = dict([(prefix, [v for k,v in regions.iteritems() if settings.get2(k)])
-                            for prefix, regions in [(SecondaryChannel.PREFIX, SECONDARY_REGIONS),
-                                                    (TertiaryChannel.PREFIX, TERTIARY_REGIONS),
-                                                    ]
-                            ])
-
-
         show_ids = settings.get('Output', 'rendering_contours_showids')
         show_ids_class = settings.get('Output', 'rendering_class_showids')
 
-        settings.get('General', 'rendering').update({'primary_contours': {prim_id: {'raw': ('#FFFFFF', 1.0),
-                                                                                    'contours': {'primary': ('#FF0000', 1, show_ids)}}}})
+        colors = REGION_INFO.colors
+        for prefix in CHANNEL_PREFIX:
+            if prefix == 'primary' or settings.get('Processing', '%s_processchannel' % prefix):
+                d = dict([('%s_contours_%s' % (prefix, x),
+                                               {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
+                                                                      'contours': [(x, colors[x], 1, show_ids)]
+                                               }})
+                                               for x in REGION_INFO.names[prefix]])
+                settings.get('General', 'rendering').update(d)
 
-        settings.set_section('Processing')
-        if settings.get2('primary_classification'):
-            settings.get('General', 'rendering_class').update({'primary_classification': {prim_id: {'raw': ('#FFFFFF', 1.0),
-                                                                                          'contours': [('primary', 'class_label', 1, False),
-                                                                                                       ('primary', '#000000', 1, show_ids_class),
-                                                                                                       ]}}})
+                if settings.get('Processing', '%s_classification' % prefix):
+                    d = dict([('%s_classification_%s' % (prefix, x),
+                               {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
+                                                      'contours': [(x, 'class_label', 1, False),
+                                                                   (x, '#000000' , 1, show_ids_class)]
+                               }})
+                               for x in REGION_INFO.names[prefix]
+                               if x == settings.get('Classification',
+                                                    '%s_classification_regionname' % prefix)])
+                    settings.get('General', 'rendering_class').update(d)
 
-        for prefix in additional_prefixes:
-            if settings.get2('%s_processchannel' % prefix):
-                sec_id = sec_ids[prefix]
-                settings.get('General', 'rendering').update(dict([('%s_contours_%s' % (prefix, x), {sec_id: {'raw': ('#FFFFFF', 1.0),
-                                                                                                             'contours': [(x, SECONDARY_COLORS[x] , 1, show_ids)]
-                                                                                                 }})
-                                                                  for x in sec_regions[prefix]]))
-
-                if settings.get2('%s_classification' % prefix):
-                    sec_id = sec_ids[prefix]
-                    sec_region = sec_class_regions[prefix]
-                    settings.get('General', 'rendering_class').update({'%s_classification_%s' % (prefix, sec_region):
-                                                                       {sec_id: {'raw': ('#FFFFFF', 1.0),
-                                                                                 'contours': [(sec_region, 'class_label', 1, False),
-                                                                                              (sec_region, '#000000', 1, show_ids_class),
-                                                                                              ]}}})
         if has_timelapse:
             # generate raw images of selected channels (later used for gallery images)
             if settings.get('Output', 'events_export_gallery_images'):
-                settings.get('General', 'rendering').update({'primary' : {prim_id : {'raw': ('#FFFFFF', 1.0)}}})
-                for prefix in additional_prefixes:
-                    if settings.get2('%s_processchannel' % prefix):
-                        sec_id = sec_ids[prefix]
-                        settings.get('General', 'rendering').update({prefix : {sec_id : {'raw': ('#FFFFFF', 1.0)}}})
+                for prefix in CHANNEL_PREFIX:
+                    if prefix == 'primary' or settings.get('Processing', '%s_processchannel' % prefix):
+                        settings.get('General', 'rendering').update({prefix : {prefix.capitalize() :
+                                                                               {'raw': ('#FFFFFF', 1.0)}}})
 
         return settings
 
@@ -215,7 +190,7 @@ class ProcessingFrame(BaseProcessorFrame):
         settings = cls.get_export_settings(settings, has_timelapse)
 
         settings.set_section('Processing')
-        for prefix in [SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]:
+        for prefix in CHANNEL_PREFIX[1:]:
             if not settings.get2('%s_processchannel' % prefix):
                 settings.set2('%s_classification' % prefix, False)
                 settings.set2('%s_errorcorrection' % prefix, False)

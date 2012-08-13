@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
+                     Copyright (c) 2006 - 2010 Michael Held
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -9,47 +9,48 @@
                  See trunk/AUTHORS.txt for author contributions.
 """
 
-__author__ = 'Michael Held'
-__date__ = '$Date$'
-__revision__ = '$Rev$'
-__source__ = '$URL$'
-
-__all__ = ['SectionCluster']
+__all__ = ['stopwatch']
 
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
+import logging
 
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
+from pdk.datetimeutils import StopWatch
 
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog.traits.settings import _Section
-from cecog.gui.guitraits import IntTrait
 
 #-------------------------------------------------------------------------------
 # constants:
 #
-SECTION_NAME_CLUSTER = 'Cluster'
 
 #-------------------------------------------------------------------------------
 # functions:
 #
-
+def stopwatch(f):
+    """
+    Simple decorator wrapping a function by measuring its execution time and reporting to a logger
+    """
+    def wrap(*args, **options):
+        fname = f.__name__
+        s = StopWatch()
+        logger = logging.getLogger()
+        logger.debug('%s start' % fname)
+        result = f(*args, **options)
+        logger.debug('%s finished: %s' % (fname, s))
+        return result
+    return wrap
 
 #-------------------------------------------------------------------------------
 # classes:
 #
-class SectionCluster(_Section):
 
-    SECTION_NAME = SECTION_NAME_CLUSTER
+#-------------------------------------------------------------------------------
+# main:
+#
 
-    OPTIONS = [
-      ('cluster',
-       [('position_granularity',
-            IntTrait(1, 1, 1000, label='Batch size (non-timelapse)')),
-        ])
-      ]

@@ -22,5 +22,7 @@
         <file alias="cecog_workflow">resources/workflow-01.png</file>
         <file alias="cecog_workflow_kinetic">resources/workflow_kinetic-01.png</file>
         <file alias="extlink">resources/extlink.png</file>
+        <file alias="plugins/segmentation/expanded">resources/plugins/segmentation/segmentation_expanded.png</file>
+        <file alias="plugins/segmentation/local_adaptive_threshold">resources/plugins/segmentation/local_adaptive_threshold.html</file>
     </qresource>
 </RCC>

@@ -39,7 +39,6 @@ from cecog.gui.util import (information,
 from cecog.gui.analyzer import (BaseProcessorFrame,
                                 PostProcessingThread,
                                 )
-from cecog.analyzer import SECONDARY_REGIONS
 from cecog.analyzer.channel import (PrimaryChannel,
                                     SecondaryChannel,
                                     TertiaryChannel,
@@ -47,7 +46,6 @@ from cecog.analyzer.channel import (PrimaryChannel,
 from cecog.learning.learning import (CommonClassPredictor,
                                      )
 from cecog.util.util import hexToRgb
-from cecog.traits.config import convert_package_path
 
 #-------------------------------------------------------------------------------
 # constants:

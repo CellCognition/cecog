@@ -27,7 +27,7 @@ __all__ = []
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog.traits.config import _Section
+from cecog.traits.settings import _Section
 from cecog.gui.guitraits import (StringTrait,
                                  IntTrait,
                                  BooleanTrait,
@@ -35,7 +35,7 @@ from cecog.gui.guitraits import (StringTrait,
                                  DictTrait,
                                  ListTrait
                                  )
-from cecog.traits.config import NAMING_SCHEMAS
+from cecog.config import NAMING_SCHEMAS
 
 #-------------------------------------------------------------------------------
 # constants:

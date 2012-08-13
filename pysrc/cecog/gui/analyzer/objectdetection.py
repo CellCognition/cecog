@@ -34,14 +34,12 @@ from cecog.gui.analyzer import (BaseProcessorFrame,
                                 AnalzyerThread,
                                 )
 from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
-from cecog.analyzer import (SECONDARY_COLORS,
-                            SECONDARY_REGIONS,
-                            TERTIARY_REGIONS,
-                            )
-from cecog.analyzer.channel import (PrimaryChannel,
-                                    SecondaryChannel,
-                                    TertiaryChannel,
-                                    )
+from cecog.plugin.segmentation import (PRIMARY_SEGMENTATION_MANAGER,
+                                       SECONDARY_SEGMENTATION_MANAGER,
+                                       TERTIARY_SEGMENTATION_MANAGER,
+                                       )
+from cecog.plugin.segmentation import REGION_INFO
+
 #-------------------------------------------------------------------------------
 # constants:
 #
@@ -89,28 +87,7 @@ class ObjectDetectionFrame(BaseProcessorFrame):
                        [('primary_flat_field_correction_image_file',),
                         ], layout='flow')
         self.add_line()
-        self.add_group(None,
-                       [('primary_medianradius', (0,0,1,1)),
-                        ('primary_latwindowsize', (0,1,1,1)),
-                        ('primary_latlimit', (0,2,1,1)),
-                        ], link='primary_lat', label='Local adaptive threshold')
-        self.add_group('primary_lat2',
-                       [('primary_latwindowsize2', (0,0,1,1)),
-                        ('primary_latlimit2', (0,1,1,1)),
-                        ])
-        self.add_input('primary_holefilling')
-        self.add_input('primary_removeborderobjects')
-        self.add_group('primary_shapewatershed',
-                       [('primary_shapewatershed_gausssize', (0,0,1,1)),
-                        ('primary_shapewatershed_maximasize', (0,1,1,1)),
-                        ('primary_shapewatershed_minmergesize', (1,0,1,1)),
-                        ])
-        self.add_group('primary_postprocessing',
-                        [('primary_postprocessing_roisize_min', (0,0,1,1)),
-                          ('primary_postprocessing_roisize_max', (0,1,1,1)),
-                          ('primary_postprocessing_intensity_min', (1,0,1,1)),
-                          ('primary_postprocessing_intensity_max', (1,1,1,1)),
-                        ])
+        self.add_plugin_bay(PRIMARY_SEGMENTATION_MANAGER, settings)
 
         self.add_expanding_spacer()
 
@@ -139,45 +116,12 @@ class ObjectDetectionFrame(BaseProcessorFrame):
                             ('%s_zslice_projection_end' % prefix,),
                             ('%s_zslice_projection_step' % prefix, None, None, True),
                             ], layout='flow')
-            self.add_group('%s_flat_field_correction' % prefix,
-                       [('%s_flat_field_correction_image_file' % prefix,),
-                        ], layout='flow')
-            self.add_line()
-            self.add_pixmap(QPixmap(':cecog_secondary_regions'), Qt.AlignRight)
-            self.add_group(None,
-                           [('%s_regions_expanded' % prefix, (0,0,1,1)),
-                            ('%s_regions_expanded_expansionsize' % prefix, (0,1,1,1), None, True),
-                            (None, (1,0,1,8)),
-
-                            ('%s_regions_inside' % prefix, (2,0,1,1)),
-                            ('%s_regions_inside_shrinkingsize' % prefix, (2,1,1,1), None, True),
-                            (None, (3,0,1,8)),
-
-                            ('%s_regions_outside' % prefix, (4,0,1,1)),
-                            ('%s_regions_outside_expansionsize' % prefix, (4,1,1,1)),
-                            ('%s_regions_outside_separationsize' % prefix, (4,2,1,1), None, True),
-                            (None, (5,0,1,8)),
-
-                            ('%s_regions_rim' % prefix, (6,0,1,1)),
-                            ('%s_regions_rim_expansionsize' % prefix, (6,1,1,1)),
-                            ('%s_regions_rim_shrinkingsize' % prefix, (6,2,1,1), None, True),
-                            (None, (7,0,1,8)),
-
-                            ], link='%s_region_definition' % prefix,
-                            label='Region definition')
 
             self.add_line()
-            self.add_group('%s_regions_constrained_watershed' % prefix,
-                           [('%s_regions_constrained_watershed_gauss_filter_size' % prefix, (0,0,1,1)),
-                            ])
-
-            self.add_line()
-            self.add_group('%s_regions_propagate' % prefix,
-                           [('%s_presegmentation_medianradius' % prefix, (0,0,1,1)),
-                            ('%s_presegmentation_alpha' % prefix, (0,1,1,1)),
-                            ('%s_regions_propagate_lambda' % prefix, (0,2,1,1)),
-                            ('%s_regions_propagate_deltawidth' % prefix, (0,3,1,1), None, True),
-                            ])
+            if prefix == 'secondary':
+                self.add_plugin_bay(SECONDARY_SEGMENTATION_MANAGER, settings)
+            else:
+                self.add_plugin_bay(TERTIARY_SEGMENTATION_MANAGER, settings)
 
             self.add_expanding_spacer()
 
@@ -188,13 +132,6 @@ class ObjectDetectionFrame(BaseProcessorFrame):
         settings = BaseProcessorFrame._get_modified_settings(self, name, has_timelapse)
 
         settings.set_section('ObjectDetection')
-        prim_id = PrimaryChannel.NAME
-        sec_id = SecondaryChannel.NAME
-        sec_regions = [v for k,v in SECONDARY_REGIONS.iteritems()
-                       if settings.get2(k)]
-        tert_id = TertiaryChannel.NAME
-        tert_regions = [v for k,v in TERTIARY_REGIONS.iteritems()
-                       if settings.get2(k)]
 
         settings.set_section('Processing')
         for prefix in ['primary', 'secondary', 'tertiary']:
@@ -206,35 +143,32 @@ class ObjectDetectionFrame(BaseProcessorFrame):
 
         settings.set_section('General')
         settings.set2('rendering_class', {})
-        #settings.set2('rendering_discwrite', True)
-        #settings.set2('rendering_class_discwrite', True)
 
         settings.set('Output', 'events_export_gallery_images', False)
         settings.set('Output', 'hdf5_create_file', False)
         show_ids = settings.get('Output', 'rendering_contours_showids')
-        #settings.set('Output', 'export_object_details', False)
-        #settings.set('Output', 'export_object_counts', False)
 
 
-        current_tab = self._tab.currentIndex()
-        print current_tab
+        current_tab = self._tab.current_index
         if current_tab == 0:
             settings.set('Processing', 'secondary_processchannel', False)
             settings.set('Processing', 'tertiary_processchannel', False)
-            settings.set('General', 'rendering', {'primary_contours': {prim_id: {'raw': ('#FFFFFF', 1.0), 'contours': {'primary': ('#FF0000', 1, show_ids)}}}})
+            prefix = 'primary'
         elif current_tab == 1:
             settings.set('Processing', 'secondary_processchannel', True)
             settings.set('Processing', 'tertiary_processchannel', False)
-            settings.set('General', 'rendering', dict([('secondary_contours_%s' % x, {sec_id: {'raw': ('#FFFFFF', 1.0),
-                                                                                                      'contours': [(x, SECONDARY_COLORS[x] , 1, show_ids)]
-                                                                                             }})
-                                                              for x in sec_regions]))
+            prefix = 'secondary'
         else:
             settings.set('Processing', 'secondary_processChannel', True)
             settings.set('Processing', 'tertiary_processchannel', True)
-            settings.set('General', 'rendering', dict([('tertiary_contours_%s' % x, {tert_id: {'raw': ('#FFFFFF', 1.0),
-                                                                                               'contours': [(x, SECONDARY_COLORS[x] , 1, show_ids)]
-                                                                                             }})
-                                                              for x in tert_regions]))
+            prefix = 'tertiary'
+
+        colors = REGION_INFO.colors
+        settings.set('General', 'rendering', dict([('%s_contours_%s' % (prefix, x),
+                                                    {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
+                                                                           'contours': [(x, colors[x] , 1, show_ids)]
+                                                    }})
+                                                  for x in REGION_INFO.names[prefix]]))
+
         return settings
 

@@ -20,7 +20,8 @@ __all__ = ['TraitDisplayMixin']
 # standard library imports:
 #
 import os, \
-       types
+       types, \
+       functools
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -58,16 +59,21 @@ from cecog.gui.util import show_html
 #-------------------------------------------------------------------------------
 # classes:
 #
+
 class TraitDisplayMixin(object):
 
     SECTION_NAME = None
     DISPLAY_NAME = None
 
-    def __init__(self, settings):
+    def __init__(self, settings, has_label_link=True, label_click_callback=None):
         self._registry = {}
         self._settings = settings
         self._extra_columns = 0
         self._final_handlers = {}
+        self._tab_name = None
+        self._input_cnt = 0
+        self._has_label_link = has_label_link
+        self._label_click_callback = label_click_callback
 
     def get_name(self):
         return self.SECTION_NAME if self.DISPLAY_NAME is None \
@@ -76,8 +82,30 @@ class TraitDisplayMixin(object):
     def add_handler(self, name, function):
         self._final_handlers[name] = function
 
-    def add_group(self, trait_name, items, layout="grid",
-                  link=None, label=None):
+    def add_expanding_spacer(self):
+        frame = self._get_frame(name=self._tab_name)
+        dummy = QWidget(frame)
+        dummy.setMinimumSize(0,0)
+        dummy.setSizePolicy(QSizePolicy(QSizePolicy.Fixed,
+                                        QSizePolicy.Expanding))
+        frame.layout().addWidget(dummy, frame._input_cnt, 0)
+        frame._input_cnt += 1
+
+    def add_line(self):
+        frame = self._get_frame(name=self._tab_name)
+        line = QFrame(frame)
+        line.setFrameShape(QFrame.HLine)
+        frame.layout().addWidget(line, frame._input_cnt, 0, 1, 2)
+        frame._input_cnt += 1
+
+    def add_pixmap(self, pixmap, align=Qt.AlignLeft):
+        frame = self._get_frame(name=self._tab_name)
+        label = QLabel(frame)
+        label.setPixmap(pixmap)
+        frame.layout().addWidget(label, frame._input_cnt, 0, 1, 2, align)
+        frame._input_cnt += 1
+
+    def add_group(self, trait_name, items, layout="grid", link=None, label=None):
         frame = self._get_frame(self._tab_name)
         frame_layout = frame.layout()
 
@@ -142,7 +170,7 @@ class TraitDisplayMixin(object):
             if not trait is None:
                 w_group.setEnabled(self._get_value(trait_name))
                 handler = lambda x : w_group.setEnabled(w_input.isChecked())
-                self.connect(w_input, SIGNAL('toggled(bool)'), handler)
+                w_input.toggled.connect(handler)
 
         frame._input_cnt += 1
 
@@ -150,16 +178,19 @@ class TraitDisplayMixin(object):
         if link is None:
             link = label
         w_label = QLabel(parent)
-        w_label.setTextFormat(Qt.AutoText)
-        #w_label.setOpenExternalLinks(True)
-        w_label.setStyleSheet("*:hover { border:none; background: #e8ff66; text-decoration: underline;}")
-        w_label.setText('<style>a { color: black; text-decoration: none;}</style>'
-                        '<a href="%s">%s</a>' % (link, label))
-        self.connect(w_label, SIGNAL('linkActivated(const QString&)'),
-                     self._on_show_help)
-        w_label.setSizePolicy(QSizePolicy(QSizePolicy.Fixed,
-                                          QSizePolicy.Fixed))
-        w_label.setToolTip('Click on the label for help.')
+
+        if self._has_label_link:
+            w_label.setTextFormat(Qt.AutoText)
+            w_label.setStyleSheet("*:hover { border:none; background: #e8ff66; text-decoration: underline;}")
+            w_label.setText('<style>a { color: black; text-decoration: none;}</style>'
+                            '<a href="%s">%s</a>' % (link, label))
+            w_label.setToolTip('Click on the label for help.')
+            if self._label_click_callback is None:
+                w_label.linkActivated.connect(self._on_show_help)
+            else:
+                w_label.linkActivated.connect(functools.partial(self._label_click_callback, link))
+        else:
+            w_label.setText(label)
         return w_label
 
     def add_input(self, trait_name, parent=None, grid=None, alignment=None,
@@ -187,6 +218,9 @@ class TraitDisplayMixin(object):
             w_input.setMaxLength(trait.max_length)
             w_input.setSizePolicy(policy_expanding)
             w_input.setToolTip(value)
+            w_input.setAcceptDrops(True)
+            w_input.setDragEnabled(True)
+
             if not trait.mask is None:
                 regexp = QRegExp(trait.mask)
                 regexp.setPatternSyntax(QRegExp.RegExp2)
@@ -272,14 +306,15 @@ class TraitDisplayMixin(object):
 
         elif isinstance(trait, SelectionTrait2):
             w_input = QComboBox(parent)
+            w_input.currentIndexChanged[str].connect(trait.on_update_observer)
             for item in trait.list_data:
                 w_input.addItem(str(item))
             trait.set_widget(w_input)
             trait.set_value(w_input, value)
             w_input.setSizePolicy(policy_fixed)
             handler = lambda n: lambda v: self._on_current_index(n, v)
-            self.connect(w_input, SIGNAL('currentIndexChanged(int)'),
-                         handler(trait_name))
+            w_input.currentIndexChanged[int].connect(handler(trait_name))
+
 
         elif isinstance(trait, DictTrait):
             w_input = QTextEdit(parent)
@@ -382,7 +417,6 @@ class TraitDisplayMixin(object):
     # event methods
 
     def _on_show_help(self, link):
-        print self.SECTION_NAME, link
         show_html(self.SECTION_NAME, link=link,
                   header='_header', footer='_footer')
 

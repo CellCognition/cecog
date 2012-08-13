@@ -54,9 +54,10 @@ from cecog.analyzer import (R_LIBRARIES,
                             TRACKING_DURATION_UNITS_DEFAULT,
                             )
 from cecog.io.imagecontainer import ImageContainer
-from cecog.traits.config import (ANALYZER_CONFIG,
-                                 get_application_support_path,
-                                 )
+from cecog.config import (ANALYZER_CONFIG,
+                          APPLICATION_SUPPORT_PATH,
+                          init_application_support_path,
+                          )
 from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.gui.config import GuiConfigSettings
 from cecog.gui.analyzer.general import (GeneralFrame,
@@ -118,6 +119,8 @@ class AnalyzerMainWindow(QMainWindow):
     def __init__(self):
         QMainWindow.__init__(self)
         qApp._main_window = self
+
+        #self.setStyleSheet("QFrame {border: 1px solid #8f8f91;}")
 
         self._is_initialized = False
         self._debug = False
@@ -323,16 +326,6 @@ class AnalyzerMainWindow(QMainWindow):
         button.setIcon(QIcon(widget.ICON))
         button.setText(widget.get_name())
         button.setTextAlignment(Qt.AlignHCenter)
-        #button.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-
-        #self.connect(button, )
-#        scroll_area = QScrollArea(self._pages)
-#        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-#        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-#        scroll_area.setWidgetResizable(True)
-#        scroll_area.setWidget(widget)
-#
-#        self._pages.addWidget(scroll_area)
         self._pages.addWidget(widget)
 
         widget.toggle_tabs.connect(self._on_toggle_tabs)
@@ -447,8 +440,13 @@ class AnalyzerMainWindow(QMainWindow):
                          info="Fix the problem in file '%s' and load the "\
                                 "settings file again." % filename,
                          detail_tb=True)
-            self.settings_changed(False)
-            status('Settings successfully loaded.')
+            else:
+                # set settings to not-changed (assume no changed since loaded from file)
+                self.settings_changed(False)
+                # notify tabs about new settings loaded
+                for tab in self._tabs:
+                    tab.settings_loaded()
+                status('Settings successfully loaded.')
 
     def _write_settings(self, filename):
         try:
@@ -827,18 +825,18 @@ if __name__ == "__main__":
     working_path = os.path.abspath(os.path.dirname(sys.argv[0]))
     program_name = os.path.split(sys.argv[0])[1]
     
-    log_path = os.path.join(get_application_support_path(), 'log')
+    log_path = os.path.join(APPLICATION_SUPPORT_PATH, 'log')
     safe_mkdirs(log_path)
 
     is_app = hasattr(sys, 'frozen')
     #is_app = True
     if is_app:
-        package_path = os.path.join(get_application_support_path(), 'battery_package')
+        package_path = os.path.join(APPLICATION_SUPPORT_PATH, 'battery_package')
         set_package_path(package_path)
-        sys.stdout = \
-            file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
-        sys.stderr = \
-            file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
+#        sys.stdout = \
+#            file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
+#        sys.stderr = \
+#            file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
 
     splash = QSplashScreen(QPixmap(':cecog_splash'))
     splash.show()
@@ -855,6 +853,7 @@ if __name__ == "__main__":
         filename = os.path.join(get_package_path(), 'Settings/demo_settings.conf')
     #filename = os.path.join(get_package_path(), 'Settings/demo_settings.conf')
     
+
     if os.path.isfile(filename):
         main._read_settings(filename)
 

@@ -32,6 +32,7 @@ from PyQt4.Qt import *
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
+from cecog import CHANNEL_PREFIX
 from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
 from cecog.gui.util import (information,
                             exception,
@@ -40,7 +41,6 @@ from cecog.gui.analyzer import (BaseProcessorFrame,
                                 AnalzyerThread,
                                 TrainingThread,
                                 )
-from cecog.analyzer import SECONDARY_REGIONS
 from cecog.analyzer.channel import (PrimaryChannel,
                                     SecondaryChannel,
                                     )
@@ -49,11 +49,11 @@ from cecog.util.util import hexToRgb
 from cecog.traits.config import convert_package_path
                              
                              
+from cecog.plugin.segmentation import REGION_INFO
 
 #-------------------------------------------------------------------------------
 # constants:
 #
-
 
 #-------------------------------------------------------------------------------
 # functions:
@@ -426,15 +426,8 @@ class ClassificationFrame(BaseProcessorFrame):
                                      AnalzyerThread,
                                      ('Test classifier', 'Stop testing'))
 
-        self.set_tab_name('Primary Channel')
-
-        self.add_input('primary_classification_envpath')
-
-        frame_results = self._add_result_frame('primary')
-        self.add_handler('primary_classification_envpath',
-                         frame_results.on_load)
-
-        for tab_name, prefix in [('Secondary Channel', 'secondary'),
+        for tab_name, prefix in [('Primary Channel', 'primary'),
+                                 ('Secondary Channel', 'secondary'),
                                  ('Tertiary Channel', 'tertiary'),
                                  ]:
             self.set_tab_name(tab_name)
@@ -452,10 +445,6 @@ class ClassificationFrame(BaseProcessorFrame):
     def _get_modified_settings(self, name, has_timelapse=True):
         settings = BaseProcessorFrame._get_modified_settings(self, name, has_timelapse)
 
-        settings.set_section('ObjectDetection')
-        prim_id = PrimaryChannel.NAME
-        sec_id = SecondaryChannel.NAME
-        #sec_regions = settings.get2('secondary_regions')
         settings.set_section('Processing')
         settings.set2('primary_classification', False)
         settings.set2('secondary_classification', False)
@@ -469,46 +458,43 @@ class ClassificationFrame(BaseProcessorFrame):
 
         show_ids_class = settings.get('Output', 'rendering_class_showids')
 
-        current_tab = self._tab.currentIndex()
+        current_tab = self._tab.current_index
         if current_tab == 0:
             settings.set('Processing', 'primary_featureextraction', True)
             settings.set('Processing', 'secondary_featureextraction', False)
-            settings.set_section('Classification')
-            settings.set2('collectsamples_prefix', 'primary')
-            settings.set('Processing', 'secondary_processChannel', False)
-
-            if name == self.PROCESS_TESTING:
-                settings.set('Processing', 'primary_classification', True)
-                settings.set('General', 'rendering_class', {'primary_classification': {prim_id: {'raw': ('#FFFFFF', 1.0),
-                                                                                                 'contours': [('primary', 'class_label', 1, False),
-                                                                                                              ('primary', '#000000', 1, show_ids_class),
-                                                                                                              ]}}})
-            else:
-                settings.set2('collectsamples', True)
-                settings.set('General', 'positions', '')
-                settings.set('General', 'framerange_begin', 0)
-                settings.set('General', 'framerange_end', 0)
-
-        else:
+            settings.set('Processing', 'tertiary_featureextraction', False)
+            settings.set('Processing', 'secondary_processchannel', False)
+            settings.set('Processing', 'tertiary_processchannel', False)
+            prefix = 'primary'
+        elif current_tab == 1:
             settings.set('Processing', 'primary_featureextraction', False)
             settings.set('Processing', 'secondary_featureextraction', True)
-            settings.set_section('Classification')
-            sec_region = settings.get2('secondary_classification_regionname')
-            settings.set2('collectsamples_prefix', 'secondary')
-            for k,v in SECONDARY_REGIONS.iteritems():
-                settings.set('ObjectDetection', k, v == sec_region)
+            settings.set('Processing', 'tertiary_featureextraction', False)
             settings.set('Processing', 'secondary_processchannel', True)
-            if name == self.PROCESS_TESTING:
-                settings.set('Processing', 'secondary_classification', True)
-                settings.set('General', 'rendering_class', {'secondary_classification_%s' % sec_region: {sec_id: {'raw': ('#FFFFFF', 1.0),
-                                                                                                                  'contours': [(sec_region, 'class_label', 1, False),
-                                                                                                                               (sec_region, '#000000', 1, show_ids_class),
+            settings.set('Processing', 'tertiary_processchannel', False)
+            prefix = 'secondary'
+        else:
+            settings.set('Processing', 'primary_featureextraction', False)
+            settings.set('Processing', 'secondary_featureextraction', False)
+            settings.set('Processing', 'tertiary_featureextraction', True)
+            settings.set('Processing', 'secondary_processchannel', True)
+            settings.set('Processing', 'tertiary_processchannel', True)
+            prefix = 'tertiary'
+
+        sec_region = settings.get('Classification', '%s_classification_regionname' % prefix)
+        settings.set('Classification', 'collectsamples_prefix', prefix)
+        if name == self.PROCESS_TESTING:
+            settings.set('Processing', '%s_classification' % prefix, True)
+            settings.set('General', 'rendering_class', {'%s_classification_%s' % (prefix, sec_region):
+                                                        {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
+                                                                               'contours': [(sec_region, 'class_label', 1, False),
+                                                                                            (sec_region, '#000000', 1, show_ids_class),
                                                                                                                                ]}}})
-            else:
-                settings.set2('collectsamples', True)
-                settings.set('General', 'positions', '')
-                settings.set('General', 'framerange_begin', 0)
-                settings.set('General', 'framerange_end', 0)
+        else:
+            settings.set('Classification', 'collectsamples', True)
+            settings.set('General', 'positions', '')
+            settings.set('General', 'framerange_begin', 0)
+            settings.set('General', 'framerange_end', 0)
 
         return settings
 
@@ -526,7 +512,7 @@ class ClassificationFrame(BaseProcessorFrame):
         return self._result_frames[name]
 
     def _update_classifier(self):
-        if self._tab.currentIndex() == 0:
+        if self._tab.current_index == 0:
             channel = 'primary'
         else:
             channel = 'secondary'
@@ -535,6 +521,14 @@ class ClassificationFrame(BaseProcessorFrame):
 
     def page_changed(self):
         self._update_classifier()
+        self.settings_loaded()
+
+    def settings_loaded(self):
+        # FIXME: set the trait list data to plugin instances of the current channel
+        prefix = CHANNEL_PREFIX[self._tab.current_index]
+        trait = self._settings.get_trait(SECTION_NAME_CLASSIFICATION, '%s_classification_regionname' % prefix)
+        trait.set_list_data(REGION_INFO.names[prefix])
 
     def tab_changed(self, index):
-        self._update_classifier()
+        self.page_changed()
+

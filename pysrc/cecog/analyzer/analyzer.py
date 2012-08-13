@@ -49,9 +49,9 @@ import h5py
 from cecog import ccore
 
 from cecog.util.util import hexToRgb
-from cecog.analyzer import REGION_NAMES_SECONDARY
 from cecog.io.imagecontainer import Coordinate, MetaImage
 from cecog.analyzer.channel import PrimaryChannel
+from cecog.plugin.segmentation import REGION_INFO
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -295,32 +295,18 @@ class TimeHolder(OrderedDict):
         self._object_coord_to_id = {}
         self._object_coord_to_idx = {}
 
-        self._channel_info = [('primary',
-                               settings.get('ObjectDetection',
-                                            'primary_channelid'))]
-        self._region_infos = [('primary',
-                               self._convert_region_name('primary','primary'),
-                               'primary')]
-        settings.set_section('ObjectDetection')
-        for prefix in ['secondary', 'tertiary']:
-            if settings.get('Processing', '%s_processchannel' % prefix):
-                name = settings.get('ObjectDetection', '%s_channelid' % prefix)
-                self._channel_info.append((prefix, name))
-                for name in REGION_NAMES_SECONDARY:
-                    if settings.get2('%s_regions_%s' % (prefix, name)):
-                        self._region_infos.append((prefix,
-                                                   self._convert_region_name(prefix, name),
-                                                   name))
+        channels = sorted(list(meta_data.channels))
+        self._region_names = REGION_INFO.names['primary'] + REGION_INFO.names['secondary']
 
-        self._channels_to_idx = OrderedDict([(n[0], i) for i, n in
-                                             enumerate(self._channel_info)])
-        self._regions_to_idx = OrderedDict([(n[1], i) for i, n in
-                                            enumerate(self._region_infos)])
-        self._edge_to_idx = {}
-
-        self._classifier_to_idx = {}
+        region_names2 = []
+        for prefix in ['primary', 'secondary', 'tertiary']:
+            for name in REGION_INFO.names[prefix]:
+                region_names2.append((prefix.capitalize(), name))
 
         self._feature_to_idx = OrderedDict()
+
+        self._regions_to_idx = dict([(n,i) for i, n in enumerate(self._region_names)])
+        self._regions_to_idx2 = OrderedDict([(n,i) for i, n in enumerate(region_names2)])
 
         if self._hdf5_create:
             label_image_cpy = None
@@ -573,7 +559,7 @@ class TimeHolder(OrderedDict):
         self[iT][oChannel.NAME] = oChannel
         self[iT].sort(key = lambda x: self[iT][x])
 
-    def apply_segmentation(self, channel, primary_channel=None):
+    def apply_segmentation(self, channel, *args):
         desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
                                          channel.strChannelId)
         name = channel.NAME.lower()
@@ -1144,7 +1130,7 @@ class TimeHolder(OrderedDict):
         for frame, channels in self.iteritems():
 
             items = []
-            prim_region = channels.values()[0].get_region('primary')
+            prim_region = channels.values()[0].get_region(REGION_INFO.names['primary'][0])
 
             for obj_id in prim_region:
 
@@ -1275,13 +1261,19 @@ class CellAnalyzer(PropertyManager):
         for channel in channels:
             self.time_holder.prepare_raw_image(channel)
             if self.detect_objects:
-                self.time_holder.apply_segmentation(channel, primary_channel)
+                if channel.NAME == 'Primary':
+                    self.time_holder.apply_segmentation(channel)
+                    primary_channel = channel
+                elif channel.NAME == 'Secondary':
+                    self.time_holder.apply_segmentation(channel, primary_channel)
+                    secondary_channel = channel
+                elif channel.NAME == 'Tertiary':
+                    self.time_holder.apply_segmentation(channel, primary_channel, secondary_channel)
+                else:
+                    raise ValueError("Channel with name '%s' not supported." % channel.NAME)
+
                 if extract_features:
                     self.time_holder.apply_features(channel)
-
-                if primary_channel is None:
-                    assert channel.RANK == 1
-                    primary_channel = channel
 
         if apply:
             for channel in channels:
@@ -1530,9 +1522,9 @@ class CellAnalyzer(PropertyManager):
                     # FIXME: export Objects is segfaulting for objects
                     #        where its bounding box is touching the border
                     #        i.e. one corner point equals zero!
-                    oContainer.exportObject(obj_id,
-                                            strFilenameImg,
-                                            strFilenameMsk)
+#                    oContainer.exportObject(obj_id,
+#                                            strFilenameImg,
+#                                            strFilenameMsk)
 
                     oContainer.markObjects([obj_id], rgb_value, False, True)
 

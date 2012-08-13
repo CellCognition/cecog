@@ -27,14 +27,12 @@ __all__ = ['SectionClassification']
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog.traits.config import _Section
+from cecog import CHANNEL_PREFIX
+from cecog.traits.settings import _Section
 from cecog.gui.guitraits import (StringTrait,
                                  BooleanTrait,
-                                 SelectionTrait,
+                                 SelectionTrait2,
                                  )
-from cecog.analyzer import (REGION_NAMES_PRIMARY,
-                            REGION_NAMES_SECONDARY,
-                            )
 from cecog.util.util import unlist
 
 #-------------------------------------------------------------------------------
@@ -54,39 +52,19 @@ class SectionClassification(_Section):
 
     SECTION_NAME = SECTION_NAME_CLASSIFICATION
 
-    OPTIONS = [
-
-    ('primary_classification',
-     [('primary_classification_envpath',
-        StringTrait('', 1000, label='Classifier folder',
-                    widget_info=StringTrait.STRING_PATH)),
-      ('primary_classification_regionname',
-        SelectionTrait(REGION_NAMES_PRIMARY[0], REGION_NAMES_PRIMARY,
-                       label='Region name')),
-      ('primary_classification_annotationfileext',
-        StringTrait('.xml', 50, label='Annotation ext.')),
-      ]),
-
-    ] + \
+    OPTIONS = \
     unlist(
     [[('%s_classification' % x,
-     [('%s_classification_envpath' % x,
-       StringTrait('', 1000, label='Classifier folder',
-                   widget_info=StringTrait.STRING_PATH)),
-      ('%s_classification_regionname' % x,
-       SelectionTrait(REGION_NAMES_SECONDARY[0], REGION_NAMES_SECONDARY,
-                      label='Region name')),
-      ('%s_classification_annotationfileext' % x,
-       StringTrait('.xml', 50, label='Annotation ext.')),
+     [('%s_classification_envpath' % x, StringTrait('', 1000, label='Classifier folder',
+                                                    widget_info=StringTrait.STRING_PATH)),
+      ('%s_classification_regionname' % x, SelectionTrait2(None, [], label='Region name')),
+      ('%s_classification_annotationfileext' % x, StringTrait('.xml', 50, label='Annotation ext.')),
       ])]
-      for x in ['secondary', 'tertiary']]
-
+      for x in CHANNEL_PREFIX]
       ) + \
       [
       ('collectsamples',
-       [('collectsamples',
-            BooleanTrait(False)),
-        ('collectsamples_prefix',
-            StringTrait('',100)),
+       [('collectsamples', BooleanTrait(False)),
+        ('collectsamples_prefix', StringTrait('',100)),
         ])
       ]

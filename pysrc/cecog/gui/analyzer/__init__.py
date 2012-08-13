@@ -1,5 +1,6 @@
 """
                            The CellCognition Project
+                     Copyright (c) 2006 - 2010 Michael Held
         Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
@@ -14,16 +15,7 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = ['REGION_NAMES_PRIMARY',
-           'REGION_NAMES_SECONDARY',
-           'SECONDARY_COLORS',
-           'ZSLICE_PROJECTION_METHODS',
-           'COMPRESSION_FORMATS',
-           'TRACKING_METHODS',
-           'R_LIBRARIES',
-           '_BaseFrame',
-           '_ProcessorMixin',
-           'callit']
+__all__ = []
 
 #-------------------------------------------------------------------------------
 # standard library imports:
@@ -40,9 +32,8 @@ import types, \
        cPickle as pickle, \
        struct, \
        threading, \
-       socket
-       
-       
+       socket, \
+       functools
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -90,19 +81,16 @@ from cecog.analyzer.channel import (PrimaryChannel,
                                     SecondaryChannel,
                                     TertiaryChannel,
                                     )
-from cecog.analyzer.core import AnalyzerCore, SECONDARY_REGIONS
+from cecog.analyzer.core import AnalyzerCore
 from cecog.io.imagecontainer import PIXEL_TYPES
-from cecog.traits.config import R_SOURCE_PATH, \
-                                convert_package_path, \
-                                PACKAGE_PATH
+from cecog.config import R_SOURCE_PATH
 from cecog import ccore
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
 from cecog.traits.analyzer.postprocessing import SECTION_NAME_POST_PROCESSING
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.analyzer.gallery import compose_galleries
-from cecog.traits.config import ConfigSettings
-from cecog.traits.analyzer import SECTION_REGISTRY
-from cecog.analyzer.ibb import IBBAnalysis
+from cecog.plugin.display import PluginBay
+from cecog.gui.widgets.tabcontrol import TabControl
 
 #-------------------------------------------------------------------------------
 # functions:
@@ -210,6 +198,8 @@ def process_initialyzer(port):
 # classes:
 #
 
+
+
 class BaseFrame(QFrame, TraitDisplayMixin):
 
     ICON = ":cecog_analyzer_icon"
@@ -220,47 +210,29 @@ class BaseFrame(QFrame, TraitDisplayMixin):
 
     def __init__(self, settings, parent):
         QFrame.__init__(self, parent)
-        self._tab_lookup = {}
-        self._tab_name = None
+        TraitDisplayMixin.__init__(self, settings)
         self._is_active = False
-
+        self._tab_name = None
         self._control = QFrame(self)
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
 
-        scroll_area = QScrollArea(self)
-        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setFrameShape(QFrame.NoFrame)
+        self._tab = TabControl(self)
 
-        if not self.TABS is None:
-            self._tab = QTabWidget(self)
-            #self._tab.setSizePolicy(QSizePolicy(QSizePolicy.Expanding|QSizePolicy.Maximum,
-            #                                    QSizePolicy.Expanding))
-            for name in self.TABS:
-                frame = QFrame(self._tab)
-                frame._input_cnt = 0
-                QGridLayout(frame)
-                idx = self._tab.addTab(frame, name)
-                self._tab_lookup[name] = (idx, frame)
-            scroll_area.setWidget(self._tab)
-            #layout.addWidget(self._tab)
-            self._tab.currentChanged.connect(self.on_tab_changed)
-        else:
-            self._frame = QFrame(self)
-            self._frame._input_cnt = 0
-            QGridLayout(self._frame)
-            #self._frame.setSizePolicy(QSizePolicy(QSizePolicy.Expanding|QSizePolicy.Maximum,
-            #                                    QSizePolicy.Expanding))
-            scroll_area.setWidget(self._frame)
-            #layout.addWidget(self._frame)
+        tabs = [self._tab_name] if self.TABS is None else self.TABS
+        for name in tabs:
+            frame = QFrame(self._tab)
+            frame._input_cnt = 0
+            layout2 = QGridLayout(frame)
+            layout2.setContentsMargins(20, 20, 20, 20)
+            self._tab.add_tab(name, frame)
 
-        layout.addWidget(scroll_area)
+        self._tab.set_active_index(0)
+        self._tab.current_changed.connect(self.on_tab_changed)
+
+        layout.addWidget(self._tab)
         layout.addWidget(self._control)
 
-        TraitDisplayMixin.__init__(self, settings)
-
-    @pyqtSlot('int')
     def on_tab_changed(self, index):
         self.tab_changed(index)
 
@@ -272,41 +244,8 @@ class BaseFrame(QFrame, TraitDisplayMixin):
 
     def _get_frame(self, name=None):
         if name is None:
-            if len(self._tab_lookup) > 0:
-                frame = self._tab_lookup[self._tab_name][1]
-            else:
-                frame = self._frame
-        else:
-            frame = self._tab_lookup[name][1]
-        return frame
-
-    def add_expanding_spacer(self):
-        frame = self._get_frame(name=self._tab_name)
-        dummy = QWidget(frame)
-        dummy.setMinimumSize(0,0)
-        dummy.setSizePolicy(QSizePolicy(QSizePolicy.Fixed,
-                                        QSizePolicy.Expanding))
-        frame.layout().addWidget(dummy, frame._input_cnt, 0)
-        frame._input_cnt += 1
-#        self._layout.addItem(QSpacerItem(0, 0,
-#                                         QSizePolicy.Fixed,
-#                                         QSizePolicy.Expanding),
-#                             self._input_cnt, 0, 1, self.WIDTH+2)
-
-
-    def add_line(self):
-        frame = self._get_frame(name=self._tab_name)
-        line = QFrame(frame)
-        line.setFrameShape(QFrame.HLine)
-        frame.layout().addWidget(line, frame._input_cnt, 0, 1, 2)
-        frame._input_cnt += 1
-
-    def add_pixmap(self, pixmap, align=Qt.AlignLeft):
-        frame = self._get_frame(name=self._tab_name)
-        label = QLabel(frame)
-        label.setPixmap(pixmap)
-        frame.layout().addWidget(label, frame._input_cnt, 0, 1, 2, align)
-        frame._input_cnt += 1
+            name = self._tab_name
+        return self._tab.get_frame(name)
 
     def page_changed(self):
         '''
@@ -315,8 +254,22 @@ class BaseFrame(QFrame, TraitDisplayMixin):
         '''
         pass
 
+    def settings_loaded(self):
+        '''
+        change notification called after a settings file is loaded
+        '''
+        pass
+
     def tab_changed(self, index):
         pass
+
+    def add_plugin_bay(self, plugin_manager, settings):
+        frame = self._get_frame(self._tab_name)
+        frame_layout = frame.layout()
+        frame_layout.addWidget(PluginBay(self, plugin_manager, settings),
+                               frame._input_cnt, 0, 1, 2)
+        frame._input_cnt += 1
+
 
 class _ProcessingThread(QThread):
 
@@ -678,7 +631,7 @@ class HmmThread(_ProcessingThread):
                 if self._abort:
                     break
 
-        if self._settings.get2('show_html'):
+        if self._settings.get2('show_html') and not self._abort:
             QDesktopServices.openUrl(QUrl('file://'+os.path.join(path_out_hmm_region, 'index.html'), QUrl.TolerantMode))
 
 
@@ -1242,7 +1195,7 @@ class _ProcessorMixin(object):
         layout.addWidget(help_button)
 
         if not self.TABS is None:
-            self.connect(self._tab, SIGNAL('currentChanged(int)'), self._on_tab_changed)
+            self._tab.current_changed.connect(self._on_tab_changed)
             self._on_tab_changed(0)
         else:
             for name in self._control_buttons:
@@ -1485,9 +1438,7 @@ class _ProcessorMixin(object):
 
     def _toggle_tabs(self, state):
         if not self.TABS is None:
-            for i in range(self._tab.count()):
-                if i != self._tab.currentIndex():
-                    self._tab.setTabEnabled(i, state)
+            self._tab.enable_non_active(state)
 
     def _abort_processing(self):
         self.setCursor(Qt.BusyCursor)
@@ -1713,16 +1664,14 @@ class _ProcessorMixin(object):
                      if not x in [PrimaryChannel.PREFIX, SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]]
         rendering += self._current_settings.get('General', 'rendering_class').keys()
         rendering.sort()
+        print rendering, qApp._image_dialog
 
-        if len(rendering) > 0:
-            self._analyzer.set_renderer(rendering[0])
-        else:
-            self._analyzer.set_renderer(None)
-
+        idx = 0
         if not qApp._image_dialog is None:
             widget = qApp._image_combo
             current = widget.currentText()
             widget.clear()
+            print current
             if len(rendering) > 1:
                 for name in rendering:
                     widget.addItem(name)
@@ -1730,8 +1679,14 @@ class _ProcessorMixin(object):
                 widget.currentIndexChanged[str].connect(self._on_render_changed)
                 if current in rendering:
                     widget.setCurrentIndex(widget.findText(current, Qt.MatchExactly))
+                    idx = rendering.index(current)
             else:
                 widget.hide()
+
+        if len(rendering) > 0:
+            self._analyzer.set_renderer(rendering[idx])
+        else:
+            self._analyzer.set_renderer(None)
 
         self._analyzer.image_ready.connect(self._on_update_image)
         
