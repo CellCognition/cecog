@@ -754,7 +754,7 @@ class TimeHolder(OrderedDict):
                     dset_idx_relation = grp_cur_pos[self.HDF5_GRP_OBJECT].create_dataset(combined_region_name,
                                                           (nr_objects,),
                                                           dtype,
-                                                          chunks=(nr_objects,),
+                                                          chunks=(nr_objects if nr_objects > 0 else 1,),
                                                           compression=self._hdf5_compression,
                                                           maxshape=(None,))
                     offset = 0
@@ -773,7 +773,7 @@ class TimeHolder(OrderedDict):
                         dset_cross_rel = grp_cur_pos[self.HDF5_GRP_OBJECT].create_dataset(obj_name, 
                                                                                       (nr_objects,), 
                                                                                       dt,
-                                                                                      chunks=(nr_objects,),
+                                                                                      chunks=(nr_objects if nr_objects > 0 else 1,),
                                                                                       compression=self._hdf5_compression,
                                                                                       maxshape=(None,))
 
@@ -792,7 +792,7 @@ class TimeHolder(OrderedDict):
                     dset_bounding_box = grp_region_features.create_dataset('bounding_box',
                                                           (nr_objects,),
                                                           dtype,
-                                                          chunks=(nr_objects,),
+                                                          chunks=(nr_objects if nr_objects > 0 else 1,),
                                                           compression=self._hdf5_compression,
                                                           maxshape=(None,))
                 else:
@@ -807,7 +807,7 @@ class TimeHolder(OrderedDict):
                     dset_center = grp_region_features.create_dataset('center',
                                                           (nr_objects,),
                                                           dtype,
-                                                          chunks=(nr_objects,),
+                                                          chunks=(nr_objects if nr_objects > 0 else 1,),
                                                           compression=self._hdf5_compression,
                                                           maxshape=(None,))
                 else:
@@ -831,7 +831,7 @@ class TimeHolder(OrderedDict):
                         dt = h5py.new_vlen(str)
                         dset_crack_contour = grp_region_features.create_dataset('crack_contour',
                                                 (nr_objects, ), dt,
-                                                chunks=(nr_objects, ),
+                                                chunks=(nr_objects if nr_objects > 0 else 1, ),
                                                 compression=self._hdf5_compression,
                                                 maxshape=(None,))
                     else:
@@ -888,7 +888,7 @@ class TimeHolder(OrderedDict):
             var_rel = grp.create_dataset('tracking',
                                          (nr_edges, ),
                                          self.HDF5_DTYPE_RELATION,
-                                         chunks=(nr_edges,),
+                                         chunks=(nr_edges if nr_edges > 0 else 1,),
                                          compression=self._hdf5_compression)
 #            grp = self._grp_cur_position[self.HDF5_GRP_OBJECT]
 #            grp_cur_obj = grp.create_group('track')
@@ -1039,7 +1039,7 @@ class TimeHolder(OrderedDict):
                 dt = numpy.dtype([('label_idx', 'int32')])
                 dset_prediction = current_classification_grp.create_dataset('prediction', 
                                                                             (nr_objects, ), dt,
-                                                                            chunks=(nr_objects,),
+                                                                            chunks=(nr_objects if nr_objects > 0 else 1,),
                                                                             compression=self._hdf5_compression,
                                                                             maxshape=(None,))
                 offset = 0 
