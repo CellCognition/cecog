@@ -592,7 +592,7 @@ class TimeHolder(OrderedDict):
         # only True if hdf_create and reuse and label_images are valid!        
         if not label_images_valid:
             # compute segmentation without (not loading from file)
-            channel.apply_segmentation(channel)
+            channel.apply_segmentation(channel, *args)
             
             # write segmentation back to file
             if self._hdf5_create and self._hdf5_include_label_images:
