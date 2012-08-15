@@ -177,6 +177,7 @@ class ConfigSettings(RawConfigParser):
                         value = self.get_value(section_name, option_name)
                         self.set(section_name, option_name, value)
                     elif option_name.find('plugin') == 0:
+                        ### TODO convert old values to plugin-ins
                         pass
 #                    else:
 #                        print("Warning: option '%s' in section '%s' is not "

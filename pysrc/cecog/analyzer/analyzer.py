@@ -288,7 +288,7 @@ class TimeHolder(OrderedDict):
         self.hdf5_filename = filename_hdf5
 
         self._logger = logging.getLogger(self.__class__.__name__)
-        # frames get an index representation with the NC file, starting at 0
+
         frames = sorted(analysis_frames)
         self._frames_to_idx = dict([(f,i) for i, f in enumerate(frames)])
         self._idx_to_frames = dict([(i,f) for i, f in enumerate(frames)])
@@ -297,17 +297,22 @@ class TimeHolder(OrderedDict):
 
         channels = sorted(list(meta_data.channels))
         self._region_names = REGION_INFO.names['primary'] + REGION_INFO.names['secondary']
-
+        
+        self._channel_info = []
+        self._region_infos = []
         region_names2 = []
         for prefix in ['primary', 'secondary', 'tertiary']:
             for name in REGION_INFO.names[prefix]:
+                self._channel_info.append((prefix, settings.get('ObjectDetection', '%s_channelid' % prefix)))
+                self._region_infos.append((prefix, self._convert_region_name(prefix, name), name))
                 region_names2.append((prefix.capitalize(), name))
 
         self._feature_to_idx = OrderedDict()
 
         self._regions_to_idx = dict([(n,i) for i, n in enumerate(self._region_names)])
+        self._channels_to_idx = OrderedDict([(n[0], i) for i, n in enumerate(self._channel_info)])
         self._regions_to_idx2 = OrderedDict([(n,i) for i, n in enumerate(region_names2)])
-
+        
         if self._hdf5_create:
             label_image_cpy = None
             label_image_str = None
@@ -383,7 +388,7 @@ class TimeHolder(OrderedDict):
 
         nr_channels = len(self._channel_info)
         global_channel_desc = self._grp_def[self.HDF5_GRP_IMAGE].create_dataset('channel', (nr_channels,), dtype)
-        for idx in self._channels_to_idx.values():
+        for idx in self._regions_to_idx.values():
             data = (self._channel_info[idx][0],
                     self._channel_info[idx][1],
                     True,
@@ -394,9 +399,10 @@ class TimeHolder(OrderedDict):
         dtype = numpy.dtype([('region_name', '|S50'), ('channel_idx', 'i')])
         nr_labels = len(self._regions_to_idx)
         global_region_desc = self._grp_def[self.HDF5_GRP_IMAGE].create_dataset(self.HDF5_GRP_REGION, (nr_labels,), dtype)
+        
         for tpl in self._region_infos:
-            channel_name, combined = tpl[:2]
-            idx = self._regions_to_idx[combined]
+            channel_name, combined, region_name = tpl
+            idx = self._regions_to_idx[region_name]
             channel_idx = self._channels_to_idx[channel_name]
             global_region_desc[idx] = (combined, channel_idx)
 

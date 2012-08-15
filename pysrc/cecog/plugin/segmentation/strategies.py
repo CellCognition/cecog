@@ -433,7 +433,7 @@ Non-overlapping expansion of the primary segmentation by a certain number of ste
         else:
             img_labels = container.img_labels
 
-        return ccore.ImageMaskContainer(image, img_labels, False, True)
+        return ccore.ImageMaskContainer(image, img_labels, False, True, True)
 
 
 class SegmentationPluginInside(_SegmentationPlugin):
@@ -459,7 +459,7 @@ class SegmentationPluginInside(_SegmentationPlugin):
         else:
             img_labels = container.img_labels
 
-        return ccore.ImageMaskContainer(image, img_labels, False, True)
+        return ccore.ImageMaskContainer(image, img_labels, False, True, True)
 
 
 class SegmentationPluginOutside(_SegmentationPlugin):
@@ -487,7 +487,7 @@ class SegmentationPluginOutside(_SegmentationPlugin):
                                                        self.params['expansion_size'],
                                                        self.params['separation_size'])
             img_labels = ccore.substractImages(img_labels, container.img_labels)
-            return ccore.ImageMaskContainer(image, img_labels, False, True)
+            return ccore.ImageMaskContainer(image, img_labels, False, True, True)
         else:
             raise ValueError("Parameters are not valid. Requirements: 'expansion_size' > 0 and "
                              "'expansion_size' > 'separation_size'")
@@ -530,7 +530,7 @@ class SegmentationPluginRim(_SegmentationPlugin):
             else:
                 img_labelsB = container.img_labels
             img_labels = ccore.substractImages(img_labelsB, img_labelsA)
-            return ccore.ImageMaskContainer(image, img_labels, False, True)
+            return ccore.ImageMaskContainer(image, img_labels, False, True, True)
         else:
             raise ValueError("Parameters are not valid. Requirements: 'expansion_size' > 0 and/or "
                              "'shrinking_size' > 0")
@@ -573,7 +573,7 @@ class SegmentationPluginModification(_SegmentationPlugin):
             else:
                 img_labelsB = container.img_labels
             img_labels = ccore.substractImages(img_labelsB, img_labelsA)
-            return ccore.ImageMaskContainer(image, img_labels, False, True)
+            return ccore.ImageMaskContainer(image, img_labels, False, True, True)
         else:
             raise ValueError("Parameters are not valid. Requirements: 'expansion_size' > 0 and/or "
                              "'shrinking_size' > 0")
@@ -604,7 +604,7 @@ class SegmentationPluginPropagate(_SegmentationPlugin):
                                                   container.img_labels,
                                                   self.params['lambda'],
                                                   self.params['delta_width'])
-        return ccore.ImageMaskContainer(image, img_labels, False, True)
+        return ccore.ImageMaskContainer(image, img_labels, False, True, True)
 
 
 class SegmentationPluginConstrainedWatershed(_SegmentationPlugin):
@@ -623,7 +623,7 @@ class SegmentationPluginConstrainedWatershed(_SegmentationPlugin):
         image = meta_image.image
         img_labels = self._constrained_watershed(image, container.img_labels,
                                                  filter_size=self.params['gauss_filter_size'])
-        return ccore.ImageMaskContainer(image, img_labels, False, True)
+        return ccore.ImageMaskContainer(image, img_labels, False, True, True)
 
     def _constrained_watershed(self, img_in, img_labels, filter_size=2):
 
@@ -681,5 +681,5 @@ class SegmentationPluginDifference(_SegmentationPlugin):
         #array = img_labels.toArray()
         #array = numpy.abs(array)
         #img_labels = ccore.numpy_to_image(array, copy=True)
-        return ccore.ImageMaskContainer(image, img_labels, False, True)
+        return ccore.ImageMaskContainer(image, img_labels, False, True, True)
 
