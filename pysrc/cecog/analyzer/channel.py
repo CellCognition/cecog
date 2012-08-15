@@ -294,21 +294,18 @@ class _Channel(PropertyManager):
                         numpy.asarray(dict_values(dctFeatures,
                                                   self.lstFeatureNames))
 
-                    oObjectHolder[iObjectId] = oImageObject
-
-
                     ul = oImageObject.oRoi.upperLeft
                     crack = [(pos[0] + ul[0], pos[1] + ul[1])
                              for pos in
                              container.getCrackCoordinates(iObjectId)
                              ]
-                    ImageObject.crack_contour = crack
-
+                    oImageObject.crack_contour = crack
 
                     # assign feature values in sorted order as NumPy array
                     oImageObject.aFeatures = \
                         numpy.asarray(dict_values(dctFeatures,
                                                   self.lstFeatureNames))
+                        
                     oObjectHolder[iObjectId] = oImageObject
 
             if not self.lstFeatureNames is None:
