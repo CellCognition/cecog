@@ -568,7 +568,6 @@ class TimeHolder(OrderedDict):
     def apply_segmentation(self, channel, *args):
         desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
                                          channel.strChannelId)
-        name = channel.NAME.lower()
         
         channel_name = channel.NAME.lower()
         
@@ -576,13 +575,12 @@ class TimeHolder(OrderedDict):
         if self._hdf5_create and self._hdf5_reuse:
             ### Try to load them
             frame_idx = self._frames_to_idx[self._iCurrentT]
-            for region_name in channel.lstAreaSelection:
+            for region_name in REGION_INFO.names[channel_name]:
                 if 'region' in self._grp_cur_position[self.HDF5_GRP_IMAGE]:
                     dset_label_image = self._grp_cur_position[self.HDF5_GRP_IMAGE]['region']
                     frame_valid = dset_label_image.attrs['valid'][frame_idx]
                     if frame_valid:
-                        combined_region_name = self._convert_region_name(channel_name, region_name)
-                        region_idx = self._regions_to_idx[combined_region_name]
+                        region_idx = self._regions_to_idx2[(channel.NAME, region_name)]
                         img_label = ccore.numpy_to_image(dset_label_image[region_idx, frame_idx, 0, :, :].astype('int16'), copy=True)
                         img_xy = channel.meta_image.image
                         container = ccore.ImageMaskContainer(img_xy, img_label, False, True, True)
@@ -622,9 +620,8 @@ class TimeHolder(OrderedDict):
                     var_labels.attrs['valid'] = numpy.zeros(t)
     
                 frame_idx = self._frames_to_idx[self._iCurrentT]
-                for region_name in channel.lstAreaSelection:
-                    idx = self._regions_to_idx[
-                            self._convert_region_name(channel.PREFIX, region_name)]
+                for region_name in REGION_INFO.names[channel_name]:
+                    idx = self._regions_to_idx2[(channel.NAME, region_name)]
                     container = channel.dctContainers[region_name]
                     array = container.img_labels.toArray(copy=False)
                     var_labels[idx, frame_idx, 0] = numpy.require(array, 'uint16')
