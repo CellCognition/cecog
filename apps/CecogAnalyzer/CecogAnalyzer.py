@@ -737,6 +737,7 @@ class AnalyzerMainWindow(QMainWindow):
             filename = QFileDialog.getOpenFileName(self, 'Open config file', dir, ';;'.join(self.NAME_FILTERS))
             if filename:
                 self._read_settings(filename)
+                information(self, "Config file version %s found" % self._settings.get('General', 'version'))
                 self._clear_browser()
                 self.set_modules_active(state=False)
 

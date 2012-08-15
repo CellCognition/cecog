@@ -30,7 +30,7 @@ import threading, \
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog import CHANNEL_PREFIX
+from cecog import CHANNEL_PREFIX, VERSION
 from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
 from cecog.gui.analyzer import (BaseProcessorFrame,
                                 AnalzyerThread,
@@ -147,6 +147,7 @@ class ProcessingFrame(BaseProcessorFrame):
     def get_export_settings(cls, settings, has_timelapse=True):
         settings = BaseProcessorFrame.get_special_settings(settings, has_timelapse)
 
+        settings.set('General', 'version', VERSION)
         settings.set('General', 'rendering', {})
         settings.set('General', 'rendering_class', {})
 

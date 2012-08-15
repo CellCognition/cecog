@@ -125,6 +125,7 @@ class SectionGeneral(_Section):
             IntTrait(1, 1, 100, label='Timepoint increment')),
 
         ('rendering', DictTrait({}, label='Rendering')),
+        ('version', StringTrait('1.3.0', 6, label='Version')),
         ('rendering_class', DictTrait({}, label='Rendering class')),
         ('primary_featureextraction_exportfeaturenames',
             ListTrait(['n2_avg', 'n2_stddev', 'roisize'], label='Primary channel')),
