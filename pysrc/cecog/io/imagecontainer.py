@@ -132,6 +132,8 @@ class MetaData(object):
     def set_image_info(self, info):
         self.dim_x = info.width
         self.dim_y = info.height
+        self.real_image_width = info.width
+        self.real_image_height = info.height
         self.pixel_type = info.pixel_type
 
     def get_timestamp_info(self, position):
@@ -257,6 +259,9 @@ class MetaData(object):
 #        lstStr += ["* Channel Mapping:\n" + oPrinter.pformat(lstChannels) + "\n"]
         strings += [line]
         return "\n".join(strings)
+    
+    def get_frames_of_position(self, pos):
+        return self._timestamps_absolute[pos].keys()
 
     def __str__(self):
         return self.format()

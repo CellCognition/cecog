@@ -89,7 +89,7 @@ class SectionOutput(_Section):
        [('hdf5_create_file',
             BooleanTrait(False, label='Create HDF5')),
         ('hdf5_reuse',
-            BooleanTrait(False, label='Reuse segmentation from HDF5')),
+            BooleanTrait(False, label='Reuse HDF5')),
         ('hdf5_include_raw_images',
             BooleanTrait(False, label='Include raw images')),
         ('hdf5_include_label_images',

@@ -106,155 +106,6 @@ class TimeHolder(OrderedDict):
         numpy.dtype([('obj_id', 'uint32'),
                      ('edge_idx1', 'uint32'),
                      ('edge_idx2', 'uint32'),])
-        
-#    def create_nc4(self):
-#        import netCDF4
-#        settings = self._settings
-#        if (self._create_nc and self._reuse_nc and self._dataset is None and
-#            os.path.isfile(self._nc4_filename)):
-#            dataset = netCDF4.Dataset(self._nc4_filename, 'a')
-#
-#            # decide which parts need to be reprocessed based on changes
-#            # between the saved (from nc4) and the current settings
-#
-#            # load settings from nc4 file
-#            #var = str(dataset.variables['settings'][:][0])
-#            #settings2 = settings.copy()
-#            #settings2.from_string(var)
-#
-#            # compare current and saved settings and decide which data is to
-#            # process again by setting the *_finished variables to zero
-#
-##            valid = {'primary'   : [True, True],
-##                     'secondary' : [True, True],
-##                     }
-##            for name in ['primary', 'secondary']:
-##                channel_id = settings2.get(SECTION_NAME_OBJECTDETECTION,
-##                                           '%s_channelid' % name)
-##                idx = dataset.variables['channels_idx'][:] == channel_id
-##                if (not settings.compare(settings2, SECTION_NAME_OBJECTDETECTION,
-##                                         '%s_image' % name) or
-##                    not settings.compare(settings2, SECTION_NAME_OBJECTDETECTION,
-##                                         'secondary_registration') or
-##                    not valid[name][0]):
-##                    dataset.variables['raw_images_finished'][:,idx] = 0
-##                    valid['primary'] = [False, False]
-##                    valid['secondary'] = [False, False]
-##                idx = dataset.variables['region_channels'][:] == name
-##                if (not settings.compare(settings2, SECTION_NAME_OBJECTDETECTION,
-##                                        '%s_segmentation' % name) or
-##                    not valid[name][1]):
-##                    dataset.variables['label_images_finished'][:,idx] = 0
-##                    valid['primary'] = [False, False]
-##                    valid['secondary'] = [False, False]
-#
-#        elif self._create_nc and self._dataset is None:
-#            meta = self._meta_data
-#            dim_t = meta.dim_t
-#            dim_c = meta.dim_c
-#            w = meta.real_image_width
-#            h = meta.real_image_height
-#
-#            channels = sorted(list(meta.channels))
-#            region_names = REGION_NAMES_PRIMARY + REGION_NAMES_SECONDARY
-#            region_channels = ['primary']*len(REGION_NAMES_PRIMARY) + \
-#                              ['secondary']*len(REGION_NAMES_SECONDARY)
-#
-#            dataset = netCDF4.Dataset(self._nc4_filename, 'w', format='NETCDF4')
-#            dataset.createDimension('frames', dim_t)
-#            dataset.createDimension('channels', dim_c)
-#            dataset.createDimension('height', h)
-#            dataset.createDimension('width', w)
-#            dataset.createDimension('regions', len(region_names))
-#            dataset.createDimension('one', 1)
-#
-#            frames = sorted(list(meta.times))
-#            var = dataset.createVariable('frames_idx', 'u4', 'frames')
-#            var.description = 'Mapping from indices to frames.'
-#            var[:] = frames
-#
-#            var = dataset.createVariable('settings', str, 'one')
-#            var.description = 'Cecog settings used for the generation of this '\
-#                              'netCDF file. Current cecog and this settings '\
-#                              'are compared hierarchically leading to a '\
-#                              'stepwise invalidation of preprocessed values.'
-#
-#            raw_g = dataset.createGroup(self.NC_GROUP_RAW)
-#            raw_g.description = 'Converted raw images as processed by cecog '\
-#                                'after 8bit conversion, registration, and '\
-#                                'z-projection/selection.'
-#            label_g = dataset.createGroup(self.NC_GROUP_LABEL)
-#            label_g.description = 'Label images as a result of object '\
-#                                  'detection.'
-#
-#            object_g = dataset.createGroup('object')
-#            object_g.description = 'General object values and mapping'
-#            feature_g = dataset.createGroup(self.NC_GROUP_FEATURE)
-#            feature_g.description = 'Feature values'
-#
-#            for channel_id in meta.channels:
-#                var = raw_g.createVariable(channel_id, 'u1',
-#                                           ('frames', 'height', 'width'),
-#                                           zlib=self.NC_ZLIB,
-#                                           shuffle=self.NC_SHUFFLE,
-#                                           chunksizes=(1, h, w))
-#                # FIXME: not working for dim_t == 1 (no timelapse data)
-#                var.valid = [0] * dim_t
-#                #print channel_id, dim_t, var.valid
-#
-#            for channel_name in REGION_NAMES.keys():
-#                channel_g = label_g.createGroup(channel_name)
-#                grp1 = object_g.createGroup(channel_name)
-#                grp2 = feature_g.createGroup(channel_name)
-#                for region_name in REGION_NAMES[channel_name]:
-#                    var = channel_g.createVariable(region_name, 'i2',
-#                                                   ('frames', 'height',
-#                                                    'width'),
-#                                                   zlib=self.NC_ZLIB,
-#                                                   shuffle=self.NC_SHUFFLE,
-#                                                   chunksizes=(1, h, w))
-#                    var.valid = [0] * dim_t
-#                    grp1.createGroup(region_name)
-#                    grp2.createGroup(region_name)
-#
-#            var = dataset.createVariable('channels_idx', str, 'channels')
-#            var[:] = numpy.asarray(channels, 'O')
-#
-#            var = dataset.createVariable('region_names', str, 'regions')
-#            var[:] = numpy.asarray(region_names, 'O')
-#
-#            var = dataset.createVariable('region_channels', str, 'regions')
-#            var[:] = numpy.asarray(region_channels, 'O')
-#
-#            dataset.createVariable('raw_images', 'u1',
-#                                   ('frames', 'channels', 'height', 'width'),
-#                                   zlib='True',
-#                                   shuffle=False,
-#                                   chunksizes=(1, 1, h, w)
-#                                   )
-#            finished = dataset.createVariable('raw_images_finished', 'i1',
-#                                              ('frames', 'channels'))
-#            finished[:] = 0
-#
-#            dataset.createVariable('label_images', 'i2',
-#                                   ('frames', 'regions', 'height', 'width'),
-#                                   zlib='True',
-#                                   shuffle=False,
-#                                   chunksizes=(1, 1, h, w)
-#                                   )
-#            finished = dataset.createVariable('label_images_finished', 'i1',
-#                                              ('frames', 'regions'))
-#
-#            finished[:] = 0
-#        else:
-#            dataset = None
-#
-#        if not dataset is None:
-#            # update the settings to the current version
-#            var = dataset.variables['settings']
-#            var[:] = numpy.asarray(settings.to_string(), 'O')
-#            self._dataset = dataset
-
 
     def __init__(self, P, channels, filename_hdf5, meta_data, settings,
                  analysis_frames, plate_id,
@@ -290,8 +141,9 @@ class TimeHolder(OrderedDict):
         self._logger = logging.getLogger(self.__class__.__name__)
         # frames get an index representation with the NC file, starting at 0
         frames = sorted(analysis_frames)
-        self._frames_to_idx = dict([(f,i) for i, f in enumerate(frames)])
-        self._idx_to_frames = dict([(i,f) for i, f in enumerate(frames)])
+        all_frames = meta_data.get_frames_of_position(self.P)
+        self._frames_to_idx = dict([(f, i) for i, f in enumerate(all_frames)])
+        self._idx_to_frames = dict([(i ,f) for i, f in enumerate(all_frames)])
         self._object_coord_to_id = {}
         self._object_coord_to_idx = {}
 
@@ -321,7 +173,15 @@ class TimeHolder(OrderedDict):
         self._classifier_to_idx = {}
 
         self._feature_to_idx = OrderedDict()
-
+        
+        self._hdf5_found = False
+        if os.path.exists(self.hdf5_filename):
+            if self._hdf5_check_file():
+                self._hdf5_found = True
+                if self._hdf5_prepare_reuse() > 0:
+                    # Error
+                    self._hdf5_found = False
+        
         if self._hdf5_create:
             label_image_cpy = None
             label_image_str = None
@@ -331,7 +191,7 @@ class TimeHolder(OrderedDict):
             raw_image_str = None
             raw_image_valid = None
             
-            if os.path.exists(self.hdf5_filename):
+            if self._hdf5_found:
                 # hdf5 file already there?  
                 if self._hdf5_reuse:               
                     try:
@@ -384,6 +244,65 @@ class TimeHolder(OrderedDict):
                                                                  (raw_image_str, raw_image_cpy, raw_image_valid))
             self._hdf5_write_global_definition()
             
+    def _hdf5_prepare_reuse(self):
+        f = h5py.File(self.hdf5_filename, 'r')
+        try:
+            self._hdf5_file = f
+            meta_data = self._meta_data
+    
+            # Check for being wellbased or old style (B01_03 vs. 0037)
+            if meta_data.has_well_info:
+                well, subwell = meta_data.get_well_and_subwell(self.P)
+                position = str(subwell)
+            else:
+                well = "0"
+                position = self.P
+            
+    
+            self._grp_cur_position = f['/sample/0/plate/%s/experiment/%s/position/%s' % (self.plate_id, 
+                                                                                          well, 
+                                                                                          position)]
+            self._grp_def = f[self.HDF5_GRP_DEFINITION]
+            return 0
+        except:
+            f.close()
+            return 1
+
+            
+    def _hdf5_check_file(self):
+        try:
+            f = h5py.File(self.hdf5_filename, 'r')
+        except:
+            return False
+        
+        try:        
+            meta_data = self._meta_data
+            # Check for being wellbased or old style (B01_03 vs. 0037)
+            if meta_data.has_well_info:
+                well, subwell = meta_data.get_well_and_subwell(self.P)
+                position = str(subwell)
+            else:
+                well = "0"
+                position = self.P
+            
+            label_image_str = '/sample/0/plate/%s/experiment/%s/position/%s/%s/region' % (self.plate_id, 
+                                                                                      well, 
+                                                                                      position, 
+                                                                                      self.HDF5_GRP_IMAGE)
+            
+            raw_image_str = '/sample/0/plate/%s/experiment/%s/position/%s/%s/channel' % (self.plate_id, 
+                                                                                      well, 
+                                                                                      position, 
+                                                                                      self.HDF5_GRP_IMAGE)
+            if label_image_str in f and raw_image_str in f:
+                return True
+            else:
+                return False
+        except:
+            return False
+        finally:
+            f.close()
+            
     def _hdf5_write_global_definition(self):
         """
         """
@@ -425,12 +344,13 @@ class TimeHolder(OrderedDict):
             dtype = numpy.dtype([('frame', 'i'), ('timestamp_abs', 'i'),
                                  ('timestamp_rel', 'i')])
             frames = sorted(self._analysis_frames)
-            nr_frames = len(frames)
+            all_frames = sorted(self._meta_data.get_frames_of_position(self.P))
+            nr_frames = len(all_frames)
             var = self._grp_cur_position[self.HDF5_GRP_IMAGE].create_dataset(self.HDF5_GRP_TIME,
                                         (nr_frames,), dtype,
                                         chunks=(nr_frames,),
                                         compression=self._hdf5_compression)
-            for frame in frames:
+            for frame in all_frames:
                 idx = self._frames_to_idx[frame]
                 coord = Coordinate(position=self.P, time=frame)
                 ts_abs = self._meta_data.get_timestamp_absolute(coord)
@@ -475,6 +395,7 @@ class TimeHolder(OrderedDict):
         label_image_str, label_image_cpy, label_image_valid = label_info
         raw_image_str, raw_image_cpy, raw_image_valid = raw_info
         
+        print filename
         f = h5py.File(filename, 'w')
         self._hdf5_file = f
 
@@ -581,7 +502,7 @@ class TimeHolder(OrderedDict):
         channel_name = channel.NAME.lower()
         
         label_images_valid = False    
-        if self._hdf5_create and self._hdf5_reuse:
+        if self._hdf5_found and self._hdf5_reuse:
             ### Try to load them
             frame_idx = self._frames_to_idx[self._iCurrentT]
             for region_name in channel.lstAreaSelection:
@@ -650,14 +571,14 @@ class TimeHolder(OrderedDict):
         desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
                                          channel.strChannelId)
         frame_valid = False
-        if self._hdf5_create and self._hdf5_reuse:
+        if self._hdf5_found and self._hdf5_reuse:
             if 'channel' in self._grp_cur_position[self.HDF5_GRP_IMAGE]:
                 frame_idx = self._frames_to_idx[self._iCurrentT]
                 dset_raw_image = self._grp_cur_position[self.HDF5_GRP_IMAGE]['channel']
                 frame_valid = dset_raw_image.attrs['valid'][frame_idx]
             
                     
-        if self._hdf5_reuse and frame_valid:
+        if self._hdf5_found and frame_valid:
             coordinate = Coordinate(position=self.P, time=self._iCurrentT,
                                     channel=channel.strChannelId, zslice=1)
             meta_image = MetaImage(image_container=None, coordinate=coordinate)
@@ -671,12 +592,13 @@ class TimeHolder(OrderedDict):
         else:
             channel.apply_zselection()
             channel.normalize_image()
-            channel.apply_registration()
+#            channel.apply_registration() TODO
 
             if self._hdf5_create and self._hdf5_include_raw_images:
                 meta = self._meta_data
                 w = meta.real_image_width
                 h = meta.real_image_height
+                
                 z = meta.dim_z
                 t = len(self._frames_to_idx)
                 nr_channels = len(self._channel_info)

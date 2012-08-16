@@ -770,12 +770,18 @@ class PositionAnalyzer(object):
                     for j in range(i, len(xs)):
                         diff_x.append(abs(xs[i]-xs[j]))
                         diff_y.append(abs(ys[i]-ys[j]))
+                        
                 # new image size after registration of all images
-                new_image_size = (meta_image.width - max(diff_x),
-                                  meta_image.height - max(diff_y))
 
-                self._meta_data.real_image_width = new_image_size[0]
-                self._meta_data.real_image_height = new_image_size[1]
+
+#                new_image_size = (meta_image.width - max(diff_x),
+#                                  meta_image.height - max(diff_y))
+#
+#                self._meta_data.real_image_width = new_image_size[0]
+#                self._meta_data.real_image_height = new_image_size[1]
+                
+                new_image_size = (self._meta_data.real_image_width,
+                                  self._meta_data.real_image_height)
 
                 # relative start point of registered image
                 registration_start = (max(xs), max(ys))
