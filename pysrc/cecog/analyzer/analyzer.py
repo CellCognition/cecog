@@ -592,7 +592,7 @@ class TimeHolder(OrderedDict):
         else:
             channel.apply_zselection()
             channel.normalize_image()
-#            channel.apply_registration() TODO
+            channel.apply_registration() 
 
             if self._hdf5_create and self._hdf5_include_raw_images:
                 meta = self._meta_data
