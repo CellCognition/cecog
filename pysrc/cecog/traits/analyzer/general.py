@@ -27,6 +27,7 @@ __all__ = []
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
+from cecog import VERSION
 from cecog.traits.settings import _Section
 from cecog.gui.guitraits import (StringTrait,
                                  IntTrait,
@@ -125,7 +126,7 @@ class SectionGeneral(_Section):
             IntTrait(1, 1, 100, label='Timepoint increment')),
 
         ('rendering', DictTrait({}, label='Rendering')),
-        ('version', StringTrait('1.3.0', 6, label='Version')),
+        ('version', StringTrait('', 6, label='Cecog %s, file version:' % VERSION, widget_info=StringTrait.STRING_GRAYED)),
         ('rendering_class', DictTrait({}, label='Rendering class')),
         ('primary_featureextraction_exportfeaturenames',
             ListTrait(['n2_avg', 'n2_stddev', 'roisize'], label='Primary channel')),

@@ -93,6 +93,8 @@ class StringTrait(Trait):
     STRING_NORMAL = 0
     STRING_PATH = 1
     STRING_FILE = 2
+    STRING_GRAYED = 3
+    
 
     def __init__(self, default_value, max_length, mask=None):
         super(StringTrait, self).__init__(default_value)

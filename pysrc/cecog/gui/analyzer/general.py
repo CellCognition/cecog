@@ -30,6 +30,7 @@ from PyQt4.Qt import *
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
+from cecog import VERSION
 from cecog.gui.analyzer import BaseFrame
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 
@@ -53,6 +54,7 @@ class GeneralFrame(BaseFrame):
     def __init__(self, settings, parent):
         super(GeneralFrame, self).__init__(settings, parent)
 
+        self.add_group('version', [])
         self.add_input('pathin')
         self.add_input('has_multiple_plates')
         self.add_input('pathout')

@@ -43,7 +43,7 @@ from cecog.gui.guitraits import (StringTrait,
                                  DictTrait,
                                  ListTrait
                                  )
-from cecog.traits.config import convert_package_path
+from cecog.traits.settings import convert_package_path
 from cecog.gui.util import show_html
 
 #-------------------------------------------------------------------------------
@@ -89,6 +89,12 @@ class TraitDisplayMixin(object):
         dummy.setSizePolicy(QSizePolicy(QSizePolicy.Fixed,
                                         QSizePolicy.Expanding))
         frame.layout().addWidget(dummy, frame._input_cnt, 0)
+        frame._input_cnt += 1
+        
+    def add_text(self, text_str):
+        frame = self._get_frame(name=self._tab_name)
+        text = QLabel(text_str)
+        frame.layout().addWidget(text, frame._input_cnt, 0, Qt.AlignRight|Qt.AlignTop)
         frame._input_cnt += 1
 
     def add_line(self):
@@ -231,12 +237,16 @@ class TraitDisplayMixin(object):
             self.connect(w_input, SIGNAL('textEdited(QString)'),
                          handler(trait_name))
 
-            if trait.widget_info != StringTrait.STRING_NORMAL:
+            if trait.widget_info != StringTrait.STRING_NORMAL and trait.widget_info != StringTrait.STRING_GRAYED:
                 w_button = QPushButton("Browse", parent)
                 handler2 = lambda name, mode: lambda: \
                     self._on_browse_name(name, mode)
                 self.connect(w_button, SIGNAL('clicked()'),
                              handler2(trait_name, trait.widget_info))
+            
+            if trait.widget_info == StringTrait.STRING_GRAYED:
+                w_input.setReadOnly(True)
+                w_input.setEnabled(False)
 
         elif isinstance(trait, IntTrait):
             w_input = QSpinBox(parent)

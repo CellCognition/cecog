@@ -80,7 +80,7 @@ from cecog.gui.browser import Browser
 from cecog.gui.log import (GuiLogHandler,
                            LogWindow,
                            )
-from cecog.traits.config import (convert_package_path,
+from cecog.traits.settings import (convert_package_path,
                              set_package_path,
                              get_package_path,
                              )

@@ -46,7 +46,7 @@ from cecog.analyzer.channel import (PrimaryChannel,
                                     )
 from cecog.learning.learning import CommonClassPredictor
 from cecog.util.util import hexToRgb
-from cecog.traits.config import convert_package_path
+from cecog.traits.settings import convert_package_path
                              
                              
 from cecog.plugin.segmentation import REGION_INFO
