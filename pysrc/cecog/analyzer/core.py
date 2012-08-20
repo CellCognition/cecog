@@ -266,6 +266,7 @@ class PositionAnalyzer(object):
         return int(round(result))
 
     def __call__(self):
+        self._oLogger.info('')
         # turn libtiff warnings off
         ccore.turn_off()
 
@@ -305,6 +306,7 @@ class PositionAnalyzer(object):
         if self.oSettings.get2('hdf5_compression'):
             hdf5_compression = 'gzip'
 
+        self._oLogger.info('Init TimeHolder object')
         oTimeHolder = TimeHolder(self.P,
                                  channel_names, filename_hdf5,
                                  self._meta_data, self.oSettings,
@@ -1324,6 +1326,7 @@ class AnalyzerCore(object):
                        }
         post_hdf5_link_list = []
         for idx, (tplArgs, dctOptions) in enumerate(lstJobInputs):
+            logging.getLogger(str(os.getpid())).info('analyze: %d' % idx)
             if not qthread is None:
                 if qthread.get_abort():
                     break
@@ -1333,7 +1336,9 @@ class AnalyzerCore(object):
                                    })
                 qthread.set_stage_info(stage_info)
             try:
+                logging.getLogger(str(os.getpid())).info('init PositionAnalyzer')
                 analyzer = PositionAnalyzer(*tplArgs, **dctOptions)
+                logging.getLogger(str(os.getpid())).info('and go: analyze()')
                 result_dct = analyzer()
             except Exception, e:
                 if hasattr(analyzer, 'oTimeHolder'):
