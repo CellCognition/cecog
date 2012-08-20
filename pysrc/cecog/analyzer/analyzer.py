@@ -61,6 +61,14 @@ from cecog.analyzer.channel import PrimaryChannel
 # functions:
 #
 
+def chunk_size(shape):
+    c = shape[0]
+    t = 1
+    z = 1
+    y = shape[3] / 4
+    x = shape[4] / 4
+    return (c,t,z,y,x)
+
 #-------------------------------------------------------------------------------
 # classes:
 #
@@ -191,54 +199,32 @@ class TimeHolder(OrderedDict):
             raw_image_str = None
             raw_image_valid = None
             
-            if self._hdf5_found:
-                # hdf5 file already there?  
-                if self._hdf5_reuse:               
-                    try:
-                        f = h5py.File(self.hdf5_filename, 'r')
+            if self._hdf5_found and self._hdf5_reuse:   
+                # file already there AND opened            
+                try:
+                    self._grp_cur_position[self.HDF5_GRP_IMAGE]
+                    # check if label images are there and if reuse is enabled
+                    if 'region' in self._grp_cur_position[self.HDF5_GRP_IMAGE]:
+                        label_image_cpy = self._grp_cur_position[self.HDF5_GRP_IMAGE]['region'].value
+                        label_image_valid = self._grp_cur_position[self.HDF5_GRP_IMAGE]['region'].attrs['valid']
                     
-                        meta_data = self._meta_data
-                        # Check for being wellbased or old style (B01_03 vs. 0037)
-                        if meta_data.has_well_info:
-                            well, subwell = meta_data.get_well_and_subwell(self.P)
-                            position = str(subwell)
-                        else:
-                            well = "0"
-                            position = self.P
-                        
-                        label_image_str = '/sample/0/plate/%s/experiment/%s/position/%s/%s/region' % (self.plate_id, 
-                                                                                                  well, 
-                                                                                                  position, 
-                                                                                                  self.HDF5_GRP_IMAGE)
-                        
-                        raw_image_str = '/sample/0/plate/%s/experiment/%s/position/%s/%s/channel' % (self.plate_id, 
-                                                                                                  well, 
-                                                                                                  position, 
-                                                                                                  self.HDF5_GRP_IMAGE)
-                        
-                        
-                        # check if label images are there and if reuse is enabled
-                        if label_image_str in f:
-                            label_image_cpy = f[label_image_str].value
-                            label_image_valid = f[label_image_str].attrs['valid']
-                        
-                        if raw_image_str in f:
-                            raw_image_cpy = f[raw_image_str].value
-                            raw_image_valid = f[raw_image_str].attrs['valid']
-                    except:
-                        print 'Loading of Hdf5 failed... '
-                        self._logger.info('Loading of Hdf5 failed... ')
-                        self._hdf5_reuse = False
-                        label_image_cpy = None
-                        label_image_str = None
-                        label_image_valid = None
-                        
-                        raw_image_cpy = None
-                        raw_image_str = None
-                        raw_image_valid = None
-                    finally:
-                        if isinstance(f, h5py._hl.files.File):
-                            f.close()
+                    if 'channel' in self._grp_cur_position[self.HDF5_GRP_IMAGE]:
+                        label_image_cpy = self._grp_cur_position[self.HDF5_GRP_IMAGE]['channel'].value
+                        label_image_valid = self._grp_cur_position[self.HDF5_GRP_IMAGE]['channel'].attrs['valid']
+                except:
+                    print 'Loading of Hdf5 failed... '
+                    self._logger.info('Loading of Hdf5 failed... ')
+                    self._hdf5_reuse = False
+                    label_image_cpy = None
+                    label_image_str = None
+                    label_image_valid = None
+                    
+                    raw_image_cpy = None
+                    raw_image_str = None
+                    raw_image_valid = None
+                finally:
+                    if isinstance(self._hdf5_file, h5py._hl.files.File):
+                        self._hdf5_file.close()
                 
             self._hdf5_create_file_structure(self.hdf5_filename, (label_image_str, label_image_cpy, label_image_valid), 
                                                                  (raw_image_str, raw_image_cpy, raw_image_valid))
@@ -246,8 +232,8 @@ class TimeHolder(OrderedDict):
             
     def _hdf5_prepare_reuse(self):
         f = h5py.File(self.hdf5_filename, 'r')
+        self._hdf5_file = f
         try:
-            self._hdf5_file = f
             meta_data = self._meta_data
     
             # Check for being wellbased or old style (B01_03 vs. 0037)
@@ -430,10 +416,11 @@ class TimeHolder(OrderedDict):
         self._grp_def.create_group(self.HDF5_GRP_FEATURE)
         self._grp_def.create_group(self.HDF5_GRP_OBJECT)
         
-        if label_image_cpy is not None:
+        if label_image_cpy is not None:           
             self._hdf5_file.create_dataset(label_image_str,
                                            label_image_cpy.shape,
                                            'uint16',
+                                           chunks=chunk_size(label_image_cpy.shape),
                                            data=label_image_cpy,
                                            compression=self._hdf5_compression)
              
@@ -443,6 +430,7 @@ class TimeHolder(OrderedDict):
             self._hdf5_file.create_dataset(raw_image_str,
                                            raw_image_cpy.shape,
                                            'uint8',
+                                           chunks=chunk_size(raw_image_cpy.shape),
                                            data=raw_image_cpy,
                                            compression=self._hdf5_compression)
             self._hdf5_file[raw_image_str].attrs['valid'] = raw_image_valid
@@ -546,7 +534,7 @@ class TimeHolder(OrderedDict):
                         grp.create_dataset(var_name,
                                            (nr_labels, t, z, h, w),
                                            'uint16',
-                                           #chunks=(1, 5, 1, h/5, w/5),
+                                           chunks=chunk_size((nr_labels, t, z, h, w)),
                                            compression=self._hdf5_compression)
                     var_labels.attrs['valid'] = numpy.zeros(t)
     
@@ -592,7 +580,7 @@ class TimeHolder(OrderedDict):
         else:
             channel.apply_zselection()
             channel.normalize_image()
-            channel.apply_registration() 
+            channel.apply_registration()        
 
             if self._hdf5_create and self._hdf5_include_raw_images:
                 meta = self._meta_data
@@ -611,7 +599,7 @@ class TimeHolder(OrderedDict):
                         grp.create_dataset(var_name,
                                            (nr_channels, t, z, h, w),
                                            'uint8',
-                                           chunks=None,
+                                           chunks=chunk_size((nr_channels, t, z, h, w)),
                                            compression=self._hdf5_compression)
                     var_images.attrs['valid'] = numpy.zeros(t)
         
