@@ -1134,23 +1134,28 @@ class AnalyzerCore(object):
         y0 = self.oSettings.get('General', 'crop_image_y0')
         x1 = self.oSettings.get('General', 'crop_image_x1')
         y1 = self.oSettings.get('General', 'crop_image_y1')
-        print ci, x0, y0,x1,y1
         if ci:
             MetaImage.enable_cropping(x0, y0, x1-x0, y1-y0)
+            self._oLogger.info("cropping enabled with %d %d %d %d" % (x0, y0, x1-x0, y1-y0))
         else:
             MetaImage.disable_cropping()
+            self._oLogger.info("cropping disabled")
             
-        print MetaImage._crop_coordinates
 
         self._imagecontainer = imagecontainer
         self.lstAnalysisFrames = []
+        self._oLogger.info("openening image container: start")
         self._openImageContainer()
-
+        self._oLogger.info("openening image container: end")
+        self._oLogger.info("lstAnalysisFrames: %r" % self.lstAnalysisFrames)
+        
+        
         self.lstSampleReader = []
         self.dctSamplePositions = {}
         self.oObjectLearner = learner
 
         self.oSettings.set_section('Classification')
+        self._oLogger.info("collectSamples? %r" % self.oSettings.get2('collectSamples'))
         if self.oSettings.get2('collectSamples'):
 
             self.oSettings.bUsePyFarm = False
@@ -1286,15 +1291,16 @@ class AnalyzerCore(object):
 
 
     def processPositions(self, qthread=None, myhack=None):
-        # loop over positions
+        logging.getLogger(str(os.getpid())).info('loop over positions...')
         lstJobInputs = []
         for oP in self.lstPositions:
-
+            logging.getLogger(str(os.getpid())).info('Positions: %r' % oP)
             if oP in self.dctSamplePositions:
                 analyze = len(self.dctSamplePositions[oP]) > 0
             else:
                 analyze = len(self.lstAnalysisFrames) > 0
-
+            
+            logging.getLogger(str(os.getpid())).info('analyze? %r' % analyze)
             if analyze:
                 tplArgs = (self.plate_id,
                            oP,
