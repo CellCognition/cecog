@@ -258,26 +258,69 @@ class ConfigSettings(RawConfigParser):
                 print 'Converted', option_name, 'into', new_option_name, '=', value
                 
         if section_name == 'ObjectDetection':
-            if option_name == 'secondary_regions_expanded':
-                if self.has_option(section_name, option_name):
-                    if self.get(section_name, option_name):
-                        value = self.get(section_name, 'secondary_regions_expanded_expansionsize')
-                        RawConfigParser.set(self, section_name, 'plugin__secondary_segmentation__expanded__expanded__expansion_size' , value)
-                        RawConfigParser.set(self, section_name, 'plugin__secondary_segmentation__expanded__expanded__require00' , 'primary')
-            if option_name == 'secondary_regions_outside':
-                if self.has_option(section_name, option_name):
-                    if self.get(section_name, option_name):
-                        value = self.get(section_name, 'secondary_regions_outside_expansionsize')
-                        RawConfigParser.set(self, section_name, 'plugin__secondary_segmentation__outside__outside__expansion_size' , value)
-                        value = self.get(section_name, 'secondary_regions_outside_separationsize')
-                        RawConfigParser.set(self, section_name, 'plugin__secondary_segmentation__outside__outside__separation_size' , value)
-                        RawConfigParser.set(self, section_name, 'plugin__secondary_segmentation__outside__outside__require00' , 'primary')
+            for prefix in ['secondary', 'tertiary']:
+                if option_name == '%s_regions_expanded' % prefix:
+                    if self.has_option(section_name, option_name):
+                        if self.get(section_name, option_name):
+                            print 'Converted', option_name
+                            value = self.get(section_name, '%s_regions_expanded_expansionsize' % prefix)
+                            RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__expanded__expanded__expansion_size' % prefix , value)
+                            RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__expanded__expanded__require00' % prefix , 'primary')
+                            
+                elif option_name == '%s_regions_inside' % prefix:
+                    if self.has_option(section_name, option_name):
+                        if self.get(section_name, option_name):
+                            print 'Converted', option_name
+                            value = self.get(section_name, '%s_regions_inside_shrinkingsize' % prefix)
+                            RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__inside__inside__shrinking_size' % prefix , value)
+                            RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__inside__inside__require00' % prefix , 'primary')
+                            
+                elif option_name == '%s_regions_outside' % prefix:
+                    if self.has_option(section_name, option_name):
+                        if self.get(section_name, option_name):
+                            print 'Converted', option_name, '%s_regions_outside_expansionsize' % prefix
+                            value = self.get(section_name, '%s_regions_outside_expansionsize' % prefix)
+                            RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__outside__outside__expansion_size' % prefix , value)
+                            value = self.get(section_name, '%s_regions_outside_separationsize' % prefix)
+                            RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__outside__outside__separation_size' % prefix , value)
+                            RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__outside__outside__require00' % prefix , 'primary')
+                            
+                elif option_name == '%s_regions_rim' % prefix:
+                    if self.has_option(section_name, option_name):
+                        if self.get(section_name, option_name):
+                            print 'Converted', option_name
+                            value = self.get(section_name, '%s_regions_rim_expansionsize' % prefix)
+                            RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__rim__rim__expansion_size' % prefix , value)
+                            value = self.get(section_name, '%s_regions_rim_shrinkingsize' % prefix)
+                            RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__rim__rim__shrinking_size' % prefix , value)
+                            RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__rim__rim__require00' % prefix , 'primary')
                         
-                        
-
-                        
-
-
+                elif option_name == '%s_regions_constrained_watershed' % prefix:
+                    if self.has_option(section_name, option_name):
+                        if self.get(section_name, option_name):
+                            print 'Converted', option_name
+                            value = self.get(section_name, '%s_regions_constrained_watershed_gauss_filter_size' % prefix)
+                            RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__constrained_watershed__constrained_watershed__gauss_filter_size' % prefix , value)
+                            RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__constrained_watershed__constrained_watershed__require00' % prefix , 'primary')
+                
+                elif option_name == '%s_regions_propagate' % prefix:
+                    if self.has_option(section_name, option_name):
+                        if self.get(section_name, option_name):
+                            print 'Converted', option_name
+                            value = self.get(section_name, '%s_regions_propagate_deltawidth' % prefix)
+                            RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__propagate__propagate__delta_width' % prefix , value)
+                            
+                            value = self.get(section_name, '%s_regions_propagate_lambda' % prefix)
+                            RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__propagate__propagate__lambda' % prefix , value)
+                            
+                            value = self.get(section_name, '%s_presegmentation_medianradius' % prefix)
+                            RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__propagate__propagate__presegmentation_median_radius' % prefix , value)
+                            
+                            value = self.get(section_name, '%s_presegmentation_alpha' % prefix)
+                            RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__propagate__propagate__presegmentation_alpha' % prefix , value)
+                            
+                            RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__constrained_watershed__constrained_watershed__require00' % prefix , 'primary')
+                            
 class SectionRegistry(object):
 
     def __init__(self):
