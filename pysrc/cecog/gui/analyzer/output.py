@@ -76,7 +76,6 @@ class OutputFrame(BaseFrame):
         self.add_group('hdf5_create_file',
                        [('hdf5_include_raw_images', (0,0,1,1)),
                         ('hdf5_include_label_images', (1,0,1,1)),
-                        ('hdf5_reuse', (2,0,1,1)),
                         ('hdf5_include_crack', (3,0,1,1)),
                         ('hdf5_include_features', (4,0,1,1)),
                         ('hdf5_include_classification', (5,0,1,1)),
@@ -86,4 +85,5 @@ class OutputFrame(BaseFrame):
                         ('hdf5_compression', (9,0,1,1)),
                         ('hdf5_merge_positions', (10,0,1,1)),
                         ])
+        self.add_group('hdf5_reuse', [])
         self.add_expanding_spacer()

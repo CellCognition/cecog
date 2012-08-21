@@ -261,6 +261,7 @@ class PositionAnalyzer(object):
         return int(round(result))
 
     def __call__(self):
+        self._oLogger.info('')
         # turn libtiff warnings off
         ccore.turn_off()
 
@@ -300,6 +301,7 @@ class PositionAnalyzer(object):
         if self.oSettings.get2('hdf5_compression'):
             hdf5_compression = 'gzip'
 
+        self._oLogger.info('Init TimeHolder object')
         oTimeHolder = TimeHolder(self.P,
                                  channel_names, filename_hdf5,
                                  self._meta_data, self.oSettings,
@@ -756,10 +758,13 @@ class PositionAnalyzer(object):
                     for j in range(i, len(xs)):
                         diff_x.append(abs(xs[i]-xs[j]))
                         diff_y.append(abs(ys[i]-ys[j]))
+                        
                 # new image size after registration of all images
-                new_image_size = (meta_image.image.width - max(diff_x),
-                                  meta_image.image.height - max(diff_y))
 
+
+                new_image_size = (self._meta_data.dim_x - max(diff_x),
+                                  self._meta_data.dim_y - max(diff_y))
+#
                 self._meta_data.real_image_width = new_image_size[0]
                 self._meta_data.real_image_height = new_image_size[1]
 
@@ -1015,23 +1020,28 @@ class AnalyzerCore(object):
         y0 = self.oSettings.get('General', 'crop_image_y0')
         x1 = self.oSettings.get('General', 'crop_image_x1')
         y1 = self.oSettings.get('General', 'crop_image_y1')
-        print ci, x0, y0,x1,y1
         if ci:
             MetaImage.enable_cropping(x0, y0, x1-x0, y1-y0)
+            self._oLogger.info("cropping enabled with %d %d %d %d" % (x0, y0, x1-x0, y1-y0))
         else:
             MetaImage.disable_cropping()
+            self._oLogger.info("cropping disabled")
             
-        print MetaImage._crop_coordinates
 
         self._imagecontainer = imagecontainer
         self.lstAnalysisFrames = []
+        self._oLogger.info("openening image container: start")
         self._openImageContainer()
-
+        self._oLogger.info("openening image container: end")
+        self._oLogger.info("lstAnalysisFrames: %r" % self.lstAnalysisFrames)
+        
+        
         self.lstSampleReader = []
         self.dctSamplePositions = {}
         self.oObjectLearner = learner
 
         self.oSettings.set_section('Classification')
+        self._oLogger.info("collectSamples? %r" % self.oSettings.get2('collectSamples'))
         if self.oSettings.get2('collectSamples'):
 
             self.oSettings.bUsePyFarm = False
@@ -1167,15 +1177,16 @@ class AnalyzerCore(object):
 
 
     def processPositions(self, qthread=None, myhack=None):
-        # loop over positions
+        logging.getLogger(str(os.getpid())).info('loop over positions...')
         lstJobInputs = []
         for oP in self.lstPositions:
-
+            logging.getLogger(str(os.getpid())).info('Positions: %r' % oP)
             if oP in self.dctSamplePositions:
                 analyze = len(self.dctSamplePositions[oP]) > 0
             else:
                 analyze = len(self.lstAnalysisFrames) > 0
-
+            
+            logging.getLogger(str(os.getpid())).info('analyze? %r' % analyze)
             if analyze:
                 tplArgs = (self.plate_id,
                            oP,
@@ -1199,6 +1210,7 @@ class AnalyzerCore(object):
                        }
         post_hdf5_link_list = []
         for idx, (tplArgs, dctOptions) in enumerate(lstJobInputs):
+            logging.getLogger(str(os.getpid())).info('analyze: %d' % idx)
             if not qthread is None:
                 if qthread.get_abort():
                     break
@@ -1208,7 +1220,9 @@ class AnalyzerCore(object):
                                    })
                 qthread.set_stage_info(stage_info)
             try:
+                logging.getLogger(str(os.getpid())).info('init PositionAnalyzer')
                 analyzer = PositionAnalyzer(*tplArgs, **dctOptions)
+                logging.getLogger(str(os.getpid())).info('and go: analyze()')
                 result_dct = analyzer()
             except Exception, e:
                 if hasattr(analyzer, 'oTimeHolder'):
