@@ -207,10 +207,12 @@ class TimeHolder(OrderedDict):
                     if 'region' in self._grp_cur_position[self.HDF5_GRP_IMAGE]:
                         label_image_cpy = self._grp_cur_position[self.HDF5_GRP_IMAGE]['region'].value
                         label_image_valid = self._grp_cur_position[self.HDF5_GRP_IMAGE]['region'].attrs['valid']
+                        label_image_str = self._grp_cur_position[self.HDF5_GRP_IMAGE].name + '/region'
                     
                     if 'channel' in self._grp_cur_position[self.HDF5_GRP_IMAGE]:
-                        label_image_cpy = self._grp_cur_position[self.HDF5_GRP_IMAGE]['channel'].value
-                        label_image_valid = self._grp_cur_position[self.HDF5_GRP_IMAGE]['channel'].attrs['valid']
+                        raw_image_cpy = self._grp_cur_position[self.HDF5_GRP_IMAGE]['channel'].value
+                        raw_image_valid = self._grp_cur_position[self.HDF5_GRP_IMAGE]['channel'].attrs['valid']
+                        raw_image_str = self._grp_cur_position[self.HDF5_GRP_IMAGE].name + '/region'
                 except:
                     print 'Loading of Hdf5 failed... '
                     self._logger.info('Loading of Hdf5 failed... ')
