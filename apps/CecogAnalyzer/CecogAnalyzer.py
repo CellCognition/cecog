@@ -441,6 +441,11 @@ class AnalyzerMainWindow(QMainWindow):
                                 "settings file again." % filename,
                          detail_tb=True)
             else:
+                # convert settings
+                if VERSION > self._settings.get('General', 'version'):
+                    print 'print new version'
+                    
+                
                 # set settings to not-changed (assume no changed since loaded from file)
                 self.settings_changed(False)
                 # notify tabs about new settings loaded

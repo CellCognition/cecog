@@ -36,7 +36,7 @@ from pdk.ordereddict import OrderedDict
 # cecog imports:
 #
 from cecog.traits.traits import StringTrait
-from cecog import PLUGIN_MANAGERS
+from cecog import PLUGIN_MANAGERS, VERSION
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -176,14 +176,16 @@ class ConfigSettings(RawConfigParser):
                         # convert values according to traits
                         value = self.get_value(section_name, option_name)
                         self.set(section_name, option_name, value)
-                    elif option_name.find('plugin') == 0:
-                        ### TODO convert old values to plugin-ins
+                        
+                    elif option_name.startswith('plugin'):
+                        # plugins are okay, because they do not obey the old trait concept
                         pass
-#                    else:
+                    else:
+                        self._update_option_to_version(section_name, option_name)
 #                        print("Warning: option '%s' in section '%s' is not "
 #                              "defined and will be deleted" %\
 #                              (option_name, section_name))
-#                        self.remove_option(section_name, option_name)
+#                        self.remove_option(section_name, option_name)  
             else:
                 print("Warning: section '%s' is not defined and will be "
                       "deleted" % section_name)
@@ -218,6 +220,62 @@ class ConfigSettings(RawConfigParser):
                 equal = False
                 break
         return equal
+    
+    def _update_option_to_version(self, section_name, option_name):
+        VERSION_130_TO_140 = {}
+        VERSION_130_TO_140['ObjectDetection'] = {
+            'primary_holefilling' : 'plugin__primary_segmentation__primary__primary__holefilling',
+            'primary_intensitywatershed' : 'plugin__primary_segmentation__primary__primary__intensitywatershed',
+            'primary_intensitywatershed_gausssize' : 'plugin__primary_segmentation__primary__primary__intensitywatershed_gausssize',
+            'primary_intensitywatershed_maximasize' : 'plugin__primary_segmentation__primary__primary__intensitywatershed_maximasize',
+            'primary_intensitywatershed_minmergesize' : 'plugin__primary_segmentation__primary__primary__intensitywatershed_minmergesize',
+            'primary_lat2' : 'plugin__primary_segmentation__primary__primary__lat2',
+            'primary_latlimit' : 'plugin__primary_segmentation__primary__primary__latlimit',
+            'primary_latlimit2' : 'plugin__primary_segmentation__primary__primary__latlimit2',
+            'primary_latwindowsize' : 'plugin__primary_segmentation__primary__primary__latwindowsize',
+            'primary_latwindowsize2' : 'plugin__primary_segmentation__primary__primary__latwindowsize2',
+            'primary_medianradius' : 'plugin__primary_segmentation__primary__primary__medianradius',
+            'primary_postprocessing' : 'plugin__primary_segmentation__primary__primary__postprocessing',
+            'primary_postprocessing_intensity_max' : 'plugin__primary_segmentation__primary__primary__postprocessing_intensity_max',
+            'primary_postprocessing_intensity_min' : 'plugin__primary_segmentation__primary__primary__postprocessing_intensity_min',
+            'primary_postprocessing_roisize_max' : 'plugin__primary_segmentation__primary__primary__postprocessing_roisize_max',
+            'primary_postprocessing_roisize_min' : 'plugin__primary_segmentation__primary__primary__postprocessing_roisize_min',
+            'primary_removeborderobjects' : 'plugin__primary_segmentation__primary__primary__removeborderobjects',
+            'primary_shapewatershed' : 'plugin__primary_segmentation__primary__primary__shapewatershed',
+            'primary_shapewatershed_gausssize' : 'plugin__primary_segmentation__primary__primary__shapewatershed_gausssize',
+            'primary_shapewatershed_maximasize' : 'plugin__primary_segmentation__primary__primary__shapewatershed_maximasize',
+            'primary_shapewatershed_minmergesize' : 'plugin__primary_segmentation__primary__primary__shapewatershed_minmergesize',
+        }
+        if not self.has_option('General', 'version'):
+            self.set('General', 'version', VERSION)
+        
+        if section_name in VERSION_130_TO_140:
+            if option_name in VERSION_130_TO_140[section_name]:
+                value = self.get(section_name, option_name)
+                new_option_name = VERSION_130_TO_140[section_name][option_name]
+                RawConfigParser.set(self, section_name, new_option_name, value)
+                self.remove_option(section_name, option_name)
+                print 'Converted', option_name, 'into', new_option_name, '=', value
+                
+        if section_name == 'ObjectDetection':
+            if option_name == 'secondary_regions_expanded':
+                if self.has_option(section_name, option_name):
+                    if self.get(section_name, option_name):
+                        value = self.get(section_name, 'secondary_regions_expanded_expansionsize')
+                        RawConfigParser.set(self, section_name, 'plugin__secondary_segmentation__expanded__expanded__expansion_size' , value)
+                        RawConfigParser.set(self, section_name, 'plugin__secondary_segmentation__expanded__expanded__require00' , 'primary')
+            if option_name == 'secondary_regions_outside':
+                if self.has_option(section_name, option_name):
+                    if self.get(section_name, option_name):
+                        value = self.get(section_name, 'secondary_regions_outside_expansionsize')
+                        RawConfigParser.set(self, section_name, 'plugin__secondary_segmentation__outside__outside__expansion_size' , value)
+                        value = self.get(section_name, 'secondary_regions_outside_separationsize')
+                        RawConfigParser.set(self, section_name, 'plugin__secondary_segmentation__outside__outside__separation_size' , value)
+                        RawConfigParser.set(self, section_name, 'plugin__secondary_segmentation__outside__outside__require00' , 'primary')
+                        
+                        
+
+                        
 
 
 class SectionRegistry(object):
