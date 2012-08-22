@@ -507,7 +507,11 @@ class TimeHolder(OrderedDict):
                     if frame_valid:
                         combined_region_name = self._convert_region_name(channel_name, region_name)
                         region_idx = self._regions_to_idx[combined_region_name]
-                        img_label = ccore.numpy_to_image(dset_label_image[region_idx, frame_idx, 0, :, :].astype('int16'), copy=True)
+                        image_data = dset_label_image[region_idx, frame_idx, 0, :, :].astype('int16')
+                        if not image_data.any():
+                            label_images_valid = False
+                            break   
+                        img_label = ccore.numpy_to_image(image_data, copy=True)
                         img_xy = channel.meta_image.image
                         container = ccore.ImageMaskContainer(img_xy, img_label, False, True, True)
                         channel.dctContainers[region_name] = container
@@ -571,6 +575,14 @@ class TimeHolder(OrderedDict):
                 frame_idx = self._frames_to_idx[self._iCurrentT]
                 dset_raw_image = self._grp_cur_position[self.HDF5_GRP_IMAGE]['channel']
                 frame_valid = dset_raw_image.attrs['valid'][frame_idx]
+                if frame_valid:
+                    # Double check if image_data contains data
+                    coordinate = Coordinate(position=self.P, time=self._iCurrentT,
+                                    channel=channel.strChannelId, zslice=1)
+                    meta_image = MetaImage(image_container=None, coordinate=coordinate)
+                    channel_idx = self._channels_to_idx[channel.PREFIX]
+                    
+                    frame_valid = dset_raw_image[channel_idx, frame_idx, 0, :, :].any()
             
                     
         if self._hdf5_found and frame_valid:
