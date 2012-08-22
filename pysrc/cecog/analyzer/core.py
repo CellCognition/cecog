@@ -673,8 +673,6 @@ class PositionAnalyzer(object):
             self._oLogger.info(" - %d image sets analyzed, %s / image set" %
                                (iNumberImages, oInterval.format(msec=True)))
 
-        oTimeHolder.close_all()
-
         # write an empty file to mark this position as finished
         strPathFinished = os.path.join(self.strPathLog, '_finished')
         safe_mkdirs(strPathFinished)
@@ -1341,10 +1339,12 @@ class AnalyzerCore(object):
                 logging.getLogger(str(os.getpid())).info('and go: analyze()')
                 result_dct = analyzer()
             except Exception, e:
-                if hasattr(analyzer, 'oTimeHolder'):
-                    analyzer.oTimeHolder.close_all()
                 logging.getLogger(str(os.getpid())).error(e.message)
                 raise
+            finally:
+                if hasattr(analyzer, 'oTimeHolder'):
+                    logging.getLogger(str(os.getpid())).debug('Closing timeholder')
+                    analyzer.oTimeHolder.close_all()
             if self.oSettings.get('Output', 'hdf5_create_file') and self.oSettings.get('Output', 'hdf5_merge_positions'):
                 post_hdf5_link_list.append(result_dct['filename_hdf5'])
             

@@ -448,8 +448,11 @@ class TimeHolder(OrderedDict):
         var.valid = helper
 
     def close_all(self):
-        if self._hdf5_create and isinstance(self._hdf5_file, h5py._hl.files.File):
-            self._hdf5_file.close()
+        if hasattr(self, '_hdf5_file'):
+            try:
+                self._hdf5_file.close()
+            except:
+                pass
 
     def initTimePoint(self, iT):
         # HDF5 feature definition is complete after first frame
