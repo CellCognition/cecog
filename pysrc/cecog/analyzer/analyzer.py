@@ -71,6 +71,16 @@ def chunk_size(shape):
     x = shape[4] / 4
     return (c,t,z,y,x)
 
+def max_shape(shape):
+    """Helper function to compute chunk size for image data cubes. 
+    """
+    c = 8 # 8 is kind of arbitrary, but better than None to help h5py to reserve the space
+    t = shape[1]
+    z = 1
+    y = shape[3]
+    x = shape[4]
+    return (c,t,z,y,x)
+
 #-------------------------------------------------------------------------------
 # classes:
 #
@@ -426,9 +436,13 @@ class TimeHolder(OrderedDict):
                                            'uint16',
                                            chunks=chunk_size(label_image_cpy.shape),
                                            data=label_image_cpy,
+                                           maxshape=max_shape(label_image_cpy.shape),
                                            compression=self._hdf5_compression)
-             
             self._hdf5_file[label_image_str].attrs['valid'] = label_image_valid
+            
+            if self._hdf5_file[label_image_str].shape[0] != len(self._regions_to_idx):
+                self._hdf5_file[label_image_str].resize(len(self._regions_to_idx), axis=0)
+            
             
         if raw_image_cpy is not None:
             self._hdf5_file.create_dataset(raw_image_str,
@@ -436,9 +450,12 @@ class TimeHolder(OrderedDict):
                                            'uint8',
                                            chunks=chunk_size(raw_image_cpy.shape),
                                            data=raw_image_cpy,
+                                           maxshape=max_shape(raw_image_cpy.shape),
                                            compression=self._hdf5_compression)
             self._hdf5_file[raw_image_str].attrs['valid'] = raw_image_valid
-
+            
+            if self._hdf5_file[raw_image_str].shape[0] != len(self._regions_to_idx):
+                self._hdf5_file[raw_image_str].resize(len(self._regions_to_idx), axis=0)
 
     @staticmethod
     def nc_valid_set(var, idx, value):
@@ -507,6 +524,9 @@ class TimeHolder(OrderedDict):
                     if frame_valid:
                         combined_region_name = self._convert_region_name(channel_name, region_name)
                         region_idx = self._regions_to_idx[combined_region_name]
+                        if not (region_idx < dset_label_image.shape[0]):
+                            label_images_valid = False
+                            break 
                         image_data = dset_label_image[region_idx, frame_idx, 0, :, :].astype('int16')
                         if not image_data.any():
                             label_images_valid = False
@@ -537,7 +557,7 @@ class TimeHolder(OrderedDict):
                 t = len(self._frames_to_idx)
                 var_name = 'region'
                 grp = self._grp_cur_position[self.HDF5_GRP_IMAGE]
-                if var_name in grp:
+                if var_name in grp and grp[var_name].shape[0] == len(self._regions_to_idx):
                     var_labels = grp[var_name]
                 else:
                     nr_labels = len(self._regions_to_idx)
@@ -581,8 +601,10 @@ class TimeHolder(OrderedDict):
                                     channel=channel.strChannelId, zslice=1)
                     meta_image = MetaImage(image_container=None, coordinate=coordinate)
                     channel_idx = self._channels_to_idx[channel.PREFIX]
-                    
-                    frame_valid = dset_raw_image[channel_idx, frame_idx, 0, :, :].any()
+                    if not (channel_idx < dset_raw_image.shape[0]):
+                        frame_valid = False
+                    else:                   
+                        frame_valid = dset_raw_image[channel_idx, frame_idx, 0, :, :].any()
             
                     
         if self._hdf5_found and frame_valid:
