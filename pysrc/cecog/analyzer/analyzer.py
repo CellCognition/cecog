@@ -62,6 +62,8 @@ from cecog.analyzer.channel import PrimaryChannel
 #
 
 def chunk_size(shape):
+    """Helper function to compute chunk size for image data cubes. 
+    """
     c = shape[0]
     t = 1
     z = 1
@@ -212,7 +214,7 @@ class TimeHolder(OrderedDict):
                     if 'channel' in self._grp_cur_position[self.HDF5_GRP_IMAGE]:
                         raw_image_cpy = self._grp_cur_position[self.HDF5_GRP_IMAGE]['channel'].value
                         raw_image_valid = self._grp_cur_position[self.HDF5_GRP_IMAGE]['channel'].attrs['valid']
-                        raw_image_str = self._grp_cur_position[self.HDF5_GRP_IMAGE].name + '/region'
+                        raw_image_str = self._grp_cur_position[self.HDF5_GRP_IMAGE].name + '/channel'
                 except:
                     print 'Loading of Hdf5 failed... '
                     self._logger.info('Loading of Hdf5 failed... ')
