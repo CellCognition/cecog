@@ -122,28 +122,42 @@ class PositionAnalyzer(object):
                  lstSampleReader, dctSamplePositions, oObjectLearner,
                  image_container,
                  qthread=None, myhack=None):
-
-        self.plate_id = plate_id
-        self.origP = P
+        
+        
         self.P = self._adjustPositionLength(P)
         self.P = P
+        self.strPathOut = mapDirectory(strPathOut)
+        self._oLogger = self._configRootLogger()
+        self._oLogger.debug("PositionAnalyzer: logger init done")
+        
+        self.plate_id = plate_id
+        self.origP = P
+        
+        self._oLogger.debug("PositionAnalyzer._adjustPositionLength()")
+        self.P = self._adjustPositionLength(P)
+        self.P = P
+        
+        self._oLogger.debug("PositionAnalyzer. mapDirectory()")
         self.strPathOut = mapDirectory(strPathOut)
 
 
         self._oLogger = self._configRootLogger()
         #self._oLogger = logging.getLogger()
-
+        
+        
         self.strPathOutAnalyzed = os.path.join(self.strPathOut, 'analyzed')
         self.oSettings = oSettings
 
         self._path_dump = os.path.join(self.strPathOut, 'dump')
         self._path_hdf5 = os.path.join(self.strPathOut, 'hdf5')
+        self._oLogger.debug("PositionAnalyzer: hdf5 folder create")
         safe_mkdirs(self._path_hdf5)
         self._imagecontainer = image_container
 
         # FIXME: a bit of a hack but the entire ImageContainer path is mapped to the current OS
         #self._imagecontainer.setPathMappingFunction(mapDirectory)
-
+        
+        self._oLogger.debug("PositionAnalyzer: get_meta_data")
         self._meta_data = self._imagecontainer.get_meta_data()
 
         if not self._meta_data.has_timelapse:
@@ -174,6 +188,8 @@ class PositionAnalyzer(object):
             self.strPathOutPosition = os.path.join(self.strPathOutAnalyzed, "%s" % self.P)
         else:
             self.strPathOutPosition = self.strPathOutAnalyzed
+        
+        self._oLogger.debug("PositionAnalyzer: create output folder")
         bMkdirsOk = safe_mkdirs(self.strPathOutPosition)
         self._oLogger.debug("Starting analysis for '%s', ok: %s" % (self.strPathOutPosition, bMkdirsOk))
 
@@ -1333,14 +1349,15 @@ class AnalyzerCore(object):
                                    'text': 'P %s (%d/%d)' % (tplArgs[0], idx+1, len(lstJobInputs)),
                                    })
                 qthread.set_stage_info(stage_info)
+            analyzer = None
             try:
                 logging.getLogger(str(os.getpid())).info('init PositionAnalyzer')
                 analyzer = PositionAnalyzer(*tplArgs, **dctOptions)
                 logging.getLogger(str(os.getpid())).info('and go: analyze()')
                 result_dct = analyzer()
             except Exception, e:
-                logging.getLogger(str(os.getpid())).error(e.message)
-                raise
+                logging.getLogger(str(os.getpid())).error(str(e))
+                raise e
             finally:
                 if hasattr(analyzer, 'oTimeHolder'):
                     logging.getLogger(str(os.getpid())).debug('Closing timeholder')
