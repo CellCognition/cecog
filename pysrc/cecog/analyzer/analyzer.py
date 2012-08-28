@@ -1003,7 +1003,7 @@ class TimeHolder(OrderedDict):
             if not var_name in current_classification_grp:
                 dset_pobability = current_classification_grp.create_dataset(var_name, (nr_objects, nr_classes),
                                            'float',
-                                           chunks=(nr_objects, nr_classes),
+                                           chunks=(nr_objects if nr_objects > 0 else 1, nr_classes),
                                            compression=self._hdf5_compression,
                                            maxshape=(None, nr_classes)
                                            )

@@ -1163,7 +1163,7 @@ class AnalyzerCore(object):
         self._oLogger.info("openening image container: start")
         self._openImageContainer()
         self._oLogger.info("openening image container: end")
-        self._oLogger.info("lstAnalysisFrames: %r" % self.lstAnalysisFrames)
+        #self._oLogger.info("lstAnalysisFrames: %r" % self.lstAnalysisFrames)
         
         
         self.lstSampleReader = []
