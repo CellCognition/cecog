@@ -1357,7 +1357,7 @@ class AnalyzerCore(object):
                 result_dct = analyzer()
             except Exception, e:
                 logging.getLogger(str(os.getpid())).error(str(e))
-                raise e
+                raise
             finally:
                 if hasattr(analyzer, 'oTimeHolder'):
                     logging.getLogger(str(os.getpid())).debug('Closing timeholder')

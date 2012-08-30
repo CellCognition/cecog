@@ -116,9 +116,52 @@ class GalleryDecorationPlotter(EventPlotterPdf):
 
         self.set_positions()
         
+class PostProcessingAnalysis(object):     
+    def __init__(self, path_in, 
+                       path_out, 
+                       plate_name, 
+                       mapping_file, 
+                       class_colors, 
+                       class_names):
+        
+        self.plate_name = plate_name
+        self.path_in = path_in
+        self.path_out = path_out
+        self.mapping_file = mapping_file
+        self.class_colors = class_colors
+        self.class_names = class_names
+         
+    def _readScreen(self):
+        self.plate = Plate.load(self.path_in, self.plate_name)
+        if self.plate is None:
+            self.plate = Plate(self.plate_name, self.path_in, self.mapping_file, self.group_by)
             
+    def run(self):
+        raise NotImplementedError
+    
+    def _run(self):
+        raise NotImplementedError
+    
+class SecurinAnalysis(PostProcessingAnalysis):
+    def __init__(self, path_in, 
+                       path_out, 
+                       plate_name, 
+                       mapping_file, 
+                       class_colors, 
+                       class_names,
+                       **securin_settings):
+        
+        self._logger = self._logger = logging.getLogger(self.__class__.__name__)
+        PostProcessingAnalysis.__init__(self, path_in, path_out, plate_name, mapping_file, class_colors, class_names)
+    
+    def run(self):
+        self._run()
 
-class IBBAnalysis(object):
+    def _run(self):
+        print "Run Securin"
+        
+        
+class IBBAnalysis(PostProcessingAnalysis):
     REJECTION = enum('OK', "BY_SIGNAL", "BY_SPLIT", "BY_IBB_ONSET", "BY_NEBD_ONSET")
     IBB_ZERO_CORRECTION = 0.025
     COLOR_SORT_BY = ['position', 'oligoid', 'gene_symbol', 'group']
@@ -149,13 +192,8 @@ class IBBAnalysis(object):
                        timeing_ylim_range=(1,100)
                        ):
         self._logger = self._logger = logging.getLogger(self.__class__.__name__)
-        
-        self.plate_name = plate_name
-        self.path_in = path_in
-        self.path_out = path_out
-        self.mapping_file = mapping_file
-        self.class_colors = class_colors
-        self.class_names = class_names
+        PostProcessingAnalysis.__init__(self, path_in, path_out, plate_name, mapping_file, class_colors, class_names)
+
         self._plotter = {}
         
         self.ibb_ratio_signal_threshold = ibb_ratio_signal_threshold
@@ -171,12 +209,7 @@ class IBBAnalysis(object):
         self.timeing_ylim_range = timeing_ylim_range
         
         self.class_label_selector = 'class__label'
-    
-    def _readScreen(self):
-        self.plate = Plate.load(self.path_in, self.plate_name)
-        if self.plate is None:
-            self.plate = Plate(self.plate_name, self.path_in, self.mapping_file, self.group_by)
-    
+      
     def run(self):
         try:
             self._readScreen()
@@ -298,8 +331,6 @@ class IBBAnalysis(object):
         data_t = numpy.array(map(None, *data), dtype=dtype)
         mpl.mlab.rec2csv(data_t, filename, formatd=formatd, delimiter='\t')
         
-        
-    
     def export_timing(self, result, id_):
         data = []
         names = []
@@ -314,8 +345,7 @@ class IBBAnalysis(object):
 
         filename = os.path.join(self.path_out, '_timing_ibb_events_%s.txt' % id_)
         self._export_data_list(filename, data, names)
-
-        
+    
     def _plot_timing(self, result):
         f_handle = PdfPages(os.path.join(self.path_out, '_class_timing.pdf' ))
         
@@ -612,7 +642,6 @@ class IBBAnalysis(object):
         
         fig.savefig(os.path.join(self.path_out, '_valid_events.pdf'), format='pdf')
         
-    
     def _barplot(self, data_list, names, colors, id_, neg_ctrl):
         fig = pyplot.figure(figsize=(len(data_list)/3+5, 20))
         ax1 = fig.add_subplot(111)
