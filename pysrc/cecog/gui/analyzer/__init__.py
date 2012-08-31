@@ -102,7 +102,7 @@ from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.analyzer.gallery import compose_galleries
 from cecog.traits.config import ConfigSettings
 from cecog.traits.analyzer import SECTION_REGISTRY
-from cecog.analyzer.ibb import IBBAnalysis
+from cecog.analyzer.ibb import IBBAnalysis, SecurinAnalysis
 
 #-------------------------------------------------------------------------------
 # functions:
@@ -990,6 +990,20 @@ class PostProcessingThread(_ProcessingThread):
                                        class_names,
                                        **ibb_options)
             ibb_analyzer.run()
+            
+        if self._settings.get2('securin_analysis'):
+            path_out_securin = os.path.join(path_out, 'sec')
+            safe_mkdirs(path_out_securin) 
+            
+            securin_options = {}
+            securin_analyzer = SecurinAnalysis(path_analyzed, 
+                                       path_out_securin, 
+                                       plate_id, 
+                                       mapping_file, 
+                                       class_colors, 
+                                       class_names,
+                                       **securin_options)
+            securin_analyzer.run()
 
 class AnalzyerThread(_ProcessingThread):
 

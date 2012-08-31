@@ -116,7 +116,8 @@ class GalleryDecorationPlotter(EventPlotterPdf):
 
         self.set_positions()
         
-class PostProcessingAnalysis(object):     
+class PostProcessingAnalysis(object):
+    REJECTION = enum('OK', "BY_SPLIT", "BY_PROPHASE_ONSET")     
     def __init__(self, path_in, 
                        path_out, 
                        plate_name, 
@@ -142,6 +143,33 @@ class PostProcessingAnalysis(object):
     def _run(self):
         raise NotImplementedError
     
+    def _find_separation_event(self, h2b):
+        # separation event found by isplit entry
+        separation_frame = h2b['issplit'].nonzero()[0]
+        if len(separation_frame) != 0:
+            return self.__class__.REJECTION.OK, separation_frame[0]
+        
+        # try first early ana phase
+        separation_frame = h2b[self.plate.class_label_selector].nonzero()[0]
+        if len(separation_frame) == 1:
+            return self.__class__.REJECTION.OK, separation_frame[0]
+        
+        # try meta -> late ana transition
+        transition = ''.join(map(str, h2b[self.plate.class_label_selector])).find('46') + 1
+        if transition > 1:
+            return self.__class__.REJECTION.OK, transition
+        
+        return self.__class__.REJECTION.BY_SPLIT, None
+    
+    def _find_prophase_onset(self, h2b, nebd_onset_frame=None):
+        if nebd_onset_frame is None:
+            nebd_onset_frame = len(h2b) / 2
+        for x in reversed(range(nebd_onset_frame+2)):
+            label = h2b[self.plate.class_label_selector][x]
+            if label == 1:
+                return IBBAnalysis.REJECTION.OK, x + 1
+        return self.__class__.REJECTION.BY_PROPHASE_ONSET, None
+    
 class SecurinAnalysis(PostProcessingAnalysis):
     def __init__(self, path_in, 
                        path_out, 
@@ -153,16 +181,104 @@ class SecurinAnalysis(PostProcessingAnalysis):
         
         self._logger = self._logger = logging.getLogger(self.__class__.__name__)
         PostProcessingAnalysis.__init__(self, path_in, path_out, plate_name, mapping_file, class_colors, class_names)
-    
+        self._plotter = {}
+        self.single_plot = True
+        self.single_plot_max_plots = 20
+        self.single_plot_ylim_range = (0, 100)
+        
     def run(self):
-        self._run()
+        try:
+            self._readScreen()
+            grouped_positions = self.plate.get_events()
+            for group_name in grouped_positions:
+                print group_name
+                if self.single_plot:
+                    self._plotter[group_name] = GalleryDecorationPlotter((15, 5))
+                    self._plotter[group_name].open(os.path.join(self.path_out, 'securin__PL%s__%s__single_plots.pdf' % (self.plate_name, group_name)))
+            self._run(grouped_positions)
+        finally:
+            for pl in self._plotter.values():
+                pl.close()  
 
-    def _run(self):
+
+    def _run(self, grouped_positions):
         print "Run Securin"
+        result = {}
+        for group_name, pos_list in grouped_positions.items():
+            result[group_name] = {}
+            result[group_name]['positions'] = []
+            for pos in pos_list:
+                cnt_single_plot = 0
+                result[group_name]['positions'].append(pos)
+                for event_idx, (event_id, event_dicts) in enumerate(sorted(pos.items())):
+                    h2b = event_dicts['Primary']['primary']
+                    securin_outside = event_dicts['Secondary']['outside']
+
+                    sec_signal = securin_outside['feature__n2_avg']
+                                        
+                    time = h2b['timestamp'] 
+                    time = time - time[0]
+                    rejection_code_split, separation_frame = self._find_separation_event(h2b)
+                    rejection_code_prophase, prophase_onset_frame = self._find_prophase_onset(h2b)
+                    if rejection_code_split != self.REJECTION.OK or \
+                       rejection_code_prophase != self.REJECTION.OK:
+                        continue
+                    
+                    if self.single_plot and cnt_single_plot < self.single_plot_max_plots:
+                            self._plot_single_event(group_name, sec_signal, h2b, 
+                                                    separation_frame, 
+                                                    prophase_onset_frame,
+                                                    event_id, pos.position)
+                            cnt_single_plot += 1
+                    
+                    
+                    
+                
+        print '1'
+        
+    def _plot_single_event(self, group_name, signal, h2b, 
+                           separation_frame, 
+                           prophase_onset, 
+                           event_id, pos_name):
+        
+        ya, yb = self.single_plot_ylim_range
+        
+        
+        self._plotter[group_name].clear()
+        axes = self._plotter[group_name].axes
+          
+        time = h2b['timestamp'] 
+        time = time - time[0]
+        time /= 60.0
+        
+        axes.plot(time, signal, 'k.-', label="Securin signal", axes=axes)
+        axes.plot([time[separation_frame], time[separation_frame]], [ya, yb], 'r', label="Split",)
+        axes.plot([time[prophase_onset], time[prophase_onset]], [ya, yb/2.0], 'y', label="Pro Onset",)
+           
+        axes.set_ylim(ya, yb)
+        
+        time_lapse_mean = numpy.array([a-b for a,b in zip(time[1:], time[0:])]).max()
+        
+        axes.set_xlim(0, time[-1]+time_lapse_mean)
+        axes.set_title("%s - %s" % (group_name, event_id))
+        axes.set_ylabel("IBB ratio")
+        axes.set_xlabel("Time [min]")
+#        pylab.text(time[separation_frame]+0.5, ratio.max(), "Sep", verticalalignment='top', color='r')
+#        pylab.text(time[ibb_onset_frame]+0.5, ratio.max(), "Ibb", verticalalignment='top', color='g')
+#        pylab.text(time[nebd_onset_frame]+0.5, ratio.max(), "Nebd", verticalalignment='top', color='b')
+        axes.legend(loc="lower right", prop={'size': 6})
+        axes.grid('on')
+        
+        class_labels = h2b[self.plate.class_label_selector]
+        
+        self._plotter[group_name].add_gallery_deco(event_id, pos_name, self.path_in, time, class_labels, self.class_colors)
+        
+        self._plotter[group_name].save()
+        
         
         
 class IBBAnalysis(PostProcessingAnalysis):
-    REJECTION = enum('OK', "BY_SIGNAL", "BY_SPLIT", "BY_IBB_ONSET", "BY_NEBD_ONSET")
+    REJECTION = enum('OK', "BY_SIGNAL", "BY_SPLIT", "BY_IBB_ONSET", "BY_NEBD_ONSET", "BY_PROPHASE_ONSET")
     IBB_ZERO_CORRECTION = 0.025
     COLOR_SORT_BY = ['position', 'oligoid', 'gene_symbol', 'group']
     
@@ -233,7 +349,7 @@ class IBBAnalysis(PostProcessingAnalysis):
             result[group_name]['sep_to__ibb_time'] = []
             result[group_name]['prophase_to_nebd'] = []
             result[group_name]['nebd_to_last_prophase'] = []
-            result[group_name]['valid'] = [0,0,0,0,0] 
+            result[group_name]['valid'] = [0,0,0,0,0,0] 
             result[group_name]['timing'] = []
             
             for pos in pos_list:
@@ -417,12 +533,6 @@ class IBBAnalysis(PostProcessingAnalysis):
         
         return IBBAnalysis.REJECTION.OK, (separation_frame, ibb_onset_frame, nebd_onset_frame, prophase_onset, prophase_last_frame)
                             
-    def _find_prophase_onset(self, h2b, nebd_onset_frame):
-        for x in reversed(range(nebd_onset_frame+2)):
-            label = h2b[self.plate.class_label_selector][x]
-            if label == 1:
-                return IBBAnalysis.REJECTION.OK, x + 1
-        return IBBAnalysis.REJECTION.BY_NEBD_ONSET, None
     
     def _find_prophase_last_frame(self, h2b, nebd_onset_frame, separation_frame):
         for x in range(nebd_onset_frame, separation_frame):
@@ -442,23 +552,6 @@ class IBBAnalysis(PostProcessingAnalysis):
     def _get_relative_time(self, h2b, frame_idx):
         return h2b['timestamp'][frame_idx] - h2b['timestamp'][0]          
         
-    def _find_separation_event(self, h2b):
-        # separation event found by isplit entry
-        separation_frame = h2b['issplit'].nonzero()[0]
-        if len(separation_frame) != 0:
-            return IBBAnalysis.REJECTION.OK, separation_frame[0]
-        
-        # try first early ana phase
-        separation_frame = h2b[self.plate.class_label_selector].nonzero()[0]
-        if len(separation_frame) == 1:
-            return IBBAnalysis.REJECTION.OK, separation_frame[0]
-        
-        # try meta -> late ana transition
-        transition = ''.join(map(str, h2b[self.plate.class_label_selector])).find('46') + 1
-        if transition > 1:
-            return IBBAnalysis.REJECTION.OK, transition
-        
-        return IBBAnalysis.REJECTION.BY_SPLIT, None
     
     def _check_signal(self, ibb_ratio):
         if ibb_ratio.mean() < self.ibb_ratio_signal_threshold or \
@@ -597,8 +690,8 @@ class IBBAnalysis(PostProcessingAnalysis):
     def _plot_valid_bars(self, result):
         data = []
         names = []
-        bar_labels = ('valid', 'signal', 'split', 'ibb_onset', 'nebd_onset')
-        bar_colors = map(lambda x:rgb_to_hex(*x), [colorbrewer.Greens[7][2],] + colorbrewer.RdBu[11][0:4])
+        bar_labels = ('valid', 'signal', 'split', 'ibb_onset', 'nebd_onset', 'prophase_onset')
+        bar_colors = map(lambda x:rgb_to_hex(*x), [colorbrewer.Greens[7][2],] + colorbrewer.RdBu[11][0:5])
         
         
         def mycmp(x, y):
