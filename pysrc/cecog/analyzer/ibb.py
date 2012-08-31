@@ -235,10 +235,6 @@ class SecurinAnalysis(PostProcessingAnalysis):
                                                     event_id, pos.position)
                             cnt_single_plot += 1
                     
-                    
-                    
-                
-        print '1'
         
     def _plot_single_event(self, group_name, signal, h2b, 
                            separation_frame, 
@@ -919,51 +915,52 @@ class Plate(object):
                 time = int(res["time"])
                 obj = int(res["obj"])
                 
-                if branch == 1:
+                if branch != 1:
+                    continue
                     
-                    if pos_name not in self._positions.keys():
-                        if 'oligoid' in self.mapping.dtype.fields.keys():
-                            self.oligo_header_name = 'oligoid'
-                        elif 'sirna_id' in self.mapping.dtype.fields.keys():
-                            self.oligo_header_name = 'sirna_id'
-                        else:
-                            raise RuntimeError('Mapping file has no header: oligoid or siRNA_id missing')
-                        
-                        self._positions[pos_name] = Position(plate=self.plate_id,
-                                                            position=self.mapping[pos_idx]['position'],
-                                                            well=self.mapping[pos_idx]['well'],
-                                                            site=self.mapping[pos_idx]['site'],
-                                                            row=self.mapping[pos_idx]['row'],
-                                                            column=self.mapping[pos_idx]['column'],
-                                                            gene_symbol=self.mapping[pos_idx]['gene_symbol'],
-                                                            oligoid=self.mapping[pos_idx][self.oligo_header_name],
-                                                            group=self.mapping[pos_idx]['group'], 
-                                                            )
-                        
-                    event_id = 'T%03d_O%04d_B%d' % (time, obj, branch)
-                    if event_id not in self._positions[pos_name]:
-                        self._positions[pos_name][event_id] = {} 
+                if pos_name not in self._positions.keys():
+                    if 'oligoid' in self.mapping.dtype.fields.keys():
+                        self.oligo_header_name = 'oligoid'
+                    elif 'sirna_id' in self.mapping.dtype.fields.keys():
+                        self.oligo_header_name = 'sirna_id'
+                    else:
+                        raise RuntimeError('Mapping file has no header: oligoid or siRNA_id missing')
                     
-                    if channel not in self._positions[pos_name][event_id]:
-                        self._positions[pos_name][event_id][channel] = {}
-                        
-                    filename = os.path.join(event_path, event_file)
-                    self._positions[pos_name][event_id][channel][region] = numpy.recfromcsv(filename, delimiter='\t')
-                    a = self._positions[pos_name][event_id][channel][region]
-                              
-                    if hmm_correction_available and region == 'primary':
-                        
-                        filename = os.path.join(event_path, '_hmm', event_file)
-                        if not os.path.exists(filename):
-                            raise RuntimeError('HMM correction folder is there but event file not found %s' % filename)
-                        class__label__hmm = numpy.recfromcsv(filename, delimiter='\t')['class__b__label']
-                        self._positions[pos_name][event_id][channel][region] = \
-                            rec_append_fields(self._positions[pos_name][event_id][channel][region], 
-                                              'class__label__hmm', 
-                                              class__label__hmm, 
-                                              numpy.uint8)
-                        
-                        self.class_label_selector = 'class__label__hmm'                       
+                    self._positions[pos_name] = Position(plate=self.plate_id,
+                                                        position=self.mapping[pos_idx]['position'],
+                                                        well=self.mapping[pos_idx]['well'],
+                                                        site=self.mapping[pos_idx]['site'],
+                                                        row=self.mapping[pos_idx]['row'],
+                                                        column=self.mapping[pos_idx]['column'],
+                                                        gene_symbol=self.mapping[pos_idx]['gene_symbol'],
+                                                        oligoid=self.mapping[pos_idx][self.oligo_header_name],
+                                                        group=self.mapping[pos_idx]['group'], 
+                                                        )
+                    
+                event_id = 'T%03d_O%04d_B%d' % (time, obj, branch)
+                if event_id not in self._positions[pos_name]:
+                    self._positions[pos_name][event_id] = {} 
+                
+                if channel not in self._positions[pos_name][event_id]:
+                    self._positions[pos_name][event_id][channel] = {}
+                    
+                filename = os.path.join(event_path, event_file)
+                self._positions[pos_name][event_id][channel][region] = numpy.recfromcsv(filename, delimiter='\t')
+                a = self._positions[pos_name][event_id][channel][region]
+                          
+                if hmm_correction_available and region == 'primary':
+                    
+                    filename = os.path.join(event_path, '_hmm', event_file)
+                    if not os.path.exists(filename):
+                        raise RuntimeError('HMM correction folder is there but event file not found %s' % filename)
+                    class__label__hmm = numpy.recfromcsv(filename, delimiter='\t')['class__b__label']
+                    self._positions[pos_name][event_id][channel][region] = \
+                        rec_append_fields(self._positions[pos_name][event_id][channel][region], 
+                                          'class__label__hmm', 
+                                          class__label__hmm, 
+                                          numpy.uint8)
+                    
+                    self.class_label_selector = 'class__label__hmm'                       
         self.save(True)
                                             
     def _readMappingFile(self):
