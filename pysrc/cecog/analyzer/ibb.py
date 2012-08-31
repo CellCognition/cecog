@@ -220,6 +220,9 @@ class SecurinAnalysis(PostProcessingAnalysis):
                     time = time - time[0]
                     rejection_code_split, separation_frame = self._find_separation_event(h2b)
                     rejection_code_prophase, prophase_onset_frame = self._find_prophase_onset(h2b)
+                    
+                    securin_peak_decay = self._find_peak_decay(sec_signal)
+                    
                     if rejection_code_split != self.REJECTION.OK or \
                        rejection_code_prophase != self.REJECTION.OK:
                         continue
@@ -228,6 +231,7 @@ class SecurinAnalysis(PostProcessingAnalysis):
                             self._plot_single_event(group_name, sec_signal, h2b, 
                                                     separation_frame, 
                                                     prophase_onset_frame,
+                                                    securin_peak_decay,
                                                     event_id, pos.position)
                             cnt_single_plot += 1
                     
@@ -239,6 +243,7 @@ class SecurinAnalysis(PostProcessingAnalysis):
     def _plot_single_event(self, group_name, signal, h2b, 
                            separation_frame, 
                            prophase_onset, 
+                           securin_peak_decay,
                            event_id, pos_name):
         
         ya, yb = self.single_plot_ylim_range
@@ -254,6 +259,7 @@ class SecurinAnalysis(PostProcessingAnalysis):
         axes.plot(time, signal, 'k.-', label="Securin signal", axes=axes)
         axes.plot([time[separation_frame], time[separation_frame]], [ya, yb], 'r', label="Split",)
         axes.plot([time[prophase_onset], time[prophase_onset]], [ya, yb/2.0], 'y', label="Pro Onset",)
+        axes.plot([time[securin_peak_decay], time[securin_peak_decay]], [ya, yb/1.5], 'b', label="Peak decay",)
            
         axes.set_ylim(ya, yb)
         
@@ -274,6 +280,11 @@ class SecurinAnalysis(PostProcessingAnalysis):
         self._plotter[group_name].add_gallery_deco(event_id, pos_name, self.path_in, time, class_labels, self.class_colors)
         
         self._plotter[group_name].save()
+        
+    def _find_peak_decay(self, sec_signal):
+        grad_sec_signal = numpy.diff(sec_signal)
+        peak_decay_fram = numpy.argmin(grad_sec_signal[1:-1]) + 1
+        return peak_decay_fram
         
         
         
