@@ -293,7 +293,7 @@ class IBBAnalysis(PostProcessingAnalysis):
     PLOT_LABELS = {'nebd_to_sep_time': 'NEBD to Separation',
                    'sep_to__ibb_time': 'Separation to IBB Onset',
                    'prophase_to_nebd': 'Prophase Onset to NEBD',
-                   'nebd_to_last_prophase': 'NEBD to last Prophase'
+                   'nebd_to_last_prophase': 'NEBD to Prometaphace Onset'
                    }
     
     def __init__(self, path_in, 
@@ -641,7 +641,7 @@ class IBBAnalysis(PostProcessingAnalysis):
         axes.plot([time[ibb_onset_frame], time[ibb_onset_frame]], [ya, yb], 'g', label="IBB Onset",)
         axes.plot([time[nebd_onset_frame], time[nebd_onset_frame]], [ya, yb], 'b', label="NEBD",)
         axes.plot([time[prophase_onset], time[prophase_onset]], [ya, yb/2.0], 'y', label="Pro Onset",)
-        axes.plot([time[prophase_last_frame], time[prophase_last_frame]], [ya, yb/2.0], 'c', label="Pro End",)
+        axes.plot([time[prophase_last_frame], time[prophase_last_frame]], [ya, yb/2.0], 'c', label="Prometa Onset",)
            
         axes.set_ylim(ya, yb)
         
@@ -830,9 +830,7 @@ class Position(dict):
         self.oligoid = str(oligoid)
         self.group = str(group)  
         
-        
-        
-        
+     
     def __str__(self):
         return "p %s, o %s, g %s, g %s" % ( self.position, self.oligoid, self.gene_symbol, self.group)
     
@@ -946,7 +944,6 @@ class Plate(object):
                     
                 filename = os.path.join(event_path, event_file)
                 self._positions[pos_name][event_id][channel][region] = numpy.recfromcsv(filename, delimiter='\t')
-                a = self._positions[pos_name][event_id][channel][region]
                           
                 if hmm_correction_available and region == 'primary':
                     
