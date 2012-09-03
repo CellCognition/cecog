@@ -135,7 +135,7 @@ class PostProcessingAnalysis(object):
     def _readScreen(self):
         self.plate = Plate.load(self.path_in, self.plate_name)
         if self.plate is None:
-            self.plate = Plate(self.plate_name, self.path_in, self.mapping_file, self.group_by)
+            self.plate = Plate(self.plate_name, self.path_in, self.mapping_file)
             
     def run(self):
         raise NotImplementedError
@@ -962,7 +962,7 @@ class Plate(object):
                                             
     def _readMappingFile(self):
         if os.path.exists(self.mapping_file):
-            mapping = numpy.recfromcsv(self.mapping_file, delimiter='\t')
+            mapping = numpy.recfromcsv(self.mapping_file, delimiter='\t', comments='###')
         else:
             raise RuntimeError("Mapping file does not exist %s" % self.mapping_file)
         
