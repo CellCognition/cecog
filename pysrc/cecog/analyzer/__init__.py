@@ -83,7 +83,6 @@ ZSLICE_PROJECTION_METHODS = ['maximum', 'average']
 
 COMPRESSION_FORMATS = ['raw', 'bz2', 'gz']
 TRACKING_METHODS = ['ClassificationCellTracker',]
-
 TRACKING_DURATION_UNIT_FRAMES = 'frames'
 TRACKING_DURATION_UNIT_MINUTES = 'minutes'
 TRACKING_DURATION_UNIT_SECONDS = 'seconds'
