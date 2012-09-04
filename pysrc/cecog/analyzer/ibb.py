@@ -28,9 +28,10 @@ class EventPlotterPdf(object):
     def __init__(self, figsize):
         self.figure = pyplot.figure(figsize=figsize)
         self.figure.set_dpi(400)
-        self.axes = self.figure.add_axes((0.1, 0.5, 0.8, 0.4))
+        self.axes = self.figure.add_axes((0.1, 0.5, 0.8, 0.5))
         self._pdf_handle = None
         self.add_axes = {}
+        self.normalize_gallery_image = True
         
     def clear(self):
         self.axes.cla()
@@ -51,7 +52,7 @@ class EventPlotterPdf(object):
               
 class GalleryDecorationPlotter(EventPlotterPdf):
     def set_positions(self):
-        self.axes.set_position((0.1, 0.5, 0.8, 0.4)) 
+        self.axes.set_position((0.1, 0.4, 0.8, 0.4)) 
 
         self.add_axes['gallery'].set_position((0.1, 0.1, 0.8, 0.4))
         self.add_axes['gallery'].set_frame_on(False)
@@ -81,6 +82,8 @@ class GalleryDecorationPlotter(EventPlotterPdf):
         
         if os.path.exists(prim_gallery_file):
             prim_img = readImage(prim_gallery_file)[:,:,0].view(numpy.ndarray).astype(numpy.uint8).swapaxes(1,0)
+            if self.normalize_gallery_image:
+                prim_img = ((prim_img - prim_img.min()) / float(prim_img.max() - prim_img.min()) * 255).astype(numpy.uint8)
             
             img = prim_img
                 
@@ -90,6 +93,8 @@ class GalleryDecorationPlotter(EventPlotterPdf):
                 
             aspect = img.shape[0] / float(img.shape[1])
             offset = x_max*aspect
+            
+            
                 
             new_axes.imshow(img, extent=(x_min, x_max, 0, offset), cmap=pyplot.get_cmap('gray'))
             
@@ -150,8 +155,8 @@ class PostProcessingAnalysis(object):
             return self.__class__.REJECTION.OK, separation_frame[0]
         
         # try first early ana phase
-        separation_frame = h2b[self.plate.class_label_selector].nonzero()[0]
-        if len(separation_frame) == 1:
+        separation_frame = (h2b[self.plate.class_label_selector] == 5).nonzero()[0]
+        if len(separation_frame) > 1:
             return self.__class__.REJECTION.OK, separation_frame[0]
         
         # try meta -> late ana transition
@@ -170,6 +175,8 @@ class PostProcessingAnalysis(object):
                 return IBBAnalysis.REJECTION.OK, x + 1
         return self.__class__.REJECTION.BY_PROPHASE_ONSET, None
     
+    
+    
 class SecurinAnalysis(PostProcessingAnalysis):
     def __init__(self, path_in, 
                        path_out, 
@@ -179,12 +186,12 @@ class SecurinAnalysis(PostProcessingAnalysis):
                        class_names,
                        **securin_settings):
         
-        self._logger = self._logger = logging.getLogger(self.__class__.__name__)
+        self._logger = logging.getLogger(self.__class__.__name__)
         PostProcessingAnalysis.__init__(self, path_in, path_out, plate_name, mapping_file, class_colors, class_names)
         self._plotter = {}
         self.single_plot = True
-        self.single_plot_max_plots = 20
-        self.single_plot_ylim_range = (0, 100)
+        self.single_plot_max_plots = 30
+        self.single_plot_ylim_range = (0, 120)
         
     def run(self):
         try:
@@ -212,7 +219,7 @@ class SecurinAnalysis(PostProcessingAnalysis):
                 result[group_name]['positions'].append(pos)
                 for event_idx, (event_id, event_dicts) in enumerate(sorted(pos.items())):
                     h2b = event_dicts['Primary']['primary']
-                    securin_outside = event_dicts['Secondary']['outside']
+                    securin_outside = event_dicts['Secondary']['expanded']
 
                     sec_signal = securin_outside['feature__n2_avg']
                                         
@@ -225,7 +232,8 @@ class SecurinAnalysis(PostProcessingAnalysis):
                     
                     if rejection_code_split != self.REJECTION.OK or \
                        rejection_code_prophase != self.REJECTION.OK:
-                        continue
+                        print 'event rejected'
+                        
                     
                     if self.single_plot and cnt_single_plot < self.single_plot_max_plots:
                             self._plot_single_event(group_name, sec_signal, h2b, 
@@ -253,8 +261,10 @@ class SecurinAnalysis(PostProcessingAnalysis):
         time /= 60.0
         
         axes.plot(time, signal, 'k.-', label="Securin signal", axes=axes)
-        axes.plot([time[separation_frame], time[separation_frame]], [ya, yb], 'r', label="Split",)
-        axes.plot([time[prophase_onset], time[prophase_onset]], [ya, yb/2.0], 'y', label="Pro Onset",)
+        if separation_frame is not None:
+            axes.plot([time[separation_frame], time[separation_frame]], [ya, yb], 'r', label="Split",)
+        if prophase_onset is not None:
+            axes.plot([time[prophase_onset], time[prophase_onset]], [ya, yb/2.0], 'y', label="Pro Onset",)
         axes.plot([time[securin_peak_decay], time[securin_peak_decay]], [ya, yb/1.5], 'b', label="Peak decay",)
            
         axes.set_ylim(ya, yb)
@@ -966,8 +976,13 @@ class Plate(object):
         else:
             raise RuntimeError("Mapping file does not exist %s" % self.mapping_file)
         
-        if len(mapping) == 0:
+        if len(mapping.shape) == 0:
+            # stupid numpy bug, when the tsv file contains one single entry
+            mapping.shape = (1,)
+        
+        if mapping.shape[0] == 0:
             raise RuntimeError("Mapping file is empty %s" % self.mapping_file)
+        
         self._logger.info('Found mapping file: %s' % self.mapping_file)
         
         return mapping
@@ -1029,6 +1044,15 @@ class Plate(object):
             print str(e)
             plate = None
         return plate
+    
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        del d['_logger']
+        return d
+    
+    def __setstate__(self, d):
+        self.__dict__.update(d)
+        self._logger = logging.getLogger(self.__class__.__name__)
                
 def test_plate():
     Plate("plate_name", r"C:\Users\sommerc\data\cecog\Analysis\H2b_aTub_MD20x_exp911_2_channels_zip\analyzed", 
