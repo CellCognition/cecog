@@ -122,28 +122,42 @@ class PositionAnalyzer(object):
                  lstSampleReader, dctSamplePositions, oObjectLearner,
                  image_container,
                  qthread=None, myhack=None):
-
-        self.plate_id = plate_id
-        self.origP = P
+        
+        
         self.P = self._adjustPositionLength(P)
         self.P = P
+        self.strPathOut = mapDirectory(strPathOut)
+        self._oLogger = self._configRootLogger()
+        self._oLogger.debug("PositionAnalyzer: logger init done")
+        
+        self.plate_id = plate_id
+        self.origP = P
+        
+        self._oLogger.debug("PositionAnalyzer._adjustPositionLength()")
+        self.P = self._adjustPositionLength(P)
+        self.P = P
+        
+        self._oLogger.debug("PositionAnalyzer. mapDirectory()")
         self.strPathOut = mapDirectory(strPathOut)
 
 
         self._oLogger = self._configRootLogger()
         #self._oLogger = logging.getLogger()
-
+        
+        
         self.strPathOutAnalyzed = os.path.join(self.strPathOut, 'analyzed')
         self.oSettings = oSettings
 
         self._path_dump = os.path.join(self.strPathOut, 'dump')
         self._path_hdf5 = os.path.join(self.strPathOut, 'hdf5')
+        self._oLogger.debug("PositionAnalyzer: hdf5 folder create")
         safe_mkdirs(self._path_hdf5)
         self._imagecontainer = image_container
 
         # FIXME: a bit of a hack but the entire ImageContainer path is mapped to the current OS
         #self._imagecontainer.setPathMappingFunction(mapDirectory)
-
+        
+        self._oLogger.debug("PositionAnalyzer: get_meta_data")
         self._meta_data = self._imagecontainer.get_meta_data()
 
         if not self._meta_data.has_timelapse:
@@ -174,6 +188,8 @@ class PositionAnalyzer(object):
             self.strPathOutPosition = os.path.join(self.strPathOutAnalyzed, "%s" % self.P)
         else:
             self.strPathOutPosition = self.strPathOutAnalyzed
+        
+        self._oLogger.debug("PositionAnalyzer: create output folder")
         bMkdirsOk = safe_mkdirs(self.strPathOutPosition)
         self._oLogger.debug("Starting analysis for '%s', ok: %s" % (self.strPathOutPosition, bMkdirsOk))
 
@@ -266,6 +282,7 @@ class PositionAnalyzer(object):
         return int(round(result))
 
     def __call__(self):
+        self._oLogger.info('')
         # turn libtiff warnings off
         ccore.turn_off()
 
@@ -305,6 +322,7 @@ class PositionAnalyzer(object):
         if self.oSettings.get2('hdf5_compression'):
             hdf5_compression = 'gzip'
 
+        self._oLogger.info('Init TimeHolder object')
         oTimeHolder = TimeHolder(self.P,
                                  channel_names, filename_hdf5,
                                  self._meta_data, self.oSettings,
@@ -671,8 +689,6 @@ class PositionAnalyzer(object):
             self._oLogger.info(" - %d image sets analyzed, %s / image set" %
                                (iNumberImages, oInterval.format(msec=True)))
 
-        oTimeHolder.close_all()
-
         # write an empty file to mark this position as finished
         strPathFinished = os.path.join(self.strPathLog, '_finished')
         safe_mkdirs(strPathFinished)
@@ -770,10 +786,13 @@ class PositionAnalyzer(object):
                     for j in range(i, len(xs)):
                         diff_x.append(abs(xs[i]-xs[j]))
                         diff_y.append(abs(ys[i]-ys[j]))
+                        
                 # new image size after registration of all images
-                new_image_size = (meta_image.width - max(diff_x),
-                                  meta_image.height - max(diff_y))
 
+
+                new_image_size = (self._meta_data.dim_x - max(diff_x),
+                                  self._meta_data.dim_y - max(diff_y))
+#
                 self._meta_data.real_image_width = new_image_size[0]
                 self._meta_data.real_image_height = new_image_size[1]
 
@@ -1131,23 +1150,28 @@ class AnalyzerCore(object):
         y0 = self.oSettings.get('General', 'crop_image_y0')
         x1 = self.oSettings.get('General', 'crop_image_x1')
         y1 = self.oSettings.get('General', 'crop_image_y1')
-        print ci, x0, y0,x1,y1
         if ci:
             MetaImage.enable_cropping(x0, y0, x1-x0, y1-y0)
+            self._oLogger.info("cropping enabled with %d %d %d %d" % (x0, y0, x1-x0, y1-y0))
         else:
             MetaImage.disable_cropping()
+            self._oLogger.info("cropping disabled")
             
-        print MetaImage._crop_coordinates
 
         self._imagecontainer = imagecontainer
         self.lstAnalysisFrames = []
+        self._oLogger.info("openening image container: start")
         self._openImageContainer()
-
+        self._oLogger.info("openening image container: end")
+        #self._oLogger.info("lstAnalysisFrames: %r" % self.lstAnalysisFrames)
+        
+        
         self.lstSampleReader = []
         self.dctSamplePositions = {}
         self.oObjectLearner = learner
 
         self.oSettings.set_section('Classification')
+        self._oLogger.info("collectSamples? %r" % self.oSettings.get2('collectSamples'))
         if self.oSettings.get2('collectSamples'):
 
             self.oSettings.bUsePyFarm = False
@@ -1283,15 +1307,16 @@ class AnalyzerCore(object):
 
 
     def processPositions(self, qthread=None, myhack=None):
-        # loop over positions
+        logging.getLogger(str(os.getpid())).info('loop over positions...')
         lstJobInputs = []
         for oP in self.lstPositions:
-
+            logging.getLogger(str(os.getpid())).info('Positions: %r' % oP)
             if oP in self.dctSamplePositions:
                 analyze = len(self.dctSamplePositions[oP]) > 0
             else:
                 analyze = len(self.lstAnalysisFrames) > 0
-
+            
+            logging.getLogger(str(os.getpid())).info('analyze? %r' % analyze)
             if analyze:
                 tplArgs = (self.plate_id,
                            oP,
@@ -1315,6 +1340,7 @@ class AnalyzerCore(object):
                        }
         post_hdf5_link_list = []
         for idx, (tplArgs, dctOptions) in enumerate(lstJobInputs):
+            logging.getLogger(str(os.getpid())).info('analyze: %d' % idx)
             if not qthread is None:
                 if qthread.get_abort():
                     break
@@ -1323,14 +1349,19 @@ class AnalyzerCore(object):
                                    'text': 'P %s (%d/%d)' % (tplArgs[0], idx+1, len(lstJobInputs)),
                                    })
                 qthread.set_stage_info(stage_info)
+            analyzer = None
             try:
+                logging.getLogger(str(os.getpid())).info('init PositionAnalyzer')
                 analyzer = PositionAnalyzer(*tplArgs, **dctOptions)
+                logging.getLogger(str(os.getpid())).info('and go: analyze()')
                 result_dct = analyzer()
             except Exception, e:
-                if hasattr(analyzer, 'oTimeHolder'):
-                    analyzer.oTimeHolder.close_all()
-                logging.getLogger(str(os.getpid())).error(e.message)
+                logging.getLogger(str(os.getpid())).error(str(e))
                 raise
+            finally:
+                if hasattr(analyzer, 'oTimeHolder'):
+                    logging.getLogger(str(os.getpid())).debug('Closing timeholder')
+                    analyzer.oTimeHolder.close_all()
             if self.oSettings.get('Output', 'hdf5_create_file') and self.oSettings.get('Output', 'hdf5_merge_positions'):
                 post_hdf5_link_list.append(result_dct['filename_hdf5'])
             

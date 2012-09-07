@@ -1,15 +1,39 @@
+"""
+                           The CellCognition Project
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
+                      Gerlich Lab, ETH Zurich, Switzerland
+                              www.cellcognition.org
+
+              CellCognition is distributed under the LGPL License.
+                        See trunk/LICENSE.txt for details.
+                 See trunk/AUTHORS.txt for author contributions.
+"""
+
+#-------------------------------------------------------------------------------
+# standard library imports:
+#
 import numpy
 import matplotlib.pyplot as mpl
 import h5py
 import collections
 import functools
-import time
-import cProfile
 import base64
 import zlib
+try:
+    import vigra
+except ImportError:
+    print 'VIGRA is not installed. Please, install from source of download binary at http://www.lfd.uci.edu/~gohlke/pythonlibs/'
+
+#-------------------------------------------------------------------------------
+# Constants:
+#
 
 GALLERY_SIZE = 100    
-  
+
+#-------------------------------------------------------------------------------
+# Functions:
+# 
+ 
 class memoize(object):
     """cache the return value of a method
     
@@ -46,6 +70,9 @@ class memoize(object):
             res = cache[key] = self.func(*args, **kw)
         return res
     
+#-------------------------------------------------------------------------------
+# Classes:
+#
 
 class CH5Position(object):
     def __init__(self, plate, well, pos, grp_pos, parent):
@@ -91,6 +118,12 @@ class CH5Position(object):
         return self['feature'] \
                    [object] \
                    ['object_features'].value
+                   
+                   
+    def get_image(self, t, c, z=0):
+        return self['image'] \
+                    ['channel'] \
+                    [c, t, z, :, :]
                    
     def get_gallery_image(self, index, object='primary__primary'):
         if not isinstance(index, (list, tuple)):
@@ -141,11 +174,14 @@ class CH5Position(object):
     def object_feature_def(self, object='primary__primary'):
         return map(lambda x: str(x[0]), self.definitions.feature_definition['%s/object_features' % object].value)
     
-    def _get_object_table(self, object):
+    def get_object_table(self, object):
         return self['object'][object].value
     
+    def get_feature_table(self, object, feature):
+        return self['feature'][object][feature].value
+    
     def get_events(self):
-        dset_event = self._get_object_table('event')
+        dset_event = self.get_object_table('event')
         events = []
         for event_id in range(1,dset_event['obj_id'].max()):
             idx = numpy.where(dset_event['obj_id'] == event_id)
@@ -224,8 +260,12 @@ class CH5CachedPosition(CH5Position):
         return super(CH5CachedPosition, self).get_events(*args, **kwargs)
     
     @memoize
-    def _get_object_table(self, *args, **kwargs):
-        return super(CH5CachedPosition, self)._get_object_table(*args, **kwargs)
+    def get_object_table(self, *args, **kwargs):
+        return super(CH5CachedPosition, self).get_object_table(*args, **kwargs)
+    
+    @memoize
+    def get_feature_table(self, *args, **kwargs):
+        return super(CH5CachedPosition, self).get_feature_table(*args, **kwargs)
     
     @memoize
     def get_tracking(self, *args, **kwargs):
@@ -277,12 +317,12 @@ class CH5File(object):
         for w in sorted(self.wells):
             self.positions[w] = self._get_group_members('/sample/0/plate/%s/experiment/%s/position/' % (self.plate, w))
                                                         
-        print 'Plate', self.plate
-        print 'Positions', self.positions
+#        print 'Plate', self.plate
+#        print 'Positions', self.positions
         self._position_group = {}
         for w, pos_list in self.positions.items():
             for p in pos_list:
-                print '/sample/0/plate/%s/experiment/%s/position/%s' % (self.plate, w, p)
+                #print '/sample/0/plate/%s/experiment/%s/position/%s' % (self.plate, w, p)
                 self._position_group[(w,p)] = CH5File.POSITION_CLS(self.plate, w, p, self._file_handle['/sample/0/plate/%s/experiment/%s/position/%s' % (self.plate, w, p)], self)
         self.current_pos = self._position_group.values()[0]
         
@@ -312,20 +352,21 @@ class CH5File(object):
     
     
 import unittest
-class CH5TestBase(unittest.TestCase):
-    pass
 
-class TestCH5Basic(CH5TestBase): 
+class CH5TestBase(unittest.TestCase):
     def setUp(self):
         self.fh = CH5File('0038-cs.h5')
         self.well_str = '0'
         self.pos_str = self.fh.positions[self.well_str][0]
+        self.pos = self.fh.get_position(self.well_str, self.pos_str)
         
+    def tearDown(self):
+        self.fh.close()
+class TestCH5Basic(CH5TestBase): 
     def testGallery(self):
-        
-        a1 = self.fh.get_position(self.well_str, self.pos_str).get_gallery_image(1)
-        b1 = self.fh.get_position(self.well_str, self.pos_str).get_gallery_image(2)
-        a2 = self.fh.get_position(self.well_str, self.pos_str).get_gallery_image(1)
+        a1 = self.pos.get_gallery_image(1)
+        b1 = self.pos.get_gallery_image(2)
+        a2 = self.pos.get_gallery_image(1)
         
         self.assertTrue(a1.shape == (GALLERY_SIZE, GALLERY_SIZE))
         self.assertTrue(b1.shape == (GALLERY_SIZE, GALLERY_SIZE))
@@ -333,66 +374,152 @@ class TestCH5Basic(CH5TestBase):
         self.assertFalse(numpy.all(a1 == b1))
         
     def testGallery2(self):
-        event = self.fh.get_position(self.well_str, self.pos_str).track_first(5)
-        a1 = self.fh.get_position(self.well_str, self.pos_str).get_gallery_image(tuple(event))
-        a2 = self.fh.get_position(self.well_str, self.pos_str).get_gallery_image(tuple(event), 'secondary__expanded')
-#        import vigra
+        event = self.pos.track_first(5)
+        a1 = self.pos.get_gallery_image(tuple(event))
+        a2 = self.pos.get_gallery_image(tuple(event), 'secondary__expanded')
 #        vigra.impex.writeImage(a1.swapaxes(1,0), 'c:/Users/sommerc/Desktop/bla.png')
 #        vigra.impex.writeImage(a2.swapaxes(1,0), 'c:/Users/sommerc/Desktop/foo.png')
         
     def testGallery3(self):
-        event = self.fh.get_position(self.well_str, self.pos_str).get_events()[42][0]
-        tracks = self.fh.get_position(self.well_str, self.pos_str).track_all(event)
+        event = self.pos.get_events()[42][0]
+        tracks = self.pos.track_all(event)
         w = numpy.array(map(len, tracks)).max()*GALLERY_SIZE
         img = numpy.zeros((GALLERY_SIZE * len(tracks), w), dtype=numpy.uint8)
         
         for k, t in enumerate(tracks):
-            a = self.fh.get_position(self.well_str, self.pos_str).get_gallery_image(tuple(t))
-            print a.shape
+            a = self.pos.get_gallery_image(tuple(t))
             img[k*GALLERY_SIZE:(k+1)*GALLERY_SIZE, 0:a.shape[1]] = a
-#        import vigra
 #        vigra.impex.writeImage(img.swapaxes(1,0), 'c:/Users/sommerc/Desktop/foo.png')
         
     def testGallery4(self):
-        event = self.fh.get_position(self.well_str, self.pos_str).get_events()[42]
-        a1 = self.fh.get_position(self.well_str, self.pos_str).get_gallery_image(tuple(event))
-#        import vigra
+        event = self.pos.get_events()[42]
+        a1 = self.pos.get_gallery_image(tuple(event))
 #        vigra.impex.writeImage(a1.swapaxes(1,0), 'c:/Users/sommerc/Desktop/blub.png')   
               
     def testClassNames(self):
         for x in ['inter', 'pro', 'earlyana']:
-            self.assertTrue(x in self.fh.get_position(self.well_str, self.pos_str).class_name_def((1,2,5)))
+            self.assertTrue(x in self.pos.class_name_def((1,2,5)))
      
     def testClassColors(self):
         for x in ['#FF8000', '#D28DCE', '#FF0000']:
-            self.assertTrue(x in self.fh.get_position(self.well_str, self.pos_str).class_color_def((3,4,8)))   
+            self.assertTrue(x in self.pos.class_color_def((3,4,8)))   
             
     def testClassColors2(self):
-        self.fh.get_position(self.well_str, self.pos_str).get_class_color((1,221,3233,44244)) 
-        self.fh.get_position(self.well_str, self.pos_str).get_class_name((1,221,3233,44244)) 
+        self.pos.get_class_color((1,221,3233,44244)) 
+        self.pos.get_class_name((1,221,3233,44244)) 
          
     def testEvents(self):
-        self.assertTrue(len(self.fh.get_position(self.well_str, self.pos_str).get_events()) > 0)
-        self.assertTrue(len(self.fh.get_position(self.well_str, self.pos_str).get_events()[0]) > 0)
+        self.assertTrue(len(self.pos.get_events()) > 0)
+        self.assertTrue(len(self.pos.get_events()[0]) > 0)
         
     def testTrack(self):
-        self.assertTrue(len(self.fh.get_position(self.well_str, self.pos_str).track_first(42)) > 0)
+        self.assertTrue(len(self.pos.track_first(42)) > 0)
         
     def testTrackFirst(self):
-        self.assertListEqual(self.fh.get_position(self.well_str, self.pos_str).track_first(42), 
-                             self.fh.get_position(self.well_str, self.pos_str).track_all(42)[0])
+        self.assertListEqual(self.pos.track_first(42), 
+                             self.pos.track_all(42)[0])
         
     def testTrackLast(self):  
-        self.assertListEqual(self.fh.get_position(self.well_str, self.pos_str).track_last(1111), 
-                             self.fh.get_position(self.well_str, self.pos_str).track_all(1111)[-1])
+        self.assertListEqual(self.pos.track_last(1111), 
+                             self.pos.track_all(1111)[-1])
         
     def testObjectFeature(self):
-        self.assertTrue('n2_avg' in  self.fh.get_position(self.well_str, self.pos_str).object_feature_def())
-        self.assertTrue( self.fh.get_position(self.well_str, self.pos_str).get_object_features().shape[1] == 239)
+        self.assertTrue('n2_avg' in  self.pos.object_feature_def())
+        self.assertTrue(self.pos.get_object_features().shape[1] == 239)
+ 
+class TestCH5Examples(CH5TestBase):   
+    def testReadAnImage(self):
+        """Read an raw image an write a sub image to disk"""
+        # read the images at time point 1
+        h2b = self.pos.get_image(0, 0)
+        tub = self.pos.get_image(0, 1)
+
+        # Print part of the images
+        # prepare image plot
+        fig = mpl.figure(frameon=False)
+        ax = mpl.Axes(fig, [0., 0., 1., 1.])
+        ax.set_axis_off()
+        fig.add_axes(ax)
+        ax.imshow(h2b[400:600, 400:600], cmap='gray')
+        fig.savefig('img1.png', format='png')
+        ax.imshow(tub[400:600, 400:600], cmap='gray')
+        fig.savefig('img2.png', format='png')
+        
+#        vigra.impex.writeImage(h2b[400:600, 400:600].swapaxes(1,0), 'img1.png')   
+#        vigra.impex.writeImage(tub[400:600, 400:600].swapaxes(1,0), 'img2.png')   
+        
+#    unittest.skip('ploting so many lines is very slow in matplotlib')
+    def testPrintTrackingTrace(self):
+        """Show the cell movement over time by showing the trace of each cell colorcoded 
+           overlayed on of the first image"""
+        h2b = self.pos.get_image(0, 0)
+        
+        tracking = self.pos.get_object_table('tracking')
+        nucleus = self.pos.get_object_table('primary__primary')
+        center = self.pos.get_feature_table('primary__primary', 'center')
         
         
-    def tearDown(self):
-        self.fh.close()
+        # prepare image plot
+        fig = mpl.figure(frameon=False)
+        ax = mpl.Axes(fig, [0., 0., 1., 1.])
+        ax.set_axis_off()
+        fig.add_axes(ax)
+        ax.imshow(h2b, cmap='gray')
+        
+        # on top of the image a white circle is plotted for each center of nucleus.
+        I = numpy.nonzero(nucleus[tracking['obj_idx1']]['time_idx'] == 0)[0]
+        for x, y in center[I]:
+            ax.plot(x,y,'w.', markersize=7.0, scaley=False, scalex=False)
+            
+        ax.axis([0, h2b.shape[1], h2b.shape[0], 0])
+        
+        # a line is plotted between nucleus center of each pair of connected nuclei. The color is the mitotic phase
+        for idx1, idx2 in zip(tracking['obj_idx1'], 
+                              tracking['obj_idx2']):
+            color = self.pos.get_class_color(idx1)
+            (x0, y0), (x1, y1) = center[idx1], center[idx2]
+            ax.plot([x0, x1],[y0, y1], color=color)
+            
+        fig.savefig('tracking.png', format='png')
+        
+    def testComputeTheMitoticIndex(self):
+        """Read the classification results and compute the mitotic index"""
+        
+        nucleus = self.pos.get_object_table('primary__primary')
+        predictions = self.pos.get_class_prediction('primary__primary')
+        
+        colors = self.pos.definitions.class_definition('primary__primary')['color']
+        names = self.pos.definitions.class_definition('primary__primary')['name']
+        
+        n_classes = len(names)
+        time_max = nucleus['time_idx'].max()
+        
+        # compute mitotic index by counting the number cell per class label over all times
+        mitotic_index =  numpy.array(map(lambda x: [len(numpy.nonzero(x==class_idx)[0]) for class_idx in range(n_classes)], 
+            [predictions[nucleus['time_idx'] == time_idx]['label_idx'] for time_idx in range(time_max)]))
+        
+        # plot it
+        fig = mpl.figure()
+        ax = fig.add_subplot(111)
+        
+        for i in range(1, n_classes):
+            ax.plot(mitotic_index[:,i], color=colors[i], label=names[i])
+            
+        ax.set_xlabel('time')
+        ax.set_ylabel('number of cells')
+        ax.set_title('Mitotic index')
+        ax.set_xlim(0, time_max)
+        ax.legend(loc='upper left')
+        fig.savefig('mitotic_index.pdf', format='pdf')
+             
+    def testShowMitoticEvents(self):
+        """Extract the mitotic events and write them as gellery images"""
+        events = self.pos.get_events()
+        
+        image = []
+        for event in events[:5]:
+            image.append(self.pos.get_gallery_image(tuple(event)))
+        vigra.impex.writeImage(numpy.concatenate(image, axis=0).swapaxes(1,0), 'mitotic_events.png')
 
 if __name__ == '__main__':
     unittest.main()

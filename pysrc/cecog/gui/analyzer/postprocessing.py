@@ -111,6 +111,7 @@ class PostProcessingFrame(BaseProcessorFrame):
                        layout='grid', link='plot_params', label='Plotting')
         
         self.add_line()
+        self.add_group('securin_analysis',[])
         self.add_expanding_spacer()
 
         self._init_control(has_images=False)

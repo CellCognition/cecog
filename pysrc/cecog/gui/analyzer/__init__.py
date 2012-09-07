@@ -31,6 +31,7 @@ __all__ = ['REGION_NAMES_PRIMARY',
 import types, \
        traceback, \
        logging, \
+       logging.handlers, \
        sys, \
        os, \
        time, \
@@ -101,7 +102,7 @@ from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.analyzer.gallery import compose_galleries
 from cecog.traits.config import ConfigSettings
 from cecog.traits.analyzer import SECTION_REGISTRY
-from cecog.analyzer.ibb import IBBAnalysis
+from cecog.analyzer.ibb import IBBAnalysis, SecurinAnalysis
 
 #-------------------------------------------------------------------------------
 # functions:
@@ -382,7 +383,7 @@ class _ProcessingThread(QThread):
 
 
 
-class HmmThread(_ProcessingThread):
+class HmmThread_Python_Scafold(_ProcessingThread):
     def __init__(self, parent, settings, learner_dict, imagecontainer):
         _ProcessingThread.__init__(self, parent, settings)
         self._settings.set_section(SECTION_NAME_ERRORCORRECTION)
@@ -452,7 +453,7 @@ class HmmThread(_ProcessingThread):
     def _produce_txt_output(self):
         pass
 
-class HmmThread__R_version(_ProcessingThread):
+class HmmThread(_ProcessingThread):
 
     DEFAULT_CMD_MAC = 'R32'
     DEFAULT_CMD_WIN = r'C:\Program Files\R\R-2.10.0\bin\R.exe'
@@ -926,14 +927,9 @@ class PostProcessingThread(_ProcessingThread):
     def _run_plate(self, plate_id):
         path_out = self._imagecontainer.get_path_out()
 
-
         path_analyzed = os.path.join(path_out, 'analyzed')
-        path_out_ibb = os.path.join(path_out, 'ibb')
-
         safe_mkdirs(path_analyzed)
-        safe_mkdirs(path_out_ibb)
-     
-        print 'for ', plate_id
+        
         mapping_file = self._mapping_files[plate_id]
         
         class_colors = {}       
@@ -946,55 +942,68 @@ class PostProcessingThread(_ProcessingThread):
             
         self._settings.set_section(SECTION_NAME_POST_PROCESSING)
         
-        ibb_options = {}
-        ibb_options['ibb_ratio_signal_threshold'] = self._settings.get2('ibb_ratio_signal_threshold')
-        ibb_options['ibb_range_signal_threshold'] = self._settings.get2('ibb_range_signal_threshold')
-        ibb_options['ibb_onset_factor_threshold'] = self._settings.get2('ibb_onset_factor_threshold')
-        ibb_options['nebd_onset_factor_threshold'] = self._settings.get2('nebd_onset_factor_threshold')
-        ibb_options['single_plot'] = self._settings.get2('single_plot')
-        ibb_options['single_plot_max_plots'] = self._settings.get2('single_plot_max_plots')
+        if self._settings.get2('ibb_analysis'):
         
-        
-        ibb_options['single_plot_ylim_range'] = self._settings.get2('single_plot_ylim_low'), \
-                                                self._settings.get2('single_plot_ylim_high')
-        
-        tmp = (self._settings.get2('group_by_group'),
-               self._settings.get2('group_by_genesymbol'),
-               self._settings.get2('group_by_oligoid'),
-               self._settings.get2('group_by_position'),
-               )
-        
-        ibb_options['group_by'] = int(numpy.log2(int(reduce(lambda x,y: str(x)+str(y), 
-                                                            numpy.array(tmp).astype(numpy.uint8)),2))+0.5)
-
-
-        tmp = (self._settings.get2('color_sort_by_group'),
-               self._settings.get2('color_sort_by_genesymbol'),
-               self._settings.get2('color_sort_by_oligoid'),
-               self._settings.get2('color_sort_by_position'),
-               )
-        
-        ibb_options['color_sort_by'] = int(numpy.log2(int(reduce(lambda x,y: str(x)+str(y), 
-                                                                 numpy.array(tmp).astype(numpy.uint8)),2))+0.5)
-        
-        if not ibb_options['group_by'] < ibb_options['color_sort_by']:
-            raise AttributeError('Group by selection must be more general than the color sorting! (%d !> %d)' % (
-                                                            ibb_options['group_by'], ibb_options['color_sort_by']))
-        
-        ibb_options['color_sort_by'] = IBBAnalysis.COLOR_SORT_BY[ibb_options['color_sort_by']]
-        
-        ibb_options['timeing_ylim_range'] = self._settings.get2('plot_ylim1_low'), \
-                                            self._settings.get2('plot_ylim1_high')
-        
+            ibb_options = {}
+            ibb_options['ibb_ratio_signal_threshold'] = self._settings.get2('ibb_ratio_signal_threshold')
+            ibb_options['ibb_range_signal_threshold'] = self._settings.get2('ibb_range_signal_threshold')
+            ibb_options['ibb_onset_factor_threshold'] = self._settings.get2('ibb_onset_factor_threshold')
+            ibb_options['nebd_onset_factor_threshold'] = self._settings.get2('nebd_onset_factor_threshold')
+            ibb_options['single_plot'] = self._settings.get2('single_plot')
+            ibb_options['single_plot_max_plots'] = self._settings.get2('single_plot_max_plots')
+            ibb_options['single_plot_ylim_range'] = self._settings.get2('single_plot_ylim_low'), \
+                                                    self._settings.get2('single_plot_ylim_high')
             
-        ibb_analyzer = IBBAnalysis(path_analyzed, 
-                                   path_out_ibb, 
-                                   plate_id, 
-                                   mapping_file, 
-                                   class_colors, 
-                                   class_names,
-                                   **ibb_options)
-        ibb_analyzer.run()
+            tmp = (self._settings.get2('group_by_group'),
+                   self._settings.get2('group_by_genesymbol'),
+                   self._settings.get2('group_by_oligoid'),
+                   self._settings.get2('group_by_position'),
+                   )
+            ibb_options['group_by'] = int(numpy.log2(int(reduce(lambda x,y: str(x)+str(y), 
+                                                                numpy.array(tmp).astype(numpy.uint8)),2))+0.5)
+
+            tmp = (self._settings.get2('color_sort_by_group'),
+                   self._settings.get2('color_sort_by_genesymbol'),
+                   self._settings.get2('color_sort_by_oligoid'),
+                   self._settings.get2('color_sort_by_position'),
+                   )
+            
+            ibb_options['color_sort_by'] = int(numpy.log2(int(reduce(lambda x,y: str(x)+str(y), 
+                                                                     numpy.array(tmp).astype(numpy.uint8)),2))+0.5)
+            
+            if not ibb_options['group_by'] < ibb_options['color_sort_by']:
+                raise AttributeError('Group by selection must be more general than the color sorting! (%d !> %d)' % (
+                                                                ibb_options['group_by'], ibb_options['color_sort_by']))
+            
+            ibb_options['color_sort_by'] = IBBAnalysis.COLOR_SORT_BY[ibb_options['color_sort_by']]
+            
+            ibb_options['timeing_ylim_range'] = self._settings.get2('plot_ylim1_low'), \
+                                                self._settings.get2('plot_ylim1_high')
+            
+            path_out_ibb = os.path.join(path_out, 'ibb')
+            safe_mkdirs(path_out_ibb)    
+            ibb_analyzer = IBBAnalysis(path_analyzed, 
+                                       path_out_ibb, 
+                                       plate_id, 
+                                       mapping_file, 
+                                       class_colors, 
+                                       class_names,
+                                       **ibb_options)
+            ibb_analyzer.run()
+            
+        if self._settings.get2('securin_analysis'):
+            path_out_securin = os.path.join(path_out, 'sec')
+            safe_mkdirs(path_out_securin) 
+            
+            securin_options = {}
+            securin_analyzer = SecurinAnalysis(path_analyzed, 
+                                       path_out_securin, 
+                                       plate_id, 
+                                       mapping_file, 
+                                       class_colors, 
+                                       class_names,
+                                       **securin_options)
+            securin_analyzer.run()
 
 class AnalzyerThread(_ProcessingThread):
 
