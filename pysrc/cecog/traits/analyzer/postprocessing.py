@@ -31,8 +31,10 @@ from cecog.traits.config import _Section
 from cecog.gui.guitraits import (StringTrait,
                                  BooleanTrait,
                                  FloatTrait,
-                                 IntTrait
+                                 IntTrait,
+                                 SelectionTrait
                                  )
+from cecog.analyzer import TC3_ALGORITHMS
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -56,8 +58,18 @@ class SectionPostProcessing(_Section):
     OPTIONS = [
       ('post_processing',
        [
+        ('tc3_analysis',
+            BooleanTrait(True, label='TC3 analysis')),
+        ('num_clusters',
+            IntTrait(6, 2, 10, label='Number of clusters',)), 
+        ('min_cluster_size',
+            IntTrait(2, 1, 10, label='Minimal Cluster Size',)),
+        ('tc3_algorithms',
+            SelectionTrait(TC3_ALGORITHMS[0],
+                           TC3_ALGORITHMS,
+                           label='TC3 algorithms')),
         ('ibb_analysis',
-            BooleanTrait(True, label='IBB analysis')),
+            BooleanTrait(False, label='IBB analysis')),
         ('mappingfile_path',
             StringTrait('', 1000, label='Mapping file path',
                                    widget_info=StringTrait.STRING_PATH)), 

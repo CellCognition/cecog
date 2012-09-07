@@ -88,6 +88,8 @@ def compose_galleries(path, path_hmm, quality="90", one_daughter=True, sample=30
             safe_mkdirs(path_out)
             image_name = os.path.join(path_out, '%s.jpg' % group_name)
             ccore.writeImage(results[gallery_name], image_name, quality)
+            image_name2 = os.path.join(path_out, '%s.png' % group_name)
+            ccore.writeImage(results[gallery_name], image_name2)
             logger.debug("Gallery image '%s' successfully written." % image_name)
 
         yield group_name

@@ -84,7 +84,7 @@ class PostProcessingFrame(BaseProcessorFrame):
                         ('ibb_onset_factor_threshold', (1,0,1,1)),
                         ('nebd_onset_factor_threshold', (1,1,1,1)),
                         ], 
-                       layout='grid', link='ibb_analysis_params', label='Group by')
+                       layout='grid', link='ibb_analysis_params', label='IBB analysis')
         
         self.add_group(None, [
                         ('group_by_position', (0,0,1,1)),
@@ -109,6 +109,14 @@ class PostProcessingFrame(BaseProcessorFrame):
                         ('plot_ylim1_high', (1,1,1,1)),
                         ], 
                        layout='grid', link='plot_params', label='Plotting')
+        
+        self.add_line()
+        self.add_group('tc3_analysis', [
+                        ('num_clusters', (0,0,1,1)),
+                        ('min_cluster_size', (0,1,1,1)),
+                        ('tc3_algorithms', (0,2,1,1)),
+                        ],
+                        layout='grid', link='tc3_analysis', label='TC3 analysis')                  
         
         self.add_line()
         self.add_group('securin_analysis',[])
