@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -24,6 +24,9 @@ import sys, \
        gc
 import cPickle as pickle
 from multiprocessing import freeze_support
+
+import matplotlib as mpl
+mpl.use('QT4Agg')
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -832,10 +835,10 @@ if __name__ == "__main__":
     if is_app:
         package_path = os.path.join(get_application_support_path(), 'battery_package')
         set_package_path(package_path)
-#        sys.stdout = \
-#            file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
-#        sys.stderr = \
-#            file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
+        sys.stdout = \
+            file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
+        sys.stderr = \
+            file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
 
     splash = QSplashScreen(QPixmap(':cecog_splash'))
     splash.show()

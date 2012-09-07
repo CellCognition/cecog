@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -31,6 +31,7 @@ __all__ = ['REGION_NAMES_PRIMARY',
 import types, \
        traceback, \
        logging, \
+       logging.handlers, \
        sys, \
        os, \
        time, \
@@ -49,7 +50,10 @@ from sklearn import mixture, utils
 # change sklearn logsumexp function by corrected version
 from cecog.util.sklearn import mylogsumexp
 utils.extmath.logsumexp = mylogsumexp
-import sklearn.hmm as hmm
+import warnings
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    import sklearn.hmm as hmm
 import scipy.stats.stats as sss
 import scipy.cluster.vq as scv
 from matplotlib import mlab
@@ -66,7 +70,7 @@ from cecog.learning.constants import CLASS_COLORS, CLASS_COLORS_LIST
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
-import numpy
+import numpy, h5py, copy
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
@@ -76,6 +80,9 @@ from pdk.datetimeutils import TimeInterval, StopWatch
 from pdk.fileutils import safe_mkdirs
 
 from multiprocessing import Pool, Queue, cpu_count
+
+
+
 
 #-------------------------------------------------------------------------------
 # cecog imports:
@@ -115,12 +122,68 @@ from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.analyzer.gallery import compose_galleries
 from cecog.traits.config import ConfigSettings
 from cecog.traits.analyzer import SECTION_REGISTRY
-from cecog.analyzer.ibb import IBBAnalysis
+from cecog.analyzer.ibb import IBBAnalysis, SecurinAnalysis
 
 #-------------------------------------------------------------------------------
 # functions:
 #
 
+
+def link_hdf5_files(post_hdf5_link_list):
+    logger = logging.getLogger()
+    
+    PLATE_PREFIX = '/sample/0/plate/'
+    WELL_PREFIX = PLATE_PREFIX + '%s/experiment/'
+    POSITION_PREFIX = WELL_PREFIX + '%s/position/'
+    
+    def get_plate_and_postion(hf_file):
+        plate = hf_file[PLATE_PREFIX].keys()[0]
+        well = hf_file[WELL_PREFIX % plate].keys()[0]
+        position = hf_file[POSITION_PREFIX % (plate, well)].keys()[0]
+        return plate, well, position
+    
+    all_pos_hdf5_filename = os.path.join(os.path.split(post_hdf5_link_list[0])[0], '_all_positions.h5')
+    
+    if os.path.exists(all_pos_hdf5_filename):
+        f = h5py.File(all_pos_hdf5_filename, 'a')
+        ### This is dangerous, several processes open the file for writing...
+        logger.info("_all_positons.hdf file found, trying to reuse it by overwrite old external links...")
+        
+        if 'definition' in f:
+            del f['definition'] 
+            f['definition'] = h5py.ExternalLink(post_hdf5_link_list[0],'/definition')
+            
+        for fname in post_hdf5_link_list:
+            fh = h5py.File(fname, 'r')
+            fplate, fwell, fpos = get_plate_and_postion(fh)
+            fh.close()
+            
+            msg = "Linking into _all_positons.hdf:" + ((POSITION_PREFIX + '%s') % (fplate, fwell, fpos))
+            logger.info(msg)
+            print msg
+            if (POSITION_PREFIX + '%s') % (fplate, fwell, fpos) in f:
+                del f[(POSITION_PREFIX + '%s') % (fplate, fwell, fpos)]
+            f[(POSITION_PREFIX + '%s') % (fplate, fwell, fpos)] = h5py.ExternalLink(fname, (POSITION_PREFIX + '%s') % (fplate, fwell, fpos))
+        
+        f.close()
+        
+    else:
+        f = h5py.File(all_pos_hdf5_filename, 'w')
+        logger.info("_all_positons.hdf file created...") 
+           
+        f['definition'] = h5py.ExternalLink(post_hdf5_link_list[0],'/definition')
+        
+        for fname in post_hdf5_link_list:
+            fh = h5py.File(fname, 'r')
+            fplate, fwell, fpos = get_plate_and_postion(fh)
+            fh.close()
+            msg = "Linking into _all_positons.hdf:" + ((POSITION_PREFIX + '%s') % (fplate, fwell, fpos))
+            logger.info(msg)
+            print msg
+            
+            f[(POSITION_PREFIX + '%s') % (fplate, fwell, fpos)] = h5py.ExternalLink(fname, (POSITION_PREFIX + '%s') % (fplate, fwell, fpos))
+        
+        f.close()
 
 # see http://stackoverflow.com/questions/3288595/multiprocessing-using-pool-map-on-a-function-defined-in-a-class
 def AnalyzerCoreHelper(plate_id, settings_str, imagecontainer, position):
@@ -131,9 +194,8 @@ def AnalyzerCoreHelper(plate_id, settings_str, imagecontainer, position):
     settings.set(SECTION_NAME_GENERAL, 'constrain_positions', True)
     settings.set(SECTION_NAME_GENERAL, 'positions', position)
     analyzer = AnalyzerCore(plate_id, settings,imagecontainer)         
-    analyzer.processPositions()
-    
-    return plate_id, position
+    result = analyzer.processPositions()
+    return plate_id, position, copy.deepcopy(result['post_hdf5_link_list'])
 
 def process_initialyzer(port):
     oLogger = logging.getLogger(str(os.getpid()))
@@ -254,8 +316,6 @@ class BaseFrame(QFrame, TraitDisplayMixin):
 
     def tab_changed(self, index):
         pass
-
-
 
 class _ProcessingThread(QThread):
 
@@ -913,8 +973,7 @@ class MultiProcessingAnalyzerMixin(ParallelProcessThreadMixinBase):
             self.parent.set_stage_info(stage_info)
             
         def __call__(self, args):
-            print 'args', args
-            plate, pos = args
+            plate, pos, hdf_files = args
             self.cnt += 1
             stage_info = {'progress': self.cnt,
                           'meta': 'Parallel processing %d / %d positions (%d cores)' % (self.cnt, 
@@ -929,6 +988,8 @@ class MultiProcessingAnalyzerMixin(ParallelProcessThreadMixinBase):
                           }
             self.parent.set_stage_info(stage_info)
             self._timer.reset()  
+            
+            return args
             
     def setup(self, ncpu=None):
         if ncpu is None:
@@ -960,6 +1021,10 @@ class MultiProcessingAnalyzerMixin(ParallelProcessThreadMixinBase):
         self.log_receiver.server_close()        
         self.log_receiver_thread.join()
         
+        post_hdf5_link_list = reduce(lambda x,y: x + y, self.post_hdf5_link_list)
+        if len(post_hdf5_link_list) > 0:
+            link_hdf5_files(sorted(post_hdf5_link_list))
+        
         
     def abort(self):
         self._abort = True
@@ -969,17 +1034,23 @@ class MultiProcessingAnalyzerMixin(ParallelProcessThreadMixinBase):
     def join(self):
         self.pool.close()
         self.pool.join()
+        self.post_hdf5_link_list = []
         if not self._abort:
-            exception_list = []
+            exception_list = []      
             for r in self.job_result:
                 if not r.successful():
                     try:
                         r.get()
                     except Exception, e:
                         exception_list.append(e)
+                else: 
+                    plate, pos, hdf_files = r.get()
+                    if len(hdf_files) > 0:
+                        self.post_hdf5_link_list.append(hdf_files)
             if len(exception_list) > 0:
                 multi_exception = MultiprocessingException(exception_list)
                 raise multi_exception
+            
                         
         self.finish()   
     
@@ -1116,14 +1187,9 @@ class PostProcessingThread(_ProcessingThread):
     def _run_plate(self, plate_id):
         path_out = self._imagecontainer.get_path_out()
 
-
         path_analyzed = os.path.join(path_out, 'analyzed')
-        path_out_ibb = os.path.join(path_out, 'ibb')
-
         safe_mkdirs(path_analyzed)
-        safe_mkdirs(path_out_ibb)
-     
-        print 'for ', plate_id
+        
         mapping_file = self._mapping_files[plate_id]
         
         class_colors = {}       
@@ -1136,54 +1202,68 @@ class PostProcessingThread(_ProcessingThread):
             
         self._settings.set_section(SECTION_NAME_POST_PROCESSING)
         
-        ibb_options = {}
-        ibb_options['ibb_ratio_signal_threshold'] = self._settings.get2('ibb_ratio_signal_threshold')
-        ibb_options['ibb_range_signal_threshold'] = self._settings.get2('ibb_range_signal_threshold')
-        ibb_options['ibb_onset_factor_threshold'] = self._settings.get2('ibb_onset_factor_threshold')
-        ibb_options['nebd_onset_factor_threshold'] = self._settings.get2('nebd_onset_factor_threshold')
-        ibb_options['single_plot'] = self._settings.get2('single_plot')
+        if self._settings.get2('ibb_analysis'):
         
-        
-        ibb_options['single_plot_ylim_range'] = self._settings.get2('single_plot_ylim_low'), \
-                                                self._settings.get2('single_plot_ylim_high')
-        
-        tmp = (self._settings.get2('group_by_group'),
-               self._settings.get2('group_by_genesymbol'),
-               self._settings.get2('group_by_oligoid'),
-               self._settings.get2('group_by_position'),
-               )
-        
-        ibb_options['group_by'] = int(numpy.log2(int(reduce(lambda x,y: str(x)+str(y), 
-                                                            numpy.array(tmp).astype(numpy.uint8)),2))+0.5)
-
-
-        tmp = (self._settings.get2('color_sort_by_group'),
-               self._settings.get2('color_sort_by_genesymbol'),
-               self._settings.get2('color_sort_by_oligoid'),
-               self._settings.get2('color_sort_by_position'),
-               )
-        
-        ibb_options['color_sort_by'] = int(numpy.log2(int(reduce(lambda x,y: str(x)+str(y), 
-                                                                 numpy.array(tmp).astype(numpy.uint8)),2))+0.5)
-        
-        if not ibb_options['group_by'] < ibb_options['color_sort_by']:
-            raise AttributeError('Group by selection must be more general than the color sorting! (%d !> %d)' % (
-                                                            ibb_options['group_by'], ibb_options['color_sort_by']))
-        
-        ibb_options['color_sort_by'] = IBBAnalysis.COLOR_SORT_BY[ibb_options['color_sort_by']]
-        
-        ibb_options['timeing_ylim_range'] = self._settings.get2('plot_ylim1_low'), \
-                                            self._settings.get2('plot_ylim1_high')
-        
+            ibb_options = {}
+            ibb_options['ibb_ratio_signal_threshold'] = self._settings.get2('ibb_ratio_signal_threshold')
+            ibb_options['ibb_range_signal_threshold'] = self._settings.get2('ibb_range_signal_threshold')
+            ibb_options['ibb_onset_factor_threshold'] = self._settings.get2('ibb_onset_factor_threshold')
+            ibb_options['nebd_onset_factor_threshold'] = self._settings.get2('nebd_onset_factor_threshold')
+            ibb_options['single_plot'] = self._settings.get2('single_plot')
+            ibb_options['single_plot_max_plots'] = self._settings.get2('single_plot_max_plots')
+            ibb_options['single_plot_ylim_range'] = self._settings.get2('single_plot_ylim_low'), \
+                                                    self._settings.get2('single_plot_ylim_high')
             
-        ibb_analyzer = IBBAnalysis(path_analyzed, 
-                                   path_out_ibb, 
-                                   plate_id, 
-                                   mapping_file, 
-                                   class_colors, 
-                                   class_names,
-                                   **ibb_options)
-        ibb_analyzer.run()
+            tmp = (self._settings.get2('group_by_group'),
+                   self._settings.get2('group_by_genesymbol'),
+                   self._settings.get2('group_by_oligoid'),
+                   self._settings.get2('group_by_position'),
+                   )
+            ibb_options['group_by'] = int(numpy.log2(int(reduce(lambda x,y: str(x)+str(y), 
+                                                                numpy.array(tmp).astype(numpy.uint8)),2))+0.5)
+
+            tmp = (self._settings.get2('color_sort_by_group'),
+                   self._settings.get2('color_sort_by_genesymbol'),
+                   self._settings.get2('color_sort_by_oligoid'),
+                   self._settings.get2('color_sort_by_position'),
+                   )
+            
+            ibb_options['color_sort_by'] = int(numpy.log2(int(reduce(lambda x,y: str(x)+str(y), 
+                                                                     numpy.array(tmp).astype(numpy.uint8)),2))+0.5)
+            
+            if not ibb_options['group_by'] < ibb_options['color_sort_by']:
+                raise AttributeError('Group by selection must be more general than the color sorting! (%d !> %d)' % (
+                                                                ibb_options['group_by'], ibb_options['color_sort_by']))
+            
+            ibb_options['color_sort_by'] = IBBAnalysis.COLOR_SORT_BY[ibb_options['color_sort_by']]
+            
+            ibb_options['timeing_ylim_range'] = self._settings.get2('plot_ylim1_low'), \
+                                                self._settings.get2('plot_ylim1_high')
+            
+            path_out_ibb = os.path.join(path_out, 'ibb')
+            safe_mkdirs(path_out_ibb)    
+            ibb_analyzer = IBBAnalysis(path_analyzed, 
+                                       path_out_ibb, 
+                                       plate_id, 
+                                       mapping_file, 
+                                       class_colors, 
+                                       class_names,
+                                       **ibb_options)
+            ibb_analyzer.run()
+            
+        if self._settings.get2('securin_analysis'):
+            path_out_securin = os.path.join(path_out, 'sec')
+            safe_mkdirs(path_out_securin) 
+            
+            securin_options = {}
+            securin_analyzer = SecurinAnalysis(path_analyzed, 
+                                       path_out_securin, 
+                                       plate_id, 
+                                       mapping_file, 
+                                       class_colors, 
+                                       class_names,
+                                       **securin_options)
+            securin_analyzer.run()
         
     @staticmethod
     def read_data(path,num_frames,col,name):  
@@ -1253,7 +1333,13 @@ class AnalzyerThread(_ProcessingThread):
             analyzer = AnalyzerCore(plate_id, self._settings,
                                     copy.copy(self._imagecontainer),
                                     learner=learner)
-            learner = analyzer.processPositions(self)
+            result = analyzer.processPositions(self)
+            learner = result['ObjectLearner']
+            post_hdf5_link_list = result['post_hdf5_link_list']
+            if len(post_hdf5_link_list) > 0:
+                link_hdf5_files(sorted(post_hdf5_link_list))
+            
+            
         # make sure the learner data is only exported while we do sample picking
         if self._settings.get('Classification', 'collectsamples') and not learner is None:
             learner.export()

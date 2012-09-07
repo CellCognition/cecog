@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -1697,13 +1697,6 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                             if len(lstNodes) == track_length:
                                 lstTracks.append(lstNodes)
 
-                        #lstLengths = [len(x) for x in lstTracks]
-                        #assert allEqual(lstLengths)
-
-                        #if self.getOption('bFollowOnlyOneCell'):
-                        #    # take the first track from the list
-                        #    lstTracks = [lstTracks[0]]
-
                         for cnt, track in enumerate(lstTracks):
                             new_start_id = '%s_%d' % (strStartId, cnt+1)
                             dctResults[new_start_id] = {'splitId'  : lstForwardNodeIds[iSplitIdx-1],
@@ -1741,10 +1734,6 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                     dctResults['_current'] += idx
                 self._forwardVisitor(strTailId, dctResults, dctVisitedNodes, iLevel=iLevel+1)
 
-#    @staticmethod
-#    def getNodeIdFromComponents(frame,  obj_id, child_id=None):
-#        return '%d_%s' % (frame, obj_id)
-#
     @staticmethod
     def getComponentsFromNodeId(strNodeId):
         items = map(int, strNodeId.split('_'))

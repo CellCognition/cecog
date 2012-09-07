@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -74,11 +74,13 @@ class SectionPostProcessing(_Section):
             StringTrait('', 1000, label='Mapping file path',
                                    widget_info=StringTrait.STRING_PATH)), 
         ('single_plot',
-            BooleanTrait(True, label='Export single event plots',)),
+            BooleanTrait(True, label='Export single event',)),
+        ('single_plot_max_plots',
+            IntTrait(1, 1, 2000, label='Max. number',)),
         ('ibb_ratio_signal_threshold',
-            FloatTrait(1.2, 1, 5, label='IBB minimum ratio signal threshold',)),    
+            FloatTrait(1.2, 0.5, 5, label='IBB minimum ratio signal threshold',)),    
         ('ibb_range_signal_threshold',
-            FloatTrait(3, 1, 5, label='IBB minimum range threshold',)),   
+            FloatTrait(3, 0.5, 5, label='IBB minimum range threshold',)),   
         ('ibb_onset_factor_threshold',
             FloatTrait(1.2, 1, 5, label='IBB onset slope threshold',)),   
         ('nebd_onset_factor_threshold',
@@ -115,7 +117,11 @@ class SectionPostProcessing(_Section):
                          widget_info=BooleanTrait.RADIOBUTTON)),
         ('color_sort_by_group',
             BooleanTrait(False, label='Group',
-                         widget_info=BooleanTrait.RADIOBUTTON))
+                         widget_info=BooleanTrait.RADIOBUTTON)),
+        
+        ('securin_analysis',
+            BooleanTrait(True, label='Securin analysis')),
+        
         ]
        )
     ]
