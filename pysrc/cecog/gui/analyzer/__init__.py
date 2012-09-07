@@ -458,7 +458,7 @@ class HmmThreadPython(_ProcessingThread):
                         for frame_index in range(dim[0]): 
                             color_index = label_matrix[track_index,frame_index]
                             plt.axhline(y=(track_index)*imgsize+offset, xmin=frame_index*frac, xmax=(frame_index+1)*frac, color=CLASS_COLORS[color_index])            
-                    plt.savefig(self._join(path_out_composed_gallery, pos+'_'+str(i)+'.png')  , dpi = 200)  
+                    plt.savefig(self._join(path_out_composed_gallery, pos+'_'+str(i)+'.png')  , dpi = 300)  
                 print i
                 print counter
 #            for (counter, infile) in enumerate(infiles) :
