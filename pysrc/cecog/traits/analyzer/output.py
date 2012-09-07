@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -88,10 +88,12 @@ class SectionOutput(_Section):
      ('hdf5',
        [('hdf5_create_file',
             BooleanTrait(False, label='Create HDF5')),
+        ('hdf5_reuse',
+            BooleanTrait(False, label='Reuse HDF5')),
         ('hdf5_include_raw_images',
-            BooleanTrait(False, label='Include channel images')),
+            BooleanTrait(False, label='Include raw images')),
         ('hdf5_include_label_images',
-            BooleanTrait(False, label='Include label images')),
+            BooleanTrait(False, label='Include segmentation images')),
         ('hdf5_include_crack',
             BooleanTrait(False, label='Include crack contours')),
         ('hdf5_include_features',

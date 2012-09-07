@@ -14,6 +14,9 @@ Authors, contributions and affiliation:
 Michael Held - project initiator, main developer
 ETH Zurich, Switzerland
 
+Christoph Sommer - project coordinator, main developer
+ETH Zurich, Switzerland
+
 Daniel Gerlich - group leader, project coordinator
 ETH Zurich, Switzerland
 

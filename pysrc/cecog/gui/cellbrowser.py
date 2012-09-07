@@ -44,7 +44,9 @@ from functools import partial
 # cecog imports:
 #
 from cecog.gui.imageviewer import HoverPolygonItem
-from cecog.io.dataprovider import File
+from cecog.io.hdfcore import CH5File, GALLERY_SIZE
+import cecog.io.hdfcore
+
 from cecog.gui.cellbroser_core import TerminalObjectItem, ObjectItem
 from pdk.datetimeutils import StopWatch
 from cecog.gui.cellbrowser_plugins import EventPCAPlugin
@@ -109,17 +111,17 @@ class PositionThumbnailEvents(PositionThumbnailBase):
         PositionThumbnailBase.__init__(self, parent)
         self.parent = parent
         self.position_key = position_key
-        events = position.get_sorted_objects('event', 'state_periods', 2,3,4)
+        events = position.get_events()
         if len(events) > 0:
             thumbnail_pixmap = QtGui.QPixmap(20*self.item_length, len(events)*self.item_height)
-            thumbnail_pixmap.fill(QtCore.Qt.black)
+            thumbnail_pixmap.fill(QtCore.Qt.white)
             painter = QtGui.QPainter()
             
             painter.begin(thumbnail_pixmap)
             
             for r, event in enumerate(events):
-                for c, pp in enumerate(event.children()):
-                    line_pen = QtGui.QPen(QtGui.QColor(pp.class_color))
+                for c, pp in enumerate(event):
+                    line_pen = QtGui.QPen(QtGui.QColor(position.get_class_color(pp)))
                     line_pen.setWidth(self.item_height)
                     painter.setPen(line_pen)
                     painter.drawLine(c*self.item_length, r*self.item_height, 
@@ -127,9 +129,10 @@ class PositionThumbnailEvents(PositionThumbnailBase):
             painter.end()
                 
             self.height = thumbnail_pixmap.height()
+
             self.setPixmap(thumbnail_pixmap)
             self.setStyleSheet(self.css)
-            self.setToolTip('Sample %s\nPlate %s \nExperiment %s\nPosition %s' % position_key)
+            self.setToolTip('%s %s %s %s' % position_key)
             self.setMinimumHeight(self.height)
         else:
             self.setText('No thumbnail\navailable...')
@@ -182,15 +185,16 @@ class TrackletThumbnailList(QtGui.QWidget):
             ThumbClass = PositionThumbnailEvents
         
         
-        for position_key in data_provider.positions:
-            tn_position = ThumbClass(position_key, data_provider[position_key], self)
-            tn_widget = QtGui.QWidget(self)
-            tn_layout = QtGui.QVBoxLayout()
-            tn_layout.addWidget(QtGui.QLabel('%s %s' % (position_key[1], position_key[3])))
-            tn_layout.addWidget(tn_position)
-            tn_layout.addStretch()
-            tn_widget.setLayout(tn_layout)
-            self.main_layout.addWidget(tn_widget)
+        for well_key, pos_keys in data_provider.positions.items():
+            for pos_key in pos_keys:
+                tn_position = ThumbClass(('0', '0', well_key, pos_key), data_provider.get_position(well_key, pos_key), self)
+                tn_widget = QtGui.QWidget(self)
+                tn_layout = QtGui.QVBoxLayout()
+                tn_layout.addWidget(QtGui.QLabel('%s_%s' % (well_key, pos_key)))
+                tn_layout.addWidget(tn_position)
+                tn_layout.addStretch()
+                tn_widget.setLayout(tn_layout)
+                self.main_layout.addWidget(tn_widget)
             
         self.main_layout.addStretch()
         self.setLayout(self.main_layout)
@@ -275,14 +279,14 @@ class TrackletBrowser(QtGui.QWidget):
         
         
         # Objects
-        gb2 = QtGui.QGroupBox('Objects')
-        gb2_layout = QtGui.QVBoxLayout()
-        self.cmb_object_type = QtGui.QComboBox()
-        self.cmb_object_type.addItems(['event', 'track', 'primary__primary','secondary__expanded'])
-        self.cmb_object_type.currentIndexChanged[str].connect(self.change_object_type) 
-        gb2_layout.addWidget(self.cmb_object_type)
-        gb2.setLayout(gb2_layout)
-        self.view_hud_btn_layout.addWidget(gb2)
+#        gb2 = QtGui.QGroupBox('Objects')
+#        gb2_layout = QtGui.QVBoxLayout()
+#        self.cmb_object_type = QtGui.QComboBox()
+#        self.cmb_object_type.addItems(['event', 'track', 'primary__primary','secondary__expanded'])
+#        self.cmb_object_type.currentIndexChanged[str].connect(self.change_object_type) 
+#        gb2_layout.addWidget(self.cmb_object_type)
+#        gb2.setLayout(gb2_layout)
+#        self.view_hud_btn_layout.addWidget(gb2)
         
         # Sorting
         gb1 = QtGui.QGroupBox('Sorting')
@@ -400,25 +404,27 @@ class TrackletBrowser(QtGui.QWidget):
         image.save(filename);
         
         
-    def show_position(self, position_key, object_name='event'):
+    def show_position(self, position_key):
         tic = timing.time()
         self.scene.clear()
         self._current_position_key = position_key
-        position = self.data_provider[position_key]
+        position = self.data_provider.get_position(position_key[2], position_key[3])
         
         self._root_items = []
-        events = position.get_objects(object_name)
+        events = position.get_events()
         
-        for event in events.iter(50):
-            g_event = GraphicsItemType(event)
+        for kk, event in enumerate(events):
+            g_event = EventGraphicsItem(kk, event, position)
             g_event.setHandlesChildEvents(False)
             self.scene.addItem(g_event)
             self._root_items.append(g_event)
+            
         print '  Loading events took %5.2f' % (timing.time() - tic)
             
-        self.GraphicsItemLayouter = GraphicsItemLayouter(events.get_object_type())(self)
+        self.GraphicsItemLayouter = EventGraphicsLayouter(self)
             
         self.update_()
+        self.position = position
         print '  Total Rendering of position took %5.2f' % (timing.time() - tic)
     
     def cb_change_vertical_alignment(self, index): 
@@ -426,10 +432,10 @@ class TrackletBrowser(QtGui.QWidget):
         self.update_()
         
     def change_object_type(self, object_name):
-        self.show_position(self._current_position_key, object_name)
+        pass
            
     def open_file(self, filename):
-        self.data_provider = File(filename)
+        self.data_provider = CH5File(filename)
         self.make_thumbnails()
         
     def remove_thumbnails(self):
@@ -500,7 +506,7 @@ class TrackletBrowser(QtGui.QWidget):
     def selectTransition(self):
         for ti in self._root_items:
             ti.is_selected = False
-            trans_pos = reduce(lambda x,y: str(x) + str(y), ti.object_item['prediction']).find('01')
+            trans_pos = reduce(lambda x,y: str(x) + str(y), self.position.get_class_prediction()[ti.object_item]['label_idx']).find('01')
             if trans_pos > 0:
                 ti.is_selected = True
                 ti.column = - (trans_pos + 1)
@@ -514,7 +520,8 @@ class GraphicsLayouterBase(QtGui.QWidget):
     properties = {}
     def __init__(self, parent):
         QtGui.QWidget.__init__(self, parent)
-        self._items = parent._root_items     
+        self._items = parent._root_items    
+        self.parent = parent 
     def __call__(self):
         print 'print default layouting'   
 
@@ -540,7 +547,7 @@ class EventGraphicsLayouter(GraphicsLayouterBase):
             if self._align_vertically == self.ALIGN_LEFT:
                 ti.moveToColumn(0)
             elif self._align_vertically == self.ALIGN_ABSOLUT_TIME:
-                ti.moveToColumn(ti.sub_items[1].object_item.time)
+                ti.moveToColumn(self.parent.data_provider.current_pos.get_time_idx(ti.sub_items[1].object_item))
             elif self._align_vertically == self.ALIGN_CUSTOM:
                 ti.moveToColumn(ti.column)
         
@@ -578,30 +585,32 @@ class GraphicsObjectItemBase(QtGui.QGraphicsItemGroup):
         self.setPos(col * self.width, self.row * self.height)
     
 class GraphicsObjectItem(GraphicsObjectItemBase):
-    def __init__(self, object_item, parent=None):
+    def __init__(self, object_item, position, parent=None):
         GraphicsObjectItemBase.__init__(self, parent)
         self.object_item = object_item
+        self.position = position
         
     
     
     
 class EventGraphicsItem(GraphicsObjectItem):
-    def __init__(self, object_item, parent=None):
-        GraphicsObjectItem.__init__(self, object_item, parent)
+    def __init__(self, idx, object_item, position, parent=None):
+        GraphicsObjectItem.__init__(self, object_item, position, parent)
         
         self.id = CellGraphicsTextItem()
-        self.id.setHtml("<span style='color:white; font:bold 32px'> %r </span>" % self.object_item.id)
+        self.id.setHtml("<span style='color:white; font:bold 32px'> %r </span>" % idx)
+        self.position = position
         
         self.addToGroup(self.id)
         self.sub_items = []
         self.sub_items.append(self.id)
-        for col, sub_item in enumerate(object_item.children()):
-            g_sub_item = GraphicsItemType(sub_item)
+        for col, sub_item in enumerate(object_item):
+            g_sub_item = CellGraphicsItem(sub_item, position)
             g_sub_item.moveToColumn(col+1)
             self.sub_items.append(g_sub_item)
             self.addToGroup(g_sub_item)
             
-        self.row = object_item.id
+        self.row = idx
         self.column = 0
         self.height = self.sub_items[1].height
         self.item_length = self.sub_items[1].width
@@ -641,9 +650,11 @@ class EventGraphicsItem(GraphicsObjectItem):
     def width(self):
         return self.sub_items[1].width#sum([x.width for x in self.sub_items])
     
-    def make_feature_plot(self, feature_idx = 5):
-        features = self.object_item.sibling_item_features[:, feature_idx]
-        min_, max_ = self.object_item.sibling_item_feature_min_max(feature_idx)
+    def make_feature_plot(self, feature_idx=222):
+        features = self.position.get_object_features()
+        min_, max_ = features[:,feature_idx].min(), features[:,feature_idx].max() 
+        
+        features = features[self.object_item, feature_idx]
 
         self.item_cnt = features.shape[0]
         width = self.item_length*self.item_cnt
@@ -658,11 +669,12 @@ class EventGraphicsItem(GraphicsObjectItem):
         
         features = ((1 - (features-min_)/(max_ - min_)) * self.height).astype(numpy.uint8)
         
-        for col, (f1, f2, obj) in enumerate(zip(features, numpy.roll(features, -1), self.object_item.children())):
-            if obj.class_color is None:
+        for col, (f1, f2, obj) in enumerate(zip(features, numpy.roll(features, -1), self.object_item)):
+            class_color = self.position.get_class_color(obj, 'secondary__expanded')
+            if class_color is None:
                 color_ = QtCore.Qt.white
             else:
-                color_ = QtGui.QColor()
+                color_ = QtGui.QColor(class_color)
             line_pen = QtGui.QPen(color_)
             line_pen.setWidth(3)
             painter.setPen(line_pen)
@@ -678,8 +690,9 @@ class EventGraphicsItem(GraphicsObjectItem):
         
              
 class GraphicsTerminalObjectItem(GraphicsObjectItemBase):
-    def __init__(self, text, parent=None):
+    def __init__(self, text, position, parent=None):
         GraphicsObjectItemBase.__init__(self, parent=None)
+        self.position = position
         
         
     @property
@@ -712,17 +725,17 @@ class CellGraphicsItem(GraphicsTerminalObjectItem):
     
     @property
     def width(self):
-        return self.object_item.BOUNDING_BOX_SIZE
+        return GALLERY_SIZE
     
     def set_gallery_view(self, type):
         self.primary_gallery_item.setVisible(False)
         self.secondary_gallery_item.setVisible(False)
         self.composed_gallery_item.setVisible(False)
         self.gallery_view_type = type
-#        if type != 'off':
-#            self.height = self.width + self.PREDICTION_BAR_HEIGHT 
-#        else:
-#            self.height = self.PREDICTION_BAR_HEIGHT
+        if type != 'off':
+            self.height = self.width + self.PREDICTION_BAR_HEIGHT 
+        else:
+            self.height = self.PREDICTION_BAR_HEIGHT
             
         if type == 'primary':
             self.primary_gallery_item.setVisible(True)
@@ -736,10 +749,10 @@ class CellGraphicsItem(GraphicsTerminalObjectItem):
         self.secondary_contour_item.setVisible(False)
 
         self.contour_view_type = type
-#        if type != 'off':
-#            self.height = self.width + self.PREDICTION_BAR_HEIGHT 
-#        else:
-#            self.height = self.PREDICTION_BAR_HEIGHT
+        if type != 'off':
+            self.height = self.width + self.PREDICTION_BAR_HEIGHT 
+        else:
+            self.height = self.PREDICTION_BAR_HEIGHT
             
         if type == 'primary':
             self.primary_contour_item.setVisible(True)
@@ -755,34 +768,31 @@ class CellGraphicsItem(GraphicsTerminalObjectItem):
             self.bar_item.setVisible(True)
 
     
-    def __init__(self, object_item, parent=None):
-        GraphicsTerminalObjectItem.__init__(self, object_item, parent=None)
+    def __init__(self, object_item, position, parent=None):
+        GraphicsTerminalObjectItem.__init__(self, object_item, position, parent=None)
         self.object_item = object_item
         
-        
-        primary_gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(object_item.image)))
+        image_own = self.position.get_gallery_image(object_item)
+        primary_gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(image_own)))
         primary_gallery_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
         self.primary_gallery_item = primary_gallery_item
         
-        primary_contour_item = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), object_item.crack_contour.tolist())))
+        primary_contour_item = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), self.position.get_crack_contour(object_item)[0])))
         primary_contour_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
-        if object_item.class_color is not None:
-            primary_contour_item.setPen(QtGui.QPen(QtGui.QColor(object_item.class_color)))
+        primary_contour_item.setPen(QtGui.QPen(QtGui.QColor(self.position.get_class_color(object_item))))
         primary_contour_item.setAcceptHoverEvents(True)
-        primary_contour_item.setZValue(3)
+        primary_contour_item.setZValue(4)
         
         self.primary_contour_item = primary_contour_item
         self.addToGroup(primary_contour_item)
         
-        sib_object_item = object_item.get_siblings()
-        if sib_object_item is not None:
-            secondary_gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(sib_object_item.image)))
+        if True:
+            image_sib = self.position.get_gallery_image(object_item, 'secondary__expanded')
+            secondary_gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(image_sib)))
             secondary_gallery_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
             self.secondary_gallery_item = secondary_gallery_item
             
-            image_sib = sib_object_item.image
-            image_own = object_item.image
-            new_shape = (object_item.BOUNDING_BOX_SIZE,)*2 + (3,)
+            new_shape = (GALLERY_SIZE,)*2 + (3,)
             composed_image = numpy.zeros(new_shape, dtype=numpy.uint8)
             composed_image[0:image_own.shape[0],0:image_own.shape[1],0] = image_own
             composed_image[0:image_sib.shape[0],0:image_sib.shape[1],1] = image_sib
@@ -791,10 +801,10 @@ class CellGraphicsItem(GraphicsTerminalObjectItem):
             composed_gallery_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
             self.composed_gallery_item = composed_gallery_item
             
-            secondary_contour_item = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), sib_object_item.crack_contour.tolist())))
+            secondary_contour_item = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), self.position.get_crack_contour(object_item, 'secondary__expanded')[0])))
             secondary_contour_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
-            if sib_object_item.class_color is not None:
-                secondary_contour_item.setPen(QtGui.QPen(QtGui.QColor(sib_object_item.class_color)))
+            
+            secondary_contour_item.setPen(QtGui.QPen(QtGui.QColor(self.position.get_class_color(object_item, 'secondary__expanded'))))
             secondary_contour_item.setAcceptHoverEvents(True)
             secondary_contour_item.setZValue(3)
             
@@ -807,7 +817,7 @@ class CellGraphicsItem(GraphicsTerminalObjectItem):
         self.addToGroup(composed_gallery_item)
         
         bar_item = QtGui.QGraphicsLineItem(self.PREDICTION_BAR_X_PADDING, 0, self.width - self.PREDICTION_BAR_X_PADDING, 0)
-        bar_pen = QtGui.QPen(QtGui.QColor(object_item.class_color))
+        bar_pen = QtGui.QPen(QtGui.QColor(self.position.get_class_color(object_item)))
         bar_pen.setWidth(self.PREDICTION_BAR_HEIGHT)
         bar_item.setPen(bar_pen)
         self.bar_item = bar_item
@@ -815,7 +825,7 @@ class CellGraphicsItem(GraphicsTerminalObjectItem):
         
  
         self.row = 0 
-        self.column = object_item.time
+        self.column = self.position['object']['primary__primary'][object_item]['time_idx']
         self.height = self.width + self.PREDICTION_BAR_HEIGHT 
         
         self.set_gallery_view('primary')
@@ -899,14 +909,16 @@ class MainWindow(QtGui.QMainWindow):
             cevent.accept()
         
     def change_gallery_size(self):
+        global GALLERY_SIZE
+        
         val, ok = QtGui.QInputDialog.getInt(self, 'New gallery image size', 'Size', 
-                                            value=CellTerminalObjectItem.BOUNDING_BOX_SIZE, 
+                                            value=GALLERY_SIZE, 
                                             min=10, 
                                             max=1000)
         if ok:
-            CellTerminalObjectItem.BOUNDING_BOX_SIZE = val
-            self.tracklet_widget.data_provider.clearObjectItemCache()
-                    
+            GALLERY_SIZE = val
+            cecog.io.hdfcore.GALLERY_SIZE = GALLERY_SIZE
+            self.tracklet_widget.data_provider.current_pos.clear_cache()
             self.tracklet_widget.show_position(self.tracklet_widget._current_position_key)
         
     
@@ -925,43 +937,30 @@ def main():
     if len(file) == 1:
         file = file[0][1]
     else:
-#        file = r'C:\Users\sommerc\data\Chromatin-Microtubles\Analysis\H2b_aTub_MD20x_exp911_2_channels_nozip\dump\_all_positions.hdf5'
-#        file = r'C:\Users\sommerc\data\Chromatin-Microtubles\Analysis\H2b_aTub_MD20x_exp911_2_channels_nozip\dump_save\two_positions.hdf5'
-        file = r'Y:\christoph\data\Analysis\mimics_secondary_screening_H2B_tub\001620\dump\0005.hdf5'
-    mainwindow = MainWindow()
-    
-#    import cProfile, pstats
-#    cProfile.run('mainwindow = MainWindow(file)', 'profile-result')
-#    ps = pstats.Stats('profile-result')
-#    ps.strip_dirs().sort_stats('cumulative').print_stats()
-    
+        file = r'C:\Users\sommerc\cellcognition\pysrc\cecog\io\0038-cs.h5'
+        
+    mainwindow = MainWindow(file)
     mainwindow.show()
     app.exec_()
     
-def test():
-    # read tracking information
-    tic = timeit.time()
-#    f = File('C:/Users/sommerc/data/Chromatin-Microtubles/Analysis/H2b_aTub_MD20x_exp911_2_channels_nozip/dump/_all_positions.hdf5')
-    f = File('C:/Users/sommerc/data/Chromatin-Microtubles/Analysis/H2b_aTub_MD20x_exp911_2_channels_nozip/dump_save/two_positions.hdf5')
-    pos = f[f.positions[0]]
-    track = pos.get_objects('event')
-    feature_matrix = []
-    for t in track.iter_random(50):
-        item_features = t.item_features 
-        if item_features is not None:
-            feature_matrix.append(item_features)
+#def test():
+#    # read tracking information
+#    tic = timeit.time()
+##    f = File('C:/Users/sommerc/data/Chromatin-Microtubles/Analysis/H2b_aTub_MD20x_exp911_2_channels_nozip/dump/_all_positions.hdf5')
+#    f = File('C:/Users/sommerc/data/Chromatin-Microtubles/Analysis/H2b_aTub_MD20x_exp911_2_channels_nozip/dump_save/two_positions.hdf5')
+#    pos = f[f.positions[0]]
+#    track = pos.get_objects('event')
+#    feature_matrix = []
+#    for t in track.iter_random(50):
+#        item_features = t.item_features 
+#        if item_features is not None:
+#            feature_matrix.append(item_features)
+#    
+#    feature_matrix = numpy.concatenate(feature_matrix)
+#    print feature_matrix.shape
+#            
+#    print timeit.time() - tic, 'seconds'
     
-    feature_matrix = numpy.concatenate(feature_matrix)
-    print feature_matrix.shape
-            
-    print timeit.time() - tic, 'seconds'
-    
-    
-
-        
-            
-
-
         
 if __name__ == "__main__":
     main()

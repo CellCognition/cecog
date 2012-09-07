@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -102,14 +102,16 @@ class PostProcessingFrame(BaseProcessorFrame):
                        layout='grid', link='color_sort', label='Color sort')
         self.add_group(None, [
                         ('single_plot', (0,0,1,1)),
-                        ('single_plot_ylim_low', (0,1,1,1)),
-                        ('single_plot_ylim_high', (0,2,1,1)),
+                        ('single_plot_max_plots', (0,1,1,1)),
+                        ('single_plot_ylim_low', (0,2,1,1)),
+                        ('single_plot_ylim_high', (0,3,1,1)),
                         ('plot_ylim1_low', (1,0,1,1)),
                         ('plot_ylim1_high', (1,1,1,1)),
                         ], 
                        layout='grid', link='plot_params', label='Plotting')
         
         self.add_line()
+        self.add_group('securin_analysis',[])
         self.add_expanding_spacer()
 
         self._init_control(has_images=False)

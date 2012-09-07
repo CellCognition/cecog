@@ -1,6 +1,6 @@
 
                           The CellCognition Project
-           Copyright (c) 2006 - 2010 Michael Held & Daniel Gerlich
+   Copyright (c) 2006 - 2012 Christoph Sommer, Michael Held & Daniel Gerlich
                    Gerlich Lab, ETH Zurich, Switzerland
 
            CellCognition is distributed under the LGPL License.

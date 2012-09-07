@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -22,8 +22,7 @@ import logging, \
        types, \
        os, \
        bz2, \
-       gzip, \
-       psutil
+       gzip
        
 import time as timing
 

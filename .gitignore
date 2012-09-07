@@ -1,0 +1,14 @@
+dist
+build
+*.pyc
+*.exe
+*.dll
+*.pkl
+*.orig
+*.diff
+*.pyd
+build.info
+.project
+.pydevproject
+.settings
+.DS_Store

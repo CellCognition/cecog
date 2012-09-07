@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -21,7 +21,7 @@ from setuptools import setup
 import shutil
 import os
 import sys
-
+import matplotlib, colorbrewer
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
@@ -43,16 +43,18 @@ from cecog.traits.config import (ANALYZER_CONFIG_FILENAME,
 MAIN_SCRIPT = 'CecogAnalyzer.py'
 
 APP = [MAIN_SCRIPT]
-INCLUDES = ['sip',]
+INCLUDES = ['sip', 'tabdelim',]
 EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
             'PyQt4.QtOpenGL', 'PyQt4.QtScript',
             'PyQt4.QtSql', 'PyQt4.QtTest',
             'PyQt4.QtWebKit', 'PyQt4.QtXml',
             'PyQt4.phonon',
-            'scipy', 'rpy',
+            'rpy',
+            '_gtkagg', '_tkagg', '_agg2', '_cairo', '_cocoaagg',
+            '_fltkagg', '_gtk', '_gtkcairo',
             'Tkconstants', 'Tkinter', 'tcl',
             ]
-PACKAGES = ['cecog', 'h5py']
+PACKAGES = ['cecog', 'h5py', 'colorbrewer', 'vigra', 'matplotlib']
 
 RESOURCE_FILES = [ANALYZER_CONFIG_FILENAME,
                   FONT12_FILENAME,
@@ -95,7 +97,8 @@ for path in ['dist', 'build']:
 if sys.platform == 'darwin':
     OPTIONS = {'app' : APP}
     SYSTEM = 'py2app'
-    DATA_FILES = []
+    DATA_FILES = matplotlib.get_py2exe_datafiles()
+    DATA_FILES.append(('colorbrewer/data',[os.path.join(colorbrewer.__path__[0], 'data', 'ColorBrewer_all_schemes_RGBonly3.csv')]))
     EXTRA_OPTIONS = {'argv_emulation': False,
                      'includes': INCLUDES,
                      'excludes': EXCLUDES,
@@ -105,7 +108,8 @@ if sys.platform == 'darwin':
                      'packages': PACKAGES,
                      'resources': [],
                      'optimize': 2,
-                     'compressed': True,
+                     'compressed': False,
+                     'skip_archive': True,
                      'iconfile': 'resources/cecog_analyzer_icon.icns',
                     }
 elif sys.platform == 'win32':
@@ -120,12 +124,14 @@ elif sys.platform == 'win32':
                'zipfile' : FILENAME_ZIP,
                }
     SYSTEM = 'py2exe'
-    DATA_FILES = []
+    DATA_FILES = matplotlib.get_py2exe_datafiles()
+    DATA_FILES.append(('colorbrewer/data',[os.path.join(colorbrewer.__path__[0], 'data', 'ColorBrewer_all_schemes_RGBonly3.csv')]))
     EXTRA_OPTIONS = {'includes': INCLUDES,
                      'excludes': EXCLUDES,
                      'packages': PACKAGES,
                      'optimize': 2,
-                     'compressed': True,
+                     'compressed': False,
+                     'skip_archive': True,
                      'bundle_files': 3,
 
                      #'ascii': True,
@@ -138,12 +144,12 @@ elif sys.platform.startswith('linux'):
     #FILENAME_ZIP = 'CecogAnalyzer.exe'
     OPTIONS = {'executables':[Executable(MAIN_SCRIPT,initScript = None,)]}
     SYSTEM = 'cx_Freeze'
-    DATA_FILES = []
     EXTRA_OPTIONS = {'includes': INCLUDES,
                      'excludes': EXCLUDES,
                      'packages': PACKAGES,
                      'optimize': 2,
-                     'compressed': True,
+                     'compressed': False,
+                     'skip_archive': True,
                      'bundle_files': 3,
 
                      #'ascii': True,
@@ -261,6 +267,9 @@ elif sys.platform == 'win32':
         print filename
         shutil.copy(filename, resource_path)
 
+    # copy vigranumpycory to correct filename
+    shutil.copy(os.path.join('dist', 'vigra.vigranumpycore.pyd'), os.path.join('dist', 'vigranumpycore.pyd'))
+    
     shutil.copytree(os.path.join(RESOURCE_PATH, 'palettes', 'zeiss'),
                     os.path.join(resource_path, 'palettes', 'zeiss'))
 

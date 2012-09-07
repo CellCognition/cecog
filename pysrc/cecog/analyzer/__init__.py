@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -83,7 +83,6 @@ ZSLICE_PROJECTION_METHODS = ['maximum', 'average']
 
 COMPRESSION_FORMATS = ['raw', 'bz2', 'gz']
 TRACKING_METHODS = ['ClassificationCellTracker',]
-
 TRACKING_DURATION_UNIT_FRAMES = 'frames'
 TRACKING_DURATION_UNIT_MINUTES = 'minutes'
 TRACKING_DURATION_UNIT_SECONDS = 'seconds'
