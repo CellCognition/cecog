@@ -1365,7 +1365,5 @@ class AnalyzerCore(object):
             if self.oSettings.get('Output', 'hdf5_create_file') and self.oSettings.get('Output', 'hdf5_merge_positions'):
                 post_hdf5_link_list.append(result_dct['filename_hdf5'])
             
-        
-        
         return {'ObjectLearner': self.oObjectLearner, 
                 'post_hdf5_link_list': post_hdf5_link_list}

@@ -388,6 +388,8 @@ class Browser(QMainWindow):
         settings.set2('collectsamples', False)
         settings.set('General', 'rendering', {})
         settings.set('General', 'rendering_class', {})
+        settings.set('Output', 'events_export_gallery_images', False)
+        
 
         if len(self._imagecontainer.channels) > 1:
             settings.set('Processing', 'secondary_processChannel', True)
