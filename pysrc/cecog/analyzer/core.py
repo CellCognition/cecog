@@ -1369,22 +1369,3 @@ class AnalyzerCore(object):
         
         return {'ObjectLearner': self.oObjectLearner, 
                 'post_hdf5_link_list': post_hdf5_link_list}
-    
-    
-        
-        
-        f = h5py.File(os.path.join(os.path.split(post_hdf5_link_list[0])[0], '_all_positions.h5'), 'w')
-        
-        f['definition'] = h5py.ExternalLink(post_hdf5_link_list[0],'/definition')
-        
-        for fname in post_hdf5_link_list:
-            fh = h5py.File(fname, 'r')
-            fplate, fwell, fpos = get_plate_and_postion(fh)
-            fh.close()
-            print (POSITION_PREFIX + '%s') % (fplate, fwell, fpos)
-            f[(POSITION_PREFIX + '%s') % (fplate, fwell, fpos)] = h5py.ExternalLink(fname, (POSITION_PREFIX + '%s') % (fplate, fwell, fpos))
-        
-        f.close()
-
-
-
