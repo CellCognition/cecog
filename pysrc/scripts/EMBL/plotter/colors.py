@@ -27,13 +27,13 @@ class ColorMap(object):
         rgbvals = zip(single_channel[0], single_channel[1], single_channel[2])
         return rgbvals
 
-    def makeDivergentColorRamp(self, N, intense=True):
+    def makeDivergentColorRamp(self, N, intense=True, hex_output=False):
         if intense:
             basic_colors = self.div_basic_colors_intense
         if not intense:
             basic_colors = self.div_basic_colors_soft
 
-        cr = self.makeColorRamp(N, basic_colors)
+        cr = self.makeColorRamp(N, basic_colors, hex_output)
         return cr
 
     def makeColorRamp(self, N, basic_colors, hex_output=False):
@@ -53,10 +53,17 @@ class ColorMap(object):
             single_channel[c] = [x / 256.0 for x in numpy.interp(xvals, xp, yp)]
 
         if hex_output:
-            colvec = ['#' + hex(numpy.int32(min(16**4 * single_channel[0][i], 16**6 - 1) +
-                                            min(16**2 * single_channel[1][i], 16**4 - 1) +
-                                            min(single_channel[2][i], 16**2 -1) )).upper()[2:]
+#            colvec = ['#' + hex(numpy.int32(min(16**4 * single_channel[0][i], 16**6 - 1) +
+#                                            min(16**2 * single_channel[1][i], 16**4 - 1) +
+#                                            min(single_channel[2][i], 16**2 -1) )).upper()[2:]
+#                      for i in range(N)]
+            colvec = ['#' + hex(numpy.int32(
+                                            (((256 * single_channel[0][i]  ) +
+                                              single_channel[1][i]) * 256 +
+                                              single_channel[2][i]) * 256
+                                              ))[2:]
                       for i in range(N)]
+
         else:
             colvec = zip(single_channel[0], single_channel[1], single_channel[2])
 

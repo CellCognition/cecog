@@ -47,6 +47,7 @@ class Cutter(object):
                 event_importer = EventDescriptionImporter(settings_filename=post_analysis_settings_name)
                 impdata = event_importer(plates=[plate], positions=positions)
 
+                print 'len(impdata[%s][%s]): %i' % (plate, positions[0], len(impdata[plate][positions[0]]))
                 # dump the result back to a pickle file
                 print 'data imported - dump file: %s' % track_data_filename
                 track_data_dir = os.path.dirname(track_data_filename)
@@ -132,6 +133,8 @@ class Cutter(object):
 
         if lstTracks is None:
             lstTracks = sorted(full_track_data[plate][pos].keys())
+
+        print '*** cutting %i tracks' % len(lstTracks)
 
         for trackId in lstTracks:
             center_values = zip(full_track_data[plate][pos][trackId][self.track_channel][self.track_region]['tracking__center_x'],

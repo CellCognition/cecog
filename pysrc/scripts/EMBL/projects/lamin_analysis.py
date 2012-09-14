@@ -33,6 +33,69 @@ from scripts.EMBL.projects.post_processing import *
 # export PYTHONPATH=/Users/twalter/workspace/cecog/pysrc
 # if rpy2 is going to be used: export PATH=/Users/twalter/software/R/R.framework/Resources/bin:${PATH}
 
+class ColorMap(object):
+    def __init__(self):
+        # divergent color maps
+        self.div_basic_colors_intense = ["#E41A1C",
+                                         "#377EB8",
+                                         "#4DAF4A",
+                                         "#984EA3",
+                                         "#FF7F00" ]
+        self.div_basic_colors_soft = ["#7FC97F",
+                                      "#BEAED4",
+                                      "#FDC086",
+                                      "#FFFF99",
+                                      "#386CB0" ]
+
+
+    def getRGBValues(self, hexvec):
+        single_channel = {}
+        for c in range(3):
+            single_channel[c] = [int(x[(1 + 2*c):(3+2*c)], base=16) / 256.0 for x in hexvec]
+        rgbvals = zip(single_channel[0], single_channel[1], single_channel[2])
+        return rgbvals
+
+    def makeDivergentColorRamp(self, N, intense=True, hex_output=False):
+        if intense:
+            basic_colors = self.div_basic_colors_intense
+        if not intense:
+            basic_colors = self.div_basic_colors_soft
+
+        cr = self.makeColorRamp(N, basic_colors, hex_output)
+        return cr
+
+    def makeColorRamp(self, N, basic_colors, hex_output=False):
+
+        if N<1:
+            return []
+        if N==1:
+            return [basic_colors[0]]
+
+        xvals = numpy.linspace(0, len(basic_colors)-1, N)
+
+        single_channel = {}
+        for c in range(3):
+            xp = range(len(basic_colors))
+            yp = [int(x[(1 + 2*c):(3+2*c)], base=16) for x in basic_colors]
+
+            single_channel[c] = [x / 256.0 for x in numpy.interp(xvals, xp, yp)]
+
+        if hex_output:
+#            colvec = ['#' + hex(numpy.int32(min(16**4 * single_channel[0][i], 16**6 - 1) +
+#                                            min(16**2 * single_channel[1][i], 16**4 - 1) +
+#                                            min(single_channel[2][i], 16**2 -1) )).upper()[2:]
+#                      for i in range(N)]
+            colvec = ['#' + hex(numpy.int32(
+                                            (((256 * single_channel[0][i]  ) +
+                                              single_channel[1][i]) * 256 +
+                                              single_channel[2][i]) * 256
+                                              ))[2:]
+                      for i in range(N)]
+
+        else:
+            colvec = zip(single_channel[0], single_channel[1], single_channel[2])
+
+        return colvec
 
 
 class LaminAnalysis(PostProcessingWorkflow, FeatureProjectionAnalysis):
@@ -46,6 +109,9 @@ class LaminAnalysis(PostProcessingWorkflow, FeatureProjectionAnalysis):
         PostProcessingWorkflow.__init__(self, settings=self.settings)
         FeatureProjectionAnalysis.__init__(self, settings=self.settings)
         #self.fpa = FeatureProjectionAnalysis(settings=settings)
+
+        self._classifiers = {'lda': None}
+        self._classifiers_fs = {}
 
     def _apply_qc(self, track_data):
         track_data['qc'] = True
@@ -136,6 +202,17 @@ class LaminAnalysis(PostProcessingWorkflow, FeatureProjectionAnalysis):
         return
 
     def _process(self, impdata):
+
+        for method in self._classifiers.keys():
+            if self._classifiers[method] is None:
+                self._classifiers[method] = self.learnClassifier(method=method)
+
+        if not self.settings.features_selection is None:
+            for method in self._classifiers_fs.keys():
+                if self._classifiers_fs[method] is None:
+                    self._classifiers_fs[method] = self.learnClassifier(method=method,
+                                                                        features = self.settings.features_selection)
+
         # get expression levels
         self.calcExpressionLevel(impdata)
 
@@ -143,7 +220,22 @@ class LaminAnalysis(PostProcessingWorkflow, FeatureProjectionAnalysis):
         self.applyQC(impdata, remove_qc_false=True, verbose=True)
 
         # calc the LDA projections
-        self.calcProjections(impdata, channels=['secondary'], regions=['propagate'])
+        #self.calcProjections(impdata, channels=['secondary'], regions=['propagate'])
+
+
+        self.projection_list = []
+        for i in range(3):
+            self.projection_list.append(('lda_discriminant_value_%i' % i,
+                                         self.getDiscriminantValues,
+                                         {'clf': self._classifiers['lda'],
+                                          'features': None,
+                                          'normalize_dynamic_range': False,
+                                          'discr_index': i
+                                          }))
+        self.calcProjections2(impdata,
+                              projection_list=self.projection_list,
+                              channels=['secondary'],
+                              regions=['propagate'])
 
         return
 
@@ -183,6 +275,12 @@ and the generated single cell plots. The scripts just links existing information
                       help="Filename of the settings file for the postprocessing")
     parser.add_option("--plot_generation", action="store_true", dest="plot_generation",
                       help="Filename of the settings file for the postprocessing")
+    parser.add_option("--panel_generation", action="store_true", dest="panel_generation",
+                      help="Flag for panel generation (representation of "
+                      "classification results to be used with gallery images.")
+    parser.add_option("--plate", dest="plate",
+                      help="Plate Identifier (default None; plates are then taken"
+                      "from the settings files.")
 
     (options, args) = parser.parse_args()
 
@@ -193,13 +291,43 @@ and the generated single cell plots. The scripts just links existing information
     if plot_generation is None:
         plot_generation = False
 
+    panel_generation = options.panel_generation
+    if panel_generation is None:
+        panel_generation = False
+
+#    parser.add_option("--plot_generation", action="store_true", dest="plot_generation",
+#                      help="Filename of the settings file for the postprocessing")
+#
+#    (options, args) = parser.parse_args()
+#
+#    if (options.settings_file is None):
+#        parser.error("incorrect number of arguments!")
+#
+#    plot_generation = options.plot_generation
+#    if plot_generation is None:
+#        plot_generation = False
+
     la = LaminAnalysis(options.settings_file)
+
+#    # plot generation
+#    if plot_generation:
+#        la.batchPlotGeneration()
+#
+#    # make HTML pages
+#    la.batchHTMLPageGeneration()
+
+    if not options.plate is None:
+        la.settings.plates = [options.plate]
 
     # plot generation
     if plot_generation:
         la.batchPlotGeneration()
 
     # make HTML pages
+    if panel_generation:
+        la.batchPanelGeneration()
+
+    # generation of html-pages
     la.batchHTMLPageGeneration()
 
 

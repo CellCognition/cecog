@@ -132,14 +132,17 @@ cd %s
 
         dctJobs = {1: []}
         i = 1
+        nbcall = 0
         for plate in plates:
             if len(dctJobs[i]) > 0:
                 i += 1
                 dctJobs[i] = []
             nbpos = len(dctExperiments[plate])
             for k in range(nbpos):
+                nbcall += 1
+                #print k, self.oBatchSettings.jobSize,
                 dctJobs[i].append((plate, dctExperiments[plate][k]))
-                if i % self.oBatchSettings.jobSize == 0 and k < nbpos - 1:
+                if nbcall % self.oBatchSettings.jobSize == 0 and k < nbpos - 1:
                     i += 1
                     dctJobs[i] = []
 
@@ -174,6 +177,7 @@ cd %s
             # the script file is called ltarray<x>.sh, where x is 1, 2, 3, 4, ... and corresponds to the job index.
             script_name = os.path.join(self.oBatchSettings.baseScriptDir, '%s%i.sh' % (self.oBatchSettings.scriptPrefix, key))
             script_file = open(script_name, "w")
+            script_file.write(head)
 
             for plate, pos in dctJobs[key]:
                 track_data_filename = os.path.join(self.oBatchSettings.track_data_dir,
@@ -190,7 +194,7 @@ cd %s
                         additional_options
                         )
 
-                script_file.write(head + cmd)
+                script_file.write(cmd + '\n')
             script_file.close()
 
             # make the script executable (without this, the cluster node cannot call it)

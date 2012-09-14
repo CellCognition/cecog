@@ -13,15 +13,11 @@ export PYTHONPATH=/g/software/linux/pack/cellcognition-%s/SRC/cecog_git/pysrc"""
 # settings for scripts
 raw_image_path = '/g/mattaj/Moritz/Olympus data'
 base_analysis_dir = '/g/mitocheck/Thomas/data/Moritz_analysis_cecog'
-
-#base_analysis_dir = '/g/mitocheck/Thomas/data/JKH'
-#raw_image_path = '/g/ellenberg/JKH/chr_cond_screen'
 plate_regex = re.compile('^plate')
-#baseInDir = '/g/ellenberg/JKH/chr_cond_screen'
 
 baseScriptDir = os.path.join(base_analysis_dir, 'scripts')
 track_data_dir = os.path.join(base_analysis_dir, 'track_data')
-scriptPrefix = 'RIBBON'
+scriptPrefix = 'HEMMING'
 
 additional_attributes = {
                          'raw_image_path': '"%s"' % raw_image_path,
@@ -40,7 +36,9 @@ additional_attributes = {
 # plates=None means that all plates found in baseInDir are going to be processed.
 #plates = None #['plate1_2_006']
 plates = [
-          '110820_mutants_LB_Compressed'
+          #'110820_mutants_LB_Compressed',
+          '111027_RNAi_LB_Compressed',
+          '111020_chemicals_LB_Compressed',
           ]
 
 batchScriptDirectory = '/g/software/linux/pack/cellcognition-%s/SRC/cecog_git/pysrc/scripts/EMBL/cutter/' % VERSION

@@ -110,6 +110,8 @@ def init_constants():
     NAMING_SCHEMA_FILENAME = _copy_check_file(RESOURCE_PATH,
                                               APPLICATION_SUPPORT_PATH,
                                               'naming_schemas.ini')
+    print NAMING_SCHEMA_FILENAME
+
     global PATH_MAPPING_FILENAME
     PATH_MAPPING_FILENAME = _copy_check_file(RESOURCE_PATH,
                                              APPLICATION_SUPPORT_PATH,

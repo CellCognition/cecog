@@ -26,6 +26,8 @@ htmlDir = os.path.join(outDir, 'html')
 galleryDir = os.path.join(outDir, 'galleries')
 htmlResourceDir = os.path.join(outDir, 'html_resources')
 
+panelDir = os.path.join(plotDir, 'panels')
+
 #foldersToCreate = [singleCellPlotDir,
 #                   htmlDir]
 
@@ -33,7 +35,9 @@ htmlResourceDir = os.path.join(outDir, 'html_resources')
 # plates: if plates are not defined, the inDir is screened and all subdirectories
 # are taken as plates.
 plates = [
-          '110820_mutants_LB_Compressed'
+          '110820_mutants_LB_Compressed',
+          '111027_RNAi_LB_Compressed',
+          '111020_chemicals_LB_Compressed',
           ]
 
 qc_rules = {
@@ -51,6 +55,19 @@ import_entries_full = {
                                    }
                        }
 
+
+panel_settings = {
+                  'classificationData': [('primary_classification_panel', 'primary', 'primary'),
+                                         ('secondary_classification_panel', 'secondary', 'propagate')]
+
+                  }
+
+features_normalization = None
+features_selection = None
+
+upper_panels = ['primary_classification_panel']
+lower_panels = ['secondary_classification_panel']
+gallery_single_image_width = 101
 
 # settings for the event track importer
 # the key has the structure (channel, region, feature)
@@ -73,12 +90,41 @@ import_entries_event = {
                         }
 
 single_cell_plot_settings = {
-                             'featureData': [#('secondary', 'propagate', 'lda_projection'),
+                             'translocation': {
+                                 'featureData': [#('secondary', 'propagate', 'lda_projection'),
                                              ('tertiary', 'diff_out_in', 'feature__avg_norm'),
                                              ],
-                             'classificationData': [('primary', 'primary'),
-                                                    ('secondary', 'propagate')]
-                             }
+                                 'classificationData': [('primary', 'primary'),
+                                                        ('secondary', 'propagate')]
+                                 },
+                            'lda_decision_values': {
+                                 'featureData': [('secondary', 'propagate', 'lda_discriminant_value_0'),
+                                                 ('secondary', 'propagate', 'lda_discriminant_value_1'),
+                                                 ('secondary', 'propagate', 'lda_discriminant_value_2'),
+                                                 ],
+                                 'classificationData': [('primary', 'primary'),
+                                                        ('secondary', 'propagate')],
+                                 #'condition': CutAfterPhase('Metaphase')
+
+                                 },
+                            'lda_decision_values_second': {
+                                 'featureData': [
+                                                 ('secondary', 'propagate', 'lda_discriminant_value_2'),
+                                                 ],
+                                 'classificationData': [('primary', 'primary'),
+                                                        ('secondary', 'propagate')],
+                                 #'condition': CutAfterPhase('Metaphase')
+                                 },
+                            }
+
+
+#single_cell_plot_settings = {
+#                             'featureData': [#('secondary', 'propagate', 'lda_projection'),
+#                                             ('tertiary', 'diff_out_in', 'feature__avg_norm'),
+#                                             ],
+#                             'classificationData': [('primary', 'primary'),
+#                                                    ('secondary', 'propagate')]
+#                             }
 
 class_color_code = {
                     ('primary', 'primary'):
@@ -108,13 +154,14 @@ class_color_code = {
                      'color_code':
                         {
                          'assembled'   : '#00ff00',
-                         'deforming'   : '#0000ff',
+                         #'deforming'   : '#0000ff',
                          'disassembling' :   '#800080',
                          'disassembled'   : '#ff8000',
                          },
                      'class_list':
                          [
-                          'assembled', 'deforming',
+                          'assembled',
+                          #'deforming',
                           'disassembling', 'disassembled'
                           ],
                      'legend_title': 'lamin',
@@ -135,7 +182,9 @@ remove_empty_fields = False
 ###############################################################
 # FEATURE PROJECTION
 
-trainingset_filename = os.path.join(outDir, 'cecog_classifiers/01102011_H2B-LB1_TRFX_LB1/data/features.arff')
+#trainingset_filename = os.path.join(outDir, 'cecog_classifiers/01102011_H2B-LB1_TRFX_LB1/data/features.arff')
+
+trainingset_filename = os.path.join(outDir, 'cecog_classifiers/111103_H2B_TRFX_LB1/data/features.arff')
 
 FEATURES_REMOVE = [
                    'h4_2ASM', 'h4_2CON', 'h4_2COR', 'h4_2COV',
@@ -156,7 +205,7 @@ FEATURES_REMOVE = [
                    'h8_VAR', 'h8_average', 'h8_variance'
                    ]
 
-PHENOCLASSES_FOR_TRAINING = ['assembled', 'disassembled']
+PHENOCLASSES_FOR_TRAINING = ['assembled', 'disassembling', 'disassembled']
 PHENOCLASSES = ['assembled', 'disassembling', 'disassembled']
 
 colordict = {
@@ -181,9 +230,15 @@ value_extraction = OrderedDict([
                                 ])
 
 html_plot_col_title = OrderedDict([
-                                   #('lda_projection', 'LDA'),
-                                   ('avg_norm', 'Transloc'),
+                                   ('translocation', 'Translocation'),
+                                   ('lda_decision_values', 'lda decision values'),
+                                   ('lda_decision_values_second', '2nd LDA dec')
                                    ])
+
+#html_plot_col_title = OrderedDict([
+#                                   #('lda_projection', 'LDA'),
+#                                   ('avg_norm', 'Transloc'),
+#                                   ])
 
 #value_extraction = {
 #                   'mean_SECONDARY_rim_bgsub_normalized_max': ('mean_SECONDARY_rim_bgsub_normalized', max, 'Max'),
