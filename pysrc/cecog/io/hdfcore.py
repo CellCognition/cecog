@@ -28,7 +28,7 @@ except ImportError:
 # Constants:
 #
 
-GALLERY_SIZE = 100    
+GALLERY_SIZE = 60    
 
 #-------------------------------------------------------------------------------
 # Functions:
@@ -118,6 +118,9 @@ class CH5Position(object):
                    ['object_classification'] \
                    ['prediction'].value
                    
+    def has_classification(self, object_):
+        return 'object_classification' in self['feature'][object_] 
+                   
     def get_crack_contour(self, index, object_='primary__primary', bb_corrected=True):
         if not isinstance(index, (list, tuple)):
             index = (index,)
@@ -193,14 +196,18 @@ class CH5Position(object):
         img = self.get_gallery_image_rgb(index, object_)
         for obj_id in object_:
             crack = self.get_crack_contour(index, obj_id)
+            
+            
             if color is None:
                 class_color = self.get_class_color(index, obj_id)
+                if class_color is None:
+                    class_color = ['#FFFFFF']*len(crack)
+                    
                 if not isinstance(class_color, (list, tuple)):
                     class_color = [class_color]
             else:
                 class_color = [color]*len(crack)
                 
-            print class_color
             for i, (cr, col) in enumerate(zip(crack, class_color)):
                 col_tmp = hex_to_rgb(col)
                 for x, y in cr:
@@ -221,6 +228,8 @@ class CH5Position(object):
         return self.get_class_prediction(object_)['label_idx'][[x for x in index]] + 1
     
     def get_class_color(self, index, object_='primary__primary'):
+        if not self.has_classification(object_):
+            return
         res = map(str, self.class_color_def(tuple(self.get_class_label(index, object_)), object_))
         if len(res) == 1:
             return res[0]
@@ -252,14 +261,14 @@ class CH5Position(object):
     def get_feature_table(self, object_, feature):
         return self['feature'][object_][feature].value
     
-    def get_events(self):
+    def get_events(self, output_second_branch=False):
         dset_event = self.get_object_table('event')
         events = []
-        for event_id in range(1,dset_event['obj_id'].max()):
+        for event_id in range(dset_event['obj_id'].max()):
             idx = numpy.where(dset_event['obj_id'] == event_id)
             idx1 = dset_event[idx]['idx1']
             idx2 = dset_event[idx]['idx2']
-            
+            second_branch_found = False
             event_list = []
             for p1, _ in zip(idx1, idx2):
                 if p1 in event_list:
@@ -268,11 +277,14 @@ class CH5Position(object):
                     break
                 else:
                     event_list.append(p1)
-            events.append(event_list)
-            if second_branch_found:
+            
+            if second_branch_found and output_second_branch:
                 a = list(idx1).index(p1)
-                b = len(idx1) - list(idx1)[-1:0:-1].index(p1) -1
-                events.append(list(idx1[0:a]) + list(idx1[b:]))
+                b = len(idx1) - list(idx1)[-1:0:-1].index(p1) - 1
+                event_list2 = list(idx1[0:a]) + list(idx1[b:])
+                events.append([event_list, event_list2])
+            else:
+                events.append([event_list])
                 
         return events
     
