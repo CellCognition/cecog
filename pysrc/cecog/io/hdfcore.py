@@ -71,7 +71,7 @@ class memoize(object):
         return res
     
     
-def hex_to_rgb(hex_string):
+def hex_to_rgb(hex_string, truncate_to_one=False):
     """
     Converts the hex representation of a RGB value (8bit per channel) to
     its integer components.
@@ -92,6 +92,11 @@ def hex_to_rgb(hex_string):
     b = hex_value & 0xff
     g = hex_value >> 8 & 0xff
     r = hex_value >> 16 & 0xff
+    
+    if truncate_to_one:
+        r = r / float(255)
+        g = g / float(255)
+        b = b / float(255)
     return (r, g, b)
 
 #-------------------------------------------------------------------------------
@@ -216,11 +221,6 @@ class CH5Position(object):
                     
         return img
             
-            
-        
-        
-        
-            
     
     def get_class_label(self, index, object_='primary__primary'):
         if not isinstance(index, (list, tuple)):
@@ -284,7 +284,8 @@ class CH5Position(object):
                 event_list2 = list(idx1[0:a]) + list(idx1[b:])
                 events.append([event_list, event_list2])
             else:
-                events.append([event_list])
+                #events.append([event_list])
+                events.append(event_list)
                 
         return events
     
@@ -533,7 +534,7 @@ class TestCH5Examples(CH5TestBase):
         ax.imshow(h2b[400:600, 400:600], cmap='gray')
         fig.savefig('img1.png', format='png')
         ax.imshow(tub[400:600, 400:600], cmap='g2ay')
-        fig.savefig('img2.png', format='png')
+        #fig.savefig('img2.png', format='png')
         
 #        vigra.impex.writeImage(h2b[400:600, 400:600].swapaxes(1,0), 'img1.png')   
 #        vigra.impex.writeImage(tub[400:600, 400:600].swapaxes(1,0), 'img2.png')   
@@ -609,7 +610,7 @@ class TestCH5Examples(CH5TestBase):
         image = []
         for event in events[:5]:
             image.append(self.pos.get_gallery_image(tuple(event)))
-        vigra.impex.writeImage(numpy.concatenate(image, axis=0).swapaxes(1,0), 'mitotic_events.png')
+        #vigra.impex.writeImage(numpy.concatenate(image, axis=0).swapaxes(1,0), 'mitotic_events.png')
 
 if __name__ == '__main__':
     unittest.main()

@@ -201,6 +201,7 @@ class AbstractImporter(object):
             else:
                 time = 0
                 item[DIMENSION_NAME_TIME] = str(time)
+                
             if not time in lookup[position]:
                 lookup[position][time] = {}
 
@@ -539,6 +540,7 @@ class IniFileImporter(AbstractImporter):
             if len(self.extensions) > 0:
                 filenames = [x for x in filenames
                              if os.path.splitext(x)[1].lower() in self.extensions]
+                filenames.sort()
             # prune dirnames by regex search for next iteration of os.walk
             # dirnames must be removed in-place!
             for dirname in dirnames[:]:
@@ -568,6 +570,7 @@ class IniFileImporter(AbstractImporter):
                     search2 = re_dim.search(found_name)
                     if not search2 is None:
                         result = search2.groupdict()
+                        
 
                         # use path data if not defined for the filename
                         for key in [DIMENSION_NAME_POSITION, META_INFO_WELL,

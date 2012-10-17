@@ -140,8 +140,6 @@ class PositionAnalyzer(object):
         self._oLogger.debug("PositionAnalyzer. mapDirectory()")
         self.strPathOut = mapDirectory(strPathOut)
 
-
-        self._oLogger = self._configRootLogger()
         #self._oLogger = logging.getLogger()
         
         

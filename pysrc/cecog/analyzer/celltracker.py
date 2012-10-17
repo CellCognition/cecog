@@ -424,6 +424,13 @@ class CellTracker(OptionManager):
                                          (dist, strNodeIdC))
 
             # prevent split and merge for one node at the same time
+            
+            ### FIXME: Here we loose alomost all cell mappings, 
+            ### because if fMaxObjectDistance is big, we find for
+            ### many cells splits and merges and there will never
+            ### be an one-to-one mapping => the bigger the radius, the less mappings 
+            ### which is counter intuitive
+             
             for id_c in dctMerges:
                 nodes = dctMerges[id_c]
                 if len(nodes) == 1:

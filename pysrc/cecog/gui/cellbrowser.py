@@ -670,7 +670,7 @@ class EventGraphicsItem(GraphicsObjectItem):
         features = ((1 - (features-min_)/(max_ - min_)) * self.height).astype(numpy.uint8)
         
         for col, (f1, f2, obj) in enumerate(zip(features, numpy.roll(features, -1), self.object_item)):
-            class_color = self.position.get_class_color(obj, 'secondary__expanded')
+            class_color = self.position.get_class_color(obj, 'secondary__inside')
             if class_color is None:
                 color_ = QtCore.Qt.white
             else:
@@ -787,7 +787,7 @@ class CellGraphicsItem(GraphicsTerminalObjectItem):
         self.addToGroup(primary_contour_item)
         
         if True:
-            image_sib = self.position.get_gallery_image(object_item, 'secondary__expanded')
+            image_sib = self.position.get_gallery_image(object_item, 'secondary__inside')
             secondary_gallery_item = QtGui.QGraphicsPixmapItem(QtGui.QPixmap(qimage2ndarray.array2qimage(image_sib)))
             secondary_gallery_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
             self.secondary_gallery_item = secondary_gallery_item
@@ -801,10 +801,10 @@ class CellGraphicsItem(GraphicsTerminalObjectItem):
             composed_gallery_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
             self.composed_gallery_item = composed_gallery_item
             
-            secondary_contour_item = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), self.position.get_crack_contour(object_item, 'secondary__expanded')[0])))
+            secondary_contour_item = HoverPolygonItem(QtGui.QPolygonF(map(lambda x: QtCore.QPointF(x[0],x[1]), self.position.get_crack_contour(object_item, 'secondary__inside')[0])))
             secondary_contour_item.setPos(0, self.PREDICTION_BAR_HEIGHT)
             
-            secondary_contour_item.setPen(QtGui.QPen(QtGui.QColor(self.position.get_class_color(object_item, 'secondary__expanded'))))
+            secondary_contour_item.setPen(QtGui.QPen(QtGui.QColor(self.position.get_class_color(object_item, 'secondary__inside'))))
             secondary_contour_item.setAcceptHoverEvents(True)
             secondary_contour_item.setZValue(3)
             
