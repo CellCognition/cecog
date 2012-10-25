@@ -19,8 +19,7 @@ __all__ = []
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
-import os, \
-       sys
+import os, sys
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -84,7 +83,8 @@ def parse_args(args):
     return parser.parse_args(args)
 
 
-def cecog_job_template(jt, path_out, args, emails, version, batch_size=1, is_bulk_job=False):
+def cecog_job_template(jt, path_out, args, emails, version,
+                       batch_size=1, is_bulk_job=False):
     job_name = 'cecog_batch_analyzer'
     env_variables = ['PATH', 'LD_LIBRARY_PATH']
 
@@ -112,14 +112,15 @@ def cecog_job_template(jt, path_out, args, emails, version, batch_size=1, is_bul
     path_out_cluster = ':' + path_out_cluster
     if is_bulk_job:
         jt.outputPath = path_out_cluster
-        # FIXME: another DRMAA hack: the PARAMETRIC_INDEX is NOT resolved in args!
+        # FIXME: another DRMAA hack: the PARAMETRIC_INDEX
+        # is NOT resolved in args!
         jt.args += ['--cluster_index', 'SGE_TASK_ID',
                     '--batch_size', str(batch_size)]
     else:
         jt.outputPath = path_out_cluster
     return jt
 
-#-------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # classes:
 #
 class ClusterControl(object):
@@ -142,7 +143,8 @@ class ClusterControl(object):
         safe_mkdirs(path_out_settings)
 
         print path_out_settings
-        filename_settings = os.path.join(path_out_settings, 'cecog_settings.conf')
+        filename_settings = os.path.join(path_out_settings,
+                                         'cecog_settings.conf')
         f = file(filename_settings, 'w')
         f.write(settings)
         f.close()
@@ -212,8 +214,7 @@ if __name__ == '__main__':
     from wsgiref import simple_server
 
     options = parse_args(sys.argv[1:])[0]
-    service = {'clustercontrol': ClusterControl(),
-               }
+    service = {'clustercontrol': ClusterControl() }
 
     host = options.host
     port = int(options.port)
@@ -233,4 +234,3 @@ if __name__ == '__main__':
         httpd.serve_forever()
     except KeyboardInterrupt:
         pass
-

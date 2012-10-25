@@ -22,9 +22,7 @@ from setuptools import find_packages
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog import (VERSION_NUM,
-                   VERSION,
-                   )
+from cecog import VERSION_NUM, VERSION
 
 #-------------------------------------------------------------------------------
 # constants:
