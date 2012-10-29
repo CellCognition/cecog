@@ -227,6 +227,15 @@ class CH5Position(object):
             index = [index]
         return self.get_class_prediction(object_)['label_idx'][[x for x in index]] + 1
     
+    def get_center(self, index, object_='primary__primary'):
+        if not isinstance(index, (list, tuple)):
+            index = [index]
+        center_list = []
+        for ind in index:
+            cen1, cen2 = self['feature'][object_]['center'][ind]
+            center_list.append((int(cen1), int(cen2)))
+        return center_list
+    
     def get_class_color(self, index, object_='primary__primary'):
         if not self.has_classification(object_):
             return
