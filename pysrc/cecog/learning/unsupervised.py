@@ -101,7 +101,6 @@ class TemporalClustering:
         """
         k = self.n_clusters
         labelMatrix = np.zeros((self.n_tracks, self.n_frames));
-        
         # estimate class labels using TC3
         for i in range(0,self.n_tracks) : 
             Rdata = data[i*self.n_frames:(i+1)*self.n_frames,:]
@@ -150,24 +149,36 @@ class TemporalClustering:
     
     def tc3_gmm_dhmm(self, labels):
         
-        trans = self.mk_stochastic(self.n_clusters)
-        eps = np.spacing(1)
-        sprob = np.array([1-eps,eps/5,eps/5,eps/5,eps/5,eps/5])
+        # a small error term
+        eps = 0.01
+        # estimate initial transition matrix
+        trans = np.zeros((self.n_clusters,self.n_clusters))
+        hist, bin_edges = np.histogram(labels, bins=self.n_clusters)
+        for i in range(0,self.n_clusters) :
+            if (i<self.n_clusters-1) :
+                trans[i,i:i+2] += [hist[i]/(hist[i]+hist[i+1]), hist[i+1]/(hist[i]+hist[i+1])]
+            else :
+                trans[i,0] += hist[i]/(hist[i]+hist[0])
+                trans[i,-1] += hist[0]/(hist[i]+hist[0])                                                                                                             
+        trans = trans + eps
+        trans /= trans.sum(axis=1)[:, np.newaxis]
+        # start probability: [1, 0, 0, ...]
+        sprob = np.zeros((1,self.n_clusters)).flatten()+eps/(self.n_clusters-1)
+        sprob[0] = 1-eps
+        # initialize DHMM
         dhmm = hmm.MultinomialHMM(n_components=self.n_clusters,transmat = trans,startprob=sprob)
-        #dhmm.n_symbols=self.n_clusters
-        eps = 1e-3;
-        dhmm.emissionprob = np.array([[1-eps, eps/5, eps/5, eps/5, eps/5, eps/5],
-                                      [eps/5, 1-eps, eps/5, eps/5, eps/5, eps/5],
-                                      [eps/5, eps/5, 1-eps, eps/5, eps/5, eps/5],
-                                      [eps/5, eps/5, eps/5, 1-eps, eps/5, eps/5], 
-                                      [eps/5, eps/5, eps/5, eps/5, 1-eps, eps/5],
-                                      [eps/5, eps/5, eps/5, eps/5, eps/5, 1-eps]]);
-        dhmm.fit([labels], init_params ='')
-        labels_tc3gmmdhmm_vec = dhmm.predict(labels) # vector format [1 x num_tracks * num_frames] 
-        labels_tc3gmmdhmm_matrix = labels_tc3gmmdhmm_vec.reshape(self.n_tracks,self.n_frames) # matrix format [num_tracks x num_frames]
+        # emission probability, identity matrix with predefined small errors.
+        emis = np.eye(self.n_clusters) + eps/(self.n_clusters-1)
+        emis[range(self.n_clusters),range(self.n_clusters)] = 1-eps;
+        dhmm.emissionprob = emis;                         
+        # learning the DHMM parameters
+        dhmm.fit([labels.flatten()], init_params ='') # default n_iter=10, thresh=1e-2
+        dhmm.emissionprob = emis # with EM update
+        labels_tc3gmmdhmm_vec = dhmm.predict(labels.flatten()) # vector format
+        labels_tc3gmmdhmm_matrix = labels_tc3gmmdhmm_vec.reshape(self.n_tracks,self.n_frames) # matrix format
         para = collections.namedtuple('para', ['transmat', 'emissionprob'])
         tc3_gmm_dhmm = {'label_matrix': labels_tc3gmmdhmm_matrix, 'labels': labels_tc3gmmdhmm_vec, 'model': para(dhmm.transmat, dhmm.emissionprob), 'name': 'TC3+GMM+DHMM'}
-        return tc3_gmm_dhmm 
+        return tc3_gmm_dhmm
     
     def tc3_gmm_chmm(self, data, gmm_model, dhmm_model):
         

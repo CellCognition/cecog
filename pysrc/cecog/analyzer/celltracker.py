@@ -31,6 +31,15 @@ from csv import DictWriter
 #
 from numpy import array, average
 
+import numpy
+import scipy.cluster.vq as scv
+from matplotlib import mlab
+from sklearn import mixture
+from cecog.util.sklearnutil import binary_clustering, remove_constant_columns
+import scipy.stats.stats as sss
+import scipy
+import cecog.learning.unsupervised as unsup
+
 from pdk.options import Option
 from pdk.optionmanagers import OptionManager
 #from pdk.containers.tableio import (importTable,
@@ -621,17 +630,51 @@ class CellTracker(OptionManager):
 
         self.oLogger.debug("tracking: start nodes %d %s" %
                            (len(lstStartIds), lstStartIds))
-
+        
         self.dctVisitorData = {}
-
         dctVisitedNodes = {}
-        for strStartId in lstStartIds:
-            self.dctVisitorData[strStartId] = {'_current': 0,
-                                               '_full'   : [[]],
-                                               }
-            self.oLogger.debug("root ID %s" % strStartId)
-            self._forwardVisitor(strStartId, self.dctVisitorData[strStartId], dctVisitedNodes)
-
+        if  self.getOption('unsupEventDetection'):
+            self.initBinaryClustering()
+            for strStartId in lstStartIds:
+                self.dctVisitorData[strStartId] = {'_current': 0,
+                                                   '_full'   : [[]],
+                                                   }
+                self.oLogger.debug("root ID %s" % strStartId)
+                self._forwardVisitor2(strStartId, self.dctVisitorData[strStartId], dctVisitedNodes)
+        elif self.getOption('unsupEventDetection'):
+            for strStartId in lstStartIds:
+                self.dctVisitorData[strStartId] = {'_current': 0,
+                                                   '_full'   : [[]],
+                                                   }
+                self.oLogger.debug("root ID %s" % strStartId)
+                self._forwardVisitor(strStartId, self.dctVisitorData[strStartId], dctVisitedNodes)
+            
+            
+    def initBinaryClustering(self):
+        oGraph = self._oGraph
+        data=[]
+        for node in oGraph.node_list():
+            obj = oGraph.node_data(node)
+            data.append(obj.aFeatures)
+        
+        data = numpy.array(data)
+        
+        # delete columns with zeros
+        ind = numpy.where(data==0)[1]
+        data = scipy.delete(data,ind,1)
+        print 'new data.shape after column=0 deletion'
+        print data.shape
+        
+        # Zscore and PCA data
+        data_zscore = sss.zscore(data) #sss.zscore(self.remove_constant_columns(data))
+        pca = mlab.PCA(data_zscore)
+        num_features = numpy.nonzero(numpy.cumsum(pca.fracs) > 0.99)[0][0] 
+        data_pca = pca.project(data_zscore)[:,0:num_features]
+        idx = binary_clustering(data_pca)
+    
+        self.iLabel_bc = {}
+        for i, node in enumerate(oGraph.node_list()):
+            self.iLabel_bc[node] = idx[i]
 
     def findNodesBoundingBox(self, nodeIdL):
         bbT = (float('+inf'), float('+inf'), float('-inf'), float('-inf'))
@@ -890,8 +933,6 @@ class PlotCellTracker(CellTracker):
             shutil.rmtree(strPathOut, True)
             safe_mkdirs(strPathOut)
 
-
-
     def analyze(self, dctChannels, channelId=None, clear_path=False):
         #print self.lstChromatinFeatureNames
         #print self.lstSecondaryFeatureNames
@@ -900,7 +941,8 @@ class PlotCellTracker(CellTracker):
         if clear_path:
             shutil.rmtree(strPathOut, True)
             safe_mkdirs(strPathOut)
-
+        
+        allFeatures = []
         for strRootId, dctTrackResults in self.dctVisitorData.iteritems():
 
             self.oLogger.debug("* root %s, candidates %s" % (strRootId, dctTrackResults.keys()))
@@ -935,13 +977,17 @@ class PlotCellTracker(CellTracker):
                                     strFilename = self._formatFilename('C%s__R%s' % (strChannelId, strRegionId),
                                                                        nodeId=strStartId, prefix='features', subPath='events',
                                                                        ext='.txt%s' % strCompression)
-                                    self.exportChannelData(dctEventData,
+                                    obj_allFeatures = self.exportChannelData(dctEventData,
                                                            strFilename,
                                                            strChannelId,
                                                            strRegionId,
                                                            lstFeatureNames)
+#                                    if strFilename.find('B01') > 0 :
+#                                        print 'found B01'
+                                    allFeatures.append (obj_allFeatures)
 
                     self.oLogger.debug("* root %s ok" % strStartId)
+                                    
 
         if self.getOption("bExportFlatFeatures"):
             for strChannelId, dctRegions in dctChannels.iteritems():
@@ -958,7 +1004,68 @@ class PlotCellTracker(CellTracker):
                                                    strChannelId,
                                                    strRegionId,
                                                    lstFeatureNames)
-
+        
+        if self.getOption('unsupEventDetection'):
+            allFeatures = numpy.array(allFeatures)
+            print allFeatures.shape
+            data= allFeatures.reshape(allFeatures.shape[0]*allFeatures.shape[1],allFeatures.shape[2])
+            print data.shape
+            # delete columns with zeros
+            ind = numpy.where(data==0)[1]
+            data = scipy.delete(data,ind,1)
+            print 'new data.shape after column=0 deletion'
+            print data.shape
+            num_frames = allFeatures.shape[1]
+            num_tracks = data.shape[0]/allFeatures.shape[1]
+            dim = [num_frames, num_tracks]
+            print dim
+            
+            # Zscore and PCA data
+            data_zscore = sss.zscore(remove_constant_columns(data))
+            pca = mlab.PCA(data_zscore)
+            num_features = numpy.nonzero(numpy.cumsum(pca.fracs) > 0.99)[0][0] 
+            data_pca = pca.project(data_zscore)[:,0:num_features]
+            
+            binary_tmp = binary_clustering(data_pca)
+            binary_matrix = binary_tmp.reshape(dim[1],dim[0])
+            numpy.savetxt('/Users/zhongq/Documents/cecog_data/Analysis/H2bTub/analyzed/0037/statistics/binary_all.txt', binary_matrix,fmt='%d',delimiter='\t') 
+            
+            idn = []
+            k=self.getOption('numClusters') # a predefined number of classes, given in GUI
+            print k
+            for i in reversed(range(num_tracks)):
+                if (sum(binary_matrix[i,:]) < k-2) or (binary_matrix[i,0] == 1) or (sum(binary_matrix[i,0:15]) == 0) :
+                    binary_matrix = scipy.delete(binary_matrix, i, 0) 
+                    data_pca = scipy.delete(data_pca,numpy.arange(i*num_frames, (i+1)*num_frames),0)
+                    num_tracks -= 1
+                    idn.append(i)
+            
+            print idn
+            numpy.savetxt('/Users/zhongq/Documents/cecog_data/Analysis/H2bTub/analyzed/0037/statistics/index.txt',idn, fmt='%d',delimiter='\t')   
+            print binary_matrix.shape
+            print num_tracks   
+            numpy.savetxt('/Users/zhongq/Documents/cecog_data/Analysis/H2bTub/analyzed/0037/statistics/binary_deleted.txt',binary_matrix, fmt='%d',delimiter='\t')   
+            dim = [num_frames, num_tracks] # update num_tracks
+            
+            # Diverse TC3 algorithms
+            m = self.getOption('minClusterSize') # a predefined minimal cluster size
+            print m
+            tc = unsup.TemporalClustering(dim,k,binary_matrix)
+            tc3 = tc.tc3_clustering(data_pca,m)
+            tc3_gmm = tc.tc3_gmm(data_pca,tc3['labels'])
+            tc3_gmm_dhmm = tc.tc3_gmm_dhmm(tc3_gmm['labels']) 
+            tc3_gmm_chmm = tc.tc3_gmm_chmm(data_pca, tc3_gmm['model'], tc3_gmm_dhmm['model']) 
+            
+            algorithms = {'TC3': tc3,
+                          'TC3+GMM': tc3_gmm, 
+                          'TC3+GMM+DHMM': tc3_gmm_dhmm, 
+                          'TC3+GMM+CHMM': tc3_gmm_chmm,
+                          }
+            
+            algorithm = self.getOption('tc3Algorithms')
+            result = algorithms[algorithm]
+            numpy.savetxt('/Users/zhongq/Documents/cecog_data/Analysis/H2bTub/analyzed/0037/statistics/tc3+gmm+dhmm.txt',result['label_matrix'], fmt='%d',delimiter='\t') 
+        
 
     def exportChannelDataFlat(self, strFilename, strChannelId, strRegionId, lstFeatureNames):
 
@@ -1030,10 +1137,9 @@ class PlotCellTracker(CellTracker):
                 iSplitT = None
 
         table = []
-
+        allFeature = []
         # zip nodes with same time together
         for tplNodes in zip(*dctEventData['tracks']):
-
             lstObjectIds = []
             iT = None
             for strNodeId in tplNodes:
@@ -1066,7 +1172,7 @@ class PlotCellTracker(CellTracker):
 
                 if self.getOption('bHasClassificationData'):
                     lstHeaderNames += [self.CLASS_COLUMN_PATTERN % x
-                                       for x in ['name', 'label', 'probability']]
+                                       for x in ['name', 'label', 'probability']] #['bc', 'name', 'label', 'probability']]
                     #lstFeatureTypes += ['c', 'i', 'c'] * len(lstChildIds)
 
                 lstHeaderNames += [self.FEATURE_COLUMN_PATTERN % strFeatureName
@@ -1102,9 +1208,10 @@ class PlotCellTracker(CellTracker):
                 oObj = oRegion[iObjId]
 
                 dctData[self.OBJID_COLUMN_PATTERN] = iObjId
-
+                
                 # classification data
                 if self.getOption('bHasClassificationData'):
+                    #dctData[self.CLASS_COLUMN_PATTERN % 'bc'] = self.iLabel_bc["%d_%d" % (iT, iObjId)]
                     dctData[self.CLASS_COLUMN_PATTERN % 'label'] = oObj.iLabel
                     dctData[self.CLASS_COLUMN_PATTERN % 'name'] = oObj.strClassName
                     dctData[self.CLASS_COLUMN_PATTERN % 'probability'] =\
@@ -1114,6 +1221,8 @@ class PlotCellTracker(CellTracker):
                 aFeatures = oRegion.getFeaturesByNames(iObjId, lstFeatureNames)
                 for fFeature, strFeatureName in zip(aFeatures, lstFeatureNames):
                     dctData[self.FEATURE_COLUMN_PATTERN % strFeatureName] = fFeature
+                
+                allFeature.append(aFeatures)  
 
                 # object tracking data (absolute center)
                 dctData[self.TRACKING_COLUMN_PATTERN % 'center_x'] = oObj.oCenterAbs[0]
@@ -1127,10 +1236,13 @@ class PlotCellTracker(CellTracker):
                 return
 
             #print dctData
-            table.append(dctData)
+            table.append(dctData) 
 
         if len(table) > 0:
             write_table(strFilename, table, column_names=lstHeaderNames)
+            
+        
+        return numpy.array(allFeature)
 
 
     def _forwardVisitor(self, strNodeId, dctResults, dctEdges, iLevel=0, strStartId=None):
@@ -1479,6 +1591,16 @@ class ClassificationCellTracker(SplitCellTracker):
 
                "bForwardRangeMin"        :   Option(False, doc=""),
                "bBackwardRangeMin"       :   Option(False, doc=""),
+               
+               'unsupEventDetection'     :   Option(False, doc=""),
+               'iForwardCheck2'          :   Option(None, doc=""),
+               'iBackwardRange2'         :   Option(None, doc=""),
+               'iForwardRange2'          :   Option(None, doc=""),
+               
+               'tc3Analysis'             :   Option(False, doc=""),
+               'numClusters'             :   Option(None, doc=""),
+               'minClusterSize'          :   Option(None, doc=""),
+               'tc3Algorithms'           :   Option(None, doc=""),
                }
 
     def __init__(self, **dctOptions):
@@ -1509,6 +1631,38 @@ class ClassificationCellTracker(SplitCellTracker):
         #assert oGraph.in_arcs(strNodeId)) == 1
         strHeadId = oGraph.head(strInEdgeId)
         return self._backwardCheck(strHeadId, lstNodeIds, iLevel=iLevel+1)
+    
+    def _backwardCheck2(self, strNodeId, lstNodeIds, iLevel=1):
+        oGraph = self._oGraph
+        lstNodeIds.append(strNodeId)
+#        if ((self.getOption('iBackwardRange') == -1 and oGraph.in_degree(strNodeId) == 0) or
+#            (self.getOption('bBackwardRangeMin') and iLevel >= self.getOption('iBackwardRange') and oGraph.in_degree(strNodeId) == 0) or
+#            (not self.getOption('bBackwardRangeMin') and iLevel >= self.getOption('iBackwardRange'))):
+#            return True
+        if ((self.getOption('iBackwardRange2') == -1 and oGraph.in_degree(strNodeId) == 0) or
+            (iLevel >= self.getOption('iBackwardRange2') and oGraph.in_degree(strNodeId) == 0) or
+            (iLevel >= self.getOption('iBackwardRange2'))):
+            return True
+        if oGraph.out_degree(strNodeId) != 1:
+            #logging.debug("     mooo out")
+            return False
+        # check for split
+        if oGraph.in_degree(strNodeId) != 1:
+            #logging.debug("     mooo in")
+            return False
+
+        iLabel_bc = self.iLabel_bc[strNodeId]
+#        if iLevel > 1 and iLevel-1 <= self.getOption('iBackwardCheck') and not iLabel_bc == 0:
+#            #logging.debug("     mooo label %d" % oObject.iLabel)
+#            return False
+        if iLevel > 1 and iLevel-1 <= 1 and not iLabel_bc == 0:
+            #logging.debug("     mooo label %d" % oObject.iLabel)
+            return False
+
+        strInEdgeId = oGraph.in_arcs(strNodeId)[0]
+        #assert oGraph.in_arcs(strNodeId)) == 1
+        strHeadId = oGraph.head(strInEdgeId)
+        return self._backwardCheck2(strHeadId, lstNodeIds, iLevel=iLevel+1)
 
     def _forwardCheck(self, strNodeId, lstNodeIds, iLevel=1, strFoundSplitId=None):
         oGraph = self._oGraph
@@ -1559,7 +1713,56 @@ class ClassificationCellTracker(SplitCellTracker):
             strOutEdgeId = oGraph.out_arcs(strNodeId)[0]
             strTailId = oGraph.tail(strOutEdgeId)
             return self._forwardCheck(strTailId, lstNodeIds, iLevel=iLevel+1, strFoundSplitId=strFoundSplitId)
+        
+    def _forwardCheck2(self, strNodeId, lstNodeIds, iLevel=1, strFoundSplitId=None):
+        oGraph = self._oGraph
+        lstNodeIds.append(strNodeId)
+#        if ((self.getOption('iForwardRange') == -1 and oGraph.out_degree(strNodeId) == 0) or
+#            (self.getOption('bForwardRangeMin') and iLevel >= self.getOption('iForwardRange') and oGraph.out_degree(strNodeId) == 0) or
+#            (not self.getOption('bForwardRangeMin') and iLevel >= self.getOption('iForwardRange'))):
+#            return True
+        if ((self.getOption('iForwardRange2') == -1 and oGraph.out_degree(strNodeId) == 0) or
+            (iLevel >= self.getOption('iForwardRange2') and oGraph.out_degree(strNodeId) == 0) or
+            (iLevel >= self.getOption('iForwardRange2'))):
+            return True
+        if oGraph.in_degree(strNodeId) > self.getOption('iMaxInDegree'):
+            return False
+        # check for split
+        if oGraph.out_degree(strNodeId) > self.getOption('iMaxOutDegree') or oGraph.out_degree(strNodeId) == 0:
+            return False
 
+        iLabel_bc = self.iLabel_bc[strNodeId]
+        if iLevel <= self.getOption('iForwardCheck2') and not iLabel_bc == 1:
+            return False
+        
+        if (strFoundSplitId is None and
+            oGraph.out_degree(strNodeId) > 1 and
+            oGraph.out_degree(strNodeId) <= self.getOption('iMaxOutDegree')):
+            logging.info("     FOUND SPLIT! %s" % strNodeId)
+            strFoundSplitId = strNodeId
+            lstNewNodeIds = []
+            if self.getOption('bAllowOneDaughterCell'):
+                bResult = False
+            else:
+                bResult = True
+            for strOutEdgeId in oGraph.out_arcs(strNodeId):
+                lstNewNodeIds.append([])
+                strTailId = oGraph.tail(strOutEdgeId)
+                if self.getOption('bAllowOneDaughterCell'):
+                    bResult |= self._forwardCheck2(strTailId, lstNewNodeIds[-1], iLevel=iLevel+1, strFoundSplitId=strFoundSplitId)
+                else:
+                    bResult &= self._forwardCheck2(strTailId, lstNewNodeIds[-1], iLevel=iLevel+1, strFoundSplitId=strFoundSplitId)
+            lstNodeIds.append(lstNewNodeIds)
+            return bResult
+        else:
+            strOutEdgeId = oGraph.out_arcs(strNodeId)[0]
+            strTailId = oGraph.tail(strOutEdgeId)
+            return self._forwardCheck2(strTailId, lstNodeIds, iLevel=iLevel+1, strFoundSplitId=strFoundSplitId)
+
+#        strOutEdgeId = oGraph.out_arcs(strNodeId)[0]
+#        strTailId = oGraph.tail(strOutEdgeId)
+#        return self._forwardCheck2(strTailId, lstNodeIds, iLevel=iLevel+1, strFoundSplitId=strFoundSplitId)
+                 
 
     def _forwardVisitor(self, strNodeId, dctResults, dctVisitedNodes, iLevel=0):
         oGraph = self._oGraph
@@ -1568,6 +1771,7 @@ class ClassificationCellTracker(SplitCellTracker):
             oObject = oGraph.node_data(strNodeId)
             oObjectNext = oGraph.node_data(oGraph.tail(oGraph.out_arcs(strNodeId)[0]))
 
+            
             bFound = False
             for tplCheck in self.getOption('lstLabelTransitions'):
                 if (len(tplCheck) == 2 and
@@ -1643,8 +1847,14 @@ class ClassificationCellTracker2(ClassificationCellTracker):
 
     OPTIONS = {"bAllowOneDaughterCell"   :   Option(True),
                }
+    @staticmethod    
+    def remove_constant_columns(A):
+        ''' A function to remove constant columns from a 2D matrix'''
+        return A[:, numpy.sum(numpy.abs(numpy.diff(A, axis=0)), axis=0) != 0]
+
 
     def _forwardVisitor(self, strNodeId, dctResults, dctVisitedNodes, iLevel=0):
+        
         oGraph = self._oGraph
 
         if oGraph.out_degree(strNodeId) == 1 and oGraph.in_degree(strNodeId) == 1:
@@ -1652,6 +1862,7 @@ class ClassificationCellTracker2(ClassificationCellTracker):
             oObjectNext = oGraph.node_data(oGraph.tail(oGraph.out_arcs(strNodeId)[0]))
 
             bFound = False
+                                
             for tplCheck in self.getOption('lstLabelTransitions'):
                 if (len(tplCheck) == 2 and
                     oObject.iLabel == tplCheck[0] and
@@ -1677,7 +1888,7 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                     self.oLogger.debug("    %s - forwards %s    %s" % (strTailId, {True: 'ok', False: 'failed'}[bCandidateOk], lstForwardNodeIds))
 
                 if bCandidateOk:
-
+                    print 'found'
                     track_length = self.getOption('iBackwardRange') + self.getOption('iForwardRange')
 
                     lstBackwardNodeIds.reverse()
@@ -1734,6 +1945,94 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                     dctResults['_current'] += idx
                 self._forwardVisitor(strTailId, dctResults, dctVisitedNodes, iLevel=iLevel+1)
 
+    def _forwardVisitor2(self, strNodeId, dctResults, dctVisitedNodes, iLevel=0):
+        
+        oGraph = self._oGraph
+
+        if oGraph.out_degree(strNodeId) == 1 and oGraph.in_degree(strNodeId) == 1:
+            iLabel_bc = self.iLabel_bc[strNodeId]
+            iLabel_bc_next = self.iLabel_bc[oGraph.tail(oGraph.out_arcs(strNodeId)[0])]
+
+            bFound = False
+                                
+            if (iLabel_bc == 0 and iLabel_bc_next == 1):
+                bFound = True
+
+            if bFound:
+                bCandidateOk = True
+                self.oLogger.debug("  found %6s" % strNodeId)
+
+                if bCandidateOk:
+                    lstBackwardNodeIds = []
+                    bCandidateOk = self._backwardCheck2(strNodeId,
+                                                       lstBackwardNodeIds)
+                    self.oLogger.debug("    %s - backwards %s    %s" % (strNodeId, {True: 'ok', False: 'failed'}[bCandidateOk], lstBackwardNodeIds))
+
+                if bCandidateOk:
+                    lstForwardNodeIds = []
+                    strTailId = oGraph.tail(oGraph.out_arcs(strNodeId)[0])
+                    bCandidateOk = self._forwardCheck2(strTailId,
+                                                      lstForwardNodeIds)
+                    self.oLogger.debug("    %s - forwards %s    %s" % (strTailId, {True: 'ok', False: 'failed'}[bCandidateOk], lstForwardNodeIds))
+
+                if bCandidateOk:
+                    print 'found'
+                    track_length = self.getOption('iBackwardRange') + self.getOption('iForwardRange')
+
+                    lstBackwardNodeIds.reverse()
+                    strStartId = lstBackwardNodeIds[0]
+
+                    # found a split event
+                    lstSplitIds = [i for i,t in enumerate(map(type, lstForwardNodeIds))
+                                   if t == ListType]
+
+                    #print lstSplitIds
+                    if len(lstSplitIds) > 0:
+                        # take only the first split event
+                        iSplitIdx = lstSplitIds[0]
+                        lstTracks = []
+                        for lstSplit in lstForwardNodeIds[iSplitIdx]:
+                            lstNodes = lstBackwardNodeIds + lstForwardNodeIds[:iSplitIdx] + lstSplit
+                            if len(lstNodes) == track_length:
+                                lstTracks.append(lstNodes)
+
+                        for cnt, track in enumerate(lstTracks):
+                            new_start_id = '%s_%d' % (strStartId, cnt+1)
+                            dctResults[new_start_id] = {'splitId'  : lstForwardNodeIds[iSplitIdx-1],
+                                                        'eventId'  : strNodeId,
+                                                        'maxLength': track_length,
+                                                        'tracks'   : [track],
+                                                        # keep value at which index the two daugther
+                                                        # tracks differ due to a split event
+                                                        'splitIdx' : iSplitIdx + len(lstBackwardNodeIds),
+                                                        }
+                    else:
+                        lstNodeIds = lstBackwardNodeIds + lstForwardNodeIds
+                        dctResults[strStartId] = {'splitId'  : None,
+                                                  'eventId'  : strNodeId,
+                                                  'maxLength': track_length,
+                                                  'tracks'   : [lstNodeIds],
+                                                  }
+                    #print dctResults[strStartId]
+                    self.oLogger.debug("  %s - valid candidate" % strStartId)
+
+        # record the full trajectory in a liniearized way
+        base = dctResults['_current']
+        dctResults['_full'][base].append(strNodeId)
+        depth = len(dctResults['_full'][base])
+
+        #self.oLogger.debug("moo %s" % self.out_arcs(strNodeId))
+        for idx, strOutEdgeId in enumerate(oGraph.out_arcs(strNodeId)):
+            strTailId = oGraph.tail(strOutEdgeId)
+            if not strTailId in dctVisitedNodes:
+                dctVisitedNodes[strTailId] = True
+
+                # make a copy of the list for the new branch
+                if idx > 0:
+                    dctResults['_full'].append(dctResults['_full'][base][:depth])
+                    dctResults['_current'] += idx
+                self._forwardVisitor2(strTailId, dctResults, dctVisitedNodes, iLevel=iLevel+1)
+                
     @staticmethod
     def getComponentsFromNodeId(strNodeId):
         items = map(int, strNodeId.split('_'))
@@ -1761,7 +2060,10 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                                    lstFeatureNames):
             feature_lookup[name] = real_name
 
-        for start_id, data in self.dctVisitorData.iteritems():
+        for start_id, data in self.dctVisitorData.iteritems():   
+            
+            #for strRootId, dctTrackResults in self.dctVisitorData.iteritems():
+            #for strStartId, dctEventData in dctTrackResults.iteritems():
 
             for idx, track in enumerate(data['_full']):
 
@@ -1775,7 +2077,6 @@ class ClassificationCellTracker2(ClassificationCellTracker):
 
                 for node_id in track:
                     frame, obj_id = self.getComponentsFromNodeId(node_id)
-
                     coordinate = Coordinate(position=self.origP, time=frame)
                     prefix = [frame, self.oMetaData.get_timestamp_relative(coordinate), obj_id]
                     prefix_names = ['frame', 'time', 'objID']
@@ -1827,5 +2128,4 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                     f.write('%s\n' % sep.join(map(str, prefix + items)))
 
                 f.close()
-
 

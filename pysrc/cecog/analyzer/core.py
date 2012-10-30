@@ -391,6 +391,23 @@ class PositionAnalyzer(object):
                                         'lstBackwardLabels'    : map(int, self.oSettings.get2('tracking_backwardlabels').split(',')),
                                         'lstForwardLabels'     : map(int, self.oSettings.get2('tracking_forwardlabels').split(',')),
                                         })
+                
+            if self.oSettings.get('Tracking', 'unsupervised_event_detection'):
+                
+                tracker_options.update({'unsupEventDetection'   : self.oSettings.get2('unsupervised_event_detection'),
+                                        'iForwardCheck2'        : self.__convert_tracking_duration('max_event_duration'),
+
+                                        'iBackwardRange2'       : self.__convert_tracking_duration('duration_pre'),
+                                        'iForwardRange2'        : self.__convert_tracking_duration('duration_post'),
+                                        })
+                print self.__convert_tracking_duration('duration_pre')
+                
+            if self.oSettings.get('Tracking', 'tc3_analysis'):
+                tracker_options.update({'tc3Analysis'           : self.oSettings.get2('tc3_analysis'),
+                                        'numClusters'           : self.oSettings.get2('num_clusters'),
+                                        'minClusterSize'        : self.oSettings.get2('min_cluster_size'),
+                                        'tc3Algorithms'         : self.oSettings.get2('tc3_algorithms'),
+                                        })
 
 #            elif self.oSettings.get2('tracking_event_tracjectory'):
 #                clsCellTracker = SplitCellTracker
@@ -512,9 +529,8 @@ class PositionAnalyzer(object):
                 if not self._qthread is None:
                     if self._qthread.get_abort():
                         return 0
-                    self._qthread.set_stage_info(stage_info)
-
-
+                    self._qthread.set_stage_info(stage_info)  
+                
                 self._oLogger.debug("--- visitor start")
                 self.oCellTracker.initVisitor()
                 self._oLogger.debug("--- visitor ok")

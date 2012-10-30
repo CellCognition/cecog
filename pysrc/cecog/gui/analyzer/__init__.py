@@ -48,14 +48,14 @@ import types, \
 from sklearn import mixture, utils
 
 # change sklearn logsumexp function by corrected version
-from cecog.util.sklearn import mylogsumexp
+from cecog.util.sklearnutil import binary_clustering, remove_constant_columns
+from cecog.util.sklearnutil import mylogsumexp
 utils.extmath.logsumexp = mylogsumexp
 import warnings
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     import sklearn.hmm as hmm
 import scipy.stats.stats as sss
-import scipy.cluster.vq as scv
 from matplotlib import mlab
 import matplotlib.pyplot as plt
 import scipy
@@ -1087,73 +1087,82 @@ class PostProcessingThread(_ProcessingThread):
         if self._settings.get2('ibb_analysis'):
             self.do_ibb_analysis(self)
             
-        if self._settings.get2('tc3_analysis'):
-            self.do_tc3_analysis()
+#        if self._settings.get2('tc3_analysis'):
+#            self.do_tc3_analysis()
 
-    def do_tc3_analysis(self):
-        print 'in tc3 analysis'
-        path_out = self._imagecontainer.get_path_out()
-        path_analyzed = self._join(path_out, 'analyzed')
-#        path_out_hmm_html = self._join(path_out, 'hmm2')
-#        safe_mkdirs(path_out_hmm_html)
-
-        "Reads all events written by the CellCognition tracking."
-        if self._settings.get('General', 'constrain_positions'):
-            pos = self._settings.get('General', 'positions')
-        num_frames = int(self._settings.get('Tracking', 'tracking_forwardrange') + self._settings.get('Tracking', 'tracking_backwardrange'))
-        path_pos = self._join(path_analyzed, pos)
-        path_data = self._join(path_pos, 'statistics/events/')
-        path_out_tc3 = self._join(path_pos, 'statistics/tc3')
-        safe_mkdirs(path_out_tc3)
-        feature_col = 8 # starting column position of features
-        
-        k=self._settings.get2('num_clusters') # a predefined number of classes, given in GUI
-        variance_explained = 0.99 # use 99% variance explained
-        m = self._settings.get2('min_cluster_size') # a predefined minimal cluster size
-        
-        # Read data
-        data,num_tracks = self.read_data(path_data,num_frames,feature_col,'B01')
-        dim = [num_frames, num_tracks] # data dimension
-        num_samples = num_frames*num_tracks # number of data points
-        
-        # Zscore and PCA data
-        data_zscore = sss.zscore(self.remove_constant_columns(data))
-        pca = mlab.PCA(data_zscore)
-        num_features = numpy.nonzero(numpy.cumsum(pca.fracs) > variance_explained)[0][0] 
-        data_pca = pca.project(data_zscore)[:,0:num_features]
-        print data_pca.shape
-        
-        # Binary clustering 
-        binary_matrix = self.binary_clustering(data_pca, dim)
-        # deleting any row containing a mitotic subgraph whose length 
-        # is shorter than the specified number of clusters
-        for i in range(num_tracks):
-            if (sum(binary_matrix[i,:] == 1) < k-2) :
-                binary_matrix = scipy.delete(binary_matrix, i, 0) 
-                data_pca = scipy.delete(data_pca,numpy.arange(i*num_frames, (i+1)*num_frames),0)
-                num_tracks -= 1;
-        path_out_binary_matrix = self._join(path_out_tc3, 'binary.txt')
-        numpy.savetxt(path_out_binary_matrix,binary_matrix,fmt='%d',delimiter='\t')   
-        dim = [num_frames, num_tracks] # update num_tracks
-        
-        # Diverse TC3 algorithms
-        tc = unsup.TemporalClustering(dim,k,binary_matrix)
-        tc3 = tc.tc3_clustering(data_pca,m)
-        tc3_gmm = tc.tc3_gmm(data_pca,tc3['labels'])
-        tc3_gmm_dhmm = tc.tc3_gmm_dhmm(tc3_gmm['labels']) 
-        tc3_gmm_chmm = tc.tc3_gmm_chmm(data_pca, tc3_gmm['model'], tc3_gmm_dhmm['model']) 
-        
-        algorithms = {'TC3': tc3,
-                      'TC3+GMM': tc3_gmm, 
-                      'TC3+GMM+DHMM': tc3_gmm_dhmm, 
-                      'TC3+GMM+CHMM': tc3_gmm_chmm,
-                      }
-        
-        algorithm = self._settings.get(SECTION_NAME_POST_PROCESSING,'tc3_algorithms')
-        result = algorithms[algorithm]
-        
-        path_out_tc3 = self._join(path_out_tc3, algorithm+'.txt')
-        numpy.savetxt(path_out_tc3,result['label_matrix'],fmt='%d',delimiter='\t') 
+#    def do_tc3_analysis(self):
+#        print 'in tc3 analysis'
+#        path_out = self._imagecontainer.get_path_out()
+#        path_analyzed = self._join(path_out, 'analyzed')
+##        path_out_hmm_html = self._join(path_out, 'hmm2')
+##        safe_mkdirs(path_out_hmm_html)
+#
+#        "Reads all events written by the CellCognition tracking."
+#        if self._settings.get('General', 'constrain_positions'):
+#            pos = self._settings.get('General', 'positions')
+#        num_preframes = int(self._settings.get('Tracking', 'tracking_forwardrange'))
+#        num_postframes = int(self._settings.get('Tracking', 'tracking_backwardrange'))
+#        num_frames = num_preframes + num_postframes
+#        path_pos = self._join(path_analyzed, pos)
+#        path_data = self._join(path_pos, 'statistics/events/')
+#        path_out_tc3 = self._join(path_pos, 'statistics/tc3')
+#        safe_mkdirs(path_out_tc3)
+#        feature_col = 9 # starting column position of features
+#        
+#        k=self._settings.get2('num_clusters') # a predefined number of classes, given in GUI
+#        variance_explained = 0.99 # use 99% variance explained
+#        m = self._settings.get2('min_cluster_size') # a predefined minimal cluster size
+#        
+#        # Read data
+#        data,num_tracks = self.read_data(path_data,num_frames,feature_col,'B01')
+#        dim = [num_frames, num_tracks] # data dimension
+#        num_samples = num_frames*num_tracks # number of data points
+#        
+#        # Zscore and PCA data
+#        data_zscore = sss.zscore(data) #sss.zscore(remove_constant_columns(data))
+#        pca = mlab.PCA(data_zscore)
+#        num_features = numpy.nonzero(numpy.cumsum(pca.fracs) > variance_explained)[0][0] 
+#        data_pca = pca.project(data_zscore)[:,0:num_features]
+#        
+#        # Binary clustering 
+#        binary_tmp = binary_clustering(data_pca)
+#        binary_matrix = binary_tmp.reshape(dim[1],dim[0])
+#        
+#        # deleting any row containing a mitotic subgraph whose length 
+#        # is shorter than the specified number of clusters
+#        idn = []
+#        for i in reversed(range(num_tracks)):
+#            if (sum(binary_matrix[i,:]) < k-2) or (binary_matrix[i,0] == 1) or (sum(binary_matrix[i,0:15]) == 0) :
+#                binary_matrix = scipy.delete(binary_matrix, i, 0) 
+#                data_pca = scipy.delete(data_pca,numpy.arange(i*num_frames, (i+1)*num_frames),0)
+#                num_tracks -= 1
+#                idn.append(i)
+#        
+#        print idn
+#        print binary_matrix.shape
+#        print num_tracks   
+#        path_out_binary_matrix = self._join(path_out_tc3, 'binary.txt')
+#        numpy.savetxt(path_out_binary_matrix,binary_matrix,fmt='%d',delimiter='\t')   
+#        dim = [num_frames, num_tracks] # update num_tracks
+#        
+#        # Diverse TC3 algorithms
+#        tc = unsup.TemporalClustering(dim,k,binary_matrix)
+#        tc3 = tc.tc3_clustering(data_pca,m)
+#        tc3_gmm = tc.tc3_gmm(data_pca,tc3['labels'])
+#        tc3_gmm_dhmm = tc.tc3_gmm_dhmm(tc3_gmm['labels']) 
+#        tc3_gmm_chmm = tc.tc3_gmm_chmm(data_pca, tc3_gmm['model'], tc3_gmm_dhmm['model']) 
+#        
+#        algorithms = {'TC3': tc3,
+#                      'TC3+GMM': tc3_gmm, 
+#                      'TC3+GMM+DHMM': tc3_gmm_dhmm, 
+#                      'TC3+GMM+CHMM': tc3_gmm_chmm,
+#                      }
+#        
+#        algorithm = self._settings.get(SECTION_NAME_POST_PROCESSING,'tc3_algorithms')
+#        result = algorithms[algorithm]
+#        
+#        path_out_tc3 = self._join(path_out_tc3, algorithm+'.txt')
+#        numpy.savetxt(path_out_tc3,result['label_matrix'],fmt='%d',delimiter='\t') 
             
     def do_ibb_analysis(self):
         path_mapping = self._settings.get2('mappingfile_path')
@@ -1265,57 +1274,26 @@ class PostProcessingThread(_ProcessingThread):
                                        **securin_options)
             securin_analyzer.run()
         
-    @staticmethod
-    def read_data(path,num_frames,col,name):  
-        listing = os.listdir(path)
-        num_tracks = 0
-        X = numpy.array(0)      
-        #infiles = [] 
-        for infile in listing:
-            infile_lower = infile.lower() # case insensitive
-            if (infile_lower.find(name.lower())!=-1) :
-                num_tracks += 1
-                #infiles.append(infile)
-                data = numpy.genfromtxt(path+infile,delimiter='\t',dtype='float')
-                #header = data[0,:]
-                data_matrix = data[1:,col:]
-                if (X.any()==0):
-                    X = data_matrix
-                else :
-                    X = numpy.vstack((X,data_matrix))
-        return X,num_tracks
+#    @staticmethod
+#    def read_data(path,num_frames,col,name):  
+#        listing = os.listdir(path)
+#        num_tracks = 0
+#        X = numpy.array(0)      
+#        #infiles = [] 
+#        for infile in listing:
+#            infile_lower = infile.lower() # case insensitive
+#            if (infile_lower.find(name.lower())!=-1) :
+#                num_tracks += 1
+#                #infiles.append(infile)
+#                data = numpy.genfromtxt(path+infile,delimiter='\t',dtype='float')
+#                #header = data[0,:]
+#                data_matrix = data[1:,col:]
+#                if (X.any()==0):
+#                    X = data_matrix
+#                else :
+#                    X = numpy.vstack((X,data_matrix))
+#        return X,num_tracks
     
-    @staticmethod    
-    def remove_constant_columns(A):
-        ''' A function to remove constant columns from a 2D matrix'''
-        return A[:, numpy.sum(numpy.abs(numpy.diff(A, axis=0)), axis=0) != 0]
-
-    @staticmethod
-    def binary_clustering(data,dim):
-    
-        m, idx = scv.kmeans2(data,2)
-        w = numpy.array([sum(idx==0)/float(len(idx)),sum(idx==1)/float(len(idx))]);
-    
-        c1 = numpy.cov(data[idx==0,:].T)
-        c2 = numpy.cov(data[idx==1,:].T)
-        c = numpy.dstack((c1,c2)).T
-        
-        g = mixture.GMM(n_components=2, cvtype = 'full')
-        g.weights = w
-        g.means = m
-        g.covars = c
-       
-        g.fit(data,init_params='')
-        labels = g.predict(data)
-        labels = labels.reshape(dim[1],dim[0]).copy() 
-        
-        # map clusters to lables
-        if (labels[1,1] == 1) :
-            labels[labels==1]=2
-            labels[labels==0]=1
-            labels[labels==2]=0
-            
-        return labels
 
 class AnalzyerThread(_ProcessingThread):
 

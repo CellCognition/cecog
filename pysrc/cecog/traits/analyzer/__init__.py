@@ -34,6 +34,7 @@ from cecog.traits.analyzer.objectdetection import SectionObjectdetection
 from cecog.traits.analyzer.featureextraction import SectionFeatureExtraction
 from cecog.traits.analyzer.classification import SectionClassification
 from cecog.traits.analyzer.tracking import SectionTracking
+from cecog.traits.analyzer.eventselection import SectionEventSelection
 from cecog.traits.analyzer.errorcorrection import SectionErrorcorrection
 from cecog.traits.analyzer.output import SectionOutput
 from cecog.traits.analyzer.processing import SectionProcessing
@@ -51,6 +52,7 @@ SECTION_REGISTRY.register_section(SectionObjectdetection())
 SECTION_REGISTRY.register_section(SectionFeatureExtraction())
 SECTION_REGISTRY.register_section(SectionClassification())
 SECTION_REGISTRY.register_section(SectionTracking())
+SECTION_REGISTRY.register_section(SectionEventSelection())
 SECTION_REGISTRY.register_section(SectionErrorcorrection())
 SECTION_REGISTRY.register_section(SectionPostProcessing())
 SECTION_REGISTRY.register_section(SectionOutput())

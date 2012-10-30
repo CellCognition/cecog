@@ -72,7 +72,7 @@ class TrackingFrame(BaseProcessorFrame):
                         ('tracking_maxsplitobjects', (1,0,1,1)),
                         ], link='tracking', label='Tracking')
         self.add_line()
-        self.add_group(None,
+        self.add_group('event_selection',
                        [('tracking_labeltransitions', (0,0,1,4)),
                         ('tracking_backwardrange', (1,0,1,1)),
                         ('tracking_forwardrange', (1,1,1,1)),
@@ -88,6 +88,20 @@ class TrackingFrame(BaseProcessorFrame):
                        [('tracking_visualize_track_length',),
                         ('tracking_centroid_radius',),
                        ], layout='flow')
+        self.add_line()
+        self.add_group('unsupervised_event_detection',
+                       [('duration_pre',),
+                        ('duration_post',),
+                        ('max_event_duration',),
+                        ('tracking_duration_unit2',),
+                       ], layout='flow')
+        self.add_line()
+        self.add_group('tc3_analysis', [
+                        ('num_clusters', (0,0,1,1)),
+                        ('min_cluster_size', (0,1,1,1)),
+                        ('tc3_algorithms', (0,2,1,1)),
+                        ],
+                        layout='grid', link='tc3_analysis', label='TC3 analysis')    
         self.add_expanding_spacer()
 
         self._init_control()
