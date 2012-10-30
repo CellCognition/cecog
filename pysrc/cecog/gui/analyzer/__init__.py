@@ -600,6 +600,9 @@ class HmmThread(_ProcessingThread):
                     lines[i] = "GALLERIES = NULL\n"
                 else:
                     lines[i] = "GALLERIES = c(%s)\n" % ','.join(["'%s'" % x for x in gallery_names])
+                    
+            if len(self._learner_dict) == 0 or 'primary' not in self._learner_dict:
+                raise RuntimeError('Classifier not found. Please check your classifications settings...')
 
             if 'primary' in self._learner_dict:# and self._settings.get('Processing', 'primary_errorcorrection'):
 
@@ -1448,8 +1451,9 @@ class _ProcessorMixin(object):
                     for kind in ['primary', 'secondary']:
                         _resolve = lambda x,y: self._settings.get(x, '%s_%s' % (kind, y))
                         env_path = convert_package_path(_resolve('Classification', 'classification_envpath'))
-                        if (_resolve('Processing', 'classification') and
-                            (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))):
+                        if (os.path.exists(env_path) 
+                             # and (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))
+                             ):
                             classifier_infos = {'strEnvPath' : env_path,
                                                 'strChannelId' : _resolve('ObjectDetection', 'channelid'),
                                                 'strRegionId' : _resolve('Classification', 'classification_regionname'),
@@ -1457,6 +1461,8 @@ class _ProcessorMixin(object):
                             learner = CommonClassPredictor(dctCollectSamples=classifier_infos)
                             learner.importFromArff()
                             learner_dict[kind] = learner
+                            
+                    ### Whee, I like it... "self.parent().main_window._imagecontainer" crazy, crazy, michael... :-)
                     self._analyzer = cls(self, self._current_settings,
                                          learner_dict,
                                          self.parent().main_window._imagecontainer)
