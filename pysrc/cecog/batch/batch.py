@@ -252,8 +252,9 @@ if __name__ ==  "__main__":
         post_hdf5_link_list.append(result['post_hdf5_link_list'])       
 
     if settings.get('Output', 'hdf5_create_file') and settings.get('Output', 'hdf5_merge_positions'):
-        post_hdf5_link_list = reduce(lambda x,y: x + y, post_hdf5_link_list)
-        link_hdf5_files(sorted(post_hdf5_link_list))
+        if len(post_hdf5_link_list) > 0:
+            post_hdf5_link_list = reduce(lambda x,y: x + y, post_hdf5_link_list)
+            link_hdf5_files(sorted(post_hdf5_link_list))
     print 'BATCHPROCESSING DONE!'
 
 

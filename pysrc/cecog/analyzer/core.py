@@ -1153,14 +1153,11 @@ class AnalyzerCore(object):
             self._oLogger.info("cropping enabled with %d %d %d %d" % (x0, y0, x1-x0, y1-y0))
         else:
             MetaImage.disable_cropping()
-            self._oLogger.info("cropping disabled")
             
 
         self._imagecontainer = imagecontainer
         self.lstAnalysisFrames = []
-        self._oLogger.info("openening image container: start")
         self._openImageContainer()
-        self._oLogger.info("openening image container: end")
         #self._oLogger.info("lstAnalysisFrames: %r" % self.lstAnalysisFrames)
         
         
@@ -1169,7 +1166,6 @@ class AnalyzerCore(object):
         self.oObjectLearner = learner
 
         self.oSettings.set_section('Classification')
-        self._oLogger.info("collectSamples? %r" % self.oSettings.get2('collectSamples'))
         if self.oSettings.get2('collectSamples'):
 
             self.oSettings.bUsePyFarm = False
@@ -1305,16 +1301,14 @@ class AnalyzerCore(object):
 
 
     def processPositions(self, qthread=None, myhack=None):
-        logging.getLogger(str(os.getpid())).info('loop over positions...')
         lstJobInputs = []
         for oP in self.lstPositions:
-            logging.getLogger(str(os.getpid())).info('Positions: %r' % oP)
+            logging.getLogger(str(os.getpid())).info('Process positions: %r' % oP)
             if oP in self.dctSamplePositions:
                 analyze = len(self.dctSamplePositions[oP]) > 0
             else:
                 analyze = len(self.lstAnalysisFrames) > 0
             
-            logging.getLogger(str(os.getpid())).info('analyze? %r' % analyze)
             if analyze:
                 tplArgs = (self.plate_id,
                            oP,
@@ -1338,7 +1332,6 @@ class AnalyzerCore(object):
                        }
         post_hdf5_link_list = []
         for idx, (tplArgs, dctOptions) in enumerate(lstJobInputs):
-            logging.getLogger(str(os.getpid())).info('analyze: %d' % idx)
             if not qthread is None:
                 if qthread.get_abort():
                     break
@@ -1349,16 +1342,13 @@ class AnalyzerCore(object):
                 qthread.set_stage_info(stage_info)
             analyzer = None
             try:
-                logging.getLogger(str(os.getpid())).info('init PositionAnalyzer')
                 analyzer = PositionAnalyzer(*tplArgs, **dctOptions)
-                logging.getLogger(str(os.getpid())).info('and go: analyze()')
                 result_dct = analyzer()
             except Exception, e:
                 logging.getLogger(str(os.getpid())).error(str(e))
                 raise
             finally:
                 if hasattr(analyzer, 'oTimeHolder'):
-                    logging.getLogger(str(os.getpid())).debug('Closing timeholder')
                     analyzer.oTimeHolder.close_all()
             if self.oSettings.get('Output', 'hdf5_create_file') and self.oSettings.get('Output', 'hdf5_merge_positions'):
                 post_hdf5_link_list.append(result_dct['filename_hdf5'])

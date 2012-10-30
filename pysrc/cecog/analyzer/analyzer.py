@@ -38,6 +38,7 @@ from pdk.map import dict_append_list
 from pdk.fileutils import safe_mkdirs
 from pdk.iterator import flatten
 from pdk.ordereddict import OrderedDict
+from pdk.datetimeutils import StopWatch
 
 import numpy
 import h5py
@@ -507,6 +508,8 @@ class TimeHolder(OrderedDict):
         self[iT].sort(key = lambda x: self[iT][x])
 
     def apply_segmentation(self, channel, primary_channel=None):
+        stop_watch = StopWatch()
+        
         desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
                                          channel.strChannelId)
         name = channel.NAME.lower()
@@ -547,7 +550,7 @@ class TimeHolder(OrderedDict):
         if not label_images_valid:
             # compute segmentation without (not loading from file)
             channel.apply_segmentation(primary_channel)
-            
+            self._logger.info('Label images %s computed in %s.' % (desc, stop_watch.current_interval()))
             # write segmentation back to file
             if self._hdf5_create and self._hdf5_include_label_images:
                 meta = self._meta_data
@@ -581,12 +584,13 @@ class TimeHolder(OrderedDict):
                     tmp[frame_idx] = 1
                     var_labels.attrs['valid'] = tmp
         else:
-            self._logger.info('Label images %s loaded from hdf5 file.' % desc)
+            self._logger.info('Label images %s loaded from hdf5 file in %s.' % (desc, stop_watch.current_interval()))
 
         
 
 
     def prepare_raw_image(self, channel):
+        stop_watch = StopWatch()
         desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
                                          channel.strChannelId)
         frame_valid = False
@@ -617,12 +621,13 @@ class TimeHolder(OrderedDict):
             meta_image.set_image(img)
             meta_image.set_raw_image(img)
             channel.meta_image = meta_image
-            self._logger.info('Raw image %s loaded from hdf5 file.' % desc)
+            self._logger.info('Raw image %s loaded from hdf5 file in %s.' % (desc, stop_watch.current_interval()))
         else:
             channel.apply_zselection()
             channel.normalize_image()
             channel.apply_registration()        
-
+            self._logger.info('Raw image %s prepared in %s.' % (desc, stop_watch.current_interval()))
+            
             if self._hdf5_create and self._hdf5_include_raw_images:
                 meta = self._meta_data
                 w = meta.real_image_width
