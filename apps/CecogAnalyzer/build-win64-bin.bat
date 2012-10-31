@@ -1,27 +1,33 @@
-set CECOGPATH=Z:\workbench\cecog
+@set CECOGPATH=Z:\workbench\cecog
+set PYTHONPATH=%PYTHONPATH%;%CECOGPATH%\pysrc
 
-set PYTHONPATH=%CECOGPATH%\pysrc
-set PATH=%PATH%;C:\Python27\Lib\site-packages\numpy
+@set PATH=%PATH%;C:\Python27\Lib\site-packages\numpy
+@set PATH=%PATH%;C:\Python27\Lib\site-packages\numpy\core
 
-python setup.py py2exe
+@Set /P _clean=Clean directory? [Y/n] || Set _clean="n"
 
-::copy /Y jpeg62.dll .\dist\
-::copy /Y QtCore4.dll .\dist\
-::copy /Y QtGui4.dll .\dist\
-::copy /Y C:\depend64\bin\hdf5_hldll.dll .\dist\
-::copy /Y C:\depend64\bin\hdf5dll.dll .\dist\
+@If "%_clean%"=="Y" goto:clean
+@If "%_clean%"=="y" goto:clean
+goto:build
 
-::copy /Y C:\depend64\bin\zlib1.dll .\dist\
-::copy /Y C:\depend64\bin\szip.dll .\dist\
+:clean
+rmdir /Q /S dist
+rmdir /Q /S build
+erase /Q *.exe
 
+:build
+python setup_windows.py py2exe
+
+@Set /P _nsis=Build NSIS-installer [Y/n] || Set _nsis="n"
+@If "%_nsis%"=="Y" goto:nsis
+@If "%_nsis%"=="y" goto:nsis
+@goto:eof
+
+:nsis
 CALL git describe --tags > build.info
 for /F "delims=\" %%a in (build.info) do (
 	set temp=%%a
 )
-SET mver="1.2.5"
-pause
-
+SET mver="1.3.0"
 makensis /Dmver=%mver% build-win-installer-64.nsi
-
-rename CecogAnalyzer-setup.exe CecogAnalyzer_%temp%_Windows_64bit.exe
-
+rename CecogAnalyzer-setup.exe CecogAnalyzer_%temp%_amd64.exe
