@@ -53,7 +53,6 @@ class TrackingFrame(BaseProcessorFrame):
 
     SECTION_NAME = SECTION_NAME_TRACKING
     PROCESS_TRACKING = 'PROCESS_TRACKING'
-    PROCESS_SYNCING = 'PROCESS_SYNCING'
 
     def __init__(self, settings, parent):
         super(TrackingFrame, self).__init__(settings, parent)
@@ -61,47 +60,16 @@ class TrackingFrame(BaseProcessorFrame):
         self.register_control_button(self.PROCESS_TRACKING,
                                      AnalzyerThread,
                                      ('Test tracking', 'Stop tracking'))
-        self.register_control_button(self.PROCESS_SYNCING,
-                                     AnalzyerThread,
-                                     ('Apply event selection',
-                                      'Stop event selection'))
-
         self.add_group(None,
                        [('tracking_maxobjectdistance', (0,0,1,1)),
                         ('tracking_maxtrackinggap', (0,1,1,1)),
                         ('tracking_maxsplitobjects', (1,0,1,1)),
                         ], link='tracking', label='Tracking')
         self.add_line()
-        self.add_group('event_selection',
-                       [('tracking_labeltransitions', (0,0,1,4)),
-                        ('tracking_backwardrange', (1,0,1,1)),
-                        ('tracking_forwardrange', (1,1,1,1)),
-                        ('tracking_backwardlabels', (2,0,1,1)),
-                        ('tracking_forwardlabels', (2,1,1,1)),
-                        ('tracking_backwardcheck', (3,0,1,1)),
-                        ('tracking_forwardcheck', (3,1,1,1)),
-                        ('tracking_duration_unit', (4,0,1,6)),
-                        ], link='tracking_eventselection',
-                        label='Event selection')
-        self.add_line()
         self.add_group('tracking_visualization',
                        [('tracking_visualize_track_length',),
                         ('tracking_centroid_radius',),
-                       ], layout='flow')
-        self.add_line()
-        self.add_group('unsupervised_event_detection',
-                       [('duration_pre',),
-                        ('duration_post',),
-                        ('max_event_duration',),
-                        ('tracking_duration_unit2',),
-                       ], layout='flow')
-        self.add_line()
-        self.add_group('tc3_analysis', [
-                        ('num_clusters', (0,0,1,1)),
-                        ('min_cluster_size', (0,1,1,1)),
-                        ('tc3_algorithms', (0,2,1,1)),
-                        ],
-                        layout='grid', link='tc3_analysis', label='TC3 analysis')    
+                       ], layout='flow')   
         self.add_expanding_spacer()
 
         self._init_control()

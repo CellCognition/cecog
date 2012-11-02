@@ -62,6 +62,7 @@ from cecog.traits.config import NAMING_SCHEMAS
 from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACTION
 from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
 from cecog.traits.analyzer.tracking import SECTION_NAME_TRACKING
+from cecog.traits.analyzer.eventselection import SECTION_NAME_EVENT_SELECTION
 
 from cecog.analyzer.gallery import EventGallery
 
@@ -265,8 +266,8 @@ class PositionAnalyzer(object):
         mean time-lapse of the current position.
         Returns the number of frames (int).
         """
-        value = self.oSettings.get(SECTION_NAME_TRACKING, option_name)
-        unit = self.oSettings.get(SECTION_NAME_TRACKING,
+        value = self.oSettings.get(SECTION_NAME_EVENT_SELECTION, option_name)
+        unit = self.oSettings.get(SECTION_NAME_EVENT_SELECTION,
                                   'tracking_duration_unit')
 
         # get mean and stddev for the current position
@@ -360,7 +361,7 @@ class PositionAnalyzer(object):
                                }
 
             clsCellTracker = ClassificationCellTracker2
-            transitions = self.oSettings.get2('tracking_labeltransitions').replace('),(', ')__(')
+            transitions = self.oSettings.get('EventSelection','tracking_labeltransitions').replace('),(', ')__(')
             transitions = map(eval, transitions.split('__'))
             tracker_options.update({'iBackwardCheck'       : 0,
                                     'iForwardCheck'        : 0,
@@ -377,7 +378,7 @@ class PositionAnalyzer(object):
                                     })
 
             if self.oSettings.get('Processing', 'tracking_synchronize_trajectories'):
-
+                self.oSettings.set_section('EventSelection')
                 tracker_options.update({'iBackwardCheck'       : self.__convert_tracking_duration('tracking_backwardCheck'),
                                         'iForwardCheck'        : self.__convert_tracking_duration('tracking_forwardCheck'),
 
@@ -391,18 +392,17 @@ class PositionAnalyzer(object):
                                         'lstBackwardLabels'    : map(int, self.oSettings.get2('tracking_backwardlabels').split(',')),
                                         'lstForwardLabels'     : map(int, self.oSettings.get2('tracking_forwardlabels').split(',')),
                                         })
-                
-            if self.oSettings.get('Tracking', 'unsupervised_event_detection'):
-                
-                tracker_options.update({'unsupEventDetection'   : self.oSettings.get2('unsupervised_event_detection'),
-                                        'iForwardCheck2'        : self.__convert_tracking_duration('max_event_duration'),
-
-                                        'iBackwardRange2'       : self.__convert_tracking_duration('duration_pre'),
-                                        'iForwardRange2'        : self.__convert_tracking_duration('duration_post'),
+            if self.oSettings.get('EventSelection', 'supervised_event_selection'):
+                self.oSettings.set_section('EventSelection')
+                tracker_options.update({'supEventSelection'   : self.oSettings.get2('supervised_event_selection'),})
+            
+            if self.oSettings.get('EventSelection', 'unsupervised_event_selection'):
+                self.oSettings.set_section('EventSelection')
+                tracker_options.update({'unsupEventSelection'   : self.oSettings.get2('unsupervised_event_selection'),
+                                        'iForwardCheck2'        : self.__convert_tracking_duration('min_event_duration'),
                                         })
-                print self.__convert_tracking_duration('duration_pre')
                 
-            if self.oSettings.get('Tracking', 'tc3_analysis'):
+            if self.oSettings.get('EventSelection', 'tc3_analysis'):
                 tracker_options.update({'tc3Analysis'           : self.oSettings.get2('tc3_analysis'),
                                         'numClusters'           : self.oSettings.get2('num_clusters'),
                                         'minClusterSize'        : self.oSettings.get2('min_cluster_size'),
@@ -531,12 +531,15 @@ class PositionAnalyzer(object):
                         return 0
                     self._qthread.set_stage_info(stage_info)  
                 
-                self._oLogger.debug("--- visitor start")
-                self.oCellTracker.initVisitor()
-                self._oLogger.debug("--- visitor ok")
+#                self._oLogger.debug("--- visitor start")
+#                self.oCellTracker.initVisitor()
+#                self._oLogger.debug("--- visitor ok")
 
                 if self.oSettings.get('Processing',
                                       'tracking_synchronize_trajectories'):
+                    self._oLogger.debug("--- visitor start")
+                    self.oCellTracker.initVisitor()
+                    self._oLogger.debug("--- visitor ok")
 
                     if not self._qthread is None:
                         if self._qthread.get_abort():

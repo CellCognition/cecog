@@ -116,6 +116,7 @@ from cecog.traits.config import R_SOURCE_PATH, \
                                 convert_package_path, \
                                 PACKAGE_PATH
 from cecog import ccore
+from cecog.traits.analyzer.eventselection import SECTION_NAME_EVENT_SELECTION
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
 from cecog.traits.analyzer.postprocessing import SECTION_NAME_POST_PROCESSING
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
@@ -1065,7 +1066,46 @@ class MultiProcessingAnalyzerMixin(ParallelProcessThreadMixinBase):
 class MultiprocessingException(Exception):
     def __init__(self, exception_list):
         self.msg = '\n-----------\nError in job item:\n'.join([str(x) for x in exception_list])
+
+
+class EventSelectionThread(_ProcessingThread):
+    
+    def __init__(self, parent, settings, learner_dict, imagecontainer):
+        _ProcessingThread.__init__(self, parent, settings)
+        self._learner_dict = learner_dict
+        self._imagecontainer = imagecontainer
+        self._mapping_files = {}    
+        self._convert = lambda x: x.replace('\\','/')
+        self._join = lambda *x: self._convert('/'.join(x))
         
+    def _run(self):
+        
+        print 'run eventselection'
+        plates = self._imagecontainer.plates
+        self.plates = plates
+        self._settings.set_section(SECTION_NAME_EVENT_SELECTION)
+            
+#        if self._settings.get2('tc3_analysis'):
+#            self.do_tc3_analysis()
+            
+    def _run_plate(self, plate_id):
+        path_out = self._imagecontainer.get_path_out()
+
+        path_analyzed = os.path.join(path_out, 'analyzed')
+        safe_mkdirs(path_analyzed)
+        
+        mapping_file = self._mapping_files[plate_id]
+        
+        class_colors = {}       
+        for i, name in self._learner_dict['primary'].dctClassNames.items():
+            class_colors[i] = self._learner_dict['primary'].dctHexColors[name]
+            
+        class_names = {}       
+        for i, name in self._learner_dict['primary'].dctClassNames.items():
+            class_names[i] = name
+            
+        self._settings.set_section(SECTION_NAME_POST_PROCESSING)
+               
 
 class PostProcessingThread(_ProcessingThread):
     
@@ -1525,6 +1565,10 @@ class _ProcessorMixin(object):
             self._show_image = QCheckBox('Show images', self._control)
             self._show_image.setChecked(True)
             layout.addWidget(self._show_image)
+        else:
+            self._show_image = QCheckBox('Show images', self._control)
+            self._show_image.setChecked(False)
+            layout.addWidget(self._show_image)
 
         for name in self._control_buttons:
             w_button = QPushButton('', self._control)
@@ -1872,9 +1916,10 @@ class _ProcessorMixin(object):
                     elif self._current_process == self.PROCESS_TESTING:
                         msg = 'Classifier testing successfully finished.'
                 elif self.SECTION_NAME == 'Tracking':
-                    if self._current_process == self.PROCESS_TRACKING:
+                    #if self._current_process == self.PROCESS_TRACKING:
                         msg = 'Tracking successfully finished.'
-                    elif self._current_process == self.PROCESS_SYNCING:
+                    #elif self._current_process == self.PROCESS_SYNCING:
+                elif self.SECTION_NAME == 'EventSelection':
                         msg = 'Motif selection successfully finished.'
                 elif self.SECTION_NAME == 'ErrorCorrection':
                     msg = 'HMM error correction successfully finished.'

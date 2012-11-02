@@ -67,7 +67,9 @@ from cecog.gui.analyzer.objectdetection import (ObjectDetectionFrame,
                                                 )
 from cecog.gui.analyzer.featureextraction import FeatureExtractionFrame
 from cecog.gui.analyzer.postprocessing import PostProcessingFrame
-from cecog.gui.analyzer.eventselection import EventSelectionFrame
+from cecog.gui.analyzer.eventselection import (EventSelectionFrame, 
+                                               SECTION_NAME_EVENT_SELECTION,
+                                               )
 from cecog.gui.analyzer.classification import ClassificationFrame
 from cecog.gui.analyzer.tracking import (TrackingFrame,
                                          SECTION_NAME_TRACKING,
@@ -658,31 +660,31 @@ class AnalyzerMainWindow(QMainWindow):
                 # a mismatch between settings and data will cause changed settings
                 self.settings_changed(True)
 
-            trait = self._settings.get_trait(SECTION_NAME_TRACKING,
+            trait = self._settings.get_trait(SECTION_NAME_EVENT_SELECTION,
                                              'tracking_duration_unit')
             
-            trait2 = self._settings.get_trait(SECTION_NAME_TRACKING,
-                                             'tracking_duration_unit2')
+#            trait2 = self._settings.get_trait(SECTION_NAME_EVENT_SELECTION,
+#                                             'tracking_duration_unit2')
 
             # allow time-base tracking durations only if time-stamp
             # information is present
             meta_data = imagecontainer.get_meta_data()
             if meta_data.has_timestamp_info:
                 result = trait.set_list_data(TRACKING_DURATION_UNITS_TIMELAPSE)
-                result2 = trait2.set_list_data(TRACKING_DURATION_UNITS_TIMELAPSE)
+#                result2 = trait2.set_list_data(TRACKING_DURATION_UNITS_TIMELAPSE)
             else:
                 result = trait.set_list_data(TRACKING_DURATION_UNITS_DEFAULT)
-                result2 = trait2.set_list_data(TRACKING_DURATION_UNITS_DEFAULT)
+#                result2 = trait2.set_list_data(TRACKING_DURATION_UNITS_DEFAULT)
             if result is None:
                 critical(self, "Could not set tracking duration units",
                          "The tracking duration units selected to match the load data. Please check your settings.")
                 # a mismatch between settings and data will cause changed settings
                 self.settings_changed(True)
-            if result2 is None:
-                critical(self, "Could not set tracking duration units for UES",
-                         "The tracking duration units selected to match the load data. Please check your settings.")
-                # a mismatch between settings and data will cause changed settings
-                self.settings_changed(True)
+#            if result2 is None:
+#                critical(self, "Could not set tracking duration units for UES",
+#                         "The tracking duration units selected to match the load data. Please check your settings.")
+#                # a mismatch between settings and data will cause changed settings
+#                self.settings_changed(True)
 
             # activate change notification again
             self._settings.set_notify_change(True)

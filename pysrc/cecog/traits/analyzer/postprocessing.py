@@ -32,7 +32,10 @@ from cecog.gui.guitraits import (StringTrait,
                                  BooleanTrait,
                                  FloatTrait,
                                  IntTrait,
+                                 SelectionTrait
                                  )
+
+from cecog.analyzer import TC3_ALGORITHMS
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -110,6 +113,16 @@ class SectionPostProcessing(_Section):
         ('securin_analysis',
             BooleanTrait(True, label='Securin analysis')),
         
+        ('tc3_analysis',
+            BooleanTrait(False, label='TC3 analysis')),
+        ('num_clusters',
+            IntTrait(6, 2, 10, label='Number of clusters',)), 
+        ('min_cluster_size',
+            IntTrait(2, 1, 10, label='Min Cluster Size',)),
+        ('tc3_algorithms',
+            SelectionTrait(TC3_ALGORITHMS[0],
+                           TC3_ALGORITHMS,
+                           label='TC3 algorithms')),
         ]
        )
     ]

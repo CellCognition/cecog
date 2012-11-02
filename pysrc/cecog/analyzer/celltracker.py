@@ -633,7 +633,8 @@ class CellTracker(OptionManager):
         
         self.dctVisitorData = {}
         dctVisitedNodes = {}
-        if  self.getOption('unsupEventDetection'):
+        if  self.getOption('unsupEventSelection'):
+            print 'in unsupervised event selection'
             self.initBinaryClustering()
             for strStartId in lstStartIds:
                 self.dctVisitorData[strStartId] = {'_current': 0,
@@ -641,7 +642,8 @@ class CellTracker(OptionManager):
                                                    }
                 self.oLogger.debug("root ID %s" % strStartId)
                 self._forwardVisitor2(strStartId, self.dctVisitorData[strStartId], dctVisitedNodes)
-        elif self.getOption('unsupEventDetection'):
+        elif self.getOption('supEventSelection'):
+            print 'in supervised event selection'
             for strStartId in lstStartIds:
                 self.dctVisitorData[strStartId] = {'_current': 0,
                                                    '_full'   : [[]],
@@ -1005,7 +1007,7 @@ class PlotCellTracker(CellTracker):
                                                    strRegionId,
                                                    lstFeatureNames)
         
-        if self.getOption('unsupEventDetection'):
+        if self.getOption('unsupEventSelection'):
             allFeatures = numpy.array(allFeatures)
             print allFeatures.shape
             data= allFeatures.reshape(allFeatures.shape[0]*allFeatures.shape[1],allFeatures.shape[2])
@@ -1034,7 +1036,7 @@ class PlotCellTracker(CellTracker):
             k=self.getOption('numClusters') # a predefined number of classes, given in GUI
             print k
             for i in reversed(range(num_tracks)):
-                if (sum(binary_matrix[i,:]) < k-2) or (binary_matrix[i,0] == 1) or (sum(binary_matrix[i,0:15]) == 0) :
+                if (sum(binary_matrix[i,:]) < k-2) or (binary_matrix[i,0] == 1) or (binary_matrix[i,1] == 1) or (sum(binary_matrix[i,0:15]) == 0) :
                     binary_matrix = scipy.delete(binary_matrix, i, 0) 
                     data_pca = scipy.delete(data_pca,numpy.arange(i*num_frames, (i+1)*num_frames),0)
                     num_tracks -= 1
@@ -1063,8 +1065,9 @@ class PlotCellTracker(CellTracker):
                           }
             
             algorithm = self.getOption('tc3Algorithms')
+            print algorithm
             result = algorithms[algorithm]
-            numpy.savetxt('/Users/zhongq/Documents/cecog_data/Analysis/H2bTub/analyzed/0037/statistics/tc3+gmm+dhmm.txt',result['label_matrix'], fmt='%d',delimiter='\t') 
+            numpy.savetxt('/Users/zhongq/Documents/cecog_data/Analysis/H2bTub/analyzed/0037/statistics/'+algorithm+'.txt',result['label_matrix'], fmt='%d',delimiter='\t') 
         
 
     def exportChannelDataFlat(self, strFilename, strChannelId, strRegionId, lstFeatureNames):
@@ -1075,7 +1078,6 @@ class PlotCellTracker(CellTracker):
 
         for iT in self._dctTimeChannels:
             oChannel = self._dctTimeChannels[iT][strChannelId]
-
             if oChannel.has_region(strRegionId):
                 oRegion = oChannel.get_region(strRegionId)
 
@@ -1592,10 +1594,10 @@ class ClassificationCellTracker(SplitCellTracker):
                "bForwardRangeMin"        :   Option(False, doc=""),
                "bBackwardRangeMin"       :   Option(False, doc=""),
                
-               'unsupEventDetection'     :   Option(False, doc=""),
+               'supEventSelection'     :   Option(False, doc=""),
+               
+               'unsupEventSelection'     :   Option(False, doc=""),
                'iForwardCheck2'          :   Option(None, doc=""),
-               'iBackwardRange2'         :   Option(None, doc=""),
-               'iForwardRange2'          :   Option(None, doc=""),
                
                'tc3Analysis'             :   Option(False, doc=""),
                'numClusters'             :   Option(None, doc=""),
@@ -1639,9 +1641,9 @@ class ClassificationCellTracker(SplitCellTracker):
 #            (self.getOption('bBackwardRangeMin') and iLevel >= self.getOption('iBackwardRange') and oGraph.in_degree(strNodeId) == 0) or
 #            (not self.getOption('bBackwardRangeMin') and iLevel >= self.getOption('iBackwardRange'))):
 #            return True
-        if ((self.getOption('iBackwardRange2') == -1 and oGraph.in_degree(strNodeId) == 0) or
-            (iLevel >= self.getOption('iBackwardRange2') and oGraph.in_degree(strNodeId) == 0) or
-            (iLevel >= self.getOption('iBackwardRange2'))):
+        if ((self.getOption('iBackwardRange') == -1 and oGraph.in_degree(strNodeId) == 0) or
+            (iLevel >= self.getOption('iBackwardRange') and oGraph.in_degree(strNodeId) == 0) or
+            (iLevel >= self.getOption('iBackwardRange'))):
             return True
         if oGraph.out_degree(strNodeId) != 1:
             #logging.debug("     mooo out")
@@ -1721,9 +1723,9 @@ class ClassificationCellTracker(SplitCellTracker):
 #            (self.getOption('bForwardRangeMin') and iLevel >= self.getOption('iForwardRange') and oGraph.out_degree(strNodeId) == 0) or
 #            (not self.getOption('bForwardRangeMin') and iLevel >= self.getOption('iForwardRange'))):
 #            return True
-        if ((self.getOption('iForwardRange2') == -1 and oGraph.out_degree(strNodeId) == 0) or
-            (iLevel >= self.getOption('iForwardRange2') and oGraph.out_degree(strNodeId) == 0) or
-            (iLevel >= self.getOption('iForwardRange2'))):
+        if ((self.getOption('iForwardRange') == -1 and oGraph.out_degree(strNodeId) == 0) or
+            (iLevel >= self.getOption('iForwardRange') and oGraph.out_degree(strNodeId) == 0) or
+            (iLevel >= self.getOption('iForwardRange'))):
             return True
         if oGraph.in_degree(strNodeId) > self.getOption('iMaxInDegree'):
             return False
