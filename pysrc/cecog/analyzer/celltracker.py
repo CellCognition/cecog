@@ -635,7 +635,9 @@ class CellTracker(OptionManager):
         dctVisitedNodes = {}
         if  self.getOption('unsupEventSelection'):
             print 'in unsupervised event selection'
-            self.initBinaryClustering()
+            invert = self.getOption('invert')
+            print invert
+            self.initBinaryClustering(invert)
             for strStartId in lstStartIds:
                 self.dctVisitorData[strStartId] = {'_current': 0,
                                                    '_full'   : [[]],
@@ -652,7 +654,7 @@ class CellTracker(OptionManager):
                 self._forwardVisitor(strStartId, self.dctVisitorData[strStartId], dctVisitedNodes)
             
             
-    def initBinaryClustering(self):
+    def initBinaryClustering(self, invert):
         oGraph = self._oGraph
         data=[]
         for node in oGraph.node_list():
@@ -672,7 +674,7 @@ class CellTracker(OptionManager):
         pca = mlab.PCA(data_zscore)
         num_features = numpy.nonzero(numpy.cumsum(pca.fracs) > 0.99)[0][0] 
         data_pca = pca.project(data_zscore)[:,0:num_features]
-        idx = binary_clustering(data_pca)
+        idx = binary_clustering(data_pca, invert)
     
         self.iLabel_bc = {}
         for i, node in enumerate(oGraph.node_list()):
@@ -1007,7 +1009,7 @@ class PlotCellTracker(CellTracker):
                                                    strRegionId,
                                                    lstFeatureNames)
         
-        if self.getOption('unsupEventSelection'):
+        if self.getOption('tc3Analysis'):
             allFeatures = numpy.array(allFeatures)
             print allFeatures.shape
             data= allFeatures.reshape(allFeatures.shape[0]*allFeatures.shape[1],allFeatures.shape[2])
@@ -1028,7 +1030,7 @@ class PlotCellTracker(CellTracker):
             num_features = numpy.nonzero(numpy.cumsum(pca.fracs) > 0.99)[0][0] 
             data_pca = pca.project(data_zscore)[:,0:num_features]
             
-            binary_tmp = binary_clustering(data_pca)
+            binary_tmp = binary_clustering(data_pca, 0)
             binary_matrix = binary_tmp.reshape(dim[1],dim[0])
             numpy.savetxt('/Users/zhongq/Documents/cecog_data/Analysis/H2bTub/analyzed/0037/statistics/binary_all.txt', binary_matrix,fmt='%d',delimiter='\t') 
             
@@ -1600,6 +1602,7 @@ class ClassificationCellTracker(SplitCellTracker):
                'iForwardCheck2'          :   Option(None, doc=""),
                
                'tc3Analysis'             :   Option(False, doc=""),
+               'invert'                  :   Option(False, doc=""),
                'numClusters'             :   Option(None, doc=""),
                'minClusterSize'          :   Option(None, doc=""),
                'tc3Algorithms'           :   Option(None, doc=""),
