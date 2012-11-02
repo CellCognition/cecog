@@ -1,5 +1,6 @@
+@SETLOCAL
 @set CECOGPATH=Z:\workbench\cecog
-set PYTHONPATH=%PYTHONPATH%;%CECOGPATH%\pysrc
+@set PYTHONPATH=%PYTHONPATH%;%CECOGPATH%\pysrc
 
 @set PATH=%PATH%;C:\Python27\Lib\site-packages\numpy
 @set PATH=%PATH%;C:\Python27\Lib\site-packages\numpy\core
@@ -10,6 +11,7 @@ set PYTHONPATH=%PYTHONPATH%;%CECOGPATH%\pysrc
 @If "%_clean%"=="y" goto:clean
 goto:build
 
+::should be replaced by a separate python setup.py clean command
 :clean
 rmdir /Q /S dist
 rmdir /Q /S build
@@ -30,4 +32,5 @@ for /F "delims=\" %%a in (build.info) do (
 )
 SET mver="1.3.0"
 makensis /Dmver=%mver% build-win-installer-64.nsi
-rename CecogAnalyzer-setup.exe CecogAnalyzer_%temp%_amd64.exe
+rename CecogAnalyzer-setup.exe CecogAnalyzer_%temp%_x86_64.exe
+@ENDLOCAL
