@@ -14,8 +14,7 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = ['SECTION_REGISTRY',
-           ]
+__all__ = ['SECTION_REGISTRY']
 
 #-------------------------------------------------------------------------------
 # standard library imports:
@@ -107,6 +106,3 @@ class UpdateDependency(object):
             for edge_id in self._graph.out_arcs(self._start):
                 tail_id = self._graph.tail(edge_id)
                 self.check(settings, settings_new, tail_id)
-
-
-

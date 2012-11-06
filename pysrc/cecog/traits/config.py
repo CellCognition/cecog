@@ -232,6 +232,7 @@ class ConfigSettings(RawConfigParser):
     def set2(self, trait_name, value):
         self.set(self._current_section, trait_name, value)
 
+    # XXX - what is this good for?
     def read(self, filename):
         fp = file(filename, 'r')
         self.readfp(fp)
@@ -395,6 +396,3 @@ class PathMapper(object):
     @property
     def column_names(self):
         return self._column_names[:]
-
-
-
