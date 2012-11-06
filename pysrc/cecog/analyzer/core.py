@@ -459,20 +459,27 @@ class PositionAnalyzer(object):
                 channel_id = self.channel_mapping[self.PRIMARY_CHANNEL]
                 if channel_id in self.classifier_infos:
                     infos = self.classifier_infos[channel_id]
-                    prim_info = (infos['strRegionId'], infos['predictor'].lstClassNames)
+                    prim_info = (infos['strRegionId'], infos['predictor'].lstClassNames, infos['predictor'].lstHexColors)
                 else:
                     # at least the total count for primary is always exported
-                    prim_info = ('primary', [])
+                    prim_info = ('primary', [], [])
 
                 sec_info = None
                 if self.SECONDARY_CHANNEL in self.channel_mapping:
                     channel_id = self.channel_mapping[self.SECONDARY_CHANNEL]
                     if channel_id in self.classifier_infos:
                         infos = self.classifier_infos[channel_id]
-                        sec_info = (infos['strRegionId'], infos['predictor'].lstClassNames)
+                        sec_info = (infos['strRegionId'], infos['predictor'].lstClassNames, infos['predictor'].lstHexColors)
 
                 oTimeHolder.extportObjectCounts(filename, self.P, self._meta_data,
                                                 prim_info, sec_info)
+                
+                pop_plot_output_dir = strPathCutter = os.path.join(self.strPathOut, "plots", "population")
+                safe_mkdirs(pop_plot_output_dir)
+                pop_plot_ylim_max = self.oSettings.get('Output', 'export_object_counts_ylim_max')
+                
+                oTimeHolder.extportPopulationPlots(filename, pop_plot_output_dir, self.P, self._meta_data,
+                                                prim_info, sec_info, pop_plot_ylim_max)
 
             if self.oSettings.get('Output', 'export_object_details'):
                 filename = os.path.join(strPathOutPositionStats,
