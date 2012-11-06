@@ -840,8 +840,8 @@ class MultiProcessingAnalyzerMixin(ParallelProcessThreadMixinBase):
         self.log_receiver.server_close()
         self.log_receiver_thread.join()
 
-        post_hdf5_link_list = reduce(lambda x,y: x + y, self.post_hdf5_link_list)
-        if len(post_hdf5_link_list) > 0:
+        if len(self.post_hdf5_link_list) > 0:
+            post_hdf5_link_list = reduce(lambda x,y: x + y, self.post_hdf5_link_list)
             link_hdf5_files(sorted(post_hdf5_link_list))
 
 

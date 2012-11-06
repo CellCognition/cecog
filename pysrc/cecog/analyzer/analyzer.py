@@ -42,6 +42,7 @@ from pdk.datetimeutils import StopWatch
 
 import numpy
 import h5py
+from matplotlib import pyplot
 
 #-------------------------------------------------------------------------------
 # cecog module imports:
@@ -1051,7 +1052,7 @@ class TimeHolder(OrderedDict):
                     region_info = None
 
                 if not region_info is None:
-                    region_name, class_names = region_info
+                    region_name, class_names, _ = region_info
                     if not has_header:
                         keys = ['total'] + class_names
                         line4 += keys
@@ -1082,6 +1083,27 @@ class TimeHolder(OrderedDict):
             f.write('%s\n' % sep.join(map(str, prefix + items)))
 
         f.close()
+        
+    def extportPopulationPlots(self, input_filename, pop_plot_output_dir, pos, meta_data, prim_info, sec_info, ylim):
+        if os.path.exists(input_filename):
+            channel_name, class_names, class_colors = prim_info
+            if len(class_names) > 1:
+                data = numpy.recfromcsv(input_filename, delimiter='\t', skip_header=3)
+                time = data['time'] / 60.0
+                
+                fig = pyplot.figure(figsize=(20,10))
+                ax = pyplot.gca()
+                
+                for cl, color in zip(class_names[1:], class_colors[1:]):
+                    ax.plot(list(time), list(data[cl]), color=color, label=cl)
+                pyplot.xlabel('time [min]')
+                pyplot.ylabel('cell count')
+                pyplot.xlim((time.min(), time.max()))
+                if ylim > 0:
+                    pyplot.ylim((0, ylim))
+                pyplot.legend(loc="upper right")
+                pyplot.title('%s primary population plot' % pos)
+                fig.savefig(os.path.join(pop_plot_output_dir, '%s_%s.png'%(channel_name, pos)))
 
 
     def extportObjectDetails(self, filename, sep='\t', excel_style=False):
