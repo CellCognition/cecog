@@ -401,16 +401,17 @@ class _Channel(PropertyManager):
                 os.path.join(self.strBackgroundImagePath, plate_id+".tif")))
 
         if len(path) > 1:
-            raise IOError("Multiple z-slice flat field correction images found.\n"
+            raise IOError("Multiple z-slice flat field corr. images found.\n"
                           "Directory must contain only one file per plate\n"
                           "(%s)" %", ".join(path))
         try:
-            bg_image = ccore.readImageFloat(path[0])
+            # ccore need str not unicode
+            bg_image = ccore.readImageFloat(str(path[0]))
         except Exception, e:
             # catching all errors, even files that are no images
             raise IOError(("Z-slice flat field correction image\n"
                            " could not be loaded! (file: %s)"
-                           %self.strBackgroundImagePath))
+                           %path[0]))
         return bg_image
 
     def normalize_image(self, plate_id=None):

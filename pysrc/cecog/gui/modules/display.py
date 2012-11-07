@@ -169,7 +169,6 @@ class DisplaySettings:
     def set_image_minmax(self, image):
         self.image_minimum = numpy.min(image)
         self.image_maximum = numpy.max(image)
-        #print self.image_minimum, self.image_maximum
 
     def set_to_image_minmax(self, image=None):
         if not image is None:

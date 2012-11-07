@@ -585,7 +585,8 @@ class TimeHolder(OrderedDict):
                     tmp[frame_idx] = 1
                     var_labels.attrs['valid'] = tmp
         else:
-            self._logger.info('Label images %s loaded from hdf5 file in %s.' % (desc, stop_watch.current_interval()))
+            self._logger.info('Label images %s loaded from hdf5 file in %s.'
+                              % (desc, stop_watch.current_interval()))
 
 
 
@@ -622,7 +623,8 @@ class TimeHolder(OrderedDict):
             meta_image.set_image(img)
             meta_image.set_raw_image(img)
             channel.meta_image = meta_image
-            self._logger.info('Raw image %s loaded from hdf5 file in %s.' % (desc, stop_watch.current_interval()))
+            self._logger.info('Raw image %s loaded from hdf5 file in %s.'
+                              % (desc, stop_watch.current_interval()))
         else:
             channel.apply_zselection()
             channel.normalize_image(self.plate_id)
@@ -1083,17 +1085,17 @@ class TimeHolder(OrderedDict):
             f.write('%s\n' % sep.join(map(str, prefix + items)))
 
         f.close()
-        
+
     def extportPopulationPlots(self, input_filename, pop_plot_output_dir, pos, meta_data, prim_info, sec_info, ylim):
         if os.path.exists(input_filename):
             channel_name, class_names, class_colors = prim_info
             if len(class_names) > 1:
                 data = numpy.recfromcsv(input_filename, delimiter='\t', skip_header=3)
                 time = data['time'] / 60.0
-                
+
                 fig = pyplot.figure(figsize=(20,10))
                 ax = pyplot.gca()
-                
+
                 for cl, color in zip(class_names[1:], class_colors[1:]):
                     ax.plot(list(time), list(data[cl]), color=color, label=cl)
                 pyplot.xlabel('time [min]')

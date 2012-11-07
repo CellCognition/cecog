@@ -455,11 +455,11 @@ class PositionAnalyzer(object):
 
                 oTimeHolder.extportObjectCounts(filename, self.P, self._meta_data,
                                                 prim_info, sec_info)
-                
+
                 pop_plot_output_dir = strPathCutter = os.path.join(self.strPathOut, "plots", "population")
                 safe_mkdirs(pop_plot_output_dir)
                 pop_plot_ylim_max = self.oSettings.get('Output', 'export_object_counts_ylim_max')
-                
+
                 oTimeHolder.extportPopulationPlots(filename, pop_plot_output_dir, self.P, self._meta_data,
                                                 prim_info, sec_info, pop_plot_ylim_max)
 
@@ -566,103 +566,8 @@ class PositionAnalyzer(object):
                         #        afterwards
                         shutil.rmtree(strPathCutterIn, ignore_errors=True)
 
-#            if (isinstance(oCellTracker, PlotCellTracker) and
-#                hasattr(self.oSettings, "bDoObjectCutting3") and
-#                self.oSettings.bDoObjectCutting3):
-#                strPathLabels = os.path.join(self.strPathOutPositionImages, "_labels")
-#                for strChannelId in os.listdir(strPathLabels):
-#                    strPathChannel = os.path.join(strPathLabels, strChannelId)
-#                    if os.path.isdir(strPathChannel):
-#                        for strRegionId in os.listdir(strPathChannel):
-#                            strPathRegion = os.path.join(strPathChannel, strRegionId)
-#                            if os.path.isdir(strPathRegion):
-#                                strPathCutterOut = os.path.join(strPathCutter, '_labels', strChannelId, strRegionId)
-#                                self._oLogger.info("running CutterLabel for '%s' / '%s'..." % (strChannelId, strRegionId))
-#                                CutterLabel(oCellTracker,
-#                                            strPathRegion,
-#                                            self.P,
-#                                            strPathCutterOut,
-#                                            self._meta_data,
-#                                            **self.oSettings.dctCutter3Infos)
-
-#            if self.oSettings.bQualityControl:
-#                self._oLogger.info("running quality control...")
-#                oQualityControl.processPosition(oTimeHolder)
-
-#            if self.oSettings.bDumpCellTracker:
-#                oFile = file(strFilenameCellTrackerDump, 'wb')
-#                pickle.dump(oCellTracker, oFile, 1)
-#                oFile.close()
-
-#        if self.oSettings.bClassify and self.oSettings.bExportUnifiedClassCounts:
-#
-#            for classifierName, classifierInfos in self.oSettings.dctClassificationInfos.iteritems():
-#                self._oLogger.info("exporting unified class counts for '%s'" % classifierName)
-#
-#                oClassPredictor = classifierInfos['predictor']
-#                oTableClassCounts = newTable(['Position', 'GeneSymbol', 'Group', 'Frame'] +
-#                                              oClassPredictor.lstClassNames,
-#                                              columnTypeCodes=['i','c', 'c', 'i'] +
-#                                              ['i']*oClassPredictor.iClassNumber)
-#
-#                for iT, dctChannels in oTimeHolder.iteritems():
-#
-#                    oRecord = {'Position'   : self.P,
-#                               'Frame'      : iT}
-#
-#                    dctClassCount = dict([(x, 0) for x in oClassPredictor.dctClassLabels])
-#                    oChannel = dctChannels[classifierInfos['strChannelId']]
-#                    strRegionId = classifierInfos['strRegionId']
-#                    if strRegionId in oChannel.getRegionNames():
-#                        oRegion = oChannel.getRegion(strRegionId)
-#                        for iObjId, oObj in oRegion.iteritems():
-#                            dctClassCount[oObj.strClassName] += 1
-#                    oRecord.update(dctClassCount)
-#                    oTableClassCounts.append(oRecord)
-#
-#                strFilename = os.path.join(self.strPathOutAnalyzed,
-#                                           'unified_class_counts__%s__P%s.tsv' %\
-#                                           (classifierName, self.P))
-#                exportTable(self.oTableClassCounts,
-#                            strFilename,
-#                            fieldDelimiter='\t',
-#                            stringDelimiter='')
-#                self._oLogger.info("Predicted class counts for '%s' exported to '%s'." %\
-#                                   (classifierName, strFilename))
-
-#        for strChannelId, tplChannelInfo in self.oSettings.dctChannelMapping.iteritems():
-#            dctChannelSettings = getattr(self.oSettings, tplChannelInfo[1])
-#            if dctChannelSettings.get('bEstimateBackground', False):
-#                oTable = newTable(['Frame', 'Timestamp', 'Background_avg'],
-#                                  columnTypeCodes=['i','f', 'f'])
-#                for iT, dctChannels in oTimeHolder.iteritems():
-#                    oChannel = dctChannels[strChannelId]
-#                    if oChannel.bSegmentationSuccessful:
-#                        oTable.append({'Frame' : iT,
-#                                       'Timestamp' : self._meta_data.getTimestamp(self.origP, iT),
-#                                       'Background_avg' : oChannel.fBackgroundAverage})
-#                exportTable(oTable,
-#                            os.path.join(self.strPathOutPosition,
-#                                         '_background_estimates__P%s__C%s.tsv' % (self.P, strChannelId)),
-#                            fieldDelimiter='\t',
-#                            typeFormatting={FloatType: lambda x: "%E" % x},
-#                            stringDelimiter='')
-
-        # clean-up
-#        if hasattr(self.oSettings, 'cleanUpPosition'):
-#            # remove render images
-#            if 'render_images' in self.oSettings.cleanUpPosition:
-#                for render_name in self.oSettings.cleanUpPosition['render_images']:
-#                    render_path = os.path.join(self.strPathOutPositionImages, render_name)
-#                    if os.path.isdir(render_path):
-#                        shutil.rmtree(render_path, True)
-#                # remove the image directory if empty
-#                if len(os.listdir(self.strPathOutPositionImages)) == 0:
-#                    shutil.rmtree(self.strPathOutPositionImages, True)
-
 
         oStopWatchPos.stop()
-        #self._oLogger.info("* position %d ok, %s" % (self.P, oStopWatchPos.stopInterval().format(msec=True)))
 
         if iNumberImages > 0:
             oInterval = oStopWatchPos.stop_interval() / iNumberImages
