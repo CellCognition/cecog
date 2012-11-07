@@ -153,7 +153,7 @@ SectionEnd
 
 Section /o "Battery package" SecDemo
 
-  SetOutPath "$INSTDIR\resources\"
+  SetOutPath "$INSTDIR\resources\battery_package"
   
   FILE /r dist\resources\battery_package\*.*
 
