@@ -673,7 +673,7 @@ namespace cecog
     inline
     void operator()(SrcIterator si, SrcAccessor sa, typename SrcAccessor::value_type label, int x=0, int y=0)
     {
-      if (is_border_fg(si, sa, label))
+      if (this->is_border_fg(si, sa, label))
         perimeter++;
     }
 

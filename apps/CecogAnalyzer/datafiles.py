@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """
+
                            The CellCognition Project
                      Copyright (c) 2006 - 2010 Michael Held
                       Gerlich Lab, ETH Zurich, Switzerland
@@ -12,7 +13,7 @@
 datafiles.py - collect resources for distutils setup
 """
 
-__author__ = 'rudolf.hoefler@imba.gmail.com'
+__author__ = 'rudolf.hoefler@imba.oeaw.ac.at'
 
 import os
 import glob
@@ -24,8 +25,8 @@ from cecog.traits.config import (ANALYZER_CONFIG_FILENAME,
                                  PATH_MAPPING_FILENAME,
                                  RESOURCE_PATH)
 
-_rfiles = ['graph_template.txt', 'hmm.R', 'hmm_report.R', 'run_hmm.R']
-_rfiles = [join('..', '..', 'rsrc', 'hmm', rf) for rf in _rfiles]
+_rfiles = ('graph_template.txt', 'hmm.R', 'hmm_report.R', 'run_hmm.R')
+_rfiles = (join('..', '..', 'rsrc', 'hmm', _rf) for _rf in _rfiles)
 
 _rsc = ( ANALYZER_CONFIG_FILENAME, FONT12_FILENAME,
          NAMING_SCHEMA_FILENAME, PATH_MAPPING_FILENAME )
@@ -35,10 +36,8 @@ _palettes = join(RESOURCE_PATH, 'palettes', 'zeiss')
 _battery_package = join(RESOURCE_PATH, 'battery_package')
 
 def get_data_files():
-    """
-    Returns a list of tuples to serve as argument for
-    distutils.core.setup as 'data_files' argument
-    """
+    """Pack data files into list of (target-dir, list-of-files)-tuples"""
+
     dfiles = matplotlib.get_py2exe_datafiles()
     dfiles.append((join(RESOURCE_PATH, 'rsrc', 'hmm'), _rfiles))
     dfiles.append((RESOURCE_PATH, _rsc))
@@ -49,3 +48,20 @@ def get_data_files():
             if file_ not in (".git", ):
                 dfiles.append((root, [join(root, file_)]))
     return dfiles
+
+
+def get_include_files():
+    """Pack data files into list of (src, dst)-tuples"""
+    ifiles = list()
+    _rfs = [(rf, join(RESOURCE_PATH, 'rsrc', 'hmm', basename(rf))) \
+                for rf in _rfiles]
+
+    ifiles.extend(_rfs)
+    ifiles.extend(_rsc)
+    ifiles.extend(glob.glob(join(_palettes, '*.zip')))
+
+    for root, subdirs, files in os.walk(_battery_package):
+        for file_ in files:
+            if file_ not in (".git", ):
+                ifiles.extend((join(root, file_), root))
+    return ifiles
