@@ -18,33 +18,46 @@ import os, sys, glob
 from distutils.core import setup
 import py2exe
 
+import pkginfo
 from datafiles import get_data_files
+
 
 if sys.platform != 'win32':
     raise RuntimeError("%s runs only on Windows machine's"
                        % os.path.basename(__file__))
 
-INCLUDES = ['sip', 'netCDF4_utils', 'netcdftime']
+INCLUDES = ['sip',
+            'scipy.sparse.csgraph._validation',
+            'scipy.spatial.kdtree',
+            'scipy.sparse.csgraph._shortest_path']
 EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
             'PyQt4.QtOpenGL', 'PyQt4.QtScript',
             'PyQt4.QtSql', 'PyQt4.QtTest',
             'PyQt4.QtWebKit', 'PyQt4.QtXml',
             'PyQt4.phonon',
-            'scipy', 'rpy',
+            'rpy',
+            '_gtkagg', '_tkagg', '_agg2', '_cairo', '_cocoaagg',
+            '_fltkagg', '_gtk', '_gtkcairo',
             'Tkconstants', 'Tkinter', 'tcl' ]
+
+PACKAGES = ['cecog', 'h5py', 'colorbrewer', 'vigra', 'matplotlib']
 
 setup( options = {"py2exe": { 'includes': INCLUDES,
                               'excludes': EXCLUDES,
-                              'packages': ['cecog'],
-                              'optimize': 2,
-                              'compressed': True,
+                              'packages': PACKAGES,
+                              'dll_excludes': ['libgdk-win32-2.0-0.dll',
+                                               'libgobject-2.0-0.dll',
+                                               'libgdk_pixbuf-2.0-0.dll'],
+                              'optimize': 1,
+                              'compressed': False,
+                              'skip_archive': True,
                               'bundle_files': 3 }},
        data_files = get_data_files(),
        zipfile = "data.zip",
        windows = [{'script': "CecogAnalyzer.py",
                    'icon_resources': [(1, 'resources\cecog_analyzer_icon.ico')]
-                   }]
-       )
+                   }],
+       **pkginfo.metadata)
 
 # why removing w9xpopen.exe anyway?
 try:

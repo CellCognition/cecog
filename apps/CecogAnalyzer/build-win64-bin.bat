@@ -5,7 +5,7 @@
 @set PATH=%PATH%;C:\Python27\Lib\site-packages\numpy
 @set PATH=%PATH%;C:\Python27\Lib\site-packages\numpy\core
 
-@Set /P _clean=Clean directory? [Y/n] || Set _clean="n"
+@Set /P _clean=Clean directories manually? [Y/n] || Set _clean="n"
 
 @If "%_clean%"=="Y" goto:clean
 @If "%_clean%"=="y" goto:clean
