@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -86,7 +86,7 @@ class ObjectDetectionFrame(BaseProcessorFrame):
                         ('primary_zslice_projection_step', None, None, True),
                         ], layout='flow')
         self.add_group('primary_flat_field_correction',
-                       [('primary_flat_field_correction_image_file',),
+                       [('primary_flat_field_correction_image_dir',),
                         ], layout='flow')
         self.add_line()
         self.add_group(None,
@@ -140,7 +140,7 @@ class ObjectDetectionFrame(BaseProcessorFrame):
                             ('%s_zslice_projection_step' % prefix, None, None, True),
                             ], layout='flow')
             self.add_group('%s_flat_field_correction' % prefix,
-                       [('%s_flat_field_correction_image_file' % prefix,),
+                       [('%s_flat_field_correction_image_dir' % prefix,),
                         ], layout='flow')
             self.add_line()
             self.add_pixmap(QPixmap(':cecog_secondary_regions'), Qt.AlignRight)
@@ -210,6 +210,7 @@ class ObjectDetectionFrame(BaseProcessorFrame):
         #settings.set2('rendering_class_discwrite', True)
 
         settings.set('Output', 'events_export_gallery_images', False)
+        settings.set('Output', 'hdf5_create_file', False)
         show_ids = settings.get('Output', 'rendering_contours_showids')
         #settings.set('Output', 'export_object_details', False)
         #settings.set('Output', 'export_object_counts', False)
@@ -236,4 +237,3 @@ class ObjectDetectionFrame(BaseProcessorFrame):
                                                                                              }})
                                                               for x in tert_regions]))
         return settings
-

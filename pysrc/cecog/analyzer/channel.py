@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -20,10 +20,12 @@ __all__ = []
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
-import sys, \
-       types, \
-       logging, \
-       copy
+import os
+import sys
+import glob
+import copy
+import types
+import logging
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -43,7 +45,6 @@ from pdk.attributemanagers import (get_attribute_values,
 from pdk.attributes import Attribute
 from pdk.iterator import unique, flatten
 from pdk.map import dict_values
-from pdk.errors import NotImplementedMethodError
 
 import numpy
 
@@ -185,8 +186,8 @@ class _Channel(PropertyManager):
                       Attribute('dctContainers')
                       ]
 
-    def __init__(self, **dctOptions):
-        super(_Channel, self).__init__(**dctOptions)
+    def __init__(self, **kw):
+        super(_Channel, self).__init__(**kw)
         self._oLogger = logging.getLogger(self.__class__.__name__)
         self.clear()
 
@@ -227,6 +228,13 @@ class _Channel(PropertyManager):
         self._lstZSlices = []
         for x in self.dctContainers.keys():
             del self.dctContainers[x]
+
+        # remove crack_contours
+        for regionName in self.region_names():
+            region = self.get_region(regionName)
+            for obj in region.values():
+                    obj.crack_contour = None
+
 
         # purge features
         if not features is None:
@@ -303,7 +311,7 @@ class _Channel(PropertyManager):
         self.meta_image.binning(iFactor)
 
     def apply_segmentation(self):
-        raise NotImplementedMethodError()
+        raise NotImplementedError
 
     def apply_registration(self):
         img_in = self.meta_image.image
@@ -315,30 +323,30 @@ class _Channel(PropertyManager):
 
     def apply_features(self):
 
-        for strKey, oContainer in self.dctContainers.iteritems():
+        for region_name, container in self.dctContainers.iteritems():
 
-            oObjectHolder = ObjectHolder(strKey)
+            object_holder = ObjectHolder(region_name)
 
-            if not oContainer is None:
+            if not container is None:
 
                 for strFeatureCategory in self.lstFeatureCategories:
                     #print strFeatureCategory
                     sys.stdout.flush()
-                    oContainer.applyFeature(strFeatureCategory)
+                    container.applyFeature(strFeatureCategory)
 
                 # calculate set of haralick features
                 # (with differnt distances)
                 if 'haralick_categories' in self.dctFeatureParameters:
                     for strHaralickCategory in self.dctFeatureParameters['haralick_categories']:
                         for iHaralickDistance in self.dctFeatureParameters['haralick_distances']:
-                            oContainer.haralick_distance = iHaralickDistance
-                            oContainer.applyFeature(strHaralickCategory)
+                            container.haralick_distance = iHaralickDistance
+                            container.applyFeature(strHaralickCategory)
 
-                lstValidObjectIds = []
-                lstRejectedObjectIds = []
+                #lstValidObjectIds = []
+                #lstRejectedObjectIds = []
 
-                for iObjectId, oObject in oContainer.getObjects().iteritems():
-                    dctFeatures = oObject.getFeatures()
+                for obj_id, c_obj in container.getObjects().iteritems():
+                    dctFeatures = c_obj.getFeatures()
 
                     bAcceptObject = True
 
@@ -361,31 +369,57 @@ class _Channel(PropertyManager):
 
                     if bAcceptObject:
                         # build a new ImageObject
-                        oImageObject = ImageObject(oObject)
-                        oImageObject.iId = iObjectId
+                        obj = ImageObject(c_obj)
+                        obj.iId = obj_id
+
+                        ul = obj.oRoi.upperLeft
+                        crack = [(pos[0] + ul[0], pos[1] + ul[1])
+                                 for pos in
+                                 container.getCrackCoordinates(obj_id)
+                                 ]
+                        obj.crack_contour = crack
 
                         if self.lstFeatureNames is None:
                             self.lstFeatureNames = sorted(dctFeatures.keys())
 
                         # assign feature values in sorted order as NumPy array
-                        oImageObject.aFeatures = \
+                        obj.aFeatures = \
                             numpy.asarray(dict_values(dctFeatures,
                                                       self.lstFeatureNames))
-
-                        oObjectHolder[iObjectId] = oImageObject
+                        object_holder[obj_id] = obj
 
             if not self.lstFeatureNames is None:
-                oObjectHolder.setFeatureNames(self.lstFeatureNames)
-            self._dctRegions[strKey] = oObjectHolder
+                object_holder.setFeatureNames(self.lstFeatureNames)
+            self._dctRegions[region_name] = object_holder
 
-    def normalize_image(self):
+    def _z_slice_image(self, plate_id):
+        if not os.path.isdir(str(self.strBackgroundImagePath)):
+            raise IOError("No z-slice correction image directory set")
+
+        path = glob.glob(os.path.join(self.strBackgroundImagePath, plate_id+".tiff"))
+        path.extend(glob.glob(
+                os.path.join(self.strBackgroundImagePath, plate_id+".tif")))
+
+        if len(path) > 1:
+            raise IOError("Multiple z-slice flat field corr. images found.\n"
+                          "Directory must contain only one file per plate\n"
+                          "(%s)" %", ".join(path))
+        try:
+            # ccore need str not unicode
+            bg_image = ccore.readImageFloat(str(path[0]))
+        except Exception, e:
+            # catching all errors, even files that are no images
+            raise IOError(("Z-slice flat field correction image\n"
+                           " could not be loaded! (file: %s)"
+                           %path[0]))
+        return bg_image
+
+    def normalize_image(self, plate_id=None):
         img_in = self.meta_image.image
         if self.bFlatfieldCorrection:
-            assert isinstance(self.strBackgroundImagePath, (str, unicode)), \
-                "no correction image provided but flat field correction checked"
-            self._oLogger.debug("* using flat field correction with image %s"
-                                % self.strBackgroundImagePath)
-            imgBackground = ccore.readImageFloat(self.strBackgroundImagePath)
+            self._oLogger.debug("* using flat field corr. with image from %s" \
+                                    % self.strBackgroundImagePath)
+            imgBackground = self._z_slice_image(plate_id)
 
             crop_coordinated = MetaImage.get_crop_coordinates()
             if crop_coordinated is not None:
@@ -397,10 +431,8 @@ class _Channel(PropertyManager):
                                                             crop_coordinated[3]))
 
             img_in = ccore.flatfieldCorrection(img_in, imgBackground, 0.0, True)
-            img_out = ccore.linearTransform2(img_in,
-                                             self.fNormalizeMin,
-                                             self.fNormalizeMax,
-                                             0, 255, 0, 255)
+            img_out = ccore.linearTransform2(img_in, self.fNormalizeMin,
+                                             self.fNormalizeMax, 0, 255, 0, 255)
         else:
             self._oLogger.debug("* not using flat field correction")
             if type(img_in) == ccore.UInt16Image:

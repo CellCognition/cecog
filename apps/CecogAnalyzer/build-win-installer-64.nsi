@@ -125,9 +125,10 @@ Section "CecogAnalyzer" SecDummy
 
   SectionIn RO
   SetOutPath "$INSTDIR"
+  SetShellVarContext all
+  RMDir /r "$%APPDATA%\CellCognition${mver}"
   
   FILE /r dist\*.*
-  RMDir /r $%APPDATA%"\CellCognition${mver}"
   
   ;Store installation folder
   WriteRegStr HKCU "Software\CecogAnalyzer-${mver}" "" $INSTDIR
@@ -143,7 +144,8 @@ Section "CecogAnalyzer" SecDummy
 
     CreateShortCut "$SMPROGRAMS\$StartMenuFolder\CecogAnalyzer-${mver}.lnk" "$INSTDIR\CecogAnalyzer.exe" "" "$INSTDIR\CecogAnalyzer.exe"  
     CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
-    ;CreateShortCut "$SMPROGRAMS\$StartMenuFolder\test.lnk" $%APPDATA%"\CellCognition${mver}"
+  
+  AccessControl::GrantOnFile "$INSTDIR" "(S-1-5-32-545)" "FullAccess"
   
   !insertmacro MUI_STARTMENU_WRITE_END
 
@@ -181,7 +183,8 @@ Section "Uninstall"
   Delete "$INSTDIR\Uninstall.exe"
 
   RMDir /r "$INSTDIR"
-  RMDir /r $%APPDATA%"\CellCognition${mver}"
+  SetShellVarContext all
+  RMDir /r "$%APPDATA%\CellCognition${mver}"
   
   !insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder
     

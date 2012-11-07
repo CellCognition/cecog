@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -30,6 +30,7 @@ __all__ = ['SectionOutput']
 from cecog.traits.config import _Section
 from cecog.gui.guitraits import (BooleanTrait,
                                  IntTrait,
+                                 SelectionTrait2,
                                  )
 
 #-------------------------------------------------------------------------------
@@ -63,6 +64,8 @@ class SectionOutput(_Section):
             BooleanTrait(False, label='Show object IDs')),
         ('export_object_counts',
             BooleanTrait(False, label='Export object counts')),
+        ('export_object_counts_ylim_max',
+            IntTrait(-1, -1, 1000 , label='Max. count in plot')),
         ('export_object_details',
             BooleanTrait(False, label='Export detailed object data')),
         ('export_file_names',
@@ -84,20 +87,28 @@ class SectionOutput(_Section):
         ('imagecontainer_reuse_file',
             BooleanTrait(True, label='Reuse ImageContainer')),
         ]),
-     ('netcdf4',
-       [('netcdf_create_file',
-            BooleanTrait(False, label='Create NetCDF4')),
-        ('netcdf_reuse_file',
-            BooleanTrait(False, label='Reuse NetCDF4 (experimental!)')),
-        ]),
      ('hdf5',
        [('hdf5_create_file',
             BooleanTrait(False, label='Create HDF5')),
+        ('hdf5_reuse',
+            BooleanTrait(False, label='Reuse HDF5')),
         ('hdf5_include_raw_images',
             BooleanTrait(False, label='Include raw images')),
         ('hdf5_include_label_images',
-            BooleanTrait(False, label='Include label images')),
+            BooleanTrait(False, label='Include segmentation images')),
+        ('hdf5_include_crack',
+            BooleanTrait(False, label='Include crack contours')),
         ('hdf5_include_features',
             BooleanTrait(False, label='Include features')),
+        ('hdf5_include_classification',
+            BooleanTrait(False, label='Include classification')),
+        ('hdf5_include_tracking',
+            BooleanTrait(False, label='Include tracking')),
+        ('hdf5_include_events',
+            BooleanTrait(False, label='Include events')),
+        ('hdf5_compression',
+            BooleanTrait(True, label='Enable gzip compression (recommended!)')),
+        ('hdf5_merge_positions',
+            BooleanTrait(True, label='Merge positions into one file')),
         ]),
       ]

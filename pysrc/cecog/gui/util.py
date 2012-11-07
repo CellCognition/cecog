@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -43,8 +43,6 @@ import numpy
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
-
-from pdk.platform import on_mac
 
 #-------------------------------------------------------------------------------
 # cecog imports:
@@ -98,8 +96,8 @@ def message(icon, text, parent, info=None, detail=None, buttons=None,
             title=None, default=None, escape=None, modal=True):
     if title is None:
         title = text
-    msg_box = MyMessageBox(icon, title, text, QMessageBox.NoButton,
-                           parent)
+    msg_box = QMessageBox(icon, title, text, QMessageBox.NoButton,
+                          parent)
     if modal:
         msg_box.setWindowModality(Qt.WindowModal)
     if not info is None:
@@ -266,13 +264,6 @@ class ImageRatioDisplay(QLabel):
     def heightForWidth(self, w):
         return int(w*self._ratio)
 
-
-class MyMessageBox(QMessageBox):
-
-    def showEvent(self, event):
-        QMessageBox.showEvent(self, event)
-        #self.setFixedSize(400, 100)
-
 class ProgressDialog(QProgressDialog):
 
     targetFinished = pyqtSignal()
@@ -365,5 +356,3 @@ if __name__ == '__main__':
     print 'result of dialog target function is:', res
 
     app.exec_()
-
-

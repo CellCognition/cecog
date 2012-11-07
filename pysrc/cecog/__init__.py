@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -29,7 +29,7 @@ from cecog.traits.config import (init_constants,
 #-------------------------------------------------------------------------------
 # constants:
 #
-VERSION_NUM = (1, 2, 5)
+VERSION_NUM = (1, 3, 0)
 VERSION = '.'.join([str(digit) for digit in VERSION_NUM])
 
 HAS_GUI = False

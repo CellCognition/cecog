@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -134,15 +134,11 @@ class ClusterControl(object):
 
     def submit_job(self, job_type, settings, path_out, emails, nr_items=1,
                    batch_size=1, version=CECOG_DEFAULT_VERSION):
-
         path_out = str(path_out.replace('\\', '/'))
         settings = settings.replace('\\', '/')
         path_out = os.path.normpath(path_out)
         path_out_settings = os.path.join(path_out, 'settings')
-        print path_out_settings
         safe_mkdirs(path_out_settings)
-
-        print path_out_settings
         filename_settings = os.path.join(path_out_settings,
                                          'cecog_settings.conf')
         f = file(filename_settings, 'w')
@@ -214,7 +210,7 @@ if __name__ == '__main__':
     from wsgiref import simple_server
 
     options = parse_args(sys.argv[1:])[0]
-    service = {'clustercontrol': ClusterControl() }
+    service = {'clustercontrol': ClusterControl()}
 
     host = options.host
     port = int(options.port)
@@ -227,7 +223,6 @@ if __name__ == '__main__':
     )
 
     httpd.set_app(gw)
-
     print 'Started server on http://%s:%s' % (host, port)
 
     try:

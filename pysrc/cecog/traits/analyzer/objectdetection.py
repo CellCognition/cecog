@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -72,9 +72,9 @@ class SectionObjectdetection(_Section):
         ('primary_flat_field_correction',
             BooleanTrait(False, label='Z-slice flat field correction',
                          widget_info=BooleanTrait.CHECKBOX)),
-        ('primary_flat_field_correction_image_file',
-            StringTrait('', 1000, label='Correction image',
-                                   widget_info=StringTrait.STRING_FILE)),
+        ('primary_flat_field_correction_image_dir',
+            StringTrait('', 1000, label='Correction image directory',
+                                   widget_info=StringTrait.STRING_PATH)),
         ('primary_zslice_selection_slice',
             IntTrait(1, 0, 1000, label='Slice')),
         ('primary_zslice_projection',
@@ -155,9 +155,9 @@ class SectionObjectdetection(_Section):
         ('%s_flat_field_correction' % prefix,
             BooleanTrait(False, label='Z-slice flat field correction',
                          widget_info=BooleanTrait.CHECKBOX)),
-        ('%s_flat_field_correction_image_file' % prefix,
-            StringTrait('', 1000, label='Correction image',
-                                   widget_info=StringTrait.STRING_FILE)),
+        ('%s_flat_field_correction_image_dir' % prefix,
+            StringTrait('', 1000, label='Correction image directory',
+                                   widget_info=StringTrait.STRING_PATH)),
         ('%s_zslice_selection_slice' % prefix,
             IntTrait(1, 0, 1000, label='Slice')),
         ('%s_zslice_projection' % prefix,

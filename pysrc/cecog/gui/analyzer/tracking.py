@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -111,12 +111,13 @@ class TrackingFrame(BaseProcessorFrame):
         settings.set2('collectsamples', False)
         sec_region = settings.get2('secondary_classification_regionname')
 
+        settings.set('Output', 'hdf5_create_file', False)
         show_ids = settings.get('Output', 'rendering_contours_showids')
         show_ids_class = settings.get('Output', 'rendering_class_showids')
 
         if name == self.PROCESS_TRACKING:
             settings.set_section('Processing')
-            settings.set2('primary_featureextraction', False)
+            settings.set2('primary_featureextraction', True)
             settings.set2('secondary_featureextraction', False)
             settings.set2('primary_classification', False)
             settings.set2('secondary_classification', False)

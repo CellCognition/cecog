@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -346,7 +346,8 @@ class NavigationModule(Module):
         coordinate_old = self.browser.get_coordinate()
         plate = coordinate_new.plate
 
-        self.dlg = waitingProgressDialog("Please wait until the plate has been loaded...", self)
+        self.dlg = waitingProgressDialog(\
+            "Please wait until the plate has been loaded...", self)
         self.dlg.setTarget(self._imagecontainer.set_plate, plate)
         self.dlg.exec_()
 

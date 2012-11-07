@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -151,7 +151,7 @@ class ArffReader(object):
                             i1 = line.find('{')
                             i2 = line.find('}')
                             assert i1 != i2 != -1
-                            lstHexColors = [self._convert_string(x)
+                            lstHexColors = [self._convert_string(x).upper()
                                             for x in
                                             line[i1+1:i2].split(',')]
 

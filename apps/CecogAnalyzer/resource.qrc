@@ -8,6 +8,7 @@
         <file alias="question_mark">resources/question_mark.png</file>
         <file>help/classification.html</file>
         <file>help/errorcorrection.html</file>
+		<file>help/postprocessing.html</file>
         <file>help/objectdetection.html</file>
         <file>help/output.html</file>
         <file>help/processing.html</file>

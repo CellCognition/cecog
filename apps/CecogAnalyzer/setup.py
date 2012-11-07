@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -22,7 +22,7 @@ import py2exe
 import shutil
 import os
 import sys
-
+import matplotlib, colorbrewer
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
@@ -44,17 +44,19 @@ from cecog.traits.config import (ANALYZER_CONFIG_FILENAME,
 MAIN_SCRIPT = 'CecogAnalyzer.py'
 
 APP = [MAIN_SCRIPT]
-INCLUDES = ['sip', 'netCDF4_utils', 'netcdftime']
+INCLUDES = ['sip']
 EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
             'PyQt4.QtOpenGL', 'PyQt4.QtScript',
             'PyQt4.QtSql', 'PyQt4.QtTest',
             'PyQt4.QtWebKit', 'PyQt4.QtXml',
 
             'PyQt4.phonon',
-            'scipy', 'rpy',
+            'rpy',
+            '_gtkagg', '_tkagg', '_agg2', '_cairo', '_cocoaagg',
+            '_fltkagg', '_gtk', '_gtkcairo',
             'Tkconstants', 'Tkinter', 'tcl',
             ]
-PACKAGES = ['cecog', ]
+PACKAGES = ['cecog', 'h5py', 'colorbrewer', 'vigra', 'matplotlib']
 
 RESOURCE_FILES = [ANALYZER_CONFIG_FILENAME,
                   FONT12_FILENAME,
@@ -97,7 +99,9 @@ for path in ['dist', 'build']:
 if sys.platform == 'darwin':
     OPTIONS = {'app' : APP}
     SYSTEM = 'py2app'
-    DATA_FILES = []
+    DATA_FILES = matplotlib.get_py2exe_datafiles()
+    DATA_FILES.append(('colorbrewer/data',[os.path.join(colorbrewer.__path__[0],
+    	       'data', 'ColorBrewer_all_schemes_RGBonly3.csv')]))
     EXTRA_OPTIONS = {'argv_emulation': False,
                      'includes': INCLUDES,
                      'excludes': EXCLUDES,
@@ -107,22 +111,49 @@ if sys.platform == 'darwin':
                      'packages': PACKAGES,
                      'resources': [],
                      'optimize': 2,
-                     'compressed': True,
+                     'compressed': False,
+                     'skip_archive': True,
                      'iconfile': 'resources/cecog_analyzer_icon.icns',
                     }
+elif sys.platform == 'win32':
+    import py2exe # pylint: disable-msg=F0401,W0611
+    FILENAME_ZIP = 'data.zip'
+    #FILENAME_ZIP = 'CecogAnalyzer.exe'
+    OPTIONS = {'windows': [{'script': MAIN_SCRIPT,
+                            'icon_resources': \
+                               [(1, r'resources\cecog_analyzer_icon.ico')],
+                           }],
+               # FIXME: the one-file version is currently not working!
+               'zipfile' : FILENAME_ZIP,
+               }
+    SYSTEM = 'py2exe'
+    DATA_FILES = matplotlib.get_py2exe_datafiles()
+    DATA_FILES.append(('colorbrewer/data',[os.path.join(colorbrewer.__path__[0], 'data', 'ColorBrewer_all_schemes_RGBonly3.csv')]))
+    EXTRA_OPTIONS = {'includes': INCLUDES,
+                     'excludes': EXCLUDES,
+                     'packages': PACKAGES,
+                     'optimize': 2,
+                     'compressed': False,
+                     'skip_archive': True,
 
+                     'bundle_files': 3,
+
+                     #'ascii': True,
+                     #'xref': True,
+                    }
+                    
 elif sys.platform.startswith('linux'):
     from cx_Freeze import setup, Executable
     FILENAME_ZIP = 'data.zip'
     #FILENAME_ZIP = 'CecogAnalyzer.exe'
     OPTIONS = {'executables':[Executable(MAIN_SCRIPT,initScript = None,)]}
     SYSTEM = 'cx_Freeze'
-    DATA_FILES = []
     EXTRA_OPTIONS = {'includes': INCLUDES,
                      'excludes': EXCLUDES,
                      'packages': PACKAGES,
                      'optimize': 2,
-                     'compressed': True,
+                     'compressed': False,
+                     'skip_archive': True,
                      'bundle_files': 3,
 
                      #'ascii': True,
@@ -210,6 +241,45 @@ if sys.platform == 'darwin':
     shutil.copytree(os.path.join(RESOURCE_PATH, 'palettes', 'zeiss'),
                     os.path.join(resource_path, 'palettes', 'zeiss'))
 
+
+elif sys.platform == 'win32':
+#    import zipfile, glob
+#    lib_filename = os.path.join('dist', FILENAME_ZIP)
+#    zfile = zipfile.PyZipFile(lib_filename, 'a')
+#    filenames = [r'C:\Source\Lib\libfftw3-3.dll',
+#                 ] +\
+#                 glob.glob(r'C:\Source\Microsoft.VC90.CRT\*.*')
+#    for filename in filenames:
+#        print "adding '%s' to '%s'" % (filename, lib_filename)
+#        zfile.write(filename, os.path.split(filename)[1])
+#    zfile.close()
+
+    filenames = ['graph_template.txt',
+                 'hmm.R',
+                 'hmm_report.R',
+                 'run_hmm.R',
+                 ]
+    resource_path = os.path.join('dist', 'resources')
+    target = os.path.join(resource_path, 'rsrc', 'hmm')
+    safe_mkdirs(target)
+    for filename in filenames:
+        shutil.copy(os.path.join('../../rsrc/hmm', filename), target)
+
+    for filename in RESOURCE_FILES:
+        # make sure we use the unchanged versions from the repository
+        filename = os.path.join('resources', os.path.split(filename)[1])
+        print filename
+        shutil.copy(filename, resource_path)
+
+    # copy vigranumpycory to correct filename
+    shutil.copy(os.path.join('dist', 'vigra.vigranumpycore.pyd'), os.path.join('dist', 'vigranumpycore.pyd'))
+    
+    shutil.copytree(os.path.join(RESOURCE_PATH, 'palettes', 'zeiss'),
+                    os.path.join(resource_path, 'palettes', 'zeiss'))
+
+    w9 = os.path.join('dist', 'w9xpopen.exe')
+    if os.path.isfile(w9):
+        os.remove(w9)
 
 elif sys.platform.startswith('linux'):
     filenames = ['graph_template.txt',

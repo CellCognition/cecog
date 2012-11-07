@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -21,7 +21,6 @@ __all__ = []
 #
 import os, \
        zipfile
-#from collections import OrderedDict
 from pdk.ordereddict import OrderedDict
 
 #-------------------------------------------------------------------------------
@@ -170,7 +169,6 @@ class DisplaySettings:
     def set_image_minmax(self, image):
         self.image_minimum = numpy.min(image)
         self.image_maximum = numpy.max(image)
-        #print self.image_minimum, self.image_maximum
 
     def set_to_image_minmax(self, image=None):
         if not image is None:

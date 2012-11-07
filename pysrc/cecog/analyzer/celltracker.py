@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -107,7 +107,7 @@ class DotWriter(object):
         self.oDotFile.write("node%s;\n" % self.NODE_STYLE)
 
         iStart, iEnd = oTracker.getValidTimeLimits()
-#        print iStart, iEnd, oTracker.getTimePoints(), oTracker.getGraph().node_list()
+#        print iStart, iEnd, oTracker.getTimePoints(), oTracker.get_graph().node_list()
 
         for iT, lstNodeIds in oTracker.getTimePoints().iteritems():
             for iObjId in lstNodeIds:
@@ -121,7 +121,7 @@ class DotWriter(object):
 
         # write nodes
         strTmpNode = '"%s" [%s];\n'
-        oGraph = self.oTracker.getGraph()
+        oGraph = self.oTracker.get_graph()
 
         for strNodeId, strLabel in self._dctKnownNodeIds.iteritems():
             node = oGraph.node_data(strNodeId)
@@ -178,7 +178,7 @@ class DotWriter(object):
 
 
     def _traverseGraph(self, strNodeId, level=0):
-        oGraph = self.oTracker.getGraph()
+        oGraph = self.oTracker.get_graph()
         node = oGraph.node_data(strNodeId)
         if strNodeId not in self._dctKnownNodeIds:
 #            self.labelD[node_id] = "%s - %d%%\\n%s" %\
@@ -301,7 +301,7 @@ class CellTracker(OptionManager):
             iEnd = -1
         return iStart, iEnd
 
-    def getGraph(self):
+    def get_graph(self):
         return self._oGraph
 
     def getTimePoints(self):
@@ -352,7 +352,7 @@ class CellTracker(OptionManager):
         self._regionName = strRegionName
         self._oGraph = Graph()
         self._dctTimePoints = OrderedDict()
-
+            
     def trackAtTimepoint(self, iT):
         oChannel = self._dctTimeChannels[iT][self._channelId]
         self.lstFeatureNames = oChannel.lstFeatureNames
@@ -424,6 +424,13 @@ class CellTracker(OptionManager):
                                          (dist, strNodeIdC))
 
             # prevent split and merge for one node at the same time
+            
+            ### FIXME: Here we loose alomost all cell mappings, 
+            ### because if fMaxObjectDistance is big, we find for
+            ### many cells splits and merges and there will never
+            ### be an one-to-one mapping => the bigger the radius, the less mappings 
+            ### which is counter intuitive
+             
             for id_c in dctMerges:
                 nodes = dctMerges[id_c]
                 if len(nodes) == 1:
@@ -471,7 +478,7 @@ class CellTracker(OptionManager):
 #            for dist, node_id in node_idTL[:self.iMaxMergeObjects]:
 #                self.add_edge(node_id_prev, node_id)
 
-        return bReturnSuccess
+        return iPreviousT, bReturnSuccess
 
     def visualizeTracks(self, iT, size, n=5, thick=True, radius=3):
         img_conn = ccore.Image(*size)
@@ -1697,19 +1704,15 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                             if len(lstNodes) == track_length:
                                 lstTracks.append(lstNodes)
 
-                        #lstLengths = [len(x) for x in lstTracks]
-                        #assert allEqual(lstLengths)
-
-                        #if self.getOption('bFollowOnlyOneCell'):
-                        #    # take the first track from the list
-                        #    lstTracks = [lstTracks[0]]
-
                         for cnt, track in enumerate(lstTracks):
                             new_start_id = '%s_%d' % (strStartId, cnt+1)
                             dctResults[new_start_id] = {'splitId'  : lstForwardNodeIds[iSplitIdx-1],
                                                         'eventId'  : strNodeId,
                                                         'maxLength': track_length,
                                                         'tracks'   : [track],
+                                                        # keep value at which index the two daugther
+                                                        # tracks differ due to a split event
+                                                        'splitIdx' : iSplitIdx + len(lstBackwardNodeIds),
                                                         }
                     else:
                         lstNodeIds = lstBackwardNodeIds + lstForwardNodeIds
@@ -1738,10 +1741,6 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                     dctResults['_current'] += idx
                 self._forwardVisitor(strTailId, dctResults, dctVisitedNodes, iLevel=iLevel+1)
 
-#    @staticmethod
-#    def getNodeIdFromComponents(frame,  obj_id, child_id=None):
-#        return '%d_%s' % (frame, obj_id)
-#
     @staticmethod
     def getComponentsFromNodeId(strNodeId):
         items = map(int, strNodeId.split('_'))

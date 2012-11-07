@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -38,6 +38,7 @@ from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
 from cecog.analyzer.core import AnalyzerCore
 from cecog.io.imagecontainer import ImageContainer
+from cecog.gui.analyzer import link_hdf5_files
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -239,6 +240,7 @@ if __name__ ==  "__main__":
         plates[plate_id].append(pos)
 
     # start one analyzer per plate with the corresponding positions
+    post_hdf5_link_list = []
     for plate_id in plates:
         # redefine the positions
         settings.set(SECTION_NAME_GENERAL, 'constrain_positions', True)
@@ -246,8 +248,13 @@ if __name__ ==  "__main__":
         logger.info("Launching analyzer for plate '%s' with positions %s" % (plate_id, plates[plate_id]))
         # initialize and run the analyzer
         analyzer = AnalyzerCore(plate_id, settings, imagecontainer)
-        analyzer.processPositions()
+        result = analyzer.processPositions()
+        post_hdf5_link_list.append(result['post_hdf5_link_list'])       
 
+    if settings.get('Output', 'hdf5_create_file') and settings.get('Output', 'hdf5_merge_positions'):
+        if len(post_hdf5_link_list) > 0:
+            post_hdf5_link_list = reduce(lambda x,y: x + y, post_hdf5_link_list)
+            link_hdf5_files(sorted(post_hdf5_link_list))
     print 'BATCHPROCESSING DONE!'
 
 

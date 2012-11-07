@@ -43,6 +43,7 @@ read.screen <- function(dir,filenameLayout,regionName,graph,fuseClasses=NULL,sin
         spath = paste(str.pos, "statistics", "events", sep="/")
         path = paste(dir, spath, sep="/")
         #print(paste(str.pos, path,file.exists(path)))
+		print(path)
         if (file.exists(path))
         {
             filename <- list.files(path, paste(".*",regionName,".*",sep=""))
@@ -180,12 +181,17 @@ read.probabilities <- function(screen)
         }
         if (dim(t)[1] != T) {
             cat("ERROR: The number of time points in file ", screen$cell$filename[i], " is ", dim(t)[1],". Expected number of time points is ",T,"\n")
-            stop()
+            stop("\n\nERROR: The number of time points in file ", screen$cell$filename[i], " is ", dim(t)[1],". Expected number of time points is ",T,"\n")
         }
 
         for (j in 1:T)
         {
             Cstr <- t$class__probability[j]
+            
+            if (is.na(Cstr)){
+                stop("\n\nERROR: Classification data invalid in event files for region '", screen$regionName, "'. Please check if you already performed classification on this region...\n")
+            }
+             
             Cstr2 <- strsplit(Cstr,split=",")[[1]]
             C <- strsplit(Cstr2, split=":")
             Cs <- rep(0, K)

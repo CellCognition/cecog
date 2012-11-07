@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -87,7 +87,8 @@ class BaseLearner(LoggerMixin, OptionManager):
                       'lstFeatureNames',
                       'dctHexColors',
                       'dctEnvPaths',
-                      'dctImageObjects']
+                      'dctImageObjects',
+                      'name']
 
     def __init__(self, **options):
         self.dctFeatureData = OrderedDict()
@@ -101,6 +102,8 @@ class BaseLearner(LoggerMixin, OptionManager):
         self.dctImageObjects = OrderedDict()
 
         super(BaseLearner, self).__init__(**options)
+
+        self.name = os.path.split(self.getOption('strEnvPath'))[1]
 
     def __getstate__(self):
         dctState = get_attribute_values(self)

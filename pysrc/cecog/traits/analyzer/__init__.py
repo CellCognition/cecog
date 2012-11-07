@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -14,8 +14,7 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = ['SECTION_REGISTRY',
-           ]
+__all__ = ['SECTION_REGISTRY']
 
 #-------------------------------------------------------------------------------
 # standard library imports:
@@ -38,6 +37,7 @@ from cecog.traits.analyzer.errorcorrection import SectionErrorcorrection
 from cecog.traits.analyzer.output import SectionOutput
 from cecog.traits.analyzer.processing import SectionProcessing
 from cecog.traits.analyzer.cluster import SectionCluster
+from cecog.traits.analyzer.postprocessing import SectionPostProcessing
 
 from cecog.extensions.graphLib import Graph
 
@@ -51,6 +51,7 @@ SECTION_REGISTRY.register_section(SectionFeatureExtraction())
 SECTION_REGISTRY.register_section(SectionClassification())
 SECTION_REGISTRY.register_section(SectionTracking())
 SECTION_REGISTRY.register_section(SectionErrorcorrection())
+SECTION_REGISTRY.register_section(SectionPostProcessing())
 SECTION_REGISTRY.register_section(SectionOutput())
 SECTION_REGISTRY.register_section(SectionProcessing())
 SECTION_REGISTRY.register_section(SectionCluster())
@@ -105,6 +106,3 @@ class UpdateDependency(object):
             for edge_id in self._graph.out_arcs(self._start):
                 tail_id = self._graph.tail(edge_id)
                 self.check(settings, settings_new, tail_id)
-
-
-

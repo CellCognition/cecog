@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -465,6 +465,7 @@ class ClassificationFrame(BaseProcessorFrame):
         settings.set('General', 'rendering', {})
         settings.set('General', 'rendering_class', {})
         settings.set('Output', 'events_export_gallery_images', False)
+        settings.set('Output', 'hdf5_create_file', False)
 
         show_ids_class = settings.get('Output', 'rendering_class_showids')
 

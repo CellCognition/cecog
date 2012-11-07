@@ -1,6 +1,6 @@
 """
                            The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
+        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
                       Gerlich Lab, ETH Zurich, Switzerland
                               www.cellcognition.org
 
@@ -108,11 +108,11 @@ class SectionGeneral(_Section):
             IntTrait(-1, -1, 4000, label='Lower right X')),
         ('crop_image_y1',
             IntTrait(-1, -1, 4000, label='Lower right Y')),
-        
+
         ('crop_image',
             BooleanTrait(False, label='Crop image')),
-        
-        
+
+
         ('redofailedonly',
             BooleanTrait(True, label='Skip processed positions')),
         ('framerange',
@@ -135,5 +135,3 @@ class SectionGeneral(_Section):
 
       ])
     ]
-
-
