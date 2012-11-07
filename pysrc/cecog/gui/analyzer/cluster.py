@@ -93,7 +93,7 @@ class ClusterDisplay(QGroupBox):
         except:
             # old config file
             self._host_url_fallback = self._host_url
-            
+
 
         self.setTitle('ClusterControl')
         label1 = QLabel('Cluster URL:', self)
@@ -296,10 +296,10 @@ class ClusterDisplay(QGroupBox):
                 self._host_url = self._host_url_fallback
             except:
                 exception(self, 'Error on connecting to cluster control service. Please check your config.ini')
-        
+
     def _connect(self):
         self._check_host_url()
-        
+
         success = False
         try:
             client = RemotingService(self._host_url)
@@ -338,11 +338,11 @@ class ClusterDisplay(QGroupBox):
                     [('Processing', 'secondary_processchannel'),
                      ('Processing', 'secondary_classification')]),
                    ]
-        targets.extend([(('ObjectDetection', '%s_flat_field_correction_image_file' % prefix),
+        targets.extend([(('ObjectDetection', '%s_flat_field_correction_image_dir' % prefix),
                           [('ObjectDetection', '%s_flat_field_correction' % prefix)]) for prefix in ['primary',
                                                                                         'secondary',
                                                                                         'tertiary']]
-                       
+
                        )
         for info, const in targets:
             passed = reduce(lambda x,y: x and y,

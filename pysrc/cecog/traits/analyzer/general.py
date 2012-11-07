@@ -108,11 +108,11 @@ class SectionGeneral(_Section):
             IntTrait(-1, -1, 4000, label='Lower right X')),
         ('crop_image_y1',
             IntTrait(-1, -1, 4000, label='Lower right Y')),
-        
+
         ('crop_image',
             BooleanTrait(False, label='Crop image')),
-        
-        
+
+
         ('redofailedonly',
             BooleanTrait(True, label='Skip processed positions')),
         ('framerange',
@@ -135,5 +135,3 @@ class SectionGeneral(_Section):
 
       ])
     ]
-
-

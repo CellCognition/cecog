@@ -5,8 +5,8 @@
                               www.cellcognition.org
 
               CellCognition is distributed under the LGPL License.
-                        See trunk/LICENSE.txt for details.
-                 See trunk/AUTHORS.txt for author contributions.
+                           See LICENSE.txt for details.
+                    See AUTHORS.txt for author contributions.
 """
 
 __author__ = 'Michael Held'
