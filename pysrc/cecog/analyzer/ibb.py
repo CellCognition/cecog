@@ -6,7 +6,6 @@ from matplotlib import pyplot
 import re
 import os
 import cPickle as pickle
-import colorbrewer
 from itertools import cycle
 from cecog.util.color import rgb_to_hex
 from matplotlib.backends.backend_pdf import PdfPages
@@ -677,7 +676,7 @@ class IBBAnalysis(PostProcessingAnalysis):
         data = []
         names = []
         colors = []
-        base_colors = cycle(colorbrewer.Set3[8])
+        base_colors = cycle([tuple(x) for x in (pyplot.cm.Set3(range(0,256,24))*255).astype('uint8')[:,:3]])
         def mycmp(x, y):
             return cmp(result[x]['positions'][0].__getattribute__(self.color_sort_by).lower(), 
                        result[y]['positions'][0].__getattribute__(self.color_sort_by).lower())
@@ -708,7 +707,9 @@ class IBBAnalysis(PostProcessingAnalysis):
         data = []
         names = []
         bar_labels = ('valid', 'signal', 'split', 'ibb_onset', 'nebd_onset', 'prophase_onset')
-        bar_colors = map(lambda x:rgb_to_hex(*x), [colorbrewer.Greens[7][2],] + colorbrewer.RdBu[11][0:5])
+        bar_colors = map(lambda x:rgb_to_hex(*x), [[int(x*255) for x in pyplot.cm.Greens(2)[0:3]],] + 
+                                                  [tuple(x) for x in (pyplot.cm.RdBu(range(0,256,62))*255)[:,:3].astype('uint8')[:,:3]]
+                          )
         
         
         def mycmp(x, y):

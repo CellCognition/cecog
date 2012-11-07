@@ -17,7 +17,6 @@ __author__ = 'rudolf.hoefler@imba.gmail.com'
 import os
 import glob
 import matplotlib
-import colorbrewer
 from os.path import basename, join
 from cecog.traits.config import (ANALYZER_CONFIG_FILENAME,
                                  FONT12_FILENAME,
@@ -41,9 +40,6 @@ def get_data_files():
     distutils.core.setup as 'data_files' argument
     """
     dfiles = matplotlib.get_py2exe_datafiles()
-    dfiles.append(('colorbrewer/data',
-                   [join(colorbrewer.__path__[0], 'data',
-                         'ColorBrewer_all_schemes_RGBonly3.csv')]))
     dfiles.append((join(RESOURCE_PATH, 'rsrc', 'hmm'), _rfiles))
     dfiles.append((RESOURCE_PATH, _rsc))
     dfiles.append((_palettes, glob.glob(join(_palettes, '*.zip'))))

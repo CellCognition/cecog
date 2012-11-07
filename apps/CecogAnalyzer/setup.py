@@ -18,11 +18,10 @@ __source__ = '$URL$'
 # standard library imports:
 #
 from setuptools import setup
-import py2exe
 import shutil
 import os
 import sys
-import matplotlib, colorbrewer
+import matplotlib
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
@@ -49,14 +48,13 @@ EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
             'PyQt4.QtOpenGL', 'PyQt4.QtScript',
             'PyQt4.QtSql', 'PyQt4.QtTest',
             'PyQt4.QtWebKit', 'PyQt4.QtXml',
-
             'PyQt4.phonon',
             'rpy',
             '_gtkagg', '_tkagg', '_agg2', '_cairo', '_cocoaagg',
             '_fltkagg', '_gtk', '_gtkcairo',
             'Tkconstants', 'Tkinter', 'tcl',
             ]
-PACKAGES = ['cecog', 'h5py', 'colorbrewer', 'vigra', 'matplotlib']
+PACKAGES = ['cecog', 'h5py', 'vigra', 'matplotlib']
 
 RESOURCE_FILES = [ANALYZER_CONFIG_FILENAME,
                   FONT12_FILENAME,
@@ -100,8 +98,6 @@ if sys.platform == 'darwin':
     OPTIONS = {'app' : APP}
     SYSTEM = 'py2app'
     DATA_FILES = matplotlib.get_py2exe_datafiles()
-    DATA_FILES.append(('colorbrewer/data',[os.path.join(colorbrewer.__path__[0],
-    	       'data', 'ColorBrewer_all_schemes_RGBonly3.csv')]))
     EXTRA_OPTIONS = {'argv_emulation': False,
                      'includes': INCLUDES,
                      'excludes': EXCLUDES,
@@ -119,7 +115,6 @@ if sys.platform == 'darwin':
 elif sys.platform.startswith('linux'):
     from cx_Freeze import setup, Executable
     FILENAME_ZIP = 'data.zip'
-    #FILENAME_ZIP = 'CecogAnalyzer.exe'
     OPTIONS = {'executables':[Executable(MAIN_SCRIPT,initScript = None,)]}
     SYSTEM = 'cx_Freeze'
     EXTRA_OPTIONS = {'includes': INCLUDES,
@@ -214,6 +209,7 @@ if sys.platform == 'darwin':
 
     shutil.copytree(os.path.join(RESOURCE_PATH, 'palettes', 'zeiss'),
                     os.path.join(resource_path, 'palettes', 'zeiss'))
+
 
 
 elif sys.platform.startswith('linux'):
