@@ -16,10 +16,9 @@ __author__ = 'rudolf.hoefler@gmail.com'
 
 import os
 import sys
-import shutil
 import pkginfo
 
-from datafiles import get_data_files, get_include_files
+from datafiles import get_include_files
 
 if not sys.platform.startswith("linux"):
     raise RuntimeError("%s runs only on Linux machine's"
@@ -34,7 +33,7 @@ PACKAGES = [ 'cecog', 'h5py', 'vigra', 'matplotlib' ]
 
 INCLUDES = [ 'sip',
              'joblib',
-             # if scipy-version >= 0.11
+             # if scipy-version >= 0.11.0
              # 'scipy.sparse.csgraph._validation',
              # 'scipy.sparse.csgraph._shortest_path',
              'scipy.spatial.kdtree']
@@ -49,19 +48,12 @@ EXCLUDES = [ 'PyQt4.QtDesigner', 'PyQt4.QtNetwork',
              '_fltkagg', '_gtk', '_gtkcairo',
              'Tkconstants', 'Tkinter', 'tcl' ]
 
-# DLL_EXCLUDES = [ 'libgdk-win32-2.0-0.dll',
-#                  'libgobject-2.0-0.dll',
-#                  'libgdk_pixbuf-2.0-0.dll',
-#                  'w9xpopen.exe' ] # is not excluded for some reasion
-
-
-setup( options  ={ "build_exe": { "include_files": get_include_files(),
-                                  "includes": INCLUDES,
-                                  "excludes": EXCLUDES,
-                                  "packages": PACKAGES,
-                                  "optimize": 1,
-                                 },
-                   "install": {"prefix": "dist"} },
+setup( options ={ "build_exe": { "include_files": get_include_files(),
+                                 "includes": INCLUDES,
+                                 "excludes": EXCLUDES,
+                                 "packages": PACKAGES,
+                                 "optimize": 1 },
+                  "install": {"prefix": "dist"} },
        executables = [Executable('CecogAnalyzer.py')],
        **pkginfo.metadata
-)
+       )
