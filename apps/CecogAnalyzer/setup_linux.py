@@ -33,9 +33,11 @@ except ImportError:
 PACKAGES = [ 'cecog', 'h5py', 'vigra', 'matplotlib' ]
 
 INCLUDES = [ 'sip',
-#             'scipy.sparse.csgraph._validation',
+             'joblib',
+             # if scipy-version >= 0.11
+             # 'scipy.sparse.csgraph._validation',
+             # 'scipy.sparse.csgraph._shortest_path',
              'scipy.spatial.kdtree']
-             #'scipy.sparse.csgraph._shortest_path' ]
 
 EXCLUDES = [ 'PyQt4.QtDesigner', 'PyQt4.QtNetwork',
              'PyQt4.QtOpenGL', 'PyQt4.QtScript',
@@ -56,7 +58,7 @@ EXCLUDES = [ 'PyQt4.QtDesigner', 'PyQt4.QtNetwork',
 setup( options  ={ "build_exe": { "include_files": get_include_files(),
                                   "includes": INCLUDES,
                                   "excludes": EXCLUDES,
-                                  "packages": ["cecog"],
+                                  "packages": PACKAGES,
                                   "optimize": 1,
                                  },
                    "install": {"prefix": "dist"} },
