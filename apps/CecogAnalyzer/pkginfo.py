@@ -18,7 +18,6 @@ __author__ = 'rudolf.hoefler@gmail.com'
 from cecog import VERSION_NUM, VERSION
 
 metadata = { 'name': 'CecogAnalyzer',
-             'numversion': VERSION_NUM,
              'version': VERSION,
              'author': 'Michael Held',
              'author_email': 'held(at)cellcognition.org',
