@@ -1048,7 +1048,7 @@ namespace cecog
 
         // check for border and size greater 1 pixel
         if ((!removeSinglePixel ||
-			 diff.x > 1 && diff.y > 1) &&
+			 (diff.x > 1 && diff.y > 1)) &&
             (!bRemoveBorderObjects ||
              (ul.x > this->region_size &&
               ul.y > this->region_size &&
