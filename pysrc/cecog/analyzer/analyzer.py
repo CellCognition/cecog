@@ -1517,7 +1517,6 @@ class CellAnalyzer(PropertyManager):
                     oContainer.markObjects([obj_id], rgb_value, False, True)
 
                     #print obj_id, obj.oCenterAbs, iCenterX, iCenterY
-                    print '*** CSdebug: drawFilledCircle', iCenterX, iCenterY
                     ccore.drawFilledCircle(ccore.Diff2D(iCenterX, iCenterY),
                                            3, oContainer.img_rgb, rgb_value)
 

@@ -315,10 +315,12 @@ class _Channel(PropertyManager):
 
     def apply_registration(self):
         img_in = self.meta_image.image
-        image = ccore.subImage(img_in,
-                               ccore.Diff2D(*self.registration_start)-
-                               ccore.Diff2D(*self.channelRegistration),
-                               ccore.Diff2D(*self.new_image_size))
+#        image = ccore.subImage(img_in,
+#                               ccore.Diff2D(*self.registration_start)-
+#                               ccore.Diff2D(*self.channelRegistration),
+#                               ccore.Diff2D(*self.new_image_size))
+        ### FIXME
+        image = img_in
         self.meta_image.set_image(image)
 
     def apply_features(self):
