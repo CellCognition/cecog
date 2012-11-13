@@ -42,6 +42,8 @@ from pdk.datetimeutils import StopWatch
 
 import numpy
 import h5py
+import matplotlib
+matplotlib.use('Agg')
 from matplotlib import pyplot
 
 #-------------------------------------------------------------------------------
