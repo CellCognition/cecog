@@ -51,13 +51,14 @@ from cecog.gui.util import (question,
 # classes:
 #
 
-class PluginParamFrame(QFrame, TraitDisplayMixin):
+class PluginParamFrame(TraitDisplayMixin):
 
     label_clicked = pyqtSignal(str)
 
     def __init__(self, parent, param_manager):
-        QFrame.__init__(self, parent)
-        TraitDisplayMixin.__init__(self, param_manager._settings, label_click_callback=self._show_help)
+        super(PluginParamFrame, self).__init__(
+            param_manager._settings,
+            parent, label_click_callback=self._show_help)
         self.SECTION_NAME = param_manager._section
         self.param_manager = param_manager
         QGridLayout(self)
@@ -259,4 +260,3 @@ class PluginBay(QFrame):
 #-------------------------------------------------------------------------------
 # main:
 #
-
