@@ -58,6 +58,7 @@ with warnings.catch_warnings():
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
+from cecog import CHANNEL_PREFIX
 from cecog.gui.display import TraitDisplayMixin
 from cecog.learning.learning import (CommonObjectLearner,
                                      CommonClassPredictor,
@@ -1224,8 +1225,7 @@ class _ProcessorMixin(object):
         return self.get_special_settings(self._settings, has_timelapse)
 
     def _on_tab_changed(self, idx):
-        names = ['primary', 'secondary', 'tertiary']
-        self._tab_name = names[idx]
+        self._tab_name = CHANNEL_PREFIX[idx]
         for name in self._control_buttons:
             self._set_control_button_text(name=name)
 

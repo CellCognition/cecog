@@ -73,6 +73,7 @@ class PluginManager(object):
     LABEL = ''
 
     def __init__(self, display_name, name, section):
+        super(PluginManager, self).__init__()
         self.display_name = display_name
         self.name = name
         self.section = section

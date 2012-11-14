@@ -14,14 +14,12 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = ['VERSION',
-           'VERSION_NUM',
-           'PLUGIN_MANAGERS',
-           ]
+__all__ = ['VERSION', 'VERSION_NUM', 'PLUGIN_MANAGERS', 'CHANNEL_PREFIX']
 
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
+from collections import namedtuple
 
 #-------------------------------------------------------------------------------
 # cecog imports:
@@ -43,8 +41,10 @@ JOB_CONTROL_TERMINATE = 'Terminate'
 SEGMENTATION_MANAGERS = []
 PLUGIN_MANAGERS = []
 
-CHANNEL_PREFIX = ['primary', 'secondary', 'tertiary']
+CH_PRIMARY = ["primary"]
+CH_VIRTUAL = ["merged"]
+CH_OTHER = ["secondary", "tertiary"]
+CHANNEL_PREFIX = CH_PRIMARY + CH_OTHER + CH_VIRTUAL
 
 init_application_support_path(VERSION)
 init_constants()
-

@@ -37,18 +37,15 @@ from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
 from cecog.gui.util import (information,
                             exception,
                             )
-from cecog.gui.analyzer import (BaseProcessorFrame,
-                                AnalzyerThread,
-                                TrainingThread,
-                                )
-from cecog.analyzer.channel import (PrimaryChannel,
-                                    SecondaryChannel,
-                                    )
+from cecog.gui.analyzer import BaseProcessorFrame
+from cecog.gui.analyzer import AnalzyerThread, TrainingThread
+
+from cecog.analyzer.channel import PrimaryChannel, SecondaryChannel
 from cecog.learning.learning import CommonClassPredictor
 from cecog.util.util import hexToRgb
 from cecog.traits.settings import convert_package_path
-                             
-                             
+
+
 from cecog.plugin.segmentation import REGION_INFO
 
 #-------------------------------------------------------------------------------
@@ -79,13 +76,10 @@ class ClassifierResultFrame(QGroupBox):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(5, 5, 5, 5)
 
-        #self._button = QPushButton('Load', self)
-        #self.connect(self._button, SIGNAL('clicked()'), self._on_load)
-        #layout.addWidget(self._button, 1, 2)
-
         splitter = QSplitter(Qt.Horizontal, self)
-        splitter.setSizePolicy(QSizePolicy(QSizePolicy.Expanding|QSizePolicy.Maximum,
-                                           QSizePolicy.Expanding|QSizePolicy.Maximum))
+        splitter.setSizePolicy(\
+            QSizePolicy(QSizePolicy.Expanding|QSizePolicy.Maximum,
+                        QSizePolicy.Expanding|QSizePolicy.Maximum))
         splitter.setStretchFactor(0, 2)
         layout.addWidget(splitter)
 
@@ -96,8 +90,9 @@ class ClassifierResultFrame(QGroupBox):
         self._table_info = QTableWidget(frame_info)
         self._table_info.setEditTriggers(QTableWidget.NoEditTriggers)
         self._table_info.setSelectionMode(QTableWidget.NoSelection)
-        self._table_info.setSizePolicy(QSizePolicy(QSizePolicy.Expanding|QSizePolicy.Maximum,
-                                                   QSizePolicy.Expanding|QSizePolicy.Maximum))
+        self._table_info.setSizePolicy(\
+            QSizePolicy(QSizePolicy.Expanding|QSizePolicy.Maximum,
+                        QSizePolicy.Expanding|QSizePolicy.Maximum))
         layout_info.addWidget(self._table_info)
         splitter.addWidget(frame_info)
 
@@ -109,8 +104,9 @@ class ClassifierResultFrame(QGroupBox):
         self._table_conf = QTableWidget(frame_conf)
         self._table_conf.setEditTriggers(QTableWidget.NoEditTriggers)
         self._table_conf.setSelectionMode(QTableWidget.NoSelection)
-        self._table_conf.setSizePolicy(QSizePolicy(QSizePolicy.Expanding|QSizePolicy.Maximum,
-                                                   QSizePolicy.Expanding|QSizePolicy.Maximum))
+        self._table_conf.setSizePolicy(\
+            QSizePolicy(QSizePolicy.Expanding|QSizePolicy.Maximum,
+                        QSizePolicy.Expanding|QSizePolicy.Maximum))
         layout_conf.addWidget(self._table_conf)
         splitter.addWidget(frame_conf)
 
@@ -145,17 +141,20 @@ class ClassifierResultFrame(QGroupBox):
         self.load_classifier(check=True)
 
     def load_classifier(self, check=True):
-
-        _resolve = lambda x,y: self._settings.get(x, '%s_%s' % (self._channel, y))
+        _resolve = lambda x,y: self._settings.get(x, '%s_%s'
+                                                  % (self._channel, y))
         env_path = convert_package_path(_resolve('Classification',
                                                  'classification_envpath'))
-        classifier_infos = {'strEnvPath' : env_path,
-                            #'strModelPrefix' : _resolve('Classification', 'classification_prefix'),
-                            'strChannelId' : _resolve('ObjectDetection', 'channelid'),
-                            'strRegionId' : _resolve('Classification', 'classification_regionname'),
+        classifier_infos = {'strEnvPath': env_path,
+                            'strChannelId': _resolve('ObjectDetection',
+                                                     'channelid'),
+                            'strRegionId': _resolve('Classification',
+                                                    'classification_regionname')
                             }
+
         try:
-            self._learner = CommonClassPredictor(dctCollectSamples=classifier_infos)
+            self._learner = CommonClassPredictor(\
+                dctCollectSamples=classifier_infos)
         except:
             exception(self, 'Error on loading classifier.')
         else:
@@ -251,11 +250,6 @@ class ClassifierResultFrame(QGroupBox):
                             ('Color', 'class color'),
                             ('%PR', 'class precision in %'),
                             ('%SE', 'class sensitivity in %'),
-#                            ('AC%', 'class accuracy in %'),
-#                            ('SE%', 'class sensitivity in %'),
-#                            ('SP%', 'class specificity in %'),
-#                            ('PPV%', 'class positive predictive value in %'),
-#                            ('NPV%', 'class negative predictive value in %'),
                             ]
         names_vertical = [str(self._learner.nl2l[r]) for r in range(rows)] + ['','#']
         self._table_info.setColumnCount(len(names_horizontal))
@@ -287,26 +281,6 @@ class ClassifierResultFrame(QGroupBox):
                 item.setToolTip('"%s" sensitivity' %  name)
                 self._table_info.setItem(r, 4, item)
 
-#                item = QTableWidgetItem('%.1f' % (conf.ac[r] * 100.))
-#                item.setToolTip('"%s" accuracy' %  name)
-#                self._table_info.setItem(r, 3, item)
-#
-#                item = QTableWidgetItem('%.1f' % (conf.se[r] * 100.))
-#                item.setToolTip('"%s" sensitivity' %  name)
-#                self._table_info.setItem(r, 4, item)
-#
-#                item = QTableWidgetItem('%.1f' % (conf.sp[r] * 100.))
-#                item.setToolTip('"%s" specificity' %  name)
-#                self._table_info.setItem(r, 5, item)
-#
-#                item = QTableWidgetItem('%.1f' % (conf.ppv[r] * 100.))
-#                item.setToolTip('"%s" positive predictive value' %  name)
-#                self._table_info.setItem(r, 6, item)
-#
-#                item = QTableWidgetItem('%.1f' % (conf.npv[r] * 100.))
-#                item.setToolTip('"%s" negative predictive value' %  name)
-#                self._table_info.setItem(r, 7, item)
-
         if not conf is None:
             self._table_info.setRowHeight(r+1, 20)
             r += 2
@@ -326,26 +300,6 @@ class ClassifierResultFrame(QGroupBox):
             item = QTableWidgetItem('%.1f' % (conf.wav_se * 100.))
             item.setToolTip('%s per class sensitivity' %  name)
             self._table_info.setItem(r, 4, item)
-
-#            item = QTableWidgetItem('%.1f' % (conf.av_ac * 100.))
-#            item.setToolTip('%s per class accuracy' %  name)
-#            self._table_info.setItem(r, 3, item)
-#
-#            item = QTableWidgetItem('%.1f' % (conf.av_se * 100.))
-#            item.setToolTip('%s per class sensitivity' %  name)
-#            self._table_info.setItem(r, 4, item)
-#
-#            item = QTableWidgetItem('%.1f' % (conf.av_sp * 100.))
-#            item.setToolTip('%s per class specificity' %  name)
-#            self._table_info.setItem(r, 5, item)
-#
-#            item = QTableWidgetItem('%.1f' % (conf.av_ppv * 100.))
-#            item.setToolTip('%s per class positive predictive value' %  name)
-#            self._table_info.setItem(r, 6, item)
-#
-#            item = QTableWidgetItem('%.1f' % (conf.av_npv * 100.))
-#            item.setToolTip('%s per class negative predictive value' %  name)
-#            self._table_info.setItem(r, 7, item)
 
         self._table_info.resizeColumnsToContents()
 
@@ -407,7 +361,7 @@ class ClassifierResultFrame(QGroupBox):
 class ClassificationFrame(BaseProcessorFrame):
 
     SECTION_NAME = SECTION_NAME_CLASSIFICATION
-    TABS = ['Primary Channel', 'Secondary Channel', 'Tertiary Channel']
+    TABS = ['Primary Channel', 'Secondary Channel', 'Tertiary Channel', 'Merged Channel']
     PROCESS_PICKING = 'PROCESS_PICKING'
     PROCESS_TRAINING = 'PROCESS_TRAINING'
     PROCESS_TESTING = 'PROCESS_TESTING'
@@ -429,13 +383,20 @@ class ClassificationFrame(BaseProcessorFrame):
         for tab_name, prefix in [('Primary Channel', 'primary'),
                                  ('Secondary Channel', 'secondary'),
                                  ('Tertiary Channel', 'tertiary'),
+                                 ('Merged Channel', 'merged'),
                                  ]:
             self.set_tab_name(tab_name)
 
             self.add_input('%s_classification_envpath' % prefix)
             self.add_line()
-            self.add_input('%s_classification_regionname' % prefix)
 
+            if prefix == 'merged':
+                self.add_group(None, [('primary_channel', (0, 0, 1, 1)),
+                                      ('secondary_channel', (0, 1, 1, 1)),
+                                      ('tertiary_channel', (0, 2, 1, 1))],
+                               link='merged_channel',
+                               label='Merge')
+            self.add_input('%s_classification_regionname' % prefix)
             frame_results = self._add_result_frame(prefix)
             self.add_handler('%s_classification_envpath' % prefix,
                              frame_results.on_load)
@@ -481,13 +442,15 @@ class ClassificationFrame(BaseProcessorFrame):
             settings.set('Processing', 'tertiary_processchannel', True)
             prefix = 'tertiary'
 
-        sec_region = settings.get('Classification', '%s_classification_regionname' % prefix)
+        sec_region = settings.get('Classification',
+                                  '%s_classification_regionname' % prefix)
         settings.set('Classification', 'collectsamples_prefix', prefix)
         if name == self.PROCESS_TESTING:
             settings.set('Processing', '%s_classification' % prefix, True)
-            settings.set('General', 'rendering_class', {'%s_classification_%s' % (prefix, sec_region):
-                                                        {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
-                                                                               'contours': [(sec_region, 'class_label', 1, False),
+            settings.set('General', 'rendering_class',
+                         {'%s_classification_%s' % (prefix, sec_region):
+                              {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
+                                                     'contours': [(sec_region, 'class_label', 1, False),
                                                                                             (sec_region, '#000000', 1, show_ids_class),
                                                                                                                                ]}}})
         else:
@@ -501,8 +464,6 @@ class ClassificationFrame(BaseProcessorFrame):
     def _add_result_frame(self, name):
         frame = self._get_frame()
         result_frame = ClassifierResultFrame(frame, name, self._settings)
-        #self._result_frame.setSizePolicy(QSizePolicy(QSizePolicy.Expanding|QSizePolicy.Maximum,
-        #                                             QSizePolicy.Expanding|QSizePolicy.Maximum))
         self._result_frames[name] = result_frame
         frame.layout().addWidget(result_frame, frame._input_cnt, 0, 1, 2)
         frame._input_cnt += 1
@@ -512,10 +473,7 @@ class ClassificationFrame(BaseProcessorFrame):
         return self._result_frames[name]
 
     def _update_classifier(self):
-        if self._tab.current_index == 0:
-            channel = 'primary'
-        else:
-            channel = 'secondary'
+        channel = CHANNEL_PREFIX[self._tab.current_index]
         result_frame = self._result_frames[channel]
         result_frame.load_classifier(check=False)
 
@@ -526,9 +484,18 @@ class ClassificationFrame(BaseProcessorFrame):
     def settings_loaded(self):
         # FIXME: set the trait list data to plugin instances of the current channel
         prefix = CHANNEL_PREFIX[self._tab.current_index]
-        trait = self._settings.get_trait(SECTION_NAME_CLASSIFICATION, '%s_classification_regionname' % prefix)
-        trait.set_list_data(REGION_INFO.names[prefix])
+        trait = self._settings.get_trait(SECTION_NAME_CLASSIFICATION,
+                                         '%s_classification_regionname' % prefix)
+        if prefix == 'merged':
+            trait.set_list_data(self._merged_region_list('merged'))
+        else:
+            trait.set_list_data(REGION_INFO.names[prefix])
+
+    def _merged_region_list(self, merged):
+        mrl = list()
+        for prefix in filter(lambda s: s!=merged, CHANNEL_PREFIX):
+            mrl.extend(['%s_%s' %(prefix, r) for r in REGION_INFO.names[prefix]])
+        return mrl
 
     def tab_changed(self, index):
         self.page_changed()
-

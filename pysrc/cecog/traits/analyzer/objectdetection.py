@@ -131,7 +131,10 @@ class SectionObjectdetection(_Section):
        ]),
 
        ]
-      for name, prefix in [('Secondary', 'secondary'),
-                           ('Tertiary', 'tertiary')
-                           ]]
-      )
+       for name, prefix in [('Secondary', 'secondary'),
+                            ('Tertiary', 'tertiary'),
+                            ]]
+      ) + \
+      [('merged_image', [('merged_channelid',
+                          SelectionTrait2(None, [], label='Merged channel ID'))])
+       ]

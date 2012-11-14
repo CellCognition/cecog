@@ -444,8 +444,8 @@ class AnalyzerMainWindow(QMainWindow):
                 # convert settings
                 if VERSION > self._settings.get('General', 'version'):
                     print 'print new version'
-                    
-                
+
+
                 # set settings to not-changed (assume no changed since loaded from file)
                 self.settings_changed(False)
                 # notify tabs about new settings loaded
@@ -456,7 +456,8 @@ class AnalyzerMainWindow(QMainWindow):
     def _write_settings(self, filename):
         try:
             f = file(filename, 'w')
-            # create a new version (copy) of the current settings which add the needed rendering information
+            # create a new version (copy) of the current
+            # settings which add the needed rendering information
             settings_dummy = ProcessingFrame.get_export_settings(self._settings)
             settings_dummy.write(f)
             f.close()
@@ -504,7 +505,7 @@ class AnalyzerMainWindow(QMainWindow):
                        '<a href="http://cellcognition.org">cellcognition.org</a><br>')
         layout.addWidget(label2, 1, 0)
         layout.addWidget(label3, 2, 0)
-        layout.setAlignment(Qt.AlignCenter | 
+        layout.setAlignment(Qt.AlignCenter |
                             Qt.AlignBottom)
         dialog.setLayout(layout)
         dialog.show()
@@ -568,7 +569,7 @@ class AnalyzerMainWindow(QMainWindow):
                     box.setInformativeText(txt)
                     box.setDetailedText('Plates with scanned structure: \n%s\n'
                                         '\nPlates without scanned structure: '
-                                        '\n%s' % 
+                                        '\n%s' %
                                         ('\n'.join(found_plates),
                                          '\n'.join(missing_plates)))
                     if not has_missing:
@@ -602,7 +603,7 @@ class AnalyzerMainWindow(QMainWindow):
                     if not question(self, "No structure data found",
                                     "Are you sure to scan %s?\n\nThis can take "
                                     "several minutes depending on the number of"
-                                    " images." % 
+                                    " images." %
                                     ("%d plates" % len(infos) if has_multiple
                                      else "one plate")):
                         cancel = True
@@ -638,7 +639,7 @@ class AnalyzerMainWindow(QMainWindow):
 
             # do not report value changes to the main window
             self._settings.set_notify_change(False)
-            
+
             self.set_image_crop_size()
 
             problems = []
@@ -652,7 +653,7 @@ class AnalyzerMainWindow(QMainWindow):
             # report problems about a mismatch between channel IDs found in the data and specified by the user
             if len(problems) > 0:
                 critical(self, "Selected channel IDs not valid",
-                         "The selected channel IDs for %s are not valid.\nValid IDs are %s." % 
+                         "The selected channel IDs for %s are not valid.\nValid IDs are %s." %
                          (", ".join(["'%s Channel'" % s.capitalize() for s in problems]),
                           ", ".join(["'%s'" % s for s in channels])))
                 # a mismatch between settings and data will cause changed settings
@@ -677,7 +678,7 @@ class AnalyzerMainWindow(QMainWindow):
             # activate change notification again
             self._settings.set_notify_change(True)
 
-            
+
             self.set_modules_active(state=True)
             if show_dlg:
                 information(self, "Plate(s) successfully loaded",
@@ -687,7 +688,7 @@ class AnalyzerMainWindow(QMainWindow):
                      "The naming schema provided might not fit your image data"
                      "or the coordinate file is not correct.\n\nPlease modify "
                      "the values and scan the structure again.")
-            
+
     def set_image_crop_size(self):
         x0, y0, x1, y1 = self._settings.get('General', 'crop_image_x0'), \
                          self._settings.get('General', 'crop_image_y0'), \
@@ -698,12 +699,12 @@ class AnalyzerMainWindow(QMainWindow):
                              0, \
                              self._imagecontainer.get_meta_data().dim_x, \
                              self._imagecontainer.get_meta_data().dim_y
-                         
+
         trait_x0 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_x0')
         trait_y0 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_y0')
         trait_x1 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_x1')
         trait_y1 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_y1')
-        
+
         # Check if the crop values are valid
         if x0 > 0 and y0 > 0 and x1 <= x1_ and y1 <= y1_ and x0 != x1 and y0 != y1:
             # Set to default values
@@ -716,7 +717,7 @@ class AnalyzerMainWindow(QMainWindow):
             trait_y0.set_value(trait_y0.get_widget(), y0_)
             trait_x1.set_value(trait_x1.get_widget(), x1_)
             trait_y0.set_value(trait_y1.get_widget(), y1_)
-                        
+
         # Set GUI widget valid ranges
         trait_x0.set_min_value(x0_)
         trait_x0.set_max_value(x1_)
@@ -747,7 +748,7 @@ class AnalyzerMainWindow(QMainWindow):
                     information(self, 'Selected config file has an old version <= 1.3.0. '
                                       'The current version is %s. The config file will be updated...' % VERSION)
                     old_conf_file = True
-                    
+
                 self._read_settings(filename)
                 if old_conf_file:
                     information(self, "Config file has been updated to %s and all settings have been converted" % self._settings.get('General', 'version'))
@@ -840,7 +841,7 @@ if __name__ == "__main__":
 
     working_path = os.path.abspath(os.path.dirname(sys.argv[0]))
     program_name = os.path.split(sys.argv[0])[1]
-    
+
     log_path = os.path.join(APPLICATION_SUPPORT_PATH, 'log')
     safe_mkdirs(log_path)
 
@@ -868,7 +869,7 @@ if __name__ == "__main__":
     else:
         filename = os.path.join(get_package_path(), 'Settings/demo_settings.conf')
     #filename = os.path.join(get_package_path(), 'Settings/demo_settings.conf')
-    
+
 
     if os.path.isfile(filename):
         main._read_settings(filename)

@@ -114,8 +114,8 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
         return img_out
 
     @stopwatch()
-    def correct_segmetation(self, img_in, img_bin, border, gauss_size, max_dist, min_merge_size, kind='shape'):
-        print type(img_in), type(img_bin)
+    def correct_segmetation(self, img_in, img_bin, border, gauss_size,
+                            max_dist, min_merge_size, kind='shape'):
         if kind == 'shape':
             f = ccore.segmentation_correction_shape
         else:
@@ -123,7 +123,8 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
         return f(img_in, img_bin, border, gauss_size, max_dist, min_merge_size)
 
     @stopwatch()
-    def postprocessing(self, container, is_active, roisize_minmax, intensity_minmax, delete_objects=True):
+    def postprocessing(self, container, is_active, roisize_minmax,
+                       intensity_minmax, delete_objects=True):
 
         valid_ids = container.getObjects().keys()
         rejected_ids = []
@@ -131,7 +132,8 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
         if is_active:
             feature_categories = set()
             conditions = []
-            for idx, (roisize, intensity) in enumerate(zip(roisize_minmax, intensity_minmax)):
+            for idx, (roisize, intensity) in enumerate( \
+                zip(roisize_minmax, intensity_minmax)):
                 cmprt = '>=' if idx == 0 else '<='
                 if roisize > -1:
                     feature_categories.add('roisize')
@@ -169,11 +171,9 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
     @stopwatch()
     def _run(self, meta_image):
         image = meta_image.image
-        
+
         img_prefiltered = self.prefilter(image)
-        print type(img_prefiltered)
         img_bin = self.threshold(img_prefiltered, self.params['latwindowsize'], self.params['latlimit'])
-        print type(img_bin)
 
         if self.params['holefilling']:
             ccore.fill_holes(img_bin, False)
@@ -199,17 +199,16 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
                                                self.params['intensitywatershed_minmergesize'],
                                                kind='intensity')
 
-        print type(image), type(img_bin), self.params['removeborderobjects']
         container = ccore.ImageMaskContainer(image, img_bin, self.params['removeborderobjects'])
-        
-        
+
+
         self.postprocessing(container, self.params['postprocessing'],
                             (self.params['postprocessing_roisize_min'], self.params['postprocessing_roisize_max']),
                             (self.params['postprocessing_intensity_min'], self.params['postprocessing_intensity_max']))
 
         return container
-    
-    
+
+
 class SegmentationPluginPrimaryLoadFromFile(SegmentationPluginPrimary):
 
     LABEL = 'Load from file'
@@ -230,11 +229,11 @@ class SegmentationPluginPrimaryLoadFromFile(SegmentationPluginPrimary):
         panel.add_group(None, [('segmentation_folder', (0, 0, 1, 1))])
         panel.add_group(None, [('loader_regex', (0, 0, 1, 1))])
 
-    
+
     @stopwatch()
     def _run(self, meta_image):
-        image = meta_image.image 
-        
+        image = meta_image.image
+
         coords = dict(
             plate = meta_image.image_container.current_plate,
             pos = meta_image.coordinate.position,
@@ -242,7 +241,7 @@ class SegmentationPluginPrimaryLoadFromFile(SegmentationPluginPrimary):
             zslice = meta_image.coordinate.zslice,
             channel = meta_image.coordinate.channel,
             )
-        
+
         main_folder = self.params['segmentation_folder']
         #FIXME: This is useful enought to put into an reusable function, maybe in utils?
         locator = self.params["loader_regex"] % coords
@@ -259,22 +258,22 @@ class SegmentationPluginPrimaryLoadFromFile(SegmentationPluginPrimary):
             if len(match_results) != 1:
                 raise RuntimeError('Could not match ' + match_candidates[0] + ' with ' + loc)
             locator_match += match_results[0] + '/'
-            
+
         match_candidates = os.listdir(main_folder + locator_match)
-        
+
         match_results = [m.group() for l in match_candidates for m in [re.search(locator_split[-1], l)] if m]
         if len(match_results) == 0:
             raise RuntimeError('Could not match ', match_candidates[0], 'with', locator_split[-1])
-        
+
         match_result = match_results[0]
-            
+
         img = ccore.readImage(main_folder + locator_match + match_result)
 #        img_pre = SegmentationPluginPrimary.prefilter(self, img, 2)
-#        img_bin = SegmentationPluginPrimary.threshold(self, img_pre, 20, 3)    
-         
+#        img_bin = SegmentationPluginPrimary.threshold(self, img_pre, 20, 3)
+
         container = ccore.ImageMaskContainer(image, img, False)
         return container
-    
+
 class SegmentationPluginIlastik(SegmentationPluginPrimary):
 
     LABEL = 'Local adaptive threshold w/ split&merge using trained ilastik classifier'
@@ -310,22 +309,22 @@ class SegmentationPluginIlastik(SegmentationPluginPrimary):
 
     # the : at the beginning indicates a QRC link with alias 'plugins/segmentation/local_adaptive_threshold'
     DOC = ':local_adaptive_threshold'
-    
+
     @stopwatch()
     def prefilter(self, img_in):
         img = SegmentationPluginPrimary.prefilter(self, img_in)
-        np_img = img.toArray(True) 
+        np_img = img.toArray(True)
         return self._predict_image_with_ilastik(np_img)
 
-    
+
     def threshold(self, img_in, *args):
-        np_img = img_in.toArray(True) 
+        np_img = img_in.toArray(True)
         return ccore.numpy_to_image((np_img > 128).astype(numpy.uint8), True)
 
     def render_to_gui(self, panel):
         panel.add_group(None, [('ilastik_classifier', (0, 0, 1, 1))])
         SegmentationPluginPrimary.render_to_gui(self, panel)
-    
+
     def _predict_image_with_ilastik(self, image_):
         import ilastik
         from ilastik.core.dataMgr import DataMgr, DataItemImage
@@ -336,39 +335,39 @@ class SegmentationPluginIlastik(SegmentationPluginPrimary):
         from ilastik.modules.classification.core.classificationMgr import ClassifierPredictThread
         from ilastik.core.volume import DataAccessor
         import numpy, h5py
-        
+
         dataMgr = DataMgr()
-        
+
         # Transform input image to ilastik convention s
-        # 3D = (time,x,y,z,channel) 
+        # 3D = (time,x,y,z,channel)
         # 2D = (time,1,x,y,channel)
         # Note, this work for 2D images right now. Is there a need for 3D
         image_.shape = (1,1) + image_.shape
-        
+
         # Check if image_ has channels, if not add singelton dimension
         if len(image_.shape) == 4:
             image_.shape = image_.shape + (1,)
-        
+
         # Add data item di to dataMgr
         di = DataItemImage('')
         di.setDataVol(DataAccessor(image_))
         dataMgr.append(di, alreadyLoaded=True)
-        
+
         fileName = self.params["ilastik_classifier"]
-        
+
         hf = h5py.File(fileName,'r')
         temp = hf['classifiers'].keys()
         # If hf is not closed this leads to an error in win64 and mac os x
         hf.close()
         del hf
-        
+
         classifiers = []
         for cid in temp:
             cidpath = 'classifiers/' + cid
             classifiers.append(ClassifierRandomForest.loadRFfromFile(fileName, str(cidpath)))
-            
+
         dataMgr.module["Classification"]["classificationMgr"].classifiers = classifiers
-        
+
         # Restore user selection of feature items from hdf5
         featureItems = []
         f = h5py.File(fileName,'r')
@@ -377,30 +376,30 @@ class SegmentationPluginIlastik(SegmentationPluginPrimary):
         f.close()
         del f
         fm = FeatureMgr(dataMgr, featureItems)
-        
-        
+
+
 
         # Create FeatureMgr
-       
-        
+
+
         # Compute features
 
         fm.prepareCompute(dataMgr)
         fm.triggerCompute()
         fm.joinCompute(dataMgr)
-        
+
         # Predict with loaded classifier
-        
+
         classificationPredict = ClassifierPredictThread(dataMgr)
         classificationPredict.start()
         classificationPredict.wait()
-        
+
         # Produce output image and select the probability map
         probMap = (classificationPredict._prediction[0][0,0,:,:, 1] * 255).astype(numpy.uint8)
         img_out = ccore.numpy_to_image(probMap, True)
         return img_out
-        
-        
+
+
 
 
 class SegmentationPluginExpanded(_SegmentationPlugin):
@@ -682,4 +681,3 @@ class SegmentationPluginDifference(_SegmentationPlugin):
         #array = numpy.abs(array)
         #img_labels = ccore.numpy_to_image(array, copy=True)
         return ccore.ImageMaskContainer(image, img_labels, False, True, True)
-

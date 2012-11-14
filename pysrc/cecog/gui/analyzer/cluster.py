@@ -85,7 +85,7 @@ class ClusterDisplay(QGroupBox):
         except:
             # old config file
             self._host_url_fallback = self._host_url
-            
+
 
         self.setTitle('ClusterControl')
         label1 = QLabel('Cluster URL:', self)
@@ -288,10 +288,10 @@ class ClusterDisplay(QGroupBox):
                 self._host_url = self._host_url_fallback
             except:
                 exception(self, 'Error on connecting to cluster control service. Please check your config.ini')
-        
+
     def _connect(self):
         self._check_host_url()
-        
+
         success = False
         msg = 'Error on connecting to cluster control service on %s' % self._host_url
         try:
@@ -304,15 +304,16 @@ class ClusterDisplay(QGroupBox):
             exception(self, msg)
         else:
             try:
-                dlg.setTarget(self._service.get_cecog_versions)
-                dlg.exec_()
-                cluster_versions = dlg.getTargetResult()
+                self.dlg.setTarget(self._service.get_cecog_versions)
+                self.dlg.exec_()
+                cluster_versions = self.dlg.getTargetResult()
             except:
                 exception(self, msg)
             else:
                 if not VERSION in set(cluster_versions):
                     warning(self, 'Cecog version %s not supported by the cluster' %
-                            VERSION, 'Valid versions are: %s' % ', '.join(cluster_versions))
+                            VERSION, 'Valid versions are: %s' \
+                                % ', '.join(cluster_versions))
                 else:
                     success = True
         return success
@@ -340,7 +341,7 @@ class ClusterDisplay(QGroupBox):
                           [('ObjectDetection', '%s_flat_field_correction' % prefix)]) for prefix in ['primary',
                                                                                         'secondary',
                                                                                         'tertiary']]
-                       
+
                        )
         for info, const in targets:
             passed = reduce(lambda x,y: x and y,

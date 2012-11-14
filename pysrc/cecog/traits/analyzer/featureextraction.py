@@ -88,4 +88,5 @@ class SectionFeatureExtraction(_Section):
        BooleanTrait(True, label=desc))
        for name, desc in zip(FEATURE_CATEGORIES, FEATURE_CATEGORY_DESC)
       ]),
+
     ]
