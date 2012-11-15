@@ -48,7 +48,7 @@ import numpy
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog import VERSION
+from cecog import VERSION, APPNAME
 from cecog.analyzer import (R_LIBRARIES,
                             TRACKING_DURATION_UNITS_TIMELAPSE,
                             TRACKING_DURATION_UNITS_DEFAULT,
@@ -109,7 +109,7 @@ import resource
 #
 class AnalyzerMainWindow(QMainWindow):
 
-    TITLE = 'CecogAnalyzer'
+    TITLE = '-'.join((APPNAME, VERSION))
 
     NAME_FILTERS = ['Settings files (*.conf)',
                     'All files (*.*)']

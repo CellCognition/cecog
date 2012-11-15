@@ -14,7 +14,7 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = ['VERSION', 'VERSION_NUM', 'PLUGIN_MANAGERS', 'CHANNEL_PREFIX']
+__all__ = ['VERSION', 'VERSION_NUM', 'PLUGIN_MANAGERS', 'CHANNEL_PREFIX', 'APPNAME']
 
 #-------------------------------------------------------------------------------
 # standard library imports:
@@ -31,6 +31,7 @@ from cecog.config import (init_constants,
 #
 VERSION_NUM = (1, 4, 0)
 VERSION = '.'.join([str(digit) for digit in VERSION_NUM])
+APPNAME = 'CecogAnalyzer'
 
 HAS_GUI = False
 
