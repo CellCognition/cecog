@@ -105,7 +105,11 @@ class SectionPostProcessing(_Section):
                          widget_info=BooleanTrait.RADIOBUTTON)),
         ('color_sort_by_group',
             BooleanTrait(False, label='Group',
-                         widget_info=BooleanTrait.RADIOBUTTON))
+                         widget_info=BooleanTrait.RADIOBUTTON)),
+        
+        ('securin_analysis',
+            BooleanTrait(True, label='Securin analysis')),
+        
         ]
        )
     ]

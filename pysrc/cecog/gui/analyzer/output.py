@@ -62,6 +62,7 @@ class OutputFrame(BaseFrame):
         self.add_group(None,
                        [('export_object_counts', (0,0,1,1)),
                         ('export_object_details', (1,0,1,1)),
+                         ('export_object_counts_ylim_max', (1,1,1,1)),
                         ('export_file_names', (2,0,1,1)),
                         ('export_tracking_as_dot', (3,0,1,1)),
                         ('export_track_data', (4,0,1,1)),

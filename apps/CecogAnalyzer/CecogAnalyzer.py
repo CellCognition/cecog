@@ -60,30 +60,27 @@ from cecog.config import (ANALYZER_CONFIG,
                           )
 from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.gui.config import GuiConfigSettings
-from cecog.gui.analyzer.general import (GeneralFrame,
-                                        SECTION_NAME_GENERAL,
-                                        )
-from cecog.gui.analyzer.objectdetection import (ObjectDetectionFrame,
-                                                SECTION_NAME_OBJECTDETECTION,
-                                                )
+
+# Frames
+from cecog.gui.analyzer.general import ( GeneralFrame, SECTION_NAME_GENERAL )
+from cecog.gui.analyzer.objectdetection import ( ObjectDetectionFrame,
+                                                 SECTION_NAME_OBJECTDETECTION )
 from cecog.gui.analyzer.featureextraction import FeatureExtractionFrame
 from cecog.gui.analyzer.postprocessing import PostProcessingFrame
 from cecog.gui.analyzer.classification import ClassificationFrame
-from cecog.gui.analyzer.tracking import (TrackingFrame,
-                                         SECTION_NAME_TRACKING,
-                                         )
+from cecog.gui.analyzer.tracking import (TrackingFrame, SECTION_NAME_TRACKING )
 from cecog.gui.analyzer.errorcorrection import ErrorCorrectionFrame
 from cecog.gui.analyzer.output import OutputFrame
 from cecog.gui.analyzer.processing import ProcessingFrame
 from cecog.gui.analyzer.cluster import ClusterFrame
+
 from cecog.gui.browser import Browser
-from cecog.gui.log import (GuiLogHandler,
-                           LogWindow,
-                           )
+from cecog.gui.log import (GuiLogHandler, LogWindow )
 from cecog.traits.settings import (convert_package_path,
                              set_package_path,
                              get_package_path,
                              )
+
 from cecog.gui.util import (status,
                             show_html,
                             critical,
@@ -110,14 +107,12 @@ import resource
 class AnalyzerMainWindow(QMainWindow):
 
     TITLE = '-'.join((APPNAME, VERSION))
-
-    NAME_FILTERS = ['Settings files (*.conf)',
-                    'All files (*.*)']
+    NAME_FILTERS = ['Settings files (*.conf)', 'All files (*.*)']
 
     modified = pyqtSignal('bool')
 
-    def __init__(self):
-        QMainWindow.__init__(self)
+    def __init__(self, *args, **kw):
+        super(AnalyzerMainWindow, self).__init__(*args, **kw)
         qApp._main_window = self
 
         #self.setStyleSheet("QFrame {border: 1px solid #8f8f91;}")
@@ -129,10 +124,7 @@ class AnalyzerMainWindow(QMainWindow):
         self._browser = None
 
         self.setWindowTitle(self.TITLE + '[*]')
-
-        central_widget = QFrame(self)
-        self.setCentralWidget(central_widget)
-
+        self.setCentralWidget(QFrame(self))
 
         action_about = self.create_action('&About', slot=self._on_about)
         action_quit = self.create_action('&Quit', slot=self._on_quit)
@@ -188,8 +180,7 @@ class AnalyzerMainWindow(QMainWindow):
         qApp._statusbar = QStatusBar(self)
         self.setStatusBar(qApp._statusbar)
 
-
-        self._selection = QListWidget(central_widget)
+        self._selection = QListWidget(self.centralWidget())
         self._selection.setViewMode(QListView.IconMode)
         #self._selection.setUniformItemSizes(True)
         self._selection.setIconSize(QSize(35, 35))
@@ -203,7 +194,7 @@ class AnalyzerMainWindow(QMainWindow):
         self._selection.setSizePolicy(QSizePolicy(QSizePolicy.Fixed,
                                                   QSizePolicy.Expanding))
 
-        self._pages = QStackedWidget(central_widget)
+        self._pages = QStackedWidget(self.centralWidget())
         self._pages.main_window = self
 
         self._settings_filename = None
@@ -231,13 +222,12 @@ class AnalyzerMainWindow(QMainWindow):
         self._pages.setMinimumWidth(max(widths) + 45)
 
         self._selection.currentItemChanged.connect(self._on_change_page)
-
         self._selection.setCurrentRow(0)
 
-        w_logo = QLabel(central_widget)
+        w_logo = QLabel(self.centralWidget())
         w_logo.setPixmap(QPixmap(':cecog_logo_w145'))
 
-        layout = QGridLayout(central_widget)
+        layout = QGridLayout(self.centralWidget())
         layout.addWidget(self._selection, 0, 0)
         layout.addWidget(w_logo, 1, 0, Qt.AlignBottom | Qt.AlignHCenter)
         layout.addWidget(self._pages, 0, 1, 2, 1)
@@ -810,6 +800,11 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 # main:
 #
 if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    splash = QSplashScreen(QPixmap(':cecog_splash'))
+    splash.show()
+    splash.raise_()
+
     try:
         import pydevd
         pydevd.connected = True
@@ -818,10 +813,11 @@ if __name__ == "__main__":
     except:
         pass
     freeze_support()
+
     import time
+    import argparse
     from pdk.fileutils import safe_mkdirs
 
-    import argparse
     parser = argparse.ArgumentParser(description='CellCognition Analyzer GUI')
     parser.add_argument('--load', action='store_true', default=False,
                         help='Load data from settings file.')
@@ -836,11 +832,11 @@ if __name__ == "__main__":
 #    sys.stderr = \
 #        file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
 
-    app = QApplication(sys.argv)
+
     #sys.excepthook=handle_exception
 
     working_path = os.path.abspath(os.path.dirname(sys.argv[0]))
-    program_name = os.path.split(sys.argv[0])[1]
+    program_name = os.path.basename(sys.argv[0])
 
     log_path = os.path.join(APPLICATION_SUPPORT_PATH, 'log')
     safe_mkdirs(log_path)
@@ -855,12 +851,9 @@ if __name__ == "__main__":
 #        sys.stderr = \
 #            file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
 
-    splash = QSplashScreen(QPixmap(':cecog_splash'))
-    splash.show()
-    splash.raise_()
     app.setWindowIcon(QIcon(':cecog_analyzer_icon'))
-    time.sleep(.2)
-    app.processEvents()
+#    time.sleep(.2)
+#    app.processEvents()
     main = AnalyzerMainWindow()
     main.raise_()
 

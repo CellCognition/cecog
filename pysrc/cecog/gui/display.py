@@ -223,6 +223,7 @@ class TraitDisplayMixin(QFrame):
         #w_doc = None
         #w_label.setMinimumWidth(width)
 
+        # read value from settings-instance
         value = self._get_value(trait_name)
 
         handler = lambda name: lambda value: self._set_value(name, value)
@@ -448,8 +449,8 @@ class TraitDisplayMixin(QFrame):
             if mode == StringTrait.STRING_FILE:
                 result = QFileDialog.getOpenFileName(self, 'Select a file', dir)
             else:
-                result = QFileDialog.getExistingDirectory(self,
-                         'Select a directory', dir)
+                result = QFileDialog.getExistingDirectory(self, \
+                               'Select a directory', dir)
 
             if result:
                 self._registry[name].setText(result)

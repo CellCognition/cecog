@@ -128,7 +128,7 @@ Section "CecogAnalyzer" SecDummy
   SetShellVarContext all
   RMDir /r "$%APPDATA%\CellCognition${mver}"
   
-  FILE /r dist\*.*
+  File /r /x battery_package dist\*.*
   
   ;Store installation folder
   WriteRegStr HKCU "Software\CecogAnalyzer-${mver}" "" $INSTDIR
@@ -138,7 +138,7 @@ Section "CecogAnalyzer" SecDummy
   
   !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
     
-    ;Create shortcuts
+    ;Create shortcutsdist\resources\battery_package\Settings\demo_settings.conf
     SetShellVarContext all
     CreateDirectory "$SMPROGRAMS\$StartMenuFolder"
 
@@ -148,6 +148,14 @@ Section "CecogAnalyzer" SecDummy
   AccessControl::GrantOnFile "$INSTDIR" "(S-1-5-32-545)" "FullAccess"
   
   !insertmacro MUI_STARTMENU_WRITE_END
+
+SectionEnd
+
+Section /o "Battery package" SecDemo
+
+  SetOutPath "$INSTDIR\resources\battery_package"
+  
+  FILE /r dist\resources\battery_package\*.*
 
 SectionEnd
 
@@ -170,6 +178,7 @@ SectionEnd
   ;Assign language strings to sections
   !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
     !insertmacro MUI_DESCRIPTION_TEXT ${SecDummy} $(DESC_SecDummy)
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecDemo} "Battery package - Example data"
     ; !insertmacro MUI_DESCRIPTION_TEXT ${SecDemo} "Demo Files will be copied into the installation folder."
   !insertmacro MUI_FUNCTION_DESCRIPTION_END
  

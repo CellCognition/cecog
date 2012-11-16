@@ -32,8 +32,9 @@ import types, \
        cPickle as pickle, \
        struct, \
        threading, \
-       socket, \
-       functools
+       socket
+
+
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -93,6 +94,7 @@ from cecog.traits.settings import convert_package_path
 from cecog.analyzer.gallery import compose_galleries
 from cecog.plugin.display import PluginBay
 from cecog.gui.widgets.tabcontrol import TabControl
+from cecog.analyzer.ibb import IBBAnalysis, SecurinAnalysis
 
 #-------------------------------------------------------------------------------
 # functions:
@@ -213,6 +215,7 @@ class BaseFrame(TraitDisplayMixin):
     def __init__(self, settings, parent):
         super(BaseFrame, self).__init__(settings, parent)
         self._is_active = False
+
         self._tab_name = None
         self._control = QFrame(self)
         layout = QVBoxLayout(self)
@@ -234,6 +237,8 @@ class BaseFrame(TraitDisplayMixin):
         layout.addWidget(self._tab)
         layout.addWidget(self._control)
 
+
+    @pyqtSlot('int')
     def on_tab_changed(self, index):
         self.tab_changed(index)
 
@@ -247,6 +252,29 @@ class BaseFrame(TraitDisplayMixin):
         if name is None:
             name = self._tab_name
         return self._tab.get_frame(name)
+
+    def add_expanding_spacer(self):
+        frame = self._get_frame(name=self._tab_name)
+        dummy = QWidget(frame)
+        dummy.setMinimumSize(0,0)
+        dummy.setSizePolicy(QSizePolicy(QSizePolicy.Fixed,
+                                        QSizePolicy.Expanding))
+        frame.layout().addWidget(dummy, frame._input_cnt, 0)
+        frame._input_cnt += 1
+
+    def add_line(self):
+        frame = self._get_frame(name=self._tab_name)
+        line = QFrame(frame)
+        line.setFrameShape(QFrame.HLine)
+        frame.layout().addWidget(line, frame._input_cnt, 0, 1, 2)
+        frame._input_cnt += 1
+
+    def add_pixmap(self, pixmap, align=Qt.AlignLeft):
+        frame = self._get_frame(name=self._tab_name)
+        label = QLabel(frame)
+        label.setPixmap(pixmap)
+        frame.layout().addWidget(label, frame._input_cnt, 0, 1, 2, align)
+        frame._input_cnt += 1
 
     def page_changed(self):
         '''
@@ -450,8 +478,10 @@ class HmmThread(_ProcessingThread):
         plates = self._imagecontainer.plates
         self._settings.set_section(SECTION_NAME_ERRORCORRECTION)
 
-        # mapping files (mapping between plate well/position and experimental condition) can be defined by a directory
-        # which must contain all mapping files for all plates in the form <plate_id>.txt or .tsv
+        # mapping files (mapping between plate well/position
+        # and experimental condition) can be defined by a directory
+        # which must contain all mapping files for all plates in
+        # the form <plate_id>.txt or .tsv
         # if the option 'position_labels' is not enabled a dummy mapping file is generated
         if self._settings.get2('position_labels'):
             path_mapping = self._convert(self._settings.get2('mappingfile_path'))
@@ -554,6 +584,9 @@ class HmmThread(_ProcessingThread):
                     lines[i] = "GALLERIES = NULL\n"
                 else:
                     lines[i] = "GALLERIES = c(%s)\n" % ','.join(["'%s'" % x for x in gallery_names])
+
+            if len(self._learner_dict) == 0 or 'primary' not in self._learner_dict:
+                raise RuntimeError('Classifier not found. Please check your classifications settings...')
 
             if 'primary' in self._learner_dict:# and self._settings.get('Processing', 'primary_errorcorrection'):
 
@@ -698,9 +731,6 @@ class HmmThread(_ProcessingThread):
         self._process.kill()
         _ProcessingThread.set_abort(self, wait=wait)
 
-
-
-
 class ParallelProcessThreadMixinBase(object):
     class ProcessCallback(object):
         def __init__(self):
@@ -785,7 +815,6 @@ class MultiProcessingAnalyzerMixin(ParallelProcessThreadMixinBase):
 
         self.log_receiver_thread = threading.Thread(target=self.log_receiver.serve_forever)
         self.log_receiver_thread.start()
-
         self.process_callback = self.ProcessCallback(self)
 
     def finish(self):
@@ -793,8 +822,8 @@ class MultiProcessingAnalyzerMixin(ParallelProcessThreadMixinBase):
         self.log_receiver.server_close()
         self.log_receiver_thread.join()
 
-        post_hdf5_link_list = reduce(lambda x,y: x + y, self.post_hdf5_link_list)
-        if len(post_hdf5_link_list) > 0:
+        if len(self.post_hdf5_link_list) > 0:
+            post_hdf5_link_list = reduce(lambda x,y: x + y, self.post_hdf5_link_list)
             link_hdf5_files(sorted(post_hdf5_link_list))
 
 
@@ -881,14 +910,9 @@ class PostProcessingThread(_ProcessingThread):
     def _run_plate(self, plate_id):
         path_out = self._imagecontainer.get_path_out()
 
-
         path_analyzed = os.path.join(path_out, 'analyzed')
-        path_out_ibb = os.path.join(path_out, 'ibb')
-
         safe_mkdirs(path_analyzed)
-        safe_mkdirs(path_out_ibb)
 
-        print 'for ', plate_id
         mapping_file = self._mapping_files[plate_id]
 
         class_colors = {}
@@ -901,55 +925,68 @@ class PostProcessingThread(_ProcessingThread):
 
         self._settings.set_section(SECTION_NAME_POST_PROCESSING)
 
-        ibb_options = {}
-        ibb_options['ibb_ratio_signal_threshold'] = self._settings.get2('ibb_ratio_signal_threshold')
-        ibb_options['ibb_range_signal_threshold'] = self._settings.get2('ibb_range_signal_threshold')
-        ibb_options['ibb_onset_factor_threshold'] = self._settings.get2('ibb_onset_factor_threshold')
-        ibb_options['nebd_onset_factor_threshold'] = self._settings.get2('nebd_onset_factor_threshold')
-        ibb_options['single_plot'] = self._settings.get2('single_plot')
-        ibb_options['single_plot_max_plots'] = self._settings.get2('single_plot_max_plots')
+        if self._settings.get2('ibb_analysis'):
 
+            ibb_options = {}
+            ibb_options['ibb_ratio_signal_threshold'] = self._settings.get2('ibb_ratio_signal_threshold')
+            ibb_options['ibb_range_signal_threshold'] = self._settings.get2('ibb_range_signal_threshold')
+            ibb_options['ibb_onset_factor_threshold'] = self._settings.get2('ibb_onset_factor_threshold')
+            ibb_options['nebd_onset_factor_threshold'] = self._settings.get2('nebd_onset_factor_threshold')
+            ibb_options['single_plot'] = self._settings.get2('single_plot')
+            ibb_options['single_plot_max_plots'] = self._settings.get2('single_plot_max_plots')
+            ibb_options['single_plot_ylim_range'] = self._settings.get2('single_plot_ylim_low'), \
+                                                    self._settings.get2('single_plot_ylim_high')
 
-        ibb_options['single_plot_ylim_range'] = self._settings.get2('single_plot_ylim_low'), \
-                                                self._settings.get2('single_plot_ylim_high')
+            tmp = (self._settings.get2('group_by_group'),
+                   self._settings.get2('group_by_genesymbol'),
+                   self._settings.get2('group_by_oligoid'),
+                   self._settings.get2('group_by_position'),
+                   )
+            ibb_options['group_by'] = int(numpy.log2(int(reduce(lambda x,y: str(x)+str(y),
+                                                                numpy.array(tmp).astype(numpy.uint8)),2))+0.5)
 
-        tmp = (self._settings.get2('group_by_group'),
-               self._settings.get2('group_by_genesymbol'),
-               self._settings.get2('group_by_oligoid'),
-               self._settings.get2('group_by_position'),
-               )
+            tmp = (self._settings.get2('color_sort_by_group'),
+                   self._settings.get2('color_sort_by_genesymbol'),
+                   self._settings.get2('color_sort_by_oligoid'),
+                   self._settings.get2('color_sort_by_position'),
+                   )
 
-        ibb_options['group_by'] = int(numpy.log2(int(reduce(lambda x,y: str(x)+str(y),
-                                                            numpy.array(tmp).astype(numpy.uint8)),2))+0.5)
+            ibb_options['color_sort_by'] = int(numpy.log2(int(reduce(lambda x,y: str(x)+str(y),
+                                                                     numpy.array(tmp).astype(numpy.uint8)),2))+0.5)
 
+            if not ibb_options['group_by'] < ibb_options['color_sort_by']:
+                raise AttributeError('Group by selection must be more general than the color sorting! (%d !> %d)' % (
+                                                                ibb_options['group_by'], ibb_options['color_sort_by']))
 
-        tmp = (self._settings.get2('color_sort_by_group'),
-               self._settings.get2('color_sort_by_genesymbol'),
-               self._settings.get2('color_sort_by_oligoid'),
-               self._settings.get2('color_sort_by_position'),
-               )
+            ibb_options['color_sort_by'] = IBBAnalysis.COLOR_SORT_BY[ibb_options['color_sort_by']]
 
-        ibb_options['color_sort_by'] = int(numpy.log2(int(reduce(lambda x,y: str(x)+str(y),
-                                                                 numpy.array(tmp).astype(numpy.uint8)),2))+0.5)
+            ibb_options['timeing_ylim_range'] = self._settings.get2('plot_ylim1_low'), \
+                                                self._settings.get2('plot_ylim1_high')
 
-        if not ibb_options['group_by'] < ibb_options['color_sort_by']:
-            raise AttributeError('Group by selection must be more general than the color sorting! (%d !> %d)' % (
-                                                            ibb_options['group_by'], ibb_options['color_sort_by']))
+            path_out_ibb = os.path.join(path_out, 'ibb')
+            safe_mkdirs(path_out_ibb)
+            ibb_analyzer = IBBAnalysis(path_analyzed,
+                                       path_out_ibb,
+                                       plate_id,
+                                       mapping_file,
+                                       class_colors,
+                                       class_names,
+                                       **ibb_options)
+            ibb_analyzer.run()
 
-        ibb_options['color_sort_by'] = IBBAnalysis.COLOR_SORT_BY[ibb_options['color_sort_by']]
+        if self._settings.get2('securin_analysis'):
+            path_out_securin = os.path.join(path_out, 'sec')
+            safe_mkdirs(path_out_securin)
 
-        ibb_options['timeing_ylim_range'] = self._settings.get2('plot_ylim1_low'), \
-                                            self._settings.get2('plot_ylim1_high')
-
-
-        ibb_analyzer = IBBAnalysis(path_analyzed,
-                                   path_out_ibb,
-                                   plate_id,
-                                   mapping_file,
-                                   class_colors,
-                                   class_names,
-                                   **ibb_options)
-        ibb_analyzer.run()
+            securin_options = {}
+            securin_analyzer = SecurinAnalysis(path_analyzed,
+                                       path_out_securin,
+                                       plate_id,
+                                       mapping_file,
+                                       class_colors,
+                                       class_names,
+                                       **securin_options)
+            securin_analyzer.run()
 
 class AnalzyerThread(_ProcessingThread):
 
@@ -962,11 +999,9 @@ class AnalzyerThread(_ProcessingThread):
         self._buffer = {}
 
     def _run(self):
-        learner = None
         for plate_id in self._imagecontainer.plates:
             analyzer = AnalyzerCore(plate_id, self._settings,
-                                    copy.copy(self._imagecontainer),
-                                    learner=learner)
+                                    copy.copy(self._imagecontainer))
             result = analyzer.processPositions(self)
             learner = result['ObjectLearner']
             post_hdf5_link_list = result['post_hdf5_link_list']
@@ -1264,7 +1299,7 @@ class _ProcessorMixin(object):
                 if type(cls) == types.ListType:
                     self._process_items = cls
                     self._current_process_item = 0
-                    cls = cls[0]
+                    cls = cls[self._current_process_item]
 
                     # remove HmmThread if process is not first in list and
                     # not valid error correction was activated
@@ -1393,8 +1428,10 @@ class _ProcessorMixin(object):
                     for kind in ['primary', 'secondary']:
                         _resolve = lambda x,y: self._settings.get(x, '%s_%s' % (kind, y))
                         env_path = convert_package_path(_resolve('Classification', 'classification_envpath'))
-                        if (_resolve('Processing', 'classification') and
-                            (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))):
+                        if (os.path.exists(env_path)
+                              and (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))
+                             ):
+
                             classifier_infos = {'strEnvPath' : env_path,
                                                 'strChannelId' : _resolve('ObjectDetection', 'channelid'),
                                                 'strRegionId' : _resolve('Classification', 'classification_regionname'),
@@ -1402,6 +1439,8 @@ class _ProcessorMixin(object):
                             learner = CommonClassPredictor(dctCollectSamples=classifier_infos)
                             learner.importFromArff()
                             learner_dict[kind] = learner
+
+                    ### Whee, I like it... "self.parent().main_window._imagecontainer" crazy, crazy, michael... :-)
                     self._analyzer = cls(self, self._current_settings,
                                          learner_dict,
                                          self.parent().main_window._imagecontainer)
@@ -1766,6 +1805,6 @@ class BaseProcessorFrame(BaseFrame, _ProcessorMixin):
         _ProcessorMixin.__init__(self)
 
     def set_active(self, state):
-        # set internal state and enable/disable control buttons
+        # set internl state and enable/disable control buttons
         super(BaseProcessorFrame, self).set_active(state)
         self.enable_control_buttons(state)
