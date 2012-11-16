@@ -542,7 +542,6 @@ class TimeHolder(OrderedDict):
         # only True if hdf_create and reuse and label_images are valid!
         if not label_images_valid:
             # compute segmentation without (not loading from file)
-            print 'jasoisadjfljsdfsad', args
             channel.apply_segmentation(*args)
             self._logger.info('Label images %s computed in %s.' % (desc, stop_watch.current_interval()))
             # write segmentation back to file
