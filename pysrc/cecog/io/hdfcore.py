@@ -298,10 +298,10 @@ class CH5Position(object):
                 
         return events
     
-    def _track_single(self, start_idx, type):
-        if type == 'first':
+    def _track_single(self, start_idx, type_):
+        if type_ == 'first':
             sel = 0
-        elif type == 'last':
+        elif type_ == 'last':
             sel = -1
         else:
             raise NotImplementedError('type not supported')
@@ -310,14 +310,22 @@ class CH5Position(object):
         ### follow last cell
         idx_list = []
         dset_tracking = self.get_tracking()
-
+        dset_tracking_idx1 = dset_tracking['obj_idx1']
+        dset_tracking_idx1_max = len(dset_tracking_idx1) - 1
+        dset_tracking_idx2 = dset_tracking['obj_idx2']
         idx = start_idx
+        last_p_idx = 0
         while True:
-            next_p_idx = (dset_tracking['obj_idx1']==idx).nonzero()[0]
+            if last_p_idx == 0 or True:
+                next_p_idx = (dset_tracking_idx1==idx).nonzero()[0]
+            else:
+                next_p_idx = (dset_tracking_idx1[last_p_idx: min(last_p_idx+2000,dset_tracking_idx1_max)]==idx).nonzero()[0]
             if len(next_p_idx) == 0:
                 break
-            idx = dset_tracking['obj_idx2'][next_p_idx[sel]]
+            #idx = dset_tracking_idx2[next_p_idx[sel] + last_p_idx]
+            idx = dset_tracking_idx2[next_p_idx[sel]]
             idx_list.append(idx)
+            last_p_idx = next_p_idx[sel] + last_p_idx
         return idx_list
     
     def track_first(self, start_idx):
