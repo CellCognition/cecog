@@ -361,7 +361,7 @@ class CellTracker(OptionManager):
         self._regionName = strRegionName
         self._oGraph = Graph()
         self._dctTimePoints = OrderedDict()
-            
+
     def trackAtTimepoint(self, iT):
         oChannel = self._dctTimeChannels[iT][self._channelId]
         self.lstFeatureNames = oChannel.lstFeatureNames
@@ -630,7 +630,7 @@ class CellTracker(OptionManager):
 
         self.oLogger.debug("tracking: start nodes %d %s" %
                            (len(lstStartIds), lstStartIds))
-        
+
         self.dctVisitorData = {}
         dctVisitedNodes = {}
         if  self.getOption('unsupEventSelection'):
@@ -652,30 +652,30 @@ class CellTracker(OptionManager):
                                                    }
                 self.oLogger.debug("root ID %s" % strStartId)
                 self._forwardVisitor(strStartId, self.dctVisitorData[strStartId], dctVisitedNodes)
-            
-            
+
+
     def initBinaryClustering(self, invert):
         oGraph = self._oGraph
-        data=[]
+        data_obj=[]
         for node in oGraph.node_list():
             obj = oGraph.node_data(node)
-            data.append(obj.aFeatures)
-        
-        data = numpy.array(data)
-        
+            data_obj.append(obj.aFeatures)
+
+        data = numpy.array(data_obj)
+
         # delete columns with zeros
         ind = numpy.where(data==0)[1]
         data = scipy.delete(data,ind,1)
         print 'new data.shape after column=0 deletion'
         print data.shape
-        
+
         # Zscore and PCA data
         data_zscore = sss.zscore(data) #sss.zscore(self.remove_constant_columns(data))
         pca = mlab.PCA(data_zscore)
-        num_features = numpy.nonzero(numpy.cumsum(pca.fracs) > 0.99)[0][0] 
+        num_features = numpy.nonzero(numpy.cumsum(pca.fracs) > 0.99)[0][0]
         data_pca = pca.project(data_zscore)[:,0:num_features]
         idx = binary_clustering(data_pca, invert)
-    
+
         self.iLabel_bc = {}
         for i, node in enumerate(oGraph.node_list()):
             self.iLabel_bc[node] = idx[i]
@@ -945,7 +945,7 @@ class PlotCellTracker(CellTracker):
         if clear_path:
             shutil.rmtree(strPathOut, True)
             safe_mkdirs(strPathOut)
-        
+
         allFeatures = []
         for strRootId, dctTrackResults in self.dctVisitorData.iteritems():
 
@@ -991,7 +991,7 @@ class PlotCellTracker(CellTracker):
                                     allFeatures.append (obj_allFeatures)
 
                     self.oLogger.debug("* root %s ok" % strStartId)
-                                    
+
 
         if self.getOption("bExportFlatFeatures"):
             for strChannelId, dctRegions in dctChannels.iteritems():
@@ -1008,7 +1008,7 @@ class PlotCellTracker(CellTracker):
                                                    strChannelId,
                                                    strRegionId,
                                                    lstFeatureNames)
-        
+
         if self.getOption('tc3Analysis'):
             allFeatures = numpy.array(allFeatures)
             print allFeatures.shape
@@ -1023,54 +1023,59 @@ class PlotCellTracker(CellTracker):
             num_tracks = data.shape[0]/allFeatures.shape[1]
             dim = [num_frames, num_tracks]
             print dim
-            
+
             # Zscore and PCA data
             data_zscore = sss.zscore(remove_constant_columns(data))
             pca = mlab.PCA(data_zscore)
-            num_features = numpy.nonzero(numpy.cumsum(pca.fracs) > 0.99)[0][0] 
+            num_features = numpy.nonzero(numpy.cumsum(pca.fracs) > 0.99)[0][0]
             data_pca = pca.project(data_zscore)[:,0:num_features]
-            
+
             binary_tmp = binary_clustering(data_pca, 0)
             binary_matrix = binary_tmp.reshape(dim[1],dim[0])
-            numpy.savetxt('/Users/zhongq/Documents/cecog_data/Analysis/H2bTub/analyzed/0037/statistics/binary_all.txt', binary_matrix,fmt='%d',delimiter='\t') 
-            
+
+            filename = os.path.join(self.strPathOut, 'binary_all.txt') 
+            numpy.savetxt(filename, binary_matrix, fmt='%d', delimiter='\t')
+
             idn = []
             k=self.getOption('numClusters') # a predefined number of classes, given in GUI
             print k
-            for i in reversed(range(num_tracks)):
+            for i in xrange(num_tracks, 0, -1):
                 if (sum(binary_matrix[i,:]) < k-2) or (binary_matrix[i,0] == 1) or (binary_matrix[i,1] == 1) or (sum(binary_matrix[i,0:15]) == 0) :
-                    binary_matrix = scipy.delete(binary_matrix, i, 0) 
-                    data_pca = scipy.delete(data_pca,numpy.arange(i*num_frames, (i+1)*num_frames),0)
+                    binary_matrix = scipy.delete(binary_matrix, i, 0)
+                    data_pca = scipy.delete(data_pca, numpy.arange(i*num_frames, (i+1)*num_frames), 0)
                     num_tracks -= 1
                     idn.append(i)
-            
+
             print idn
-            numpy.savetxt('/Users/zhongq/Documents/cecog_data/Analysis/H2bTub/analyzed/0037/statistics/index.txt',idn, fmt='%d',delimiter='\t')   
+            filename = os.path.join(self.strPathOut, 'index.txt') 
+            numpy.savetxt(filename,idn, fmt='%d',delimiter='\t')
             print binary_matrix.shape
-            print num_tracks   
-            numpy.savetxt('/Users/zhongq/Documents/cecog_data/Analysis/H2bTub/analyzed/0037/statistics/binary_deleted.txt',binary_matrix, fmt='%d',delimiter='\t')   
+            print num_tracks
+            filename = os.path.join(self.strPathOut, 'indexbinary_deleted.txt') 
+            numpy.savetxt(filename, binary_matrix, fmt='%d',delimiter='\t')
             dim = [num_frames, num_tracks] # update num_tracks
-            
+
             # Diverse TC3 algorithms
             m = self.getOption('minClusterSize') # a predefined minimal cluster size
             print m
             tc = unsup.TemporalClustering(dim,k,binary_matrix)
             tc3 = tc.tc3_clustering(data_pca,m)
             tc3_gmm = tc.tc3_gmm(data_pca,tc3['labels'])
-            tc3_gmm_dhmm = tc.tc3_gmm_dhmm(tc3_gmm['labels']) 
-            tc3_gmm_chmm = tc.tc3_gmm_chmm(data_pca, tc3_gmm['model'], tc3_gmm_dhmm['model']) 
-            
+            tc3_gmm_dhmm = tc.tc3_gmm_dhmm(tc3_gmm['labels'])
+            tc3_gmm_chmm = tc.tc3_gmm_chmm(data_pca, tc3_gmm['model'], tc3_gmm_dhmm['model'])
+
             algorithms = {'TC3': tc3,
-                          'TC3+GMM': tc3_gmm, 
-                          'TC3+GMM+DHMM': tc3_gmm_dhmm, 
+                          'TC3+GMM': tc3_gmm,
+                          'TC3+GMM+DHMM': tc3_gmm_dhmm,
                           'TC3+GMM+CHMM': tc3_gmm_chmm,
                           }
-            
+
             algorithm = self.getOption('tc3Algorithms')
             print algorithm
             result = algorithms[algorithm]
-            numpy.savetxt('/Users/zhongq/Documents/cecog_data/Analysis/H2bTub/analyzed/0037/statistics/'+algorithm+'.txt',result['label_matrix'], fmt='%d',delimiter='\t') 
-        
+            filename = os.path.join(self.strPathOut, '%s.txt'%algorithm) 
+            numpy.savetxt(filename, result['label_matrix'], fmt='%d',delimiter='\t')
+
 
     def exportChannelDataFlat(self, strFilename, strChannelId, strRegionId, lstFeatureNames):
 
@@ -1212,7 +1217,7 @@ class PlotCellTracker(CellTracker):
                 oObj = oRegion[iObjId]
 
                 dctData[self.OBJID_COLUMN_PATTERN] = iObjId
-                
+
                 # classification data
                 if self.getOption('bHasClassificationData'):
                     #dctData[self.CLASS_COLUMN_PATTERN % 'bc'] = self.iLabel_bc["%d_%d" % (iT, iObjId)]
@@ -1225,8 +1230,8 @@ class PlotCellTracker(CellTracker):
                 aFeatures = oRegion.getFeaturesByNames(iObjId, lstFeatureNames)
                 for fFeature, strFeatureName in zip(aFeatures, lstFeatureNames):
                     dctData[self.FEATURE_COLUMN_PATTERN % strFeatureName] = fFeature
-                
-                allFeature.append(aFeatures)  
+
+                allFeature.append(aFeatures)
 
                 # object tracking data (absolute center)
                 dctData[self.TRACKING_COLUMN_PATTERN % 'center_x'] = oObj.oCenterAbs[0]
@@ -1240,12 +1245,12 @@ class PlotCellTracker(CellTracker):
                 return
 
             #print dctData
-            table.append(dctData) 
+            table.append(dctData)
 
         if len(table) > 0:
             write_table(strFilename, table, column_names=lstHeaderNames)
-            
-        
+
+
         return numpy.array(allFeature)
 
 
@@ -1595,12 +1600,12 @@ class ClassificationCellTracker(SplitCellTracker):
 
                "bForwardRangeMin"        :   Option(False, doc=""),
                "bBackwardRangeMin"       :   Option(False, doc=""),
-               
+
                'supEventSelection'     :   Option(False, doc=""),
-               
+
                'unsupEventSelection'     :   Option(False, doc=""),
                'iForwardCheck2'          :   Option(None, doc=""),
-               
+
                'tc3Analysis'             :   Option(False, doc=""),
                'invert'                  :   Option(False, doc=""),
                'numClusters'             :   Option(None, doc=""),
@@ -1636,7 +1641,7 @@ class ClassificationCellTracker(SplitCellTracker):
         #assert oGraph.in_arcs(strNodeId)) == 1
         strHeadId = oGraph.head(strInEdgeId)
         return self._backwardCheck(strHeadId, lstNodeIds, iLevel=iLevel+1)
-    
+
     def _backwardCheck2(self, strNodeId, lstNodeIds, iLevel=1):
         oGraph = self._oGraph
         lstNodeIds.append(strNodeId)
@@ -1718,7 +1723,7 @@ class ClassificationCellTracker(SplitCellTracker):
             strOutEdgeId = oGraph.out_arcs(strNodeId)[0]
             strTailId = oGraph.tail(strOutEdgeId)
             return self._forwardCheck(strTailId, lstNodeIds, iLevel=iLevel+1, strFoundSplitId=strFoundSplitId)
-        
+
     def _forwardCheck2(self, strNodeId, lstNodeIds, iLevel=1, strFoundSplitId=None):
         oGraph = self._oGraph
         lstNodeIds.append(strNodeId)
@@ -1739,7 +1744,7 @@ class ClassificationCellTracker(SplitCellTracker):
         iLabel_bc = self.iLabel_bc[strNodeId]
         if iLevel <= self.getOption('iForwardCheck2') and not iLabel_bc == 1:
             return False
-        
+
         if (strFoundSplitId is None and
             oGraph.out_degree(strNodeId) > 1 and
             oGraph.out_degree(strNodeId) <= self.getOption('iMaxOutDegree')):
@@ -1767,7 +1772,7 @@ class ClassificationCellTracker(SplitCellTracker):
 #        strOutEdgeId = oGraph.out_arcs(strNodeId)[0]
 #        strTailId = oGraph.tail(strOutEdgeId)
 #        return self._forwardCheck2(strTailId, lstNodeIds, iLevel=iLevel+1, strFoundSplitId=strFoundSplitId)
-                 
+
 
     def _forwardVisitor(self, strNodeId, dctResults, dctVisitedNodes, iLevel=0):
         oGraph = self._oGraph
@@ -1776,7 +1781,7 @@ class ClassificationCellTracker(SplitCellTracker):
             oObject = oGraph.node_data(strNodeId)
             oObjectNext = oGraph.node_data(oGraph.tail(oGraph.out_arcs(strNodeId)[0]))
 
-            
+
             bFound = False
             for tplCheck in self.getOption('lstLabelTransitions'):
                 if (len(tplCheck) == 2 and
@@ -1852,14 +1857,14 @@ class ClassificationCellTracker2(ClassificationCellTracker):
 
     OPTIONS = {"bAllowOneDaughterCell"   :   Option(True),
                }
-    @staticmethod    
+    @staticmethod
     def remove_constant_columns(A):
         ''' A function to remove constant columns from a 2D matrix'''
         return A[:, numpy.sum(numpy.abs(numpy.diff(A, axis=0)), axis=0) != 0]
 
 
     def _forwardVisitor(self, strNodeId, dctResults, dctVisitedNodes, iLevel=0):
-        
+
         oGraph = self._oGraph
 
         if oGraph.out_degree(strNodeId) == 1 and oGraph.in_degree(strNodeId) == 1:
@@ -1867,7 +1872,7 @@ class ClassificationCellTracker2(ClassificationCellTracker):
             oObjectNext = oGraph.node_data(oGraph.tail(oGraph.out_arcs(strNodeId)[0]))
 
             bFound = False
-                                
+
             for tplCheck in self.getOption('lstLabelTransitions'):
                 if (len(tplCheck) == 2 and
                     oObject.iLabel == tplCheck[0] and
@@ -1951,7 +1956,7 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                 self._forwardVisitor(strTailId, dctResults, dctVisitedNodes, iLevel=iLevel+1)
 
     def _forwardVisitor2(self, strNodeId, dctResults, dctVisitedNodes, iLevel=0):
-        
+
         oGraph = self._oGraph
 
         if oGraph.out_degree(strNodeId) == 1 and oGraph.in_degree(strNodeId) == 1:
@@ -1959,7 +1964,7 @@ class ClassificationCellTracker2(ClassificationCellTracker):
             iLabel_bc_next = self.iLabel_bc[oGraph.tail(oGraph.out_arcs(strNodeId)[0])]
 
             bFound = False
-                                
+
             if (iLabel_bc == 0 and iLabel_bc_next == 1):
                 bFound = True
 
@@ -2037,7 +2042,7 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                     dctResults['_full'].append(dctResults['_full'][base][:depth])
                     dctResults['_current'] += idx
                 self._forwardVisitor2(strTailId, dctResults, dctVisitedNodes, iLevel=iLevel+1)
-                
+
     @staticmethod
     def getComponentsFromNodeId(strNodeId):
         items = map(int, strNodeId.split('_'))
@@ -2058,15 +2063,15 @@ class ClassificationCellTracker2(ClassificationCellTracker):
         feature_lookup['mean'] = 'n2_avg'
         feature_lookup['sd'] = 'n2_stddev'
         feature_lookup['size'] = 'roisize'
-        
+
         lstFeatureNames = sorted(self.lstFeatureNames)
-        
+
         for name, real_name in zip([self.FEATURE_FLAT_PATTERN % f for f in lstFeatureNames],
                                    lstFeatureNames):
             feature_lookup[name] = real_name
 
-        for start_id, data in self.dctVisitorData.iteritems():   
-            
+        for start_id, data in self.dctVisitorData.iteritems():
+
             #for strRootId, dctTrackResults in self.dctVisitorData.iteritems():
             #for strStartId, dctEventData in dctTrackResults.iteritems():
 
@@ -2133,4 +2138,3 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                     f.write('%s\n' % sep.join(map(str, prefix + items)))
 
                 f.close()
-

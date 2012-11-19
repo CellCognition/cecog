@@ -137,9 +137,9 @@ class TemporalClustering:
         tc3 = {'label_matrix': labels_tc3_matrix, 'labels': labels_tc3_vec, 'name': 'TC3'}
         return tc3
     
-    def tc3_gmm(self, data, labels, cvtype='full', sharedcov=True) :
+    def tc3_gmm(self, data, labels, covariance_type='full', sharedcov=True) :
         
-        g = mixture.GMM(n_components=self.n_clusters, cvtype=cvtype)
+        g = mixture.GMM(n_components=self.n_clusters, covariance_type=covariance_type)
         g.means, g.covars, g.weights = self._gmm_int_parameters(data,labels,sharedcov=sharedcov)
         g.fit(data,n_iter=1,init_params='') # restrict EM to only one iteration
         labels_tc3gmm_vec = g.predict(data) # vector format [1 x num_tracks * num_frames]
@@ -184,7 +184,7 @@ class TemporalClustering:
         
         eps = np.spacing(1)
         sprob = np.array([1-eps,eps,eps,eps,eps,eps])
-        chmm = hmm.GaussianHMM(n_components=self.n_clusters,transmat=dhmm_model.transmat,startprob=sprob,cvtype='full')
+        chmm = hmm.GaussianHMM(n_components=self.n_clusters,transmat=dhmm_model.transmat,startprob=sprob, covariance_type='full')
         chmm.means = gmm_model.means
         chmm.covars = gmm_model.covars
         chmm.fit([data], n_iter=1, init_params='') # restrict EM to only one iteration
@@ -220,7 +220,7 @@ class TemporalClustering:
     
     n_clusters = property(_get_n_clusters, _set_n_clusters)
 
-    def _gmm_int_parameters (self,data,labels,sharedcov=False) :
+    def _gmm_int_parameters(self,data,labels,sharedcov=False) :
 
         n = data.shape[0] 
         n_features =  data.shape[1]
@@ -228,8 +228,11 @@ class TemporalClustering:
         Sigma = np.zeros((n_features, n_features, self.n_clusters))
         p = np.zeros((self.n_clusters))
         
-        for i in range(0,self.n_clusters) : 
-            X = data[labels==i,:]
+        for i in range(self.n_clusters) :
+            print 'asdf', data
+            print'jkl;', labels
+            print data.shape, labels.shape
+            X = data[labels==i, :]
             mu[i,:] = np.mean(X,0)
             if sharedcov : 
                 Sigma[:,:,i] = np.cov(data.T)

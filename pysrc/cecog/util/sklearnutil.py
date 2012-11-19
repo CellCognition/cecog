@@ -41,14 +41,14 @@ def mylogsumexp(A, axis=None):
 
 def binary_clustering(data, invert):
 
-    m, idx = scv.kmeans2(data,2)
-    w = numpy.array([sum(idx==0)/float(len(idx)),sum(idx==1)/float(len(idx))]);
+    m, idx = scv.kmeans2(data, 2)
+    w = numpy.array([sum(idx==0)/float(len(idx)), sum(idx==1)/float(len(idx))]);
 
     c1 = numpy.cov(data[idx==0,:].T)
     c2 = numpy.cov(data[idx==1,:].T)
     c = numpy.dstack((c1,c2)).T
     
-    g = mixture.GMM(n_components=2, cvtype = 'full') #thresh=1e-6
+    g = mixture.GMM(n_components=2, covariance_type = 'full') #thresh=1e-6
     g.weights = w
     g.means = m
     g.covars = c

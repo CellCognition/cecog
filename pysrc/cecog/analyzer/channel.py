@@ -344,11 +344,14 @@ class _Channel(PropertyManager):
                 #lstValidObjectIds = []
                 #lstRejectedObjectIds = []
 
+                has_nan_values = False
                 for obj_id, c_obj in container.getObjects().iteritems():
                     dctFeatures = c_obj.getFeatures()
 
                     bAcceptObject = True
-
+                    for x in dctFeatures.values():
+                        if numpy.isnan(x):
+                            has_nan_values = True
 #                    # post-processing
 #                    if self.bPostProcessing:
 #
@@ -386,6 +389,8 @@ class _Channel(PropertyManager):
                             numpy.asarray(dict_values(dctFeatures,
                                                       self.lstFeatureNames))
                         object_holder[obj_id] = obj
+                        
+                if has_nan_values: self._oLogger.warn('Feature values contain NaNs!' )
 
             if not self.lstFeatureNames is None:
                 object_holder.setFeatureNames(self.lstFeatureNames)
