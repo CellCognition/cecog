@@ -41,7 +41,7 @@ import types, \
        struct, \
        threading, \
        socket
-       
+
 #-------------------------------------------------------------------------------
 # sklearn, scipy, matplotlib imports:
 #
@@ -132,48 +132,48 @@ from cecog.analyzer.ibb import IBBAnalysis, SecurinAnalysis
 
 def link_hdf5_files(post_hdf5_link_list):
     logger = logging.getLogger()
-    
+
     PLATE_PREFIX = '/sample/0/plate/'
     WELL_PREFIX = PLATE_PREFIX + '%s/experiment/'
     POSITION_PREFIX = WELL_PREFIX + '%s/position/'
-    
+
     def get_plate_and_postion(hf_file):
         plate = hf_file[PLATE_PREFIX].keys()[0]
         well = hf_file[WELL_PREFIX % plate].keys()[0]
         position = hf_file[POSITION_PREFIX % (plate, well)].keys()[0]
         return plate, well, position
-    
+
     all_pos_hdf5_filename = os.path.join(os.path.split(post_hdf5_link_list[0])[0], '_all_positions.h5')
-    
+
     if os.path.exists(all_pos_hdf5_filename):
         f = h5py.File(all_pos_hdf5_filename, 'a')
         ### This is dangerous, several processes open the file for writing...
         logger.info("_all_positons.hdf file found, trying to reuse it by overwrite old external links...")
-        
+
         if 'definition' in f:
-            del f['definition'] 
+            del f['definition']
             f['definition'] = h5py.ExternalLink(post_hdf5_link_list[0],'/definition')
-            
+
         for fname in post_hdf5_link_list:
             fh = h5py.File(fname, 'r')
             fplate, fwell, fpos = get_plate_and_postion(fh)
             fh.close()
-            
+
             msg = "Linking into _all_positons.hdf:" + ((POSITION_PREFIX + '%s') % (fplate, fwell, fpos))
             logger.info(msg)
             print msg
             if (POSITION_PREFIX + '%s') % (fplate, fwell, fpos) in f:
                 del f[(POSITION_PREFIX + '%s') % (fplate, fwell, fpos)]
             f[(POSITION_PREFIX + '%s') % (fplate, fwell, fpos)] = h5py.ExternalLink(fname, (POSITION_PREFIX + '%s') % (fplate, fwell, fpos))
-        
+
         f.close()
-        
+
     else:
         f = h5py.File(all_pos_hdf5_filename, 'w')
-        logger.info("_all_positons.hdf file created...") 
-           
+        logger.info("_all_positons.hdf file created...")
+
         f['definition'] = h5py.ExternalLink(post_hdf5_link_list[0],'/definition')
-        
+
         for fname in post_hdf5_link_list:
             fh = h5py.File(fname, 'r')
             fplate, fwell, fpos = get_plate_and_postion(fh)
@@ -181,9 +181,9 @@ def link_hdf5_files(post_hdf5_link_list):
             msg = "Linking into _all_positons.hdf:" + ((POSITION_PREFIX + '%s') % (fplate, fwell, fpos))
             logger.info(msg)
             print msg
-            
+
             f[(POSITION_PREFIX + '%s') % (fplate, fwell, fpos)] = h5py.ExternalLink(fname, (POSITION_PREFIX + '%s') % (fplate, fwell, fpos))
-        
+
         f.close()
 
 # see http://stackoverflow.com/questions/3288595/multiprocessing-using-pool-map-on-a-function-defined-in-a-class
@@ -191,10 +191,10 @@ def AnalyzerCoreHelper(plate_id, settings_str, imagecontainer, position):
     print ' analyzing plate', plate_id, 'and position', position, 'in process', os.getpid()
     settings = ConfigSettings(SECTION_REGISTRY)
     settings.from_string(settings_str)
-    
+
     settings.set(SECTION_NAME_GENERAL, 'constrain_positions', True)
     settings.set(SECTION_NAME_GENERAL, 'positions', position)
-    analyzer = AnalyzerCore(plate_id, settings,imagecontainer)         
+    analyzer = AnalyzerCore(plate_id, settings,imagecontainer)
     result = analyzer.processPositions()
     return plate_id, position, copy.deepcopy(result['post_hdf5_link_list'])
 
@@ -349,7 +349,7 @@ class _ProcessingThread(QThread):
             print 'Thread enabled interactive eclipse debuging...'
         except:
             pass
-        
+
         try:
             self._run()
         except MultiprocessingException, e:
@@ -394,7 +394,7 @@ class HmmThreadPython(_ProcessingThread):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._convert = lambda x: x.replace('\\','/')
         self._join = lambda *x: self._convert('/'.join(x))
-        
+
     @classmethod
     def get_cmd(cls, filename):
         filename = filename.strip()
@@ -405,7 +405,7 @@ class HmmThreadPython(_ProcessingThread):
         else:
             cmd = cls.DEFAULT_CMD_WIN
         return cmd
-    
+
     def _setMappingFile(self):
         if self._settings.get2('position_labels'):
             path_mapping = self._convert(self._settings.get2('mappingfile_path'))
@@ -417,7 +417,7 @@ class HmmThreadPython(_ProcessingThread):
                         raise IOError("Mapping file '%s' for plate '%s' not found." %
                                       (mapping_file, plate_id))
                 self._mapping_files[plate_id] = os.path.abspath(mapping_file)
-        
+
     def _run(self):
 
         self._settings.set_section(SECTION_NAME_ERRORCORRECTION)
@@ -428,7 +428,7 @@ class HmmThreadPython(_ProcessingThread):
                 'stage': 0,
                 'meta': 'Error correction...',
                 'progress': 0}
-        
+
         # Process each plate and update Progressbar (if not aborted by user)
         for idx, plate_id in enumerate(self.plates):
             if not self._abort:
@@ -440,7 +440,7 @@ class HmmThreadPython(_ProcessingThread):
                 self.set_stage_info(info)
             else:
                 break
-    
+
     def _run_plate(self, plate_id):
         print "processing", plate_id
         path_out = self._imagecontainer.get_path_out()
@@ -449,37 +449,37 @@ class HmmThreadPython(_ProcessingThread):
         safe_mkdirs(path_out_hmm_html)
         region_name_primary = self._settings.get('Classification', 'primary_classification_regionname')
         region_name_secondary = self._settings.get('Classification', 'secondary_classification_regionname')
-        
+
         # don't do anything if the 'hmm' folder already exists and the skip-option is on
         if os.path.isdir(path_out_hmm_html) and self._settings.get('ErrorCorrection','skip_processed_plates'):
             return
-        
+
         "Reads all events written by the CellCognition tracking."
         if self._settings.get('General', 'constrain_positions'):
-            pos = self._settings.get('General', 'positions')  
-        
+            pos = self._settings.get('General', 'positions')
+
         num_frames = int(self._settings.get('Tracking', 'tracking_forwardrange') + self._settings.get('Tracking', 'tracking_backwardrange'))
         path_pos = self._join(path_analyzed, pos)
         path_data = self._join(path_pos, 'statistics/events/')
         class_col = 6 # column position of svm_labels, should be retrieved from variable
-        
+
         # directory of hmm corrected labels
         path_out_hmm2 = self._join(path_data, '_hmm2')
         safe_mkdirs(path_out_hmm2)
         text = 'Trajectory'
-        
-        if self._settings.get('ErrorCorrection', 'ignore_tracking_branches') : 
+
+        if self._settings.get('ErrorCorrection', 'ignore_tracking_branches') :
             branch = 'B01__'
-        else: 
+        else:
             branch = '__'
-            
+
         if self._settings.get('Processing', 'secondary_processchannel') :
             channels = ['CPrimary','CSecondary']
             path_out_hmm_regions = [self._convert(self._get_path_out(path_out_hmm_html,'%s_%s' % ('primary', region_name_primary))),
-                                    self._convert(self._get_path_out(path_out_hmm_html,'%s_%s' % ('secondary', region_name_secondary)))]                                        
+                                    self._convert(self._get_path_out(path_out_hmm_html,'%s_%s' % ('secondary', region_name_secondary)))]
         else :
             channels = ['CPrimary']
-            path_out_hmm_regions = [self._convert(self._get_path_out(path_out_hmm_html,'%s_%s' % ('primary', region_name_primary)))] 
+            path_out_hmm_regions = [self._convert(self._get_path_out(path_out_hmm_html,'%s_%s' % ('primary', region_name_primary)))]
 
         for (counter,channel) in enumerate(channels) :
             labels_svm, num_tracks, infiles = self.read_labels(path_data,num_frames,class_col,branch+channel) # SVM labels
@@ -492,9 +492,9 @@ class HmmThreadPython(_ProcessingThread):
             labels_dhmm_vec, labels_dhmm_matrix = self.dhmm_correction(k, labels_svm-1, dim)
             path_out_labelmatrix = self._join(path_out_hmm2, 'labels'+channel+'.txt')
             path_out_labelhmm = self._join(path_out_hmm, 'labels'+channel+'.txt')
-            numpy.savetxt(path_out_labelmatrix, labels_dhmm_matrix+1,fmt='%d',delimiter='\t') # labels starts with 1, not 0!   
-            numpy.savetxt(path_out_labelhmm, labels_svm_hmm,fmt='%d',delimiter='\t')  
-            print 'Agreement in %: ', (labels_svm_hmm.flatten() == labels_dhmm_vec+1).sum() / (dim[0] * dim[1])   
+            numpy.savetxt(path_out_labelmatrix, labels_dhmm_matrix+1,fmt='%d',delimiter='\t') # labels starts with 1, not 0!
+            numpy.savetxt(path_out_labelhmm, labels_svm_hmm,fmt='%d',delimiter='\t')
+            print 'Agreement in %: ', (labels_svm_hmm.flatten() == labels_dhmm_vec+1).sum() / (dim[0] * dim[1])
             if self._settings.get('ErrorCorrection','compose_galleries'):
                 if channel == 'CPrimary': # backwards naming compatibility
                     channel = 'primary'
@@ -516,27 +516,27 @@ class HmmThreadPython(_ProcessingThread):
                     for track_index in range(dim[1]) :
                         if track_index == 0 :
                             print label_matrix[track_index,]
-                        for frame_index in range(dim[0]): 
+                        for frame_index in range(dim[0]):
                             color_index = label_matrix[track_index,frame_index]
-                            plt.axhline(y=(track_index)*imgsize+offset, xmin=frame_index*frac, xmax=(frame_index+1)*frac, color=CLASS_COLORS[color_index])            
-                    plt.savefig(self._join(path_out_composed_gallery, pos+'_'+str(i)+'.png')  , dpi = 300)  
+                            plt.axhline(y=(track_index)*imgsize+offset, xmin=frame_index*frac, xmax=(frame_index+1)*frac, color=CLASS_COLORS[color_index])
+                    plt.savefig(self._join(path_out_composed_gallery, pos+'_'+str(i)+'.png')  , dpi = 300)
                 print i
                 print counter
 #            for (counter, infile) in enumerate(infiles) :
 #                path_out_sf = self._join(path_out_hmm2, infile)
-#                numpy.savetxt(path_out_sf, labels_dhmm_matrix[counter,:],fmt='%d',delimiter='\t')   
+#                numpy.savetxt(path_out_sf, labels_dhmm_matrix[counter,:],fmt='%d',delimiter='\t')
 #                if channel in infile :
 #                    text = text+'\n'+infile
 #            for track_index in dim[1] :
 #                hist, bin_edges = numpy.histogram(labels_dhmm_matrix[track_index,:], bins=k)
-#                freq_matrix [track_index,:] = hist       
+#                freq_matrix [track_index,:] = hist
 #        f = open(path_out_composed_gallery+pos+'.txt', 'w')
 #        for line in text:
 #            f.write(line)
 #        f.close()
-    
 
-            
+
+
     def make_galleries(self,branch,channel2,pos,path_pos,path_out_hmm_regions):
         path_out_gallery_image = self._join(path_out_hmm_regions, '_gallery/'+channel2+'/'+pos+'.png')
         gallery_path = self._join(path_pos, 'gallery/'+channel2+'/')
@@ -549,22 +549,22 @@ class HmmThreadPython(_ProcessingThread):
         w = images[0].size[0]
         h = sum(i.size[1] for i in images)
         result = Image.new("RGBA", (w, h))
-        
+
         x = 0
         for i in images:
             result.paste(i, (0, x))
-            x += i.size[1]   
-        result.save(path_out_gallery_image, format='PNG') 
+            x += i.size[1]
+        result.save(path_out_gallery_image, format='PNG')
         return path_out_gallery_image, list_of_images
-    
+
     def set_abort(self, wait=False):
         pass
-    
+
     @classmethod
     def test_executable(cls, filename):
         "mock interface method"
         return True, ""
-    
+
     def _get_path_out(self, path, prefix):
         if self._settings.get2('groupby_oligoid'):
             suffix = 'byoligo'
@@ -575,7 +575,7 @@ class HmmThreadPython(_ProcessingThread):
         path_out = os.path.join(path, '%s_%s' % (prefix, suffix))
         safe_mkdirs(path_out)
         return path_out
-    
+
     @staticmethod
     def read_labels(path,num_frames,col,name):
         listing = os.listdir(path)
@@ -597,7 +597,7 @@ class HmmThreadPython(_ProcessingThread):
                 else :
                     Y = numpy.vstack((Y,labels))
         return Y,num_tracks,infiles
-    
+
     @staticmethod
     def dhmm_correction(n_clusters, labels, dim):
         if min(labels.flatten()) == 1 :
@@ -613,7 +613,8 @@ class HmmThreadPython(_ProcessingThread):
                 trans[i,i:i+2] += [hist[i]/(hist[i]+hist[i+1]), hist[i+1]/(hist[i]+hist[i+1])]
             else :
                 trans[i,0] += hist[i]/(hist[i]+hist[0])
-                trans[i,-1] += hist[0]/(hist[i]+hist[0])                                                                                                             
+                trans[i,-1] += hist[0]/(hist[i]+hist[0])
+
         trans = trans + eps
         trans /= trans.sum(axis=1)[:, numpy.newaxis]
         # start probability: [1, 0, 0, ...]
@@ -624,14 +625,14 @@ class HmmThreadPython(_ProcessingThread):
         # emission probability, identity matrix with predefined small errors.
         emis = numpy.eye(n_clusters) + eps/(n_clusters-1)
         emis[range(n_clusters),range(n_clusters)] = 1-eps;
-        dhmm.emissionprob = emis;                         
+        dhmm.emissionprob = emis;
         # learning the DHMM parameters
         dhmm.fit([labels.flatten()], init_params ='') # default n_iter=10, thresh=1e-2
         dhmm.emissionprob = emis # with EM update
         labels_dhmm_vec = dhmm.predict(labels.flatten()) # vector format
         labels_dhmm_matrix = labels_dhmm_vec.reshape(dim[1],dim[0]) # matrix format
         return labels_dhmm_vec, labels_dhmm_matrix
-        
+
 
 class HmmThread(_ProcessingThread): #__R_version
 
@@ -926,10 +927,10 @@ class HmmThread(_ProcessingThread): #__R_version
     def set_abort(self, wait=False):
         self._process.kill()
         _ProcessingThread.set_abort(self, wait=wait)
-        
-        
 
-        
+
+
+
 class ParallelProcessThreadMixinBase(object):
     class ProcessCallback(object):
         def __init__(self):
@@ -938,20 +939,20 @@ class ParallelProcessThreadMixinBase(object):
             pass
     def setup(self):
         pass
-    
+
     def finish(self):
         pass
-    
+
     def abort(self):
         pass
-    
+
     @property
     def target(self):
         pass
-    
+
     def submit_jobs(self, job_list):
         pass
-    
+
 class MultiProcessingAnalyzerMixin(ParallelProcessThreadMixinBase):
     class ProcessCallback(object):
         def __init__(self, parent):
@@ -959,8 +960,8 @@ class MultiProcessingAnalyzerMixin(ParallelProcessThreadMixinBase):
             self.parent = parent
             self.job_count = None
             self._timer = StopWatch()
-            
-            
+
+
         def notify_execution(self, job_list, ncpu):
             self.job_count = len(job_list)
             self.ncpu = ncpu
@@ -972,13 +973,13 @@ class MultiProcessingAnalyzerMixin(ParallelProcessThreadMixinBase):
                       'max': self.job_count,
                        }
             self.parent.set_stage_info(stage_info)
-            
+
         def __call__(self, args):
             plate, pos, hdf_files = args
             self.cnt += 1
             stage_info = {'progress': self.cnt,
-                          'meta': 'Parallel processing %d / %d positions (%d cores)' % (self.cnt, 
-                                                                                        self.job_count, 
+                          'meta': 'Parallel processing %d / %d positions (%d cores)' % (self.cnt,
+                                                                                        self.job_count,
                                                                                         self.ncpu),
                           'text': 'finished %s - %s' % (str(plate), str(pos)),
                           'stage': 0,
@@ -988,10 +989,10 @@ class MultiProcessingAnalyzerMixin(ParallelProcessThreadMixinBase):
                           'max': self.job_count,
                           }
             self.parent.set_stage_info(stage_info)
-            self._timer.reset()  
-            
+            self._timer.reset()
+
             return args
-            
+
     def setup(self, ncpu=None):
         if ncpu is None:
             ncpu = cpu_count()
@@ -1001,132 +1002,132 @@ class MultiProcessingAnalyzerMixin(ParallelProcessThreadMixinBase):
         self.pool = Pool(self.ncpu, initializer=process_initialyzer, initargs=(port,))
         self.parent.process_log_window.init_process_list([str(p.pid) for p in self.pool._pool])
         self.parent.process_log_window.show()
-        
+
         SocketServer.ThreadingTCPServer.allow_reuse_address = True
-        
+
         for p in self.pool._pool:
             logger = logging.getLogger(str(p.pid))
             handler = NicePidHandler(self.parent.process_log_window)
             handler.setFormatter(logging.Formatter('%(asctime)s %(name)-24s %(levelname)-6s %(message)s'))
             logger.addHandler(handler)
-        
+
         self.log_receiver.handler.log_window = self.parent.process_log_window
-               
+
         self.log_receiver_thread = threading.Thread(target=self.log_receiver.serve_forever)
         self.log_receiver_thread.start()
-        
+
         self.process_callback = self.ProcessCallback(self)
-        
+
     def finish(self):
         self.log_receiver.shutdown()
-        self.log_receiver.server_close()        
+        self.log_receiver.server_close()
         self.log_receiver_thread.join()
-        
+
         post_hdf5_link_list = reduce(lambda x,y: x + y, self.post_hdf5_link_list)
         if len(post_hdf5_link_list) > 0:
             link_hdf5_files(sorted(post_hdf5_link_list))
-        
-        
+
+
     def abort(self):
         self._abort = True
         self.pool.terminate()
         self.parent.process_log_window.close()
-        
+
     def join(self):
         self.pool.close()
         self.pool.join()
         self.post_hdf5_link_list = []
         if not self._abort:
-            exception_list = []      
+            exception_list = []
             for r in self.job_result:
                 if not r.successful():
                     try:
                         r.get()
                     except Exception, e:
                         exception_list.append(e)
-                else: 
+                else:
                     plate, pos, hdf_files = r.get()
                     if len(hdf_files) > 0:
                         self.post_hdf5_link_list.append(hdf_files)
             if len(exception_list) > 0:
                 multi_exception = MultiprocessingException(exception_list)
                 raise multi_exception
-            
-                        
-        self.finish()   
-    
+
+
+        self.finish()
+
     @property
     def target(self):
         return AnalyzerCoreHelper
-    
+
     def submit_jobs(self, job_list):
         self.process_callback.notify_execution(job_list, self.ncpu)
         self.job_result = [self.pool.apply_async(self.target, args, callback=self.process_callback) for args in job_list]
-        
+
 class MultiprocessingException(Exception):
     def __init__(self, exception_list):
         self.msg = '\n-----------\nError in job item:\n'.join([str(x) for x in exception_list])
 
 
 class EventSelectionThread(_ProcessingThread):
-    
+
     def __init__(self, parent, settings, learner_dict, imagecontainer):
         _ProcessingThread.__init__(self, parent, settings)
         self._learner_dict = learner_dict
         self._imagecontainer = imagecontainer
-        self._mapping_files = {}    
+        self._mapping_files = {}
         self._convert = lambda x: x.replace('\\','/')
         self._join = lambda *x: self._convert('/'.join(x))
-        
+
     def _run(self):
-        
+
         print 'run eventselection'
         plates = self._imagecontainer.plates
         self.plates = plates
         self._settings.set_section(SECTION_NAME_EVENT_SELECTION)
-            
+
 #        if self._settings.get2('tc3_analysis'):
 #            self.do_tc3_analysis()
-            
+
     def _run_plate(self, plate_id):
         path_out = self._imagecontainer.get_path_out()
 
         path_analyzed = os.path.join(path_out, 'analyzed')
         safe_mkdirs(path_analyzed)
-        
+
         mapping_file = self._mapping_files[plate_id]
-        
-        class_colors = {}       
+
+        class_colors = {}
         for i, name in self._learner_dict['primary'].dctClassNames.items():
             class_colors[i] = self._learner_dict['primary'].dctHexColors[name]
-            
-        class_names = {}       
+
+        class_names = {}
         for i, name in self._learner_dict['primary'].dctClassNames.items():
             class_names[i] = name
-            
+
         self._settings.set_section(SECTION_NAME_POST_PROCESSING)
-               
+
 
 class PostProcessingThread(_ProcessingThread):
-    
+
     def __init__(self, parent, settings, learner_dict, imagecontainer):
         _ProcessingThread.__init__(self, parent, settings)
         self._learner_dict = learner_dict
         self._imagecontainer = imagecontainer
-        self._mapping_files = {}    
+        self._mapping_files = {}
         self._convert = lambda x: x.replace('\\','/')
         self._join = lambda *x: self._convert('/'.join(x))
-        
+
     def _run(self):
-        
+
         print 'run postprocessing'
         plates = self._imagecontainer.plates
         self.plates = plates
         self._settings.set_section(SECTION_NAME_POST_PROCESSING)
-        
+
         if self._settings.get2('ibb_analysis'):
             self.do_ibb_analysis(self)
-            
+
 #        if self._settings.get2('tc3_analysis'):
 #            self.do_tc3_analysis()
 
@@ -1148,62 +1149,62 @@ class PostProcessingThread(_ProcessingThread):
 #        path_out_tc3 = self._join(path_pos, 'statistics/tc3')
 #        safe_mkdirs(path_out_tc3)
 #        feature_col = 9 # starting column position of features
-#        
+#
 #        k=self._settings.get2('num_clusters') # a predefined number of classes, given in GUI
 #        variance_explained = 0.99 # use 99% variance explained
 #        m = self._settings.get2('min_cluster_size') # a predefined minimal cluster size
-#        
+#
 #        # Read data
 #        data,num_tracks = self.read_data(path_data,num_frames,feature_col,'B01')
 #        dim = [num_frames, num_tracks] # data dimension
 #        num_samples = num_frames*num_tracks # number of data points
-#        
+#
 #        # Zscore and PCA data
 #        data_zscore = sss.zscore(data) #sss.zscore(remove_constant_columns(data))
 #        pca = mlab.PCA(data_zscore)
-#        num_features = numpy.nonzero(numpy.cumsum(pca.fracs) > variance_explained)[0][0] 
+#        num_features = numpy.nonzero(numpy.cumsum(pca.fracs) > variance_explained)[0][0]
 #        data_pca = pca.project(data_zscore)[:,0:num_features]
-#        
-#        # Binary clustering 
+#
+#        # Binary clustering
 #        binary_tmp = binary_clustering(data_pca)
 #        binary_matrix = binary_tmp.reshape(dim[1],dim[0])
-#        
-#        # deleting any row containing a mitotic subgraph whose length 
+#
+#        # deleting any row containing a mitotic subgraph whose length
 #        # is shorter than the specified number of clusters
 #        idn = []
 #        for i in reversed(range(num_tracks)):
 #            if (sum(binary_matrix[i,:]) < k-2) or (binary_matrix[i,0] == 1) or (sum(binary_matrix[i,0:15]) == 0) :
-#                binary_matrix = scipy.delete(binary_matrix, i, 0) 
+#                binary_matrix = scipy.delete(binary_matrix, i, 0)
 #                data_pca = scipy.delete(data_pca,numpy.arange(i*num_frames, (i+1)*num_frames),0)
 #                num_tracks -= 1
 #                idn.append(i)
-#        
+#
 #        print idn
 #        print binary_matrix.shape
-#        print num_tracks   
+#        print num_tracks
 #        path_out_binary_matrix = self._join(path_out_tc3, 'binary.txt')
-#        numpy.savetxt(path_out_binary_matrix,binary_matrix,fmt='%d',delimiter='\t')   
+#        numpy.savetxt(path_out_binary_matrix,binary_matrix,fmt='%d',delimiter='\t')
 #        dim = [num_frames, num_tracks] # update num_tracks
-#        
+#
 #        # Diverse TC3 algorithms
 #        tc = unsup.TemporalClustering(dim,k,binary_matrix)
 #        tc3 = tc.tc3_clustering(data_pca,m)
 #        tc3_gmm = tc.tc3_gmm(data_pca,tc3['labels'])
-#        tc3_gmm_dhmm = tc.tc3_gmm_dhmm(tc3_gmm['labels']) 
-#        tc3_gmm_chmm = tc.tc3_gmm_chmm(data_pca, tc3_gmm['model'], tc3_gmm_dhmm['model']) 
-#        
+#        tc3_gmm_dhmm = tc.tc3_gmm_dhmm(tc3_gmm['labels'])
+#        tc3_gmm_chmm = tc.tc3_gmm_chmm(data_pca, tc3_gmm['model'], tc3_gmm_dhmm['model'])
+#
 #        algorithms = {'TC3': tc3,
-#                      'TC3+GMM': tc3_gmm, 
-#                      'TC3+GMM+DHMM': tc3_gmm_dhmm, 
+#                      'TC3+GMM': tc3_gmm,
+#                      'TC3+GMM+DHMM': tc3_gmm_dhmm,
 #                      'TC3+GMM+CHMM': tc3_gmm_chmm,
 #                      }
-#        
+#
 #        algorithm = self._settings.get(SECTION_NAME_POST_PROCESSING,'tc3_algorithms')
 #        result = algorithms[algorithm]
-#        
+#
 #        path_out_tc3 = self._join(path_out_tc3, algorithm+'.txt')
-#        numpy.savetxt(path_out_tc3,result['label_matrix'],fmt='%d',delimiter='\t') 
-            
+#        numpy.savetxt(path_out_tc3,result['label_matrix'],fmt='%d',delimiter='\t')
+
     def do_ibb_analysis(self):
         path_mapping = self._settings.get2('mappingfile_path')
         plates = self.plates
@@ -1221,7 +1222,7 @@ class PostProcessingThread(_ProcessingThread):
                 'stage': 0,
                 'meta': 'Post processing...',
                 'progress': 0}
-        
+
         for idx, plate_id in enumerate(plates):
             if not self._abort:
                 info['text'] = "Plate: '%s' (%d / %d)" % (plate_id, idx+1, len(plates))
@@ -1232,27 +1233,27 @@ class PostProcessingThread(_ProcessingThread):
                 self.set_stage_info(info)
             else:
                 break
-            
+
     def _run_plate(self, plate_id):
         path_out = self._imagecontainer.get_path_out()
 
         path_analyzed = os.path.join(path_out, 'analyzed')
         safe_mkdirs(path_analyzed)
-        
+
         mapping_file = self._mapping_files[plate_id]
-        
-        class_colors = {}       
+
+        class_colors = {}
         for i, name in self._learner_dict['primary'].dctClassNames.items():
             class_colors[i] = self._learner_dict['primary'].dctHexColors[name]
-            
-        class_names = {}       
+
+        class_names = {}
         for i, name in self._learner_dict['primary'].dctClassNames.items():
             class_names[i] = name
-            
+
         self._settings.set_section(SECTION_NAME_POST_PROCESSING)
-        
+
         if self._settings.get2('ibb_analysis'):
-        
+
             ibb_options = {}
             ibb_options['ibb_ratio_signal_threshold'] = self._settings.get2('ibb_ratio_signal_threshold')
             ibb_options['ibb_range_signal_threshold'] = self._settings.get2('ibb_range_signal_threshold')
@@ -1262,13 +1263,13 @@ class PostProcessingThread(_ProcessingThread):
             ibb_options['single_plot_max_plots'] = self._settings.get2('single_plot_max_plots')
             ibb_options['single_plot_ylim_range'] = self._settings.get2('single_plot_ylim_low'), \
                                                     self._settings.get2('single_plot_ylim_high')
-            
+
             tmp = (self._settings.get2('group_by_group'),
                    self._settings.get2('group_by_genesymbol'),
                    self._settings.get2('group_by_oligoid'),
                    self._settings.get2('group_by_position'),
                    )
-            ibb_options['group_by'] = int(numpy.log2(int(reduce(lambda x,y: str(x)+str(y), 
+            ibb_options['group_by'] = int(numpy.log2(int(reduce(lambda x,y: str(x)+str(y),
                                                                 numpy.array(tmp).astype(numpy.uint8)),2))+0.5)
 
             tmp = (self._settings.get2('color_sort_by_group'),
@@ -1276,50 +1277,50 @@ class PostProcessingThread(_ProcessingThread):
                    self._settings.get2('color_sort_by_oligoid'),
                    self._settings.get2('color_sort_by_position'),
                    )
-            
-            ibb_options['color_sort_by'] = int(numpy.log2(int(reduce(lambda x,y: str(x)+str(y), 
+
+            ibb_options['color_sort_by'] = int(numpy.log2(int(reduce(lambda x,y: str(x)+str(y),
                                                                      numpy.array(tmp).astype(numpy.uint8)),2))+0.5)
-            
+
             if not ibb_options['group_by'] < ibb_options['color_sort_by']:
                 raise AttributeError('Group by selection must be more general than the color sorting! (%d !> %d)' % (
                                                                 ibb_options['group_by'], ibb_options['color_sort_by']))
-            
+
             ibb_options['color_sort_by'] = IBBAnalysis.COLOR_SORT_BY[ibb_options['color_sort_by']]
-            
+
             ibb_options['timeing_ylim_range'] = self._settings.get2('plot_ylim1_low'), \
                                                 self._settings.get2('plot_ylim1_high')
-            
+
             path_out_ibb = os.path.join(path_out, 'ibb')
-            safe_mkdirs(path_out_ibb)    
-            ibb_analyzer = IBBAnalysis(path_analyzed, 
-                                       path_out_ibb, 
-                                       plate_id, 
-                                       mapping_file, 
-                                       class_colors, 
+            safe_mkdirs(path_out_ibb)
+            ibb_analyzer = IBBAnalysis(path_analyzed,
+                                       path_out_ibb,
+                                       plate_id,
+                                       mapping_file,
+                                       class_colors,
                                        class_names,
                                        **ibb_options)
             ibb_analyzer.run()
-            
+
         if self._settings.get2('securin_analysis'):
             path_out_securin = os.path.join(path_out, 'sec')
-            safe_mkdirs(path_out_securin) 
-            
+            safe_mkdirs(path_out_securin)
+
             securin_options = {}
-            securin_analyzer = SecurinAnalysis(path_analyzed, 
-                                       path_out_securin, 
-                                       plate_id, 
-                                       mapping_file, 
-                                       class_colors, 
+            securin_analyzer = SecurinAnalysis(path_analyzed,
+                                       path_out_securin,
+                                       plate_id,
+                                       mapping_file,
+                                       class_colors,
                                        class_names,
                                        **securin_options)
             securin_analyzer.run()
-        
+
 #    @staticmethod
-#    def read_data(path,num_frames,col,name):  
+#    def read_data(path,num_frames,col,name):
 #        listing = os.listdir(path)
 #        num_tracks = 0
-#        X = numpy.array(0)      
-#        #infiles = [] 
+#        X = numpy.array(0)
+#        #infiles = []
 #        for infile in listing:
 #            infile_lower = infile.lower() # case insensitive
 #            if (infile_lower.find(name.lower())!=-1) :
@@ -1333,7 +1334,7 @@ class PostProcessingThread(_ProcessingThread):
 #                else :
 #                    X = numpy.vstack((X,data_matrix))
 #        return X,num_tracks
-    
+
 
 class AnalzyerThread(_ProcessingThread):
 
@@ -1356,8 +1357,8 @@ class AnalzyerThread(_ProcessingThread):
             post_hdf5_link_list = result['post_hdf5_link_list']
             if len(post_hdf5_link_list) > 0:
                 link_hdf5_files(sorted(post_hdf5_link_list))
-            
-            
+
+
         # make sure the learner data is only exported while we do sample picking
         if self._settings.get('Classification', 'collectsamples') and not learner is None:
             learner.export()
@@ -1388,7 +1389,7 @@ class MultiAnalzyerThread(AnalzyerThread, MultiProcessingAnalyzerMixin):
         AnalzyerThread.__init__(self, parent, settings, imagecontainer)
         self.setup(ncpu)
         self._abort = False
-        
+
     def set_abort(self, wait=False):
         self._abort = True
         self.abort()
@@ -1398,16 +1399,16 @@ class MultiAnalzyerThread(AnalzyerThread, MultiProcessingAnalyzerMixin):
     def _run(self):
         self._abort = False
         settings_str = self._settings.to_string()
-        
+
         self._settings.set_section('General')
         self.lstPositions = self._settings.get2('positions')
         if self.lstPositions == '' or not self._settings.get2('constrain_positions'):
             self.lstPositions = None
         else:
             self.lstPositions = self.lstPositions.split(',')
-        
+
         job_list = []
-        
+
         for plate_id in self._imagecontainer.plates:
             self._imagecontainer.set_plate(plate_id)
             meta_data = self._imagecontainer.get_meta_data()
@@ -1417,7 +1418,7 @@ class MultiAnalzyerThread(AnalzyerThread, MultiProcessingAnalyzerMixin):
                 else:
                     if pos_id in self.lstPositions:
                         job_list.append((plate_id, settings_str, self._imagecontainer, pos_id))
-                        
+
         self.submit_jobs(job_list)
         self.join()
 
@@ -1663,7 +1664,7 @@ class _ProcessorMixin(object):
                              (self._settings.get('Processing', 'secondary_errorcorrection') and
                               self._settings.get('Processing', 'secondary_processchannel')))):
                         self._process_items.remove(HmmThread)
-                        
+
                     if (HmmThreadPython in self._process_items and
                         self._process_items.index(HmmThreadPython) > 0 and
                         not (self._settings.get('Processing', 'primary_errorcorrection') or
@@ -1718,7 +1719,7 @@ class _ProcessorMixin(object):
                              "Make sure that the R-project is installed.\n\n"\
                              "See README.txt for details." % cmd)
                     is_valid = False
-                    
+
             elif cls is MultiAnalzyerThread:
                 ncpu = cpu_count()
                 (ncpu, ok) = QInputDialog.getInt(None, "On your machine are %d processers available." % ncpu, \
@@ -1761,15 +1762,15 @@ class _ProcessorMixin(object):
                         pix2.fill(Qt.black)
                         qApp._graphics.setPixmap(pix2)
                         qApp._image_dialog.raise_()
-                        
+
                 elif cls is MultiAnalzyerThread:
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
                     self._analyzer = cls(self, self._current_settings, imagecontainer, ncpu)
-                    
+
                     self._set_display_renderer_info()
 
-                    
-                    
+
+
 
                 elif cls is TrainingThread:
                     self._current_settings = self._settings.copy()
@@ -1802,7 +1803,7 @@ class _ProcessorMixin(object):
                                          learner_dict,
                                          self.parent().main_window._imagecontainer)
                     self._analyzer.setTerminationEnabled(True)
-                    
+
                 elif cls is PostProcessingThread:
                     learner_dict = {}
                     for kind in ['primary', 'secondary']:
@@ -2105,11 +2106,11 @@ class _ProcessorMixin(object):
                 widget.hide()
 
         self._analyzer.image_ready.connect(self._on_update_image)
-        
-        
+
+
 class LogRecordStreamHandler(SocketServer.BaseRequestHandler):
     'Handler for a streaming logging request'
-    
+
     def handle(self):
         '''
         Handle multiple requests - each expected to be a 4-byte length,
@@ -2127,12 +2128,12 @@ class LogRecordStreamHandler(SocketServer.BaseRequestHandler):
                 obj = self.unPickle(chunk)
                 record = logging.makeLogRecord(obj)
                 self.handleLogRecord(record)
-            
+
             except socket.error:
                 print 'socket handler abort'
                 break
-                  
-        
+
+
     def unPickle(self, data):
         return pickle.loads(data)
 
@@ -2152,11 +2153,11 @@ class LogRecordStreamHandler(SocketServer.BaseRequestHandler):
 
 
 class NicePidHandler(logging.Handler):
-    
+
     def __init__(self, log_window, level=logging.NOTSET):
         logging.Handler.__init__(self, level)
         self.log_window = log_window
-        
+
     def emit(self, record):
         self.log_window.on_msg_received_emit(record, self.format(record))
 
@@ -2185,4 +2186,3 @@ class BaseProcessorFrame(BaseFrame, _ProcessorMixin):
         # set internal state and enable/disable control buttons
         super(BaseProcessorFrame, self).set_active(state)
         self.enable_control_buttons(state)
-
