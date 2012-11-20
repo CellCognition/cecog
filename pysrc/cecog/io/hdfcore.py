@@ -19,6 +19,9 @@ import collections
 import functools
 import base64
 import zlib
+import time
+from collections import defaultdict
+
 try:
     import vigra
 except ImportError:
@@ -28,7 +31,7 @@ except ImportError:
 # Constants:
 #
 
-GALLERY_SIZE = 60    
+GALLERY_SIZE = 100    
 
 #-------------------------------------------------------------------------------
 # Functions:
@@ -117,6 +120,13 @@ class CH5Position(object):
     def get_tracking(self):
         return self.grp_pos['object']['tracking'].value
     
+    def _get_tracking_lookup(self, obj_idx='obj_idx1'):
+        dset_tracking_idx1 = self.get_tracking()[obj_idx]
+        tracking_lookup_idx1 = defaultdict()
+        for i, o in enumerate(dset_tracking_idx1):
+            tracking_lookup_idx1.setdefault(o, []).append(i)
+        return tracking_lookup_idx1
+    
     def get_class_prediction(self, object_='primary__primary'):
         return self['feature'] \
                    [object_] \
@@ -193,10 +203,7 @@ class CH5Position(object):
                 img[:,:,c] = self.get_gallery_image(index, object_[c])
                 
         return img
-                
-        
-        
-        
+                 
     def get_gallery_image_contour(self, index, object_=('primary__primary',), color=None):
         img = self.get_gallery_image_rgb(index, object_)
         for obj_id in object_:
@@ -217,11 +224,10 @@ class CH5Position(object):
                 col_tmp = hex_to_rgb(col)
                 for x, y in cr:
                     for c in range(3):
-                        img[y, x + i* GALLERY_SIZE, c] = col_tmp[c] 
-                    
+                        img[y, x + i* GALLERY_SIZE, c] = col_tmp[c]               
         return img
             
-    
+
     def get_class_label(self, index, object_='primary__primary'):
         if not isinstance(index, (list, tuple)):
             index = [index]
@@ -230,10 +236,7 @@ class CH5Position(object):
     def get_center(self, index, object_='primary__primary'):
         if not isinstance(index, (list, tuple)):
             index = [index]
-        center_list = []
-        for ind in index:
-            cen1, cen2 = self['feature'][object_]['center'][ind]
-            center_list.append((int(cen1), int(cen2)))
+        center_list = self.get_feature_table(object_, 'center')[index]
         return center_list
     
     def get_class_color(self, index, object_='primary__primary'):
@@ -286,16 +289,13 @@ class CH5Position(object):
                     break
                 else:
                     event_list.append(p1)
-            
             if second_branch_found and output_second_branch:
                 a = list(idx1).index(p1)
                 b = len(idx1) - list(idx1)[-1:0:-1].index(p1) - 1
                 event_list2 = list(idx1[0:a]) + list(idx1[b:])
                 events.append([event_list, event_list2])
             else:
-                #events.append([event_list])
-                events.append(event_list)
-                
+                events.append(event_list)    
         return events
     
     def _track_single(self, start_idx, type_):
@@ -305,28 +305,22 @@ class CH5Position(object):
             sel = -1
         else:
             raise NotImplementedError('type not supported')
-            
-        
-        ### follow last cell
-        idx_list = []
+
         dset_tracking = self.get_tracking()
-        dset_tracking_idx1 = dset_tracking['obj_idx1']
-        dset_tracking_idx1_max = len(dset_tracking_idx1) - 1
         dset_tracking_idx2 = dset_tracking['obj_idx2']
-        idx = start_idx
-        last_p_idx = 0
+        tracking_lookup_idx1 = self._get_tracking_lookup()
+        
+        idx_list = []
+        idx = start_idx  
         while True:
-            if last_p_idx == 0 or True:
-                next_p_idx = (dset_tracking_idx1==idx).nonzero()[0]
+            if idx in tracking_lookup_idx1:
+                next_p_idx = tracking_lookup_idx1[idx]
             else:
-                next_p_idx = (dset_tracking_idx1[last_p_idx: min(last_p_idx+2000,dset_tracking_idx1_max)]==idx).nonzero()[0]
-            if len(next_p_idx) == 0:
                 break
-            #idx = dset_tracking_idx2[next_p_idx[sel] + last_p_idx]
             idx = dset_tracking_idx2[next_p_idx[sel]]
             idx_list.append(idx)
-            last_p_idx = next_p_idx[sel] + last_p_idx
-        return idx_list
+        return idx_list    
+
     
     def track_first(self, start_idx):
         return self._track_single(start_idx, 'first')
@@ -378,6 +372,10 @@ class CH5CachedPosition(CH5Position):
     @memoize
     def get_tracking(self, *args, **kwargs):
         return super(CH5CachedPosition, self).get_tracking(*args, **kwargs)
+    
+    @memoize
+    def _get_tracking_lookup(self, *args, **kwargs):
+        return super(CH5CachedPosition, self)._get_tracking_lookup(*args, **kwargs)
     
     @memoize
     def get_class_prediction(self, object_='primary__primary'):
