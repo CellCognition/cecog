@@ -111,7 +111,9 @@ hmm.read.graph.structure <- function(filename) {
     i <- i + 1
   }
   i <- i + 1
+  print(L[i])
   st <- unlist(strsplit(L[i],split="[ \\t]"))
+  print(st)
   I = nchar(st) > 0
   if (length(I) > 0) {
     st = st[I]
@@ -313,7 +315,7 @@ plot.transition.graph <- function(hmm, loops=FALSE,type=NULL,filename=NULL,weigh
         #}
     }
     z.start <- z
-  #print(K)
+  
     for (i in 1:K)
     {
         if (hmm$start[i] > 0)
@@ -326,14 +328,12 @@ plot.transition.graph <- function(hmm, loops=FALSE,type=NULL,filename=NULL,weigh
     if (z > z.start)
         max.w <- append(max.w, which.max(w[z.start+1:z]) + z.start)
 
-    #print(el)
     idx <- sort(w, index.return=TRUE)$ix
     el <- el[idx,]
     w <- w[idx]
 
-    #print(el)
-
-    g <- graph.edgelist(el,directed = TRUE)
+	el_str = matrix(as.character(el), nrow=nrow(el), ncol=ncol(el))
+    g <- graph.edgelist(el_str, directed = TRUE)
     g$layout <- layout.circle
     w.col <- round(w * 256)
     w.col[w.col < 1] <- 1
@@ -342,16 +342,16 @@ plot.transition.graph <- function(hmm, loops=FALSE,type=NULL,filename=NULL,weigh
     {
         w[] = 1
         w.col[] = 256
-        #w.col[] = 1
     }
 
     E(g)$color <- bwcol[w.col]
-    #E(g)$color[max.w] <- 'red'
     V(g)$color <- c('#FFFFFF', class.colors.hmm)
     V(g)$frame.color <- 'black' #'transparent'#white
 
-    #E(g)$width = 3 * w
-    if (weights)
+	# just numbering the nodes, no class names
+	V(g)$label = as.character(seq(0,K  ))
+			
+	if (weights)
     {
         # mark the outgoing edges with highest prob. red (with the current weight)
         #E(g)$color[max.w] <- redcol[w.col[max.w]]
