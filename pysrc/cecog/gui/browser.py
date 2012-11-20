@@ -126,7 +126,10 @@ class Browser(QMainWindow):
         self.coordinate.channel = self._imagecontainer.channels[0]
 
         meta_data = self._imagecontainer.get_meta_data()
-
+        self.max_time = meta_data.times[-1]
+        self.min_time = meta_data.times[0]
+        self.max_frame = meta_data.dim_t-1
+        
         layout = QGridLayout(frame)
         layout.setContentsMargins(0, 0, 0, 0)
         self.image_viewer = ImageViewer(frame, auto_resize=True)
@@ -136,8 +139,9 @@ class Browser(QMainWindow):
         self.image_viewer.zoom_info_updated.connect(self.on_zoom_info_updated)
 
         self._t_slider = QSlider(Qt.Horizontal, frame)
-        self._t_slider.setMinimum(meta_data.times[0])
-        self._t_slider.setMaximum(meta_data.times[-1])
+        self._t_slider.setMinimum(0)
+        self._t_slider.setMaximum(self.max_frame)
+        
         self._t_slider.setTickPosition(QSlider.TicksBelow)
         self._t_slider.valueChanged.connect(self.on_time_changed_by_slider,
                                             Qt.DirectConnection)
@@ -329,12 +333,20 @@ class Browser(QMainWindow):
         from the Navigator is processed here and further propagated via
         a new Browser event (the Modules are not supposed to know each other).
         """
+        
         self.coordinate = coordinate.copy()
         self._t_slider.blockSignals(True)
         self._imagecontainer.set_plate(coordinate.plate)
-        meta_data = self._imagecontainer.get_meta_data()
-        self._t_slider.setMaximum(meta_data.dim_t)
-        self._t_slider.setValue(coordinate.time)
+
+        # the slider is always working with frames.
+        # reason: it is difficult to forbid slider values between allowed values.        
+        frame = int(round(                          
+                          self.max_frame * (coordinate.time - self.min_time) / 
+                          float(self.max_time - self.min_time)  
+                          )
+                    )
+
+        self._t_slider.setValue(frame)
         self._t_slider.blockSignals(False)
         self._process_image()
         # propagate the signal further to other modules
@@ -395,10 +407,12 @@ class Browser(QMainWindow):
     def on_zoom_info_updated(self, info):
         self.update_statusbar()
 
-    def on_time_changed_by_slider(self, time):
+    def on_time_changed_by_slider(self, frame):
         nav = self._module_manager.get_widget(NavigationModule.NAME)
+        meta_data = self._imagecontainer.get_meta_data()
+        time = meta_data.times[frame]
         nav.nav_to_time(time)
-
+        
     def on_object_region_changed(self, channel, region):
         self._object_region = channel, region
         self._process_image()

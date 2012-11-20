@@ -460,7 +460,16 @@ class Coordinate(object):
     def copy(self):
         return copy.deepcopy(self)
 
-
+    def __str__(self):
+        res = ''
+        for key, info in zip(['plate', 'position','time', 'channel', 'zslice'], 
+                             [self.plate, self.position, self.time, self.channel, self.zslice]):
+            if info is None: 
+                continue
+            else: 
+                res += '\n%s: %s' % (key, str(info))
+        return res
+    
 class ImageContainer(object):
 
     def __init__(self):
