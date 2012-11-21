@@ -617,7 +617,7 @@ class SegmentationPluginConstrainedWatershed(_SegmentationPlugin):
     PARAMS = [('gauss_filter_size', IntTrait(2, 1, 4, label='Gauss filter size')),
               ]
 
-    @stopwatch
+    @stopwatch()
     def _run(self, meta_image, container):
         image = meta_image.image
         img_labels = self._constrained_watershed(image, container.img_labels,

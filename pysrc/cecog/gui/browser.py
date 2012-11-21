@@ -244,15 +244,8 @@ class Browser(QMainWindow):
 
         region_names = []
         for prefix in ['primary', 'secondary', 'tertiary']:
-            region_names.extend(['%s - %s' % (prefix.capitalize(), name) for name in REGION_INFO.names[prefix]])
-        region_names = ['Primary - primary']
-        self._settings.set_section('ObjectDetection')
-        for prefix in ['secondary', 'tertiary']:
-            if self._settings.get('Processing', '%s_processchannel' % prefix):
-                for name in REGION_NAMES_SECONDARY:
-                    if self._settings.get2('%s_regions_%s' % (prefix, name)):
-                        region_names.append('%s - %s' % (prefix.capitalize(),
-                                                         name))
+            region_names.extend(['%s - %s' % (prefix.capitalize(), name) \
+                                 for name in REGION_INFO.names[prefix]])
 
         # FIXME: something went wrong with setting up the current region
         self._object_region = region_names[0].split(' - ')

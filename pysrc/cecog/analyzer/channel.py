@@ -248,8 +248,8 @@ class _Channel(PropertyManager):
     def apply_binning(self, iFactor):
         self.meta_image.binning(iFactor)
 
-#    def apply_segmentation(self, channel):
-#        raise NotImplementedError()
+    def apply_segmentation(self, channel):
+        raise NotImplementedError()
 
     def apply_registration(self):
         img_in = self.meta_image.image
