@@ -77,8 +77,6 @@ from cecog.plugin.segmentation import REGION_INFO
 #
 
 
-
-#@singleton
 class Browser(QMainWindow):
 
     ZOOM_STEP = 1.05
@@ -104,10 +102,7 @@ class Browser(QMainWindow):
 
         self.grabGesture(Qt.SwipeGesture)
 
-        self.setStyleSheet(
-"""
-  QStatusBar { border-top: 1px solid gray; }
-""")
+        self.setStyleSheet("QStatusBar { border-top: 1px solid gray; }")
 
 
         layout = QVBoxLayout(frame)
@@ -243,14 +238,14 @@ class Browser(QMainWindow):
 
 
         # tool bar
-
         toolbar = self.addToolBar('Toolbar')
         toolbar.setMovable(False)
         toolbar.setFloatable(False)
 
         region_names = []
         for prefix in ['primary', 'secondary', 'tertiary']:
-            region_names.extend(['%s - %s' % (prefix.capitalize(), name) for name in REGION_INFO.names[prefix]])
+            region_names.extend(['%s - %s' % (prefix.capitalize(), name) \
+                                 for name in REGION_INFO.names[prefix]])
 
         # FIXME: something went wrong with setting up the current region
         self._object_region = region_names[0].split(' - ')
@@ -350,7 +345,6 @@ class Browser(QMainWindow):
         nav.nav_to_coordinate(coordinate)
 
     def _process_image(self):
-        print 'process image'
         self._stopwatch.reset()
         s = StopWatch()
         settings = _ProcessorMixin.get_special_settings(self._settings)
@@ -385,18 +379,15 @@ class Browser(QMainWindow):
         settings.set2('collectsamples', False)
         settings.set('General', 'rendering', {})
         settings.set('General', 'rendering_class', {})
+        settings.set('Output', 'events_export_gallery_images', False)
+
 
         if len(self._imagecontainer.channels) > 1:
             settings.set('Processing', 'secondary_processChannel', True)
         settings.set('General', 'rendering', {})
-
-        print settings
         analyzer = AnalyzerCore(self.coordinate.plate, settings,
                                 self._imagecontainer)
         analyzer.processPositions(myhack=self)
-        print('PROCESS IMAGE: %s' % s)
-
-    # slots
 
     def on_zoom_info_updated(self, info):
         self.update_statusbar()

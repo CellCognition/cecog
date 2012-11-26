@@ -30,6 +30,7 @@ __all__ = ['SectionProcessing']
 from cecog.traits.settings import _Section
 from cecog.gui.guitraits import BooleanTrait
 from cecog.util.util import unlist
+from cecog import CH_OTHER, CH_VIRTUAL
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -75,6 +76,6 @@ class SectionProcessing(_Section):
             BooleanTrait(False, label='Classification')),
           ('%s_errorcorrection' % x,
             BooleanTrait(False, label='Error correction')),
-        ] for x in ['secondary', 'tertiary']]
+          ] for x in (CH_OTHER+CH_VIRTUAL)]
         )
       )]

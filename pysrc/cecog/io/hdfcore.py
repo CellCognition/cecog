@@ -28,7 +28,7 @@ except ImportError:
 # Constants:
 #
 
-GALLERY_SIZE = 100    
+GALLERY_SIZE = 60    
 
 #-------------------------------------------------------------------------------
 # Functions:
@@ -44,7 +44,7 @@ class memoize(object):
     
     If a memoized method is invoked directly on its class the result will not
     be cached. Instead the method will be invoked like a static method:
-    class Obj(object):
+    class Obj(object_):
         @memoize
         def add_to(self, arg):
             return self + arg
@@ -70,6 +70,35 @@ class memoize(object):
             res = cache[key] = self.func(*args, **kw)
         return res
     
+    
+def hex_to_rgb(hex_string, truncate_to_one=False):
+    """
+    Converts the hex representation of a RGB value (8bit per channel) to
+    its integer components.
+
+    Example: hex_to_rgb('#559988') = (85, 153, 136)
+             hex_to_rgb('559988') = (85, 153, 136)
+
+    @param hexString: the RGB value
+    @type hexString: string
+    @return: RGB integer components (tuple)
+    """
+    if hex_string[:2] == '0x':
+        hex_value = int(hex_string, 16)
+    elif hex_string[0] == '#':
+        hex_value = int('0x'+hex_string[1:], 16)
+    else:
+        hex_value = int('0x'+hex_string, 16)
+    b = hex_value & 0xff
+    g = hex_value >> 8 & 0xff
+    r = hex_value >> 16 & 0xff
+    
+    if truncate_to_one:
+        r = r / float(255)
+        g = g / float(255)
+        b = b / float(255)
+    return (r, g, b)
+
 #-------------------------------------------------------------------------------
 # Classes:
 #
@@ -88,24 +117,27 @@ class CH5Position(object):
     def get_tracking(self):
         return self.grp_pos['object']['tracking'].value
     
-    def get_class_prediction(self, object='primary__primary'):
+    def get_class_prediction(self, object_='primary__primary'):
         return self['feature'] \
-                   [object] \
+                   [object_] \
                    ['object_classification'] \
                    ['prediction'].value
                    
-    def get_crack_contour(self, index, object='primary__primary', bb_corrected=True):
+    def has_classification(self, object_):
+        return 'object_classification' in self['feature'][object_] 
+                   
+    def get_crack_contour(self, index, object_='primary__primary', bb_corrected=True):
         if not isinstance(index, (list, tuple)):
             index = (index,)
         crack_list = []
         for ind in index:
-            crack_str = self['feature'][object]['crack_contour'][ind]
+            crack_str = self['feature'][object_]['crack_contour'][ind]
             crack = numpy.asarray(zlib.decompress( \
                              base64.b64decode(crack_str)).split(','), \
                              dtype=numpy.float32).reshape(-1,2)
             
             if bb_corrected:
-                bb = self['feature'][object]['center'][ind]
+                bb = self['feature'][object_]['center'][ind]
                 crack[:,0] -= bb[0] - GALLERY_SIZE/2
                 crack[:,1] -= bb[1] - GALLERY_SIZE/2 
                 crack.clip(0, GALLERY_SIZE)
@@ -114,9 +146,9 @@ class CH5Position(object):
  
         return crack_list
     
-    def get_object_features(self, object='primary__primary'):
+    def get_object_features(self, object_='primary__primary'):
         return self['feature'] \
-                   [object] \
+                   [object_] \
                    ['object_features'].value
                    
                    
@@ -125,15 +157,15 @@ class CH5Position(object):
                     ['channel'] \
                     [c, t, z, :, :]
                    
-    def get_gallery_image(self, index, object='primary__primary'):
+    def get_gallery_image(self, index, object_='primary__primary'):
         if not isinstance(index, (list, tuple)):
             index = (index,)
         image_list = []
         for ind in index:
-            time_idx = self['object'][object][ind]['time_idx']
-            cen1 = self['feature'][object]['center'][ind]
+            time_idx = self['object'][object_][ind]['time_idx']
+            cen1 = self['feature'][object_]['center'][ind]
             image = numpy.zeros((GALLERY_SIZE,GALLERY_SIZE))
-            channel_idx = self.definitions.image_definition['region']['channel_idx'][self.definitions.image_definition['region']['region_name'] == 'region___%s' % object]
+            channel_idx = self.definitions.image_definition['region']['channel_idx'][self.definitions.image_definition['region']['region_name'] == 'region___%s' % object_]
             tmp_img = self['image'] \
                              ['channel'] \
                              [channel_idx, time_idx, 0,
@@ -143,59 +175,127 @@ class CH5Position(object):
             image_list.append(image)
         return numpy.concatenate(image_list, axis=1)
     
-    def get_class_label(self, index, object='primary__primary'):
+    def get_gallery_image_rgb(self, index, object_=('primary__primary',)):
+        if len(object_) == 1:
+            img_ = self.get_gallery_image(index, object_[0])
+            rgb_shape = img_.shape + (3,)
+            img = numpy.zeros(rgb_shape, img_.dtype)
+            for c in range(3): img[:,:,c] = img_
+            return img
+        
+        for c in range(3):
+            if c == 0:
+                img_ = self.get_gallery_image(index, object_[c])
+                rgb_shape = img_.shape + (3,)
+                img = numpy.zeros(rgb_shape, img_.dtype)
+                img[:,:, 0] = img_
+            if 0 < c < len(object_):
+                img[:,:,c] = self.get_gallery_image(index, object_[c])
+                
+        return img
+                
+        
+        
+        
+    def get_gallery_image_contour(self, index, object_=('primary__primary',), color=None):
+        img = self.get_gallery_image_rgb(index, object_)
+        for obj_id in object_:
+            crack = self.get_crack_contour(index, obj_id)
+            
+            
+            if color is None:
+                class_color = self.get_class_color(index, obj_id)
+                if class_color is None:
+                    class_color = ['#FFFFFF']*len(crack)
+                    
+                if not isinstance(class_color, (list, tuple)):
+                    class_color = [class_color]
+            else:
+                class_color = [color]*len(crack)
+                
+            for i, (cr, col) in enumerate(zip(crack, class_color)):
+                col_tmp = hex_to_rgb(col)
+                for x, y in cr:
+                    for c in range(3):
+                        img[y, x + i* GALLERY_SIZE, c] = col_tmp[c] 
+                    
+        return img
+            
+    
+    def get_class_label(self, index, object_='primary__primary'):
         if not isinstance(index, (list, tuple)):
             index = [index]
-        return self.get_class_prediction(object)['label_idx'][[x for x in index]] + 1
+        return self.get_class_prediction(object_)['label_idx'][[x for x in index]] + 1
     
-    def get_class_color(self, index, object='primary__primary'):
-        res = map(str, self.class_color_def(tuple(self.get_class_label(index, object)), object))
+    def get_center(self, index, object_='primary__primary'):
+        if not isinstance(index, (list, tuple)):
+            index = [index]
+        center_list = []
+        for ind in index:
+            cen1, cen2 = self['feature'][object_]['center'][ind]
+            center_list.append((int(cen1), int(cen2)))
+        return center_list
+    
+    def get_class_color(self, index, object_='primary__primary'):
+        if not self.has_classification(object_):
+            return
+        res = map(str, self.class_color_def(tuple(self.get_class_label(index, object_)), object_))
         if len(res) == 1:
             return res[0]
         return res
     
-    def get_time_idx(self, index, object='primary__primary'):
-        return self['object'][object][index]['time_idx']
+    def get_time_idx(self, index, object_='primary__primary'):
+        return self['object'][object_][index]['time_idx']
     
-    def get_class_name(self, index, object='primary__primary'):
-        res = map(str, self.class_name_def(tuple(self.get_class_label(index)), object))
+    def get_class_name(self, index, object_='primary__primary'):
+        res = map(str, self.class_name_def(tuple(self.get_class_label(index)), object_))
         if len(res) == 1:
             return res[0]
         return res
           
-    def class_color_def(self, class_labels, object):
-        class_mapping = self.definitions.class_definition(object)
+    def class_color_def(self, class_labels, object_):
+        class_mapping = self.definitions.class_definition(object_)
         return [class_mapping['color'][col-1] for col in class_labels]
     
-    def class_name_def(self, class_labels, object):
-        class_mapping = self.definitions.class_definition(object)
+    def class_name_def(self, class_labels, object_):
+        class_mapping = self.definitions.class_definition(object_)
         return [class_mapping['name'][col-1] for col in class_labels]
     
-    def object_feature_def(self, object='primary__primary'):
-        return map(lambda x: str(x[0]), self.definitions.feature_definition['%s/object_features' % object].value)
+    def object_feature_def(self, object_='primary__primary'):
+        return map(lambda x: str(x[0]), self.definitions.feature_definition['%s/object_features' % object_].value)
     
-    def get_object_table(self, object):
-        return self['object'][object].value
+    def get_object_table(self, object_):
+        return self['object'][object_].value
     
-    def get_feature_table(self, object, feature):
-        return self['feature'][object][feature].value
+    def get_feature_table(self, object_, feature):
+        return self['feature'][object_][feature].value
     
-    def get_events(self):
+    def get_events(self, output_second_branch=False):
         dset_event = self.get_object_table('event')
         events = []
-        for event_id in range(1,dset_event['obj_id'].max()):
+        for event_id in range(dset_event['obj_id'].max()):
             idx = numpy.where(dset_event['obj_id'] == event_id)
             idx1 = dset_event[idx]['idx1']
             idx2 = dset_event[idx]['idx2']
-            
+            second_branch_found = False
             event_list = []
             for p1, _ in zip(idx1, idx2):
                 if p1 in event_list:
                     # branch ends
+                    second_branch_found = True
                     break
                 else:
                     event_list.append(p1)
-            events.append(event_list)
+            
+            if second_branch_found and output_second_branch:
+                a = list(idx1).index(p1)
+                b = len(idx1) - list(idx1)[-1:0:-1].index(p1) - 1
+                event_list2 = list(idx1[0:a]) + list(idx1[b:])
+                events.append([event_list, event_list2])
+            else:
+                #events.append([event_list])
+                events.append(event_list)
+                
         return events
     
     def _track_single(self, start_idx, type):
@@ -272,36 +372,36 @@ class CH5CachedPosition(CH5Position):
         return super(CH5CachedPosition, self).get_tracking(*args, **kwargs)
     
     @memoize
-    def get_class_prediction(self, object='primary__primary'):
-        return super(CH5CachedPosition, self).get_class_prediction(object)
+    def get_class_prediction(self, object_='primary__primary'):
+        return super(CH5CachedPosition, self).get_class_prediction(object_)
 
     @memoize
-    def get_object_features(self, object='primary__primary'):
-        return super(CH5CachedPosition, self).get_object_features(object)
+    def get_object_features(self, object_='primary__primary'):
+        return super(CH5CachedPosition, self).get_object_features(object_)
     
     @memoize
     def get_gallery_image(self, *args, **kwargs):
         return super(CH5CachedPosition, self).get_gallery_image(*args, **kwargs)
     
     @memoize
-    def class_name_def(self, class_labels, object='primary__primary'):
-        return super(CH5CachedPosition, self).class_name_def(class_labels, object)
+    def class_name_def(self, class_labels, object_='primary__primary'):
+        return super(CH5CachedPosition, self).class_name_def(class_labels, object_)
     
     @memoize
-    def class_color_def(self, class_labels, object='primary__primary'):
-        return super(CH5CachedPosition, self).class_color_def(class_labels, object)
+    def class_color_def(self, class_labels, object_='primary__primary'):
+        return super(CH5CachedPosition, self).class_color_def(class_labels, object_)
     
     @memoize
-    def object_feature_def(self, object='primary__primary'):
-        return super(CH5CachedPosition, self).object_feature_def(object)
+    def object_feature_def(self, object_='primary__primary'):
+        return super(CH5CachedPosition, self).object_feature_def(object_)
     
     @memoize
-    def get_class_name(self, class_labels, object='primary__primary'):
-        return super(CH5CachedPosition, self).get_class_name(class_labels, object)
+    def get_class_name(self, class_labels, object_='primary__primary'):
+        return super(CH5CachedPosition, self).get_class_name(class_labels, object_)
         
     @memoize
-    def get_class_color(self, class_labels, object='primary__primary'):
-        return super(CH5CachedPosition, self).get_class_color(class_labels, object)
+    def get_class_color(self, class_labels, object_='primary__primary'):
+        return super(CH5CachedPosition, self).get_class_color(class_labels, object_)
     
     def clear_cache(self):
         if hasattr(self, '_memoize__cache'):
@@ -336,8 +436,8 @@ class CH5File(object):
         return map(str, self._file_handle[path].keys())
     
     @memoize
-    def class_definition(self, object):
-        return self._file_handle['/definition/feature/%s/object_classification/class_labels' % object].value
+    def class_definition(self, object_):
+        return self._file_handle['/definition/feature/%s/object_classification/class_labels' % object_].value
     
     @property
     def feature_definition(self):
@@ -442,8 +542,8 @@ class TestCH5Examples(CH5TestBase):
         fig.add_axes(ax)
         ax.imshow(h2b[400:600, 400:600], cmap='gray')
         fig.savefig('img1.png', format='png')
-        ax.imshow(tub[400:600, 400:600], cmap='gray')
-        fig.savefig('img2.png', format='png')
+        ax.imshow(tub[400:600, 400:600], cmap='g2ay')
+        #fig.savefig('img2.png', format='png')
         
 #        vigra.impex.writeImage(h2b[400:600, 400:600].swapaxes(1,0), 'img1.png')   
 #        vigra.impex.writeImage(tub[400:600, 400:600].swapaxes(1,0), 'img2.png')   
@@ -519,7 +619,7 @@ class TestCH5Examples(CH5TestBase):
         image = []
         for event in events[:5]:
             image.append(self.pos.get_gallery_image(tuple(event)))
-        vigra.impex.writeImage(numpy.concatenate(image, axis=0).swapaxes(1,0), 'mitotic_events.png')
+        #vigra.impex.writeImage(numpy.concatenate(image, axis=0).swapaxes(1,0), 'mitotic_events.png')
 
 if __name__ == '__main__':
     unittest.main()

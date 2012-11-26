@@ -19,13 +19,14 @@ __all__ = ['TraitDisplayMixin']
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
-import os, \
-       types, \
-       functools
+import os
+import types
+import functools
 
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
+
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
@@ -60,12 +61,15 @@ from cecog.gui.util import show_html
 # classes:
 #
 
-class TraitDisplayMixin(object):
+class TraitDisplayMixin(QFrame):
 
     SECTION_NAME = None
     DISPLAY_NAME = None
 
-    def __init__(self, settings, has_label_link=True, label_click_callback=None):
+    def __init__(self, settings,
+                 parent=None, has_label_link=True, label_click_callback=None,
+                 *args, **kw):
+        super(TraitDisplayMixin, self).__init__(parent , *args, **kw)
         self._registry = {}
         self._settings = settings
         self._extra_columns = 0
@@ -90,11 +94,12 @@ class TraitDisplayMixin(object):
                                         QSizePolicy.Expanding))
         frame.layout().addWidget(dummy, frame._input_cnt, 0)
         frame._input_cnt += 1
-        
+
     def add_text(self, text_str):
         frame = self._get_frame(name=self._tab_name)
         text = QLabel(text_str)
-        frame.layout().addWidget(text, frame._input_cnt, 0, Qt.AlignRight|Qt.AlignTop)
+        frame.layout().addWidget(text, frame._input_cnt, 0,
+                                 Qt.AlignRight|Qt.AlignTop)
         frame._input_cnt += 1
 
     def add_line(self):
@@ -152,7 +157,8 @@ class TraitDisplayMixin(object):
                                    alignment=alignment)
                     self.add_input(info[0][1], parent=w_group2, grid=(0,1,1,1),
                                    alignment=alignment)
-                    w_group.layout().addWidget(w_group2, w_group._input_cnt, 1, 1, 1)
+                    w_group.layout().addWidget(w_group2, w_group._input_cnt,
+                                               1, 1, 1)
                 else:
                     trait_name2 = info[0]
                     # add a line
@@ -187,14 +193,16 @@ class TraitDisplayMixin(object):
 
         if self._has_label_link:
             w_label.setTextFormat(Qt.AutoText)
-            w_label.setStyleSheet("*:hover { border:none; background: #e8ff66; text-decoration: underline;}")
-            w_label.setText('<style>a { color: black; text-decoration: none;}</style>'
-                            '<a href="%s">%s</a>' % (link, label))
+            w_label.setStyleSheet(("*:hover { border:none; background: "
+                                   "#e8ff66; text-decoration: underline;}"))
+            w_label.setText(('<style>a { color: black; text-decoration: none;'
+                             '}</style> <a href="%s">%s</a>') % (link, label))
             w_label.setToolTip('Click on the label for help.')
             if self._label_click_callback is None:
                 w_label.linkActivated.connect(self._on_show_help)
             else:
-                w_label.linkActivated.connect(functools.partial(self._label_click_callback, link))
+                w_label.linkActivated.connect(
+                    functools.partial(self._label_click_callback, link))
         else:
             w_label.setText(label)
         return w_label
@@ -215,6 +223,7 @@ class TraitDisplayMixin(object):
         #w_doc = None
         #w_label.setMinimumWidth(width)
 
+        # read value from settings-instance
         value = self._get_value(trait_name)
 
         handler = lambda name: lambda value: self._set_value(name, value)
@@ -237,13 +246,14 @@ class TraitDisplayMixin(object):
             self.connect(w_input, SIGNAL('textEdited(QString)'),
                          handler(trait_name))
 
-            if trait.widget_info != StringTrait.STRING_NORMAL and trait.widget_info != StringTrait.STRING_GRAYED:
+            if trait.widget_info != StringTrait.STRING_NORMAL and \
+                    trait.widget_info != StringTrait.STRING_GRAYED:
                 w_button = QPushButton("Browse", parent)
                 handler2 = lambda name, mode: lambda: \
                     self._on_browse_name(name, mode)
                 self.connect(w_button, SIGNAL('clicked()'),
                              handler2(trait_name, trait.widget_info))
-            
+
             if trait.widget_info == StringTrait.STRING_GRAYED:
                 w_input.setReadOnly(True)
                 w_input.setEnabled(False)
@@ -258,13 +268,6 @@ class TraitDisplayMixin(object):
             self.connect(w_input, SIGNAL('valueChanged(int)'),
                          handler(trait_name))
             trait.set_widget(w_input)
-#            w_input = CecogSpinBox(parent, trait.checkable)
-#            w_input.setRange(trait.min_value, trait.max_value)
-#            w_input.setSizePolicy(policy_fixed)
-#            trait.set_value(w_input, value)
-#            if not trait.step is None:
-#                w_input.setSingleStep(trait.step)
-#            self.connect(w_input.widget, SIGNAL('valueChanged(int)'), handler(name))
 
         elif isinstance(trait, FloatTrait):
             w_input = QDoubleSpinBox(parent)
@@ -294,9 +297,7 @@ class TraitDisplayMixin(object):
             w_input.setMaximumHeight(100)
             w_input.setSelectionMode(QListWidget.ExtendedSelection)
             w_input.setSizePolicy(policy_fixed)
-            #print "moo1", value
-            #value = trait.convert(value)
-            #print "moo2", value
+
             for item in trait.list_data:
                 w_input.addItem(str(item))
             trait.set_value(w_input, value)
@@ -425,7 +426,6 @@ class TraitDisplayMixin(object):
 
 
     # event methods
-
     def _on_show_help(self, link):
         show_html(self.SECTION_NAME, link=link,
                   header='_header', footer='_footer')
@@ -449,7 +449,8 @@ class TraitDisplayMixin(object):
             if mode == StringTrait.STRING_FILE:
                 result = QFileDialog.getOpenFileName(self, 'Select a file', dir)
             else:
-                result = QFileDialog.getExistingDirectory(self, 'Select a directory', dir)
+                result = QFileDialog.getExistingDirectory(self, \
+                               'Select a directory', dir)
 
             if result:
                 self._registry[name].setText(result)

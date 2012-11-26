@@ -9,22 +9,14 @@
                  See trunk/AUTHORS.txt for author contributions.
 """
 
-__all__ = ['PLUGIN_MANAGERS',
-           'PRIMARY_PLUGIN_MANAGER',
-           'SECONDARY_PLUGIN_MANAGER',
-           'TERTIARY_PLUGIN_MANAGER',
-           'REGION_INFO',
-           ]
+__all__ = [ 'PLUGIN_MANAGERS', 'PRIMARY_PLUGIN_MANAGER', 'SECONDARY_PLUGIN_MANAGER',
+            'TERTIARY_PLUGIN_MANAGER', 'REGION_INFO' ]
 
-from cecog import (PLUGIN_MANAGERS,
-                   SEGMENTATION_MANAGERS,
-                   )
-
+from cecog import PLUGIN_MANAGERS, SEGMENTATION_MANAGERS
 from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
+from cecog.plugin.segmentation.manager import RegionInformation
+from cecog.plugin.segmentation.manager import SegmentationPluginManager
 
-from cecog.plugin.segmentation.manager import (RegionInformation,
-                                               SegmentationPluginManager,
-                                               )
 from cecog.plugin.segmentation.strategies import (SegmentationPluginPrimary,
                                                   SegmentationPluginExpanded,
                                                   SegmentationPluginInside,
@@ -39,14 +31,16 @@ from cecog.plugin.segmentation.strategies import (SegmentationPluginPrimary,
 
 REGION_INFO = RegionInformation()
 
-PRIMARY_SEGMENTATION_MANAGER = SegmentationPluginManager('Primary segmentation',
+PRIMARY_SEGMENTATION_MANAGER = SegmentationPluginManager(REGION_INFO,
+                                                         'Primary segmentation',
                                                          'primary_segmentation',
                                                          SECTION_NAME_OBJECTDETECTION)
 PRIMARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginPrimary)
 PRIMARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginIlastik)
 PRIMARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginPrimaryLoadFromFile)
 
-SECONDARY_SEGMENTATION_MANAGER = SegmentationPluginManager('Secondary segmentation',
+SECONDARY_SEGMENTATION_MANAGER = SegmentationPluginManager(REGION_INFO,
+                                                           'Secondary segmentation',
                                                            'secondary_segmentation',
                                                            SECTION_NAME_OBJECTDETECTION)
 SECONDARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginExpanded)
@@ -56,7 +50,8 @@ SECONDARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginRim)
 SECONDARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginPropagate)
 SECONDARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginConstrainedWatershed)
 
-TERTIARY_SEGMENTATION_MANAGER = SegmentationPluginManager('Tertiary segmentation',
+TERTIARY_SEGMENTATION_MANAGER = SegmentationPluginManager(REGION_INFO,
+                                                          'Tertiary segmentation',
                                                           'tertiary_segmentation',
                                                           SECTION_NAME_OBJECTDETECTION)
 TERTIARY_SEGMENTATION_MANAGER.register_plugin(SegmentationPluginExpanded)
@@ -72,4 +67,3 @@ SEGMENTATION_MANAGERS.extend([PRIMARY_SEGMENTATION_MANAGER,
                               TERTIARY_SEGMENTATION_MANAGER])
 
 PLUGIN_MANAGERS.extend(SEGMENTATION_MANAGERS)
-

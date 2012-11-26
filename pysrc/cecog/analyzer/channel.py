@@ -20,10 +20,12 @@ __all__ = []
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
-import sys, \
-       types, \
-       logging, \
-       copy
+import os
+import sys
+import glob
+import copy
+import types
+import logging
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -43,7 +45,6 @@ from pdk.attributemanagers import (get_attribute_values,
 from pdk.attributes import Attribute
 from pdk.iterator import unique, flatten
 from pdk.map import dict_values
-from pdk.errors import NotImplementedMethodError
 
 import numpy
 
@@ -142,8 +143,8 @@ class _Channel(PropertyManager):
                       Attribute('dctContainers')
                       ]
 
-    def __init__(self, **dctOptions):
-        super(_Channel, self).__init__(**dctOptions)
+    def __init__(self, **kw):
+        super(_Channel, self).__init__(**kw)
         self._oLogger = logging.getLogger(self.__class__.__name__)
         self.clear()
 
@@ -184,7 +185,7 @@ class _Channel(PropertyManager):
         self._lstZSlices = []
         for x in self.dctContainers.keys():
             del self.dctContainers[x]
-            
+
         # remove crack_contours
         for regionName in self.region_names():
             region = self.get_region(regionName)
@@ -247,25 +248,24 @@ class _Channel(PropertyManager):
     def apply_binning(self, iFactor):
         self.meta_image.binning(iFactor)
 
-#    def apply_segmentation(self, channel):
-#        raise NotImplementedError()
+    def apply_segmentation(self, channel):
+        raise NotImplementedError()
 
     def apply_registration(self):
         img_in = self.meta_image.image
-        image = ccore.subImage(img_in,
-                               ccore.Diff2D(*self.registration_start)-
-                               ccore.Diff2D(*self.channelRegistration),
-                               ccore.Diff2D(*self.new_image_size))
+#        image = ccore.subImage(img_in,
+#                               ccore.Diff2D(*self.registration_start)-
+#                               ccore.Diff2D(*self.channelRegistration),
+#                               ccore.Diff2D(*self.new_image_size))
+        ### FIXME
+        image = img_in
         self.meta_image.set_image(image)
 
     def apply_features(self):
 
         for region_name, container in self.dctContainers.iteritems():
-
-            oObjectHolder = ObjectHolder(region_name)
-
+            object_holder = ObjectHolder(region_name)
             if not container is None:
-
                 for strFeatureCategory in self.lstFeatureCategories:
                     #print strFeatureCategory
                     sys.stdout.flush()
@@ -279,55 +279,74 @@ class _Channel(PropertyManager):
                             container.haralick_distance = iHaralickDistance
                             container.applyFeature(strHaralickCategory)
 
-                for iObjectId, oObject in container.getObjects().iteritems():
-                    dctFeatures = oObject.getFeatures()
+                for obj_id, c_obj in container.getObjects().iteritems():
+                    dctFeatures = c_obj.getFeatures()
 
-                    # build a new ImageObject
-                    oImageObject = ImageObject(oObject)
-                    oImageObject.iId = iObjectId
+                        # build a new ImageObject
+                    obj = ImageObject(c_obj)
+                    obj.iId = obj_id
+
+                    ul = obj.oRoi.upperLeft
+                    crack = [(pos[0] + ul[0], pos[1] + ul[1])
+                             for pos in
+                             container.getCrackCoordinates(obj_id)
+                             ]
+                    obj.crack_contour = crack
 
                     if self.lstFeatureNames is None:
                         self.lstFeatureNames = sorted(dctFeatures.keys())
 
                     # assign feature values in sorted order as NumPy array
-                    oImageObject.aFeatures = \
+                    obj.aFeatures = \
                         numpy.asarray(dict_values(dctFeatures,
                                                   self.lstFeatureNames))
-
-                    ul = oImageObject.oRoi.upperLeft
-                    crack = [(pos[0] + ul[0], pos[1] + ul[1])
-                             for pos in
-                             container.getCrackCoordinates(iObjectId)
-                             ]
-                    oImageObject.crack_contour = crack
-
-                    # assign feature values in sorted order as NumPy array
-                    oImageObject.aFeatures = \
-                        numpy.asarray(dict_values(dctFeatures,
-                                                  self.lstFeatureNames))
-                        
-                    oObjectHolder[iObjectId] = oImageObject
+                    object_holder[obj_id] = obj
 
             if not self.lstFeatureNames is None:
-                oObjectHolder.setFeatureNames(self.lstFeatureNames)
-            self._dctRegions[region_name] = oObjectHolder
+                object_holder.setFeatureNames(self.lstFeatureNames)
+            self._dctRegions[region_name] = object_holder
 
-    def normalize_image(self):
+    def _z_slice_image(self, plate_id):
+        if not os.path.isdir(str(self.strBackgroundImagePath)):
+            raise IOError("No z-slice correction image directory set")
+
+        path = glob.glob(os.path.join(self.strBackgroundImagePath, plate_id+".tiff"))
+        path.extend(glob.glob(
+                os.path.join(self.strBackgroundImagePath, plate_id+".tif")))
+
+        if len(path) > 1:
+            raise IOError("Multiple z-slice flat field corr. images found.\n"
+                          "Directory must contain only one file per plate\n"
+                          "(%s)" %", ".join(path))
+        try:
+            # ccore need str not unicode
+            bg_image = ccore.readImageFloat(str(path[0]))
+        except Exception, e:
+            # catching all errors, even files that are no images
+            raise IOError(("Z-slice flat field correction image\n"
+                           " could not be loaded! (file: %s)"
+                           %path[0]))
+        return bg_image
+
+    def normalize_image(self, plate_id=None):
         img_in = self.meta_image.image
         if self.bFlatfieldCorrection:
-            self._oLogger.debug("* using flat field correction with image %s" % self.strBackgroundImagePath)
-            imgBackground = ccore.readImageFloat(self.strBackgroundImagePath)
-            
+            self._oLogger.debug("* using flat field correction with image from %s" \
+                                    % self.strBackgroundImagePath)
+            imgBackground = self._z_slice_image(plate_id)
+
             crop_coordinated = MetaImage.get_crop_coordinates()
             if crop_coordinated is not None:
                 self._oLogger.debug("* applying cropping to background image")
-                imgBackground = ccore.subImage(imgBackground, ccore.Diff2D(crop_coordinated[0],
-                                                                           crop_coordinated[1]),
-                                                              ccore.Diff2D(crop_coordinated[2],
-                                                                           crop_coordinated[3]))
+                imgBackground = ccore.subImage(imgBackground,
+                                               ccore.Diff2D(crop_coordinated[0],
+                                                            crop_coordinated[1]),
+                                               ccore.Diff2D(crop_coordinated[2],
+                                                            crop_coordinated[3]))
 
             img_in = ccore.flatfieldCorrection(img_in, imgBackground, 0.0, True)
-            img_out = ccore.linearTransform2(img_in, self.fNormalizeMin, self.fNormalizeMax, 0, 255, 0, 255)
+            img_out = ccore.linearTransform2(img_in, self.fNormalizeMin,
+                                             self.fNormalizeMax, 0, 255, 0, 255)
         else:
             self._oLogger.debug("* not using flat field correction")
             if type(img_in) == ccore.UInt16Image:
@@ -338,7 +357,7 @@ class _Channel(PropertyManager):
                 img_out = ccore.linearTransform2(img_in, int(self.fNormalizeMin),
                                                  int(self.fNormalizeMax),
                                                  0, 255, 0, 255)
-                
+
             else:
                 img_out = img_in
 
@@ -382,9 +401,3 @@ class TertiaryChannel(_Channel):
 
     RANK = 3
     SEGMENTATION = TERTIARY_SEGMENTATION_MANAGER
-
-
-#-------------------------------------------------------------------------------
-# main:
-#
-

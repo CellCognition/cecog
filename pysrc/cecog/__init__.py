@@ -14,14 +14,12 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = ['VERSION',
-           'VERSION_NUM',
-           'PLUGIN_MANAGERS',
-           ]
+__all__ = ['VERSION', 'VERSION_NUM', 'PLUGIN_MANAGERS', 'CHANNEL_PREFIX', 'APPNAME']
 
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
+from collections import namedtuple
 
 #-------------------------------------------------------------------------------
 # cecog imports:
@@ -33,6 +31,7 @@ from cecog.config import (init_constants,
 #
 VERSION_NUM = (1, 4, 0)
 VERSION = '.'.join([str(digit) for digit in VERSION_NUM])
+APPNAME = 'CecogAnalyzer'
 
 HAS_GUI = False
 
@@ -43,8 +42,10 @@ JOB_CONTROL_TERMINATE = 'Terminate'
 SEGMENTATION_MANAGERS = []
 PLUGIN_MANAGERS = []
 
-CHANNEL_PREFIX = ['primary', 'secondary', 'tertiary']
+CH_PRIMARY = ["primary"]
+CH_VIRTUAL = ["merged"]
+CH_OTHER = ["secondary", "tertiary"]
+CHANNEL_PREFIX = CH_PRIMARY + CH_OTHER + CH_VIRTUAL
 
 init_application_support_path(VERSION)
 init_constants()
-

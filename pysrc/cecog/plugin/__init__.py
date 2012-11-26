@@ -73,6 +73,7 @@ class PluginManager(object):
     LABEL = ''
 
     def __init__(self, display_name, name, section):
+        super(PluginManager, self).__init__()
         self.display_name = display_name
         self.name = name
         self.section = section
@@ -198,6 +199,7 @@ class PluginManager(object):
     def get_plugin_instance(self, name):
         return self._instances[name]
 
+    # FIXME **option is dangerous, what if one calls run(foo=bar)
     @stopwatch(level=logging.INFO)
     def run(self, *args, **options):
         results = OrderedDict()
@@ -205,8 +207,9 @@ class PluginManager(object):
             inst_args = list(args)
             if not instance.REQUIRES is None:
                 if not 'requirements' in options:
-                    raise ValueError("PluginManager(%s).run needs 'requirements' options, because Plugin instances "
-                                     "'%s' defines requirements." % (self.name, instance.name))
+                    raise ValueError(("PluginManager(%s).run needs 'requirements' options, "
+                                      "because Plugin instances '%s' defines requirements."
+                                      % (self.name, instance.name)))
                 requirements = options['requirements']
                 for idx in range(len(instance.REQUIRES)):
                     value = instance.get_requirement_info(idx)[1]

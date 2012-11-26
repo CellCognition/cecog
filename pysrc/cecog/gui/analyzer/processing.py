@@ -31,6 +31,7 @@ import threading, \
 # cecog imports:
 #
 from cecog import CHANNEL_PREFIX, VERSION
+from cecog import CH_OTHER, CH_VIRTUAL
 from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
 from cecog.gui.analyzer import (BaseProcessorFrame,
                                 AnalzyerThread,
@@ -62,7 +63,7 @@ from PyQt4.QtCore import *
 class SubProcessLogWindow(QFrame):
     lock = threading.Lock()
     on_msg_received = pyqtSignal(str, str, int)
-    
+
     def __init__(self, parent):
         QFrame.__init__(self)
         self.setWindowTitle('Process log window')
@@ -73,7 +74,7 @@ class SubProcessLogWindow(QFrame):
         self.tab_widget.setUsesScrollButtons(True)
         self._layout.addWidget(self.tab_widget)
         self.on_msg_received.connect(self.on_show_msg)
-        
+
     def init_process_list(self, sub_process_names):
         self.tab_widget.clear()
         self.items = {}
@@ -81,7 +82,7 @@ class SubProcessLogWindow(QFrame):
             lw = QPlainTextEdit(self.tab_widget)
             self.items[p] = lw
             self.tab_widget.addTab(lw, p)
-        
+
     def on_show_msg(self, name, msg, level):
         print '+'*10, msg, level
         if level == logging.INFO:
@@ -94,15 +95,15 @@ class SubProcessLogWindow(QFrame):
             msg = "<font color='blue'><b>" + msg + '</b></font>'
             self.items[name].appendHtml(msg)
         elif level > logging.WARNING:
-            msg = "<font color='red'><b>" + msg + '</b></font>' 
+            msg = "<font color='red'><b>" + msg + '</b></font>'
         else:
             self.items[name].appendPlainText(msg)
-            
+
     def on_msg_received_emit(self, record, formated_msg):
         self.on_msg_received.emit(record.name, formated_msg, record.levelno)
 
-        
-        
+
+
 class ProcessingFrame(BaseProcessorFrame):
 
     SECTION_NAME = SECTION_NAME_PROCESSING
@@ -114,12 +115,12 @@ class ProcessingFrame(BaseProcessorFrame):
                                      [AnalzyerThread,
                                       HmmThread],
                                      ('Start processing', 'Stop processing'))
-        
+
         self.register_control_button('multi_process',
                                      [MultiAnalzyerThread,
                                       HmmThread],
                                      ('Start multi processing', 'Stop multi processing'))
-        
+
 
         self.add_group(None,
                        [('primary_featureextraction', (0,0,1,1)),
@@ -129,7 +130,7 @@ class ProcessingFrame(BaseProcessorFrame):
                         ('primary_errorcorrection', (4,0,1,1))
                         ], link='primary_channel', label='Primary channel')
 
-        for prefix in ['secondary', 'tertiary']:
+        for prefix in CH_OTHER+CH_VIRTUAL:
             self.add_group('%s_processchannel' % prefix,
                            [('%s_featureextraction' % prefix, (0,0,1,1)),
                             ('%s_classification' % prefix, (1,0,1,1)),

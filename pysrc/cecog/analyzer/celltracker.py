@@ -424,6 +424,13 @@ class CellTracker(OptionManager):
                                          (dist, strNodeIdC))
 
             # prevent split and merge for one node at the same time
+            
+            ### FIXME: Here we loose alomost all cell mappings, 
+            ### because if fMaxObjectDistance is big, we find for
+            ### many cells splits and merges and there will never
+            ### be an one-to-one mapping => the bigger the radius, the less mappings 
+            ### which is counter intuitive
+             
             for id_c in dctMerges:
                 nodes = dctMerges[id_c]
                 if len(nodes) == 1:
@@ -1697,13 +1704,6 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                             if len(lstNodes) == track_length:
                                 lstTracks.append(lstNodes)
 
-                        #lstLengths = [len(x) for x in lstTracks]
-                        #assert allEqual(lstLengths)
-
-                        #if self.getOption('bFollowOnlyOneCell'):
-                        #    # take the first track from the list
-                        #    lstTracks = [lstTracks[0]]
-
                         for cnt, track in enumerate(lstTracks):
                             new_start_id = '%s_%d' % (strStartId, cnt+1)
                             dctResults[new_start_id] = {'splitId'  : lstForwardNodeIds[iSplitIdx-1],
@@ -1741,10 +1741,6 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                     dctResults['_current'] += idx
                 self._forwardVisitor(strTailId, dctResults, dctVisitedNodes, iLevel=iLevel+1)
 
-#    @staticmethod
-#    def getNodeIdFromComponents(frame,  obj_id, child_id=None):
-#        return '%d_%s' % (frame, obj_id)
-#
     @staticmethod
     def getComponentsFromNodeId(strNodeId):
         items = map(int, strNodeId.split('_'))

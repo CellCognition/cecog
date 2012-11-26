@@ -31,8 +31,7 @@ from PyQt4.Qt import *
 # cecog imports:
 #
 from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACTION
-from cecog.gui.analyzer import (BaseFrame,
-                                )
+from cecog.gui.analyzer import BaseFrame
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -86,6 +85,3 @@ class FeatureExtractionFrame(BaseFrame):
                            link='%s_featureextraction' % prefix,
                            label='Feature extraction')
             self.add_expanding_spacer()
-
-        #self._init_control()
-

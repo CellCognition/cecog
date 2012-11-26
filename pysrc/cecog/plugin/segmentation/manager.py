@@ -9,10 +9,7 @@
                  See trunk/AUTHORS.txt for author contributions.
 """
 
-__all__ = ['RegionInformation',
-           'SegmentationPluginManager',
-           '_SegmentationPlugin',
-           ]
+__all__ = ['RegionInformation', 'SegmentationPluginManager', '_SegmentationPlugin']
 
 #-------------------------------------------------------------------------------
 # standard library imports:
@@ -25,9 +22,8 @@ __all__ = ['RegionInformation',
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog.plugin import (PluginManager,
-                          _Plugin,
-                          )
+from cecog import CHANNEL_PREFIX
+from cecog.plugin import PluginManager, _Plugin
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -42,23 +38,26 @@ from cecog.plugin import (PluginManager,
 #
 class RegionInformation(object):
 
-    names = {'primary': [], 'secondary': [], 'tertiary': []}
+    names = dict([(p, list()) for p in CHANNEL_PREFIX])
     colors = {}
-
 
 class SegmentationPluginManager(PluginManager):
 
     LABEL = 'Segmentation plugins'
 
+    def __init__(self, region_info, *args, **kw):
+        super(SegmentationPluginManager, self).__init__(*args, **kw)
+        self.region_info = region_info
+
     def notify_instance_modified(self, plugin_name, removed=False):
-        super(SegmentationPluginManager, self).notify_instance_modified(plugin_name, removed)
-        #FIXME: should not be imported here
-        from cecog.plugin.segmentation import REGION_INFO
+        super(SegmentationPluginManager, self).notify_instance_modified( \
+            plugin_name, removed)
         prefix = self.name.split('_')[0]
 
-        REGION_INFO.names[prefix] = self.get_plugin_names()
-        REGION_INFO.colors.update(dict([(name, self.get_plugin_instance(name).COLOR)
-                                        for name in self.get_plugin_names()]))
+        self.region_info.names[prefix] = self.get_plugin_names()
+        self.region_info.colors.update( \
+            dict([(name, self.get_plugin_instance(name).COLOR)
+                  for name in self.get_plugin_names()]))
 
 
 class _SegmentationPlugin(_Plugin):
@@ -70,4 +69,3 @@ class _SegmentationPlugin(_Plugin):
 #-------------------------------------------------------------------------------
 # main:
 #
-

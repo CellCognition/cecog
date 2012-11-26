@@ -48,23 +48,22 @@ SECTION_NAME_CLASSIFICATION = 'Classification'
 #-------------------------------------------------------------------------------
 # classes:
 #
+
 class SectionClassification(_Section):
 
     SECTION_NAME = SECTION_NAME_CLASSIFICATION
 
-    OPTIONS = \
-    unlist(
-    [[('%s_classification' % x,
-     [('%s_classification_envpath' % x, StringTrait('', 1000, label='Classifier folder',
-                                                    widget_info=StringTrait.STRING_PATH)),
-      ('%s_classification_regionname' % x, SelectionTrait2(None, [], label='Region name')),
-      ('%s_classification_annotationfileext' % x, StringTrait('.xml', 50, label='Annotation ext.')),
-      ])]
-      for x in CHANNEL_PREFIX]
-      ) + \
-      [
-      ('collectsamples',
-       [('collectsamples', BooleanTrait(False)),
-        ('collectsamples_prefix', StringTrait('',100)),
-        ])
-      ]
+    OPTIONS = [('%s_classification' % x, [ ('%s_classification_envpath' % x, \
+                                       StringTrait('', 1000, label='Classifier folder',
+                                                   widget_info=StringTrait.STRING_PATH)),
+                                     ('%s_classification_regionname' % x,
+                                      SelectionTrait2(None, [], label='Region name')),
+                                     ('%s_classification_annotationfileext' % x,
+                                      StringTrait('.xml', 50, label='Annotation ext.')) ]) \
+           for x in CHANNEL_PREFIX] + \
+           [('collectsamples', [ ('collectsamples', BooleanTrait(False)),
+                                 ('collectsamples_prefix', StringTrait('',100))]),
+            ('merged_channel', [ ('primary_channel', BooleanTrait(True, label='Primary Channel')),
+                                 ('secondary_channel', BooleanTrait(True, label='Secondary Channel')),
+                                 ('tertiary_channel', BooleanTrait(True, label='Tertiary Channel')) ])
+            ]

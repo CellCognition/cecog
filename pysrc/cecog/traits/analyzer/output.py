@@ -64,6 +64,8 @@ class SectionOutput(_Section):
             BooleanTrait(False, label='Show object IDs')),
         ('export_object_counts',
             BooleanTrait(False, label='Export object counts')),
+        ('export_object_counts_ylim_max',
+            IntTrait(-1, -1, 1000 , label='Max. count in plot')),
         ('export_object_details',
             BooleanTrait(False, label='Export detailed object data')),
         ('export_file_names',

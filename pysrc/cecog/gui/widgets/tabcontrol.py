@@ -64,11 +64,7 @@ TAB_STYLE = \
 # classes:
 #
 class TabControl(QFrame):
-
-    """
-    General tab control: list of buttons at the top and stacked widget below
-    Should be merged with cecog.gui.modules.module.ModuleManager
-    """
+    """General tab control: list of buttons at the top and stacked widget below"""
 
     current_changed = pyqtSignal(int)
 
@@ -160,4 +156,3 @@ class TabControl(QFrame):
 #-------------------------------------------------------------------------------
 # main:
 #
-
