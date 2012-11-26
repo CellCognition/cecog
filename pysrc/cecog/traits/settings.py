@@ -100,6 +100,7 @@ class ConfigSettings(RawConfigParser):
                                  allow_no_value=True)
         self._registry = OrderedDict()
         self._current_section = None
+        self._old_file_format = False
 
         self._section_registry = section_registry
         for section_name in section_registry.get_section_names():
@@ -108,6 +109,9 @@ class ConfigSettings(RawConfigParser):
             for trait_name in section.get_trait_names():
                 trait = section.get_trait(trait_name)
                 self.set(section_name, trait_name, trait.default_value)
+
+    def was_old_file_format(self):
+        return self._old_file_format
 
     def copy(self):
         return copy.deepcopy(self)
@@ -182,7 +186,11 @@ class ConfigSettings(RawConfigParser):
             self.remove_section(section)
 
         result = RawConfigParser.readfp(self, fp)
-        self._merge_registry()
+
+        self._old_file_format = False
+        if not self.has_option('General', 'version') or \
+                self.get('General', 'version') < VERSION:
+            self._old_file_format = True
 
         for section_name in self.sections():
             if section_name in self._section_registry.get_section_names():
@@ -208,6 +216,7 @@ class ConfigSettings(RawConfigParser):
                       "deleted" % section_name)
                 self.remove_section(section_name)
 
+        self._merge_registry()
         for plugin_manager in PLUGIN_MANAGERS:
             plugin_manager.init_from_settings(self)
 
@@ -263,8 +272,6 @@ class ConfigSettings(RawConfigParser):
             'primary_shapewatershed_maximasize' : 'plugin__primary_segmentation__primary__primary__shapewatershed_maximasize',
             'primary_shapewatershed_minmergesize' : 'plugin__primary_segmentation__primary__primary__shapewatershed_minmergesize',
         }
-        if not self.has_option('General', 'version'):
-            self.set('General', 'version', VERSION)
 
         if section_name in VERSION_130_TO_140:
             if option_name in VERSION_130_TO_140[section_name]:
@@ -280,6 +287,7 @@ class ConfigSettings(RawConfigParser):
                     if self.has_option(section_name, option_name):
                         if self.get(section_name, option_name):
                             print 'Converted', option_name
+                            self.remove_option(section_name, option_name)
                             value = self.get(section_name, '%s_regions_expanded_expansionsize' % prefix)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__expanded__expanded__expansion_size' % prefix , value)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__expanded__expanded__require00' % prefix , 'primary')
@@ -288,6 +296,7 @@ class ConfigSettings(RawConfigParser):
                     if self.has_option(section_name, option_name):
                         if self.get(section_name, option_name):
                             print 'Converted', option_name
+                            self.remove_option(section_name, option_name)
                             value = self.get(section_name, '%s_regions_inside_shrinkingsize' % prefix)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__inside__inside__shrinking_size' % prefix , value)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__inside__inside__require00' % prefix , 'primary')
@@ -296,6 +305,7 @@ class ConfigSettings(RawConfigParser):
                     if self.has_option(section_name, option_name):
                         if self.get(section_name, option_name):
                             print 'Converted', option_name, '%s_regions_outside_expansionsize' % prefix
+                            self.remove_option(section_name, option_name)
                             value = self.get(section_name, '%s_regions_outside_expansionsize' % prefix)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__outside__outside__expansion_size' % prefix , value)
                             value = self.get(section_name, '%s_regions_outside_separationsize' % prefix)
@@ -306,6 +316,7 @@ class ConfigSettings(RawConfigParser):
                     if self.has_option(section_name, option_name):
                         if self.get(section_name, option_name):
                             print 'Converted', option_name
+                            self.remove_option(section_name, option_name)
                             value = self.get(section_name, '%s_regions_rim_expansionsize' % prefix)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__rim__rim__expansion_size' % prefix , value)
                             value = self.get(section_name, '%s_regions_rim_shrinkingsize' % prefix)
@@ -316,6 +327,7 @@ class ConfigSettings(RawConfigParser):
                     if self.has_option(section_name, option_name):
                         if self.get(section_name, option_name):
                             print 'Converted', option_name
+                            self.remove_option(section_name, option_name)
                             value = self.get(section_name, '%s_regions_constrained_watershed_gauss_filter_size' % prefix)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__constrained_watershed__constrained_watershed__gauss_filter_size' % prefix , value)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__constrained_watershed__constrained_watershed__require00' % prefix , 'primary')
@@ -324,6 +336,7 @@ class ConfigSettings(RawConfigParser):
                     if self.has_option(section_name, option_name):
                         if self.get(section_name, option_name):
                             print 'Converted', option_name
+                            self.remove_option(section_name, option_name)
                             value = self.get(section_name, '%s_regions_propagate_deltawidth' % prefix)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__propagate__propagate__delta_width' % prefix , value)
 

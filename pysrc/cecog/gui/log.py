@@ -14,40 +14,14 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = ['LogWindow',
-           'GuiLogHandler',
-           ]
+__all__ = ['LogWindow', 'GuiLogHandler']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
 import logging
 
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
-
-
-#-------------------------------------------------------------------------------
-# constants:
-#
-
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 class LogWindow(QFrame):
 
     LEVELS = {'DEBUG' : logging.DEBUG,
@@ -69,7 +43,7 @@ class LogWindow(QFrame):
         self._log_widget.setMaximumBlockCount(max_count)
         format = QTextCharFormat()
         format.setFontFixedPitch(True)
-        format.setFontPointSize(11)
+#       format.setFontPointSize(11)
         self._log_widget.setCurrentCharFormat(format)
         layout.addWidget(self._log_widget, 0, 0, 1, 4)
         layout.setColumnStretch(0,2)

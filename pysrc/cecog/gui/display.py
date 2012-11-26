@@ -220,12 +220,9 @@ class TraitDisplayMixin(QFrame):
         label = trait.label
         w_label = self._create_label(parent, label, link=trait_name)
         w_button = None
-        #w_doc = None
-        #w_label.setMinimumWidth(width)
 
         # read value from settings-instance
         value = self._get_value(trait_name)
-
         handler = lambda name: lambda value: self._set_value(name, value)
 
         if isinstance(trait, StringTrait):
@@ -310,7 +307,7 @@ class TraitDisplayMixin(QFrame):
             for item in trait.list_data:
                 w_input.addItem(str(item))
             trait.set_value(w_input, value)
-            w_input.setSizePolicy(policy_fixed)
+            w_input.setSizePolicy(policy_expanding)
             handler = lambda n: lambda v: self._on_current_index(n, v)
             self.connect(w_input, SIGNAL('currentIndexChanged(int)'),
                          handler(trait_name))
@@ -322,7 +319,7 @@ class TraitDisplayMixin(QFrame):
                 w_input.addItem(str(item))
             trait.set_widget(w_input)
             trait.set_value(w_input, value)
-            w_input.setSizePolicy(policy_fixed)
+            w_input.setSizePolicy(policy_expanding)
             handler = lambda n: lambda v: self._on_current_index(n, v)
             w_input.currentIndexChanged[int].connect(handler(trait_name))
 
@@ -340,9 +337,6 @@ class TraitDisplayMixin(QFrame):
             w_input = QTextEdit(parent)
             w_input.setMaximumHeight(100)
             w_input.setSizePolicy(policy_expanding)
-            #print value
-            #value = trait.convert(value)
-            #print value
             trait.set_value(w_input, value)
             handler = lambda n: lambda: self._on_text_to_list(n)
             self.connect(w_input, SIGNAL('textChanged()'),
@@ -424,12 +418,10 @@ class TraitDisplayMixin(QFrame):
     def _get_trait(self, name):
         return self._settings.get_trait(self.SECTION_NAME, name)
 
-
     # event methods
     def _on_show_help(self, link):
         show_html(self.SECTION_NAME, link=link,
                   header='_header', footer='_footer')
-
 
     def _on_set_radio_button(self, name, value):
         # FIXME: this is somehow hacky. we need to inform all the radio-buttons

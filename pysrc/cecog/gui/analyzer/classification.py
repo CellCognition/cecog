@@ -32,19 +32,20 @@ from PyQt4.Qt import *
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog import CHANNEL_PREFIX
+from cecog import CHANNEL_PREFIX, CH_VIRTUAL
 from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
 from cecog.gui.util import (information,
                             exception,
                             )
 from cecog.gui.analyzer import BaseProcessorFrame
-from cecog.gui.analyzer import AnalzyerThread, TrainingThread
+
+from cecog.threads.analyzer import AnalyzerThread
+from cecog.threads.training import TrainingThread
 
 from cecog.analyzer.channel import PrimaryChannel, SecondaryChannel
 from cecog.learning.learning import CommonClassPredictor
 from cecog.util.util import hexToRgb
 from cecog.traits.settings import convert_package_path
-
 
 from cecog.plugin.segmentation import REGION_INFO
 
@@ -371,13 +372,13 @@ class ClassificationFrame(BaseProcessorFrame):
         self._result_frames = {}
 
         self.register_control_button(self.PROCESS_PICKING,
-                                     AnalzyerThread,
+                                     AnalyzerThread,
                                      ('Pick %s samples', 'Stop %s picking'))
         self.register_control_button(self.PROCESS_TRAINING,
                                      TrainingThread,
                                      ('Train classifier', 'Stop training'))
         self.register_control_button(self.PROCESS_TESTING,
-                                     AnalzyerThread,
+                                     AnalyzerThread,
                                      ('Test classifier', 'Stop testing'))
 
         for tab_name, prefix in [('Primary Channel', 'primary'),
@@ -390,7 +391,7 @@ class ClassificationFrame(BaseProcessorFrame):
             self.add_input('%s_classification_envpath' % prefix)
             self.add_line()
 
-            if prefix == 'merged':
+            if prefix in CH_VIRTUAL:
                 self.add_group(None, [('primary_channel', (0, 0, 1, 1)),
                                       ('secondary_channel', (0, 1, 1, 1)),
                                       ('tertiary_channel', (0, 2, 1, 1))],
@@ -486,7 +487,7 @@ class ClassificationFrame(BaseProcessorFrame):
         prefix = CHANNEL_PREFIX[self._tab.current_index]
         trait = self._settings.get_trait(SECTION_NAME_CLASSIFICATION,
                                          '%s_classification_regionname' % prefix)
-        if prefix == 'merged':
+        if prefix in CH_VIRTUAL:
             trait.set_list_data(self._merged_region_list('merged'))
         else:
             trait.set_list_data(REGION_INFO.names[prefix])

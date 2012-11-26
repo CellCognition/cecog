@@ -882,6 +882,7 @@ def analyzePosition(*tplArgs, **dctOptions):
 class AnalyzerCore(object):
 
     def __init__(self, plate_id, settings, imagecontainer, learner=None):
+
         self._imagecontainer = imagecontainer
         self.oStopWatch = StopWatch()
         self.oSettings = settings
@@ -916,11 +917,12 @@ class AnalyzerCore(object):
             self._oLogger.info("cropping enabled with %d %d %d %d" % (x0, y0, x1-x0, y1-y0))
         else:
             MetaImage.disable_cropping()
+            self._oLogger.info("cropping disabled")
 
         self.lstAnalysisFrames = []
         self._openImageContainer()
-        #self._oLogger.info("lstAnalysisFrames: %r" % self.lstAnalysisFrames)
-
+        self._oLogger.info("openening image container: end")
+        self._oLogger.info("lstAnalysisFrames: %r" % self.lstAnalysisFrames)
 
         self.lstSampleReader = []
         self.dctSamplePositions = {}
@@ -1070,6 +1072,7 @@ class AnalyzerCore(object):
             else:
                 analyze = len(self.lstAnalysisFrames) > 0
 
+            logging.getLogger(str(os.getpid())).info('analyze? %r' % analyze)
             if analyze:
                 tplArgs = (self.plate_id,
                            oP,

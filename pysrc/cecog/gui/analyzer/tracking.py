@@ -29,7 +29,7 @@ __all__ = ['TrackingFrame']
 #
 from cecog.traits.analyzer.tracking import SECTION_NAME_TRACKING
 from cecog.gui.analyzer import (BaseProcessorFrame,
-                                AnalzyerThread,
+                                AnalyzerThread,
                                 )
 from cecog.analyzer.channel import (PrimaryChannel,
                                     SecondaryChannel,
@@ -60,10 +60,10 @@ class TrackingFrame(BaseProcessorFrame):
         super(TrackingFrame, self).__init__(settings, parent)
 
         self.register_control_button(self.PROCESS_TRACKING,
-                                     AnalzyerThread,
+                                     AnalyzerThread,
                                      ('Test tracking', 'Stop tracking'))
         self.register_control_button(self.PROCESS_SYNCING,
-                                     AnalzyerThread,
+                                     AnalyzerThread,
                                      ('Apply event selection',
                                       'Stop event selection'))
 

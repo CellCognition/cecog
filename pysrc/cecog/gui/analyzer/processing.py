@@ -34,9 +34,9 @@ from cecog import CHANNEL_PREFIX, VERSION
 from cecog import CH_OTHER, CH_VIRTUAL
 from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
 from cecog.gui.analyzer import (BaseProcessorFrame,
-                                AnalzyerThread,
+                                AnalyzerThread,
                                 HmmThread,
-                                MultiAnalzyerThread,
+                                MultiAnalyzerThread,
                                 )
 from cecog.analyzer.channel import (PrimaryChannel,
                                     SecondaryChannel,
@@ -112,12 +112,12 @@ class ProcessingFrame(BaseProcessorFrame):
         super(ProcessingFrame, self).__init__(settings, parent)
 
         self.register_control_button('process',
-                                     [AnalzyerThread,
+                                     [AnalyzerThread,
                                       HmmThread],
                                      ('Start processing', 'Stop processing'))
 
         self.register_control_button('multi_process',
-                                     [MultiAnalzyerThread,
+                                     [MultiAnalyzerThread,
                                       HmmThread],
                                      ('Start multi processing', 'Stop multi processing'))
 

@@ -18,12 +18,11 @@ __source__ = '$URL$'
 # standard library imports:
 #
 
-import logging, \
-       types, \
-       os, \
-       bz2, \
-       gzip
-       
+import os
+import bz2
+import gzip
+import types
+import logging
 import time as timing
 
 #-------------------------------------------------------------------------------
@@ -47,6 +46,16 @@ OS_LINUX = 'linux'
 #-------------------------------------------------------------------------------
 # functions:
 #
+
+def makedirs(path):
+    """
+    Recursively make directory if path doesn't already exist.
+    If permission is not set, an exception (os.error) is raised.
+    """
+    path = os.path.normpath(path)
+    if not os.path.isdir(path):
+        os.makedirs(path)
+
 
 def singleton(cls):
     '''
@@ -219,4 +228,3 @@ class LoggerMixin(OptionManager):
 
     def _onLoggerName(self, strLoggerName):
         self.oLogger = logging.getLogger(strLoggerName)
-

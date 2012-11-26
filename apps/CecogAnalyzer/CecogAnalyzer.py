@@ -732,18 +732,14 @@ class AnalyzerMainWindow(QMainWindow):
                     dir = settings_filename
             filename = QFileDialog.getOpenFileName(self, 'Open config file', dir, ';;'.join(self.NAME_FILTERS))
             if filename:
-                old_conf_file = False
-                if not self._settings.has_option('General', 'version') or \
-                    self._settings.get('General', 'version') < VERSION:
-                    information(self, 'Selected config file has an old version <= 1.3.0. '
-                                      'The current version is %s. The config file will be updated...' % VERSION)
-                    old_conf_file = True
-
                 self._read_settings(filename)
-                if old_conf_file:
-                    information(self, "Config file has been updated to %s and all settings have been converted" % self._settings.get('General', 'version'))
+                if self._settings.was_old_file_format():
+                    information(self, ('Selected config file had an old '
+                                       'version <= 1.3.0. The current version is %s. '
+                                       'The config file was  be updated...' % VERSION))
                 else:
-                    information(self, "Config file version %s found" % self._settings.get('General', 'version'))
+                    information(self, "Config file version %s found"  \
+                                %self._settings.get('General', 'version'))
                 self._clear_browser()
                 self.set_modules_active(state=False)
 

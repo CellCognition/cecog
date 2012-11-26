@@ -39,7 +39,7 @@ import types, \
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
-import numpy, h5py, copy
+import numpy, h5py
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
@@ -65,9 +65,7 @@ from cecog.learning.learning import (CommonObjectLearner,
                                      CommonClassPredictor,
                                      ConfusionMatrix,
                                      )
-from cecog.util.util import (hexToRgb,
-                             write_table,
-                             )
+from cecog.util.util import hexToRgb, write_table
 from cecog.gui.util import (ImageRatioDisplay,
                             numpy_to_qimage,
                             question,
@@ -76,13 +74,12 @@ from cecog.gui.util import (ImageRatioDisplay,
                             status,
                             waitingProgressDialog,
                             )
-from cecog.analyzer import (CONTROL_1,
-                            CONTROL_2,
-                            )
-from cecog.analyzer.channel import (PrimaryChannel,
-                                    SecondaryChannel,
-                                    TertiaryChannel,
-                                    )
+from cecog.analyzer import CONTROL_1, CONTROL_2
+
+from cecog.analyzer.channel import PrimaryChannel
+from cecog.analyzer.channel import SecondaryChannel
+from cecog.analyzer.channel import TertiaryChannel
+
 from cecog.analyzer.core import AnalyzerCore
 from cecog.io.imagecontainer import PIXEL_TYPES
 from cecog.config import R_SOURCE_PATH
@@ -96,7 +93,16 @@ from cecog.plugin.display import PluginBay
 from cecog.gui.widgets.tabcontrol import TabControl
 from cecog.analyzer.ibb import IBBAnalysis, SecurinAnalysis
 
-#-------------------------------------------------------------------------------
+from cecog.threads.analyzer import AnalyzerThread
+from cecog.threads.training import TrainingThread
+from cecog.threads.hmm_scafold import HmmThread_Python_Scafold
+from cecog.threads.hmm import HmmThread
+from cecog.threads.post_processing import PostProcessingThread
+
+from cecog.traits.config import ConfigSettings
+from cecog.traits.analyzer import SECTION_REGISTRY
+
+#------------------------------------------------------------------------------
 # functions:
 #
 def mk_stochastic(k):
@@ -110,7 +116,8 @@ def dhmm_correction(n_clusters, labels):
     trans = mk_stochastic(n_clusters)
     eps = numpy.spacing(1)
     sprob = numpy.array([1-eps,eps,eps,eps,eps,eps])
-    dhmm = hmm.MultinomialHMM(n_components=n_clusters,transmat = trans,startprob=sprob)
+    dhmm = hmm.MultinomialHMM(
+        n_components=n_clusters,transmat = trans,startprob=sprob)
     eps = 1e-3;
     dhmm.emissionprob = numpy.array([[1-eps, eps, eps, eps, eps, eps],
                     [eps, 1-eps, eps, eps, eps, eps],
@@ -119,7 +126,8 @@ def dhmm_correction(n_clusters, labels):
                     [eps, eps, eps, eps, 1-eps, eps],
                     [eps, eps, eps, eps, eps, 1-eps]]);
     dhmm.fit([labels], init_params ='')
-    labels_dhmm = dhmm.predict(labels) # vector format [1 x num_tracks *num_frames]
+    # vector format [1 x num_tracks *num_frames]
+    labels_dhmm = dhmm.predict(labels)
     return labels_dhmm
 
 def link_hdf5_files(post_hdf5_link_list):
@@ -156,7 +164,8 @@ def link_hdf5_files(post_hdf5_link_list):
             print msg
             if (POSITION_PREFIX + '%s') % (fplate, fwell, fpos) in f:
                 del f[(POSITION_PREFIX + '%s') % (fplate, fwell, fpos)]
-            f[(POSITION_PREFIX + '%s') % (fplate, fwell, fpos)] = h5py.ExternalLink(fname, (POSITION_PREFIX + '%s') % (fplate, fwell, fpos))
+            f[(POSITION_PREFIX + '%s') % (fplate, fwell, fpos)] = \
+                h5py.ExternalLink(fname, (POSITION_PREFIX + '%s') % (fplate, fwell, fpos))
 
         f.close()
 
@@ -174,7 +183,8 @@ def link_hdf5_files(post_hdf5_link_list):
             logger.info(msg)
             print msg
 
-            f[(POSITION_PREFIX + '%s') % (fplate, fwell, fpos)] = h5py.ExternalLink(fname, (POSITION_PREFIX + '%s') % (fplate, fwell, fpos))
+            f[(POSITION_PREFIX + '%s') % (fplate, fwell, fpos)] = \
+                h5py.ExternalLink(fname, (POSITION_PREFIX + '%s') % (fplate, fwell, fpos))
 
         f.close()
 
@@ -186,8 +196,11 @@ def AnalyzerCoreHelper(plate_id, settings_str, imagecontainer, position):
 
     settings.set(SECTION_NAME_GENERAL, 'constrain_positions', True)
     settings.set(SECTION_NAME_GENERAL, 'positions', position)
-    analyzer = AnalyzerCore(plate_id, settings,imagecontainer)
-    result = analyzer.processPositions()
+    try:
+        analyzer = AnalyzerCore(plate_id, settings,imagecontainer)
+        result = analyzer.processPositions()
+    except Exception, e:
+        traceback.print_exc()
     return plate_id, position, copy.deepcopy(result['post_hdf5_link_list'])
 
 def process_initialyzer(port):
@@ -201,7 +214,6 @@ def process_initialyzer(port):
 #-------------------------------------------------------------------------------
 # classes:
 #
-
 
 
 class BaseFrame(TraitDisplayMixin):
@@ -278,7 +290,7 @@ class BaseFrame(TraitDisplayMixin):
 
     def page_changed(self):
         '''
-        Abstract method. Invoked by the AnalyzerMainWindow when this frame
+          Abstract method. Invoked by the AnalyzerMainWindow when this frame
         is activated for display.
         '''
         pass
@@ -298,438 +310,6 @@ class BaseFrame(TraitDisplayMixin):
         frame_layout.addWidget(PluginBay(self, plugin_manager, settings),
                                frame._input_cnt, 0, 1, 2)
         frame._input_cnt += 1
-
-
-class _ProcessingThread(QThread):
-
-    stage_info = pyqtSignal(dict)
-    analyzer_error = pyqtSignal(str)
-
-    def __init__(self, parent, settings):
-        QThread.__init__(self, parent)
-        self._settings = settings
-        self._abort = False
-        self._mutex = QMutex()
-        self._stage_info = {'text': '',
-                            'progress': 0,
-                            'max': 0,
-                            }
-        self.parent = parent
-
-    def __del__(self):
-        #self._mutex.lock()
-        self._abort = True
-        self._mutex.unlock()
-        self.stop()
-        self.wait()
-
-    def run(self):
-        try:
-            import pydevd
-            pydevd.connected = True
-            pydevd.settrace(suspend=False)
-            print 'Thread enabled interactive eclipse debuging...'
-        except:
-            pass
-
-        try:
-            self._run()
-        except MultiprocessingException, e:
-            msg = e.msg
-            logger = logging.getLogger()
-            logger.error(msg)
-            self.analyzer_error.emit(msg)
-            raise
-        except:
-            msg = traceback.format_exc()
-            logger = logging.getLogger()
-            logger.error(msg)
-            self.analyzer_error.emit(msg)
-            raise
-
-    def set_abort(self, wait=False):
-        self._mutex.lock()
-        self._abort = True
-        self._mutex.unlock()
-        if wait:
-            self.wait()
-
-    def get_abort(self):
-        abort = self._abort
-        return abort
-
-    def set_stage_info(self, info):
-        self._mutex.lock()
-        self.stage_info.emit(info)
-        self._mutex.unlock()
-
-
-
-class HmmThread_Python_Scafold(_ProcessingThread):
-    def __init__(self, parent, settings, learner_dict, imagecontainer):
-        _ProcessingThread.__init__(self, parent, settings)
-        self._settings.set_section(SECTION_NAME_ERRORCORRECTION)
-        self._learner_dict = learner_dict
-        self._imagecontainer = imagecontainer
-        self.plates = self._imagecontainer.plates
-        self._mapping_files = {}
-        self._logger = logging.getLogger(self.__class__.__name__)
-
-        # Read Events from event txt files
-        self.events = self._readEvents()
-
-    def _readEvents(self):
-        "Reads all events written by the CellCognition tracking."
-        pass
-
-    def _setMappingFile(self):
-        if self._settings.get2('position_labels'):
-            path_mapping = self._convert(self._settings.get2('mappingfile_path'))
-            for plate_id in self.plates:
-                mapping_file = os.path.join(path_mapping, '%s.tsv' % plate_id)
-                if not os.path.isfile(mapping_file):
-                    mapping_file = os.path.join(path_mapping, '%s.txt' % plate_id)
-                    if not os.path.isfile(mapping_file):
-                        raise IOError("Mapping file '%s' for plate '%s' not found." %
-                                      (mapping_file, plate_id))
-                self._mapping_files[plate_id] = os.path.abspath(mapping_file)
-
-    def _run(self):
-        # Initialize GUI Progress bar
-        info = {'min' : 0,
-                'max' : len(self.plates),
-                'stage': 0,
-                'meta': 'Error correction...',
-                'progress': 0}
-
-        # Process each plate and update Progressbar (if not aborted by user)
-        for idx, plate_id in enumerate(self.plates):
-            if not self._abort:
-                info['text'] = "Plate: '%s' (%d / %d)" % (plate_id, idx+1, len(self.plates))
-                self.set_stage_info(info)
-                self._imagecontainer.set_plate(plate_id)
-                self._run_plate(plate_id)
-                info['progress'] = idx+1
-                self.set_stage_info(info)
-            else:
-                break
-
-    def _run_plate(self, plate_id):
-        print "processing", plate_id
-
-    def set_abort(self, wait=False):
-        pass
-
-    @classmethod
-    def test_executable(cls, filename):
-        "mock interface method"
-        return True, ""
-
-    @classmethod
-    def get_cmd(cls, filename):
-        "mock interface method"
-        return ""
-
-
-
-    def _produce_txt_output(self):
-        pass
-
-class HmmThread(_ProcessingThread):
-
-    DEFAULT_CMD_MAC = 'R32'
-    DEFAULT_CMD_WIN = r'C:\Program Files\R\R-2.10.0\bin\R.exe'
-
-    def __init__(self, parent, settings, learner_dict, imagecontainer):
-        _ProcessingThread.__init__(self, parent, settings)
-        self._learner_dict = learner_dict
-        self._imagecontainer = imagecontainer
-        self._mapping_files = {}
-
-        # R on windows works better with '/' then '\'
-        self._convert = lambda x: x.replace('\\','/')
-        self._join = lambda *x: self._convert('/'.join(x))
-
-        self._logger = logging.getLogger(self.__class__.__name__)
-
-        qApp._log_window.show()
-        qApp._log_window.raise_()
-
-    @classmethod
-    def get_cmd(cls, filename):
-        filename = filename.strip()
-        if filename != '':
-            cmd = filename
-        elif sys.platform == 'darwin':
-            cmd = cls.DEFAULT_CMD_MAC
-        else:
-            cmd = cls.DEFAULT_CMD_WIN
-        return cmd
-
-    @classmethod
-    def test_executable(cls, filename):
-        cmd = cls.get_cmd(filename)
-        process = QProcess()
-        process.start(cmd, ['--version'])
-        success = process.waitForFinished()
-        return success and process.exitCode() == QProcess.NormalExit, cmd
-
-    def _run(self):
-        plates = self._imagecontainer.plates
-        self._settings.set_section(SECTION_NAME_ERRORCORRECTION)
-
-        # mapping files (mapping between plate well/position
-        # and experimental condition) can be defined by a directory
-        # which must contain all mapping files for all plates in
-        # the form <plate_id>.txt or .tsv
-        # if the option 'position_labels' is not enabled a dummy mapping file is generated
-        if self._settings.get2('position_labels'):
-            path_mapping = self._convert(self._settings.get2('mappingfile_path'))
-            for plate_id in plates:
-                mapping_file = os.path.join(path_mapping, '%s.tsv' % plate_id)
-                if not os.path.isfile(mapping_file):
-                    mapping_file = os.path.join(path_mapping, '%s.txt' % plate_id)
-                    if not os.path.isfile(mapping_file):
-                        raise IOError("Mapping file '%s' for plate '%s' not found." %
-                                      (mapping_file, plate_id))
-                self._mapping_files[plate_id] = os.path.abspath(mapping_file)
-
-        info = {'min' : 0,
-                'max' : len(plates),
-                'stage': 0,
-                'meta': 'Error correction...',
-                'progress': 0}
-        for idx, plate_id in enumerate(plates):
-            if not self._abort:
-                info['text'] = "Plate: '%s' (%d / %d)" % (plate_id, idx+1, len(plates))
-                self.set_stage_info(info)
-                self._imagecontainer.set_plate(plate_id)
-                self._run_plate(plate_id)
-                info['progress'] = idx+1
-                self.set_stage_info(info)
-            else:
-                break
-
-    def _run_plate(self, plate_id):
-        filename = self._settings.get2('filename_to_R')
-        cmd = self.get_cmd(filename)
-
-        path_out = self._imagecontainer.get_path_out()
-
-        wd = os.path.abspath(os.path.join(R_SOURCE_PATH, 'hmm'))
-        f = file(os.path.join(wd, 'run_hmm.R'), 'r')
-        lines = f.readlines()
-        f.close()
-
-        path_analyzed = self._join(path_out, 'analyzed')
-        path_out_hmm = self._join(path_out, 'hmm')
-
-        # don't do anything if the 'hmm' folder already exists and the skip-option is on
-        if os.path.isdir(path_out_hmm) and self._settings.get2('skip_processed_plates'):
-            return
-
-        safe_mkdirs(path_out_hmm)
-
-        region_name_primary = self._settings.get('Classification', 'primary_classification_regionname')
-        region_name_secondary = self._settings.get('Classification', 'secondary_classification_regionname')
-
-        path_out_hmm_region = self._convert(self._get_path_out(path_out_hmm,
-                                                               '%s_%s' % ('primary', region_name_primary)))
-
-        # take mapping file for plate or generate dummy mapping file for the R script
-        if plate_id in self._mapping_files:
-            # convert path for R
-            mapping_file = self._convert(self._mapping_files[plate_id])
-        else:
-            mapping_file = self._generate_mapping(wd, path_out_hmm, path_analyzed)
-
-        if self._settings.get2('overwrite_time_lapse'):
-            time_lapse = self._settings.get2('timelapse')
-        else:
-            meta_data = self._imagecontainer.get_meta_data()
-            if meta_data.has_timestamp_info:
-                time_lapse = meta_data.plate_timestamp_info[0] / 60.
-            else:
-                raise ValueError("Plate '%s' has not time-lapse info.\n"
-                                 "Please define (overwrite) the value manually." % plate_id)
-
-        if self._settings.get2('compose_galleries'):# and self._settings.get('Output', 'events_export_gallery_images'):
-            gallery_names = ['primary'] +\
-                            [x for x in ['secondary','tertiary']
-                             if self._settings.get('Processing', '%s_processchannel' % x)]
-        else:
-            gallery_names = None
-
-
-        for i in range(len(lines)):
-            line2 = lines[i].strip()
-            if line2 == '#WORKING_DIR':
-                lines[i] = "WORKING_DIR = '%s'\n" % self._convert(wd)
-            elif line2 == '#FILENAME_MAPPING':
-                lines[i] = "FILENAME_MAPPING = '%s'\n" % mapping_file
-            elif line2 == '#PATH_INPUT':
-                lines[i] = "PATH_INPUT = '%s'\n" % path_analyzed
-            elif line2 == '#GROUP_BY_GENE':
-                lines[i] = "GROUP_BY_GENE = %s\n" % str(self._settings.get2('groupby_genesymbol')).upper()
-            elif line2 == '#GROUP_BY_OLIGOID':
-                lines[i] = "GROUP_BY_OLIGOID = %s\n" % str(self._settings.get2('groupby_oligoid')).upper()
-            elif line2 == '#TIMELAPSE':
-                lines[i] = "TIMELAPSE = %s\n" % time_lapse
-            elif line2 == '#MAX_TIME':
-                lines[i] = "MAX_TIME = %s\n" % self._settings.get2('max_time')
-            elif line2 == '#SINGLE_BRANCH':
-                lines[i] = "SINGLE_BRANCH = %s\n" % str(self._settings.get2('ignore_tracking_branches')).upper()
-            elif line2 == '#GALLERIES':
-                if gallery_names is None:
-                    lines[i] = "GALLERIES = NULL\n"
-                else:
-                    lines[i] = "GALLERIES = c(%s)\n" % ','.join(["'%s'" % x for x in gallery_names])
-
-            if len(self._learner_dict) == 0 or 'primary' not in self._learner_dict:
-                raise RuntimeError('Classifier not found. Please check your classifications settings...')
-
-            if 'primary' in self._learner_dict:# and self._settings.get('Processing', 'primary_errorcorrection'):
-
-                if self._settings.get2('constrain_graph'):
-                    primary_graph = self._convert(self._settings.get2('primary_graph'))
-                else:
-                    primary_graph = self._generate_graph('primary', wd, path_out_hmm, region_name_primary)
-
-                if line2 == '#FILENAME_GRAPH_P':
-                    lines[i] = "FILENAME_GRAPH_P = '%s'\n" % primary_graph
-                elif line2 == '#CLASS_COLORS_P':
-                    learner = self._learner_dict['primary']
-                    colors = ",".join(["'%s'" % learner.dctHexColors[x] for x in learner.lstClassNames])
-                    lines[i] = "CLASS_COLORS_P = c(%s)\n" % colors
-                elif line2 == '#REGION_NAME_P':
-                    lines[i] = "REGION_NAME_P = '%s'\n" % region_name_primary
-                elif line2 == '#SORT_CLASSES_P':
-                    if self._settings.get2('enable_sorting'):
-                        lines[i] = "SORT_CLASSES_P = c(%s)\n" % self._settings.get2('sorting_sequence')
-                    else:
-                        lines[i] = "SORT_CLASSES_P = NULL\n"
-                elif line2 == "#PATH_OUT_P":
-                    lines[i] = "PATH_OUT_P = '%s'\n" % path_out_hmm_region
-
-
-
-            if 'secondary' in self._learner_dict:# and self._settings.get('Processing', 'secondary_errorcorrection'):
-                if self._settings.get2('constrain_graph'):
-                    secondary_graph = self._convert(self._settings.get2('secondary_graph'))
-                else:
-                    secondary_graph = self._generate_graph('secondary', wd, path_out_hmm, region_name_secondary)
-
-                if line2 == '#FILENAME_GRAPH_S':
-                    lines[i] = "FILENAME_GRAPH_S = '%s'\n" % secondary_graph
-                elif line2 == '#CLASS_COLORS_S':
-                    learner = self._learner_dict['secondary']
-                    colors = ",".join(["'%s'" % learner.dctHexColors[x] for x in learner.lstClassNames])
-                    lines[i] = "CLASS_COLORS_S = c(%s)\n" % colors
-                elif line2 == '#REGION_NAME_S':
-                    lines[i] = "REGION_NAME_S = '%s'\n" % region_name_secondary
-                elif line2 == '#SORT_CLASSES_S':
-                    secondary_sort = self._settings.get2('secondary_sort')
-                    if secondary_sort == '':
-                        lines[i] = "SORT_CLASSES_S = NULL\n"
-                    else:
-                        lines[i] = "SORT_CLASSES_S = c(%s)\n" % secondary_sort
-                elif line2 == "#PATH_OUT_S":
-                    lines[i] = "PATH_OUT_S = '%s'\n" % \
-                        self._convert(self._get_path_out(path_out_hmm, '%s_%s' % ('secondary', region_name_secondary)))
-
-        input_filename = os.path.join(path_out_hmm, 'cecog_hmm_input.R')
-        f = file(input_filename, 'w')
-        f.writelines(lines)
-        f.close()
-
-        process = QProcess()
-        self._process = process
-        process.setWorkingDirectory(wd)
-        process.start(cmd, ['BATCH', '--silent', '-f', input_filename])
-        process.readyReadStandardOutput.connect(self._on_stdout)
-        process.waitForFinished(-1)
-
-        if process.exitCode() != 0:
-            process.setReadChannel(QProcess.StandardError)
-            msg = str(process.readLine()).rstrip()
-            msg = ''.join(list(process.readAll()))
-            self.analyzer_error.emit(msg)
-            self.set_abort()
-
-        elif self._settings.get2('compose_galleries') and not self._abort:
-            sample = self._settings.get2('compose_galleries_sample')
-            if sample == -1:
-                sample = None
-            for group_name in compose_galleries(path_out, path_out_hmm_region, sample=sample):
-                self._logger.debug('gallery finished for group: %s' % group_name)
-                if self._abort:
-                    break
-
-        if self._settings.get2('show_html') and not self._abort:
-            QDesktopServices.openUrl(QUrl('file://'+os.path.join(path_out_hmm_region, 'index.html'), QUrl.TolerantMode))
-
-
-    def _generate_graph(self, channel, wd, hmm_path, region_name):
-        f_in = file(os.path.join(wd, 'graph_template.txt'), 'rU')
-        filename_out = self._join(hmm_path, 'graph_%s.txt' % region_name)
-        f_out = file(filename_out, 'w')
-        learner = self._learner_dict[channel]
-        for line in f_in:
-            line2 = line.strip()
-            if line2 in ['#numberOfClasses', '#numberOfHiddenStates']:
-                f_out.write('%d\n' % len(learner.lstClassNames))
-            elif line2 == '#startNodes':
-                f_out.write('%s\n' % '  '.join(map(str, learner.lstClassLabels)))
-            elif line2 == '#transitionGraph':
-                f_out.write('%s -> %s\n' %
-                            (','.join(map(str, learner.lstClassLabels)),
-                             ','.join(map(str, learner.lstClassLabels))))
-            elif line2 == '#hiddenNodeToClassificationNode':
-                for label in learner.lstClassLabels:
-                    f_out.write('%s\n' % '  '.join(map(str, [label]*2)))
-            else:
-                f_out.write(line)
-        f_in.close()
-        f_out.close()
-        return filename_out
-
-    def _generate_mapping(self, wd, hmm_path, path_analyzed):
-        filename_out = self._join(hmm_path, 'layout.txt')
-        rows = []
-        positions = None
-        if self._settings.get('General', 'constrain_positions'):
-            positions = self._settings.get('General', 'positions')
-        if positions is None or positions == '':
-            positions = [x for x in os.listdir(path_analyzed)
-                         if os.path.isdir(os.path.join(path_analyzed, x)) and
-                         x[0] != '_']
-        else:
-            positions = positions.split(',')
-        for pos in positions:
-            rows.append({'Position': pos, 'OligoID':'', 'GeneSymbol':'', 'Group':''})
-        header_names = ['Position', 'OligoID', 'GeneSymbol', 'Group']
-        write_table(filename_out, rows, column_names=header_names, sep='\t')
-        return filename_out
-
-    def _on_stdout(self):
-        self._process.setReadChannel(QProcess.StandardOutput)
-        msg = str(self._process.readLine()).rstrip()
-        self._logger.info(msg)
-
-    def _get_path_out(self, path, prefix):
-        if self._settings.get2('groupby_oligoid'):
-            suffix = 'byoligo'
-        elif self._settings.get2('groupby_genesymbol'):
-            suffix = 'bysymbol'
-        else:
-            suffix = 'bypos'
-        path_out = os.path.join(path, '%s_%s' % (prefix, suffix))
-        safe_mkdirs(path_out)
-        return path_out
-
-    def set_abort(self, wait=False):
-        self._process.kill()
-        _ProcessingThread.set_abort(self, wait=wait)
 
 class ParallelProcessThreadMixinBase(object):
     class ProcessCallback(object):
@@ -867,176 +447,11 @@ class MultiprocessingException(Exception):
     def __init__(self, exception_list):
         self.msg = '\n-----------\nError in job item:\n'.join([str(x) for x in exception_list])
 
-class PostProcessingThread(_ProcessingThread):
 
-    def __init__(self, parent, settings, learner_dict, imagecontainer):
-        _ProcessingThread.__init__(self, parent, settings)
-        self._learner_dict = learner_dict
-        self._imagecontainer = imagecontainer
-        self._mapping_files = {}
-
-    def _run(self):
-        print 'run postprocessing'
-        plates = self._imagecontainer.plates
-        self._settings.set_section(SECTION_NAME_POST_PROCESSING)
-
-        path_mapping = self._settings.get2('mappingfile_path')
-        for plate_id in plates:
-            mapping_file = os.path.join(path_mapping, '%s.tsv' % plate_id)
-            if not os.path.isfile(mapping_file):
-                mapping_file = os.path.join(path_mapping, '%s.txt' % plate_id)
-                if not os.path.isfile(mapping_file):
-                    raise IOError("Mapping file '%s' for plate '%s' not found." %
-                                  (mapping_file, plate_id))
-            self._mapping_files[plate_id] = os.path.abspath(mapping_file)
-
-        info = {'min' : 0,
-                'max' : len(plates),
-                'stage': 0,
-                'meta': 'Post processing...',
-                'progress': 0}
-
-        for idx, plate_id in enumerate(plates):
-            if not self._abort:
-                info['text'] = "Plate: '%s' (%d / %d)" % (plate_id, idx+1, len(plates))
-                self.set_stage_info(info)
-                self._imagecontainer.set_plate(plate_id)
-                self._run_plate(plate_id)
-                info['progress'] = idx+1
-                self.set_stage_info(info)
-            else:
-                break
-
-    def _run_plate(self, plate_id):
-        path_out = self._imagecontainer.get_path_out()
-
-        path_analyzed = os.path.join(path_out, 'analyzed')
-        safe_mkdirs(path_analyzed)
-
-        mapping_file = self._mapping_files[plate_id]
-
-        class_colors = {}
-        for i, name in self._learner_dict['primary'].dctClassNames.items():
-            class_colors[i] = self._learner_dict['primary'].dctHexColors[name]
-
-        class_names = {}
-        for i, name in self._learner_dict['primary'].dctClassNames.items():
-            class_names[i] = name
-
-        self._settings.set_section(SECTION_NAME_POST_PROCESSING)
-
-        if self._settings.get2('ibb_analysis'):
-
-            ibb_options = {}
-            ibb_options['ibb_ratio_signal_threshold'] = self._settings.get2('ibb_ratio_signal_threshold')
-            ibb_options['ibb_range_signal_threshold'] = self._settings.get2('ibb_range_signal_threshold')
-            ibb_options['ibb_onset_factor_threshold'] = self._settings.get2('ibb_onset_factor_threshold')
-            ibb_options['nebd_onset_factor_threshold'] = self._settings.get2('nebd_onset_factor_threshold')
-            ibb_options['single_plot'] = self._settings.get2('single_plot')
-            ibb_options['single_plot_max_plots'] = self._settings.get2('single_plot_max_plots')
-            ibb_options['single_plot_ylim_range'] = self._settings.get2('single_plot_ylim_low'), \
-                                                    self._settings.get2('single_plot_ylim_high')
-
-            tmp = (self._settings.get2('group_by_group'),
-                   self._settings.get2('group_by_genesymbol'),
-                   self._settings.get2('group_by_oligoid'),
-                   self._settings.get2('group_by_position'),
-                   )
-            ibb_options['group_by'] = int(numpy.log2(int(reduce(lambda x,y: str(x)+str(y),
-                                                                numpy.array(tmp).astype(numpy.uint8)),2))+0.5)
-
-            tmp = (self._settings.get2('color_sort_by_group'),
-                   self._settings.get2('color_sort_by_genesymbol'),
-                   self._settings.get2('color_sort_by_oligoid'),
-                   self._settings.get2('color_sort_by_position'),
-                   )
-
-            ibb_options['color_sort_by'] = int(numpy.log2(int(reduce(lambda x,y: str(x)+str(y),
-                                                                     numpy.array(tmp).astype(numpy.uint8)),2))+0.5)
-
-            if not ibb_options['group_by'] < ibb_options['color_sort_by']:
-                raise AttributeError('Group by selection must be more general than the color sorting! (%d !> %d)' % (
-                                                                ibb_options['group_by'], ibb_options['color_sort_by']))
-
-            ibb_options['color_sort_by'] = IBBAnalysis.COLOR_SORT_BY[ibb_options['color_sort_by']]
-
-            ibb_options['timeing_ylim_range'] = self._settings.get2('plot_ylim1_low'), \
-                                                self._settings.get2('plot_ylim1_high')
-
-            path_out_ibb = os.path.join(path_out, 'ibb')
-            safe_mkdirs(path_out_ibb)
-            ibb_analyzer = IBBAnalysis(path_analyzed,
-                                       path_out_ibb,
-                                       plate_id,
-                                       mapping_file,
-                                       class_colors,
-                                       class_names,
-                                       **ibb_options)
-            ibb_analyzer.run()
-
-        if self._settings.get2('securin_analysis'):
-            path_out_securin = os.path.join(path_out, 'sec')
-            safe_mkdirs(path_out_securin)
-
-            securin_options = {}
-            securin_analyzer = SecurinAnalysis(path_analyzed,
-                                       path_out_securin,
-                                       plate_id,
-                                       mapping_file,
-                                       class_colors,
-                                       class_names,
-                                       **securin_options)
-            securin_analyzer.run()
-
-class AnalzyerThread(_ProcessingThread):
-
-    image_ready = pyqtSignal(ccore.RGBImage, str, str)
-
-    def __init__(self, parent, settings, imagecontainer):
-        _ProcessingThread.__init__(self, parent, settings)
-        self._renderer = None
-        self._imagecontainer = imagecontainer
-        self._buffer = {}
-
-    def _run(self):
-        for plate_id in self._imagecontainer.plates:
-            analyzer = AnalyzerCore(plate_id, self._settings,
-                                    copy.copy(self._imagecontainer))
-            result = analyzer.processPositions(self)
-            learner = result['ObjectLearner']
-            post_hdf5_link_list = result['post_hdf5_link_list']
-            if len(post_hdf5_link_list) > 0:
-                link_hdf5_files(sorted(post_hdf5_link_list))
-
-
-        # make sure the learner data is only exported while we do sample picking
-        if self._settings.get('Classification', 'collectsamples') and not learner is None:
-            learner.export()
-
-    def set_renderer(self, name):
-        self._mutex.lock()
-        self._renderer = name
-        self._emit(name)
-        self._mutex.unlock()
-
-    def get_renderer(self):
-        return self._renderer
-
-    def set_image(self, name, image_rgb, info, filename=''):
-        self._mutex.lock()
-        self._buffer[name] = (image_rgb, info, filename)
-        if name == self._renderer:
-            self._emit(name)
-        self._mutex.unlock()
-
-    def _emit(self, name):
-        if name in self._buffer:
-            self.image_ready.emit(*self._buffer[name])
-
-class MultiAnalzyerThread(AnalzyerThread, MultiProcessingAnalyzerMixin):
+class MultiAnalyzerThread(AnalyzerThread, MultiProcessingAnalyzerMixin):
     image_ready = pyqtSignal(ccore.RGBImage, str, str)
     def __init__(self, parent, settings, imagecontainer, ncpu):
-        AnalzyerThread.__init__(self, parent, settings, imagecontainer)
+        AnalyzerThread.__init__(self, parent, settings, imagecontainer)
         self.setup(ncpu)
         self._abort = False
 
@@ -1073,83 +488,6 @@ class MultiAnalzyerThread(AnalzyerThread, MultiProcessingAnalyzerMixin):
         self.join()
 
 
-
-
-
-class TrainingThread(_ProcessingThread):
-
-    conf_result = pyqtSignal(float, float, ConfusionMatrix)
-
-    def __init__(self, parent, settings, learner):
-        _ProcessingThread.__init__(self, parent, settings)
-        self._learner = learner
-
-    def _run(self):
-        #print "training"
-
-        # log2 settings (range and step size) for C and gamma
-        c_begin, c_end, c_step = -5,  15, 2
-        c_info = c_begin, c_end, c_step
-
-        g_begin, g_end, g_step = -15, 3, 2
-        g_info = g_begin, g_end, g_step
-
-        stage_info = {'stage': 0,
-                      'text': '',
-                      'min': 0,
-                      'max': 1,
-                      'meta': 'Classifier training:',
-                      'item_name': 'round',
-                      'progress': 0,
-                      }
-        self.set_stage_info(stage_info)
-
-        i = 0
-        best_accuracy = -1
-        best_log2c = None
-        best_log2g = None
-        best_conf = None
-        is_abort = False
-        stopwatch = StopWatch()
-        self._learner.filterData(apply=True)
-        for info in self._learner.iterGridSearchSVM(c_info=c_info,
-                                                    g_info=g_info):
-            n, log2c, log2g, conf = info
-            stage_info.update({'min': 1,
-                               'max': n,
-                               'progress': i+1,
-                               'text': 'log2(C)=%d, log2(g)=%d' % \
-                               (log2c, log2g),
-                               'interval': stopwatch.current_interval(),
-                               })
-            self.set_stage_info(stage_info)
-            stopwatch.reset()
-            i += 1
-            accuracy = conf.ac_sample
-            if accuracy > best_accuracy:
-                best_accuracy = accuracy
-                best_log2c = log2c
-                best_log2g = log2g
-                best_conf = conf
-                self.conf_result.emit(log2c, log2g, conf)
-            time.sleep(.05)
-
-            if self.get_abort():
-                is_abort = True
-                break
-
-        # overwrite only if grid-search was not aborted by the user
-        if not is_abort:
-            self._learner.train(2**best_log2c, 2**best_log2g)
-            self._learner.exportConfusion(best_log2c, best_log2g, best_conf)
-            self._learner.exportRanges()
-            # FIXME: in case the meta-data (colors, names, zero-insert) changed
-            #        the ARFF file has to be written again
-            #        -> better store meta-data outside ARFF
-            self._learner.exportToArff()
-
-
-
 class _ProcessorMixin(object):
     def __init__(self):
         self._is_running = False
@@ -1164,32 +502,6 @@ class _ProcessorMixin(object):
 
         shortcut = QShortcut(QKeySequence(Qt.Key_Escape), self)
         self.connect(shortcut, SIGNAL('activated()'), self._on_esc_pressed)
-
-        #frame = self._get_frame()
-#        frame = self._control
-#        layout = frame.layout()
-#
-#        self._analyzer_progress2 = QProgressBar(frame)
-#        self._analyzer_label2 = QLabel(frame)
-#        layout.addWidget(self._analyzer_progress2, 1, 0, 1, 3)
-#        layout.addWidget(self._analyzer_label2, 2, 0, 1, 3)
-#
-#        self._analyzer_progress1 = QProgressBar(frame)
-#        self._analyzer_label1 = QLabel(frame)
-#        layout.addWidget(self._analyzer_progress1, 3, 0, 1, 3)
-#        layout.addWidget(self._analyzer_label1, 4, 0, 1, 3)
-#
-#        self._show_image = QCheckBox('Show images', frame)
-#        self._show_image.setTristate(False)
-#        self._show_image.setCheckState(Qt.Checked)
-#        layout.addWidget(self._show_image, 5, 0)
-#
-#        self._run_button = QPushButton('Start processing', frame)
-#        self.connect(self._run_button, SIGNAL('clicked()'), self._on_run_analyer)
-#        layout.addWidget(self._run_button, 5, 2)
-#
-#        self._is_running = False
-#        self._image_combo = None
 
     def register_process(self, name):
         pass
@@ -1289,7 +601,6 @@ class _ProcessorMixin(object):
 
     def _on_process_start(self, name, start_again=False):
         if not self._is_running or start_again:
-
             is_valid = True
             self._is_abort = False
             self._has_error = False
@@ -1358,7 +669,7 @@ class _ProcessorMixin(object):
                              "See README.txt for details." % cmd)
                     is_valid = False
 
-            elif cls is MultiAnalzyerThread:
+            elif cls is MultiAnalyzerThread:
                 ncpu = cpu_count()
                 (ncpu, ok) = QInputDialog.getInt(None, "On your machine are %d processers available." % ncpu, \
                                              "Select the number of processors", \
@@ -1366,7 +677,6 @@ class _ProcessorMixin(object):
                 if not ok:
                     self._process_items = None
                     is_valid = False
-
 
             if is_valid:
                 self._current_process = name
@@ -1386,10 +696,11 @@ class _ProcessorMixin(object):
                     self._toggle_control_buttons()
 
                 imagecontainer = self.parent().main_window._imagecontainer
-                if cls is AnalzyerThread:
+                if cls is AnalyzerThread:
 
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
                     self._analyzer = cls(self, self._current_settings, imagecontainer)
+                    print isinstance(self._analyzer, AnalyzerThread)
 
                     self._set_display_renderer_info()
 
@@ -1401,7 +712,7 @@ class _ProcessorMixin(object):
                         qApp._graphics.setPixmap(pix2)
                         qApp._image_dialog.raise_()
 
-                elif cls is MultiAnalzyerThread:
+                elif cls is MultiAnalyzerThread:
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
                     self._analyzer = cls(self, self._current_settings, imagecontainer, ncpu)
 
@@ -1423,7 +734,7 @@ class _ProcessorMixin(object):
                 elif cls is HmmThread:
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
 
-                    # FIXME: classifier handling needs revision!!!
+                      # FIXME: classifier handling needs revision!!!
                     learner_dict = {}
                     for kind in ['primary', 'secondary']:
                         _resolve = lambda x,y: self._settings.get(x, '%s_%s' % (kind, y))

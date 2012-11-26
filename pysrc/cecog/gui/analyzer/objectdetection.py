@@ -30,9 +30,8 @@ from PyQt4.Qt import *
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog.gui.analyzer import (BaseProcessorFrame,
-                                AnalzyerThread,
-                                )
+from cecog.gui.analyzer import BaseProcessorFrame
+from cecog.threads.analyzer import AnalyzerThread
 from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
 from cecog.plugin.segmentation import (PRIMARY_SEGMENTATION_MANAGER,
                                        SECONDARY_SEGMENTATION_MANAGER,
@@ -63,7 +62,7 @@ class ObjectDetectionFrame(BaseProcessorFrame):
         super(ObjectDetectionFrame, self).__init__(settings, parent)
 
         self.register_control_button('detect',
-                                     AnalzyerThread,
+                                     AnalyzerThread,
                                      ('Detect %s objects', 'Stop %s detection'))
 
         self.set_tab_name('Primary Channel')
