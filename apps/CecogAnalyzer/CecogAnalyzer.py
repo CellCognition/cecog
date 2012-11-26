@@ -17,11 +17,11 @@ __source__ = '$URL$'
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
-import sys, \
-       os, \
-       logging, \
-       time, \
-       gc
+import gc
+import os
+import sys
+import loggign
+import time
 import cPickle as pickle
 from multiprocessing import freeze_support
 
@@ -730,7 +730,8 @@ class AnalyzerMainWindow(QMainWindow):
                 settings_filename = convert_package_path(self._settings_filename)
                 if os.path.isfile(settings_filename):
                     dir = settings_filename
-            filename = QFileDialog.getOpenFileName(self, 'Open config file', dir, ';;'.join(self.NAME_FILTERS))
+            filename = QFileDialog.getOpenFileName(self, 'Open config file',
+                                                   dir, ';;'.join(self.NAME_FILTERS))
             if filename:
                 self._read_settings(filename)
                 if self._settings.was_old_file_format():
