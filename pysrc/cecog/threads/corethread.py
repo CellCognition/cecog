@@ -63,7 +63,7 @@ class CoreThread(QtCore.QThread):
                 msg = e.msg
             else:
                 msg = traceback.format_exc()
-                traceback.print_exc()
+            traceback.print_exc()
 
             logger = logging.getLogger()
             logger.error(msg)

@@ -220,8 +220,7 @@ class ReverseDict(dict):
 
 class LoggerMixin(OptionManager):
 
-    OPTIONS = {"strLoggerName": Option("", callback="_onLoggerName"),
-              }
+    OPTIONS = {"strLoggerName": Option("", callback="_onLoggerName")}
 
     def __init__(self, **dctOptions):
         super(LoggerMixin, self).__init__(**dctOptions)

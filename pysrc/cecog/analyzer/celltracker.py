@@ -1090,7 +1090,6 @@ class PlotCellTracker(CellTracker):
             if bHasSplitId:
                 dctData['isSplit'] = 1 if iT == iSplitT else 0
 
-            print iT, strChannelId, strRegionId, lstObjectIds
             #for iIdx, iObjId in enumerate(lstObjectIds):
             iObjId = lstObjectIds[0]
             if iObjId in oRegion:

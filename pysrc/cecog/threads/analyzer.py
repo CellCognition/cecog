@@ -29,9 +29,11 @@ class AnalyzerThread(CoreThread):
         self._buffer = {}
 
     def _run(self):
+        learner = None
         for plate_id in self._imagecontainer.plates:
             analyzer = AnalyzerCore(plate_id, self._settings,
-                                    copy.deepcopy(self._imagecontainer))
+                                    copy.deepcopy(self._imagecontainer),
+                                    learner=learner)
             result = analyzer.processPositions(self)
             learner = result['ObjectLearner']
             post_hdf5_link_list = result['post_hdf5_link_list']

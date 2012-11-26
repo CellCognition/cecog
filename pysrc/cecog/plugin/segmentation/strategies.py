@@ -596,7 +596,7 @@ class SegmentationPluginPropagate(_SegmentationPlugin):
     def _run(self, meta_image, container):
         image = meta_image.image
 
-        img_red = ccore.disc_median(image, self.params['presegmentation_median_radius'])
+        img_prefiltered = ccore.disc_median(image, self.params['presegmentation_median_radius'])
         t = int(ccore.get_otsu_threshold(img_prefiltered) * self.params['presegmentation_alpha'])
         img_bin = ccore.threshold_image(img_prefiltered, t)
         img_labels = ccore.segmentation_propagate(img_prefiltered, img_bin,

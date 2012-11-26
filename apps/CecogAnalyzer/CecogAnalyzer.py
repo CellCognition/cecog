@@ -20,7 +20,7 @@ __source__ = '$URL$'
 import gc
 import os
 import sys
-import loggign
+import logging
 import time
 import cPickle as pickle
 from multiprocessing import freeze_support
@@ -40,6 +40,11 @@ sip.setapi('QUrl', 2)
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
+
+try:
+    import cecog
+except ImportError:
+    sys.path.append(os.path.join(os.pardir, os.pardir, "pysrc"))
 
 from pdk.ordereddict import OrderedDict
 
@@ -62,13 +67,13 @@ from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.gui.config import GuiConfigSettings
 
 # Frames
-from cecog.gui.analyzer.general import ( GeneralFrame, SECTION_NAME_GENERAL )
-from cecog.gui.analyzer.objectdetection import ( ObjectDetectionFrame,
-                                                 SECTION_NAME_OBJECTDETECTION )
+from cecog.gui.analyzer.general import GeneralFrame, SECTION_NAME_GENERAL
+from cecog.gui.analyzer.objectdetection import ObjectDetectionFrame, \
+    SECTION_NAME_OBJECTDETECTION
 from cecog.gui.analyzer.featureextraction import FeatureExtractionFrame
 from cecog.gui.analyzer.postprocessing import PostProcessingFrame
 from cecog.gui.analyzer.classification import ClassificationFrame
-from cecog.gui.analyzer.tracking import (TrackingFrame, SECTION_NAME_TRACKING )
+from cecog.gui.analyzer.tracking import TrackingFrame, SECTION_NAME_TRACKING
 from cecog.gui.analyzer.errorcorrection import ErrorCorrectionFrame
 from cecog.gui.analyzer.output import OutputFrame
 from cecog.gui.analyzer.processing import ProcessingFrame

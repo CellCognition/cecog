@@ -18,10 +18,10 @@ __source__ = '$URL$'
 # standard library imports:
 #
 
-import os, \
-       re, \
-       csv, \
-       copy
+import os
+import re
+import csv
+import copy
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -620,16 +620,6 @@ class ClassPredictor(BaseLearner):
             f.write('%s\n' % '\t'.join([str(self.nl2l[r])] +
                                        [str(conf_array[r,c])
                                         for c in range(cols)]))
-#        f.write('\n')
-#        f.write('confusion matrix (relative)\n')
-#        conf_norm = conf.swapaxes(0,1) / numpy.array(numpy.sum(conf, 1),
-#                                                     numpy.float)
-#        conf_norm = conf_norm.swapaxes(0,1)
-#        f.write('%s\n' % '\t'.join([''] + [str(self.nl2l[nl])
-#                                           for nl in range(cols)]))
-#        for r in range(rows):
-#            f.write('%s\n' % '\t'.join([str(self.nl2l[r])] + [str(conf_norm[r,c])
-#                                                         for c in range(cols)]))
         f.close()
 
 
@@ -902,12 +892,9 @@ class ConfusionMatrix2(ConfusionMatrix):
 
 class CommonMixin(OptionManager):
 
-    OPTIONS = {'dctCollectSamples' : Option(None),
-               }
+    OPTIONS = {'dctCollectSamples' : Option(None)}
 
-    __attributes__ = ['strChannelId',
-                      'strRegionId',
-                      ]
+    __attributes__ = ['strChannelId', 'strRegionId']
 
     def __init__(self, *args, **options):
 

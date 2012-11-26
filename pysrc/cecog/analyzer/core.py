@@ -104,9 +104,6 @@ sys.setrecursionlimit(10000)
 # functions:
 #
 
-def mapDirectory(path):
-    return path
-
 #-------------------------------------------------------------------------------
 # classes:
 #
@@ -126,7 +123,7 @@ class PositionAnalyzer(object):
 
         self.P = self._adjustPositionLength(P)
         self.P = P
-        self.strPathOut = mapDirectory(strPathOut)
+        self.strPathOut = strPathOut
         self._oLogger = self._configRootLogger()
 
         self.plate_id = plate_id
@@ -135,7 +132,7 @@ class PositionAnalyzer(object):
         self.P = self._adjustPositionLength(P)
         self.P = P
 
-        self.strPathOut = mapDirectory(strPathOut)
+        self.strPathOut = strPathOut
 
         #self._oLogger = logging.getLogger()
 
@@ -217,7 +214,7 @@ class PositionAnalyzer(object):
                 self.oSettings.get2(self._resolve_name(channel, 'classification'))):
                 channel_id = self.channel_mapping[channel]
                 self.oSettings.set_section('Classification')
-                classifier_infos = {'strEnvPath' : mapDirectory(self.oSettings.get2(self._resolve_name(channel, 'classification_envpath'))),
+                classifier_infos = {'strEnvPath' : self.oSettings.get2(self._resolve_name(channel, 'classification_envpath')),
                                     'strChannelId' : CHANNEL_CLASSES[channel].NAME,
                                     'strRegionId' : self.oSettings.get2(self._resolve_name(channel, 'classification_regionname')),
                                     }
@@ -934,14 +931,15 @@ class AnalyzerCore(object):
         self.oObjectLearner = learner
 
         self.oSettings.set_section('Classification')
-        if self.oSettings.get2('collectSamples'):
 
+        # this part is for PICKING
+        if self.oSettings.get2('collectSamples'):
             self.oSettings.bUsePyFarm = False
 
             _resolve = lambda x: '%s_%s' % (self.oSettings.get2('collectsamples_prefix'), x)
             classifier_path = self.oSettings.get2(_resolve('classification_envpath'))
 
-            classifier_infos = {'strEnvPath' : mapDirectory(classifier_path),
+            classifier_infos = {'strEnvPath' : classifier_path,
                                 'strChannelId' : self.oSettings.get('ObjectDetection', _resolve('channelid')),
                                 'strRegionId' : self.oSettings.get2(_resolve('classification_regionname')),
                                 }
@@ -996,7 +994,8 @@ class AnalyzerCore(object):
 
             for position in self.dctSamplePositions:
                 if not self.dctSamplePositions[position] is None:
-                    self.dctSamplePositions[position] = sorted(unique(self.dctSamplePositions[position]))
+                    self.dctSamplePositions[position] = \
+                        sorted(unique(self.dctSamplePositions[position]))
 
             self.lstPositions = sorted(self.dctSamplePositions.keys())
 
@@ -1016,8 +1015,9 @@ class AnalyzerCore(object):
         # does a position selection exist?
         if not self.lstPositions is None:
             if not is_subset(self.lstPositions, self._meta_data.positions):
-                raise ValueError("The list of selected positions is not valid! %s\nValid values are %s" %\
-                                 (self.lstPositions, self._meta_data.positions))
+                raise ValueError(("The list of selected positions is not valid!"
+                                  " %s\nValid values are %s" %\
+                                 (self.lstPositions, self._meta_data.positions)))
         else:
             # take all positions found
             self.lstPositions = list(self._meta_data.positions)
