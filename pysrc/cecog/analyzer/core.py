@@ -22,16 +22,21 @@ __source__ = '$URL$'
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
-import sys, \
-       time, \
-       logging, \
-       h5py
+import sys
+import os
+import re
+import time
+import shutil
+import logging
 
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
 from pdk.datetimeutils import StopWatch
 from pdk.iterator import is_subset
+from pdk.fileutils import safe_mkdirs, collect_files
+from pdk.map import dict_append_list
+from pdk.iterator import unique
 
 #-------------------------------------------------------------------------------
 # cecog module imports:
@@ -49,7 +54,7 @@ from cecog.analyzer.channel import (PrimaryChannel,
                                     SecondaryChannel,
                                     TertiaryChannel,
                                     )
-from cecog.analyzer.celltracker import *
+from cecog.analyzer.celltracker import ClassificationCellTracker2
 from cecog.io.imagecontainer import Coordinate
 from cecog.learning.collector import CellCounterReader, CellCounterReaderXML
 from cecog.learning.learning import CommonObjectLearner, CommonClassPredictor

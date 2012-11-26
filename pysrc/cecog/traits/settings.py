@@ -181,12 +181,10 @@ class ConfigSettings(RawConfigParser):
     def readfp(self, fp):
         for plugin_manager in PLUGIN_MANAGERS:
             plugin_manager.clear()
-
         for section in self.sections():
             self.remove_section(section)
 
         result = RawConfigParser.readfp(self, fp)
-
         self._old_file_format = False
         if not self.has_option('General', 'version') or \
                 self.get('General', 'version') < VERSION:

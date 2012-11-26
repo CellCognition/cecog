@@ -99,7 +99,7 @@ from cecog.threads.hmm_scafold import HmmThread_Python_Scafold
 from cecog.threads.hmm import HmmThread
 from cecog.threads.post_processing import PostProcessingThread
 
-from cecog.traits.config import ConfigSettings
+from cecog.traits.settings import ConfigSettings
 from cecog.traits.analyzer import SECTION_REGISTRY
 
 #------------------------------------------------------------------------------
@@ -143,7 +143,8 @@ def link_hdf5_files(post_hdf5_link_list):
         position = hf_file[POSITION_PREFIX % (plate, well)].keys()[0]
         return plate, well, position
 
-    all_pos_hdf5_filename = os.path.join(os.path.split(post_hdf5_link_list[0])[0], '_all_positions.h5')
+    all_pos_hdf5_filename = os.path.join( \
+        os.path.split(post_hdf5_link_list[0])[0], '_all_positions.h5')
 
     if os.path.exists(all_pos_hdf5_filename):
         f = h5py.File(all_pos_hdf5_filename, 'a')
@@ -192,15 +193,21 @@ def link_hdf5_files(post_hdf5_link_list):
 def AnalyzerCoreHelper(plate_id, settings_str, imagecontainer, position):
     print ' analyzing plate', plate_id, 'and position', position, 'in process', os.getpid()
     settings = ConfigSettings(SECTION_REGISTRY)
+    print 'before..'*100
     settings.from_string(settings_str)
+    print settings.sections()
 
     settings.set(SECTION_NAME_GENERAL, 'constrain_positions', True)
     settings.set(SECTION_NAME_GENERAL, 'positions', position)
     try:
-        analyzer = AnalyzerCore(plate_id, settings,imagecontainer)
+        print "plate_id: ", plate_id
+        print "settings: ", id(settings)
+        print 'imagecontainer: ', id(imagecontainer)
+        analyzer = AnalyzerCore(plate_id, settings, imagecontainer)
         result = analyzer.processPositions()
     except Exception, e:
         traceback.print_exc()
+        raise
     return plate_id, position, copy.deepcopy(result['post_hdf5_link_list'])
 
 def process_initialyzer(port):
@@ -214,7 +221,6 @@ def process_initialyzer(port):
 #-------------------------------------------------------------------------------
 # classes:
 #
-
 
 class BaseFrame(TraitDisplayMixin):
 
@@ -441,7 +447,8 @@ class MultiProcessingAnalyzerMixin(ParallelProcessThreadMixinBase):
 
     def submit_jobs(self, job_list):
         self.process_callback.notify_execution(job_list, self.ncpu)
-        self.job_result = [self.pool.apply_async(self.target, args, callback=self.process_callback) for args in job_list]
+        self.job_result = [self.pool.apply_async(self.target, args, callback=self.process_callback)
+                           for args in job_list]
 
 class MultiprocessingException(Exception):
     def __init__(self, exception_list):

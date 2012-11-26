@@ -87,12 +87,6 @@ class DotWriter(object):
         self.oDotFile = file(strFilename, "w")
 
         self.oDotFile.write("digraph G {\n")
-#        tmp = "ratio=auto; size=\"160.0,260.0\"; " +\
-#              "ranksep=.25; nodesep=.5; " +\
-#              "fontname=\"Helvetica\"; rankdir=TB;\n"
-#        tmp = "ratio=auto; size=\"100.0,200.0\"; " +\
-#              "ranksep=.8; nodesep=.8; " +\
-#              "fontname=\"Helvetica\"; rankdir=TB;\n"
         tmp = "ranksep=.01; nodesep=1.5; " +\
               "fontname=\"Helvetica\"; rankdir=TB;\n"
         self.oDotFile.write(tmp)
@@ -226,8 +220,7 @@ class CellTracker(OptionManager):
                  '_dctTimePoints',
                  '_dctTimeChannels',
                  '_dctImageFilenames',
-                 'dctVisitorData',
-                 ]
+                 'dctVisitorData']
 
     def __init__(self, **dctOptions):
         super(CellTracker, self).__init__(**dctOptions)
@@ -243,7 +236,6 @@ class CellTracker(OptionManager):
         self._dctTimePoints = None
         self.dctVisitorData = None
         self.oLogger = logging.getLogger(self.__class__.__name__)
-
 
     def __getstate__(self):
         dctSlots = {}
@@ -352,7 +344,7 @@ class CellTracker(OptionManager):
         self._regionName = strRegionName
         self._oGraph = Graph()
         self._dctTimePoints = OrderedDict()
-            
+
     def trackAtTimepoint(self, iT):
         oChannel = self._dctTimeChannels[iT][self._channelId]
         self.lstFeatureNames = oChannel.lstFeatureNames
@@ -424,13 +416,13 @@ class CellTracker(OptionManager):
                                          (dist, strNodeIdC))
 
             # prevent split and merge for one node at the same time
-            
-            ### FIXME: Here we loose alomost all cell mappings, 
+
+            ### FIXME: Here we loose alomost all cell mappings,
             ### because if fMaxObjectDistance is big, we find for
             ### many cells splits and merges and there will never
-            ### be an one-to-one mapping => the bigger the radius, the less mappings 
+            ### be an one-to-one mapping => the bigger the radius, the less mappings
             ### which is counter intuitive
-             
+
             for id_c in dctMerges:
                 nodes = dctMerges[id_c]
                 if len(nodes) == 1:
@@ -568,10 +560,6 @@ class CellTracker(OptionManager):
     def forwardReachable(self, node_id, reachableD, edgeD, iMaxLevel=None, iLevel=0):
         oGraph = self._oGraph
         reachableD[node_id] = True
-        #print node_id
-        #print "     out:", self.out_arcs(node_id)
-        #print "      in:", self.in_arcs(node_id)
-
         if iMaxLevel is None or iLevel < iMaxLevel:
             for out_edge_id in oGraph.out_arcs(node_id):
                 next_node_id = oGraph.tail(out_edge_id)
@@ -1761,9 +1749,9 @@ class ClassificationCellTracker2(ClassificationCellTracker):
         feature_lookup['mean'] = 'n2_avg'
         feature_lookup['sd'] = 'n2_stddev'
         feature_lookup['size'] = 'roisize'
-        
+
         lstFeatureNames = sorted(self.lstFeatureNames)
-        
+
         for name, real_name in zip([self.FEATURE_FLAT_PATTERN % f for f in lstFeatureNames],
                                    lstFeatureNames):
             feature_lookup[name] = real_name
@@ -1834,5 +1822,3 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                     f.write('%s\n' % sep.join(map(str, prefix + items)))
 
                 f.close()
-
-
