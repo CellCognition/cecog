@@ -1091,9 +1091,9 @@ class TimeHolder(OrderedDict):
     def extportPopulationPlots(self, input_filename, pop_plot_output_dir, pos,
                                meta_data, prim_info, sec_info, ylim):
         if os.path.exists(input_filename):
-            channel_name, class_names, class_colors = prim_info
+            channel, classes, colors = prim_info
             case = "lower"
-            if len(class_names) > 1:
+            if len(classes) > 1:
                 data = numpy.recfromcsv(input_filename, delimiter='\t', skip_header=3,
                                         case_sensitive=case)
 
@@ -1103,10 +1103,11 @@ class TimeHolder(OrderedDict):
 
                 # numpy wants nice attribute names
                 validator = numpy.lib._iotools.NameValidator(case_sensitive=case)
-                classes = validator.validate(class_names)
+                keys = validator.validate(classes)
 
-                for cl, color in zip(classes[1:], class_colors[1:]):
-                    ax.plot(time, data[cl], color=color, label=cl)
+                for lb, key, color in zip(classes[1:], keys[1:],
+                                          colors[1:]):
+                    ax.plot(time, data[key], color=color, label=lb)
                 pyplot.xlabel('time [min]')
                 pyplot.ylabel('cell count')
                 pyplot.xlim((time.min(), time.max()))
@@ -1114,7 +1115,7 @@ class TimeHolder(OrderedDict):
                     pyplot.ylim((0, ylim))
                 pyplot.legend(loc="upper right")
                 pyplot.title('%s primary population plot' % pos)
-                fig.savefig(os.path.join(pop_plot_output_dir, '%s_%s.png'%(channel_name, pos)))
+                fig.savefig(os.path.join(pop_plot_output_dir, '%s_%s.png'%(channel, pos)))
 
 
     def extportObjectDetails(self, filename, sep='\t', excel_style=False):
