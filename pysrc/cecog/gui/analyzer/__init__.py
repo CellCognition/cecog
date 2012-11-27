@@ -20,20 +20,14 @@ __all__ = []
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
-import types, \
-       traceback, \
-       logging, \
-       logging.handlers, \
-       sys, \
-       os, \
-       time, \
-       copy, \
-       SocketServer, \
-       cPickle as pickle, \
-       struct, \
-       threading, \
-       socket
-
+import types
+import traceback
+import logging
+import logging.handlers
+import sys
+import os
+import time
+import copy
 
 
 #-------------------------------------------------------------------------------
@@ -44,17 +38,15 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
-from pdk.ordereddict import OrderedDict
-from pdk.datetimeutils import TimeInterval, StopWatch
-from pdk.fileutils import safe_mkdirs
-
-from multiprocessing import Pool, Queue, cpu_count
+from collections import OrderedDict
+from pdk.datetimeutils import TimeInterval
 
 import warnings
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     import sklearn.hmm as hmm
 
+from multiprocessing import cpu_count
 
 #-------------------------------------------------------------------------------
 # cecog imports:
@@ -98,7 +90,7 @@ from cecog.threads.training import TrainingThread
 from cecog.threads.hmm_scafold import HmmThread_Python_Scafold
 from cecog.threads.hmm import HmmThread
 from cecog.threads.post_processing import PostProcessingThread
-from cecog.threads.multianalyzer import MultiAnalyzerThread
+from cecog.multiprocess.multianalyzer import MultiAnalyzerThread
 
 
 #------------------------------------------------------------------------------
