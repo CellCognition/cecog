@@ -1088,18 +1088,25 @@ class TimeHolder(OrderedDict):
 
         f.close()
 
-    def extportPopulationPlots(self, input_filename, pop_plot_output_dir, pos, meta_data, prim_info, sec_info, ylim):
+    def extportPopulationPlots(self, input_filename, pop_plot_output_dir, pos,
+                               meta_data, prim_info, sec_info, ylim):
         if os.path.exists(input_filename):
             channel_name, class_names, class_colors = prim_info
+            case = "lower"
             if len(class_names) > 1:
-                data = numpy.recfromcsv(input_filename, delimiter='\t', skip_header=3)
-                time = data['time'] / 60.0
+                data = numpy.recfromcsv(input_filename, delimiter='\t', skip_header=3,
+                                        case_sensitive=case)
 
+                time = data['time'] / 60.0
                 fig = pyplot.figure(figsize=(20,10))
                 ax = pyplot.gca()
 
-                for cl, color in zip(class_names[1:], class_colors[1:]):
-                    ax.plot(list(time), list(data[cl]), color=color, label=cl)
+                # numpy wants nice attribute names
+                validator = numpy.lib._iotools.NameValidator(case_sensitive=case)
+                classes = validator.validate(class_names)
+
+                for cl, color in zip(classes[1:], class_colors[1:]):
+                    ax.plot(time, data[cl], color=color, label=cl)
                 pyplot.xlabel('time [min]')
                 pyplot.ylabel('cell count')
                 pyplot.xlim((time.min(), time.max()))
