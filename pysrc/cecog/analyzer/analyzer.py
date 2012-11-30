@@ -172,7 +172,8 @@ class TimeHolder(OrderedDict):
         self._object_coord_to_idx = {}
 
         channels = sorted(list(meta_data.channels))
-        self._region_names = REGION_INFO.names['primary'] + REGION_INFO.names['secondary']
+        self._region_names = REGION_INFO.names['primary'] + \
+            REGION_INFO.names['secondary'] + REGION_INFO.names['tertiary']
 
         self._channel_info = []
         self._region_infos = []
@@ -299,10 +300,8 @@ class TimeHolder(OrderedDict):
             f.close()
 
     def _hdf5_write_global_definition(self):
-        """
-        """
 
-        ### global channel description
+        # global channel description
         dtype = numpy.dtype([('channel_name', '|S50'),
                              ('description', '|S100'),
                              ('is_physical', bool),
@@ -310,7 +309,8 @@ class TimeHolder(OrderedDict):
                              ])
 
         nr_channels = len(self._channel_info)
-        global_channel_desc = self._grp_def[self.HDF5_GRP_IMAGE].create_dataset('channel', (nr_channels,), dtype)
+        global_channel_desc = self._grp_def[self.HDF5_GRP_IMAGE].create_dataset( \
+            'channel', (nr_channels,), dtype)
         for idx in self._regions_to_idx.values():
             data = (self._channel_info[idx][0],
                     self._channel_info[idx][1],
@@ -318,10 +318,11 @@ class TimeHolder(OrderedDict):
                     (0, 0, 0))
             global_channel_desc[idx] = data
 
-        ### global region description
+        # global region description
         dtype = numpy.dtype([('region_name', '|S50'), ('channel_idx', 'i')])
-        nr_labels = len(self._regions_to_idx)
-        global_region_desc = self._grp_def[self.HDF5_GRP_IMAGE].create_dataset(self.HDF5_GRP_REGION, (nr_labels,), dtype)
+        nr_labels = len(self._region_infos)
+        global_region_desc = self._grp_def[self.HDF5_GRP_IMAGE].create_dataset(\
+            self.HDF5_GRP_REGION, (nr_labels,), dtype)
 
         for tpl in self._region_infos:
             channel_name, combined, region_name = tpl
@@ -329,7 +330,7 @@ class TimeHolder(OrderedDict):
             channel_idx = self._channels_to_idx[channel_name]
             global_region_desc[idx] = (combined, channel_idx)
 
-        ### time-lapse definition
+        # time-lapse definition
         # global definition
         if self._meta_data.has_timelapse:
             var = self._grp_def[self.HDF5_GRP_IMAGE].create_dataset(self.HDF5_GRP_TIME,
@@ -862,26 +863,7 @@ class TimeHolder(OrderedDict):
 
                 data.append((head_obj_idx_meta,
                              tail_obj_idx_meta))
-                self._edge_to_idx[(head_id, tail_id)] = idx
-
             var_rel[:] = data
-            # traverse the graph structure by head nodes and save one object per head node
-            # (with all forward-reachable nodes)
-#            data = []
-#            for obj_idx, head_id in enumerate(head_nodes):
-#                obj_id = obj_idx + 1
-#                edge_idx_start = len(data)
-#                edge_list = graph.dfs_edges(head_id)
-#
-#                for head, tail in edge_list:
-#                    rel_idx = self._edge_to_idx[(head, tail)]
-#                    data.append((obj_id, rel_idx))
-#
-#                var_id[obj_idx] = (obj_id, edge_idx_start, len(data))
-#
-#            var_edge = grp_cur_obj.create_dataset(self.HDF5_NAME_EDGE, (len(data),),
-#                                                  self.HDF5_DTYPE_EDGE)
-#            var_edge[:] = data
 
     def serialize_events(self, tracker):
         if self._hdf5_create and self._hdf5_include_events:
