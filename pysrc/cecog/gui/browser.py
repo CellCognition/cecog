@@ -60,6 +60,7 @@ from cecog.gui.widgets.groupbox import QxtGroupBox
 from cecog.gui.modules.navigation import NavigationModule
 from cecog.gui.modules.display import DisplayModule
 from cecog.gui.modules.annotation import AnnotationModule
+from cecog.gui.modules.tracking import TrackingModule
 #-------------------------------------------------------------------------------
 # constants:
 #
@@ -266,6 +267,9 @@ class Browser(QMainWindow):
         DisplayModule(self._module_manager, self, self._imagecontainer,
                       region_names)
 
+        TrackingModule(self._module_manager, self, self._settings,
+                         self._imagecontainer)
+
         AnnotationModule(self._module_manager, self, self._settings,
                          self._imagecontainer)
 
@@ -303,7 +307,7 @@ class Browser(QMainWindow):
     def set_coords(self, coords):
         self.image_viewer.remove_objects()
         self.image_viewer.set_objects_by_crackcoords(coords)
-        widget = self._module_manager.get_widget(AnnotationModule.NAME)
+        widget = self._module_manager.get_widget(TrackingModule.NAME)
         widget.set_coords()
 
     def set_image(self, image_dict):

@@ -196,7 +196,12 @@ class AbstractImporter(object):
             position = item[DIMENSION_NAME_POSITION]
             if not position in lookup:
                 lookup[position] = {}
-            if DIMENSION_NAME_TIME in item:
+ #           if DIMENSION_NAME_TIME in item:
+  #              time = int(item[DIMENSION_NAME_TIME])
+#ATTENTION c'est moche mais ca marche
+            if DIMENSION_NAME_TIME in item and str(self.section_name)=="MITOCHECK":
+                time = int(item[DIMENSION_NAME_TIME])/30
+            elif DIMENSION_NAME_TIME in item:
                 time = int(item[DIMENSION_NAME_TIME])
             else:
                 time = 0
@@ -481,6 +486,7 @@ class IniFileImporter(AbstractImporter):
         super(IniFileImporter, self).__init__(path)
         config_parser = config_parser
         section_name = section_name
+        self.section_name = section_name
 
         self._regex_subdirectories = config_parser.get(section_name, 'regex_subdirectories')
         # take all sub-directories if parameter is empty
