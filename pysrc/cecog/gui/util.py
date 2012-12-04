@@ -32,8 +32,8 @@ __all__ = ['QRC_TOKEN',
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
-import sys, \
-       traceback
+import sys
+import traceback
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -316,6 +316,8 @@ class ProgressDialog(QProgressDialog):
                     else:
                         t.result = self._target(*self._args, **self._options)
                 except Exception, e:
+                    import traceback
+                    traceback.print_exc()
                     t.exception = e
                 else:
                     self.targetFinished.emit()

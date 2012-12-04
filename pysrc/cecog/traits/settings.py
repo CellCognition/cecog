@@ -142,9 +142,10 @@ class ConfigSettings(RawConfigParser):
     def get_value(self, section_name, trait_name):
         return self.get(section_name, trait_name)
 
-    def get(self, section_name, trait_name):
-        trait_name = trait_name.lower()
-        return RawConfigParser.get(self, section_name, trait_name)
+    def get(self, section, option):
+        if section not in self.sections():
+            raise RuntimeError("Section %s does not exists" %section)
+        return RawConfigParser.get(self, section, option)
 
     def get2(self, trait_name):
         return self.get(self._current_section, trait_name)

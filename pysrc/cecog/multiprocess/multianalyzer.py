@@ -25,7 +25,7 @@ from PyQt4 import QtCore
 from pdk.datetimeutils import StopWatch
 from cecog import ccore
 from cecog.threads.link_hdf import link_hdf5_files
-from cecog.analyzer.core import AnalyzerCore
+from cecog.analyzer.core import AnalyzerCore, PositionAnalyzer
 from cecog.threads.analyzer import AnalyzerThread
 from cecog.traits.settings import ConfigSettings
 from cecog.traits.analyzer import SECTION_REGISTRY

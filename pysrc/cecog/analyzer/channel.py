@@ -379,7 +379,7 @@ class _Channel(PropertyManager):
 class PrimaryChannel(_Channel):
 
     NAME = 'Primary'
-    PREFIX = 'primary'
+    PREFIX = NAME.lower()
 
     RANK = 1
     SEGMENTATION = PRIMARY_SEGMENTATION_MANAGER
@@ -388,7 +388,7 @@ class PrimaryChannel(_Channel):
 class SecondaryChannel(_Channel):
 
     NAME = 'Secondary'
-    PREFIX = 'secondary'
+    PREFIX = NAME.lower()
 
     RANK = 2
     SEGMENTATION = SECONDARY_SEGMENTATION_MANAGER
@@ -397,7 +397,7 @@ class SecondaryChannel(_Channel):
 class TertiaryChannel(_Channel):
 
     NAME = 'Tertiary'
-    PREFIX = 'tertiary'
+    PREFIX = NAME.lower()
 
     RANK = 3
     SEGMENTATION = TERTIARY_SEGMENTATION_MANAGER

@@ -33,7 +33,7 @@ import copy
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
-import numpy, h5py
+import numpy
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
@@ -85,6 +85,7 @@ from cecog.plugin.display import PluginBay
 from cecog.gui.widgets.tabcontrol import TabControl
 from cecog.analyzer.ibb import IBBAnalysis, SecurinAnalysis
 
+from cecog.threads.picker import PickerThread
 from cecog.threads.analyzer import AnalyzerThread
 from cecog.threads.training import TrainingThread
 from cecog.threads.hmm_scafold import HmmThread_Python_Scafold
@@ -329,6 +330,15 @@ class _ProcessorMixin(object):
                 w_button = self._control_buttons[name2]['widget']
                 w_button.setEnabled(not w_button.isEnabled())
 
+    def _clear_image(self):
+        """Pop up and clear the image display"""
+        if not qApp._image_dialog is None:
+            pix = qApp._graphics.pixmap()
+            pix2 = QPixmap(pix.size())
+            pix2.fill(Qt.black)
+            qApp._graphics.setPixmap(pix2)
+            qApp._image_dialog.raise_()
+
     def _on_process_start(self, name, start_again=False):
         if not self._is_running or start_again:
             is_valid = True
@@ -426,28 +436,18 @@ class _ProcessorMixin(object):
                     self._toggle_control_buttons()
 
                 imagecontainer = self.parent().main_window._imagecontainer
-                if cls is AnalyzerThread:
 
+                if cls is PickerThread:
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
                     self._analyzer = cls(self, self._current_settings, imagecontainer)
                     self._set_display_renderer_info()
+                    self._clear_image()
 
-                    # clear the image display and raise the window
-                    if not qApp._image_dialog is None:
-                        pix = qApp._graphics.pixmap()
-                        pix2 = QPixmap(pix.size())
-                        pix2.fill(Qt.black)
-                        qApp._graphics.setPixmap(pix2)
-                        qApp._image_dialog.raise_()
-
-                elif cls is MultiAnalyzerThread:
+                elif cls is AnalyzerThread:
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
-                    self._analyzer = cls(self, self._current_settings, imagecontainer, ncpu)
-
+                    self._analyzer = cls(self, self._current_settings, imagecontainer)
                     self._set_display_renderer_info()
-
-
-
+                    self._clear_image()
 
                 elif cls is TrainingThread:
                     self._current_settings = self._settings.copy()
@@ -458,6 +458,12 @@ class _ProcessorMixin(object):
                     self._analyzer.conf_result.connect(result_frame.on_conf_result,
                                                        Qt.QueuedConnection)
                     result_frame.reset()
+
+                elif cls is MultiAnalyzerThread:
+                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
+                    self._analyzer = cls(self, self._current_settings, imagecontainer, ncpu)
+
+                    self._set_display_renderer_info()
 
                 elif cls is HmmThread:
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
@@ -734,6 +740,7 @@ class _ProcessorMixin(object):
             qApp._graphics.setPixmap(QPixmap.fromImage(qimage))
             qApp._image_dialog.setWindowTitle(info)
             qApp._image_dialog.setToolTip(filename)
+
             if not qApp._image_dialog.isVisible():
                 qApp._image_dialog.show()
                 qApp._image_dialog.raise_()

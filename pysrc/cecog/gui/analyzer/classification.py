@@ -39,6 +39,7 @@ from cecog.gui.util import (information,
                             )
 from cecog.gui.analyzer import BaseProcessorFrame
 
+from cecog.threads.picker import PickerThread
 from cecog.threads.analyzer import AnalyzerThread
 from cecog.threads.training import TrainingThread
 
@@ -372,7 +373,7 @@ class ClassificationFrame(BaseProcessorFrame):
         self._result_frames = {}
 
         self.register_control_button(self.PROCESS_PICKING,
-                                     AnalyzerThread,
+                                     PickerThread,
                                      ('Pick %s samples', 'Stop %s picking'))
         self.register_control_button(self.PROCESS_TRAINING,
                                      TrainingThread,

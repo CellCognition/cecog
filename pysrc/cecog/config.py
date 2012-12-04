@@ -27,8 +27,8 @@ __all__ = ['NAMING_SCHEMAS',
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
-import os, \
-       shutil
+import os
+import shutil
 from ConfigParser import RawConfigParser
 
 #-------------------------------------------------------------------------------
@@ -193,6 +193,3 @@ class PathMapper(object):
     @property
     def column_names(self):
         return self._column_names[:]
-
-
-

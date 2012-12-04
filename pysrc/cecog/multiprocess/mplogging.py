@@ -20,12 +20,12 @@ import logging
 import SocketServer
 
 def initialyze_process(port):
-    oLogger = logging.getLogger(str(os.getpid()))
-    oLogger.setLevel(logging.NOTSET)
+    logger = logging.getLogger(str(os.getpid()))
+    logger.setLevel(logging.NOTSET)
     socketHandler = logging.handlers.SocketHandler('localhost', port)
     socketHandler.setLevel(logging.NOTSET)
-    oLogger.addHandler(socketHandler)
-    oLogger.info('logger init')
+    logger.addHandler(socketHandler)
+    logger.info('logger init')
 
 class LogRecordStreamHandler(SocketServer.BaseRequestHandler):
     """Handler for a streaming logging request"""

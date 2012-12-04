@@ -17,32 +17,31 @@ from PyQt4 import QtCore
 from cecog import ccore
 from cecog.threads.corethread import CoreThread
 from cecog.threads.link_hdf import link_hdf5_files
-from cecog.analyzer.core import AnalyzerCore
+from cecog.analyzer.core import Picker
 
-class AnalyzerThread(CoreThread):
+class PickerThread(CoreThread):
 
     image_ready = QtCore.pyqtSignal(ccore.RGBImage, str, str)
 
     def __init__(self, parent, settings, imagecontainer):
-        super(AnalyzerThread, self).__init__(parent, settings)
+        super(PickerThread, self).__init__(parent, settings)
         self._renderer = None
         self._imagecontainer = imagecontainer
 
     def _run(self):
         learner = None
         for plate_id in self._imagecontainer.plates:
-            analyzer = AnalyzerCore(plate_id, self._settings,
-                                    copy.deepcopy(self._imagecontainer),
-                                    learner=learner)
-            result = analyzer.processPositions(self)
+            picker = Picker(plate_id, self._settings,
+                              copy.deepcopy(self._imagecontainer),
+                              learner=learner)
+            result = picker.processPositions(self)
             learner = result['ObjectLearner']
             post_hdf5_link_list = result['post_hdf5_link_list']
             if len(post_hdf5_link_list) > 0:
                 link_hdf5_files(sorted(post_hdf5_link_list))
 
         # make sure the learner data is only exported while we do sample picking
-        if self._settings.get('Classification', 'collectsamples') and \
-                not learner is None:
+        if learner is not None:
             learner.export()
 
     def set_renderer(self, name):
