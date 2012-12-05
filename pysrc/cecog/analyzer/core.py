@@ -33,39 +33,79 @@ from cecog.util.logger import LoggerObject
 from cecog.util.util import makedirs
 
 
-class AnalyzerCore(LoggerObject):
+# XXX - fix class names
+class AnalyzerBase(LoggerObject):
 
-    def __init__(self, plate_id, settings, imagecontainer, learner=None):
-        super(AnalyzerCore, self).__init__()
-
+    def __init__(self, plate, settings, imagecontainer):
+        super(AnalyzerBase, self).__init__()
         self._frames = None
         self._positions = None
+
+        # XXX
+        self.sample_reader = list()
+        self.sample_positions = dict()
 
         self.add_stream_handler(self._lvl.WARNING)
         self._imagecontainer = imagecontainer
         self.settings = settings
-        self.plate_id = plate_id
-        self._imagecontainer.set_plate(plate_id)
-
-        self._makedirs()
-        self._setup_cropping()
-
-        self.logger.info("openening image container: end")
-        self.logger.info("lstAnalysisFrames: %r" % self.frames)
-
-        # # belongs already to picker
-        self.sample_reader = []
-        self.sample_positions = {}
-        self.learner = learner
-
+        self.plate = plate
+        self._imagecontainer.set_plate(plate)
 
     @property
     def _out_dir(self):
-        return self._imagecontainer.get_path_out(self.plate_id)
+        return self._imagecontainer.get_path_out(self.plate)
 
     @property
     def meta_data(self):
         return self._imagecontainer.get_meta_data()
+
+
+    def _makedirs(self):
+        """Make output directories (analyzed, dumps and log)"""
+        odirs = ("analyzed", "dump", "log")
+        for odir in odirs:
+            path = join(self._out_dir, odir)
+            try:
+                makedirs(path)
+            except os.error: # no permissions
+                self.logger.error("mkdir %s: failed" %path)
+            else:
+                self.logger.info("mkdir %s: ok" %path)
+            setattr(self, "_%s_dir" %basename(odir).lower(), path)
+
+    @property
+    def frames(self):
+        """Return a list of frame indices under consideration of time
+        constraints (start, end, increment)
+        """
+
+        if self._frames is None:
+            frames_total = self.meta_data.times
+            f_start, f_end, f_incr = 0, len(frames_total), 1
+
+            if self.settings.get('General', 'frameRange'):
+                f_start = max(self.settings.get('General', 'frameRange_begin'),
+                              f_start)
+                f_end = min(self.settings.get('General', 'frameRange_end'),
+                            f_end)
+                f_incr = self.settings.get('General', 'frameincrement')
+
+                # > for picking >= anything else
+                if f_start > f_end:
+                    raise RuntimeError(("Invalid time constraints "
+                                        "(upper_bound <= lower_bound)!"))
+                self._frames = frames_total[f_start:f_end+1:f_incr]
+        return self._frames
+
+
+class AnalyzerCore(AnalyzerBase):
+
+    def __init__(self, plate, settings, imagecontainer):
+        super(AnalyzerCore, self).__init__(plate, settings, imagecontainer)
+        self._makedirs()
+        self._setup_cropping()
+        self.logger.info("openening image container: end")
+        self.logger.info("lstAnalysisFrames: %r" % self.frames)
 
     def _already_processed(self, positions):
         """Find positions already been processed and remove them from list"""
@@ -82,8 +122,8 @@ class AnalyzerCore(LoggerObject):
                 set_found.add(pos)
                 pos_found = list(positions.difference(set_found))
             pos_found.sort()
-            self.logger.info("Following positions have been processed already:\n%s"
-                             %positions)
+            self.logger.info(("Following positions have been "
+                              "processed already:\n%s" %positions))
         else:
             pos_found = positions
             self.logger.info("No positions have been processed yet.")
@@ -126,30 +166,6 @@ class AnalyzerCore(LoggerObject):
         assert isinstance(positions, list)
         self._positions = sorted(positions)
 
-    @property
-    def frames(self):
-        """Return a list of frame indices under consideration of time
-        constraints (start, end, increment)
-        """
-
-        if self._frames is None:
-            frames_total = self.meta_data.times
-            f_start, f_end, f_incr = 0, len(frames_total), 1
-
-            if self.settings.get('General', 'frameRange'):
-                f_start = max(self.settings.get('General', 'frameRange_begin'),
-                              f_start)
-                f_end = min(self.settings.get('General', 'frameRange_end'),
-                            f_end)
-                f_incr = self.settings.get('General', 'frameincrement')
-
-                # > for picking >= anything else
-                if f_start > f_end:
-                    raise RuntimeError(("Invalid time constraints "
-                                        "(upper_bound <= lower_bound)!"))
-                self._frames = frames_total[f_start:f_end+1:f_incr]
-        return self._frames
-
     def _setup_cropping(self):
         crop = self.settings.get('General', 'crop_image')
         x0 = self.settings.get('General', 'crop_image_x0')
@@ -164,38 +180,19 @@ class AnalyzerCore(LoggerObject):
             MetaImage.disable_cropping()
             self.logger.info("cropping disabled")
 
-    def _makedirs(self):
-        """Make output directories (analyzed, dumps and log)"""
-        odirs = ("analyzed", "dump", "log")
-        for odir in odirs:
-            path = join(self._out_dir, odir)
-            try:
-                makedirs(path)
-            except os.error: # no permissions
-                self.logger.error("mkdir %s: failed" %path)
-            else:
-                self.logger.info("mkdir %s: ok" %path)
-            setattr(self, "_%s_dir" %basename(odir).lower(), path)
-
     def processPositions(self, qthread=None, myhack=None):
         job_args = []
         for pos in self.positions:
             self.logger.info('Process positions: %r' % pos)
-            if pos in self.sample_positions:
-                analyze = len(self.sample_positions[pos]) > 0
-            else:
-                analyze = len(self.frames) > 0
-            self.logger.debug('analyze? %r' % analyze)
-
-            if analyze:
-                args_ = (self.plate_id,
+            if len(self.frames) > 0:
+                args_ = (self.plate,
                          pos,
                          self._out_dir,
                          self.settings,
                          self.frames,
                          self.sample_reader,
                          self.sample_positions,
-                         self.learner,
+                         None,
                          self._imagecontainer)
                 kw_ = dict(qthread = qthread, myhack = myhack)
                 job_args.append((args_, kw_))
@@ -218,19 +215,19 @@ class AnalyzerCore(LoggerObject):
                     self.settings.get('Output', 'hdf5_merge_positions'):
                 post_hdf5_link_list.append(result['filename_hdf5'])
 
-        return {'ObjectLearner': self.learner,
+        return {'ObjectLearner': None,
                 'post_hdf5_link_list': post_hdf5_link_list}
 
 
-class Picker(AnalyzerCore):
+class Picker(AnalyzerBase):
 
     # FIXME
     _ch_names = {'primary'   : 'Primary',
                 'secondary' : 'Secondary',
                 'tertiary'  : 'Tertiary'}
 
-    def __init__(self, plate_id, settings, imagecontainer, learner):
-        super(Picker, self).__init__(plate_id, settings, imagecontainer)
+    def __init__(self, plate, settings, imagecontainer, learner=None):
+        super(Picker, self).__init__(plate, settings, imagecontainer)
         # belongs already to picker
         self.sample_reader = []
         self.sample_positions = {}
@@ -288,7 +285,7 @@ class Picker(AnalyzerCore):
                 not sample_file[0] in ['.', '_'] and \
                 not result is None and \
                 (result.group('plate')is None or
-                 result.group('plate') == self.plate_id)):
+                 result.group('plate') == self.plate)):
             return True
         else:
             return False
@@ -306,3 +303,42 @@ class Picker(AnalyzerCore):
     def _resolve(self, txt):
         return '%s_%s' %(self.settings.get("Classification",
                                            "collectsamples_prefix"), txt)
+
+    def processPositions(self, qthread=None, myhack=None):
+        job_args = []
+        for posid, poslist in self.sample_positions.iteritems():
+            self.logger.info('Process positions: %r' % posid)
+            if len(poslist) > 0:
+                args_ = (self.plate,
+                         posid,
+                         self._out_dir,
+                         self.settings,
+                         self.frames,
+                         self.sample_reader,
+                         self.sample_positions,
+                         self.learner,
+                         self._imagecontainer)
+                # XXX - include kw_ into arags_
+                kw_ = dict(qthread = qthread, myhack = myhack)
+                job_args.append((args_, kw_))
+
+        stage_info = {'stage': 1, 'min': 1, 'max': len(job_args)}
+
+        hdf5_link_list = []
+        for idx, (args_, kw_) in enumerate(job_args):
+            if not qthread is None:
+                if qthread.get_abort():
+                    break
+                stage_info.update({'progress': idx+1,
+                                   'text': 'P %s (%d/%d)' \
+                                       % (args_[0], idx+1, len(job_args))})
+                qthread.set_stage_info(stage_info)
+            analyzer = PositionAnalyzer(*args_, **kw_)
+            result = analyzer()
+
+            if self.settings.get('Output', 'hdf5_create_file') and \
+                    self.settings.get('Output', 'hdf5_merge_positions'):
+                hdf5_link_list.append(result['filename_hdf5'])
+
+        return {'ObjectLearner': self.learner,
+                'post_hdf5_link_list': hdf5_link_list}
