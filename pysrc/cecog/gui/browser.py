@@ -379,8 +379,14 @@ class Browser(QMainWindow):
         settings.set2('collectsamples', False)
         settings.set('General', 'rendering', {})
         settings.set('General', 'rendering_class', {})
-        settings.set('Output', 'events_export_gallery_images', False)
 
+        # turn of output:
+        settings.set('Output', 'export_object_counts', False)
+        settings.set('Output', 'export_object_details', False)
+        settings.set('Output', 'export_file_names', False)
+        settings.set('Output', 'events_export_gallery_images', False)
+        settings.set('Output', 'export_track_data', False)
+        settings.set('Output', 'export_tracking_as_dot', False)
 
         if len(self._imagecontainer.channels) > 1:
             settings.set('Processing', 'secondary_processChannel', True)
