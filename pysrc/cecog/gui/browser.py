@@ -30,11 +30,6 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
-from pdk.datetimeutils import StopWatch
-
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 from cecog.gui.util import (exception,
                             information,
                             question,
@@ -60,19 +55,6 @@ from cecog.gui.widgets.groupbox import QxtGroupBox
 from cecog.gui.modules.navigation import NavigationModule
 from cecog.gui.modules.display import DisplayModule
 from cecog.gui.modules.annotation import AnnotationModule
-#-------------------------------------------------------------------------------
-# constants:
-#
-
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 
 
 class Browser(QMainWindow):
@@ -84,12 +66,10 @@ class Browser(QMainWindow):
     coordinates_changed = pyqtSignal(Coordinate)
 
     def __init__(self, settings, imagecontainer):
-        QMainWindow.__init__(self)
+        super(Browser, self).__init__()
 
         frame = QFrame(self)
         self.setCentralWidget(frame)
-
-        self._stopwatch = StopWatch()
 
         self._settings = settings
         self._imagecontainer = imagecontainer
@@ -270,6 +250,7 @@ class Browser(QMainWindow):
         # process and display the first image
         self._process_image()
 
+
     def create_action(self, text, slot=None, shortcut=None, icon=None,
                       tooltip=None, checkable=None, signal='triggered()',
                       checked=False):
@@ -333,6 +314,7 @@ class Browser(QMainWindow):
         self._t_slider.blockSignals(True)
         self._imagecontainer.set_plate(coordinate.plate)
         meta_data = self._imagecontainer.get_meta_data()
+
         self._t_slider.setMaximum(meta_data.dim_t)
         self._t_slider.setValue(coordinate.time)
         self._t_slider.blockSignals(False)
@@ -348,8 +330,6 @@ class Browser(QMainWindow):
         nav.nav_to_coordinate(coordinate)
 
     def _process_image(self):
-        self._stopwatch.reset()
-        s = StopWatch()
         settings = _ProcessorMixin.get_special_settings(self._settings)
         settings.set_section('General')
         settings.set2('constrain_positions', True)
@@ -384,6 +364,11 @@ class Browser(QMainWindow):
         settings.set('General', 'rendering_class', {})
         settings.set('Output', 'events_export_gallery_images', False)
 
+        pr = self._imagecontainer.get_meta_data().pixel_range
+        settings.set('ObjectDetection', 'primary_normalizemax', pr[1])
+        settings.set('ObjectDetection', 'primary_normalizemin', pr[0])
+        settings.set('ObjectDetection', 'secondary_normalizemax', pr[1])
+        settings.set('ObjectDetection', 'secondary_normalizemin', pr[0])
 
         if len(self._imagecontainer.channels) > 1:
             settings.set('Processing', 'secondary_processChannel', True)
@@ -495,7 +480,7 @@ class Browser(QMainWindow):
     # Qt method overwrites
 
     def keyPressEvent(self, ev):
-        QMainWindow.keyPressEvent(self, ev)
+        super(Browser, self).keyPressEvent(self, ev)
         # allow to return from fullscreen via the Escape key
         if self.isFullScreen() and ev.key() == Qt.Key_Escape:
             self.showNormal()
