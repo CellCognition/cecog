@@ -59,7 +59,6 @@ class AnalyzerBase(LoggerObject):
     def meta_data(self):
         return self._imagecontainer.get_meta_data()
 
-
     def _makedirs(self):
         """Make output directories (analyzed, dumps and log)"""
         odirs = ("analyzed", "dump", "log")

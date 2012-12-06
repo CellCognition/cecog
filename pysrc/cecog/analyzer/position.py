@@ -170,7 +170,7 @@ class PositionAnalyzer(LoggerObject):
         channels = (PrimaryChannel.NAME, )
         for name in [SecondaryChannel.NAME, TertiaryChannel.NAME]:
             if self.settings.get('Processing', '%s_processchannel' % name.lower()):
-                channels =  channels = (name,)
+                channels = channels + (name,)
         return channels
 
     @property
@@ -452,7 +452,6 @@ class PositionAnalyzer(LoggerObject):
         self.export_features = self.define_exp_features()
         n_images = self._analyzePosition(oCellAnalyzer)
 
-        #FIXME was 0, browser raises execption
         if n_images > 0:
             if self.settings.get('Output', 'export_object_counts'):
                 self.export_object_counts(self.oTimeHolder)
@@ -472,10 +471,10 @@ class PositionAnalyzer(LoggerObject):
                 if self.settings.get('Processing', 'tracking_synchronize_trajectories'):
                     self.event_selection(self.oTimeHolder, self.oCellTracker)
 
-            if self.settings.get('Output', 'export_track_data'):
-                self.export_full_tracks(self.oCellTracker)
-            if self.settings.get('Output', 'export_tracking_as_dot'):
-                self.export_graphviz(self.oCellTracker)
+                if self.settings.get('Output', 'export_track_data'):
+                    self.export_full_tracks(self.oCellTracker)
+                if self.settings.get('Output', 'export_tracking_as_dot'):
+                    self.export_graphviz(self.oCellTracker)
 
             if self.is_aborted():
                 return 0

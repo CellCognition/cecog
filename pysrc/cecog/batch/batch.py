@@ -219,7 +219,6 @@ if __name__ ==  "__main__":
                           'rendering_contours_discwrite']:
             settings.set(SECTION_NAME_OUTPUT, rendering, create_images)
 
-
     # group positions by plate
     plates = {}
     for item in positions:
@@ -249,12 +248,10 @@ if __name__ ==  "__main__":
         # initialize and run the analyzer
         analyzer = AnalyzerCore(plate_id, settings, imagecontainer)
         result = analyzer.processPositions()
-        post_hdf5_link_list.append(result['post_hdf5_link_list'])       
+        post_hdf5_link_list.append(result['post_hdf5_link_list'])
 
     if settings.get('Output', 'hdf5_create_file') and settings.get('Output', 'hdf5_merge_positions'):
         if len(post_hdf5_link_list) > 0:
             post_hdf5_link_list = reduce(lambda x,y: x + y, post_hdf5_link_list)
             link_hdf5_files(sorted(post_hdf5_link_list))
     print 'BATCHPROCESSING DONE!'
-
-
