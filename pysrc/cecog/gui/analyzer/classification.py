@@ -432,15 +432,15 @@ class ClassificationFrame(BaseProcessorFrame):
         elif current_tab == 1:
             settings.set('Processing', 'primary_featureextraction', False)
             settings.set('Processing', 'secondary_featureextraction', True)
-            settings.set('Processing', 'tertiary_featureextraction', False)
             settings.set('Processing', 'secondary_processchannel', True)
+            settings.set('Processing', 'tertiary_featureextraction', False)
             settings.set('Processing', 'tertiary_processchannel', False)
             prefix = 'secondary'
         else:
             settings.set('Processing', 'primary_featureextraction', False)
             settings.set('Processing', 'secondary_featureextraction', False)
-            settings.set('Processing', 'tertiary_featureextraction', True)
             settings.set('Processing', 'secondary_processchannel', True)
+            settings.set('Processing', 'tertiary_featureextraction', True)
             settings.set('Processing', 'tertiary_processchannel', True)
             prefix = 'tertiary'
 

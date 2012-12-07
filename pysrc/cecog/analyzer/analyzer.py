@@ -1000,67 +1000,68 @@ class TimeHolder(OrderedDict):
                 dset_prediction[obj_idx + offset] = (label_to_idx[obj.iLabel],)
                 dset_pobability[obj_idx + offset] = obj.dctProb.values()
 
-    def extportObjectCounts(self, filename, P, meta_data, prim_info=None,
-                            sec_info=None, sep='\t'):
-        f = file(filename, 'w')
-        has_header = False
+    def exportObjectCounts(self, filename, pos, meta_data, ch_info,
+                           sep='\t', has_header=False):
+
+        fp = file(filename, 'w')
 
         for frame, channels in self.iteritems():
-            #channels.sort(key = lambda x: channels[x])
-
             line1 = []
             line2 = []
             line3 = []
             line4 = []
             items = []
-            coordinate = Coordinate(position=P, time=frame)
+            coordinate = Coordinate(position=pos, time=frame)
             prefix = [frame, meta_data.get_timestamp_relative(coordinate)]
             prefix_names = ['frame', 'time']
 
             for channel in channels.values():
-                if channel.NAME == 'Primary' and not prim_info is None:
-                    region_info = prim_info
-                elif channel.NAME == 'Secondary' and not sec_info is None:
-                    region_info = sec_info
-                else:
-                    region_info = None
+                region_name, class_names, _ = ch_info[channel.NAME]
+                if not has_header:
+                    keys = ['total'] + class_names
+                    line4 += keys
+                    line3 += ['total'] + ['class']*len(class_names)
+                    line1 += [channel.NAME.upper()] * len(keys)
+                    line2 += [region_name] * len(keys)
 
-                if not region_info is None:
-                    region_name, class_names, _ = region_info
-                    if not has_header:
-                        keys = ['total'] + class_names
-                        line4 += keys
-                        line3 += ['total'] + ['class']*len(class_names)
-                        line1 += [channel.NAME.upper()] * len(keys)
-                        line2 += [region_name] * len(keys)
+                if channel.has_region(region_name):
+                    region = channel.get_region(region_name)
+                    total = len(region)
+                    count = dict([(x, 0) for x in class_names])
+                    # in case just total counts are needed
 
-                    if channel.has_region(region_name):
-                        region = channel.get_region(region_name)
-                        total = len(region)
-                        count = dict([(x, 0) for x in class_names])
-                        # in case just total counts are needed
-                        if len(class_names) > 0:
-                            for obj in region.values():
+                    if len(class_names) > 0:
+                        for obj in region.values():
+                            try:
                                 count[obj.strClassName] += 1
-                        items += [total] + [count[x] for x in class_names]
-                    else:
-                        items += [numpy.NAN] * (len(class_names) + 1)
+                            # this Exceptions occurs e.g. on testing
+                            # the tertiary Channel
+                            except KeyError:
+                                count[obj.strClassName] = numpy.NAN
+                                print channel.NAME
+                                print region_name
+                                print count
+                                continue
+                    items += [total] + [count[x] for x in class_names]
+                else:
+                    items += [numpy.NAN] * (len(class_names) + 1)
 
             if not has_header:
                 has_header = True
                 prefix_str = [''] * len(prefix)
-                f.write('%s\n' % sep.join(prefix_str + line1))
-                f.write('%s\n' % sep.join(prefix_str + line2))
-                f.write('%s\n' % sep.join(prefix_str + line3))
-                f.write('%s\n' % sep.join(prefix_names + line4))
+                fp.write('%s\n' % sep.join(prefix_str + line1))
+                fp.write('%s\n' % sep.join(prefix_str + line2))
+                fp.write('%s\n' % sep.join(prefix_str + line3))
+                fp.write('%s\n' % sep.join(prefix_names + line4))
 
-            f.write('%s\n' % sep.join(map(str, prefix + items)))
+            fp.write('%s\n' % sep.join(map(str, prefix + items)))
 
-        f.close()
+        fp.close()
 
-    def extportPopulationPlots(self, input_filename, pop_plot_output_dir, pos, meta_data, prim_info, sec_info, ylim):
+    def exportPopulationPlots(self, input_filename, pop_plot_output_dir, pos,
+                               meta_data, cinfo, ylim):
         if os.path.exists(input_filename):
-            channel_name, class_names, class_colors = prim_info
+            channel_name, class_names, class_colors = cinfo
             if len(class_names) > 1:
                 data = numpy.recfromcsv(input_filename, delimiter='\t', skip_header=3)
                 time = data['time'] / 60.0
@@ -1080,7 +1081,7 @@ class TimeHolder(OrderedDict):
                 fig.savefig(os.path.join(pop_plot_output_dir, '%s_%s.png'%(channel_name, pos)))
 
 
-    def extportObjectDetails(self, filename, sep='\t', excel_style=False):
+    def exportObjectDetails(self, filename, sep='\t', excel_style=False):
         f = file(filename, 'w')
 
         feature_lookup = OrderedDict()
@@ -1155,7 +1156,7 @@ class TimeHolder(OrderedDict):
                 f.write('%s\n' % sep.join(map(str, prefix + items)))
         f.close()
 
-    def extportImageFileNames(self, output_path, position_str, imagecontainer, channel_mapping):
+    def exportImageFileNames(self, output_path, position_str, imagecontainer, channel_mapping):
         channel_mapping_reversed = dict([(v,k) for k,v in channel_mapping.iteritems()])
         filename = os.path.join(output_path, 'P%s__image_files.txt' % self.P)
         importer = imagecontainer._importer

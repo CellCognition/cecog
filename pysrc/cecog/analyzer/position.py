@@ -67,20 +67,20 @@ FEATURE_MAP = {'featurecategory_intensity': ['normbase', 'normbase2'],
                'featurecategory_distance': ['distance'],
                'featurecategory_moments': ['moments']}
 
-CHANNEL_CLASSES = {'PrimaryChannel' : PrimaryChannel,
-                   'SecondaryChannel' : SecondaryChannel,
-                   'TertiaryChannel' : TertiaryChannel}
+CHANNEL_CLASSES = {'Primary' : PrimaryChannel,
+                   'Secondary' : SecondaryChannel,
+                   'Tertiary' : TertiaryChannel}
 
 
 class PositionAnalyzer(LoggerObject):
 
     POSITION_LENGTH = 4
-    PRIMARY_CHANNEL = 'PrimaryChannel'
-    SECONDARY_CHANNEL = 'SecondaryChannel'
-    TERTIARY_CHANNEL = 'TertiaryChannel'
+    PRIMARY_CHANNEL = 'Primary'
+    SECONDARY_CHANNEL = 'Secondary'
+    TERTIARY_CHANNEL = 'Tertiary'
 
     CHANNELS = OrderedDict( primary=PrimaryChannel,
-                            secondarz=SecondaryChannel,
+                            secondary=SecondaryChannel,
                             tertiary=TertiaryChannel)
 
     _info = {'stage': 0,
@@ -121,9 +121,9 @@ class PositionAnalyzer(LoggerObject):
             self.settings.set('Processing', 'tracking', False)
             self.lstAnalysisFrames = dctSamplePositions[self.origP]
 
-        self.setup_predictors()
+        self.setup_classifiers()
 
-    def setup_predictors(self):
+    def setup_classifiers(self):
         self.classifier_infos = {}
         sttg = self.settings
         for channel, channel_id in self.ch_mapping.iteritems():
@@ -131,17 +131,19 @@ class PositionAnalyzer(LoggerObject):
             if sttg.get2(self._resolve_name(channel, 'classification')):
                 sttg.set_section('Classification')
                 classifier_infos = {'strEnvPath' :
-                                    sttg.get2(self._resolve_name(channel,
-                                                                 'classification_envpath')),
+                                        sttg.get2(self._resolve_name(channel,
+                                                                     'classification_envpath')),
+                                    # varnames are messed up!
                                     'strChannelId' : CHANNEL_CLASSES[channel].NAME,
+                                    'channel_id': channel_id,
                                     'strRegionId' :
                                     sttg.get2(self._resolve_name(channel,
                                                                  'classification_regionname'))}
-                predictor = CommonClassPredictor(dctCollectSamples=classifier_infos)
-                predictor.importFromArff()
-                predictor.loadClassifier()
-                classifier_infos['predictor'] = predictor
-                self.classifier_infos[channel_id] = classifier_infos
+                clf = CommonClassPredictor(dctCollectSamples=classifier_infos)
+                clf.importFromArff()
+                clf.loadClassifier()
+                classifier_infos['classifier'] = clf
+                self.classifier_infos[channel] = classifier_infos
 
     # FIXME the following functions do moreless the same!
     def _resolve_name(self, channel, name):
@@ -314,42 +316,37 @@ class PositionAnalyzer(LoggerObject):
 
     def export_object_counts(self, timeholder):
         fname = join(self._statistics_dir, 'P%s__object_counts.txt' % self.P)
-        channel_id = self.ch_mapping[self.PRIMARY_CHANNEL]
-        if channel_id in self.classifier_infos:
-            infos = self.classifier_infos[channel_id]
-            prim_info = (infos['strRegionId'],
-                         infos['predictor'].lstClassNames,
-                         infos['predictor'].lstHexColors)
-        else:
-            # at least the total count for primary is always exported
-            prim_info = ('primary', [], [])
 
-        sec_info = None
-        if self.SECONDARY_CHANNEL in self.ch_mapping:
-            channel_id = self.ch_mapping[self.SECONDARY_CHANNEL]
-            if channel_id in self.classifier_infos:
-                infos = self.classifier_infos[channel_id]
-                sec_info = (infos['strRegionId'],
-                            infos['predictor'].lstClassNames,
-                            infos['predictor'].lstHexColors)
-        timeholder.extportObjectCounts(fname, self.P, self.meta_data,
-                                       prim_info, sec_info)
-        pop_plot_ylim_max = \
+        # at least the total count for primary is always exported
+        ch_info = {'Primary': ('primary', [], [])}
+
+
+        for ch_name, channel_id in self.ch_mapping.iteritems():
+            if self.classifier_infos.has_key(ch_name):
+                infos = self.classifier_infos[ch_name]
+                ch_info[ch_name] = (infos['strRegionId'],
+                                    infos['classifier'].lstClassNames,
+                                    infos['classifier'].lstHexColors)
+
+        timeholder.exportObjectCounts(fname, self.P, self.meta_data, ch_info)
+        pplot_ymax = \
             self.settings.get('Output', 'export_object_counts_ylim_max')
-        timeholder.extportPopulationPlots(fname, self._population_dir, self.P,
-                                          self.meta_data, prim_info, sec_info,
-                                          pop_plot_ylim_max)
+
+        # plot only for primary channel so far!
+        timeholder.exportPopulationPlots(fname, self._population_dir, self.P,
+                                         self.meta_data, ch_info['Primary'], pplot_ymax)
+
 
     def export_object_details(self, timeholder):
         fname = join(self._statistics_dir,
                         'P%s__object_details.txt' % self.P)
-        timeholder.extportObjectDetails(fname, excel_style=False)
+        timeholder.exportObjectDetails(fname, excel_style=False)
         fname = join(self._statistics_dir,
                         'P%s__object_details_excel.txt' % self.P)
-        timeholder.extportObjectDetails(fname, excel_style=True)
+        timeholder.exportObjectDetails(fname, excel_style=True)
 
     def export_image_names(self, timeholder):
-        timeholder.extportImageFileNames(self._statistics_dir,
+        timeholder.exportImageFileNames(self._statistics_dir,
                                          self.P,
                                          self._imagecontainer,
                                          self.ch_mapping)
@@ -453,6 +450,7 @@ class PositionAnalyzer(LoggerObject):
         n_images = self._analyzePosition(oCellAnalyzer)
 
         if n_images > 0:
+            # exports also
             if self.settings.get('Output', 'export_object_counts'):
                 self.export_object_counts(self.oTimeHolder)
             if self.settings.get('Output', 'export_object_details'):
@@ -709,9 +707,8 @@ class PositionAnalyzer(LoggerObject):
                         images += [(img_conn, '#FFFF00', 1.0),
                                    (img_split, '#00FFFF', 1.0)]
 
-                for infos in self.classifier_infos.itervalues():
-                    oCellAnalyzer.classify_objects(infos['predictor'])
-
+                for name, infos in self.classifier_infos.iteritems():
+                    oCellAnalyzer.classify_objects(infos['classifier'])
 
                 self.settings.set_section('General')
                 for strType, dctRenderInfo in self.settings.get2('rendering_class').iteritems():
