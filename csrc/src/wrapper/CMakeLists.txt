@@ -12,9 +12,9 @@ ENDIF()
 ########################################################################
 ########################################################################
 
-FOREACH(path ${DEPENDENCY_SEARCH_PREFIX})  
+FOREACH(path ${DEPENDENCY_SEARCH_PREFIX})
     SET(CMAKE_INCLUDE_PATH ${path}/include;${CMAKE_INCLUDE_PATH})
-    SET(CMAKE_LIBRARY_PATH ${path}/lib;${CMAKE_LIBRARY_PATH})       
+    SET(CMAKE_LIBRARY_PATH ${path}/lib;${CMAKE_LIBRARY_PATH})
 ENDFOREACH(path)
 
 ########################################################################
@@ -26,10 +26,10 @@ FIND_PACKAGE(PythonInterp REQUIRED)
 FIND_PACKAGE(PythonLibs)
 IF(NOT PYTHONLIBS_FOUND)
     MESSAGE(STATUS " activate fallback when standard search does not work...")
-    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c 
+    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c
                      "import sys; skip = 2 if sys.platform.startswith('win') else 1; print 'python' + sys.version[0:3:skip]"
                       OUTPUT_VARIABLE PYTHON_LIBRARY_NAME OUTPUT_STRIP_TRAILING_WHITESPACE)
-    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c 
+    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c
                      "import sys; print sys.exec_prefix"
                       OUTPUT_VARIABLE PYTHON_PREFIX OUTPUT_STRIP_TRAILING_WHITESPACE)
     FIND_LIBRARY(PYTHON_LIBRARY ${PYTHON_LIBRARY_NAME} "${PYTHON_PREFIX}/libs")
@@ -51,10 +51,10 @@ IF(PYTHONINTERP_FOUND)
     IF(NOT NUMPY_INCLUDE_DIR)
         # Note: we must suppress possible output of the 'from numpy... import *' command,
         #       because the output cannot be interpreted correctly otherwise
-        execute_process(COMMAND ${PYTHON_EXECUTABLE} -c 
+        execute_process(COMMAND ${PYTHON_EXECUTABLE} -c
                          "import sys, os; sys.stdout = open(os.devnull, 'w'); from numpy.distutils.misc_util import *; sys.__stdout__.write(' '.join(get_numpy_include_dirs()))"
                           RESULT_VARIABLE PYTHON_NUMPY_NOT_FOUND
-                          OUTPUT_VARIABLE NUMPY_INCLUDE_DIR 
+                          OUTPUT_VARIABLE NUMPY_INCLUDE_DIR
                           OUTPUT_STRIP_TRAILING_WHITESPACE)
         IF(NOT PYTHON_NUMPY_NOT_FOUND)
             FILE(TO_CMAKE_PATH ${NUMPY_INCLUDE_DIR} NUMPY_INCLUDE_DIR)
@@ -93,11 +93,11 @@ IF(NOT VIGRA_IMPEX_LIBRARY)
     ELSE()
         MESSAGE(SEND_ERROR "VIGRA_IMPEX_LIBRARY not found. Try -DVIGRA_IMPEX_LIBRARY=<vigra-impex-library>")
     ENDIF()
-    
+
 ENDIF()
 
 ########################################################################
-# CHECK FOR TIFF AND BOOST 
+# CHECK FOR TIFF AND BOOST
 ########################################################################
 ########################################################################
 
@@ -133,8 +133,8 @@ ENDIF()
 INCLUDE_DIRECTORIES(${cecog_ccore_SOURCE_DIR}/../../include ${VIGRA_INCLUDE_DIR} ${TIFF_INCLUDE_DIR} ${BOOST_INCLUDE_DIR} ${PYTHON_INCLUDE_DIR} ${NUMPY_INCLUDE_DIR})
 
 ADD_LIBRARY(cecog-lib SHARED
-    cecog.cxx) 
-    
+    cecog.cxx)
+
 TARGET_LINK_LIBRARIES(cecog-lib ${TIFF_LIBRARY} ${Boost_PYTHON_LIBRARY} ${VIGRA_IMPEX_LIBRARY} ${PYTHON_LIBRARY})
 
 GET_TARGET_PROPERTY(LIB_NAME cecog-lib LOCATION)
@@ -156,6 +156,12 @@ ADD_CUSTOM_COMMAND(
     COMMAND ${CMAKE_COMMAND} -E copy ${LIB_NAME} ../${NEW_LIB_NAME}
     COMMENT "copying ${LIB_NAME} ${NEW_LIB_NAME}"
 )
+
+# g++ specific options
+IF(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+#  SET(CMAKE_CXX_COMPILER "g++-4.7")
+  SET(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -Wall")
+ENDIF()
 
 INSTALL(FILES ${NEW_LIB_NAME} DESTINATION ${cecog_ccore_SOURCE_DIR}/../../../pysrc/cecog/ccore/)
 

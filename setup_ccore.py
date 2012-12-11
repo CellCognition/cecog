@@ -42,7 +42,7 @@ if sys.platform.startswith('win32'):
 else: #currently just linux.
     includes = ['/usr/include/python2.7',
                 '/usr/lib/python2.7/numpy/core/include',
-                'include']
+                'csrc/include']
     compiler_opts = ['-O3', '-fPIC']
     libraries = ['boost_python', 'tiff', 'vigraimpex']
 
@@ -53,7 +53,7 @@ cecog = Extension('cecog.ccore._cecog',
                   sources=sources,
                   include_dirs=includes,
                   libraries=libraries,
-                  library_dirs=library_dirs,
+#                  library_dirs=library_dirs,
                   language='c++')
 
 try:
