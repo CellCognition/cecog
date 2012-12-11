@@ -135,6 +135,8 @@ class BaseFrame(TraitDisplayMixin):
         super(BaseFrame, self).__init__(settings, parent)
         self._is_active = False
 
+        self._intervals = list()
+
         self._tab_name = None
         self._control = QFrame(self)
         layout = QVBoxLayout(self)
@@ -626,7 +628,7 @@ class _ProcessorMixin(object):
                         msg += '   %s' % info['text']
                     if info['progress'] > info['min'] and 'interval' in info:
                         interval = info['interval']
-                        self._intervals.append(interval.get_interval())
+                        self._intervals.append(interval)
                         avg = numpy.average(self._intervals)
                         estimate = TimeInterval(avg * float(info['max']-info['progress']))
                         msg += '%s~ %.1fs / %s%s%s remaining' % (sep,
@@ -657,11 +659,11 @@ class _ProcessorMixin(object):
                                            self._stage_infos[2]['text'])
                     if current > 1 and ('interval' in info.keys()):
                         interval = info['interval']
-                        self._intervals.append(interval.get_interval())
+                        self._intervals.append(interval)
                         estimate = TimeInterval(numpy.average(self._intervals) *
                                                 float(total-current))
                         msg += '%s%.1fs / %s%s%s remaining' % (sep,
-                                                               interval.get_interval(),
+                                                               interval,
                                                                self._stage_infos[2]['item_name'],
                                                                sep,
                                                                estimate.format())

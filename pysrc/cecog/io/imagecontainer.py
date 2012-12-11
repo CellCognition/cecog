@@ -424,6 +424,12 @@ class Coordinate(object):
 
     def __init__(self, plate=None, position=None, time=None, channel=None,
                  zslice=None):
+
+        for c in (plate, position, time, channel, zslice):
+            if isinstance(c, (list, tuple)) and (len(set(c)) != len(c)):
+                raise RuntimeError(('Cannot setup unambiguous '
+                                    'coordianates for image stack'))
+
         self.plate = plate
         self.position = position
         self.time = time
@@ -557,9 +563,7 @@ class ImageContainer(object):
             yield plate_id, path_plate_in, path_plate_out, filename
 
     def iter_import_from_settings(self, settings, scan_plates=None):
-        from cecog.io.importer import (IniFileImporter,
-                                       FlatFileImporter,
-                                       )
+        from cecog.io.importer import IniFileImporter, FlatFileImporter
         settings.set_section(SECTION_NAME_GENERAL)
 
         for info in self.iter_check_plates(settings):

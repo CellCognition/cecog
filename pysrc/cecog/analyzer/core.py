@@ -93,7 +93,7 @@ class AnalyzerBase(LoggerObject):
                 if f_start > f_end:
                     raise RuntimeError(("Invalid time constraints "
                                         "(upper_bound <= lower_bound)!"))
-                self._frames = frames_total[f_start:f_end+1:f_incr]
+                self._frames = frames_total[f_start-1:f_end:f_incr]
         return self._frames
 
 

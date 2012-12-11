@@ -12,6 +12,7 @@ __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
 
+import time
 import copy
 from PyQt4 import QtCore
 from cecog import ccore
@@ -55,8 +56,10 @@ class AnalyzerThread(CoreThread):
     def get_renderer(self):
         return self._renderer
 
-    def set_image(self, name, image_rgb, info, filename=''):
+    def set_image(self, name, image_rgb, info, filename='', stime=0.0):
         self._mutex.lock()
         if name == self._renderer:
             self.image_ready.emit(image_rgb, info, filename)
         self._mutex.unlock()
+        # is it really necessary?
+        time.sleep(stime)

@@ -13,6 +13,7 @@ __url__ = 'www.cellcognition.org'
 
 __all__ = ['CoreThread']
 
+import time
 import logging
 import traceback
 from PyQt4 import QtCore
@@ -83,9 +84,11 @@ class CoreThread(QtCore.QThread):
         abort = self._abort
         return abort
 
-    def set_stage_info(self, info):
+    def set_stage_info(self, info, stime=0.0):
         self._mutex.lock()
         try:
             self.stage_info.emit(info)
         finally:
             self._mutex.unlock()
+        # is it really necessary?
+        time.sleep(stime)

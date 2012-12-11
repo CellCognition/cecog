@@ -20,13 +20,9 @@ __source__ = '$URL$'
 # distributed computing of positions.
 
 import os
-import time
 import shutil
 from collections import OrderedDict
 from os.path import join, basename, isdir
-
-from pdk.datetimeutils import StopWatch
-from pdk.map import dict_append_list
 
 from cecog import ccore
 from cecog.io.imagecontainer import Coordinate
@@ -35,7 +31,8 @@ from cecog.analyzer import (TRACKING_DURATION_UNIT_FRAMES,
                             TRACKING_DURATION_UNIT_MINUTES,
                             TRACKING_DURATION_UNIT_SECONDS)
 
-from cecog.analyzer.analyzer import CellAnalyzer, TimeHolder
+from cecog.analyzer.timeholder import TimeHolder
+from cecog.analyzer.analyzer import CellAnalyzer
 from cecog.analyzer.celltracker import ClassificationCellTracker2
 
 from cecog.analyzer.channel import (PrimaryChannel,
@@ -50,9 +47,8 @@ from cecog.traits.analyzer.tracking import SECTION_NAME_TRACKING
 
 from cecog.analyzer.gallery import EventGallery
 from cecog.util.logger import LoggerObject
+from cecog.util.stopwatch import StopWatch
 from cecog.util.util import makedirs
-
-FILENAME_CELLTRACKER_DUMP = "P%04d_CellTracker.pkl"
 
 FEATURE_MAP = {'featurecategory_intensity': ['normbase', 'normbase2'],
                'featurecategory_haralick': ['haralick', 'haralick2'],
@@ -67,17 +63,18 @@ FEATURE_MAP = {'featurecategory_intensity': ['normbase', 'normbase2'],
                'featurecategory_distance': ['distance'],
                'featurecategory_moments': ['moments']}
 
-CHANNEL_CLASSES = {'Primary' : PrimaryChannel,
-                   'Secondary' : SecondaryChannel,
-                   'Tertiary' : TertiaryChannel}
+#XXX just use CHANNELS
+CHANNEL_CLASSES = {PrimaryChannel.NAME: PrimaryChannel,
+                   SecondaryChannel.NAME : SecondaryChannel,
+                   TertiaryChannel.NAME : TertiaryChannel}
 
 
 class PositionAnalyzer(LoggerObject):
 
     POSITION_LENGTH = 4
-    PRIMARY_CHANNEL = 'Primary'
-    SECONDARY_CHANNEL = 'Secondary'
-    TERTIARY_CHANNEL = 'Tertiary'
+    PRIMARY_CHANNEL = PrimaryChannel.NAME
+    SECONDARY_CHANNEL = SecondaryChannel.NAME
+    TERTIARY_CHANNEL = TertiaryChannel.NAME
 
     CHANNELS = OrderedDict( primary=PrimaryChannel,
                             secondary=SecondaryChannel,
@@ -91,7 +88,7 @@ class PositionAnalyzer(LoggerObject):
              'progress': 0}
 
 
-    def __init__(self, plate_id, P, out_dir, settings, lstAnalysisFrames,
+    def __init__(self, plate_id, P, out_dir, settings, frames,
                  lstSampleReader, dctSamplePositions, learner,
                  image_container, qthread=None, myhack=None):
         super(PositionAnalyzer, self).__init__()
@@ -108,7 +105,7 @@ class PositionAnalyzer(LoggerObject):
         self._makedirs()
         self.add_file_handler(join(self._log_dir, "%s.log" %P), self._lvl.DEBUG)
 
-        self.lstAnalysisFrames = lstAnalysisFrames
+        self._frames = frames # frames to process
         self.lstSampleReader = lstSampleReader
         self.dctSamplePositions = dctSamplePositions
         self.learner = learner
@@ -119,7 +116,7 @@ class PositionAnalyzer(LoggerObject):
         # disable tracking
         if self.settings.get('Classification', 'collectsamples'):
             self.settings.set('Processing', 'tracking', False)
-            self.lstAnalysisFrames = dctSamplePositions[self.origP]
+            self._frames = dctSamplePositions[self.origP]
 
         self.setup_classifiers()
 
@@ -147,10 +144,10 @@ class PositionAnalyzer(LoggerObject):
 
     # FIXME the following functions do moreless the same!
     def _resolve_name(self, channel, name):
-        _channel_lkp = {self.PRIMARY_CHANNEL   : 'primary',
-                        self.SECONDARY_CHANNEL : 'secondary',
-                        self.TERTIARY_CHANNEL  : 'tertiary'}
-        return '%s_%s' % (_channel_lkp[channel], name)
+        _channel_lkp = {self.PRIMARY_CHANNEL: 'primary',
+                        self.SECONDARY_CHANNEL: 'secondary',
+                        self.TERTIARY_CHANNEL: 'tertiary'}
+        return '%s_%s' %(_channel_lkp[channel], name)
 
     @property
     def ch_mapping(self):
@@ -320,7 +317,6 @@ class PositionAnalyzer(LoggerObject):
         # at least the total count for primary is always exported
         ch_info = {'Primary': ('primary', [], [])}
 
-
         for ch_name, channel_id in self.ch_mapping.iteritems():
             if self.classifier_infos.has_key(ch_name):
                 infos = self.classifier_infos[ch_name]
@@ -408,7 +404,7 @@ class PositionAnalyzer(LoggerObject):
         # turn libtiff warnings off
         if not __debug__:
             ccore.turn_off()
-        stopwatch = StopWatch()
+        stopwatch = StopWatch(start=True)
         self.settings.set_section('Output')
 
         # include hdf5 file name in hdf5_options
@@ -418,7 +414,7 @@ class PositionAnalyzer(LoggerObject):
         self.oTimeHolder = TimeHolder(self.P, self.channels_to_process,
                                       hdf5_fname,
                                       self.meta_data, self.settings,
-                                      self.lstAnalysisFrames,
+                                      self._frames,
                                       self.plate_id,
                                       **self._hdf_options)
 
@@ -440,14 +436,14 @@ class PositionAnalyzer(LoggerObject):
 
 
         # object detection??
-        oCellAnalyzer = CellAnalyzer(time_holder=self.oTimeHolder,
-                                     P = self.P,
-                                     bCreateImages = True,
-                                     iBinningFactor = 1,
-                                     detect_objects = self.settings.get('Processing', 'objectdetection'))
+        ca = CellAnalyzer(time_holder=self.oTimeHolder,
+                          position = self.P,
+                          create_images = True,
+                          binning_factor = 1,
+                          detect_objects = self.settings.get('Processing', 'objectdetection'))
 
         self.export_features = self.define_exp_features()
-        n_images = self._analyzePosition(oCellAnalyzer)
+        n_images = self._analyzePosition(ca)
 
         if n_images > 0:
             # exports also
@@ -483,21 +479,26 @@ class PositionAnalyzer(LoggerObject):
             # remove all features from all channels to free memory
             # for the generation of gallery images
             self.oTimeHolder.purge_features()
-
             if self.settings.get('Output', 'events_export_gallery_images'):
                 self.export_gallery_images(self.oCellTracker)
-        stopwatch.stop()
 
-        if n_images > 0:
-            oInterval = stopwatch.stop_interval()/n_images
-            self.logger.info(" - %d image sets analyzed, %s / image set" %
-                             (n_images, oInterval.format(msec=True)))
+        try:
+            intval = stopwatch.stop()/n_images*1000
+        except ZeroDivisionError:
+            pass
+        else:
+            self.logger.info(" - %d image sets analyzed, %3d ms per image set" %
+                             (n_images, intval))
 
-        # write an empty file to mark this position as finished
-        oFile = file(join(self._finished_dir, '%s__finished.txt' % self.P), 'w')
-        oFile.close()
+        self.touch_finished()
         self.clear()
         return {'iNumberImages': n_images, 'filename_hdf5': hdf5_fname}
+
+    def touch_finished(self, times=None):
+        """Writes an empty file to mark this position as finished"""
+        fname = join(self._finished_dir, '%s__finished.txt' % self.P)
+        with open(fname, "w") as f:
+            os.utime(fname, times)
 
     def clear(self):
         # closes hdf5
@@ -512,28 +513,128 @@ class PositionAnalyzer(LoggerObject):
     def update_stage(self, info):
         self._info.update(info)
         if not self._qthread is None:
-            self._qthread.set_stage_info(self._info)
+            self._qthread.set_stage_info(self._info, stime=0.1)
 
-    def _analyzePosition(self, oCellAnalyzer):
-        stage_info = {'stage': 2,
-                      'min': 1,
-                      'max': len(self.lstAnalysisFrames),
-                      'meta' : 'Image processing:',
-                      'item_name': 'image set'}
+    def registration_shift(self):
+        # FIXME this function causses a segfault on c++ side in compination
+        # with cropping
+        # compute values for the registration of multiple channels
+        # (translation only)
+        self.settings.set_section('ObjectDetection')
+        xs = [0]
+        ys = [0]
+        for prefix in [SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]:
+            if self.settings.get('Processing','%s_processchannel' % prefix):
+                reg_x = self.settings.get2('%s_channelregistration_x' % prefix)
+                reg_y = self.settings.get2('%s_channelregistration_y' % prefix)
+                xs.append(reg_x)
+                ys.append(reg_y)
+        diff_x = []
+        diff_y = []
+        for i in range(len(xs)):
+            for j in range(i, len(xs)):
+                diff_x.append(abs(xs[i]-xs[j]))
+                diff_y.append(abs(ys[i]-ys[j]))
+
+        # new image size after registration of all images
+        image_size = (self.meta_data.dim_x - max(diff_x),
+                      self.meta_data.dim_y - max(diff_y))
+#
+        self.meta_data.real_image_width = image_size[0]
+        self.meta_data.real_image_height = image_size[1]
+
+        # relative start point of registered image
+        return (max(xs), max(ys)), image_size
+
+    def zslice_par(self, ch_name):
+        """Returns either the number of the zslice to select or a tuple of parmeters
+        to control the zslice projcetion"""
+        self.settings.set_section('ObjectDetection')
+        if self.settings.get2(self._resolve_name(ch_name, 'zslice_selection')):
+            par = self.settings.get2(self._resolve_name(
+                    ch_name, 'zslice_selection_slice'))
+        elif self.settings.get2(self._resolve_name(ch_name, 'zslice_projection')):
+            method = self.settings.get2(self._resolve_name(
+                    ch_name, 'zslice_projection_method'))
+            begin = self.settings.get2(self._resolve_name(
+                    ch_name, 'zslice_projection_begin'))
+            end = self.settings.get2(self._resolve_name(
+                    ch_name, 'zslice_projection_end'))
+            step = self.settings.get2(self._resolve_name(
+                    ch_name, 'zslice_projection_step'))
+            par = (method, begin, end, step)
+        return par
+
+    def feature_params(self, ch_name):
+
+        # XXX unify list and dict
+        f_categories = list()
+        f_cat_params = dict()
+
+        # unfortunateley some classes expecte empty list and dict
+        if not self.settings.get(SECTION_NAME_PROCESSING,
+                             self._resolve_name(ch_name,
+                                                'featureextraction')):
+            return f_categories, f_cat_params
+
+        for category, feature in FEATURE_MAP.iteritems():
+            if self.settings.get(SECTION_NAME_FEATURE_EXTRACTION,
+                                 self._resolve_name(ch_name, category)):
+                if "haralick" in category:
+                    try:
+                        f_cat_params['haralick_categories'].extend(feature)
+                    except KeyError:
+                        assert isinstance(feature, list)
+                        f_cat_params['haralick_categories'] = feature
+                else:
+                    f_categories += feature
+
+        if f_cat_params.has_key("haralick_categories"):
+            f_cat_params['haralick_distances'] = (1, 2, 4, 8)
+
+        return f_categories, f_cat_params
+
+    def setup_channel(self, ch_name, channel_id):
+        prefix = ch_name.lower()
+
+        # determine the list of features to be calculated from each object
+        f_cats, f_params = self.feature_params(ch_name)
+        reg_shift, im_size = self.registration_shift()
+        ch_cls = self.CHANNELS[prefix]
+
+        if ch_name == self.PRIMARY_CHANNEL:
+            channel_registration = (0,0)
+        elif ch_name in [self.SECONDARY_CHANNEL, self.TERTIARY_CHANNEL]:
+            channel_registration = (self.settings.get2('%s_channelregistration_x' % prefix),
+                                    self.settings.get2('%s_channelregistration_y' % prefix))
+
+        channel = ch_cls(strChannelId=channel_id,
+                         oZSliceOrProjection = self.zslice_par(ch_name),
+                         channelRegistration = channel_registration,
+                         new_image_size = im_size,
+                         registration_start = reg_shift,
+                         fNormalizeMin = self.settings.get2('%s_normalizemin' % prefix),
+                         fNormalizeMax = self.settings.get2('%s_normalizemax' % prefix),
+                         lstFeatureCategories = f_cats,
+                         dctFeatureParameters = f_params)
+        return channel
+
+    def _analyzePosition(self, cellanalyzer):
+
+        self._info.update({'stage': 2,
+                           'min': 1,
+                           'max': len(self._frames),
+                           'meta' : 'Image processing:',
+                           'item_name': 'image set'})
 
         n_images = 0
-        iLastFrame = self.lstAnalysisFrames[-1]
-        stopwatch = StopWatch()
+        last_frame = self._frames[-1]
+        stopwatch = StopWatch(start=True)
 
-        # - loop over a sub-space with fixed position 'P' and reduced time and
-        # channel axis (in case more channels or time-points exist)
-        # - define break-points at C and Z which will yield two nested generators
-        coordinate = Coordinate(plate=self.plate_id,
-                                position = self.origP,
-                                time = self.lstAnalysisFrames,
-                                channel = self.ch_mapping.values())
-
-        for frame, iter_channel in self._imagecontainer(coordinate,
+        # here self.P is also as good
+        crd = Coordinate(self.plate_id, self.origP,
+                         self._frames, list(set(self.ch_mapping.values())))
+        for frame, iter_channel in self._imagecontainer(crd,
                                                         interrupt_channel=True,
                                                         interrupt_zslice=True):
 
@@ -541,144 +642,35 @@ class PositionAnalyzer(LoggerObject):
                 self.clear()
                 return 0
             else:
-                stage_info.update({'progress': self.lstAnalysisFrames.index(frame)+1,
-                                   'text': 'T %d (%d/%d)' % (frame, self.lstAnalysisFrames.index(frame)+1, len(self.lstAnalysisFrames)),
-                                   'interval': stopwatch.current_interval()})
-                if not self._qthread is None:
-                    self._qthread.set_stage_info(stage_info)
-                # FIXME: give the GUI a moment to recover
-                time.sleep(.1)
-            stopwatch.reset()
+                txt = 'T %d (%d/%d)' %(frame, self._frames.index(frame)+1,
+                                       len(self._frames))
+                self.update_stage({'progress': self._frames.index(frame)+1,
+                                   'text': txt,
+                                   'interval': stopwatch.interim()})
+            stopwatch.reset(start=True)
+            cellanalyzer.initTimepoint(frame)
 
-            oCellAnalyzer.initTimepoint(frame)
             # loop over the channels
             for channel_id, iter_zslice in iter_channel:
+                zslice_images = [meta_image for _, meta_image in iter_zslice]
+                for ch_name in self.channels_to_process:
+                    # each process channel has a destinct color channel
+                    if channel_id != self.ch_mapping[ch_name]:
+                        continue
 
-                zslice_images = []
-                for zslice, meta_image in iter_zslice:
-                    zslice_images.append(meta_image)
+                    channel = self.setup_channel(ch_name, channel_id)
+                    # loop over the z-slices
+                    for meta_image in zslice_images:
+                        channel.append_zslice(meta_image)
+                    cellanalyzer.register_channel(channel)
 
-
-                # compute values for the registration of multiple channels
-                # (translation only)
-                self.settings.set_section('ObjectDetection')
-                xs = [0]
-                ys = [0]
-                for prefix in [SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]:
-                    if self.settings.get('Processing','%s_processchannel' % prefix):
-                        reg_x = self.settings.get2('%s_channelregistration_x' % prefix)
-                        reg_y = self.settings.get2('%s_channelregistration_y' % prefix)
-                        xs.append(reg_x)
-                        ys.append(reg_y)
-                diff_x = []
-                diff_y = []
-                for i in range(len(xs)):
-                    for j in range(i, len(xs)):
-                        diff_x.append(abs(xs[i]-xs[j]))
-                        diff_y.append(abs(ys[i]-ys[j]))
-
-                # new image size after registration of all images
-
-
-                new_image_size = (self.meta_data.dim_x - max(diff_x),
-                                  self.meta_data.dim_y - max(diff_y))
-#
-                self.meta_data.real_image_width = new_image_size[0]
-                self.meta_data.real_image_height = new_image_size[1]
-
-                # relative start point of registered image
-                registration_start = (max(xs), max(ys))
-
-                # important change: image channels can be assigned to multiple
-                # processing channels
-
-                # loop over all possible channels:
-                for channel_section, cls in CHANNEL_CLASSES.iteritems():
-
-                    if (channel_section in self.ch_mapping and
-                        channel_id == self.ch_mapping[channel_section]):
-
-                        self.settings.set_section('ObjectDetection')
-                        if self.settings.get2(self._resolve_name(channel_section,
-                                                                  'zslice_selection')):
-                            projection_info = self.settings.get2(self._resolve_name(
-                                                                    channel_section,
-                                                                    'zslice_selection_slice'))
-                        else:
-                            assert self.settings.get2(self._resolve_name(channel_section,
-                                                                  'zslice_projection'))
-                            method = self.settings.get2(self._resolve_name(
-                                                           channel_section,
-                                                           'zslice_projection_method'))
-                            begin = self.settings.get2(self._resolve_name(
-                                                           channel_section,
-                                                           'zslice_projection_begin'))
-                            end = self.settings.get2(self._resolve_name(
-                                                           channel_section,
-                                                           'zslice_projection_end'))
-                            step = self.settings.get2(self._resolve_name(
-                                                           channel_section,
-                                                           'zslice_projection_step'))
-                            projection_info = (method, begin, end, step)
-
-
-                        # determine the list of features to be calculated from each object
-                        feature_extraction = self.settings.get(SECTION_NAME_PROCESSING,
-                                                                self._resolve_name(channel_section,
-                                                                                   'featureextraction'))
-                        lstFeatureCategories = []
-                        if feature_extraction:
-                            for feature in FEATURE_MAP.keys():
-                                if self.settings.get(SECTION_NAME_FEATURE_EXTRACTION,
-                                                      self._resolve_name(channel_section,
-                                                                         feature)):
-                                    lstFeatureCategories += FEATURE_MAP[feature]
-
-
-                        dctFeatureParameters = {}
-                        if feature_extraction:
-                            for name in lstFeatureCategories[:]:
-                                if 'haralick' in name:
-                                    lstFeatureCategories.remove(name)
-                                    dict_append_list(dctFeatureParameters, 'haralick_categories', name)
-                                    dctFeatureParameters['haralick_distances'] = (1, 2, 4, 8)
-
-                        if channel_section == self.PRIMARY_CHANNEL:
-                            channel_registration = (0,0)
-
-                        elif channel_section in [self.SECONDARY_CHANNEL,
-                                                 self.TERTIARY_CHANNEL]:
-                            prefix = cls.PREFIX
-                            channel_registration = (self.settings.get2('%s_channelregistration_x' % prefix),
-                                                    self.settings.get2('%s_channelregistration_y' % prefix))
-
-                        channel = cls(strChannelId=channel_id,
-                                      oZSliceOrProjection = projection_info,
-
-                                      channelRegistration = channel_registration,
-                                      new_image_size = new_image_size,
-                                      registration_start = registration_start,
-
-                                      fNormalizeMin = self.settings.get2('%s_normalizemin' % prefix),
-                                      fNormalizeMax = self.settings.get2('%s_normalizemax' % prefix),
-
-                                      lstFeatureCategories = lstFeatureCategories,
-                                      dctFeatureParameters = dctFeatureParameters,
-                                      )
-
-                        # loop over the z-slices
-                        for meta_image in zslice_images:
-                            channel.append_zslice(meta_image)
-                        oCellAnalyzer.register_channel(channel)
-
-
+            # PICKING
             if self.settings.get('Classification', 'collectsamples'):
-                img_rgb = oCellAnalyzer.collectObjects(self.plate_id,
-                                                       self.origP,
-                                                       self.lstSampleReader,
-                                                       self.learner,
-                                                       byTime=True)
-
+                img_rgb = cellanalyzer.collectObjects(self.plate_id,
+                                                      self.origP,
+                                                      self.lstSampleReader,
+                                                      self.learner,
+                                                      byTime=True)
                 if not img_rgb is None:
                     n_images += 1
                     if not self._qthread is None:
@@ -686,13 +678,12 @@ class PositionAnalyzer(LoggerObject):
                         self._qthread.set_image(None,
                                                 img_rgb,
                                                 'PL %s - P %s - T %05d' % (self.plate_id, self.origP, frame))
-
+            #END PICKING
             else:
-                oCellAnalyzer.process()
+                cellanalyzer.process()
                 n_images += 1
-
-                if not self._qthread:
-                    time.sleep(.1)
+                # if not self._qthread:
+                #     time.sleep(.1)
 
                 images = []
                 if self.settings.get('Processing', 'tracking'):
@@ -700,7 +691,7 @@ class PositionAnalyzer(LoggerObject):
 
                     self.settings.set_section('Tracking')
                     if self.settings.get2('tracking_visualization'):
-                        size = oCellAnalyzer.getImageSize(PrimaryChannel.NAME)
+                        size = cellanalyzer.getImageSize(PrimaryChannel.NAME)
                         img_conn, img_split = self.oCellTracker.visualizeTracks(frame, size,
                                                                                 n=self.settings.get2('tracking_visualize_track_length'),
                                                                                 radius=self.settings.get2('tracking_centroid_radius'))
@@ -708,73 +699,66 @@ class PositionAnalyzer(LoggerObject):
                                    (img_split, '#00FFFF', 1.0)]
 
                 for name, infos in self.classifier_infos.iteritems():
-                    oCellAnalyzer.classify_objects(infos['classifier'])
+                    cellanalyzer.classify_objects(infos['classifier'])
 
-                self.settings.set_section('General')
-                for strType, dctRenderInfo in self.settings.get2('rendering_class').iteritems():
-                    out_images = join(self._images_dir, strType)
-                    img_rgb, filename = oCellAnalyzer.render(out_images, dctRenderInfo=dctRenderInfo,
-                                                             writeToDisc=self.settings.get('Output', 'rendering_class_discwrite'),
-                                                             images=images)
-
-                    if not self._qthread is None and not img_rgb is None:
-                        self._qthread.set_image(strType,
-                                                img_rgb,
-                                                'PL %s - P %s - T %05d' % (self.plate_id, self.origP, frame),
-                                                filename)
-                        time.sleep(.05)
-
-
-                prefixes = [PrimaryChannel.PREFIX, SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]
-                self.settings.set_section('General')
-                for strType, dctRenderInfo in self.settings.get2('rendering').iteritems():
-                    if not strType in prefixes:
-                        out_images = join(self._images_dir, strType)
-                        img_rgb, filename = oCellAnalyzer.render(out_images,
-                                                                 dctRenderInfo=dctRenderInfo,
-                                                                 writeToDisc=self.settings.get('Output', 'rendering_contours_discwrite'),
-                                                                 images=images)
-
-                        if (not self._qthread is None and not img_rgb is None and
-                            not strType in [PrimaryChannel.PREFIX, SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]):
-                            self._qthread.set_image(strType,
-                                                    img_rgb,
-                                                    'PL %s - P %s - T %05d' % (self.plate_id, self.origP, frame),
-                                                    filename)
-                            time.sleep(.05)
-
+                ##############################################################
+                # FIXME - part for browser
                 if not self._myhack is None:
-                    d = {}
-                    for name in oCellAnalyzer.get_channel_names():
-                        channel = oCellAnalyzer.get_channel(name)
-                        d[channel.strChannelId] = channel.meta_image.image
-                    self._myhack.set_image(d)
+                    self.render_browser(cellanalyzer)
+                ##############################################################
 
-                    channel_name, region_name = self._myhack._object_region
-                    channel = oCellAnalyzer.get_channel(channel_name)
-                    if channel.has_region(region_name):
-                        region = channel.get_region(region_name)
-                        coords = {}
-                        for obj_id, obj in region.iteritems():
-                            coords[obj_id] = obj.crack_contour
-                        self._myhack.set_coords(coords)
-
-                # treat the raw images used for the gallery images differently
-                for strType, dctRenderInfo in self.settings.get2('rendering').iteritems():
-                    if strType in prefixes:
-                        out_images = join(self._images_dir, strType)
-                        img_rgb, filename = oCellAnalyzer.render(out_images,
-                                                                 dctRenderInfo=dctRenderInfo,
-                                                                 writeToDisc=True)
+                self.settings.set_section('General')
+                self.render_classification_images(cellanalyzer, images, frame)
+                self.render_contour_images(cellanalyzer, images, frame)
 
                 if self.settings.get('Output', 'rendering_labels_discwrite'):
-                    oCellAnalyzer.exportLabelImages(self._labels_dir)
+                    cellanalyzer.exportLabelImages(self._labels_dir)
 
-            self.logger.info(" - Frame %d, duration: %s" \
-                                 %(frame, stopwatch.current_interval().format(msec=True)))
+            self.logger.info(" - Frame %d, duration (ms): %3d" \
+                                 %(frame, stopwatch.interim()*1000))
+            cellanalyzer.purge(features=self.export_features)
 
-            oCellAnalyzer.purge(features=self.export_features)
-
-        if self.is_aborted():
-            return 0
         return n_images
+
+    def render_contour_images(self, cellanalyzer, images, frame):
+        for region, render_info in self.settings.get2('rendering').iteritems():
+            out_images = join(self._images_dir, region)
+            write = self.settings.get('Output', 'rendering_contours_discwrite')
+            img_rgb, filename = cellanalyzer.render(out_images,
+                                                    dctRenderInfo=render_info,
+                                                    writeToDisc=write,
+                                                    images=images)
+
+            if (not self._qthread is None and not img_rgb is None):
+                msg = 'PL %s - P %s - T %05d' % (self.plate_id, self.origP, frame)
+                self._qthread.set_image(region, img_rgb, msg, filename, stime=0.05)
+
+    def render_classification_images(self, cellanalyzer, images, frame):
+        for region, render_info in self.settings.get2('rendering_class').iteritems():
+            out_images = join(self._images_dir, region)
+            write = self.settings.get('Output', 'rendering_class_discwrite')
+            img_rgb, filename = cellanalyzer.render(out_images,
+                                                    dctRenderInfo=render_info,
+                                                    writeToDisc=write,
+                                                    images=images)
+
+            # emit image to gui
+            if not self._qthread is None and not img_rgb is None:
+                msg = 'PL %s - P %s - T %05d' % (self.plate_id, self.origP, frame)
+                self._qthread.set_image(region, img_rgb, msg, filename, stime=0.05)
+
+    def render_browser(self, cellanalyzer):
+        d = {}
+        for name in cellanalyzer.get_channel_names():
+            channel = cellanalyzer.get_channel(name)
+            d[channel.strChannelId] = channel.meta_image.image
+            self._myhack.set_image(d)
+
+        channel_name, region_name = self._myhack._object_region
+        channel = cellanalyzer.get_channel(channel_name)
+        if channel.has_region(region_name):
+            region = channel.get_region(region_name)
+            coords = {}
+            for obj_id, obj in region.iteritems():
+                coords[obj_id] = obj.crack_contour
+            self._myhack.set_coords(coords)
