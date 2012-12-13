@@ -319,6 +319,8 @@ class _Channel(PropertyManager):
                                ccore.Diff2D(*self.registration_start)-
                                ccore.Diff2D(*self.channelRegistration),
                                ccore.Diff2D(*self.new_image_size))
+        # FIXME - cropping and shift do not work together
+        # image = img_in
         self.meta_image.set_image(image)
 
     def apply_features(self):

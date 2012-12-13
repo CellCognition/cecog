@@ -2,7 +2,7 @@ mac	windows	linux
 /Volumes/share-gerlich-1-$	X:	/BIOL/share-gerlich-1
 /Volumes/share-gerlich-2-$	Y:	/BIOL/share-gerlich-2
 /Volumes/share-gr-peter-1-$	Z:	/BIOL/share-peter
-/Volumes/share-kutay-analysis-1-$	W:	/projects/dgearchive
+/Volumes/share-kutay-analysis-1-$	U:	/projects/dgearchive
 /Volumes/dgedata	V:	/projects/gerlich
 /Volumes/dgedata2	S:	/projects/gerlich2
 

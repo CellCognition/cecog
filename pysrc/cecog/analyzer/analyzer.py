@@ -42,6 +42,8 @@ from pdk.datetimeutils import StopWatch
 
 import numpy
 import h5py
+import matplotlib
+matplotlib.use('Agg')
 from matplotlib import pyplot
 
 #-------------------------------------------------------------------------------
@@ -1086,18 +1088,26 @@ class TimeHolder(OrderedDict):
 
         f.close()
 
-    def extportPopulationPlots(self, input_filename, pop_plot_output_dir, pos, meta_data, prim_info, sec_info, ylim):
+    def extportPopulationPlots(self, input_filename, pop_plot_output_dir, pos,
+                               meta_data, prim_info, sec_info, ylim):
         if os.path.exists(input_filename):
-            channel_name, class_names, class_colors = prim_info
-            if len(class_names) > 1:
-                data = numpy.recfromcsv(input_filename, delimiter='\t', skip_header=3)
-                time = data['time'] / 60.0
+            channel, classes, colors = prim_info
+            case = "lower"
+            if len(classes) > 1:
+                data = numpy.recfromcsv(input_filename, delimiter='\t', skip_header=3,
+                                        case_sensitive=case)
 
+                time = data['time'] / 60.0
                 fig = pyplot.figure(figsize=(20,10))
                 ax = pyplot.gca()
 
-                for cl, color in zip(class_names[1:], class_colors[1:]):
-                    ax.plot(list(time), list(data[cl]), color=color, label=cl)
+                # numpy wants nice attribute names
+                validator = numpy.lib._iotools.NameValidator(case_sensitive=case)
+                keys = validator.validate(classes)
+
+                for lb, key, color in zip(classes[1:], keys[1:],
+                                          colors[1:]):
+                    ax.plot(time, data[key], color=color, label=lb)
                 pyplot.xlabel('time [min]')
                 pyplot.ylabel('cell count')
                 pyplot.xlim((time.min(), time.max()))
@@ -1105,7 +1115,7 @@ class TimeHolder(OrderedDict):
                     pyplot.ylim((0, ylim))
                 pyplot.legend(loc="upper right")
                 pyplot.title('%s primary population plot' % pos)
-                fig.savefig(os.path.join(pop_plot_output_dir, '%s_%s.png'%(channel_name, pos)))
+                fig.savefig(os.path.join(pop_plot_output_dir, '%s_%s.png'%(channel, pos)))
 
 
     def extportObjectDetails(self, filename, sep='\t', excel_style=False):
@@ -1517,7 +1527,6 @@ class CellAnalyzer(PropertyManager):
                     oContainer.markObjects([obj_id], rgb_value, False, True)
 
                     #print obj_id, obj.oCenterAbs, iCenterX, iCenterY
-                    print '*** CSdebug: drawFilledCircle', iCenterX, iCenterY
                     ccore.drawFilledCircle(ccore.Diff2D(iCenterX, iCenterY),
                                            3, oContainer.img_rgb, rgb_value)
 

@@ -112,7 +112,9 @@ hmm.read.graph.structure <- function(filename) {
     i <- i + 1
   }
   i <- i + 1
+  print(L[i])
   st <- unlist(strsplit(L[i],split="[ \\t]"))
+  print(st)
   I = nchar(st) > 0
   if (length(I) > 0) {
     st = st[I]
@@ -187,11 +189,11 @@ read.probabilities <- function(screen)
         for (j in 1:T)
         {
             Cstr <- t$class__probability[j]
-            
+
             if (is.na(Cstr)){
                 stop("\n\nERROR: Classification data invalid in event files for region '", screen$regionName, "'. Please check if you already performed classification on this region...\n")
             }
-             
+
             Cstr2 <- strsplit(Cstr,split=",")[[1]]
             C <- strsplit(Cstr2, split=":")
             Cs <- rep(0, K)
@@ -319,7 +321,7 @@ plot.transition.graph <- function(hmm, loops=FALSE,type=NULL,filename=NULL,weigh
         #}
     }
     z.start <- z
-  #print(K)
+
     for (i in 1:K)
     {
         if (hmm$start[i] > 0)
@@ -332,14 +334,12 @@ plot.transition.graph <- function(hmm, loops=FALSE,type=NULL,filename=NULL,weigh
     if (z > z.start)
         max.w <- append(max.w, which.max(w[z.start+1:z]) + z.start)
 
-    #print(el)
     idx <- sort(w, index.return=TRUE)$ix
     el <- el[idx,]
     w <- w[idx]
 
-    #print(el)
-
-    g <- graph.edgelist(el,directed = TRUE)
+    el_str = matrix(as.character(el), nrow=nrow(el), ncol=ncol(el))
+    g <- graph.edgelist(el_str, directed = TRUE)
     g$layout <- layout.circle
     w.col <- round(w * 256)
     w.col[w.col < 1] <- 1
@@ -348,39 +348,30 @@ plot.transition.graph <- function(hmm, loops=FALSE,type=NULL,filename=NULL,weigh
     {
         w[] = 1
         w.col[] = 256
-        #w.col[] = 1
     }
 
     E(g)$color <- bwcol[w.col]
-    #E(g)$color[max.w] <- 'red'
     V(g)$color <- c('#FFFFFF', class.colors.hmm)
     V(g)$frame.color <- 'black' #'transparent'#white
 
-    #E(g)$width = 3 * w
-    if (weights)
-    {
-        # mark the outgoing edges with highest prob. red (with the current weight)
-        #E(g)$color[max.w] <- redcol[w.col[max.w]]
-        #V(g)$size <- 80 * c(0, w.K) + 15
-    }
+	# just numbering the nodes, no class names
+	V(g)$label = as.character(seq(0,K  ))
+
     #par(family = 'sans')
     V(g)$size <- 25
     E(g)$width <- 2
     V(g)$label.font <- 2
     V(g)$label.cex <- 2
     V(g)$label.color <- 'black'
-    #V(g)$loop.angle <- -pi
 
     if (type=="PNG")
     {
         png(filename, bg='transparent')
-        #png(filename, bg='transparent')
         plot(g)
         dev.off()
     } else
     if (type=="PS")
     {
-        #postscript(filename, bg='transparent')
         postscript(filename, bg='transparent')
         plot(g, vertex.label.family="Helvetica")
         dev.off()
@@ -402,7 +393,6 @@ write.decode <- function(screen, cell, hmm)
     K <- hmm$graph$K
     for (f in 1:dim(cell)[1])
     {
-        #cat("Read file ", paste(screen$dir, cell$filename[f], sep="/"), "\n")
         if (cell$valid[f]) {
 	        t <- read.delim(paste(screen$dir, cell$filename[f], sep="/"), as.is=TRUE)
 	        if (!is.null(t$class__A__probability) && !is.null(t$class__B__probability))
@@ -426,13 +416,13 @@ write.decode <- function(screen, cell, hmm)
 	            v <- array(0, c(nCells, T))
 	            v[1,] <- t$class__probability
 	        }
-	
+
 	        fuseClasses <- screen$fuseClasses
 	        prob2 <- array(0,dim = c(nCells,T,K))
 	        n <- 0
 	        for (ic in 1:nCells)
 	        {
-	
+
 	            for (j in 1:T)
 	            {
 	                Cstr <- v[ic,j]
@@ -914,7 +904,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             write.table(export.data, paste(dirHmm, "/", pos.name, ".txt", sep=""), quote=FALSE, sep="\t",
                         row.names=FALSE, col.names=c("Trajectory", "Realign"))
 
-            if (groupByGene){ 
+            if (groupByGene){
                 plot_title = paste(gene.name, " n=", N.gene,"/",N.gene.old, "\n(", str.pos.list, ")", sep="")}
             else if (groupByOligoId){
                 plot_title = paste(gene.oligo, " n=", N.gene,"/",N.gene.old, "\n(", str.pos.list, ")", sep="")}
@@ -1289,4 +1279,3 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
 bwcol  <- colorRampPalette(c("#FFFFFF","#000000"), space="rgb")(256)
 bwcol_features  <- colorRampPalette(c("#000000","#FFFFFF"), space="rgb")(256)
 redcol <- colorRampPalette(c("#FFFFFF","#FF0000"), space="rgb")(256)
-

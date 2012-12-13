@@ -43,7 +43,12 @@ from cecog.traits.config import (ANALYZER_CONFIG_FILENAME,
 MAIN_SCRIPT = 'CecogAnalyzer.py'
 
 APP = [MAIN_SCRIPT]
-INCLUDES = ['sip', 'tabdelim',]
+
+INCLUDES = [ 'sip',
+             'scipy.sparse.csgraph._validation',
+             'scipy.spatial.kdtree',
+             'scipy.sparse.csgraph._shortest_path' ]
+
 EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
             'PyQt4.QtOpenGL', 'PyQt4.QtScript',
             'PyQt4.QtSql', 'PyQt4.QtTest',
@@ -52,19 +57,20 @@ EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
             'rpy',
             '_gtkagg', '_tkagg', '_agg2', '_cairo', '_cocoaagg',
             '_fltkagg', '_gtk', '_gtkcairo',
-            'Tkconstants', 'Tkinter', 'tcl',
-            ]
+            'Tkconstants', 'Tkinter', 'tcl']
+
 PACKAGES = ['cecog', 'h5py', 'vigra', 'matplotlib']
 
-RESOURCE_FILES = [ANALYZER_CONFIG_FILENAME,
-                  FONT12_FILENAME,
-                  NAMING_SCHEMA_FILENAME,
-                  PATH_MAPPING_FILENAME,
-                  ]
+DLL_EXCLUDES = [ 'libgdk-win32-2.0-0.dll',
+                 'libgobject-2.0-0.dll',
+                 'libgdk_pixbuf-2.0-0.dll',
+                 'w9xpopen.exe' ] # is not excluded for some reason
 
-#-------------------------------------------------------------------------------
-# functions:
-#
+RESOURCE_FILES = [ANALYZER_CONFIG_FILENAME, FONT12_FILENAME,
+                   NAMING_SCHEMA_FILENAME, PATH_MAPPING_FILENAME]
+
+DATA_FILES = matplotlib.get_py2exe_datafiles()
+
 def tempsyspath(path):
     def decorate(f):
         def handler():
@@ -84,9 +90,6 @@ def read_pkginfo_file(setup_file):
         return __import__('__pkginfo__')
     return _import_pkginfo_file()
 
-#-------------------------------------------------------------------------------
-# main:
-#
 pkginfo = read_pkginfo_file(__file__)
 
 # delete target folder before execution of py2app
@@ -97,7 +100,6 @@ for path in ['dist', 'build']:
 if sys.platform == 'darwin':
     OPTIONS = {'app' : APP}
     SYSTEM = 'py2app'
-    DATA_FILES = matplotlib.get_py2exe_datafiles()
     EXTRA_OPTIONS = {'argv_emulation': False,
                      'includes': INCLUDES,
                      'excludes': EXCLUDES,
@@ -122,17 +124,14 @@ elif sys.platform == 'win32':
                'zipfile' : FILENAME_ZIP,
                }
     SYSTEM = 'py2exe'
-    DATA_FILES = matplotlib.get_py2exe_datafiles()
     EXTRA_OPTIONS = {'includes': INCLUDES,
                      'excludes': EXCLUDES,
                      'packages': PACKAGES,
-                     'optimize': 2,
+                     'dll_excludes': DLL_EXCLUDES,
+                     'optimize': 1, #don't strip doc strings
                      'compressed': False,
-                     'skip_archive': True,
+                     'skip_archive': False,
                      'bundle_files': 3,
-
-                     #'ascii': True,
-                     #'xref': True,
                     }
 
 elif sys.platform.startswith('linux'):
@@ -156,7 +155,6 @@ elif sys.platform.startswith('linux'):
 setup(
     data_files=DATA_FILES,
     options={SYSTEM: EXTRA_OPTIONS},
-    includes=['sip', 'netCDF4_utils', 'netcdftime'],
     setup_requires=[SYSTEM],
     name=pkginfo.name,
     version=pkginfo.version,
@@ -238,8 +236,7 @@ elif sys.platform == 'win32':
     filenames = ['graph_template.txt',
                  'hmm.R',
                  'hmm_report.R',
-                 'run_hmm.R',
-                 ]
+                 'run_hmm.R']
     resource_path = os.path.join('dist', 'resources')
     target = os.path.join(resource_path, 'rsrc', 'hmm')
     safe_mkdirs(target)
@@ -253,7 +250,8 @@ elif sys.platform == 'win32':
         shutil.copy(filename, resource_path)
 
     # copy vigranumpycory to correct filename
-    shutil.copy(os.path.join('dist', 'vigra.vigranumpycore.pyd'), os.path.join('dist', 'vigranumpycore.pyd'))
+    shutil.copy(os.path.join('dist', 'vigra.vigranumpycore.pyd'),
+                os.path.join('dist', 'vigranumpycore.pyd'))
 
     shutil.copytree(os.path.join(RESOURCE_PATH, 'palettes', 'zeiss'),
                     os.path.join(resource_path, 'palettes', 'zeiss'))
