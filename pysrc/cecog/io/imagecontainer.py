@@ -258,7 +258,7 @@ class MetaData(object):
         return "\n".join(strings)
 
     def get_frames_of_position(self, pos):
-        print self._timestamps_absolute.keys()
+        #print self._timestamps_absolute.keys()
         return self._timestamps_absolute[pos].keys()
 
     def __str__(self):
@@ -457,7 +457,16 @@ class Coordinate(object):
     def copy(self):
         return copy.deepcopy(self)
 
-
+    def __str__(self):
+        res = ''
+        for key, info in zip(['plate', 'position','time', 'channel', 'zslice'], 
+                             [self.plate, self.position, self.time, self.channel, self.zslice]):
+            if info is None: 
+                continue
+            else: 
+                res += '\n%s: %s' % (key, str(info))
+        return res
+    
 class ImageContainer(object):
 
     def __init__(self):
