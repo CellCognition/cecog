@@ -8,71 +8,45 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
-from cecog.io.imagecontainer import MetaImage
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = []
+__all__ = ["PrimaryChannel", "SecondaryChannel", "TertiaryChannel"]
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
 import os
 import sys
 import glob
 import copy
 import types
+import numpy
 import logging
 
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
 from pdk.propertymanagers import PropertyManager
 from pdk.properties import (BooleanProperty,
                             FloatProperty,
-                            IntProperty,
                             ListProperty,
                             TupleProperty,
                             StringProperty,
                             DictionaryProperty,
-                            Property,
-                            )
-from pdk.attributemanagers import (get_attribute_values,
-                                   set_attribute_values)
+                            Property)
+
+from pdk.attributemanagers import get_attribute_values, set_attribute_values
 from pdk.attributes import Attribute
-from pdk.iterator import unique, flatten
+from pdk.iterator import unique
 from pdk.map import dict_values
 
-import numpy
-
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
-from cecog.analyzer.object import (ImageObject,
-                                   ObjectHolder,
-                                   )
 from cecog import ccore
+from cecog.io.imagecontainer import MetaImage
+from cecog.analyzer.object import ImageObject, ObjectHolder
+
 from cecog.plugin.segmentation import (PRIMARY_SEGMENTATION_MANAGER,
                                        SECONDARY_SEGMENTATION_MANAGER,
-                                       TERTIARY_SEGMENTATION_MANAGER,
-                                       )
-from cecog.io.imagecontainer import MetaImage
+                                       TERTIARY_SEGMENTATION_MANAGER)
 
-#-------------------------------------------------------------------------------
-# constants:
-#
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-#-------------------------------------------------------------------------------
-# classes:
-#
-class _Channel(PropertyManager):
+class Channel(PropertyManager):
 
     NAME = None
 
@@ -144,7 +118,7 @@ class _Channel(PropertyManager):
                       ]
 
     def __init__(self, **kw):
-        super(_Channel, self).__init__(**kw)
+        super(Channel, self).__init__(**kw)
         self._oLogger = logging.getLogger(self.__class__.__name__)
         self.clear()
 
@@ -376,7 +350,9 @@ class _Channel(PropertyManager):
         '''
         self.dctContainers = self.SEGMENTATION.run(self.meta_image, requirements=args)
 
-class PrimaryChannel(_Channel):
+
+# XXX remove prefix in future version just use name
+class PrimaryChannel(Channel):
 
     NAME = 'Primary'
     PREFIX = NAME.lower()
@@ -385,7 +361,7 @@ class PrimaryChannel(_Channel):
     SEGMENTATION = PRIMARY_SEGMENTATION_MANAGER
 
 
-class SecondaryChannel(_Channel):
+class SecondaryChannel(Channel):
 
     NAME = 'Secondary'
     PREFIX = NAME.lower()
@@ -394,7 +370,7 @@ class SecondaryChannel(_Channel):
     SEGMENTATION = SECONDARY_SEGMENTATION_MANAGER
 
 
-class TertiaryChannel(_Channel):
+class TertiaryChannel(Channel):
 
     NAME = 'Tertiary'
     PREFIX = NAME.lower()

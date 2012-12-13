@@ -18,13 +18,16 @@ from os.path import join
 from collections import OrderedDict
 
 from cecog import ccore
+from cecog.analyzer.channel import PrimaryChannel
+from cecog.analyzer.channel import SecondaryChannel
+from cecog.analyzer.channel import TertiaryChannel
+
 from cecog.util.logger import LoggerObject
 from cecog.util.util import makedirs
 from cecog.util.util import hexToRgb
 
 
 # XXX factorize a picker, a classifier and a analyzer
-
 
 class CellAnalyzer(LoggerObject):
 
@@ -65,13 +68,13 @@ class CellAnalyzer(LoggerObject):
         for channel in channels:
             self.time_holder.prepare_raw_image(channel)
             if self.detect_objects:
-                if channel.NAME == 'Primary':
+                if channel.NAME == PrimaryChannel.NAME:
                     self.time_holder.apply_segmentation(channel)
                     primary_channel = channel
-                elif channel.NAME == 'Secondary':
+                elif channel.NAME == SecondaryChannel.NAME:
                     self.time_holder.apply_segmentation(channel, primary_channel)
                     secondary_channel = channel
-                elif channel.NAME == 'Tertiary':
+                elif channel.NAME == TertiaryChannel.NAME:
                     self.time_holder.apply_segmentation(channel, primary_channel, secondary_channel)
                 else:
                     raise ValueError("Channel with name '%s' not supported." % channel.NAME)

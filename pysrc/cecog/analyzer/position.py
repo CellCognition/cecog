@@ -20,6 +20,7 @@ __source__ = '$URL$'
 # distributed computing of positions.
 
 import os
+import time
 import shutil
 from collections import OrderedDict
 from os.path import join, basename, isdir
@@ -33,7 +34,7 @@ from cecog.analyzer import (TRACKING_DURATION_UNIT_FRAMES,
 
 from cecog.analyzer.timeholder import TimeHolder
 from cecog.analyzer.analyzer import CellAnalyzer
-from cecog.analyzer.celltracker import ClassificationCellTracker2
+from cecog.analyzer.celltracker import ClassificationCellTracker2 as CellTracker
 
 from cecog.analyzer.channel import (PrimaryChannel,
                                     SecondaryChannel,
@@ -63,13 +64,8 @@ FEATURE_MAP = {'featurecategory_intensity': ['normbase', 'normbase2'],
                'featurecategory_distance': ['distance'],
                'featurecategory_moments': ['moments']}
 
-#XXX just use CHANNELS
-CHANNEL_CLASSES = {PrimaryChannel.NAME: PrimaryChannel,
-                   SecondaryChannel.NAME : SecondaryChannel,
-                   TertiaryChannel.NAME : TertiaryChannel}
 
-
-class PositionAnalyzer(LoggerObject):
+class PositionCore(LoggerObject):
 
     POSITION_LENGTH = 4
     PRIMARY_CHANNEL = PrimaryChannel.NAME
@@ -87,60 +83,180 @@ class PositionAnalyzer(LoggerObject):
              'max': 0,
              'progress': 0}
 
-
-    def __init__(self, plate_id, P, out_dir, settings, frames,
+    def __init__(self, plate_id, position, out_dir, settings, frames,
                  lstSampleReader, dctSamplePositions, learner,
                  image_container, qthread=None, myhack=None):
-        super(PositionAnalyzer, self).__init__()
+        super(PositionCore, self).__init__()
+
         self._out_dir = out_dir
         self.settings = settings
         self._imagecontainer = image_container
         self.plate_id = plate_id
-        self.origP = P
-        self.P = P
-
-        if not self.has_timelapse:
-            self.settings.set('Processing', 'tracking', False)
-
-        self._makedirs()
-        self.add_file_handler(join(self._log_dir, "%s.log" %P), self._lvl.DEBUG)
+        self.position = position
 
         self._frames = frames # frames to process
         self.lstSampleReader = lstSampleReader
         self.dctSamplePositions = dctSamplePositions
         self.learner = learner
 
+        self.tracker = None
+        self.timeholder = None
+        self.classifiers = {}
+
         self._qthread = qthread
         self._myhack = myhack
 
-        # disable tracking
-        if self.settings.get('Classification', 'collectsamples'):
-            self.settings.set('Processing', 'tracking', False)
-            self._frames = dctSamplePositions[self.origP]
+    def __call__(self):
+        # turn libtiff warnings off
+        if not __debug__:
+            ccore.turn_off()
+        self.settings.set_section('Output')
 
-        self.setup_classifiers()
+    def _analyze(self):
+        self._info.update({'stage': 2,
+                           'min': 1,
+                           'max': len(self._frames),
+                           'meta' : 'Image processing:',
+                           'item_name': 'image set'})
 
-    def setup_classifiers(self):
-        self.classifier_infos = {}
-        sttg = self.settings
-        for channel, channel_id in self.ch_mapping.iteritems():
-            self.settings.set_section('Processing')
-            if sttg.get2(self._resolve_name(channel, 'classification')):
-                sttg.set_section('Classification')
-                classifier_infos = {'strEnvPath' :
-                                        sttg.get2(self._resolve_name(channel,
-                                                                     'classification_envpath')),
-                                    # varnames are messed up!
-                                    'strChannelId' : CHANNEL_CLASSES[channel].NAME,
-                                    'channel_id': channel_id,
-                                    'strRegionId' :
-                                    sttg.get2(self._resolve_name(channel,
-                                                                 'classification_regionname'))}
-                clf = CommonClassPredictor(dctCollectSamples=classifier_infos)
-                clf.importFromArff()
-                clf.loadClassifier()
-                classifier_infos['classifier'] = clf
-                self.classifier_infos[channel] = classifier_infos
+    def zslice_par(self, ch_name):
+        """Returns either the number of the zslice to select or a tuple of parmeters
+        to control the zslice projcetion"""
+        self.settings.set_section('ObjectDetection')
+        if self.settings.get2(self._resolve_name(ch_name, 'zslice_selection')):
+            par = self.settings.get2(self._resolve_name(
+                    ch_name, 'zslice_selection_slice'))
+        elif self.settings.get2(self._resolve_name(ch_name, 'zslice_projection')):
+            method = self.settings.get2(self._resolve_name(
+                    ch_name, 'zslice_projection_method'))
+            begin = self.settings.get2(self._resolve_name(
+                    ch_name, 'zslice_projection_begin'))
+            end = self.settings.get2(self._resolve_name(
+                    ch_name, 'zslice_projection_end'))
+            step = self.settings.get2(self._resolve_name(
+                    ch_name, 'zslice_projection_step'))
+            par = (method, begin, end, step)
+        return par
+
+    def registration_shift(self):
+        # FIXME this function causses a segfault on c++ side in compination
+        # with cropping
+        # compute values for the registration of multiple channels
+        # (translation only)
+        self.settings.set_section('ObjectDetection')
+        xs = [0]
+        ys = [0]
+        for prefix in [SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]:
+            if self.settings.get('Processing','%s_processchannel' % prefix):
+                reg_x = self.settings.get2('%s_channelregistration_x' % prefix)
+                reg_y = self.settings.get2('%s_channelregistration_y' % prefix)
+                xs.append(reg_x)
+                ys.append(reg_y)
+        diff_x = []
+        diff_y = []
+        for i in range(len(xs)):
+            for j in range(i, len(xs)):
+                diff_x.append(abs(xs[i]-xs[j]))
+                diff_y.append(abs(ys[i]-ys[j]))
+
+        # new image size after registration of all images
+        image_size = (self.meta_data.dim_x - max(diff_x),
+                      self.meta_data.dim_y - max(diff_y))
+
+        self.meta_data.real_image_width = image_size[0]
+        self.meta_data.real_image_height = image_size[1]
+
+        # relative start point of registered image
+        return (max(xs), max(ys)), image_size
+
+    def feature_params(self, ch_name):
+
+        # XXX unify list and dict
+        f_categories = list()
+        f_cat_params = dict()
+
+        # unfortunateley some classes expecte empty list and dict
+        if not self.settings.get(SECTION_NAME_PROCESSING,
+                             self._resolve_name(ch_name,
+                                                'featureextraction')):
+            return f_categories, f_cat_params
+
+        for category, feature in FEATURE_MAP.iteritems():
+            if self.settings.get(SECTION_NAME_FEATURE_EXTRACTION,
+                                 self._resolve_name(ch_name, category)):
+                if "haralick" in category:
+                    try:
+                        f_cat_params['haralick_categories'].extend(feature)
+                    except KeyError:
+                        assert isinstance(feature, list)
+                        f_cat_params['haralick_categories'] = feature
+                else:
+                    f_categories += feature
+
+        if f_cat_params.has_key("haralick_categories"):
+            f_cat_params['haralick_distances'] = (1, 2, 4, 8)
+
+        return f_categories, f_cat_params
+
+    def setup_channel(self, proc_channel, col_channel):
+
+        # determine the list of features to be calculated from each object
+        f_cats, f_params = self.feature_params(proc_channel)
+        reg_shift, im_size = self.registration_shift()
+        ch_cls = self.CHANNELS[proc_channel.lower()]
+
+        if proc_channel == self.PRIMARY_CHANNEL:
+            channel_registration = (0,0)
+        elif proc_channel in [self.SECONDARY_CHANNEL, self.TERTIARY_CHANNEL]:
+            channel_registration = (self.settings.get2('%s_channelregistration_x' %proc_channel),
+                                    self.settings.get2('%s_channelregistration_y' %proc_channel))
+
+        channel = ch_cls(strChannelId=col_channel,
+                         oZSliceOrProjection = self.zslice_par(proc_channel),
+                         channelRegistration = channel_registration,
+                         new_image_size = im_size,
+                         registration_start = reg_shift,
+                         fNormalizeMin = self.settings.get2('%s_normalizemin' %proc_channel),
+                         fNormalizeMax = self.settings.get2('%s_normalizemax' %proc_channel),
+                         lstFeatureCategories = f_cats,
+                         dctFeatureParameters = f_params)
+        return channel
+
+    def register_channels(self, cellanalyzer, channels):
+        # loop over the channels
+        for channel_id, zslices in channels:
+            zslice_images = [meta_image for _, meta_image in zslices]
+            for ch_name in self.processing_channels:
+                # each process channel has a destinct color channel
+                if channel_id != self.ch_mapping[ch_name]:
+                    continue
+
+                channel = self.setup_channel(ch_name, channel_id)
+                    # loop over the z-slices
+                for meta_image in zslice_images:
+                    channel.append_zslice(meta_image)
+                cellanalyzer.register_channel(channel)
+
+    @property
+    def _hdf_options(self):
+        self.settings.set_section('Output')
+        h5opts = {"hdf5_include_tracking": self.settings.get2('hdf5_include_tracking'),
+                  "hdf5_include_events": self.settings.get2('hdf5_include_events'),
+                  "hdf5_compression": "gzip" if self.settings.get2("hdf5_compression") else None,
+                  "hdf5_create": self.settings.get2('hdf5_create_file'),
+                  "hdf5_reuse": self.settings.get2('hdf5_reuse'),
+                  "hdf5_include_raw_images": self.settings.get2('hdf5_include_raw_images'),
+                  "hdf5_include_label_images": self.settings.get2('hdf5_include_label_images'),
+                  "hdf5_include_features": self.settings.get2('hdf5_include_features'),
+                  "hdf5_include_crack": self.settings.get2('hdf5_include_crack'),
+                  "hdf5_include_classification": self.settings.get2('hdf5_include_classification')}
+
+        # Processing overwrites Output
+        if not self.settings.get('Processing', 'tracking'):
+            h5opts["hdf5_include_tracking"] = False
+            h5opts["hdf5_include_events"] = False
+        return h5opts
+
 
     # FIXME the following functions do moreless the same!
     def _resolve_name(self, channel, name):
@@ -148,29 +264,6 @@ class PositionAnalyzer(LoggerObject):
                         self.SECONDARY_CHANNEL: 'secondary',
                         self.TERTIARY_CHANNEL: 'tertiary'}
         return '%s_%s' %(_channel_lkp[channel], name)
-
-    @property
-    def ch_mapping(self):
-        sttg =self.settings
-        chm = OrderedDict()
-        chm[self.PRIMARY_CHANNEL] = sttg.get('ObjectDetection',
-                                             'primary_channelid')
-        if sttg.get('Processing', 'secondary_processchannel'):
-            chm[self.SECONDARY_CHANNEL] = sttg.get('ObjectDetection',
-                                                   'secondary_channelid')
-        if sttg.get('Processing', 'tertiary_processchannel'):
-            chm[self.TERTIARY_CHANNEL] = sttg.get('ObjectDetection',
-                                                  'tertiary_channelid')
-        return chm
-
-    @property
-    def channels_to_process(self):
-        # refactor this function with ch_mapping
-        channels = (PrimaryChannel.NAME, )
-        for name in [SecondaryChannel.NAME, TertiaryChannel.NAME]:
-            if self.settings.get('Processing', '%s_processchannel' % name.lower()):
-                channels = channels + (name,)
-        return channels
 
     @property
     def meta_data(self):
@@ -181,13 +274,129 @@ class PositionAnalyzer(LoggerObject):
         return self.meta_data.has_timelapse
         # self._has_timelapse = len(self.meta_data.times) > 1
 
+    @property
+    def processing_channels(self):
+        channels = (self.PRIMARY_CHANNEL, )
+        for name in [self.SECONDARY_CHANNEL, self.TERTIARY_CHANNEL]:
+            if self.settings.get('Processing', '%s_processchannel' % name.lower()):
+                channels = channels + (name,)
+        return channels
+
+    @property
+    def ch_mapping(self):
+        """Maps processing channels to color channels. Mapping is not
+        necessariliy one-to-one.
+        """
+        sttg = self.settings
+        chm = OrderedDict()
+        for channel in self.processing_channels:
+            chm[channel] = sttg.get('ObjectDetection',
+                                    '%s_channelid' %channel.lower())
+        return chm
+
+    def is_aborted(self):
+        if self._qthread is None:
+            return False
+        elif self._qthread.get_abort():
+            return True
+
+    def update_stage(self, info):
+        self._info.update(info)
+        if not self._qthread is None:
+            self._qthread.set_stage_info(self._info, stime=0.1)
+
+    def set_image(self, image, msg, filename='', region=None, stime=0.0):
+        """Propagate a rendered image to QThread"""
+        if not (self._qthread is None and image is None):
+            self._qthread.set_image(region, image, msg, filename)
+            time.sleep(stime)
+
+class PositionPicker(PositionCore):
+
+    def __init__(self, *args, **kw):
+        super(PositionPicker, self).__init__(*args, **kw)
+
+        # disable tracking somewhere else
+        self.settings.set('Processing', 'tracking', False)
+        self._frames = self.dctSamplePositions[self.position]
+
+        if not self.settings.get('Classification', 'collectsamples'):
+            raise RuntimeError("settings not set to PICKING")
+
+    def __call__(self):
+        super(PositionPicker, self).__call__()
+
+        self.timeholder = TimeHolder(self.position, self.processing_channels,
+                                     None,
+                                     self.meta_data, self.settings,
+                                     self._frames,
+                                     self.plate_id,
+                                     **self._hdf_options)
+
+        stopwatch = StopWatch(start=True)
+        ca = CellAnalyzer(time_holder=self.timeholder,
+                          position = self.position,
+                          create_images = True,
+                          binning_factor = 1,
+                          detect_objects = self.settings.get('Processing',
+                                                             'objectdetection'))
+
+        n_images = self._analyze(ca)
+
+    def _analyze(self, cellanalyzer):
+        super(PositionPicker, self)._analyze()
+        n_images = 0
+        stopwatch = StopWatch(start=True)
+        crd = Coordinate(self.plate_id, self.position,
+                         self._frames, list(set(self.ch_mapping.values())))
+
+        for frame, channels in self._imagecontainer( \
+            crd, interrupt_channel=True, interrupt_zslice=True):
+
+            if self.is_aborted():
+                self.clear()
+                return 0
+            else:
+                txt = 'T %d (%d/%d)' %(frame, self._frames.index(frame)+1,
+                                       len(self._frames))
+                self.update_stage({'progress': self._frames.index(frame)+1,
+                                   'text': txt,
+                                   'interval': stopwatch.interim()})
+
+            stopwatch.reset(start=True)
+            cellanalyzer.initTimepoint(frame)
+            self.register_channels(cellanalyzer, channels)
+
+            img_rgb = cellanalyzer.collectObjects(self.plate_id,
+                                                  self.position,
+                                                  self.lstSampleReader,
+                                                  self.learner,
+                                                  byTime=True)
+            if img_rgb is not None:
+                n_images += 1
+                msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position, frame)
+                self.set_image(img_rgb, msg)
+
+
+class PositionAnalyzer(PositionCore):
+
+    def __init__(self, *args, **kw):
+        super(PositionAnalyzer, self).__init__(*args, **kw)
+
+        if not self.has_timelapse:
+            self.settings.set('Processing', 'tracking', False)
+
+        self._makedirs()
+        self.add_file_handler(join(self._log_dir, "%s.log" %self.position),
+                              self._lvl.DEBUG)
+
     def _makedirs(self):
-        assert isinstance(self.P, basestring)
+        assert isinstance(self.position, basestring)
         assert isinstance(self._out_dir, basestring)
 
         self._analyzed_dir = join(self._out_dir, "analyzed")
         if self.has_timelapse:
-            self._position_dir = join(self._analyzed_dir, self.P)
+            self._position_dir = join(self._analyzed_dir, self.position)
         else:
             self._position_dir = self._analyzed_dir
 
@@ -212,9 +421,31 @@ class PositionAnalyzer(LoggerObject):
                 self.logger.info("mkdir %s: ok" %odir)
             setattr(self, "_%s_dir" %basename(odir.lower()).strip("_"), odir)
 
-    def __del__(self):
-        # XXX - is it really necessary?
-        self.logger.removeHandler(self._file_handler)
+    def setup_classifiers(self):
+        sttg = self.settings
+        # processing channel, color channel
+        for p_channel, c_channel in self.ch_mapping.iteritems():
+            self.settings.set_section('Processing')
+            if sttg.get2(self._resolve_name(p_channel, 'classification')):
+                sttg.set_section('Classification')
+                cpar = {'strEnvPath' :
+                            sttg.get2(self._resolve_name(p_channel,
+                                                         'classification_envpath')),
+                        # varnames are messed up!
+                        'strChannelId' : p_channel,
+                        'color_channel': c_channel,
+                        'name': p_channel,
+                        'strRegionId' :
+                            sttg.get2(self._resolve_name(p_channel,
+                                                         'classification_regionname'))}
+                clf = CommonClassPredictor(dctCollectSamples=cpar)
+                clf.importFromArff()
+                clf.loadClassifier()
+                self.classifiers[p_channel] = clf
+
+    # def __del__(self):
+    #     # XXX - is it really necessary?
+    #     self.logger.removeHandler(self._file_handler)
 
     def _convert_tracking_duration(self, option_name):
         """
@@ -227,7 +458,7 @@ class PositionAnalyzer(LoggerObject):
                                   'tracking_duration_unit')
 
         # get mean and stddev for the current position
-        info = self.meta_data.get_timestamp_info(self.P)
+        info = self.meta_data.get_timestamp_info(self.position)
         if unit == TRACKING_DURATION_UNIT_FRAMES or info is None:
             result = value
         elif unit == TRACKING_DURATION_UNIT_MINUTES:
@@ -237,26 +468,6 @@ class PositionAnalyzer(LoggerObject):
         else:
             raise ValueError("Wrong unit '%s' specified." % unit)
         return int(round(result))
-
-    @property
-    def _hdf_options(self):
-        self.settings.set_section('Output')
-        h5opts = {"hdf5_include_tracking": self.settings.get2('hdf5_include_tracking'),
-                  "hdf5_include_events": self.settings.get2('hdf5_include_events'),
-                  "hdf5_compression": "gzip" if self.settings.get2("hdf5_compression") else None,
-                  "hdf5_create": self.settings.get2('hdf5_create_file'),
-                  "hdf5_reuse": self.settings.get2('hdf5_reuse'),
-                  "hdf5_include_raw_images": self.settings.get2('hdf5_include_raw_images'),
-                  "hdf5_include_label_images": self.settings.get2('hdf5_include_label_images'),
-                  "hdf5_include_features": self.settings.get2('hdf5_include_features'),
-                  "hdf5_include_crack": self.settings.get2('hdf5_include_crack'),
-                  "hdf5_include_classification": self.settings.get2('hdf5_include_classification')}
-
-        # Processing overwrites Output
-        if not self.settings.get('Processing', 'tracking'):
-            h5opts["hdf5_include_tracking"] = False
-            h5opts["hdf5_include_events"] = False
-        return h5opts
 
     @property
     def _tracking_options(self):
@@ -312,38 +523,33 @@ class PositionAnalyzer(LoggerObject):
         return features
 
     def export_object_counts(self, timeholder):
-        fname = join(self._statistics_dir, 'P%s__object_counts.txt' % self.P)
+        fname = join(self._statistics_dir, 'P%s__object_counts.txt' % self.position)
 
         # at least the total count for primary is always exported
         ch_info = {'Primary': ('primary', [], [])}
+        for name, clf in self.classifiers.iteritems():
+            ch_info[name] = (clf.strRegionId, clf.lstClassNames, clf.lstHexColors)
 
-        for ch_name, channel_id in self.ch_mapping.iteritems():
-            if self.classifier_infos.has_key(ch_name):
-                infos = self.classifier_infos[ch_name]
-                ch_info[ch_name] = (infos['strRegionId'],
-                                    infos['classifier'].lstClassNames,
-                                    infos['classifier'].lstHexColors)
-
-        timeholder.exportObjectCounts(fname, self.P, self.meta_data, ch_info)
+        timeholder.exportObjectCounts(fname, self.position, self.meta_data, ch_info)
         pplot_ymax = \
             self.settings.get('Output', 'export_object_counts_ylim_max')
 
         # plot only for primary channel so far!
-        timeholder.exportPopulationPlots(fname, self._population_dir, self.P,
+        timeholder.exportPopulationPlots(fname, self._population_dir, self.position,
                                          self.meta_data, ch_info['Primary'], pplot_ymax)
 
 
     def export_object_details(self, timeholder):
         fname = join(self._statistics_dir,
-                        'P%s__object_details.txt' % self.P)
+                        'P%s__object_details.txt' % self.position)
         timeholder.exportObjectDetails(fname, excel_style=False)
         fname = join(self._statistics_dir,
-                        'P%s__object_details_excel.txt' % self.P)
+                        'P%s__object_details_excel.txt' % self.position)
         timeholder.exportObjectDetails(fname, excel_style=True)
 
     def export_image_names(self, timeholder):
         timeholder.exportImageFileNames(self._statistics_dir,
-                                         self.P,
+                                         self.position,
                                          self._imagecontainer,
                                          self.ch_mapping)
 
@@ -351,8 +557,8 @@ class PositionAnalyzer(LoggerObject):
         celltracker.exportFullTracks()
 
     def export_graphviz(self, celltracker):
-        self.oCellTracker.exportGraph(\
-            join(self._statistics_dir, 'tracking_graph___P%s.dot' % self.P))
+        self.tracker.exportGraph(\
+            join(self._statistics_dir, 'tracking_graph___P%s.dot' % self.position))
 
     def export_gallery_images(self, celltracker):
         gallery_images = ['primary']
@@ -367,7 +573,7 @@ class PositionAnalyzer(LoggerObject):
                 self.logger.info("running Cutter for '%s'..." % render_name)
                 image_size = \
                     self.settings.get('Output', 'events_gallery_image_size')
-                EventGallery(celltracker, cutter_in, self.P, cutter_out,
+                EventGallery(celltracker, cutter_in, self.position, cutter_out,
                              self.meta_data, oneFilePerTrack=True,
                              size=(image_size, image_size))
             # FIXME: be careful here. normally only raw images are
@@ -400,75 +606,68 @@ class PositionAnalyzer(LoggerObject):
         self.logger.debug("--- serializing events ok")
 
     def __call__(self):
-        self.logger.info('')
-        # turn libtiff warnings off
-        if not __debug__:
-            ccore.turn_off()
-        stopwatch = StopWatch(start=True)
-        self.settings.set_section('Output')
+        super(PositionAnalyzer, self).__call__()
 
         # include hdf5 file name in hdf5_options
         # perhaps timeholder might be a good placke to read out the options
         # fils must not exist to proceed
-        hdf5_fname = join(self._hdf5_dir, '%s.hdf5' % self.P)
-        self.oTimeHolder = TimeHolder(self.P, self.channels_to_process,
-                                      hdf5_fname,
-                                      self.meta_data, self.settings,
-                                      self._frames,
-                                      self.plate_id,
-                                      **self._hdf_options)
+        hdf5_fname = join(self._hdf5_dir, '%s.hdf5' % self.position)
+        self.timeholder = TimeHolder(self.position, self.processing_channels,
+                                     hdf5_fname,
+                                     self.meta_data, self.settings,
+                                     self._frames,
+                                     self.plate_id,
+                                     **self._hdf_options)
 
         self.settings.set_section('Tracking')
-        # structure and logic to handle object trajectories
-        if not self.settings.get('Processing', 'tracking'):
-            self.oCellTracker = None
-        else:
-            clsCellTracker = ClassificationCellTracker2
-            self.oCellTracker = clsCellTracker(oTimeHolder=self.oTimeHolder,
-                                               oMetaData=self.meta_data,
-                                               P=self.P,
-                                               origP=self.origP,
-                                               strPathOut=self._statistics_dir,
-                                               **self._tracking_options)
-            primary_channel_id = PrimaryChannel.NAME
+        # setup tracker
+        if self.settings.get('Processing', 'tracking'):
+            self.tracker = CellTracker(oTimeHolder=self.timeholder,
+                                       oMetaData=self.meta_data,
+                                       P=self.position,
+                                       origP=self.position,
+                                       strPathOut=self._statistics_dir,
+                                       **self._tracking_options)
             region_name = self.settings.get2('tracking_regionname')
-            self.oCellTracker.initTrackingAtTimepoint(primary_channel_id, region_name)
+            self.tracker.initTrackingAtTimepoint(PrimaryChannel.NAME,
+                                                 region_name)
 
-
+        stopwatch = StopWatch(start=True)
         # object detection??
-        ca = CellAnalyzer(time_holder=self.oTimeHolder,
-                          position = self.P,
+        ca = CellAnalyzer(time_holder=self.timeholder,
+                          position = self.position,
                           create_images = True,
                           binning_factor = 1,
                           detect_objects = self.settings.get('Processing', 'objectdetection'))
 
+        self.setup_classifiers()
         self.export_features = self.define_exp_features()
-        n_images = self._analyzePosition(ca)
+        n_images = self._analyze(ca)
 
         if n_images > 0:
             # exports also
             if self.settings.get('Output', 'export_object_counts'):
-                self.export_object_counts(self.oTimeHolder)
+                self.export_object_counts(self.timeholder)
             if self.settings.get('Output', 'export_object_details'):
-                self.export_object_details(self.oTimeHolder)
+                self.export_object_details(self.timeholder)
             if self.settings.get('Output', 'export_file_names'):
-                self.export_image_names(self.oTimeHolder)
+                self.export_image_names(self.timeholder)
 
             # invoke tracking
             self.settings.set_section('Tracking')
             if self.settings.get('Processing', 'tracking'):
-                ret = self.tracking(self.oTimeHolder, self.oCellTracker)
+                ret = self.tracking(self.timeholder, self.tracker)
                 if self.is_aborted() or ret == 0:
                     return 0 # number of processed images
                 self.update_stage({'text': 'export events...'})
                 # invoke event selection
                 if self.settings.get('Processing', 'tracking_synchronize_trajectories'):
-                    self.event_selection(self.oTimeHolder, self.oCellTracker)
+                    self.event_selection(self.timeholder, self.tracker)
 
                 if self.settings.get('Output', 'export_track_data'):
-                    self.export_full_tracks(self.oCellTracker)
+                    self.export_full_tracks(self.tracker)
                 if self.settings.get('Output', 'export_tracking_as_dot'):
-                    self.export_graphviz(self.oCellTracker)
+                    self.export_graphviz(self.tracker)
 
             if self.is_aborted():
                 return 0
@@ -478,9 +677,9 @@ class PositionAnalyzer(LoggerObject):
 
             # remove all features from all channels to free memory
             # for the generation of gallery images
-            self.oTimeHolder.purge_features()
+            self.timeholder.purge_features()
             if self.settings.get('Output', 'events_export_gallery_images'):
-                self.export_gallery_images(self.oCellTracker)
+                self.export_gallery_images(self.tracker)
 
         try:
             intval = stopwatch.stop()/n_images*1000
@@ -492,151 +691,28 @@ class PositionAnalyzer(LoggerObject):
 
         self.touch_finished()
         self.clear()
-        return {'iNumberImages': n_images, 'filename_hdf5': hdf5_fname}
+        return {'iNumberImages': n_images,
+                'filename_hdf5': self.timeholder.hdf5_filename}
 
     def touch_finished(self, times=None):
         """Writes an empty file to mark this position as finished"""
-        fname = join(self._finished_dir, '%s__finished.txt' % self.P)
+        fname = join(self._finished_dir, '%s__finished.txt' % self.position)
         with open(fname, "w") as f:
             os.utime(fname, times)
 
     def clear(self):
         # closes hdf5
-        self.oTimeHolder.close_all()
+        self.timeholder.close_all()
 
-    def is_aborted(self):
-        if self._qthread is None:
-            return False
-        elif self._qthread.get_abort():
-            return True
-
-    def update_stage(self, info):
-        self._info.update(info)
-        if not self._qthread is None:
-            self._qthread.set_stage_info(self._info, stime=0.1)
-
-    def registration_shift(self):
-        # FIXME this function causses a segfault on c++ side in compination
-        # with cropping
-        # compute values for the registration of multiple channels
-        # (translation only)
-        self.settings.set_section('ObjectDetection')
-        xs = [0]
-        ys = [0]
-        for prefix in [SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]:
-            if self.settings.get('Processing','%s_processchannel' % prefix):
-                reg_x = self.settings.get2('%s_channelregistration_x' % prefix)
-                reg_y = self.settings.get2('%s_channelregistration_y' % prefix)
-                xs.append(reg_x)
-                ys.append(reg_y)
-        diff_x = []
-        diff_y = []
-        for i in range(len(xs)):
-            for j in range(i, len(xs)):
-                diff_x.append(abs(xs[i]-xs[j]))
-                diff_y.append(abs(ys[i]-ys[j]))
-
-        # new image size after registration of all images
-        image_size = (self.meta_data.dim_x - max(diff_x),
-                      self.meta_data.dim_y - max(diff_y))
-#
-        self.meta_data.real_image_width = image_size[0]
-        self.meta_data.real_image_height = image_size[1]
-
-        # relative start point of registered image
-        return (max(xs), max(ys)), image_size
-
-    def zslice_par(self, ch_name):
-        """Returns either the number of the zslice to select or a tuple of parmeters
-        to control the zslice projcetion"""
-        self.settings.set_section('ObjectDetection')
-        if self.settings.get2(self._resolve_name(ch_name, 'zslice_selection')):
-            par = self.settings.get2(self._resolve_name(
-                    ch_name, 'zslice_selection_slice'))
-        elif self.settings.get2(self._resolve_name(ch_name, 'zslice_projection')):
-            method = self.settings.get2(self._resolve_name(
-                    ch_name, 'zslice_projection_method'))
-            begin = self.settings.get2(self._resolve_name(
-                    ch_name, 'zslice_projection_begin'))
-            end = self.settings.get2(self._resolve_name(
-                    ch_name, 'zslice_projection_end'))
-            step = self.settings.get2(self._resolve_name(
-                    ch_name, 'zslice_projection_step'))
-            par = (method, begin, end, step)
-        return par
-
-    def feature_params(self, ch_name):
-
-        # XXX unify list and dict
-        f_categories = list()
-        f_cat_params = dict()
-
-        # unfortunateley some classes expecte empty list and dict
-        if not self.settings.get(SECTION_NAME_PROCESSING,
-                             self._resolve_name(ch_name,
-                                                'featureextraction')):
-            return f_categories, f_cat_params
-
-        for category, feature in FEATURE_MAP.iteritems():
-            if self.settings.get(SECTION_NAME_FEATURE_EXTRACTION,
-                                 self._resolve_name(ch_name, category)):
-                if "haralick" in category:
-                    try:
-                        f_cat_params['haralick_categories'].extend(feature)
-                    except KeyError:
-                        assert isinstance(feature, list)
-                        f_cat_params['haralick_categories'] = feature
-                else:
-                    f_categories += feature
-
-        if f_cat_params.has_key("haralick_categories"):
-            f_cat_params['haralick_distances'] = (1, 2, 4, 8)
-
-        return f_categories, f_cat_params
-
-    def setup_channel(self, ch_name, channel_id):
-        prefix = ch_name.lower()
-
-        # determine the list of features to be calculated from each object
-        f_cats, f_params = self.feature_params(ch_name)
-        reg_shift, im_size = self.registration_shift()
-        ch_cls = self.CHANNELS[prefix]
-
-        if ch_name == self.PRIMARY_CHANNEL:
-            channel_registration = (0,0)
-        elif ch_name in [self.SECONDARY_CHANNEL, self.TERTIARY_CHANNEL]:
-            channel_registration = (self.settings.get2('%s_channelregistration_x' % prefix),
-                                    self.settings.get2('%s_channelregistration_y' % prefix))
-
-        channel = ch_cls(strChannelId=channel_id,
-                         oZSliceOrProjection = self.zslice_par(ch_name),
-                         channelRegistration = channel_registration,
-                         new_image_size = im_size,
-                         registration_start = reg_shift,
-                         fNormalizeMin = self.settings.get2('%s_normalizemin' % prefix),
-                         fNormalizeMax = self.settings.get2('%s_normalizemax' % prefix),
-                         lstFeatureCategories = f_cats,
-                         dctFeatureParameters = f_params)
-        return channel
-
-    def _analyzePosition(self, cellanalyzer):
-
-        self._info.update({'stage': 2,
-                           'min': 1,
-                           'max': len(self._frames),
-                           'meta' : 'Image processing:',
-                           'item_name': 'image set'})
-
+    def _analyze(self, cellanalyzer):
+        super(PositionAnalyzer, self)._analyze()
         n_images = 0
-        last_frame = self._frames[-1]
         stopwatch = StopWatch(start=True)
-
-        # here self.P is also as good
-        crd = Coordinate(self.plate_id, self.origP,
+        crd = Coordinate(self.plate_id, self.position,
                          self._frames, list(set(self.ch_mapping.values())))
-        for frame, iter_channel in self._imagecontainer(crd,
-                                                        interrupt_channel=True,
-                                                        interrupt_zslice=True):
+
+        for frame, channels in self._imagecontainer( \
+            crd, interrupt_channel=True, interrupt_zslice=True):
 
             if self.is_aborted():
                 self.clear()
@@ -647,72 +723,44 @@ class PositionAnalyzer(LoggerObject):
                 self.update_stage({'progress': self._frames.index(frame)+1,
                                    'text': txt,
                                    'interval': stopwatch.interim()})
+
             stopwatch.reset(start=True)
             cellanalyzer.initTimepoint(frame)
+            self.register_channels(cellanalyzer, channels)
 
-            # loop over the channels
-            for channel_id, iter_zslice in iter_channel:
-                zslice_images = [meta_image for _, meta_image in iter_zslice]
-                for ch_name in self.channels_to_process:
-                    # each process channel has a destinct color channel
-                    if channel_id != self.ch_mapping[ch_name]:
-                        continue
+            cellanalyzer.process()
+            n_images += 1
+            # if not self._qthread:
+            #     time.sleep(.1)
 
-                    channel = self.setup_channel(ch_name, channel_id)
-                    # loop over the z-slices
-                    for meta_image in zslice_images:
-                        channel.append_zslice(meta_image)
-                    cellanalyzer.register_channel(channel)
+            images = []
+            if self.settings.get('Processing', 'tracking'):
+                self.tracker.trackAtTimepoint(frame)
 
-            # PICKING
-            if self.settings.get('Classification', 'collectsamples'):
-                img_rgb = cellanalyzer.collectObjects(self.plate_id,
-                                                      self.origP,
-                                                      self.lstSampleReader,
-                                                      self.learner,
-                                                      byTime=True)
-                if not img_rgb is None:
-                    n_images += 1
-                    if not self._qthread is None:
-                        #if self._qthread.get_renderer() == strType:
-                        self._qthread.set_image(None,
-                                                img_rgb,
-                                                'PL %s - P %s - T %05d' % (self.plate_id, self.origP, frame))
-            #END PICKING
-            else:
-                cellanalyzer.process()
-                n_images += 1
-                # if not self._qthread:
-                #     time.sleep(.1)
+                self.settings.set_section('Tracking')
+                if self.settings.get2('tracking_visualization'):
+                    size = cellanalyzer.getImageSize(PrimaryChannel.NAME)
+                    img_conn, img_split = self.tracker.visualizeTracks(frame, size,
+                                                                            n=self.settings.get2('tracking_visualize_track_length'),
+                                                                            radius=self.settings.get2('tracking_centroid_radius'))
+                    images += [(img_conn, '#FFFF00', 1.0),
+                               (img_split, '#00FFFF', 1.0)]
 
-                images = []
-                if self.settings.get('Processing', 'tracking'):
-                    self.oCellTracker.trackAtTimepoint(frame)
+            for clf in self.classifiers.itervalues():
+                cellanalyzer.classify_objects(clf)
 
-                    self.settings.set_section('Tracking')
-                    if self.settings.get2('tracking_visualization'):
-                        size = cellanalyzer.getImageSize(PrimaryChannel.NAME)
-                        img_conn, img_split = self.oCellTracker.visualizeTracks(frame, size,
-                                                                                n=self.settings.get2('tracking_visualize_track_length'),
-                                                                                radius=self.settings.get2('tracking_centroid_radius'))
-                        images += [(img_conn, '#FFFF00', 1.0),
-                                   (img_split, '#00FFFF', 1.0)]
+            ##############################################################
+            # FIXME - part for browser
+            if not self._myhack is None:
+                self.render_browser(cellanalyzer)
+            ##############################################################
 
-                for name, infos in self.classifier_infos.iteritems():
-                    cellanalyzer.classify_objects(infos['classifier'])
+            self.settings.set_section('General')
+            self.render_classification_images(cellanalyzer, images, frame)
+            self.render_contour_images(cellanalyzer, images, frame)
 
-                ##############################################################
-                # FIXME - part for browser
-                if not self._myhack is None:
-                    self.render_browser(cellanalyzer)
-                ##############################################################
-
-                self.settings.set_section('General')
-                self.render_classification_images(cellanalyzer, images, frame)
-                self.render_contour_images(cellanalyzer, images, frame)
-
-                if self.settings.get('Output', 'rendering_labels_discwrite'):
-                    cellanalyzer.exportLabelImages(self._labels_dir)
+            if self.settings.get('Output', 'rendering_labels_discwrite'):
+                cellanalyzer.exportLabelImages(self._labels_dir)
 
             self.logger.info(" - Frame %d, duration (ms): %3d" \
                                  %(frame, stopwatch.interim()*1000))
@@ -720,32 +768,33 @@ class PositionAnalyzer(LoggerObject):
 
         return n_images
 
-    def render_contour_images(self, cellanalyzer, images, frame):
-        for region, render_info in self.settings.get2('rendering').iteritems():
-            out_images = join(self._images_dir, region)
+    def render_contour_images(self, ca, images, frame):
+        for region, render_par in self.settings.get2('rendering').iteritems():
+            out_dir = join(self._images_dir, region)
             write = self.settings.get('Output', 'rendering_contours_discwrite')
-            img_rgb, filename = cellanalyzer.render(out_images,
-                                                    dctRenderInfo=render_info,
-                                                    writeToDisc=write,
-                                                    images=images)
 
-            if (not self._qthread is None and not img_rgb is None):
-                msg = 'PL %s - P %s - T %05d' % (self.plate_id, self.origP, frame)
-                self._qthread.set_image(region, img_rgb, msg, filename, stime=0.05)
+            if region not in self.CHANNELS.keys():
+                img, fname = ca.render(out_dir, dctRenderInfo=render_par,
+                                       writeToDisc=write, images=images)
+
+                msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position,
+                                                frame)
+                self.set_image(img, msg, fname, region, 0.05)
+            # gallery images are treated differenty
+            else:
+                ca.render(out_dir, dctRenderInfo=render_par, writeToDisc=True)
 
     def render_classification_images(self, cellanalyzer, images, frame):
-        for region, render_info in self.settings.get2('rendering_class').iteritems():
+        for region, render_par in self.settings.get2('rendering_class').iteritems():
             out_images = join(self._images_dir, region)
             write = self.settings.get('Output', 'rendering_class_discwrite')
-            img_rgb, filename = cellanalyzer.render(out_images,
-                                                    dctRenderInfo=render_info,
+            img_rgb, fname = cellanalyzer.render(out_images,
+                                                    dctRenderInfo=render_par,
                                                     writeToDisc=write,
                                                     images=images)
 
-            # emit image to gui
-            if not self._qthread is None and not img_rgb is None:
-                msg = 'PL %s - P %s - T %05d' % (self.plate_id, self.origP, frame)
-                self._qthread.set_image(region, img_rgb, msg, filename, stime=0.05)
+            msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position, frame)
+            self.set_image(img_rgb, msg, fname, region, 0.05)
 
     def render_browser(self, cellanalyzer):
         d = {}

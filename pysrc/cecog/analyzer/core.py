@@ -28,6 +28,7 @@ from cecog.learning.collector import CellCounterReader, CellCounterReaderXML
 from cecog.learning.learning import CommonObjectLearner
 
 from cecog.analyzer.position import PositionAnalyzer
+from cecog.analyzer.position import PositionPicker
 from cecog.io.imagecontainer import MetaImage
 from cecog.util.logger import LoggerObject
 from cecog.util.util import makedirs
@@ -227,6 +228,7 @@ class Picker(AnalyzerBase):
 
     def __init__(self, plate, settings, imagecontainer, learner=None):
         super(Picker, self).__init__(plate, settings, imagecontainer)
+
         # belongs already to picker
         self.sample_reader = []
         self.sample_positions = {}
@@ -321,19 +323,19 @@ class Picker(AnalyzerBase):
                 kw_ = dict(qthread = qthread, myhack = myhack)
                 job_args.append((args_, kw_))
 
-        stage_info = {'stage': 1, 'min': 1, 'max': len(job_args)}
-
         hdf5_link_list = []
         for idx, (args_, kw_) in enumerate(job_args):
             if not qthread is None:
                 if qthread.get_abort():
                     break
-                stage_info.update({'progress': idx+1,
-                                   'text': 'P %s (%d/%d)' \
-                                       % (args_[0], idx+1, len(job_args))})
-                qthread.set_stage_info(stage_info)
-            analyzer = PositionAnalyzer(*args_, **kw_)
-            result = analyzer()
+                qthread.set_stage_info({'stage': 1,
+                                        'min': 1,
+                                        "max": len(job_args),
+                                        'progress': idx+1, 'text': 'P %s (%d/%d)' \
+                                            % (args_[0], idx+1, len(job_args))})
+
+            picker = PositionPicker(*args_, **kw_)
+            result = picker()
 
             if self.settings.get('Output', 'hdf5_create_file') and \
                     self.settings.get('Output', 'hdf5_merge_positions'):

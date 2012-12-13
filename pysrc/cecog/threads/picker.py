@@ -32,8 +32,8 @@ class PickerThread(CoreThread):
         learner = None
         for plate_id in self._imagecontainer.plates:
             picker = Picker(plate_id, self._settings,
-                              copy.deepcopy(self._imagecontainer),
-                              learner=learner)
+                            copy.deepcopy(self._imagecontainer),
+                            learner=learner)
             result = picker.processPositions(self)
             learner = result['ObjectLearner']
             post_hdf5_link_list = result['post_hdf5_link_list']
@@ -54,8 +54,12 @@ class PickerThread(CoreThread):
     def get_renderer(self):
         return self._renderer
 
-    def set_image(self, name, image_rgb, info, filename=''):
+    def set_image(self, name, image, message, filename=''):
         self._mutex.lock()
+        assert isinstance(image, ccore.RGBImage)
+        assert isinstance(message, str)
+        assert isinstance(filename, str)
+
         if name == self._renderer:
-            self.image_ready.emit(image_rgb, info, filename)
+            self.image_ready.emit(image, message, filename)
         self._mutex.unlock()

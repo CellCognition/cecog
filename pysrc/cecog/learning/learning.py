@@ -389,8 +389,7 @@ class BaseLearner(LoggerMixin, OptionManager):
 class ClassTrainer(BaseLearner):
 
     OPTIONS = {"strImgRePattern" : Option("^(?P<id_string>.+?)__img\..+?$"),
-               "strMskRePattern" : Option("^(?P<id_string>.+?)__msk\..+?$"),
-               }
+               "strMskRePattern" : Option("^(?P<id_string>.+?)__msk\..+?$")}
 
     def __init__(self, **options):
         super(ClassTrainer, self).__init__(**options)
