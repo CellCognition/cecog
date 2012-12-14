@@ -49,3 +49,13 @@ class PickerThread(CoreThread):
             self.image_ready.emit(image, message, filename)
         finally:
             self._mutex.unlock()
+
+    def set_renderer(self, name):
+        self._mutex.lock()
+        try:
+            self._renderer = name
+        finally:
+            self._mutex.unlock()
+
+    def get_renderer(self):
+        return self._renderer

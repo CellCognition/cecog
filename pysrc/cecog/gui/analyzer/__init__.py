@@ -242,8 +242,7 @@ class _ProcessorMixin(object):
     def register_control_button(self, name, cls, labels):
         self._control_buttons[name] = {'labels' : labels,
                                        'widget' : None,
-                                       'cls'    : cls,
-                                       }
+                                       'cls'    : cls}
 
     def _init_control(self, has_images=True):
         layout = QHBoxLayout(self._control)

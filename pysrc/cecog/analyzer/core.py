@@ -326,7 +326,7 @@ class Picker(AnalyzerBase):
         hdf5_link_list = []
         for idx, (args_, kw_) in enumerate(job_args):
             if not qthread is None:
-                if qthread.get_abort():
+                if qthread.is_aborted():
                     break
                 qthread.set_stage_info({'stage': 1,
                                         'min': 1,

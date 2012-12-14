@@ -11,13 +11,12 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-
 import time
 from PyQt4 import QtCore
 
 from cecog.threads.corethread import CoreThread
 from cecog.learning.learning import ConfusionMatrix
-from pdk.datetimeutils import StopWatch
+from cecog.util.stopwatch import StopWatch
 
 class TrainingThread(CoreThread):
 
@@ -35,12 +34,12 @@ class TrainingThread(CoreThread):
         g_info = g_begin, g_end, g_step
 
         stage_info = {'stage': 0,
-                      'text': '',
-                      'min': 0,
-                      'max': 1,
-                      'meta': 'Classifier training:',
-                      'item_name': 'round',
-                      'progress': 0}
+                'text': '',
+                'min': 0,
+                'max': 1,
+                'meta': 'Classifier training:',
+                'item_name': 'round',
+                'progress': 0}
         self.set_stage_info(stage_info)
 
         i = 0
@@ -49,8 +48,9 @@ class TrainingThread(CoreThread):
         best_log2g = None
         best_conf = None
         is_abort = False
-        stopwatch = StopWatch()
+        stopwatch = StopWatch(start=True)
         self._learner.filterData(apply=True)
+        t0 = time.time()
         for info in self._learner.iterGridSearchSVM(c_info=c_info,
                                                     g_info=g_info):
             n, log2c, log2g, conf = info
@@ -58,11 +58,11 @@ class TrainingThread(CoreThread):
                                'max': n,
                                'progress': i+1,
                                'text': 'log2(C)=%d, log2(g)=%d' % \
-                               (log2c, log2g),
-                               'interval': stopwatch.current_interval(),
+                                   (log2c, log2g),
+                               'interval': stopwatch.interim(),
                                })
-            self.set_stage_info(stage_info)
-            stopwatch.reset()
+            self.set_stage_info(stage_info, stime=0.05)
+            stopwatch.reset(start=True)
             i += 1
             accuracy = conf.ac_sample
             if accuracy > best_accuracy:
@@ -71,8 +71,6 @@ class TrainingThread(CoreThread):
                 best_log2g = log2g
                 best_conf = conf
                 self.conf_result.emit(log2c, log2g, conf)
-            # XXX - time.sleep
-            time.sleep(.05)
 
             if self.is_aborted():
                 is_abort = True
