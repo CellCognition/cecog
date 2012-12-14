@@ -60,7 +60,7 @@ class NavigationModule(Module):
         Module.__init__(self, parent, browser)
 
         self._imagecontainer = imagecontainer
-            
+
         frame_info = QGroupBox('Plate Information', self)
         layout = QGridLayout(frame_info)
         frame_info.setStyleSheet('QLabel { font-size: 10px }')
@@ -417,4 +417,3 @@ class NavigationModule(Module):
             self._table_time.blockSignals(False)
             self._table_time.scrollToItem(item)
             self._table_time.update()
-            
