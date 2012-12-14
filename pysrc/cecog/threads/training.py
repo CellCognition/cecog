@@ -74,7 +74,7 @@ class TrainingThread(CoreThread):
             # XXX - time.sleep
             time.sleep(.05)
 
-            if self.get_abort():
+            if self.is_aborted():
                 is_abort = True
                 break
 

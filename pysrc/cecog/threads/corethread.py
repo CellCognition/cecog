@@ -20,8 +20,6 @@ from PyQt4 import QtCore
 
 class CoreThread(QtCore.QThread):
 
-    foobar = QtCore.pyqtSignal("PyQt_PyObject")
-
     stage_info = QtCore.pyqtSignal(dict)
     analyzer_error = QtCore.pyqtSignal(str)
 
@@ -34,19 +32,20 @@ class CoreThread(QtCore.QThread):
         self._stage_info = {'text': '',
                             'progress': 0,
                             'max': 0}
-    @property
-    def parent(self):
-        return super(CoreThread, self).parent()
+    # @property
+    # def parent(self):
+    #     return super(CoreThread, self).parent()
 
-    def __del__(self):
-        self._abort = True
-        self.stop()
-        self.wait()
+    # does not make sense on python
+    # def __del__(self):
+    #     self._abort = True
+    #     self.stop()
+    #     self.wait()
 
-    def _run(self):
-        raise NotImplementedError
+    # def run(self):
+    #     raise NotImplementedError
 
-    def run(self):
+    def run(self, *args, **kw):
         try:
             import pydevd
             pydevd.connected = True
@@ -60,7 +59,7 @@ class CoreThread(QtCore.QThread):
         except Exception, e:
             # XXX
             if hasattr(e, 'msg'):
-                # MultiprocessingExeption
+                # MultiprocessingError
                 msg = e.msg
             else:
                 msg = traceback.format_exc()
@@ -71,7 +70,7 @@ class CoreThread(QtCore.QThread):
             self.analyzer_error.emit(msg)
             raise
 
-    def set_abort(self, wait=False):
+    def abort(self, wait=False):
         self._mutex.lock()
         try:
             self._abort = True
@@ -80,9 +79,8 @@ class CoreThread(QtCore.QThread):
         if wait:
             self.wait()
 
-    def get_abort(self):
-        abort = self._abort
-        return abort
+    def is_aborted(self):
+        return self._abort
 
     def set_stage_info(self, info, stime=0.0):
         self._mutex.lock()

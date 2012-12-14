@@ -25,7 +25,6 @@ class PickerThread(CoreThread):
 
     def __init__(self, parent, settings, imagecontainer):
         super(PickerThread, self).__init__(parent, settings)
-        self._renderer = None
         self._imagecontainer = imagecontainer
 
     def _run(self):
@@ -44,22 +43,9 @@ class PickerThread(CoreThread):
         if learner is not None:
             learner.export()
 
-    def set_renderer(self, name):
-        self._mutex.lock()
-        try:
-            self._renderer = name
-        finally:
-            self._mutex.unlock()
-
-    def get_renderer(self):
-        return self._renderer
-
     def set_image(self, name, image, message, filename=''):
         self._mutex.lock()
-        assert isinstance(image, ccore.RGBImage)
-        assert isinstance(message, str)
-        assert isinstance(filename, str)
-
-        if name == self._renderer:
+        try:
             self.image_ready.emit(image, message, filename)
-        self._mutex.unlock()
+        finally:
+            self._mutex.unlock()

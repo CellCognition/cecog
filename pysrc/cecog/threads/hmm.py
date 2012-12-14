@@ -259,7 +259,7 @@ class HmmThread(CoreThread):
             msg = str(self._process.readLine()).rstrip()
             msg = ''.join(list(self._process.readAll()))
             self.analyzer_error.emit(msg)
-            self.set_abort()
+            self.abort()
 
         elif self._settings.get2('compose_galleries') and not self._abort:
             sample = self._settings.get2('compose_galleries_sample')

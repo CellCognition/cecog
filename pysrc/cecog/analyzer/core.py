@@ -202,7 +202,7 @@ class AnalyzerCore(AnalyzerBase):
 
         for idx, (args_, kw_) in enumerate(job_args):
             if not qthread is None:
-                if qthread.get_abort():
+                if qthread.is_aborted():
                     break
                 stage_info.update({'progress': idx+1,
                                    'text': 'P %s (%d/%d)' \

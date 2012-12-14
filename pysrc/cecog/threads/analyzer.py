@@ -29,7 +29,6 @@ class AnalyzerThread(CoreThread):
         self._imagecontainer = imagecontainer
 
     def _run(self):
-
         for plate_id in self._imagecontainer.plates:
             analyzer = AnalyzerCore(plate_id, self._settings,
                                     copy.deepcopy(self._imagecontainer))

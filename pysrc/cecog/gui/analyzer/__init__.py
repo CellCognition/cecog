@@ -530,7 +530,7 @@ class _ProcessorMixin(object):
         self.setCursor(Qt.BusyCursor)
         self._is_abort = True
         self.dlg = waitingProgressDialog('Please wait until the processing has been terminated...', self)
-        self.dlg.setTarget(self._analyzer.set_abort, wait=True)
+        self.dlg.setTarget(self._analyzer.abort, wait=True)
         self.dlg.exec_()
         self.setCursor(Qt.ArrowCursor)
 

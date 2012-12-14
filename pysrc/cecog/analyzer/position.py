@@ -297,7 +297,7 @@ class PositionCore(LoggerObject):
     def is_aborted(self):
         if self._qthread is None:
             return False
-        elif self._qthread.get_abort():
+        elif self._qthread.is_aborted():
             return True
 
     def update_stage(self, info):
