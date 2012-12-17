@@ -545,9 +545,9 @@ namespace cecog
       #endif
       vigra::FImage fimg(wx, hx);
       distanceTransform(srcImageRange(img_bin), destImage(fimg), foreground, 2);
-      transformImage(srcImageRange(fimg), destImage(timg),
-                     Arg1() + Param(0.1 * rand() / (RAND_MAX + 1.0)));
-      gaussianSmoothing(srcImageRange(timg), destImage(bimg), gauss_size);
+      //transformImage(srcImageRange(fimg), destImage(timg),
+      //               Arg1() + Param(0.1 * rand() / (RAND_MAX + 1.0)));
+      gaussianSmoothing(srcImageRange(fimg), destImage(bimg), gauss_size);
     } else
     {
       #ifdef __DEBUG__
