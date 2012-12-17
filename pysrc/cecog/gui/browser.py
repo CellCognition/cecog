@@ -378,10 +378,10 @@ class Browser(QMainWindow):
         settings.set('Output', 'events_export_gallery_images', False)
 
         pr = self._imagecontainer.get_meta_data().pixel_range
-        settings.set('ObjectDetection', 'primary_normalizemax', pr[1])
-        settings.set('ObjectDetection', 'primary_normalizemin', pr[0])
-        settings.set('ObjectDetection', 'secondary_normalizemax', pr[1])
-        settings.set('ObjectDetection', 'secondary_normalizemin', pr[0])
+        #settings.set('ObjectDetection', 'primary_normalizemax', pr[1])
+        #settings.set('ObjectDetection', 'primary_normalizemin', pr[0])
+        #settings.set('ObjectDetection', 'secondary_normalizemax', pr[1])
+        #settings.set('ObjectDetection', 'secondary_normalizemin', pr[0])
 
         if len(self._imagecontainer.channels) > 1:
             settings.set('Processing', 'secondary_processChannel', True)
