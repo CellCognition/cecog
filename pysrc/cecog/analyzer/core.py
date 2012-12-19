@@ -95,6 +95,8 @@ class AnalyzerBase(LoggerObject):
                     raise RuntimeError(("Invalid time constraints "
                                         "(upper_bound <= lower_bound)!"))
                 self._frames = frames_total[f_start-1:f_end:f_incr]
+            else:
+                self._frames = frames_total
         return self._frames
 
 
@@ -131,29 +133,22 @@ class AnalyzerCore(AnalyzerBase):
 
     @property
     def positions(self):
-        """Determine positions to process considering all options
+        """Determine positions to process considering
 
         -) constrain position
         -) skip already processed
         """
 
         if self._positions is None:
-            positions = self.settings.get('General', 'positions')
-            # XXX - empty string needs separate execption
-            if not(bool(positions) or \
-                       self.settings.get('General', 'constrain_positions')):
-                positions = None
+            if self.settings.get('General', 'constrain_positions'):
+                positions  = self.settings.get('General', 'positions').split(',')
             else:
-                positions  = positions.split(',')
-
-            if not positions is None:
-                if not set(positions).issubset(self.meta_data.positions):
-                    raise ValueError(("The list of selected positions is not valid!"
-                                      " %s\nValid values are %s" % \
-                                          (positions, self.meta_data.positions)))
-            else:
-                # take all positions found
                 positions = list(self.meta_data.positions)
+
+            if not set(positions).issubset(self.meta_data.positions):
+                raise ValueError(("The list of selected positions is not valid!"
+                                  " %s\nValid values are %s" % \
+                                      (positions, self.meta_data.positions)))
 
             # drop already processed positions
             if self.settings.get('General', 'redoFailedOnly'):
@@ -198,8 +193,8 @@ class AnalyzerCore(AnalyzerBase):
                 job_args.append((args_, kw_))
 
         stage_info = {'stage': 1, 'min': 1, 'max': len(job_args)}
-        post_hdf5_link_list = []
 
+        hdf5_links = []
         for idx, (args_, kw_) in enumerate(job_args):
             if not qthread is None:
                 if qthread.is_aborted():
@@ -207,16 +202,14 @@ class AnalyzerCore(AnalyzerBase):
                 stage_info.update({'progress': idx+1,
                                    'text': 'P %s (%d/%d)' \
                                        % (args_[0], idx+1, len(job_args))})
-                qthread.set_stage_info(stage_info)
+                qthread.update_status(stage_info)
             analyzer = PositionAnalyzer(*args_, **kw_)
-            result = analyzer()
+            nimages = analyzer()
 
             if self.settings.get('Output', 'hdf5_create_file') and \
                     self.settings.get('Output', 'hdf5_merge_positions'):
-                post_hdf5_link_list.append(result['filename_hdf5'])
-
-        return {'ObjectLearner': None,
-                'post_hdf5_link_list': post_hdf5_link_list}
+                hdf5_links.append(analyzer.hdf5_filename)
+        return hdf5_links
 
 
 class Picker(AnalyzerBase):
@@ -323,23 +316,16 @@ class Picker(AnalyzerBase):
                 kw_ = dict(qthread = qthread, myhack = myhack)
                 job_args.append((args_, kw_))
 
-        hdf5_link_list = []
         for idx, (args_, kw_) in enumerate(job_args):
             if not qthread is None:
                 if qthread.is_aborted():
                     break
-                qthread.set_stage_info({'stage': 1,
-                                        'min': 1,
-                                        "max": len(job_args),
-                                        'progress': idx+1, 'text': 'P %s (%d/%d)' \
-                                            % (args_[0], idx+1, len(job_args))})
+                qthread.update_status({'stage': 1,
+                                       'min': 1,
+                                       "max": len(job_args),
+                                       'progress': idx+1,
+                                       'text': 'P %s (%d/%d)' \
+                                           %(args_[0], idx+1, len(job_args))})
 
             picker = PositionPicker(*args_, **kw_)
             result = picker()
-
-            if self.settings.get('Output', 'hdf5_create_file') and \
-                    self.settings.get('Output', 'hdf5_merge_positions'):
-                hdf5_link_list.append(result['filename_hdf5'])
-
-        return {'ObjectLearner': self.learner,
-                'post_hdf5_link_list': hdf5_link_list}

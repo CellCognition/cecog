@@ -29,26 +29,17 @@ class PickerThread(CoreThread):
 
     def _run(self):
         learner = None
-        for plate_id in self._imagecontainer.plates:
-            picker = Picker(plate_id, self._settings,
+        for plate in self._imagecontainer.plates:
+            picker = Picker(plate, self._settings,
                             copy.deepcopy(self._imagecontainer),
                             learner=learner)
-            result = picker.processPositions(self)
-            learner = result['ObjectLearner']
-            post_hdf5_link_list = result['post_hdf5_link_list']
-            if len(post_hdf5_link_list) > 0:
-                link_hdf5_files(sorted(post_hdf5_link_list))
+            picker.processPositions(self)
+            learner = picker.learner
+        learner.export()
 
-        # make sure the learner data is only exported while we do sample picking
-        if learner is not None:
-            learner.export()
-
-    def set_image(self, name, image, message, filename=''):
-        self._mutex.lock()
-        try:
-            self.image_ready.emit(image, message, filename)
-        finally:
-            self._mutex.unlock()
+    def set_image(self, name, image, message, filename='', stime=0):
+        self.image_ready.emit(image, message, filename)
+        self.msleep(stime)
 
     def set_renderer(self, name):
         self._mutex.lock()

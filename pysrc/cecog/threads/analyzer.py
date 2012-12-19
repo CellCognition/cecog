@@ -32,11 +32,9 @@ class AnalyzerThread(CoreThread):
         for plate_id in self._imagecontainer.plates:
             analyzer = AnalyzerCore(plate_id, self._settings,
                                     copy.deepcopy(self._imagecontainer))
-            result = analyzer.processPositions(self)
-            learner = result['ObjectLearner']
-            post_hdf5_link_list = result['post_hdf5_link_list']
-            if len(post_hdf5_link_list) > 0:
-                link_hdf5_files(sorted(post_hdf5_link_list))
+            h5_links = analyzer.processPositions(self)
+            if h5_links:
+                link_hdf5_files(h5_links)
 
         # make sure the learner data is only exported while we do sample picking
         if self._settings.get('Classification', 'collectsamples') and \
@@ -53,8 +51,7 @@ class AnalyzerThread(CoreThread):
     def get_renderer(self):
         return self._renderer
 
-    def set_image(self, name, image, message, filename='', stime=0.0):
-        self._mutex.lock()
+    def set_image(self, name, image, message, filename='', stime=0):
         if name == self._renderer:
             self.image_ready.emit(image, message, filename)
-        self._mutex.unlock()
+        self.msleep(stime)

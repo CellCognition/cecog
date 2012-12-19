@@ -33,14 +33,14 @@ class TrainingThread(CoreThread):
         g_begin, g_end, g_step = -15, 3, 2
         g_info = g_begin, g_end, g_step
 
-        stage_info = {'stage': 0,
-                'text': '',
-                'min': 0,
-                'max': 1,
-                'meta': 'Classifier training:',
-                'item_name': 'round',
-                'progress': 0}
-        self.set_stage_info(stage_info)
+        status = {'stage': 0,
+                  'text': '',
+                  'min': 0,
+                  'max': 1,
+                  'meta': 'Classifier training:',
+                  'item_name': 'round',
+                  'progress': 0}
+        self.update_status(status)
 
         i = 0
         best_accuracy = -1
@@ -54,14 +54,14 @@ class TrainingThread(CoreThread):
         for info in self._learner.iterGridSearchSVM(c_info=c_info,
                                                     g_info=g_info):
             n, log2c, log2g, conf = info
-            stage_info.update({'min': 1,
-                               'max': n,
-                               'progress': i+1,
-                               'text': 'log2(C)=%d, log2(g)=%d' % \
-                                   (log2c, log2g),
-                               'interval': stopwatch.interim(),
-                               })
-            self.set_stage_info(stage_info, stime=0.05)
+            status.update({'min': 1,
+                           'max': n,
+                           'progress': i+1,
+                           'text': 'log2(C)=%d, log2(g)=%d' % \
+                               (log2c, log2g),
+                           'interval': stopwatch.interim(),
+                           })
+            self.update_status(status, stime=50)
             stopwatch.reset(start=True)
             i += 1
             accuracy = conf.ac_sample

@@ -14,10 +14,6 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-# Core module of the image processing work flow handling all positions of an
-# experiment including the general setup (AnalyzerCore), and the analysis of
-# a single position (PositionAnalyzer). This separation was necessary for the
-# distributed computing of positions.
 
 import os
 import time
@@ -84,7 +80,7 @@ class PositionCore(LoggerObject):
              'progress': 0}
 
     def __init__(self, plate_id, position, out_dir, settings, frames,
-                 lstSampleReader, dctSamplePositions, learner,
+                 sample_readers, sample_positions, learner,
                  image_container, qthread=None, myhack=None):
         super(PositionCore, self).__init__()
 
@@ -95,8 +91,8 @@ class PositionCore(LoggerObject):
         self.position = position
 
         self._frames = frames # frames to process
-        self.lstSampleReader = lstSampleReader
-        self.dctSamplePositions = dctSamplePositions
+        self.sample_readers = sample_readers
+        self.sample_positions = sample_positions
         self.learner = learner
 
         self.tracker = None
@@ -300,16 +296,15 @@ class PositionCore(LoggerObject):
         elif self._qthread.is_aborted():
             return True
 
-    def update_stage(self, info):
+    def update_status(self, info):
         self._info.update(info)
         if not self._qthread is None:
-            self._qthread.set_stage_info(self._info, stime=0.1)
+            self._qthread.update_status(self._info, stime=50)
 
-    def set_image(self, image, msg, filename='', region=None, stime=0.0):
+    def set_image(self, image, msg, filename='', region=None, stime=0):
         """Propagate a rendered image to QThread"""
         if not (self._qthread is None and image is None):
-            self._qthread.set_image(region, image, msg, filename)
-            time.sleep(stime)
+            self._qthread.set_image(region, image, msg, filename, stime)
 
 class PositionPicker(PositionCore):
 
@@ -318,7 +313,7 @@ class PositionPicker(PositionCore):
 
         # disable tracking somewhere else
         self.settings.set('Processing', 'tracking', False)
-        self._frames = self.dctSamplePositions[self.position]
+        self._frames = self.sample_positions[self.position]
 
         if not self.settings.get('Classification', 'collectsamples'):
             raise RuntimeError("settings not set to PICKING")
@@ -359,7 +354,7 @@ class PositionPicker(PositionCore):
             else:
                 txt = 'T %d (%d/%d)' %(frame, self._frames.index(frame)+1,
                                        len(self._frames))
-                self.update_stage({'progress': self._frames.index(frame)+1,
+                self.update_status({'progress': self._frames.index(frame)+1,
                                    'text': txt,
                                    'interval': stopwatch.interim()})
 
@@ -369,12 +364,13 @@ class PositionPicker(PositionCore):
 
             img_rgb = cellanalyzer.collectObjects(self.plate_id,
                                                   self.position,
-                                                  self.lstSampleReader,
+                                                  self.sample_readers,
                                                   self.learner,
                                                   byTime=True)
             if img_rgb is not None:
                 n_images += 1
-                msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position, frame)
+                msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position,
+                                                frame)
                 self.set_image(img_rgb, msg)
 
 
@@ -589,7 +585,7 @@ class PositionAnalyzer(PositionCore):
 
         if self.is_aborted():
             return 0 # number of processed images
-        self.update_stage({'text': "find events"})
+        self.update_status({'text': "find events"})
 
         self.logger.debug("--- visitor start")
         celltracker.initVisitor()
@@ -659,7 +655,7 @@ class PositionAnalyzer(PositionCore):
                 ret = self.tracking(self.timeholder, self.tracker)
                 if self.is_aborted() or ret == 0:
                     return 0 # number of processed images
-                self.update_stage({'text': 'export events...'})
+                self.update_status({'text': 'export events...'})
                 # invoke event selection
                 if self.settings.get('Processing', 'tracking_synchronize_trajectories'):
                     self.event_selection(self.timeholder, self.tracker)
@@ -671,7 +667,7 @@ class PositionAnalyzer(PositionCore):
 
             if self.is_aborted():
                 return 0
-            self.update_stage({'text': 'export events...',
+            self.update_status({'text': 'export events...',
                                'max': 1,
                                'progress': 1})
 
@@ -691,8 +687,11 @@ class PositionAnalyzer(PositionCore):
 
         self.touch_finished()
         self.clear()
-        return {'iNumberImages': n_images,
-                'filename_hdf5': self.timeholder.hdf5_filename}
+        return n_images
+
+    @property
+    def hdf5_filename(self):
+        return self.timeholder.hdf5_filename
 
     def touch_finished(self, times=None):
         """Writes an empty file to mark this position as finished"""
@@ -720,9 +719,9 @@ class PositionAnalyzer(PositionCore):
             else:
                 txt = 'T %d (%d/%d)' %(frame, self._frames.index(frame)+1,
                                        len(self._frames))
-                self.update_stage({'progress': self._frames.index(frame)+1,
-                                   'text': txt,
-                                   'interval': stopwatch.interim()})
+                self.update_status({'progress': self._frames.index(frame)+1,
+                                    'text': txt,
+                                    'interval': stopwatch.interim()})
 
             stopwatch.reset(start=True)
             cellanalyzer.initTimepoint(frame)
@@ -779,7 +778,7 @@ class PositionAnalyzer(PositionCore):
 
                 msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position,
                                                 frame)
-                self.set_image(img, msg, fname, region, 0.05)
+                self.set_image(img, msg, fname, region, 50)
             # gallery images are treated differenty
             else:
                 ca.render(out_dir, dctRenderInfo=render_par, writeToDisc=True)
@@ -794,7 +793,7 @@ class PositionAnalyzer(PositionCore):
                                                     images=images)
 
             msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position, frame)
-            self.set_image(img_rgb, msg, fname, region, 0.05)
+            self.set_image(img_rgb, msg, fname, region, 50)
 
     def render_browser(self, cellanalyzer):
         d = {}
