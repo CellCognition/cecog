@@ -569,6 +569,9 @@ PyObject * pyToggleMapping(IMAGE1 const &imgIn, int size)
   return incref(object(imgPtr).ptr());
 }
 
+// usage:  cc = ccore.overlayBinaryImage(imin, imbin, ccore.RGBValue(255, 0, 0))
+// (full overlay)
+// for contours calculate gradient first.
 template <class Image1, class Image2, class Image3>
 PyObject * pyOverlayBinaryImage(Image1 const & imgIn1, Image2 const & imgIn2,
     typename Image3::value_type value)

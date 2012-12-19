@@ -20,6 +20,11 @@
 #ifndef CECOG_SEGMENTATION
 #define CECOG_SEGMENTATION
 
+//#ifndef __DEBUG_IMAGE_EXPORT__
+//#define __DEBUG_IMAGE_EXPORT__
+//#define DEBUG_PREFIX "/Users/twalter/temp/debug/seg_debug__1_3_3__"
+//#endif
+
 #include <iostream>
 #include <utility>
 #include <algorithm>
@@ -418,16 +423,21 @@ namespace cecog
 
     StopWatch oStopWatch, oStopWatchTotal;
 
-//    std::string filepath_base = filepath_img.substr(0, filepath_img.size()-4);
-//    std::string filepath_export_inv           = filepath_base + "__01inv.png";
-//    std::string filepath_export_binary        = filepath_base + "__02bin.png";
-//    std::string filepath_export_min           = filepath_base + "__03min.png";
-//    std::string filepath_export_voronoi       = filepath_base + "__04voronoi.png";
-//    std::string filepath_export_binws         = filepath_base + "__05binws.png";
-//    std::string filepath_export_rgb           = filepath_base + "__06seg.png";
-//    std::string filepath_export_rgb_merged    = filepath_base + "__07seg_merged.png";
-//    std::string filepath_export_binary_merged = filepath_base + "__08bin_merged.png";
+    //std::string filepath_base = filepath_img.substr(0, filepath_img.size()-4);
+#ifdef __DEBUG_IMAGE_EXPORT__
+    std::string filepath_base = DEBUG_PREFIX;
+    std::string filepath_export_inv           = filepath_base + "__01inv.png";
+    std::string filepath_export_binary        = filepath_base + "__02bin.png";
+    std::string filepath_export_min           = filepath_base + "__03min.png";
+    std::string filepath_export_voronoi       = filepath_base + "__04voronoi.png";
+    std::string filepath_export_binws         = filepath_base + "__05binws.png";
+    std::string filepath_export_rgb           = filepath_base + "__06seg.png";
+    std::string filepath_export_rgb_merged    = filepath_base + "__07seg_merged.png";
+    std::string filepath_export_binary_merged = filepath_base + "__08bin_merged.png";
+    std::string filepath_export_colmin           = filepath_base + "__09colmin.png";
+#endif
 
+    //filepath_export_colmin
     typedef ImageMaskContainer<8> ImageMaskContainer8;
     typedef ImageMaskContainer8::label_type::value_type label_value_type;
     typedef ImageMaskContainer8::image_type::value_type image_value_type;
@@ -579,6 +589,14 @@ namespace cecog
     if (bScaleDiscDilation)
     {
 
+      // FIXME:
+      // the parameter maxima_size
+      // should indicate the minimal distance between seeds.
+      // For instance: if two maxima are closer than maxima_size/2 but have
+      // the same value, then both are actually kept.
+      // And in principle, this is not correct anyways, as slow slopes would also be detected
+      // by this method. However, for distance functions, this should still be fine if maxima_size >= 2
+      // (where maxima_size is the RADIUS of the Structuring Element).
       discDilation(srcImageRange(bimg), destImage(labels), maxima_size);
 
       combineTwoImagesIf(srcImageRange(bimg), srcImage(labels), maskImage(img_bin), destImage(labels2),
@@ -605,11 +623,30 @@ namespace cecog
 
 
     // label the minima just found
+    // note: we have to use 8 connected minima. If not, there can be 8-connected minima
+    // each of which is a seed for the region growing.
+    // as a consequence, the watershed line cannot be 4-connected, and therefore the bassins
+    // (regions) have to be 4-connected (which is not the case). Therefore,
+    // this leads to a documented error (github) of an existing separation, that does not
+    // really separate two objects (because both objects and separating lines are 8-connected).
     int max_region_label =
       labelImageWithBackground(srcImageRange(labels2), destImage(labels2),
-                               false, background);
+                               true, background);
     #ifdef __DEBUG_IMAGE_EXPORT__
       exportImage(srcImageRange(labels2), vigra::ImageExportInfo(filepath_export_min.c_str()));
+
+      typedef vigra::BRGBImage rgb_type;
+      rgb_type col = rgb_type(bimg.size());
+
+      //RGBValue<unsigned char>(170.0);
+      typedef vigra::RGBValue<unsigned char> rgb_val;
+      rgb_val value = rgb_val(255, 0, 0);
+
+      //vigra::BRGBImage(bimg.w, bimg.h)
+      ImOverlayBinaryImage(vigra::srcImageRange(bimg), vigra::srcImage(labels2),
+    		  	  	  	   vigra::destImage(col), value);
+      exportImage(srcImageRange(col), vigra::ImageExportInfo(filepath_export_colmin.c_str()));
+
     #endif
 
 //    vigra::ArrayOfRegionStatistics<FindAVGCenter> maxcenter(max_region_label);
