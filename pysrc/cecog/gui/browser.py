@@ -173,6 +173,10 @@ class Browser(QMainWindow):
         act_zoomout = self.create_action('Zoom Out',
                                          shortcut=QKeySequence('CTRL+-'),
                                          slot=self.on_act_zoomout)
+        act_refresh = self.create_action('Refresh',
+                                         shortcut=QKeySequence('F5'),
+                                         slot=self.on_refresh)
+
         act_fullscreen = self.create_action('Full Screen',
                                             shortcut=QKeySequence('CTRL+F'),
                                             slot=self.on_act_fullscreen,
@@ -202,6 +206,7 @@ class Browser(QMainWindow):
                                         checkable=True,
                                         checked=True)
         view_menu = self.menuBar().addMenu('&View')
+
         self.add_actions(view_menu, (act_resize, None,
                                      act_zoom100, act_zoomfit,
                                      act_zoomin, act_zoomout,
@@ -210,6 +215,7 @@ class Browser(QMainWindow):
                                      act_prev_pos, act_next_pos,
                                      act_prev_plate, act_next_plate,
                                      None,
+                                     act_refresh,
                                      act_fullscreen, None,
                                      act_show_contours, None,
                                      act_anti, act_smooth,
@@ -389,6 +395,9 @@ class Browser(QMainWindow):
         analyzer = AnalyzerCore(self.coordinate.plate, settings,
                                 self._imagecontainer)
         analyzer.processPositions(myhack=self)
+
+    def on_refresh(self):
+        self._process_image()
 
     def on_zoom_info_updated(self, info):
         self.update_statusbar()
