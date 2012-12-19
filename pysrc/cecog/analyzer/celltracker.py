@@ -1026,6 +1026,7 @@ class PlotCellTracker(CellTracker):
 
             # Zscore and PCA data
             data_zscore = sss.zscore(remove_constant_columns(data))
+            import pdb; pdb.set_trace()
             pca = mlab.PCA(data_zscore)
             num_features = numpy.nonzero(numpy.cumsum(pca.fracs) > 0.99)[0][0]
             data_pca = pca.project(data_zscore)[:,0:num_features]
@@ -1033,31 +1034,40 @@ class PlotCellTracker(CellTracker):
             binary_tmp = binary_clustering(data_pca, 0)
             binary_matrix = binary_tmp.reshape(dim[1],dim[0])
 
-            filename = os.path.join(self.strPathOut, 'binary_all.txt') 
+            filename = os.path.join(self.strPathOut, 'binary_all.txt')
             numpy.savetxt(filename, binary_matrix, fmt='%d', delimiter='\t')
 
             idn = []
-            k=self.getOption('numClusters') # a predefined number of classes, given in GUI
+            # a predefined number of classes, given in GUI
+            k = self.getOption('numClusters')
             print k
-            for i in xrange(num_tracks, 0, -1):
-                if (sum(binary_matrix[i,:]) < k-2) or (binary_matrix[i,0] == 1) or (binary_matrix[i,1] == 1) or (sum(binary_matrix[i,0:15]) == 0) :
+
+            for i in xrange(num_tracks-1, -1, -1):
+                print num_tracks
+                if (sum(binary_matrix[i,:]) < k-2) or (binary_matrix[i,0] == 1) or \
+                        (binary_matrix[i,1] == 1) or (sum(binary_matrix[i,0:15]) == 0) :
                     binary_matrix = scipy.delete(binary_matrix, i, 0)
-                    data_pca = scipy.delete(data_pca, numpy.arange(i*num_frames, (i+1)*num_frames), 0)
+                    data_pca = scipy.delete(data_pca, numpy.arange(i*num_frames,
+                                                                   (i+1)*num_frames), 0)
                     num_tracks -= 1
                     idn.append(i)
 
             print idn
-            filename = os.path.join(self.strPathOut, 'index.txt') 
+            filename = os.path.join(self.strPathOut, 'index.txt')
             numpy.savetxt(filename,idn, fmt='%d',delimiter='\t')
             print binary_matrix.shape
             print num_tracks
-            filename = os.path.join(self.strPathOut, 'indexbinary_deleted.txt') 
+            filename = os.path.join(self.strPathOut, 'indexbinary_deleted.txt')
             numpy.savetxt(filename, binary_matrix, fmt='%d',delimiter='\t')
             dim = [num_frames, num_tracks] # update num_tracks
 
             # Diverse TC3 algorithms
             m = self.getOption('minClusterSize') # a predefined minimal cluster size
             print m
+
+            from PyQt4.QtCore import pyqtRemoveInputHook; pyqtRemoveInputHook()
+            import pdb; pdb.set_trace()
+
             tc = unsup.TemporalClustering(dim,k,binary_matrix)
             tc3 = tc.tc3_clustering(data_pca,m)
             tc3_gmm = tc.tc3_gmm(data_pca,tc3['labels'])
@@ -1073,7 +1083,7 @@ class PlotCellTracker(CellTracker):
             algorithm = self.getOption('tc3Algorithms')
             print algorithm
             result = algorithms[algorithm]
-            filename = os.path.join(self.strPathOut, '%s.txt'%algorithm) 
+            filename = os.path.join(self.strPathOut, '%s.txt'%algorithm)
             numpy.savetxt(filename, result['label_matrix'], fmt='%d',delimiter='\t')
 
 
