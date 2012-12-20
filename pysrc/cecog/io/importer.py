@@ -481,6 +481,7 @@ class IniFileImporter(AbstractImporter):
         super(IniFileImporter, self).__init__(path)
         config_parser = config_parser
         section_name = section_name
+        self.section_name = section_name
 
         self._regex_subdirectories = config_parser.get(section_name, 'regex_subdirectories')
         # take all sub-directories if parameter is empty
