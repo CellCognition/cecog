@@ -91,11 +91,11 @@ class HmmThread(CoreThread):
             if not self._abort:
                 info['text'] = "Plate: '%s' (%d / %d)" \
                     % (plate_id, idx+1, len(plates))
-                self.set_stage_info(info)
+                self.update_status(info)
                 self._imagecontainer.set_plate(plate_id)
                 self._run_plate(plate_id)
                 info['progress'] = idx+1
-                self.set_stage_info(info)
+                self.update_status(info)
             else:
                 break
 

@@ -146,17 +146,12 @@ class ClassifierResultFrame(QGroupBox):
         _resolve = lambda x,y: self._settings.get(x, '%s_%s'
                                                   % (self._channel, y))
         env_path = convert_package_path(_resolve('Classification',
-                                                 'classification_envpath'))
-        classifier_infos = {'strEnvPath': env_path,
-                            'strChannelId': _resolve('ObjectDetection',
-                                                     'channelid'),
-                            'strRegionId': _resolve('Classification',
-                                                    'classification_regionname')
-                            }
-
+                                                         'classification_envpath'))
         try:
-            self._learner = CommonClassPredictor(\
-                dctCollectSamples=classifier_infos)
+            self._learner = CommonClassPredictor( \
+                strEnvPath=env_path,
+                strChannelId=_resolve('ObjectDetection', 'channelid'),
+                strRegionId=_resolve('Classification', 'classification_regionname'))
         except:
             exception(self, 'Error on loading classifier.')
         else:

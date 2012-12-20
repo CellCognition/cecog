@@ -478,11 +478,10 @@ class _ProcessorMixin(object):
                               and (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))
                              ):
 
-                            classifier_infos = {'strEnvPath' : env_path,
-                                                'strChannelId' : _resolve('ObjectDetection', 'channelid'),
-                                                'strRegionId' : _resolve('Classification', 'classification_regionname'),
-                                                }
-                            learner = CommonClassPredictor(dctCollectSamples=classifier_infos)
+                            learner = CommonClassPredictor( \
+                                env_path,
+                                _resolve('ObjectDetection', 'channelid'),
+                                _resolve('Classification', 'classification_regionname'))
                             learner.importFromArff()
                             learner_dict[kind] = learner
 
@@ -499,11 +498,11 @@ class _ProcessorMixin(object):
                         env_path = convert_package_path(_resolve('Classification', 'classification_envpath'))
                         if (_resolve('Processing', 'classification') and
                             (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))):
-                            classifier_infos = {'strEnvPath' : env_path,
-                                                'strChannelId' : _resolve('ObjectDetection', 'channelid'),
-                                                'strRegionId' : _resolve('Classification', 'classification_regionname'),
-                                                }
-                            learner = CommonClassPredictor(dctCollectSamples=classifier_infos)
+                            learner = CommonClassPredictor( \
+                                env_path,
+                                _resolve('ObjectDetection', 'channelid'),
+                                _resolve('Classification', 'classification_regionname'))
+
                             learner.importFromArff()
                             learner_dict[kind] = learner
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)

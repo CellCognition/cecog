@@ -430,11 +430,11 @@ class PositionAnalyzer(PositionCore):
                         # varnames are messed up!
                         'strChannelId' : p_channel,
                         'color_channel': c_channel,
-                        'name': p_channel,
+                        'prcs_channel': p_channel,
                         'strRegionId' :
                             sttg.get2(self._resolve_name(p_channel,
                                                          'classification_regionname'))}
-                clf = CommonClassPredictor(dctCollectSamples=cpar)
+                clf = CommonClassPredictor(**cpar)
                 clf.importFromArff()
                 clf.loadClassifier()
                 self.classifiers[p_channel] = clf

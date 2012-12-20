@@ -200,11 +200,6 @@ def print_memory_increase(func):
     except:
         return runc
 
-#-------------------------------------------------------------------------------
-# classes:
-#
-
-
 class ReverseDict(dict):
 
     def __init__(self, dataD={}):
@@ -216,14 +211,3 @@ class ReverseDict(dict):
 
     def __call__(self):
         return self._reverseD
-
-
-class LoggerMixin(OptionManager):
-
-    OPTIONS = {"strLoggerName": Option("", callback="_onLoggerName")}
-
-    def __init__(self, **dctOptions):
-        super(LoggerMixin, self).__init__(**dctOptions)
-
-    def _onLoggerName(self, strLoggerName):
-        self.oLogger = logging.getLogger(strLoggerName)

@@ -226,16 +226,12 @@ class Picker(AnalyzerBase):
         self.sample_reader = []
         self.sample_positions = {}
 
-        cl_infos = {'strEnvPath' : self.cl_path,
-                    'strChannelId' :
-                        self.settings.get('ObjectDetection',
-                                          self._resolve('channelid')),
-                    'strRegionId' :
-                        self.settings.get('Classification',
-                                          self._resolve('classification_regionname'))}
-
         if learner is None:
-            self.learner = CommonObjectLearner(dctCollectSamples=cl_infos)
+            cid = self.settings.get( \
+                'ObjectDetection', self._resolve('channelid'))
+            rid = self.settings.get( \
+                'Classification', self._resolve('classification_regionname'))
+            self.learner = CommonObjectLearner(self.cl_path, cid, rid)
             self.learner.loadDefinition()
 
         # FIXME: if the resulting .ARFF file is trained directly from
