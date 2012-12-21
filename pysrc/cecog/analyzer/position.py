@@ -424,17 +424,13 @@ class PositionAnalyzer(PositionCore):
             self.settings.set_section('Processing')
             if sttg.get2(self._resolve_name(p_channel, 'classification')):
                 sttg.set_section('Classification')
-                cpar = {'strEnvPath' :
-                            sttg.get2(self._resolve_name(p_channel,
+                clf = CommonClassPredictor(
+                    clf_dir=sttg.get2(self._resolve_name(p_channel,
                                                          'classification_envpath')),
-                        # varnames are messed up!
-                        'strChannelId' : p_channel,
-                        'color_channel': c_channel,
-                        'prcs_channel': p_channel,
-                        'strRegionId' :
-                            sttg.get2(self._resolve_name(p_channel,
-                                                         'classification_regionname'))}
-                clf = CommonClassPredictor(**cpar)
+                    color_channel=c_channel,
+                    region=sttg.get2(self._resolve_name(p_channel,
+                                                        'classification_regionname')),
+                    prcs_channel=p_channel)
                 clf.importFromArff()
                 clf.loadClassifier()
                 self.classifiers[p_channel] = clf
@@ -524,7 +520,7 @@ class PositionAnalyzer(PositionCore):
         # at least the total count for primary is always exported
         ch_info = {'Primary': ('primary', [], [])}
         for name, clf in self.classifiers.iteritems():
-            ch_info[name] = (clf.strRegionId, clf.lstClassNames, clf.lstHexColors)
+            ch_info[name] = (clf.region, clf.lstClassNames, clf.lstHexColors)
 
         timeholder.exportObjectCounts(fname, self.position, self.meta_data, ch_info)
         pplot_ymax = \

@@ -29,6 +29,7 @@ import os, \
        time, \
        shutil, \
        math
+
 from xml.dom import minidom
 
 from PyQt4.QtGui import *
@@ -390,7 +391,7 @@ class AnnotationModule(Module):
         class_table.setStyleSheet('font-size: 10px;')
         layout.addWidget(class_table)
         self._class_table = class_table
-        
+
         frame2 = QFrame(grp_box)
         layout2 = QBoxLayout(QBoxLayout.LeftToRight, frame2)
         layout2.setContentsMargins(0,0,0,0)
@@ -464,7 +465,7 @@ class AnnotationModule(Module):
         btn.clicked.connect(self._on_save_classifier)
         layout_frame.addWidget(btn)
         #layout_frame.addSpacing(5)
-        btn = QPushButton('Save as', frame) 
+        btn = QPushButton('Save as', frame)
         btn.pressed.connect(self._on_saveas_classifier)
         layout_frame.addWidget(btn)
         layout.addWidget(frame)
@@ -493,18 +494,19 @@ class AnnotationModule(Module):
     def _find_items_in_class_table(self, value, column, match=Qt.MatchExactly):
         items = self._class_table.findItems(value, match)
         return [item for item in items if item.column() == column]
-    
+
     def _on_import_class_definitions(self):
         if self._on_new_classifier():
-            path = self._learner.get_env_path()
-            result = QFileDialog.getExistingDirectory(self, 'Open classifier directory', os.path.abspath(path))
+            path = self._learner.clf_dir
+            result = QFileDialog.getExistingDirectory(
+                self, 'Open classifier directory', os.path.abspath(path))
             if result:
                 learner = self._load_classifier(result)
                 if not learner is None:
                     self._learner = learner
                     self._update_class_definition_table()
-                    self._learner.set_env_path('.')
-        
+                    self._learner.clf_dir = None
+
     def _update_class_definition_table(self):
         class_table = self._class_table
         class_table.clearContents()
@@ -669,7 +671,7 @@ class AnnotationModule(Module):
                 self._update_annotation_table()
 
     def _init_new_classifier(self):
-        learner = BaseLearner()
+        learner = BaseLearner(".", None, None)
         self._current_class = None
         self._class_sbox.setValue(1)
         self._class_text.setText('class1')
@@ -692,12 +694,12 @@ class AnnotationModule(Module):
                     'will be lost.'):
             self._learner = self._init_new_classifier()
             ok = True
-            
+
         return ok
-            
+
 
     def _on_open_classifier(self):
-        path = self._learner.get_env_path()
+        path = self._learner.clf_dir
         result = QFileDialog.getExistingDirectory(self, 'Open classifier directory', os.path.abspath(path))
         if result:
             learner = self._load_classifier(result)
@@ -706,7 +708,7 @@ class AnnotationModule(Module):
                 self._update_class_definition_table()
 
                 self._activate_objects_for_image(False, clear=True)
-                path2 = learner.getPath(learner.ANNOTATIONS)
+                path2 = learner.annotations_dir
                 try:
                     has_invalid = self._annotations.import_from_xml(path2,
                                                                     learner.dctClassNames,
@@ -728,26 +730,25 @@ class AnnotationModule(Module):
                 finally:
                     coord = self.browser.get_coordinate()
                     self._imagecontainer.set_plate(coord.plate)
-                    
+
     def _on_save_classifier(self):
         learner = self._learner
-        path = learner.get_env_path()
-        if path == '.':
-            path = None
+        path = learner.clf_dir
         self._on_saveas_classifier(path)
 
     def _on_saveas_classifier(self, path=None):
         learner = self._learner
         if path is None:
-            path = learner.get_env_path()
-            result = QFileDialog.getExistingDirectory(self, 'Save to classifier directory', os.path.abspath(path))
+            path = learner.clf_dir
+            result = QFileDialog.getExistingDirectory(
+                self, 'Save to classifier directory', os.path.abspath(path))
         else:
             result = path
-            
+
         if result:
             if self._save_classifier(result):
                 try:
-                    path2 = learner.getPath(learner.ANNOTATIONS)
+                    path2 = learner.annotations_dir
                     filenames = os.listdir(path2)
                     filenames = [os.path.join(path2, f) for f in filenames
                                  if os.path.isfile(os.path.join(path2, f)) and
@@ -1004,7 +1005,7 @@ class AnnotationModule(Module):
     def _load_classifier(self, path):
         learner = None
         try:
-            learner = BaseLearner(strEnvPath=path)
+            learner = BaseLearner(path, None, None)
         except:
             exception(self, 'Error on loading classifier')
         else:
@@ -1020,8 +1021,8 @@ class AnnotationModule(Module):
         learner = self._learner
         success = True
         try:
-            learner.set_env_path(path)
-            learner.initEnv()
+            learner.clf_dir = path
+            learner.makedirs()
             learner.saveDefinition()
         except:
             exception(self, 'Error on saving classifier')

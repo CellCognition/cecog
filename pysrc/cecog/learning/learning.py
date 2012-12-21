@@ -21,14 +21,8 @@ import copy
 from os.path import join, isdir, exists, splitext, isfile, basename
 from collections import OrderedDict
 
-import numpy
+import numpy as np
 import svm
-
-from pdk.fileutils import safe_mkdirs
-from pdk.iterator import flatten
-from pdk.map import dict_append_list
-#from pdk.attributemanagers import (get_attribute_values,
-#                                   set_attribute_values)
 
 from cecog.learning.util import SparseWriter, ArffWriter, ArffReader
 from cecog.learning.classifier import LibSvmClassifier as Classifier
@@ -53,61 +47,61 @@ class ConfusionMatrix(object):
         reg = 0.0000000001
 
         # true-positives
-        self.tp = numpy.diag(self.conf)
+        self.tp = np.diag(self.conf)
         # false-positives
-        self.fp = numpy.sum(self.conf, axis=0) - self.tp
+        self.fp = np.sum(self.conf, axis=0) - self.tp
         # false-negatives
-        self.fn = numpy.sum(self.conf, axis=1) - self.tp
+        self.fn = np.sum(self.conf, axis=1) - self.tp
         # true-negatives
-        self.tn = numpy.sum(self.conf) - self.tp - self.fn - self.fp
+        self.tn = np.sum(self.conf) - self.tp - self.fn - self.fp
 
         # sensitivity
-        self.se = self.tp / numpy.asarray(self.tp + self.fn + reg, numpy.float)
+        self.se = self.tp / np.asarray(self.tp + self.fn + reg, np.float)
         self.sensitivity = self.se
 
         # specificity
-        self.sp = self.tn / numpy.asarray(self.tn + self.fp + reg, numpy.float)
+        self.sp = self.tn / np.asarray(self.tn + self.fp + reg, np.float)
         self.specificity = self.sp
 
         # accuracy
         self.ac = (self.tp + self.tn) / \
-                  numpy.asarray(self.tp + self.tn + self.fp + self.fn + reg,
-                                numpy.float)
+                  np.asarray(self.tp + self.tn + self.fp + self.fn + reg,
+                                np.float)
 
         # positive prediction value (also precision)
-        self.ppv = self.tp / numpy.asarray(self.tp + self.fp + reg, numpy.float)
+        self.ppv = self.tp / np.asarray(self.tp + self.fp + reg, np.float)
         self.precision = self.ppv
 
         # negative prediction value
-        self.npv = self.tn / numpy.asarray(self.tn + self.fn + reg, numpy.float)
+        self.npv = self.tn / np.asarray(self.tn + self.fn + reg, np.float)
         # samples
         self.samples = self.tp + self.fn
 
         # average values weighted by sample number
-        nan = -numpy.isnan(self.se)
-        self.wav_se = numpy.average(self.se[nan], weights=self.samples[nan])
-        nan = -numpy.isnan(self.sp)
-        self.wav_sp = numpy.average(self.sp[nan], weights=self.samples[nan])
-        nan = -numpy.isnan(self.ppv)
-        self.wav_ppv = numpy.average(self.ppv[nan], weights=self.samples[nan])
-        nan = -numpy.isnan(self.npv)
-        self.wav_npv = numpy.average(self.npv[nan], weights=self.samples[nan])
-        nan = -numpy.isnan(self.ac)
-        self.wav_ac = numpy.average(self.ac[nan], weights=self.samples[nan])
+        nan = -np.isnan(self.se)
+        self.wav_se = np.average(self.se[nan], weights=self.samples[nan])
+        nan = -np.isnan(self.sp)
+        self.wav_sp = np.average(self.sp[nan], weights=self.samples[nan])
+        nan = -np.isnan(self.ppv)
+        self.wav_ppv = np.average(self.ppv[nan], weights=self.samples[nan])
+        nan = -np.isnan(self.npv)
+        self.wav_npv = np.average(self.npv[nan], weights=self.samples[nan])
+        nan = -np.isnan(self.ac)
+        self.wav_ac = np.average(self.ac[nan], weights=self.samples[nan])
 
         # average values (not weighted by sample number)
-        self.av_se = numpy.average(self.se[-numpy.isnan(self.se)])
-        self.av_sp = numpy.average(self.sp[-numpy.isnan(self.sp)])
-        self.av_ppv = numpy.average(self.ppv[-numpy.isnan(self.ppv)])
-        self.av_npv = numpy.average(self.npv[-numpy.isnan(self.npv)])
-        self.av_ac = numpy.average(self.ac[-numpy.isnan(self.ac)])
+        self.av_se = np.average(self.se[-np.isnan(self.se)])
+        self.av_sp = np.average(self.sp[-np.isnan(self.sp)])
+        self.av_ppv = np.average(self.ppv[-np.isnan(self.ppv)])
+        self.av_npv = np.average(self.npv[-np.isnan(self.npv)])
+        self.av_ac = np.average(self.ac[-np.isnan(self.ac)])
 
         # average accuracy per class
         self.ac_class = self.av_ac
 
         # accuracy per item (true-positives divided by all decisions)
-        self.ac_sample = numpy.sum(self.tp) / numpy.sum(self.samples + reg,
-                                                        dtype=numpy.float)
+        self.ac_sample = np.sum(self.tp) / np.sum(self.samples + reg,
+                                                        dtype=np.float)
 
     def __len__(self):
         return self.conf.shape[0]
@@ -116,13 +110,13 @@ class ConfusionMatrix(object):
         f = file(filename, 'w')
 
         #data = self.ac.copy()
-        overall = numpy.asarray([numpy.sum(self.samples),
+        overall = np.asarray([np.sum(self.samples),
                                  self.av_ac, self.av_se, self.av_sp,
                                  self.av_ppv, self.av_npv])
-        woverall = numpy.asarray([numpy.sum(self.samples),
+        woverall = np.asarray([np.sum(self.samples),
                                   self.wav_ac, self.wav_se, self.wav_sp,
                                   self.wav_ppv, self.wav_npv])
-        data = numpy.vstack((self.samples,
+        data = np.vstack((self.samples,
                              self.ac, self.se, self.sp,
                              self.ppv, self.npv))
         data2 = data.swapaxes(0,1)
@@ -153,7 +147,7 @@ class ConfusionMatrix(object):
         @return: ConfusionMatrix
         '''
         k = len(mapping)
-        conf = numpy.zeros((k, k))
+        conf = np.zeros((k, k))
         for l, v in pairs:
             l2 = mapping[int(l)]
             v2 = mapping[int(v)]
@@ -187,17 +181,16 @@ class BaseLearner(LoggerObject):
     SAMPLES = 'samples'
     CONTROLS = 'controls'
 
-    def __init__(self, strEnvPath, strChannelId, strRegionId,
-                 color_channel=None, prcs_channel=None):
+    def __init__(self, clf_dir, color_channel, region,
+                 prcs_channel=None):
         super(BaseLearner, self).__init__()
+        self._cld_dir = None
 
-        self.name = basename(strEnvPath)
         self.color_channel = color_channel
         self.prcs_channel = prcs_channel
 
-        self.strEnvPath = strEnvPath
-        self.strChannelId = strChannelId
-        self.strRegionId = strRegionId
+        self.clf_dir = clf_dir
+        self.region = region
 
         self.strArffFileName = 'features.arff'
         self.strSparseFileName ='features.sparse'
@@ -213,23 +206,28 @@ class BaseLearner(LoggerObject):
         self.dctClassLabels = {}
         self.dctHexColors = {}
         self.dctSampleNames = {}
-        self.initEnv()
+
+        if clf_dir is not None:
+            self.name = basename(clf_dir)
+            self.makedirs()
 
     @property
-    def strEnvPath(self):
-        return self._env_dir
+    def clf_dir(self):
+        return self._clf_dir
 
-    @strEnvPath.deleter
-    def strEnvPath(self):
-        del self._env_dir
+    @clf_dir.deleter
+    def clf_dir(self):
+        del self._clf_dir
 
-    @strEnvPath.setter
-    def strEnvPath(self, path):
-        self._env_dir = path
-        self.dctEnvPaths = {self.SAMPLES: join(path, "samples"),
-                            self.ANNOTATIONS : join(path, self.ANNOTATIONS),
-                            self.DATA: join(path, "data"),
-                            self.CONTROLS: join(path, "controls")}
+    @clf_dir.setter
+    def clf_dir(self, path):
+        if path is None:
+            return
+        self._clf_dir = path
+        self._subdirs = {self.SAMPLES: join(path, "samples"),
+                         self.ANNOTATIONS : join(path, self.ANNOTATIONS),
+                         self.DATA: join(path, "data"),
+                         self.CONTROLS: join(path, "controls")}
 
     @property
     def lstClassDefinitions(self):
@@ -286,7 +284,7 @@ class BaseLearner(LoggerObject):
                 old_name = self.dctClassNames[old_label]
                 data[new_name].extend(self.dctFeatureData[old_name])
         for name in data:
-            data[name] = numpy.asarray(data[name])
+            data[name] = np.asarray(data[name])
         newl.dctFeatureData = data
         return newl
 
@@ -311,7 +309,6 @@ class BaseLearner(LoggerObject):
         return dict([(n, len(self.dctFeatureData.get(n, [])))
                      for n in self.lstClassNames])
 
-
     @property
     def l2nl(self):
         """Converts a label into a new label
@@ -324,77 +321,72 @@ class BaseLearner(LoggerObject):
         """Converts a new label into the original label"""
         return dict([(i,l) for i,l in enumerate(self.lstClassLabels)])
 
-
-    def initEnv(self):
-        env_path = self.strEnvPath
+    def makedirs(self):
+        env_path = self.clf_dir
         if not isdir(env_path):
             raise IOError(("Classifier environment path '%s' does not exist." \
                            %env_path))
-        for strName, strPath in self.dctEnvPaths.iteritems():
-            makedirs(strPath)
+        for name, path in self._subdirs.iteritems():
+            setattr(self, "%s_dir" %name, path)
+            makedirs(path)
 
-    def getPath(self, strName):
-        path = self.dctEnvPaths[strName]
-        if not exists(path):
-            os.mkdir(path)
-        return path
+    # XXX replace subdir function
+    def subdir(self, directory):
+        return self._subdirs[directory]
 
     def loadDefinition(self, path=None, filename=None):
         if filename is None:
             filename = self.strDefinitionFileName
         if path is None:
-            path = self.strEnvPath
+            path = self.clf_dir
 
-        f = open(join(path, filename), "rb")
-        reader = csv.reader(f, delimiter='\t', quoting=csv.QUOTE_NONE)
-        self.dctClassNames.clear()
-        self.dctClassLabels.clear()
-        self.dctHexColors.clear()
-        for row in reader:
-            label = int(row[0])
-            name = row[1]
-            color = row[2]
-            self.dctClassNames[label] = name
-            self.dctClassLabels[name] = label
-            self.dctHexColors[name] = color
-        f.close()
+        with open(join(path, filename), "rb") as f:
+            reader = csv.reader(f, delimiter='\t', quoting=csv.QUOTE_NONE)
+            self.dctClassNames.clear()
+            self.dctClassLabels.clear()
+            self.dctHexColors.clear()
+            for row in reader:
+                label = int(row[0])
+                name = row[1]
+                color = row[2]
+                self.dctClassNames[label] = name
+                self.dctClassLabels[name] = label
+                self.dctHexColors[name] = color
 
     def saveDefinition(self, path=None, filename=None):
         if filename is None:
             filename = self.strDefinitionFileName
         if path is None:
-            path = self.strEnvPath
-        f = open(join(path, filename), "wb")
-        writer = csv.writer(f, delimiter='\t', quoting=csv.QUOTE_NONE)
-        for class_name in self.lstClassNames:
-            class_label = self.dctClassLabels[class_name]
-            color = self.dctHexColors[class_name]
-            writer.writerow([class_label, class_name, color])
-        f.close()
+            path = self.clf_dir
+        with open(join(path, filename), "wb") as f:
+            writer = csv.writer(f, delimiter='\t', quoting=csv.QUOTE_NONE)
+            for class_name in self.lstClassNames:
+                class_label = self.dctClassLabels[class_name]
+                color = self.dctHexColors[class_name]
+                writer.writerow([class_label, class_name, color])
 
-    def exportRanges(self, strFilePath=None, strFileName=None):
-        if strFileName is None:
-            strFileName = os.path.splitext(self.strArffFileName)[0]
-            strFileName += '.range'
-        if strFilePath is None:
-            strFilePath = self.dctEnvPaths['data']
+    def exportRanges(self, path=None, fname=None):
+        if fname is None:
+            fname = splitext(self.strArffFileName)[0] + '.range'
+        if path is None:
+            path = self._subdirs['data']
 
-        all_features = numpy.asarray(flatten(self.dctFeatureData.values()))
-        features_min = numpy.min(all_features, 0)
-        features_max = numpy.max(all_features, 0)
+        all_features = np.vstack(self.dctFeatureData.values())
+        features_min = np.min(all_features, 0)
+        features_max = np.max(all_features, 0)
 
-        f = file(os.path.join(strFilePath, strFileName), 'w')
-        f.write('x\n')
-        f.write('-1 1\n')
-        for idx, (m1, m2) in enumerate(zip(features_min, features_max)):
-            f.write('%d %.10e %.10e\n' % (idx+1, m1, m2))
-        f.close()
+        with open(join(path, fname), 'w') as fp:
+            fp.write('x\n')
+            fp.write('-1 1\n')
+            for idx, (m1, m2) in enumerate(zip(features_min, features_max)):
+                fp.write('%d %.10e %.10e\n' % (idx+1, m1, m2))
+
 
     def importFromArff(self, strFilePath=None, strFileName=None):
         if strFileName is None:
             strFileName = self.strArffFileName
         if strFilePath is None:
-            strFilePath = self.dctEnvPaths['data']
+            strFilePath = self._subdirs['data']
 
         oReader = ArffReader(os.path.join(strFilePath, strFileName))
         self.dctFeatureData = oReader.dctFeatureData
@@ -406,31 +398,31 @@ class BaseLearner(LoggerObject):
 
     def check(self):
         filename = splitext(self.strArffFileName)[0]
-        result = {'path_env': self.strEnvPath,
-                  'path_data': self.dctEnvPaths['data'],
-                  'path_samples': self.dctEnvPaths['samples'],
-                  'path_annotations': self.dctEnvPaths['annotations'],
-                  'model': join(self.dctEnvPaths['data'], '%s.model' %filename),
-                  'range': join(self.dctEnvPaths['data'], '%s.range' %filename),
-                  'conf': join(self.dctEnvPaths['data'], '%s.confusion.txt' %filename),
-                  'arff': join(self.dctEnvPaths['data'], self.strArffFileName),
-                  'definition': join(self.strEnvPath, self.strDefinitionFileName),
+        result = {'path_env': self.clf_dir,
+                  'path_data': self._subdirs['data'],
+                  'path_samples': self._subdirs['samples'],
+                  'path_annotations': self._subdirs['annotations'],
+                  'model': join(self._subdirs['data'], '%s.model' %filename),
+                  'range': join(self._subdirs['data'], '%s.range' %filename),
+                  'conf': join(self._subdirs['data'], '%s.confusion.txt' %filename),
+                  'arff': join(self._subdirs['data'], self.strArffFileName),
+                  'definition': join(self.clf_dir, self.strDefinitionFileName),
                   # result of validity checks
-                  'has_path_data': isdir(self.dctEnvPaths['data']),
-                  'has_path_samples': isdir(self.dctEnvPaths['samples']),
-                  'has_path_annotations': isdir(self.dctEnvPaths['annotations']),
-                  'has_model': isfile(join(self.dctEnvPaths['data'], '%s.model' % filename)),
-                  'has_range': isfile(join(self.dctEnvPaths['data'], '%s.range' % filename)),
-                  'has_conf': isfile(join(self.dctEnvPaths['data'], '%s.confusion.txt' % filename)),
-                  'has_arff': isfile(join(self.dctEnvPaths['data'], self.strArffFileName)),
-                  'has_definition': isfile(join(self.strEnvPath, self.strDefinitionFileName))}
+                  'has_path_data': isdir(self._subdirs['data']),
+                  'has_path_samples': isdir(self._subdirs['samples']),
+                  'has_path_annotations': isdir(self._subdirs['annotations']),
+                  'has_model': isfile(join(self._subdirs['data'], '%s.model' % filename)),
+                  'has_range': isfile(join(self._subdirs['data'], '%s.range' % filename)),
+                  'has_conf': isfile(join(self._subdirs['data'], '%s.confusion.txt' % filename)),
+                  'has_arff': isfile(join(self._subdirs['data'], self.strArffFileName)),
+                  'has_definition': isfile(join(self.clf_dir, self.strDefinitionFileName))}
         return result
 
     def exportToArff(self, path=None, filename=None):
         if filename is None:
             filename = self.strArffFileName
         if path is None:
-            path = self.dctEnvPaths['data']
+            path = self._subdirs['data']
 
         writer = ArffWriter(join(path, filename),
                             self.lstFeatureNames,
@@ -444,7 +436,7 @@ class BaseLearner(LoggerObject):
         if filename is None:
             filename = self.strSparseFileName
         if directory is None:
-            directory = self.dctEnvPaths['data']
+            directory = self._subdirs['data']
 
         try:
             writer = SparseWriter(join(directory, filename),
@@ -459,7 +451,7 @@ class BaseLearner(LoggerObject):
             strFileName = os.path.splitext(self.strArffFileName)[0]
             strFileName = '%s.samples.txt' % strFileName
         if strFilePath is None:
-            strFilePath = self.dctEnvPaths['data']
+            strFilePath = self._subdirs['data']
         f = file(os.path.join(strFilePath, strFileName), 'r')
         self.dctSampleNames = {}
         for line in f:
@@ -475,7 +467,7 @@ class BaseLearner(LoggerObject):
             strFileName = splitext(self.strArffFileName)[0]
             strFileName = '%s.samples.txt' % strFileName
         if strFilePath is None:
-            strFilePath = self.dctEnvPaths['data']
+            strFilePath = self._subdirs['data']
         f = file(os.path.join(strFilePath, strFileName), 'w')
         for class_name, samples in self.dctSampleNames.iteritems():
             for sample_name in samples:
@@ -501,7 +493,7 @@ class CommonClassPredictor(BaseLearner):
             strModelPrefix = self.strModelPrefix
 
 
-        self.classifier = Classifier(self.dctEnvPaths['data'], self.logger,
+        self.classifier = Classifier(self._subdirs['data'], self.logger,
                                      strSvmPrefix=strModelPrefix,
                                      hasZeroInsert=self.hasZeroInsert)
         self.bProbability = self.classifier.bProbability
@@ -519,11 +511,11 @@ class CommonClassPredictor(BaseLearner):
             label = self.dctClassLabels[name]
             labels += [label] * len(data)
             samples += data.tolist()
-        labels = numpy.asarray(labels)
-        samples = numpy.asarray(samples)
+        labels = np.asarray(labels)
+        samples = np.asarray(samples)
         if normalize:
-            lo = numpy.min(samples, 0)
-            hi = numpy.max(samples, 0)
+            lo = np.min(samples, 0)
+            hi = np.max(samples, 0)
             # scale between -1 and +1
             samples = 2.0 * (samples - lo) / (hi - lo + 0.0000001) - 1.0
         # FIXME: stupid libSVM conversions
@@ -536,16 +528,16 @@ class CommonClassPredictor(BaseLearner):
         find features with NA values in the data set and remove features from the data and corresponding feature names
         returns the list of removed feature names
         """
-        filter_idx = numpy.array([], numpy.int32)
-        features = numpy.asarray(self.lstFeatureNames)
-        feature_idx = numpy.arange(len(features))
+        filter_idx = np.array([], np.int32)
+        features = np.asarray(self.lstFeatureNames)
+        feature_idx = np.arange(len(features))
         for data in self.dctFeatureData.itervalues():
-            filter_idx = numpy.append(filter_idx, feature_idx[numpy.any(numpy.isnan(data), 0)])
-        filter_idx = numpy.unique(filter_idx)
+            filter_idx = np.append(filter_idx, feature_idx[np.any(np.isnan(data), 0)])
+        filter_idx = np.unique(filter_idx)
         if apply:
             for name in self.dctFeatureData:
-                self.dctFeatureData[name] = numpy.delete(self.dctFeatureData[name], filter_idx, 1)
-            self.lstFeatureNames = numpy.delete(features, filter_idx).tolist()
+                self.dctFeatureData[name] = np.delete(self.dctFeatureData[name], filter_idx, 1)
+            self.lstFeatureNames = np.delete(features, filter_idx).tolist()
         return features[filter_idx]
 
     def train(self, c, g, probability=True, compensation=True,
@@ -554,7 +546,7 @@ class CommonClassPredictor(BaseLearner):
             filename = splitext(self.strArffFileName)[0]
             filename += '.model'
         if path is None:
-            path = self.dctEnvPaths['data']
+            path = self._subdirs['data']
         param = svm.svm_parameter(kernel_type=svm.RBF,
                                   C=c, gamma=g,
                                   probability=1 if probability else 0)
@@ -583,7 +575,7 @@ class CommonClassPredictor(BaseLearner):
             filename = splitext(self.strArffFileName)[0]
             filename += '.confusion.txt'
         if path is None:
-            path = self.dctEnvPaths['data']
+            path = self._subdirs['data']
 
         with open(join(path, filename), "w") as f:
             f.write('log2(C) = %f\n' % log2c)
@@ -605,7 +597,7 @@ class CommonClassPredictor(BaseLearner):
             filename = os.path.splitext(self.strArffFileName)[0]
             filename += '.confusion.txt'
         if path is None:
-            path = self.dctEnvPaths['data']
+            path = self._subdirs['data']
 
         with open(join(path, filename), "Ur") as f:
             log2c = float(f.readline().split('=')[1].strip())
@@ -621,12 +613,12 @@ class CommonClassPredictor(BaseLearner):
                     break
                 items = map(int, map(float, line.split('\t')[1:]))
                 conf_array.append(items)
-            conf = ConfusionMatrix(numpy.asarray(conf_array))
+            conf = ConfusionMatrix(np.asarray(conf_array))
         return log2c, log2g, conf
 
     def _calculateCompensation(self, labels):
-        ulabels = numpy.unique(labels)
-        count = numpy.bincount(labels)[ulabels]
+        ulabels = np.unique(labels)
+        count = np.bincount(labels)[ulabels]
         weight = (float(len(labels)) - count) / count
         weight_label = map(int, ulabels)
         return weight, weight_label
@@ -718,11 +710,24 @@ class CommonObjectLearner(BaseLearner):
         for image in images:
             self.dctImageObjects[image.sample_id] = image
             class_name = self.dctClassNames[image.iLabel]
-            dict_append_list(self.dctFeatureData, class_name, image.aFeatures)
-            dict_append_list(self.dctSampleNames, class_name, image.sample_id)
+            try:
+                self.dctFeatureData[class_name].extend([image.aFeatures])
+            except KeyError:
+                self.dctFeatureData[class_name] = [image.aFeatures]
+
+            try:
+                self.dctSampleNames[class_name].extend(image.sample_id)
+            except KeyError:
+                self.dctSampleNames[class_name] = [image.sample_id]
+
 
 if __name__ ==  "__main__":
-    learner = CommonClassPredictor(strEnvPath='/Users/miheld/data/Classifiers/H2b_20x_MD_exp911_DG')
-    learner.importFromArff()
-    c, g, conf = learner.importConfusion()
+    import sys
+    if isdir(sys.argv[1]):
+        learner = CommonClassPredictor(sys.argv[1])
+        learner.importFromArff()
+        c, g, conf = learner.importConfusion()
+        import pdb; pdb.set_trace()
+    else:
+        raise IOError("%s\n is not a valid directory" %sys.argv[1])
     #learner.statsFromConfusion(conf)

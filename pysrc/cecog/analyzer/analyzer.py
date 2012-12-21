@@ -201,7 +201,8 @@ class CellAnalyzer(LoggerObject):
                                         [x[2] for x in lstImages])
 
             if writeToDisc:
-                strFilePath = join(strPathOut, "P%s_T%05d%s" % (self.P, self._iT, strFileSuffix))
+                strFilePath = join(strPathOut, "P%s_T%05d%s"
+                                   %(self.P, self._iT, strFileSuffix))
                 makedirs(strPathOut)
                 ccore.writeImage(imgRgb, strFilePath, strCompression)
                 self.logger.debug("* rendered image written '%s'" % strFilePath)
@@ -212,8 +213,7 @@ class CellAnalyzer(LoggerObject):
 
     def collectObjects(self, plate_id, P, lstReader, oLearner, byTime=True):
 
-        #channel_name = oLearner.strChannelId
-        strRegionId = oLearner.strRegionId
+        region = oLearner.region
         img_rgb = None
 
         self.logger.debug('* collecting samples...')
@@ -221,7 +221,7 @@ class CellAnalyzer(LoggerObject):
 
         # self._channel_registry
         oChannel = self._channel_registry[oLearner.channel_name]
-        oContainer = oChannel.get_container(strRegionId)
+        oContainer = oChannel.get_container(region)
         objects = oContainer.getObjects()
 
         object_lookup = {}
@@ -282,7 +282,7 @@ class CellAnalyzer(LoggerObject):
             oContainer.delObject(obj_id)
 
         self.time_holder.apply_features(oChannel)
-        region = oChannel.get_region(strRegionId)
+        region = oChannel.get_region(region)
 
         learner_objects = []
         for label, object_ids in object_lookup.iteritems():
@@ -301,7 +301,7 @@ class CellAnalyzer(LoggerObject):
                     obj.oRoi.lowerRight[1] < oContainer.height):
                     iCenterX, iCenterY = obj.oCenterAbs
 
-                    strPathOutLabel = join(oLearner.dctEnvPaths['samples'],
+                    strPathOutLabel = join(oLearner.subdir(oLearner.SAMPLES),
                                                    oLearner.dctClassNames[label])
                     makedirs(strPathOutLabel)
 
@@ -331,21 +331,25 @@ class CellAnalyzer(LoggerObject):
             # we don't want to apply None for feature names
             oLearner.setFeatureNames(oChannel.lstFeatureNames)
 
-        strPathOut = join(oLearner.dctEnvPaths['controls'])
+        strPathOut = join(oLearner.subdir(oLearner.CONTROLS))
         makedirs(strPathOut)
         oContainer.exportRGB(join(strPathOut,
                                   "P%s_T%05d_C%s_R%s.jpg" %\
-                                      (self.P, self._iT, oLearner.strChannelId, oLearner.strRegionId)),
+                                      (self.P,
+                                       self._iT,
+                                       oLearner.color_channel,
+                                       oLearner.region)),
                             '90')
         img_rgb = oContainer.img_rgb
         return img_rgb
 
 
     def classify_objects(self, predictor):
-        channel_name = predictor.strChannelId
-        region_name = predictor.strRegionId
-        channel = self._channel_registry[channel_name]
-        region = channel.get_region(region_name)
+        cname = predictor.prcs_channel
+        region = predictor.region
+
+        channel = self._channel_registry[cname]
+        region = channel.get_region(region)
         for obj in region.itervalues():
             label, probs = predictor.predict(obj.aFeatures,
                                              region.getFeatureNames())
@@ -354,5 +358,4 @@ class CellAnalyzer(LoggerObject):
             obj.strClassName = predictor.dctClassNames[label]
             obj.strHexColor = predictor.dctHexColors[obj.strClassName]
 
-        self.time_holder.serialize_classification(channel_name, region_name,
-                                                  predictor)
+        self.time_holder.serialize_classification(cname, region, predictor)

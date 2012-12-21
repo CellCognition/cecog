@@ -243,7 +243,7 @@ class Picker(AnalyzerBase):
         annotation_re = re.compile(('((.*?_{3})?PL(?P<plate>.*?)_{3})?P(?P'
                                     '<position>.+?)_{1,3}T(?P<time>\d+).*?'))
 
-        anno_path = self.learner.dctEnvPaths['annotations']
+        anno_path = self.learner.subdir(self.learner.ANNOTATIONS)
         for dir_item in os.listdir(anno_path):
             sample_file = join(anno_path, dir_item)
             result = annotation_re.match(dir_item)
