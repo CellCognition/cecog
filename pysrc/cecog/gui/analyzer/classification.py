@@ -358,7 +358,8 @@ class ClassifierResultFrame(QGroupBox):
 class ClassificationFrame(BaseProcessorFrame):
 
     SECTION_NAME = SECTION_NAME_CLASSIFICATION
-    TABS = ['Primary Channel', 'Secondary Channel', 'Tertiary Channel', 'Merged Channel']
+    TABS = ['Primary Channel', 'Secondary Channel',
+            'Tertiary Channel', 'Merged Channel']
     PROCESS_PICKING = 'PROCESS_PICKING'
     PROCESS_TRAINING = 'PROCESS_TRAINING'
     PROCESS_TESTING = 'PROCESS_TESTING'

@@ -471,11 +471,6 @@ class TimeHolder(OrderedDict):
             self[iT] = OrderedDict()
         self[iT][oChannel.NAME] = oChannel
 
-        # from PyQt4.QtCore import pyqtRemoveInputHook; pyqtRemoveInputHook()
-        # import pdb; pdb.set_trace()
-#       #
-#       self[iT].sort(key = lambda x: self[iT][x])
-
     def apply_segmentation(self, channel, *args):
         stop_watch = StopWatch()
 

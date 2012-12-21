@@ -214,11 +214,6 @@ class AnalyzerCore(AnalyzerBase):
 
 class Picker(AnalyzerBase):
 
-    # FIXME
-    _ch_names = {'primary'   : 'Primary',
-                'secondary' : 'Secondary',
-                'tertiary'  : 'Tertiary'}
-
     def __init__(self, plate, settings, imagecontainer, learner=None):
         super(Picker, self).__init__(plate, settings, imagecontainer)
 
@@ -237,8 +232,8 @@ class Picker(AnalyzerBase):
         # FIXME: if the resulting .ARFF file is trained directly from
         # Python SVM (instead of easy.py) NO leading ID need to be inserted
         self.learner.hasZeroInsert = False
-        self.learner.channel_name = self._ch_names[self.settings.get(
-                'Classification', 'collectsamples_prefix')]
+        self.learner.channel_name = self.settings.get(
+            'Classification', 'collectsamples_prefix').title()
 
         annotation_re = re.compile(('((.*?_{3})?PL(?P<plate>.*?)_{3})?P(?P'
                                     '<position>.+?)_{1,3}T(?P<time>\d+).*?'))
@@ -273,7 +268,7 @@ class Picker(AnalyzerBase):
         if (isfile(sample_file) and \
                 extension == ext and \
                 not sample_file[0] in ['.', '_'] and \
-                not result is None and \
+                                                                                                                                                                                                                                                                           not result is None and \
                 (result.group('plate')is None or
                  result.group('plate') == self.plate)):
             return True
@@ -308,7 +303,7 @@ class Picker(AnalyzerBase):
                          self.sample_positions,
                          self.learner,
                          self._imagecontainer)
-                # XXX - include kw_ into arags_
+                # XXX - include kw_ into arag_
                 kw_ = dict(qthread = qthread, myhack = myhack)
                 job_args.append((args_, kw_))
 

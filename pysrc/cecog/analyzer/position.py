@@ -194,7 +194,7 @@ class PositionCore(LoggerObject):
 
         return f_categories, f_cat_params
 
-    def setup_channel(self, proc_channel, col_channel):
+    def setup_channel(self, proc_channel, col_channel, zslice_images):
 
         # determine the list of features to be calculated from each object
         f_cats, f_params = self.feature_params(proc_channel)
@@ -216,21 +216,21 @@ class PositionCore(LoggerObject):
                          fNormalizeMax = self.settings.get2('%s_normalizemax' %proc_channel),
                          lstFeatureCategories = f_cats,
                          dctFeatureParameters = f_params)
+
+        # loop over the z-slices
+        for meta_image in zslice_images:
+            channel.append_zslice(meta_image)
         return channel
 
     def register_channels(self, cellanalyzer, channels):
-        # loop over the channels
         for channel_id, zslices in channels:
             zslice_images = [meta_image for _, meta_image in zslices]
             for ch_name in self.processing_channels:
                 # each process channel has a destinct color channel
                 if channel_id != self.ch_mapping[ch_name]:
                     continue
-
-                channel = self.setup_channel(ch_name, channel_id)
-                    # loop over the z-slices
-                for meta_image in zslice_images:
-                    channel.append_zslice(meta_image)
+                channel = self.setup_channel(ch_name, channel_id, zslice_images)
+                # XXX order is not preservered
                 cellanalyzer.register_channel(channel)
 
     @property
@@ -328,7 +328,6 @@ class PositionPicker(PositionCore):
                                      self.plate_id,
                                      **self._hdf_options)
 
-        stopwatch = StopWatch(start=True)
         ca = CellAnalyzer(time_holder=self.timeholder,
                           position = self.position,
                           create_images = True,
@@ -362,16 +361,17 @@ class PositionPicker(PositionCore):
             cellanalyzer.initTimepoint(frame)
             self.register_channels(cellanalyzer, channels)
 
-            img_rgb = cellanalyzer.collectObjects(self.plate_id,
+            image = cellanalyzer.collectObjects(self.plate_id,
                                                   self.position,
                                                   self.sample_readers,
                                                   self.learner,
                                                   byTime=True)
-            if img_rgb is not None:
+
+            if image is not None:
                 n_images += 1
                 msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position,
                                                 frame)
-                self.set_image(img_rgb, msg)
+                self.set_image(image, msg)
 
 
 class PositionAnalyzer(PositionCore):

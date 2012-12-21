@@ -25,7 +25,7 @@ from cecog.analyzer.channel import TertiaryChannel
 from cecog.util.logger import LoggerObject
 from cecog.util.util import makedirs
 from cecog.util.util import hexToRgb
-
+from cecog.util.stopwatch import StopWatch
 
 # XXX factorize a picker, a classifier and a analyzer
 
@@ -60,10 +60,10 @@ class CellAnalyzer(LoggerObject):
         return self._channel_registry[name]
 
     def process(self, apply=True, extract_features=True):
-        # sort by Channel `RANK`
+        """Perform the segmentation and feature extraction.
+        """
         channels = sorted(self._channel_registry.values())
         primary_channel = None
-
 
         for channel in channels:
             self.time_holder.prepare_raw_image(channel)
@@ -211,7 +211,7 @@ class CellAnalyzer(LoggerObject):
             return imgRgb, strFilePath
 
 
-    def collectObjects(self, plate_id, P, lstReader, oLearner, byTime=True):
+    def collectObjects(self, plate_id, P, sample_readers, oLearner, byTime=True):
 
         region = oLearner.region
         img_rgb = None
@@ -219,23 +219,22 @@ class CellAnalyzer(LoggerObject):
         self.logger.debug('* collecting samples...')
         self.process(apply = False, extract_features = False)
 
-        # self._channel_registry
         oChannel = self._channel_registry[oLearner.channel_name]
         oContainer = oChannel.get_container(region)
         objects = oContainer.getObjects()
 
         object_lookup = {}
         object_ids = set()
-        for oReader in lstReader:
+        for reader in sample_readers:
             lstCoordinates = None
-            if (byTime and P == oReader.getPosition() and self._iT in oReader):
-                lstCoordinates = oReader[self._iT]
-            elif (not byTime and P in oReader):
-                lstCoordinates = oReader[P]
-            #print "moo", P, oReader.getPosition(), byTime, self._iT in oReader
-            #print lstCoordinates, byTime, self.P, oReader.keys()
+            if (byTime and P == reader.getPosition() and self._iT in reader):
+                lstCoordinates = reader[self._iT]
+            elif (not byTime and P in reader):
+                lstCoordinates = reader[P]
+            #print "moo", P, reader.getPosition(), byTime, self._iT in reader
+            #print lstCoordinates, byTime, self.P, reader.keys()
 
-            if not lstCoordinates is None:
+            if lstCoordinates is not None:
                 #print self.iP, self._iT, lstCoordinates
                 for dctData in lstCoordinates:
                     label = dctData['iClassLabel']
@@ -247,6 +246,7 @@ class CellAnalyzer(LoggerObject):
 
                         center1 = ccore.Diff2D(dctData['iPosX'],
                                                dctData['iPosY'])
+
 
                         # test for obj_id "under" annotated pixel first
                         obj_id = oContainer.img_labels[center1]
@@ -284,7 +284,11 @@ class CellAnalyzer(LoggerObject):
         self.time_holder.apply_features(oChannel)
         region = oChannel.get_region(region)
 
+        import pdb; pdb.set_trace()
+
         learner_objects = []
+        # exporting tiny images to samples directory
+        # XXX ---> refactor it to its own functions
         for label, object_ids in object_lookup.iteritems():
             class_name = oLearner.dctClassNames[label]
             hex_color = oLearner.dctHexColors[class_name]
@@ -305,13 +309,17 @@ class CellAnalyzer(LoggerObject):
                                                    oLearner.dctClassNames[label])
                     makedirs(strPathOutLabel)
 
-                    strFilenameBase = 'PL%s___P%s___T%05d___X%04d___Y%04d' % (plate_id, self.P, self._iT, iCenterX, iCenterY)
+                    strFilenameBase = 'PL%s___P%s___T%05d___X%04d___Y%04d' \
+                        %(plate_id, self.P, self._iT, iCenterX, iCenterY)
 
                     obj.sample_id = strFilenameBase
                     learner_objects.append(obj)
 
-                    strFilenameImg = join(strPathOutLabel, '%s___img.png' % strFilenameBase)
-                    strFilenameMsk = join(strPathOutLabel, '%s___msk.png' % strFilenameBase)
+                    strFilenameImg = join(strPathOutLabel,
+                                          '%s___img.png' %strFilenameBase)
+                    strFilenameMsk = join(strPathOutLabel,
+                                          '%s___msk.png' %strFilenameBase)
+
                     # FIXME: export Objects is segfaulting for objects
                     #        where its bounding box is touching the border
                     #        i.e. one corner point equals zero!
@@ -320,11 +328,10 @@ class CellAnalyzer(LoggerObject):
 #                                            strFilenameMsk)
 
                     oContainer.markObjects([obj_id], rgb_value, False, True)
-
-                    #print obj_id, obj.oCenterAbs, iCenterX, iCenterY
                     ccore.drawFilledCircle(ccore.Diff2D(iCenterX, iCenterY),
                                            3, oContainer.img_rgb, rgb_value)
 
+        import pdb; pdb.set_trace()
 
         if len(learner_objects) > 0:
             oLearner.applyObjects(learner_objects)
