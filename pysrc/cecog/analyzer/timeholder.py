@@ -157,7 +157,7 @@ class TimeHolder(OrderedDict):
         self._feature_to_idx = OrderedDict()
 
         self._hdf5_found = False
-        if os.path.exists(self.hdf5_filename):
+        if self.hdf5_filename is not None and os.path.exists(self.hdf5_filename):
             if self._hdf5_check_file():
                 self._hdf5_found = True
                 if self._hdf5_prepare_reuse() > 0:
@@ -470,11 +470,6 @@ class TimeHolder(OrderedDict):
         if not iT in self:
             self[iT] = OrderedDict()
         self[iT][oChannel.NAME] = oChannel
-
-        # from PyQt4.QtCore import pyqtRemoveInputHook; pyqtRemoveInputHook()
-        # import pdb; pdb.set_trace()
-#       #
-#       self[iT].sort(key = lambda x: self[iT][x])
 
     def apply_segmentation(self, channel, *args):
         stop_watch = StopWatch()
@@ -977,60 +972,43 @@ class TimeHolder(OrderedDict):
     def exportObjectCounts(self, filename, pos, meta_data, ch_info,
                            sep='\t', has_header=False):
 
-        fp = file(filename, 'w')
+        with open(filename, 'w') as fp:
+            for frame, channels in self.iteritems():
+                line1 = []
+                line2 = []
+                line3 = []
+                line4 = []
+                items = []
+                coordinate = Coordinate(position=pos, time=frame)
+                prefix = [frame, meta_data.get_timestamp_relative(coordinate)]
+                prefix_names = ['frame', 'time']
 
-        for frame, channels in self.iteritems():
-            line1 = []
-            line2 = []
-            line3 = []
-            line4 = []
-            items = []
-            coordinate = Coordinate(position=pos, time=frame)
-            prefix = [frame, meta_data.get_timestamp_relative(coordinate)]
-            prefix_names = ['frame', 'time']
+                for chname, (region_name, class_names, _) in ch_info.iteritems():
+                    channel = channels[chname]
+                    if not has_header:
+                        keys = ['total'] + class_names
+                        line4 += keys
+                        line3 += ['total'] + ['class']*len(class_names)
+                        line1 += [chname.upper()] * len(keys)
+                        line2 += [region_name] * len(keys)
 
-            for channel in channels.values():
-                region_name, class_names, _ = ch_info[channel.NAME]
-                if not has_header:
-                    keys = ['total'] + class_names
-                    line4 += keys
-                    line3 += ['total'] + ['class']*len(class_names)
-                    line1 += [channel.NAME.upper()] * len(keys)
-                    line2 += [region_name] * len(keys)
-
-                if channel.has_region(region_name):
                     region = channel.get_region(region_name)
                     total = len(region)
                     count = dict([(x, 0) for x in class_names])
                     # in case just total counts are needed
-
                     if len(class_names) > 0:
                         for obj in region.values():
-                            try:
-                                count[obj.strClassName] += 1
-                            # this Exceptions occurs e.g. on testing
-                            # the tertiary Channel
-                            except KeyError:
-                                count[obj.strClassName] = numpy.NAN
-                                print channel.NAME
-                                print region_name
-                                print count
-                                continue
+                            count[obj.strClassName] += 1
                     items += [total] + [count[x] for x in class_names]
-                else:
-                    items += [numpy.NAN] * (len(class_names) + 1)
 
-            if not has_header:
-                has_header = True
-                prefix_str = [''] * len(prefix)
-                fp.write('%s\n' % sep.join(prefix_str + line1))
-                fp.write('%s\n' % sep.join(prefix_str + line2))
-                fp.write('%s\n' % sep.join(prefix_str + line3))
-                fp.write('%s\n' % sep.join(prefix_names + line4))
-
-            fp.write('%s\n' % sep.join(map(str, prefix + items)))
-
-        fp.close()
+                if not has_header:
+                    has_header = True
+                    prefix_str = [''] * len(prefix)
+                    fp.write('%s\n' % sep.join(prefix_str + line1))
+                    fp.write('%s\n' % sep.join(prefix_str + line2))
+                    fp.write('%s\n' % sep.join(prefix_str + line3))
+                    fp.write('%s\n' % sep.join(prefix_names + line4))
+                fp.write('%s\n' % sep.join(map(str, prefix + items)))
 
     def exportPopulationPlots(self, input_filename, pop_plot_output_dir, pos,
                                meta_data, cinfo, ylim):

@@ -91,11 +91,11 @@ class HmmThread(CoreThread):
             if not self._abort:
                 info['text'] = "Plate: '%s' (%d / %d)" \
                     % (plate_id, idx+1, len(plates))
-                self.set_stage_info(info)
+                self.update_status(info)
                 self._imagecontainer.set_plate(plate_id)
                 self._run_plate(plate_id)
                 info['progress'] = idx+1
-                self.set_stage_info(info)
+                self.update_status(info)
             else:
                 break
 
@@ -259,7 +259,7 @@ class HmmThread(CoreThread):
             msg = str(self._process.readLine()).rstrip()
             msg = ''.join(list(self._process.readAll()))
             self.analyzer_error.emit(msg)
-            self.set_abort()
+            self.abort()
 
         elif self._settings.get2('compose_galleries') and not self._abort:
             sample = self._settings.get2('compose_galleries_sample')

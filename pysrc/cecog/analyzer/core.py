@@ -28,6 +28,7 @@ from cecog.learning.collector import CellCounterReader, CellCounterReaderXML
 from cecog.learning.learning import CommonObjectLearner
 
 from cecog.analyzer.position import PositionAnalyzer
+from cecog.analyzer.position import PositionPicker
 from cecog.io.imagecontainer import MetaImage
 from cecog.util.logger import LoggerObject
 from cecog.util.util import makedirs
@@ -94,6 +95,8 @@ class AnalyzerBase(LoggerObject):
                     raise RuntimeError(("Invalid time constraints "
                                         "(upper_bound <= lower_bound)!"))
                 self._frames = frames_total[f_start-1:f_end:f_incr]
+            else:
+                self._frames = frames_total
         return self._frames
 
 
@@ -130,29 +133,22 @@ class AnalyzerCore(AnalyzerBase):
 
     @property
     def positions(self):
-        """Determine positions to process considering all options
+        """Determine positions to process considering
 
         -) constrain position
         -) skip already processed
         """
 
         if self._positions is None:
-            positions = self.settings.get('General', 'positions')
-            # XXX - empty string needs separate execption
-            if not(bool(positions) or \
-                       self.settings.get('General', 'constrain_positions')):
-                positions = None
+            if self.settings.get('General', 'constrain_positions'):
+                positions  = self.settings.get('General', 'positions').split(',')
             else:
-                positions  = positions.split(',')
-
-            if not positions is None:
-                if not set(positions).issubset(self.meta_data.positions):
-                    raise ValueError(("The list of selected positions is not valid!"
-                                      " %s\nValid values are %s" % \
-                                          (positions, self.meta_data.positions)))
-            else:
-                # take all positions found
                 positions = list(self.meta_data.positions)
+
+            if not set(positions).issubset(self.meta_data.positions):
+                raise ValueError(("The list of selected positions is not valid!"
+                                  " %s\nValid values are %s" % \
+                                      (positions, self.meta_data.positions)))
 
             # drop already processed positions
             if self.settings.get('General', 'redoFailedOnly'):
@@ -197,62 +193,52 @@ class AnalyzerCore(AnalyzerBase):
                 job_args.append((args_, kw_))
 
         stage_info = {'stage': 1, 'min': 1, 'max': len(job_args)}
-        post_hdf5_link_list = []
 
+        hdf5_links = []
         for idx, (args_, kw_) in enumerate(job_args):
             if not qthread is None:
-                if qthread.get_abort():
+                if qthread.is_aborted():
                     break
                 stage_info.update({'progress': idx+1,
                                    'text': 'P %s (%d/%d)' \
                                        % (args_[0], idx+1, len(job_args))})
-                qthread.set_stage_info(stage_info)
+                qthread.update_status(stage_info)
             analyzer = PositionAnalyzer(*args_, **kw_)
-            result = analyzer()
+            nimages = analyzer()
 
             if self.settings.get('Output', 'hdf5_create_file') and \
                     self.settings.get('Output', 'hdf5_merge_positions'):
-                post_hdf5_link_list.append(result['filename_hdf5'])
-
-        return {'ObjectLearner': None,
-                'post_hdf5_link_list': post_hdf5_link_list}
+                hdf5_links.append(analyzer.hdf5_filename)
+        return hdf5_links
 
 
 class Picker(AnalyzerBase):
 
-    # FIXME
-    _ch_names = {'primary'   : 'Primary',
-                'secondary' : 'Secondary',
-                'tertiary'  : 'Tertiary'}
-
     def __init__(self, plate, settings, imagecontainer, learner=None):
         super(Picker, self).__init__(plate, settings, imagecontainer)
+
         # belongs already to picker
         self.sample_reader = []
         self.sample_positions = {}
 
-        cl_infos = {'strEnvPath' : self.cl_path,
-                    'strChannelId' :
-                        self.settings.get('ObjectDetection',
-                                          self._resolve('channelid')),
-                    'strRegionId' :
-                        self.settings.get('Classification',
-                                          self._resolve('classification_regionname'))}
-
         if learner is None:
-            self.learner = CommonObjectLearner(dctCollectSamples=cl_infos)
+            cid = self.settings.get( \
+                'ObjectDetection', self._resolve('channelid'))
+            rid = self.settings.get( \
+                'Classification', self._resolve('classification_regionname'))
+            self.learner = CommonObjectLearner(self.cl_path, cid, rid)
             self.learner.loadDefinition()
 
         # FIXME: if the resulting .ARFF file is trained directly from
         # Python SVM (instead of easy.py) NO leading ID need to be inserted
         self.learner.hasZeroInsert = False
-        self.learner.channel_name = self._ch_names[self.settings.get(
-                'Classification', 'collectsamples_prefix')]
+        self.learner.channel_name = self.settings.get(
+            'Classification', 'collectsamples_prefix').title()
 
         annotation_re = re.compile(('((.*?_{3})?PL(?P<plate>.*?)_{3})?P(?P'
                                     '<position>.+?)_{1,3}T(?P<time>\d+).*?'))
 
-        anno_path = self.learner.dctEnvPaths['annotations']
+        anno_path = self.learner.subdir(self.learner.ANNOTATIONS)
         for dir_item in os.listdir(anno_path):
             sample_file = join(anno_path, dir_item)
             result = annotation_re.match(dir_item)
@@ -282,7 +268,7 @@ class Picker(AnalyzerBase):
         if (isfile(sample_file) and \
                 extension == ext and \
                 not sample_file[0] in ['.', '_'] and \
-                not result is None and \
+                                                                                                                                                                                                                                                                           not result is None and \
                 (result.group('plate')is None or
                  result.group('plate') == self.plate)):
             return True
@@ -317,27 +303,20 @@ class Picker(AnalyzerBase):
                          self.sample_positions,
                          self.learner,
                          self._imagecontainer)
-                # XXX - include kw_ into arags_
+                # XXX - include kw_ into arag_
                 kw_ = dict(qthread = qthread, myhack = myhack)
                 job_args.append((args_, kw_))
 
-        stage_info = {'stage': 1, 'min': 1, 'max': len(job_args)}
-
-        hdf5_link_list = []
         for idx, (args_, kw_) in enumerate(job_args):
             if not qthread is None:
-                if qthread.get_abort():
+                if qthread.is_aborted():
                     break
-                stage_info.update({'progress': idx+1,
-                                   'text': 'P %s (%d/%d)' \
-                                       % (args_[0], idx+1, len(job_args))})
-                qthread.set_stage_info(stage_info)
-            analyzer = PositionAnalyzer(*args_, **kw_)
-            result = analyzer()
+                qthread.update_status({'stage': 1,
+                                       'min': 1,
+                                       "max": len(job_args),
+                                       'progress': idx+1,
+                                       'text': 'P %s (%d/%d)' \
+                                           %(args_[0], idx+1, len(job_args))})
 
-            if self.settings.get('Output', 'hdf5_create_file') and \
-                    self.settings.get('Output', 'hdf5_merge_positions'):
-                hdf5_link_list.append(result['filename_hdf5'])
-
-        return {'ObjectLearner': self.learner,
-                'post_hdf5_link_list': hdf5_link_list}
+            picker = PositionPicker(*args_, **kw_)
+            result = picker()

@@ -145,18 +145,13 @@ class ClassifierResultFrame(QGroupBox):
     def load_classifier(self, check=True):
         _resolve = lambda x,y: self._settings.get(x, '%s_%s'
                                                   % (self._channel, y))
-        env_path = convert_package_path(_resolve('Classification',
-                                                 'classification_envpath'))
-        classifier_infos = {'strEnvPath': env_path,
-                            'strChannelId': _resolve('ObjectDetection',
-                                                     'channelid'),
-                            'strRegionId': _resolve('Classification',
-                                                    'classification_regionname')
-                            }
-
+        clfdir = convert_package_path(_resolve('Classification',
+                                                         'classification_envpath'))
         try:
-            self._learner = CommonClassPredictor(\
-                dctCollectSamples=classifier_infos)
+            self._learner = CommonClassPredictor( \
+                clf_dir=clfdir,
+                color_channel=_resolve('ObjectDetection', 'channelid'),
+                region=_resolve('Classification', 'classification_regionname'))
         except:
             exception(self, 'Error on loading classifier.')
         else:
@@ -363,7 +358,8 @@ class ClassifierResultFrame(QGroupBox):
 class ClassificationFrame(BaseProcessorFrame):
 
     SECTION_NAME = SECTION_NAME_CLASSIFICATION
-    TABS = ['Primary Channel', 'Secondary Channel', 'Tertiary Channel', 'Merged Channel']
+    TABS = ['Primary Channel', 'Secondary Channel',
+            'Tertiary Channel', 'Merged Channel']
     PROCESS_PICKING = 'PROCESS_PICKING'
     PROCESS_TRAINING = 'PROCESS_TRAINING'
     PROCESS_TESTING = 'PROCESS_TESTING'

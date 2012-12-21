@@ -242,8 +242,7 @@ class _ProcessorMixin(object):
     def register_control_button(self, name, cls, labels):
         self._control_buttons[name] = {'labels' : labels,
                                        'widget' : None,
-                                       'cls'    : cls,
-                                       }
+                                       'cls'    : cls}
 
     def _init_control(self, has_images=True):
         layout = QHBoxLayout(self._control)
@@ -479,11 +478,10 @@ class _ProcessorMixin(object):
                               and (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))
                              ):
 
-                            classifier_infos = {'strEnvPath' : env_path,
-                                                'strChannelId' : _resolve('ObjectDetection', 'channelid'),
-                                                'strRegionId' : _resolve('Classification', 'classification_regionname'),
-                                                }
-                            learner = CommonClassPredictor(dctCollectSamples=classifier_infos)
+                            learner = CommonClassPredictor( \
+                                env_path,
+                                _resolve('ObjectDetection', 'channelid'),
+                                _resolve('Classification', 'classification_regionname'))
                             learner.importFromArff()
                             learner_dict[kind] = learner
 
@@ -500,11 +498,11 @@ class _ProcessorMixin(object):
                         env_path = convert_package_path(_resolve('Classification', 'classification_envpath'))
                         if (_resolve('Processing', 'classification') and
                             (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))):
-                            classifier_infos = {'strEnvPath' : env_path,
-                                                'strChannelId' : _resolve('ObjectDetection', 'channelid'),
-                                                'strRegionId' : _resolve('Classification', 'classification_regionname'),
-                                                }
-                            learner = CommonClassPredictor(dctCollectSamples=classifier_infos)
+                            learner = CommonClassPredictor( \
+                                env_path,
+                                _resolve('ObjectDetection', 'channelid'),
+                                _resolve('Classification', 'classification_regionname'))
+
                             learner.importFromArff()
                             learner_dict[kind] = learner
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
@@ -530,7 +528,7 @@ class _ProcessorMixin(object):
         self.setCursor(Qt.BusyCursor)
         self._is_abort = True
         self.dlg = waitingProgressDialog('Please wait until the processing has been terminated...', self)
-        self.dlg.setTarget(self._analyzer.set_abort, wait=True)
+        self.dlg.setTarget(self._analyzer.abort, wait=True)
         self.dlg.exec_()
         self.setCursor(Qt.ArrowCursor)
 

@@ -85,7 +85,7 @@ class ProcessCallback(object):
                           % (0, self.job_count, self.ncpu),
                       'min': 0,
                       'max': self.job_count}
-        self.parent.set_stage_info(stage_info)
+        self.parent.update_status(stage_info)
 
     def __call__(self, (plate, pos, hdf_files)):
         self.cnt += 1
@@ -98,7 +98,7 @@ class ProcessCallback(object):
                       'item_name': 'position',
                       'interval': self._timer.current_interval(),
                       'max': self.job_count}
-        self.parent.set_stage_info(stage_info)
+        self.parent.update_status(stage_info)
         self._timer.reset()
         return plate, pos, hdf_files
 
