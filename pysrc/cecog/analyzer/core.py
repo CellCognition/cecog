@@ -342,7 +342,7 @@ class PositionAnalyzer(object):
 
             clsCellTracker = ClassificationCellTracker2
             transitions = self.oSettings.get2('tracking_labeltransitions').replace('),(', ')__(')
-            transitions = map(eval, transitions.split('__'))
+           # transitions = map(eval, transitions.split('__'))
             tracker_options.update({'iBackwardCheck'       : 0,
                                     'iForwardCheck'        : 0,
 
