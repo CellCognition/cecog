@@ -206,15 +206,11 @@ class AbstractImporter(object):
                     time_val = 0
                 first_pass[position].append(time_val)
                 
-            #time_index_correspondence = dict(zip(all_times, range(len(all_times))))
-            #print 'len(all_times): ', len(all_times)
-            #print 'all_times: ', all_times
             time_index_correspondence = {}
             for pos in first_pass.keys():
                 first_pass[position].sort()
                 time_index_correspondence[pos] = dict(zip(first_pass[position], 
                                                           range(len(first_pass[position]))))
-            print 'time_index_correspondence: ', time_index_correspondence
             
         for item in dimension_items:
             
@@ -556,7 +552,7 @@ class IniFileImporter(AbstractImporter):
         else:
             self.use_frame_indices = False
 
-        print 'use_frame_indices: ', self.use_frame_indices
+        #print 'use_frame_indices: ', self.use_frame_indices
         
     def __setstate__(self, state):
         super(IniFileImporter, self).__setstate__(state)
