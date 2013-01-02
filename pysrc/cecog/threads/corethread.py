@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 corethreads.py - base class  for all threads of the processing pipline
 """
@@ -16,33 +15,25 @@ __all__ = ['CoreThread']
 import logging
 import traceback
 from PyQt4 import QtCore
+from cecog import ccore
 
 class CoreThread(QtCore.QThread):
 
     stage_info = QtCore.pyqtSignal(dict)
     analyzer_error = QtCore.pyqtSignal(str)
+    image_ready = QtCore.pyqtSignal(ccore.RGBImage, str, str)
+
 
     def __init__(self, parent, settings):
         super(CoreThread, self).__init__(parent)
         self._logger = logging.getLogger(self.__class__.__name__)
+        self._renderer = None
         self._settings = settings
         self._abort = False
         self._mutex = QtCore.QMutex()
         self._stage_info = {'text': '',
                             'progress': 0,
                             'max': 0}
-    # @property
-    # def parent(self):
-    #     return super(CoreThread, self).parent()
-
-    # does not make sense on python
-    # def __del__(self):
-    #     self._abort = True
-    #     self.stop()
-    #     self.wait()
-
-    # def run(self):
-    #     raise NotImplementedError
 
     def run(self, *args, **kw):
         try:
@@ -84,3 +75,24 @@ class CoreThread(QtCore.QThread):
     def update_status(self, info, stime=0):
         self.stage_info.emit(info)
         self.msleep(stime)
+
+    @property
+    def renderer(self):
+        return self._renderer
+
+    @renderer.setter
+    def renderer(self, renderer):
+        self._mutex.lock()
+        try:
+            self._renderer = renderer
+        finally:
+            self._mutex.unlock()
+
+    @renderer.deleter
+    def renderer(self):
+        del self._renderer
+
+    def show_image(self, name, image, message, filename='', stime=0):
+        self.image_ready.emit(image, message, filename)
+        self.msleep(stime)
+

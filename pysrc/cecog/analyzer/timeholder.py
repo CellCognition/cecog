@@ -362,7 +362,6 @@ class TimeHolder(OrderedDict):
         label_image_str, label_image_cpy, label_image_valid = label_info
         raw_image_str, raw_image_cpy, raw_image_valid = raw_info
 
-        print filename
         f = h5py.File(filename, 'w')
         self._hdf5_file = f
 

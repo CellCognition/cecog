@@ -26,6 +26,7 @@ from os.path import join, basename, isdir, splitext, isfile
 
 from cecog.learning.collector import CellCounterReader, CellCounterReaderXML
 from cecog.learning.learning import CommonObjectLearner
+from cecog.learning.learning import MergedChannelLearner
 
 from cecog.analyzer.position import PositionAnalyzer
 from cecog.analyzer.position import PositionPicker
@@ -222,12 +223,7 @@ class Picker(AnalyzerBase):
         self.sample_positions = {}
 
         if learner is None:
-            cid = self.settings.get( \
-                'ObjectDetection', self._resolve('channelid'))
-            rid = self.settings.get( \
-                'Classification', self._resolve('classification_regionname'))
-            self.learner = CommonObjectLearner(self.cl_path, cid, rid)
-            self.learner.loadDefinition()
+            self.learner = self.setup_learner()
 
         # FIXME: if the resulting .ARFF file is trained directly from
         # Python SVM (instead of easy.py) NO leading ID need to be inserted
@@ -262,6 +258,27 @@ class Picker(AnalyzerBase):
             self.sample_positions[pos] = sorted(list(set(iframes)))
         self.positions = self.sample_positions.keys()
 
+    def setup_learner(self):
+        """Return a learner instance for a specific channel_name
+
+        For primary, sceondary and tertiary channels have the same learner while
+        the merged channel has a different learner.
+        """
+        cid = self.settings.get('ObjectDetection', self._resolve('channelid'))
+
+        if cid is None:
+            # FIXME a region for each check channel!!!!
+            region = self.settings.get( \
+                'Classification', self._resolve('classification_regionname'))
+            learner = MergedChannelLearner(self.cl_path, regions)
+        else:
+            region = self.settings.get( \
+                'Classification', self._resolve('classification_regionname'))
+            learner = CommonObjectLearner(self.cl_path, cid, region)
+
+        learner.loadDefinition()
+        return learner
+
     def is_valid_annofile(self, result, sample_file, extension):
         ext = self.settings.get('Classification',
                                 self._resolve('classification_annotationfileext'))
@@ -280,6 +297,7 @@ class Picker(AnalyzerBase):
         """Read out and check for classifier_envpath"""
         cpath = self.settings.get("Classification",
                                   self._resolve("classification_envpath"))
+
         if not isdir(cpath):
             raise IOError("Classifier path '%s' does not exist." %cpath)
         return cpath
@@ -290,33 +308,28 @@ class Picker(AnalyzerBase):
                                            "collectsamples_prefix"), txt)
 
     def processPositions(self, qthread=None, myhack=None):
-        job_args = []
-        for posid, poslist in self.sample_positions.iteritems():
-            self.logger.info('Process positions: %r' % posid)
-            if len(poslist) > 0:
-                args_ = (self.plate,
-                         posid,
-                         self._out_dir,
-                         self.settings,
-                         self.frames,
-                         self.sample_reader,
-                         self.sample_positions,
-                         self.learner,
-                         self._imagecontainer)
-                # XXX - include kw_ into arag_
-                kw_ = dict(qthread = qthread, myhack = myhack)
-                job_args.append((args_, kw_))
+        imax = len(self.sample_positions)
 
-        for idx, (args_, kw_) in enumerate(job_args):
+        for i, (posid, poslist) in enumerate(self.sample_positions.iteritems()):
+            self.logger.info('Process positions: %r' % posid)
+
             if not qthread is None:
                 if qthread.is_aborted():
                     break
-                qthread.update_status({'stage': 1,
-                                       'min': 1,
-                                       "max": len(job_args),
-                                       'progress': idx+1,
+                qthread.update_status({'stage': 1, 'min': 1,
+                                       "max": imax, 'progress': i+1,
                                        'text': 'P %s (%d/%d)' \
-                                           %(args_[0], idx+1, len(job_args))})
+                                           %(self.plate, i+1, imax)})
 
-            picker = PositionPicker(*args_, **kw_)
+            picker = PositionPicker(self.plate,
+                                    posid,
+                                    self._out_dir,
+                                    self.settings,
+                                    self.frames,
+                                    self.sample_reader,
+                                    self.sample_positions,
+                                    self.learner,
+                                    self._imagecontainer,
+                                    qthread,
+                                    myhack)
             result = picker()

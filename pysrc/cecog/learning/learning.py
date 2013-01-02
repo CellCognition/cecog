@@ -552,8 +552,6 @@ class CommonClassPredictor(BaseLearner):
                 l2g += g_step
             l2c += c_step
 
-
-
 class CommonObjectLearner(BaseLearner):
 
     def __init__(self, *args, **kw):
@@ -577,6 +575,12 @@ class CommonObjectLearner(BaseLearner):
                 self.dctSampleNames[class_name].extend(obj.sample_id)
             except KeyError:
                 self.dctSampleNames[class_name] = [obj.sample_id]
+
+
+class MergedChannelLearner(BaseLearner):
+
+    def __init__(self, *args, **kw):
+        super(MergedChannelLearner, self).__init__(*args, **kw)
 
 
 if __name__ ==  "__main__":

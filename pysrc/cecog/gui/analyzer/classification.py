@@ -16,22 +16,12 @@ __source__ = '$URL$'
 
 __all__ = ['ClassificationFrame']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
 import numpy
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 from cecog import CHANNEL_PREFIX, CH_VIRTUAL
 from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
 from cecog.gui.util import (information,
@@ -47,21 +37,9 @@ from cecog.analyzer.channel import PrimaryChannel, SecondaryChannel
 from cecog.learning.learning import CommonClassPredictor
 from cecog.util.util import hexToRgb
 from cecog.traits.settings import convert_package_path
-
 from cecog.plugin.segmentation import REGION_INFO
 
-#-------------------------------------------------------------------------------
-# constants:
-#
 
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 class ClassifierResultFrame(QGroupBox):
 
     LABEL_FEATURES = '#Features: %d (%d)'
@@ -70,7 +48,7 @@ class ClassifierResultFrame(QGroupBox):
     LABEL_G = 'Log2(g) = %.1f'
 
     def __init__(self, parent, channel, settings):
-        QGroupBox.__init__(self, parent)
+        super(ClassifierResultFrame, self).__init__(parent)
 
         self._channel = channel
         self._settings = settings
@@ -146,7 +124,7 @@ class ClassifierResultFrame(QGroupBox):
         _resolve = lambda x,y: self._settings.get(x, '%s_%s'
                                                   % (self._channel, y))
         clfdir = convert_package_path(_resolve('Classification',
-                                                         'classification_envpath'))
+                                               'classification_envpath'))
         try:
             self._learner = CommonClassPredictor( \
                 clf_dir=clfdir,
@@ -432,13 +410,25 @@ class ClassificationFrame(BaseProcessorFrame):
             settings.set('Processing', 'tertiary_featureextraction', False)
             settings.set('Processing', 'tertiary_processchannel', False)
             prefix = 'secondary'
-        else:
+        elif current_tab == 2:
             settings.set('Processing', 'primary_featureextraction', False)
             settings.set('Processing', 'secondary_featureextraction', False)
             settings.set('Processing', 'secondary_processchannel', True)
             settings.set('Processing', 'tertiary_featureextraction', True)
             settings.set('Processing', 'tertiary_processchannel', True)
             prefix = 'tertiary'
+        else:
+            # checkboxes in merged channel tab
+            pch = settings.get('Classification', 'primary_channel')
+            sch = settings.get('Classification', 'secondary_channel')
+            tch = settings.get('Classification', 'tertiary_channel')
+
+            settings.set('Processing', 'primary_featureextraction', pch)
+            settings.set('Processing', 'secondary_featureextraction', sch)
+            settings.set('Processing', 'secondary_processchannel', sch)
+            settings.set('Processing', 'tertiary_featureextraction', tch)
+            settings.set('Processing', 'tertiary_processchannel', tch)
+            prefix = 'merged'
 
         sec_region = settings.get('Classification',
                                   '%s_classification_regionname' % prefix)

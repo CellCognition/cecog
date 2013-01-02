@@ -298,7 +298,7 @@ class Browser(QMainWindow):
         widget = self._module_manager.get_widget(AnnotationModule.NAME)
         widget.set_coords()
 
-    def set_image(self, image_dict):
+    def show_image(self, image_dict):
         widget = self._module_manager.get_widget(DisplayModule.NAME)
         widget.set_image_dict(image_dict)
         self.update_statusbar()

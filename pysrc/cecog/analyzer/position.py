@@ -304,7 +304,7 @@ class PositionCore(LoggerObject):
     def set_image(self, image, msg, filename='', region=None, stime=0):
         """Propagate a rendered image to QThread"""
         if not (self._qthread is None and image is None):
-            self._qthread.set_image(region, image, msg, filename, stime)
+            self._qthread.show_image(region, image, msg, filename, stime)
 
 class PositionPicker(PositionCore):
 
@@ -348,7 +348,6 @@ class PositionPicker(PositionCore):
             crd, interrupt_channel=True, interrupt_zslice=True):
 
             if self.is_aborted():
-                self.clear()
                 return 0
             else:
                 txt = 'T %d (%d/%d)' %(frame, self._frames.index(frame)+1,
@@ -362,10 +361,10 @@ class PositionPicker(PositionCore):
             self.register_channels(cellanalyzer, channels)
 
             image = cellanalyzer.collectObjects(self.plate_id,
-                                                  self.position,
-                                                  self.sample_readers,
-                                                  self.learner,
-                                                  byTime=True)
+                                                self.position,
+                                                self.sample_readers,
+                                                self.learner,
+                                                byTime=True)
 
             if image is not None:
                 n_images += 1
@@ -796,7 +795,7 @@ class PositionAnalyzer(PositionCore):
         for name in cellanalyzer.get_channel_names():
             channel = cellanalyzer.get_channel(name)
             d[channel.strChannelId] = channel.meta_image.image
-            self._myhack.set_image(d)
+            self._myhack.show_image(d)
 
         channel_name, region_name = self._myhack._object_region
         channel = cellanalyzer.get_channel(channel_name)

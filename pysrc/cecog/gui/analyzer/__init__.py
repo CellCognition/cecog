@@ -771,9 +771,9 @@ class _ProcessorMixin(object):
                 widget.hide()
 
         if len(rendering) > 0:
-            self._analyzer.set_renderer(rendering[idx])
+            self._analyzer.renderer = rendering[idx]
         else:
-            self._analyzer.set_renderer(None)
+            self._analyzer.renderer = None
 
         self._analyzer.image_ready.connect(self._on_update_image)
 

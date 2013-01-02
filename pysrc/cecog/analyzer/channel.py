@@ -49,9 +49,7 @@ from cecog.plugin.segmentation import (PRIMARY_SEGMENTATION_MANAGER,
 class Channel(PropertyManager):
 
     NAME = None
-
     RANK = None
-
     SEGMENTATION = None
 
     PROPERTIES = \

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 cellanalyzer.py
 
@@ -212,9 +211,9 @@ class CellAnalyzer(LoggerObject):
 
 
     def collectObjects(self, plate_id, P, sample_readers, oLearner, byTime=True):
-
         region = oLearner.region
-        img_rgb = None
+
+
 
         self.logger.debug('* collecting samples...')
         self.process(apply = False, extract_features = False)
@@ -284,14 +283,34 @@ class CellAnalyzer(LoggerObject):
         self.time_holder.apply_features(oChannel)
         region = oChannel.get_region(region)
 
-        import pdb; pdb.set_trace()
+        learner_objects = self.exportObjects(plate_id, object_lookup,
+                                             oLearner, oContainer,
+                                             region)
+
+
+        if learner_objects:
+            oLearner.applyObjects(learner_objects)
+            # we don't want to apply None for feature names
+            oLearner.setFeatureNames(oChannel.lstFeatureNames)
+
+        strPathOut = join(oLearner.subdir(oLearner.CONTROLS))
+        makedirs(strPathOut)
+        name = join(strPathOut, "P%s_T%05d_C%s_R%s.jpg"
+                    %(self.P, self._iT,
+                      oLearner.color_channel,
+                      oLearner.region))
+
+        oContainer.exportRGB(name, "90")
+        return oContainer.img_rgb
+
+    def exportObjects(self, plate, sample_objects, learner, container, region):
+        """Exports mask and images of annotated objects after picking.
+        Also draw labels and cirles."""
 
         learner_objects = []
-        # exporting tiny images to samples directory
-        # XXX ---> refactor it to its own functions
-        for label, object_ids in object_lookup.iteritems():
-            class_name = oLearner.dctClassNames[label]
-            hex_color = oLearner.dctHexColors[class_name]
+        for label, object_ids in sample_objects.iteritems():
+            class_name = learner.dctClassNames[label]
+            hex_color = learner.dctHexColors[class_name]
             rgb_value = ccore.RGBValue(*hexToRgb(hex_color))
             for obj_id in object_ids:
                 obj = region[obj_id]
@@ -301,16 +320,16 @@ class CellAnalyzer(LoggerObject):
 
                 if (obj.oRoi.upperLeft[0] >= 0 and
                     obj.oRoi.upperLeft[1] >= 0 and
-                    obj.oRoi.lowerRight[0] < oContainer.width and
-                    obj.oRoi.lowerRight[1] < oContainer.height):
+                    obj.oRoi.lowerRight[0] < container.width and
+                    obj.oRoi.lowerRight[1] < container.height):
                     iCenterX, iCenterY = obj.oCenterAbs
 
-                    strPathOutLabel = join(oLearner.subdir(oLearner.SAMPLES),
-                                                   oLearner.dctClassNames[label])
+                    strPathOutLabel = join(learner.subdir(learner.SAMPLES),
+                                           learner.dctClassNames[label])
                     makedirs(strPathOutLabel)
 
                     strFilenameBase = 'PL%s___P%s___T%05d___X%04d___Y%04d' \
-                        %(plate_id, self.P, self._iT, iCenterX, iCenterY)
+                        %(plate, self.P, self._iT, iCenterX, iCenterY)
 
                     obj.sample_id = strFilenameBase
                     learner_objects.append(obj)
@@ -323,40 +342,29 @@ class CellAnalyzer(LoggerObject):
                     # FIXME: export Objects is segfaulting for objects
                     #        where its bounding box is touching the border
                     #        i.e. one corner point equals zero!
-#                    oContainer.exportObject(obj_id,
+#                    container.exportObject(obj_id,
 #                                            strFilenameImg,
 #                                            strFilenameMsk)
 
-                    oContainer.markObjects([obj_id], rgb_value, False, True)
+                    container.markObjects([obj_id], rgb_value, False, True)
                     ccore.drawFilledCircle(ccore.Diff2D(iCenterX, iCenterY),
-                                           3, oContainer.img_rgb, rgb_value)
+                                           3, container.img_rgb, rgb_value)
 
-        import pdb; pdb.set_trace()
-
-        if len(learner_objects) > 0:
-            oLearner.applyObjects(learner_objects)
-            # we don't want to apply None for feature names
-            oLearner.setFeatureNames(oChannel.lstFeatureNames)
-
-        strPathOut = join(oLearner.subdir(oLearner.CONTROLS))
-        makedirs(strPathOut)
-        oContainer.exportRGB(join(strPathOut,
-                                  "P%s_T%05d_C%s_R%s.jpg" %\
-                                      (self.P,
-                                       self._iT,
-                                       oLearner.color_channel,
-                                       oLearner.region)),
-                            '90')
-        img_rgb = oContainer.img_rgb
-        return img_rgb
-
+        return learner_objects
 
     def classify_objects(self, predictor):
         cname = predictor.prcs_channel
         region = predictor.region
 
+        # for cxx, ch in self._channel_registry.iteritems():
+        #     for rname, rxx in ch._dctRegions.iteritems():
+        #         print cxx + '_' + rname
+        #         print rxx.keys()
+
         channel = self._channel_registry[cname]
         region = channel.get_region(region)
+
+
         for obj in region.itervalues():
             label, probs = predictor.predict(obj.aFeatures,
                                              region.getFeatureNames())
