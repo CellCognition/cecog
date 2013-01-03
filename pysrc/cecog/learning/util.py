@@ -14,27 +14,8 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-
 import numpy
 
-#-------------------------------------------------------------------------------
-# cecog module imports:
-#
-
-#-------------------------------------------------------------------------------
-# constants:
-#
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 
 class Normalizer(object):
 
@@ -110,7 +91,8 @@ class ArffReader(object):
         lstClassLabels = []
         lstHexColors = []
 
-        for line in self.oFile.readlines():
+        print self.oFile.name
+        for i, line in enumerate(self.oFile.readlines()):
             line = line.rstrip()
 
             if len(line) > 0:
@@ -166,6 +148,10 @@ class ArffReader(object):
                     strClassName = self._convert_string(lstItems[-1])
                     lstItems = lstItems[:-1]
                     #print strClassName, lstClassNames
+                    #from PyQt4.QtCore import pyqtRemoveInputHook; pyqtRemoveInputHook()
+#                    import pdb; pdb.set_trace()
+
+                    print i, len(lstItems), len(self.lstFeatureNames)
                     assert strClassName in setClassNames
                     assert len(lstItems) == len(self.lstFeatureNames)
                     lstFeatureData = []
@@ -181,7 +167,8 @@ class ArffReader(object):
                     self.dctFeatureData[strClassName].append(lstFeatureData)
 
         for strClassName in self.dctFeatureData:
-            self.dctFeatureData[strClassName] = numpy.array(self.dctFeatureData[strClassName], numpy.float)
+            self.dctFeatureData[strClassName] = \
+            numpy.array(self.dctFeatureData[strClassName], numpy.float)
 
         for iClassLabel, strClassName in zip(lstClassLabels, lstClassNames):
             self.dctClassLabels[strClassName] = iClassLabel
@@ -225,14 +212,14 @@ class WriterBase(object):
     def writeObjectFeatureData(self, strClassName, lstObjectFeatureData):
         self.writeLine(self.buildLine(strClassName, lstObjectFeatureData))
 
-    def writeAllFeatureData(self, dctFeatureData):
-        for strClassName in dctFeatureData:
-            for lstObjectFeatureData in dctFeatureData[strClassName]:
-                self.writeObjectFeatureData(strClassName, lstObjectFeatureData)
+    def writeAllFeatureData(self, feature_data):
+        for class_name in feature_data:
+            for sample_features in feature_data[class_name]:
+                self.writeObjectFeatureData(class_name, sample_features)
 
     @classmethod
     def _convert(cls, f):
-        return "%%.%de" % cls.FLOAT_DIGITS % f
+        return "%%.%de" %cls.FLOAT_DIGITS %f
 
 
 class SparseWriter(WriterBase):
@@ -252,22 +239,22 @@ class SparseWriter(WriterBase):
 
 
 
-class TsvWriter(WriterBase):
+# class TsvWriter(WriterBase):
 
-    def __init__(self, strFilename, lstFeatureNames, dctClassLabels):
-        super(TsvWriter, self).__init__(strFilename, lstFeatureNames,
-                                        dctClassLabels)
-        self.writeLine("\t".join(["Class Name", "Class Label"] +
-                                 self.lstFeatureNames))
+#     def __init__(self, strFilename, lstFeatureNames, dctClassLabels):
+#         super(TsvWriter, self).__init__(strFilename, lstFeatureNames,
+#                                         dctClassLabels)
+#         self.writeLine("\t".join(["Class Name", "Class Label"] +
+#                                  self.lstFeatureNames))
 
-    @classmethod
-    def buildLineStatic(cls, strClassName, lstObjectFeatures, dctClassLabels):
-        line = "\t".join([strClassName] +
-                         ["%d" % dctClassLabels[strClassName]] +
-                         [cls._convert(fObjectFeature)
-                          for fObjectFeature in lstObjectFeatures]
-                         )
-        return line
+#     @classmethod
+#     def buildLineStatic(cls, strClassName, lstObjectFeatures, dctClassLabels):
+#         line = "\t".join([strClassName] +
+#                          ["%d" % dctClassLabels[strClassName]] +
+#                          [cls._convert(fObjectFeature)
+#                           for fObjectFeature in lstObjectFeatures]
+#                          )
+#         return line
 
 
 
@@ -317,5 +304,3 @@ class ArffWriter(WriterBase):
     def close(self):
         self.writeLine()
         super(ArffWriter, self).close()
-
-

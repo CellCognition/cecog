@@ -12,8 +12,8 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
+import numpy as np
 from os.path import join
-
 from collections import OrderedDict
 
 from cecog import ccore
@@ -24,9 +24,6 @@ from cecog.analyzer.channel import TertiaryChannel
 from cecog.util.logger import LoggerObject
 from cecog.util.util import makedirs
 from cecog.util.util import hexToRgb
-from cecog.util.stopwatch import StopWatch
-
-# XXX factorize a picker, a classifier and a analyzer
 
 class CellAnalyzer(LoggerObject):
 
@@ -209,109 +206,117 @@ class CellAnalyzer(LoggerObject):
                 strFilePath = ''
             return imgRgb, strFilePath
 
-
     def collectObjects(self, plate_id, P, sample_readers, oLearner, byTime=True):
-        region = oLearner.region
-
-
-
         self.logger.debug('* collecting samples...')
         self.process(apply = False, extract_features = False)
 
-        oChannel = self._channel_registry[oLearner.channel_name]
-        oContainer = oChannel.get_container(region)
-        objects = oContainer.getObjects()
+        region_images = OrderedDict()
+        training_data = {}
+        feature_names = []
 
-        object_lookup = {}
-        object_ids = set()
-        for reader in sample_readers:
-            lstCoordinates = None
-            if (byTime and P == reader.getPosition() and self._iT in reader):
-                lstCoordinates = reader[self._iT]
-            elif (not byTime and P in reader):
-                lstCoordinates = reader[P]
-            #print "moo", P, reader.getPosition(), byTime, self._iT in reader
-            #print lstCoordinates, byTime, self.P, reader.keys()
+        for chname, region in oLearner.channels_regions.iteritems():
+            oChannel = self._channel_registry[chname]
+            oContainer = oChannel.get_container(region)
+            objects = oContainer.getObjects()
+            object_lookup = {}
+            object_ids = set()
 
-            if lstCoordinates is not None:
-                #print self.iP, self._iT, lstCoordinates
-                for dctData in lstCoordinates:
-                    label = dctData['iClassLabel']
-                    if (label in oLearner.dctClassNames and
-                        dctData['iPosX'] >= 0 and
-                        dctData['iPosX'] < oContainer.width and
-                        dctData['iPosY'] >= 0 and
-                        dctData['iPosY'] < oContainer.height):
+            for reader in sample_readers:
+                lstCoordinates = None
+                if (byTime and P == reader.getPosition() and self._iT in reader):
+                    lstCoordinates = reader[self._iT]
+                elif (not byTime and P in reader):
+                    lstCoordinates = reader[P]
 
-                        center1 = ccore.Diff2D(dctData['iPosX'],
-                                               dctData['iPosY'])
+                if lstCoordinates is not None:
+                    #print self.iP, self._iT, lstCoordinates
+                    for dctData in lstCoordinates:
+                        label = dctData['iClassLabel']
+                        if (label in oLearner.dctClassNames and
+                            0 <= dctData['iPosX'] < oContainer.width and
+                            0 <= dctData['iPosY'] < oContainer.height):
 
+                            center1 = ccore.Diff2D(dctData['iPosX'],
+                                                   dctData['iPosY'])
 
-                        # test for obj_id "under" annotated pixel first
-                        obj_id = oContainer.img_labels[center1]
+                            # test for obj_id "under" annotated pixel first
+                            obj_id = oContainer.img_labels[center1]
 
-                        # if not background: valid obj_id found
-                        if obj_id > 0:
-                            object_ids.add(obj_id)
-                            try:
-                                object_lookup[label].extend([obj_id])
-                            except KeyError:
-                                object_lookup[label] = [obj_id]
-                        # otherwise try to find nearest object in a search
-                        # radius of 30 pixel (compatibility with CellCounter)
-                        else:
-                            dists = []
-                            for obj_id, obj in objects.iteritems():
-                                diff = obj.oCenterAbs - center1
-                                dist_sq = diff.squaredMagnitude()
-                                # limit to 30 pixel radius
-                                if dist_sq < 900:
-                                    dists.append((obj_id, dist_sq))
-                            if len(dists) > 0:
-                                dists.sort(lambda a,b: cmp(a[1], b[1]))
-                                obj_id = dists[0][0]
+                            # if not background: valid obj_id found
+                            if obj_id > 0:
                                 object_ids.add(obj_id)
                                 try:
                                     object_lookup[label].extend([obj_id])
                                 except KeyError:
                                     object_lookup[label] = [obj_id]
+                            # otherwise try to find nearest object in a search
+                            # radius of 30 pixel (compatibility with CellCounter)
+                            else:
+                                dists = []
+                                for obj_id, obj in objects.iteritems():
+                                    diff = obj.oCenterAbs - center1
+                                    dist_sq = diff.squaredMagnitude()
+                                    # limit to 30 pixel radius
+                                    if dist_sq < 900:
+                                        dists.append((obj_id, dist_sq))
+                                if len(dists) > 0:
+                                    dists.sort(lambda a,b: cmp(a[1], b[1]))
+                                    obj_id = dists[0][0]
+                                    object_ids.add(obj_id)
+                                    try:
+                                        object_lookup[label].extend([obj_id])
+                                    except KeyError:
+                                        object_lookup[label] = [obj_id]
 
-        objects_del = set(objects.keys()) - object_ids
-        for obj_id in objects_del:
-            oContainer.delObject(obj_id)
+            objects_del = set(objects.keys()) - object_ids
+            for obj_id in objects_del:
+                oContainer.delObject(obj_id)
 
-        self.time_holder.apply_features(oChannel)
-        region = oChannel.get_region(region)
+            self.time_holder.apply_features(oChannel)
+            tdata = self.exportObjects(plate_id, object_lookup,
+                                                 oLearner, oContainer,
+                                                 oChannel.get_region(region))
 
-        learner_objects = self.exportObjects(plate_id, object_lookup,
-                                             oLearner, oContainer,
-                                             region)
+            # book keeping btw. color channels
+            # XXX move this functionality to the learner class
+            for label, sample in tdata.iteritems():
+                if training_data.has_key(label):
+                    td = training_data[label]
+                    td["features"] = np.append(td['features'], np.array(sample.aFeatures))
+                    td["files"].append(sample.sample_id)
+                    assert td["class"] == sample.iLabel
+                else:
+                    training_data[label] = {"features": np.array(sample.aFeatures),
+                                            "files": [sample.sample_id],
+                                            "class": sample.iLabel}
 
+            # book keeping for feature names
+            # move this functionality to the learner class_name
+            if len(oLearner.channels_regions) > 1:
+                pfx = "%s_%s" %(chname, region)
+                feature_names.extend(["_".join((pfx, f)) for f in oChannel.lstFeatureNames])
+            else:
+                feature_names.extend(oChannel.lstFeatureNames)
 
-        if learner_objects:
-            oLearner.applyObjects(learner_objects)
-            # we don't want to apply None for feature names
-            oLearner.setFeatureNames(oChannel.lstFeatureNames)
+            name = join(oLearner.controls_dir, "P%s_T%05d_C%s_R%s.jpg"
+                        %(self.P, self._iT, oLearner.color_channel, region))
+            oContainer.exportRGB(name, "90")
+            region_images["%s_%s" %(chname, region)] = oContainer.img_rgb
 
-        strPathOut = join(oLearner.subdir(oLearner.CONTROLS))
-        makedirs(strPathOut)
-        name = join(strPathOut, "P%s_T%05d_C%s_R%s.jpg"
-                    %(self.P, self._iT,
-                      oLearner.color_channel,
-                      oLearner.region))
+        oLearner.set_training_data(training_data, feature_names)
+        return region_images
 
-        oContainer.exportRGB(name, "90")
-        return oContainer.img_rgb
 
     def exportObjects(self, plate, sample_objects, learner, container, region):
         """Exports mask and images of annotated objects after picking.
         Also draw labels and cirles."""
 
-        learner_objects = []
+        learner_objects = {}
         for label, object_ids in sample_objects.iteritems():
             class_name = learner.dctClassNames[label]
             hex_color = learner.dctHexColors[class_name]
             rgb_value = ccore.RGBValue(*hexToRgb(hex_color))
+
             for obj_id in object_ids:
                 obj = region[obj_id]
                 obj.iLabel = label
@@ -322,34 +327,25 @@ class CellAnalyzer(LoggerObject):
                     obj.oRoi.upperLeft[1] >= 0 and
                     obj.oRoi.lowerRight[0] < container.width and
                     obj.oRoi.lowerRight[1] < container.height):
-                    iCenterX, iCenterY = obj.oCenterAbs
 
-                    strPathOutLabel = join(learner.subdir(learner.SAMPLES),
-                                           learner.dctClassNames[label])
-                    makedirs(strPathOutLabel)
+                    learner_objects[obj_id] = obj
 
-                    strFilenameBase = 'PL%s___P%s___T%05d___X%04d___Y%04d' \
-                        %(plate, self.P, self._iT, iCenterX, iCenterY)
-
-                    obj.sample_id = strFilenameBase
-                    learner_objects.append(obj)
-
-                    strFilenameImg = join(strPathOutLabel,
-                                          '%s___img.png' %strFilenameBase)
-                    strFilenameMsk = join(strPathOutLabel,
-                                          '%s___msk.png' %strFilenameBase)
+                    cxi, cyi = obj.oCenterAbs
+                    label_dir = join(learner.samples_dir, class_name)
+                    makedirs(label_dir)
+                    samplefile = 'PL%s___P%s___T%05d___X%04d___Y%04d' \
+                        %(plate, self.P, self._iT, cxi, cyi)
+                    obj.sample_id = samplefile
+                    imgfile = join(label_dir, '%s___img.png' %samplefile)
+                    mskfile = join(label_dir, '%s___msk.png' %samplefile)
 
                     # FIXME: export Objects is segfaulting for objects
                     #        where its bounding box is touching the border
                     #        i.e. one corner point equals zero!
-#                    container.exportObject(obj_id,
-#                                            strFilenameImg,
-#                                            strFilenameMsk)
-
+                    container.exportObject(obj_id, imgfile, mskfile)
                     container.markObjects([obj_id], rgb_value, False, True)
-                    ccore.drawFilledCircle(ccore.Diff2D(iCenterX, iCenterY),
+                    ccore.drawFilledCircle(ccore.Diff2D(cxi, cyi),
                                            3, container.img_rgb, rgb_value)
-
         return learner_objects
 
     def classify_objects(self, predictor):

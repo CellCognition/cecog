@@ -14,9 +14,7 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-
 import os
-import time
 import shutil
 from collections import OrderedDict
 from os.path import join, basename, isdir
@@ -370,7 +368,7 @@ class PositionPicker(PositionCore):
                 n_images += 1
                 msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position,
                                                 frame)
-                self.set_image(image, msg)
+                self.set_image(image.values()[0], msg)
 
 
 class PositionAnalyzer(PositionCore):

@@ -22,18 +22,15 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
-from cecog import CHANNEL_PREFIX, CH_VIRTUAL
+from cecog import CHANNEL_PREFIX, CH_VIRTUAL, CH_PRIMARY, CH_OTHER
 from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
-from cecog.gui.util import (information,
-                            exception,
-                            )
+from cecog.gui.util import information, exception
 from cecog.gui.analyzer import BaseProcessorFrame
 
 from cecog.threads.picker import PickerThread
 from cecog.threads.analyzer import AnalyzerThread
 from cecog.threads.training import TrainingThread
 
-from cecog.analyzer.channel import PrimaryChannel, SecondaryChannel
 from cecog.learning.learning import CommonClassPredictor
 from cecog.util.util import hexToRgb
 from cecog.traits.settings import convert_package_path
@@ -224,8 +221,8 @@ class ClassifierResultFrame(QGroupBox):
                             ('Samples', 'class samples'),
                             ('Color', 'class color'),
                             ('%PR', 'class precision in %'),
-                            ('%SE', 'class sensitivity in %'),
-                            ]
+                            ('%SE', 'class sensitivity in %')]
+
         names_vertical = [str(self._learner.nl2l[r]) for r in range(rows)] + ['','#']
         self._table_info.setColumnCount(len(names_horizontal))
         self._table_info.setRowCount(len(names_vertical))
@@ -285,14 +282,12 @@ class ClassifierResultFrame(QGroupBox):
             rows, cols = conf_array.shape
             self._table_conf.setColumnCount(cols)
             self._table_conf.setRowCount(rows)
-            #names2cols = self._learner.dctHexColors
             for c in range(cols):
                 self._table_conf.setColumnWidth(c, 20)
                 label = self._learner.nl2l[c]
                 name = self._learner.dctClassNames[label]
                 item = QTableWidgetItem(str(label))
                 item.setToolTip('%d : %s' % (label, name))
-                #item.setBackground(QBrush(QColor(*hexToRgb(names2cols[name]))))
                 self._table_conf.setHorizontalHeaderItem(c, item)
             for r in range(rows):
                 self._table_conf.setRowHeight(r, 20)
@@ -300,7 +295,6 @@ class ClassifierResultFrame(QGroupBox):
                 name = self._learner.dctClassNames[label]
                 item = QTableWidgetItem(str(label))
                 item.setToolTip('%d : %s' % (label, name))
-                #item.setForeground(QBrush(QColor(*hexToRgb(names2cols[name]))))
                 self._table_conf.setVerticalHeaderItem(r, item)
 
     def _update_conf_table(self, conf):
@@ -359,20 +353,25 @@ class ClassificationFrame(BaseProcessorFrame):
         for tab_name, prefix in [('Primary Channel', 'primary'),
                                  ('Secondary Channel', 'secondary'),
                                  ('Tertiary Channel', 'tertiary'),
-                                 ('Merged Channel', 'merged'),
-                                 ]:
-            self.set_tab_name(tab_name)
+                                 ('Merged Channel', 'merged')]:
 
+            self.set_tab_name(tab_name)
             self.add_input('%s_classification_envpath' % prefix)
             self.add_line()
 
             if prefix in CH_VIRTUAL:
+                                      # checkboxes
                 self.add_group(None, [('primary_channel', (0, 0, 1, 1)),
                                       ('secondary_channel', (0, 1, 1, 1)),
-                                      ('tertiary_channel', (0, 2, 1, 1))],
+                                      ('tertiary_channel', (0, 2, 1, 1)),
+                                      # comboboxes
+                                      ('merged_primary_region', (1, 0, 1, 1)),
+                                      ('merged_secondary_region', (1, 1, 1, 1)),
+                                      ('merged_tertiary_region', (1, 2, 1, 1))],
                                link='merged_channel',
-                               label='Merge')
-            self.add_input('%s_classification_regionname' % prefix)
+                               label='Merge Channels')
+            else:
+                self.add_input('%s_classification_regionname' % prefix)
             frame_results = self._add_result_frame(prefix)
             self.add_handler('%s_classification_envpath' % prefix,
                              frame_results.on_load)
@@ -472,18 +471,29 @@ class ClassificationFrame(BaseProcessorFrame):
     def settings_loaded(self):
         # FIXME: set the trait list data to plugin instances of the current channel
         prefix = CHANNEL_PREFIX[self._tab.current_index]
-        trait = self._settings.get_trait(SECTION_NAME_CLASSIFICATION,
-                                         '%s_classification_regionname' % prefix)
+
         if prefix in CH_VIRTUAL:
-            trait.set_list_data(self._merged_region_list('merged'))
+            self._merged_channel_and_region(prefix)
         else:
+            trait = self._settings.get_trait(SECTION_NAME_CLASSIFICATION,
+                                             '%s_classification_regionname' % prefix)
             trait.set_list_data(REGION_INFO.names[prefix])
 
-    def _merged_region_list(self, merged):
-        mrl = list()
-        for prefix in filter(lambda s: s!=merged, CHANNEL_PREFIX):
-            mrl.extend(['%s_%s' %(prefix, r) for r in REGION_INFO.names[prefix]])
-        return mrl
+    def _merged_channel_and_region(self, prefix):
+        for ch in (CH_PRIMARY+CH_OTHER):
+            trait = self._settings.get_trait(SECTION_NAME_CLASSIFICATION,
+                                             '%s_%s_region' %(prefix, ch))
+
+            regions = REGION_INFO.names[ch]
+
+            # ugly workaround for due to trait concept
+            if regions:
+                trait.set_list_data(regions)
+            else:
+                cbtrait = self._settings.get_trait(SECTION_NAME_CLASSIFICATION,
+                                                   '%s_channel' %ch)
+                cbtrait.set_value(False)
+                trait.set_list_data([])
 
     def tab_changed(self, index):
         self.page_changed()

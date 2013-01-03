@@ -24,6 +24,7 @@ import re
 import glob
 from os.path import join, basename, isdir, splitext, isfile
 
+from cecog import CH_PRIMARY, CH_OTHER, CH_VIRTUAL
 from cecog.learning.collector import CellCounterReader, CellCounterReaderXML
 from cecog.learning.learning import CommonObjectLearner
 from cecog.learning.learning import MergedChannelLearner
@@ -267,10 +268,8 @@ class Picker(AnalyzerBase):
         cid = self.settings.get('ObjectDetection', self._resolve('channelid'))
 
         if cid is None:
-            # FIXME a region for each check channel!!!!
-            region = self.settings.get( \
-                'Classification', self._resolve('classification_regionname'))
-            learner = MergedChannelLearner(self.cl_path, regions)
+            regions = self._merged_channel_regions()
+            learner = MergedChannelLearner(self.cl_path, cid, regions)
         else:
             region = self.settings.get( \
                 'Classification', self._resolve('classification_regionname'))
@@ -279,13 +278,22 @@ class Picker(AnalyzerBase):
         learner.loadDefinition()
         return learner
 
+    def _merged_channel_regions(self):
+        """Read the the checked processing channels and the region to consider
+        for feature extraction."""
+        regions = dict()
+        for prefix in (CH_PRIMARY+CH_OTHER):
+            if self.settings.get("Classification", "%s_channel" %prefix):
+                regions[prefix.title()] = \
+                self.settings.get("Classification", "%s_%s_region" %(CH_VIRTUAL[0], prefix))
+        return regions
+
     def is_valid_annofile(self, result, sample_file, extension):
         ext = self.settings.get('Classification',
                                 self._resolve('classification_annotationfileext'))
-        if (isfile(sample_file) and \
-                extension == ext and \
+        if (isfile(sample_file) and extension == ext and \
                 not sample_file[0] in ['.', '_'] and \
-                                                                                                                                                                                                                                                                           not result is None and \
+                not result is None and \
                 (result.group('plate')is None or
                  result.group('plate') == self.plate)):
             return True

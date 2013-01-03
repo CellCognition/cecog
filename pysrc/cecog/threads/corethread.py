@@ -93,6 +93,6 @@ class CoreThread(QtCore.QThread):
         del self._renderer
 
     def show_image(self, name, image, message, filename='', stime=0):
-        self.image_ready.emit(image, message, filename)
+        if name == self._renderer:
+            self.image_ready.emit(image, message, filename)
         self.msleep(stime)
-

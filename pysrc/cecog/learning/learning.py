@@ -53,7 +53,6 @@ class BaseLearner(LoggerObject):
         self.strArffFileName = 'features.arff'
         self.strSparseFileName ='features.sparse'
         self.strDefinitionFileName = 'class_definition.txt'
-#        self.filename_pickle = 'learner.pkl'
         self.lstFeatureNames = None
 
         self._class_definitions = []
@@ -468,7 +467,7 @@ class CommonClassPredictor(BaseLearner):
             for line in f:
                 line = line.strip()
                 if len(line) == 0:
-                    break
+                     break
                 items = map(int, map(float, line.split('\t')[1:]))
                 conf_array.append(items)
             conf = ConfusionMatrix(np.asarray(conf_array))
@@ -557,30 +556,53 @@ class CommonObjectLearner(BaseLearner):
     def __init__(self, *args, **kw):
         super(CommonObjectLearner, self).__init__(*args, **kw)
 
-    def setFeatureNames(self, feature_names):
+    @property
+    def channels_regions(self):
+        return {self.channel_name: self.region}
+
+    @property
+    def feature_names(self):
+        return self.lstFeatureNames
+
+    @feature_names.setter
+    def feature_names(self, feature_names):
         if self.lstFeatureNames is None:
             self.lstFeatureNames = feature_names
         assert self.lstFeatureNames == feature_names
 
-    def applyObjects(self, image_objects):
-        for obj in image_objects:
-            self.dctImageObjects[obj.sample_id] = obj
-            class_name = self.dctClassNames[obj.iLabel]
-            try:
-                self.dctFeatureData[class_name].extend([obj.aFeatures])
-            except KeyError:
-                self.dctFeatureData[class_name] = [obj.aFeatures]
+    def set_training_data(self, training_data, feature_names):
+        self.feature_names = feature_names
+        nfeatures = len(feature_names)
+
+        for obj_label, tdata in training_data.iteritems():
+            class_name = self.dctClassNames[tdata["class"]]
+
+            if tdata['features'].size != nfeatures:
+                msg = ('Incomplete feature set found (%d/%d): skipping sample '
+                       'class: %s, object label %s, files: %s'
+                       %(tdata["features"].size, nfeatures, class_name,
+                         obj_label, str(tdata["files"]).strip("[]")))
+                self.logger.warning(msg)
+                continue
 
             try:
-                self.dctSampleNames[class_name].extend(obj.sample_id)
+                self.dctFeatureData[class_name].extend([tdata["features"]])
             except KeyError:
-                self.dctSampleNames[class_name] = [obj.sample_id]
+                self.dctFeatureData[class_name] = [tdata["features"]]
+            try:
+                self.dctSampleNames[class_name].extend([tdata['files']])
+            except KeyError:
+                self.dctSampleNames[class_name] = [tdata["files"]]
 
 
-class MergedChannelLearner(BaseLearner):
+class MergedChannelLearner(CommonObjectLearner):
 
     def __init__(self, *args, **kw):
         super(MergedChannelLearner, self).__init__(*args, **kw)
+
+    @property
+    def channels_regions(self):
+        return self.region
 
 
 if __name__ ==  "__main__":
@@ -588,7 +610,7 @@ if __name__ ==  "__main__":
     if isdir(sys.argv[1]):
         learner = CommonClassPredictor(sys.argv[1])
         learner.importFromArff()
-        c, g, conf = learner.importConfusion()
+#        c, g, conf = learner.importConfusion()
         import pdb; pdb.set_trace()
     else:
         raise IOError("%s\n is not a valid directory" %sys.argv[1])

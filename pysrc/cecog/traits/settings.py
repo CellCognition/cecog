@@ -446,8 +446,3 @@ class _Section(object):
     def get_trait_names_for_group(self, name):
         grp = self.get_group(name)
         return grp.get_trait_names()
-
-
-#-------------------------------------------------------------------------------
-# main:
-#

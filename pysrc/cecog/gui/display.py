@@ -120,7 +120,7 @@ class TraitDisplayMixin(QFrame):
         frame = self._get_frame(self._tab_name)
         frame_layout = frame.layout()
 
-        if not trait_name is None:
+        if trait_name is not None:
             w_input = self.add_input(trait_name)
             trait = self._get_trait(trait_name)
         else:
@@ -283,7 +283,8 @@ class TraitDisplayMixin(QFrame):
                 w_input = QCheckBox(parent)
             elif trait.widget_info == BooleanTrait.RADIOBUTTON:
                 w_input = QRadioButton(parent)
-            trait.set_value(w_input, value)
+            trait.set_widget(w_input)
+            trait.set_value(value)
             handler = lambda n: lambda v: self._set_value(n, trait.convert(v))
             w_input.setSizePolicy(policy_fixed)
             self.connect(w_input, SIGNAL('toggled(bool)'),
@@ -399,7 +400,11 @@ class TraitDisplayMixin(QFrame):
                 w_input = self._registry[name]
                 trait = self._get_trait(name)
                 #print '    ', name, value
-                trait.set_value(w_input, value)
+                if isinstance(trait, BooleanTrait):
+                    trait.set_widget(w_input)
+                    trait.set_value(value)
+                else:
+                    trait.set_value(w_input, value)
 
     def get_widget(self, trait_name):
         return self._registry[trait_name]
