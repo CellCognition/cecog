@@ -122,14 +122,14 @@ class ClassifierResultFrame(QGroupBox):
                                                   % (self._channel, y))
         clfdir = convert_package_path(_resolve('Classification',
                                                'classification_envpath'))
-        try:
+        # XXX - where does the "." come from?
+        if not clfdir or clfdir == ".":
+            return
+        else:
             self._learner = CommonClassPredictor( \
                 clf_dir=clfdir,
                 color_channel=_resolve('ObjectDetection', 'channelid'),
                 region=_resolve('Classification', 'classification_regionname'))
-        except:
-            exception(self, 'Error on loading classifier.')
-        else:
             result = self._learner.check()
             if check:
                 b = lambda x: 'Yes' if x else 'No'
@@ -150,7 +150,7 @@ class ClassifierResultFrame(QGroupBox):
 
             if result['has_arff']:
                 self._learner.importFromArff()
-                nr_features_prev = len(self._learner.lstFeatureNames)
+                nr_features_prev = len(self._learner.feature_names)
                 removed_features = self._learner.filterData(apply=False)
                 nr_features = nr_features_prev - len(removed_features)
                 self._label_features.setText(self.LABEL_FEATURES % (nr_features, nr_features_prev))
@@ -396,26 +396,32 @@ class ClassificationFrame(BaseProcessorFrame):
 
         current_tab = self._tab.current_index
         if current_tab == 0:
+            prefix = 'primary'
             settings.set('Processing', 'primary_featureextraction', True)
             settings.set('Processing', 'secondary_featureextraction', False)
             settings.set('Processing', 'tertiary_featureextraction', False)
             settings.set('Processing', 'secondary_processchannel', False)
             settings.set('Processing', 'tertiary_processchannel', False)
-            prefix = 'primary'
+            rdn = {"%s_%s" %(prefix, settings.get("Classification",
+                                                  "%s_classification_regionname" %prefix)): {}}
         elif current_tab == 1:
+            prefix = 'secondary'
             settings.set('Processing', 'primary_featureextraction', False)
             settings.set('Processing', 'secondary_featureextraction', True)
             settings.set('Processing', 'secondary_processchannel', True)
             settings.set('Processing', 'tertiary_featureextraction', False)
             settings.set('Processing', 'tertiary_processchannel', False)
-            prefix = 'secondary'
+            rdn = {"%s_%s" %(prefix, settings.get("Classification",
+                                                  "%s_classification_regionname" %prefix)): {}}
         elif current_tab == 2:
+            prefix = 'tertiary'
             settings.set('Processing', 'primary_featureextraction', False)
             settings.set('Processing', 'secondary_featureextraction', False)
             settings.set('Processing', 'secondary_processchannel', True)
             settings.set('Processing', 'tertiary_featureextraction', True)
             settings.set('Processing', 'tertiary_processchannel', True)
-            prefix = 'tertiary'
+            rdn = {"%s_%s" %(prefix, settings.get("Classification",
+                                                  "%s_classification_regionname" %prefix)): {}}
         else:
             # checkboxes in merged channel tab
             pch = settings.get('Classification', 'primary_channel')
@@ -429,6 +435,12 @@ class ClassificationFrame(BaseProcessorFrame):
             settings.set('Processing', 'tertiary_processchannel', tch)
             prefix = 'merged'
 
+            rdn = {}
+            for pfx in (CH_PRIMARY+CH_OTHER):
+                if settings.get("Classification", "%s_channel" %pfx):
+                    rdn["%s_%s" %(pfx, settings.get("Classification","merged_%s_region" %pfx))] = {}
+
+        settings.set('General', 'rendering', rdn)
         sec_region = settings.get('Classification',
                                   '%s_classification_regionname' % prefix)
         settings.set('Classification', 'collectsamples_prefix', prefix)
@@ -439,13 +451,13 @@ class ClassificationFrame(BaseProcessorFrame):
                               {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
                                                      'contours': [(sec_region, 'class_label', 1, False),
                                                                                             (sec_region, '#000000', 1, show_ids_class),
+
                                                                                                                                ]}}})
         else:
             settings.set('Classification', 'collectsamples', True)
             settings.set('General', 'positions', '')
             settings.set('General', 'framerange_begin', 0)
             settings.set('General', 'framerange_end', 0)
-
         return settings
 
     def _add_result_frame(self, name):

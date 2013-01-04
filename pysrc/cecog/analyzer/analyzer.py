@@ -109,6 +109,7 @@ class CellAnalyzer(LoggerObject):
     def render(self, strPathOut, dctRenderInfo=None,
                strFileSuffix='.jpg', strCompression='98', writeToDisc=True,
                images=None):
+
         lstImages = []
         if not images is None:
             lstImages += images
@@ -204,7 +205,7 @@ class CellAnalyzer(LoggerObject):
                 self.logger.debug("* rendered image written '%s'" % strFilePath)
             else:
                 strFilePath = ''
-            return imgRgb, strFilePath
+                return imgRgb, strFilePath
 
     def collectObjects(self, plate_id, P, sample_readers, oLearner, byTime=True):
         self.logger.debug('* collecting samples...')
@@ -222,23 +223,21 @@ class CellAnalyzer(LoggerObject):
             object_ids = set()
 
             for reader in sample_readers:
-                lstCoordinates = None
                 if (byTime and P == reader.getPosition() and self._iT in reader):
-                    lstCoordinates = reader[self._iT]
+                    coords = reader[self._iT]
                 elif (not byTime and P in reader):
-                    lstCoordinates = reader[P]
+                    coords = reader[P]
+                else:
+                    coords = None
 
-                if lstCoordinates is not None:
-                    #print self.iP, self._iT, lstCoordinates
-                    for dctData in lstCoordinates:
-                        label = dctData['iClassLabel']
+                if coords is not None:
+                    for data in coords:
+                        label = data['iClassLabel']
                         if (label in oLearner.dctClassNames and
-                            0 <= dctData['iPosX'] < oContainer.width and
-                            0 <= dctData['iPosY'] < oContainer.height):
+                            0 <= data['iPosX'] < oContainer.width and
+                            0 <= data['iPosY'] < oContainer.height):
 
-                            center1 = ccore.Diff2D(dctData['iPosX'],
-                                                   dctData['iPosY'])
-
+                            center1 = ccore.Diff2D(data['iPosX'], data['iPosY'])
                             # test for obj_id "under" annotated pixel first
                             obj_id = oContainer.img_labels[center1]
 
@@ -301,7 +300,7 @@ class CellAnalyzer(LoggerObject):
             name = join(oLearner.controls_dir, "P%s_T%05d_C%s_R%s.jpg"
                         %(self.P, self._iT, oLearner.color_channel, region))
             oContainer.exportRGB(name, "90")
-            region_images["%s_%s" %(chname, region)] = oContainer.img_rgb
+            region_images["%s_%s" %(chname.lower(), region)] = oContainer.img_rgb
 
         oLearner.set_training_data(training_data, feature_names)
         return region_images

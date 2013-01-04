@@ -170,10 +170,13 @@ class ObjectDetectionFrame(BaseProcessorFrame):
             prefix = 'tertiary'
 
         colors = REGION_INFO.colors
-        settings.set('General', 'rendering', dict([('%s_contours_%s' % (prefix, x),
-                                                    {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
-                                                                           'contours': [(x, colors[x] , 1, show_ids)]
-                                                    }})
-                                                  for x in REGION_INFO.names[prefix]]))
+        rdn = dict([('%s_contours_%s' % (prefix, x),
+                     {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
+                                            'contours': [(x, colors[x] , 1, show_ids)]
+                                            }
+                      }
+                     ) for x in REGION_INFO.names[prefix]])
+
+        settings.set('General', 'rendering', rdn)
 
         return settings

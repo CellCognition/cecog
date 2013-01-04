@@ -17,9 +17,6 @@ __source__ = '$URL$'
 
 __all__ = []
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
 import types
 import traceback
 import logging
@@ -28,12 +25,8 @@ import sys
 import os
 import time
 import copy
-
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
 import numpy
+
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
@@ -48,9 +41,6 @@ with warnings.catch_warnings():
 
 from multiprocessing import cpu_count
 
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 from cecog import CHANNEL_PREFIX
 from cecog.gui.display import TraitDisplayMixin
 from cecog.learning.learning import (CommonObjectLearner,
@@ -93,14 +83,10 @@ from cecog.threads.hmm import HmmThread
 from cecog.threads.post_processing import PostProcessingThread
 from cecog.multiprocess.multianalyzer import MultiAnalyzerThread
 
-
-#------------------------------------------------------------------------------
-# functions:
-#
 def mk_stochastic(k):
-    '''  function [T,Z] = mk_stochastic(T)
+    """function [T,Z] = mk_stochastic(T)
     MK_STOCHASTIC ensure the matrix is a stochastic matrix,
-    i.e., the sum over the last dimension is 1.'''
+    i.e., the sum over the last dimension is 1."""
     raw_A = numpy.random.uniform( size = k * k ).reshape( ( k, k ) )
     return ( raw_A.T / raw_A.T.sum( 0 ) ).T
 
@@ -399,7 +385,6 @@ class _ProcessorMixin(object):
                     is_valid = False
                     result_frame.msg_apply_classifier(self)
 
-
             elif cls is HmmThread:
 
                 success, cmd = HmmThread.test_executable(self._settings.get('ErrorCorrection', 'filename_to_R'))
@@ -534,10 +519,7 @@ class _ProcessorMixin(object):
 
     def _on_render_changed(self, name):
         #FIXME: proper sub-classing needed
-        try:
-            self._analyzer.set_renderer(name)
-        except AttributeError:
-            pass
+        self._analyzer.renderer = name
 
     def _on_error(self, msg):
         self._has_error = True
@@ -760,8 +742,7 @@ class _ProcessorMixin(object):
             current = widget.currentText()
             widget.clear()
             if len(rendering) > 1:
-                for name in rendering:
-                    widget.addItem(name)
+                widget.addItems(rendering)
                 widget.show()
                 widget.currentIndexChanged[str].connect(self._on_render_changed)
                 if current in rendering:

@@ -36,7 +36,6 @@ class Normalizer(object):
         oFile.close()
 
     def scale(self, lstValues):
-        #print self.iMode, len(lstValues), len(self.lstScale)
         if len(lstValues) != len(self.lstScale):
             raise ValueError('Length of value list (%d) differs from length '
                              'of scale factor list (%d)!' % \
@@ -54,8 +53,6 @@ class Normalizer(object):
         return lstResults
 
     __call__ = scale
-
-
 
 
 class ArffReader(object):
@@ -91,7 +88,6 @@ class ArffReader(object):
         lstClassLabels = []
         lstHexColors = []
 
-        print self.oFile.name
         for i, line in enumerate(self.oFile.readlines()):
             line = line.rstrip()
 
@@ -147,11 +143,6 @@ class ArffReader(object):
                     lstItems = line.split(',')
                     strClassName = self._convert_string(lstItems[-1])
                     lstItems = lstItems[:-1]
-                    #print strClassName, lstClassNames
-                    #from PyQt4.QtCore import pyqtRemoveInputHook; pyqtRemoveInputHook()
-#                    import pdb; pdb.set_trace()
-
-                    print i, len(lstItems), len(self.lstFeatureNames)
                     assert strClassName in setClassNames
                     assert len(lstItems) == len(self.lstFeatureNames)
                     lstFeatureData = []
@@ -236,27 +227,6 @@ class SparseWriter(WriterBase):
                             enumerate(lstObjectFeatures)]
                            )
         return strLine
-
-
-
-# class TsvWriter(WriterBase):
-
-#     def __init__(self, strFilename, lstFeatureNames, dctClassLabels):
-#         super(TsvWriter, self).__init__(strFilename, lstFeatureNames,
-#                                         dctClassLabels)
-#         self.writeLine("\t".join(["Class Name", "Class Label"] +
-#                                  self.lstFeatureNames))
-
-#     @classmethod
-#     def buildLineStatic(cls, strClassName, lstObjectFeatures, dctClassLabels):
-#         line = "\t".join([strClassName] +
-#                          ["%d" % dctClassLabels[strClassName]] +
-#                          [cls._convert(fObjectFeature)
-#                           for fObjectFeature in lstObjectFeatures]
-#                          )
-#         return line
-
-
 
 class ArffWriter(WriterBase):
 

@@ -368,7 +368,7 @@ class PositionPicker(PositionCore):
                 n_images += 1
                 msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position,
                                                 frame)
-                self.set_image(image.values()[0], msg)
+                self.set_image(image[self._qthread.renderer], msg, region=self._qthread.renderer)
 
 
 class PositionAnalyzer(PositionCore):
@@ -733,8 +733,8 @@ class PositionAnalyzer(PositionCore):
                 if self.settings.get2('tracking_visualization'):
                     size = cellanalyzer.getImageSize(PrimaryChannel.NAME)
                     img_conn, img_split = self.tracker.visualizeTracks(frame, size,
-                                                                            n=self.settings.get2('tracking_visualize_track_length'),
-                                                                            radius=self.settings.get2('tracking_centroid_radius'))
+                                                                       n=self.settings.get2('tracking_visualize_track_length'),
+                                                                       radius=self.settings.get2('tracking_centroid_radius'))
                     images += [(img_conn, '#FFFF00', 1.0),
                                (img_split, '#00FFFF', 1.0)]
 
@@ -768,7 +768,6 @@ class PositionAnalyzer(PositionCore):
             if region not in self.CHANNELS.keys():
                 img, fname = ca.render(out_dir, dctRenderInfo=render_par,
                                        writeToDisc=write, images=images)
-
                 msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position,
                                                 frame)
                 self.set_image(img, msg, fname, region, 50)
@@ -781,9 +780,9 @@ class PositionAnalyzer(PositionCore):
             out_images = join(self._images_dir, region)
             write = self.settings.get('Output', 'rendering_class_discwrite')
             img_rgb, fname = cellanalyzer.render(out_images,
-                                                    dctRenderInfo=render_par,
-                                                    writeToDisc=write,
-                                                    images=images)
+                                                 dctRenderInfo=render_par,
+                                                 writeToDisc=write,
+                                                 images=images)
 
             msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position, frame)
             self.set_image(img_rgb, msg, fname, region, 50)

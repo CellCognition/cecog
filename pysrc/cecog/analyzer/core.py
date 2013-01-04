@@ -235,9 +235,8 @@ class Picker(AnalyzerBase):
         annotation_re = re.compile(('((.*?_{3})?PL(?P<plate>.*?)_{3})?P(?P'
                                     '<position>.+?)_{1,3}T(?P<time>\d+).*?'))
 
-        anno_path = self.learner.subdir(self.learner.ANNOTATIONS)
-        for dir_item in os.listdir(anno_path):
-            sample_file = join(anno_path, dir_item)
+        for dir_item in os.listdir(self.learner.annotations_dir):
+            sample_file = join(self.learner.annotations_dir, dir_item)
             result = annotation_re.match(dir_item)
             extension = splitext(sample_file)[1]
 

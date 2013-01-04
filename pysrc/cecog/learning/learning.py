@@ -34,39 +34,40 @@ from cecog.util.util import makedirs
 class BaseLearner(LoggerObject):
 
     # directory substructure
-    ANNOTATIONS = 'annotations'
-    DATA = 'data'
-    SAMPLES = 'samples'
-    CONTROLS = 'controls'
+    _subdirs = ('annotations', 'data', 'samples', 'controls')
 
     def __init__(self, clf_dir, color_channel, region,
                  prcs_channel=None):
         super(BaseLearner, self).__init__()
-        self._cld_dir = None
+
+        self.clf_dir = clf_dir
+        self.name = basename(clf_dir)
 
         self.color_channel = color_channel
         self.prcs_channel = prcs_channel
-
-        self.clf_dir = clf_dir
         self.region = region
 
         self.strArffFileName = 'features.arff'
         self.strSparseFileName ='features.sparse'
         self.strDefinitionFileName = 'class_definition.txt'
-        self.lstFeatureNames = None
+        self._feature_names = None
 
         self._class_definitions = []
-
-        self.dctImageObjects = OrderedDict()
         self.dctFeatureData = OrderedDict()
         self.dctClassNames = {}
         self.dctClassLabels = {}
         self.dctHexColors = {}
         self.dctSampleNames = {}
 
-        if clf_dir is not None:
-            self.name = basename(clf_dir)
-            self.makedirs()
+    @property
+    def feature_names(self):
+        return self._feature_names
+
+    @feature_names.setter
+    def feature_names(self, feature_names):
+        if self._feature_names is None:
+            self._feature_names = feature_names
+        assert self._feature_names == feature_names
 
     @property
     def clf_dir(self):
@@ -78,13 +79,15 @@ class BaseLearner(LoggerObject):
 
     @clf_dir.setter
     def clf_dir(self, path):
-        if path is None:
-            return
+        if not isdir(path):
+            raise IOError("Path to classifier '%s' does not exist."
+                          %path)
         self._clf_dir = path
-        self._subdirs = {self.SAMPLES: join(path, "samples"),
-                         self.ANNOTATIONS : join(path, self.ANNOTATIONS),
-                         self.DATA: join(path, "data"),
-                         self.CONTROLS: join(path, "controls")}
+
+        for dir_ in self._subdirs:
+            subdir = join(path, dir_)
+            setattr(self, "%s_dir" %dir_, subdir)
+            makedirs(subdir)
 
     @property
     def lstClassDefinitions(self):
@@ -117,10 +120,9 @@ class BaseLearner(LoggerObject):
         self.dctFeatureData.clear()
         self.dctClassNames.clear()
         self.dctClassLabels.clear()
-        self.lstFeatureNames = None
+        self.feature_names = []
         self.dctHexColors.clear()
         self.dctSampleNames.clear()
-        self.dctImageObjects.clear()
 
     def mergeClasses(self, info, mapping):
         newl = copy.deepcopy(self)
@@ -178,19 +180,6 @@ class BaseLearner(LoggerObject):
         """Converts a new label into the original label"""
         return dict([(i,l) for i,l in enumerate(self.lstClassLabels)])
 
-    def makedirs(self):
-        env_path = self.clf_dir
-        if not isdir(env_path):
-            raise IOError(("Classifier environment path '%s' does not exist." \
-                           %env_path))
-        for name, path in self._subdirs.iteritems():
-            setattr(self, "%s_dir" %name, path)
-            makedirs(path)
-
-    # XXX replace subdir function
-    def subdir(self, directory):
-        return self._subdirs[directory]
-
     def loadDefinition(self, path=None, filename=None):
         if filename is None:
             filename = self.strDefinitionFileName
@@ -226,7 +215,7 @@ class BaseLearner(LoggerObject):
         if fname is None:
             fname = splitext(self.strArffFileName)[0] + '.range'
         if path is None:
-            path = self._subdirs['data']
+            path = self.data_dir
 
         all_features = np.vstack(self.dctFeatureData.values())
         features_min = np.min(all_features, 0)
@@ -243,35 +232,38 @@ class BaseLearner(LoggerObject):
         if strFileName is None:
             strFileName = self.strArffFileName
         if strFilePath is None:
-            strFilePath = self._subdirs['data']
+            strFilePath = self.data_dir
 
         oReader = ArffReader(os.path.join(strFilePath, strFileName))
         self.dctFeatureData = oReader.dctFeatureData
         self.dctClassNames = oReader.dctClassNames
         self.dctClassLabels = oReader.dctClassLabels
-        self.lstFeatureNames = oReader.lstFeatureNames
+        self.feature_names = oReader.lstFeatureNames
         self.dctHexColors = oReader.dctHexColors
         self.hasZeroInsert = oReader.hasZeroInsert
+
+        # from PyQt4.QtCore import pyqtRemoveInputHook; pyqtRemoveInputHook()
+        # import pdb; pdb.set_trace()
 
     def check(self):
         filename = splitext(self.strArffFileName)[0]
         result = {'path_env': self.clf_dir,
-                  'path_data': self._subdirs['data'],
-                  'path_samples': self._subdirs['samples'],
-                  'path_annotations': self._subdirs['annotations'],
-                  'model': join(self._subdirs['data'], '%s.model' %filename),
-                  'range': join(self._subdirs['data'], '%s.range' %filename),
-                  'conf': join(self._subdirs['data'], '%s.confusion.txt' %filename),
-                  'arff': join(self._subdirs['data'], self.strArffFileName),
+                  'path_data': self.data_dir,
+                  'path_samples': self.samples_dir,
+                  'path_annotations': self.annotations_dir,
+                  'model': join(self.data_dir, '%s.model' %filename),
+                  'range': join(self.data_dir, '%s.range' %filename),
+                  'conf': join(self.data_dir, '%s.confusion.txt' %filename),
+                  'arff': join(self.data_dir, self.strArffFileName),
                   'definition': join(self.clf_dir, self.strDefinitionFileName),
                   # result of validity checks
-                  'has_path_data': isdir(self._subdirs['data']),
-                  'has_path_samples': isdir(self._subdirs['samples']),
-                  'has_path_annotations': isdir(self._subdirs['annotations']),
-                  'has_model': isfile(join(self._subdirs['data'], '%s.model' % filename)),
-                  'has_range': isfile(join(self._subdirs['data'], '%s.range' % filename)),
-                  'has_conf': isfile(join(self._subdirs['data'], '%s.confusion.txt' % filename)),
-                  'has_arff': isfile(join(self._subdirs['data'], self.strArffFileName)),
+                  'has_path_data': isdir(self.data_dir),
+                  'has_path_samples': isdir(self.data_dir),
+                  'has_path_annotations': isdir(self.data_dir),
+                  'has_model': isfile(join(self.data_dir, '%s.model' % filename)),
+                  'has_range': isfile(join(self.data_dir, '%s.range' % filename)),
+                  'has_conf': isfile(join(self.data_dir, '%s.confusion.txt' % filename)),
+                  'has_arff': isfile(join(self.data_dir, self.strArffFileName)),
                   'has_definition': isfile(join(self.clf_dir, self.strDefinitionFileName))}
         return result
 
@@ -279,10 +271,10 @@ class BaseLearner(LoggerObject):
         if filename is None:
             filename = self.strArffFileName
         if path is None:
-            path = self._subdirs['data']
+            path = self.data_dir
 
         writer = ArffWriter(join(path, filename),
-                            self.lstFeatureNames,
+                            self._feature_names,
                             self.dctClassLabels,
                             dctHexColors=self.dctHexColors,
                             hasZeroInsert=self.hasZeroInsert)
@@ -293,11 +285,11 @@ class BaseLearner(LoggerObject):
         if filename is None:
             filename = self.strSparseFileName
         if directory is None:
-            directory = self._subdirs['data']
+            directory = self.data_dir
 
         try:
             writer = SparseWriter(join(directory, filename),
-                                  self.lstFeatureNames,
+                                  self._feature_names,
                                   self.dctClassLabels)
             writer.writeAllFeatureData(self.dctFeatureData)
         finally:
@@ -308,7 +300,7 @@ class BaseLearner(LoggerObject):
             strFileName = os.path.splitext(self.strArffFileName)[0]
             strFileName = '%s.samples.txt' % strFileName
         if strFilePath is None:
-            strFilePath = self._subdirs['data']
+            strFilePath = self.data_dir
         f = file(os.path.join(strFilePath, strFileName), 'r')
         self.dctSampleNames = {}
         for line in f:
@@ -324,7 +316,7 @@ class BaseLearner(LoggerObject):
             strFileName = splitext(self.strArffFileName)[0]
             strFileName = '%s.samples.txt' % strFileName
         if strFilePath is None:
-            strFilePath = self._subdirs['data']
+            strFilePath = self.data_dir
         f = file(os.path.join(strFilePath, strFileName), 'w')
         for class_name, samples in self.dctSampleNames.iteritems():
             for sample_name in samples:
@@ -350,15 +342,15 @@ class CommonClassPredictor(BaseLearner):
             strModelPrefix = self.strModelPrefix
 
 
-        self.classifier = Classifier(self._subdirs['data'], self.logger,
+        self.classifier = Classifier(self.data_dir, self.logger,
                                      strSvmPrefix=strModelPrefix,
                                      hasZeroInsert=self.hasZeroInsert)
         self.bProbability = self.classifier.bProbability
 
-    def predict(self, aFeatureData, lstFeatureNames):
-        dctNameLookup = dict([(name,i) for i,name in enumerate(lstFeatureNames)])
+    def predict(self, aFeatureData, feature_names):
+        dctNameLookup = dict([(name,i) for i,name in enumerate(feature_names)])
         lstRequiredFeatureData = [aFeatureData[dctNameLookup[x]]
-                                  for x in self.lstFeatureNames]
+                                  for x in self._feature_names]
         return self.classifier(lstRequiredFeatureData)
 
     def getData(self, normalize=True):
@@ -386,7 +378,7 @@ class CommonClassPredictor(BaseLearner):
         returns the list of removed feature names
         """
         filter_idx = np.array([], np.int32)
-        features = np.asarray(self.lstFeatureNames)
+        features = np.asarray(self._feature_names)
         feature_idx = np.arange(len(features))
         for data in self.dctFeatureData.itervalues():
             filter_idx = np.append(filter_idx, feature_idx[np.any(np.isnan(data), 0)])
@@ -394,7 +386,7 @@ class CommonClassPredictor(BaseLearner):
         if apply:
             for name in self.dctFeatureData:
                 self.dctFeatureData[name] = np.delete(self.dctFeatureData[name], filter_idx, 1)
-            self.lstFeatureNames = np.delete(features, filter_idx).tolist()
+            self.feature_names = np.delete(features, filter_idx).tolist()
         return features[filter_idx]
 
     def train(self, c, g, probability=True, compensation=True,
@@ -403,7 +395,7 @@ class CommonClassPredictor(BaseLearner):
             filename = splitext(self.strArffFileName)[0]
             filename += '.model'
         if path is None:
-            path = self._subdirs['data']
+            path = self.data_dir
         param = svm.svm_parameter(kernel_type=svm.RBF,
                                   C=c, gamma=g,
                                   probability=1 if probability else 0)
@@ -432,7 +424,7 @@ class CommonClassPredictor(BaseLearner):
             filename = splitext(self.strArffFileName)[0]
             filename += '.confusion.txt'
         if path is None:
-            path = self._subdirs['data']
+            path = self.data_dir
 
         with open(join(path, filename), "w") as f:
             f.write('log2(C) = %f\n' % log2c)
@@ -454,7 +446,7 @@ class CommonClassPredictor(BaseLearner):
             filename = os.path.splitext(self.strArffFileName)[0]
             filename += '.confusion.txt'
         if path is None:
-            path = self._subdirs['data']
+            path = self.data_dir
 
         with open(join(path, filename), "Ur") as f:
             log2c = float(f.readline().split('=')[1].strip())
@@ -559,16 +551,6 @@ class CommonObjectLearner(BaseLearner):
     @property
     def channels_regions(self):
         return {self.channel_name: self.region}
-
-    @property
-    def feature_names(self):
-        return self.lstFeatureNames
-
-    @feature_names.setter
-    def feature_names(self, feature_names):
-        if self.lstFeatureNames is None:
-            self.lstFeatureNames = feature_names
-        assert self.lstFeatureNames == feature_names
 
     def set_training_data(self, training_data, feature_names):
         self.feature_names = feature_names

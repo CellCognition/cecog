@@ -50,6 +50,7 @@ class TrainingThread(CoreThread):
         is_abort = False
         stopwatch = StopWatch(start=True)
         self._learner.filterData(apply=True)
+
         t0 = time.time()
         for info in self._learner.iterGridSearchSVM(c_info=c_info,
                                                     g_info=g_info):
@@ -75,7 +76,6 @@ class TrainingThread(CoreThread):
             if self.is_aborted():
                 is_abort = True
                 break
-
         # overwrite only if grid-search was not aborted by the user
         if not is_abort:
             self._learner.train(2**best_log2c, 2**best_log2g)
