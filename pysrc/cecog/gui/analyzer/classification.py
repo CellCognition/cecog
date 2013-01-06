@@ -440,11 +440,11 @@ class ClassificationFrame(BaseProcessorFrame):
                 if settings.get("Classification", "%s_channel" %pfx):
                     rdn["%s_%s" %(pfx, settings.get("Classification","merged_%s_region" %pfx))] = {}
 
-        settings.set('General', 'rendering', rdn)
         sec_region = settings.get('Classification',
                                   '%s_classification_regionname' % prefix)
         settings.set('Classification', 'collectsamples_prefix', prefix)
         if name == self.PROCESS_TESTING:
+            rdn = dict()
             settings.set('Processing', '%s_classification' % prefix, True)
             settings.set('General', 'rendering_class',
                          {'%s_classification_%s' % (prefix, sec_region):
@@ -458,6 +458,7 @@ class ClassificationFrame(BaseProcessorFrame):
             settings.set('General', 'positions', '')
             settings.set('General', 'framerange_begin', 0)
             settings.set('General', 'framerange_end', 0)
+        settings.set('General', 'rendering', rdn)
         return settings
 
     def _add_result_frame(self, name):

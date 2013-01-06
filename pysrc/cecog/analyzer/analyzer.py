@@ -191,7 +191,6 @@ class CellAnalyzer(LoggerObject):
                                         oContainer.drawLabelsByIds(lstObjIds, imgCon2)
                                         lstImages.append((imgCon2, '#FFFFFF', 1.0))
 
-
         if len(lstImages) > 0:
             imgRgb = ccore.makeRGBImage([x[0].getView() for x in lstImages],
                                         [ccore.RGBValue(*hexToRgb(x[1])) for x in lstImages],
@@ -205,7 +204,7 @@ class CellAnalyzer(LoggerObject):
                 self.logger.debug("* rendered image written '%s'" % strFilePath)
             else:
                 strFilePath = ''
-                return imgRgb, strFilePath
+            return imgRgb, strFilePath
 
     def collectObjects(self, plate_id, P, sample_readers, oLearner, byTime=True):
         self.logger.debug('* collecting samples...')
