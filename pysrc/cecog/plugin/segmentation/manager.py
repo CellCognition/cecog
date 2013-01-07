@@ -9,7 +9,8 @@
                  See trunk/AUTHORS.txt for author contributions.
 """
 
-__all__ = ['RegionInformation', 'SegmentationPluginManager', '_SegmentationPlugin']
+__all__ = ['RegionInformation', 'SegmentationPluginManager',
+           '_SegmentationPlugin']
 
 #-------------------------------------------------------------------------------
 # standard library imports:

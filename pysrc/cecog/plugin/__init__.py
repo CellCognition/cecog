@@ -15,8 +15,7 @@ __all__ = ['PluginManager',
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
-import os, \
-       logging
+import os, logging
 from functools import wraps
 
 #-------------------------------------------------------------------------------
@@ -198,6 +197,10 @@ class PluginManager(object):
 
     def get_plugin_instance(self, name):
         return self._instances[name]
+
+    def number_loaded_plugins(self):
+        """Return the number of plugins that are invoked if run is executed."""
+        return len(self._instances)
 
     # FIXME **option is dangerous, what if one calls run(foo=bar)
     @stopwatch(level=logging.INFO)

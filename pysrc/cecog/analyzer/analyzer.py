@@ -210,8 +210,8 @@ class CellAnalyzer(LoggerObject):
         self.logger.debug('* collecting samples...')
         self.process(apply = False, extract_features = False)
 
-        region_images = OrderedDict()
-        training_data = {}
+        region_images = dict()
+        training_data = OrderedDict()
         feature_names = []
 
         for chname, region in oLearner.channels_regions.iteritems():
@@ -306,8 +306,10 @@ class CellAnalyzer(LoggerObject):
 
 
     def exportObjects(self, plate, sample_objects, learner, container, region):
-        """Exports mask and images of annotated objects after picking.
-        Also draw labels and cirles."""
+        """
+        Exports mask and images of annotated objects after picking.
+        Also draw labels and cirles.
+        """
 
         learner_objects = {}
         for label, object_ids in sample_objects.iteritems():

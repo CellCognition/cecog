@@ -220,9 +220,6 @@ class Channel(PropertyManager):
     def apply_binning(self, iFactor):
         self.meta_image.binning(iFactor)
 
-    def apply_segmentation(self, channel):
-        raise NotImplementedError()
-
     def apply_registration(self):
         img_in = self.meta_image.image
 #        image = ccore.subImage(img_in,
@@ -336,18 +333,21 @@ class Channel(PropertyManager):
         self.meta_image.set_image(img_out)
 
     def get_requirement(self, name):
-        '''
-        Deliver required data for PluginManager to resolve plugin inter-dependencies.
-        '''
+        """Deliver required data for PluginManager to resolve plugin
+        inter-dependencies.
+        """
         return self.dctContainers[name]
 
     def apply_segmentation(self, *args):
-        '''
-        Performs the actual segmentation tasks for this channel by calling the defined plugin instances (managed via
-        the PluginManger of this channel).
-        '''
-        self.dctContainers = self.SEGMENTATION.run(self.meta_image, requirements=args)
-
+        """Performs the actual segmentation tasks for this channel by calling
+        the defined plugin instances (managed via the PluginManger of this
+        channel).
+        """
+        if self.SEGMENTATION.number_loaded_plugins() == 0:
+            raise RuntimeError("%s channel has no loaded segmentation plugins!"
+                               %self.NAME)
+        self.dctContainers = self.SEGMENTATION.run(self.meta_image,
+                                                   requirements=args)
 
 # XXX remove prefix in future version just use name
 class PrimaryChannel(Channel):
