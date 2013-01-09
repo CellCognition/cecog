@@ -374,8 +374,8 @@ class CommonClassPredictor(BaseLearner):
 
     def filterData(self, apply=False):
         """
-        find features with NA values in the data set and remove features from the data and corresponding feature names
-        returns the list of removed feature names
+        find features with NA values in the data set and remove features from the
+        data and corresponding feature names returns the list of removed feature names
         """
         filter_idx = np.array([], np.int32)
         features = np.asarray(self._feature_names)
@@ -385,7 +385,8 @@ class CommonClassPredictor(BaseLearner):
         filter_idx = np.unique(filter_idx)
         if apply:
             for name in self.dctFeatureData:
-                self.dctFeatureData[name] = np.delete(self.dctFeatureData[name], filter_idx, 1)
+                self.dctFeatureData[name] = np.delete(self.dctFeatureData[name],
+                                                      filter_idx, 1)
             self.feature_names = np.delete(features, filter_idx).tolist()
         return features[filter_idx]
 

@@ -34,7 +34,6 @@ CMakeFiles/
 Release/
 Debug/
 
-*.cmake
 *.py[co]
 *~
 *.mex
@@ -56,4 +55,5 @@ Makefile
 *.[do]
 *.l[doa]
 *.loT
+resource.py
 >>>>>>> plugin_segmentation
