@@ -56,8 +56,16 @@ with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     import sklearn.hmm as hmm
 import scipy.stats.stats as sss
-from matplotlib import mlab
+
+# FIXME don't set Agg in a pyqt4 Program
+# emit an event whent thread is finish that generates the plots
+from matplotlib import use
+use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.colors import ListedColormap
+
+
 import scipy
 from PIL import Image
 
@@ -360,6 +368,7 @@ class _ProcessingThread(QThread):
             raise
         except:
             msg = traceback.format_exc()
+            print msg
             logger = logging.getLogger()
             logger.error(msg)
             self.analyzer_error.emit(msg)
@@ -395,33 +404,33 @@ class HmmThreadPython(_ProcessingThread):
         self._convert = lambda x: x.replace('\\','/')
         self._join = lambda *x: self._convert('/'.join(x))
 
-    @classmethod
-    def get_cmd(cls, filename):
-        filename = filename.strip()
-        if filename != '':
-            cmd = filename
-        elif sys.platform == 'darwin':
-            cmd = cls.DEFAULT_CMD_MAC
-        else:
-            cmd = cls.DEFAULT_CMD_WIN
-        return cmd
+    # @classmethod
+    # def get_cmd(cls, filename):
+    #     filename = filename.strip()
+    #     if filename != '':
+    #         cmd = filename
+    #     elif sys.platform == 'darwin':
+    #         cmd = cls.DEFAULT_CMD_MAC
+    #     else:
+    #         cmd = cls.DEFAULT_CMD_WIN
+    #     return cmd
 
-    def _setMappingFile(self):
-        if self._settings.get2('position_labels'):
-            path_mapping = self._convert(self._settings.get2('mappingfile_path'))
-            for plate_id in self.plates:
-                mapping_file = os.path.join(path_mapping, '%s.tsv' % plate_id)
-                if not os.path.isfile(mapping_file):
-                    mapping_file = os.path.join(path_mapping, '%s.txt' % plate_id)
-                    if not os.path.isfile(mapping_file):
-                        raise IOError("Mapping file '%s' for plate '%s' not found." %
-                                      (mapping_file, plate_id))
-                self._mapping_files[plate_id] = os.path.abspath(mapping_file)
+    # def _setMappingFile(self):
+    #     if self._settings.get2('position_labels'):
+    #         path_mapping = self._convert(self._settings.get2('mappingfile_path'))
+    #         for plate_id in self.plates:
+    #             mapping_file = os.path.join(path_mapping, '%s.tsv' % plate_id)
+    #             if not os.path.isfile(mapping_file):
+    #                 mapping_file = os.path.join(path_mapping, '%s.txt' % plate_id)
+    #                 if not os.path.isfile(mapping_file):
+    #                     raise IOError("Mapping file '%s' for plate '%s' not found." %
+    #                                   (mapping_file, plate_id))
+    #             self._mapping_files[plate_id] = os.path.abspath(mapping_file)
 
     def _run(self):
-
         self._settings.set_section(SECTION_NAME_ERRORCORRECTION)
-        print 'ALL POSITONS AVAILABLE', self._imagecontainer.get_meta_data().positions
+        self._logger.info('ALL POSITONS AVAILABLE %s'
+                          %str(self._imagecontainer.get_meta_data().positions))
         # Initialize GUI Progress bar
         info = {'min' : 0,
                 'max' : len(self.plates),
@@ -436,13 +445,14 @@ class HmmThreadPython(_ProcessingThread):
                 self.set_stage_info(info)
                 self._imagecontainer.set_plate(plate_id)
                 self._run_plate(plate_id)
+
                 info['progress'] = idx+1
                 self.set_stage_info(info)
             else:
                 break
 
     def _run_plate(self, plate_id):
-        print "processing", plate_id
+        self._logger.info("processing plate %s" %plate_id)
         path_out = self._imagecontainer.get_path_out()
         path_analyzed = self._join(path_out, 'analyzed')
         path_out_hmm_html = self._join(path_out, 'hmm2')
@@ -458,11 +468,12 @@ class HmmThreadPython(_ProcessingThread):
         if self._settings.get('General', 'constrain_positions'):
             pos = self._settings.get('General', 'positions')
 
-        num_frames = int(self._settings.get('Tracking', 'tracking_forwardrange') + self._settings.get('Tracking', 'tracking_backwardrange'))
+        num_frames = int(self._settings.get('EventSelection', 'tracking_forwardrange') \
+                             + self._settings.get('EventSelection', 'tracking_backwardrange'))
         path_pos = self._join(path_analyzed, pos)
         path_data = self._join(path_pos, 'statistics/events/')
+        # FIXME there are 8 classes
         class_col = 6 # column position of svm_labels, should be retrieved from variable
-
         # directory of hmm corrected labels
         path_out_hmm2 = self._join(path_data, '_hmm2')
         safe_mkdirs(path_out_hmm2)
@@ -481,71 +492,92 @@ class HmmThreadPython(_ProcessingThread):
             channels = ['CPrimary']
             path_out_hmm_regions = [self._convert(self._get_path_out(path_out_hmm_html,'%s_%s' % ('primary', region_name_primary)))]
 
+        cmap = ListedColormap(CLASS_COLORS_LIST, name="class_colors")
         for (counter,channel) in enumerate(channels) :
-            labels_svm, num_tracks, infiles = self.read_labels(path_data,num_frames,class_col,branch+channel) # SVM labels
-            print labels_svm[0,]
+            labels_svm, num_tracks, infiles = \
+                self.read_labels(path_data, num_frames,class_col,branch+channel) # SVM labels
             path_out_hmm = self._join(path_pos, 'statistics/events/_hmm/')
             labels_svm_hmm, num_tracks2, infiles2 = self.read_labels(path_out_hmm,num_frames,0,branch+channel) # R version SVM+HMM
-            dim = [num_frames, num_tracks] # data dimension
             k = numpy.unique(labels_svm).shape[0]
-            print k
-            labels_dhmm_vec, labels_dhmm_matrix = self.dhmm_correction(k, labels_svm-1, dim)
+            labels_dhmm_vec, labels_dhmm_matrix = self.dhmm_correction(k, labels_svm-1, (num_frames, num_tracks))
             path_out_labelmatrix = self._join(path_out_hmm2, 'labels'+channel+'.txt')
             path_out_labelhmm = self._join(path_out_hmm, 'labels'+channel+'.txt')
             numpy.savetxt(path_out_labelmatrix, labels_dhmm_matrix+1,fmt='%d',delimiter='\t') # labels starts with 1, not 0!
             numpy.savetxt(path_out_labelhmm, labels_svm_hmm,fmt='%d',delimiter='\t')
-            print 'Agreement in %: ', (labels_svm_hmm.flatten() == labels_dhmm_vec+1).sum() / (dim[0] * dim[1])
+            label_matrices = [labels_svm-1, labels_svm_hmm-1, labels_dhmm_matrix]
+            titles =("SVM", "SVM HMM", "DHMM")
+
             if self._settings.get('ErrorCorrection','compose_galleries'):
                 if channel == 'CPrimary': # backwards naming compatibility
                     channel = 'primary'
                 else :
                     channel = 'secondary'
-                path_out_composed_gallery = self._join(path_out_hmm_regions[counter], '_gallery/'+channel+'/')
-                safe_mkdirs(path_out_composed_gallery)
-                path_out_gallery_image, list_of_images = self.make_galleries(branch,channel,pos,path_pos,path_out_hmm_regions[counter])
-                print list_of_images
+                gallery_path = self._join(path_out_hmm_regions[counter], '_gallery/'+channel+'/')
+                safe_mkdirs(gallery_path)
+                gallery_image, list_of_images = \
+                    self.make_galleries(branch, channel, pos, path_pos,
+                                        path_out_hmm_regions[counter])
 
-                img = plt.imread(path_out_gallery_image)
-                plt.imshow(img)
-                imgsize = 100
-                offset = 10
-                frac = 1/dim[0]
-                print frac
-                label_matrices = [labels_svm-1, labels_svm_hmm-1, labels_dhmm_matrix]
-                for (i, label_matrix) in enumerate(label_matrices) :
-                    for track_index in range(dim[1]) :
-                        if track_index == 0 :
-                            print label_matrix[track_index,]
-                        for frame_index in range(dim[0]):
-                            color_index = label_matrix[track_index,frame_index]
-                            plt.axhline(y=(track_index)*imgsize+offset, xmin=frame_index*frac, xmax=(frame_index+1)*frac, color=CLASS_COLORS[color_index])
-                    plt.savefig(self._join(path_out_composed_gallery, pos+'_'+str(i)+'.png')  , dpi = 300)
-                print i
-                print counter
-#            for (counter, infile) in enumerate(infiles) :
-#                path_out_sf = self._join(path_out_hmm2, infile)
-#                numpy.savetxt(path_out_sf, labels_dhmm_matrix[counter,:],fmt='%d',delimiter='\t')
-#                if channel in infile :
-#                    text = text+'\n'+infile
-#            for track_index in dim[1] :
-#                hist, bin_edges = numpy.histogram(labels_dhmm_matrix[track_index,:], bins=k)
-#                freq_matrix [track_index,:] = hist
-#        f = open(path_out_composed_gallery+pos+'.txt', 'w')
-#        for line in text:
-#            f.write(line)
-#        f.close()
+                for title, label_matrix in zip(titles, label_matrices):
+                    # FIXME read labels from settings
+                    slm = self._sort_tracks(label_matrix, labels=(2,3))
+                    fname = self._join(gallery_path,
+                                       ("P%s" %pos)+'_%s_'+title.lower().replace(" ", "_")+'.pdf')
+                    img_fname =  fname %"trj-gallery"
+                    mat_fname =  fname %"trj"
+                    self.plot_trj_gallery(gallery_image, label_matrix, title, img_fname)
+                    self.plot_trajectories(slm, title, mat_fname, cmap)
 
+    def plot_trj_gallery(self, img_file, matrix, title, file_):
+        image = plt.imread(img_file)
+        n_trj, n_frames =  matrix.shape
+        imgsize = image.shape[0]/n_trj
+        offset = 1.5
+        fig = plt.figure(dpi=300, figsize=(6, 9))
+        ax = fig.add_subplot(111, frameon=False)
+        ax.imshow(image)
 
+        for ti in xrange(n_trj):
+            for fi in range(n_frames):
+                color = CLASS_COLORS[matrix[ti, fi]]
+                ax.axhline(y=(ti+1)*imgsize+offset,
+                           xmin=fi/n_frames,
+                           xmax=(fi+1)/n_frames, color=color,
+                           linewidth=1.5)
 
-    def make_galleries(self,branch,channel2,pos,path_pos,path_out_hmm_regions):
-        path_out_gallery_image = self._join(path_out_hmm_regions, '_gallery/'+channel2+'/'+pos+'.png')
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+        ax.set_title(title)
+        fig.savefig(file_, dpi=300)
+
+    def plot_trajectories(self, matrix, title, file_, cmap=None):
+        fig = plt.figure(dpi=300)
+        ax = fig.add_subplot(111, frameon=False)
+        ax.matshow(matrix, cmap=cmap)
+        self._logger.info("saving plot %s" %file_)
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+        ax.set_title(title)
+        fig.savefig(file_, dpi=300)
+
+    def _sort_tracks(self, label_matrix, labels, reverse=False):
+        keyfunc = lambda track: len(filter(lambda l: l in labels, track))
+        slm = numpy.array(sorted(label_matrix, key=keyfunc, reverse=reverse))
+        return slm
+
+    def make_galleries(self, branch, channel2, pos, path_pos, path_out_hmm_regions):
+        path_out_gallery_image = self._join(path_out_hmm_regions,
+                                            '_gallery/'+channel2+'/'+pos+'.png')
         gallery_path = self._join(path_pos, 'gallery/'+channel2+'/')
-        list_of_images = []
-        if os.path.isdir(gallery_path):
-            for gallery_name in os.listdir(gallery_path):
-                if gallery_name.find('B01') >= 0: # only one branch is use for plotting
-                    list_of_images.append(gallery_path+gallery_name)
-        images = map(Image.open, list_of_images)
+        if not os.path.isdir(gallery_path):
+            raise IOError("Directory does not exists (%s)" %gallery_path)
+
+        image_fnames = []
+        for gallery_name in os.listdir(gallery_path):
+            if gallery_name.find('B01') >= 0: # only one branch is use for plotting
+                image_fnames.append(gallery_path+gallery_name)
+
+        images = map(Image.open, image_fnames)
         w = images[0].size[0]
         h = sum(i.size[1] for i in images)
         result = Image.new("RGBA", (w, h))
@@ -555,15 +587,7 @@ class HmmThreadPython(_ProcessingThread):
             result.paste(i, (0, x))
             x += i.size[1]
         result.save(path_out_gallery_image, format='PNG')
-        return path_out_gallery_image, list_of_images
-
-    def set_abort(self, wait=False):
-        pass
-
-    @classmethod
-    def test_executable(cls, filename):
-        "mock interface method"
-        return True, ""
+        return path_out_gallery_image, image_fnames
 
     def _get_path_out(self, path, prefix):
         if self._settings.get2('groupby_oligoid'):
@@ -601,7 +625,7 @@ class HmmThreadPython(_ProcessingThread):
     @staticmethod
     def dhmm_correction(n_clusters, labels, dim):
         if min(labels.flatten()) == 1 :
-            print 'labels must begin with 0 !'
+            self._logger.warning('labels must begin with 0 !')
             return
         # a small error term
         eps = 0.01
@@ -618,17 +642,18 @@ class HmmThreadPython(_ProcessingThread):
         trans = trans + eps
         trans /= trans.sum(axis=1)[:, numpy.newaxis]
         # start probability: [1, 0, 0, ...]
-        sprob = numpy.zeros((1,n_clusters)).flatten()+eps/(n_clusters-1)
+        sprob = numpy.zeros((1, n_clusters)).flatten()+eps/(n_clusters-1)
         sprob[0] = 1-eps
         # initialize DHMM
-        dhmm = hmm.MultinomialHMM(n_components=n_clusters,transmat = trans,startprob=sprob)
+        dhmm = hmm.MultinomialHMM(n_components=n_clusters, transmat=trans,
+                                  startprob=sprob, init_params="")
         # emission probability, identity matrix with predefined small errors.
         emis = numpy.eye(n_clusters) + eps/(n_clusters-1)
         emis[range(n_clusters),range(n_clusters)] = 1-eps;
-        dhmm.emissionprob = emis;
+        dhmm.emissionprob_ = emis;
         # learning the DHMM parameters
-        dhmm.fit([labels.flatten()], init_params ='') # default n_iter=10, thresh=1e-2
-        dhmm.emissionprob = emis # with EM update
+        dhmm.fit([labels.flatten()]) # default n_iter=10, thresh=1e-2
+        dhmm.emissionprob_ = emis # with EM update
         labels_dhmm_vec = dhmm.predict(labels.flatten()) # vector format
         labels_dhmm_matrix = labels_dhmm_vec.reshape(dim[1],dim[0]) # matrix format
         return labels_dhmm_vec, labels_dhmm_matrix
@@ -708,7 +733,6 @@ class HmmThread(_ProcessingThread): #__R_version
 
     def _run_plate(self, plate_id):
         filename = self._settings.get2('filename_to_R')
-        print filename
         cmd = self.get_cmd(filename)
 
         path_out = self._imagecontainer.get_path_out()
@@ -855,9 +879,6 @@ class HmmThread(_ProcessingThread): #__R_version
             if sample == -1:
                 sample = None
             for group_name in compose_galleries(path_out, path_out_hmm_region, sample=sample):
-                print path_out
-                print path_out_hmm_region
-                print group_name
                 self._logger.debug('gallery finished for group: %s' % group_name)
                 if self._abort:
                     break
@@ -1080,14 +1101,9 @@ class EventSelectionThread(_ProcessingThread):
         self._join = lambda *x: self._convert('/'.join(x))
 
     def _run(self):
-
-        print 'run eventselection'
         plates = self._imagecontainer.plates
         self.plates = plates
         self._settings.set_section(SECTION_NAME_EVENT_SELECTION)
-
-#        if self._settings.get2('tc3_analysis'):
-#            self.do_tc3_analysis()
 
     def _run_plate(self, plate_id):
         path_out = self._imagecontainer.get_path_out()
@@ -1119,8 +1135,6 @@ class PostProcessingThread(_ProcessingThread):
         self._join = lambda *x: self._convert('/'.join(x))
 
     def _run(self):
-
-        print 'run postprocessing'
         plates = self._imagecontainer.plates
         self.plates = plates
         self._settings.set_section(SECTION_NAME_POST_PROCESSING)
@@ -1421,9 +1435,6 @@ class MultiAnalzyerThread(AnalzyerThread, MultiProcessingAnalyzerMixin):
 
         self.submit_jobs(job_list)
         self.join()
-
-
-
 
 
 class TrainingThread(_ProcessingThread):

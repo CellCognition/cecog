@@ -16,7 +16,7 @@ import collections
 
 class TemporalClustering:
 
-    def __init__(self,dim,n_clusters,subgraph=[]):
+    def __init__(self, dim, n_clusters, subgraph=[]):
         self.n_frames = dim[0]
         self.n_tracks = dim[1]
         self.n_clusters = n_clusters
@@ -104,19 +104,19 @@ class TemporalClustering:
         labelMatrix = np.zeros((self.n_tracks, self.n_frames));
         # estimate class labels using TC3
         for i in range(0,self.n_tracks) :
-            Rdata = data[i*self.n_frames:(i+1)*self.n_frames,:]
+            Rdata = data[i*self.n_frames:(i+1)*self.n_frames, :]
 
             # subgraph
             if len(self.subgraph) == 0 :
                 intLabels = self._tc3_per_track(Rdata,k+1,constraint=True) # k+1 -> data is cyclic
                 intLabels[intLabels == k+1] = 0
-                labelMatrix[i,:] = intLabels
+                labelMatrix[i, :] = intLabels
                 indRange = []
             else :
-                indRange = np.nonzero(self.subgraph[i,:] == 1)
+                indRange = np.nonzero(self.subgraph[i, :] == 1)
 
             if (len(indRange) == 0) and i > 1 :
-                labelMatrix[i,:] = labelMatrix[i-1,:]
+                labelMatrix[i, :] = labelMatrix[i-1, :]
             else :
                 ###########
                 # 12|3456|1
@@ -124,28 +124,40 @@ class TemporalClustering:
                 # interphase and prometaphase/Aster
                 k1 = 2;
                 intV = range(0,indRange[0][0])
-                intLabels = self._tc3_per_track(Rdata[intV,:],k1,1) # only 2 classes, no mcs constraint
+                # only 2 classes, no mcs constraint
+                intLabels = self._tc3_per_track(Rdata[intV,:],k1,1)
                 labelMatrix[i,intV] = intLabels
 
                 # mitosis: prometa, meta, ana, telo
                 k2 = k-k1;
                 intV = np.arange(indRange[0][0],indRange[-1][-1]+1)
                 intLabels = self._tc3_per_track(Rdata[intV,:],k2,m) + k1;
-                labelMatrix[i,intV] = intLabels;
+                labelMatrix[i, intV] = intLabels;
 
-        labels_tc3_matrix = labelMatrix # matrix format [num_tracks x num_frames]
-        labels_tc3_vec = labels_tc3_matrix.flatten() # vector format [1 x num_tracks * num_frames]
-        tc3 = {'label_matrix': labels_tc3_matrix, 'labels': labels_tc3_vec, 'name': 'TC3'}
+        # matrix format [num_tracks x num_frames]
+        labels_tc3_matrix = labelMatrix
+        # vector format [1 x num_tracks * num_frames]
+        labels_tc3_vec = labels_tc3_matrix.flatten()
+        tc3 = {'label_matrix': labels_tc3_matrix,
+               'labels': labels_tc3_vec,
+               'name': 'TC3'}
         return tc3
 
     def tc3_gmm(self, data, labels, covariance_type='full', sharedcov=True) :
 
-        g = mixture.GMM(n_components=self.n_clusters, covariance_type=covariance_type)
-        g.means, g.covars, g.weights = self._gmm_int_parameters(data,labels,sharedcov=sharedcov)
-        g.fit(data,n_iter=1,init_params='') # restrict EM to only one iteration
-        labels_tc3gmm_vec = g.predict(data) # vector format [1 x num_tracks * num_frames]
-        labels_tc3gmm_matrix = labels_tc3gmm_vec.reshape(self.n_tracks,self.n_frames) # matrix format [num_tracks x num_frames]
-        tc3_gmm = {'label_matrix': labels_tc3gmm_matrix, 'labels': labels_tc3gmm_vec, 'model': g, 'name': 'TC3+GMM'}
+        g = mixture.GMM(n_components=self.n_clusters,
+                        covariance_type=covariance_type)
+        g.means, g.covars, g.weights = \
+            self._gmm_int_parameters(data, labels, sharedcov=sharedcov)
+        # restrict EM to only one iteration
+        g.fit(data, n_iter=1, init_params='')
+        # vector format [1 x num_tracks * num_frames]
+        labels_tc3gmm_vec = g.predict(data)
+        # matrix format [num_tracks x num_frames]
+        labels_tc3gmm_matrix = labels_tc3gmm_vec.reshape(self.n_tracks, self.n_frames)
+        tc3_gmm = {'label_matrix': labels_tc3gmm_matrix,
+                   'labels': labels_tc3gmm_vec,
+                   'model': g, 'name': 'TC3+GMM'}
         return tc3_gmm
 
     def tc3_gmm_dhmm(self, labels):
@@ -167,45 +179,63 @@ class TemporalClustering:
         sprob = np.zeros((1,self.n_clusters)).flatten()+eps/(self.n_clusters-1)
         sprob[0] = 1-eps
         # initialize DHMM
-        dhmm = hmm.MultinomialHMM(n_components=self.n_clusters,transmat = trans,startprob=sprob)
+        dhmm = hmm.MultinomialHMM(n_components=self.n_clusters,
+                                  transmat=trans,
+                                  startprob=sprob)
         # emission probability, identity matrix with predefined small errors.
         emis = np.eye(self.n_clusters) + eps/(self.n_clusters-1)
         emis[range(self.n_clusters),range(self.n_clusters)] = 1-eps;
-        dhmm.emissionprob = emis;
+        dhmm.emissionprob_ = emis;
         # learning the DHMM parameters
-        dhmm.fit([labels.flatten()], init_params ='') # default n_iter=10, thresh=1e-2
-        dhmm.emissionprob = emis # with EM update
-        labels_tc3gmmdhmm_vec = dhmm.predict(labels.flatten()) # vector format
-        labels_tc3gmmdhmm_matrix = labels_tc3gmmdhmm_vec.reshape(self.n_tracks,self.n_frames) # matrix format
+        # default n_iter=10, thresh=1e-2
+        dhmm.fit([labels.flatten()], init_params ='')
+        # with EM update
+        dhmm.emissionprob_ = emis
+        # vector format
+        labels_tc3gmmdhmm_vec = dhmm.predict(labels.flatten())
+        # matrix format
+        labels_tc3gmmdhmm_matrix = labels_tc3gmmdhmm_vec.reshape(self.n_tracks,self.n_frames)
         para = collections.namedtuple('para', ['transmat', 'emissionprob'])
-        tc3_gmm_dhmm = {'label_matrix': labels_tc3gmmdhmm_matrix, 'labels': labels_tc3gmmdhmm_vec, 'model': para(dhmm.transmat, dhmm.emissionprob), 'name': 'TC3+GMM+DHMM'}
+        tc3_gmm_dhmm = {'label_matrix': labels_tc3gmmdhmm_matrix,
+                        'labels': labels_tc3gmmdhmm_vec,
+                        'model': para(dhmm.transmat_, dhmm.emissionprob_),
+                        'name': 'TC3+GMM+DHMM'}
         return tc3_gmm_dhmm
 
     def tc3_gmm_chmm(self, data, gmm_model, dhmm_model):
 
         eps = np.spacing(1)
         sprob = np.array([1-eps,eps,eps,eps,eps,eps])
-        chmm = hmm.GaussianHMM(n_components=self.n_clusters,transmat=dhmm_model.transmat,startprob=sprob, covariance_type='full')
-        chmm.means = gmm_model.means
-        chmm.covars = gmm_model.covars
-        chmm.fit([data], n_iter=1, init_params='') # restrict EM to only one iteration
-        labels_tc3gmmchmm_vec = chmm.predict(data) # vector format [1 x num_tracks * num_frames]
-        labels_tc3gmmchmm_matrix = labels_tc3gmmchmm_vec.reshape(self.n_tracks,self.n_frames) # matrix format [num_tracks x num_frames]
+        chmm = hmm.GaussianHMM(n_components=self.n_clusters,
+                               transmat=dhmm_model.transmat,
+                               startprob=sprob,
+                               covariance_type='full')
+        chmm.means_ = gmm_model.means
+        chmm.covars_ = gmm_model.covars
+        # restrict EM to only one iteration
+        chmm.fit([data], n_iter=1, init_params='')
+        # vector format [1 x num_tracks * num_frames]
+        labels_tc3gmmchmm_vec = chmm.predict(data)
+        # matrix format [num_tracks x num_frames]
+        labels_tc3gmmchmm_matrix = labels_tc3gmmchmm_vec.reshape( \
+            self.n_tracks,self.n_frames)
         para = collections.namedtuple('para', ['transmat', 'covars','means'])
-        tc3_gmm_chmm = {'label_matrix': labels_tc3gmmchmm_matrix, 'labels': labels_tc3gmmchmm_vec, 'chmm_model': para( chmm.transmat, chmm.covars, chmm.means),'name': 'TC3+GMM+CHMM'}
+        tc3_gmm_chmm = {'label_matrix': labels_tc3gmmchmm_matrix,
+                        'labels': labels_tc3gmmchmm_vec,
+                        'chmm_model': para( chmm.transmat_,
+                                            chmm.covars_, chmm.means_),
+                        'name': 'TC3+GMM+CHMM'}
         return tc3_gmm_chmm
 
     def __repr__(self):
-        return "TC3(n_frames=%s, n_tracks=%s, n_clusters=%s)"%(self.n_frames,self.n_tracks, self.n_clusters)
+        return "TC3(n_frames=%s, n_tracks=%s, n_clusters=%s)" \
+            %(self.n_frames,self.n_tracks, self.n_clusters)
 
-    # Read-only properties.
     @property
     def n_frames(self):
         """Number of frames."""
         return self.n_frames
 
-    # Read-only properties.
-    @property
     def n_tracks(self):
         """Number of tracks."""
         return self.n_tracks
@@ -230,9 +260,6 @@ class TemporalClustering:
         p = np.zeros((self.n_clusters))
 
         for i in range(self.n_clusters) :
-            print 'asdf', data
-            print'jkl;', labels
-            print data.shape, labels.shape
             X = data[labels==i, :]
             mu[i,:] = np.mean(X,0)
             if sharedcov :
@@ -242,10 +269,12 @@ class TemporalClustering:
             pts = X.shape[0]
             p[i] = pts/float(n)
         return [mu, Sigma.T, p]
+
     @staticmethod
     def mk_stochastic(k):
-        '''  function [T,Z] = mk_stochastic(T)
+        """function [T,Z] = mk_stochastic(T)
         MK_STOCHASTIC ensure the matrix is a stochastic matrix,
-        i.e., the sum over the last dimension is 1.'''
+        i.e., the sum over the last dimension is 1.
+        """
         raw_A = np.random.uniform( size = k * k ).reshape( ( k, k ) )
         return ( raw_A.T / raw_A.T.sum( 0 ) ).T

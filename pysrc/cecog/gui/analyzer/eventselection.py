@@ -54,12 +54,13 @@ class EventSelectionFrame(BaseProcessorFrame):
 
     def __init__(self, settings, parent):
         super(EventSelectionFrame, self).__init__(settings, parent)
-        
-        #### IMPORTANT LINE HERE: DESIGN NEW EVENT SELECTION PROCESSING THREAD BY TEARING APPART THE OLD TRACKING 
+
+        # IMPORTANT LINE HERE: DESIGN NEW EVENT SELECTION PROCESSING
+        # THREAD BY TEARING APPART THE OLD TRACKING
         self.register_control_button(self.PROCESS_SYNCING,
                                      AnalzyerThread,
                                      ('Start', 'Stop'))
-        
+
         self.add_line()
         self.add_group(None,
                        [('tracking_backwardrange', (0,0,1,1)),
@@ -83,7 +84,7 @@ class EventSelectionFrame(BaseProcessorFrame):
                 ('min_cluster_size', (0,2,1,1)),
                 ('tc3_algorithms', (0,3,1,1)),
                 ],
-                layout='grid', link='tc3_analysis')            
+                layout='grid', link='tc3_analysis')
         self.add_expanding_spacer()
 
         self._init_control(has_images=False)

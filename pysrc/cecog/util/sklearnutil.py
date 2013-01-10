@@ -18,7 +18,6 @@ __source__ = '$URL$'
 import numpy
 import scipy.cluster.vq as scv
 from sklearn import mixture
-from matplotlib import mlab
 
 def mylogsumexp(A, axis=None):
     """Computes the sum of A assuming A is in the log domain.
@@ -47,30 +46,31 @@ def binary_clustering(data, invert):
     c1 = numpy.cov(data[idx==0,:].T)
     c2 = numpy.cov(data[idx==1,:].T)
     c = numpy.dstack((c1,c2)).T
-    
+
+
     g = mixture.GMM(n_components=2, covariance_type = 'full') #thresh=1e-6
     g.weights = w
     g.means = m
     g.covars = c
-   
+
     g.fit(data, init_params='') #n_iter=10, thresh=1e-2
     idx = g.predict(data)
-    
-    
+
+
     # map clusters to labels
     if numpy.sum(idx==1) > numpy.sum(idx==0) :
         idx[idx==0]=2
         idx[idx==1]=0
         idx[idx==2]=1
-        
+
     if invert:
         idx[idx==0]=2
         idx[idx==1]=0
         idx[idx==2]=1
-       
+
     return idx
 
-    
+
 def remove_constant_columns(A):
     ''' A function to remove constant columns from a 2D matrix'''
     return A[:, numpy.sum(numpy.abs(numpy.diff(A, axis=0)), axis=0) != 0]

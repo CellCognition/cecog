@@ -64,16 +64,9 @@ from cecog import ccore
 # constants:
 #
 
-DEBUG = False
-
 #-------------------------------------------------------------------------------
 # functions:
 #
-
-def printd(str):
-    if DEBUG:
-        print str
-
 
 #-------------------------------------------------------------------------------
 # classes:
@@ -570,9 +563,6 @@ class CellTracker(OptionManager):
     def forwardReachable(self, node_id, reachableD, edgeD, iMaxLevel=None, iLevel=0):
         oGraph = self._oGraph
         reachableD[node_id] = True
-        #print node_id
-        #print "     out:", self.out_arcs(node_id)
-        #print "      in:", self.in_arcs(node_id)
 
         if iMaxLevel is None or iLevel < iMaxLevel:
             for out_edge_id in oGraph.out_arcs(node_id):
@@ -591,34 +581,6 @@ class CellTracker(OptionManager):
 
     def initVisitor(self, lstRootIds=None, iStart=None, iEnd=None):
 
-        # this was somehow stupid since only root tracks (starting in the first
-        # frame) are considered. tracks starting afterwards (due to cell
-        # migration or stage shifts were NOT considered, resulting in a lower
-        # and quality dependent yield.
-        # This was fixed below.
-
-#        if lstRootIds is None:
-#            iStart, iEnd = self.getValidTimeLimits(iStart, iEnd)
-#            if iEnd > -1:
-#                lstRootIds = [self.getNodeIdFromComponents(iStart, iObjectId)
-#                              for iObjectId in self._dctTimePoints[iStart]]
-#                self.oLogger.debug("tracking: start nodes %d %s" %
-#                                   (len(lstRootIds), lstRootIds))
-#            else:
-#                lstRootIds = []
-#                self.oLogger.warning("tracking: no time-points found for this video.")
-#
-#        self.dctVisitorData = {}
-#        for strRootId in lstRootIds:
-#            self.dctVisitorData[strRootId] = {}
-#            self.oLogger.debug("root ID %s" % strRootId)
-#            dctEdges = {}
-#            self._forwardVisitor(strRootId, self.dctVisitorData[strRootId], dctEdges)
-
-        # find all starting tracks and use them for further analysis.
-        # multiple traversing of one track is prevented by 'dctEdges', so that no
-        # outgoing node ID can be touched twice
-
         if lstRootIds is None:
             # find all start tracks (without incoming edges)
             lstStartIds = [strNodeId for strNodeId in self._oGraph.node_list()
@@ -634,9 +596,9 @@ class CellTracker(OptionManager):
         self.dctVisitorData = {}
         dctVisitedNodes = {}
         if  self.getOption('unsupEventSelection'):
-            print 'in unsupervised event selection'
+            #print 'in unsupervised event selection'
             invert = self.getOption('invert')
-            print invert
+            #print invert
             self.initBinaryClustering(invert)
             for strStartId in lstStartIds:
                 self.dctVisitorData[strStartId] = {'_current': 0,
@@ -645,7 +607,7 @@ class CellTracker(OptionManager):
                 self.oLogger.debug("root ID %s" % strStartId)
                 self._forwardVisitor2(strStartId, self.dctVisitorData[strStartId], dctVisitedNodes)
         elif self.getOption('supEventSelection'):
-            print 'in supervised event selection'
+            #print 'in supervised event selection'
             for strStartId in lstStartIds:
                 self.dctVisitorData[strStartId] = {'_current': 0,
                                                    '_full'   : [[]],
@@ -666,9 +628,10 @@ class CellTracker(OptionManager):
         # delete columns with zeros
         ind = numpy.where(data==0)[1]
         data = scipy.delete(data,ind,1)
-        print 'new data.shape after column=0 deletion'
-        print data.shape
+        # print 'new data.shape after column=0 deletion'
+        # print data.shape
 
+        # FIXME dimension of data_zscore
         # Zscore and PCA data
         data_zscore = sss.zscore(data) #sss.zscore(self.remove_constant_columns(data))
         pca = mlab.PCA(data_zscore)
@@ -698,39 +661,6 @@ class CellTracker(OptionManager):
         return bbT
 
     def clear(self, filter_area=None, filter_firstL=None):
-
-##         # find broken links
-##         broken_outL = []
-##         broken_inL = []
-##         time_pointL = self.node_timeD.keys()
-##         for time_point, node_idL in self.node_timeD.iteritems():
-##             for node_id in node_idL:
-##                 if (time_point != max(time_pointL) and
-##                     len(self.out_arcs(node_id)) == 0):
-##                     broken_outL.append((time_point, node_id))
-##                 if (time_point != min(time_pointL) and
-##                     len(self.in_arcs(node_id)) == 0):
-##                     broken_inL.append((time_point, node_id))
-
-##         # bridge the broken links (which are shorter than MAX_OBJECT_DISTANCE)
-##         for time_point_out, node_id_out in broken_outL:
-##             for time_point_in, node_id_in in broken_inL:
-##                 if (node_id_out != node_id_in and
-##                     time_point_out < time_point_in and
-##                     time_point_in-time_point_out <= self.MAX_LINK_BRIDGE_TIME):
-##                     obj_out = self.node_data(node_id_out)
-##                     obj_in = self.node_data(node_id_in)
-##                     dist = obj_in.distance(obj_out)
-##                     if dist < self.MAX_OBJECT_DISTANCE:
-##                         dataD = {'broken link': True}
-##                         self.add_edge(node_id_out, node_id_in, dataD)
-
-#        print "*** old graph id: %s, levels: %d, nodes %d\n" %\
-#                  (self,
-#                   len(self.node_timeD),
-#                   len(self.node_list())
-#                   )
-
 
         # remove nodes from first layer outside a certain area
         if not filter_area is None:
@@ -766,42 +696,12 @@ class CellTracker(OptionManager):
                 time_point, obj_id = self.get_items_from_node_id(node_id)
                 if node_id in self.node_timeD[time_point]:
                     self.node_timeD[time_point].remove(node_id)
-                #else:
-                #    print "moo", time_point, node_id
-
-#        print "moo2"
-#        print "*** new graph id: %s, levels: %d, nodes %d\n" %\
-#                  (self,
-#                   len(self.node_timeD),
-#                   len(self.node_list())
-#                   )
-
-##         # filter merges close to border
-##         for node_id in self.node_timeD[1]:
-##             self.forward_traversal(node_id, functor=self.functor_reachable)
-
-
-##                     # if center is MIN_DISTANCE_FROM_BORDER away
-##             if (self.time_point > 1 or
-##                 (s_obj.centerT[0] > self.MIN_DISTANCE_FROM_BORDER and
-##                  s_obj.centerT[1] > self.MIN_DISTANCE_FROM_BORDER and
-##                  s_obj.centerT[0] < min_x_from_border and
-##                  s_obj.centerT[1] < min_y_from_border)):
-
-
-
-        # delete all nodes which disappear without being in apoptosis
-
-
-        # fix merges for short shapeI phases (segmentation errors)
 
     def clearByObjects(self, iStart, lstObjIds, iMaxLevel=None):
         """
         remove all nodes from first timepoint which are not in the list
         """
-        #iStart, iEnd = self.getTimePoints()
         for iObjId in self._dctTimePoints[iStart][:]:
-            #s_obj = self.node_data(node_id)
             if not iObjId in lstObjIds:
                 self._dctTimePoints[iStart].remove(iObjId)
 
@@ -836,8 +736,6 @@ class CellTracker(OptionManager):
             if len(self._dctTimePoints[iT]) == 0:
                 del self._dctTimePoints[iT]
                 del self._dctTimeChannels[iT]
-
-
 
 class PlotCellTracker(CellTracker):
 
@@ -938,8 +836,6 @@ class PlotCellTracker(CellTracker):
             safe_mkdirs(strPathOut)
 
     def analyze(self, dctChannels, channelId=None, clear_path=False):
-        #print self.lstChromatinFeatureNames
-        #print self.lstSecondaryFeatureNames
 
         strPathOut = os.path.join(self.strPathOut, 'events')
         if clear_path:
@@ -950,24 +846,8 @@ class PlotCellTracker(CellTracker):
         for strRootId, dctTrackResults in self.dctVisitorData.iteritems():
 
             self.oLogger.debug("* root %s, candidates %s" % (strRootId, dctTrackResults.keys()))
-
-#            if self.getOption("bExportRootGraph"):
-#                self.exportSubGraph(self._formatFilename("graph.dot", nodeId=strRootId, prefix="root_", subPath='_graphs'),
-#                                    strRootId,
-#                                    bRunDot=self.getOption("bRenderRootGraph"),
-#                                    channelId=channelId)
-
             for strStartId, dctEventData in dctTrackResults.iteritems():
-
                 if strStartId[0] != '_':
-
-    #                if self.getOption("bExportSubGraph"):
-    #                    self.exportSubGraph(self._formatFilename("graph.dot", strStartId, subPath='_graphs'),
-    #                                        strStartId,
-    #                                        iMaxLevel=dctEventData['maxLength'],
-    #                                        bRunDot=self.getOption("bRenderSubGraph"),
-    #                                        channelId=channelId)
-
                     if self.getOption("bExportTrackFeatures"):
                         for strChannelId, dctRegions in dctChannels.iteritems():
                             #print strChannelId, dctRegions,self._dctTimeChannels.channels
@@ -986,12 +866,8 @@ class PlotCellTracker(CellTracker):
                                                            strChannelId,
                                                            strRegionId,
                                                            lstFeatureNames)
-#                                    if strFilename.find('B01') > 0 :
-#                                        print 'found B01'
                                     allFeatures.append (obj_allFeatures)
-
                     self.oLogger.debug("* root %s ok" % strStartId)
-
 
         if self.getOption("bExportFlatFeatures"):
             for strChannelId, dctRegions in dctChannels.iteritems():
@@ -1011,25 +887,29 @@ class PlotCellTracker(CellTracker):
 
         if self.getOption('tc3Analysis'):
             allFeatures = numpy.array(allFeatures)
-            print allFeatures.shape
-            data= allFeatures.reshape(allFeatures.shape[0]*allFeatures.shape[1],allFeatures.shape[2])
-            print data.shape
+            data = allFeatures.reshape(allFeatures.shape[0]*allFeatures.shape[1],
+                                       allFeatures.shape[2])
+
             # delete columns with zeros
             ind = numpy.where(data==0)[1]
-            data = scipy.delete(data,ind,1)
-            print 'new data.shape after column=0 deletion'
-            print data.shape
+            data = scipy.delete(data, ind, 1)
             num_frames = allFeatures.shape[1]
             num_tracks = data.shape[0]/allFeatures.shape[1]
             dim = [num_frames, num_tracks]
-            print dim
 
             # Zscore and PCA data
+            # FIXME check shape of data_zscore
             data_zscore = sss.zscore(remove_constant_columns(data))
-            import pdb; pdb.set_trace()
-            pca = mlab.PCA(data_zscore)
-            num_features = numpy.nonzero(numpy.cumsum(pca.fracs) > 0.99)[0][0]
-            data_pca = pca.project(data_zscore)[:,0:num_features]
+
+            if data_zscore.shape[0] > data_zscore.shape[1]:
+                pca = mlab.PCA(data_zscore)
+                num_features = numpy.nonzero(numpy.cumsum(pca.fracs) > 0.99)[0][0]
+                data_pca = pca.project(data_zscore)[:,0:num_features]
+            else:
+                msg = ("Not enough objects found (nobjects < nfeatures)",
+                       "(%s, %s)" %data_zscore.shape)
+                raise RuntimeError(msg)
+                # data_pca = data_zscore
 
             binary_tmp = binary_clustering(data_pca, 0)
             binary_matrix = binary_tmp.reshape(dim[1],dim[0])
@@ -1040,10 +920,10 @@ class PlotCellTracker(CellTracker):
             idn = []
             # a predefined number of classes, given in GUI
             k = self.getOption('numClusters')
-            print k
+#            print "numClusters: ", k
 
             for i in xrange(num_tracks-1, -1, -1):
-                print num_tracks
+                #print num_tracks
                 if (sum(binary_matrix[i,:]) < k-2) or (binary_matrix[i,0] == 1) or \
                         (binary_matrix[i,1] == 1) or (sum(binary_matrix[i,0:15]) == 0) :
                     binary_matrix = scipy.delete(binary_matrix, i, 0)
@@ -1052,36 +932,35 @@ class PlotCellTracker(CellTracker):
                     num_tracks -= 1
                     idn.append(i)
 
-            print idn
+#           print idn
             filename = os.path.join(self.strPathOut, 'index.txt')
             numpy.savetxt(filename,idn, fmt='%d',delimiter='\t')
-            print binary_matrix.shape
-            print num_tracks
+#           print binary_matrix.shape
+#           print num_tracks
             filename = os.path.join(self.strPathOut, 'indexbinary_deleted.txt')
-            numpy.savetxt(filename, binary_matrix, fmt='%d',delimiter='\t')
+            numpy.savetxt(filename, binary_matrix, fmt='%d', delimiter='\t')
             dim = [num_frames, num_tracks] # update num_tracks
 
             # Diverse TC3 algorithms
             m = self.getOption('minClusterSize') # a predefined minimal cluster size
-            print m
+#           print m
 
-            from PyQt4.QtCore import pyqtRemoveInputHook; pyqtRemoveInputHook()
-            import pdb; pdb.set_trace()
-
-            tc = unsup.TemporalClustering(dim,k,binary_matrix)
-            tc3 = tc.tc3_clustering(data_pca,m)
-            tc3_gmm = tc.tc3_gmm(data_pca,tc3['labels'])
+            tc = unsup.TemporalClustering(dim, k, binary_matrix)
+            tc3 = tc.tc3_clustering(data_pca, m)
+            if tc3['labels'].size == 0:
+                raise RuntimeError("No candidates found, check tracking parameters!")
+            tc3_gmm = tc.tc3_gmm(data_pca, tc3['labels'])
             tc3_gmm_dhmm = tc.tc3_gmm_dhmm(tc3_gmm['labels'])
-            tc3_gmm_chmm = tc.tc3_gmm_chmm(data_pca, tc3_gmm['model'], tc3_gmm_dhmm['model'])
+            tc3_gmm_chmm = tc.tc3_gmm_chmm(data_pca, tc3_gmm['model'],
+                                           tc3_gmm_dhmm['model'])
 
             algorithms = {'TC3': tc3,
                           'TC3+GMM': tc3_gmm,
                           'TC3+GMM+DHMM': tc3_gmm_dhmm,
-                          'TC3+GMM+CHMM': tc3_gmm_chmm,
-                          }
+                          'TC3+GMM+CHMM': tc3_gmm_chmm}
 
             algorithm = self.getOption('tc3Algorithms')
-            print algorithm
+#           print algorithm
             result = algorithms[algorithm]
             filename = os.path.join(self.strPathOut, '%s.txt'%algorithm)
             numpy.savetxt(filename, result['label_matrix'], fmt='%d',delimiter='\t')
@@ -1220,7 +1099,7 @@ class PlotCellTracker(CellTracker):
             if bHasSplitId:
                 dctData['isSplit'] = 1 if iT == iSplitT else 0
 
-            print iT, strChannelId, strRegionId, lstObjectIds
+#            print iT, strChannelId, strRegionId, lstObjectIds
             #for iIdx, iObjId in enumerate(lstObjectIds):
             iObjId = lstObjectIds[0]
             if iObjId in oRegion:
@@ -1393,8 +1272,8 @@ class PlotCellTracker(CellTracker):
                     branch_id = 1
             lstParts += ['T%05d' % frame,
                          'O%04d' % obj_id,
-                         'B%02d' % branch_id,
-                         ]
+                         'B%02d' % branch_id]
+
         if not strSuffix is None:
             lstParts.append(strSuffix)
         strParts = '__'.join(lstParts)
@@ -1908,7 +1787,7 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                     self.oLogger.debug("    %s - forwards %s    %s" % (strTailId, {True: 'ok', False: 'failed'}[bCandidateOk], lstForwardNodeIds))
 
                 if bCandidateOk:
-                    print 'found'
+                    #print 'found'
                     track_length = self.getOption('iBackwardRange') + self.getOption('iForwardRange')
 
                     lstBackwardNodeIds.reverse()
@@ -1996,7 +1875,7 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                     self.oLogger.debug("    %s - forwards %s    %s" % (strTailId, {True: 'ok', False: 'failed'}[bCandidateOk], lstForwardNodeIds))
 
                 if bCandidateOk:
-                    print 'found'
+                    #print 'found'
                     track_length = self.getOption('iBackwardRange') + self.getOption('iForwardRange')
 
                     lstBackwardNodeIds.reverse()
