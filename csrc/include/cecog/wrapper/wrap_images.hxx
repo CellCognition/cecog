@@ -569,6 +569,9 @@ PyObject * pyToggleMapping(IMAGE1 const &imgIn, int size)
   return incref(object(imgPtr).ptr());
 }
 
+// usage:  cc = ccore.overlayBinaryImage(imin, imbin, ccore.RGBValue(255, 0, 0))
+// (full overlay)
+// for contours calculate gradient first.
 template <class Image1, class Image2, class Image3>
 PyObject * pyOverlayBinaryImage(Image1 const & imgIn1, Image2 const & imgIn2,
     typename Image3::value_type value)
@@ -848,8 +851,10 @@ inline static PyObject * pyReadImage(std::string strFilename, int imageIndex=-1)
 {
   typedef vigra::BasicImage< PixelType > ImageType;
   vigra::ImageImportInfo oInfo(strFilename.c_str());
-  //if (imageIndex > -1)
-  //  oInfo.setImageIndex(imageIndex);
+  if (imageIndex > -1)
+  {
+	  oInfo.setImageIndex(imageIndex);
+  }
   std::auto_ptr< ImageType > imgPtr(new ImageType(oInfo.size()));
   vigra::importImage(oInfo, vigra::destImage(*imgPtr));
   return incref(object(imgPtr).ptr());

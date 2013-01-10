@@ -14,39 +14,16 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = ['ImageViewer',
-           ]
+__all__ = ['ImageViewer']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
 import math
 
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 from cecog.gui.util import numpy_to_qimage
 
-#-------------------------------------------------------------------------------
-# constants:
-#
-
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 class ItemHoverMixin:
 
     SCALE = 1.1
@@ -137,6 +114,7 @@ class ImageViewer(QGraphicsView):
         self.grabGesture(Qt.PinchGesture)
 
     def from_numpy(self, data):
+
         self._qimage = numpy_to_qimage(data)
         # safe the data for garbage collection
         self._qimage.ndarray = data
@@ -331,4 +309,3 @@ class ImageViewer(QGraphicsView):
             if gesture.state() in [Qt.GestureCanceled, Qt.GestureFinished]:
                 self.setTransformationAnchor(self.AnchorViewCenter)
         return True
-

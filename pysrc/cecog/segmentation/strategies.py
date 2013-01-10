@@ -359,7 +359,7 @@ class PrimarySegmentation(_Segmentation):
 #            # reset the container RGB
 #            container.eraseRGB()
 #            container.combineExtraRGB([7],[1])
-        self._logger.debug("         total time: %s" %
+        self._logger.debug("         total segmentation time: %s" %
                             stopwatch_total.current_interval())
         return container
 
@@ -535,7 +535,7 @@ class SecondarySegmentation(_Segmentation):
                                stopwatch.current_interval())
 
 
-        self._logger.debug("         total time: %s" %
+        self._logger.debug("         total segmentation time: %s" %
                             stopwatch_total.current_interval())
         return containers
 

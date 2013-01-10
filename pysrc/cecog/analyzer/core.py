@@ -123,42 +123,35 @@ class PositionAnalyzer(object):
                  lstSampleReader, dctSamplePositions, oObjectLearner,
                  image_container,
                  qthread=None, myhack=None):
-        
-        
+
+
         self.P = self._adjustPositionLength(P)
         self.P = P
         self.strPathOut = mapDirectory(strPathOut)
         self._oLogger = self._configRootLogger()
-        self._oLogger.debug("PositionAnalyzer: logger init done")
-        
+
         self.plate_id = plate_id
         self.origP = P
-        
-        self._oLogger.debug("PositionAnalyzer._adjustPositionLength()")
+
         self.P = self._adjustPositionLength(P)
         self.P = P
-        
-        self._oLogger.debug("PositionAnalyzer. mapDirectory()")
+
         self.strPathOut = mapDirectory(strPathOut)
 
-
-        self._oLogger = self._configRootLogger()
         #self._oLogger = logging.getLogger()
-        
-        
+
+
         self.strPathOutAnalyzed = os.path.join(self.strPathOut, 'analyzed')
         self.oSettings = oSettings
 
         self._path_dump = os.path.join(self.strPathOut, 'dump')
         self._path_hdf5 = os.path.join(self.strPathOut, 'hdf5')
-        self._oLogger.debug("PositionAnalyzer: hdf5 folder create")
         safe_mkdirs(self._path_hdf5)
         self._imagecontainer = image_container
 
         # FIXME: a bit of a hack but the entire ImageContainer path is mapped to the current OS
         #self._imagecontainer.setPathMappingFunction(mapDirectory)
-        
-        self._oLogger.debug("PositionAnalyzer: get_meta_data")
+
         self._meta_data = self._imagecontainer.get_meta_data()
 
         if not self._meta_data.has_timelapse:
@@ -189,8 +182,7 @@ class PositionAnalyzer(object):
             self.strPathOutPosition = os.path.join(self.strPathOutAnalyzed, "%s" % self.P)
         else:
             self.strPathOutPosition = self.strPathOutAnalyzed
-        
-        self._oLogger.debug("PositionAnalyzer: create output folder")
+
         bMkdirsOk = safe_mkdirs(self.strPathOutPosition)
         self._oLogger.debug("Starting analysis for '%s', ok: %s" % (self.strPathOutPosition, bMkdirsOk))
 
@@ -247,10 +239,10 @@ class PositionAnalyzer(object):
         self._oLogHandler = logging.FileHandler(os.path.join(self.strPathLog, "%s.log" % self.P), 'w')
         self._oLogHandler.setLevel(logging.DEBUG)
         self._oLogHandler.setFormatter(logging.Formatter('%(asctime)s %(name)-24s %(levelname)-6s %(message)s'))
-        
-        
+
+
         oLogger.addHandler(self._oLogHandler)
-        
+
         return oLogger
 
     def __del__(self):
@@ -288,16 +280,6 @@ class PositionAnalyzer(object):
         ccore.turn_off()
 
         oStopWatchPos = StopWatch()
-
-
-#        if self.oSettings.bQualityControl:
-#            strPathOutQualityControl = os.path.join(self.strPathOut, 'qc')
-#            oQualityControl = QualityControl(strPathOutQualityControl,
-#                                             self._meta_data,
-#                                             self.oSettings.dctQualityControl)
-#            oQualityControl.initPosition(self.P, self.origP)
-
-
         strPathOutPositionStats = os.path.join(self.strPathOutPosition,
                                                'statistics')
         bMkdirsOk = safe_mkdirs(strPathOutPositionStats)
@@ -323,7 +305,6 @@ class PositionAnalyzer(object):
         if self.oSettings.get2('hdf5_compression'):
             hdf5_compression = 'gzip'
 
-        self._oLogger.info('Init TimeHolder object')
         oTimeHolder = TimeHolder(self.P,
                                  channel_names, filename_hdf5,
                                  self._meta_data, self.oSettings,
@@ -410,14 +391,6 @@ class PositionAnalyzer(object):
                                         'tc3Algorithms'         : self.oSettings.get2('tc3_algorithms'),
                                         })
 
-#            elif self.oSettings.get2('tracking_event_tracjectory'):
-#                clsCellTracker = SplitCellTracker
-#                tracker_options.update({'iBackwardCheck'       : self.oSettings.get2('tracking_backwardcheck'),
-#                                        'iForwardCheck'        : self.oSettings.get2('tracking_forwardcheck'),
-#                                        })
-#            elif self.oSettings.get2('tracking_event_no_constraint'):
-#                clsCellTracker = PlotCellTracker
-
             self.oCellTracker = clsCellTracker(oTimeHolder=oTimeHolder,
                                           oMetaData=self._meta_data,
                                           P=self.P,
@@ -486,20 +459,27 @@ class PositionAnalyzer(object):
                 channel_id = self.channel_mapping[self.PRIMARY_CHANNEL]
                 if channel_id in self.classifier_infos:
                     infos = self.classifier_infos[channel_id]
-                    prim_info = (infos['strRegionId'], infos['predictor'].lstClassNames)
+                    prim_info = (infos['strRegionId'], infos['predictor'].lstClassNames, infos['predictor'].lstHexColors)
                 else:
                     # at least the total count for primary is always exported
-                    prim_info = ('primary', [])
+                    prim_info = ('primary', [], [])
 
                 sec_info = None
                 if self.SECONDARY_CHANNEL in self.channel_mapping:
                     channel_id = self.channel_mapping[self.SECONDARY_CHANNEL]
                     if channel_id in self.classifier_infos:
                         infos = self.classifier_infos[channel_id]
-                        sec_info = (infos['strRegionId'], infos['predictor'].lstClassNames)
+                        sec_info = (infos['strRegionId'], infos['predictor'].lstClassNames, infos['predictor'].lstHexColors)
 
                 oTimeHolder.extportObjectCounts(filename, self.P, self._meta_data,
                                                 prim_info, sec_info)
+
+                pop_plot_output_dir = strPathCutter = os.path.join(self.strPathOut, "plots", "population")
+                safe_mkdirs(pop_plot_output_dir)
+                pop_plot_ylim_max = self.oSettings.get('Output', 'export_object_counts_ylim_max')
+
+                oTimeHolder.extportPopulationPlots(filename, pop_plot_output_dir, self.P, self._meta_data,
+                                                prim_info, sec_info, pop_plot_ylim_max)
 
             if self.oSettings.get('Output', 'export_object_details'):
                 filename = os.path.join(strPathOutPositionStats,
@@ -508,7 +488,7 @@ class PositionAnalyzer(object):
                 filename = os.path.join(strPathOutPositionStats,
                                         'P%s__object_details_excel.txt' % self.P)
                 oTimeHolder.extportObjectDetails(filename, excel_style=True)
-                
+
             if self.oSettings.get('Output', 'export_file_names'):
                 oTimeHolder.extportImageFileNames(strPathOutPositionStats, self.P, self._imagecontainer, self.channel_mapping)
 
@@ -606,103 +586,8 @@ class PositionAnalyzer(object):
                         #        afterwards
                         shutil.rmtree(strPathCutterIn, ignore_errors=True)
 
-#            if (isinstance(oCellTracker, PlotCellTracker) and
-#                hasattr(self.oSettings, "bDoObjectCutting3") and
-#                self.oSettings.bDoObjectCutting3):
-#                strPathLabels = os.path.join(self.strPathOutPositionImages, "_labels")
-#                for strChannelId in os.listdir(strPathLabels):
-#                    strPathChannel = os.path.join(strPathLabels, strChannelId)
-#                    if os.path.isdir(strPathChannel):
-#                        for strRegionId in os.listdir(strPathChannel):
-#                            strPathRegion = os.path.join(strPathChannel, strRegionId)
-#                            if os.path.isdir(strPathRegion):
-#                                strPathCutterOut = os.path.join(strPathCutter, '_labels', strChannelId, strRegionId)
-#                                self._oLogger.info("running CutterLabel for '%s' / '%s'..." % (strChannelId, strRegionId))
-#                                CutterLabel(oCellTracker,
-#                                            strPathRegion,
-#                                            self.P,
-#                                            strPathCutterOut,
-#                                            self._meta_data,
-#                                            **self.oSettings.dctCutter3Infos)
-
-#            if self.oSettings.bQualityControl:
-#                self._oLogger.info("running quality control...")
-#                oQualityControl.processPosition(oTimeHolder)
-
-#            if self.oSettings.bDumpCellTracker:
-#                oFile = file(strFilenameCellTrackerDump, 'wb')
-#                pickle.dump(oCellTracker, oFile, 1)
-#                oFile.close()
-
-#        if self.oSettings.bClassify and self.oSettings.bExportUnifiedClassCounts:
-#
-#            for classifierName, classifierInfos in self.oSettings.dctClassificationInfos.iteritems():
-#                self._oLogger.info("exporting unified class counts for '%s'" % classifierName)
-#
-#                oClassPredictor = classifierInfos['predictor']
-#                oTableClassCounts = newTable(['Position', 'GeneSymbol', 'Group', 'Frame'] +
-#                                              oClassPredictor.lstClassNames,
-#                                              columnTypeCodes=['i','c', 'c', 'i'] +
-#                                              ['i']*oClassPredictor.iClassNumber)
-#
-#                for iT, dctChannels in oTimeHolder.iteritems():
-#
-#                    oRecord = {'Position'   : self.P,
-#                               'Frame'      : iT}
-#
-#                    dctClassCount = dict([(x, 0) for x in oClassPredictor.dctClassLabels])
-#                    oChannel = dctChannels[classifierInfos['strChannelId']]
-#                    strRegionId = classifierInfos['strRegionId']
-#                    if strRegionId in oChannel.getRegionNames():
-#                        oRegion = oChannel.getRegion(strRegionId)
-#                        for iObjId, oObj in oRegion.iteritems():
-#                            dctClassCount[oObj.strClassName] += 1
-#                    oRecord.update(dctClassCount)
-#                    oTableClassCounts.append(oRecord)
-#
-#                strFilename = os.path.join(self.strPathOutAnalyzed,
-#                                           'unified_class_counts__%s__P%s.tsv' %\
-#                                           (classifierName, self.P))
-#                exportTable(self.oTableClassCounts,
-#                            strFilename,
-#                            fieldDelimiter='\t',
-#                            stringDelimiter='')
-#                self._oLogger.info("Predicted class counts for '%s' exported to '%s'." %\
-#                                   (classifierName, strFilename))
-
-#        for strChannelId, tplChannelInfo in self.oSettings.dctChannelMapping.iteritems():
-#            dctChannelSettings = getattr(self.oSettings, tplChannelInfo[1])
-#            if dctChannelSettings.get('bEstimateBackground', False):
-#                oTable = newTable(['Frame', 'Timestamp', 'Background_avg'],
-#                                  columnTypeCodes=['i','f', 'f'])
-#                for iT, dctChannels in oTimeHolder.iteritems():
-#                    oChannel = dctChannels[strChannelId]
-#                    if oChannel.bSegmentationSuccessful:
-#                        oTable.append({'Frame' : iT,
-#                                       'Timestamp' : self._meta_data.getTimestamp(self.origP, iT),
-#                                       'Background_avg' : oChannel.fBackgroundAverage})
-#                exportTable(oTable,
-#                            os.path.join(self.strPathOutPosition,
-#                                         '_background_estimates__P%s__C%s.tsv' % (self.P, strChannelId)),
-#                            fieldDelimiter='\t',
-#                            typeFormatting={FloatType: lambda x: "%E" % x},
-#                            stringDelimiter='')
-
-        # clean-up
-#        if hasattr(self.oSettings, 'cleanUpPosition'):
-#            # remove render images
-#            if 'render_images' in self.oSettings.cleanUpPosition:
-#                for render_name in self.oSettings.cleanUpPosition['render_images']:
-#                    render_path = os.path.join(self.strPathOutPositionImages, render_name)
-#                    if os.path.isdir(render_path):
-#                        shutil.rmtree(render_path, True)
-#                # remove the image directory if empty
-#                if len(os.listdir(self.strPathOutPositionImages)) == 0:
-#                    shutil.rmtree(self.strPathOutPositionImages, True)
-
 
         oStopWatchPos.stop()
-        #self._oLogger.info("* position %d ok, %s" % (self.P, oStopWatchPos.stopInterval().format(msec=True)))
 
         if iNumberImages > 0:
             oInterval = oStopWatchPos.stop_interval() / iNumberImages
@@ -715,7 +600,7 @@ class PositionAnalyzer(object):
         oFile = file(os.path.join(strPathFinished, '%s__finished.txt' % self.P), 'w')
         oFile.close()
 
-        return {'iNumberImages': iNumberImages, 
+        return {'iNumberImages': iNumberImages,
                 'filename_hdf5': filename_hdf5}
 
     def _adjustPositionLength(self, pos):
@@ -725,7 +610,7 @@ class PositionAnalyzer(object):
 
     def _analyzePosition(self, oCellAnalyzer):
         debug_mode = False #self.oSettings.get('General', 'debugMode')
-        
+
         if (self.oSettings.get('Output', 'rendering_labels_discwrite') or
             self.oSettings.get('Output', 'rendering_contours_discwrite') or
             self.oSettings.get('Output', 'rendering_class_discwrite')):
@@ -806,7 +691,7 @@ class PositionAnalyzer(object):
                     for j in range(i, len(xs)):
                         diff_x.append(abs(xs[i]-xs[j]))
                         diff_y.append(abs(ys[i]-ys[j]))
-                        
+
                 # new image size after registration of all images
 
 
@@ -891,11 +776,11 @@ class PositionAnalyzer(object):
                                 lstPostprocessingConditions.append('n2_avg <= %d' % self.oSettings.get2('primary_postprocessing_intensity_max'))
 
                             if self.oSettings.get2('primary_flat_field_correction') and \
-                               os.path.exists(self.oSettings.get2('primary_flat_field_correction_image_file')):
-                                strBackgroundImagePath = self.oSettings.get2('primary_flat_field_correction_image_file')
+                               os.path.exists(self.oSettings.get2('primary_flat_field_correction_image_dir')):
+                                strBackgroundImagePath = self.oSettings.get2('primary_flat_field_correction_image_dir')
                             else:
                                 strBackgroundImagePath = None
-                                 
+
                             lstPostprocessingFeatureCategories = unique(lstPostprocessingFeatureCategories)
                             if len(lstPostprocessingFeatureCategories) > 0 and \
                                 self.oSettings.get2('primary_postprocessing'):
@@ -954,11 +839,11 @@ class PositionAnalyzer(object):
                             channel_registration = (self.oSettings.get2('%s_channelregistration_x' % prefix),
                                                     self.oSettings.get2('%s_channelregistration_y' % prefix))
                             if self.oSettings.get2('%s_flat_field_correction' % prefix) and \
-                               os.path.exists(self.oSettings.get2('%s_flat_field_correction_image_file' % prefix)):
-                                strBackgroundImagePath = self.oSettings.get2('%s_flat_field_correction_image_file' % prefix)
+                               os.path.exists(self.oSettings.get2('%s_flat_field_correction_image_dir' % prefix)):
+                                strBackgroundImagePath = self.oSettings.get2('%s_flat_field_correction_image_dir' % prefix)
                             else:
                                 strBackgroundImagePath = None
-                            
+
                             params = dict(oZSliceOrProjection = projection_info,
                                           channelRegistration=channel_registration,
                                           new_image_size=new_image_size,
@@ -988,7 +873,7 @@ class PositionAnalyzer(object):
                                           lstAreaSelection = regions,
                                           lstFeatureCategories = lstFeatureCategories,
                                           dctFeatureParameters = dctFeatureParameters,
-                                          
+
                                           strBackgroundImagePath = strBackgroundImagePath,
                                           bFlatfieldCorrection = self.oSettings.get2('%s_flat_field_correction' % prefix),
                                           )
@@ -1110,7 +995,7 @@ class PositionAnalyzer(object):
                     strPathOutImages = os.path.join(self.strPathOutPositionImages, '_labels')
                     safe_mkdirs(strPathOutImages)
                     oCellAnalyzer.exportLabelImages(strPathOutImages)
-                    
+
 
             self._oLogger.info(" - Frame %d, duration: %s" % (frame, stopwatch.current_interval().format(msec=True)))
 
@@ -1135,32 +1020,26 @@ def analyzePosition(*tplArgs, **dctOptions):
 class AnalyzerCore(object):
 
     def __init__(self, plate_id, settings, imagecontainer, learner=None):
-
-        #self.guid = newGuid()
+        self._imagecontainer = imagecontainer
         self.oStopWatch = StopWatch()
-
         self.oSettings = settings
         self.plate_id = plate_id
-        #self.plate = plate
         self._oLogger = logging.getLogger(self.__class__.__name__)
 
-
         self.oSettings.set_section('General')
-        self.strPathOut = imagecontainer.get_path_out(plate_id)
-        imagecontainer.set_plate(plate_id)
+        self.strPathOut = self._imagecontainer.get_path_out(plate_id)
+        self._imagecontainer.set_plate(plate_id)
 
+        # XXX move this to separate function
         bMkdirsOk = safe_mkdirs(self.strPathOut)
         self._oLogger.info("strPathOut '%s', ok: %s" % (self.strPathOut, bMkdirsOk))
-
         self.strPathOutAnalyzed = os.path.join(self.strPathOut, 'analyzed')
         bMkdirsOk = safe_mkdirs(self.strPathOutAnalyzed)
         self._oLogger.info("strPathOutAnalyzed '%s', ok: %s" % (self.strPathOutAnalyzed, bMkdirsOk))
-
         self.strPathOutDump = os.path.join(self.strPathOut, 'dump')
         bMkdirsOk = safe_mkdirs(self.strPathOutDump)
         #if self.oSettings.bDumpCellTracker:
         self._oLogger.info("strPathOutDump '%s', ok: %s" % (self.strPathOutDump, bMkdirsOk))
-
         self.strPathOutLog = os.path.join(self.strPathOut, 'log')
         bMkdirsOk = safe_mkdirs(self.strPathOutLog)
         self._oLogger.info("strPathOutLog '%s', ok: %s" % (self.strPathOutLog, bMkdirsOk))
@@ -1175,23 +1054,17 @@ class AnalyzerCore(object):
             self._oLogger.info("cropping enabled with %d %d %d %d" % (x0, y0, x1-x0, y1-y0))
         else:
             MetaImage.disable_cropping()
-            self._oLogger.info("cropping disabled")
-            
 
-        self._imagecontainer = imagecontainer
         self.lstAnalysisFrames = []
-        self._oLogger.info("openening image container: start")
         self._openImageContainer()
-        self._oLogger.info("openening image container: end")
         #self._oLogger.info("lstAnalysisFrames: %r" % self.lstAnalysisFrames)
-        
-        
+
+
         self.lstSampleReader = []
         self.dctSamplePositions = {}
         self.oObjectLearner = learner
 
         self.oSettings.set_section('Classification')
-        self._oLogger.info("collectSamples? %r" % self.oSettings.get2('collectSamples'))
         if self.oSettings.get2('collectSamples'):
 
             self.oSettings.bUsePyFarm = False
@@ -1327,16 +1200,14 @@ class AnalyzerCore(object):
 
 
     def processPositions(self, qthread=None, myhack=None):
-        logging.getLogger(str(os.getpid())).info('loop over positions...')
         lstJobInputs = []
         for oP in self.lstPositions:
-            logging.getLogger(str(os.getpid())).info('Positions: %r' % oP)
+            logging.getLogger(str(os.getpid())).info('Process positions: %r' % oP)
             if oP in self.dctSamplePositions:
                 analyze = len(self.dctSamplePositions[oP]) > 0
             else:
                 analyze = len(self.lstAnalysisFrames) > 0
-            
-            logging.getLogger(str(os.getpid())).info('analyze? %r' % analyze)
+
             if analyze:
                 tplArgs = (self.plate_id,
                            oP,
@@ -1359,8 +1230,8 @@ class AnalyzerCore(object):
                       'max': len(lstJobInputs),
                        }
         post_hdf5_link_list = []
+
         for idx, (tplArgs, dctOptions) in enumerate(lstJobInputs):
-            logging.getLogger(str(os.getpid())).info('analyze: %d' % idx)
             if not qthread is None:
                 if qthread.get_abort():
                     break
@@ -1371,40 +1242,16 @@ class AnalyzerCore(object):
                 qthread.set_stage_info(stage_info)
             analyzer = None
             try:
-                logging.getLogger(str(os.getpid())).info('init PositionAnalyzer')
                 analyzer = PositionAnalyzer(*tplArgs, **dctOptions)
-                logging.getLogger(str(os.getpid())).info('and go: analyze()')
                 result_dct = analyzer()
             except Exception, e:
                 logging.getLogger(str(os.getpid())).error(str(e))
                 raise
             finally:
                 if hasattr(analyzer, 'oTimeHolder'):
-                    logging.getLogger(str(os.getpid())).debug('Closing timeholder')
                     analyzer.oTimeHolder.close_all()
             if self.oSettings.get('Output', 'hdf5_create_file') and self.oSettings.get('Output', 'hdf5_merge_positions'):
                 post_hdf5_link_list.append(result_dct['filename_hdf5'])
-            
-        
-        
-        return {'ObjectLearner': self.oObjectLearner, 
+
+        return {'ObjectLearner': self.oObjectLearner,
                 'post_hdf5_link_list': post_hdf5_link_list}
-    
-    
-        
-        
-        f = h5py.File(os.path.join(os.path.split(post_hdf5_link_list[0])[0], '_all_positions.h5'), 'w')
-        
-        f['definition'] = h5py.ExternalLink(post_hdf5_link_list[0],'/definition')
-        
-        for fname in post_hdf5_link_list:
-            fh = h5py.File(fname, 'r')
-            fplate, fwell, fpos = get_plate_and_postion(fh)
-            fh.close()
-            print (POSITION_PREFIX + '%s') % (fplate, fwell, fpos)
-            f[(POSITION_PREFIX + '%s') % (fplate, fwell, fpos)] = h5py.ExternalLink(fname, (POSITION_PREFIX + '%s') % (fplate, fwell, fpos))
-        
-        f.close()
-
-
-

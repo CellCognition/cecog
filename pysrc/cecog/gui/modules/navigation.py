@@ -253,6 +253,7 @@ class NavigationModule(Module):
     def initialize(self):
         self.coordinate_changed.connect(self.browser.on_coordinate_changed)
         coordinate = self.browser.get_coordinate()
+
         meta_data = self._imagecontainer.get_meta_data()
         self._update_position_table(meta_data)
         self._update_info_frame(meta_data)
@@ -346,7 +347,8 @@ class NavigationModule(Module):
         coordinate_old = self.browser.get_coordinate()
         plate = coordinate_new.plate
 
-        self.dlg = waitingProgressDialog("Please wait until the plate has been loaded...", self)
+        self.dlg = waitingProgressDialog(\
+            "Please wait until the plate has been loaded...", self)
         self.dlg.setTarget(self._imagecontainer.set_plate, plate)
         self.dlg.exec_()
 

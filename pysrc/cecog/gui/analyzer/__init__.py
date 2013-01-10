@@ -60,7 +60,7 @@ import scipy.stats.stats as sss
 # FIXME don't set Agg in a pyqt4 Program
 # emit an event whent thread is finish that generates the plots
 from matplotlib import use
-use("Agg")
+use("Agg", warn=False)
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.colors import ListedColormap
@@ -74,6 +74,7 @@ from PIL import Image
 #
 import cecog.learning.unsupervised as unsup
 from cecog.learning.constants import CLASS_COLORS, CLASS_COLORS_LIST
+
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -136,7 +137,6 @@ from cecog.analyzer.ibb import IBBAnalysis, SecurinAnalysis
 #-------------------------------------------------------------------------------
 # functions:
 #
-
 
 def link_hdf5_files(post_hdf5_link_list):
     logger = logging.getLogger()
@@ -404,28 +404,24 @@ class HmmThreadPython(_ProcessingThread):
         self._convert = lambda x: x.replace('\\','/')
         self._join = lambda *x: self._convert('/'.join(x))
 
-    # @classmethod
-    # def get_cmd(cls, filename):
-    #     filename = filename.strip()
-    #     if filename != '':
-    #         cmd = filename
-    #     elif sys.platform == 'darwin':
-    #         cmd = cls.DEFAULT_CMD_MAC
-    #     else:
-    #         cmd = cls.DEFAULT_CMD_WIN
-    #     return cmd
+        # Read Events from event txt files
+        self.events = self._readEvents()
 
-    # def _setMappingFile(self):
-    #     if self._settings.get2('position_labels'):
-    #         path_mapping = self._convert(self._settings.get2('mappingfile_path'))
-    #         for plate_id in self.plates:
-    #             mapping_file = os.path.join(path_mapping, '%s.tsv' % plate_id)
-    #             if not os.path.isfile(mapping_file):
-    #                 mapping_file = os.path.join(path_mapping, '%s.txt' % plate_id)
-    #                 if not os.path.isfile(mapping_file):
-    #                     raise IOError("Mapping file '%s' for plate '%s' not found." %
-    #                                   (mapping_file, plate_id))
-    #             self._mapping_files[plate_id] = os.path.abspath(mapping_file)
+    def _readEvents(self):
+        "Reads all events written by the CellCognition tracking."
+        pass
+
+    def _setMappingFile(self):
+        if self._settings.get2('position_labels'):
+            path_mapping = self._convert(self._settings.get2('mappingfile_path'))
+            for plate_id in self.plates:
+                mapping_file = os.path.join(path_mapping, '%s.tsv' % plate_id)
+                if not os.path.isfile(mapping_file):
+                    mapping_file = os.path.join(path_mapping, '%s.txt' % plate_id)
+                    if not os.path.isfile(mapping_file):
+                        raise IOError("Mapping file '%s' for plate '%s' not found." %
+                                      (mapping_file, plate_id))
+                self._mapping_files[plate_id] = os.path.abspath(mapping_file)
 
     def _run(self):
         self._settings.set_section(SECTION_NAME_ERRORCORRECTION)
@@ -701,8 +697,11 @@ class HmmThread(_ProcessingThread): #__R_version
     def _run(self):
         plates = self._imagecontainer.plates
         self._settings.set_section(SECTION_NAME_ERRORCORRECTION)
-        # mapping files (mapping between plate well/position and experimental condition) can be defined by a directory
-        # which must contain all mapping files for all plates in the form <plate_id>.txt or .tsv
+
+        # mapping files (mapping between plate well/position
+        # and experimental condition) can be defined by a directory
+        # which must contain all mapping files for all plates in
+        # the form <plate_id>.txt or .tsv
         # if the option 'position_labels' is not enabled a dummy mapping file is generated
         if self._settings.get2('position_labels'):
             path_mapping = self._convert(self._settings.get2('mappingfile_path'))
@@ -805,6 +804,9 @@ class HmmThread(_ProcessingThread): #__R_version
                     lines[i] = "GALLERIES = NULL\n"
                 else:
                     lines[i] = "GALLERIES = c(%s)\n" % ','.join(["'%s'" % x for x in gallery_names])
+
+            if len(self._learner_dict) == 0 or 'primary' not in self._learner_dict:
+                raise RuntimeError('Classifier not found. Please check your classifications settings...')
 
             if 'primary' in self._learner_dict:# and self._settings.get('Processing', 'primary_errorcorrection'):
 
@@ -949,9 +951,6 @@ class HmmThread(_ProcessingThread): #__R_version
         self._process.kill()
         _ProcessingThread.set_abort(self, wait=wait)
 
-
-
-
 class ParallelProcessThreadMixinBase(object):
     class ProcessCallback(object):
         def __init__(self):
@@ -1036,7 +1035,6 @@ class MultiProcessingAnalyzerMixin(ParallelProcessThreadMixinBase):
 
         self.log_receiver_thread = threading.Thread(target=self.log_receiver.serve_forever)
         self.log_receiver_thread.start()
-
         self.process_callback = self.ProcessCallback(self)
 
     def finish(self):
@@ -1044,8 +1042,8 @@ class MultiProcessingAnalyzerMixin(ParallelProcessThreadMixinBase):
         self.log_receiver.server_close()
         self.log_receiver_thread.join()
 
-        post_hdf5_link_list = reduce(lambda x,y: x + y, self.post_hdf5_link_list)
-        if len(post_hdf5_link_list) > 0:
+        if len(self.post_hdf5_link_list) > 0:
+            post_hdf5_link_list = reduce(lambda x,y: x + y, self.post_hdf5_link_list)
             link_hdf5_files(sorted(post_hdf5_link_list))
 
 
@@ -1361,11 +1359,9 @@ class AnalzyerThread(_ProcessingThread):
         self._buffer = {}
 
     def _run(self):
-        learner = None
         for plate_id in self._imagecontainer.plates:
             analyzer = AnalyzerCore(plate_id, self._settings,
-                                    copy.copy(self._imagecontainer),
-                                    learner=learner)
+                                    copy.copy(self._imagecontainer))
             result = analyzer.processPositions(self)
             learner = result['ObjectLearner']
             post_hdf5_link_list = result['post_hdf5_link_list']
@@ -1665,7 +1661,7 @@ class _ProcessorMixin(object):
                 if type(cls) == types.ListType:
                     self._process_items = cls
                     self._current_process_item = 0
-                    cls = cls[0]
+                    cls = cls[self._current_process_item]
 
                     # remove HmmThread if process is not first in list and
                     # not valid error correction was activated
@@ -1801,8 +1797,10 @@ class _ProcessorMixin(object):
                     for kind in ['primary', 'secondary']:
                         _resolve = lambda x,y: self._settings.get(x, '%s_%s' % (kind, y))
                         env_path = convert_package_path(_resolve('Classification', 'classification_envpath'))
-                        if (_resolve('Processing', 'classification') and
-                            (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))):
+                        if (os.path.exists(env_path)
+                              and (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))
+                             ):
+
                             classifier_infos = {'strEnvPath' : env_path,
                                                 'strChannelId' : _resolve('ObjectDetection', 'channelid'),
                                                 'strRegionId' : _resolve('Classification', 'classification_regionname'),
@@ -1810,6 +1808,8 @@ class _ProcessorMixin(object):
                             learner = CommonClassPredictor(dctCollectSamples=classifier_infos)
                             learner.importFromArff()
                             learner_dict[kind] = learner
+
+                    ### Whee, I like it... "self.parent().main_window._imagecontainer" crazy, crazy, michael... :-)
                     self._analyzer = cls(self, self._current_settings,
                                          learner_dict,
                                          self.parent().main_window._imagecontainer)
@@ -2194,6 +2194,6 @@ class BaseProcessorFrame(BaseFrame, _ProcessorMixin):
         _ProcessorMixin.__init__(self)
 
     def set_active(self, state):
-        # set internal state and enable/disable control buttons
+        # set internl state and enable/disable control buttons
         super(BaseProcessorFrame, self).set_active(state)
         self.enable_control_buttons(state)

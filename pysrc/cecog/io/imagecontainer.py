@@ -25,38 +25,31 @@ __all__ = ['DIMENSION_NAME_POSITION',
            'MetaImage',
            ]
 
-#------------------------------------------------------------------------------
-# standard library imports:
-#
-import types, \
-       os, \
-       copy
+import os
+import copy
+import types
 import numpy
 import cPickle as pickle
 
-#------------------------------------------------------------------------------
-# extension module imports:
-#
 from pdk.ordereddict import OrderedDict
 from pdk.datetimeutils import StopWatch
 from pdk.fileutils import safe_mkdirs
 
-#------------------------------------------------------------------------------
-# cecog imports:
-#
 from cecog.traits.config import NAMING_SCHEMAS, convert_package_path
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog import ccore
 
-#------------------------------------------------------------------------------
-# constants:
-#
+# XXX derive all this from numpy
 UINT8 = 'UINT8'
 UINT16 = 'UINT16'
 INT8 = 'INT8'
 INT16 = 'INT16'
-PIXEL_TYPES = [UINT8, UINT16, INT8, INT16]
+PIXEL_TYPES = (UINT8, UINT16, INT8, INT16)
 PIXEL_INFO = dict((n, n.lower()) for n in PIXEL_TYPES)
+PIXEL_RANGE = {UINT8: (0, 255),
+               UINT16: (0, 65535),
+               INT8: (-128, 127),
+               INT16: (-32768, 32767)}
 
 DIMENSION_NAME_POSITION = 'position'
 DIMENSION_NAME_TIME = 'time'
@@ -124,6 +117,10 @@ class MetaData(object):
         self._position_well_map = {}
 
         self.pixel_type = None
+
+    @property
+    def pixel_range(self):
+        return PIXEL_RANGE[self.pixel_type]
 
     @property
     def pixel_info(self):
@@ -259,8 +256,9 @@ class MetaData(object):
 #        lstStr += ["* Channel Mapping:\n" + oPrinter.pformat(lstChannels) + "\n"]
         strings += [line]
         return "\n".join(strings)
-    
+
     def get_frames_of_position(self, pos):
+        #print self._timestamps_absolute.keys()
         return self._timestamps_absolute[pos].keys()
 
     def __str__(self):
@@ -275,7 +273,7 @@ class MetaImage(object):
     Image reading is implemented lazy.
     """
     _crop_coordinates = None
-    
+
     @classmethod
     def get_crop_coordinates(cls):
         return cls._crop_coordinates
@@ -293,15 +291,15 @@ class MetaImage(object):
     @property
     def width(self):
         return self.image.width
-    
+
     @property
     def height(self):
         return self.image.height
-    
+
     @property
     def raw_width(self):
         return self._raw_image.width
-    
+
     @property
     def raw_height(self):
         return self._raw_image.height
@@ -312,14 +310,14 @@ class MetaImage(object):
             return self._raw_image
         else:
             return self._cropped_image
-    
+
     @property
     def _raw_image(self):
         if self._img is None:
             self._img = self.image_container.get_image(self.coordinate)
         return self._img
-    
-    @property  
+
+    @property
     def _cropped_image(self):
         if self._img_c is None:
             self._img_c = ccore.subImage(self._raw_image,
@@ -329,35 +327,35 @@ class MetaImage(object):
 
     def set_raw_image(self, img):
         self._img = img
-        
+
     def set_cropped_image(self, img):
         self._img_c = img
-        
+
     def set_image(self, img):
         if self._crop_coordinates is None:
             self.set_raw_image(img)
         else:
             self.set_cropped_image(img)
-      
-    @classmethod    
+
+    @classmethod
     def _check_crop_coordinates(cls, x0, y0, width, height):
         ok = True
         if x0 < 0 or y0 < 0 or width < 0 or height < 0:
             ok = False
         return ok
-        
+
     @classmethod
     def enable_cropping(cls, x0, y0, width, height):
         if cls._check_crop_coordinates(x0, y0, width, height):
             cls._crop_coordinates = (x0, y0, width, height)
         else:
             raise RuntimeError('wrong crop coordinates')
-     
-    @classmethod    
+
+    @classmethod
     def disable_cropping(cls):
         MetaImage._crop_coordinates = None
-      
-    
+
+
 
 
 
@@ -459,7 +457,16 @@ class Coordinate(object):
     def copy(self):
         return copy.deepcopy(self)
 
-
+    def __str__(self):
+        res = ''
+        for key, info in zip(['plate', 'position','time', 'channel', 'zslice'], 
+                             [self.plate, self.position, self.time, self.channel, self.zslice]):
+            if info is None: 
+                continue
+            else: 
+                res += '\n%s: %s' % (key, str(info))
+        return res
+    
 class ImageContainer(object):
 
     def __init__(self):

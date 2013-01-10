@@ -103,8 +103,8 @@ class PositionThumbnailBase(QtGui.QLabel):
         self.parent.clicked.emit(self.position_key)
         
 class PositionThumbnailEvents(PositionThumbnailBase):
-    item_length = 10
-    item_height = 2
+    item_length = 12
+    item_height = 1
     name = 'Standard'
     
     def __init__(self, position_key, position, parent=None):
@@ -112,8 +112,18 @@ class PositionThumbnailEvents(PositionThumbnailBase):
         self.parent = parent
         self.position_key = position_key
         events = position.get_events()
+        
+        def event_cmp(x, y):
+            x_l = position.get_class_label(x)
+            y_l = position.get_class_label(y)
+            return cmp(numpy.count_nonzero(numpy.logical_or(x_l == 3, x_l ==4)),
+                       numpy.count_nonzero(numpy.logical_or(y_l == 3, y_l ==4)) 
+                                           )
+            
+        events = sorted(events, cmp=event_cmp)
+        
         if len(events) > 0:
-            thumbnail_pixmap = QtGui.QPixmap(20*self.item_length, len(events)*self.item_height)
+            thumbnail_pixmap = QtGui.QPixmap(len(events[0])*self.item_length, len(events)*self.item_height)
             thumbnail_pixmap.fill(QtCore.Qt.white)
             painter = QtGui.QPainter()
             
@@ -845,7 +855,7 @@ class MainWindow(QtGui.QMainWindow):
         QtGui.QMainWindow.__init__(self, parent)
         self.setStyleSheet('background-color: qlineargradient(x1: 0, y1: 0, x2: 500, y2: 500, stop: 0 #444444, stop: 1 #0A0A0A);') 
         self.setGeometry(100,100,1200,800)
-        self.setWindowTitle('tracklet browser')
+        self.setWindowTitle('CellH5Browser')
         
         self.mnu_open = QtGui.QAction('&Open', self)
         self.mnu_open.triggered.connect(self.open_file)
@@ -937,7 +947,7 @@ def main():
     if len(file) == 1:
         file = file[0][1]
     else:
-        file = r'C:\Users\sommerc\cellcognition\pysrc\cecog\io\0038-cs.h5'
+        file = r'V:\ChristophSommer\cecog_data\Analysis\exp911\hdf5\_all_positions.h5'
         
     mainwindow = MainWindow(file)
     mainwindow.show()

@@ -21,7 +21,7 @@ from setuptools import setup
 import shutil
 import os
 import sys
-import matplotlib, colorbrewer
+import matplotlib
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
@@ -43,7 +43,12 @@ from cecog.traits.config import (ANALYZER_CONFIG_FILENAME,
 MAIN_SCRIPT = 'CecogAnalyzer.py'
 
 APP = [MAIN_SCRIPT]
-INCLUDES = ['sip', 'tabdelim',]
+
+INCLUDES = [ 'sip',
+             'scipy.sparse.csgraph._validation',
+             'scipy.spatial.kdtree',
+             'scipy.sparse.csgraph._shortest_path' ]
+
 EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
             'PyQt4.QtOpenGL', 'PyQt4.QtScript',
             'PyQt4.QtSql', 'PyQt4.QtTest',
@@ -52,19 +57,20 @@ EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
             'rpy',
             '_gtkagg', '_tkagg', '_agg2', '_cairo', '_cocoaagg',
             '_fltkagg', '_gtk', '_gtkcairo',
-            'Tkconstants', 'Tkinter', 'tcl',
-            ]
-PACKAGES = ['cecog', 'h5py', 'colorbrewer', 'vigra', 'matplotlib']
+            'Tkconstants', 'Tkinter', 'tcl']
 
-RESOURCE_FILES = [ANALYZER_CONFIG_FILENAME,
-                  FONT12_FILENAME,
-                  NAMING_SCHEMA_FILENAME,
-                  PATH_MAPPING_FILENAME,
-                  ]
+PACKAGES = ['cecog', 'h5py', 'vigra', 'matplotlib']
 
-#-------------------------------------------------------------------------------
-# functions:
-#
+DLL_EXCLUDES = [ 'libgdk-win32-2.0-0.dll',
+                 'libgobject-2.0-0.dll',
+                 'libgdk_pixbuf-2.0-0.dll',
+                 'w9xpopen.exe' ] # is not excluded for some reason
+
+RESOURCE_FILES = [ANALYZER_CONFIG_FILENAME, FONT12_FILENAME,
+                   NAMING_SCHEMA_FILENAME, PATH_MAPPING_FILENAME]
+
+DATA_FILES = matplotlib.get_py2exe_datafiles()
+
 def tempsyspath(path):
     def decorate(f):
         def handler():
@@ -84,9 +90,6 @@ def read_pkginfo_file(setup_file):
         return __import__('__pkginfo__')
     return _import_pkginfo_file()
 
-#-------------------------------------------------------------------------------
-# main:
-#
 pkginfo = read_pkginfo_file(__file__)
 
 # delete target folder before execution of py2app
@@ -97,8 +100,6 @@ for path in ['dist', 'build']:
 if sys.platform == 'darwin':
     OPTIONS = {'app' : APP}
     SYSTEM = 'py2app'
-    DATA_FILES = matplotlib.get_py2exe_datafiles()
-    DATA_FILES.append(('colorbrewer/data',[os.path.join(colorbrewer.__path__[0], 'data', 'ColorBrewer_all_schemes_RGBonly3.csv')]))
     EXTRA_OPTIONS = {'argv_emulation': False,
                      'includes': INCLUDES,
                      'excludes': EXCLUDES,
@@ -115,7 +116,6 @@ if sys.platform == 'darwin':
 elif sys.platform == 'win32':
     import py2exe # pylint: disable-msg=F0401,W0611
     FILENAME_ZIP = 'data.zip'
-    #FILENAME_ZIP = 'CecogAnalyzer.exe'
     OPTIONS = {'windows': [{'script': MAIN_SCRIPT,
                             'icon_resources': \
                                [(1, r'resources\cecog_analyzer_icon.ico')],
@@ -124,24 +124,19 @@ elif sys.platform == 'win32':
                'zipfile' : FILENAME_ZIP,
                }
     SYSTEM = 'py2exe'
-    DATA_FILES = matplotlib.get_py2exe_datafiles()
-    DATA_FILES.append(('colorbrewer/data',[os.path.join(colorbrewer.__path__[0], 'data', 'ColorBrewer_all_schemes_RGBonly3.csv')]))
     EXTRA_OPTIONS = {'includes': INCLUDES,
                      'excludes': EXCLUDES,
                      'packages': PACKAGES,
-                     'optimize': 2,
+                     'dll_excludes': DLL_EXCLUDES,
+                     'optimize': 1, #don't strip doc strings
                      'compressed': False,
-                     'skip_archive': True,
+                     'skip_archive': False,
                      'bundle_files': 3,
-
-                     #'ascii': True,
-                     #'xref': True,
                     }
-                    
+
 elif sys.platform.startswith('linux'):
     from cx_Freeze import setup, Executable
     FILENAME_ZIP = 'data.zip'
-    #FILENAME_ZIP = 'CecogAnalyzer.exe'
     OPTIONS = {'executables':[Executable(MAIN_SCRIPT,initScript = None,)]}
     SYSTEM = 'cx_Freeze'
     EXTRA_OPTIONS = {'includes': INCLUDES,
@@ -160,7 +155,6 @@ elif sys.platform.startswith('linux'):
 setup(
     data_files=DATA_FILES,
     options={SYSTEM: EXTRA_OPTIONS},
-    includes=['sip', 'netCDF4_utils', 'netcdftime'],
     setup_requires=[SYSTEM],
     name=pkginfo.name,
     version=pkginfo.version,
@@ -239,22 +233,10 @@ if sys.platform == 'darwin':
 
 
 elif sys.platform == 'win32':
-#    import zipfile, glob
-#    lib_filename = os.path.join('dist', FILENAME_ZIP)
-#    zfile = zipfile.PyZipFile(lib_filename, 'a')
-#    filenames = [r'C:\Source\Lib\libfftw3-3.dll',
-#                 ] +\
-#                 glob.glob(r'C:\Source\Microsoft.VC90.CRT\*.*')
-#    for filename in filenames:
-#        print "adding '%s' to '%s'" % (filename, lib_filename)
-#        zfile.write(filename, os.path.split(filename)[1])
-#    zfile.close()
-
     filenames = ['graph_template.txt',
                  'hmm.R',
                  'hmm_report.R',
-                 'run_hmm.R',
-                 ]
+                 'run_hmm.R']
     resource_path = os.path.join('dist', 'resources')
     target = os.path.join(resource_path, 'rsrc', 'hmm')
     safe_mkdirs(target)
@@ -268,8 +250,9 @@ elif sys.platform == 'win32':
         shutil.copy(filename, resource_path)
 
     # copy vigranumpycory to correct filename
-    shutil.copy(os.path.join('dist', 'vigra.vigranumpycore.pyd'), os.path.join('dist', 'vigranumpycore.pyd'))
-    
+    shutil.copy(os.path.join('dist', 'vigra.vigranumpycore.pyd'),
+                os.path.join('dist', 'vigranumpycore.pyd'))
+
     shutil.copytree(os.path.join(RESOURCE_PATH, 'palettes', 'zeiss'),
                     os.path.join(resource_path, 'palettes', 'zeiss'))
 
@@ -302,7 +285,7 @@ elif sys.platform.startswith('linux'):
     w9 = os.path.join('dist', 'w9xpopen.exe')
     if os.path.isfile(w9):
         os.remove(w9)
-        
+
 try:
     shutil.copytree(os.path.join(RESOURCE_PATH, 'battery_package', 'Classifier'),
                     os.path.join(resource_path, 'battery_package', 'Classifier'))

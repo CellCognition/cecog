@@ -120,6 +120,7 @@ class AbstractImporter(object):
                            else multi_image
         self.has_multi_images = False
         self.timestamps_from_file = None
+        self.use_frame_indices = False
         self.dimension_lookup = {}
         self.meta_data = MetaData()
 
@@ -183,27 +184,64 @@ class AbstractImporter(object):
         dimension_items = self._get_dimension_items()
         print("Get dimensions: %s" % s)
         s.reset()
-        for item in dimension_items:
 
+        # if use_frame_indices is set in the ini file, 
+        # we make a first scan of the items and determine for each position
+        # the list of timepoints. 
+        # Then, we can assign to each position a dictionary that assigns to each timepoint
+        # its index (after ordering).
+        if self.use_frame_indices:        
+            #all_times = list(set([int(item[DIMENSION_NAME_TIME]) if DIMENSION_NAME_TIME in item else 0 
+            #                      for item in dimension_items]))
+            #all_times.sort()
+            first_pass = {}
+            for item in dimension_items:
+                position = item[DIMENSION_NAME_POSITION]
+                if not position in first_pass:
+                    first_pass[position] = []
+
+                if DIMENSION_NAME_TIME in item:
+                    time_val = int(item[DIMENSION_NAME_TIME])
+                else:
+                    time_val = 0
+                first_pass[position].append(time_val)
+                
+            time_index_correspondence = {}
+            for pos in first_pass.keys():
+                first_pass[position].sort()
+                time_index_correspondence[pos] = dict(zip(first_pass[position], 
+                                                          range(len(first_pass[position]))))
+            
+        for item in dimension_items:
+            
             # import image info only once
             if not has_xy:
                 has_xy = True
                 info = ccore.ImageImportInfo(os.path.join(self.path,
                                                           item['filename']))
                 self.meta_data.set_image_info(info)
-                self.has_multi_images = False#info.images > 1
-
+                self.has_multi_images = False #info.images > 1
+            
+            # position
             position = item[DIMENSION_NAME_POSITION]
             if not position in lookup:
                 lookup[position] = {}
+                
+            # time                
             if DIMENSION_NAME_TIME in item:
-                time = int(item[DIMENSION_NAME_TIME])
+                time_from_filename = int(item[DIMENSION_NAME_TIME])
             else:
-                time = 0
-                item[DIMENSION_NAME_TIME] = str(time)
+                time_from_filename = 0
+                item[DIMENSION_NAME_TIME] = str(time_from_filename)
+
+            if self.use_frame_indices:
+                time = time_index_correspondence[position][time_from_filename]
+            else: 
+                time = time_from_filename
             if not time in lookup[position]:
                 lookup[position][time] = {}
 
+            # channels
             if DIMENSION_NAME_CHANNEL in item:
                 channel = item[DIMENSION_NAME_CHANNEL]
             else:
@@ -509,6 +547,13 @@ class IniFileImporter(AbstractImporter):
         else:
             self.allow_subfolder = None
 
+        if config_parser.has_option(section_name, 'use_frame_indices'):
+            self.use_frame_indices = config_parser.get(section_name, 'use_frame_indices').lower() == 'true'
+        else:
+            self.use_frame_indices = False
+
+        #print 'use_frame_indices: ', self.use_frame_indices
+        
     def __setstate__(self, state):
         super(IniFileImporter, self).__setstate__(state)
         if 'config_parser' in state:
@@ -539,6 +584,7 @@ class IniFileImporter(AbstractImporter):
             if len(self.extensions) > 0:
                 filenames = [x for x in filenames
                              if os.path.splitext(x)[1].lower() in self.extensions]
+                filenames.sort()
             # prune dirnames by regex search for next iteration of os.walk
             # dirnames must be removed in-place!
             for dirname in dirnames[:]:
@@ -568,6 +614,7 @@ class IniFileImporter(AbstractImporter):
                     search2 = re_dim.search(found_name)
                     if not search2 is None:
                         result = search2.groupdict()
+                        
 
                         # use path data if not defined for the filename
                         for key in [DIMENSION_NAME_POSITION, META_INFO_WELL,
