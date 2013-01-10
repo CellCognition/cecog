@@ -602,19 +602,16 @@ class CellTracker(OptionManager):
             self.initBinaryClustering(invert)
             for strStartId in lstStartIds:
                 self.dctVisitorData[strStartId] = {'_current': 0,
-                                                   '_full'   : [[]],
-                                                   }
+                                                   '_full'   : [[]]}
                 self.oLogger.debug("root ID %s" % strStartId)
                 self._forwardVisitor2(strStartId, self.dctVisitorData[strStartId], dctVisitedNodes)
         elif self.getOption('supEventSelection'):
             #print 'in supervised event selection'
             for strStartId in lstStartIds:
                 self.dctVisitorData[strStartId] = {'_current': 0,
-                                                   '_full'   : [[]],
-                                                   }
+                                                   '_full'   : [[]]}
                 self.oLogger.debug("root ID %s" % strStartId)
                 self._forwardVisitor(strStartId, self.dctVisitorData[strStartId], dctVisitedNodes)
-
 
     def initBinaryClustering(self, invert):
         oGraph = self._oGraph
@@ -844,7 +841,6 @@ class PlotCellTracker(CellTracker):
 
         allFeatures = []
         for strRootId, dctTrackResults in self.dctVisitorData.iteritems():
-
             self.oLogger.debug("* root %s, candidates %s" % (strRootId, dctTrackResults.keys()))
             for strStartId, dctEventData in dctTrackResults.iteritems():
                 if strStartId[0] != '_':
@@ -866,8 +862,9 @@ class PlotCellTracker(CellTracker):
                                                            strChannelId,
                                                            strRegionId,
                                                            lstFeatureNames)
-                                    allFeatures.append (obj_allFeatures)
+                                    allFeatures.append(obj_allFeatures)
                     self.oLogger.debug("* root %s ok" % strStartId)
+
 
         if self.getOption("bExportFlatFeatures"):
             for strChannelId, dctRegions in dctChannels.iteritems():
@@ -884,6 +881,9 @@ class PlotCellTracker(CellTracker):
                                                    strChannelId,
                                                    strRegionId,
                                                    lstFeatureNames)
+
+        if len(allFeatures) == 0:
+            raise RuntimeError("No events found for TC3 analysis")
 
         if self.getOption('tc3Analysis'):
             allFeatures = numpy.array(allFeatures)
@@ -920,7 +920,6 @@ class PlotCellTracker(CellTracker):
             idn = []
             # a predefined number of classes, given in GUI
             k = self.getOption('numClusters')
-#            print "numClusters: ", k
 
             for i in xrange(num_tracks-1, -1, -1):
                 #print num_tracks
@@ -932,18 +931,15 @@ class PlotCellTracker(CellTracker):
                     num_tracks -= 1
                     idn.append(i)
 
-#           print idn
             filename = os.path.join(self.strPathOut, 'index.txt')
             numpy.savetxt(filename,idn, fmt='%d',delimiter='\t')
-#           print binary_matrix.shape
-#           print num_tracks
             filename = os.path.join(self.strPathOut, 'indexbinary_deleted.txt')
             numpy.savetxt(filename, binary_matrix, fmt='%d', delimiter='\t')
-            dim = [num_frames, num_tracks] # update num_tracks
+            # update num_tracks
+            dim = [num_frames, num_tracks]
 
             # Diverse TC3 algorithms
             m = self.getOption('minClusterSize') # a predefined minimal cluster size
-#           print m
 
             tc = unsup.TemporalClustering(dim, k, binary_matrix)
             tc3 = tc.tc3_clustering(data_pca, m)
@@ -960,7 +956,6 @@ class PlotCellTracker(CellTracker):
                           'TC3+GMM+CHMM': tc3_gmm_chmm}
 
             algorithm = self.getOption('tc3Algorithms')
-#           print algorithm
             result = algorithms[algorithm]
             filename = os.path.join(self.strPathOut, '%s.txt'%algorithm)
             numpy.savetxt(filename, result['label_matrix'], fmt='%d',delimiter='\t')

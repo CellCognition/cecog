@@ -46,7 +46,7 @@ class TemporalClustering:
         else :
             if (k*m > t) : m = t//k
             for i in range(m,t-(k-1)*m+1):
-                tmp = np.hstack((np.tile(i,(self.ntc3(t-i,k-1,m),1)), self.get_interval_matrix(t-i,k-1,m)))
+                tmp = np.hstack((np.tile(i,(self.ntc3(t-i, k-1, m),1)), self.get_interval_matrix(t-i,k-1,m)))
                 if len(intervalMatrix) == 0 : intervalMatrix = tmp
                 else : intervalMatrix = np.vstack((intervalMatrix, tmp))
         return intervalMatrix
@@ -146,11 +146,13 @@ class TemporalClustering:
     def tc3_gmm(self, data, labels, covariance_type='full', sharedcov=True) :
 
         g = mixture.GMM(n_components=self.n_clusters,
-                        covariance_type=covariance_type)
+                        covariance_type=covariance_type,
+                        init_params='',
+                        n_iter=1)
         g.means, g.covars, g.weights = \
             self._gmm_int_parameters(data, labels, sharedcov=sharedcov)
         # restrict EM to only one iteration
-        g.fit(data, n_iter=1, init_params='')
+        g.fit(data)
         # vector format [1 x num_tracks * num_frames]
         labels_tc3gmm_vec = g.predict(data)
         # matrix format [num_tracks x num_frames]
@@ -181,14 +183,15 @@ class TemporalClustering:
         # initialize DHMM
         dhmm = hmm.MultinomialHMM(n_components=self.n_clusters,
                                   transmat=trans,
-                                  startprob=sprob)
+                                  startprob=sprob,
+                                  init_params ='')
         # emission probability, identity matrix with predefined small errors.
         emis = np.eye(self.n_clusters) + eps/(self.n_clusters-1)
         emis[range(self.n_clusters),range(self.n_clusters)] = 1-eps;
         dhmm.emissionprob_ = emis;
         # learning the DHMM parameters
         # default n_iter=10, thresh=1e-2
-        dhmm.fit([labels.flatten()], init_params ='')
+        dhmm.fit([labels.flatten()])
         # with EM update
         dhmm.emissionprob_ = emis
         # vector format
@@ -203,17 +206,18 @@ class TemporalClustering:
         return tc3_gmm_dhmm
 
     def tc3_gmm_chmm(self, data, gmm_model, dhmm_model):
-
         eps = np.spacing(1)
-        sprob = np.array([1-eps,eps,eps,eps,eps,eps])
+        sprob = np.array([1-eps, eps, eps, eps, eps, eps])
         chmm = hmm.GaussianHMM(n_components=self.n_clusters,
                                transmat=dhmm_model.transmat,
                                startprob=sprob,
-                               covariance_type='full')
+                               covariance_type='full',
+                               init_params ='',
+                               n_iter=1)
         chmm.means_ = gmm_model.means
         chmm.covars_ = gmm_model.covars
         # restrict EM to only one iteration
-        chmm.fit([data], n_iter=1, init_params='')
+        chmm.fit([data])
         # vector format [1 x num_tracks * num_frames]
         labels_tc3gmmchmm_vec = chmm.predict(data)
         # matrix format [num_tracks x num_frames]
