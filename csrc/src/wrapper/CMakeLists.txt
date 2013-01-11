@@ -7,6 +7,8 @@ IF (NOT CMAKE_BUILD_TYPE)
     SET(CMAKE_BUILD_TYPE "Release")
 ENDIF()
 
+SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/config)
+
 ########################################################################
 # ADD DEPENDENCY_SEARCH_PREFIX TO CMAKES'FIND_PACKAGE PATH
 ########################################################################
@@ -24,6 +26,7 @@ ENDFOREACH(path)
 
 FIND_PACKAGE(PythonInterp REQUIRED)
 FIND_PACKAGE(PythonLibs)
+
 IF(NOT PYTHONLIBS_FOUND)
     MESSAGE(STATUS " activate fallback when standard search does not work...")
     execute_process(COMMAND ${PYTHON_EXECUTABLE} -c
@@ -96,12 +99,15 @@ IF(NOT VIGRA_IMPEX_LIBRARY)
 
 ENDIF()
 
+
 ########################################################################
 # CHECK FOR TIFF AND BOOST
 ########################################################################
 ########################################################################
 
 FIND_PACKAGE(TIFF REQUIRED)
+FIND_PACKAGE(ZLIB REQUIRED)
+FIND_PACKAGE(LZMA REQUIRED)
 FIND_PACKAGE(Boost COMPONENTS python REQUIRED)
 
 
@@ -132,10 +138,9 @@ ENDIF()
 
 INCLUDE_DIRECTORIES(${cecog_ccore_SOURCE_DIR}/../../include ${VIGRA_INCLUDE_DIR} ${TIFF_INCLUDE_DIR} ${BOOST_INCLUDE_DIR} ${PYTHON_INCLUDE_DIR} ${NUMPY_INCLUDE_DIR})
 
-ADD_LIBRARY(cecog-lib SHARED
-    cecog.cxx)
+ADD_LIBRARY(cecog-lib SHARED cecog.cxx)
 
-TARGET_LINK_LIBRARIES(cecog-lib ${TIFF_LIBRARY} ${Boost_PYTHON_LIBRARY} ${VIGRA_IMPEX_LIBRARY} ${PYTHON_LIBRARY})
+TARGET_LINK_LIBRARIES(cecog-lib ${TIFF_LIBRARY} ${Boost_PYTHON_LIBRARY} ${VIGRA_IMPEX_LIBRARY} ${PYTHON_LIBRARY} ${ZLIB_LIBRARIES} ${LZMA_LIBRARY})
 
 GET_TARGET_PROPERTY(LIB_NAME cecog-lib LOCATION)
 
@@ -164,5 +169,3 @@ IF(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
 ENDIF()
 
 INSTALL(FILES ${NEW_LIB_NAME} DESTINATION ${cecog_ccore_SOURCE_DIR}/../../../pysrc/cecog/ccore/)
-
-
