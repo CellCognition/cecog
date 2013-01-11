@@ -27,7 +27,6 @@ from os.path import join, basename, isdir, splitext, isfile
 from cecog import CH_PRIMARY, CH_OTHER, CH_VIRTUAL
 from cecog.learning.collector import CellCounterReader, CellCounterReaderXML
 from cecog.learning.learning import CommonObjectLearner
-from cecog.learning.learning import MergedChannelLearner
 
 from cecog.analyzer.position import PositionAnalyzer
 from cecog.analyzer.position import PositionPicker
@@ -264,20 +263,20 @@ class Picker(AnalyzerBase):
         For primary, sceondary and tertiary channels have the same learner while
         the merged channel has a different learner.
         """
-        cid = self.settings.get('ObjectDetection', self._resolve('channelid'))
+        chid = self.settings.get("ObjectDetection", self._resolve("channelid"))
+        pchannel = self.settings.get("Classification", "collectsamples_prefix")
 
-        if cid is None:
-            regions = self._merged_channel_regions()
-            learner = MergedChannelLearner(self.cl_path, cid, regions)
+        if chid is None:
+            learner = CommonObjectLearner(self.cl_path, self._merge_channels())
         else:
-            region = self.settings.get( \
-                'Classification', self._resolve('classification_regionname'))
-            learner = CommonObjectLearner(self.cl_path, cid, region)
+            channels = {pchannel.title(): self.settings.get( \
+                    'Classification', self._resolve("classification_regionname"))}
+            learner = CommonObjectLearner(self.cl_path, channels, chid)
 
         learner.loadDefinition()
         return learner
 
-    def _merged_channel_regions(self):
+    def _merge_channels(self):
         """Read the the checked processing channels and the region to consider
         for feature extraction."""
         regions = dict()
@@ -328,15 +327,8 @@ class Picker(AnalyzerBase):
                                        'text': 'P %s (%d/%d)' \
                                            %(self.plate, i+1, imax)})
 
-            picker = PositionPicker(self.plate,
-                                    posid,
-                                    self._out_dir,
-                                    self.settings,
-                                    self.frames,
-                                    self.sample_reader,
-                                    self.sample_positions,
-                                    self.learner,
-                                    self._imagecontainer,
-                                    qthread,
-                                    myhack)
+            picker = PositionPicker(self.plate, posid, self._out_dir, self.settings,
+                                    self.frames, self.sample_reader,
+                                    self.sample_positions, self.learner,
+                                    self._imagecontainer, qthread, myhack)
             result = picker()

@@ -32,7 +32,8 @@ from cecog.analyzer.celltracker import ClassificationCellTracker2 as CellTracker
 
 from cecog.analyzer.channel import (PrimaryChannel,
                                     SecondaryChannel,
-                                    TertiaryChannel)
+                                    TertiaryChannel,
+                                    MergedChannel)
 
 from cecog.learning.learning import CommonClassPredictor
 
@@ -65,10 +66,12 @@ class PositionCore(LoggerObject):
     PRIMARY_CHANNEL = PrimaryChannel.NAME
     SECONDARY_CHANNEL = SecondaryChannel.NAME
     TERTIARY_CHANNEL = TertiaryChannel.NAME
+    MERGED_CHANNEL = MergedChannel.NAME
 
-    CHANNELS = OrderedDict( primary=PrimaryChannel,
-                            secondary=SecondaryChannel,
-                            tertiary=TertiaryChannel)
+    CHANNELS = OrderedDict(primary=PrimaryChannel,
+                           secondary=SecondaryChannel,
+                           tertiary=TertiaryChannel,
+                           merged=MergedChannel)
 
     _info = {'stage': 0,
              'meta': 'Motif selection:',
@@ -95,7 +98,7 @@ class PositionCore(LoggerObject):
 
         self.tracker = None
         self.timeholder = None
-        self.classifiers = {}
+        self.classifiers = OrderedDict()
 
         self._qthread = qthread
         self._myhack = myhack
@@ -205,19 +208,22 @@ class PositionCore(LoggerObject):
             channel_registration = (self.settings.get2('%s_channelregistration_x' %proc_channel),
                                     self.settings.get2('%s_channelregistration_y' %proc_channel))
 
-        channel = ch_cls(strChannelId=col_channel,
-                         oZSliceOrProjection = self.zslice_par(proc_channel),
-                         channelRegistration = channel_registration,
-                         new_image_size = im_size,
-                         registration_start = reg_shift,
-                         fNormalizeMin = self.settings.get2('%s_normalizemin' %proc_channel),
-                         fNormalizeMax = self.settings.get2('%s_normalizemax' %proc_channel),
-                         lstFeatureCategories = f_cats,
-                         dctFeatureParameters = f_params)
+        if ch_cls.is_virtual():
+            channel = ch_cls()
+        else:
+            channel = ch_cls(strChannelId=col_channel,
+                             oZSliceOrProjection = self.zslice_par(proc_channel),
+                             channelRegistration = channel_registration,
+                             new_image_size = im_size,
+                             registration_start = reg_shift,
+                             fNormalizeMin = self.settings.get2('%s_normalizemin' %proc_channel),
+                             fNormalizeMax = self.settings.get2('%s_normalizemax' %proc_channel),
+                             lstFeatureCategories = f_cats,
+                             dctFeatureParameters = f_params)
 
-        # loop over the z-slices
-        for meta_image in zslice_images:
-            channel.append_zslice(meta_image)
+            # loop over the z-slices
+            for meta_image in zslice_images:
+                channel.append_zslice(meta_image)
         return channel
 
     def register_channels(self, cellanalyzer, channels):
@@ -256,7 +262,8 @@ class PositionCore(LoggerObject):
     def _resolve_name(self, channel, name):
         _channel_lkp = {self.PRIMARY_CHANNEL: 'primary',
                         self.SECONDARY_CHANNEL: 'secondary',
-                        self.TERTIARY_CHANNEL: 'tertiary'}
+                        self.TERTIARY_CHANNEL: 'tertiary',
+                        self.MERGED_CHANNEL: 'merged'}
         return '%s_%s' %(_channel_lkp[channel], name)
 
     @property
@@ -271,7 +278,7 @@ class PositionCore(LoggerObject):
     @property
     def processing_channels(self):
         channels = (self.PRIMARY_CHANNEL, )
-        for name in [self.SECONDARY_CHANNEL, self.TERTIARY_CHANNEL]:
+        for name in [self.SECONDARY_CHANNEL, self.TERTIARY_CHANNEL, self.MERGED_CHANNEL]:
             if self.settings.get('Processing', '%s_processchannel' % name.lower()):
                 channels = channels + (name,)
         return channels
@@ -355,8 +362,10 @@ class PositionPicker(PositionCore):
                                    'interval': stopwatch.interim()})
 
             stopwatch.reset(start=True)
+            # initTimepoint clears channel_registry
             cellanalyzer.initTimepoint(frame)
             self.register_channels(cellanalyzer, channels)
+            print cellanalyzer._channel_registry.keys()
 
             image = cellanalyzer.collectObjects(self.plate_id,
                                                 self.position,
@@ -414,6 +423,22 @@ class PositionAnalyzer(PositionCore):
                 self.logger.info("mkdir %s: ok" %odir)
             setattr(self, "_%s_dir" %basename(odir.lower()).strip("_"), odir)
 
+    def _channel_regions(self, p_channel):
+        """Return a dict of of channel region pairs according to the classifier"""
+        regions = dict()
+        if self.CHANNELS[p_channel.lower()].is_virtual():
+            for prefix, channel in self.CHANNELS.iteritems():
+                if channel.is_virtual():
+                    continue
+                if self.settings.get("Classification", "%s_channel" %prefix):
+                    regions[prefix.title()] = \
+                        self.settings.get("Classification", "%s_%s_region"
+                                          %(self.MERGED_CHANNEL.lower(), prefix))
+        else:
+            regions[p_channel] = self.settings.get2(self._resolve_name( \
+                    p_channel, 'classification_regionname'))
+        return regions
+
     def setup_classifiers(self):
         sttg = self.settings
         # processing channel, color channel
@@ -424,17 +449,11 @@ class PositionAnalyzer(PositionCore):
                 clf = CommonClassPredictor(
                     clf_dir=sttg.get2(self._resolve_name(p_channel,
                                                          'classification_envpath')),
-                    color_channel=c_channel,
-                    region=sttg.get2(self._resolve_name(p_channel,
-                                                        'classification_regionname')),
-                    prcs_channel=p_channel)
+                    channels=self._channel_regions(p_channel),
+                    color_channel=c_channel)
                 clf.importFromArff()
                 clf.loadClassifier()
                 self.classifiers[p_channel] = clf
-
-    # def __del__(self):
-    #     # XXX - is it really necessary?
-    #     self.logger.removeHandler(self._file_handler)
 
     def _convert_tracking_duration(self, option_name):
         """
@@ -517,7 +536,7 @@ class PositionAnalyzer(PositionCore):
         # at least the total count for primary is always exported
         ch_info = {'Primary': ('primary', [], [])}
         for name, clf in self.classifiers.iteritems():
-            ch_info[name] = (clf.region, clf.lstClassNames, clf.lstHexColors)
+            ch_info[name] = (clf.regions_str, clf.lstClassNames, clf.lstHexColors)
 
         timeholder.exportObjectCounts(fname, self.position, self.meta_data, ch_info)
         pplot_ymax = \
@@ -722,9 +741,6 @@ class PositionAnalyzer(PositionCore):
 
             cellanalyzer.process()
             n_images += 1
-            # if not self._qthread:
-            #     time.sleep(.1)
-
             images = []
             if self.settings.get('Processing', 'tracking'):
                 self.tracker.trackAtTimepoint(frame)
@@ -738,6 +754,7 @@ class PositionAnalyzer(PositionCore):
                     images += [(img_conn, '#FFFF00', 1.0),
                                (img_split, '#00FFFF', 1.0)]
 
+#            import pdb; pdb.set_trace()
             for clf in self.classifiers.itervalues():
                 cellanalyzer.classify_objects(clf)
 

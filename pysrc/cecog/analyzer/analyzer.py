@@ -38,14 +38,14 @@ class CellAnalyzer(LoggerObject):
         self.detect_objects = detect_objects
 
         self._iT = None
-        self._channel_registry = None
+        self._channel_registry = OrderedDict()
 
     def initTimepoint(self, iT):
-        self._channel_registry = OrderedDict()
+        self._channel_registry.clear()
         self._iT = iT
         self.time_holder.initTimePoint(iT)
 
-    # XXX rename id to "add_channel"
+    # XXX rename it to "add_channel"
     def register_channel(self, channel):
         self._channel_registry[channel.NAME] = channel
 
@@ -62,6 +62,8 @@ class CellAnalyzer(LoggerObject):
         primary_channel = None
 
         for channel in channels:
+            if channel.is_virtual():
+                continue
             self.time_holder.prepare_raw_image(channel)
             if self.detect_objects:
                 if channel.NAME == PrimaryChannel.NAME:
@@ -117,6 +119,7 @@ class CellAnalyzer(LoggerObject):
         if dctRenderInfo is None:
             for name, oChannel in self._channel_registry.iteritems():
                 for strRegion, oContainer in oChannel.dctContainers.iteritems():
+                    import pdb; pdb.set_trace()
                     strHexColor, fAlpha = oChannel.dctAreaRendering[strRegion]
                     imgRaw = oChannel.meta_image.image
                     imgCon = ccore.Image(imgRaw.width, imgRaw.height)
@@ -214,7 +217,7 @@ class CellAnalyzer(LoggerObject):
         training_data = OrderedDict()
         feature_names = []
 
-        for chname, region in oLearner.channels_regions.iteritems():
+        for chname, region in oLearner.channels.iteritems():
             oChannel = self._channel_registry[chname]
             oContainer = oChannel.get_container(region)
             objects = oContainer.getObjects()
@@ -290,7 +293,7 @@ class CellAnalyzer(LoggerObject):
 
             # book keeping for feature names
             # move this functionality to the learner class_name
-            if len(oLearner.channels_regions) > 1:
+            if len(oLearner.channels) > 1:
                 pfx = "%s_%s" %(chname, region)
                 feature_names.extend(["_".join((pfx, f)) for f in oChannel.lstFeatureNames])
             else:
@@ -303,7 +306,6 @@ class CellAnalyzer(LoggerObject):
 
         oLearner.set_training_data(training_data, feature_names)
         return region_images
-
 
     def exportObjects(self, plate, sample_objects, learner, container, region):
         """
@@ -349,24 +351,21 @@ class CellAnalyzer(LoggerObject):
         return learner_objects
 
     def classify_objects(self, predictor):
-        cname = predictor.prcs_channel
-        region = predictor.region
-
+        # import pdb; pdb.set_trace()
         # for cxx, ch in self._channel_registry.iteritems():
         #     for rname, rxx in ch._dctRegions.iteritems():
         #         print cxx + '_' + rname
         #         print rxx.keys()
 
-        channel = self._channel_registry[cname]
-        region = channel.get_region(region)
+        for cname, region_name in predictor.channels.iteritems():
+            channel = self._channel_registry[cname]
+            region = channel.get_region(region_name)
 
-
-        for obj in region.itervalues():
-            label, probs = predictor.predict(obj.aFeatures,
-                                             region.getFeatureNames())
-            obj.iLabel = label
-            obj.dctProb = probs
-            obj.strClassName = predictor.dctClassNames[label]
-            obj.strHexColor = predictor.dctHexColors[obj.strClassName]
-
-        self.time_holder.serialize_classification(cname, region, predictor)
+            for obj in region.itervalues():
+                label, probs = predictor.predict(obj.aFeatures,
+                                                 region.getFeatureNames())
+                obj.iLabel = label
+                obj.dctProb = probs
+                obj.strClassName = predictor.dctClassNames[label]
+                obj.strHexColor = predictor.dctHexColors[obj.strClassName]
+            self.time_holder.serialize_classification(cname, region, predictor)

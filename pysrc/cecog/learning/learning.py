@@ -36,16 +36,14 @@ class BaseLearner(LoggerObject):
     # directory substructure
     _subdirs = ('annotations', 'data', 'samples', 'controls')
 
-    def __init__(self, clf_dir, color_channel, region,
-                 prcs_channel=None):
+    def __init__(self, clf_dir, channels, color_channel=None):
         super(BaseLearner, self).__init__()
 
         self.clf_dir = clf_dir
         self.name = basename(clf_dir)
 
         self.color_channel = color_channel
-        self.prcs_channel = prcs_channel
-        self.region = region
+        self.channels = channels
 
         self.strArffFileName = 'features.arff'
         self.strSparseFileName ='features.sparse'
@@ -56,8 +54,16 @@ class BaseLearner(LoggerObject):
         self.dctFeatureData = OrderedDict()
         self.dctClassNames = {}
         self.dctClassLabels = {}
+
         self.dctHexColors = {}
         self.dctSampleNames = {}
+
+    @property
+    def regions_str(self):
+        if len(self.channels) == 1:
+            return self.channels.values()[0]
+        else:
+            return str(self.channels.values())
 
     @property
     def feature_names(self):
@@ -548,10 +554,6 @@ class CommonObjectLearner(BaseLearner):
     def __init__(self, *args, **kw):
         super(CommonObjectLearner, self).__init__(*args, **kw)
 
-    @property
-    def channels_regions(self):
-        return {self.channel_name: self.region}
-
     def set_training_data(self, training_data, feature_names):
         self.feature_names = feature_names
         nfeatures = len(feature_names)
@@ -575,17 +577,6 @@ class CommonObjectLearner(BaseLearner):
                 self.dctSampleNames[class_name].extend([tdata['files']])
             except KeyError:
                 self.dctSampleNames[class_name] = [tdata["files"]]
-
-
-class MergedChannelLearner(CommonObjectLearner):
-
-    def __init__(self, *args, **kw):
-        super(MergedChannelLearner, self).__init__(*args, **kw)
-
-    @property
-    def channels_regions(self):
-        return self.region
-
 
 if __name__ ==  "__main__":
     import sys

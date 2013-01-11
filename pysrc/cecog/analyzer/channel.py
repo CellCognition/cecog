@@ -51,6 +51,7 @@ class Channel(PropertyManager):
     NAME = None
     RANK = None
     SEGMENTATION = None
+    _is_virtual = False
 
     PROPERTIES = \
         dict(strChannelId =
@@ -133,6 +134,10 @@ class Channel(PropertyManager):
         set_attribute_values(self, state)
         # FIXME: restore logger instance
         self._oLogger = logging.getLogger(self.NAME)
+
+    @classmethod
+    def is_virtual(cls):
+        return cls._is_virtual
 
     def clear(self):
         self._lstZSlices = []
@@ -358,7 +363,6 @@ class PrimaryChannel(Channel):
     RANK = 1
     SEGMENTATION = PRIMARY_SEGMENTATION_MANAGER
 
-
 class SecondaryChannel(Channel):
 
     NAME = 'Secondary'
@@ -367,7 +371,6 @@ class SecondaryChannel(Channel):
     RANK = 2
     SEGMENTATION = SECONDARY_SEGMENTATION_MANAGER
 
-
 class TertiaryChannel(Channel):
 
     NAME = 'Tertiary'
@@ -375,3 +378,28 @@ class TertiaryChannel(Channel):
 
     RANK = 3
     SEGMENTATION = TERTIARY_SEGMENTATION_MANAGER
+
+# This channel is 'virtual'
+class MergedChannel(object):
+    """
+    Virtal or PseudoChannel which is meant to concatenate features of
+    other channels. It cannot perform an segmentation or ohter operation
+    on images.
+    """
+
+
+    NAME = 'Merged'
+    PREFIX = NAME.lower()
+    RANK = 4
+    SEGMENTATION = None
+    _is_virtual = True
+
+    def __init__(self, *args, **kw):
+        pass
+
+    @classmethod
+    def is_virtual(cls):
+        return cls._is_virtual
+
+    def merge(self):
+        pass

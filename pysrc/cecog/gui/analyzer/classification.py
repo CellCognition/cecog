@@ -87,7 +87,6 @@ class ClassifierResultFrame(QGroupBox):
         layout_conf.addWidget(self._table_conf)
         splitter.addWidget(frame_conf)
 
-
         desc = QFrame(self)
         layout_desc = QHBoxLayout(desc)
         self._label_acc = QLabel(self.LABEL_ACC % float('NAN'), desc)
@@ -128,8 +127,8 @@ class ClassifierResultFrame(QGroupBox):
         else:
             self._learner = CommonClassPredictor( \
                 clf_dir=clfdir,
-                color_channel=_resolve('ObjectDetection', 'channelid'),
-                region=_resolve('Classification', 'classification_regionname'))
+                channels={self._channel.title(): _resolve('Classification', 'classification_regionname')},
+                color_channel=_resolve('ObjectDetection', 'channelid'))
             result = self._learner.check()
             if check:
                 b = lambda x: 'Yes' if x else 'No'
@@ -392,8 +391,6 @@ class ClassificationFrame(BaseProcessorFrame):
         settings.set('Output', 'events_export_gallery_images', False)
         settings.set('Output', 'hdf5_create_file', False)
 
-        show_ids_class = settings.get('Output', 'rendering_class_showids')
-
         current_tab = self._tab.current_index
         if current_tab == 0:
             prefix = 'primary'
@@ -402,6 +399,7 @@ class ClassificationFrame(BaseProcessorFrame):
             settings.set('Processing', 'tertiary_featureextraction', False)
             settings.set('Processing', 'secondary_processchannel', False)
             settings.set('Processing', 'tertiary_processchannel', False)
+            settings.set('Processing', 'merged_processchannel', False)
             rdn = {"%s_%s" %(prefix, settings.get("Classification",
                                                   "%s_classification_regionname" %prefix)): {}}
         elif current_tab == 1:
@@ -411,15 +409,22 @@ class ClassificationFrame(BaseProcessorFrame):
             settings.set('Processing', 'secondary_processchannel', True)
             settings.set('Processing', 'tertiary_featureextraction', False)
             settings.set('Processing', 'tertiary_processchannel', False)
+            settings.set('Processing', 'merged_processchannel', False)
+
+            # to setup the rending of the image currently processed
             rdn = {"%s_%s" %(prefix, settings.get("Classification",
                                                   "%s_classification_regionname" %prefix)): {}}
         elif current_tab == 2:
             prefix = 'tertiary'
+            seg_region = settings.get('Classification',
+                                      'tertiary_classification_regionname')
             settings.set('Processing', 'primary_featureextraction', False)
             settings.set('Processing', 'secondary_featureextraction', False)
             settings.set('Processing', 'secondary_processchannel', True)
             settings.set('Processing', 'tertiary_featureextraction', True)
             settings.set('Processing', 'tertiary_processchannel', True)
+            settings.set('Processing', 'merged_processchannel', False)
+
             rdn = {"%s_%s" %(prefix, settings.get("Classification",
                                                   "%s_classification_regionname" %prefix)): {}}
         else:
@@ -433,6 +438,7 @@ class ClassificationFrame(BaseProcessorFrame):
             settings.set('Processing', 'secondary_processchannel', sch)
             settings.set('Processing', 'tertiary_featureextraction', tch)
             settings.set('Processing', 'tertiary_processchannel', tch)
+            settings.set('Processing', 'merged_processchannel', True)
             prefix = 'merged'
 
             rdn = {}
@@ -440,19 +446,13 @@ class ClassificationFrame(BaseProcessorFrame):
                 if settings.get("Classification", "%s_channel" %pfx):
                     rdn["%s_%s" %(pfx, settings.get("Classification","merged_%s_region" %pfx))] = {}
 
-        sec_region = settings.get('Classification',
-                                  '%s_classification_regionname' % prefix)
+
         settings.set('Classification', 'collectsamples_prefix', prefix)
         if name == self.PROCESS_TESTING:
             rdn = dict()
             settings.set('Processing', '%s_classification' % prefix, True)
             settings.set('General', 'rendering_class',
-                         {'%s_classification_%s' % (prefix, sec_region):
-                              {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
-                                                     'contours': [(sec_region, 'class_label', 1, False),
-                                                                                            (sec_region, '#000000', 1, show_ids_class),
-
-                                                                                                                               ]}}})
+                         self._class_rendering_params(prefix, settings))
         else:
             settings.set('Classification', 'collectsamples', True)
             settings.set('General', 'positions', '')
@@ -460,6 +460,32 @@ class ClassificationFrame(BaseProcessorFrame):
             settings.set('General', 'framerange_end', 0)
         settings.set('General', 'rendering', rdn)
         return settings
+
+    def _class_rendering_params(self, prefix, settings):
+        """Setup rendering prameters for images to show classified objects"""
+        showids = settings.get('Output', 'rendering_class_showids')
+        region = settings.get('Classification',
+                              '%s_classification_regionname' %prefix)
+
+        if prefix in CH_VIRTUAL:
+            cl_rendering = {}
+            for pfx in (CH_PRIMARY+CH_OTHER):
+                rpar = {pfx.title():
+                            {'raw': ('#FFFFFF', 1.0),
+                             'contours': [(region, 'class_label', 1, False),
+                                          (region, '#000000', 1, showids)]}}
+                if settings.get("Classification", "%s_channel" %pfx):
+                    cl_rendering["%s_classification_%s"
+                                 %(pfx, settings.get("Classification",
+                                                     "merged_%s_region" %pfx))] = rpar
+        else:
+            rpar = {prefix.title():
+                        {'raw': ('#FFFFFF', 1.0),
+                         'contours': [(region, 'class_label', 1, False),
+                                      (region, '#000000', 1, showids)]}}
+            cl_rendering = {'%s_classification_%s' %(prefix, region): rpar}
+        return cl_rendering
+
 
     def _add_result_frame(self, name):
         frame = self._get_frame()
