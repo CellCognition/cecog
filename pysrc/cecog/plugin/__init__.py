@@ -9,8 +9,7 @@
                  See trunk/AUTHORS.txt for author contributions.
 """
 
-__all__ = ['PluginManager',
-           '_Plugin']
+__all__ = ['PluginManager', '_Plugin']
 
 #-------------------------------------------------------------------------------
 # standard library imports:
@@ -43,8 +42,9 @@ from cecog.gui.guitraits import SelectionTrait2
 #
 class stopwatch(object):
     """
-    Decorator wrapping methods (e.g. of class _Plugin) by measuring its execution time and reporting to a logger.
-    The instance requires a 'name' attribute, e.g. the name of the current plugin instance
+    Decorator wrapping methods (e.g. of class _Plugin) by measuring its
+    execution time and reporting to a logger. The instance requires a 'name'
+    attribute, e.g. the name of the current plugin instance
     """
 
     def __init__(self, level=logging.DEBUG):

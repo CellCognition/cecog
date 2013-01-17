@@ -60,7 +60,6 @@ class SegmentationPluginManager(PluginManager):
             dict([(name, self.get_plugin_instance(name).COLOR)
                   for name in self.get_plugin_names()]))
 
-
 class _SegmentationPlugin(_Plugin):
 
     COLOR = '#FFFFFF'

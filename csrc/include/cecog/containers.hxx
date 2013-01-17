@@ -1519,8 +1519,7 @@ namespace cecog
     void __doLabeling()
     {
       if (this->img.size() != this->img_binary.size())
-        std::cerr << "size conflict of img and mask!"
-        << std::endl;
+        std::cerr << "size conflict of img and mask!" << std::endl;
 
 //      // FIXME: in case we get an label-image (non-binary) as mask-image
 //      transformImageIf(srcImageRange(this->img_binary),

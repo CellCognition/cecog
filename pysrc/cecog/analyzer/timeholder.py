@@ -464,11 +464,12 @@ class TimeHolder(OrderedDict):
     def _convert_feature_name(self, feature_name, channel_name, region_name):
         return '__'.join([feature_name, channel_name, region_name])
 
-    def apply_channel(self, oChannel):
+    # isn't it add channel
+    def apply_channel(self, channel):
         iT = self._iCurrentT
         if not iT in self:
             self[iT] = OrderedDict()
-        self[iT][oChannel.NAME] = oChannel
+        self[iT][channel.NAME] = channel
 
     def apply_segmentation(self, channel, *args):
         stop_watch = StopWatch()
@@ -498,7 +499,7 @@ class TimeHolder(OrderedDict):
                         img_label = ccore.numpy_to_image(image_data, copy=True)
                         img_xy = channel.meta_image.image
                         container = ccore.ImageMaskContainer(img_xy, img_label, False, True, True)
-                        channel.dctContainers[region_name] = container
+                        channel.containers[region_name] = container
                         label_images_valid = True
                     else:
                         label_images_valid = False
@@ -536,7 +537,7 @@ class TimeHolder(OrderedDict):
                 frame_idx = self._frames_to_idx[self._iCurrentT]
                 for region_name in REGION_INFO.names[channel_name]:
                     idx = self._regions_to_idx2[(channel.NAME, region_name)]
-                    container = channel.dctContainers[region_name]
+                    container = channel.containers[region_name]
                     array = container.img_labels.toArray(copy=False)
                     var_labels[idx, frame_idx, 0] = numpy.require(array, 'uint16')
                     ### Workaround... h5py attributes do not support transparent list types...
@@ -546,9 +547,6 @@ class TimeHolder(OrderedDict):
         else:
             self._logger.info('Label images %s loaded from hdf5 file in %s.'
                               % (desc, stop_watch.current_interval()))
-
-
-
 
     def prepare_raw_image(self, channel):
         stop_watch = StopWatch()
@@ -570,7 +568,6 @@ class TimeHolder(OrderedDict):
                         frame_valid = False
                     else:
                         frame_valid = dset_raw_image[channel_idx, frame_idx, 0, :, :].any()
-
 
         if self._hdf5_found and frame_valid:
             coordinate = Coordinate(position=self.P, time=self._iCurrentT,
@@ -636,7 +633,7 @@ class TimeHolder(OrderedDict):
                 combined_region_name = self._convert_region_name(channel_name, region_name, '')
 
                 region = channel.get_region(region_name)
-                feature_names = region.getFeatureNames()
+                feature_names = region.feature_name()
                 nr_features = len(feature_names)
                 nr_objects = len(region)
 
@@ -988,8 +985,8 @@ class TimeHolder(OrderedDict):
                         keys = ['total'] + class_names
                         line4 += keys
                         line3 += ['total'] + ['class']*len(class_names)
-                        line1 += [chname.upper()] * len(keys)
-                        line2 += [region_name] * len(keys)
+                        line1 += [chname.upper()]*len(keys)
+                        line2 += [str(region_name)]*len(keys)
 
                     region = channel.get_region(region_name)
                     total = len(region)
@@ -997,8 +994,14 @@ class TimeHolder(OrderedDict):
                     # in case just total counts are needed
                     if len(class_names) > 0:
                         for obj in region.values():
-                            count[obj.strClassName] += 1
+                            try:
+                                count[obj.strClassName] += 1
+                            except KeyError:
+                                print channel
+                                print region_name
+                                import pdb; pdb.set_trace()
                     items += [total] + [count[x] for x in class_names]
+
 
                 if not has_header:
                     has_header = True
@@ -1030,7 +1033,6 @@ class TimeHolder(OrderedDict):
                 pyplot.legend(loc="upper right")
                 pyplot.title('%s primary population plot' % pos)
                 fig.savefig(os.path.join(pop_plot_output_dir, '%s_%s.png'%(channel_name, pos)))
-
 
     def exportObjectDetails(self, filename, sep='\t', excel_style=False):
         f = file(filename, 'w')
@@ -1065,7 +1067,7 @@ class TimeHolder(OrderedDict):
                             #FIXME:
                             feature_lookup2 = feature_lookup.copy()
                             for k,v in feature_lookup2.items():
-                                if not region.hasFeatureName(v):
+                                if not region.has_feature(v):
                                     del feature_lookup2[k]
 
                             if not has_header:
@@ -1075,7 +1077,7 @@ class TimeHolder(OrderedDict):
                                 keys += feature_lookup2.keys()
                                 if excel_style:
                                     line1 += [channel.NAME.upper()] * len(keys)
-                                    line2 += [region_id] * len(keys)
+                                    line2 += [str(region_id)] * len(keys)
                                     line3 += keys
                                 else:
                                     line1 += ['%s_%s_%s' % (channel.NAME.upper(),
@@ -1083,7 +1085,7 @@ class TimeHolder(OrderedDict):
                                               for key in keys]
 
                             obj = region[obj_id]
-                            features = region.getFeaturesByNames(obj_id, feature_lookup2.values())
+                            features = region.features_by_name(obj_id, feature_lookup2.values())
                             values = [x if not x is None else '' for x in [obj.iLabel, obj.strClassName]]
                             if channel.NAME == 'Primary':
                                 values += [obj.oCenterAbs[0], obj.oCenterAbs[1]]

@@ -127,6 +127,7 @@ class ClassifierResultFrame(QGroupBox):
         else:
             self._learner = CommonClassPredictor( \
                 clf_dir=clfdir,
+                name=self._channel,
                 channels={self._channel.title(): _resolve('Classification', 'classification_regionname')},
                 color_channel=_resolve('ObjectDetection', 'channelid'))
             result = self._learner.check()

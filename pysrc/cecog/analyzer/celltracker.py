@@ -348,7 +348,7 @@ class CellTracker(OptionManager):
     def trackAtTimepoint(self, iT):
         oChannel = self._dctTimeChannels[iT][self._channelId]
         self.lstFeatureNames = oChannel.lstFeatureNames
-        oObjectHolder = oChannel._dctRegions[self._regionName]
+        oObjectHolder = oChannel.get_region(self._regionName)
         for iObjId, oImageObject in oObjectHolder.iteritems():
             strNodeId = self.getNodeIdFromComponents(iT, iObjId)
             self._oGraph.add_node(strNodeId, oImageObject)
@@ -885,37 +885,17 @@ class PlotCellTracker(CellTracker):
             shutil.rmtree(strPathOut, True)
             safe_mkdirs(strPathOut)
 
-
-
     def analyze(self, dctChannels, channelId=None, clear_path=False):
-        #print self.lstChromatinFeatureNames
-        #print self.lstSecondaryFeatureNames
-
         strPathOut = os.path.join(self.strPathOut, 'events')
         if clear_path:
             shutil.rmtree(strPathOut, True)
             safe_mkdirs(strPathOut)
 
         for strRootId, dctTrackResults in self.dctVisitorData.iteritems():
-
             self.oLogger.debug("* root %s, candidates %s" % (strRootId, dctTrackResults.keys()))
-
-#            if self.getOption("bExportRootGraph"):
-#                self.exportSubGraph(self._formatFilename("graph.dot", nodeId=strRootId, prefix="root_", subPath='_graphs'),
-#                                    strRootId,
-#                                    bRunDot=self.getOption("bRenderRootGraph"),
-#                                    channelId=channelId)
-
             for strStartId, dctEventData in dctTrackResults.iteritems():
 
                 if strStartId[0] != '_':
-
-    #                if self.getOption("bExportSubGraph"):
-    #                    self.exportSubGraph(self._formatFilename("graph.dot", strStartId, subPath='_graphs'),
-    #                                        strStartId,
-    #                                        iMaxLevel=dctEventData['maxLength'],
-    #                                        bRunDot=self.getOption("bRenderSubGraph"),
-    #                                        channelId=channelId)
 
                     if self.getOption("bExportTrackFeatures"):
                         for strChannelId, dctRegions in dctChannels.iteritems():
@@ -969,7 +949,7 @@ class PlotCellTracker(CellTracker):
 
                 if len(oRegion) > 0:
                     if lstFeatureNames is None:
-                        lstFeatureNames = oRegion.getFeatureNames()
+                        lstFeatureNames = oRegion.feature_names
 
                     if oTable is None:
                         tracking_features = ['center_x','center_y',
@@ -986,7 +966,7 @@ class PlotCellTracker(CellTracker):
                     for iObjId, oObj in oRegion.iteritems():
                         dctData = {'Frame' : iT,
                                    'ObjectID' : iObjId}
-                        aFeatures = oRegion.getFeaturesByNames(iObjId, lstFeatureNames)
+                        aFeatures = oRegion.features_by_name(iObjId, lstFeatureNames)
                         for fFeature, strName in zip(aFeatures, lstFeatureNames):
                             dctData[self.FEATURE_FLAT_PATTERN % strName] = float(fFeature)
                         if self.getOption('bHasClassificationData'):
@@ -1054,7 +1034,7 @@ class PlotCellTracker(CellTracker):
             if not bHasFeatures:
                 bHasFeatures = True
                 if lstFeatureNames is None:
-                    lstFeatureNames = oRegion.getFeatureNames()
+                    lstFeatureNames = oRegion.feature_names
                     #print "moo123", lstFeatureNames
 
                 lstHeaderNames += [self.OBJID_COLUMN_PATTERN]
@@ -1105,7 +1085,7 @@ class PlotCellTracker(CellTracker):
                         ','.join(['%d:%.5f' % (int(x),y) for x,y in oObj.dctProb.iteritems()])
 
                 # object features
-                aFeatures = oRegion.getFeaturesByNames(iObjId, lstFeatureNames)
+                aFeatures = oRegion.features_by_name(iObjId, lstFeatureNames)
                 for fFeature, strFeatureName in zip(aFeatures, lstFeatureNames):
                     dctData[self.FEATURE_COLUMN_PATTERN % strFeatureName] = fFeature
 
@@ -1149,94 +1129,6 @@ class PlotCellTracker(CellTracker):
             if strKey not in dctEdges:
                 dctEdges[strKey] = True
                 self._forwardVisitor(strTailId, dctResults, dctEdges, iLevel=iLevel+1, strStartId=strStartId)
-
-#    def analyze(self):
-#
-#        from rpy import r
-#
-#        oPlotter = RPlotter(bUseCairo=self.getOption("bPlotterUseCairo"))
-#        for strRootId, dctTrackResults in self.dctVisitorData.iteritems():
-#
-#            if self.getOption("bExportRootGraph"):
-#                self.exportSubGraph(self._formatFilename("graph.dot", strRootId),
-#                                    strRootId,
-#                                    bRunDot=self.getOption("bRenderRootGraph"))
-#
-#            if 'chromatin' in dctTrackResults:
-#                aChromatin = array(dctTrackResults['chromatin'])
-#
-#                if self.getOption("bChromatinCreateTrackFiles"):
-#                    oTable = newTable(range(len(self.getOption("lstChromatinFeatureNames"))),
-#                                      data=aChromatin,
-#                                      columnLabels=self.getOption("lstChromatinFeatureNames"))
-#                    exportTable(oTable,
-#                                self._formatFilename("chromatin.dat", strRootId),
-#                                fieldDelimiter="\t",
-#                                writeColumnKeys=True,
-#                                writeRowLabels=False,
-#                                stringDelimiter="",
-#                                useLabelsAsKeys=True)
-#
-#                if self.getOption("bChromatinCreateTrackImages"):
-#                    oPlotter.figure(strFilename=self._formatFilename("chromatin.png", strRootId), width=900, height=600)
-#                    aChromatin2 = (aChromatin - min(aChromatin,0)) / (max(aChromatin,0) - min(aChromatin,0))
-#                    oPlotter.par(mar=(2.5, 0.5, 0.5, 5))
-#                    oPlotter.image(range(len(aChromatin2)),
-#                                   range(len(aChromatin2[0])),
-#                                   aChromatin2, axes=False,
-#                                   ylab="features", xlab="frames",
-#                                   zlim=(0,1), col=r.heat_colors(100))
-#                    oPlotter.box()
-#                    oPlotter.axis(1, range(len(aChromatin2)),
-#                                  labels=map(str, range(1,len(aChromatin2)+1)),
-#                                  las=1, cex=0.9, tick=1)
-#                    oPlotter.axis(4, range(len(aChromatin2[0])),
-#                                  labels=self.getOption("lstChromatinFeatureNames"),
-#                                  las=2, tick=1, cex=0.9)
-#                    oPlotter.close()
-#
-#
-#            if 'secondary' in dctTrackResults:
-#                aSecondary = array(dctTrackResults['secondary'])
-#
-#                if self.getOption("bSecondaryCreateTrackFiles"):
-#                    oTable = newTable(range(len(self.getOption("lstSecondaryFeatureNames"))),
-#                                      data=aSecondary,
-#                                      columnLabels=self.getOption("lstSecondaryFeatureNames"))
-#                    exportTable(oTable,
-#                                self._formatFilename("secondary.dat", strRootId),
-#                                fieldDelimiter="\t",
-#                                writeColumnKeys=True,
-#                                writeRowLabels=False,
-#                                stringDelimiter="",
-#                                useLabelsAsKeys=True)
-#
-#                if self.getOption("bSecondaryCreateTrackImages"):
-#                    dctData = {}
-#                    for iIdx, strFeatureName in enumerate(self.getOption("lstSecondaryFeatureNames")):
-#                        dctData[strFeatureName] = aSecondary[:,iIdx]
-#
-#                    tplYRange = r.range(dctData['second_in_avg'],
-#                                        dctData['second_out_avg'])
-#
-#                    if 'nan' not in [str(x).lower() for x in tplYRange]:
-#
-#                        oPlotter.figure(strTitle="Timeseries",
-#                                        strFilename=self._formatFilename("secondary.png", strRootId))
-#
-#                        r.plot(dctData['second_in_avg'], type='b', col='red', lwd=2,
-#                               xlab='Frames',
-#                               ylab='Secondary Intensity',
-#                               ylim=tplYRange)
-#                        r.grid()
-#                        r.lines(dctData['second_out_avg'], type='b', col='green', lwd=2,
-#                                ylim=tplYRange)
-#                        r.legend(1, tplYRange[0],
-#                                 legend=('in avg', 'out avg'),
-#                                 fill=('red', 'green'),
-#                                 xjust=0, yjust=0)
-#
-#                        oPlotter.close()
 
 
     def _formatFilename(self, strSuffix=None, nodeId=None, prefix=None, subPath=None, branchId=None, ext='.txt'):
@@ -1738,6 +1630,84 @@ class ClassificationCellTracker2(ClassificationCellTracker):
             branch_id = items[2]
             return frame, obj_id, branch_id
 
+    def feature_lookup(self, feature_names):
+        """
+        Return feature names of with prefix. The lookup table must not contain a
+        different number of features.
+        """
+        flkp = OrderedDict()
+
+        name_table = {'n2_avg': 'mean',
+                      'n2_stddev': 'sd',
+                      'roisize': 'size'}
+
+        for fn in feature_names:
+            if fn in name_table.keys():
+                flkp[fn] = name_table[fn]
+            else:
+                flkp[fn] = self.FEATURE_FLAT_PATTERN %fn
+        return flkp
+
+    # def exportFullTracks(self, sep='\t'):
+    #     strPathOut = os.path.join(self.strPathOut, 'full')
+    #     shutil.rmtree(strPathOut, True)
+    #     safe_mkdirs(strPathOut)
+
+    #     for start_id, data in self.dctVisitorData.iteritems():
+    #         for idx, track in enumerate(data['_full']):
+    #             has_header = False
+    #             line1 = []
+    #             line2 = []
+    #             line3 = []
+
+    #             filename = self._formatFilename(nodeId=start_id, subPath='full', branchId=idx+1)
+    #             f = file(filename, 'w')
+    #             for node_id in track:
+    #                 frame, obj_id = self.getComponentsFromNodeId(node_id)
+
+    #                 coordinate = Coordinate(position=self.origP, time=frame)
+    #                 prefix = [frame, self.oMetaData.get_timestamp_relative(coordinate), obj_id]
+    #                 prefix_names = ['frame', 'time', 'objID']
+    #                 items = []
+    #                 for channel in self._dctTimeChannels[frame].values():
+    #                     for region_id in channel.region_names():
+    #                         region = channel.get_region(region_id)
+    #                         # setup header
+    #                         flookup = self.feature_lookup(region.feature_names)
+
+    #                         if obj_id in region:
+    #                             if not has_header:
+    #                                 cols = ['classLabel', 'className']
+    #                                 if channel.NAME == 'Primary':
+    #                                     cols += ['centerX', 'centerY']
+    #                                 cols += flookup.values()
+    #                                 line1 += [channel.NAME.upper()]*region.n_features
+    #                                 line2 += [str(region_id)]*region.n_features
+    #                                 line3 += cols
+
+    #                             obj = region[obj_id]
+    #                             # preserve the correct order of the features
+    #                             # qimport pdb; pdb.set_trace()
+    #                             features = region.features_by_name(obj_id, flookup.keys())
+    #                             values = [x if not x is None else '' for x in [obj.iLabel, obj.strClassName]]
+    #                             if channel.NAME == 'Primary':
+    #                                 values += [obj.oCenterAbs[0], obj.oCenterAbs[1]]
+    #                             values += list(features)
+    #                             items.extend(values)
+
+
+    #                 if not has_header:
+    #                     has_header = True
+    #                     prefix_str = [""]*len(prefix)
+    #                     line1 = prefix_str + line1
+    #                     line2 = prefix_str + line2
+    #                     line3 = prefix_names + line3
+    #                     f.write('%s\n' %sep.join(line1))
+    #                     f.write('%s\n' %sep.join(line2))
+    #                     f.write('%s\n' %sep.join(line3))
+    #                 f.write('%s\n' % sep.join(map(str, prefix + items)))
+    #             f.close()
+
     def exportFullTracks(self, sep='\t'):
 
         strPathOut = os.path.join(self.strPathOut, 'full')
@@ -1777,14 +1747,12 @@ class ClassificationCellTracker2(ClassificationCellTracker):
 
                     for channel in self._dctTimeChannels[frame].values():
                         for region_id in channel.region_names():
-
                             region = channel.get_region(region_id)
-
                             if obj_id in region:
                                 #FIXME:
                                 feature_lookup2 = feature_lookup.copy()
                                 for k,v in feature_lookup2.iteritems():
-                                    if not region.hasFeatureName(v):
+                                    if not region.has_feature(v):
                                         del feature_lookup2[k]
 
                                 if not has_header:
@@ -1800,7 +1768,7 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                                 #print feature_lookup2.keys(), feature_lookup2.values()
                                 #fn = region.getFeatureNames()
                                 #print zip(fn, obj.aFeatures)
-                                features = region.getFeaturesByNames(obj_id, feature_lookup2.values())
+                                features = region.features_by_name(obj_id, feature_lookup2.values())
                                 values = [x if not x is None else '' for x in [obj.iLabel, obj.strClassName]]
                                 if channel.NAME == 'Primary':
                                     values += [obj.oCenterAbs[0], obj.oCenterAbs[1]]

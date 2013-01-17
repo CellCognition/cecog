@@ -2,36 +2,20 @@
 Copyright (c) 2005-2007 by Michael Held
 '''
 
-#------------------------------------------------------------------------------
-# standard library imports:
-#
-import os, \
-       shutil, \
-       random, \
-       logging
+import os
+import shutil
+import random
+import logging
 
-#------------------------------------------------------------------------------
-# extension module imports:
-#
 from pdk.fileutils import (safe_mkdirs,
                            collect_files,
-                           collect_files_by_regex,
-                           )
+                           collect_files_by_regex)
 
-#------------------------------------------------------------------------------
-# cecog module imports:
-#
 from cecog import ccore
 from cecog.util.util import read_table
 
-#------------------------------------------------------------------------------
-# constants:
-#
-
-#------------------------------------------------------------------------------
-# functions:
-#
-def compose_galleries(path, path_hmm, quality="90", one_daughter=True, sample=30):
+def compose_galleries(path, path_hmm, quality="90",
+                      one_daughter=True, sample=30):
     logger = logging.getLogger('compose_galleries')
     column_name = 'Trajectory'
     path_index = os.path.join(path_hmm, '_index')
@@ -91,11 +75,6 @@ def compose_galleries(path, path_hmm, quality="90", one_daughter=True, sample=30
             logger.debug("Gallery image '%s' successfully written." % image_name)
 
         yield group_name
-
-#------------------------------------------------------------------------------
-# classes:
-#
-
 
 class EventGallery(object):
 
@@ -278,10 +257,6 @@ class EventGalleryLabel(EventGallery):
     def read_image(name):
         return ccore.readImageInt16(name)
 
-
-#-------------------------------------------------------------------------------
-# main:
-#
 if __name__ == "__main__":
     import sys
     logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
@@ -289,6 +264,3 @@ if __name__ == "__main__":
                           "/Volumes/share-gerlich-2-$/claudia/Analysis/001782/110709/_hmm/primary_primary_byoligo",
                           one_daughter=False,
                           sample=100)
-    for i in x:
-        break
-

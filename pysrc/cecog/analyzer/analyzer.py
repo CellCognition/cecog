@@ -20,6 +20,8 @@ from cecog import ccore
 from cecog.analyzer.channel import PrimaryChannel
 from cecog.analyzer.channel import SecondaryChannel
 from cecog.analyzer.channel import TertiaryChannel
+from cecog.analyzer.channel import MergedChannel
+from cecog.analyzer.object import ObjectHolder
 
 from cecog.util.logger import LoggerObject
 from cecog.util.util import makedirs
@@ -55,15 +57,23 @@ class CellAnalyzer(LoggerObject):
     def get_channel(self, name):
         return self._channel_registry[name]
 
-    def process(self, apply=True, extract_features=True):
-        """Perform the segmentation and feature extraction.
+    @property
+    def proc_channels(self):
+        """Return processing channels i.e the dict contains no virtual or
+        pseudo channels.
         """
+        pchannels = OrderedDict()
+        for name, channel in self._channel_registry.iteritems():
+            if not channel.is_virtual():
+                pchannels[name] =  channel
+        return pchannels
+
+    def process(self, apply=True, extract_features=True):
+        """Perform the segmentation and feature extraction."""
         channels = sorted(self._channel_registry.values())
         primary_channel = None
 
         for channel in channels:
-            if channel.is_virtual():
-                continue
             self.time_holder.prepare_raw_image(channel)
             if self.detect_objects:
                 if channel.NAME == PrimaryChannel.NAME:
@@ -74,6 +84,9 @@ class CellAnalyzer(LoggerObject):
                     secondary_channel = channel
                 elif channel.NAME == TertiaryChannel.NAME:
                     self.time_holder.apply_segmentation(channel, primary_channel, secondary_channel)
+                elif channel.NAME == MergedChannel.NAME:
+                    channel.meta_image = primary_channel.meta_image
+                    self.time_holder.apply_segmentation(channel, self._channel_registry)
                 else:
                     raise ValueError("Channel with name '%s' not supported." % channel.NAME)
 
@@ -81,7 +94,8 @@ class CellAnalyzer(LoggerObject):
                     self.time_holder.apply_features(channel)
 
         if apply:
-            for channel in channels:
+            # want apply also the pseudo channels
+            for channel in sorted(self._channel_registry.values()):
                 self.time_holder.apply_channel(channel)
 
     def purge(self, features=None):
@@ -93,9 +107,10 @@ class CellAnalyzer(LoggerObject):
             channel.purge(features=channelFeatures)
 
     def exportLabelImages(self, pathOut, compression='LZW'):
-        for name, channel in self._channel_registry.iteritems():
+        # TODO no label images for virtual channels
+        for name, channel in self.proc_channels.iteritems():
             channel_id = channel.strChannelId
-            for strRegion, oContainer in channel.dctContainers.iteritems():
+            for strRegion, oContainer in channel.containers.iteritems():
                 strPathOutImage = join(pathOut, channel_id, strRegion)
                 makedirs(strPathOutImage)
                 oContainer.exportLabelImage(join(strPathOutImage,
@@ -118,8 +133,7 @@ class CellAnalyzer(LoggerObject):
 
         if dctRenderInfo is None:
             for name, oChannel in self._channel_registry.iteritems():
-                for strRegion, oContainer in oChannel.dctContainers.iteritems():
-                    import pdb; pdb.set_trace()
+                for strRegion, oContainer in oChannel.containers.iteritems():
                     strHexColor, fAlpha = oChannel.dctAreaRendering[strRegion]
                     imgRaw = oChannel.meta_image.image
                     imgCon = ccore.Image(imgRaw.width, imgRaw.height)
@@ -132,7 +146,9 @@ class CellAnalyzer(LoggerObject):
                     oChannel = self._channel_registry[channel_name]
                     if 'raw' in dctChannelInfo:
                         strHexColor, fAlpha = dctChannelInfo['raw']
+#                        print len(lstImages)
                         lstImages.append((oChannel.meta_image.image, strHexColor, 1.0))
+#                        print len(lstImages)
 
                     if 'contours' in dctChannelInfo:
                         # transform the old dict-style to the new tuple-style,
@@ -147,13 +163,15 @@ class CellAnalyzer(LoggerObject):
                             strRegion, strNameOrColor, fAlpha, bShowLabels = tplData[:4]
 
                             # draw contours only if region is present
+                            # print channel_name, strRegion
+                            # import pdb; pdb.set_trace()
                             if oChannel.has_region(strRegion):
                                 if len(tplData) > 4:
                                     bThickContours = tplData[4]
                                 else:
                                     bThickContours = False
                                 if strNameOrColor == 'class_label':
-                                    oContainer = oChannel.dctContainers[strRegion]
+                                    oContainer = oChannel.containers[strRegion]
                                     oRegion = oChannel.get_region(strRegion)
                                     dctLabels = {}
                                     dctColors = {}
@@ -179,7 +197,7 @@ class CellAnalyzer(LoggerObject):
                                     lstImages.append((imgCon2, '#FFFFFF', 1.0))
 
                                 else:
-                                    oContainer = oChannel.dctContainers[strRegion]
+                                    oContainer = oChannel.containers[strRegion]
                                     oRegion = oChannel.get_region(strRegion)
                                     lstObjIds = oRegion.keys()
                                     imgRaw = oChannel.meta_image.image
@@ -351,21 +369,18 @@ class CellAnalyzer(LoggerObject):
         return learner_objects
 
     def classify_objects(self, predictor):
-        # import pdb; pdb.set_trace()
-        # for cxx, ch in self._channel_registry.iteritems():
-        #     for rname, rxx in ch._dctRegions.iteritems():
-        #         print cxx + '_' + rname
-        #         print rxx.keys()
-
-        for cname, region_name in predictor.channels.iteritems():
-            channel = self._channel_registry[cname]
-            region = channel.get_region(region_name)
-
-            for obj in region.itervalues():
-                label, probs = predictor.predict(obj.aFeatures,
-                                                 region.getFeatureNames())
+        channel = self._channel_registry[predictor.name]
+        holder = channel.get_region(predictor.regions)
+        for label, obj in holder.iteritems():
+            if obj.aFeatures.size != len(holder.feature_names):
+                msg = ('Incomplete feature set found (%d/%d): skipping sample '
+                       'object label %s'
+                       %(obj.aFeatures.size, len(holder.feature_names), label))
+                self.logger.warning(msg)
+            else:
+                label, probs = predictor.predict(obj.aFeatures, holder.feature_names)
                 obj.iLabel = label
                 obj.dctProb = probs
                 obj.strClassName = predictor.dctClassNames[label]
                 obj.strHexColor = predictor.dctHexColors[obj.strClassName]
-            self.time_holder.serialize_classification(cname, region, predictor)
+                self.time_holder.serialize_classification(predictor.name, holder, predictor)

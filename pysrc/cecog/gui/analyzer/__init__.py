@@ -729,10 +729,9 @@ class _ProcessorMixin(object):
 
 
     def _set_display_renderer_info(self):
+        # WTF - to exclude properties for gallery images
         rendering = [x for x in self._current_settings.get('General', 'rendering')
-                     if not x in [PrimaryChannel.PREFIX,
-                                  SecondaryChannel.PREFIX,
-                                  TertiaryChannel.PREFIX]]
+                     if not x in CHANNEL_PREFIX]
         rendering += self._current_settings.get('General', 'rendering_class').keys()
         rendering.sort()
 

@@ -267,11 +267,12 @@ class Picker(AnalyzerBase):
         pchannel = self.settings.get("Classification", "collectsamples_prefix")
 
         if chid is None:
-            learner = CommonObjectLearner(self.cl_path, self._merge_channels())
+            learner = CommonObjectLearner(self.cl_path, pchannel,
+                                          self._merge_channels())
         else:
             channels = {pchannel.title(): self.settings.get( \
                     'Classification', self._resolve("classification_regionname"))}
-            learner = CommonObjectLearner(self.cl_path, channels, chid)
+            learner = CommonObjectLearner(self.cl_path, pchannel, channels, chid)
 
         learner.loadDefinition()
         return learner

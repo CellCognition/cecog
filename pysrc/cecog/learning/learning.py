@@ -36,11 +36,11 @@ class BaseLearner(LoggerObject):
     # directory substructure
     _subdirs = ('annotations', 'data', 'samples', 'controls')
 
-    def __init__(self, clf_dir, channels, color_channel=None):
+    def __init__(self, clf_dir, name, channels, color_channel=None):
         super(BaseLearner, self).__init__()
 
         self.clf_dir = clf_dir
-        self.name = basename(clf_dir)
+        self.name = name#basename(clf_dir)
 
         self.color_channel = color_channel
         self.channels = channels
@@ -59,11 +59,11 @@ class BaseLearner(LoggerObject):
         self.dctSampleNames = {}
 
     @property
-    def regions_str(self):
+    def regions(self):
         if len(self.channels) == 1:
             return self.channels.values()[0]
         else:
-            return str(self.channels.values())
+            return tuple(self.channels.values())
 
     @property
     def feature_names(self):
