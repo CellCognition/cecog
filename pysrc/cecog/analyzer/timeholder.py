@@ -15,9 +15,11 @@ __revision__ = '$Rev$'
 __source__ = '$URL$'
 
 import os
+from os.path import join, exists
 import logging
 import zlib
 import base64
+import csv
 
 from collections import OrderedDict
 from pdk.iterator import flatten
@@ -157,7 +159,7 @@ class TimeHolder(OrderedDict):
         self._feature_to_idx = OrderedDict()
 
         self._hdf5_found = False
-        if self.hdf5_filename is not None and os.path.exists(self.hdf5_filename):
+        if self.hdf5_filename is not None and exists(self.hdf5_filename):
             if self._hdf5_check_file():
                 self._hdf5_found = True
                 if self._hdf5_prepare_reuse() > 0:
@@ -787,7 +789,7 @@ class TimeHolder(OrderedDict):
 
         # export full graph structure to .dot file
         #path_out = self._settings.get('General', 'pathout')
-        #tracker.exportGraph(os.path.join(path_out, 'graph.dot'))
+        #tracker.exportGraph(join(path_out, 'graph.dot'))
         if self._hdf5_create and self._hdf5_include_tracking:
             grp = self._grp_cur_position[self.HDF5_GRP_OBJECT]
 
@@ -798,7 +800,7 @@ class TimeHolder(OrderedDict):
 
             # export graph structure of every head node to .dot file
             #for node_id in head_nodes:
-            #    tracker.exportSubGraph(os.path.join(path_out, 'graph__%s.dot' % node_id), node_id)
+            #    tracker.exportSubGraph(join(path_out, 'graph__%s.dot' % node_id), node_id)
 
             var_rel = grp.create_dataset('tracking',
                                          (nr_edges, ),
@@ -1014,7 +1016,7 @@ class TimeHolder(OrderedDict):
 
     def exportPopulationPlots(self, input_filename, pop_plot_output_dir, pos,
                                meta_data, cinfo, ylim):
-        if os.path.exists(input_filename):
+        if exists(input_filename):
             channel_name, class_names, class_colors = cinfo
             if len(class_names) > 1:
                 data = numpy.recfromcsv(input_filename, delimiter='\t', skip_header=3)
@@ -1032,7 +1034,7 @@ class TimeHolder(OrderedDict):
                     pyplot.ylim((0, ylim))
                 pyplot.legend(loc="upper right")
                 pyplot.title('%s primary population plot' % pos)
-                fig.savefig(os.path.join(pop_plot_output_dir, '%s_%s.png'%(channel_name, pos)))
+                fig.savefig(join(pop_plot_output_dir, '%s_%s.png'%(channel_name, pos)))
 
     def exportObjectDetails(self, filename, sep='\t', excel_style=False):
         f = file(filename, 'w')
@@ -1109,21 +1111,19 @@ class TimeHolder(OrderedDict):
                 f.write('%s\n' % sep.join(map(str, prefix + items)))
         f.close()
 
-    def exportImageFileNames(self, output_path, position_str, imagecontainer, channel_mapping):
-        channel_mapping_reversed = dict([(v,k) for k,v in channel_mapping.iteritems()])
-        filename = os.path.join(output_path, 'P%s__image_files.txt' % self.P)
-        importer = imagecontainer._importer
-        table = {}
-        for c in channel_mapping:
-            table[c] = []
-        for t in self.keys():
-            for c in channel_mapping.values():
-                for z in importer.dimension_lookup[position_str][t][c]:
-                    c_name = channel_mapping_reversed[c]
-                    table[c_name].append(os.path.join(importer.path, importer.dimension_lookup[position_str][t][c][z]))
+    def exportImageFileNames(self, outdir, position, importer, ch_mapping):
+        fname = join(outdir, 'P%s__image_files.csv' %position)
 
-        f = open(filename, 'w')
-        f.write("\t".join(table.keys()) + "\n")
-        for image_file_names in zip(*table.values()):
-            f.write("\t".join(image_file_names) + "\n")
-        f.close()
+        with open(fname, 'w') as fp:
+            writer = csv.DictWriter(fp, ch_mapping.keys(), lineterminator='\n')
+            writer.writeheader()
+            for frame in self.keys():
+                table = dict()
+                for chname, color in ch_mapping.iteritems():
+                    # no color channel in merged channel
+                    if color is None:
+                        continue
+                    for zslice in importer.dimension_lookup[position][frame][color]:
+                        file_ = importer.dimension_lookup[position][frame][color][zslice]
+                        table[chname] = join(importer.path, file_)
+                writer.writerow(table)

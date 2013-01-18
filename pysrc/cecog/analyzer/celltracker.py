@@ -1630,105 +1630,30 @@ class ClassificationCellTracker2(ClassificationCellTracker):
             branch_id = items[2]
             return frame, obj_id, branch_id
 
-    def feature_lookup(self, feature_names):
-        """
-        Return feature names of with prefix. The lookup table must not contain a
-        different number of features.
-        """
+    def map_feature_names(self, feature_names):
+        """Return a hash table to map feature names to new names."""
+
+        name_table = OrderedDict()
+        name_table['mean'] = 'n2_avg'
+        name_table['sd'] = 'n2_stddev'
+        name_table['size'] = 'roisize'
+
+        # prominent place int the table for certain features
         flkp = OrderedDict()
-
-        name_table = {'n2_avg': 'mean',
-                      'n2_stddev': 'sd',
-                      'roisize': 'size'}
-
+        for nname, name in name_table.iteritems():
+            if name in feature_names:
+                flkp[nname] = name
         for fn in feature_names:
-            if fn in name_table.keys():
-                flkp[fn] = name_table[fn]
-            else:
-                flkp[fn] = self.FEATURE_FLAT_PATTERN %fn
+            flkp[self.FEATURE_FLAT_PATTERN %fn] = fn
         return flkp
 
-    # def exportFullTracks(self, sep='\t'):
-    #     strPathOut = os.path.join(self.strPathOut, 'full')
-    #     shutil.rmtree(strPathOut, True)
-    #     safe_mkdirs(strPathOut)
-
-    #     for start_id, data in self.dctVisitorData.iteritems():
-    #         for idx, track in enumerate(data['_full']):
-    #             has_header = False
-    #             line1 = []
-    #             line2 = []
-    #             line3 = []
-
-    #             filename = self._formatFilename(nodeId=start_id, subPath='full', branchId=idx+1)
-    #             f = file(filename, 'w')
-    #             for node_id in track:
-    #                 frame, obj_id = self.getComponentsFromNodeId(node_id)
-
-    #                 coordinate = Coordinate(position=self.origP, time=frame)
-    #                 prefix = [frame, self.oMetaData.get_timestamp_relative(coordinate), obj_id]
-    #                 prefix_names = ['frame', 'time', 'objID']
-    #                 items = []
-    #                 for channel in self._dctTimeChannels[frame].values():
-    #                     for region_id in channel.region_names():
-    #                         region = channel.get_region(region_id)
-    #                         # setup header
-    #                         flookup = self.feature_lookup(region.feature_names)
-
-    #                         if obj_id in region:
-    #                             if not has_header:
-    #                                 cols = ['classLabel', 'className']
-    #                                 if channel.NAME == 'Primary':
-    #                                     cols += ['centerX', 'centerY']
-    #                                 cols += flookup.values()
-    #                                 line1 += [channel.NAME.upper()]*region.n_features
-    #                                 line2 += [str(region_id)]*region.n_features
-    #                                 line3 += cols
-
-    #                             obj = region[obj_id]
-    #                             # preserve the correct order of the features
-    #                             # qimport pdb; pdb.set_trace()
-    #                             features = region.features_by_name(obj_id, flookup.keys())
-    #                             values = [x if not x is None else '' for x in [obj.iLabel, obj.strClassName]]
-    #                             if channel.NAME == 'Primary':
-    #                                 values += [obj.oCenterAbs[0], obj.oCenterAbs[1]]
-    #                             values += list(features)
-    #                             items.extend(values)
-
-
-    #                 if not has_header:
-    #                     has_header = True
-    #                     prefix_str = [""]*len(prefix)
-    #                     line1 = prefix_str + line1
-    #                     line2 = prefix_str + line2
-    #                     line3 = prefix_names + line3
-    #                     f.write('%s\n' %sep.join(line1))
-    #                     f.write('%s\n' %sep.join(line2))
-    #                     f.write('%s\n' %sep.join(line3))
-    #                 f.write('%s\n' % sep.join(map(str, prefix + items)))
-    #             f.close()
-
     def exportFullTracks(self, sep='\t'):
-
         strPathOut = os.path.join(self.strPathOut, 'full')
         shutil.rmtree(strPathOut, True)
         safe_mkdirs(strPathOut)
 
-        feature_lookup = OrderedDict()
-        feature_lookup['mean'] = 'n2_avg'
-        feature_lookup['sd'] = 'n2_stddev'
-        feature_lookup['size'] = 'roisize'
-
-        lstFeatureNames = sorted(self.lstFeatureNames)
-
-        for name, real_name in zip([self.FEATURE_FLAT_PATTERN % f for f in lstFeatureNames],
-                                   lstFeatureNames):
-            feature_lookup[name] = real_name
-
         for start_id, data in self.dctVisitorData.iteritems():
-
             for idx, track in enumerate(data['_full']):
-
                 has_header = False
                 line1 = []
                 line2 = []
@@ -1749,32 +1674,22 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                         for region_id in channel.region_names():
                             region = channel.get_region(region_id)
                             if obj_id in region:
-                                #FIXME:
-                                feature_lookup2 = feature_lookup.copy()
-                                for k,v in feature_lookup2.iteritems():
-                                    if not region.has_feature(v):
-                                        del feature_lookup2[k]
-
+                                flkp = self.map_feature_names(region.feature_names)
                                 if not has_header:
                                     keys = ['classLabel', 'className']
                                     if channel.NAME == 'Primary':
                                         keys += ['centerX', 'centerY']
-                                    keys += feature_lookup2.keys()
+                                    keys += flkp.keys()
                                     line1 += [channel.NAME.upper()] * len(keys)
-                                    line2 += [region_id] * len(keys)
+                                    line2 += [str(region_id)] * len(keys)
                                     line3 += keys
-
                                 obj = region[obj_id]
-                                #print feature_lookup2.keys(), feature_lookup2.values()
-                                #fn = region.getFeatureNames()
-                                #print zip(fn, obj.aFeatures)
-                                features = region.features_by_name(obj_id, feature_lookup2.values())
+                                features = region.features_by_name(obj_id, flkp.values())
                                 values = [x if not x is None else '' for x in [obj.iLabel, obj.strClassName]]
                                 if channel.NAME == 'Primary':
                                     values += [obj.oCenterAbs[0], obj.oCenterAbs[1]]
                                 values += list(features)
                                 items.extend(values)
-
 
                     if not has_header:
                         has_header = True

@@ -163,13 +163,12 @@ class CellAnalyzer(LoggerObject):
                             strRegion, strNameOrColor, fAlpha, bShowLabels = tplData[:4]
 
                             # draw contours only if region is present
-                            # print channel_name, strRegion
-                            # import pdb; pdb.set_trace()
                             if oChannel.has_region(strRegion):
                                 if len(tplData) > 4:
                                     bThickContours = tplData[4]
                                 else:
                                     bThickContours = False
+                                imgRaw = oChannel.meta_image.image
                                 if strNameOrColor == 'class_label':
                                     oContainer = oChannel.containers[strRegion]
                                     oRegion = oChannel.get_region(strRegion)
@@ -183,7 +182,7 @@ class CellAnalyzer(LoggerObject):
                                             dctLabels[iLabel].append(iObjId)
                                             dctColors[iLabel] = oObj.strHexColor
                                     #print dctLabels
-                                    imgRaw = oChannel.meta_image.image
+#                                    imgRaw = oChannel.meta_image.image
                                     imgCon2 = ccore.Image(imgRaw.width, imgRaw.height)
                                     for iLabel, lstObjIds in dctLabels.iteritems():
                                         imgCon = ccore.Image(imgRaw.width, imgRaw.height)
@@ -200,7 +199,6 @@ class CellAnalyzer(LoggerObject):
                                     oContainer = oChannel.containers[strRegion]
                                     oRegion = oChannel.get_region(strRegion)
                                     lstObjIds = oRegion.keys()
-                                    imgRaw = oChannel.meta_image.image
                                     imgCon = ccore.Image(imgRaw.width, imgRaw.height)
                                     if not strNameOrColor is None:
                                         oContainer.drawContoursByIds(lstObjIds, 255, imgCon, bThickContours, False)

@@ -19,8 +19,8 @@ __all__ = []
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
-import os, \
-       zipfile
+import os
+import zipfile
 from pdk.ordereddict import OrderedDict
 
 #-------------------------------------------------------------------------------
@@ -43,8 +43,7 @@ from cecog.gui.widgets.colorbox import ColorBox
 from cecog.config import RESOURCE_PATH
 from cecog.util.palette import (NucMedPalette,
                                 ZeissPalette,
-                                SingleColorPalette,
-                                )
+                                SingleColorPalette)
 from cecog.gui.util import numpy_to_qimage
 from cecog.gui.widgets.colorbutton import ColorButton
 
@@ -64,8 +63,7 @@ COLOR_DEFINITIONS = {'red'    : '#FF0000',
                      'yellow' : '#FFFF00',
                      'magenta': '#FF00FF',
                      'cyan'   : '#00FFFF',
-                     'white'  : '#FFFFFF',
-                     }
+                     'white'  : '#FFFFFF'}
 
 #-------------------------------------------------------------------------------
 # functions:

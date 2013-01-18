@@ -532,7 +532,7 @@ class PositionAnalyzer(PositionCore):
         fname = join(self._statistics_dir, 'P%s__object_counts.txt' % self.position)
 
         # at least the total count for primary is always exported
-        ch_info = {'Primary': ('primary', [], [])}
+        ch_info = OrderedDict([('Primary', ('primary', [], []))])
         for name, clf in self.classifiers.iteritems():
             ch_info[name] = (clf.regions, clf.lstClassNames, clf.lstHexColors)
 
@@ -555,9 +555,9 @@ class PositionAnalyzer(PositionCore):
 
     def export_image_names(self, timeholder):
         timeholder.exportImageFileNames(self._statistics_dir,
-                                         self.position,
-                                         self._imagecontainer,
-                                         self.ch_mapping)
+                                        self.position,
+                                        self._imagecontainer._importer,
+                                        self.ch_mapping)
 
     def export_full_tracks(self, celltracker):
         celltracker.exportFullTracks()
