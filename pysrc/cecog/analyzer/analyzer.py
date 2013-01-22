@@ -146,10 +146,7 @@ class CellAnalyzer(LoggerObject):
                     oChannel = self._channel_registry[channel_name]
                     if 'raw' in dctChannelInfo:
                         strHexColor, fAlpha = dctChannelInfo['raw']
-#                        print len(lstImages)
                         lstImages.append((oChannel.meta_image.image, strHexColor, 1.0))
-#                        print len(lstImages)
-
                     if 'contours' in dctChannelInfo:
                         # transform the old dict-style to the new tuple-style,
                         # which allows multiple definitions for one region
