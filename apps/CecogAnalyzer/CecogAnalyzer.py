@@ -21,12 +21,11 @@ import gc
 import os
 import sys
 import logging
-import time
-import cPickle as pickle
 from multiprocessing import freeze_support
 
+# use agg as long no Figure canvas will draw any qwidget
 import matplotlib as mpl
-mpl.use('QT4Agg')
+mpl.use('Agg')
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -49,27 +48,24 @@ except ImportError:
 from pdk.ordereddict import OrderedDict
 
 import numpy
-#import vigra
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
+
 from cecog import VERSION, APPNAME
-from cecog.analyzer import (R_LIBRARIES,
-                            TRACKING_DURATION_UNITS_TIMELAPSE,
-                            TRACKING_DURATION_UNITS_DEFAULT,
-                            )
+from cecog.analyzer import R_LIBRARIES
+from cecog.analyzer import TRACKING_DURATION_UNITS_TIMELAPSE
+from cecog.analyzer import TRACKING_DURATION_UNITS_DEFAULT
+
 from cecog.io.imagecontainer import ImageContainer
-from cecog.config import (ANALYZER_CONFIG,
-                          APPLICATION_SUPPORT_PATH,
-                          init_application_support_path,
-                          )
+from cecog.config import ANALYZER_CONFIG
+from cecog.config import APPLICATION_SUPPORT_PATH
+from cecog.config import init_application_support_path
+
 from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.gui.config import GuiConfigSettings
 
 # Frames
 from cecog.gui.analyzer.general import GeneralFrame, SECTION_NAME_GENERAL
-from cecog.gui.analyzer.objectdetection import ObjectDetectionFrame, \
-    SECTION_NAME_OBJECTDETECTION
+from cecog.gui.analyzer.objectdetection import ObjectDetectionFrame
+from cecog.gui.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
 from cecog.gui.analyzer.featureextraction import FeatureExtractionFrame
 from cecog.gui.analyzer.postprocessing import PostProcessingFrame
 from cecog.gui.analyzer.classification import ClassificationFrame
@@ -80,11 +76,11 @@ from cecog.gui.analyzer.processing import ProcessingFrame
 from cecog.gui.analyzer.cluster import ClusterFrame
 
 from cecog.gui.browser import Browser
-from cecog.gui.log import (GuiLogHandler, LogWindow )
-from cecog.traits.settings import (convert_package_path,
-                             set_package_path,
-                             get_package_path,
-                             )
+from cecog.gui.log import GuiLogHandler, LogWindow
+from cecog.traits.settings import convert_package_path
+from cecog.traits.settings import set_package_path
+from cecog.traits.settings import get_package_path
+
 
 from cecog.gui.util import (status,
                             show_html,
@@ -93,22 +89,11 @@ from cecog.gui.util import (status,
                             exception,
                             information,
                             warning,
-                            waitingProgressDialog,
-                            )
+                            waitingProgressDialog)
 
 import resource
 
-#-------------------------------------------------------------------------------
-# constants:
-#
 
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 class AnalyzerMainWindow(QMainWindow):
 
     TITLE = '-'.join((APPNAME, VERSION))
@@ -119,8 +104,6 @@ class AnalyzerMainWindow(QMainWindow):
     def __init__(self, *args, **kw):
         super(AnalyzerMainWindow, self).__init__(*args, **kw)
         qApp._main_window = self
-
-        #self.setStyleSheet("QFrame {border: 1px solid #8f8f91;}")
 
         self._is_initialized = False
         self._debug = False
@@ -854,6 +837,7 @@ if __name__ == "__main__":
 #            file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
 
     app.setWindowIcon(QIcon(':cecog_analyzer_icon'))
+    app.setApplicationName('CecogAnalyzer')
 #    time.sleep(.2)
 #    app.processEvents()
     main = AnalyzerMainWindow()
