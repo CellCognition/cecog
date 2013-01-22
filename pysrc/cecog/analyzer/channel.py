@@ -18,12 +18,15 @@ __all__ = ["PrimaryChannel", "SecondaryChannel", "TertiaryChannel"
            "MergedChannel"]
 
 import os
+from os.path import join, isdir
 import glob
 import copy
 import types
 import numpy
+from collections import OrderedDict
 
 from cecog import ccore
+from cecog.colors import Colors
 from cecog.io.imagecontainer import MetaImage
 from cecog.analyzer.object import ImageObject, ObjectHolder
 
@@ -234,12 +237,12 @@ class Channel(ChannelCore):
             self._regions[region_name] = object_holder
 
     def _z_slice_image(self, plate_id):
-        if not os.path.isdir(str(self.strBackgroundImagePath)):
+        if not isdir(str(self.strBackgroundImagePath)):
             raise IOError("No z-slice correction image directory set")
 
-        path = glob.glob(os.path.join(self.strBackgroundImagePath, plate_id+".tiff"))
+        path = glob.glob(join(self.strBackgroundImagePath, plate_id+".tiff"))
         path.extend(glob.glob(
-                os.path.join(self.strBackgroundImagePath, plate_id+".tif")))
+                join(self.strBackgroundImagePath, plate_id+".tif")))
 
         if len(path) > 1:
             raise IOError("Multiple z-slice flat field corr. images found.\n"
@@ -349,7 +352,7 @@ class MergedChannel(ChannelCore):
     def __init__(self, *args, **kw):
         super(MergedChannel, self).__init__(*args, **kw)
         # defined channels an region to concatenate
-        self._merge_regions = {}
+        self._merge_regions = OrderedDict()
         self._channels = None
 
     @property
@@ -390,6 +393,23 @@ class MergedChannel(ChannelCore):
     def regkey(self):
         # tuples are hashable
         return tuple(self._merge_regions.values())
+
+    def meta_images(self, alpha=1.0):
+        """Return a list of image, hexcolor, alpha-value tripples, which
+        is used for ccore.makeRGBImage method.
+        """
+
+        images = list()
+        ccolors = dict([(c.strChannelId, False) for c in self._channels.values()])
+
+        for channel in self._channels.values():
+            ccolor = channel.strChannelId
+            if ccolor is not None and not ccolors[channel.strChannelId]:
+                ccolors[channel.strChannelId] = True
+                images.append((channel.meta_image.image,
+                               Colors.channel_hexcolor(ccolor),
+                               alpha))
+        return images
 
     # most of the following functions are just nope to stay
     # combatible to processing channels that do actually perform segmentation

@@ -68,10 +68,11 @@ class PositionCore(LoggerObject):
     TERTIARY_CHANNEL = TertiaryChannel.NAME
     MERGED_CHANNEL = MergedChannel.NAME
 
-    CHANNELS = OrderedDict(primary=PrimaryChannel,
-                           secondary=SecondaryChannel,
-                           tertiary=TertiaryChannel,
-                           merged=MergedChannel)
+    CHANNELS = OrderedDict()
+    CHANNELS['primary'] = PrimaryChannel
+    CHANNELS['secondary'] = SecondaryChannel
+    CHANNELS['tertiary'] = TertiaryChannel
+    CHANNELS['merged'] = MergedChannel
 
     _info = {'stage': 0,
              'meta': 'Motif selection:',
@@ -223,15 +224,16 @@ class PositionCore(LoggerObject):
             channel.append_zslice(meta_image)
         return channel
 
-    def register_channels(self, cellanalyzer, channels):
-        for channel_id, zslices in channels:
+    def register_channels(self, cellanalyzer, col_channels):
+
+        channels = list()
+        for channel_id, zslices in col_channels:
             zslice_images = [meta_image for _, meta_image in zslices]
             for ch_name in self.processing_channels:
                 # each process channel has a destinct color channel
                 if channel_id != self.ch_mapping[ch_name]:
                     continue
                 channel = self.setup_channel(ch_name, channel_id, zslice_images)
-                # XXX order is not preservered
                 cellanalyzer.register_channel(channel)
 
     @property
@@ -310,7 +312,7 @@ class PositionCore(LoggerObject):
 
     def _channel_regions(self, p_channel):
         """Return a dict of of channel region pairs according to the classifier"""
-        regions = dict()
+        regions = OrderedDict()
         if self.CHANNELS[p_channel.lower()].is_virtual():
             for prefix, channel in self.CHANNELS.iteritems():
                 if channel.is_virtual():
@@ -378,8 +380,6 @@ class PositionPicker(PositionCore):
             # initTimepoint clears channel_registry
             cellanalyzer.initTimepoint(frame)
             self.register_channels(cellanalyzer, channels)
-            print cellanalyzer._channel_registry.keys()
-
             image = cellanalyzer.collectObjects(self.plate_id,
                                                 self.position,
                                                 self.sample_readers,

@@ -136,12 +136,10 @@ class ProcessingFrame(BaseProcessorFrame):
         show_ids = settings.get('Output', 'rendering_contours_showids')
         show_ids_class = settings.get('Output', 'rendering_class_showids')
 
-        # # set propertys of merged channel to the same as for Primary
-        # # unfortunately REGION_INFO is like a global variable
-        # reginfo = copy.deepcopy(REGION_INFO)
-        # # reginfo.names[CH_VIRTUAL[0]] = CH_VIRTUAL
-        # # reginfo.colors[CH_VIRTUAL[0]] = reginfo.colors[CH_PRIMARY[0]]
+        # set propertys of merged channel to the same as for Primary
+        # unfortunately REGION_INFO is like a global variable
 
+        d = {}
         for prefix in CH_PRIMARY+CH_OTHER:
             if prefix == CH_PRIMARY[0] \
                     or settings.get('Processing', '%s_processchannel' % prefix):
@@ -154,9 +152,6 @@ class ProcessingFrame(BaseProcessorFrame):
                          }
 
                 settings.get('General', 'rendering').update(d)
-
-
-
                 if settings.get('Processing', '%s_classification' % prefix):
                     for x in reginfo.names[prefix]:
                         if x == settings.get('Classification', '%s_classification_regionname' % prefix) or \
@@ -179,7 +174,7 @@ class ProcessingFrame(BaseProcessorFrame):
                                  'contours': [(regions, reginfo.colors["primary"], 1, show_ids)]}}}
             settings.get("General", "rendering").update(d)
             if settings.get('Processing', 'merged_classification'):
-                d = {'merged_classification_merged':
+                d = {'merged_classification_%s' %'-'.join(regions):
                          {"Merged": {'raw': ('#FFFFFF', 1.0),
                                      'contours': [(regions, 'class_label', 1, False),
                                                   (regions, '#000000' , 1, show_ids_class)]}}}

@@ -1527,8 +1527,7 @@ class ClassificationCellTracker(SplitCellTracker):
 
 class ClassificationCellTracker2(ClassificationCellTracker):
 
-    OPTIONS = {"bAllowOneDaughterCell"   :   Option(True),
-               }
+    OPTIONS = {"bAllowOneDaughterCell":   Option(True)}
 
     def _forwardVisitor(self, strNodeId, dctResults, dctVisitedNodes, iLevel=0):
         oGraph = self._oGraph

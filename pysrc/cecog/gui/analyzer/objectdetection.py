@@ -156,6 +156,8 @@ class ObjectDetectionFrame(BaseProcessorFrame):
 
 
         current_tab = self._tab.current_index
+        # turn of merged channel
+        settings.set('Processing', 'merged_processchannel', False)
         if current_tab == 0:
             settings.set('Processing', 'secondary_processchannel', False)
             settings.set('Processing', 'tertiary_processchannel', False)

@@ -16,40 +16,14 @@ __source__ = '$URL$'
 
 __all__ = ['TrackingFrame']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 from cecog.traits.analyzer.tracking import SECTION_NAME_TRACKING
-from cecog.gui.analyzer import (BaseProcessorFrame,
-                                AnalyzerThread,
-                                )
-from cecog.analyzer.channel import (PrimaryChannel,
-                                    SecondaryChannel,
-                                    TertiaryChannel,
-                                    )
+from cecog.gui.analyzer import BaseProcessorFrame, AnalyzerThread
+
+from cecog.analyzer.channel import PrimaryChannel, SecondaryChannel
+from cecog.analyzer.channel import TertiaryChannel
+
 from cecog.plugin.segmentation import REGION_INFO
 
-#-------------------------------------------------------------------------------
-# constants:
-#
-
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 class TrackingFrame(BaseProcessorFrame):
 
     SECTION_NAME = SECTION_NAME_TRACKING
@@ -100,6 +74,8 @@ class TrackingFrame(BaseProcessorFrame):
         settings.set_section('ObjectDetection')
         prim_id = PrimaryChannel.NAME
         sec_id = SecondaryChannel.NAME
+        ter_id = TertiaryChannel.NAME
+
         settings.set_section('Processing')
         settings.set2('tracking', True)
         settings.set2('tracking_synchronize_trajectories', False)
@@ -111,18 +87,29 @@ class TrackingFrame(BaseProcessorFrame):
         settings.set_section('Classification')
         settings.set2('collectsamples', False)
         sec_region = settings.get2('secondary_classification_regionname')
+        ter_region = settings.get2('tertiary_classification_regionname')
 
         settings.set('Output', 'hdf5_create_file', False)
         show_ids = settings.get('Output', 'rendering_contours_showids')
         show_ids_class = settings.get('Output', 'rendering_class_showids')
 
         if name == self.PROCESS_TRACKING:
+            # tracking only invokes the primary channel
             settings.set_section('Processing')
-            settings.set2('primary_featureextraction', True)
-            settings.set2('secondary_featureextraction', False)
             settings.set2('primary_classification', False)
-            settings.set2('secondary_classification', False)
+            settings.set2('primary_featureextraction', True)
+
             settings.set2('secondary_processChannel', False)
+            settings.set2('secondary_featureextraction', False)
+            settings.set2('secondary_classification', False)
+
+            settings.set2('tertiary_processChannel', False)
+            settings.set2('tertiary_featureextraction', False)
+            settings.set2('tertiary_classification', False)
+
+            settings.set2('merged_processChannel', False)
+            settings.set2('merged_classification', False)
+
             settings.set('Output', 'events_export_gallery_images', False)
             settings.set('General', 'rendering', {'primary_contours':
                                                   {prim_id: {'raw': ('#FFFFFF', 1.0),
@@ -141,11 +128,25 @@ class TrackingFrame(BaseProcessorFrame):
             if (settings.get2('secondary_featureextraction') and
                 settings.get2('secondary_classification') and
                 settings.get2('secondary_processchannel')):
-                settings.get('General', 'rendering_class').update({'secondary_classification_%s' % sec_region: {sec_id: {'raw': ('#FFFFFF', 1.0),
-                                                                                                              'contours': [(sec_region, 'class_label', 1, False),
-                                                                                                                           (sec_region, '#000000', 1, show_ids_class)]}
-                                                                                                              }
-                                                                   })
+                settings.get('General', 'rendering_class').update( \
+                    {'secondary_classification_%s' % sec_region: \
+                         {sec_id: {'raw': ('#FFFFFF', 1.0),
+                                   'contours': [(sec_region, 'class_label', 1, False),
+                                                (sec_region, '#000000', 1, show_ids_class)]}
+                          }
+                     })
+
+            # if (settings.get2('tertiary_featureextraction') and
+            #     settings.get2('tertiary_classification') and
+            #     settings.get2('tertiary_processchannel')):
+            #     settings.get('General', 'rendering_class').update( \
+            #         {'tertiary_classification_%s' %ter_region: \
+            #              {ter_id: {'raw': ('#FFFFFF', 1.0),
+            #                        'contours': [(ter_region, 'class_label', 1, False),
+            #                                     (ter_region, '#000000', 1, show_ids_class)]}
+            #               }
+            #          })
+
         return settings
 
     def page_changed(self):

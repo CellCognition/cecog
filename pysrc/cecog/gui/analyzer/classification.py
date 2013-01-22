@@ -24,7 +24,7 @@ from PyQt4.Qt import *
 
 from cecog import CHANNEL_PREFIX, CH_VIRTUAL, CH_PRIMARY, CH_OTHER
 from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
-from cecog.gui.util import information, exception
+from cecog.gui.util import information
 from cecog.gui.analyzer import BaseProcessorFrame
 
 from cecog.threads.picker import PickerThread
@@ -131,6 +131,7 @@ class ClassifierResultFrame(QGroupBox):
                 channels={self._channel.title(): _resolve('Classification', 'classification_regionname')},
                 color_channel=_resolve('ObjectDetection', 'channelid'))
             result = self._learner.check()
+
             if check:
                 b = lambda x: 'Yes' if x else 'No'
                 msg =  'Classifier path: %s\n' % result['path_env']
@@ -465,26 +466,22 @@ class ClassificationFrame(BaseProcessorFrame):
     def _class_rendering_params(self, prefix, settings):
         """Setup rendering prameters for images to show classified objects"""
         showids = settings.get('Output', 'rendering_class_showids')
-        region = settings.get('Classification',
-                              '%s_classification_regionname' %prefix)
 
         if prefix in CH_VIRTUAL:
-            cl_rendering = {}
-            for pfx in (CH_PRIMARY+CH_OTHER):
-                rpar = {pfx.title():
-                            {'raw': ('#FFFFFF', 1.0),
-                             'contours': [(region, 'class_label', 1, False),
-                                          (region, '#000000', 1, showids)]}}
-                if settings.get("Classification", "%s_channel" %pfx):
-                    cl_rendering["%s_classification_%s"
-                                 %(pfx, settings.get("Classification",
-                                                     "merged_%s_region" %pfx))] = rpar
+            region = [settings.get("Classification", \
+                                       "merged_%s_region" %pfx) for pfx in (CH_PRIMARY+CH_OTHER)]
+            region = tuple(region)
+            region_str = '-'.join(region)
         else:
-            rpar = {prefix.title():
-                        {'raw': ('#FFFFFF', 1.0),
-                         'contours': [(region, 'class_label', 1, False),
-                                      (region, '#000000', 1, showids)]}}
-            cl_rendering = {'%s_classification_%s' %(prefix, region): rpar}
+            region = settings.get('Classification',
+                                  '%s_classification_regionname' %prefix)
+            region_str = region
+
+        rpar = {prefix.title():
+                    {'raw': ('#FFFFFF', 1.0),
+                     'contours': [(region, 'class_label', 1, False),
+                                  (region, '#000000', 1, showids)]}}
+        cl_rendering = {'%s_classification_%s' %(prefix, region_str): rpar}
         return cl_rendering
 
 

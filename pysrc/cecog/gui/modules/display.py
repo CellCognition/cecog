@@ -38,6 +38,7 @@ from pdk.datetimeutils import StopWatch
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
+from cecog.colors import Colors
 from cecog.gui.modules.module import Module
 from cecog.gui.widgets.colorbox import ColorBox
 from cecog.config import RESOURCE_PATH
@@ -47,32 +48,15 @@ from cecog.util.palette import (NucMedPalette,
 from cecog.gui.util import numpy_to_qimage
 from cecog.gui.widgets.colorbutton import ColorButton
 
-#-------------------------------------------------------------------------------
-# constants:
-#
-DEFAULT_COLORS_BY_NAME = {'rfp' : 'red',
-                          'gfp' : 'green',
-                          'yfp' : 'yellow',
-                          'cfp' : 'cyan',
-                          }
-DEFAULT_LUT_COLORS = ['white', 'red', 'green', 'blue', 'yellow', 'magenta', 'cyan', ]
+DEFAULT_COLORS_BY_NAME = Colors.channel_table
+DEFAULT_LUT_COLORS = Colors.colors
+COLOR_DEFINITIONS = dict((c, getattr(Colors, c)) for c in Colors.colors)
 
-COLOR_DEFINITIONS = {'red'    : '#FF0000',
-                     'green'  : '#00FF00',
-                     'blue'   : '#0000FF',
-                     'yellow' : '#FFFF00',
-                     'magenta': '#FF00FF',
-                     'cyan'   : '#00FFFF',
-                     'white'  : '#FFFFFF'}
-
-#-------------------------------------------------------------------------------
-# functions:
-#
 def blend_images_max(images):
-    '''
+    """
     blend a list of QImages together by "lighten" composition (lighter color
     of source and dest image is selected; same effect as max operation)
-    '''
+    """
     assert len(images) > 0, 'At least one image required for blending.'
     pixmap = QPixmap(images[0].width(), images[0].height())
     # for some reason the pixmap is NOT empty

@@ -146,9 +146,12 @@ class CellAnalyzer(LoggerObject):
                     oChannel = self._channel_registry[channel_name]
                     if 'raw' in dctChannelInfo:
                         strHexColor, fAlpha = dctChannelInfo['raw']
-#                        print len(lstImages)
-                        lstImages.append((oChannel.meta_image.image, strHexColor, 1.0))
-#                        print len(lstImages)
+                        # special casing for virtual channel to mix
+                        # raw images together
+                        if oChannel.is_virtual():
+                            lstImages.extend(oChannel.meta_images(fAlpha))
+                        else:
+                            lstImages.append((oChannel.meta_image.image, strHexColor, 1.0))
 
                     if 'contours' in dctChannelInfo:
                         # transform the old dict-style to the new tuple-style,
@@ -181,8 +184,6 @@ class CellAnalyzer(LoggerObject):
                                                 dctLabels[iLabel] = []
                                             dctLabels[iLabel].append(iObjId)
                                             dctColors[iLabel] = oObj.strHexColor
-                                    #print dctLabels
-#                                    imgRaw = oChannel.meta_image.image
                                     imgCon2 = ccore.Image(imgRaw.width, imgRaw.height)
                                     for iLabel, lstObjIds in dctLabels.iteritems():
                                         imgCon = ccore.Image(imgRaw.width, imgRaw.height)
@@ -314,6 +315,9 @@ class CellAnalyzer(LoggerObject):
                 feature_names.extend(["_".join((pfx, f)) for f in oChannel.lstFeatureNames])
             else:
                 feature_names.extend(oChannel.lstFeatureNames)
+
+            if isinstance(region, tuple):
+                region = "-".join(region)
 
             name = join(oLearner.controls_dir, "P%s_T%05d_C%s_R%s.jpg"
                         %(self.P, self._iT, oLearner.color_channel, region))
