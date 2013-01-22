@@ -351,7 +351,7 @@ class MergedChannel(ChannelCore):
 
     def __init__(self, *args, **kw):
         super(MergedChannel, self).__init__(*args, **kw)
-        # defined channels an region to concatenate
+        # defines channels an regions to concatenate
         self._merge_regions = OrderedDict()
         self._channels = None
 
@@ -381,11 +381,17 @@ class MergedChannel(ChannelCore):
             pfx = "%s_%s" %(cname, region_name)
             feature_names = ["_".join((pfx, f)) for f in holder0.feature_names]
             holder.cat_samples(holder0, feature_names)
+
+        removed = holder.remove_incomplete()
+        if len(removed) > 0:
+            self.logger.info("Found incomplete samples in merged channel")
+            self.logger.info("removed samples: %s" %",".join([str(r) for r in removed]))
         self._regions[self.regkey] = holder
         self.lstFeatureNames = holder.feature_names
 
     def _new_container(self, master):
         # not sure if it makes a difference to have a master
+        # perhaps a method to get an rgb image
         mcnt = self._channels[master].containers['primary']
         self.containers[self.regkey] = mcnt
 
@@ -411,7 +417,7 @@ class MergedChannel(ChannelCore):
                                alpha))
         return images
 
-    # most of the following functions are just nope to stay
+    # most of the following functions are just dummy implementations to stay
     # combatible to processing channels that do actually perform segmentation
     def purge(self, *args, **kw):
         self._channels = None

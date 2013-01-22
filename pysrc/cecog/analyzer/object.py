@@ -91,6 +91,19 @@ class ObjectHolder(OrderedDict):
         for label, sample in holder.iteritems():
             self[label] = copy.deepcopy(sample)
 
+    def remove_incomplete(self):
+        """Remove samples that do not have the same number of features as necessary.
+        This can happen in merged channels. i.e. where features of different
+        processing channels are concatenated and the sample was skipped in on channel
+        for some reasion.
+        """
+        removed = list()
+        for label, sample in self.items():
+            if sample.aFeatures.size != len(self.feature_names):
+                del self[label]
+                removed.append(label)
+        return removed
+
     def cat_samples(self, holder, feature_names):
         """Concatenate features of image objects. If the dict does not contain
         the image object, it's added automatically.

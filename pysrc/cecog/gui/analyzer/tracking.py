@@ -16,11 +16,12 @@ __source__ = '$URL$'
 
 __all__ = ['TrackingFrame']
 
+from cecog import CHANNEL_PREFIX, CH_VIRTUAL, CH_PRIMARY, CH_OTHER
 from cecog.traits.analyzer.tracking import SECTION_NAME_TRACKING
 from cecog.gui.analyzer import BaseProcessorFrame, AnalyzerThread
 
 from cecog.analyzer.channel import PrimaryChannel, SecondaryChannel
-from cecog.analyzer.channel import TertiaryChannel
+from cecog.analyzer.channel import TertiaryChannel, MergedChannel
 
 from cecog.plugin.segmentation import REGION_INFO
 
@@ -125,29 +126,43 @@ class TrackingFrame(BaseProcessorFrame):
                                                         })
 
             settings.set_section('Processing')
-            if (settings.get2('secondary_featureextraction') and
-                settings.get2('secondary_classification') and
-                settings.get2('secondary_processchannel')):
-                settings.get('General', 'rendering_class').update( \
-                    {'secondary_classification_%s' % sec_region: \
-                         {sec_id: {'raw': ('#FFFFFF', 1.0),
-                                   'contours': [(sec_region, 'class_label', 1, False),
-                                                (sec_region, '#000000', 1, show_ids_class)]}
-                          }
-                     })
-
-            # if (settings.get2('tertiary_featureextraction') and
-            #     settings.get2('tertiary_classification') and
-            #     settings.get2('tertiary_processchannel')):
-            #     settings.get('General', 'rendering_class').update( \
-            #         {'tertiary_classification_%s' %ter_region: \
-            #              {ter_id: {'raw': ('#FFFFFF', 1.0),
-            #                        'contours': [(ter_region, 'class_label', 1, False),
-            #                                     (ter_region, '#000000', 1, show_ids_class)]}
-            #               }
-            #          })
+            self._channel_render_settings(settings, SecondaryChannel.NAME, show_ids_class)
+            self._channel_render_settings(settings, TertiaryChannel.NAME, show_ids_class)
+            self._channel_render_settings(settings, MergedChannel.NAME, show_ids_class)
 
         return settings
+
+    def _channel_render_settings(self, settings, ch_name, show_class_ids):
+        pfx = ch_name.lower()
+        chreg = settings.get('Classification', '%s_classification_regionname' %pfx)
+        if ((settings.get2('%s_featureextraction' %pfx) or pfx in CH_VIRTUAL) and
+            settings.get2('%s_classification' %pfx) and
+            settings.get2('%s_processchannel' %pfx)):
+            settings.get('General', 'rendering_class').update( \
+                self._class_rendering_params(ch_name.lower(), settings))
+
+    def _class_rendering_params(self, prefix, settings):
+        """Setup rendering prameters for images to show classified objects"""
+        showids = settings.get('Output', 'rendering_class_showids')
+
+        if prefix in CH_VIRTUAL:
+            region = [settings.get("Classification", \
+                                       "merged_%s_region" %pfx) \
+                          for pfx in (CH_PRIMARY+CH_OTHER)]
+            region = tuple(region)
+            region_str = '-'.join(region)
+        else:
+            region = settings.get('Classification',
+                                  '%s_classification_regionname' %prefix)
+            region_str = region
+
+        rpar = {prefix.title():
+                    {'raw': ('#FFFFFF', 1.0),
+                     'contours': [(region, 'class_label', 1, False),
+                                  (region, '#000000', 1, showids)]}}
+        cl_rendering = {'%s_classification_%s' %(prefix, region_str): rpar}
+        return cl_rendering
+
 
     def page_changed(self):
         self.settings_loaded()

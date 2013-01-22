@@ -152,7 +152,6 @@ class CellAnalyzer(LoggerObject):
                             lstImages.extend(oChannel.meta_images(fAlpha))
                         else:
                             lstImages.append((oChannel.meta_image.image, strHexColor, 1.0))
-
                     if 'contours' in dctChannelInfo:
                         # transform the old dict-style to the new tuple-style,
                         # which allows multiple definitions for one region

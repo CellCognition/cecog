@@ -996,12 +996,7 @@ class TimeHolder(OrderedDict):
                     # in case just total counts are needed
                     if len(class_names) > 0:
                         for obj in region.values():
-                            try:
-                                count[obj.strClassName] += 1
-                            except KeyError:
-                                print channel
-                                print region_name
-                                import pdb; pdb.set_trace()
+                            count[obj.strClassName] += 1
                     items += [total] + [count[x] for x in class_names]
 
 
