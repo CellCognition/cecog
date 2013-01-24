@@ -40,7 +40,7 @@ class BaseLearner(LoggerObject):
         super(BaseLearner, self).__init__()
 
         self.clf_dir = clf_dir
-        self.name = name#basename(clf_dir)
+        self.name = name
 
         self.color_channel = color_channel
         self.channels = channels
@@ -555,29 +555,29 @@ class CommonObjectLearner(BaseLearner):
     def __init__(self, *args, **kw):
         super(CommonObjectLearner, self).__init__(*args, **kw)
 
-    def set_training_data(self, training_data, feature_names):
-        self.feature_names = feature_names
-        nfeatures = len(feature_names)
+    def set_training_data(self, training_set):
+        self.feature_names = training_set.feature_names
+        nfeatures = training_set.n_features
 
-        for obj_label, tdata in training_data.iteritems():
-            class_name = self.dctClassNames[tdata["class"]]
+        for obj_label, sample in training_set.iteritems():
+            class_name = self.dctClassNames[sample.iLabel]
 
-            if tdata['features'].size != nfeatures:
+            if sample.aFeatures.size != nfeatures:
                 msg = ('Incomplete feature set found (%d/%d): skipping sample '
                        'class: %s, object label %s, files: %s'
-                       %(tdata["features"].size, nfeatures, class_name,
-                         obj_label, str(tdata["files"]).strip("[]")))
+                       %(sample.aFeatures.size, nfeatures, class_name,
+                         obj_label, str(sample.file)))
                 self.logger.warning(msg)
                 continue
 
             try:
-                self.dctFeatureData[class_name].extend([tdata["features"]])
+                self.dctFeatureData[class_name].extend([sample.aFeatures])
             except KeyError:
-                self.dctFeatureData[class_name] = [tdata["features"]]
+                self.dctFeatureData[class_name] = [sample.aFeatures]
             try:
-                self.dctSampleNames[class_name].extend([tdata['files']])
+                self.dctSampleNames[class_name].extend([sample.file])
             except KeyError:
-                self.dctSampleNames[class_name] = [tdata["files"]]
+                self.dctSampleNames[class_name] = [sample.file]
 
 if __name__ ==  "__main__":
     import sys

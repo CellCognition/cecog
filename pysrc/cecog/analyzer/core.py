@@ -23,6 +23,7 @@ import os
 import re
 import glob
 from os.path import join, basename, isdir, splitext, isfile
+from collections import OrderedDict
 
 from cecog import CH_PRIMARY, CH_OTHER, CH_VIRTUAL
 from cecog.learning.collector import CellCounterReader, CellCounterReaderXML
@@ -63,7 +64,7 @@ class AnalyzerBase(LoggerObject):
 
     def _makedirs(self):
         """Make output directories (analyzed, dumps and log)"""
-        odirs = ("analyzed", "dump", "log")
+        odirs = ("analyzed", "hdf5", "plots", "log")
         for odir in odirs:
             path = join(self._out_dir, odir)
             try:
@@ -267,12 +268,13 @@ class Picker(AnalyzerBase):
         pchannel = self.settings.get("Classification", "collectsamples_prefix")
 
         if chid is None:
-            learner = CommonObjectLearner(self.cl_path, pchannel,
+            learner = CommonObjectLearner(self.cl_path, pchannel.title(),
                                           self._merge_channels())
         else:
             channels = {pchannel.title(): self.settings.get( \
                     'Classification', self._resolve("classification_regionname"))}
-            learner = CommonObjectLearner(self.cl_path, pchannel, channels, chid)
+            learner = CommonObjectLearner(self.cl_path, pchannel.title(),
+                                          channels, chid)
 
         learner.loadDefinition()
         return learner
@@ -280,7 +282,7 @@ class Picker(AnalyzerBase):
     def _merge_channels(self):
         """Read the the checked processing channels and the region to consider
         for feature extraction."""
-        regions = dict()
+        regions = OrderedDict()
         for prefix in (CH_PRIMARY+CH_OTHER):
             if self.settings.get("Classification", "%s_channel" %prefix):
                 regions[prefix.title()] = \

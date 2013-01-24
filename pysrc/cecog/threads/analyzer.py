@@ -31,8 +31,3 @@ class AnalyzerThread(CoreThread):
             h5_links = analyzer.processPositions(self)
             if h5_links:
                 link_hdf5_files(h5_links)
-
-        # make sure the learner data is only exported while we do sample picking
-        if self._settings.get('Classification', 'collectsamples') and \
-                not learner is None:
-            learner.export()

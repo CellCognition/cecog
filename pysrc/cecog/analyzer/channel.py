@@ -87,6 +87,7 @@ class ChannelCore(LoggerObject):
         self.containers = {}
         self._regions = {}
         self.meta_image = None
+        self._features_calculated = False
 
     def __cmp__(self, channel):
         return cmp(self._rank, channel._rank)
@@ -193,7 +194,7 @@ class Channel(ChannelCore):
         self.meta_image.set_image(image)
 
     def apply_features(self):
-
+        self._features_calculated = True
         for region_name, container in self.containers.iteritems():
             object_holder = ObjectHolder(region_name)
             if not container is None:
@@ -235,6 +236,7 @@ class Channel(ChannelCore):
             if self.lstFeatureNames is not None:
                 object_holder.feature_names = self.lstFeatureNames
             self._regions[region_name] = object_holder
+
 
     def _z_slice_image(self, plate_id):
         if not isdir(str(self.strBackgroundImagePath)):
@@ -416,6 +418,10 @@ class MergedChannel(ChannelCore):
                                Colors.channel_hexcolor(ccolor),
                                alpha))
         return images
+
+    def sub_channels(self):
+        for schannel, region in self._merge_regions.iteritems():
+            yield self._channels[schannel], region
 
     # most of the following functions are just dummy implementations to stay
     # combatible to processing channels that do actually perform segmentation

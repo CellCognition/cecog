@@ -16,10 +16,6 @@ __source__ = '$URL$'
 
 __all__ = ['ProcessingFrame']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-
 import threading
 import logging
 

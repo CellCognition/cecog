@@ -50,11 +50,24 @@ class ImageObject(object):
         self.iId = None
         self.aFeatures = None
         self.crack_contour = None
+        self.file = None
 
     def squaredMagnitude(self, oObj):
         x = float(oObj.oCenterAbs[0] - self.oCenterAbs[0])
         y = float(oObj.oCenterAbs[1] - self.oCenterAbs[1])
         return x*x + y*y
+
+    def touches_border(self, width, height):
+        """Determines if region of interes touch the border given by
+        width and height.
+        """
+        if self.oRoi.upperLeft[0] >= 0 or self.oRoi.upperLeft[1] >= 0:
+            return False
+        elif self.oRoi.lowerRight[0] < width or \
+                self.oRoi.lowerRight[1] < height:
+            return False
+        else:
+            return True
 
 
 class ObjectHolder(OrderedDict):
@@ -70,6 +83,10 @@ class ObjectHolder(OrderedDict):
 
     def has_feature(self, name):
         return name in self.feature_names
+
+    @property
+    def files(self):
+        return [sample.file for sample in self.values()]
 
     @property
     def n_features(self):
@@ -92,10 +109,10 @@ class ObjectHolder(OrderedDict):
             self[label] = copy.deepcopy(sample)
 
     def remove_incomplete(self):
-        """Remove samples that do not have the same number of features as necessary.
-        This can happen in merged channels. i.e. where features of different
-        processing channels are concatenated and the sample was skipped in on channel
-        for some reasion.
+        """Remove samples that do not have the same number of features as
+        necessary. This can happen in merged channels. i.e. where features of
+        different processing channels are concatenated and the sample was
+        skipped in on channel for some reasion.
         """
         removed = list()
         for label, sample in self.items():

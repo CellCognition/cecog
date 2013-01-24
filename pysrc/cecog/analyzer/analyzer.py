@@ -107,15 +107,14 @@ class CellAnalyzer(LoggerObject):
             channel.purge(features=channelFeatures)
 
     def exportLabelImages(self, pathOut, compression='LZW'):
-        # TODO no label images for virtual channels
-        for name, channel in self.proc_channels.iteritems():
+        # no segmentaion in virtual channels --> no label images
+        for channel in self.proc_channels.itervalues():
             channel_id = channel.strChannelId
-            for strRegion, oContainer in channel.containers.iteritems():
-                strPathOutImage = join(pathOut, channel_id, strRegion)
-                makedirs(strPathOutImage)
-                oContainer.exportLabelImage(join(strPathOutImage,
-                                                 'P%s_T%05d.tif' % (self.P, self._iT)),
-                                            compression)
+            for region, container in channel.containers.iteritems():
+                outdir = join(pathOut, channel_id, region)
+                makedirs(outdir)
+                fname = join(outdir, 'P%s_T%05d.tif' %(self.P, self._iT))
+                container.exportLabelImage(fname, compression)
 
     def getImageSize(self, name):
         oChannel = self._channel_registry[name]
@@ -186,7 +185,7 @@ class CellAnalyzer(LoggerObject):
                                     imgCon2 = ccore.Image(imgRaw.width, imgRaw.height)
                                     for iLabel, lstObjIds in dctLabels.iteritems():
                                         imgCon = ccore.Image(imgRaw.width, imgRaw.height)
-                                        ### Flip this and use drawContours with fill option enables to get black background
+                                        # Flip this and use drawContours with fill option enables to get black background
                                         oContainer.drawContoursByIds(lstObjIds, 255, imgCon, bThickContours, False)
 #                                        oContainer.drawContoursByIds(lstObjIds, 255, imgCon, bThickContours, True)
                                         lstImages.append((imgCon, dctColors[iLabel], fAlpha))
@@ -229,145 +228,146 @@ class CellAnalyzer(LoggerObject):
         self.logger.debug('* collecting samples...')
         self.process(apply = False, extract_features = False)
 
-        region_images = dict()
-        training_data = OrderedDict()
-        feature_names = []
+        chname = oLearner.name
+        region = oLearner.regions
 
-        for chname, region in oLearner.channels.iteritems():
-            oChannel = self._channel_registry[chname]
-            oContainer = oChannel.get_container(region)
-            objects = oContainer.getObjects()
-            object_lookup = {}
-            object_ids = set()
+        oChannel = self._channel_registry[chname]
+        oContainer = oChannel.get_container(region)
+        objects = oContainer.getObjects()
+        # key = class_label, value = list of samples
+        object_lookup = {}
+        object_ids = set()
 
-            for reader in sample_readers:
-                if (byTime and P == reader.getPosition() and self._iT in reader):
-                    coords = reader[self._iT]
-                elif (not byTime and P in reader):
-                    coords = reader[P]
-                else:
-                    coords = None
+        for reader in sample_readers:
+            if (byTime and P == reader.getPosition() and self._iT in reader):
+                coords = reader[self._iT]
+            elif (not byTime and P in reader):
+                coords = reader[P]
+            else:
+                coords = None
 
-                if coords is not None:
-                    for data in coords:
-                        label = data['iClassLabel']
-                        if (label in oLearner.dctClassNames and
-                            0 <= data['iPosX'] < oContainer.width and
-                            0 <= data['iPosY'] < oContainer.height):
+            if coords is not None:
+                for data in coords:
+                    label = data['iClassLabel']
+                    if (label in oLearner.dctClassNames and
+                        0 <= data['iPosX'] < oContainer.width and
+                        0 <= data['iPosY'] < oContainer.height):
 
-                            center1 = ccore.Diff2D(data['iPosX'], data['iPosY'])
-                            # test for obj_id "under" annotated pixel first
-                            obj_id = oContainer.img_labels[center1]
+                        center1 = ccore.Diff2D(data['iPosX'], data['iPosY'])
+                        # test for obj_id "under" annotated pixel first
+                        obj_id = oContainer.img_labels[center1]
 
-                            # if not background: valid obj_id found
-                            if obj_id > 0:
+                        # if not background: valid obj_id found
+                        if obj_id > 0:
+                            object_ids.add(obj_id)
+                            try:
+                                object_lookup[label].extend([obj_id])
+                            except KeyError:
+                                object_lookup[label] = [obj_id]
+                        # otherwise try to find nearest object in a search
+                        # radius of 30 pixel (compatibility with CellCounter)
+                        else:
+                            dists = []
+                            for obj_id, obj in objects.iteritems():
+                                diff = obj.oCenterAbs - center1
+                                dist_sq = diff.squaredMagnitude()
+                                # limit to 30 pixel radius
+                                if dist_sq < 900:
+                                    dists.append((obj_id, dist_sq))
+                            if len(dists) > 0:
+                                dists.sort(lambda a,b: cmp(a[1], b[1]))
+                                obj_id = dists[0][0]
                                 object_ids.add(obj_id)
                                 try:
                                     object_lookup[label].extend([obj_id])
                                 except KeyError:
                                     object_lookup[label] = [obj_id]
-                            # otherwise try to find nearest object in a search
-                            # radius of 30 pixel (compatibility with CellCounter)
-                            else:
-                                dists = []
-                                for obj_id, obj in objects.iteritems():
-                                    diff = obj.oCenterAbs - center1
-                                    dist_sq = diff.squaredMagnitude()
-                                    # limit to 30 pixel radius
-                                    if dist_sq < 900:
-                                        dists.append((obj_id, dist_sq))
-                                if len(dists) > 0:
-                                    dists.sort(lambda a,b: cmp(a[1], b[1]))
-                                    obj_id = dists[0][0]
-                                    object_ids.add(obj_id)
-                                    try:
-                                        object_lookup[label].extend([obj_id])
-                                    except KeyError:
-                                        object_lookup[label] = [obj_id]
 
-            objects_del = set(objects.keys()) - object_ids
-            for obj_id in objects_del:
-                oContainer.delObject(obj_id)
+        objects_del = set(objects.keys()) - object_ids
+        for obj_id in objects_del:
+            oContainer.delObject(obj_id)
 
-            self.time_holder.apply_features(oChannel)
-            tdata = self.exportObjects(plate_id, object_lookup,
-                                                 oLearner, oContainer,
-                                                 oChannel.get_region(region))
+        # calculate features of sub channels first
+        # want invoke time_holder for hdf5
+        if oChannel.is_virtual():
+            for mchannel, _ in oChannel.sub_channels():
+                self.time_holder.apply_features(mchannel)
 
-            # book keeping btw. color channels
-            # XXX move this functionality to the learner class
-            for label, sample in tdata.iteritems():
-                if training_data.has_key(label):
-                    td = training_data[label]
-                    td["features"] = np.append(td['features'], np.array(sample.aFeatures))
-                    td["files"].append(sample.sample_id)
-                    assert td["class"] == sample.iLabel
-                else:
-                    training_data[label] = {"features": np.array(sample.aFeatures),
-                                            "files": [sample.sample_id],
-                                            "class": sample.iLabel}
+        self.time_holder.apply_features(oChannel)
+        training_set = self.annotate(object_lookup,
+                                     oLearner, oContainer,
+                                     oChannel.get_region(region))
 
-            # book keeping for feature names
-            # move this functionality to the learner class_name
-            if len(oLearner.channels) > 1:
-                pfx = "%s_%s" %(chname, region)
-                feature_names.extend(["_".join((pfx, f)) for f in oChannel.lstFeatureNames])
-            else:
-                feature_names.extend(oChannel.lstFeatureNames)
+        if oChannel.is_virtual():
+            images = {}
+            for s_ch, reg in oChannel.sub_channels():
+                rid = "%s_%s" %(s_ch.NAME, reg)
+                self.draw_annotation_images(plate_id, training_set,
+                                   s_ch.get_container(reg), oLearner, rid)
+                images.update(self.write_annotation_images(s_ch, reg, oLearner))
 
-            if isinstance(region, tuple):
-                region = "-".join(region)
+        else:
+            self.draw_annotation_images(plate_id, training_set, oContainer, oLearner)
+            images = self.write_annotation_images(oChannel, region, oLearner)
 
-            name = join(oLearner.controls_dir, "P%s_T%05d_C%s_R%s.jpg"
-                        %(self.P, self._iT, oLearner.color_channel, region))
-            oContainer.exportRGB(name, "90")
-            region_images["%s_%s" %(chname.lower(), region)] = oContainer.img_rgb
+        oLearner.set_training_data(training_set)
+        return images
 
-        oLearner.set_training_data(training_data, feature_names)
-        return region_images
+    def write_annotation_images(self, channel, region, learner):
+        cnt = channel.get_container(region)
+        images = {}
+        if isinstance(region, tuple):
+            region = "-".join(region)
+        name = join(learner.controls_dir, "P%s_T%05d_C%s_R%s.jpg"
+                    %(self.P, self._iT, learner.color_channel, region))
+        cnt.exportRGB(name, "90")
+        images["%s_%s" %(channel.NAME.lower(), region)] = cnt.img_rgb
+        return images
 
-    def exportObjects(self, plate, sample_objects, learner, container, region):
-        """
-        Exports mask and images of annotated objects after picking.
-        Also draw labels and cirles.
-        """
+    def draw_annotation_images(self, plate, training_set, container, learner, rid=""):
+        cldir = dict([(cname, join(learner.samples_dir, cname)) \
+                          for cname in learner.dctClassNames.values()])
+        # create dir per class name
+        for dir_ in cldir.values():
+            makedirs(dir_)
 
-        learner_objects = {}
-        for label, object_ids in sample_objects.iteritems():
-            class_name = learner.dctClassNames[label]
+        for obj in training_set.itervalues():
+            if not obj.touches_border(container.width, container.height):
+                rgb_value = ccore.RGBValue(*hexToRgb(obj.strHexColor))
+
+                file_ = 'PL%s___P%s___T%05d___X%04d___Y%04d' \
+                    %(plate, self.P, self._iT,
+                      obj.oCenterAbs[0], obj.oCenterAbs[1])
+                obj.file = file_
+                file_ = join(cldir[obj.strClassName],
+                             '%s___%s.png' %(file_, rid+"_%s"))
+
+                # FIXME: export Objects is segfaulting for objects
+                #        where its bounding box is touching the border
+                #        i.e. one corner point equals zero!
+                container.exportObject(obj.iId, file_ %"img", file_ %"msk")
+                container.markObjects([obj.iId], rgb_value, False, True)
+                ccore.drawFilledCircle(ccore.Diff2D(*obj.oCenterAbs),
+                                       3, container.img_rgb, rgb_value)
+
+    def annotate(self, sample_objects, learner, container, region):
+        """Annotate predefined class labels to picked samples."""
+
+        training_set = ObjectHolder(region.name)
+        training_set.feature_names = region.feature_names
+
+        for class_label, object_ids in sample_objects.iteritems():
+            class_name = learner.dctClassNames[class_label]
             hex_color = learner.dctHexColors[class_name]
-            rgb_value = ccore.RGBValue(*hexToRgb(hex_color))
 
             for obj_id in object_ids:
                 obj = region[obj_id]
-                obj.iLabel = label
+                obj.iLabel = class_label
                 obj.strClassName = class_name
                 obj.strHexColor = hex_color
-
-                if (obj.oRoi.upperLeft[0] >= 0 and
-                    obj.oRoi.upperLeft[1] >= 0 and
-                    obj.oRoi.lowerRight[0] < container.width and
-                    obj.oRoi.lowerRight[1] < container.height):
-
-                    learner_objects[obj_id] = obj
-
-                    cxi, cyi = obj.oCenterAbs
-                    label_dir = join(learner.samples_dir, class_name)
-                    makedirs(label_dir)
-                    samplefile = 'PL%s___P%s___T%05d___X%04d___Y%04d' \
-                        %(plate, self.P, self._iT, cxi, cyi)
-                    obj.sample_id = samplefile
-                    imgfile = join(label_dir, '%s___img.png' %samplefile)
-                    mskfile = join(label_dir, '%s___msk.png' %samplefile)
-
-                    # FIXME: export Objects is segfaulting for objects
-                    #        where its bounding box is touching the border
-                    #        i.e. one corner point equals zero!
-                    container.exportObject(obj_id, imgfile, mskfile)
-                    container.markObjects([obj_id], rgb_value, False, True)
-                    ccore.drawFilledCircle(ccore.Diff2D(cxi, cyi),
-                                           3, container.img_rgb, rgb_value)
-        return learner_objects
+                if not obj.touches_border(container.width, container.height):
+                    training_set[obj_id] = obj
+        return training_set
 
     def classify_objects(self, predictor):
         channel = self._channel_registry[predictor.name]

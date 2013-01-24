@@ -416,12 +416,10 @@ class PositionAnalyzer(PositionCore):
             self._position_dir = self._analyzed_dir
 
         odirs = (self._analyzed_dir,
-                 join(self._out_dir, "debug"),
-                 join(self._out_dir, "dump"),
                  join(self._out_dir, "log"),
                  join(self._out_dir, "log", "_finished"),
                  join(self._out_dir, "hdf5"),
-                 join(self._out_dir, "plots", "population"),
+                 join(self._out_dir, "plots"),
                  join(self._position_dir, "statistics"),
                  join(self._position_dir, "gallery"),
                  join(self._position_dir, "images"),
@@ -541,7 +539,7 @@ class PositionAnalyzer(PositionCore):
             self.settings.get('Output', 'export_object_counts_ylim_max')
 
         # plot only for primary channel so far!
-        timeholder.exportPopulationPlots(fname, self._population_dir, self.position,
+        timeholder.exportPopulationPlots(fname, self._plots_dir, self.position,
                                          self.meta_data, ch_info['Primary'], pplot_ymax)
 
 

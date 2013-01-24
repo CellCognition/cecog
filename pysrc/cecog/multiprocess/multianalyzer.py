@@ -108,20 +108,21 @@ class MultiProcessingMixin(object):
         port = self.log_receiver.server_address[1]
         self.pool = Pool(self.ncpu, initializer=lg.initialyze_process,
                          initargs=(port,))
-        self.parent.process_log_window.init_process_list( \
+
+        self.parent().process_log_window.init_process_list( \
             [str(p.pid) for p in self.pool._pool])
-        self.parent.process_log_window.show()
+        self.parent().process_log_window.show()
 
         SocketServer.ThreadingTCPServer.allow_reuse_address = True
 
         for p in self.pool._pool:
             logger = logging.getLogger(str(p.pid))
-            handler = lg.NicePidHandler(self.parent.process_log_window)
+            handler = lg.NicePidHandler(self.parent().process_log_window)
             handler.setFormatter(logging.Formatter( \
                     '%(asctime)s %(name)-24s %(levelname)-6s %(message)s'))
             logger.addHandler(handler)
 
-        self.log_receiver.handler.log_window = self.parent.process_log_window
+        self.log_receiver.handler.log_window = self.parent().process_log_window
 
         self.log_receiver_thread = threading.Thread( \
             target=self.log_receiver.serve_forever)
@@ -142,7 +143,7 @@ class MultiProcessingMixin(object):
     def abort(self):
         self._abort = True
         self.pool.terminate()
-        self.parent.process_log_window.close()
+        self.parent().process_log_window.close()
 
     def join(self):
         self.pool.close()
@@ -171,9 +172,14 @@ class MultiProcessingMixin(object):
 
     def submit_jobs(self, job_list):
         self.process_callback.notify_execution(job_list, self.ncpu)
-        self.job_result = [self.pool.apply_async(self.target, args,
-                                                 callback=self.process_callback)
-                           for args in job_list]
+
+        self.job_result = list()
+        for args in job_list:
+            self.pool.apply_async(self.target, args,
+                                  callback=self.process_callback)
+        # self.job_result = [self.pool.apply_async(self.target, args,
+        #                                          callback=self.process_callback)
+        #                    for args in job_list]
 
 
 class MultiAnalyzerThread(AnalyzerThread, MultiProcessingMixin):
