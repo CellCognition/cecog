@@ -175,11 +175,7 @@ class MultiProcessingMixin(object):
 
         self.job_result = list()
         for args in job_list:
-            self.pool.apply_async(self.target, args,
-                                  callback=self.process_callback)
-        # self.job_result = [self.pool.apply_async(self.target, args,
-        #                                          callback=self.process_callback)
-        #                    for args in job_list]
+            self.pool.apply_async(self.target, args, callback=self.process_callback)
 
 
 class MultiAnalyzerThread(AnalyzerThread, MultiProcessingMixin):

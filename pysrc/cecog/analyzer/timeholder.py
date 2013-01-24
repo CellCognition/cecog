@@ -33,6 +33,7 @@ matplotlib.use('Agg', warn=False)
 from matplotlib import pyplot
 
 from cecog import ccore
+from cecog import CHANNEL_PREFIX
 from cecog.io.imagecontainer import Coordinate, MetaImage
 from cecog.analyzer.channel import PrimaryChannel
 from cecog.plugin.segmentation import REGION_INFO
@@ -150,7 +151,8 @@ class TimeHolder(OrderedDict):
         self._channel_info = []
         self._region_infos = []
         region_names2 = []
-        for prefix in ['primary', 'secondary', 'tertiary']:
+        # XXX hardcoded values
+        for prefix in CHANNEL_PREFIX:
             for name in REGION_INFO.names[prefix]:
                 self._channel_info.append((prefix, settings.get('ObjectDetection', '%s_channelid' % prefix)))
                 self._region_infos.append((prefix, self._convert_region_name(prefix, name), name))
@@ -551,6 +553,10 @@ class TimeHolder(OrderedDict):
                               % (desc, stop_watch.current_interval()))
 
     def prepare_raw_image(self, channel):
+        if channel.is_virtual():
+            # no raw image in a merged channel
+            return
+
         stop_watch = StopWatch()
         desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
                                          channel.strChannelId)
@@ -635,7 +641,7 @@ class TimeHolder(OrderedDict):
                 combined_region_name = self._convert_region_name(channel_name, region_name, '')
 
                 region = channel.get_region(region_name)
-                feature_names = region.feature_name()
+                feature_names = region.feature_names
                 nr_features = len(feature_names)
                 nr_objects = len(region)
 
@@ -890,11 +896,12 @@ class TimeHolder(OrderedDict):
                                                       self.HDF5_DTYPE_EDGE,
                                                       chunks=(1,), maxshape=(None,))
 
-    def serialize_classification(self, channel_name, region_name, predictor):
+    def serialize_classification(self, channel_name, region, predictor):
         if self._hdf5_create and self._hdf5_include_classification:
             channel = self[self._iCurrentT][channel_name]
-            region = channel.get_region(region_name)
-            combined_region_name = self._convert_region_name(channel_name, region_name, prefix=None)
+            #region = channel.get_region(region_name)
+            combined_region_name = self._convert_region_name( \
+                channel_name, region.name, prefix=None)
 
             nr_classes = predictor.iClassNumber
             nr_objects = len(region)
@@ -920,12 +927,12 @@ class TimeHolder(OrderedDict):
                 var = classification_group.create_dataset('classifier', (1,), dt)
 
                 var[0] = (predictor.name,
-                                   predictor.oClassifier.METHOD,
-                                   predictor.oClassifier.NAME,
-                                   '',
-                                   '')
+                          predictor.classifier.METHOD,
+                          predictor.classifier.NAME,
+                          '',
+                          '')
 
-                feature_names = predictor.lstFeatureNames
+                feature_names = predictor.feature_names
                 var = classification_group.create_dataset('features', (len(feature_names),), [('object_feautres','|S512'),])
                 var[:] = feature_names
 
@@ -962,10 +969,9 @@ class TimeHolder(OrderedDict):
                                  for i, label in
                                  enumerate(predictor.lstClassLabels)])
 
-            for obj_idx, obj_id in enumerate(region):
-                obj = region[obj_id]
-                dset_prediction[obj_idx + offset] = (label_to_idx[obj.iLabel],)
-                dset_pobability[obj_idx + offset] = obj.dctProb.values()
+            for i, obj in enumerate(region.itervalues()):
+                dset_prediction[i+offset] = (label_to_idx[obj.iLabel],)
+                dset_pobability[i+offset] = obj.dctProb.values()
 
     def exportObjectCounts(self, filename, pos, meta_data, ch_info,
                            sep='\t', has_header=False):

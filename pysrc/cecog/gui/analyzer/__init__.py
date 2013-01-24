@@ -406,7 +406,6 @@ class _ProcessorMixin(object):
 
             if is_valid:
                 self._current_process = name
-                #qApp._image_dialog = None
 
                 if not start_again:
                     qApp._log_window.clear()
