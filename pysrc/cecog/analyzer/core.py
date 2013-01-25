@@ -253,6 +253,8 @@ class Picker(AnalyzerBase):
                 if not position in self.sample_positions:
                     self.sample_positions[position] = []
                 self.sample_positions[position].extend(reader.getTimePoints())
+            else:
+                raise RuntimeError("Annotation file is invalid!")
 
         for pos, iframes in self.sample_positions.iteritems():
             self.sample_positions[pos] = sorted(list(set(iframes)))
