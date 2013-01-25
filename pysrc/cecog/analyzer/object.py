@@ -61,14 +61,13 @@ class ImageObject(object):
         """Determines if region of interes touch the border given by
         width and height.
         """
-        if self.oRoi.upperLeft[0] >= 0 or self.oRoi.upperLeft[1] >= 0:
-            return False
-        elif self.oRoi.lowerRight[0] < width or \
-                self.oRoi.lowerRight[1] < height:
+        if (self.oRoi.upperLeft[0] > 0 and
+            self.oRoi.upperLeft[1] > 0 and
+            self.oRoi.lowerRight[0] < width-1 and
+            self.oRoi.lowerRight[1] < height-1):
             return False
         else:
             return True
-
 
 class ObjectHolder(OrderedDict):
     """Container class for image objects. Provides object access by label (key),

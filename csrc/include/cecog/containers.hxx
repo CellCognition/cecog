@@ -867,13 +867,19 @@ namespace cecog
                       std::string msk_name,
                       std::string compression = "100")
     {
-      // add a border of 1 pixel arround object image & mask
-      const vigra::Diff2D ul_1px(-1,-1);
-      const vigra::Diff2D lr_1px(+1,+1);
-
       if (objects.count(objId))
       {
         ROIObject& o = objects[objId];
+
+		// add a border of 1 pixel arround object image & mask
+		// and fixes a segfault in vigra::exportImage
+		int xul, yul, xlr, ylr;
+		xul = (o.roi.upperLeft.x == 0) ? 0 : -1;
+		yul = (o.roi.upperLeft.y == 0) ? 0 : -1;
+		xlr = (o.roi.lowerRight.x == img.width()) ? 0 : 1;
+		ylr = (o.roi.lowerRight.y == img.height()) ? 0 : 1;
+		const vigra::Diff2D ul_1px(xul, yul);
+        const vigra::Diff2D lr_1px(xlr, ylr);
 
         vigra::ImageExportInfo img_info(img_name.c_str());
         img_info.setCompression(compression.c_str());
@@ -881,16 +887,14 @@ namespace cecog
         vigra::ImageExportInfo msk_info(msk_name.c_str());
         msk_info.setCompression(compression.c_str());
 
-        vigra::Diff2D ul = o.roi.upperLeft + ul_1px;
+    	vigra::Diff2D ul = o.roi.upperLeft + ul_1px;
         vigra::Diff2D lr = o.roi.lowerRight + lr_1px;
-        //printf("img: %d %d, %d %d, %d %d\n", t1.x, t1.y, t2.x, t2.y, img.width(), img.height());
 
         vigra::exportImage(img.upperLeft() + ul,
                            img.upperLeft() + lr,
                            img.accessor(),
                            img_info);
-        //printf("done!\n");
-
+        
         binary_type mask(o.roi.width+2, o.roi.height+2);
 
         typedef binary_type::value_type binary_value;

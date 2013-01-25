@@ -332,23 +332,18 @@ class CellAnalyzer(LoggerObject):
             makedirs(dir_)
 
         for obj in training_set.itervalues():
-            if not obj.touches_border(container.width, container.height):
-                rgb_value = ccore.RGBValue(*hexToRgb(obj.strHexColor))
+            rgb_value = ccore.RGBValue(*hexToRgb(obj.strHexColor))
 
-                file_ = 'PL%s___P%s___T%05d___X%04d___Y%04d' \
-                    %(plate, self.P, self._iT,
-                      obj.oCenterAbs[0], obj.oCenterAbs[1])
-                obj.file = file_
-                file_ = join(cldir[obj.strClassName],
-                             '%s___%s.png' %(file_, rid+"_%s"))
-
-                # FIXME: export Objects is segfaulting for objects
-                #        where its bounding box is touching the border
-                #        i.e. one corner point equals zero!
-                container.exportObject(obj.iId, file_ %"img", file_ %"msk")
-                container.markObjects([obj.iId], rgb_value, False, True)
-                ccore.drawFilledCircle(ccore.Diff2D(*obj.oCenterAbs),
-                                       3, container.img_rgb, rgb_value)
+            file_ = 'PL%s___P%s___T%05d___X%04d___Y%04d' \
+                %(plate, self.P, self._iT,
+                  obj.oCenterAbs[0], obj.oCenterAbs[1])
+            obj.file = file_
+            file_ = join(cldir[obj.strClassName],
+                         '%s___%s.png' %(file_, rid+"_%s"))
+            container.exportObject(obj.iId, file_ %"img", file_ %"msk")
+            container.markObjects([obj.iId], rgb_value, False, True)
+            ccore.drawFilledCircle(ccore.Diff2D(*obj.oCenterAbs),
+                                   3, container.img_rgb, rgb_value)
 
     def annotate(self, sample_objects, learner, container, region):
         """Annotate predefined class labels to picked samples."""
@@ -365,8 +360,7 @@ class CellAnalyzer(LoggerObject):
                 obj.iLabel = class_label
                 obj.strClassName = class_name
                 obj.strHexColor = hex_color
-                if not obj.touches_border(container.width, container.height):
-                    training_set[obj_id] = obj
+                training_set[obj_id] = obj
         return training_set
 
     def classify_objects(self, predictor):
