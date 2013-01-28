@@ -73,9 +73,6 @@ class TrackingFrame(BaseProcessorFrame):
         settings = BaseProcessorFrame._get_modified_settings(self, name, has_timelapse)
 
         settings.set_section('ObjectDetection')
-        prim_id = PrimaryChannel.NAME
-        sec_id = SecondaryChannel.NAME
-        ter_id = TertiaryChannel.NAME
 
         settings.set_section('Processing')
         settings.set2('tracking', True)
@@ -87,8 +84,6 @@ class TrackingFrame(BaseProcessorFrame):
         settings.set2('rendering', {})
         settings.set_section('Classification')
         settings.set2('collectsamples', False)
-        sec_region = settings.get2('secondary_classification_regionname')
-        ter_region = settings.get2('tertiary_classification_regionname')
 
         settings.set('Output', 'hdf5_create_file', False)
         show_ids = settings.get('Output', 'rendering_contours_showids')
@@ -113,17 +108,18 @@ class TrackingFrame(BaseProcessorFrame):
 
             settings.set('Output', 'events_export_gallery_images', False)
             settings.set('General', 'rendering', {'primary_contours':
-                                                  {prim_id: {'raw': ('#FFFFFF', 1.0),
-                                                             'contours': {region_name: ('#FF0000', 1, show_ids)}}}})
+                                                      {PrimaryChannel.NAME: {'raw': ('#FFFFFF', 1.0),
+                                                                             'contours': {region_name: ('#FF0000', 1, show_ids)}}}})
         else:
             settings.set_section('Processing')
             settings.set2('primary_featureextraction', True)
             settings.set2('primary_classification', True)
             settings.set2('tracking_synchronize_trajectories', True)
-            settings.set('General', 'rendering_class', {'primary_classification': {prim_id: {'raw': ('#FFFFFF', 1.0),
-                                                                                             'contours': [('primary', 'class_label', 1, False),
-                                                                                                          ('primary', '#000000', 1, show_ids_class)]}},
-                                                        })
+            cl_rnd = {'primary_classification':
+                      {PrimaryChannel.NAME: {'raw': ('#FFFFFF', 1.0),
+                                             'contours': [('primary', 'class_label', 1, False),
+                                                          ('primary', '#000000', 1, show_ids_class)]}},                                                        }
+            settings.set('General', 'rendering_class', cl_rnd)
 
             settings.set_section('Processing')
             self._channel_render_settings(settings, SecondaryChannel.NAME, show_ids_class)

@@ -376,6 +376,8 @@ class CellAnalyzer(LoggerObject):
                 label, probs = predictor.predict(obj.aFeatures, holder.feature_names)
                 obj.iLabel = label
                 obj.dctProb = probs
+                print label, predictor.dctClassNames
+                print predictor.dctHexColors
                 obj.strClassName = predictor.dctClassNames[label]
                 obj.strHexColor = predictor.dctHexColors[obj.strClassName]
         self.time_holder.serialize_classification(predictor.name, holder, predictor)

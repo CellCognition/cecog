@@ -13,21 +13,34 @@ __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
 import os
-import sys
+import numpy
+import argparse
 from cecog.learning.learning import CommonClassPredictor
 import time
 
+
+
 if __name__ ==  "__main__":
-    if os.path.isdir(sys.argv[1]):
-        learner = CommonClassPredictor(sys.argv[1], None, None)
+
+    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser.add_argument('directory', type=str,
+                        help='Directory to the classifier')
+    args = parser.parse_args()
+
+    if os.path.isdir(args.directory):
+        learner = CommonClassPredictor(args.directory, None, None)
         learner.importFromArff()
         t0 = time.time()
-        print learner.gridSearch()
+        n, c, g, conf =learner.gridSearch()
         print "Grid search took: ", time.time() - t0
-        c, g, conf = learner.importConfusion()
-        import pdb; pdb.set_trace()
+        #c, g, conf = learner.importConfusion()
+
+        numpy.set_printoptions(linewidth=80)
+        print "Confusion Matrix:"
+        for row in conf.conf:
+            print row
     else:
-        raise IOError("%s\n is not a valid directory" %sys.argv[1])
+        raise IOError("%s\n is not a valid directory" %args.directory)
     #learner.statsFromConfusion(conf)
 
 # #benchmark

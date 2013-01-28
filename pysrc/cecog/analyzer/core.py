@@ -83,7 +83,7 @@ class AnalyzerBase(LoggerObject):
 
         if self._frames is None:
             frames_total = self.meta_data.times
-            f_start, f_end, f_incr = 0, len(frames_total), 1
+            f_start, f_end, f_incr = 1, len(frames_total), 1
 
             if self.settings.get('General', 'frameRange'):
                 f_start = max(self.settings.get('General', 'frameRange_begin'),
@@ -232,21 +232,20 @@ class Picker(AnalyzerBase):
         self.learner.channel_name = self.settings.get(
             'Classification', 'collectsamples_prefix').title()
 
-        annotation_re = re.compile(('((.*?_{3})?PL(?P<plate>.*?)_{3})?P(?P'
-                                    '<position>.+?)_{1,3}T(?P<time>\d+).*?'))
+        ext = self.settings.get('Classification',
+                                self._resolve('classification_annotationfileext'))
+        pattern = join(self.learner.annotations_dir, "*%s" %ext)
+        anno_re = re.compile(('((.*?_{3})?PL(?P<plate>.*?)_{3})?P(?P'
+                              '<position>.+?)_{1,3}T(?P<time>\d+).*?'))
 
-        for dir_item in os.listdir(self.learner.annotations_dir):
-            sample_file = join(self.learner.annotations_dir, dir_item)
-            result = annotation_re.match(dir_item)
-            extension = splitext(sample_file)[1]
-
-            if self.is_valid_annofile(result, sample_file, extension):
+        for annofile in glob.glob(pattern):
+            result = anno_re.match(basename(annofile))
+            if self.is_valid_annofile(result):
                 frames_total = self.meta_data.times
-
-                if extension == '.xml':
-                    reader = CellCounterReaderXML(result, sample_file, frames_total)
+                if ext == '.xml':
+                    reader = CellCounterReaderXML(result, annofile, frames_total)
                 else:
-                    reader = CellCounterReader(result, sample_file, frames_total)
+                    reader = CellCounterReader(result, annofile, frames_total)
                 self.sample_reader.append(reader)
 
                 position = result.group('position')
@@ -291,17 +290,16 @@ class Picker(AnalyzerBase):
                 self.settings.get("Classification", "%s_%s_region" %(CH_VIRTUAL[0], prefix))
         return regions
 
-    def is_valid_annofile(self, result, sample_file, extension):
-        ext = self.settings.get('Classification',
-                                self._resolve('classification_annotationfileext'))
-        if (isfile(sample_file) and extension == ext and \
-                not sample_file[0] in ['.', '_'] and \
-                not result is None and \
-                (result.group('plate')is None or
-                 result.group('plate') == self.plate)):
-            return True
-        else:
-            return False
+    def is_valid_annofile(self, result):
+        # sanity checks for the annotation file
+        if result is None:
+            raise RuntimeError(("Annotation file name does not match the "
+                                "plate name"))
+        elif not (result.group("plate") is None or
+                  result.group("plate") == self.plate):
+            raise RuntimeError("Plate name does is invalid (%s, %s)"
+                               %(result.groupf("plate"), self.plate))
+        return True
 
     @property
     def cl_path(self):
