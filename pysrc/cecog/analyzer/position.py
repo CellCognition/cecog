@@ -307,7 +307,7 @@ class PositionCore(LoggerObject):
 
     def set_image(self, image, msg, filename='', region=None, stime=0):
         """Propagate a rendered image to QThread"""
-        if not (self._qthread is None and image is None):
+        if not (self._qthread is None or image is None):
             self._qthread.show_image(region, image, msg, filename, stime)
 
     def _channel_regions(self, p_channel):
