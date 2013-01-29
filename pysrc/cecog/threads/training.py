@@ -49,7 +49,9 @@ class TrainingThread(CoreThread):
         best_conf = None
         is_abort = False
         stopwatch = StopWatch(start=True)
-        self._learner.filterData(apply=True)
+
+        if self._learner.has_nan_features():
+            self._learner.filter_nans(apply=True)
 
         t0 = time.time()
         for info in self._learner.iterGridSearchSVM(c_info=c_info,
@@ -81,6 +83,7 @@ class TrainingThread(CoreThread):
             self._learner.train(2**best_log2c, 2**best_log2g)
             self._learner.exportConfusion(best_log2c, best_log2g, best_conf)
             self._learner.exportRanges()
+
             # FIXME: in case the meta-data (colors, names, zero-insert) changed
             #        the ARFF file has to be written again
             #        -> better store meta-data outside ARFF

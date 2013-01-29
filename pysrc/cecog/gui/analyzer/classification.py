@@ -16,6 +16,7 @@ __source__ = '$URL$'
 
 __all__ = ['ClassificationFrame']
 
+from os.path import isdir
 import numpy
 
 from PyQt4.QtGui import *
@@ -121,8 +122,8 @@ class ClassifierResultFrame(QGroupBox):
                                                   % (self._channel, y))
         clfdir = convert_package_path(_resolve('Classification',
                                                'classification_envpath'))
-        # XXX - where does the "." come from?
-        if not clfdir or clfdir == ".":
+        # XXX - where does the "." come
+        if not isdir(clfdir) or clfdir == ".":
             return
         else:
             self._learner = CommonClassPredictor( \
@@ -152,9 +153,9 @@ class ClassifierResultFrame(QGroupBox):
             if result['has_arff']:
                 self._learner.importFromArff()
                 nr_features_prev = len(self._learner.feature_names)
-                removed_features = self._learner.filterData(apply=False)
+                removed_features = self._learner.filter_nans(apply=True)
                 nr_features = nr_features_prev - len(removed_features)
-                self._label_features.setText(self.LABEL_FEATURES % (nr_features, nr_features_prev))
+                self._label_features.setText(self.LABEL_FEATURES %(nr_features, nr_features_prev))
                 self._label_features.setToolTip("removed %d features containing NA values:\n%s" %
                                                 (len(removed_features), "\n".join(removed_features)))
 
@@ -468,8 +469,10 @@ class ClassificationFrame(BaseProcessorFrame):
         showids = settings.get('Output', 'rendering_class_showids')
 
         if prefix in CH_VIRTUAL:
-            region = [settings.get("Classification", \
-                                       "merged_%s_region" %pfx) for pfx in (CH_PRIMARY+CH_OTHER)]
+            region = []
+            for pfx in (CH_PRIMARY+CH_OTHER):
+                if settings.get('Classification', '%s_channel' %pfx):
+                    region.append(settings.get("Classification", "merged_%s_region" %pfx))
             region = tuple(region)
             region_str = '-'.join(region)
         else:

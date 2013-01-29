@@ -165,7 +165,7 @@ class ProcessingFrame(BaseProcessorFrame):
         # want the same rendering properties as for the primary channel!
         if settings.get('Processing', 'merged_processchannel'):
             regions = cls._merged_regions(settings)
-            d = {'merged_contours_merged':
+            d = {'merged_contours_%s' %'-'.join(regions):
                      {"Merged": {'raw': ('#FFFFFF', 1.0),
                                  'contours': [(regions, reginfo.colors["primary"], 1, show_ids)]}}}
             settings.get("General", "rendering").update(d)

@@ -252,23 +252,14 @@ class MetaData(object):
         strings += ["* Height: %s" % self.dim_y]
         strings += ["* Width: %s" % self.dim_x]
         strings += ["* Wells: %s" % len(self.get_well_and_subwell_dict())]
-#        if time:
-#            lstStr += ["* Timestamp(s):\n" + oPrinter.pformat(self.dctTimestampStrs) + "\n"]
-#        lstChannels = ["%s: %s" % (key, value)
-#                       for key, value in self.dctChannelMapping.iteritems()
-#                       if key in self.setC]
-#        lstStr += ["* Channel Mapping:\n" + oPrinter.pformat(lstChannels) + "\n"]
         strings += [line]
         return "\n".join(strings)
 
     def get_frames_of_position(self, pos):
-        print self._timestamps_absolute.keys()
         return self._timestamps_absolute[pos].keys()
 
     def __str__(self):
         return self.format()
-
-
 
 
 class MetaImage(object):

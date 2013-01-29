@@ -320,7 +320,7 @@ class Picker(AnalyzerBase):
         imax = len(self.sample_positions)
 
         for i, (posid, poslist) in enumerate(self.sample_positions.iteritems()):
-            self.logger.info('Process positions: %r' % posid)
+            self.logger.info('Process positions: %r' %posid)
 
             if not qthread is None:
                 if qthread.is_aborted():

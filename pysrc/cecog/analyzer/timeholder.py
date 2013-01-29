@@ -136,7 +136,6 @@ class TimeHolder(OrderedDict):
         self.hdf5_filename = filename_hdf5
 
         self._logger = logging.getLogger(self.__class__.__name__)
-
         frames = sorted(analysis_frames)
         all_frames = meta_data.get_frames_of_position(self.P)
         self._frames_to_idx = dict([(f, i) for i, f in enumerate(all_frames)])
@@ -152,6 +151,7 @@ class TimeHolder(OrderedDict):
         self._region_infos = []
         region_names2 = []
         # XXX hardcoded values
+
         for prefix in CHANNEL_PREFIX:
             for name in REGION_INFO.names[prefix]:
                 self._channel_info.append((prefix, settings.get('ObjectDetection', '%s_channelid' % prefix)))

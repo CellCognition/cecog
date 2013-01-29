@@ -31,7 +31,7 @@ if __name__ ==  "__main__":
         learner = CommonClassPredictor(args.directory, None, None)
         learner.importFromArff()
         t0 = time.time()
-        n, c, g, conf =learner.gridSearch()
+        n, c, g, conf = learner.gridSearch()
         print "Grid search took: ", time.time() - t0
         #c, g, conf = learner.importConfusion()
 

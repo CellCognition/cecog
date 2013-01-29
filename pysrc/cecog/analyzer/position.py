@@ -340,7 +340,6 @@ class PositionPicker(PositionCore):
 
     def __call__(self):
         super(PositionPicker, self).__call__()
-
         self.timeholder = TimeHolder(self.position, self.processing_channels,
                                      None,
                                      self.meta_data, self.settings,
@@ -354,7 +353,6 @@ class PositionPicker(PositionCore):
                           binning_factor = 1,
                           detect_objects = self.settings.get('Processing',
                                                              'objectdetection'))
-
         n_images = self._analyze(ca)
 
     def _analyze(self, cellanalyzer):
@@ -385,6 +383,7 @@ class PositionPicker(PositionCore):
                                                 self.sample_readers,
                                                 self.learner,
                                                 byTime=True)
+
 
             if image is not None:
                 n_images += 1

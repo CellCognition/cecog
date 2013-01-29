@@ -16,9 +16,8 @@ __source__ = '$URL$'
 
 import os
 import csv
-import copy
 
-from os.path import join, isdir, splitext, isfile, basename
+from os.path import join, isdir, splitext, isfile
 from collections import OrderedDict
 
 import numpy as np
@@ -75,6 +74,15 @@ class BaseLearner(LoggerObject):
             self._feature_names = feature_names
         assert self._feature_names == feature_names
 
+    def delete_feature_names(self, indices):
+        """Remove feature names given a list of indices."""
+        features = np.asarray(self._feature_names)
+        self._feature_names = np.delete(features, indices).tolist()
+
+        self.logger.info(("Following features evaluated to NaN"
+                         "and have been removed: %s" %str(features[indices])))
+        return features[indices]
+
     @property
     def clf_dir(self):
         return self._clf_dir
@@ -110,13 +118,6 @@ class BaseLearner(LoggerObject):
             label = class_description['label']
             color = class_description['color']
 
-            # FIXME: folders not supported yet!
-            # what is it good for?
-            try:
-                folders = class_description["folders"]
-            except KeyError:
-                folders = [name]
-
             # and what is this good for
             self.dctClassNames[label] = name
             self.dctClassLabels[name] = label
@@ -129,29 +130,6 @@ class BaseLearner(LoggerObject):
         self.feature_names = []
         self.dctHexColors.clear()
         self.dctSampleNames.clear()
-
-    def mergeClasses(self, info, mapping):
-        newl = copy.deepcopy(self)
-
-        newl.dctClassNames = {}
-        newl.dctClassLabels = {}
-        newl.dctHexColors = {}
-        for label, name, color in info:
-            newl.dctClassNames[label] = name
-            newl.dctClassLabels[name] = label
-            newl.dctHexColors[name] = color
-        data = OrderedDict()
-        for new_label, label_list in mapping.iteritems():
-            new_name = newl.dctClassNames[new_label]
-            if not new_name in data:
-                data[new_name] = []
-            for old_label in label_list:
-                old_name = self.dctClassNames[old_label]
-                data[new_name].extend(self.dctFeatureData[old_name])
-        for name in data:
-            data[name] = np.asarray(data[name])
-        newl.dctFeatureData = data
-        return newl
 
     @property
     def lstClassNames(self):
@@ -248,9 +226,6 @@ class BaseLearner(LoggerObject):
         self.dctHexColors = oReader.dctHexColors
         self.hasZeroInsert = oReader.hasZeroInsert
 
-        # from PyQt4.QtCore import pyqtRemoveInputHook; pyqtRemoveInputHook()
-        # import pdb; pdb.set_trace()
-
     def check(self):
         filename = splitext(self.strArffFileName)[0]
         result = {'path_env': self.clf_dir,
@@ -340,6 +315,13 @@ class CommonClassPredictor(BaseLearner):
         super(CommonClassPredictor, self).__init__(*args, **kw)
         self.strModelPrefix = "features"
         self.classifier = None
+        self.nan_features = []
+
+    def has_nan_features(self):
+        for data in self.dctFeatureData.itervalues():
+            if np.any(np.isnan(data)):
+                return True
+        return False
 
     def loadClassifier(self):
         if self.strModelPrefix is None:
@@ -347,13 +329,14 @@ class CommonClassPredictor(BaseLearner):
         else:
             strModelPrefix = self.strModelPrefix
 
-
         self.classifier = Classifier(self.data_dir, self.logger,
                                      strSvmPrefix=strModelPrefix,
                                      hasZeroInsert=self.hasZeroInsert)
         self.bProbability = self.classifier.bProbability
 
     def predict(self, aFeatureData, feature_names):
+        # ensurse to get the right fearues in the right order
+        # FIX what if NaN's are in in feature data
         dctNameLookup = dict([(name,i) for i,name in enumerate(feature_names)])
         lstRequiredFeatureData = [aFeatureData[dctNameLookup[x]]
                                   for x in self._feature_names]
@@ -378,23 +361,25 @@ class CommonClassPredictor(BaseLearner):
         samples = samples.tolist()
         return labels, samples
 
-    def filterData(self, apply=False):
+    def filter_nans(self, apply=False):
+        """Find features with NA values in the data set and remove features
+        from the data and corresponding feature names returns the list of
+        removed feature names.
         """
-        find features with NA values in the data set and remove features from the
-        data and corresponding feature names returns the list of removed feature names
-        """
-        filter_idx = np.array([], np.int32)
-        features = np.asarray(self._feature_names)
-        feature_idx = np.arange(len(features))
+
+        filter_idx = np.array([], int)
+        feature_idx = np.arange(len(self._feature_names), dtype=int)
+
         for data in self.dctFeatureData.itervalues():
             filter_idx = np.append(filter_idx, feature_idx[np.any(np.isnan(data), 0)])
         filter_idx = np.unique(filter_idx)
+
         if apply:
             for name in self.dctFeatureData:
                 self.dctFeatureData[name] = np.delete(self.dctFeatureData[name],
                                                       filter_idx, 1)
-            self.feature_names = np.delete(features, filter_idx).tolist()
-        return features[filter_idx]
+            self.nan_features = self.delete_feature_names(filter_idx)
+        return self.nan_features
 
     def train(self, c, g, probability=True, compensation=True,
               path=None, filename=None, save=True):
@@ -518,7 +503,6 @@ class CommonClassPredictor(BaseLearner):
         g_step = abs(g_step)
 
         labels, samples = self.getData(normalize=True)
-        #print len(labels), len(samples)
         problem = svm.svm_problem(labels, samples)
 
         if compensation:
@@ -578,6 +562,7 @@ class CommonObjectLearner(BaseLearner):
                 self.dctSampleNames[class_name].extend([sample.file])
             except KeyError:
                 self.dctSampleNames[class_name] = [sample.file]
+
 
 if __name__ ==  "__main__":
     import sys

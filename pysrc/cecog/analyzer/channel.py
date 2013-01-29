@@ -199,8 +199,6 @@ class Channel(ChannelCore):
             object_holder = ObjectHolder(region_name)
             if not container is None:
                 for strFeatureCategory in self.lstFeatureCategories:
-                    #print strFeatureCategory
-#                    sys.stdout.flush()
                     container.applyFeature(strFeatureCategory)
 
                 # calculate set of haralick features

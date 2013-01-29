@@ -73,6 +73,7 @@ class TrackingFrame(BaseProcessorFrame):
         settings = BaseProcessorFrame._get_modified_settings(self, name, has_timelapse)
 
         settings.set_section('ObjectDetection')
+        prim_id = PrimaryChannel.NAME
 
         settings.set_section('Processing')
         settings.set2('tracking', True)
@@ -116,10 +117,11 @@ class TrackingFrame(BaseProcessorFrame):
             settings.set2('primary_classification', True)
             settings.set2('tracking_synchronize_trajectories', True)
             cl_rnd = {'primary_classification':
-                      {PrimaryChannel.NAME: {'raw': ('#FFFFFF', 1.0),
-                                             'contours': [('primary', 'class_label', 1, False),
-                                                          ('primary', '#000000', 1, show_ids_class)]}},                                                        }
+                          {PrimaryChannel.NAME: {'raw': ('#FFFFFF', 1.0),
+                                                 'contours': [('primary', 'class_label', 1, False),
+                                                              ('primary', '#000000', 1, show_ids_class)]}},                                                        }
             settings.set('General', 'rendering_class', cl_rnd)
+
 
             settings.set_section('Processing')
             self._channel_render_settings(settings, SecondaryChannel.NAME, show_ids_class)
@@ -142,9 +144,10 @@ class TrackingFrame(BaseProcessorFrame):
         showids = settings.get('Output', 'rendering_class_showids')
 
         if prefix in CH_VIRTUAL:
-            region = [settings.get("Classification", \
-                                       "merged_%s_region" %pfx) \
-                          for pfx in (CH_PRIMARY+CH_OTHER)]
+            region = list()
+            for pfx in (CH_PRIMARY+CH_OTHER):
+                if settings.get('Classifcation', '%s_channel' %pfx):
+                    region.append(settings.get("Classification", "merged_%s_region" %pfx))
             region = tuple(region)
             region_str = '-'.join(region)
         else:

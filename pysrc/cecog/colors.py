@@ -22,19 +22,22 @@ class Colors(object):
     magenta ='#FF00FF'
     cyan = '#00FFFF'
     white = '#FFFFFF'
+    fallback = '#FFFFFF'
 
     colors = ['white', 'red', 'green', 'blue', 'yellow', 'magenta', 'cyan']
 
     channel_table = {'rfp': 'red',
                      'gfp': 'green',
                      'yfp': 'yellow',
-                     'cfp': 'cyan'}
+                     'cfp': 'cyan',
+                     'cy5': 'cyan'}
 
     @classmethod
     def channel_color(cls, name):
         if name not in cls.channel_table.keys():
-            raise AttributeError('no channel_color defined')
-
+            if __debug__:
+                print "color %s not defined. Using fallback"
+            return cls.channel_table[cls.fallback]
         return cls.channel_table[name]
 
     @classmethod

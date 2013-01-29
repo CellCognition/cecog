@@ -13,10 +13,7 @@ __url__ = 'www.cellcognition.org'
 
 
 import copy
-from PyQt4 import QtCore
-from cecog import ccore
 from cecog.threads.corethread import CoreThread
-from cecog.threads.link_hdf import link_hdf5_files
 from cecog.analyzer.core import Picker
 
 class PickerThread(CoreThread):

@@ -151,6 +151,7 @@ class CellAnalyzer(LoggerObject):
                             lstImages.extend(oChannel.meta_images(fAlpha))
                         else:
                             lstImages.append((oChannel.meta_image.image, strHexColor, 1.0))
+
                     if 'contours' in dctChannelInfo:
                         # transform the old dict-style to the new tuple-style,
                         # which allows multiple definitions for one region
@@ -162,7 +163,6 @@ class CellAnalyzer(LoggerObject):
 
                         for tplData in lstContourInfos:
                             strRegion, strNameOrColor, fAlpha, bShowLabels = tplData[:4]
-
                             # draw contours only if region is present
                             if oChannel.has_region(strRegion):
                                 if len(tplData) > 4:
@@ -376,8 +376,6 @@ class CellAnalyzer(LoggerObject):
                 label, probs = predictor.predict(obj.aFeatures, holder.feature_names)
                 obj.iLabel = label
                 obj.dctProb = probs
-                print label, predictor.dctClassNames
-                print predictor.dctHexColors
                 obj.strClassName = predictor.dctClassNames[label]
                 obj.strHexColor = predictor.dctHexColors[obj.strClassName]
         self.time_holder.serialize_classification(predictor.name, holder, predictor)

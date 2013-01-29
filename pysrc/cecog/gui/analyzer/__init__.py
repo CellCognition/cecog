@@ -83,30 +83,30 @@ from cecog.threads.hmm import HmmThread
 from cecog.threads.post_processing import PostProcessingThread
 from cecog.multiprocess.multianalyzer import MultiAnalyzerThread
 
-def mk_stochastic(k):
-    """function [T,Z] = mk_stochastic(T)
-    MK_STOCHASTIC ensure the matrix is a stochastic matrix,
-    i.e., the sum over the last dimension is 1."""
-    raw_A = numpy.random.uniform( size = k * k ).reshape( ( k, k ) )
-    return ( raw_A.T / raw_A.T.sum( 0 ) ).T
+# def mk_stochastic(k):
+#     """function [T,Z] = mk_stochastic(T)
+#     MK_STOCHASTIC ensure the matrix is a stochastic matrix,
+#     i.e., the sum over the last dimension is 1."""
+#     raw_A = numpy.random.uniform( size = k * k ).reshape( ( k, k ) )
+#     return ( raw_A.T / raw_A.T.sum( 0 ) ).T
 
-def dhmm_correction(n_clusters, labels):
-    trans = mk_stochastic(n_clusters)
-    eps = numpy.spacing(1)
-    sprob = numpy.array([1-eps,eps,eps,eps,eps,eps])
-    dhmm = hmm.MultinomialHMM(
-        n_components=n_clusters,transmat = trans,startprob=sprob)
-    eps = 1e-3;
-    dhmm.emissionprob = numpy.array([[1-eps, eps, eps, eps, eps, eps],
-                    [eps, 1-eps, eps, eps, eps, eps],
-                    [eps, eps, 1-eps, eps, eps, eps],
-                    [eps, eps, eps, 1-eps, eps, eps],
-                    [eps, eps, eps, eps, 1-eps, eps],
-                    [eps, eps, eps, eps, eps, 1-eps]]);
-    dhmm.fit([labels], init_params ='')
-    # vector format [1 x num_tracks *num_frames]
-    labels_dhmm = dhmm.predict(labels)
-    return labels_dhmm
+# def dhmm_correction(n_clusters, labels):
+#     trans = mk_stochastic(n_clusters)
+#     eps = numpy.spacing(1)
+#     sprob = numpy.array([1-eps,eps,eps,eps,eps,eps])
+#     dhmm = hmm.MultinomialHMM(
+#         n_components=n_clusters,transmat = trans,startprob=sprob)
+#     eps = 1e-3;
+#     dhmm.emissionprob = numpy.array([[1-eps, eps, eps, eps, eps, eps],
+#                     [eps, 1-eps, eps, eps, eps, eps],
+#                     [eps, eps, 1-eps, eps, eps, eps],
+#                     [eps, eps, eps, 1-eps, eps, eps],
+#                     [eps, eps, eps, eps, 1-eps, eps],
+#                     [eps, eps, eps, eps, eps, 1-eps]]);
+#     dhmm.fit([labels], init_params ='')
+#     # vector format [1 x num_tracks *num_frames]
+#     labels_dhmm = dhmm.predict(labels)
+#     return labels_dhmm
 
 
 class BaseFrame(TraitDisplayMixin):
@@ -551,7 +551,8 @@ class _ProcessorMixin(object):
                               'newly picked samples.'
                         result_frame = self._get_result_frame(self._tab_name)
                         result_frame.load_classifier(check=False)
-                        nr_removed = len(result_frame._learner.filterData(apply=False))
+#                        nr_removed = len(result_frame._learner.filter_nans(apply=False))
+                        nr_removed = len(result_frame._learner.nan_features)
                         if nr_removed > 0:
                             msg += '\n\n%d features contained NA values and will be removed from training.' % nr_removed
                     elif self._current_process == self.PROCESS_TRAINING:
