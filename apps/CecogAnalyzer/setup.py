@@ -43,7 +43,12 @@ from cecog.traits.config import (ANALYZER_CONFIG_FILENAME,
 MAIN_SCRIPT = 'CecogAnalyzer.py'
 
 APP = [MAIN_SCRIPT]
-INCLUDES = ['sip']
+
+INCLUDES = [ 'sip',
+             'scipy.sparse.csgraph._validation',
+             'scipy.spatial.kdtree',
+             'scipy.sparse.csgraph._shortest_path' ]
+
 EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
             'PyQt4.QtOpenGL', 'PyQt4.QtScript',
             'PyQt4.QtSql', 'PyQt4.QtTest',
@@ -52,19 +57,20 @@ EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
             'rpy',
             '_gtkagg', '_tkagg', '_agg2', '_cairo', '_cocoaagg',
             '_fltkagg', '_gtk', '_gtkcairo',
-            'Tkconstants', 'Tkinter', 'tcl',
-            ]
+            'Tkconstants', 'Tkinter', 'tcl']
+
 PACKAGES = ['cecog', 'h5py', 'vigra', 'matplotlib']
 
-RESOURCE_FILES = [ANALYZER_CONFIG_FILENAME,
-                  FONT12_FILENAME,
-                  NAMING_SCHEMA_FILENAME,
-                  PATH_MAPPING_FILENAME,
-                  ]
+DLL_EXCLUDES = [ 'libgdk-win32-2.0-0.dll',
+                 'libgobject-2.0-0.dll',
+                 'libgdk_pixbuf-2.0-0.dll',
+                 'w9xpopen.exe' ] # is not excluded for some reason
 
-#-------------------------------------------------------------------------------
-# functions:
-#
+RESOURCE_FILES = [ANALYZER_CONFIG_FILENAME, FONT12_FILENAME,
+                   NAMING_SCHEMA_FILENAME, PATH_MAPPING_FILENAME]
+
+DATA_FILES = matplotlib.get_py2exe_datafiles()
+
 def tempsyspath(path):
     def decorate(f):
         def handler():
@@ -110,6 +116,26 @@ if sys.platform == 'darwin':
                      'compressed': False,
                      'skip_archive': True,
                      'iconfile': 'resources/cecog_analyzer_icon.icns',
+                    }
+elif sys.platform == 'win32':
+    import py2exe # pylint: disable-msg=F0401,W0611
+    FILENAME_ZIP = 'data.zip'
+    OPTIONS = {'windows': [{'script': MAIN_SCRIPT,
+                            'icon_resources': \
+                               [(1, r'resources\cecog_analyzer_icon.ico')],
+                           }],
+               # FIXME: the one-file version is currently not working!
+               'zipfile' : FILENAME_ZIP,
+               }
+    SYSTEM = 'py2exe'
+    EXTRA_OPTIONS = {'includes': INCLUDES,
+                     'excludes': EXCLUDES,
+                     'packages': PACKAGES,
+                     'dll_excludes': DLL_EXCLUDES,
+                     'optimize': 1, #don't strip doc strings
+                     'compressed': False,
+                     'skip_archive': False,
+                     'bundle_files': 3,
                     }
 
 elif sys.platform.startswith('linux'):
@@ -211,6 +237,33 @@ if sys.platform == 'darwin':
                     os.path.join(resource_path, 'palettes', 'zeiss'))
 
 
+elif sys.platform == 'win32':
+    filenames = ['graph_template.txt',
+                 'hmm.R',
+                 'hmm_report.R',
+                 'run_hmm.R']
+    resource_path = os.path.join('dist', 'resources')
+    target = os.path.join(resource_path, 'rsrc', 'hmm')
+    safe_mkdirs(target)
+    for filename in filenames:
+        shutil.copy(os.path.join('../../rsrc/hmm', filename), target)
+
+    for filename in RESOURCE_FILES:
+        # make sure we use the unchanged versions from the repository
+        filename = os.path.join('resources', os.path.split(filename)[1])
+        print filename
+        shutil.copy(filename, resource_path)
+
+    # copy vigranumpycory to correct filename
+    shutil.copy(os.path.join('dist', 'vigra.vigranumpycore.pyd'),
+                os.path.join('dist', 'vigranumpycore.pyd'))
+
+    shutil.copytree(os.path.join(RESOURCE_PATH, 'palettes', 'zeiss'),
+                    os.path.join(resource_path, 'palettes', 'zeiss'))
+
+    w9 = os.path.join('dist', 'w9xpopen.exe')
+    if os.path.isfile(w9):
+        os.remove(w9)
 
 elif sys.platform.startswith('linux'):
     filenames = ['graph_template.txt',
@@ -234,7 +287,6 @@ elif sys.platform.startswith('linux'):
     shutil.copytree(os.path.join(RESOURCE_PATH, 'palettes', 'zeiss'),
                     os.path.join(resource_path, 'palettes', 'zeiss'))
 
-    # this does not make sens on linux
     w9 = os.path.join('dist', 'w9xpopen.exe')
     if os.path.isfile(w9):
         os.remove(w9)

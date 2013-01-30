@@ -60,7 +60,7 @@ ENV_INDEX_SGE = 'SGE_TASK_ID'
 #
 
 if __name__ ==  "__main__":
-
+    os.umask(0o000)
     from optparse import OptionParser, OptionGroup
 
     description =\

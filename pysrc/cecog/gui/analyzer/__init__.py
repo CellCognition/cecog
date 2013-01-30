@@ -1448,8 +1448,9 @@ class _ProcessorMixin(object):
                         _resolve = lambda x,y: self._settings.get(x, '%s_%s' % (kind, y))
                         env_path = convert_package_path(_resolve('Classification', 'classification_envpath'))
                         if (os.path.exists(env_path)
-                             # and (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))
+                              and (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))
                              ):
+                            
                             classifier_infos = {'strEnvPath' : env_path,
                                                 'strChannelId' : _resolve('ObjectDetection', 'channelid'),
                                                 'strRegionId' : _resolve('Classification', 'classification_regionname'),

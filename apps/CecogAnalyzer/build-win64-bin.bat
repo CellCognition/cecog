@@ -31,6 +31,8 @@ for /F "delims=\" %%a in (build.info) do (
 	set temp=%%a
 )
 SET mver="1.3.0"
+pause
+
 makensis /Dmver=%mver% build-win-installer-64.nsi
 rename CecogAnalyzer-setup.exe CecogAnalyzer_%temp%_x86_64.exe
 @ENDLOCAL

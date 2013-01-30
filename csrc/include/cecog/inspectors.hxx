@@ -380,7 +380,7 @@ namespace cecog
 
     inline
     bool is_border(SrcIterator si, SrcAccessor sa,
-                   typename SrcAccessor::value_type background=0)
+    			   typename SrcAccessor::value_type background=0)
     {
       bool border = false;
       if (NEIGHBORHOOD == 4)
@@ -673,7 +673,7 @@ namespace cecog
     inline
     void operator()(SrcIterator si, SrcAccessor sa, typename SrcAccessor::value_type label, int x=0, int y=0)
     {
-      if (this->is_border_fg(si, sa, label))
+      if (is_border_fg(si, sa, label))
         perimeter++;
     }
 
