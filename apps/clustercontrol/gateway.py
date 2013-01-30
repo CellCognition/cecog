@@ -21,7 +21,7 @@ import sys
 import pyamf
 import drmaa
 
-cecog_root = basename(__file__).split(os.sep)[:-2]
+cecog_root = dirname(__file__).split(os.sep)[:-2]
 sys.path.append(cecog_root)
 
 from cecog.util.util import makedirs
