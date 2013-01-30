@@ -14,35 +14,21 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = []
+import os
+import sys
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-import os, \
-       sys
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
 import pyamf
 import drmaa
 
 from pdk.fileutils import safe_mkdirs
 
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 import cecog.batch
 from cecog import (VERSION,
                    JOB_CONTROL_RESUME,
                    JOB_CONTROL_SUSPEND,
-                   JOB_CONTROL_TERMINATE,
-                   )
+                   JOB_CONTROL_TERMINATE)
 
-#-------------------------------------------------------------------------------
-# constants:
-#
+
 DRMAA_STATUS_TEXT = {
     drmaa.JobState.UNDETERMINED : 'process status cannot be determined',
     drmaa.JobState.QUEUED_ACTIVE : 'job is queued and active',
@@ -63,12 +49,9 @@ DRMAA_CONTROL_ACTIONS = {
     JOB_CONTROL_TERMINATE : drmaa.JobControlAction.TERMINATE,
     }
 
-CECOG_VERSIONS_PATH = '/home/miheld/src/cecog_versions'
-CECOG_DEFAULT_VERSION = '1.0.7'
+CECOG_VERSIONS_PATH = '/clusterfs/gerlich/cecog_versions'
+CECOG_DEFAULT_VERSION = '1.3.2'
 
-#-------------------------------------------------------------------------------
-# functions:
-#
 def parse_args(args):
     """
     Parse commandline options.
@@ -203,7 +186,7 @@ class ClusterControl(object):
 # main:
 #
 if __name__ == '__main__':
-    import sys
+    oldmask = os.umask(0o000)
     from pyamf.remoting.gateway.wsgi import WSGIGateway
     from wsgiref import simple_server
 
@@ -227,4 +210,3 @@ if __name__ == '__main__':
         httpd.serve_forever()
     except KeyboardInterrupt:
         pass
-

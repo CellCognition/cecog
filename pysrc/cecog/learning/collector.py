@@ -38,9 +38,7 @@ class CellCounterReader(OrderedDict):
     def _importData(self, iOffset):
         self._oTable = importTable(self.strFilename,
                                    fieldDelimiter=self._strFieldDelimiter)
-        #self._oTable.sort(['Slice', 'Type'])
         for oRecord in self._oTable:
-            #print reference, oRecord['Slice'] - 1 + offset
             try:
                 idx = self._oReference[oRecord['Slice'] - 1 + iOffset]
             except IndexError:
@@ -77,7 +75,6 @@ class CellCounterReaderXML(CellCounterReader):
         oDom = parse(self.strFilename)
         for oMarkerType in oDom.getElementsByTagName('Marker_Type'):
             iMarkerType = int(oMarkerType.getElementsByTagName('Type')[0].childNodes[0].data)
-            print 'type', iMarkerType
 
             for oMarker in oMarkerType.getElementsByTagName('Marker'):
                 iX = int(oMarker.getElementsByTagName('MarkerX')[0].childNodes[0].data)
@@ -89,7 +86,6 @@ class CellCounterReaderXML(CellCounterReader):
                 except IndexError:
                     pass
                 else:
-                    #print idx
                     if not idx in self:
                         self[idx] = []
                     self[idx].append(dict([('iClassLabel', iMarkerType),

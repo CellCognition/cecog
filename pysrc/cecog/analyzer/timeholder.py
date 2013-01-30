@@ -14,7 +14,6 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-import os
 from os.path import join, exists
 import logging
 import zlib
@@ -28,8 +27,7 @@ from pdk.datetimeutils import StopWatch
 import numpy
 import h5py
 import matplotlib
-# FIXME this is useless, backend is already choosen
-matplotlib.use('Agg', warn=False)
+matplotlib.use('Agg')
 from matplotlib import pyplot
 
 from cecog import ccore
