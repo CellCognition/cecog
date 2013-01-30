@@ -15,13 +15,17 @@ __revision__ = '$Rev$'
 __source__ = '$URL$'
 
 import os
+from os.path import dirname
 import sys
 
 import pyamf
 import drmaa
 
-import cecog.batch
+cecog_root = basename(__file__).split(os.sep)[:-2]
+sys.path.append(cecog_root)
+
 from cecog.util.util import makedirs
+import cecog.batch
 from cecog import (VERSION,
                    JOB_CONTROL_RESUME,
                    JOB_CONTROL_SUSPEND,
