@@ -16,22 +16,10 @@ __source__ = '$URL$'
 
 __all__ = []
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-
 import os
 import sys
 import logging
-import types
 
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 from cecog import VERSION
 from cecog.traits.config import ConfigSettings
 from cecog.traits.analyzer import SECTION_REGISTRY
@@ -39,26 +27,9 @@ from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
 from cecog.analyzer.core import AnalyzerCore
 from cecog.io.imagecontainer import ImageContainer
-from cecog.gui.analyzer import link_hdf5_files
+from cecog.threads.link_hdf5 import link_hdf5_files
 
-#-------------------------------------------------------------------------------
-# constants:
-#
 ENV_INDEX_SGE = 'SGE_TASK_ID'
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
-
-
-#-------------------------------------------------------------------------------
-# main:
-#
 
 if __name__ ==  "__main__":
     from optparse import OptionParser, OptionGroup

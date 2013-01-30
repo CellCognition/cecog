@@ -22,8 +22,6 @@ import os
 import bz2
 import gzip
 import types
-import logging
-import time as timing
 
 #-------------------------------------------------------------------------------
 # extension module imports:

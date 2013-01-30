@@ -20,9 +20,8 @@ import sys
 import pyamf
 import drmaa
 
-from pdk.fileutils import safe_mkdirs
-
 import cecog.batch
+from cecog.util.util import makedirs
 from cecog import (VERSION,
                    JOB_CONTROL_RESUME,
                    JOB_CONTROL_SUSPEND,
@@ -50,12 +49,10 @@ DRMAA_CONTROL_ACTIONS = {
     }
 
 CECOG_VERSIONS_PATH = '/clusterfs/gerlich/cecog_versions'
-CECOG_DEFAULT_VERSION = '1.3.2'
+CECOG_DEFAULT_VERSION = '1.4.0'
 
 def parse_args(args):
-    """
-    Parse commandline options.
-    """
+    """Parse commandline options."""
     from optparse import OptionParser
 
     parser = OptionParser()
@@ -67,7 +64,8 @@ def parse_args(args):
     return parser.parse_args(args)
 
 
-def cecog_job_template(jt, path_out, args, emails, version, batch_size=1, is_bulk_job=False):
+def cecog_job_template(jt, path_out, args, emails, version, batch_size=1,
+                       is_bulk_job=False):
     job_name = 'cecog_batch_analyzer'
     env_variables = ['PATH', 'LD_LIBRARY_PATH']
 
@@ -78,9 +76,14 @@ def cecog_job_template(jt, path_out, args, emails, version, batch_size=1, is_bul
     jt.workingDirectory = batch_path
     print jt.workingDirectory
 
-    env = dict([(x, os.environ[x]) for x in env_variables])
-    env['PYTHONPATH'] = os.path.join(base_path, 'pysrc')
-    jt.jobEnvironment = env
+    # I want the almost the same environment as for the gateway!
+    if os.environ.has_key('PYTHONPATH'):
+        os.environ["PYTHONPATH"] = os.path.join(base_path, "pysrc")+os.pathsep+ \
+            os.environ["PYTHONPATH"]
+    else:
+        os.putenv("PYTHONPATH", os.path.join(base_path, "pysrc"))
+
+    jt.jobEnvironment = os.environ
     print jt.jobEnvironment
     jt.remoteCommand = os.path.join(batch_path, 'python')
     print jt.remoteCommand
@@ -91,7 +94,7 @@ def cecog_job_template(jt, path_out, args, emails, version, batch_size=1, is_bul
     jt.nativeSpecification = '-m bea'
 
     path_out_cluster = os.path.join(path_out, 'log_cluster')
-    safe_mkdirs(path_out_cluster)
+    makedirs(path_out_cluster)
     path_out_cluster = ':' + path_out_cluster
     if is_bulk_job:
         jt.outputPath = path_out_cluster
@@ -102,9 +105,7 @@ def cecog_job_template(jt, path_out, args, emails, version, batch_size=1, is_bul
         jt.outputPath = path_out_cluster
     return jt
 
-#-------------------------------------------------------------------------------
-# classes:
-#
+
 class ClusterControl(object):
 
     def __init__(self):
@@ -120,7 +121,7 @@ class ClusterControl(object):
         settings = settings.replace('\\', '/')
         path_out = os.path.normpath(path_out)
         path_out_settings = os.path.join(path_out, 'settings')
-        safe_mkdirs(path_out_settings)
+        makedirs(path_out_settings)
         filename_settings = os.path.join(path_out_settings, 'cecog_settings.conf')
         f = file(filename_settings, 'w')
         f.write(settings)
@@ -171,9 +172,7 @@ class ClusterControl(object):
                (self._session.drmsInfo, ', '.join(self.get_cecog_versions()))
 
     def get_cecog_versions(self):
-        '''
-        returns a list of supported cecog versions
-        '''
+        """Returns a list of supported cecog versions."""
         names = [n for n in os.listdir(CECOG_VERSIONS_PATH)
                  if os.path.isdir(os.path.join(CECOG_VERSIONS_PATH, n))]
         return sorted(names)
@@ -182,31 +181,23 @@ class ClusterControl(object):
         if job_id is None:
             raise ValueError("Invalid job ID '%s'!" % job_id)
 
-#-------------------------------------------------------------------------------
-# main:
-#
+
 if __name__ == '__main__':
     oldmask = os.umask(0o000)
     from pyamf.remoting.gateway.wsgi import WSGIGateway
     from wsgiref import simple_server
 
     options = parse_args(sys.argv[1:])[0]
-    service = {'clustercontrol': ClusterControl(),}
+    service = {'clustercontrol': ClusterControl()}
 
     host = options.host
     port = int(options.port)
 
     gw = WSGIGateway(service)
 
-    httpd = simple_server.WSGIServer(
-        (host, port),
-        simple_server.WSGIRequestHandler,
-    )
+    httpd = simple_server.WSGIServer((host, port),
+                                     simple_server.WSGIRequestHandler)
 
     httpd.set_app(gw)
-    print 'Started server on http://%s:%s' % (host, port)
-
-    try:
-        httpd.serve_forever()
-    except KeyboardInterrupt:
-        pass
+    print 'Started server on http://%s:%s' %(host, port)
+    httpd.serve_forever()
