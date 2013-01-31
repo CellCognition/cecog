@@ -173,7 +173,6 @@ class PathMapper(object):
         self.read(filename)
 
     def map_path_to_os(self, path, target_os=None, force=True):
-        print self._path_mappings
         path2 = _map_path_to_os(path, self._path_mappings, target_os=target_os)
         if path2 is None and force:
             path2 = path
