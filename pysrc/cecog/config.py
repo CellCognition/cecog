@@ -30,11 +30,13 @@ __all__ = ['NAMING_SCHEMAS',
 import os
 import shutil
 from ConfigParser import RawConfigParser
+import csv
 
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
 from pdk.fileutils import safe_mkdirs
+
 from pdk.platform import (is_mac,
                           is_windows,
                           is_linux,
@@ -43,10 +45,7 @@ from pdk.platform import (is_mac,
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog.util.util import (read_table,
-                             write_table,
-                             get_appdata_path,
-                             )
+from cecog.util.util import get_appdata_path
 from cecog.util.mapping import map_path_to_os as _map_path_to_os
 
 #-------------------------------------------------------------------------------
@@ -174,6 +173,7 @@ class PathMapper(object):
         self.read(filename)
 
     def map_path_to_os(self, path, target_os=None, force=True):
+        print self._path_mappings
         path2 = _map_path_to_os(path, self._path_mappings, target_os=target_os)
         if path2 is None and force:
             path2 = path
@@ -184,12 +184,18 @@ class PathMapper(object):
         return not path2 is None
 
     def read(self, filename):
-        self._column_names, self._path_mappings = read_table(filename)
+        with open(filename, "r") as fp:
+            pmp = csv.DictReader(fp, delimiter="\t")
+            self._path_mappings = [row for row in pmp]
+            self._column_names = pmp.fieldnames
 
     def write(self, filename):
-        write_table(filename, self._path_mappings,
-                    column_names=self._column_names)
+        with open(filename, "w") as fp:
+            pmp = csv.DictWriter(fp, fieldnames=self._column_names,
+                                 delimiter="\t")
+            for row in self._path_mappings:
+                pmp.writerow(row)
 
     @property
     def column_names(self):
-        return self._column_names[:]
+        return self._column_names

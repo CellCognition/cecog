@@ -14,8 +14,6 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = []
-
 import os
 import sys
 import logging
@@ -35,10 +33,8 @@ if __name__ ==  "__main__":
     os.umask(0o000)
     from optparse import OptionParser, OptionGroup
 
-    description =\
-'''
-%prog - A headless (GUI-free) batch analyzer for CellCognition.
-'''
+    description = ("%prog - A headless (GUI-free) batch "
+                   "analyzer for CellCognition.")
 
     parser = OptionParser(usage="usage: %prog [options]",
                           description=description,
@@ -86,7 +82,7 @@ if __name__ ==  "__main__":
     formatter = logging.Formatter('%(asctime)s %(levelname)-6s %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     logger.info("*************************************************" + '*'*len(VERSION))
     logger.info("*** CellCognition - Batch Analyzer - Version %s ***" % VERSION)

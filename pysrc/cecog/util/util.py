@@ -102,6 +102,7 @@ def get_file_handle(filename, mode, guess_compression=True, compress_level=6):
     return fh
 
 
+
 def read_table(filename, has_column_names=True, skip=0, sep='\t',
                guess_compression=True):
     '''
