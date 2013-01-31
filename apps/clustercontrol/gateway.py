@@ -15,13 +15,15 @@ __revision__ = '$Rev$'
 __source__ = '$URL$'
 
 import os
-from os.path import dirname
+from os.path import dirname, abspath, join
 import sys
 
 import pyamf
 import drmaa
 
-cecog_root = dirname(__file__).split(os.sep)[:-2]
+#FIXME - remove all CECOG PYTHONPATHS from bash profiles!
+cecog_root = dirname(abspath(__file__)).split(os.sep)[:-2]
+cecog_root = join(os.sep.join(cecog_root), "pysrc")
 sys.path.append(cecog_root)
 
 from cecog.util.util import makedirs

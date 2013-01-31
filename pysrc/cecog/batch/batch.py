@@ -21,17 +21,18 @@ import sys
 import logging
 
 from cecog import VERSION
-from cecog.traits.config import ConfigSettings
+from cecog.traits.settings import ConfigSettings
 from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
 from cecog.analyzer.core import AnalyzerCore
 from cecog.io.imagecontainer import ImageContainer
-from cecog.threads.link_hdf5 import link_hdf5_files
+from cecog.threads.link_hdf import link_hdf5_files
 
 ENV_INDEX_SGE = 'SGE_TASK_ID'
 
 if __name__ ==  "__main__":
+    os.umask(0o000)
     from optparse import OptionParser, OptionGroup
 
     description =\
@@ -218,8 +219,8 @@ if __name__ ==  "__main__":
         logger.info("Launching analyzer for plate '%s' with positions %s" % (plate_id, plates[plate_id]))
         # initialize and run the analyzer
         analyzer = AnalyzerCore(plate_id, settings, imagecontainer)
-        result = analyzer.processPositions()
-        post_hdf5_link_list.append(result['post_hdf5_link_list'])
+        hdf_links = analyzer.processPositions()
+        post_hdf5_link_list.append(hdf_links)
 
     if settings.get('Output', 'hdf5_create_file') and settings.get('Output', 'hdf5_merge_positions'):
         if len(post_hdf5_link_list) > 0:
