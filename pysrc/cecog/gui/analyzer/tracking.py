@@ -146,7 +146,7 @@ class TrackingFrame(BaseProcessorFrame):
         if prefix in CH_VIRTUAL:
             region = list()
             for pfx in (CH_PRIMARY+CH_OTHER):
-                if settings.get('Classifcation', '%s_channel' %pfx):
+                if settings.get('Classification', '%s_channel' %pfx):
                     region.append(settings.get("Classification", "merged_%s_region" %pfx))
             region = tuple(region)
             region_str = '-'.join(region)

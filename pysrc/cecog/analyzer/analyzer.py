@@ -12,7 +12,6 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-import numpy as np
 from os.path import join
 from collections import OrderedDict
 

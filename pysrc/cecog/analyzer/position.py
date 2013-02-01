@@ -333,6 +333,8 @@ class PositionPicker(PositionCore):
 
         # disable tracking somewhere else
         self.settings.set('Processing', 'tracking', False)
+
+        # overwrite frames by frames indices from picked samples
         self._frames = self.sample_positions[self.position]
 
         if not self.settings.get('Classification', 'collectsamples'):

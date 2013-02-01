@@ -150,8 +150,6 @@ def write_table(filename, rows, column_names=None, sep='\t',
             f.write('%s\n' % sep.join(map(str, func(row))))
     f.close()
 
-
-
 def unlist(a):
     b = []
     for x in a:
@@ -199,14 +197,3 @@ def print_memory_increase(func):
     except:
         return runc
 
-class ReverseDict(dict):
-
-    def __init__(self, dataD={}):
-        super(ReverseDict, self).__init__(dataD)
-        self._reverseD = {}
-        for k, v in self.iteritems():
-            if not v in self._reverseD:
-                self._reverseD[v] = k
-
-    def __call__(self):
-        return self._reverseD

@@ -23,7 +23,7 @@ import os, \
        itertools, \
        re, \
        shutil
-from types import ListType, FloatType
+from types import ListType
 from csv import DictWriter
 
 #-------------------------------------------------------------------------------
@@ -36,7 +36,7 @@ from pdk.optionmanagers import OptionManager
 from pdk.ordereddict import OrderedDict
 from pdk.map import dict_append_list
 from pdk.fileutils import safe_mkdirs, collect_files
-from pdk.iterator import unique, flatten, all_equal
+from pdk.iterator import unique, flatten
 from pdk.attributemanagers import (get_slot_values,
                                    set_slot_values)
 
@@ -826,7 +826,6 @@ class PlotCellTracker(CellTracker):
     def analyze(self, dctChannels, channelId=None, clear_path=False):
         strPathOut = os.path.join(self.strPathOut, 'events')
 
-        print "strPathOut =========", strPathOut
         if clear_path:
             shutil.rmtree(strPathOut, True)
             safe_mkdirs(strPathOut)
@@ -896,7 +895,6 @@ class PlotCellTracker(CellTracker):
                                              'upperleft_x', 'upperleft_y',
                                              'lowerright_x', 'lowerright_y']
 
-                        print "exportChannelDataFlat, filename: ", strFilename
 
                         oTable = DictWriter(open(strFilename,'wb'), ['Frame', 'ObjectID'] +
                                           [self.FEATURE_FLAT_PATTERN % f for f in lstFeatureNames] +

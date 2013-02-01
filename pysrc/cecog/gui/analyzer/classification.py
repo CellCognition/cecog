@@ -459,8 +459,6 @@ class ClassificationFrame(BaseProcessorFrame):
         else:
             settings.set('Classification', 'collectsamples', True)
             settings.set('General', 'positions', '')
-            settings.set('General', 'framerange_begin', 0)
-            settings.set('General', 'framerange_end', 0)
         settings.set('General', 'rendering', rdn)
         return settings
 

@@ -1,6 +1,10 @@
 <<<<<<< HEAD
 dist
 build
+resource.py
+*_flymake.py
+*~
+*.so
 *.pyc
 *.exe
 *.dll

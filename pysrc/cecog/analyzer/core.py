@@ -238,10 +238,11 @@ class Picker(AnalyzerBase):
         anno_re = re.compile(('((.*?_{3})?PL(?P<plate>.*?)_{3})?P(?P'
                               '<position>.+?)_{1,3}T(?P<time>\d+).*?'))
 
+        frames_total = self.meta_data.times
         for annofile in glob.glob(pattern):
             result = anno_re.match(basename(annofile))
+
             if self.is_valid_annofile(result):
-                frames_total = self.meta_data.times
                 if ext == '.xml':
                     reader = CellCounterReaderXML(result, annofile, frames_total)
                 else:
@@ -287,7 +288,8 @@ class Picker(AnalyzerBase):
         for prefix in (CH_PRIMARY+CH_OTHER):
             if self.settings.get("Classification", "%s_channel" %prefix):
                 regions[prefix.title()] = \
-                self.settings.get("Classification", "%s_%s_region" %(CH_VIRTUAL[0], prefix))
+                self.settings.get("Classification", "%s_%s_region"
+                                  %(CH_VIRTUAL[0], prefix))
         return regions
 
     def is_valid_annofile(self, result):
@@ -316,6 +318,8 @@ class Picker(AnalyzerBase):
         return '%s_%s' %(self.settings.get("Classification",
                                            "collectsamples_prefix"), txt)
 
+
+
     def processPositions(self, qthread=None, myhack=None):
         imax = len(self.sample_positions)
 
@@ -330,7 +334,8 @@ class Picker(AnalyzerBase):
                                        'text': 'P %s (%d/%d)' \
                                            %(self.plate, i+1, imax)})
 
-            picker = PositionPicker(self.plate, posid, self._out_dir, self.settings,
+            picker = PositionPicker(self.plate, posid, self._out_dir,
+                                    self.settings,
                                     self.frames, self.sample_reader,
                                     self.sample_positions, self.learner,
                                     self._imagecontainer, qthread, myhack)

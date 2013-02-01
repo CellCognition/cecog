@@ -25,9 +25,6 @@ __all__ = ['DIMENSION_NAME_POSITION',
            'MetaImage',
            ]
 
-#------------------------------------------------------------------------------
-# standard library imports:
-#
 import os
 import copy
 import types
@@ -35,28 +32,24 @@ import numpy
 import cPickle as pickle
 from PyQt4.QtCore import *
 
-#------------------------------------------------------------------------------
-# extension module imports:
-#
 from collections import OrderedDict
 
-#------------------------------------------------------------------------------
-# cecog imports:
-#
 from cecog.config import NAMING_SCHEMAS
 from cecog.traits.settings import convert_package_path
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog import ccore
 
-#------------------------------------------------------------------------------
-# constants:
-#
+# XXX derive all this from numpy
 UINT8 = 'UINT8'
 UINT16 = 'UINT16'
 INT8 = 'INT8'
 INT16 = 'INT16'
-PIXEL_TYPES = [UINT8, UINT16, INT8, INT16]
+PIXEL_TYPES = (UINT8, UINT16, INT8, INT16)
 PIXEL_INFO = dict((n, n.lower()) for n in PIXEL_TYPES)
+PIXEL_RANGE = {UINT8: (0, 255),
+               UINT16: (0, 65535),
+               INT8: (-128, 127),
+               INT16: (-32768, 32767)}
 
 DIMENSION_NAME_POSITION = 'position'
 DIMENSION_NAME_TIME = 'time'
@@ -71,9 +64,6 @@ META_INFO_SUBWELL = 'subwell'
 IMAGECONTAINER_FILENAME = 'cecog_imagecontainer___PL%s.pkl'
 IMAGECONTAINER_FILENAME_OLD = '.cecog_imagecontainer___PL%s.pkl'
 
-#------------------------------------------------------------------------------
-# functions:
-#
 def importer_pickle(obj, filename):
     f = open(filename, 'wb')
     pickle.dump(obj, f, protocol=pickle.HIGHEST_PROTOCOL)
@@ -85,9 +75,6 @@ def importer_unpickle(filename):
     f.close()
     return obj
 
-#------------------------------------------------------------------------------
-# classes:
-#
 
 class MetaData(object):
 
@@ -124,6 +111,10 @@ class MetaData(object):
         self._position_well_map = {}
 
         self.pixel_type = None
+
+    @property
+    def pixel_range(self):
+        return PIXEL_RANGE[self.pixel_type]
 
     @property
     def pixel_info(self):
@@ -168,8 +159,8 @@ class MetaData(object):
     def append_well_subwell_info(self, position, well, subwell):
         if not position in self._position_well_map:
             self._position_well_map[position] = {META_INFO_WELL: well,
-                                                 META_INFO_SUBWELL: subwell,
-                                                 }
+                                                 META_INFO_SUBWELL: subwell}
+
         self.has_well_info = True
 
     def get_well_and_subwell(self, position):
@@ -222,7 +213,6 @@ class MetaData(object):
         self.dim_c = len(self.channels)
         self.dim_z = len(self.zslices)
         self.has_timelapse = self.dim_t > 1
-
 
     def h(self, a):
         if len(a) == 0:
@@ -430,6 +420,15 @@ class Coordinate(object):
     def copy(self):
         return copy.deepcopy(self)
 
+    def __str__(self):
+        res = ''
+        for key, info in zip(['plate', 'position','time', 'channel', 'zslice'],
+                             [self.plate, self.position, self.time, self.channel, self.zslice]):
+            if info is None:
+                continue
+            else:
+                res += '\n%s: %s' % (key, str(info))
+        return res
 
 class ImageContainer(object):
 

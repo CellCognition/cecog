@@ -16,16 +16,12 @@ __source__ = '$URL$'
 
 __all__ = []
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
 import os
 import zipfile
-from pdk.ordereddict import OrderedDict
+from collections import OrderedDict
+import os
+import zipfile
 
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
 import numpy
 
 from PyQt4.QtGui import *
@@ -35,9 +31,6 @@ from PyQt4.Qt import *
 from pdk.fileutils import collect_files
 from pdk.datetimeutils import StopWatch
 
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 from cecog.colors import Colors
 from cecog.gui.modules.module import Module
 from cecog.gui.widgets.colorbox import ColorBox
@@ -72,7 +65,7 @@ def blend_images_max(images):
 #-------------------------------------------------------------------------------
 # classes:
 #
-class ImageHelper:
+class ImageHelper(object):
 
     def __init__(self, image):
         self._image = image
@@ -128,17 +121,20 @@ class ChannelItem(QFrame):
         self.channel_changed.emit(self.name)
 
 
-class DisplaySettings:
+class DisplaySettings(object):
 
     def __init__(self, default_minimum, default_maximum,
                  disp_minimum=0, disp_maximum=255):
         self.default_minimum = default_minimum
         self.default_maximum = default_maximum
+        self.minimum = default_minimum
+        self.maximum = default_maximum
+        self.set_bitdepth(disp_maximum, disp_minimum)
+
+    def set_bitdepth(self, disp_maximum, disp_minimum=0):
         self.slider_range = disp_maximum - disp_minimum + 1
         self.brightness = self.slider_range / 2.0
         self.contrast = self.slider_range / 2.0
-        self.minimum = default_minimum
-        self.maximum = default_maximum
         self.image_minimum = disp_minimum
         self.image_maximum = disp_maximum
 
@@ -211,7 +207,7 @@ class EnhancementFrame(QFrame):
 
     values_changed = pyqtSignal(str)
 
-    def __init__(self, names, parent):
+    def __init__(self, names, parent, bitdepth=8):
         QFrame.__init__(self, parent)
 
         layout = QBoxLayout(QBoxLayout.TopToBottom, self)
@@ -239,7 +235,7 @@ class EnhancementFrame(QFrame):
                               'border: 1px solid #444444;}')
             grp.addButton(btn)
             layout_grp.addWidget(btn)
-            self._display_settings[name] = DisplaySettings(0, 255)
+            self._display_settings[name] = DisplaySettings(0, 2**bitdepth)
         layout_grp.addStretch(1)
         layout.addWidget(frame_grp)
 
@@ -254,7 +250,7 @@ class EnhancementFrame(QFrame):
         label = QLabel(name.capitalize(), frame)
         label.setAlignment(Qt.AlignRight)
         sld = QSlider(Qt.Horizontal, frame)
-        sld.setRange(0, 255)
+        sld.setRange(0, 2**bitdepth)
         sld.setTickPosition(QSlider.TicksBelow)
         sld.valueChanged.connect(fct(name))
         self._sliders[name] = sld
@@ -265,7 +261,7 @@ class EnhancementFrame(QFrame):
         label = QLabel(name.capitalize(), frame)
         label.setAlignment(Qt.AlignRight)
         sld = QSlider(Qt.Horizontal, frame)
-        sld.setRange(0, 255)
+        sld.setRange(0, 2**bitdepth)
         sld.setTickPosition(QSlider.TicksBelow)
         sld.valueChanged.connect(fct(name))
         self._sliders[name] = sld
@@ -276,7 +272,7 @@ class EnhancementFrame(QFrame):
         label = QLabel(name.capitalize(), frame)
         label.setAlignment(Qt.AlignRight)
         sld = QSlider(Qt.Horizontal, frame)
-        sld.setRange(0, 255)
+        sld.setRange(0, 2*bitdepth)
         sld.setTickPosition(QSlider.TicksBelow)
         sld.valueChanged.connect(fct(name))
         self._sliders[name] = sld
@@ -287,7 +283,7 @@ class EnhancementFrame(QFrame):
         label = QLabel(name.capitalize(), frame)
         label.setAlignment(Qt.AlignRight)
         sld = QSlider(Qt.Horizontal, frame)
-        sld.setRange(0, 255)
+        sld.setRange(0, 2**bitdepth)
         sld.setTickPosition(QSlider.TicksBelow)
         sld.valueChanged.connect(fct(name))
         self._sliders[name] = sld
