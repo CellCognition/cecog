@@ -1,0 +1,51 @@
+#!/bin/bash
+#
+# 04/02/2013 Rudolf Hoefler
+#
+
+if [ -r ~$C_USER/cellcognition ]; then
+    . ~$C_USER/cellcognition
+    echo "configuration from $C_USER/cellcognition"
+else if [ -r /etc/defaults/cellcogntion ]; then
+    . /etc/default/cellcognition
+    echo "configuration from /etc/defaults/cellcognition"
+else
+    echo "No gateway configuration found!"
+    exit 1
+fi
+
+# start
+start() {
+    echo "Starting gateway"
+    echo $CMD
+    mkdir -p ${LOG_DIR}
+    /sbin/start-stop-daemon --start --pidfile ${PIDFILE} \
+        --user ${C_USER} --group ${C_GROUP} \
+        -b --make-pidfile \
+        --chuid ${C_USER} \
+        --exec ${CMD} -- $GATEWAYOPTS
+}
+
+# stop
+stop() {
+    echo "Stopping gateway"
+    /sbin/start-stop-daemon --stop --pidfile ${PIDFILE} --verbose
+    rm -f ${PIDFILE}
+}
+
+
+# do it
+case "$1" in
+        start)
+                start
+                ;;
+        stop)
+                stop
+                ;;
+        restart)
+                stop
+                start
+                ;;
+        *)
+                echo "Usage: $0 {start|stop|restart}"
+esac

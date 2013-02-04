@@ -241,9 +241,9 @@ class BaseLearner(LoggerObject):
                   'has_path_data': isdir(self.data_dir),
                   'has_path_samples': isdir(self.data_dir),
                   'has_path_annotations': isdir(self.data_dir),
-                  'has_model': isfile(join(self.data_dir, '%s.model' % filename)),
-                  'has_range': isfile(join(self.data_dir, '%s.range' % filename)),
-                  'has_conf': isfile(join(self.data_dir, '%s.confusion.txt' % filename)),
+                  'has_model': isfile(join(self.data_dir, '%s.model' %filename)),
+                  'has_range': isfile(join(self.data_dir, '%s.range' %filename)),
+                  'has_conf': isfile(join(self.data_dir, '%s.confusion.txt' %filename)),
                   'has_arff': isfile(join(self.data_dir, self.strArffFileName)),
                   'has_definition': isfile(join(self.clf_dir, self.strDefinitionFileName))}
         return result
