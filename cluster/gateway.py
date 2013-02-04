@@ -22,7 +22,7 @@ import pyamf
 import drmaa
 
 #FIXME - remove all CECOG PYTHONPATHS from bash profiles!
-cecog_root = dirname(abspath(__file__)).split(os.sep)[:-2]
+cecog_root = dirname(abspath(__file__)).split(os.sep)[:-1]
 cecog_root = join(os.sep.join(cecog_root), "pysrc")
 sys.path.append(cecog_root)
 
