@@ -33,6 +33,7 @@ import cPickle as pickle
 from PyQt4.QtCore import *
 
 from collections import OrderedDict
+import vigra
 
 from cecog.config import NAMING_SCHEMAS
 from cecog.traits.settings import convert_package_path
@@ -339,6 +340,15 @@ class MetaImage(object):
     @classmethod
     def disable_cropping(cls):
         MetaImage._crop_coordinates = None
+
+    # @property
+    # def dtype(self):
+    #     return self.image.toArray().dtype
+
+    @property
+    def vigra_image(self):
+        ar = self.image.toArray()
+        return vigra.Image(ar, dtype=ar.dtype)
 
 
 class AxisIterator(object):

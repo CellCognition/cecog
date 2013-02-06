@@ -42,6 +42,7 @@ from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
 from cecog.traits.analyzer.tracking import SECTION_NAME_TRACKING
 
 from cecog.analyzer.gallery import EventGallery
+from cecog.analyzer.channel_gallery import ChannelGallery
 from cecog.util.logger import LoggerObject
 from cecog.util.stopwatch import StopWatch
 from cecog.util.util import makedirs
@@ -766,6 +767,9 @@ class PositionAnalyzer(PositionCore):
             self.render_classification_images(cellanalyzer, images, frame)
             self.render_contour_images(cellanalyzer, images, frame)
 
+            if self.settings.get('Output', 'rendering_channel_gallery'):
+                self.render_channel_gallery(cellanalyzer, frame)
+
             if self.settings.get('Output', 'rendering_labels_discwrite'):
                 cellanalyzer.exportLabelImages(self._labels_dir)
 
@@ -774,6 +778,11 @@ class PositionAnalyzer(PositionCore):
             cellanalyzer.purge(features=self.export_features)
 
         return n_images
+
+    def render_channel_gallery(self, cellanalyzer, frame):
+        for channel in cellanalyzer.virtual_channels.itervalues():
+            chgal = ChannelGallery(channel, frame, self._images_dir)
+            chgal.make_gallery()
 
     def render_contour_images(self, ca, images, frame):
         for region, render_par in self.settings.get2('rendering').iteritems():

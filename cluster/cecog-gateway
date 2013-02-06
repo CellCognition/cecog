@@ -3,17 +3,16 @@
 # 04/02/2013 Rudolf Hoefler
 #
 
-if [ -r ~$HOME/cellcognition ]; then
-    . ~$HOME/cellcognition
+if [ -r $HOME/cellcognition ]; then
+    . $HOME/cellcognition
     echo "configuration from $HOME/cellcognition"
-else if [ -r /etc/defaults/cellcogntion ]; then
+elif [ -r /etc/defaults/cellcogntion ]; then
     . /etc/default/cellcognition
     echo "configuration from /etc/defaults/cellcognition"
 else
     echo "No gateway configuration found!"
     exit 1
 fi
-
 
 # start
 start() {
@@ -23,6 +22,7 @@ start() {
     /sbin/start-stop-daemon --start --pidfile ${PIDFILE} \
         --user ${C_USER} --group ${C_GROUP} \
         -b --make-pidfile \
+	--umask ${C_UMASK} \
         --chuid ${C_USER} \
         --exec ${CMD} -- $GATEWAYOPTS
 }
@@ -33,6 +33,7 @@ stop() {
     /sbin/start-stop-daemon --stop --pidfile ${PIDFILE} --verbose
     rm -f ${PIDFILE}
 }
+
 
 # do it
 case "$1" in
@@ -49,3 +50,4 @@ case "$1" in
         *)
                 echo "Usage: $0 {start|stop|restart}"
 esac
+

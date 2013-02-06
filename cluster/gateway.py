@@ -189,7 +189,6 @@ class ClusterControl(object):
 
 
 if __name__ == '__main__':
-    oldmask = os.umask(0o000)
     from pyamf.remoting.gateway.wsgi import WSGIGateway
     from wsgiref import simple_server
 

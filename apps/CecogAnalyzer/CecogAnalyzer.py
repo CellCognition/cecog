@@ -452,9 +452,8 @@ class AnalyzerMainWindow(QMainWindow):
             status('Settings successfully saved.')
 
     def _on_about(self):
-        print "about"
         dialog = QDialog(self)
-        #dialog.setBackgroundRole(QPalette.Dark)
+        dialog.setBackgroundRole(QPalette.Dark)
         dialog.setStyleSheet('background: #000000; '
                              'background-image: url(:cecog_about)')
         dialog.setWindowTitle('About CecogAnalyzer')
@@ -810,15 +809,6 @@ if __name__ == "__main__":
                         help='Settings file.')
     args, _ = parser.parse_known_args()
 
-#    log_path = 'log'
-#    safe_mkdirs(log_path)
-#    sys.stdout = \
-#        file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
-#    sys.stderr = \
-#        file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
-
-
-    #sys.excepthook=handle_exception
 
     working_path = os.path.abspath(os.path.dirname(sys.argv[0]))
     program_name = os.path.basename(sys.argv[0])
@@ -827,19 +817,12 @@ if __name__ == "__main__":
     safe_mkdirs(log_path)
 
     is_app = hasattr(sys, 'frozen')
-    #is_app = True
     if is_app:
         package_path = os.path.join(APPLICATION_SUPPORT_PATH, 'battery_package')
         set_package_path(package_path)
-#        sys.stdout = \
-#            file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
-#        sys.stderr = \
-#            file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
 
     app.setWindowIcon(QIcon(':cecog_analyzer_icon'))
     app.setApplicationName('CecogAnalyzer')
-#    time.sleep(.2)
-#    app.processEvents()
     main = AnalyzerMainWindow()
     main.raise_()
 
@@ -847,8 +830,6 @@ if __name__ == "__main__":
         filename = args.settings
     else:
         filename = os.path.join(get_package_path(), 'Settings/demo_settings.conf')
-    #filename = os.path.join(get_package_path(), 'Settings/demo_settings.conf')
-
 
     if os.path.isfile(filename):
         main._read_settings(filename)

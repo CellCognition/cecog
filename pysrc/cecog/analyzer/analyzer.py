@@ -67,6 +67,15 @@ class CellAnalyzer(LoggerObject):
                 pchannels[name] =  channel
         return pchannels
 
+    @property
+    def virtual_channels(self):
+        """Return a dict that contains all virtual channels."""
+        channels = dict()
+        for name, channel in self._channel_registry.iteritems():
+            if channel.is_virtual():
+                channels[name] =  channel
+        return channels
+
     def process(self, apply=True, extract_features=True):
         """Perform the segmentation and feature extraction."""
         channels = sorted(self._channel_registry.values())
