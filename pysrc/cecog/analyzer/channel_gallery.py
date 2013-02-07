@@ -37,6 +37,7 @@ class GalleryRGBImage(np.ndarray):
         super(GalleryRGBImage, self).__init__(*args, **kw)
         self.contours = list()
         self._swidth = None
+        self._colors = list()
         self[:,:,:] = 0
 
     def __array_finalize__(self, obj):
@@ -61,9 +62,13 @@ class GalleryRGBImage(np.ndarray):
         self[xmin:xmax, :, :] = rgb_img
 
         # column of the merged channel
-        mimg =   self[(self._nsub-1)*self.swidth:, :, :]
-        mimg += self._grey2rgb(image, color)
-        self[(self._nsub-1)*self.swidth:, :, :] = mimg
+        # ensure that the same color is not added twice
+        # i. e. if 2 channels are gft but have different segmentation
+        if color not in self._colors:
+            self._colors.append(color)
+            mimg =   self[(self._nsub-1)*self.swidth:, :, :]
+            mimg += self._grey2rgb(image, color)
+            self[(self._nsub-1)*self.swidth:, :, :] = mimg
 
 
     def _grey2rgb(self, image, color="#FFFFFF"):
@@ -75,6 +80,10 @@ class GalleryRGBImage(np.ndarray):
     def add_contour(self, position, contour, color):
         if is_color_like(color):
             color = hex2color(color)
+
+        if color is None:
+            color = hex2color(Colors.white)
+
         color = np.array(color)
         color = np.round(color*np.iinfo(self.dtype).max)
 
