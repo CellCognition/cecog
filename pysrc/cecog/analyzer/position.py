@@ -424,6 +424,7 @@ class PositionAnalyzer(PositionCore):
                  join(self._out_dir, "plots"),
                  join(self._position_dir, "statistics"),
                  join(self._position_dir, "gallery"),
+                 join(self._position_dir, "channel_gallery"),
                  join(self._position_dir, "images"),
                  join(self._position_dir, "images","_labels"))
 
@@ -781,7 +782,7 @@ class PositionAnalyzer(PositionCore):
 
     def render_channel_gallery(self, cellanalyzer, frame):
         for channel in cellanalyzer.virtual_channels.itervalues():
-            chgal = ChannelGallery(channel, frame, self._images_dir)
+            chgal = ChannelGallery(channel, frame, self._channel_gallery_dir)
             chgal.make_gallery()
 
     def render_contour_images(self, ca, images, frame):
