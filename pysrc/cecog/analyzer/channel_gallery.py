@@ -130,7 +130,7 @@ class ChannelGallery(object):
 
     def gallery_name(self, label):
         fname = "T%05d_L%s.png" %(self._frame, label)
-        subdir = "-".join(self._channel.merge_regions)
+        subdir = "-".join(self._channel.merge_regions).lower()
         return join(self._outdir, subdir, fname)
 
     def _i_sub_image(self, center, (height, width)):

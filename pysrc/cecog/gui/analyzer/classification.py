@@ -393,6 +393,7 @@ class ClassificationFrame(BaseProcessorFrame):
         settings.set('General', 'rendering_class', {})
         settings.set('Output', 'events_export_gallery_images', False)
         settings.set('Output', 'hdf5_create_file', False)
+        settings.set('Output', 'rendering_channel_gallery', False)
 
         current_tab = self._tab.current_index
         if current_tab == 0:
