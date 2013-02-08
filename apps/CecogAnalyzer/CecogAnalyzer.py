@@ -170,13 +170,9 @@ class AnalyzerMainWindow(QMainWindow):
 
         self._selection = QListWidget(self.centralWidget())
         self._selection.setViewMode(QListView.IconMode)
-        #self._selection.setUniformItemSizes(True)
         self._selection.setIconSize(QSize(35, 35))
         self._selection.setGridSize(QSize(140, 60))
-        #self._selection.setWrapping(False)
         self._selection.setMovement(QListView.Static)
-        #self._selection.setFlow(QListView.TopToBottom)
-        #self._selection.setSpacing(12)
         self._selection.setMaximumWidth(self._selection.gridSize().width() + 5)
         self._selection.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._selection.setSizePolicy(QSizePolicy(QSizePolicy.Fixed,
@@ -219,6 +215,7 @@ class AnalyzerMainWindow(QMainWindow):
         layout.addWidget(self._selection, 0, 0)
         layout.addWidget(w_logo, 1, 0, Qt.AlignBottom | Qt.AlignHCenter)
         layout.addWidget(self._pages, 0, 1, 2, 1)
+        layout.setContentsMargins(1, 1, 1, 1)
 
         qApp._log_handler = GuiLogHandler(self)
         qApp._log_window = LogWindow(qApp._log_handler)
@@ -234,7 +231,7 @@ class AnalyzerMainWindow(QMainWindow):
         qApp._image_dialog = None
         qApp._graphics = None
 
-        self.setGeometry(0, 0, 1100, 750)
+        self.setGeometry(0, 0, 1200, 700)
         self.setMinimumSize(QSize(700, 600))
         self.show()
         self.center()

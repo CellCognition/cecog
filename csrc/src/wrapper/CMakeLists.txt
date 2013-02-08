@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 2.6)
 PROJECT(cecog_ccore)
 
 IF (NOT CMAKE_BUILD_TYPE)
-    MESSAGE(STATUS "Build type -> Debug")
-    SET(CMAKE_BUILD_TYPE "Debug")
+    MESSAGE(STATUS "Build type -> Release")
+    SET(CMAKE_BUILD_TYPE "Release")
 ENDIF()
 
 SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/config)

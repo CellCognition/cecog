@@ -17,7 +17,6 @@ __source__ = '$URL$'
 __all__ = ["PrimaryChannel", "SecondaryChannel", "TertiaryChannel"
            "MergedChannel"]
 
-import os
 from os.path import join, isdir
 import glob
 import copy

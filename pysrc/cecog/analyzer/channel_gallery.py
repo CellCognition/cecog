@@ -90,9 +90,9 @@ class GalleryRGBImage(np.ndarray):
         # filter pixels that do not lie in the sub image
         contour = np.array(filter(
                 lambda c: c[0]<self.swidth and c[1]<self.swidth, contour))
-        contour = contour + np.array((0, position*self.swidth))
+        contour = contour + np.array((position*self.swidth, 0))
         # rgb color according to dtype of the image
-        self.contours.append((contour[:, 1], contour[:, 0], color))
+        self.contours.append((contour[:, 0], contour[:, 1], color))
 
     def draw_contour(self):
         for ix, iy, color in self.contours:
@@ -161,14 +161,14 @@ class ChannelGallery(object):
         return (xmin, xmax, ymin, ymax), contur_offset
 
     def cut(self, image, (xmin, xmax, ymin, ymax)):
-        return image[ymin:ymax, xmin:xmax]
+        return np.transpose(image[ymin:ymax, xmin:xmax])
 
     def make_target_dir(self):
         makedirs(join(self._outdir,
                       "-".join(self._channel.merge_regions).lower()))
 
     def make_gallery(self, grey_subimages=True):
-        #  >= 2
+        # n_ch >= 2
         n_ch = len(self._channel.merge_regions)+1
         self.make_target_dir()
 
@@ -197,5 +197,4 @@ class ChannelGallery(object):
 
             gallery.draw_contour()
             gallery.draw_merge_contour(holder[label].strHexColor)
-
             vigra.RGBImage(gallery).writeImage(iname)
