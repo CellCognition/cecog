@@ -16,34 +16,11 @@ __source__ = '$URL$'
 
 __all__ = ['SectionOutput']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 from cecog.traits.settings import _Section
-from cecog.gui.guitraits import (BooleanTrait,
-                                 IntTrait)
+from cecog.gui.guitraits import BooleanTrait, IntTrait
 
-#-------------------------------------------------------------------------------
-# constants:
-#
 SECTION_NAME_OUTPUT = 'Output'
 
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 class SectionOutput(_Section):
 
     SECTION_NAME = SECTION_NAME_OUTPUT
