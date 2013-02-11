@@ -1024,7 +1024,7 @@ class PlotCellTracker(CellTracker):
             table.append(dctData)
 
         if len(table) > 0:
-            print "exportChannelData, filenname: ", strFilename
+            #print "exportChannelData, filenname: ", strFilename
             write_table(strFilename, table, column_names=lstHeaderNames)
 
 

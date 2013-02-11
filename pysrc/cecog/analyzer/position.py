@@ -318,7 +318,7 @@ class PositionCore(LoggerObject):
             for prefix, channel in self.CHANNELS.iteritems():
                 if channel.is_virtual():
                     continue
-                if self.settings.get("Classification", "%s_channel" %prefix):
+                if self.settings.get("Classification", "merge_%s" %prefix):
                     regions[prefix.title()] = \
                         self.settings.get("Classification", "%s_%s_region"
                                           %(self.MERGED_CHANNEL.lower(), prefix))

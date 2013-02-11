@@ -36,9 +36,9 @@ class SectionClassification(_Section):
                    for x in (CH_PRIMARY+CH_OTHER)] + \
             [('collectsamples', [ ('collectsamples', BooleanTrait(False)),
                                  ('collectsamples_prefix', StringTrait('',100))]),
-             ('merged_channel', [ ('primary_channel', BooleanTrait(True, label='primary')),
-                                  ('secondary_channel', BooleanTrait(True, label='secondary')),
-                                  ('tertiary_channel', BooleanTrait(True, label='tertiary')) ])
+             ('merged_channel', [ ('merge_primary', BooleanTrait(True, label='primary')),
+                                  ('merge_secondary', BooleanTrait(True, label='secondary')),
+                                  ('merge_tertiary', BooleanTrait(True, label='tertiary')) ])
              ] + \
              [('%s_classification' %CH_VIRTUAL[0],
                [ ('%s_classification_envpath' %CH_VIRTUAL[0], \

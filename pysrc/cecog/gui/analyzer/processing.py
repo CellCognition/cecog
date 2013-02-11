@@ -191,7 +191,7 @@ class ProcessingFrame(BaseProcessorFrame):
         order (primary, secondary, tertiary)."""
         regions = []
         for ch in (CH_PRIMARY+CH_OTHER):
-            if settings.get("Classification", "%s_channel" %ch):
+            if settings.get("Classification", "merge_%s" %ch):
                 regions.append(settings.get("Classification",
                                             "merged_%s_region" %ch))
         # want regions hashable

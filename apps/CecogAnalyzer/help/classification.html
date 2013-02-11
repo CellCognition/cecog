@@ -66,7 +66,11 @@
 
       <a name="primary_classification_regionname"></a>
       <h4>Region name</h4>
-      <p class="text">For the primary channel is currently only one choice available.</p>
+      <p class="text">Choose a primary region (segmentation strategy)
+      for the primary channel. Choices are made available by adding
+      a <a href="qrc:/objectdetection#primary_region_definition">Primary
+      segementation plugin</a> in
+      section <a href="qrc:/objectdetection">Object Detection</a>.</p>
       <hr></hr>
 
       <a name="secondary_channel"></a>
@@ -83,14 +87,24 @@
       <a name="tertiary_classification_regionname"></a>
       <a name="secondary_classification_regionname"></a>
       <h4>Region name</h4>
-      <p class="text">One of the regions defined in <a href="qrc:/objectdetection#secondary_region_definition">Object Detection</a>, which is used for classification. The region must be enabled. For now, only one region can be used for classification, but features are extracted for all enabled regions in <a href="qrc:/objectdetection#secondary_region_definition">Object Detection</a>.
-      </p>
+
+      <p class="text">Choose a region defined
+      in <a href="qrc:/objectdetection#secondary_region_definition">Object
+      Detection</a>, which is used for classification. A region is
+      made available by adding
+      a <a href="qrc:/objectdetection#secondary_region_definition">segementation
+      plugin</a> in section <a href="qrc:/objectdetection">Object
+      Detection</a>. Only the features of the selected region are used
+      for classification, but features of all available regions are
+      calculated.</p>
+
+      <hr/>
 
       <a name="merged_channel"></a>
       <h2 class="param">Merged Channel</h2>
       The Merged Channel is a so called <it>virtual</it> or <it>pseudo</it>
-      channel. That means there is no segmentation or object detection
-      in this channel. The Merged Channel concatenates the features
+      channel. There is no segmentation or object detection taking
+      place. The Merged Channel concatenates the feature vectors
       extracted from the other channels into a new feature vector of
       higher dimension. Classification takes place in the higher
       dimensional feature space. <br/>
@@ -98,22 +112,23 @@
       <h3>Parameters</h3>
       <a name="merged_classification_envpath"></a>
       <h4>Classifier folder</h4>
-      <p class="text">See <a href="#primary_classification_envpath">classifier folder</a> of the primary channel.
+      <p class="text">See <a href="#primary_classification_envpath">classifier
+      folder</a> of the primary channel.
       </p>
 
       <a name="merged_primary_region"></a>
       <a name="merged_secondary_region"></a>
       <a name="merged_Tertiary_region"></a>
+      <a name="merge_primary"/>
+      <a name="merge_secondary"/>
+      <a name="merge_tertiary"/>
 
-      <h4>Merged Channels</h4>
-      <p class="text">Choose channels whose features shall be
-        concatenated to a higher dimensional feature space. Regions
-        defined
+      <h4>Merge Channels</h4>
+      <p class="text">Choose channels whose feature vectors to be
+        concatenated. Regions defined
         in <a href="qrc:/objectdetection#secondary_region_definition">Object
-        Detection</a> can be choosen for each channel, but only one
+          Detection</a> can be choosen for each channel, but only one
         region for each channel.</p>
-
-
 
       <hr></hr>
       <a name="controlpanel">

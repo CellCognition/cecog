@@ -286,7 +286,7 @@ class Picker(AnalyzerBase):
         for feature extraction."""
         regions = OrderedDict()
         for prefix in (CH_PRIMARY+CH_OTHER):
-            if self.settings.get("Classification", "%s_channel" %prefix):
+            if self.settings.get("Classification", "merge_%s" %prefix):
                 regions[prefix.title()] = \
                 self.settings.get("Classification", "%s_%s_region"
                                   %(CH_VIRTUAL[0], prefix))

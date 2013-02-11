@@ -363,9 +363,9 @@ class ClassificationFrame(BaseProcessorFrame):
 
             if prefix in CH_VIRTUAL:
                                       # checkboxes
-                self.add_group(None, [('primary_channel', (0, 0, 1, 1)),
-                                      ('secondary_channel', (0, 1, 1, 1)),
-                                      ('tertiary_channel', (0, 2, 1, 1)),
+                self.add_group(None, [('merge_primary', (0, 0, 1, 1)),
+                                      ('merge_secondary', (0, 1, 1, 1)),
+                                      ('merge_tertiary', (0, 2, 1, 1)),
                                       # comboboxes
                                       ('merged_primary_region', (1, 0, 1, 1)),
                                       ('merged_secondary_region', (1, 1, 1, 1)),
@@ -433,9 +433,9 @@ class ClassificationFrame(BaseProcessorFrame):
                                                   "%s_classification_regionname" %prefix)): {}}
         else:
             # checkboxes in merged channel tab
-            pch = settings.get('Classification', 'primary_channel')
-            sch = settings.get('Classification', 'secondary_channel')
-            tch = settings.get('Classification', 'tertiary_channel')
+            pch = settings.get('Classification', 'merge_primary')
+            sch = settings.get('Classification', 'merge_secondary')
+            tch = settings.get('Classification', 'merge_tertiary')
 
             settings.set('Processing', 'primary_featureextraction', pch)
             settings.set('Processing', 'secondary_featureextraction', sch)
@@ -447,7 +447,7 @@ class ClassificationFrame(BaseProcessorFrame):
 
             rdn = {}
             for pfx in (CH_PRIMARY+CH_OTHER):
-                if settings.get("Classification", "%s_channel" %pfx):
+                if settings.get("Classification", "merge_%s" %pfx):
                     rdn["%s_%s" %(pfx, settings.get("Classification","merged_%s_region" %pfx))] = {}
 
 
@@ -470,7 +470,7 @@ class ClassificationFrame(BaseProcessorFrame):
         if prefix in CH_VIRTUAL:
             region = []
             for pfx in (CH_PRIMARY+CH_OTHER):
-                if settings.get('Classification', '%s_channel' %pfx):
+                if settings.get('Classification', 'merge_%s' %pfx):
                     region.append(settings.get("Classification", "merged_%s_region" %pfx))
             region = tuple(region)
             region_str = '-'.join(region)
@@ -530,7 +530,7 @@ class ClassificationFrame(BaseProcessorFrame):
                 trait.set_list_data(regions)
             else:
                 cbtrait = self._settings.get_trait(SECTION_NAME_CLASSIFICATION,
-                                                   '%s_channel' %ch)
+                                                   'merge_%s' %ch)
                 cbtrait.set_value(False)
                 trait.set_list_data([])
 
