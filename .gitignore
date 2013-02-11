@@ -1,6 +1,10 @@
 <<<<<<< HEAD
 dist
 build
+resource.py
+*_flymake.py
+*~
+*.so
 *.pyc
 *.exe
 *.dll
@@ -21,7 +25,7 @@ build.info
 *.nc
 *.nc4
 *.hdf5
-*.hdf
+**.hdf
 *.hf5
 *.ncb
 
@@ -31,10 +35,12 @@ build.info
 /doc/
 /private/
 CMakeFiles/
+\#.*
+.\#.*
+*_flymake.py
 Release/
 Debug/
 
-*.cmake
 *.py[co]
 *~
 *.mex
@@ -44,6 +50,7 @@ Debug/
 *.obj
 .libs
 .deps
+*#*
 Makefile
 *.exe
 *.ilk
@@ -56,4 +63,5 @@ Makefile
 *.[do]
 *.l[doa]
 *.loT
+resource.py
 >>>>>>> plugin_segmentation

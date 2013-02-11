@@ -16,36 +16,10 @@ __source__ = '$URL$'
 
 __all__ = []
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-import types, \
-       pprint
-
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
+import types, pprint
 from pdk.ordereddict import OrderedDict
 
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 
-
-#-------------------------------------------------------------------------------
-# constants:
-#
-
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 class Trait(object):
 
     DATATYPE = None
@@ -66,10 +40,10 @@ class NumberTrait(Trait):
         super(NumberTrait, self).__init__(default_value)
         self.min_value = min_value
         self.max_value = max_value
-        
+
     def set_min_value(self, min_value):
         self.min_value = min_value
-        
+
     def set_max_value(self, max_value):
         self.max_value = max_value
 
@@ -94,7 +68,7 @@ class StringTrait(Trait):
     STRING_PATH = 1
     STRING_FILE = 2
     STRING_GRAYED = 3
-    
+
 
     def __init__(self, default_value, max_length, mask=None):
         super(StringTrait, self).__init__(default_value)
@@ -191,8 +165,3 @@ class DictTrait(ListTrait):
 
         def set_value(self, widget, value):
             widget.setText(pprint.pformat(value, indent=2))
-
-#-------------------------------------------------------------------------------
-# main:
-#
-

@@ -18,13 +18,10 @@ __source__ = '$URL$'
 # standard library imports:
 #
 
-import logging, \
-       types, \
-       os, \
-       bz2, \
-       gzip
-       
-import time as timing
+import os
+import bz2
+import gzip
+import types
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -47,6 +44,16 @@ OS_LINUX = 'linux'
 #-------------------------------------------------------------------------------
 # functions:
 #
+
+def makedirs(path):
+    """
+    Recursively make directory if path doesn't already exist.
+    If permission is not set, an exception (os.error) is raised.
+    """
+    path = os.path.normpath(path)
+    if not os.path.isdir(path):
+        os.makedirs(path)
+
 
 def singleton(cls):
     '''
@@ -93,6 +100,7 @@ def get_file_handle(filename, mode, guess_compression=True, compress_level=6):
     else:
         fh = file(filename, mode)
     return fh
+
 
 
 def read_table(filename, has_column_names=True, skip=0, sep='\t',
@@ -142,8 +150,6 @@ def write_table(filename, rows, column_names=None, sep='\t',
             f.write('%s\n' % sep.join(map(str, func(row))))
     f.close()
 
-
-
 def unlist(a):
     b = []
     for x in a:
@@ -190,33 +196,4 @@ def print_memory_increase(func):
         return wrapper
     except:
         return runc
-
-#-------------------------------------------------------------------------------
-# classes:
-#
-
-
-class ReverseDict(dict):
-
-    def __init__(self, dataD={}):
-        super(ReverseDict, self).__init__(dataD)
-        self._reverseD = {}
-        for k, v in self.iteritems():
-            if not v in self._reverseD:
-                self._reverseD[v] = k
-
-    def __call__(self):
-        return self._reverseD
-
-
-class LoggerMixin(OptionManager):
-
-    OPTIONS = {"strLoggerName": Option("", callback="_onLoggerName"),
-              }
-
-    def __init__(self, **dctOptions):
-        super(LoggerMixin, self).__init__(**dctOptions)
-
-    def _onLoggerName(self, strLoggerName):
-        self.oLogger = logging.getLogger(strLoggerName)
 

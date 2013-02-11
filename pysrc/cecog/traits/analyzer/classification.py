@@ -16,54 +16,42 @@ __source__ = '$URL$'
 
 __all__ = ['SectionClassification']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
-from cecog import CHANNEL_PREFIX
-from cecog.traits.settings import _Section
-from cecog.gui.guitraits import (StringTrait,
-                                 BooleanTrait,
-                                 SelectionTrait2,
-                                 )
-from cecog.util.util import unlist
-
-#-------------------------------------------------------------------------------
-# constants:
-#
 SECTION_NAME_CLASSIFICATION = 'Classification'
 
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
+from cecog import CHANNEL_PREFIX, CH_PRIMARY, CH_OTHER, CH_VIRTUAL
+from cecog.traits.settings import _Section
+from cecog.gui.guitraits import StringTrait, BooleanTrait, SelectionTrait2
 
 class SectionClassification(_Section):
 
     SECTION_NAME = SECTION_NAME_CLASSIFICATION
 
     OPTIONS = [('%s_classification' % x, [ ('%s_classification_envpath' % x, \
-                                       StringTrait('', 1000, label='Classifier folder',
-                                                   widget_info=StringTrait.STRING_PATH)),
-                                     ('%s_classification_regionname' % x,
-                                      SelectionTrait2(None, [], label='Region name')),
-                                     ('%s_classification_annotationfileext' % x,
-                                      StringTrait('.xml', 50, label='Annotation ext.')) ]) \
-           for x in CHANNEL_PREFIX] + \
-           [('collectsamples', [ ('collectsamples', BooleanTrait(False)),
+                                                StringTrait('', 1000, label='Classifier folder',
+                                                            widget_info=StringTrait.STRING_PATH)),
+                                           ('%s_classification_regionname' % x,
+                                            SelectionTrait2(None, [], label='Region name')),
+                                           ('%s_classification_annotationfileext' % x,
+                                            StringTrait('.xml', 50, label='Annotation ext.')) ]) \
+                   for x in (CH_PRIMARY+CH_OTHER)] + \
+            [('collectsamples', [ ('collectsamples', BooleanTrait(False)),
                                  ('collectsamples_prefix', StringTrait('',100))]),
-            ('merged_channel', [ ('primary_channel', BooleanTrait(True, label='Primary Channel')),
-                                 ('secondary_channel', BooleanTrait(True, label='Secondary Channel')),
-                                 ('tertiary_channel', BooleanTrait(True, label='Tertiary Channel')) ])
-            ]
+             ('merged_channel', [ ('merge_primary', BooleanTrait(True, label='primary')),
+                                  ('merge_secondary', BooleanTrait(True, label='secondary')),
+                                  ('merge_tertiary', BooleanTrait(True, label='tertiary')) ])
+             ] + \
+             [('%s_classification' %CH_VIRTUAL[0],
+               [ ('%s_classification_envpath' %CH_VIRTUAL[0], \
+                      StringTrait('', 1000, label='Classifier folder',
+                                  widget_info=StringTrait.STRING_PATH)),
+                 ('%s_primary_region' %CH_VIRTUAL[0],
+                  SelectionTrait2(None, [], label='')),
+                 ('%s_secondary_region' %CH_VIRTUAL[0],
+                  SelectionTrait2(None, [], label='')),
+                 ('%s_tertiary_region' %CH_VIRTUAL[0],
+                  SelectionTrait2(None, [], label='')),
+                 ('%s_classification_annotationfileext' %CH_VIRTUAL[0],
+                  StringTrait('.xml', 50, label='Annotation ext.')),
+                 ('%s_classification_regionname' %CH_VIRTUAL[0],
+                  SelectionTrait2(None, [], label="Region name"))
+                 ])]

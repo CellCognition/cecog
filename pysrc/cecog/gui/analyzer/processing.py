@@ -16,50 +16,26 @@ __source__ = '$URL$'
 
 __all__ = ['ProcessingFrame']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
+import threading
+import logging
 
-import threading, \
-        logging
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 from cecog import CHANNEL_PREFIX, VERSION
-from cecog import CH_OTHER, CH_VIRTUAL
+from cecog import CH_OTHER, CH_VIRTUAL, CH_PRIMARY
 from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
 from cecog.gui.analyzer import (BaseProcessorFrame,
-                                AnalzyerThread,
+                                AnalyzerThread,
                                 HmmThread,
-                                MultiAnalzyerThread,
+                                MultiAnalyzerThread,
                                 )
 from cecog.analyzer.channel import (PrimaryChannel,
                                     SecondaryChannel,
-                                    TertiaryChannel,
-                                    )
-from cecog.plugin.segmentation import REGION_INFO
+                                    TertiaryChannel)
 
+from cecog.plugin.segmentation import REGION_INFO as reginfo
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-#-------------------------------------------------------------------------------
-# constants:
-#
 
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 class SubProcessLogWindow(QFrame):
     lock = threading.Lock()
     on_msg_received = pyqtSignal(str, str, int)
@@ -112,15 +88,14 @@ class ProcessingFrame(BaseProcessorFrame):
         super(ProcessingFrame, self).__init__(settings, parent)
 
         self.register_control_button('process',
-                                     [AnalzyerThread,
+                                     [AnalyzerThread,
                                       HmmThread],
                                      ('Start processing', 'Stop processing'))
 
         self.register_control_button('multi_process',
-                                     [MultiAnalzyerThread,
+                                     [MultiAnalyzerThread,
                                       HmmThread],
                                      ('Start multi processing', 'Stop multi processing'))
-
 
         self.add_group(None,
                        [('primary_featureextraction', (0,0,1,1)),
@@ -130,17 +105,19 @@ class ProcessingFrame(BaseProcessorFrame):
                         ('primary_errorcorrection', (4,0,1,1))
                         ], link='primary_channel', label='Primary channel')
 
-        for prefix in CH_OTHER+CH_VIRTUAL:
+        for prefix in CH_OTHER:
             self.add_group('%s_processchannel' % prefix,
                            [('%s_featureextraction' % prefix, (0,0,1,1)),
                             ('%s_classification' % prefix, (1,0,1,1)),
                             ('%s_errorcorrection' % prefix, (2,0,1,1))
                             ])
 
-        #self.add_line()
+
+        self.add_group('merged_processchannel',
+                       [('merged_classification', (1,0,1,1)),
+                        ('merged_errorcorrection', (2,0,1,1))])
 
         self.add_expanding_spacer()
-
         self._init_control()
         self.process_log_window = SubProcessLogWindow(self)
 
@@ -155,26 +132,49 @@ class ProcessingFrame(BaseProcessorFrame):
         show_ids = settings.get('Output', 'rendering_contours_showids')
         show_ids_class = settings.get('Output', 'rendering_class_showids')
 
-        colors = REGION_INFO.colors
-        for prefix in CHANNEL_PREFIX:
-            if prefix == 'primary' or settings.get('Processing', '%s_processchannel' % prefix):
-                d = dict([('%s_contours_%s' % (prefix, x),
-                                               {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
-                                                                      'contours': [(x, colors[x], 1, show_ids)]
-                                               }})
-                                               for x in REGION_INFO.names[prefix]])
-                settings.get('General', 'rendering').update(d)
+        # set propertys of merged channel to the same as for Primary
+        # unfortunately REGION_INFO is like a global variable
 
+        d = {}
+        for prefix in CH_PRIMARY+CH_OTHER:
+            if prefix == CH_PRIMARY[0] \
+                    or settings.get('Processing', '%s_processchannel' % prefix):
+                for x in reginfo.names[prefix]:
+                    d = {'%s_contours_%s' % (prefix, x):
+                             {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
+                                                    'contours': [(x, reginfo.colors[x], 1, show_ids)]
+                                                    }
+                              }
+                         }
+
+                settings.get('General', 'rendering').update(d)
                 if settings.get('Processing', '%s_classification' % prefix):
-                    d = dict([('%s_classification_%s' % (prefix, x),
-                               {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
-                                                      'contours': [(x, 'class_label', 1, False),
-                                                                   (x, '#000000' , 1, show_ids_class)]
-                               }})
-                               for x in REGION_INFO.names[prefix]
-                               if x == settings.get('Classification',
-                                                    '%s_classification_regionname' % prefix)])
+                    for x in reginfo.names[prefix]:
+                        if x == settings.get('Classification', '%s_classification_regionname' % prefix) or \
+                                prefix == CH_VIRTUAL[0]:
+                            d = {'%s_classification_%s' % (prefix, x):
+                                     {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
+                                                            'contours': [(x, 'class_label', 1, False),
+                                                                         (x, '#000000' , 1, show_ids_class)]
+                                                            }
+                                      }
+                                 }
                     settings.get('General', 'rendering_class').update(d)
+
+        # setup rendering properties for merged channel
+        # want the same rendering properties as for the primary channel!
+        if settings.get('Processing', 'merged_processchannel'):
+            regions = cls._merged_regions(settings)
+            d = {'merged_contours_%s' %'-'.join(regions):
+                     {"Merged": {'raw': ('#FFFFFF', 1.0),
+                                 'contours': [(regions, reginfo.colors["primary"], 1, show_ids)]}}}
+            settings.get("General", "rendering").update(d)
+            if settings.get('Processing', 'merged_classification'):
+                d = {'merged_classification_%s' %'-'.join(regions):
+                         {"Merged": {'raw': ('#FFFFFF', 1.0),
+                                     'contours': [(regions, 'class_label', 1, False),
+                                                  (regions, '#000000' , 1, show_ids_class)]}}}
+                settings.get("General", "rendering_class").update(d)
 
         if has_timelapse:
             # generate raw images of selected channels (later used for gallery images)
@@ -182,10 +182,20 @@ class ProcessingFrame(BaseProcessorFrame):
                 for prefix in CHANNEL_PREFIX:
                     if prefix == 'primary' or settings.get('Processing', '%s_processchannel' % prefix):
                         settings.get('General', 'rendering').update({prefix : {prefix.capitalize() :
-                                                                               {'raw': ('#FFFFFF', 1.0)}}})
-
+                                                                                   {'raw': ('#FFFFFF', 1.0)}}})
         return settings
 
+    @staticmethod
+    def _merged_regions(settings):
+        """Return the regions seletected for segmentation in the
+        order (primary, secondary, tertiary)."""
+        regions = []
+        for ch in (CH_PRIMARY+CH_OTHER):
+            if settings.get("Classification", "merge_%s" %ch):
+                regions.append(settings.get("Classification",
+                                            "merged_%s_region" %ch))
+        # want regions hashable
+        return tuple(regions)
 
     @classmethod
     def get_special_settings(cls, settings, has_timelapse=True):

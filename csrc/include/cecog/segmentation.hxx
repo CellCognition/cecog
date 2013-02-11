@@ -20,6 +20,11 @@
 #ifndef CECOG_SEGMENTATION
 #define CECOG_SEGMENTATION
 
+//#ifndef __DEBUG_IMAGE_EXPORT__
+//#define __DEBUG_IMAGE_EXPORT__
+//#define DEBUG_PREFIX "/Users/twalter/temp/debug/seg_debug__1_3_3__"
+//#endif
+
 #include <iostream>
 #include <utility>
 #include <algorithm>
@@ -406,11 +411,9 @@ namespace cecog
   void segmentationCorrection(vigra::BImage const & img_in,
                               vigra::BImage const & bin_in,
                               vigra::BImage & bin_out,
-                              //std::string const & filepath_img,
                               int rsize,
                               int gauss_size, int maxima_size,
                               int iMinMergeSize,
-                              //std::string filepath_rgb="",
                               SegmentationType segmentation_type=ShapeBasedSegmentation)
 
   {
@@ -418,15 +421,22 @@ namespace cecog
 
     StopWatch oStopWatch, oStopWatchTotal;
 
-//    std::string filepath_base = filepath_img.substr(0, filepath_img.size()-4);
-//    std::string filepath_export_inv           = filepath_base + "__01inv.png";
-//    std::string filepath_export_binary        = filepath_base + "__02bin.png";
-//    std::string filepath_export_min           = filepath_base + "__03min.png";
-//    std::string filepath_export_voronoi       = filepath_base + "__04voronoi.png";
-//    std::string filepath_export_binws         = filepath_base + "__05binws.png";
-//    std::string filepath_export_rgb           = filepath_base + "__06seg.png";
-//    std::string filepath_export_rgb_merged    = filepath_base + "__07seg_merged.png";
-//    std::string filepath_export_binary_merged = filepath_base + "__08bin_merged.png";
+#ifdef __DEBUG_IMAGE_EXPORT__
+    //std::string filepath_base = filepath_img.substr(0, filepath_img.size()-4);
+    std::string filepath_base = DEBUG_PREFIX;
+    std::string filepath_export_original      = filepath_base + "__00original.tiff";
+    std::string filepath_export_original_bin  = filepath_base + "__00originalbin.tiff";
+    std::string filepath_export_inv           = filepath_base + "__01inv.png";
+    std::string filepath_export_binary        = filepath_base + "__02bin.png";
+    std::string filepath_export_min           = filepath_base + "__03min.png";
+    std::string filepath_export_voronoi       = filepath_base + "__04voronoi.png";
+    std::string filepath_export_binws         = filepath_base + "__05binws.png";
+    std::string filepath_export_rgb           = filepath_base + "__06seg.png";
+    std::string filepath_export_rgb_merged    = filepath_base + "__07seg_merged.png";
+    std::string filepath_export_binary_merged = filepath_base + "__08bin_merged.png";
+    std::string filepath_export_colmin           = filepath_base + "__09colmin.png";
+    std::string filepath_export_ws_input           = filepath_base + "__10wsinput.png";
+#endif
 
     typedef ImageMaskContainer<8> ImageMaskContainer8;
     typedef ImageMaskContainer8::label_type::value_type label_value_type;
@@ -436,7 +446,6 @@ namespace cecog
     binary_value_type background = 0;
     binary_value_type foreground = 255;
 
-    //vigra::ImageImportInfo img_info(filepath_img.c_str());
     static const int mem_border = 10;
     int w = img_in.width();
     int h = img_in.height();
@@ -445,6 +454,10 @@ namespace cecog
 
     ImageMaskContainer<8>::image_type img(wx, hx);
 
+#ifdef __DEBUG_IMAGE_EXPORT__
+	exportImage(srcImageRange(img_in), vigra::ImageExportInfo(filepath_export_original.c_str()));
+#endif
+
     copyImage(img_in.upperLeft(),
               img_in.lowerRight(),
               img_in.accessor(),
@@ -452,82 +465,20 @@ namespace cecog
               img.accessor());
 
     ImageMaskContainer8::binary_type img_bin(wx, hx);
+	#ifdef __DEBUG_IMAGE_EXPORT__
+    	exportImage(srcImageRange(bin_in), vigra::ImageExportInfo(filepath_export_original_bin.c_str()));
+	#endif
     copyImage(bin_in.upperLeft(),
               bin_in.lowerRight(),
               bin_in.accessor(),
               img_bin.upperLeft() + vigra::Diff2D(mem_border, mem_border),
               img_bin.accessor());
 
-
-//    ImageMaskContainer8::image_type img(wx, hx);
-//    ImageMaskContainer8::rgb_type img_rgb(wx, hx);
-//
-//    if (img_info.isGrayscale())
-//    {
-//      importImage(img_info,
-//                  img.upperLeft() + vigra::Diff2D(mem_border, mem_border),
-//                  img.accessor());
-//    } else
-//    {
-//      importImage(img_info,
-//                  img_rgb.upperLeft() + vigra::Diff2D(mem_border, mem_border),
-//                  img_rgb.accessor());
-//      extractRGBChannel(img_rgb, img, rgb_channel);
-//    }
-//
-
-
-
-
-    //printf("moo2\n");
-
-
-    // do some hole-filling
-    //holeFilling(img_bin, false, background, foreground);
-
     vigra::IImage labels(wx, hx), labels2(wx, hx);
-    //printf("moo3\n");
 
     int object_label1 =
       labelImageWithBackground(srcImageRange(img_bin), destImage(labels),
                                false, background);
-    //printf("moo4\n");
-
-//    vigra::ArrayOfRegionStatistics<vigra::FindROISize<label_value_type> > roisize1(object_label1);
-//    inspectTwoImagesIf(srcImageRange(labels),
-//                       srcImage(labels),
-//                       maskImage(labels),
-//                       roisize1);
-//
-//    int min_roi_size = 5, max_roi_size = 12000;
-//    int validObjects = 0;
-//    for (int i=1; i<object_label1; i++)
-//    {
-//      #ifdef __DEBUG__
-//        printf("object: %d, size: %d\n", i, roisize1[i]());
-//      #endif
-//      if (roisize1[i]() > max_roi_size or roisize1[i]() < min_roi_size)
-//      {
-//        combineTwoImages(srcImageRange(img_bin),
-//                         srcImage(labels),
-//                         destImage(img_bin),
-//                         ifThenElse(Arg2() == Param(i), Param(0), Arg1()));
-//        //transformImage(srcImageRange(labels),
-//        //               destImage(img_bin),
-//        //               ifThen(Arg1() == Param(i), Param(0)));
-//      } else
-//        validObjects++;
-//    }
-//
-//    //FIXME!
-//    if (validObjects == 0)
-//    {
-//      printf("moo5\n");
-//      return bin_in;
-//    }
-//
-
-//    exportImage(srcImageRange(img_bin), vigra::ImageExportInfo(filepath_export_binary.c_str()));
 
     #ifdef __DEBUG__
       printf("StopWatch: preamble %.3fs\n", oStopWatch.measure());
@@ -545,9 +496,16 @@ namespace cecog
       #endif
       vigra::FImage fimg(wx, hx);
       distanceTransform(srcImageRange(img_bin), destImage(fimg), foreground, 2);
-      transformImage(srcImageRange(fimg), destImage(timg),
-                     Arg1() + Param(0.1 * rand() / (RAND_MAX + 1.0)));
-      gaussianSmoothing(srcImageRange(timg), destImage(bimg), gauss_size);
+      //transformImage(srcImageRange(fimg), destImage(timg),
+      //               Arg1() + Param(0.1 * rand() / (RAND_MAX + 1.0)));
+      // The addition of a random value aimed at making sure that there were not
+      // maxima with equal values. Maxima with equal values posed a problem when implementing
+      // the minimal distance condition via dilation (as below). But this strategy fails:
+      // adding random values can actually generate new minima
+      // it is partially reverted by the gaussian filtering.
+      // and in addition, bimg is not a float image, so that it is completely unclear whether
+      // this works.
+      gaussianSmoothing(srcImageRange(fimg), destImage(bimg), gauss_size);
     } else
     {
       #ifdef __DEBUG__
@@ -574,29 +532,23 @@ namespace cecog
       printf("--- disc dilation, radius %d\n", maxima_size);
     #endif
 
-    bool bScaleDiscDilation = true;
+    // FIXME:
+    // the parameter maxima_size
+    // should indicate the minimal distance between seeds.
+    // First problem here: if two maxima are closer than maxima_size/2 but have
+    // the same value, then both are kept.
+    // Second problem: for large dilations, it is possible that different connected
+    // connected components are influencing each other.
+    // And in principle, this is not correct anyways, as slow slopes would also be detected
+    // by this method. However, for distance functions, this should still be fine if maxima_size >= 2
+    // (where maxima_size is the RADIUS of the Structuring Element).
+    discDilation(srcImageRange(bimg), destImage(labels), maxima_size);
 
-    if (bScaleDiscDilation)
-    {
+    combineTwoImagesIf(srcImageRange(bimg), srcImage(labels), maskImage(img_bin), destImage(labels2),
+    				   ifThenElse(Arg1() < Arg2(),
+    				   Param(background),
+					   Arg2()));
 
-      discDilation(srcImageRange(bimg), destImage(labels), maxima_size);
-
-      combineTwoImagesIf(srcImageRange(bimg), srcImage(labels), maskImage(img_bin), destImage(labels2),
-                       ifThenElse(Arg1() < Arg2(),
-                                  Param(background),
-                                  Arg2())
-                      );
-
-    } else
-    {
-      discDilation(srcImageRange(bimg), destImage(labels), maxima_size);
-
-      combineTwoImagesIf(srcImageRange(bimg), srcImage(labels), maskImage(img_bin), destImage(labels2),
-                       ifThenElse(Arg1() < Arg2(),
-                                  Param(background),
-                                  Arg2())
-                      );
-    }
 
     #ifdef __DEBUG__
       printf("StopWatch: disc dilation %.3fs\n", oStopWatch.measure());
@@ -605,227 +557,66 @@ namespace cecog
 
 
     // label the minima just found
+    // note: we have to use 8 connected minima. If not, there can be 8-connected minima
+    // each of which is a seed for the region growing.
+    // as a consequence, the watershed line cannot be 4-connected, and therefore the bassins
+    // (regions) have to be 4-connected (which is not the case). Therefore,
+    // this leads to a documented error (github) of an existing separation, that does not
+    // really separate two objects (because both objects and separating lines are 8-connected).
     int max_region_label =
       labelImageWithBackground(srcImageRange(labels2), destImage(labels2),
-                               false, background);
+                               true, background);
     #ifdef __DEBUG_IMAGE_EXPORT__
       exportImage(srcImageRange(labels2), vigra::ImageExportInfo(filepath_export_min.c_str()));
+
+      typedef vigra::BRGBImage rgb_type;
+      rgb_type col = rgb_type(bimg.size());
+
+      typedef vigra::RGBValue<unsigned char> rgb_val;
+      rgb_val value = rgb_val(255, 0, 0);
+
+      ImOverlayBinaryImage(vigra::srcImageRange(bimg), vigra::srcImage(labels2),
+    		  	  	  	   vigra::destImage(col), value);
+      exportImage(srcImageRange(col), vigra::ImageExportInfo(filepath_export_colmin.c_str()));
+
     #endif
 
-//    vigra::ArrayOfRegionStatistics<FindAVGCenter> maxcenter(max_region_label);
-//    inspectTwoImagesIf(srcIterRange(vigra::Diff2D(0,0), vigra::Diff2D(wx,hx)),
-//                       srcImage(labels2),
-//                       maskImage(labels2),
-//                       maxcenter);
-//    labels2 = 0;
-//    for (int ci=1; ci < maxcenter.size()-1; ci++)
-//    {
-//      bool valid = true;
-//      vigra::Point2D pi(maxcenter[ci]());
-//      for (int cj=ci+1; cj < maxcenter.size(); cj++)
-//      {
-//        vigra::Point2D pj(maxcenter[cj]());
-//        if ((pi - pj).squaredMagnitude() <= 2)
-//        {
-//          valid = false;
-//          break;
-//        }
-//      }
-//      if (valid)
-//        labels2[pi] = ci;
-//    }
+// This is the original version (before 1.3.3): the watershed is applied on the original image.
+// I.e. not on the gradient image and not on the distance map.
+//    gaussianSmoothing(srcImageRange(img), destImage(timg), 1.0);
+//
+//    #ifdef __DEBUG_IMAGE_EXPORT__
+//    	exportImage(srcImageRange(timg), vigra::ImageExportInfo(filepath_export_ws_input.c_str()));
+//	#endif
 
-//      labels2[c + vigra::Diff2D(1,0)] = ci;
-//      labels2[c + vigra::Diff2D(0,1)] = ci;
-//      labels2[c + vigra::Diff2D(-1,0)] = ci;
-//      labels2[c + vigra::Diff2D(0,-1)] = ci;
-//      labels2[c + vigra::Diff2D(1,1)] = ci;
-//      labels2[c + vigra::Diff2D(-1,-1)] = ci;
-//      labels2[c + vigra::Diff2D(1,-1)] = ci;
-//      labels2[c + vigra::Diff2D(-1,1)] = ci;
-
-
-
-
-    #ifdef __DEBUG_IMAGE_EXPORT__
-      exportImage(srcImageRange(labels2), vigra::ImageExportInfo(filepath_export_min.c_str()));
-    #endif
-
-
-    //discMedian(srcImageRange(img), destImage(timg), 2);
-
-    // invert image
-    gaussianSmoothing(srcImageRange(img), destImage(timg), 1.0);
-    //transformImage(srcImageRange(timg), destImage(timg),
-    //               vigra::linearIntensityTransform(-1, -255));
-    //transformImage(srcImageRange(timg), destImage(timg),
-    //               vigra::linearIntensityTransform(-1, -255));
-
-    //vigra::FImage gimg(w, h);
-    //gaussianSmoothing(srcImageRange(timg), destImage(gimg), 1.0);
-    /*
-    combineTwoImages(srcImageRange(timg), srcImage(img_bin), destImage(timg),
-                     ifThenElse(Arg2() == Param(0), Param(255), Arg1() * Param(0.2))
-                     );
-    */
 
     #ifdef __DEBUG__
       printf("--- seeded region growing\n");
     #endif
 
+    // REGION GROWING:
+    // gradstat gives back the cost of adding a pixel to a region.
+    // Here we just use the pixel value in the input image for this.
+    // Which means that it performs a watershed.
     vigra::ArrayOfRegionStatistics<SRGDirectValueFunctor<double, -1> > gradstat(max_region_label);
 
+    // Initialization of the image labels
     labels = 0;
-    seededRegionGrowing(srcImageRange(timg), srcImage(labels2),
-                        destImage(labels), gradstat, KeepContours);
+
+    // The vigra:: seededRegionGrowing with EightNeighborCode() is identical to
+    // the cecog::seededRegionGrowing.
+    vigra::seededRegionGrowing(srcImageRange(bimg), srcImage(labels2),
+    						   destImage(labels), gradstat,
+    						   vigra::KeepContours,
+    						   vigra::EightNeighborCode());
 
     #ifdef __DEBUG_IMAGE_EXPORT__
       exportImage(srcImageRange(labels), vigra::ImageExportInfo(filepath_export_voronoi.c_str()));
     #endif
 
-    //vigra::ArrayOfRegionStatistics<vigra::FindROISize<label_value_type> > wsroisize(max_region_label);
-    //inspectTwoImages(srcImageRange(labels), srcImage(labels), wsroisize);
 
     int bin_region_label =
       labelImageWithBackground(srcImageRange(img_bin), destImage(labels2), false, background);
-
-    //regionImageToEdgeImage(srcImageRange(labels), destImage(img_bin),
-    //                       vigra::NumericTraits<image_value_type>::zero());
-
-    //holeFilling(img_bin, true, background, foreground);
-
-    /*
-    ImageMaskContainer8 container(img, img_bin);
-    container.markObjects(RED, false, false);
-
-
-
-
-    typedef vigra::IImage::traverser SrcIterator;
-    typedef vigra::BImage::traverser DestIterator;
-    typedef vigra::BRGBImage::traverser IllIterator;
-
-    typedef vigra::IImage::Accessor SrcAccessor;
-    typedef vigra::BImage::Accessor DestAccessor;
-    typedef vigra::BRGBImage::Accessor IllAccessor;
-
-    SrcIterator sul(labels.upperLeft());
-    SrcIterator slr(labels.lowerRight());
-    SrcAccessor sa(labels.accessor());
-
-    SrcIterator rul(labels2.upperLeft());
-    SrcAccessor ra(labels2.accessor());
-
-    DestIterator dul(img_bin.upperLeft());
-    DestAccessor da(img_bin.accessor());
-
-    IllIterator iul(container.img_rgb.upperLeft());
-    IllAccessor ia(container.img_rgb.accessor());
-
-    vigra::BRGBImage::value_type ill_marker = YELLOW;
-
-
-    //     findSplits(labels.upperLeft(), labels.lowerRight(), labels.accessor(),
-    //            labels2.upperLeft(), labels.accessor(),
-    //            img_bin.upperLeft(), img_bin.accessor(),
-    //            container.img_rgb.upperLeft(), container.img_rgb.accessor(),
-    //            vigra::NumericTraits<image_value_type>::zero(),
-    //            YELLOW);
-
-    int ws = slr.x - sul.x;
-    int hs = slr.y - sul.y;
-    int x,y;
-
-    static const vigra::Diff2D right(1,0);
-    static const vigra::Diff2D left(-1,0);
-    static const vigra::Diff2D bottomright(1,1);
-    static const vigra::Diff2D bottom(0,1);
-    static const vigra::Diff2D top(0,-1);
-
-    SrcIterator iy = sul;
-    SrcIterator ry = rul;
-    DestIterator dy = dul;
-    IllIterator ly = iul;
-
-    //typedef boost::property<boost::name_t, int> vertex_property;
-    typedef boost::adjacency_list<boost::setS, boost::vecS, boost::undirectedS> graph_type;
-
-    typedef std::map<int, graph_type> graph_map_type;
-
-    graph_map_type graph_map;
-
-    for (y=0; y<hs-1; ++y, ++iy.y, ++dy.y, ++ry.y, ++ly.y)
-    {
-      SrcIterator ix = iy;
-      SrcIterator rx = ry;
-      DestIterator dx = dy;
-      IllIterator lx = ly;
-
-      for (x=0; x<ws-1; ++x, ++ix.x, ++dx.x, ++rx.x, ++lx.x)
-      {
-        int orig_label = ra(rx);
-        if (orig_label != 0)
-        {
-          int other = -1;
-          int current = sa(ix);
-          if (sa(ix, right) != current)
-            other = sa(ix, right);
-          else if (sa(ix, bottom) != current)
-            other = sa(ix, bottom);
-
-          if (other != -1)
-          {
-              ia.set(ill_marker, lx);
-              add_edge(current, other, graph_map[orig_label]);
-              //printf("%d: %d %d\n", orig_label, current, other);
-          }
-        }
-      }
-
-      if (sa(ix, bottom) != sa(ix))
-      {
-          ia.set(ill_marker, lx);
-      }
-    }
-
-    SrcIterator ix = iy;
-    DestIterator dx = dy;
-    IllIterator lx = ly;
-    for (x=0; x<ws-1; ++x, ++ix.x, ++dx.x, ++lx.x)
-    {
-      if (sa(ix, right) != sa(ix))
-        ia.set(ill_marker, lx);
-    }
-
-
-    graph_map_type::iterator git = graph_map.begin();
-    for (; git != graph_map.end(); ++git)
-    {
-      graph_type& g = (*git).second;
-      int orig_label = (*git).first;
-
-      printf("orig: %d\n", orig_label);
-
-      boost::graph_traits<graph_type>::vertex_iterator vi, vi_end;
-      boost::graph_traits<graph_type>::adjacency_iterator ai, ai_end;
-      boost::property_map<graph_type, boost::vertex_index_t>::type index_map = get(boost::vertex_index, g);
-
-      for (boost::tie(vi, vi_end) = vertices(g); vi != vi_end; ++vi)
-      {
-        boost::tie(ai, ai_end) = adjacent_vertices(*vi, g);
-        if (ai != ai_end)
-        {
-          std::cout << get(index_map, *vi) << "  is parent of ";
-          for (; ai != ai_end; ++ai)
-            std::cout << get(index_map, *ai) << " ";
-          std::cout << std::endl;
-        }
-      }
-      printf("\n");
-    }
-
-*/
-
 
 
     transformImageIf(srcImageRange(labels), maskImage(img_bin), destImage(img_bin),
@@ -834,14 +625,8 @@ namespace cecog
                                 Param(foreground))
                      );
 
-    //max_region_label =
-    //    labelImageWithBackground(srcImageRange(img_bin), destImage(labels2),
-    //                             false, background);
-
-    #ifdef __DEBUG_IMAGE_EXPORT__
+     #ifdef __DEBUG_IMAGE_EXPORT__
       exportImage(srcImageRange(img_bin), vigra::ImageExportInfo(filepath_export_binws.c_str()));
-      //exportImage(srcImageRange(container.img_rgb), vigra::ImageExportInfo(filepath_export_rgb.c_str()));
-      //exportImage(srcImageRange(labels), vigra::ImageExportInfo(filepath_export_binws.c_str()));
     #endif
 
 

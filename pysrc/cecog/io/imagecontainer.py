@@ -25,39 +25,32 @@ __all__ = ['DIMENSION_NAME_POSITION',
            'MetaImage',
            ]
 
-#------------------------------------------------------------------------------
-# standard library imports:
-#
-import types, \
-       os, \
-       copy
+import os
+import copy
+import types
 import numpy
 import cPickle as pickle
+from PyQt4.QtCore import *
 
-#------------------------------------------------------------------------------
-# extension module imports:
-#
-from pdk.ordereddict import OrderedDict
-from pdk.datetimeutils import StopWatch
-from pdk.fileutils import safe_mkdirs
+from collections import OrderedDict
+import vigra
 
-#------------------------------------------------------------------------------
-# cecog imports:
-#
-from cecog.config import NAMING_SCHEMAS 
+from cecog.config import NAMING_SCHEMAS
 from cecog.traits.settings import convert_package_path
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog import ccore
 
-#------------------------------------------------------------------------------
-# constants:
-#
+# XXX derive all this from numpy
 UINT8 = 'UINT8'
 UINT16 = 'UINT16'
 INT8 = 'INT8'
 INT16 = 'INT16'
-PIXEL_TYPES = [UINT8, UINT16, INT8, INT16]
+PIXEL_TYPES = (UINT8, UINT16, INT8, INT16)
 PIXEL_INFO = dict((n, n.lower()) for n in PIXEL_TYPES)
+PIXEL_RANGE = {UINT8: (0, 255),
+               UINT16: (0, 65535),
+               INT8: (-128, 127),
+               INT16: (-32768, 32767)}
 
 DIMENSION_NAME_POSITION = 'position'
 DIMENSION_NAME_TIME = 'time'
@@ -72,9 +65,6 @@ META_INFO_SUBWELL = 'subwell'
 IMAGECONTAINER_FILENAME = 'cecog_imagecontainer___PL%s.pkl'
 IMAGECONTAINER_FILENAME_OLD = '.cecog_imagecontainer___PL%s.pkl'
 
-#------------------------------------------------------------------------------
-# functions:
-#
 def importer_pickle(obj, filename):
     f = open(filename, 'wb')
     pickle.dump(obj, f, protocol=pickle.HIGHEST_PROTOCOL)
@@ -86,9 +76,6 @@ def importer_unpickle(filename):
     f.close()
     return obj
 
-#------------------------------------------------------------------------------
-# classes:
-#
 
 class MetaData(object):
 
@@ -125,6 +112,10 @@ class MetaData(object):
         self._position_well_map = {}
 
         self.pixel_type = None
+
+    @property
+    def pixel_range(self):
+        return PIXEL_RANGE[self.pixel_type]
 
     @property
     def pixel_info(self):
@@ -169,8 +160,8 @@ class MetaData(object):
     def append_well_subwell_info(self, position, well, subwell):
         if not position in self._position_well_map:
             self._position_well_map[position] = {META_INFO_WELL: well,
-                                                 META_INFO_SUBWELL: subwell,
-                                                 }
+                                                 META_INFO_SUBWELL: subwell}
+
         self.has_well_info = True
 
     def get_well_and_subwell(self, position):
@@ -197,8 +188,9 @@ class MetaData(object):
         return well_map
 
     def setup(self):
-        for position in self._timestamps_absolute:
-            self._timestamps_absolute[position].sort()
+        for pos, od in self._timestamps_absolute.iteritems():
+            sorted_od = OrderedDict(sorted(od.iteritems(), key=lambda o: o[0]))
+            self._timestamps_absolute[pos] = sorted_od
         for position, timestamps in self._timestamps_absolute.iteritems():
             base_time = timestamps.values()[0]
             self._timestamps_relative[position] = OrderedDict()
@@ -222,7 +214,6 @@ class MetaData(object):
         self.dim_c = len(self.channels)
         self.dim_z = len(self.zslices)
         self.has_timelapse = self.dim_t > 1
-
 
     def h(self, a):
         if len(a) == 0:
@@ -252,23 +243,14 @@ class MetaData(object):
         strings += ["* Height: %s" % self.dim_y]
         strings += ["* Width: %s" % self.dim_x]
         strings += ["* Wells: %s" % len(self.get_well_and_subwell_dict())]
-#        if time:
-#            lstStr += ["* Timestamp(s):\n" + oPrinter.pformat(self.dctTimestampStrs) + "\n"]
-#        lstChannels = ["%s: %s" % (key, value)
-#                       for key, value in self.dctChannelMapping.iteritems()
-#                       if key in self.setC]
-#        lstStr += ["* Channel Mapping:\n" + oPrinter.pformat(lstChannels) + "\n"]
         strings += [line]
         return "\n".join(strings)
-    
+
     def get_frames_of_position(self, pos):
-        print self._timestamps_absolute.keys()
         return self._timestamps_absolute[pos].keys()
 
     def __str__(self):
         return self.format()
-
-
 
 
 class MetaImage(object):
@@ -277,7 +259,7 @@ class MetaImage(object):
     Image reading is implemented lazy.
     """
     _crop_coordinates = None
-    
+
     @classmethod
     def get_crop_coordinates(cls):
         return cls._crop_coordinates
@@ -295,15 +277,15 @@ class MetaImage(object):
     @property
     def width(self):
         return self.image.width
-    
+
     @property
     def height(self):
         return self.image.height
-    
+
     @property
     def raw_width(self):
         return self._raw_image.width
-    
+
     @property
     def raw_height(self):
         return self._raw_image.height
@@ -314,14 +296,14 @@ class MetaImage(object):
             return self._raw_image
         else:
             return self._cropped_image
-    
+
     @property
     def _raw_image(self):
         if self._img is None:
             self._img = self.image_container.get_image(self.coordinate)
         return self._img
-    
-    @property  
+
+    @property
     def _cropped_image(self):
         if self._img_c is None:
             self._img_c = ccore.subImage(self._raw_image,
@@ -331,62 +313,43 @@ class MetaImage(object):
 
     def set_raw_image(self, img):
         self._img = img
-        
+
     def set_cropped_image(self, img):
         self._img_c = img
-        
+
     def set_image(self, img):
         if self._crop_coordinates is None:
             self.set_raw_image(img)
         else:
             self.set_cropped_image(img)
-      
-    @classmethod    
+
+    @classmethod
     def _check_crop_coordinates(cls, x0, y0, width, height):
         ok = True
         if x0 < 0 or y0 < 0 or width < 0 or height < 0:
             ok = False
         return ok
-        
+
     @classmethod
     def enable_cropping(cls, x0, y0, width, height):
         if cls._check_crop_coordinates(x0, y0, width, height):
             cls._crop_coordinates = (x0, y0, width, height)
         else:
             raise RuntimeError('wrong crop coordinates')
-     
-    @classmethod    
+
+    @classmethod
     def disable_cropping(cls):
         MetaImage._crop_coordinates = None
-      
-    
 
+    # @property
+    # def dtype(self):
+    #     return self.image.toArray().dtype
 
+    @property
+    def vigra_image(self):
+        ar = self.image.toArray()
+        return vigra.Image(ar, dtype=ar.dtype)
 
-#    def format_info(self, suffix=None, show_position=True, show_time=True,
-#                    show_channel=True, show_zslice=True, sep='_'):
-#        items = []
-#        if show_position:
-#            items.append("P%s" % self.position)
-#        if show_time:
-#            items.append("T%05d" % self.time)
-#        if show_channel:
-#            items.append("C%s" % self.channel)
-#        if show_zslice:
-#            items.append("Z%02d" % self.zslice)
-#        if suffix is not None:
-#            items.append(suffix)
-#        return sep.join(items)
-
-
-
-#class Axis(object):
-#
-#    NAME = None
-#
-#    def __init__(self, current=None):
-#        self.values = OrderedSet()
-#        self.
 
 class AxisIterator(object):
     """
@@ -452,6 +415,12 @@ class Coordinate(object):
 
     def __init__(self, plate=None, position=None, time=None, channel=None,
                  zslice=None):
+
+        for c in (plate, position, time, channel, zslice):
+            if isinstance(c, (list, tuple)) and (len(set(c)) != len(c)):
+                raise RuntimeError(('Cannot setup unambiguous '
+                                    'coordianates for image stack'))
+
         self.plate = plate
         self.position = position
         self.time = time
@@ -461,6 +430,15 @@ class Coordinate(object):
     def copy(self):
         return copy.deepcopy(self)
 
+    def __str__(self):
+        res = ''
+        for key, info in zip(['plate', 'position','time', 'channel', 'zslice'],
+                             [self.plate, self.position, self.time, self.channel, self.zslice]):
+            if info is None:
+                continue
+            else:
+                res += '\n%s: %s' % (key, str(info))
+        return res
 
 class ImageContainer(object):
 
@@ -585,9 +563,7 @@ class ImageContainer(object):
             yield plate_id, path_plate_in, path_plate_out, filename
 
     def iter_import_from_settings(self, settings, scan_plates=None):
-        from cecog.io.importer import (IniFileImporter,
-                                       FlatFileImporter,
-                                       )
+        from cecog.io.importer import IniFileImporter, FlatFileImporter
         settings.set_section(SECTION_NAME_GENERAL)
 
         for info in self.iter_check_plates(settings):

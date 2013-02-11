@@ -41,7 +41,25 @@ Processing results like contour images for annotation by <img class="extlink" sr
 
 <a name="rendering_class_showids">
 <h4 class="sub">Show object IDs</h4>
-<p class="subtext">Object IDs are shown in the classification images. The IDs correspond to the label images and the statistical output below. Note that object IDs change over time for the same object!</p>
+<p class="subtext">Object IDs are shown in the classification
+  images. The IDs correspond to the label images and the statistical
+  output below. Note that object IDs change over time for the same
+  object!</p>
+
+<a name="rendering_channel_gallery">
+<h4 class="sub">Merged channel gallery</h4>
+<p class="subtext">A merged channel gallery image shows the objects
+  (cells) of the selected channels beside each other. The subimages
+  are ordered from left to right, starting with the image extracted
+  from the primary channel, then from secondary and tertiary
+  channel, if selected. In the last subimage all previous channels are
+  merged together to an color image. <br>
+  Further the crack contours of the segemented
+  regions are drawn in the color of the corresponding class label. If
+  classification was turned off for a certain channel, the color of the
+  crack contour is white. Since there is no crack countour in the
+  merged channel, the image shows the contour of the primary channel,
+  but uses the class color of the merged channel.</p>
 </a>
 </p>
 </a>

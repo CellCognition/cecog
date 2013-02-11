@@ -16,36 +16,13 @@ __source__ = '$URL$'
 
 __all__ = ['GuiConfigSettings']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
 import copy
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 from cecog.traits.settings import ConfigSettings
-#-------------------------------------------------------------------------------
-# constants:
-#
 
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 class GuiConfigSettings(ConfigSettings):
-    '''
-    Extended ConfigSettings to set the window modified flag of the parent
+    """Extended ConfigSettings to set the window modified flag of the parent
     window upon all setting changes via set.
-    '''
-
+    """
     def __init__(self, parent, section_registry):
         self._parent = parent
         self._notify_change = True
@@ -74,9 +51,3 @@ class GuiConfigSettings(ConfigSettings):
         ConfigSettings.set(self, section_name, trait_name, value)
         if not self._parent is None and self._notify_change:
             self._parent.settings_changed(True)
-
-
-#-------------------------------------------------------------------------------
-# main:
-#
-

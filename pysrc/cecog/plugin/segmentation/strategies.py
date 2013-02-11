@@ -201,7 +201,6 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
 
         container = ccore.ImageMaskContainer(image, img_bin, self.params['removeborderobjects'])
 
-
         self.postprocessing(container, self.params['postprocessing'],
                             (self.params['postprocessing_roisize_min'], self.params['postprocessing_roisize_max']),
                             (self.params['postprocessing_intensity_min'], self.params['postprocessing_intensity_max']))

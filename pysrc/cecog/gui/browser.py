@@ -30,11 +30,6 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
-from pdk.datetimeutils import StopWatch
-
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 from cecog.gui.util import (exception,
                             information,
                             question,
@@ -62,19 +57,6 @@ from cecog.gui.modules.annotation import AnnotationModule
 
 from cecog.plugin.segmentation import REGION_INFO
 
-#-------------------------------------------------------------------------------
-# constants:
-#
-
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 
 
 class Browser(QMainWindow):
@@ -86,12 +68,10 @@ class Browser(QMainWindow):
     coordinates_changed = pyqtSignal(Coordinate)
 
     def __init__(self, settings, imagecontainer):
-        QMainWindow.__init__(self)
+        super(Browser, self).__init__()
 
         frame = QFrame(self)
         self.setCentralWidget(frame)
-
-        self._stopwatch = StopWatch()
 
         self._settings = settings
         self._imagecontainer = imagecontainer
@@ -128,6 +108,9 @@ class Browser(QMainWindow):
         self.coordinate.channel = self._imagecontainer.channels[0]
 
         meta_data = self._imagecontainer.get_meta_data()
+        self.max_time = meta_data.times[-1]
+        self.min_time = meta_data.times[0]
+        self.max_frame = meta_data.dim_t-1
 
         layout = QGridLayout(frame)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -138,8 +121,10 @@ class Browser(QMainWindow):
         self.image_viewer.zoom_info_updated.connect(self.on_zoom_info_updated)
 
         self._t_slider = QSlider(Qt.Horizontal, frame)
-        self._t_slider.setMinimum(meta_data.times[0])
-        self._t_slider.setMaximum(meta_data.times[-1])
+        self._t_slider.setMinimum(self.min_time)
+        self._t_slider.setMaximum(self.max_time)
+#        self._t_slider.setMaximum(self.max_frame)
+
         self._t_slider.setTickPosition(QSlider.TicksBelow)
         self._t_slider.valueChanged.connect(self.on_time_changed_by_slider,
                                             Qt.DirectConnection)
@@ -191,6 +176,10 @@ class Browser(QMainWindow):
         act_zoomout = self.create_action('Zoom Out',
                                          shortcut=QKeySequence('CTRL+-'),
                                          slot=self.on_act_zoomout)
+        act_refresh = self.create_action('Refresh',
+                                         shortcut=QKeySequence('F5'),
+                                         slot=self.on_refresh)
+
         act_fullscreen = self.create_action('Full Screen',
                                             shortcut=QKeySequence('CTRL+F'),
                                             slot=self.on_act_fullscreen,
@@ -220,6 +209,7 @@ class Browser(QMainWindow):
                                         checkable=True,
                                         checked=True)
         view_menu = self.menuBar().addMenu('&View')
+
         self.add_actions(view_menu, (act_resize, None,
                                      act_zoom100, act_zoomfit,
                                      act_zoomin, act_zoomout,
@@ -228,6 +218,7 @@ class Browser(QMainWindow):
                                      act_prev_pos, act_next_pos,
                                      act_prev_plate, act_next_plate,
                                      None,
+                                     act_refresh,
                                      act_fullscreen, None,
                                      act_show_contours, None,
                                      act_anti, act_smooth,
@@ -267,6 +258,7 @@ class Browser(QMainWindow):
         # process and display the first image
         self._process_image()
 
+
     def create_action(self, text, slot=None, shortcut=None, icon=None,
                       tooltip=None, checkable=None, signal='triggered()',
                       checked=False):
@@ -298,7 +290,7 @@ class Browser(QMainWindow):
         widget = self._module_manager.get_widget(AnnotationModule.NAME)
         widget.set_coords()
 
-    def set_image(self, image_dict):
+    def show_image(self, image_dict):
         widget = self._module_manager.get_widget(DisplayModule.NAME)
         widget.set_image_dict(image_dict)
         self.update_statusbar()
@@ -308,6 +300,7 @@ class Browser(QMainWindow):
         if meta_data.has_timelapse:
             timestamp = meta_data.get_timestamp_relative(self.coordinate)
             time_info = ' | Frame: %d' % self.coordinate.time
+
             if not numpy.isnan(timestamp):
                 time_info += ' (%.1f min)' % (timestamp / 60)
         else:
@@ -326,12 +319,21 @@ class Browser(QMainWindow):
         from the Navigator is processed here and further propagated via
         a new Browser event (the Modules are not supposed to know each other).
         """
+
         self.coordinate = coordinate.copy()
         self._t_slider.blockSignals(True)
         self._imagecontainer.set_plate(coordinate.plate)
-        meta_data = self._imagecontainer.get_meta_data()
-        self._t_slider.setMaximum(meta_data.dim_t)
-        self._t_slider.setValue(coordinate.time)
+
+        # the slider is always working with frames.
+        # reason: it is difficult to forbid slider values between allowed values.
+        frame = int(round(
+                          self.max_frame * (coordinate.time - self.min_time) /
+                          float(self.max_time - self.min_time)
+                          )
+                    )
+
+        self._t_slider.setValue(frame)
+
         self._t_slider.blockSignals(False)
         self._process_image()
         # propagate the signal further to other modules
@@ -345,8 +347,6 @@ class Browser(QMainWindow):
         nav.nav_to_coordinate(coordinate)
 
     def _process_image(self):
-        self._stopwatch.reset()
-        s = StopWatch()
         settings = _ProcessorMixin.get_special_settings(self._settings)
         settings.set_section('General')
         settings.set2('constrain_positions', True)
@@ -363,6 +363,8 @@ class Browser(QMainWindow):
         settings.set_section('Processing')
         settings.set2('primary_classification', False)
         settings.set2('secondary_classification', False)
+        settings.set2('tertiary_classification', False)
+        settings.set2('merged_classification', False)
         settings.set2('primary_featureextraction', False)
         settings.set2('secondary_featureextraction', False)
 
@@ -381,19 +383,34 @@ class Browser(QMainWindow):
         settings.set('General', 'rendering_class', {})
         settings.set('Output', 'events_export_gallery_images', False)
 
+        # turn of output:
+        settings.set('Output', 'export_object_counts', False)
+        settings.set('Output', 'export_object_details', False)
+        settings.set('Output', 'export_file_names', False)
+        settings.set('Output', 'events_export_gallery_images', False)
+        settings.set('Output', 'export_track_data', False)
+        settings.set('Output', 'export_tracking_as_dot', False)
 
         if len(self._imagecontainer.channels) > 1:
             settings.set('Processing', 'secondary_processChannel', True)
+            # need turn of virtual channels
+            settings.set('Processing', 'merged_processChannel', False)
+
         settings.set('General', 'rendering', {})
         analyzer = AnalyzerCore(self.coordinate.plate, settings,
                                 self._imagecontainer)
         analyzer.processPositions(myhack=self)
 
+    def on_refresh(self):
+        self._process_image()
+
     def on_zoom_info_updated(self, info):
         self.update_statusbar()
 
-    def on_time_changed_by_slider(self, time):
+    def on_time_changed_by_slider(self, frame):
         nav = self._module_manager.get_widget(NavigationModule.NAME)
+        meta_data = self._imagecontainer.get_meta_data()
+        time = meta_data.times[frame]
         nav.nav_to_time(time)
 
     def on_object_region_changed(self, channel, region):
@@ -492,7 +509,7 @@ class Browser(QMainWindow):
     # Qt method overwrites
 
     def keyPressEvent(self, ev):
-        QMainWindow.keyPressEvent(self, ev)
+        super(Browser, self).keyPressEvent(self, ev)
         # allow to return from fullscreen via the Escape key
         if self.isFullScreen() and ev.key() == Qt.Key_Escape:
             self.showNormal()

@@ -18,8 +18,7 @@ __source__ = '$URL$'
 # standard library imports:
 #
 
-import os, \
-       logging
+import os, logging
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -123,4 +122,3 @@ class LibSvmClassifier(BaseClassifier):
             iLabel = int(fLabel)
             dctProb = {iLabel: 1.0}
         return iLabel, dctProb
-

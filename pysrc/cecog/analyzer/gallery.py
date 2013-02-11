@@ -2,36 +2,20 @@
 Copyright (c) 2005-2007 by Michael Held
 '''
 
-#------------------------------------------------------------------------------
-# standard library imports:
-#
-import os, \
-       shutil, \
-       random, \
-       logging
+import os
+import shutil
+import random
+import logging
 
-#------------------------------------------------------------------------------
-# extension module imports:
-#
 from pdk.fileutils import (safe_mkdirs,
                            collect_files,
-                           collect_files_by_regex,
-                           )
+                           collect_files_by_regex)
 
-#------------------------------------------------------------------------------
-# cecog module imports:
-#
 from cecog import ccore
 from cecog.util.util import read_table
 
-#------------------------------------------------------------------------------
-# constants:
-#
-
-#------------------------------------------------------------------------------
-# functions:
-#
-def compose_galleries(path, path_hmm, quality="90", one_daughter=True, sample=30):
+def compose_galleries(path, path_hmm, quality="90",
+                      one_daughter=True, sample=30):
     logger = logging.getLogger('compose_galleries')
     column_name = 'Trajectory'
     path_index = os.path.join(path_hmm, '_index')
@@ -92,25 +76,10 @@ def compose_galleries(path, path_hmm, quality="90", one_daughter=True, sample=30
 
         yield group_name
 
-#------------------------------------------------------------------------------
-# classes:
-#
-
-
 class EventGallery(object):
 
     IMAGE_CLASS = ccore.RGBImage
     PROCESS_LABEL = False
-
-    @staticmethod
-    def read_image(name):
-        return ccore.readImageRGB(name)
-
-    def _format_name(self, pos, frame, obj_id, branch_id):
-        s = "P%s__T%05d__O%04d" % (pos, frame, obj_id)
-        if not branch_id is None:
-            s += '__B%02d' % branch_id
-        return s
 
     def __init__(self, oTracker, strPathIn, oP, strPathOut,
                  imageCompression="85",
@@ -172,26 +141,16 @@ class EventGallery(object):
                 x2Corr = imgXY.width-1 if x2 >= imgXY.width else x2
                 y2Corr = imgXY.height-1 if y2 >= imgXY.height else y2
 
-#                print x1, x1Corr
-#                print y1, y1Corr
-#                print x2, x2Corr
-#                print y2, y2Corr
                 imgSub = ccore.subImage(imgXY,
                                         ccore.Diff2D(x1Corr, y1Corr),
                                         ccore.Diff2D(x2Corr-x1Corr+1, y2Corr-y1Corr+1))
 
                 if (x1 < 0 or y1 < 0 or
                     x2 >= imgXY.width or y2 >= imgXY.height):
-#                    print " * ", x2-x1+1
-#                    print " * ", y2-y1+1
-#                    m = ccore.Diff2D(x1Corr-x1, y1Corr-y1)
-#                    print " * ", m.x, m.y
                     imgSub2 = self.IMAGE_CLASS(size[0], size[1])
                     ccore.copySubImage(imgSub, imgSub2, ccore.Diff2D(x1Corr-x1, y1Corr-y1))
                     imgSub = imgSub2
 
-#                print "w", imgSub.width, size[0], x2-x1+1
-#                print "h", imgSub.height, size[1], y2-y1+1
                 assert imgSub.width == size[0]
                 assert imgSub.width == x2-x1+1
                 assert imgSub.height == size[1]
@@ -204,12 +163,20 @@ class EventGallery(object):
                     imgSub = ccore.projectImage(lstImages, ccore.ProjectionType.MaxProjection)
 
                 strFilenameImage = os.path.join(strPathOutEvent, "P%s__T%05d%s" % (oP, iT, imageSuffix))
-                ccore.writeImage(imgSub,
-                                 strFilenameImage)
+                ccore.writeImage(imgSub, strFilenameImage)
 
         if oneFilePerTrack and os.path.isdir(strPathOut):
             self.convertToOneFilePerTrack(strPathOut, imageCompression)
 
+    @staticmethod
+    def read_image(name):
+        return ccore.readImageRGB(name)
+
+    def _format_name(self, pos, frame, obj_id, branch_id):
+        s = "P%s__T%05d__O%04d" % (pos, frame, obj_id)
+        if not branch_id is None:
+            s += '__B%02d' % branch_id
+        return s
 
     @classmethod
     def convertToOneFilePerTrack(cls, path_out, image_compression=''):
@@ -278,10 +245,6 @@ class EventGalleryLabel(EventGallery):
     def read_image(name):
         return ccore.readImageInt16(name)
 
-
-#-------------------------------------------------------------------------------
-# main:
-#
 if __name__ == "__main__":
     import sys
     logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
@@ -289,6 +252,3 @@ if __name__ == "__main__":
                           "/Volumes/share-gerlich-2-$/claudia/Analysis/001782/110709/_hmm/primary_primary_byoligo",
                           one_daughter=False,
                           sample=100)
-    for i in x:
-        break
-

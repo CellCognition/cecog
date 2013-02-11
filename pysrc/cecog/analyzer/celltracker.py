@@ -23,7 +23,7 @@ import os, \
        itertools, \
        re, \
        shutil
-from types import ListType, FloatType
+from types import ListType
 from csv import DictWriter
 
 #-------------------------------------------------------------------------------
@@ -33,13 +33,10 @@ from numpy import array, average
 
 from pdk.options import Option
 from pdk.optionmanagers import OptionManager
-#from pdk.containers.tableio import (importTable,
-#                                    exportTable)
-#from pdk.containers.tablefactories import newTable
 from pdk.ordereddict import OrderedDict
 from pdk.map import dict_append_list
 from pdk.fileutils import safe_mkdirs, collect_files
-from pdk.iterator import unique, flatten, all_equal
+from pdk.iterator import unique, flatten
 from pdk.attributemanagers import (get_slot_values,
                                    set_slot_values)
 
@@ -87,12 +84,6 @@ class DotWriter(object):
         self.oDotFile = file(strFilename, "w")
 
         self.oDotFile.write("digraph G {\n")
-#        tmp = "ratio=auto; size=\"160.0,260.0\"; " +\
-#              "ranksep=.25; nodesep=.5; " +\
-#              "fontname=\"Helvetica\"; rankdir=TB;\n"
-#        tmp = "ratio=auto; size=\"100.0,200.0\"; " +\
-#              "ranksep=.8; nodesep=.8; " +\
-#              "fontname=\"Helvetica\"; rankdir=TB;\n"
         tmp = "ranksep=.01; nodesep=1.5; " +\
               "fontname=\"Helvetica\"; rankdir=TB;\n"
         self.oDotFile.write(tmp)
@@ -226,15 +217,13 @@ class CellTracker(OptionManager):
                  '_dctTimePoints',
                  '_dctTimeChannels',
                  '_dctImageFilenames',
-                 'dctVisitorData',
-                 ]
+                 'dctVisitorData']
 
     def __init__(self, **dctOptions):
         super(CellTracker, self).__init__(**dctOptions)
         self.oMetaData = self.getOption('oMetaData')
         self.P = self.getOption('P')
         self.origP = self.getOption('origP')
-        #print "mooooo", self.iP
         self.strPathOut = self.getOption('strPathOut')
 
         self._dctTimeChannels = self.getOption('oTimeHolder')
@@ -243,7 +232,6 @@ class CellTracker(OptionManager):
         self._dctTimePoints = None
         self.dctVisitorData = None
         self.oLogger = logging.getLogger(self.__class__.__name__)
-
 
     def __getstate__(self):
         dctSlots = {}
@@ -328,9 +316,7 @@ class CellTracker(OptionManager):
 
         for iT in range(iStart, iEnd+1):
             if iT in self._dctTimeChannels:
-                #print "moo", iT, iStart, iEnd
                 oChannel = self._dctTimeChannels[iT][strChannelId]
-                #print iT, self._dctTimeChannels[iT]
                 self.lstFeatureNames = oChannel.lstFeatureNames
 
                 # does Region exist for that time-point?
@@ -352,11 +338,11 @@ class CellTracker(OptionManager):
         self._regionName = strRegionName
         self._oGraph = Graph()
         self._dctTimePoints = OrderedDict()
-            
+
     def trackAtTimepoint(self, iT):
         oChannel = self._dctTimeChannels[iT][self._channelId]
         self.lstFeatureNames = oChannel.lstFeatureNames
-        oObjectHolder = oChannel._dctRegions[self._regionName]
+        oObjectHolder = oChannel.get_region(self._regionName)
         for iObjId, oImageObject in oObjectHolder.iteritems():
             strNodeId = self.getNodeIdFromComponents(iT, iObjId)
             self._oGraph.add_node(strNodeId, oImageObject)
@@ -424,13 +410,13 @@ class CellTracker(OptionManager):
                                          (dist, strNodeIdC))
 
             # prevent split and merge for one node at the same time
-            
-            ### FIXME: Here we loose alomost all cell mappings, 
+
+            ### FIXME: Here we loose alomost all cell mappings,
             ### because if fMaxObjectDistance is big, we find for
             ### many cells splits and merges and there will never
-            ### be an one-to-one mapping => the bigger the radius, the less mappings 
+            ### be an one-to-one mapping => the bigger the radius, the less mappings
             ### which is counter intuitive
-             
+
             for id_c in dctMerges:
                 nodes = dctMerges[id_c]
                 if len(nodes) == 1:
@@ -568,10 +554,6 @@ class CellTracker(OptionManager):
     def forwardReachable(self, node_id, reachableD, edgeD, iMaxLevel=None, iLevel=0):
         oGraph = self._oGraph
         reachableD[node_id] = True
-        #print node_id
-        #print "     out:", self.out_arcs(node_id)
-        #print "      in:", self.in_arcs(node_id)
-
         if iMaxLevel is None or iLevel < iMaxLevel:
             for out_edge_id in oGraph.out_arcs(node_id):
                 next_node_id = oGraph.tail(out_edge_id)
@@ -659,39 +641,6 @@ class CellTracker(OptionManager):
 
     def clear(self, filter_area=None, filter_firstL=None):
 
-##         # find broken links
-##         broken_outL = []
-##         broken_inL = []
-##         time_pointL = self.node_timeD.keys()
-##         for time_point, node_idL in self.node_timeD.iteritems():
-##             for node_id in node_idL:
-##                 if (time_point != max(time_pointL) and
-##                     len(self.out_arcs(node_id)) == 0):
-##                     broken_outL.append((time_point, node_id))
-##                 if (time_point != min(time_pointL) and
-##                     len(self.in_arcs(node_id)) == 0):
-##                     broken_inL.append((time_point, node_id))
-
-##         # bridge the broken links (which are shorter than MAX_OBJECT_DISTANCE)
-##         for time_point_out, node_id_out in broken_outL:
-##             for time_point_in, node_id_in in broken_inL:
-##                 if (node_id_out != node_id_in and
-##                     time_point_out < time_point_in and
-##                     time_point_in-time_point_out <= self.MAX_LINK_BRIDGE_TIME):
-##                     obj_out = self.node_data(node_id_out)
-##                     obj_in = self.node_data(node_id_in)
-##                     dist = obj_in.distance(obj_out)
-##                     if dist < self.MAX_OBJECT_DISTANCE:
-##                         dataD = {'broken link': True}
-##                         self.add_edge(node_id_out, node_id_in, dataD)
-
-#        print "*** old graph id: %s, levels: %d, nodes %d\n" %\
-#                  (self,
-#                   len(self.node_timeD),
-#                   len(self.node_list())
-#                   )
-
-
         # remove nodes from first layer outside a certain area
         if not filter_area is None:
             for node_id in self.node_timeD[1][:]:
@@ -726,42 +675,16 @@ class CellTracker(OptionManager):
                 time_point, obj_id = self.get_items_from_node_id(node_id)
                 if node_id in self.node_timeD[time_point]:
                     self.node_timeD[time_point].remove(node_id)
-                #else:
-                #    print "moo", time_point, node_id
-
-#        print "moo2"
-#        print "*** new graph id: %s, levels: %d, nodes %d\n" %\
-#                  (self,
-#                   len(self.node_timeD),
-#                   len(self.node_list())
-#                   )
-
-##         # filter merges close to border
-##         for node_id in self.node_timeD[1]:
-##             self.forward_traversal(node_id, functor=self.functor_reachable)
-
-
-##                     # if center is MIN_DISTANCE_FROM_BORDER away
-##             if (self.time_point > 1 or
-##                 (s_obj.centerT[0] > self.MIN_DISTANCE_FROM_BORDER and
-##                  s_obj.centerT[1] > self.MIN_DISTANCE_FROM_BORDER and
-##                  s_obj.centerT[0] < min_x_from_border and
-##                  s_obj.centerT[1] < min_y_from_border)):
-
-
 
         # delete all nodes which disappear without being in apoptosis
-
-
         # fix merges for short shapeI phases (segmentation errors)
 
     def clearByObjects(self, iStart, lstObjIds, iMaxLevel=None):
         """
         remove all nodes from first timepoint which are not in the list
         """
-        #iStart, iEnd = self.getTimePoints()
+
         for iObjId in self._dctTimePoints[iStart][:]:
-            #s_obj = self.node_data(node_id)
             if not iObjId in lstObjIds:
                 self._dctTimePoints[iStart].remove(iObjId)
 
@@ -892,42 +815,26 @@ class PlotCellTracker(CellTracker):
         return dctBoundingBoxes
 
     def exportFullTracks(self):
-        strPathOut = os.path.join(self.strPathOut, 'full')
-        if clear_path:
-            shutil.rmtree(strPathOut, True)
-            safe_mkdirs(strPathOut)
+        raise NotImplementedError("Overwrite this function in derived classes")
 
-
+        # XXX
+        # strPathOut = os.path.join(self.strPathOut, 'full')
+        # if clear_path:
+        #     shutil.rmtree(strPathOut, True)
+        #     safe_mkdirs(strPathOut)
 
     def analyze(self, dctChannels, channelId=None, clear_path=False):
-        #print self.lstChromatinFeatureNames
-        #print self.lstSecondaryFeatureNames
-
         strPathOut = os.path.join(self.strPathOut, 'events')
+
         if clear_path:
             shutil.rmtree(strPathOut, True)
             safe_mkdirs(strPathOut)
 
         for strRootId, dctTrackResults in self.dctVisitorData.iteritems():
-
             self.oLogger.debug("* root %s, candidates %s" % (strRootId, dctTrackResults.keys()))
-
-#            if self.getOption("bExportRootGraph"):
-#                self.exportSubGraph(self._formatFilename("graph.dot", nodeId=strRootId, prefix="root_", subPath='_graphs'),
-#                                    strRootId,
-#                                    bRunDot=self.getOption("bRenderRootGraph"),
-#                                    channelId=channelId)
-
             for strStartId, dctEventData in dctTrackResults.iteritems():
 
                 if strStartId[0] != '_':
-
-    #                if self.getOption("bExportSubGraph"):
-    #                    self.exportSubGraph(self._formatFilename("graph.dot", strStartId, subPath='_graphs'),
-    #                                        strStartId,
-    #                                        iMaxLevel=dctEventData['maxLength'],
-    #                                        bRunDot=self.getOption("bRenderSubGraph"),
-    #                                        channelId=channelId)
 
                     if self.getOption("bExportTrackFeatures"):
                         for strChannelId, dctRegions in dctChannels.iteritems():
@@ -981,12 +888,13 @@ class PlotCellTracker(CellTracker):
 
                 if len(oRegion) > 0:
                     if lstFeatureNames is None:
-                        lstFeatureNames = oRegion.getFeatureNames()
+                        lstFeatureNames = oRegion.feature_names
 
                     if oTable is None:
                         tracking_features = ['center_x','center_y',
                                              'upperleft_x', 'upperleft_y',
                                              'lowerright_x', 'lowerright_y']
+
 
                         oTable = DictWriter(open(strFilename,'wb'), ['Frame', 'ObjectID'] +
                                           [self.FEATURE_FLAT_PATTERN % f for f in lstFeatureNames] +
@@ -998,7 +906,7 @@ class PlotCellTracker(CellTracker):
                     for iObjId, oObj in oRegion.iteritems():
                         dctData = {'Frame' : iT,
                                    'ObjectID' : iObjId}
-                        aFeatures = oRegion.getFeaturesByNames(iObjId, lstFeatureNames)
+                        aFeatures = oRegion.features_by_name(iObjId, lstFeatureNames)
                         for fFeature, strName in zip(aFeatures, lstFeatureNames):
                             dctData[self.FEATURE_FLAT_PATTERN % strName] = float(fFeature)
                         if self.getOption('bHasClassificationData'):
@@ -1019,8 +927,6 @@ class PlotCellTracker(CellTracker):
 
     def exportChannelData(self, dctEventData, strFilename, strChannelId, strRegionId, lstFeatureNames):
         bHasFeatures = False
-        #lstChildIds = None
-
         strEventId = dctEventData['eventId']
         iEventT, iObjId = self.getComponentsFromNodeId(strEventId)
 
@@ -1053,12 +959,7 @@ class PlotCellTracker(CellTracker):
 
             # FIXME
             if iT is None:
-                #print "no tracks found for event '%strEventId'" % strEventId
                 return
-#            elif lstChildIds is None:
-#                lstChildIds = [chr(65+i) for i in range(len(lstObjectIds))]
-#            else:
-#                assert len(lstChildIds) == len(lstObjectIds)
 
             oChannel = self._dctTimeChannels[iT][strChannelId]
             oRegion = oChannel.get_region(strRegionId)
@@ -1066,33 +967,20 @@ class PlotCellTracker(CellTracker):
             if not bHasFeatures:
                 bHasFeatures = True
                 if lstFeatureNames is None:
-                    lstFeatureNames = oRegion.getFeatureNames()
-                    #print "moo123", lstFeatureNames
-
+                    lstFeatureNames = oRegion.feature_names
                 lstHeaderNames += [self.OBJID_COLUMN_PATTERN]
 
                 if self.getOption('bHasClassificationData'):
                     lstHeaderNames += [self.CLASS_COLUMN_PATTERN % x
                                        for x in ['name', 'label', 'probability']]
-                    #lstFeatureTypes += ['c', 'i', 'c'] * len(lstChildIds)
-
                 lstHeaderNames += [self.FEATURE_COLUMN_PATTERN % strFeatureName
                                    for strFeatureName in lstFeatureNames]
-                #lstFeatureTypes += ['f'] * (len(lstFeatureNames) * len(lstChildIds))
 
                 tracking_features = ['center_x','center_y',
                                      'upperleft_x', 'upperleft_y',
                                      'lowerright_x', 'lowerright_y']
                 lstHeaderNames += [self.TRACKING_COLUMN_PATTERN % strFeatureName
                                    for strFeatureName in tracking_features]
-                #lstFeatureTypes += ['i'] * (len(tracking_features) * len(lstChildIds))
-
-#                for strColumnName, strTypeCode in zip(lstFeatureColumns,
-#                                                      lstFeatureTypes):
-#                    oTable.appendColumn(strColumnName, typeCode=strTypeCode)
-
-                #print lstFeatureColumns
-                #print lstFeatureTypes
 
             coordinate = Coordinate(position=self.origP, time=iT)
             dctData = {'Frame' : iT,
@@ -1102,7 +990,6 @@ class PlotCellTracker(CellTracker):
             if bHasSplitId:
                 dctData['isSplit'] = 1 if iT == iSplitT else 0
 
-            print iT, strChannelId, strRegionId, lstObjectIds
             #for iIdx, iObjId in enumerate(lstObjectIds):
             iObjId = lstObjectIds[0]
             if iObjId in oRegion:
@@ -1118,7 +1005,7 @@ class PlotCellTracker(CellTracker):
                         ','.join(['%d:%.5f' % (int(x),y) for x,y in oObj.dctProb.iteritems()])
 
                 # object features
-                aFeatures = oRegion.getFeaturesByNames(iObjId, lstFeatureNames)
+                aFeatures = oRegion.features_by_name(iObjId, lstFeatureNames)
                 for fFeature, strFeatureName in zip(aFeatures, lstFeatureNames):
                     dctData[self.FEATURE_COLUMN_PATTERN % strFeatureName] = fFeature
 
@@ -1137,6 +1024,7 @@ class PlotCellTracker(CellTracker):
             table.append(dctData)
 
         if len(table) > 0:
+            #print "exportChannelData, filenname: ", strFilename
             write_table(strFilename, table, column_names=lstHeaderNames)
 
 
@@ -1162,94 +1050,6 @@ class PlotCellTracker(CellTracker):
             if strKey not in dctEdges:
                 dctEdges[strKey] = True
                 self._forwardVisitor(strTailId, dctResults, dctEdges, iLevel=iLevel+1, strStartId=strStartId)
-
-#    def analyze(self):
-#
-#        from rpy import r
-#
-#        oPlotter = RPlotter(bUseCairo=self.getOption("bPlotterUseCairo"))
-#        for strRootId, dctTrackResults in self.dctVisitorData.iteritems():
-#
-#            if self.getOption("bExportRootGraph"):
-#                self.exportSubGraph(self._formatFilename("graph.dot", strRootId),
-#                                    strRootId,
-#                                    bRunDot=self.getOption("bRenderRootGraph"))
-#
-#            if 'chromatin' in dctTrackResults:
-#                aChromatin = array(dctTrackResults['chromatin'])
-#
-#                if self.getOption("bChromatinCreateTrackFiles"):
-#                    oTable = newTable(range(len(self.getOption("lstChromatinFeatureNames"))),
-#                                      data=aChromatin,
-#                                      columnLabels=self.getOption("lstChromatinFeatureNames"))
-#                    exportTable(oTable,
-#                                self._formatFilename("chromatin.dat", strRootId),
-#                                fieldDelimiter="\t",
-#                                writeColumnKeys=True,
-#                                writeRowLabels=False,
-#                                stringDelimiter="",
-#                                useLabelsAsKeys=True)
-#
-#                if self.getOption("bChromatinCreateTrackImages"):
-#                    oPlotter.figure(strFilename=self._formatFilename("chromatin.png", strRootId), width=900, height=600)
-#                    aChromatin2 = (aChromatin - min(aChromatin,0)) / (max(aChromatin,0) - min(aChromatin,0))
-#                    oPlotter.par(mar=(2.5, 0.5, 0.5, 5))
-#                    oPlotter.image(range(len(aChromatin2)),
-#                                   range(len(aChromatin2[0])),
-#                                   aChromatin2, axes=False,
-#                                   ylab="features", xlab="frames",
-#                                   zlim=(0,1), col=r.heat_colors(100))
-#                    oPlotter.box()
-#                    oPlotter.axis(1, range(len(aChromatin2)),
-#                                  labels=map(str, range(1,len(aChromatin2)+1)),
-#                                  las=1, cex=0.9, tick=1)
-#                    oPlotter.axis(4, range(len(aChromatin2[0])),
-#                                  labels=self.getOption("lstChromatinFeatureNames"),
-#                                  las=2, tick=1, cex=0.9)
-#                    oPlotter.close()
-#
-#
-#            if 'secondary' in dctTrackResults:
-#                aSecondary = array(dctTrackResults['secondary'])
-#
-#                if self.getOption("bSecondaryCreateTrackFiles"):
-#                    oTable = newTable(range(len(self.getOption("lstSecondaryFeatureNames"))),
-#                                      data=aSecondary,
-#                                      columnLabels=self.getOption("lstSecondaryFeatureNames"))
-#                    exportTable(oTable,
-#                                self._formatFilename("secondary.dat", strRootId),
-#                                fieldDelimiter="\t",
-#                                writeColumnKeys=True,
-#                                writeRowLabels=False,
-#                                stringDelimiter="",
-#                                useLabelsAsKeys=True)
-#
-#                if self.getOption("bSecondaryCreateTrackImages"):
-#                    dctData = {}
-#                    for iIdx, strFeatureName in enumerate(self.getOption("lstSecondaryFeatureNames")):
-#                        dctData[strFeatureName] = aSecondary[:,iIdx]
-#
-#                    tplYRange = r.range(dctData['second_in_avg'],
-#                                        dctData['second_out_avg'])
-#
-#                    if 'nan' not in [str(x).lower() for x in tplYRange]:
-#
-#                        oPlotter.figure(strTitle="Timeseries",
-#                                        strFilename=self._formatFilename("secondary.png", strRootId))
-#
-#                        r.plot(dctData['second_in_avg'], type='b', col='red', lwd=2,
-#                               xlab='Frames',
-#                               ylab='Secondary Intensity',
-#                               ylim=tplYRange)
-#                        r.grid()
-#                        r.lines(dctData['second_out_avg'], type='b', col='green', lwd=2,
-#                                ylim=tplYRange)
-#                        r.legend(1, tplYRange[0],
-#                                 legend=('in avg', 'out avg'),
-#                                 fill=('red', 'green'),
-#                                 xjust=0, yjust=0)
-#
-#                        oPlotter.close()
 
 
     def _formatFilename(self, strSuffix=None, nodeId=None, prefix=None, subPath=None, branchId=None, ext='.txt'):
@@ -1333,11 +1133,6 @@ class SplitCellTracker(PlotCellTracker):
         if oGraph.out_degree(strNodeId) == 2 and oGraph.in_degree(strNodeId) == 1: # and oObject.iLabel in [2,3,4,5,6,7]:
             bCandidateOk = True
             self.oLogger.debug("%s - found n=2" % strNodeId)
-#            for strOutEdgeId in self.out_arcs(strNodeId):
-#                strOutTailId = self.tail(strOutEdgeId)
-#                oTailObject = self.node_data(strOutTailId)
-#                #if oTailObject.iLabel not in [6,7]:
-#                #    bCandidateOk = False
 
             if bCandidateOk:
                 lstBackwardNodeIds = []
@@ -1359,11 +1154,10 @@ class SplitCellTracker(PlotCellTracker):
 
                 lstTrackA = lstBackwardNodeIds + lstForwardNodeIds[0]
                 lstTrackB = lstBackwardNodeIds + lstForwardNodeIds[1]
-                #assert len(lstTrackA) == len(lstTrackB)
                 dctResults[strStartId] = {'eventId'  : strNodeId,
                                           'maxLength': len(lstTrackA),
-                                          'tracks'   : [lstTrackA, lstTrackB],
-                                          }
+                                          'tracks'   : [lstTrackA, lstTrackB]}
+
                 self.oLogger.debug("%s - valid candidate" % strStartId)
 
         self.oLogger.debug("outdegree=%d, outarcs=%s, level=%d" %\
@@ -1445,17 +1239,6 @@ class NoSplitCellTrackerExt(PlotCellTracker):
                                           }
                 self.oLogger.debug("%s - valid candidate" % strStartId)
 
-#        for strOutEdgeId in oGraph.out_arcs(strNodeId):
-#            strTailId = oGraph.tail(strOutEdgeId)
-#
-#            #print " "*iLevel, strTailId
-#
-#            # ignore merging nodes
-#            strKey = "%s--%s" % (strNodeId, strTailId)
-#            if strKey not in dctEdges:
-#                dctEdges[strKey] = True
-#                self._forwardVisitor(strTailId, dctResults, dctEdges, iLevel=iLevel+1)
-
     def _forwardCheck(self, strNodeId, lstNodeIds, iLevel=1):
         oGraph = self._oGraph
         lstNodeIds.append(strNodeId)
@@ -1525,18 +1308,10 @@ class ClassificationCellTracker(SplitCellTracker):
             (not self.getOption('bForwardRangeMin') and iLevel >= self.getOption('iForwardRange'))):
             return True
         if oGraph.in_degree(strNodeId) > self.getOption('iMaxInDegree'):
-            #logging.debug("     mooo in")
             return False
         # check for split
         if oGraph.out_degree(strNodeId) > self.getOption('iMaxOutDegree') or oGraph.out_degree(strNodeId) == 0:
-            #logging.debug("     mooo out")
             return False
-#        elif oGraph.out_degree(strNodeId) == 2:
-#            if strFoundSplitId is None:
-#                strFoundSplitId = strNodeId
-#            else:
-#                logging.debug("     mooo split")
-#                return False
 
         oObject = oGraph.node_data(strNodeId)
         if iLevel <= self.getOption('iForwardCheck') and not oObject.iLabel in self.getOption('lstForwardLabels'):
@@ -1633,12 +1408,9 @@ class ClassificationCellTracker(SplitCellTracker):
                     else:
                         lstNodeIds = lstBackwardNodeIds + lstForwardNodeIds
                         dctResults[strStartId].update({'maxLength': track_length,
-                                                       'tracks'   : [lstNodeIds],
-                                                       })
-                    #print dctResults[strStartId]
+                                                       'tracks'   : [lstNodeIds]})
                     self.oLogger.debug("  %s - valid candidate" % strStartId)
 
-        #self.oLogger.debug("moo %s" % self.out_arcs(strNodeId))
         for strOutEdgeId in oGraph.out_arcs(strNodeId):
             strTailId = oGraph.tail(strOutEdgeId)
             if not strTailId in dctVisitedNodes:
@@ -1648,8 +1420,7 @@ class ClassificationCellTracker(SplitCellTracker):
 
 class ClassificationCellTracker2(ClassificationCellTracker):
 
-    OPTIONS = {"bAllowOneDaughterCell"   :   Option(True),
-               }
+    OPTIONS = {"bAllowOneDaughterCell":   Option(True)}
 
     def _forwardVisitor(self, strNodeId, dctResults, dctVisitedNodes, iLevel=0):
         oGraph = self._oGraph
@@ -1751,27 +1522,30 @@ class ClassificationCellTracker2(ClassificationCellTracker):
             branch_id = items[2]
             return frame, obj_id, branch_id
 
-    def exportFullTracks(self, sep='\t'):
+    def map_feature_names(self, feature_names):
+        """Return a hash table to map feature names to new names."""
 
+        name_table = OrderedDict()
+        name_table['mean'] = 'n2_avg'
+        name_table['sd'] = 'n2_stddev'
+        name_table['size'] = 'roisize'
+
+        # prominent place int the table for certain features
+        flkp = OrderedDict()
+        for nname, name in name_table.iteritems():
+            if name in feature_names:
+                flkp[nname] = name
+        for fn in feature_names:
+            flkp[self.FEATURE_FLAT_PATTERN %fn] = fn
+        return flkp
+
+    def exportFullTracks(self, sep='\t'):
         strPathOut = os.path.join(self.strPathOut, 'full')
         shutil.rmtree(strPathOut, True)
         safe_mkdirs(strPathOut)
 
-        feature_lookup = OrderedDict()
-        feature_lookup['mean'] = 'n2_avg'
-        feature_lookup['sd'] = 'n2_stddev'
-        feature_lookup['size'] = 'roisize'
-        
-        lstFeatureNames = sorted(self.lstFeatureNames)
-        
-        for name, real_name in zip([self.FEATURE_FLAT_PATTERN % f for f in lstFeatureNames],
-                                   lstFeatureNames):
-            feature_lookup[name] = real_name
-
         for start_id, data in self.dctVisitorData.iteritems():
-
             for idx, track in enumerate(data['_full']):
-
                 has_header = False
                 line1 = []
                 line2 = []
@@ -1790,36 +1564,24 @@ class ClassificationCellTracker2(ClassificationCellTracker):
 
                     for channel in self._dctTimeChannels[frame].values():
                         for region_id in channel.region_names():
-
                             region = channel.get_region(region_id)
-
                             if obj_id in region:
-                                #FIXME:
-                                feature_lookup2 = feature_lookup.copy()
-                                for k,v in feature_lookup2.iteritems():
-                                    if not region.hasFeatureName(v):
-                                        del feature_lookup2[k]
-
+                                flkp = self.map_feature_names(region.feature_names)
                                 if not has_header:
                                     keys = ['classLabel', 'className']
                                     if channel.NAME == 'Primary':
                                         keys += ['centerX', 'centerY']
-                                    keys += feature_lookup2.keys()
+                                    keys += flkp.keys()
                                     line1 += [channel.NAME.upper()] * len(keys)
-                                    line2 += [region_id] * len(keys)
+                                    line2 += [str(region_id)] * len(keys)
                                     line3 += keys
-
                                 obj = region[obj_id]
-                                #print feature_lookup2.keys(), feature_lookup2.values()
-                                #fn = region.getFeatureNames()
-                                #print zip(fn, obj.aFeatures)
-                                features = region.getFeaturesByNames(obj_id, feature_lookup2.values())
+                                features = region.features_by_name(obj_id, flkp.values())
                                 values = [x if not x is None else '' for x in [obj.iLabel, obj.strClassName]]
                                 if channel.NAME == 'Primary':
                                     values += [obj.oCenterAbs[0], obj.oCenterAbs[1]]
                                 values += list(features)
                                 items.extend(values)
-
 
                     if not has_header:
                         has_header = True
@@ -1832,7 +1594,4 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                         f.write('%s\n' % sep.join(line3))
 
                     f.write('%s\n' % sep.join(map(str, prefix + items)))
-
                 f.close()
-
-

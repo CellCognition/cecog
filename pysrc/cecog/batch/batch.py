@@ -14,59 +14,27 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = []
+import os
+import sys
+import logging
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-import sys, \
-       os, \
-       logging, \
-       types
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 from cecog import VERSION
-from cecog.traits.config import ConfigSettings
+from cecog.traits.settings import ConfigSettings
 from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
 from cecog.analyzer.core import AnalyzerCore
 from cecog.io.imagecontainer import ImageContainer
-from cecog.gui.analyzer import link_hdf5_files
+from cecog.threads.link_hdf import link_hdf5_files
 
-#-------------------------------------------------------------------------------
-# constants:
-#
 ENV_INDEX_SGE = 'SGE_TASK_ID'
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
-
-
-#-------------------------------------------------------------------------------
-# main:
-#
 
 if __name__ ==  "__main__":
     os.umask(0o000)
     from optparse import OptionParser, OptionGroup
 
-    description =\
-'''
-%prog - A headless (GUI-free) batch analyzer for CellCognition.
-'''
+    description = ("%prog - A headless (GUI-free) batch "
+                   "analyzer for CellCognition.")
 
     parser = OptionParser(usage="usage: %prog [options]",
                           description=description,
@@ -114,7 +82,7 @@ if __name__ ==  "__main__":
     formatter = logging.Formatter('%(asctime)s %(levelname)-6s %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     logger.info("*************************************************" + '*'*len(VERSION))
     logger.info("*** CellCognition - Batch Analyzer - Version %s ***" % VERSION)
@@ -219,7 +187,6 @@ if __name__ ==  "__main__":
                           'rendering_contours_discwrite']:
             settings.set(SECTION_NAME_OUTPUT, rendering, create_images)
 
-
     # group positions by plate
     plates = {}
     for item in positions:
@@ -248,13 +215,11 @@ if __name__ ==  "__main__":
         logger.info("Launching analyzer for plate '%s' with positions %s" % (plate_id, plates[plate_id]))
         # initialize and run the analyzer
         analyzer = AnalyzerCore(plate_id, settings, imagecontainer)
-        result = analyzer.processPositions()
-        post_hdf5_link_list.append(result['post_hdf5_link_list'])       
+        hdf_links = analyzer.processPositions()
+        post_hdf5_link_list.append(hdf_links)
 
     if settings.get('Output', 'hdf5_create_file') and settings.get('Output', 'hdf5_merge_positions'):
         if len(post_hdf5_link_list) > 0:
             post_hdf5_link_list = reduce(lambda x,y: x + y, post_hdf5_link_list)
             link_hdf5_files(sorted(post_hdf5_link_list))
     print 'BATCHPROCESSING DONE!'
-
-

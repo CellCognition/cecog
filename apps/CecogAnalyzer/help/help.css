@@ -43,12 +43,14 @@ p.mtext {
   margin-top: 0;
   margin-bottom: 0;
   margin-left: 20;
+  text-align: justify;
 }
 
 p.text {
   margin-top: 0;
   margin-bottom: 0;
   margin-left: 40;
+  text-align: justify;
 }
 
 h4.sub {
@@ -68,6 +70,7 @@ p.subtext {
   margin-top: 0;
   margin-bottom: 0;
   margin-left: 60;
+  text-align: justify;
 }
 
 div.param {

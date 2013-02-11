@@ -15,8 +15,6 @@ __revision__ = '$Rev$'
 __source__ = '$URL$'
 
 import os
-import sys
-
 from cecog.config import FONT12_FILENAME
 
 # import all wrapped C++ classes and functions and make them part of this package
@@ -26,3 +24,4 @@ from _cecog import *
 # (must be a realpath for C++)
 Config.strFontFilepath = os.path.realpath(FONT12_FILENAME)
 #assert os.path.isfile(Config.strFontFilepath)
+del os

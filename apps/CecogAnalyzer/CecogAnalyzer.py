@@ -17,16 +17,15 @@ __source__ = '$URL$'
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
-import sys, \
-       os, \
-       logging, \
-       time, \
-       gc
-import cPickle as pickle
+import gc
+import os
+import sys
+import logging
 from multiprocessing import freeze_support
 
+# use agg as long no Figure canvas will draw any qwidget
 import matplotlib as mpl
-mpl.use('QT4Agg')
+mpl.use('Agg')
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -41,45 +40,47 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
+try:
+    import cecog
+except ImportError:
+    sys.path.append(os.path.join(os.pardir, os.pardir, "pysrc"))
+
 from pdk.ordereddict import OrderedDict
 
 import numpy
-#import vigra
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
+
 from cecog import VERSION, APPNAME
-from cecog.analyzer import (R_LIBRARIES,
-                            TRACKING_DURATION_UNITS_TIMELAPSE,
-                            TRACKING_DURATION_UNITS_DEFAULT,
-                            )
+from cecog.analyzer import R_LIBRARIES
+from cecog.analyzer import TRACKING_DURATION_UNITS_TIMELAPSE
+from cecog.analyzer import TRACKING_DURATION_UNITS_DEFAULT
+
 from cecog.io.imagecontainer import ImageContainer
-from cecog.config import (ANALYZER_CONFIG,
-                          APPLICATION_SUPPORT_PATH,
-                          init_application_support_path,
-                          )
+from cecog.config import ANALYZER_CONFIG
+from cecog.config import APPLICATION_SUPPORT_PATH
+from cecog.config import init_application_support_path
+
 from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.gui.config import GuiConfigSettings
 
 # Frames
-from cecog.gui.analyzer.general import ( GeneralFrame, SECTION_NAME_GENERAL )
-from cecog.gui.analyzer.objectdetection import ( ObjectDetectionFrame,
-                                                 SECTION_NAME_OBJECTDETECTION )
+from cecog.gui.analyzer.general import GeneralFrame, SECTION_NAME_GENERAL
+from cecog.gui.analyzer.objectdetection import ObjectDetectionFrame
+from cecog.gui.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
 from cecog.gui.analyzer.featureextraction import FeatureExtractionFrame
 from cecog.gui.analyzer.postprocessing import PostProcessingFrame
 from cecog.gui.analyzer.classification import ClassificationFrame
-from cecog.gui.analyzer.tracking import (TrackingFrame, SECTION_NAME_TRACKING )
+from cecog.gui.analyzer.tracking import TrackingFrame, SECTION_NAME_TRACKING
 from cecog.gui.analyzer.errorcorrection import ErrorCorrectionFrame
 from cecog.gui.analyzer.output import OutputFrame
 from cecog.gui.analyzer.processing import ProcessingFrame
 from cecog.gui.analyzer.cluster import ClusterFrame
 
 from cecog.gui.browser import Browser
-from cecog.gui.log import (GuiLogHandler, LogWindow )
-from cecog.traits.settings import (convert_package_path,
-                             set_package_path,
-                             get_package_path,
-                             )
+from cecog.gui.log import GuiLogHandler, LogWindow
+from cecog.traits.settings import convert_package_path
+from cecog.traits.settings import set_package_path
+from cecog.traits.settings import get_package_path
+
 
 from cecog.gui.util import (status,
                             show_html,
@@ -88,22 +89,11 @@ from cecog.gui.util import (status,
                             exception,
                             information,
                             warning,
-                            waitingProgressDialog,
-                            )
+                            waitingProgressDialog)
 
 import resource
 
-#-------------------------------------------------------------------------------
-# constants:
-#
 
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 class AnalyzerMainWindow(QMainWindow):
 
     TITLE = '-'.join((APPNAME, VERSION))
@@ -114,8 +104,6 @@ class AnalyzerMainWindow(QMainWindow):
     def __init__(self, *args, **kw):
         super(AnalyzerMainWindow, self).__init__(*args, **kw)
         qApp._main_window = self
-
-        #self.setStyleSheet("QFrame {border: 1px solid #8f8f91;}")
 
         self._is_initialized = False
         self._debug = False
@@ -182,13 +170,9 @@ class AnalyzerMainWindow(QMainWindow):
 
         self._selection = QListWidget(self.centralWidget())
         self._selection.setViewMode(QListView.IconMode)
-        #self._selection.setUniformItemSizes(True)
         self._selection.setIconSize(QSize(35, 35))
         self._selection.setGridSize(QSize(140, 60))
-        #self._selection.setWrapping(False)
         self._selection.setMovement(QListView.Static)
-        #self._selection.setFlow(QListView.TopToBottom)
-        #self._selection.setSpacing(12)
         self._selection.setMaximumWidth(self._selection.gridSize().width() + 5)
         self._selection.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._selection.setSizePolicy(QSizePolicy(QSizePolicy.Fixed,
@@ -231,6 +215,7 @@ class AnalyzerMainWindow(QMainWindow):
         layout.addWidget(self._selection, 0, 0)
         layout.addWidget(w_logo, 1, 0, Qt.AlignBottom | Qt.AlignHCenter)
         layout.addWidget(self._pages, 0, 1, 2, 1)
+        layout.setContentsMargins(1, 1, 1, 1)
 
         qApp._log_handler = GuiLogHandler(self)
         qApp._log_window = LogWindow(qApp._log_handler)
@@ -246,7 +231,7 @@ class AnalyzerMainWindow(QMainWindow):
         qApp._image_dialog = None
         qApp._graphics = None
 
-        self.setGeometry(0, 0, 1100, 750)
+        self.setGeometry(0, 0, 1200, 700)
         self.setMinimumSize(QSize(700, 600))
         self.show()
         self.center()
@@ -464,9 +449,8 @@ class AnalyzerMainWindow(QMainWindow):
             status('Settings successfully saved.')
 
     def _on_about(self):
-        print "about"
         dialog = QDialog(self)
-        #dialog.setBackgroundRole(QPalette.Dark)
+        dialog.setBackgroundRole(QPalette.Dark)
         dialog.setStyleSheet('background: #000000; '
                              'background-image: url(:cecog_about)')
         dialog.setWindowTitle('About CecogAnalyzer')
@@ -730,20 +714,17 @@ class AnalyzerMainWindow(QMainWindow):
                 settings_filename = convert_package_path(self._settings_filename)
                 if os.path.isfile(settings_filename):
                     dir = settings_filename
-            filename = QFileDialog.getOpenFileName(self, 'Open config file', dir, ';;'.join(self.NAME_FILTERS))
+            filename = QFileDialog.getOpenFileName(self, 'Open config file',
+                                                   dir, ';;'.join(self.NAME_FILTERS))
             if filename:
-                old_conf_file = False
-                if not self._settings.has_option('General', 'version') or \
-                    self._settings.get('General', 'version') < VERSION:
-                    information(self, 'Selected config file has an old version <= 1.3.0. '
-                                      'The current version is %s. The config file will be updated...' % VERSION)
-                    old_conf_file = True
-
                 self._read_settings(filename)
-                if old_conf_file:
-                    information(self, "Config file has been updated to %s and all settings have been converted" % self._settings.get('General', 'version'))
+                if self._settings.was_old_file_format():
+                    information(self, ('Selected config file had an old '
+                                       'version <= 1.3.0. The current version is %s. '
+                                       'The config file was  be updated...' % VERSION))
                 else:
-                    information(self, "Config file version %s found" % self._settings.get('General', 'version'))
+                    information(self, "Config file version %s found"  \
+                                %self._settings.get('General', 'version'))
                 self._clear_browser()
                 self.set_modules_active(state=False)
 
@@ -825,15 +806,6 @@ if __name__ == "__main__":
                         help='Settings file.')
     args, _ = parser.parse_known_args()
 
-#    log_path = 'log'
-#    safe_mkdirs(log_path)
-#    sys.stdout = \
-#        file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
-#    sys.stderr = \
-#        file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
-
-
-    #sys.excepthook=handle_exception
 
     working_path = os.path.abspath(os.path.dirname(sys.argv[0]))
     program_name = os.path.basename(sys.argv[0])
@@ -842,18 +814,12 @@ if __name__ == "__main__":
     safe_mkdirs(log_path)
 
     is_app = hasattr(sys, 'frozen')
-    #is_app = True
     if is_app:
         package_path = os.path.join(APPLICATION_SUPPORT_PATH, 'battery_package')
         set_package_path(package_path)
-#        sys.stdout = \
-#            file(os.path.join(log_path, 'cecog_analyzer_stdout.log'), 'w')
-#        sys.stderr = \
-#            file(os.path.join(log_path, 'cecog_analyzer_stderr.log'), 'w')
 
     app.setWindowIcon(QIcon(':cecog_analyzer_icon'))
-#    time.sleep(.2)
-#    app.processEvents()
+    app.setApplicationName('CecogAnalyzer')
     main = AnalyzerMainWindow()
     main.raise_()
 
@@ -861,8 +827,6 @@ if __name__ == "__main__":
         filename = args.settings
     else:
         filename = os.path.join(get_package_path(), 'Settings/demo_settings.conf')
-    #filename = os.path.join(get_package_path(), 'Settings/demo_settings.conf')
-
 
     if os.path.isfile(filename):
         main._read_settings(filename)

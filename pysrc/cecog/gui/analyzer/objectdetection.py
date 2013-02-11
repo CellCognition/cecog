@@ -30,9 +30,8 @@ from PyQt4.Qt import *
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog.gui.analyzer import (BaseProcessorFrame,
-                                AnalzyerThread,
-                                )
+from cecog.gui.analyzer import BaseProcessorFrame
+from cecog.threads.analyzer import AnalyzerThread
 from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
 from cecog.plugin.segmentation import (PRIMARY_SEGMENTATION_MANAGER,
                                        SECONDARY_SEGMENTATION_MANAGER,
@@ -63,7 +62,7 @@ class ObjectDetectionFrame(BaseProcessorFrame):
         super(ObjectDetectionFrame, self).__init__(settings, parent)
 
         self.register_control_button('detect',
-                                     AnalzyerThread,
+                                     AnalyzerThread,
                                      ('Detect %s objects', 'Stop %s detection'))
 
         self.set_tab_name('Primary Channel')
@@ -147,10 +146,18 @@ class ObjectDetectionFrame(BaseProcessorFrame):
 
         settings.set('Output', 'events_export_gallery_images', False)
         settings.set('Output', 'hdf5_create_file', False)
+        settings.set('Output', 'export_object_counts', False)
+        settings.set('Output', 'export_file_names', False)
+        settings.set('Output', 'export_object_details', False)
+        settings.set('Output', 'export_tracking_as_dot', False)
+        settings.set('Output', 'export_track_data', False)
+
         show_ids = settings.get('Output', 'rendering_contours_showids')
 
 
         current_tab = self._tab.current_index
+        # turn of merged channel
+        settings.set('Processing', 'merged_processchannel', False)
         if current_tab == 0:
             settings.set('Processing', 'secondary_processchannel', False)
             settings.set('Processing', 'tertiary_processchannel', False)
@@ -165,10 +172,13 @@ class ObjectDetectionFrame(BaseProcessorFrame):
             prefix = 'tertiary'
 
         colors = REGION_INFO.colors
-        settings.set('General', 'rendering', dict([('%s_contours_%s' % (prefix, x),
-                                                    {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
-                                                                           'contours': [(x, colors[x] , 1, show_ids)]
-                                                    }})
-                                                  for x in REGION_INFO.names[prefix]]))
+        rdn = dict([('%s_contours_%s' % (prefix, x),
+                     {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
+                                            'contours': [(x, colors[x] , 1, show_ids)]
+                                            }
+                      }
+                     ) for x in REGION_INFO.names[prefix]])
+
+        settings.set('General', 'rendering', rdn)
 
         return settings

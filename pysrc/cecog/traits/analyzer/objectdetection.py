@@ -85,10 +85,15 @@ class SectionObjectdetection(_Section):
         ('primary_zslice_projection_end',
             IntTrait(1, 0, 1000, label='End')),
         ('primary_zslice_projection_step',
-            IntTrait(1, 1, 1000, label='Step')),
-       ]),
-
-      ] +\
+         IntTrait(1, 1, 1000, label='Step')),
+        # these two options are nopes, just to have no
+        # special casing in channel classes
+        ('primary_channelregistration_x',
+         IntTrait(0, -99999, 99999, label='Shift X')),
+        ('primary_channelregistration_y',
+         IntTrait(0, -99999, 99999, label='Shift Y')),
+        ]),
+      ] + \
       unlist(
       [[('%s_image' % prefix,
        [('%s_channelid' % prefix,
@@ -126,15 +131,15 @@ class SectionObjectdetection(_Section):
       ('%s_registration' % prefix,
        [('%s_channelregistration_x' % prefix,
             IntTrait(0, -99999, 99999, label='Shift X')),
-        ('%s_channelRegistration_y' % prefix,
+        ('%s_channelregistration_y' % prefix,
             IntTrait(0, -99999, 99999, label='Shift Y')),
        ]),
 
        ]
        for name, prefix in [('Secondary', 'secondary'),
                             ('Tertiary', 'tertiary'),
+                            # moste merged channel options are nopes
+                            # to avoid special casing
+                            ('Merged', 'merged')
                             ]]
-      ) + \
-      [('merged_image', [('merged_channelid',
-                          SelectionTrait2(None, [], label='Merged channel ID'))])
-       ]
+      )

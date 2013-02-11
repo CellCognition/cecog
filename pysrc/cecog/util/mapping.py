@@ -14,29 +14,11 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = []
+__all__ = ["map_path_to_os"]
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
 import os
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 from cecog.util.util import resolve_os_name
 
-#-------------------------------------------------------------------------------
-# constants:
-#
-
-#-------------------------------------------------------------------------------
-# functions:
-#
 def map_path_to_os(path, path_mappings, target_os=None):
     path = os.path.normpath(path)
     path_mapped = None
@@ -54,13 +36,3 @@ def map_path_to_os(path, path_mappings, target_os=None):
         if found:
             break
     return path_mapped
-
-#-------------------------------------------------------------------------------
-# classes:
-#
-
-
-#-------------------------------------------------------------------------------
-# main:
-#
-

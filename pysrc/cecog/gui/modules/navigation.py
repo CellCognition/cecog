@@ -154,6 +154,7 @@ class NavigationModule(Module):
         table.clearContents()
 
         column_names = ['Frame']
+
         if meta_data.has_timestamp_info:
             column_names += ['rel. t (min)', 'abs. t (GMT)']
         table.setColumnCount(len(column_names))
@@ -253,6 +254,7 @@ class NavigationModule(Module):
     def initialize(self):
         self.coordinate_changed.connect(self.browser.on_coordinate_changed)
         coordinate = self.browser.get_coordinate()
+
         meta_data = self._imagecontainer.get_meta_data()
         self._update_position_table(meta_data)
         self._update_info_frame(meta_data)

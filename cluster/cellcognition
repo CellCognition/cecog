@@ -1,0 +1,23 @@
+# Defaults for cecog-gateway
+# sourced by /etc/init.d/cecog-gateway
+# installed at /etc/default/cellcognition by the maintainer scripts
+#
+# Gateway setup for the cellcognition cluster environment
+
+CECOG_GATEWAY_HOME=/clusterfs/gerlich/gateway
+LOG_DIR=/var/log/cecog/
+LOGFILE=$LOG_DIR/gateway.log
+
+C_HOST=albert
+C_PORT=9999
+# u=rwx,g=rwx,o=r
+C_UMASK=002
+C_USER=cecog
+C_GROUP=Gerlich.GRP
+
+PYTHON_BIN="/sw/lenny/arch/x86_64/Python-2.7.2/bin/python"
+GATEWAY_PY="/clusterfs/gerlich/cecog_versions/1.4.0/cluster/gateway.py"
+CMD="$PYTHON_BIN $GATEWAY_PY"
+GATEWAYOPTS="--host=$C_HOST --port=$C_PORT >$LOGFILE 2>$LOGFILE"
+
+PIDFILE=${LOG_DIR}/gateway.pid

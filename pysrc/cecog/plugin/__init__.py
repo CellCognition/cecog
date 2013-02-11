@@ -9,14 +9,12 @@
                  See trunk/AUTHORS.txt for author contributions.
 """
 
-__all__ = ['PluginManager',
-           '_Plugin']
+__all__ = ['PluginManager', '_Plugin']
 
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
-import os, \
-       logging
+import os, logging
 from functools import wraps
 
 #-------------------------------------------------------------------------------
@@ -44,8 +42,9 @@ from cecog.gui.guitraits import SelectionTrait2
 #
 class stopwatch(object):
     """
-    Decorator wrapping methods (e.g. of class _Plugin) by measuring its execution time and reporting to a logger.
-    The instance requires a 'name' attribute, e.g. the name of the current plugin instance
+    Decorator wrapping methods (e.g. of class _Plugin) by measuring its
+    execution time and reporting to a logger. The instance requires a 'name'
+    attribute, e.g. the name of the current plugin instance
     """
 
     def __init__(self, level=logging.DEBUG):
@@ -198,6 +197,10 @@ class PluginManager(object):
 
     def get_plugin_instance(self, name):
         return self._instances[name]
+
+    def number_loaded_plugins(self):
+        """Return the number of plugins that are invoked if run is executed."""
+        return len(self._instances)
 
     # FIXME **option is dangerous, what if one calls run(foo=bar)
     @stopwatch(level=logging.INFO)

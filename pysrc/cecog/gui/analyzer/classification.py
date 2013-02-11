@@ -16,50 +16,28 @@ __source__ = '$URL$'
 
 __all__ = ['ClassificationFrame']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
+from os.path import isdir
 import numpy
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
-from cecog import CHANNEL_PREFIX
+from cecog import CHANNEL_PREFIX, CH_VIRTUAL, CH_PRIMARY, CH_OTHER
 from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
-from cecog.gui.util import (information,
-                            exception,
-                            )
+from cecog.gui.util import information
 from cecog.gui.analyzer import BaseProcessorFrame
-from cecog.gui.analyzer import AnalzyerThread, TrainingThread
 
-from cecog.analyzer.channel import PrimaryChannel, SecondaryChannel
+from cecog.threads.picker import PickerThread
+from cecog.threads.analyzer import AnalyzerThread
+from cecog.threads.training import TrainingThread
+
 from cecog.learning.learning import CommonClassPredictor
 from cecog.util.util import hexToRgb
 from cecog.traits.settings import convert_package_path
-
-
 from cecog.plugin.segmentation import REGION_INFO
 
-#-------------------------------------------------------------------------------
-# constants:
-#
 
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 class ClassifierResultFrame(QGroupBox):
 
     LABEL_FEATURES = '#Features: %d (%d)'
@@ -68,7 +46,7 @@ class ClassifierResultFrame(QGroupBox):
     LABEL_G = 'Log2(g) = %.1f'
 
     def __init__(self, parent, channel, settings):
-        QGroupBox.__init__(self, parent)
+        super(ClassifierResultFrame, self).__init__(parent)
 
         self._channel = channel
         self._settings = settings
@@ -110,7 +88,6 @@ class ClassifierResultFrame(QGroupBox):
         layout_conf.addWidget(self._table_conf)
         splitter.addWidget(frame_conf)
 
-
         desc = QFrame(self)
         layout_desc = QHBoxLayout(desc)
         self._label_acc = QLabel(self.LABEL_ACC % float('NAN'), desc)
@@ -143,22 +120,19 @@ class ClassifierResultFrame(QGroupBox):
     def load_classifier(self, check=True):
         _resolve = lambda x,y: self._settings.get(x, '%s_%s'
                                                   % (self._channel, y))
-        env_path = convert_package_path(_resolve('Classification',
-                                                 'classification_envpath'))
-        classifier_infos = {'strEnvPath': env_path,
-                            'strChannelId': _resolve('ObjectDetection',
-                                                     'channelid'),
-                            'strRegionId': _resolve('Classification',
-                                                    'classification_regionname')
-                            }
-
-        try:
-            self._learner = CommonClassPredictor(\
-                dctCollectSamples=classifier_infos)
-        except:
-            exception(self, 'Error on loading classifier.')
+        clfdir = convert_package_path(_resolve('Classification',
+                                               'classification_envpath'))
+        # XXX - where does the "." come
+        if not isdir(clfdir) or clfdir == ".":
+            return
         else:
+            self._learner = CommonClassPredictor( \
+                clf_dir=clfdir,
+                name=self._channel,
+                channels={self._channel.title(): _resolve('Classification', 'classification_regionname')},
+                color_channel=_resolve('ObjectDetection', 'channelid'))
             result = self._learner.check()
+
             if check:
                 b = lambda x: 'Yes' if x else 'No'
                 msg =  'Classifier path: %s\n' % result['path_env']
@@ -178,10 +152,10 @@ class ClassifierResultFrame(QGroupBox):
 
             if result['has_arff']:
                 self._learner.importFromArff()
-                nr_features_prev = len(self._learner.lstFeatureNames)
-                removed_features = self._learner.filterData(apply=False)
+                nr_features_prev = len(self._learner.feature_names)
+                removed_features = self._learner.filter_nans(apply=True)
                 nr_features = nr_features_prev - len(removed_features)
-                self._label_features.setText(self.LABEL_FEATURES % (nr_features, nr_features_prev))
+                self._label_features.setText(self.LABEL_FEATURES %(nr_features, nr_features_prev))
                 self._label_features.setToolTip("removed %d features containing NA values:\n%s" %
                                                 (len(removed_features), "\n".join(removed_features)))
 
@@ -249,8 +223,8 @@ class ClassifierResultFrame(QGroupBox):
                             ('Samples', 'class samples'),
                             ('Color', 'class color'),
                             ('%PR', 'class precision in %'),
-                            ('%SE', 'class sensitivity in %'),
-                            ]
+                            ('%SE', 'class sensitivity in %')]
+
         names_vertical = [str(self._learner.nl2l[r]) for r in range(rows)] + ['','#']
         self._table_info.setColumnCount(len(names_horizontal))
         self._table_info.setRowCount(len(names_vertical))
@@ -310,14 +284,12 @@ class ClassifierResultFrame(QGroupBox):
             rows, cols = conf_array.shape
             self._table_conf.setColumnCount(cols)
             self._table_conf.setRowCount(rows)
-            #names2cols = self._learner.dctHexColors
             for c in range(cols):
                 self._table_conf.setColumnWidth(c, 20)
                 label = self._learner.nl2l[c]
                 name = self._learner.dctClassNames[label]
                 item = QTableWidgetItem(str(label))
                 item.setToolTip('%d : %s' % (label, name))
-                #item.setBackground(QBrush(QColor(*hexToRgb(names2cols[name]))))
                 self._table_conf.setHorizontalHeaderItem(c, item)
             for r in range(rows):
                 self._table_conf.setRowHeight(r, 20)
@@ -325,7 +297,6 @@ class ClassifierResultFrame(QGroupBox):
                 name = self._learner.dctClassNames[label]
                 item = QTableWidgetItem(str(label))
                 item.setToolTip('%d : %s' % (label, name))
-                #item.setForeground(QBrush(QColor(*hexToRgb(names2cols[name]))))
                 self._table_conf.setVerticalHeaderItem(r, item)
 
     def _update_conf_table(self, conf):
@@ -361,7 +332,8 @@ class ClassifierResultFrame(QGroupBox):
 class ClassificationFrame(BaseProcessorFrame):
 
     SECTION_NAME = SECTION_NAME_CLASSIFICATION
-    TABS = ['Primary Channel', 'Secondary Channel', 'Tertiary Channel', 'Merged Channel']
+    TABS = ['Primary Channel', 'Secondary Channel',
+            'Tertiary Channel', 'Merged Channel']
     PROCESS_PICKING = 'PROCESS_PICKING'
     PROCESS_TRAINING = 'PROCESS_TRAINING'
     PROCESS_TESTING = 'PROCESS_TESTING'
@@ -371,32 +343,37 @@ class ClassificationFrame(BaseProcessorFrame):
         self._result_frames = {}
 
         self.register_control_button(self.PROCESS_PICKING,
-                                     AnalzyerThread,
+                                     PickerThread,
                                      ('Pick %s samples', 'Stop %s picking'))
         self.register_control_button(self.PROCESS_TRAINING,
                                      TrainingThread,
                                      ('Train classifier', 'Stop training'))
         self.register_control_button(self.PROCESS_TESTING,
-                                     AnalzyerThread,
+                                     AnalyzerThread,
                                      ('Test classifier', 'Stop testing'))
 
         for tab_name, prefix in [('Primary Channel', 'primary'),
                                  ('Secondary Channel', 'secondary'),
                                  ('Tertiary Channel', 'tertiary'),
-                                 ('Merged Channel', 'merged'),
-                                 ]:
-            self.set_tab_name(tab_name)
+                                 ('Merged Channel', 'merged')]:
 
+            self.set_tab_name(tab_name)
             self.add_input('%s_classification_envpath' % prefix)
             self.add_line()
 
-            if prefix == 'merged':
-                self.add_group(None, [('primary_channel', (0, 0, 1, 1)),
-                                      ('secondary_channel', (0, 1, 1, 1)),
-                                      ('tertiary_channel', (0, 2, 1, 1))],
+            if prefix in CH_VIRTUAL:
+                                      # checkboxes
+                self.add_group(None, [('merge_primary', (0, 0, 1, 1)),
+                                      ('merge_secondary', (0, 1, 1, 1)),
+                                      ('merge_tertiary', (0, 2, 1, 1)),
+                                      # comboboxes
+                                      ('merged_primary_region', (1, 0, 1, 1)),
+                                      ('merged_secondary_region', (1, 1, 1, 1)),
+                                      ('merged_tertiary_region', (1, 2, 1, 1))],
                                link='merged_channel',
-                               label='Merge')
-            self.add_input('%s_classification_regionname' % prefix)
+                               label='Merge Channels')
+            else:
+                self.add_input('%s_classification_regionname' % prefix)
             frame_results = self._add_result_frame(prefix)
             self.add_handler('%s_classification_envpath' % prefix,
                              frame_results.on_load)
@@ -416,50 +393,99 @@ class ClassificationFrame(BaseProcessorFrame):
         settings.set('General', 'rendering_class', {})
         settings.set('Output', 'events_export_gallery_images', False)
         settings.set('Output', 'hdf5_create_file', False)
-
-        show_ids_class = settings.get('Output', 'rendering_class_showids')
+        settings.set('Output', 'rendering_channel_gallery', False)
 
         current_tab = self._tab.current_index
         if current_tab == 0:
+            prefix = 'primary'
             settings.set('Processing', 'primary_featureextraction', True)
             settings.set('Processing', 'secondary_featureextraction', False)
             settings.set('Processing', 'tertiary_featureextraction', False)
             settings.set('Processing', 'secondary_processchannel', False)
             settings.set('Processing', 'tertiary_processchannel', False)
-            prefix = 'primary'
+            settings.set('Processing', 'merged_processchannel', False)
+            rdn = {"%s_%s" %(prefix, settings.get("Classification",
+                                                  "%s_classification_regionname" %prefix)): {}}
         elif current_tab == 1:
+            prefix = 'secondary'
             settings.set('Processing', 'primary_featureextraction', False)
             settings.set('Processing', 'secondary_featureextraction', True)
-            settings.set('Processing', 'tertiary_featureextraction', False)
             settings.set('Processing', 'secondary_processchannel', True)
+            settings.set('Processing', 'tertiary_featureextraction', False)
             settings.set('Processing', 'tertiary_processchannel', False)
-            prefix = 'secondary'
-        else:
+            settings.set('Processing', 'merged_processchannel', False)
+
+            # to setup the rending of the image currently processed
+            rdn = {"%s_%s" %(prefix, settings.get("Classification",
+                                                  "%s_classification_regionname" %prefix)): {}}
+        elif current_tab == 2:
+            prefix = 'tertiary'
+            seg_region = settings.get('Classification',
+                                      'tertiary_classification_regionname')
             settings.set('Processing', 'primary_featureextraction', False)
             settings.set('Processing', 'secondary_featureextraction', False)
-            settings.set('Processing', 'tertiary_featureextraction', True)
             settings.set('Processing', 'secondary_processchannel', True)
+            settings.set('Processing', 'tertiary_featureextraction', True)
             settings.set('Processing', 'tertiary_processchannel', True)
-            prefix = 'tertiary'
+            settings.set('Processing', 'merged_processchannel', False)
 
-        sec_region = settings.get('Classification',
-                                  '%s_classification_regionname' % prefix)
+            rdn = {"%s_%s" %(prefix, settings.get("Classification",
+                                                  "%s_classification_regionname" %prefix)): {}}
+        else:
+            # checkboxes in merged channel tab
+            pch = settings.get('Classification', 'merge_primary')
+            sch = settings.get('Classification', 'merge_secondary')
+            tch = settings.get('Classification', 'merge_tertiary')
+
+            settings.set('Processing', 'primary_featureextraction', pch)
+            settings.set('Processing', 'secondary_featureextraction', sch)
+            settings.set('Processing', 'secondary_processchannel', sch)
+            settings.set('Processing', 'tertiary_featureextraction', tch)
+            settings.set('Processing', 'tertiary_processchannel', tch)
+            settings.set('Processing', 'merged_processchannel', True)
+            prefix = 'merged'
+
+            rdn = {}
+            for pfx in (CH_PRIMARY+CH_OTHER):
+                if settings.get("Classification", "merge_%s" %pfx):
+                    rdn["%s_%s" %(pfx, settings.get("Classification","merged_%s_region" %pfx))] = {}
+
+
         settings.set('Classification', 'collectsamples_prefix', prefix)
         if name == self.PROCESS_TESTING:
+            rdn = dict()
             settings.set('Processing', '%s_classification' % prefix, True)
             settings.set('General', 'rendering_class',
-                         {'%s_classification_%s' % (prefix, sec_region):
-                              {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
-                                                     'contours': [(sec_region, 'class_label', 1, False),
-                                                                                            (sec_region, '#000000', 1, show_ids_class),
-                                                                                                                               ]}}})
+                         self._class_rendering_params(prefix, settings))
         else:
             settings.set('Classification', 'collectsamples', True)
             settings.set('General', 'positions', '')
-            settings.set('General', 'framerange_begin', 0)
-            settings.set('General', 'framerange_end', 0)
-
+        settings.set('General', 'rendering', rdn)
         return settings
+
+    def _class_rendering_params(self, prefix, settings):
+        """Setup rendering prameters for images to show classified objects"""
+        showids = settings.get('Output', 'rendering_class_showids')
+
+        if prefix in CH_VIRTUAL:
+            region = []
+            for pfx in (CH_PRIMARY+CH_OTHER):
+                if settings.get('Classification', 'merge_%s' %pfx):
+                    region.append(settings.get("Classification", "merged_%s_region" %pfx))
+            region = tuple(region)
+            region_str = '-'.join(region)
+        else:
+            region = settings.get('Classification',
+                                  '%s_classification_regionname' %prefix)
+            region_str = region
+
+        rpar = {prefix.title():
+                    {'raw': ('#FFFFFF', 1.0),
+                     'contours': [(region, 'class_label', 1, False),
+                                  (region, '#000000', 1, showids)]}}
+        cl_rendering = {'%s_classification_%s' %(prefix, region_str): rpar}
+        return cl_rendering
+
 
     def _add_result_frame(self, name):
         frame = self._get_frame()
@@ -484,18 +510,29 @@ class ClassificationFrame(BaseProcessorFrame):
     def settings_loaded(self):
         # FIXME: set the trait list data to plugin instances of the current channel
         prefix = CHANNEL_PREFIX[self._tab.current_index]
-        trait = self._settings.get_trait(SECTION_NAME_CLASSIFICATION,
-                                         '%s_classification_regionname' % prefix)
-        if prefix == 'merged':
-            trait.set_list_data(self._merged_region_list('merged'))
+
+        if prefix in CH_VIRTUAL:
+            self._merged_channel_and_region(prefix)
         else:
+            trait = self._settings.get_trait(SECTION_NAME_CLASSIFICATION,
+                                             '%s_classification_regionname' % prefix)
             trait.set_list_data(REGION_INFO.names[prefix])
 
-    def _merged_region_list(self, merged):
-        mrl = list()
-        for prefix in filter(lambda s: s!=merged, CHANNEL_PREFIX):
-            mrl.extend(['%s_%s' %(prefix, r) for r in REGION_INFO.names[prefix]])
-        return mrl
+    def _merged_channel_and_region(self, prefix):
+        for ch in (CH_PRIMARY+CH_OTHER):
+            trait = self._settings.get_trait(SECTION_NAME_CLASSIFICATION,
+                                             '%s_%s_region' %(prefix, ch))
+
+            regions = REGION_INFO.names[ch]
+
+            # ugly workaround for due to trait concept
+            if regions:
+                trait.set_list_data(regions)
+            else:
+                cbtrait = self._settings.get_trait(SECTION_NAME_CLASSIFICATION,
+                                                   'merge_%s' %ch)
+                cbtrait.set_value(False)
+                trait.set_list_data([])
 
     def tab_changed(self, index):
         self.page_changed()
