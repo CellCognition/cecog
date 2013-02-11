@@ -148,7 +148,8 @@ class Channel(ChannelCore):
                                     if region.hasFeatureName(x)]
                 for objId in region:
                     try:
-                        region[objId].aFeatures = region.features_by_name(objId, channelFeatures2)
+                        region[objId].aFeatures = region.features_by_name(
+                            objId, channelFeatures2)
                     except KeyError:
                         pass
                 region.feature_names = channelFeatures2
@@ -260,8 +261,8 @@ class Channel(ChannelCore):
     def normalize_image(self, plate_id=None):
         img_in = self.meta_image.image
         if self.bFlatfieldCorrection:
-            self.logger.debug("* using flat field correction with image from %s" \
-                                    % self.strBackgroundImagePath)
+            self.logger.debug("* using flat field correction with image from %s"
+                              % self.strBackgroundImagePath)
             imgBackground = self._z_slice_image(plate_id)
 
             crop_coordinated = MetaImage.get_crop_coordinates()

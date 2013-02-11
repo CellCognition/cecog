@@ -112,9 +112,7 @@ hmm.read.graph.structure <- function(filename) {
     i <- i + 1
   }
   i <- i + 1
-  print(L[i])
   st <- unlist(strsplit(L[i],split="[ \\t]"))
-  print(st)
   I = nchar(st) > 0
   if (length(I) > 0) {
     st = st[I]

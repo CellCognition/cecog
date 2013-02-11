@@ -22,9 +22,11 @@ __all__ = ['ConfigSettings',
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
-import copy, \
-       cStringIO, \
-       os
+import copy
+import cStringIO
+import os
+import shutil
+
 from ConfigParser import RawConfigParser
 
 #-------------------------------------------------------------------------------

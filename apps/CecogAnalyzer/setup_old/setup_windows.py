@@ -14,10 +14,9 @@ setup_windows.py - windows specific instructions for distuils
 
 __author__ = 'rudolf.hoefler@gmail.com'
 
-import os
-import sys
-from os.path import join
-from cx_Freeze import setup, Executable
+import os, sys, glob
+from distutils.core import setup
+import py2exe
 
 import pkginfo
 from datafiles import get_data_files
@@ -41,21 +40,30 @@ EXCLUDES = [ 'PyQt4.QtDesigner', 'PyQt4.QtNetwork',
              'rpy',
              '_gtkagg', '_tkagg', '_agg2', '_cairo', '_cocoaagg',
              '_fltkagg', '_gtk', '_gtkcairo',
-             'Tkconstants', 'tk', 'Tkinter', 'tcl']
+             'Tkconstants', 'Tkinter', 'tcl' ]
 
-base = None
-if sys.platform == "win32":
-    base = "Win32GUI"
+DLL_EXCLUDES = [ 'libgdk-win32-2.0-0.dll',
+                 'libgobject-2.0-0.dll',
+                 'libgdk_pixbuf-2.0-0.dll',
+                 'w9xpopen.exe' ] # is not excluded for some reasion
 
-setup(  options = {"build_exe" : {"includes" : INCLUDES,
-                                  "packages": PACKAGES,
-                                  "excludes": EXCLUDES,
-                                  "silent": False},
-                   "install_exe" : {"install_dir": "dist"},
-                   "install": {"prefix": "dist"}},
-        data_files = get_data_files(),
-        executables = [Executable("CecogAnalyzer.py",
-                                  base=base,
-                                  icon=join('resources',
-                                            'cecog_analyzer_icon.ico'))],
-        **pkginfo.metadata)
+setup( options = {"py2exe": { 'includes': INCLUDES,
+                              'excludes': EXCLUDES,
+                              'packages': PACKAGES,
+                              'dll_excludes': DLL_EXCLUDES,
+                              # optimize 2 would strip doc-strings
+                              'optimize': 1,
+                              'compressed': True,
+                              'skip_archive': False,
+                              'bundle_files': 3 }},
+       data_files = get_data_files(),
+       zipfile = "data.zip",
+       windows = [{'script': "CecogAnalyzer.py",
+                   'icon_resources': [(1, 'resources\cecog_analyzer_icon.ico')]
+                   }],
+       **pkginfo.metadata)
+
+try:
+    os.remove(join('dist', 'w9xpopen.exe'))
+except:
+    pass

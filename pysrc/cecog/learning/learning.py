@@ -37,6 +37,7 @@ class BaseLearner(LoggerObject):
 
     def __init__(self, clf_dir, name, channels, color_channel=None):
         super(BaseLearner, self).__init__()
+        self.add_stream_handler(self._lvl.INFO)
 
         self.clf_dir = clf_dir
         self.name = name

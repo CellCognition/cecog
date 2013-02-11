@@ -5,4 +5,3 @@ mac	windows	linux
 /Volumes/share-kutay-analysis-1-$	U:	/projects/dgearchive
 /Volumes/dgedata	V:	/projects/gerlich
 /Volumes/dgedata2	S:	/projects/gerlich2
-/Volumes/seattle	R:	/groups/gerlich

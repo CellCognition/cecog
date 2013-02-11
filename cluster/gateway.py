@@ -69,9 +69,9 @@ def parse_args(args):
 
     return parser.parse_args(args)
 
-
 def cecog_job_template(jt, path_out, args, emails, version, batch_size=1,
                        is_bulk_job=False):
+
     job_name = 'cecog_batch_analyzer'
     env_variables = ['PATH', 'LD_LIBRARY_PATH']
 
@@ -104,13 +104,13 @@ def cecog_job_template(jt, path_out, args, emails, version, batch_size=1,
     path_out_cluster = ':' + path_out_cluster
     if is_bulk_job:
         jt.outputPath = path_out_cluster
-        # FIXME: another DRMAA hack: the PARAMETRIC_INDEX is NOT resolved in args!
+        # FIXME: another DRMAA hack: the PARAMETRIC_INDEX
+        # is NOT resolved in args!
         jt.args += ['--cluster_index', 'SGE_TASK_ID',
                     '--batch_size', str(batch_size)]
     else:
         jt.outputPath = path_out_cluster
     return jt
-
 
 class ClusterControl(object):
 
@@ -128,7 +128,9 @@ class ClusterControl(object):
         path_out = os.path.normpath(path_out)
         path_out_settings = os.path.join(path_out, 'settings')
         makedirs(path_out_settings)
-        filename_settings = os.path.join(path_out_settings, 'cecog_settings.conf')
+        filename_settings = os.path.join(path_out_settings,
+                                         'cecog_settings.conf')
+
         f = file(filename_settings, 'w')
         f.write(settings)
         f.close()
