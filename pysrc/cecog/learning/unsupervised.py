@@ -149,7 +149,7 @@ class TemporalClustering:
                         covariance_type=covariance_type,
                         init_params='',
                         n_iter=1)
-        g.means, g.covars, g.weights = \
+        g.means_, g.covars_, g.weights_ = \
             self._gmm_int_parameters(data, labels, sharedcov=sharedcov)
         # restrict EM to only one iteration
         g.fit(data)
@@ -214,8 +214,8 @@ class TemporalClustering:
                                covariance_type='full',
                                init_params ='',
                                n_iter=1)
-        chmm.means_ = gmm_model.means
-        chmm.covars_ = gmm_model.covars
+        chmm.means_ = gmm_model.means_
+        chmm.covars_ = gmm_model.covars_
         # restrict EM to only one iteration
         chmm.fit([data])
         # vector format [1 x num_tracks * num_frames]
