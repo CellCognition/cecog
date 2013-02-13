@@ -21,11 +21,11 @@ If your msvc is part of the Microsoft SDKs run:
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = 'WTFL'
 
-import os
 import sys
 from os.path import join
 from distutils.core import setup, Extension
 
+import numpy.distutils
 
 if sys.platform.startswith('win32'):
     includes = ['c:/python27/include',
@@ -40,10 +40,14 @@ if sys.platform.startswith('win32'):
     library_dirs = ['c:/lib/lib']
 
 else: #currently just linux.
-    includes = ['/usr/include/python2.7',
-                '/usr/lib/python2.7/numpy/core/include',
-                'csrc/include']
-    compiler_opts = ['-O3', '-fPIC']
+    includes = [#'/usr/include/python2.7',
+                '/Users/hoefler/sandbox/lib-static/include',
+                '/cecoglibs/vigra/include/',
+                'csrc/include'] + \
+                numpy.distutils.misc_util.get_numpy_include_dirs()
+    library_dirs = ['/Users/hoefler/sandbox/lib-static/lib',
+                    '/cecoglibs/vigra/lib']
+    compiler_opts = ['-O3', '-fPIC', '-arch x86_64']
     libraries = ['boost_python', 'tiff', 'vigraimpex']
 
 
@@ -53,7 +57,7 @@ cecog = Extension('cecog.ccore._cecog',
                   sources=sources,
                   include_dirs=includes,
                   libraries=libraries,
-#                  library_dirs=library_dirs,
+                  library_dirs=library_dirs,
                   language='c++')
 
 try:
