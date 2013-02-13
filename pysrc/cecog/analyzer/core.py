@@ -385,7 +385,6 @@ class PositionAnalyzer(object):
                 
             if self.oSettings.get('EventSelection', 'tc3_analysis'):
                 tracker_options.update({'tc3Analysis'           : self.oSettings.get2('tc3_analysis'),
-                                        'invert'                : self.oSettings.get2('invert'),
                                         'numClusters'           : self.oSettings.get2('num_clusters'),
                                         'minClusterSize'        : self.oSettings.get2('min_cluster_size'),
                                         'tc3Algorithms'         : self.oSettings.get2('tc3_algorithms'),

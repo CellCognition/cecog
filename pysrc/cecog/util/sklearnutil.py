@@ -38,7 +38,7 @@ def mylogsumexp(A, axis=None):
     return Asum
 # overwrite the existing logsumexp with new mylogsumexp
 
-def binary_clustering(data, invert):
+def binary_clustering(data):
 
     m, idx = scv.kmeans2(data, 2)
     w = numpy.array([sum(idx==0)/float(len(idx)), sum(idx==1)/float(len(idx))]);
@@ -59,11 +59,6 @@ def binary_clustering(data, invert):
 
     # map clusters to labels
     if numpy.sum(idx==1) > numpy.sum(idx==0) :
-        idx[idx==0]=2
-        idx[idx==1]=0
-        idx[idx==2]=1
-
-    if invert:
         idx[idx==0]=2
         idx[idx==1]=0
         idx[idx==2]=1

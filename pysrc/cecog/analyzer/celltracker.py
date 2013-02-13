@@ -604,9 +604,7 @@ class CellTracker(OptionManager):
         dctVisitedNodes = {}
         if  self.getOption('unsupEventSelection'):
             #print 'in unsupervised event selection'
-            invert = self.getOption('invert')
-            #print invert
-            self.initBinaryClustering(invert)
+            self.initBinaryClustering()
             for strStartId in lstStartIds:
                 self.dctVisitorData[strStartId] = {'_current': 0,
                                                    '_full'   : [[]]}
@@ -620,7 +618,7 @@ class CellTracker(OptionManager):
                 self.oLogger.debug("root ID %s" % strStartId)
                 self._forwardVisitor(strStartId, self.dctVisitorData[strStartId], dctVisitedNodes)
 
-    def initBinaryClustering(self, invert):
+    def initBinaryClustering(self):
         oGraph = self._oGraph
         data_obj=[]
         for node in oGraph.node_list():
@@ -641,7 +639,7 @@ class CellTracker(OptionManager):
         pca = mlab.PCA(data_zscore)
         num_features = numpy.nonzero(numpy.cumsum(pca.fracs) > 0.99)[0][0]
         data_pca = pca.project(data_zscore)[:,0:num_features]
-        idx = binary_clustering(data_pca, invert)
+        idx = binary_clustering(data_pca)
 
         self.iLabel_bc = {}
         for i, node in enumerate(oGraph.node_list()):
@@ -842,9 +840,12 @@ class PlotCellTracker(CellTracker):
     def analyze(self, dctChannels, channelId=None, clear_path=False):
 
         strPathOut = os.path.join(self.strPathOut, 'events')
+        strPathOutTC3 = os.path.join(self.strPathOut, 'tc3')
         if clear_path:
             shutil.rmtree(strPathOut, True)
             safe_mkdirs(strPathOut)
+            shutil.rmtree(strPathOutTC3, True)
+            safe_mkdirs(strPathOutTC3)
 
         allFeatures = []
         for strRootId, dctTrackResults in self.dctVisitorData.iteritems():
@@ -918,29 +919,33 @@ class PlotCellTracker(CellTracker):
                 raise RuntimeError(msg)
                 # data_pca = data_zscore
 
-            binary_tmp = binary_clustering(data_pca, 0)
+            binary_tmp = binary_clustering(data_pca)
             binary_matrix = binary_tmp.reshape(dim[1],dim[0])
 
-            filename = os.path.join(self.strPathOut, 'binary_all.txt')
+            filename = os.path.join(strPathOutTC3, 'initial_binary_matrix.txt')
             numpy.savetxt(filename, binary_matrix, fmt='%d', delimiter='\t')
 
             idn = []
             # a predefined number of classes, given in GUI
             k = self.getOption('numClusters')
 
+            # delete false positive trajectories, according to the following rules:
+            # 1. No length of the event of interest < k
+            # 2. Event of interest should start from frame 10 to 12 due to event extraction algorithm 
             for i in xrange(num_tracks-1, -1, -1):
-                #print num_tracks
-                if (sum(binary_matrix[i,:]) < k-2) or (binary_matrix[i,0] == 1) or \
-                        (binary_matrix[i,1] == 1) or (sum(binary_matrix[i,0:15]) == 0) :
+                # print num_tracks
+                
+                if (sum(binary_matrix[i,:]) < k) or (sum(binary_matrix[i,0:9]) > 0) or \
+                    (sum(binary_matrix[i,10:12]) == 0) :
                     binary_matrix = scipy.delete(binary_matrix, i, 0)
                     data_pca = scipy.delete(data_pca, numpy.arange(i*num_frames,
                                                                    (i+1)*num_frames), 0)
                     num_tracks -= 1
                     idn.append(i)
 
-            filename = os.path.join(self.strPathOut, 'index.txt')
+            filename = os.path.join(strPathOutTC3, 'deleted_index.txt')
             numpy.savetxt(filename,idn, fmt='%d',delimiter='\t')
-            filename = os.path.join(self.strPathOut, 'indexbinary_deleted.txt')
+            filename = os.path.join(strPathOutTC3, 'final_binary_matrix.txt')
             numpy.savetxt(filename, binary_matrix, fmt='%d', delimiter='\t')
             # update num_tracks
             dim = [num_frames, num_tracks]
@@ -964,7 +969,7 @@ class PlotCellTracker(CellTracker):
 
             algorithm = self.getOption('tc3Algorithms')
             result = algorithms[algorithm]
-            filename = os.path.join(self.strPathOut, '%s.txt'%algorithm)
+            filename = os.path.join(strPathOutTC3, '%s.txt'%algorithm)
             numpy.savetxt(filename, result['label_matrix'], fmt='%d',delimiter='\t')
 
 
@@ -1498,7 +1503,6 @@ class ClassificationCellTracker(SplitCellTracker):
                'iForwardCheck2'          :   Option(None, doc=""),
 
                'tc3Analysis'             :   Option(False, doc=""),
-               'invert'                  :   Option(False, doc=""),
                'numClusters'             :   Option(None, doc=""),
                'minClusterSize'          :   Option(None, doc=""),
                'tc3Algorithms'           :   Option(None, doc=""),

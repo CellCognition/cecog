@@ -103,8 +103,6 @@ class SectionEventSelection(_Section):
       ('tc3_analysis',
         [('tc3_analysis',
             BooleanTrait(False, label='Temporal Clustering')),
-         ('invert',
-            BooleanTrait(False, label='Invert event/background')),
          ('num_clusters',
             IntTrait(6, 2, 10, label='Number of clusters',)), 
          ('min_cluster_size',
