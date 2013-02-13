@@ -18,7 +18,7 @@ rmdir /Q /S build
 erase /Q *.exe
 
 :build
-python setup.py install
+python setup_windows.py py2exe
 
 @Set /P _nsis=Build NSIS-installer [Y/n] || Set _nsis="n"
 @If "%_nsis%"=="Y" goto:nsis
