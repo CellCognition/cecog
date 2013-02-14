@@ -207,7 +207,8 @@ class TemporalClustering:
 
     def tc3_gmm_chmm(self, data, gmm_model, dhmm_model):
         eps = np.spacing(1)
-        sprob = np.array([1-eps, eps, eps, eps, eps, eps])
+        sprob = np.zeros((1,self.n_clusters)).flatten()+eps/(self.n_clusters-1)
+        sprob[0] = 1-eps
         chmm = hmm.GaussianHMM(n_components=self.n_clusters,
                                transmat=dhmm_model.transmat,
                                startprob=sprob,
