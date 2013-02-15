@@ -426,13 +426,13 @@ class CellTracker(OptionManager):
                                          (dist, strNodeIdC))
 
             # prevent split and merge for one node at the same time
-            
-            ### FIXME: Here we loose alomost all cell mappings, 
+
+            ### FIXME: Here we loose alomost all cell mappings,
             ### because if fMaxObjectDistance is big, we find for
             ### many cells splits and merges and there will never
-            ### be an one-to-one mapping => the bigger the radius, the less mappings 
+            ### be an one-to-one mapping => the bigger the radius, the less mappings
             ### which is counter intuitive
-             
+
             for id_c in dctMerges:
                 nodes = dctMerges[id_c]
                 if len(nodes) == 1:
@@ -610,11 +610,12 @@ class CellTracker(OptionManager):
                                                    '_full'   : [[]]}
                 self.oLogger.debug("root ID %s" % strStartId)
                 self._forwardVisitor2(strStartId, self.dctVisitorData[strStartId], dctVisitedNodes)
+
         elif self.getOption('supEventSelection'):
             #print 'in supervised event selection'
             for strStartId in lstStartIds:
                 self.dctVisitorData[strStartId] = {'_current': 0,
-                                                   '_full'   : [[]]}
+                                                   '_full': [[]]}
                 self.oLogger.debug("root ID %s" % strStartId)
                 self._forwardVisitor(strStartId, self.dctVisitorData[strStartId], dctVisitedNodes)
 
@@ -890,10 +891,11 @@ class PlotCellTracker(CellTracker):
                                                    strRegionId,
                                                    lstFeatureNames)
 
-        if len(allFeatures) == 0:
-            raise RuntimeError("No events found for TC3 analysis")
-
         if self.getOption('tc3Analysis'):
+
+            if len(allFeatures) == 0:
+                raise RuntimeError("No events found for TC3 analysis")
+
             allFeatures = numpy.array(allFeatures)
             data = allFeatures.reshape(allFeatures.shape[0]*allFeatures.shape[1],
                                        allFeatures.shape[2])
@@ -931,11 +933,11 @@ class PlotCellTracker(CellTracker):
 
             # delete false positive trajectories, according to the following rules:
             # 1. No length of the event of interest < k
-            # 2. Event of interest should start from frame 10 to 12 due to event extraction algorithm 
+            # 2. Event of interest should start from frame 10 to 12 due to event extraction algorithm
             # 3. No 0*1*0*1* pattern
             for i in xrange(num_tracks-1, -1, -1):
                 # print num_tracks
-                
+
                 if (sum(binary_matrix[i,:]) < k) or (sum(binary_matrix[i,0:9]) > 0) or \
                     (sum(binary_matrix[i,10:12]) == 0) or sum(numpy.diff(binary_matrix[i,:])==1) > 1:
                     binary_matrix = scipy.delete(binary_matrix, i, 0)
@@ -1751,8 +1753,8 @@ class ClassificationCellTracker(SplitCellTracker):
 
 class ClassificationCellTracker2(ClassificationCellTracker):
 
-    OPTIONS = {"bAllowOneDaughterCell"   :   Option(True),
-               }
+    OPTIONS = {"bAllowOneDaughterCell"   :   Option(True)}
+
     @staticmethod
     def remove_constant_columns(A):
         ''' A function to remove constant columns from a 2D matrix'''
@@ -2030,7 +2032,5 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                         f.write('%s\n' % sep.join(line1))
                         f.write('%s\n' % sep.join(line2))
                         f.write('%s\n' % sep.join(line3))
-
                     f.write('%s\n' % sep.join(map(str, prefix + items)))
-
                 f.close()
