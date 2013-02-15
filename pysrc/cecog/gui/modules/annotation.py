@@ -1022,7 +1022,6 @@ class AnnotationModule(Module):
         success = True
         try:
             learner.clf_dir = path
-            learner.makedirs()
             learner.saveDefinition()
         except:
             exception(self, 'Error on saving classifier')
