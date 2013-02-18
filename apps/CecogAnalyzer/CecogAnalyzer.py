@@ -817,6 +817,11 @@ if __name__ == "__main__":
     if is_app:
         package_path = os.path.join(APPLICATION_SUPPORT_PATH, 'battery_package')
         set_package_path(package_path)
+        if sys.frozen == "windows_exe":
+            # redirection output of stream handler
+            log = open(os.path.abspath(sys.argv[0].replace("exe", "log")), "w")
+            sys.stdout = log
+            sys.stderr = log
 
     app.setWindowIcon(QIcon(':cecog_analyzer_icon'))
     app.setApplicationName('CecogAnalyzer')
