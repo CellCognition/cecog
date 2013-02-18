@@ -23,18 +23,16 @@ import os, \
        itertools, \
        re, \
        shutil
-from types import ListType, FloatType
+from types import ListType
 from csv import DictWriter
 
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
-from numpy import array, average
 
-import numpy
-import scipy.cluster.vq as scv
+import numpy as np
+
 from matplotlib import mlab
-from sklearn import mixture
 from cecog.util.sklearnutil import binary_clustering, remove_constant_columns
 import scipy.stats.stats as sss
 import scipy
@@ -48,7 +46,7 @@ from pdk.optionmanagers import OptionManager
 from pdk.ordereddict import OrderedDict
 from pdk.map import dict_append_list
 from pdk.fileutils import safe_mkdirs, collect_files
-from pdk.iterator import unique, flatten, all_equal
+from pdk.iterator import unique, flatten
 from pdk.attributemanagers import (get_slot_values,
                                    set_slot_values)
 
@@ -68,10 +66,14 @@ from cecog import ccore
 # functions:
 #
 
+def filter_col_nans(data):
+    nans = np.isnan(data)
+    col_nans = np.unique(np.where(nans)[1])
+    return np.delete(data, col_nans, axis=1)
+
 #-------------------------------------------------------------------------------
 # classes:
 #
-
 
 class DotWriter(object):
 
@@ -626,10 +628,10 @@ class CellTracker(OptionManager):
             obj = oGraph.node_data(node)
             data_obj.append(obj.aFeatures)
 
-        data = numpy.array(data_obj)
+        data = np.array(data_obj)
 
         # delete columns with zeros
-        ind = numpy.where(data==0)[1]
+        ind = np.where(data==0)[1]
         data = scipy.delete(data,ind,1)
         # print 'new data.shape after column=0 deletion'
         # print data.shape
@@ -638,7 +640,7 @@ class CellTracker(OptionManager):
         # Zscore and PCA data
         data_zscore = sss.zscore(data) #sss.zscore(self.remove_constant_columns(data))
         pca = mlab.PCA(data_zscore)
-        num_features = numpy.nonzero(numpy.cumsum(pca.fracs) > 0.99)[0][0]
+        num_features = np.nonzero(np.cumsum(pca.fracs) > 0.99)[0][0]
         data_pca = pca.project(data_zscore)[:,0:num_features]
         idx = binary_clustering(data_pca)
 
@@ -792,10 +794,10 @@ class PlotCellTracker(CellTracker):
                     maxY = max([obj.oRoi.lowerRight[1] for obj in lstImageObjects])
                     width  = maxX - minX + 1
                     height = maxY - minY + 1
-                    centerX = int(round(average([obj.oCenterAbs[0] for obj in lstImageObjects])))
-                    centerY = int(round(average([obj.oCenterAbs[1] for obj in lstImageObjects])))
+                    centerX = int(round(np.average([obj.oCenterAbs[0] for obj in lstImageObjects])))
+                    centerY = int(round(np.average([obj.oCenterAbs[1] for obj in lstImageObjects])))
                     lstData.append((iT, centerX, centerY, width, height, lstObjIds))
-                aData = array(lstData, 'O')
+                aData = np.array(lstData, 'O')
                 if not size is None and len(size) == 2:
                     iDiffX = int(size[0] / 2)
                     iDiffY = int(size[1] / 2)
@@ -896,12 +898,12 @@ class PlotCellTracker(CellTracker):
             if len(allFeatures) == 0:
                 raise RuntimeError("No events found for TC3 analysis")
 
-            allFeatures = numpy.array(allFeatures)
+            allFeatures = np.array(allFeatures)
             data = allFeatures.reshape(allFeatures.shape[0]*allFeatures.shape[1],
                                        allFeatures.shape[2])
 
             # delete columns with zeros
-            ind = numpy.where(data==0)[1]
+            ind = np.where(data==0)[1]
             data = scipy.delete(data, ind, 1)
             num_frames = allFeatures.shape[1]
             num_tracks = data.shape[0]/allFeatures.shape[1]
@@ -909,11 +911,12 @@ class PlotCellTracker(CellTracker):
 
             # Zscore and PCA data
             # FIXME check shape of data_zscore
+            data = filter_col_nans(data)
             data_zscore = sss.zscore(remove_constant_columns(data))
 
             if data_zscore.shape[0] > data_zscore.shape[1]:
                 pca = mlab.PCA(data_zscore)
-                num_features = numpy.nonzero(numpy.cumsum(pca.fracs) > 0.99)[0][0]
+                num_features = np.nonzero(np.cumsum(pca.fracs) > 0.99)[0][0]
                 data_pca = pca.project(data_zscore)[:,0:num_features]
             else:
                 msg = ("Not enough objects found (nobjects < nfeatures)",
@@ -925,7 +928,7 @@ class PlotCellTracker(CellTracker):
             binary_matrix = binary_tmp.reshape(dim[1],dim[0])
 
             filename = os.path.join(strPathOutTC3, 'initial_binary_matrix.txt')
-            numpy.savetxt(filename, binary_matrix, fmt='%d', delimiter='\t')
+            np.savetxt(filename, binary_matrix, fmt='%d', delimiter='\t')
 
             idn = []
             # a predefined number of classes, given in GUI
@@ -939,17 +942,17 @@ class PlotCellTracker(CellTracker):
                 # print num_tracks
 
                 if (sum(binary_matrix[i,:]) < k) or (sum(binary_matrix[i,0:9]) > 0) or \
-                    (sum(binary_matrix[i,10:12]) == 0) or sum(numpy.diff(binary_matrix[i,:])==1) > 1:
+                    (sum(binary_matrix[i,10:12]) == 0) or sum(np.diff(binary_matrix[i,:])==1) > 1:
                     binary_matrix = scipy.delete(binary_matrix, i, 0)
-                    data_pca = scipy.delete(data_pca, numpy.arange(i*num_frames,
+                    data_pca = scipy.delete(data_pca, np.arange(i*num_frames,
                                                                    (i+1)*num_frames), 0)
                     num_tracks -= 1
                     idn.append(i)
 
             filename = os.path.join(strPathOutTC3, 'deleted_index.txt')
-            numpy.savetxt(filename,idn, fmt='%d',delimiter='\t')
+            np.savetxt(filename,idn, fmt='%d',delimiter='\t')
             filename = os.path.join(strPathOutTC3, 'final_binary_matrix.txt')
-            numpy.savetxt(filename, binary_matrix, fmt='%d', delimiter='\t')
+            np.savetxt(filename, binary_matrix, fmt='%d', delimiter='\t')
             # update num_tracks
             dim = [num_frames, num_tracks]
 
@@ -973,7 +976,7 @@ class PlotCellTracker(CellTracker):
             algorithm = self.getOption('tc3Algorithms')
             result = algorithms[algorithm]
             filename = os.path.join(strPathOutTC3, '%s.txt'%algorithm)
-            numpy.savetxt(filename, result['label_matrix'], fmt='%d',delimiter='\t')
+            np.savetxt(filename, result['label_matrix'], fmt='%d',delimiter='\t')
 
 
     def exportChannelDataFlat(self, strFilename, strChannelId, strRegionId, lstFeatureNames):
@@ -1150,7 +1153,7 @@ class PlotCellTracker(CellTracker):
             write_table(strFilename, table, column_names=lstHeaderNames)
 
 
-        return numpy.array(allFeature)
+        return np.array(allFeature)
 
 
     def _forwardVisitor(self, strNodeId, dctResults, dctEdges, iLevel=0, strStartId=None):
@@ -1758,7 +1761,7 @@ class ClassificationCellTracker2(ClassificationCellTracker):
     @staticmethod
     def remove_constant_columns(A):
         ''' A function to remove constant columns from a 2D matrix'''
-        return A[:, numpy.sum(numpy.abs(numpy.diff(A, axis=0)), axis=0) != 0]
+        return A[:, np.sum(np.abs(np.diff(A, axis=0)), axis=0) != 0]
 
 
     def _forwardVisitor(self, strNodeId, dctResults, dctVisitedNodes, iLevel=0):
