@@ -32,19 +32,26 @@ from cecog.util.util import makedirs
 
 class BaseLearner(LoggerObject):
 
+    XML = "xml"
     # directory substructure
     _subdirs = ('annotations', 'data', 'samples', 'controls')
 
-    def __init__(self, clf_dir, name, channels, color_channel=None):
+    def __init__(self, clf_dir, name, channels, color_channel=None,
+                 extension=None, has_zero_insert=False):
         super(BaseLearner, self).__init__()
         self.add_stream_handler(self._lvl.INFO)
 
+        if not os.path.isdir(clf_dir):
+            raise IOError("Classifier path '%s' does not exist." %clf_dir)
+
         self.clf_dir = clf_dir
         self.name = name
+        self.extension = extension
 
         self.color_channel = color_channel
         self.channels = channels
 
+        # XXX remove hungarian
         self.strArffFileName = 'features.arff'
         self.strSparseFileName ='features.sparse'
         self.strDefinitionFileName = 'class_definition.txt'
@@ -54,7 +61,7 @@ class BaseLearner(LoggerObject):
         self.dctFeatureData = OrderedDict()
         self.dctClassNames = {}
         self.dctClassLabels = {}
-
+        self.hasZeroInsert = has_zero_insert
         self.dctHexColors = {}
         self.dctSampleNames = {}
 
@@ -379,7 +386,8 @@ class CommonClassPredictor(BaseLearner):
             for name in self.dctFeatureData:
                 self.dctFeatureData[name] = np.delete(self.dctFeatureData[name],
                                                       filter_idx, 1)
-            self.nan_features = self.delete_feature_names(filter_idx)
+            if filter_idx.size > 0:
+                self.nan_features = self.delete_feature_names(filter_idx)
         return self.nan_features
 
     def train(self, c, g, probability=True, compensation=True,

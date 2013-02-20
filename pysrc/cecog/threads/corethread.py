@@ -36,6 +36,10 @@ class CoreThread(QtCore.QThread):
                             'max': 0}
 
     def run(self, *args, **kw):
+        # turn off tiff warings per thread
+        if not __debug__:
+            ccore.turn_off()
+
         try:
             import pydevd
             pydevd.connected = True

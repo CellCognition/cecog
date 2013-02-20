@@ -381,14 +381,13 @@ class ClassificationFrame(BaseProcessorFrame):
         self._init_control()
 
     def _get_modified_settings(self, name, has_timelapse=True):
-        settings = BaseProcessorFrame._get_modified_settings(self, name, has_timelapse)
+        settings = BaseProcessorFrame._get_modified_settings( \
+            self, name, has_timelapse)
 
-        settings.set_section('Processing')
-        settings.set2('primary_classification', False)
-        settings.set2('secondary_classification', False)
-        settings.set2('tracking', False)
-        settings.set_section('Classification')
-        settings.set2('collectsamples', False)
+        settings.set('Processing', 'primary_classification', False)
+        settings.set('Processing', 'secondary_classification', False)
+        settings.set('Processing', 'tracking', False)
+        settings.set('Classification', 'collectsamples', False)
         settings.set('General', 'rendering', {})
         settings.set('General', 'rendering_class', {})
         settings.set('Output', 'events_export_gallery_images', False)

@@ -14,27 +14,17 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-# Core module of the image processing work flow handling all positions of an
-# experiment including the general setup (AnalyzerCore), and the analysis of
-# a single position (PositionAnalyzer). This separation was necessary for the
-# distributed computing of positions.
-
 import os
 import re
 import glob
-from os.path import join, basename, isdir, splitext, isfile
-from collections import OrderedDict
+from os.path import join, basename, isdir
 
-from cecog import CH_PRIMARY, CH_OTHER, CH_VIRTUAL
 from cecog.learning.collector import CellCounterReader, CellCounterReaderXML
-from cecog.learning.learning import CommonObjectLearner
-
 from cecog.analyzer.position import PositionAnalyzer
 from cecog.analyzer.position import PositionPicker
 from cecog.io.imagecontainer import MetaImage
 from cecog.util.logger import LoggerObject
 from cecog.util.util import makedirs
-
 
 # XXX - fix class names
 class AnalyzerBase(LoggerObject):
@@ -216,25 +206,15 @@ class AnalyzerCore(AnalyzerBase):
 
 class Picker(AnalyzerBase):
 
-    def __init__(self, plate, settings, imagecontainer, learner=None):
+    def __init__(self, plate, settings, imagecontainer, learner):
         super(Picker, self).__init__(plate, settings, imagecontainer)
 
         # belongs already to picker
         self.sample_reader = []
         self.sample_positions = {}
+        self.learner = learner
 
-        if learner is None:
-            self.learner = self.setup_learner()
-
-        # FIXME: if the resulting .ARFF file is trained directly from
-        # Python SVM (instead of easy.py) NO leading ID need to be inserted
-        self.learner.hasZeroInsert = False
-        self.learner.channel_name = self.settings.get(
-            'Classification', 'collectsamples_prefix').title()
-
-        ext = self.settings.get('Classification',
-                                self._resolve('classification_annotationfileext'))
-        pattern = join(self.learner.annotations_dir, "*%s" %ext)
+        pattern = join(self.learner.annotations_dir, "*%s" %learner.extension)
         anno_re = re.compile(('((.*?_{3})?PL(?P<plate>.*?)_{3})?P(?P'
                               '<position>.+?)_{1,3}T(?P<time>\d+).*?'))
 
@@ -242,8 +222,11 @@ class Picker(AnalyzerBase):
         for annofile in glob.glob(pattern):
             result = anno_re.match(basename(annofile))
 
-            if self.is_valid_annofile(result):
-                if ext == '.xml':
+            # Taking only annotated samples for the specific plate
+            if (result.group("plate") != self.plate):
+                continue
+            elif self.is_valid_annofile(result):
+                if learner.extension.endswith(learner.XML):
                     reader = CellCounterReaderXML(result, annofile, frames_total)
                 else:
                     reader = CellCounterReader(result, annofile, frames_total)
@@ -260,70 +243,21 @@ class Picker(AnalyzerBase):
             self.sample_positions[pos] = sorted(list(set(iframes)))
         self.positions = self.sample_positions.keys()
 
-    def setup_learner(self):
-        """Return a learner instance for a specific channel_name
-
-        For primary, sceondary and tertiary channels have the same learner while
-        the merged channel has a different learner.
-        """
-        chid = self.settings.get("ObjectDetection", self._resolve("channelid"))
-        pchannel = self.settings.get("Classification", "collectsamples_prefix")
-
-        if chid is None:
-            learner = CommonObjectLearner(self.cl_path, pchannel.title(),
-                                          self._merge_channels())
-        else:
-            channels = {pchannel.title(): self.settings.get( \
-                    'Classification', self._resolve("classification_regionname"))}
-            learner = CommonObjectLearner(self.cl_path, pchannel.title(),
-                                          channels, chid)
-
-        learner.loadDefinition()
-        return learner
-
-    def _merge_channels(self):
-        """Read the the checked processing channels and the region to consider
-        for feature extraction."""
-        regions = OrderedDict()
-        for prefix in (CH_PRIMARY+CH_OTHER):
-            if self.settings.get("Classification", "merge_%s" %prefix):
-                regions[prefix.title()] = \
-                self.settings.get("Classification", "%s_%s_region"
-                                  %(CH_VIRTUAL[0], prefix))
-        return regions
-
     def is_valid_annofile(self, result):
         # sanity checks for the annotation file
         if result is None:
             raise RuntimeError(("Annotation file name does not match the "
                                 "plate name"))
-        elif not (result.group("plate") is None or
-                  result.group("plate") == self.plate):
+        elif result.group("plate") is None:
             raise RuntimeError("Plate name does is invalid (%s, %s)"
-                               %(result.groupf("plate"), self.plate))
+                               %(result.group("plate"), self.plate))
         return True
-
-    @property
-    def cl_path(self):
-        """Read out and check for classifier_envpath"""
-        cpath = self.settings.get("Classification",
-                                  self._resolve("classification_envpath"))
-
-        if not isdir(cpath):
-            raise IOError("Classifier path '%s' does not exist." %cpath)
-        return cpath
-
-
-    def _resolve(self, txt):
-        return '%s_%s' %(self.settings.get("Classification",
-                                           "collectsamples_prefix"), txt)
-
 
 
     def processPositions(self, qthread=None, myhack=None):
         imax = len(self.sample_positions)
 
-        for i, (posid, poslist) in enumerate(self.sample_positions.iteritems()):
+        for i, (posid, frames) in enumerate(self.sample_positions.iteritems()):
             self.logger.info('Process positions: %r' %posid)
 
             if not qthread is None:
@@ -336,7 +270,7 @@ class Picker(AnalyzerBase):
 
             picker = PositionPicker(self.plate, posid, self._out_dir,
                                     self.settings,
-                                    self.frames, self.sample_reader,
+                                    frames, self.sample_reader,
                                     self.sample_positions, self.learner,
                                     self._imagecontainer, qthread, myhack)
             result = picker()

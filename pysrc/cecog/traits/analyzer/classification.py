@@ -32,7 +32,7 @@ class SectionClassification(_Section):
                                            ('%s_classification_regionname' % x,
                                             SelectionTrait2(None, [], label='Region name')),
                                            ('%s_classification_annotationfileext' % x,
-                                            StringTrait('.xml', 50, label='Annotation ext.')) ]) \
+                                            StringTrait('xml', 50, label='Annotation ext.')) ]) \
                    for x in (CH_PRIMARY+CH_OTHER)] + \
             [('collectsamples', [ ('collectsamples', BooleanTrait(False)),
                                  ('collectsamples_prefix', StringTrait('',100))]),
@@ -51,7 +51,7 @@ class SectionClassification(_Section):
                  ('%s_tertiary_region' %CH_VIRTUAL[0],
                   SelectionTrait2(None, [], label='')),
                  ('%s_classification_annotationfileext' %CH_VIRTUAL[0],
-                  StringTrait('.xml', 50, label='Annotation ext.')),
+                  StringTrait('xml', 50, label='Annotation ext.')),
                  ('%s_classification_regionname' %CH_VIRTUAL[0],
                   SelectionTrait2(None, [], label="Region name"))
                  ])]

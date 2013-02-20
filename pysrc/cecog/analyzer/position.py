@@ -105,12 +105,6 @@ class PositionCore(LoggerObject):
         self._qthread = qthread
         self._myhack = myhack
 
-    def __call__(self):
-        # turn libtiff warnings off
-        if not __debug__:
-            ccore.turn_off()
-        self.settings.set_section('Output')
-
     def _analyze(self):
         self._info.update({'stage': 2,
                            'min': 1,
@@ -329,20 +323,7 @@ class PositionCore(LoggerObject):
 
 class PositionPicker(PositionCore):
 
-    def __init__(self, *args, **kw):
-        super(PositionPicker, self).__init__(*args, **kw)
-
-        # disable tracking somewhere else
-        self.settings.set('Processing', 'tracking', False)
-
-        # overwrite frames by frames indices from picked samples
-        self._frames = self.sample_positions[self.position]
-
-        if not self.settings.get('Classification', 'collectsamples'):
-            raise RuntimeError("settings not set to PICKING")
-
     def __call__(self):
-        super(PositionPicker, self).__call__()
         self.timeholder = TimeHolder(self.position, self.processing_channels,
                                      None,
                                      self.meta_data, self.settings,
@@ -386,7 +367,6 @@ class PositionPicker(PositionCore):
                                                 self.sample_readers,
                                                 self.learner,
                                                 byTime=True)
-
 
             if image is not None:
                 n_images += 1
@@ -615,8 +595,6 @@ class PositionAnalyzer(PositionCore):
         self.logger.debug("--- serializing events ok")
 
     def __call__(self):
-        super(PositionAnalyzer, self).__call__()
-
         # include hdf5 file name in hdf5_options
         # perhaps timeholder might be a good placke to read out the options
         # fils must not exist to proceed
@@ -647,7 +625,8 @@ class PositionAnalyzer(PositionCore):
                           position = self.position,
                           create_images = True,
                           binning_factor = 1,
-                          detect_objects = self.settings.get('Processing', 'objectdetection'))
+                          detect_objects = self.settings.get('Processing',
+                                                             'objectdetection'))
 
         self.setup_classifiers()
         self.export_features = self.define_exp_features()
