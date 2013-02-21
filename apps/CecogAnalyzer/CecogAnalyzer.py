@@ -41,7 +41,11 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
-from pdk.ordereddict import OrderedDict
+try:
+    from pdk.ordereddict import OrderedDict
+except ImportError:
+    sys.path.append(os.path.join(os.pardir, os.pardir, 'pysrc'))
+    from pdk.ordereddict import OrderedDict
 
 import numpy
 #import vigra

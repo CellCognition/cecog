@@ -645,9 +645,10 @@ class HmmThreadPython(_ProcessingThread):
                                   startprob=sprob, init_params="")
         # emission probability, identity matrix with predefined small errors.
         emis = numpy.eye(n_clusters) + eps/(n_clusters-1)
-        emis[range(n_clusters),range(n_clusters)] = 1-eps;
+        emis[range(n_clusters), range(n_clusters)] = 1-eps;
         dhmm.emissionprob_ = emis;
         # learning the DHMM parameters
+
         dhmm.fit([labels.flatten()]) # default n_iter=10, thresh=1e-2
         dhmm.emissionprob_ = emis # with EM update
         labels_dhmm_vec = dhmm.predict(labels.flatten()) # vector format
