@@ -931,13 +931,15 @@ class PlotCellTracker(CellTracker):
 
             # delete false positive trajectories, according to the following rules:
             # 1. No length of the event of interest < k
-            # 2. Event of interest should start from frame 10 to 12 due to event extraction algorithm 
-            # 3. No 0*1*0*1* pattern
+            # 2. Event of interest should start from within frame event_start and event_start+event_tol due to event extraction algorithm 
+            # 3. No 0*1*0*1* pattern (maybe omitted)
+            event_start = self.getOption('iBackwardRange')
+            event_tol = 2
             for i in xrange(num_tracks-1, -1, -1):
                 # print num_tracks
                 
-                if (sum(binary_matrix[i,:]) < k) or (sum(binary_matrix[i,0:9]) > 0) or \
-                    (sum(binary_matrix[i,10:12]) == 0) or sum(numpy.diff(binary_matrix[i,:])==1) > 1:
+                if (sum(binary_matrix[i,:]) < k) or (sum(binary_matrix[i,0:event_start-1]) > 0) or \
+                    (sum(binary_matrix[i,event_start:event_start+event_tol]) == 0) or sum(numpy.diff(binary_matrix[i,:])==1) > 1:
                     binary_matrix = scipy.delete(binary_matrix, i, 0)
                     data_pca = scipy.delete(data_pca, numpy.arange(i*num_frames,
                                                                    (i+1)*num_frames), 0)

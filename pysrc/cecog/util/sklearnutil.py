@@ -49,9 +49,9 @@ def binary_clustering(data):
 
     # thresh=1e-6
     g = mixture.GMM(n_components=2, covariance_type='full', init_params='')
-    g.weights = w
-    g.means = m
-    g.covars = c
+    g.weights_ = w
+    g.means_ = m
+    g.covars_ = c
 
     # n_iter=10, thresh=1e-2
     g.fit(data)
