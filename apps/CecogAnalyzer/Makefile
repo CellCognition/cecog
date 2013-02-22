@@ -6,18 +6,25 @@
 # 14/02/2013
 # This software can be distribute under the term of the LGPL
 
-VERSION = 1.4.0
+VERSION = 1.4.0rc1
 APPNAME = CecogAnalyzer
 DMGNAME = CecogAnalyzer-$(VERSION).dmg
+VOLNAME = $(APPNAME)-$(VERSION)
 
 all: dmg
 
 osx:
 	python setup_mac.py py2app
-	mv dist/$(APPNAME).app dist/$(APPNAME)-$(VERSION).app
+#	mv dist/$(APPNAME).app dist/$(APPNAME)-$(VERSION).app
 
 dmg: osx
-	hdiutil create -srcfolder dist/$(APPNAME)-$(VERSION).app $(DMGNAME)
+	hdiutil create -srcfolder dist/$(APPNAME).app \
+	-volname $(VOLNAME) -fs HFS+ -format UDRW $(DMGNAME)
+	hdiutil attach -readwrite -noverify -noautoopen $(DMGNAME)
+	ln -s /Volumes/$(VOLNAME)/$(APPNAME).app/Contents/Resources/resources/battery_package/ /Volumes/$(VOLNAME)/battery_package
+	ln -s /Applications /Volumes/$(VOLNAME)/Applications
+	hdiutil detach /Volumes/$(VOLNAME)
+#	hdiutil create -srcfolder dist/$(APPNAME)-$(VERSION).app $(DMGNAME)
 
 clean:
 	rm -rfv build dist
