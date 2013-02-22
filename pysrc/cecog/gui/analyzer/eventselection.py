@@ -16,35 +16,10 @@ __source__ = '$URL$'
 
 __all__ = ['EventSelectionFrame']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 from cecog.traits.analyzer.eventselection import SECTION_NAME_EVENT_SELECTION
-from cecog.gui.analyzer import (BaseProcessorFrame,
-                                AnalzyerThread,
-                                )
+from cecog.gui.analyzer import BaseProcessorFrame, AnalzyerThread
+from cecog.analyzer.channel import PrimaryChannel
 
-#-------------------------------------------------------------------------------
-# constants:
-#
-
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 
 class EventSelectionFrame(BaseProcessorFrame):
 
@@ -87,3 +62,48 @@ class EventSelectionFrame(BaseProcessorFrame):
         self.add_expanding_spacer()
 
         self._init_control(has_images=False)
+
+
+    def _get_modified_settings(self, name, has_timelapse=True):
+        settings = BaseProcessorFrame._get_modified_settings( \
+            self, name, has_timelapse)
+
+        settings.set('Processing', 'tracking', True)
+        settings.set('Processing', 'tracking_synchronize_trajectories', False)
+        settings.set('General', 'rendering_class', {})
+        settings.set('General', 'rendering', {})
+
+        settings.set('Classification', 'collectsamples', False)
+
+#       settings.set('Output', 'hdf5_create_file', False)
+        settings.set('Output', 'events_export_gallery_images', False)
+
+        # only primary channel for event selection
+        settings.set('Processing', 'secondary_featureextraction', False)
+        settings.set('Processing', 'secondary_classification', False)
+        settings.set('Processing', 'secondary_processChannel', False)
+        settings.set('Processing', 'tertiary_featureextraction', False)
+        settings.set('Processing', 'tertiary_classification', False)
+        settings.set('Processing', 'tertiary_processChannel', False)
+
+        show_ids = settings.get('Output', 'rendering_contours_showids')
+        show_ids_class = settings.get('Output', 'rendering_class_showids')
+
+        # setting up primary channel and live rendering
+        if settings.get('EventSelection', 'unsupervised_event_selection'):
+            settings.set('Processing', 'primary_featureextraction', True)
+            settings.set('Processing', 'primary_classification', False)
+            rdn =  {'primary_contours':
+                    {PrimaryChannel.NAME: {'raw': ('#FFFFFF', 1.0),
+                                           'contours': {'primary': ('#FF0000', 1, show_ids)}}}}
+            settings.set('General', 'rendering', rdn)
+
+        elif settings.get('EventSelection', 'supervised_event_selection'):
+            settings.set('Processing', 'primary_featureextraction', True)
+            settings.set('Processing', 'primary_classification', True)
+            rdn = {'primary_classification':
+                   {PrimaryChannel.NAME: {'raw': ('#FFFFFF', 1.0),
+                                          'contours': [('primary', 'class_label', 1, False),
+                                                       ('primary', '#000000', 1, show_ids_class)]}}}
+            settings.set('General', 'rendering_class', rdn)
+        return settings

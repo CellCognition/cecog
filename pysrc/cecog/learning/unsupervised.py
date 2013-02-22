@@ -7,10 +7,7 @@ Created on Nov 24, 2011
 import numpy as np
 import scipy.misc as sm
 import scipy.spatial.distance as ssd
-import math
-import warnings
 import sklearn.mixture as mixture
-import util
 import sklearn.hmm as hmm
 import collections
 

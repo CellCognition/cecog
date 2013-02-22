@@ -14,19 +14,8 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = ['SectionPostProcessing']
+__all__ = ['SectionEventSelection']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 from cecog.traits.config import _Section
 from cecog.gui.guitraits import (StringTrait,
                                  BooleanTrait,
@@ -37,21 +26,9 @@ from cecog.gui.guitraits import (StringTrait,
                                  )
 from cecog.analyzer import TRACKING_DURATION_UNITS_DEFAULT
 from cecog.analyzer import TC3_ALGORITHMS
-#-------------------------------------------------------------------------------
-# constants:
-#
+
 SECTION_NAME_EVENT_SELECTION = 'EventSelection'
 
-
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 class SectionEventSelection(_Section):
 
     SECTION_NAME = SECTION_NAME_EVENT_SELECTION
@@ -74,10 +51,10 @@ class SectionEventSelection(_Section):
         ('tracking_forwardrange_min',
             BooleanTrait(False, label='Min.')),
         ]),
-     
+
      ('supervised_event_selection',
        [('supervised_event_selection',
-            BooleanTrait(True, label='Supervised', 
+            BooleanTrait(True, label='Supervised',
                                  widget_info=BooleanTrait.RADIOBUTTON)),
         ('tracking_labeltransitions',
             StringTrait('', 200, label='Class transition motif(s)',
@@ -104,7 +81,7 @@ class SectionEventSelection(_Section):
         [('tc3_analysis',
             BooleanTrait(False, label='Temporal Clustering')),
          ('num_clusters',
-            IntTrait(6, 2, 10, label='Number of clusters',)), 
+            IntTrait(6, 2, 10, label='Number of clusters',)),
          ('min_cluster_size',
             IntTrait(2, 1, 10, label='Min cluster size',)),
          ('tc3_algorithms',

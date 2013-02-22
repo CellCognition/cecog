@@ -16,7 +16,6 @@ __source__ = '$URL$'
 
 
 import numpy
-import scipy.cluster.vq as scv
 from sklearn import mixture
 
 def mylogsumexp(A, axis=None):
@@ -39,21 +38,7 @@ def mylogsumexp(A, axis=None):
 # overwrite the existing logsumexp with new mylogsumexp
 
 def binary_clustering(data):
-
-    m, idx = scv.kmeans2(data, 2)
-    w = numpy.array([sum(idx==0)/float(len(idx)), sum(idx==1)/float(len(idx))]);
-
-    c1 = numpy.cov(data[idx==0,:].T)
-    c2 = numpy.cov(data[idx==1,:].T)
-    c = numpy.dstack((c1,c2)).T
-
-    # thresh=1e-6
-    g = mixture.GMM(n_components=2, covariance_type='full', init_params='')
-    g.weights = w
-    g.means = m
-    g.covars = c
-
-    # n_iter=10, thresh=1e-2
+    g = mixture.GMM(n_components=2, covariance_type='full', init_params='wmc')
     g.fit(data)
     idx = g.predict(data)
 

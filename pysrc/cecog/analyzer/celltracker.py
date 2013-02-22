@@ -33,16 +33,11 @@ from csv import DictWriter
 import numpy as np
 
 from matplotlib import mlab
-from cecog.util.sklearnutil import binary_clustering, remove_constant_columns
 import scipy.stats.stats as sss
 import scipy
-import cecog.learning.unsupervised as unsup
 
 from pdk.options import Option
 from pdk.optionmanagers import OptionManager
-#from pdk.containers.tableio import (importTable,
-#                                    exportTable)
-#from pdk.containers.tablefactories import newTable
 from pdk.ordereddict import OrderedDict
 from pdk.map import dict_append_list
 from pdk.fileutils import safe_mkdirs, collect_files
@@ -53,6 +48,10 @@ from pdk.attributemanagers import (get_slot_values,
 #-------------------------------------------------------------------------------
 # cecog module imports:
 #
+
+import cecog.learning.unsupervised as unsup
+from cecog.util.sklearnutil import binary_clustering
+from cecog.util.sklearnutil import remove_constant_columns
 from cecog.extensions.graphLib import Graph
 from cecog.util.util import write_table
 from cecog.io.imagecontainer import Coordinate
@@ -976,7 +975,7 @@ class PlotCellTracker(CellTracker):
             algorithm = self.getOption('tc3Algorithms')
             result = algorithms[algorithm]
             filename = os.path.join(strPathOutTC3, '%s.txt'%algorithm)
-            np.savetxt(filename, result['label_matrix'], fmt='%d',delimiter='\t')
+            np.savetxt(filename, result['label_matrix'], fmt='%d', delimiter='\t')
 
 
     def exportChannelDataFlat(self, strFilename, strChannelId, strRegionId, lstFeatureNames):
