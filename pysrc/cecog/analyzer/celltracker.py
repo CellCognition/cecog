@@ -918,7 +918,7 @@ class PlotCellTracker(CellTracker):
                        "(%s, %s)" %data_zscore.shape)
                 raise RuntimeError(msg)
                 # data_pca = data_zscore
-
+            
             binary_tmp = binary_clustering(data_pca)
             binary_matrix = binary_tmp.reshape(dim[1],dim[0])
 
@@ -965,15 +965,25 @@ class PlotCellTracker(CellTracker):
             tc3_gmm_chmm = tc.tc3_gmm_chmm(data_pca, tc3_gmm['model'],
                                            tc3_gmm_dhmm['model'])
 
-            algorithms = {'TC3': tc3,
-                          'TC3+GMM': tc3_gmm,
-                          'TC3+GMM+DHMM': tc3_gmm_dhmm,
-                          'TC3+GMM+CHMM': tc3_gmm_chmm}
-
-            algorithm = self.getOption('tc3Algorithms')
-            result = algorithms[algorithm]
-            filename = os.path.join(strPathOutTC3, '%s.txt'%algorithm)
-            numpy.savetxt(filename, result['label_matrix'], fmt='%d',delimiter='\t')
+#            algorithms = {'TC3': tc3,
+#                          'TC3+GMM': tc3_gmm,
+#                          'TC3+GMM+DHMM': tc3_gmm_dhmm,
+#                          'TC3+GMM+CHMM': tc3_gmm_chmm}
+#
+#            algorithm = self.getOption('tc3Algorithms')
+#            result = algorithms[algorithm]
+#            filename = os.path.join(strPathOutTC3, '%s.txt'%algorithm)
+#            numpy.savetxt(filename, result['label_matrix'], fmt='%d',delimiter='\t')
+            
+            # for debug, output all results
+            filenameTC3 = os.path.join(strPathOutTC3, 'TC3.txt')
+            numpy.savetxt(filenameTC3, tc3['label_matrix'], fmt='%d',delimiter='\t')
+            filenameTC3GMM = os.path.join(strPathOutTC3, 'TC3+GMM.txt')
+            numpy.savetxt(filenameTC3GMM, tc3_gmm['label_matrix'], fmt='%d',delimiter='\t')
+            filenameTC3DHMM = os.path.join(strPathOutTC3, 'TC3+GMM+DHMM.txt')
+            numpy.savetxt(filenameTC3DHMM, tc3_gmm_chmm['label_matrix'], fmt='%d',delimiter='\t')
+            filenameTC3CHMM = os.path.join(strPathOutTC3, 'TC3+GMM+CHMM.txt')
+            numpy.savetxt(filenameTC3CHMM, tc3_gmm_chmm['label_matrix'], fmt='%d',delimiter='\t')
 
 
     def exportChannelDataFlat(self, strFilename, strChannelId, strRegionId, lstFeatureNames):
