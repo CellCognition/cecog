@@ -15,7 +15,6 @@ all: dmg
 
 osx:
 	python setup_mac.py py2app
-#	mv dist/$(APPNAME).app dist/$(APPNAME)-$(VERSION).app
 
 dmg: osx
 	hdiutil create -srcfolder dist/$(APPNAME).app \
@@ -24,7 +23,6 @@ dmg: osx
 	ln -s /Volumes/$(VOLNAME)/$(APPNAME).app/Contents/Resources/resources/battery_package/ /Volumes/$(VOLNAME)/battery_package
 	ln -s /Applications /Volumes/$(VOLNAME)/Applications
 	hdiutil detach /Volumes/$(VOLNAME)
-#	hdiutil create -srcfolder dist/$(APPNAME)-$(VERSION).app $(DMGNAME)
 
 clean:
 	rm -rfv build dist

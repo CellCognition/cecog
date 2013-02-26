@@ -1,362 +1,150 @@
 """
-                           The CellCognition Project
-        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
-                      Gerlich Lab, ETH Zurich, Switzerland
-                              www.cellcognition.org
-
-              CellCognition is distributed under the LGPL License.
-                        See trunk/LICENSE.txt for details.
-                 See trunk/AUTHORS.txt for author contributions.
+celltracker.py
 """
 
-__author__ = 'Michael Held'
-__date__ = '$Date$'
-__revision__ = '$Rev$'
-__source__ = '$URL$'
+__author__ = 'rudolf.hoefler@gmail.com'
+__copyright__ = ('The CellCognition Project'
+                 'Copyright (c) 2006 - 2012'
+                 'Gerlich Lab, IMBA Vienna, Austria'
+                 'see AUTHORS.txt for contributions')
+__licence__ = 'LGPL'
+__url__ = 'www.cellcognition.org'
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-import os, \
-       subprocess, \
-       logging, \
-       itertools, \
-       re, \
-       shutil
+
+import os
+import shutil
+import subprocess
+import numpy as np
+from itertools import cycle
+from collections import OrderedDict
+
 from types import ListType
 from csv import DictWriter
 
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-from numpy import array, average
+from cecog.util.util import makedirs
+from cecog.util.logger import LoggerObject
 
-from pdk.options import Option
-from pdk.optionmanagers import OptionManager
-from pdk.ordereddict import OrderedDict
-from pdk.map import dict_append_list
-from pdk.fileutils import safe_mkdirs, collect_files
-from pdk.iterator import unique, flatten
-from pdk.attributemanagers import (get_slot_values,
-                                   set_slot_values)
-
-#-------------------------------------------------------------------------------
-# cecog module imports:
-#
+from cecog.io.dotwriter import DotWriter
 from cecog.extensions.graphLib import Graph
 from cecog.util.util import write_table
 from cecog.io.imagecontainer import Coordinate
 from cecog import ccore
 
-#-------------------------------------------------------------------------------
-# constants:
-#
+class CellTracker(LoggerObject):
 
-DEBUG = False
+    FEATURE_FLAT_PATTERN = "feature__%s"
+    CLASS_FLAT_PATTERN = "class__%s"
+    TRACKING_FLAT_PATTERN = "tracking__%s"
+    FEATURE_COLUMN_PATTERN = "feature__%s"
+    TRACKING_COLUMN_PATTERN = "tracking__%s"
+    CLASS_COLUMN_PATTERN = "class__%s"
+    OBJID_COLUMN_PATTERN = "objId"
 
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-def printd(str):
-    if DEBUG:
-        print str
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
-
-
-class DotWriter(object):
-
-    #SHAPE = 'ellipse'
-    SHAPE = 'plaintext'
-    NODE_STYLE = ' [shape=circle]'
-    EDGE_STYLE = ' [style=bold, arrowsize=0.5]'
-
-    def __init__(self, strFilename, oTracker, lstNodeIds=[], tplTimeRange=None,
-                 strNodeDefaultColor="#AAAAAA"):
-        self.oTracker = oTracker
-        self._dctKnownNodeIds = {}
-        self._dctEdges = {}
-        self.strNodeDefaultColor = strNodeDefaultColor
-        self.oDotFile = file(strFilename, "w")
-
-        self.oDotFile.write("digraph G {\n")
-        tmp = "ranksep=.01; nodesep=1.5; " +\
-              "fontname=\"Helvetica\"; rankdir=TB;\n"
-        self.oDotFile.write(tmp)
-
-
-#        self.dot_file.write("node [shape=\"plaintext\"];\n")
-        lstTimeStrings = ["time %d" % x for x in oTracker.getTimePoints()]
-#        self.dot_file.write("%s;\n" %\
-#                            " -> ".join(["\"%s\"" % x
-#                                         for x in time_nodeL]))
-
-        self.oDotFile.write("node%s;\n" % self.NODE_STYLE)
-
-        iStart, iEnd = oTracker.getValidTimeLimits()
-#        print iStart, iEnd, oTracker.getTimePoints(), oTracker.get_graph().node_list()
-
-        for iT, lstNodeIds in oTracker.getTimePoints().iteritems():
-            for iObjId in lstNodeIds:
-                strNodeId = oTracker.getNodeIdFromComponents(iT, iObjId)
-                if iT == iStart:
-                    self._traverseGraph(strNodeId)
-                # find appearing nuclei
-                elif strNodeId not in self._dctKnownNodeIds:
-                    self._traverseGraph(strNodeId)
-
-
-        # write nodes
-        strTmpNode = '"%s" [%s];\n'
-        oGraph = self.oTracker.get_graph()
-
-        for strNodeId, strLabel in self._dctKnownNodeIds.iteritems():
-            node = oGraph.node_data(strNodeId)
-            #lstNodeAttributes = ["label=\"%s\"" % str_label]
-            lstNodeAttributes = []
-
-            if node.strHexColor is None:
-                strHexColor = self.strNodeDefaultColor
-            else:
-                strHexColor = node.strHexColor
-            lstNodeAttributes += ['style=filled','fillcolor="%s"' % strHexColor]
-            if len(node.dctProb) > 0:
-                fClasses = 1.0 / len(node.dctProb)
-                fProb = node.dctProb[node.iLabel]
-                # scale the node size between 1.1 (100% prob) and 0.1 (1/n% prob, less possible)
-                fWidth = 1.0 * (fProb - fClasses) / (1.01 - fClasses) + 0.1
-                #fWidth = 1.0
-                fHeight = fWidth
-                #lstNodeAttributes += ["label=\"%d %.1f\"" % (node.iId, fProb * 100.0),
-                #                      "width=\"%.2f\"" % fWidth,
-                #                      "height=\"%.2f\"" % fHeight,
-                #                      "fixedsize=\"%s\"" % True]
-                lstNodeAttributes += ['label="%s"' % strNodeId,
-                                      "width=\"%.2f\"" % fWidth,
-                                      "height=\"%.2f\"" % fHeight,
-                                      'fixedsize="%s\"' % True,
-                                      ]
-            else:
-                lstNodeAttributes += ['fixedsize="%s\"' % True,
-                                      ]
-
-
-            strNode = strTmpNode % (strNodeId,
-                                    ",".join(lstNodeAttributes)
-                                    )
-            self.oDotFile.write(strNode)
-
-        # write ranks (force node to be on the same ranks)
-        for strNode, (iT, lstObjIds) in zip(lstTimeStrings, oTracker.getTimePoints().iteritems()):
-            #shown_nodeL = [x for x in node_idL if x in self.labelD]
-            #tmp = "{%s}\n" % "; ".join(["rank=same", "\"%s\"" % time_node] +
-            #                           ["\"%s\"" % self._nodeName(x)
-            #                            for x in node_idL])
-            tmp = "{%s}\n" % "; ".join(['rank=same'] +
-                                       ['"%s"' % oTracker.getNodeIdFromComponents(iT, iObjId)
-                                        for iObjId in lstObjIds])
-            self.oDotFile.write(tmp)
-
-
-
-        self.oDotFile.write("}\n")
-        self.oDotFile.close()
-
-
-
-    def _traverseGraph(self, strNodeId, level=0):
-        oGraph = self.oTracker.get_graph()
-        node = oGraph.node_data(strNodeId)
-        if strNodeId not in self._dctKnownNodeIds:
-#            self.labelD[node_id] = "%s - %d%%\\n%s" %\
-#                                   (node.label,
-#                                    node.probD[node.label]*100.0,
-#                                    node_id)
-            #self.labelD[node_id] = "%d (%d)" % (node.id, node.label)
-            #self.labelD[node_id] = "%d" % node.id
-            self._dctKnownNodeIds[strNodeId] = " "
-
-        for strEdgeId in oGraph.out_arcs(strNodeId):
-            strNodeIdN = oGraph.tail(strEdgeId)
-
-            # since merges are possible, a node reachable more than one time
-            # -> store all edges (combined node ids) and follow them only once
-            strKey = "%s--%s" % (strNodeId, strNodeIdN)
-            if not strKey in self._dctEdges:
-                self._dctEdges[strKey] = 1
-                self._writeEdge(strNodeId, strNodeIdN)
-                self._traverseGraph(strNodeIdN, level+1)
-
-    def _writeEdge(self, strNodeId, strNodeIdN):
-        self.oDotFile.write('"%s" -> "%s"%s;\n' % \
-                            (strNodeId, strNodeIdN, self.EDGE_STYLE))
-
-
-
-
-class CellTracker(OptionManager):
-
-    OPTIONS = {"oMetaData"                  : Option(None),
-               "P"                          : Option(None),
-               "origP"                      : Option(None),
-               "strPathOut"                 : Option(None),
-               "fMaxObjectDistance"         : Option(None),
-               "iMaxSplitObjects"           : Option(None),
-               "oTimeHolder"                : Option(None),
-               "iMaxTrackingGap"            : Option(5),
-               "bVisualize"                 : Option(False),
-               "tplRenderInfo"              : Option(None),
-               }
-
-    __slots__ = ['_oGraph',
+    __slots__ = ['graph',
                  '_channelId',
                  '_dctTimePoints',
                  '_dctTimeChannels',
                  '_dctImageFilenames',
                  'dctVisitorData']
 
-    def __init__(self, **dctOptions):
-        super(CellTracker, self).__init__(**dctOptions)
-        self.oMetaData = self.getOption('oMetaData')
-        self.P = self.getOption('P')
-        self.origP = self.getOption('origP')
-        self.strPathOut = self.getOption('strPathOut')
+    def __init__(self, timeholder, meta_data, position, path_out,
+                 fMaxObjectDistance, iMaxSplitObjects,
+                 iMaxTrackingGap=5,
+                 bHasClassificationData=False,
+                 bExportTrackFeatures=False,
+                 bExportFlatFeatures=False,
+                 featureCompression=None,
+                 flatFeatureCompression=None,
+                 transitions=None,
+                 forward_labels=None,
+                 backward_labels=None,
+                 iMaxInDegree=1,
+                 iMaxOutDegree=2,
+                 forward_check=0,
+                 backward_check=0,
+                 forward_range=-1,
+                 backward_range=-1,
+                 forward_range_min=False,
+                 backward_range_min=False,
+                 allow_one_daughter_cell=True):
 
-        self._dctTimeChannels = self.getOption('oTimeHolder')
-        self._oGraph = None
+        super(CellTracker, self).__init__()
+
+        self.meta_data = meta_data
+        self.position = position
+        self.timeholder = timeholder
+        self.path_out = path_out
+
+        self.fMaxObjectDistance = fMaxObjectDistance
+        self.iMaxSplitObjects = iMaxSplitObjects
+        self.iMaxTrackingGap = iMaxTrackingGap
+        self.lstLabelTransitions = transitions
+        self.iMaxInDegree = iMaxInDegree
+        self.iMaxOutDegree = iMaxOutDegree
+        self.iBackwardCheck = backward_check
+        self.iForwardCheck = forward_check
+        self.iBackwardRange = backward_range
+        self.iForwardRange = forward_range
+        self.bForwardRangeMin = forward_range_min
+        self.bBackwardRangeMin = backward_range_min
+        self.lstForwardLabels = forward_labels
+        self.lstBackwardLabels = backward_labels
+        self.bAllowOneDaughterCell = allow_one_daughter_cell
+
+        self.bHasClassificationData = bHasClassificationData
+        self.bExportTrackFeatures = bExportTrackFeatures
+        self.bExportFlatFeatures = bExportFlatFeatures
+        self.featureCompression = featureCompression
+        self.flatFeatureCompression = flatFeatureCompression
+
+        self._timeholder = self.timeholder
+        self._feature_names = None
+        self.graph = None
         self._channelId = None
+        self._region = None
         self._dctTimePoints = None
-        self.dctVisitorData = None
-        self.oLogger = logging.getLogger(self.__class__.__name__)
+        self.dctVisitorData = {}
 
-    def __getstate__(self):
-        dctSlots = {}
-        dctSlots.update(super(CellTracker, self).__getstate__())
-        dctSlots.update(get_slot_values(self))
-        return dctSlots
+    @property
+    def start_frame(self):
+        """Return the index of the first frame."""
+        return min(self._dctTimePoints.keys())
 
-    def __setstate__(self, state):
-        super(CellTracker, self).__setstate__(state)
-        set_slot_values(self, state)
-        # FIXME:
-        self.oMetaData = self.getOption('oMetaData')
-        self.P = self.getOption('P')
-        self.origP = self.getOption('origP')
-        self.strPathOut = self.getOption('strPathOut')
-        self._dctTimeChannels = self.getOption('oTimeHolder')
-        self.oLogger = logging.getLogger(self.__class__.__name__)
-
-    def __copy__(self):
-        oInstance = self.__class__(**self.getAllOptions())
-        oInstance._dctTimeChannels = self._dctTimeChannels.copy()
-        # careful here: we want to copy the list of node IDs for every T but
-        # we don't want to duplicate the channel data and ImageObjects
-        oInstance._dctTimePoints = self._dctTimePoints.deepcopy()
-        oInstance._oGraph = Graph()
-        oInstance._oGraph.copy(self._oGraph)
-        return oInstance
-
-    def copy(self, channelId=None):
-        tracker = self.__copy__()
-        if not channelId is None and channelId != self._channelId:
-            tracker._channelId = channelId
-            g = tracker._oGraph
-            for nodeId in g.node_list():
-                t, objId = self.getComponentsFromNodeId(nodeId)
-                channel = self._dctTimeChannels[t][channelId]
-                region = channel._dctRegions.values()[0]
-                g.update_node_data(nodeId, region[objId])
-        return tracker
-
-    def getValidTimeLimits(self, iStart=None, iEnd=None):
-        try:
-            if iStart is None:
-                if not self._dctTimePoints is None:
-                    iStart = self._dctTimePoints.keys()[0]
-                else:
-                    iStart = self._dctTimeChannels.keys()[0]
-            if iEnd is None:
-                if not self._dctTimePoints is None:
-                    iEnd = self._dctTimePoints.keys()[-1]
-                else:
-                    iEnd = self._dctTimeChannels.keys()[-1]
-        except IndexError:
-            iStart = 0
-            iEnd = -1
-        return iStart, iEnd
-
-    def get_graph(self):
-        return self._oGraph
+    @property
+    def end_frame(self):
+        """Returns the index of the last frame currently processed."""
+        return max(self._dctTimePoints.keys())
 
     def getTimePoints(self):
         return self._dctTimePoints
 
-    def trackObjects(self, strChannelId, strRegionName, iStart=None, iEnd=None):
-
-        if self.getOption('bVisualize'):
-            lstImageFilenames = collect_files(os.path.join(self.strPathOut, os.pardir, '_images',
-                                                           self.getOption('tplRenderInfo')[0]),
-                                             ['.png', '.jpg'])
-            reTime = re.compile('T(\d+)')
-            self._dctImageFilenames = OrderedDict()
-            for filename in lstImageFilenames:
-                oSearch = reTime.search(os.path.split(filename)[1])
-                if not oSearch is None:
-                    iT = int(oSearch.groups()[0])
-                    self._dctImageFilenames[iT] = filename
-
-        self._channelId = strChannelId
-        self._oGraph = Graph()
-        iStart, iEnd = self.getValidTimeLimits(iStart=iStart, iEnd=iEnd)
+    def initTrackingAtTimepoint(self, color_channel, region):
+        self._channelId = color_channel
+        self._region = region
+        self.graph = Graph()
         self._dctTimePoints = OrderedDict()
 
-        for iT in range(iStart, iEnd+1):
-            if iT in self._dctTimeChannels:
-                oChannel = self._dctTimeChannels[iT][strChannelId]
-                self.lstFeatureNames = oChannel.lstFeatureNames
+    def trackAtTimepoint(self, frame):
+        channel = self._timeholder[frame][self._channelId]
+        holder = channel.get_region(self._region)
 
-                # does Region exist for that time-point?
-                # (yes: segmentation was successfully applied)
-                if strRegionName in oChannel._dctRegions:
-                    #print "  ", strRegionName
-                    oObjectHolder = oChannel._dctRegions[strRegionName]
-                    for iObjId, oImageObject in oObjectHolder.iteritems():
-                        strNodeId = self.getNodeIdFromComponents(iT, iObjId)
-                        self._oGraph.add_node(strNodeId, oImageObject)
-                        if not iT in self._dctTimePoints:
-                            self._dctTimePoints[iT] = []
-                        self._dctTimePoints[iT].append(iObjId)
-                    if iT > iStart:
-                        self._connectTimePoints(iT)
+        for label, sample in holder.iteritems():
+            node_id = self.getNodeIdFromComponents(frame, label)
+            self.graph.add_node(node_id, sample)
+            try:
+                self._dctTimePoints[frame].append(label)
+            except KeyError:
+                self._dctTimePoints[frame] = [label]
 
-    def initTrackingAtTimepoint(self, strChannelId, strRegionName):
-        self._channelId = strChannelId
-        self._regionName = strRegionName
-        self._oGraph = Graph()
-        self._dctTimePoints = OrderedDict()
-
-    def trackAtTimepoint(self, iT):
-        oChannel = self._dctTimeChannels[iT][self._channelId]
-        self.lstFeatureNames = oChannel.lstFeatureNames
-        oObjectHolder = oChannel.get_region(self._regionName)
-        for iObjId, oImageObject in oObjectHolder.iteritems():
-            strNodeId = self.getNodeIdFromComponents(iT, iObjId)
-            self._oGraph.add_node(strNodeId, oImageObject)
-            dict_append_list(self._dctTimePoints, iT, iObjId)
-        #if len(self._dctTimePoints) > 1:
         # connect time point only if any object is present
-        if iT in self._dctTimePoints:
-            self._connectTimePoints(iT)
+        if frame in self._dctTimePoints:
+            self._connectTimePoints(frame)
 
     def _getClosestPreviousT(self, iT):
         iResultT = None
         iTries = 0
-        iMaxGap = self.getOption('iMaxTrackingGap')
-        start = self.getValidTimeLimits()[0]
+        iMaxGap = self.iMaxTrackingGap
+        start = self.start_frame
         while iResultT is None and iTries < iMaxGap and iT > start:
             iT -= 1
             if iT in self._dctTimePoints:
@@ -367,11 +155,11 @@ class CellTracker(OptionManager):
 
     def _connectTimePoints(self, iT):
 
-        fMaxObjectDistanceSquared = float(self.getOption('fMaxObjectDistance')) ** 2
-        iMaxSplitObjects = self.getOption('iMaxSplitObjects')
+        fMaxObjectDistanceSquared = float(self.fMaxObjectDistance) ** 2
+        iMaxSplitObjects = self.iMaxSplitObjects
 
         bReturnSuccess = False
-        oGraph = self._oGraph
+        oGraph = self.graph
 
         # search all nodes in the previous frame
         iPreviousT = self._getClosestPreviousT(iT)
@@ -404,10 +192,15 @@ class CellTracker(OptionManager):
 
                     # take only a certain number as merge candidates (the N closest)
                     for dist, strNodeIdC in lstNearest[:iMaxSplitObjects]:
-                        dict_append_list(dctMerges, strNodeIdC,
-                                         (dist, strNodeIdP))
-                        dict_append_list(dctSplits, strNodeIdP,
-                                         (dist, strNodeIdC))
+                        try:
+                            dctMerges[strNodeIdC].append((dist, strNodeIdP))
+                        except KeyError:
+                            dctMerges[strNodeIdC] = [(dist, strNodeIdP)]
+
+                        try:
+                            dctSplits[strNodeIdP].append((dist, strNodeIdC))
+                        except KeyError:
+                            dctSplits[strNodeIdP] = [(dist, strNodeIdC)]
 
             # prevent split and merge for one node at the same time
 
@@ -426,50 +219,12 @@ class CellTracker(OptionManager):
                         if len(dctSplits[id_p]) == 1:
                             oGraph.add_edge(id_p, id_c)
 
-
-
-            if self.getOption('bVisualize'):
-
-                img = ccore.readRGBImage(self._dctImageFilenames[iT])
-                for objIdP in self._dctTimePoints[iPreviousT]:
-                    nodeIdP = self.getNodeIdFromComponents(iPreviousT, objIdP)
-                    objP = oGraph.node_data(nodeIdP)
-
-                    for edgeId in oGraph.out_arcs(nodeIdP):
-                        nodeIdC = oGraph.tail(edgeId)
-                        objC = oGraph.node_data(nodeIdC)
-
-                        x1 = objP.oCenterAbs[0]
-                        y1 = objP.oCenterAbs[1]
-                        x2 = objC.oCenterAbs[0]
-                        y2 = objC.oCenterAbs[1]
-                        if (x1 == x2 and y1 == y2):
-                            x1 += 1
-                        ccore.drawLine(ccore.Diff2D(x1, y1),
-                                       ccore.Diff2D(x2, y2),
-                                       img, ccore.RGBValue(255,0,0),
-                                       thick=True)
-
-
-                pathOut = os.path.join(self.strPathOut, '_visualize')
-                safe_mkdirs(pathOut)
-                ccore.writeImage(img, os.path.join(pathOut, 'T%05d.jpg' % iT), '89')
-
-
-        # build edges for merged objects: take all items from reverse map
-#        for node_id_prev, node_idTL in mergeD.iteritems():
-#            # take only prev_nodes without successor
-#            # prevent a crossing of edges between two nodes
-#            node_idTL.sort(lambda a,b: cmp(a[0], b[0]))
-#            for dist, node_id in node_idTL[:self.iMaxMergeObjects]:
-#                self.add_edge(node_id_prev, node_id)
-
         return iPreviousT, bReturnSuccess
 
     def visualizeTracks(self, iT, size, n=5, thick=True, radius=3):
         img_conn = ccore.Image(*size)
         img_split = ccore.Image(*size)
-        min_T = self.getValidTimeLimits()[0]
+        min_T = self.start_frame
         if n < 0 or iT-n+1 < min_T:
             current = min_T
             n = iT-current+1
@@ -487,16 +242,16 @@ class CellTracker(OptionManager):
                     found = True
                     for objIdP in self._dctTimePoints[previous]:
                         nodeIdP = self.getNodeIdFromComponents(previous, objIdP)
-                        objP = self._oGraph.node_data(nodeIdP)
+                        objP = self.graph.node_data(nodeIdP)
 
-                        if self._oGraph.out_degree(nodeIdP) > 1:
+                        if self.graph.out_degree(nodeIdP) > 1:
                             img = img_split
                         else:
                             img = img_conn
 
-                        for edgeId in self._oGraph.out_arcs(nodeIdP):
-                            nodeIdC = self._oGraph.tail(edgeId)
-                            objC = self._oGraph.node_data(nodeIdC)
+                        for edgeId in self.graph.out_arcs(nodeIdP):
+                            nodeIdC = self.graph.tail(edgeId)
+                            objC = self.graph.node_data(nodeIdC)
                             ccore.drawLine(ccore.Diff2D(*objP.oCenterAbs),
                                            ccore.Diff2D(*objC.oCenterAbs),
                                            img, col,
@@ -508,7 +263,7 @@ class CellTracker(OptionManager):
         if not found and iT in self._dctTimePoints:
             for objId in self._dctTimePoints[iT]:
                 nodeId = self.getNodeIdFromComponents(iT, objId)
-                obj = self._oGraph.node_data(nodeId)
+                obj = self.graph.node_data(nodeId)
                 ccore.drawFilledCircle(ccore.Diff2D(*obj.oCenterAbs),
                                        radius, img_conn, col)
 
@@ -538,21 +293,12 @@ class CellTracker(OptionManager):
         if bRunDot:
             self.callGraphviz(strDotFilePath)
 
-    def getSubTracker(self, strNodeId, iMaxLevel=None, channelId=None):
-        oTrackerCopy = self.copy(channelId=channelId)
-        oTrackerCopy.clearByStartId(strNodeId, iMaxLevel)
-        return oTrackerCopy
-
     def exportGraph(self, strDotFilePath, bRunDot=False):
         self._exportGraph(self, strDotFilePath, bRunDot=bRunDot)
         self.exportChannelDataFlat(strDotFilePath.split('.')[0] + '_features.txt', 'Primary', 'primary', None)
 
-    def exportSubGraph(self, strDotFilePath, strStartId, iMaxLevel=None, bRunDot=False, channelId=None):
-        tracker = self.getSubTracker(strStartId, iMaxLevel=iMaxLevel, channelId=channelId)
-        tracker.exportGraph(strDotFilePath, bRunDot=bRunDot)
-
     def forwardReachable(self, node_id, reachableD, edgeD, iMaxLevel=None, iLevel=0):
-        oGraph = self._oGraph
+        oGraph = self.graph
         reachableD[node_id] = True
         if iMaxLevel is None or iLevel < iMaxLevel:
             for out_edge_id in oGraph.out_arcs(node_id):
@@ -577,38 +323,20 @@ class CellTracker(OptionManager):
         # and quality dependent yield.
         # This was fixed below.
 
-#        if lstRootIds is None:
-#            iStart, iEnd = self.getValidTimeLimits(iStart, iEnd)
-#            if iEnd > -1:
-#                lstRootIds = [self.getNodeIdFromComponents(iStart, iObjectId)
-#                              for iObjectId in self._dctTimePoints[iStart]]
-#                self.oLogger.debug("tracking: start nodes %d %s" %
-#                                   (len(lstRootIds), lstRootIds))
-#            else:
-#                lstRootIds = []
-#                self.oLogger.warning("tracking: no time-points found for this video.")
-#
-#        self.dctVisitorData = {}
-#        for strRootId in lstRootIds:
-#            self.dctVisitorData[strRootId] = {}
-#            self.oLogger.debug("root ID %s" % strRootId)
-#            dctEdges = {}
-#            self._forwardVisitor(strRootId, self.dctVisitorData[strRootId], dctEdges)
-
         # find all starting tracks and use them for further analysis.
         # multiple traversing of one track is prevented by 'dctEdges', so that no
         # outgoing node ID can be touched twice
 
         if lstRootIds is None:
             # find all start tracks (without incoming edges)
-            lstStartIds = [strNodeId for strNodeId in self._oGraph.node_list()
-                           if self._oGraph.in_degree(strNodeId) == 0]
+            lstStartIds = [strNodeId for strNodeId in self.graph.node_list()
+                           if self.graph.in_degree(strNodeId) == 0]
             # sort by time
             lstStartIds.sort(key = lambda x: self.getComponentsFromNodeId(x)[0])
         else:
             lstStartIds = lstRootIds
 
-        self.oLogger.debug("tracking: start nodes %d %s" %
+        self.logger.debug("tracking: start nodes %d %s" %
                            (len(lstStartIds), lstStartIds))
 
         self.dctVisitorData = {}
@@ -618,7 +346,7 @@ class CellTracker(OptionManager):
             self.dctVisitorData[strStartId] = {'_current': 0,
                                                '_full'   : [[]],
                                                }
-            self.oLogger.debug("root ID %s" % strStartId)
+            self.logger.debug("root ID %s" % strStartId)
             self._forwardVisitor(strStartId, self.dctVisitorData[strStartId], dctVisitedNodes)
 
 
@@ -695,10 +423,10 @@ class CellTracker(OptionManager):
             self.forwardReachable(strStartId, dctReachable, {}, iMaxLevel=iMaxLevel)
 
         # remove all nodes from the entire graph which are not reachable
-        lstNodes = self._oGraph.node_list()
+        lstNodes = self.graph.node_list()
         for strNodeId in lstNodes:
             if not strNodeId in dctReachable:
-                self._oGraph.delete_node(strNodeId)
+                self.graph.delete_node(strNodeId)
                 iT, iObjId = self.getComponentsFromNodeId(strNodeId)
                 if iObjId in self._dctTimePoints[iT]:
                     self._dctTimePoints[iT].remove(iObjId)
@@ -708,54 +436,26 @@ class CellTracker(OptionManager):
         dctReachable = {}
         self.forwardReachable(strStartId, dctReachable, {}, iMaxLevel=iMaxLevel)
         # remove all nodes from the entire graph which are not reachable
-        for strNodeId in self._oGraph.node_list()[:]:
+        for strNodeId in self.graph.node_list()[:]:
             if not strNodeId in dctReachable:
                 #print " * node not reachable", node_id
-                self._oGraph.delete_node(strNodeId)
+                self.graph.delete_node(strNodeId)
                 iT, iObjId = self.getComponentsFromNodeId(strNodeId)
                 if iObjId in self._dctTimePoints[iT]:
                     self._dctTimePoints[iT].remove(iObjId)
         for iT in self._dctTimePoints.keys():
             if len(self._dctTimePoints[iT]) == 0:
                 del self._dctTimePoints[iT]
-                del self._dctTimeChannels[iT]
+                del self._timeholder[iT]
 
-
-
-class PlotCellTracker(CellTracker):
-
-    OPTIONS = {"bExportRootGraph"            : Option(False, doc=""),
-               "bRenderRootGraph"            : Option(False, doc=""),
-               "bExportSubGraph"             : Option(False, doc=""),
-               "bRenderSubGraph"             : Option(False, doc=""),
-               "bPlotterUseCairo"            : Option(False, doc=""),
-               "bHasClassificationData"      : Option(False, doc=""),
-               "bExportTrackFeatures"        : Option(False, doc=""),
-               "bExportFlatFeatures"         : Option(False, doc=""),
-               "featureCompression"          : Option(None, doc=""),
-               "flatFeatureCompression"      : Option(None, doc=""),
-               }
-
-    FEATURE_FLAT_PATTERN = "feature__%s"
-    CLASS_FLAT_PATTERN = "class__%s"
-    TRACKING_FLAT_PATTERN = "tracking__%s"
-    FEATURE_COLUMN_PATTERN = "feature__%s"
-    TRACKING_COLUMN_PATTERN = "tracking__%s"
-    CLASS_COLUMN_PATTERN = "class__%s"
-    OBJID_COLUMN_PATTERN = "objId"
-
-    def __init__(self, **dctOptions):
-        super(PlotCellTracker, self).__init__(**dctOptions)
-        self.dctVisitorData = {}
-
-    def eventIterator(self):
-        for strRootId, dctTrackResults in self.dctVisitorData.iteritems():
-            for strStartId, dctEventData in dctTrackResults.iteritems():
-                yield strStartId, dctEventData
+    def iter_events(self):
+        for track_results in self.dctVisitorData.itervalues():
+            for start_id, event_data in track_results.iteritems():
+                yield start_id, event_data
 
     def getBoundingBoxes(self, method="objectCentered", size=None, border=0):
         dctBoundingBoxes = {}
-        for strStartId, dctEventData in self.eventIterator():
+        for strStartId, dctEventData in self.iter_events():
             if strStartId in ['_full', '_current']:
                 continue
             if method == "objectCentered":
@@ -766,7 +466,7 @@ class PlotCellTracker(CellTracker):
                     iT = self.getComponentsFromNodeId(strNodeId)[0]
                     lstObjIds = [self.getComponentsFromNodeId(strNodeId)[1]
                                  for strNodeId in tplNodeIds]
-                    lstImageObjects = [self._oGraph.node_data(strNodeId)
+                    lstImageObjects = [self.graph.node_data(strNodeId)
                                        for strNodeId in tplNodeIds]
                     minX = min([obj.oRoi.upperLeft[0] for obj in lstImageObjects])
                     minY = min([obj.oRoi.upperLeft[1] for obj in lstImageObjects])
@@ -774,10 +474,10 @@ class PlotCellTracker(CellTracker):
                     maxY = max([obj.oRoi.lowerRight[1] for obj in lstImageObjects])
                     width  = maxX - minX + 1
                     height = maxY - minY + 1
-                    centerX = int(round(average([obj.oCenterAbs[0] for obj in lstImageObjects])))
-                    centerY = int(round(average([obj.oCenterAbs[1] for obj in lstImageObjects])))
+                    centerX = int(round(np.average([obj.oCenterAbs[0] for obj in lstImageObjects])))
+                    centerY = int(round(np.average([obj.oCenterAbs[1] for obj in lstImageObjects])))
                     lstData.append((iT, centerX, centerY, width, height, lstObjIds))
-                aData = array(lstData, 'O')
+                aData = np.array(lstData, 'O')
                 if not size is None and len(size) == 2:
                     iDiffX = int(size[0] / 2)
                     iDiffY = int(size[1] / 2)
@@ -793,8 +493,8 @@ class PlotCellTracker(CellTracker):
                                 aI[5])
                                for aI in aData]
             else:
-                lstNodeIds = flatten(dctEventData['tracks'])
-                lstImageObjects = [self._oGraph.node_data(strNodeId)
+                lstNodeIds = [id_ for data in dctEventData['tracks'] for id_ in data]
+                lstImageObjects = [self.graph.node_data(strNodeId)
                                    for strNodeId in lstNodeIds]
                 iMinX = min([oImgObj.oRoi.upperLeft[0] for oImgObj in lstImageObjects])
                 iMinY = min([oImgObj.oRoi.upperLeft[1] for oImgObj in lstImageObjects])
@@ -803,49 +503,39 @@ class PlotCellTracker(CellTracker):
 
                 tplBoundingBox = (iMinX-border, iMinY-border,
                                   iMaxX+border, iMaxY+border)
-                lstTimePoints = sorted(unique([self.getComponentsFromNodeId(strNodeId)[0]
-                                               for strNodeId in lstNodeIds]))
+                lstTimePoints = sorted(set([self.getComponentsFromNodeId(strNodeId)[0]
+                                            for strNodeId in lstNodeIds]))
                 lstObjIds = [[self.getComponentsFromNodeId(strNodeId)[1]
                               for strNodeId in tplNodeIds]
                              for tplNodeIds in zip(*dctEventData['tracks'])]
                 assert len(lstObjIds) == len(lstTimePoints)
-                lstTimeData = zip(lstTimePoints, itertools.cycle([tplBoundingBox], lstObjIds))
+                lstTimeData = zip(lstTimePoints, cycle([tplBoundingBox], lstObjIds))
 
             dctBoundingBoxes[strStartId] = lstTimeData
         return dctBoundingBoxes
 
-    def exportFullTracks(self):
-        raise NotImplementedError("Overwrite this function in derived classes")
-
-        # XXX
-        # strPathOut = os.path.join(self.strPathOut, 'full')
-        # if clear_path:
-        #     shutil.rmtree(strPathOut, True)
-        #     safe_mkdirs(strPathOut)
-
-    def analyze(self, dctChannels, channelId=None, clear_path=False):
-        strPathOut = os.path.join(self.strPathOut, 'events')
+    def analyze(self, dctChannels, clear_path=False):
+        strPathOut = os.path.join(self.path_out, 'events')
 
         if clear_path:
             shutil.rmtree(strPathOut, True)
-            safe_mkdirs(strPathOut)
+            makedirs(strPathOut)
 
         for strRootId, dctTrackResults in self.dctVisitorData.iteritems():
-            self.oLogger.debug("* root %s, candidates %s" % (strRootId, dctTrackResults.keys()))
+            self.logger.debug("* root %s, candidates %s" % (strRootId, dctTrackResults.keys()))
             for strStartId, dctEventData in dctTrackResults.iteritems():
 
                 if strStartId[0] != '_':
 
-                    if self.getOption("bExportTrackFeatures"):
+                    if self.bExportTrackFeatures:
                         for strChannelId, dctRegions in dctChannels.iteritems():
-                            #print strChannelId, dctRegions,self._dctTimeChannels.channels
-                            if strChannelId in self._dctTimeChannels.channels:
+                            if strChannelId in self._timeholder.channels:
                                 for strRegionId, lstFeatureNames in dctRegions.iteritems():
 
-                                    if self.getOption('featureCompression') is None:
+                                    if self.featureCompression is None:
                                         strCompression = ''
                                     else:
-                                        strCompression = '.%s' % self.getOption('featureCompression')
+                                        strCompression = '.%s' %self.featureCompression
                                     strFilename = self._formatFilename('C%s__R%s' % (strChannelId, strRegionId),
                                                                        nodeId=strStartId, prefix='features', subPath='events',
                                                                        ext='.txt%s' % strCompression)
@@ -855,16 +545,16 @@ class PlotCellTracker(CellTracker):
                                                            strRegionId,
                                                            lstFeatureNames)
 
-                    self.oLogger.debug("* root %s ok" % strStartId)
+                    self.logger.debug("* root %s ok" % strStartId)
 
-        if self.getOption("bExportFlatFeatures"):
+        if self.bExportFlatFeatures:
             for strChannelId, dctRegions in dctChannels.iteritems():
-                if strChannelId in self._dctTimeChannels.channels:
+                if strChannelId in self._timeholder.channels:
                     for strRegionId, lstFeatureNames in dctRegions.iteritems():
-                        if self.getOption('flatFeatureCompression') is None:
+                        if self.flatFeatureCompression is None:
                             strCompression = ''
                         else:
-                            strCompression = '.%s' % self.getOption('flatFeatureCompression')
+                            strCompression = '.%s' % self.flatFeatureCompression
                         strFilename = self._formatFilename('C%s__R%s' % (strChannelId, strRegionId),
                                                             nodeId=strStartId, prefix='_flat_features', subPath='events',
                                                             ext='.txt%s' % strCompression)
@@ -880,8 +570,8 @@ class PlotCellTracker(CellTracker):
         if not lstFeatureNames is None:
             lstFeatureNames = sorted(lstFeatureNames)
 
-        for iT in self._dctTimeChannels:
-            oChannel = self._dctTimeChannels[iT][strChannelId]
+        for iT in self._timeholder:
+            oChannel = self._timeholder[iT][strChannelId]
 
             if oChannel.has_region(strRegionId):
                 oRegion = oChannel.get_region(strRegionId)
@@ -909,7 +599,7 @@ class PlotCellTracker(CellTracker):
                         aFeatures = oRegion.features_by_name(iObjId, lstFeatureNames)
                         for fFeature, strName in zip(aFeatures, lstFeatureNames):
                             dctData[self.FEATURE_FLAT_PATTERN % strName] = float(fFeature)
-                        if self.getOption('bHasClassificationData'):
+                        if self.bHasClassificationData:
                             dctData[self.CLASS_FLAT_PATTERN % 'label'] = oObj.iLabel
                             dctData[self.CLASS_FLAT_PATTERN % 'name'] = oObj.strClassName
                             dctData[self.CLASS_FLAT_PATTERN % 'probability'] =\
@@ -961,7 +651,7 @@ class PlotCellTracker(CellTracker):
             if iT is None:
                 return
 
-            oChannel = self._dctTimeChannels[iT][strChannelId]
+            oChannel = self._timeholder[iT][strChannelId]
             oRegion = oChannel.get_region(strRegionId)
 
             if not bHasFeatures:
@@ -970,7 +660,7 @@ class PlotCellTracker(CellTracker):
                     lstFeatureNames = oRegion.feature_names
                 lstHeaderNames += [self.OBJID_COLUMN_PATTERN]
 
-                if self.getOption('bHasClassificationData'):
+                if self.bHasClassificationData:
                     lstHeaderNames += [self.CLASS_COLUMN_PATTERN % x
                                        for x in ['name', 'label', 'probability']]
                 lstHeaderNames += [self.FEATURE_COLUMN_PATTERN % strFeatureName
@@ -982,9 +672,9 @@ class PlotCellTracker(CellTracker):
                 lstHeaderNames += [self.TRACKING_COLUMN_PATTERN % strFeatureName
                                    for strFeatureName in tracking_features]
 
-            coordinate = Coordinate(position=self.origP, time=iT)
+            coordinate = Coordinate(position=self.position, time=iT)
             dctData = {'Frame' : iT,
-                       'Timestamp' : self.oMetaData.get_timestamp_relative(coordinate),
+                       'Timestamp' : self.meta_data.get_timestamp_relative(coordinate),
                        'isEvent' : 1 if iT == iEventT else 0,
                        }
             if bHasSplitId:
@@ -998,7 +688,7 @@ class PlotCellTracker(CellTracker):
                 dctData[self.OBJID_COLUMN_PATTERN] = iObjId
 
                 # classification data
-                if self.getOption('bHasClassificationData'):
+                if self.bHasClassificationData:
                     dctData[self.CLASS_COLUMN_PATTERN % 'label'] = oObj.iLabel
                     dctData[self.CLASS_COLUMN_PATTERN % 'name'] = oObj.strClassName
                     dctData[self.CLASS_COLUMN_PATTERN % 'probability'] =\
@@ -1028,35 +718,11 @@ class PlotCellTracker(CellTracker):
             write_table(strFilename, table, column_names=lstHeaderNames)
 
 
-    def _forwardVisitor(self, strNodeId, dctResults, dctEdges, iLevel=0, strStartId=None):
-        oGraph = self._oGraph
-        oObject = oGraph.node_data(strNodeId)
-
-        if strStartId is None:
-            strStartId = strNodeId
-            dctResults[strStartId] = {'eventId'  : strNodeId,
-                                      'maxLength': 0,
-                                      'tracks'   : [[]],
-                                      }
-            self.oLogger.debug("%s - valid candidate" % strStartId)
-
-        dctResults[strStartId]['tracks'][0].append(strNodeId)
-        dctResults[strStartId]['maxLength'] += 1
-
-        for strOutEdgeId in oGraph.out_arcs(strNodeId):
-            strTailId = oGraph.tail(strOutEdgeId)
-            # ignore merging nodes
-            strKey = "%s--%s" % (strNodeId, strTailId)
-            if strKey not in dctEdges:
-                dctEdges[strKey] = True
-                self._forwardVisitor(strTailId, dctResults, dctEdges, iLevel=iLevel+1, strStartId=strStartId)
-
-
     def _formatFilename(self, strSuffix=None, nodeId=None, prefix=None, subPath=None, branchId=None, ext='.txt'):
         lstParts = []
         if not prefix is None:
             lstParts.append(prefix)
-        lstParts.append('P%s' % self.P)
+        lstParts.append('P%s' % self.position)
         if not nodeId is None:
             items = self.getComponentsFromNodeId(nodeId)
             frame, obj_id = items[:2]
@@ -1075,263 +741,65 @@ class PlotCellTracker(CellTracker):
             lstParts.append(strSuffix)
         strParts = '__'.join(lstParts)
         if not subPath is None:
-            strPathOut = os.path.join(self.strPathOut, subPath)
-            safe_mkdirs(strPathOut)
+            strPathOut = os.path.join(self.path_out, subPath)
+            makedirs(strPathOut)
         else:
-            strPathOut = self.strPathOut
+            strPathOut = self.path_out
         return os.path.join(strPathOut, strParts) + ext
 
-
-
-class SplitCellTracker(PlotCellTracker):
-
-    OPTIONS = {"iForwardRange"           :   Option(None, doc=""),
-               "iBackwardRange"          :   Option(None, doc=""),
-               }
-
-    def __init__(self, **dctOptions):
-        super(SplitCellTracker, self).__init__(**dctOptions)
-        self.bRunDotCmdRoot = False
-
     def _backwardCheck(self, strNodeId, lstNodeIds, iLevel=1):
-        oGraph = self._oGraph
+        oGraph = self.graph
         lstNodeIds.append(strNodeId)
-        if iLevel > 1 and oGraph.out_degree(strNodeId) != 1:
-            #logging.debug("mooo out")
-            return False
-        # check for split
-        if oGraph.in_degree(strNodeId) != 1:
-            #logging.debug("mooo in")
-            return False
-        if iLevel >= self.getOption('iBackwardRange'):
+        if ((self.iBackwardRange == -1 and oGraph.in_degree(strNodeId) == 0) or
+            (self.bBackwardRangeMin and iLevel >= self.iBackwardRange and oGraph.in_degree(strNodeId) == 0) or
+            (not self.bBackwardRangeMin and iLevel >= self.iBackwardRange)):
             return True
-        strInEdgeId = oGraph.in_arcs(strNodeId)[0]
-        assert len(oGraph.in_arcs(strNodeId)) == 1
-        strHeadId = oGraph.head(strInEdgeId)
-        return self._backwardCheck(strHeadId, lstNodeIds, iLevel=iLevel+1)
-
-    def _forwardCheck(self, strNodeId, lstNodeIds, iLevel=1):
-        oGraph = self._oGraph
-        lstNodeIds.append(strNodeId)
-        if oGraph.in_degree(strNodeId) != 1:
-            return False
-        # check for split
         if oGraph.out_degree(strNodeId) != 1:
             return False
-        if iLevel >= self.getOption('iForwardRange'):
-            return True
-        strOutEdgeId = oGraph.out_arcs(strNodeId)[0]
-        strTailId = oGraph.tail(strOutEdgeId)
-        return self._forwardCheck(strTailId, lstNodeIds, iLevel=iLevel+1)
-
-    def _forwardVisitor(self, strNodeId, dctResults, dctVisitedNodes, iLevel=0):
-        oGraph = self._oGraph
-        oObject = oGraph.node_data(strNodeId)
-
-        self.oLogger.debug('_forwardVisitor nodeId=%s level=%d' % (strNodeId, iLevel))
-
-        if oGraph.out_degree(strNodeId) == 2 and oGraph.in_degree(strNodeId) == 1: # and oObject.iLabel in [2,3,4,5,6,7]:
-            bCandidateOk = True
-            self.oLogger.debug("%s - found n=2" % strNodeId)
-
-            if bCandidateOk:
-                lstBackwardNodeIds = []
-                bCandidateOk = self._backwardCheck(strNodeId, lstBackwardNodeIds)
-                self.oLogger.debug("%s - backwards %s    %s" % (strNodeId, {True: 'ok', False: 'failed'}[bCandidateOk], lstBackwardNodeIds))
-
-            lstForwardNodeIds = [[],[]]
-            dctNodeIds = {}
-            for iCnt, strOutEdgeId in enumerate(oGraph.out_arcs(strNodeId)):
-                if bCandidateOk:
-                    strTailId = oGraph.tail(strOutEdgeId)
-                    bCandidateOk = self._forwardCheck(strTailId, lstForwardNodeIds[iCnt])
-                    self.oLogger.debug("%s - forwards %s %s" % (strNodeId, ['A','B'][iCnt], {True: 'ok', False: 'failed'}[bCandidateOk]))
-
-            if bCandidateOk:
-
-                lstBackwardNodeIds.reverse()
-                strStartId = lstBackwardNodeIds[0]
-
-                lstTrackA = lstBackwardNodeIds + lstForwardNodeIds[0]
-                lstTrackB = lstBackwardNodeIds + lstForwardNodeIds[1]
-                dctResults[strStartId] = {'eventId'  : strNodeId,
-                                          'maxLength': len(lstTrackA),
-                                          'tracks'   : [lstTrackA, lstTrackB]}
-
-                self.oLogger.debug("%s - valid candidate" % strStartId)
-
-        self.oLogger.debug("outdegree=%d, outarcs=%s, level=%d" %\
-                           (len(oGraph.out_arcs(strNodeId)), oGraph.out_arcs(strNodeId), iLevel))
-        for strOutEdgeId in oGraph.out_arcs(strNodeId):
-            strTailId = oGraph.tail(strOutEdgeId)
-            if strTailId not in dctVisitedNodes:
-                dctVisitedNodes[strTailId] = True
-                self._forwardVisitor(strTailId, dctResults, dctVisitedNodes, iLevel=iLevel+1)
-
-class SplitCellTrackerExt(SplitCellTracker):
-
-    def __init__(self, **dctOptions):
-        super(SplitCellTrackerExt, self).__init__(**dctOptions)
-        self.bRunDotCmdRoot = False
-
-    def _backwardCheck(self, strNodeId, lstNodeIds, iLevel=1):
-        oGraph = self._oGraph
-        lstNodeIds.append(strNodeId)
-        if iLevel < self.getOption('iBackwardCheck'):
-            if iLevel > 1 and oGraph.out_degree(strNodeId) != 1:
-                #logging.debug("mooo out")
-                return False
-            # check for split
-            if oGraph.in_degree(strNodeId) != 1:
-                #logging.debug("mooo in")
-                return False
-        if len(oGraph.in_arcs(strNodeId)) > 0:
-            strInEdgeId = oGraph.in_arcs(strNodeId)[0]
-            #assert len(oGraph.in_arcs(strNodeId)) == 1
-            strHeadId = oGraph.head(strInEdgeId)
-            return self._backwardCheck(strHeadId, lstNodeIds, iLevel=iLevel+1)
-        else:
-            return True
-
-    def _forwardCheck(self, strNodeId, lstNodeIds, iLevel=1):
-        oGraph = self._oGraph
-        lstNodeIds.append(strNodeId)
-        if iLevel < self.getOption('iForwardCheck'):
-            if oGraph.in_degree(strNodeId) != 1:
-                return False
-            # check for split
-            if oGraph.out_degree(strNodeId) != 1:
-                return False
-
-        if len(oGraph.out_arcs(strNodeId)) > 0:
-            strOutEdgeId = oGraph.out_arcs(strNodeId)[0]
-            strTailId = oGraph.tail(strOutEdgeId)
-            return self._forwardCheck(strTailId, lstNodeIds, iLevel=iLevel+1)
-        else:
-            return True
-
-class NoSplitCellTrackerExt(PlotCellTracker):
-
-    def __init__(self, **dctOptions):
-        super(NoSplitCellTrackerExt, self).__init__(**dctOptions)
-        self.bRunDotCmdRoot = False
-
-    def _forwardVisitor(self, strNodeId, dctResults, dctEdges, iLevel=0):
-        oGraph = self._oGraph
-        oObject = oGraph.node_data(strNodeId)
-
-        if oGraph.out_degree(strNodeId) == 1:
-            bCandidateOk = True
-            self.oLogger.debug("%s - found n=1" % strNodeId)
-
-            lstForwardNodeIds = []
-            strTailId = oGraph.tail(oGraph.out_arcs(strNodeId)[0])
-            bCandidateOk = self._forwardCheck(strTailId, lstForwardNodeIds)
-            self.oLogger.debug("%s - forwards %s" % (strNodeId, {True: 'ok', False: 'failed'}[bCandidateOk]))
-
-            if bCandidateOk:
-
-                strStartId = lstForwardNodeIds[0]
-                lstTrackA = lstForwardNodeIds
-                dctResults[strStartId] = {'eventId'  : strStartId,
-                                          'maxLength': len(lstTrackA),
-                                          'tracks'   : [lstTrackA],
-                                          }
-                self.oLogger.debug("%s - valid candidate" % strStartId)
-
-    def _forwardCheck(self, strNodeId, lstNodeIds, iLevel=1):
-        oGraph = self._oGraph
-        lstNodeIds.append(strNodeId)
-        if oGraph.in_degree(strNodeId) != 1:
-            return False
-        # check for split
-        if oGraph.out_degree(strNodeId) > 1:
-            return False
-
-        if oGraph.out_degree(strNodeId) > 0:
-            strTailId = oGraph.tail(oGraph.out_arcs(strNodeId)[0])
-            return self._forwardCheck(strTailId, lstNodeIds, iLevel=iLevel+1)
-        else:
-            return True
-
-
-class ClassificationCellTracker(SplitCellTracker):
-
-    OPTIONS = {"lstForwardLabels"        :   Option(None, doc=""),
-               "lstBackwardLabels"       :   Option(None, doc=""),
-               "iMaxInDegree"            :   Option(None, doc=""),
-               "iMaxOutDegree"           :   Option(None, doc=""),
-               "lstLabelTransitions"     :   Option(None),
-               "bFollowOnlyOneCell"      :   Option(False),
-               "bAllowOneDaughterCell"   :   Option(False),
-               "iBackwardCheck"          :   Option(None, doc=""),
-               "iForwardCheck"           :   Option(None, doc=""),
-
-               "bForwardRangeMin"        :   Option(False, doc=""),
-               "bBackwardRangeMin"       :   Option(False, doc=""),
-               }
-
-    def __init__(self, **dctOptions):
-        super(ClassificationCellTracker, self).__init__(**dctOptions)
-        self.bRunDotCmdRoot = False
-
-    def _backwardCheck(self, strNodeId, lstNodeIds, iLevel=1):
-        oGraph = self._oGraph
-        lstNodeIds.append(strNodeId)
-        if ((self.getOption('iBackwardRange') == -1 and oGraph.in_degree(strNodeId) == 0) or
-            (self.getOption('bBackwardRangeMin') and iLevel >= self.getOption('iBackwardRange') and oGraph.in_degree(strNodeId) == 0) or
-            (not self.getOption('bBackwardRangeMin') and iLevel >= self.getOption('iBackwardRange'))):
-            return True
-        if oGraph.out_degree(strNodeId) != 1:
-            #logging.debug("     mooo out")
-            return False
         # check for split
         if oGraph.in_degree(strNodeId) != 1:
-            #logging.debug("     mooo in")
             return False
 
         oObject = oGraph.node_data(strNodeId)
-        if iLevel > 1 and iLevel-1 <= self.getOption('iBackwardCheck') and not oObject.iLabel in self.getOption('lstBackwardLabels'):
-            #logging.debug("     mooo label %d" % oObject.iLabel)
+        if iLevel > 1 and iLevel-1 <= self.iBackwardCheck and not \
+                oObject.iLabel in self.lstBackwardLabels:
             return False
 
         strInEdgeId = oGraph.in_arcs(strNodeId)[0]
-        #assert oGraph.in_arcs(strNodeId)) == 1
         strHeadId = oGraph.head(strInEdgeId)
         return self._backwardCheck(strHeadId, lstNodeIds, iLevel=iLevel+1)
 
     def _forwardCheck(self, strNodeId, lstNodeIds, iLevel=1, strFoundSplitId=None):
-        oGraph = self._oGraph
+        oGraph = self.graph
         lstNodeIds.append(strNodeId)
-        if ((self.getOption('iForwardRange') == -1 and oGraph.out_degree(strNodeId) == 0) or
-            (self.getOption('bForwardRangeMin') and iLevel >= self.getOption('iForwardRange') and oGraph.out_degree(strNodeId) == 0) or
-            (not self.getOption('bForwardRangeMin') and iLevel >= self.getOption('iForwardRange'))):
+        if ((self.iForwardRange == -1 and oGraph.out_degree(strNodeId) == 0) or
+            (self.bForwardRangeMin and iLevel >= self.iForwardRange and oGraph.out_degree(strNodeId) == 0) or
+            (not self.bForwardRangeMin and iLevel >= self.iForwardRange)):
             return True
-        if oGraph.in_degree(strNodeId) > self.getOption('iMaxInDegree'):
+        if oGraph.in_degree(strNodeId) > self.iMaxInDegree:
             return False
         # check for split
-        if oGraph.out_degree(strNodeId) > self.getOption('iMaxOutDegree') or oGraph.out_degree(strNodeId) == 0:
+        if oGraph.out_degree(strNodeId) > self.iMaxOutDegree or oGraph.out_degree(strNodeId) == 0:
             return False
 
         oObject = oGraph.node_data(strNodeId)
-        if iLevel <= self.getOption('iForwardCheck') and not oObject.iLabel in self.getOption('lstForwardLabels'):
-            #logging.debug("     mooo label %d" % oObject.iLabel)
+        if iLevel <= self.iForwardCheck and not oObject.iLabel in self.lstForwardLabels:
             return False
 
         if (strFoundSplitId is None and
             oGraph.out_degree(strNodeId) > 1 and
-            oGraph.out_degree(strNodeId) <= self.getOption('iMaxOutDegree')):
-            logging.info("     FOUND SPLIT! %s" % strNodeId)
+            oGraph.out_degree(strNodeId) <= self.iMaxOutDegree):
+            self.logger.info("     FOUND SPLIT! %s" % strNodeId)
             strFoundSplitId = strNodeId
             lstNewNodeIds = []
-            if self.getOption('bAllowOneDaughterCell'):
+            if self.bAllowOneDaughterCell:
                 bResult = False
             else:
                 bResult = True
             for strOutEdgeId in oGraph.out_arcs(strNodeId):
                 lstNewNodeIds.append([])
                 strTailId = oGraph.tail(strOutEdgeId)
-                if self.getOption('bAllowOneDaughterCell'):
+                if self.bAllowOneDaughterCell:
                     bResult |= self._forwardCheck(strTailId, lstNewNodeIds[-1], iLevel=iLevel+1, strFoundSplitId=strFoundSplitId)
                 else:
                     bResult &= self._forwardCheck(strTailId, lstNewNodeIds[-1], iLevel=iLevel+1, strFoundSplitId=strFoundSplitId)
@@ -1342,16 +810,15 @@ class ClassificationCellTracker(SplitCellTracker):
             strTailId = oGraph.tail(strOutEdgeId)
             return self._forwardCheck(strTailId, lstNodeIds, iLevel=iLevel+1, strFoundSplitId=strFoundSplitId)
 
-
     def _forwardVisitor(self, strNodeId, dctResults, dctVisitedNodes, iLevel=0):
-        oGraph = self._oGraph
+        oGraph = self.graph
 
         if oGraph.out_degree(strNodeId) == 1 and oGraph.in_degree(strNodeId) == 1:
             oObject = oGraph.node_data(strNodeId)
             oObjectNext = oGraph.node_data(oGraph.tail(oGraph.out_arcs(strNodeId)[0]))
 
             bFound = False
-            for tplCheck in self.getOption('lstLabelTransitions'):
+            for tplCheck in self.lstLabelTransitions:
                 if (len(tplCheck) == 2 and
                     oObject.iLabel == tplCheck[0] and
                     oObjectNext.iLabel == tplCheck[1]):
@@ -1360,103 +827,24 @@ class ClassificationCellTracker(SplitCellTracker):
 
             if bFound:
                 bCandidateOk = True
-                self.oLogger.debug("  found %6s" % strNodeId)
+                self.logger.debug("  found %6s" % strNodeId)
 
                 if bCandidateOk:
                     lstBackwardNodeIds = []
                     bCandidateOk = self._backwardCheck(strNodeId,
                                                        lstBackwardNodeIds)
-                    self.oLogger.debug("    %s - backwards %s    %s" % (strNodeId, {True: 'ok', False: 'failed'}[bCandidateOk], lstBackwardNodeIds))
+                    self.logger.debug("    %s - backwards %s    %s" % (strNodeId, {True: 'ok', False: 'failed'}[bCandidateOk], lstBackwardNodeIds))
 
                 if bCandidateOk:
                     lstForwardNodeIds = []
                     strTailId = oGraph.tail(oGraph.out_arcs(strNodeId)[0])
                     bCandidateOk = self._forwardCheck(strTailId,
                                                       lstForwardNodeIds)
-                    self.oLogger.debug("    %s - forwards %s    %s" % (strTailId, {True: 'ok', False: 'failed'}[bCandidateOk], lstForwardNodeIds))
+                    self.logger.debug("    %s - forwards %s    %s" % (strTailId, {True: 'ok', False: 'failed'}[bCandidateOk], lstForwardNodeIds))
 
                 if bCandidateOk:
 
-                    track_length = self.getOption('iBackwardRange') + self.getOption('iForwardRange')
-
-                    lstBackwardNodeIds.reverse()
-                    strStartId = lstBackwardNodeIds[0]
-                    dctResults[strStartId] = {'eventId'  : strNodeId}
-
-                    # found a split event
-                    lstSplitIds = [i for i,t in enumerate(map(type, lstForwardNodeIds))
-                                   if t == ListType]
-
-                    #print lstSplitIds
-                    if len(lstSplitIds) > 0:
-                        # take only the first split event
-                        iSplitIdx = lstSplitIds[0]
-                        lstTracks = []
-                        for lstSplit in lstForwardNodeIds[iSplitIdx]:
-                            lstNodes = lstBackwardNodeIds + lstForwardNodeIds[:iSplitIdx] + lstSplit
-                            if len(lstNodes) == track_length:
-                                lstTracks.append(lstNodes)
-
-                        if self.getOption('bFollowOnlyOneCell'):
-                            # take the first track from the list
-                            lstTracks = [lstTracks[0]]
-
-                        dctResults[strStartId].update({'splitId'  : lstForwardNodeIds[iSplitIdx-1],
-                                                       'maxLength': track_length,
-                                                       'tracks'   : lstTracks,
-                                                       })
-                    else:
-                        lstNodeIds = lstBackwardNodeIds + lstForwardNodeIds
-                        dctResults[strStartId].update({'maxLength': track_length,
-                                                       'tracks'   : [lstNodeIds]})
-                    self.oLogger.debug("  %s - valid candidate" % strStartId)
-
-        for strOutEdgeId in oGraph.out_arcs(strNodeId):
-            strTailId = oGraph.tail(strOutEdgeId)
-            if not strTailId in dctVisitedNodes:
-                dctVisitedNodes[strTailId] = True
-                self._forwardVisitor(strTailId, dctResults, dctVisitedNodes, iLevel=iLevel+1)
-
-
-class ClassificationCellTracker2(ClassificationCellTracker):
-
-    OPTIONS = {"bAllowOneDaughterCell":   Option(True)}
-
-    def _forwardVisitor(self, strNodeId, dctResults, dctVisitedNodes, iLevel=0):
-        oGraph = self._oGraph
-
-        if oGraph.out_degree(strNodeId) == 1 and oGraph.in_degree(strNodeId) == 1:
-            oObject = oGraph.node_data(strNodeId)
-            oObjectNext = oGraph.node_data(oGraph.tail(oGraph.out_arcs(strNodeId)[0]))
-
-            bFound = False
-            for tplCheck in self.getOption('lstLabelTransitions'):
-                if (len(tplCheck) == 2 and
-                    oObject.iLabel == tplCheck[0] and
-                    oObjectNext.iLabel == tplCheck[1]):
-                    bFound = True
-                    break
-
-            if bFound:
-                bCandidateOk = True
-                self.oLogger.debug("  found %6s" % strNodeId)
-
-                if bCandidateOk:
-                    lstBackwardNodeIds = []
-                    bCandidateOk = self._backwardCheck(strNodeId,
-                                                       lstBackwardNodeIds)
-                    self.oLogger.debug("    %s - backwards %s    %s" % (strNodeId, {True: 'ok', False: 'failed'}[bCandidateOk], lstBackwardNodeIds))
-
-                if bCandidateOk:
-                    lstForwardNodeIds = []
-                    strTailId = oGraph.tail(oGraph.out_arcs(strNodeId)[0])
-                    bCandidateOk = self._forwardCheck(strTailId,
-                                                      lstForwardNodeIds)
-                    self.oLogger.debug("    %s - forwards %s    %s" % (strTailId, {True: 'ok', False: 'failed'}[bCandidateOk], lstForwardNodeIds))
-
-                if bCandidateOk:
-
-                    track_length = self.getOption('iBackwardRange') + self.getOption('iForwardRange')
+                    track_length = self.iBackwardRange + self.iForwardRange
 
                     lstBackwardNodeIds.reverse()
                     strStartId = lstBackwardNodeIds[0]
@@ -1493,14 +881,14 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                                                   'tracks'   : [lstNodeIds],
                                                   }
                     #print dctResults[strStartId]
-                    self.oLogger.debug("  %s - valid candidate" % strStartId)
+                    self.logger.debug("  %s - valid candidate" % strStartId)
 
         # record the full trajectory in a liniearized way
         base = dctResults['_current']
         dctResults['_full'][base].append(strNodeId)
         depth = len(dctResults['_full'][base])
 
-        #self.oLogger.debug("moo %s" % self.out_arcs(strNodeId))
+        #self.logger.debug("moo %s" % self.out_arcs(strNodeId))
         for idx, strOutEdgeId in enumerate(oGraph.out_arcs(strNodeId)):
             strTailId = oGraph.tail(strOutEdgeId)
             if not strTailId in dctVisitedNodes:
@@ -1540,9 +928,9 @@ class ClassificationCellTracker2(ClassificationCellTracker):
         return flkp
 
     def exportFullTracks(self, sep='\t'):
-        strPathOut = os.path.join(self.strPathOut, 'full')
-        shutil.rmtree(strPathOut, True)
-        safe_mkdirs(strPathOut)
+        path = os.path.join(self.path_out, 'full')
+        shutil.rmtree(path, True)
+        makedirs(path)
 
         for start_id, data in self.dctVisitorData.iteritems():
             for idx, track in enumerate(data['_full']):
@@ -1557,12 +945,12 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                 for node_id in track:
                     frame, obj_id = self.getComponentsFromNodeId(node_id)
 
-                    coordinate = Coordinate(position=self.origP, time=frame)
-                    prefix = [frame, self.oMetaData.get_timestamp_relative(coordinate), obj_id]
+                    coordinate = Coordinate(position=self.position, time=frame)
+                    prefix = [frame, self.meta_data.get_timestamp_relative(coordinate), obj_id]
                     prefix_names = ['frame', 'time', 'objID']
                     items = []
 
-                    for channel in self._dctTimeChannels[frame].values():
+                    for channel in self._timeholder[frame].values():
                         for region_id in channel.region_names():
                             region = channel.get_region(region_id)
                             if obj_id in region:

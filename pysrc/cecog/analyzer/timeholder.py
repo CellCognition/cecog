@@ -789,7 +789,7 @@ class TimeHolder(OrderedDict):
                         dset_cross_rel[idx + offset] = (idx, idx)
 
     def serialize_tracking(self, tracker):
-        graph = tracker.get_graph()
+        graph = tracker.graph
 
         # export full graph structure to .dot file
         #path_out = self._settings.get('General', 'pathout')

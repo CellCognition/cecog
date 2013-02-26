@@ -19,7 +19,6 @@ import shutil
 from collections import OrderedDict
 from os.path import join, basename, isdir
 
-from cecog import ccore
 from cecog.io.imagecontainer import Coordinate
 from cecog.plugin.segmentation import REGION_INFO
 from cecog.analyzer import (TRACKING_DURATION_UNIT_FRAMES,
@@ -28,7 +27,7 @@ from cecog.analyzer import (TRACKING_DURATION_UNIT_FRAMES,
 
 from cecog.analyzer.timeholder import TimeHolder
 from cecog.analyzer.analyzer import CellAnalyzer
-from cecog.analyzer.celltracker import ClassificationCellTracker2 as CellTracker
+from cecog.analyzer.celltracker import CellTracker
 
 from cecog.analyzer.channel import (PrimaryChannel,
                                     SecondaryChannel,
@@ -464,30 +463,30 @@ class PositionAnalyzer(PositionCore):
                   'bExportTrackFeatures': self.settings.get2('tracking_exporttrackfeatures'),
                   'featureCompression': None if self.settings.get2('tracking_compressiontrackfeatures') == 'raw' else self.settings.get2('tracking_compressiontrackfeatures'),
                   'bHasClassificationData': True,
-                  'iBackwardCheck': 0,
-                  'iForwardCheck': 0,
-                  'iBackwardRange': -1,
-                  'iForwardRange': -1,
+                  'backward_check': 0,
+                  'forward_check': 0,
+                  'forward_range': -1,
+                  'backward_range': -1,
                   'iMaxInDegree': self.settings.get2('tracking_maxindegree'),
                   'iMaxOutDegree': self.settings.get2('tracking_maxoutdegree'),
-                  'lstLabelTransitions': [],
-                  'lstBackwardLabels': [],
-                  'lstForwardLabels': []}
+                  'transitions': [],
+                  'backward_labels': [],
+                  'forward_labels': []}
 
         # if event selection is on
         # what is this good for?
         transitions = self.settings.get2('tracking_labeltransitions').replace('),(', ')__(')
         transitions = map(eval, transitions.split('__'))
         if self.settings.get('Processing', 'tracking_synchronize_trajectories'):
-            tropts.update({'iBackwardCheck': self._convert_tracking_duration('tracking_backwardCheck'),
-                           'iForwardCheck': self._convert_tracking_duration('tracking_forwardCheck'),
-                           'iBackwardRange': self._convert_tracking_duration('tracking_backwardrange'),
-                           'iForwardRange': self._convert_tracking_duration('tracking_forwardrange'),
-                           'bBackwardRangeMin': self.settings.get2('tracking_backwardrange_min'),
-                           'bForwardRangeMin': self.settings.get2('tracking_forwardrange_min'),
-                           'lstLabelTransitions': transitions,
-                           'lstBackwardLabels': map(int, self.settings.get2('tracking_backwardlabels').split(',')),
-                           'lstForwardLabels': map(int, self.settings.get2('tracking_forwardlabels').split(','))})
+            tropts.update({'backward_check': self._convert_tracking_duration('tracking_backwardCheck'),
+                           'forward_check': self._convert_tracking_duration('tracking_forwardCheck'),
+                           'backward_range': self._convert_tracking_duration('tracking_backwardrange'),
+                           'forward_range': self._convert_tracking_duration('tracking_forwardrange'),
+                           'backward_range_min': self.settings.get2('tracking_backwardrange_min'),
+                           'forward_range_min': self.settings.get2('tracking_forwardrange_min'),
+                           'transitions': transitions,
+                           'backward_labels': map(int, self.settings.get2('tracking_backwardlabels').split(',')),
+                           'forward_labels': map(int, self.settings.get2('tracking_forwardlabels').split(','))})
         return tropts
 
     def define_exp_features(self):
@@ -586,9 +585,7 @@ class PositionAnalyzer(PositionCore):
 
     def event_selection(self, timeholder, celltracker):
         """Invoke event_selection"""
-        celltracker.analyze(self.export_features,
-                            channelId=PrimaryChannel.NAME,
-                            clear_path=True)
+        celltracker.analyze(self.export_features, clear_path=True)
 
         self.logger.debug("--- visitor analysis ok")
         timeholder.serialize_events(celltracker)
@@ -609,15 +606,13 @@ class PositionAnalyzer(PositionCore):
         self.settings.set_section('Tracking')
         # setup tracker
         if self.settings.get('Processing', 'tracking'):
-            self.tracker = CellTracker(oTimeHolder=self.timeholder,
-                                       oMetaData=self.meta_data,
-                                       P=self.position,
-                                       origP=self.position,
-                                       strPathOut=self._statistics_dir,
+            self.tracker = CellTracker(timeholder=self.timeholder,
+                                       meta_data=self.meta_data,
+                                       position=self.position,
+                                       path_out=self._statistics_dir,
                                        **self._tracking_options)
-            region_name = self.settings.get2('tracking_regionname')
-            self.tracker.initTrackingAtTimepoint(PrimaryChannel.NAME,
-                                                 region_name)
+            region = self.settings.get('Tracking', 'tracking_regionname')
+            self.tracker.initTrackingAtTimepoint(PrimaryChannel.NAME, region)
 
         stopwatch = StopWatch(start=True)
         # object detection??

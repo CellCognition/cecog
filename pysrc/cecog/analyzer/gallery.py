@@ -95,7 +95,8 @@ class EventGallery(object):
         self._bHasImages = False
         dctTimePoints = {}
 
-        for strStartId, lstTimeData in oTracker.getBoundingBoxes(method=method, size=size, border=border).iteritems():
+        for strStartId, lstTimeData in oTracker.getBoundingBoxes(\
+            method=method, size=size, border=border).iteritems():
             items = oTracker.getComponentsFromNodeId(strStartId)
             iStartT, iObjId = items[:2]
             if len(items) == 3:

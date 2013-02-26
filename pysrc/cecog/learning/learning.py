@@ -300,22 +300,22 @@ class BaseLearner(LoggerObject):
             self.dctSampleNames[class_name].append(file_name)
         f.close()
 
-    def exportSampleNames(self, strFilePath=None, strFileName=None):
-        if strFileName is None:
-            strFileName = splitext(self.strArffFileName)[0]
-            strFileName = '%s.samples.txt' % strFileName
-        if strFilePath is None:
-            strFilePath = self.data_dir
-        f = file(os.path.join(strFilePath, strFileName), 'w')
-        for class_name, samples in self.dctSampleNames.iteritems():
-            for sample_name in samples:
-                f.write('%s\t%s\n' % (class_name, sample_name))
-        f.close()
+    def export_sample_names(self, path=None, filename=None):
+        if filename is None:
+            filename = splitext(self.strArffFileName)[0]
+            filename = '%s.samples.txt' %filename
+        if path is None:
+            path = self.data_dir
+
+        with open(join(path, filename), 'w') as fp:
+            for class_name, samples in self.dctSampleNames.iteritems():
+                for sample_name in samples:
+                    fp.write('%s\t%s\n' % (class_name, sample_name))
 
     def export(self):
         self.exportToArff()
         self.exportToSparse()
-        self.exportSampleNames()
+        self.export_sample_names()
 
 class CommonClassPredictor(BaseLearner):
 
