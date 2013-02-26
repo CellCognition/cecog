@@ -1,0 +1,99 @@
+<html>
+<head>
+<link rel="stylesheet"  type="text/css" href="help.css">
+</head>
+<body>
+
+<!-- HEADER -->
+
+<a name="tracking_eventselection">
+<h1>Event Selection</h1>
+
+Select event of interest by transition motifs by supervised or unsupervised methods.
+<br/>
+<hr/>
+<img class="figure" src=":/umes"/>
+
+
+<a name="tracking_backwardrange">
+<h4 class="sub">Duration [pre]</h4>
+<p class="subtext">The number of time-points before the event. Shorter trajectories are omitted. (The -1 is experimental going backward to the trajectory begin, e.g the first frame of the movie.)</p>
+</a>
+
+<a name="tracking_forwardrange">
+<h4 class="sub">Duration [post]</h4>
+<p class="subtext">The number of time-points after the event. Shorter trajectories are omitted. (The -1 is experimental going forward to the trajectory end, e.g the last frame of the movie.)</p>
+</a>
+
+<a name="tracking_duration_unit">
+<h4 class="sub">Duration unit</h4>
+<p class="subtext">Different duration unit.</p>
+</a>
+
+<hr/>
+
+<a name="supervised_event_selection">
+<h2>Supervised Event selection</h2>
+<p class="text">Events like mitosis can be detected by class transition motifs and additional rules.</p>
+
+<a name="tracking_labeltransitions">
+<h4 class="sub">Class transition motif(s)</h4>
+<p class="subtext">One or more pairs of class labels to define class transition.
+<br/>
+Examples:
+<ul>
+<li><tt>(2,3)</tt> - detects any track with class label sequence 2 -> 3. As for our H2b classifier this would mean a prophase (2) followed by prometaphase (3).</li>
+<li><tt>(2,3),(2,4)</tt> - detects any track with class label sequence 2 -> 3 OR 2 -> 4. In a longer time-lapse the sequence 2,3 might not always be observable. Therefore 2,3 or 2,4 are selected.</li>
+</ul>
+</p>
+</a>
+
+<a name="tracking_backwardlabels">
+<h4 class="sub">Class filter [pre]</h4>
+<p class="subtext">A list of comma-separated class labels, which are allowed to appear before the event. (Useful to improve accuracy of selected sequences, but by adding a priori information unexpected phenotypes might be lost.)</p>
+</a>
+
+<a name="tracking_forwardlabels">
+<h4 class="sub">Class filter [post]</h4>
+<p class="subtext">A list of comma-separated class labels, which are allowed to appear after the event. (Useful to improve accuracy of selected sequences, but by adding a priori information unexpected phenotypes might be lost.)</p>
+</a>
+
+<a name="tracking_backwardcheck">
+<h4 class="sub">Filter duration [pre]</h4>
+<p class="subtext">The number of time-points before the event for which the filter should be applied.</p>
+</a>
+
+<a name="tracking_forwardcheck">
+<h4 class="sub">Filter duration [post]</h4>
+<p class="subtext">The number of time-points after the event for which the filter should be applied.</p>
+</a>
+
+<hr/>
+<a name="unsupervised_event_selection">
+<h2>Unsupervised Event selection</h2>
+<p class="text">Events of interest can be detected by binary clustering using transition motif (0,1) pattern and domain knowledge.</p>
+
+<a name="min_event_duration">
+<h4 class="sub">Minimum event duration</h4>
+<p class="subtext">The minimum number of time-points of the event. If the minimal event duration is 3, then all events whose length are equal or longer than 3 are selected.</p>
+</a>
+
+<hr/>
+<a name="tc3_analysis">
+<h2>Temporal clustering</h2>
+<p class="text">Temporally Constrained Combinatorial Clustering (TC3).</p>
+
+<a name="num_clusters">
+<h4 class="sub">Number of clusters</h4>
+<p class="subtext">The minimum number of time-points of the event. If the minimum event duration is 3, then all events whose length are equal or longer than 3 are selected.</p>
+</a>
+
+<a name="min_cluster_size">
+<h4 class="sub">Minimum cluster size</h4>
+<p class="subtext">It is assumed that clusters are not singleton cluster. The minimum cluster size specifies the smallest number of observations required in a cluster.</p>
+</a>
+
+<!-- FOOTER -->
+
+</body>
+</html>
