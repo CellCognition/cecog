@@ -848,6 +848,7 @@ class PlotCellTracker(CellTracker):
             safe_mkdirs(strPathOutTC3)
 
         allFeatures = []
+        allFilenames = []
         for strRootId, dctTrackResults in self.dctVisitorData.iteritems():
             self.oLogger.debug("* root %s, candidates %s" % (strRootId, dctTrackResults.keys()))
             for strStartId, dctEventData in dctTrackResults.iteritems():
@@ -865,12 +866,13 @@ class PlotCellTracker(CellTracker):
                                     strFilename = self._formatFilename('C%s__R%s' % (strChannelId, strRegionId),
                                                                        nodeId=strStartId, prefix='features', subPath='events',
                                                                        ext='.txt%s' % strCompression)
-                                    obj_allFeatures = self.exportChannelData(dctEventData,
+                                    obj_allFeatures, strFilename = self.exportChannelData(dctEventData,
                                                            strFilename,
                                                            strChannelId,
                                                            strRegionId,
                                                            lstFeatureNames)
                                     allFeatures.append(obj_allFeatures)
+                                    allFilenames.append(strFilename)
                     self.oLogger.debug("* root %s ok" % strStartId)
 
 
@@ -945,11 +947,22 @@ class PlotCellTracker(CellTracker):
                                                                    (i+1)*num_frames), 0)
                     num_tracks -= 1
                     idn.append(i)
-
+            
+            # save file names
+            Filenamelist = os.path.join(strPathOutTC3, 'initial_filenames.txt')
+            numpy.savetxt(Filenamelist, allFilenames, fmt='%s',delimiter='\n')
+            FilenamelistDel = os.path.join(strPathOutTC3, 'final_filenames.txt')
+            allFilenamesDel = scipy.delete(allFilenames, idn, 0) 
+            numpy.savetxt(FilenamelistDel, allFilenamesDel, fmt='%s',delimiter='\n')
+            
+            # index of deleted trajectories.
             filename = os.path.join(strPathOutTC3, 'deleted_index.txt')
             numpy.savetxt(filename,idn, fmt='%d',delimiter='\t')
+            
+            # binary matrix after unsupervised event selection
             filename = os.path.join(strPathOutTC3, 'final_binary_matrix.txt')
             numpy.savetxt(filename, binary_matrix, fmt='%d', delimiter='\t')
+            
             # update num_tracks
             dim = [num_frames, num_tracks]
 
@@ -984,6 +997,13 @@ class PlotCellTracker(CellTracker):
             numpy.savetxt(filenameTC3DHMM, tc3_gmm_chmm['label_matrix'], fmt='%d',delimiter='\t')
             filenameTC3CHMM = os.path.join(strPathOutTC3, 'TC3+GMM+CHMM.txt')
             numpy.savetxt(filenameTC3CHMM, tc3_gmm_chmm['label_matrix'], fmt='%d',delimiter='\t')
+            
+            # TC3 result with filename
+            Filenamelist = os.path.join(strPathOutTC3, 'filenames.txt') 
+            allFilenamesDel = allFilenamesDel[numpy.newaxis]
+            allFilenamesDel = allFilenamesDel.T
+            z=numpy.concatenate((allFilenamesDel,tc3['label_matrix']),axis=1);
+            numpy.savetxt(Filenamelist, z, fmt='%s',delimiter='\t')
 
 
     def exportChannelDataFlat(self, strFilename, strChannelId, strRegionId, lstFeatureNames):
@@ -1160,7 +1180,7 @@ class PlotCellTracker(CellTracker):
             write_table(strFilename, table, column_names=lstHeaderNames)
 
 
-        return numpy.array(allFeature)
+        return numpy.array(allFeature), strFilename
 
 
     def _forwardVisitor(self, strNodeId, dctResults, dctEdges, iLevel=0, strStartId=None):

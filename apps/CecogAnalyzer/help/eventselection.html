@@ -11,6 +11,7 @@
 
 Select event of interest by transition motifs by supervised or unsupervised methods.
 <br/>
+
 <hr/>
 <img class="figure" src=":/umes"/>
 
@@ -29,6 +30,8 @@ Select event of interest by transition motifs by supervised or unsupervised meth
 <h4 class="sub">Duration unit</h4>
 <p class="subtext">Different duration unit.</p>
 </a>
+
+<h4 class="sub">Important note: Duration [pre] + Duration [post] should be at least two times longer than the average length of the event of interest.</h4>
 
 <hr/>
 
@@ -75,7 +78,7 @@ Examples:
 
 <a name="min_event_duration">
 <h4 class="sub">Minimum event duration</h4>
-<p class="subtext">The minimum number of time-points of the event. If the minimal event duration is 3, then all events whose length are equal or longer than 3 are selected.</p>
+<p class="subtext">The minimum number of time-points of the event. If the minimal event duration is 3, then all events whose length are equal or longer than 3 are selected. For a larger min event duration, fewer event trajectories will be selected.</p>
 </a>
 
 <hr/>
@@ -90,7 +93,7 @@ Examples:
 
 <a name="min_cluster_size">
 <h4 class="sub">Minimum cluster size</h4>
-<p class="subtext">It is assumed that clusters are not singleton cluster. The minimum cluster size specifies the smallest number of observations required in a cluster.</p>
+<p class="subtext">It is assumed that clusters are not singleton cluster. The minimum cluster size specifies the smallest number of observations required in a cluster. The larger the number, the faster the algorithm, but the classification result might be less accurate.</p>
 </a>
 
 <!-- FOOTER -->
