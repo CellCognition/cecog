@@ -5,11 +5,11 @@ settings_dir = os.path.abspath(os.path.dirname(inspect.getfile( inspect.currentf
 
 if os.path.exists(os.path.join(settings_dir, 'CLUSTER')):
     print 'CLUSTER VERSION'
-    outDir = '/g/mitocheck/Thomas/data/JKH'
+    outDir = '/g/ellenberg/JKH/cecog'    
 else:
     outDir = '/Users/twalter/data/JKH'
 
-baseDir = os.path.join(outDir, 'cecog_output')
+baseDir = os.path.join(outDir, 'output')
 importDir = os.path.join(outDir, 'imported_event_data')
 plotDir = os.path.join(outDir, 'plots')
 singleCellPlotDir = os.path.join(plotDir, 'single_cell_plots')
@@ -42,22 +42,13 @@ import_entries_event = {
                         }
 
 
+# for the moment, plates has to be determined (None does not work for the moment!)
 plates = [
-          'plate1_1_013',
-          'plate1_2_006',
-          'plate1_3_003',
-          'plate1_7_015',
-          'plate2_2_007',
-          'plate2_3_018',
-          'plate2_5_015',
-          'plate2_7_028',
-          'plate3_4_034',
-          'plate3_5_002',
-          'plate3_8_010',
-          'plate3_11_007',
+          '2012-11-16-test_plate_009',
+          'PTP4A3_rescue-2013-01-17',
           ]
 
-#plates = None
+positions = None
 
 qc_rules = {
             }
@@ -83,49 +74,14 @@ features_selection = [
                       #'h1_IDM',
                       ]
 
+# this contains the settings for the single plots. 
+# The key indicates the feature name: 
 single_cell_plot_settings = {
-                             'classification_probability_reduced':
-                                {
-                                 'featureData': [('primary', 'primary', 'lda_prob_reduced'),
-                                                 ('primary', 'primary', 'svm_prob_reduced'),
-                                                 ('primary', 'primary', 'logres_prob_reduced'),
-                                                 ],
-                                 'classificationData': [('primary', 'primary')]
-                                 },
-                             'classification_decision_value_reduced':
-                                {
-                                 'featureData': [('primary', 'primary', 'lda_decvalue_reduced'),
-                                                 ('primary', 'primary', 'svm_decvalue_reduced'),
-                                                 ('primary', 'primary', 'logres_decvalue_reduced'),],
-                                 'classificationData': [('primary', 'primary')]
-                                 },
                              'classification_decision_value_reduced_norm':
                                 {
                                  'featureData': [('primary', 'primary', 'lda_decvalue_reduced_norm'),
                                                  ('primary', 'primary', 'svm_decvalue_reduced_norm'),
                                                  ('primary', 'primary', 'logres_decvalue_reduced_norm'),],
-                                 'classificationData': [('primary', 'primary')]
-                                 },
-                             'classification_probability':
-                                {
-                                 'featureData': [('primary', 'primary', 'lda_prob'),
-                                                 ('primary', 'primary', 'svm_prob'),
-                                                 ('primary', 'primary', 'logres_prob'),
-                                                 ],
-                                 'classificationData': [('primary', 'primary')]
-                                 },
-                             'classification_decision_value':
-                                {
-                                 'featureData': [('primary', 'primary', 'lda_decvalue'),
-                                                 ('primary', 'primary', 'svm_decvalue'),
-                                                 ('primary', 'primary', 'logres_decvalue'),],
-                                 'classificationData': [('primary', 'primary')]
-                                 },
-                             'classification_decision_value_norm':
-                                {
-                                 'featureData': [('primary', 'primary', 'lda_decvalue_norm'),
-                                                 ('primary', 'primary', 'svm_decvalue_norm'),
-                                                 ('primary', 'primary', 'logres_decvalue_norm'),],
                                  'classificationData': [('primary', 'primary')]
                                  },
                              'feature_selection':
@@ -150,6 +106,7 @@ upper_panels = ['primary_classification_panel']
 lower_panels = []
 gallery_single_image_width = 101
 
+# colors for the plot of classification results
 class_color_code = {
                     ('primary', 'primary'):
                     {
@@ -191,8 +148,11 @@ remove_empty_fields = False
 
 ###############################################################
 # FEATURE PROJECTION
-trainingset_filename = os.path.join(outDir, 'cecog_classifiers', 'classifier3','data','features.arff')
+#tempDir = '/g/mitocheck/Thomas/data/JKH'
+#trainingset_filename = os.path.join(tempDir, 'cecog_classifiers', 'classifier3','data','features.arff')
+trainingset_filename = '/g/ellenberg/JKH/cecog/classifiers/chr_cond_classifier/data/features.arff'
 
+# features to remove from the analysis (typically because of high correlation)
 FEATURES_REMOVE = [
                    'h4_2ASM', 'h4_2CON', 'h4_2COR', 'h4_2COV',
                    'h4_2DAV', 'h4_2ENT', 'h4_2IDM', 'h4_2PRO',
@@ -212,25 +172,38 @@ FEATURES_REMOVE = [
                    'h8_VAR', 'h8_average', 'h8_variance'
                    ]
 
+# classes for LDA projection
 PHENOCLASSES_FOR_TRAINING = ['interphase', 'mid_prophase',]
 PHENOCLASSES = ['interphase', 'early_prophase', 'mid_prophase',]
 
 ###############################################################
 # HTML SETTINGS
+# These are values to be displayed in the html page, starting with the title of the column
+# and then the way how to extract the data. 
+# The first entry for instance calls the ValueCounter (with __call__ function) which
+# counts occurences of early_prophase in channel=primary, region=primary and column=class_name.
 value_extraction = OrderedDict([
                                 ('count(early)', (ValueCounter('early_prophase'), 'primary', 'primary', 'class__name')),
                                 ('count(mid)', (ValueCounter('mid_prophase'), 'primary', 'primary', 'class__name')),
                                 ])
 
+# The columns of the html-page: List of tuples, each tuple takes 
+# the variable name and the title of the column. 
 html_plot_col_title = OrderedDict([
-                                   ('classification_decision_value', 'Projection'),
-                                   ('classification_decision_value_reduced', 'Projection (select)'),
-                                   ('classification_decision_value_norm', 'Projection (normalized)'),
-                                   ('classification_decision_value_reduced_norm', 'Projection (select, normalized)'),
-                                   ('classification_probability', 'Probability'),
-                                   ('classification_probability_reduced', 'Probability (Select)'),
+                                   ('classification_decision_value_reduced_norm', 'Projection (select, normalized)'),                                   
+                                   #('classification_decision_value_norm', 'Projection (normalized)'),
                                    ('feature_selection', 'Feature Selection'),
                                    #('avg_norm', 'Transloc'),
                                    ])
-gallery_channels = ['primary', 'secondary']
+
+# The order of galleries.
+gallery_channels = ['primary']
+
+# This is True if the galleries from Cellcognition are used. 
+# otherwise it is False (use galleries from the cutter script instead. 
+# Note that this is quite different: if the galleries were generated with the cutter script
+# they contain already two channels, whereas if they are generated with cellcognition
+# directly, we must specifiy ['primary', 'secondary'] above to have them both. 
+use_cecog_galleries = False
+
 

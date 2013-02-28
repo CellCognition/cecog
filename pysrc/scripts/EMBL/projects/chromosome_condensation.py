@@ -21,29 +21,6 @@ class ChromosomeCondensationAnalysis(PostProcessingWorkflow, FeatureProjectionAn
         self._classifiers = {'lda': None, 'svm': None, 'logres': None}
         self._classifiers_fs = {'lda': None, 'svm': None, 'logres': None}
 
-#        for method, clf in self._classifiers.iteritems():
-#            projection_list = [('%s_decvalue' % method, SingleCellFeatureProjection(impdata, lt, pos,
-#                                                                                    track, channel, region, clf)),
-#                               ('%s_decvalue_norm' % method, SingleCellFeatureProjection(impdata, lt, pos,
-#                                                                                         track, channel, region, clf,
-#                                                                                         normalize_dynamic_range=True)),
-#                               ('%s_prob' % method, ClassificationProbability(impdata, lt, pos,
-#                                                                              track, channel, region, clf)),
-#                              ]
-#
-#        for method, clf in self._classifiers_fs.iteritems():
-#            projection_list.extend([('%s_decvalue_reduced' % method, SingleCellFeatureProjection(impdata, lt, pos,
-#                                                                                                 track, channel, region, clf,
-#                                                                                                 features = self.settings.features_selection)),
-#                                    ('%s_decvalue_reduced_norm' % method, SingleCellFeatureProjection(impdata, lt, pos,
-#                                                                                                      track, channel, region, clf,
-#                                                                                                      features = self.settings.features_selection,
-#                                                                                                      normalize_dynamic_range=True)),
-#                                    ('%s_prob_reduced' % method, ClassificationProbability(impdata, lt, pos,
-#                                                                                           track, channel, region, clf,
-#                                                                                           features = self.settings.features_selection)),
-#                                   ])
-
 
     def _apply_qc(self, track_data):
         track_data['qc'] = True

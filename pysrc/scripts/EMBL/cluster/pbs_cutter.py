@@ -25,9 +25,15 @@ class BatchProcessor(object):
         plates = self.oBatchSettings.plates
         if plates is None:
             plates = filter(lambda x:
-                            not self.oBatchSettings.plate_regex.match(x) is None,
+                            (not self.oBatchSettings.plate_regex.match(x) is None)
+                            and os.path.isdir(os.path.join(self.oBatchSettings.raw_image_path, x)),
                             os.listdir(self.oBatchSettings.raw_image_path))
+            for temp in os.listdir(self.oBatchSettings.raw_image_path):
+                print 'DEBUG: ', temp, self.oBatchSettings.plate_regex.match(temp) is None, os.path.isdir(os.path.join(self.oBatchSettings.raw_image_path, temp))
 
+        print '%i plates found in %s ' % (len(plates), self.oBatchSettings.raw_image_path)            
+        print 'plates to process: ', plates
+        
         # the path command is the first command to be executed in each single job
         # script. This is practical for setting environment variables,
         # in particular if there are several version of the same software that are
@@ -118,13 +124,19 @@ cd %s
         plates = self.oBatchSettings.plates
         if plates is None:
             plates = filter(lambda x:
-                            not self.oBatchSettings.plate_regex.match(x) is None,
+                            (not self.oBatchSettings.plate_regex.match(x) is None)
+                            and os.path.isdir(os.path.join(self.oBatchSettings.raw_image_path, x)),
                             os.listdir(self.oBatchSettings.raw_image_path))
+            for temp in os.listdir(self.oBatchSettings.raw_image_path):
+                print 'DEBUG: ', temp, self.oBatchSettings.plate_regex.match(temp) is None, os.path.isdir(os.path.join(self.oBatchSettings.raw_image_path, temp))
 
+        print '%i plates found in %s ' % (len(plates), self.oBatchSettings.raw_image_path)
+        print 'plates to process: ', plates
+        
         dctExperiments = {}
         total_job_count = 0
         for plate in plates:
-            platedir = os.path.join(self.oBatchSettings.base_analysis_dir, 'cecog_output',
+            platedir = os.path.join(self.oBatchSettings.cecog_output_dir,
                                     plate, 'analyzed')
             dctExperiments[plate] = sorted(filter(lambda x: os.path.isdir(os.path.join(platedir, x)),
                                                   os.listdir(platedir) ))

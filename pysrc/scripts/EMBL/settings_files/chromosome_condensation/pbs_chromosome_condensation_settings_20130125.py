@@ -20,11 +20,12 @@ baseOutDir = '/g/ellenberg/JKH/cecog/output'
 
 # settings for scripts
 baseScriptDir = '/g/mitocheck/Thomas/data/JKH/scripts'
-scriptPrefix = 'PostPaperCutout'
+scriptPrefix = 'PostPaperProcessing'
 
 # settingsfile
-#settingsFilename = '/g/mitocheck/Thomas/data/JKH/cecog_settings/screen_settings_2011-11-16.conf'
-settingsFilename = '/g/ellenberg/JKH/cecog/pbs_PTP4A3_settings.py'
+settingsFilename = '/g/mitocheck/Thomas/data/JKH/cecog_settings/screen_settings_2011-11-16.conf'
+#settingsFilename = '/g/ellenberg/JKH/cecog/pbs_PTP4A3_settings.py'
+#settingsFilename = '/g/ellenberg/JKH/cecog/settings/settings_PTP4A3_rescue-2013-01-17.conf'
 
 # plates=None means that all plates found in baseInDir are going to be processed.
 plates = None
