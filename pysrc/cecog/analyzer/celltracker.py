@@ -379,7 +379,7 @@ class CellTracker(OptionManager):
                 iTries += 1
         return iResultT
 
-    def _connectTimePoints(self, iT):
+    def new_connectTimePoints(self, iT):
 
         fMaxObjectDistanceSquared = float(self.fMaxObjectDistance) ** 2
         iMaxSplitObjects = self.iMaxSplitObjects
@@ -496,7 +496,7 @@ class CellTracker(OptionManager):
                         
         return iPreviousT, bReturnSuccess
 
-    def old_connectTimePoints(self, iT):
+    def _connectTimePoints(self, iT):
 
         fMaxObjectDistanceSquared = float(self.getOption('fMaxObjectDistance')) ** 2
         iMaxSplitObjects = self.getOption('iMaxSplitObjects')
@@ -505,6 +505,9 @@ class CellTracker(OptionManager):
         oGraph = self._oGraph
 
         # search all nodes in the previous frame
+        # if there is an empty frame, look for the closest frame 
+        # that contains objects. For this go up to iMaxTrackingGap
+        # into the past. 
         iPreviousT = self._getClosestPreviousT(iT)
 
         if not iPreviousT is None:
@@ -520,6 +523,7 @@ class CellTracker(OptionManager):
 
                 lstNearest = []
 
+
                 for iObjIdC in self._dctTimePoints[iT]:
                     strNodeIdC = self.getNodeIdFromComponents(iT, iObjIdC)
                     oImageObjectC = oGraph.node_data(strNodeIdC)
@@ -529,35 +533,52 @@ class CellTracker(OptionManager):
                     if dist < fMaxObjectDistanceSquared:
                         lstNearest.append((dist, strNodeIdC))
 
+                # lstNearest is the list of nodes in the current frame 
+                # whose distance to the previous node is smaller than the 
+                # fixed threshold.                
                 if len(lstNearest) > 0:
                     # sort ascending by distance (first tuple element)
                     lstNearest.sort(key=lambda x: x[0])
 
                     # take only a certain number as merge candidates (the N closest)
+                    # and split candidates (this number is identical).
                     for dist, strNodeIdC in lstNearest[:iMaxSplitObjects]:
                         dict_append_list(dctMerges, strNodeIdC,
                                          (dist, strNodeIdP))
                         dict_append_list(dctSplits, strNodeIdP,
                                          (dist, strNodeIdC))
 
+            # dctSplits contains for each node the list of potential 
+            # successors with distance smaller than threshold.
+            # dctMerges contains for each node the list of potential 
+            # predecessors with distance smaller than threshold. 
+
             # prevent split and merge for one node at the same time
-            
-            ### FIXME: Here we loose alomost all cell mappings, 
-            ### because if fMaxObjectDistance is big, we find for
-            ### many cells splits and merges and there will never
-            ### be an one-to-one mapping => the bigger the radius, the less mappings 
-            ### which is counter intuitive
-                          
             for id_c in dctMerges:
+                found_connection = False
+                
                 nodes = dctMerges[id_c]
+                # for all objects that have only one predecessor within the defined radius, 
+                # take this predecessor.
                 if len(nodes) == 1:
                     oGraph.add_edge(nodes[0][1], id_c)
+                    found_connection = True
                 else:
+                    # If there are several candidates (previous objects fulfilling the condition)
+                    # take those candidates in the previous frame that have only one possible
+                    # predecessor.
                     for dist, id_p in nodes:
                         if len(dctSplits[id_p]) == 1:
                             oGraph.add_edge(id_p, id_c)
-
-
+                            found_connection = True
+                
+                # if there was no connection found, take the closest predecessor, 
+                # unless there is none.
+                if not found_connection:
+                    if len(nodes) > 0:
+                        oGraph.add_edge(nodes[0][1], id_c)
+            
+                          
 
             if self.getOption('bVisualize'):
 
