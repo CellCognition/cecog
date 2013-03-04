@@ -48,7 +48,8 @@ def binary_clustering(data):
     c = numpy.dstack((c1,c2)).T
 
     # thresh=1e-6
-    g = mixture.GMM(n_components=2, covariance_type='full', init_params='')
+    g = mixture.GMM(n_components=2,
+                    covariance_type='full', init_params='')
     g.weights_ = w
     g.means_ = m
     g.covars_ = c

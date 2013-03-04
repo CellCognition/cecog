@@ -68,6 +68,11 @@ from cecog import ccore
 # functions:
 #
 
+def filter_col_nans(data):
+    nans = numpy.isnan(data)
+    col_nans = numpy.unique(numpy.where(nans)[1])
+    return numpy.delete(data, col_nans, axis=1)
+
 #-------------------------------------------------------------------------------
 # classes:
 #
@@ -426,13 +431,13 @@ class CellTracker(OptionManager):
                                          (dist, strNodeIdC))
 
             # prevent split and merge for one node at the same time
-            
-            ### FIXME: Here we loose alomost all cell mappings, 
+
+            ### FIXME: Here we loose alomost all cell mappings,
             ### because if fMaxObjectDistance is big, we find for
             ### many cells splits and merges and there will never
-            ### be an one-to-one mapping => the bigger the radius, the less mappings 
+            ### be an one-to-one mapping => the bigger the radius, the less mappings
             ### which is counter intuitive
-             
+
             for id_c in dctMerges:
                 nodes = dctMerges[id_c]
                 if len(nodes) == 1:
@@ -639,6 +644,11 @@ class CellTracker(OptionManager):
         pca = mlab.PCA(data_zscore)
         num_features = numpy.nonzero(numpy.cumsum(pca.fracs) > 0.99)[0][0]
         data_pca = pca.project(data_zscore)[:,0:num_features]
+
+        # just for debugging
+        bcfname = os.path.join(self.strPathOut, 'init_bc.csv')
+        numpy.savetxt(bcfname, data_pca, delimiter=",")
+
         idx = binary_clustering(data_pca)
 
         self.iLabel_bc = {}
@@ -909,6 +919,7 @@ class PlotCellTracker(CellTracker):
 
             # Zscore and PCA data
             # FIXME check shape of data_zscore
+            data = filter_col_nans(data)
             data_zscore = sss.zscore(remove_constant_columns(data))
 
             if data_zscore.shape[0] > data_zscore.shape[1]:
@@ -920,7 +931,10 @@ class PlotCellTracker(CellTracker):
                        "(%s, %s)" %data_zscore.shape)
                 raise RuntimeError(msg)
                 # data_pca = data_zscore
-            
+
+            # data exprot for debugging
+            bcfname = os.path.join(strPathOutTC3, 'data_tc3.csv')
+            numpy.savetxt(bcfname, data_pca, delimiter=",")
             binary_tmp = binary_clustering(data_pca)
             binary_matrix = binary_tmp.reshape(dim[1],dim[0])
 
@@ -933,13 +947,13 @@ class PlotCellTracker(CellTracker):
 
             # delete false positive trajectories, according to the following rules:
             # 1. No length of the event of interest < k
-            # 2. Event of interest should start from within frame event_start and event_start+event_tol due to event extraction algorithm 
+            # 2. Event of interest should start from within frame event_start and event_start+event_tol due to event extraction algorithm
             # 3. No 0*1*0*1* pattern (maybe omitted)
             event_start = self.getOption('iBackwardRange')
             event_tol = 2
             for i in xrange(num_tracks-1, -1, -1):
                 # print num_tracks
-                
+
                 if (sum(binary_matrix[i,:]) < k) or (sum(binary_matrix[i,0:event_start-1]) > 0) or \
                     (sum(binary_matrix[i,event_start:event_start+event_tol]) == 0) or sum(numpy.diff(binary_matrix[i,:])==1) > 1:
                     binary_matrix = scipy.delete(binary_matrix, i, 0)
@@ -987,7 +1001,7 @@ class PlotCellTracker(CellTracker):
 #            result = algorithms[algorithm]
 #            filename = os.path.join(strPathOutTC3, '%s.txt'%algorithm)
 #            numpy.savetxt(filename, result['label_matrix'], fmt='%d',delimiter='\t')
-            
+
             # for debug, output all results
             filenameTC3 = os.path.join(strPathOutTC3, 'TC3.txt')
             numpy.savetxt(filenameTC3, tc3['label_matrix'], fmt='%d',delimiter='\t')
