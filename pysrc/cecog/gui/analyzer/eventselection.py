@@ -56,7 +56,7 @@ class EventSelectionFrame(BaseProcessorFrame):
         self.add_group('tc3_analysis', [
                 ('num_clusters', (0,0,1,1)),
                 ('min_cluster_size', (0,1,1,1)),
-                ('tc3_algorithms', (0,2,1,1)),
+#                ('tc3_algorithms', (0,2,1,1)),
                 ],
                 layout='grid', link='tc3_analysis')
         self.add_expanding_spacer()

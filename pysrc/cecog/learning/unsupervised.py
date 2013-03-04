@@ -162,7 +162,7 @@ class TemporalClustering:
     def tc3_gmm_dhmm(self, labels):
 
         # a small error term
-        eps = 0.01
+        eps = 1e-6
         # estimate initial transition matrix
         trans = np.zeros((self.n_clusters,self.n_clusters))
         hist, bin_edges = np.histogram(labels, bins=self.n_clusters)

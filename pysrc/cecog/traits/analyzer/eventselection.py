@@ -79,7 +79,7 @@ class SectionEventSelection(_Section):
         ]),
       ('tc3_analysis',
         [('tc3_analysis',
-            BooleanTrait(False, label='Temporal Clustering')),
+            BooleanTrait(False, label='Temporal clustering')),
          ('num_clusters',
             IntTrait(6, 2, 10, label='Number of clusters',)),
          ('min_cluster_size',

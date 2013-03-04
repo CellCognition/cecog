@@ -23,16 +23,18 @@ import os, \
        itertools, \
        re, \
        shutil
-from types import ListType
+from types import ListType, FloatType
 from csv import DictWriter
 
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
+from numpy import array, average
 
-import numpy as np
-
+import numpy
+import scipy.cluster.vq as scv
 from matplotlib import mlab
+from sklearn import mixture
 import scipy.stats.stats as sss
 import scipy
 
@@ -41,7 +43,7 @@ from pdk.optionmanagers import OptionManager
 from pdk.ordereddict import OrderedDict
 from pdk.map import dict_append_list
 from pdk.fileutils import safe_mkdirs, collect_files
-from pdk.iterator import unique, flatten
+from pdk.iterator import unique, flatten, all_equal
 from pdk.attributemanagers import (get_slot_values,
                                    set_slot_values)
 
@@ -66,13 +68,14 @@ from cecog import ccore
 #
 
 def filter_col_nans(data):
-    nans = np.isnan(data)
-    col_nans = np.unique(np.where(nans)[1])
-    return np.delete(data, col_nans, axis=1)
+    nans = numpy.isnan(data)
+    col_nans = numpy.unique(numpy.where(nans)[1])
+    return numpy.delete(data, col_nans, axis=1)
 
 #-------------------------------------------------------------------------------
 # classes:
 #
+
 
 class DotWriter(object):
 
@@ -611,12 +614,11 @@ class CellTracker(OptionManager):
                                                    '_full'   : [[]]}
                 self.oLogger.debug("root ID %s" % strStartId)
                 self._forwardVisitor2(strStartId, self.dctVisitorData[strStartId], dctVisitedNodes)
-
         elif self.getOption('supEventSelection'):
             #print 'in supervised event selection'
             for strStartId in lstStartIds:
                 self.dctVisitorData[strStartId] = {'_current': 0,
-                                                   '_full': [[]]}
+                                                   '_full'   : [[]]}
                 self.oLogger.debug("root ID %s" % strStartId)
                 self._forwardVisitor(strStartId, self.dctVisitorData[strStartId], dctVisitedNodes)
 
@@ -627,10 +629,10 @@ class CellTracker(OptionManager):
             obj = oGraph.node_data(node)
             data_obj.append(obj.aFeatures)
 
-        data = np.array(data_obj)
+        data = numpy.array(data_obj)
 
         # delete columns with zeros
-        ind = np.where(data==0)[1]
+        ind = numpy.where(data==0)[1]
         data = scipy.delete(data,ind,1)
         # print 'new data.shape after column=0 deletion'
         # print data.shape
@@ -639,8 +641,13 @@ class CellTracker(OptionManager):
         # Zscore and PCA data
         data_zscore = sss.zscore(data) #sss.zscore(self.remove_constant_columns(data))
         pca = mlab.PCA(data_zscore)
-        num_features = np.nonzero(np.cumsum(pca.fracs) > 0.99)[0][0]
+        num_features = numpy.nonzero(numpy.cumsum(pca.fracs) > 0.99)[0][0]
         data_pca = pca.project(data_zscore)[:,0:num_features]
+
+        # just for debugging
+        bcfname = os.path.join(self.strPathOut, 'init_bc.csv')
+        numpy.savetxt(bcfname, data_pca, delimiter=",")
+
         idx = binary_clustering(data_pca)
 
         self.iLabel_bc = {}
@@ -793,10 +800,10 @@ class PlotCellTracker(CellTracker):
                     maxY = max([obj.oRoi.lowerRight[1] for obj in lstImageObjects])
                     width  = maxX - minX + 1
                     height = maxY - minY + 1
-                    centerX = int(round(np.average([obj.oCenterAbs[0] for obj in lstImageObjects])))
-                    centerY = int(round(np.average([obj.oCenterAbs[1] for obj in lstImageObjects])))
+                    centerX = int(round(average([obj.oCenterAbs[0] for obj in lstImageObjects])))
+                    centerY = int(round(average([obj.oCenterAbs[1] for obj in lstImageObjects])))
                     lstData.append((iT, centerX, centerY, width, height, lstObjIds))
-                aData = np.array(lstData, 'O')
+                aData = array(lstData, 'O')
                 if not size is None and len(size) == 2:
                     iDiffX = int(size[0] / 2)
                     iDiffY = int(size[1] / 2)
@@ -850,6 +857,7 @@ class PlotCellTracker(CellTracker):
             safe_mkdirs(strPathOutTC3)
 
         allFeatures = []
+        allFilenames = []
         for strRootId, dctTrackResults in self.dctVisitorData.iteritems():
             self.oLogger.debug("* root %s, candidates %s" % (strRootId, dctTrackResults.keys()))
             for strStartId, dctEventData in dctTrackResults.iteritems():
@@ -867,12 +875,13 @@ class PlotCellTracker(CellTracker):
                                     strFilename = self._formatFilename('C%s__R%s' % (strChannelId, strRegionId),
                                                                        nodeId=strStartId, prefix='features', subPath='events',
                                                                        ext='.txt%s' % strCompression)
-                                    obj_allFeatures = self.exportChannelData(dctEventData,
+                                    obj_allFeatures, strFilename = self.exportChannelData(dctEventData,
                                                            strFilename,
                                                            strChannelId,
                                                            strRegionId,
                                                            lstFeatureNames)
                                     allFeatures.append(obj_allFeatures)
+                                    allFilenames.append(strFilename)
                     self.oLogger.debug("* root %s ok" % strStartId)
 
 
@@ -892,17 +901,16 @@ class PlotCellTracker(CellTracker):
                                                    strRegionId,
                                                    lstFeatureNames)
 
+        if len(allFeatures) == 0:
+            raise RuntimeError("No events found for TC3 analysis")
+
         if self.getOption('tc3Analysis'):
-
-            if len(allFeatures) == 0:
-                raise RuntimeError("No events found for TC3 analysis")
-
-            allFeatures = np.array(allFeatures)
+            allFeatures = numpy.array(allFeatures)
             data = allFeatures.reshape(allFeatures.shape[0]*allFeatures.shape[1],
                                        allFeatures.shape[2])
 
             # delete columns with zeros
-            ind = np.where(data==0)[1]
+            ind = numpy.where(data==0)[1]
             data = scipy.delete(data, ind, 1)
             num_frames = allFeatures.shape[1]
             num_tracks = data.shape[0]/allFeatures.shape[1]
@@ -915,7 +923,7 @@ class PlotCellTracker(CellTracker):
 
             if data_zscore.shape[0] > data_zscore.shape[1]:
                 pca = mlab.PCA(data_zscore)
-                num_features = np.nonzero(np.cumsum(pca.fracs) > 0.99)[0][0]
+                num_features = numpy.nonzero(numpy.cumsum(pca.fracs) > 0.99)[0][0]
                 data_pca = pca.project(data_zscore)[:,0:num_features]
             else:
                 msg = ("Not enough objects found (nobjects < nfeatures)",
@@ -923,11 +931,14 @@ class PlotCellTracker(CellTracker):
                 raise RuntimeError(msg)
                 # data_pca = data_zscore
 
+            # data exprot for debugging
+            bcfname = os.path.join(strPathOutTC3, 'data_tc3.csv')
+            numpy.savetxt(bcfname, data_pca, delimiter=",")
             binary_tmp = binary_clustering(data_pca)
             binary_matrix = binary_tmp.reshape(dim[1],dim[0])
 
             filename = os.path.join(strPathOutTC3, 'initial_binary_matrix.txt')
-            np.savetxt(filename, binary_matrix, fmt='%d', delimiter='\t')
+            numpy.savetxt(filename, binary_matrix, fmt='%d', delimiter='\t')
 
             idn = []
             # a predefined number of classes, given in GUI
@@ -935,23 +946,36 @@ class PlotCellTracker(CellTracker):
 
             # delete false positive trajectories, according to the following rules:
             # 1. No length of the event of interest < k
-            # 2. Event of interest should start from frame 10 to 12 due to event extraction algorithm
-            # 3. No 0*1*0*1* pattern
+            # 2. Event of interest should start from within frame event_start and event_start+event_tol due to event extraction algorithm
+            # 3. No 0*1*0*1* pattern (maybe omitted)
+            event_start = self.getOption('iBackwardRange')
+            event_tol = 2
             for i in xrange(num_tracks-1, -1, -1):
                 # print num_tracks
 
-                if (sum(binary_matrix[i,:]) < k) or (sum(binary_matrix[i,0:9]) > 0) or \
-                    (sum(binary_matrix[i,10:12]) == 0) or sum(np.diff(binary_matrix[i,:])==1) > 1:
+                if (sum(binary_matrix[i,:]) < k) or (sum(binary_matrix[i,0:event_start-1]) > 0) or \
+                    (sum(binary_matrix[i,event_start:event_start+event_tol]) == 0) or sum(numpy.diff(binary_matrix[i,:])==1) > 1:
                     binary_matrix = scipy.delete(binary_matrix, i, 0)
-                    data_pca = scipy.delete(data_pca, np.arange(i*num_frames,
+                    data_pca = scipy.delete(data_pca, numpy.arange(i*num_frames,
                                                                    (i+1)*num_frames), 0)
                     num_tracks -= 1
                     idn.append(i)
-
+            
+            # save file names
+            Filenamelist = os.path.join(strPathOutTC3, 'initial_filenames.txt')
+            numpy.savetxt(Filenamelist, allFilenames, fmt='%s',delimiter='\n')
+            FilenamelistDel = os.path.join(strPathOutTC3, 'final_filenames.txt')
+            allFilenamesDel = scipy.delete(allFilenames, idn, 0) 
+            numpy.savetxt(FilenamelistDel, allFilenamesDel, fmt='%s',delimiter='\n')
+            
+            # index of deleted trajectories.
             filename = os.path.join(strPathOutTC3, 'deleted_index.txt')
-            np.savetxt(filename,idn, fmt='%d',delimiter='\t')
+            numpy.savetxt(filename,idn, fmt='%d',delimiter='\t')
+            
+            # binary matrix after unsupervised event selection
             filename = os.path.join(strPathOutTC3, 'final_binary_matrix.txt')
-            np.savetxt(filename, binary_matrix, fmt='%d', delimiter='\t')
+            numpy.savetxt(filename, binary_matrix, fmt='%d', delimiter='\t')
+            
             # update num_tracks
             dim = [num_frames, num_tracks]
 
@@ -967,15 +991,32 @@ class PlotCellTracker(CellTracker):
             tc3_gmm_chmm = tc.tc3_gmm_chmm(data_pca, tc3_gmm['model'],
                                            tc3_gmm_dhmm['model'])
 
-            algorithms = {'TC3': tc3,
-                          'TC3+GMM': tc3_gmm,
-                          'TC3+GMM+DHMM': tc3_gmm_dhmm,
-                          'TC3+GMM+CHMM': tc3_gmm_chmm}
+#            algorithms = {'TC3': tc3,
+#                          'TC3+GMM': tc3_gmm,
+#                          'TC3+GMM+DHMM': tc3_gmm_dhmm,
+#                          'TC3+GMM+CHMM': tc3_gmm_chmm}
+#
+#            algorithm = self.getOption('tc3Algorithms')
+#            result = algorithms[algorithm]
+#            filename = os.path.join(strPathOutTC3, '%s.txt'%algorithm)
+#            numpy.savetxt(filename, result['label_matrix'], fmt='%d',delimiter='\t')
 
-            algorithm = self.getOption('tc3Algorithms')
-            result = algorithms[algorithm]
-            filename = os.path.join(strPathOutTC3, '%s.txt'%algorithm)
-            np.savetxt(filename, result['label_matrix'], fmt='%d', delimiter='\t')
+            # for debug, output all results
+            filenameTC3 = os.path.join(strPathOutTC3, 'TC3.txt')
+            numpy.savetxt(filenameTC3, tc3['label_matrix'], fmt='%d',delimiter='\t')
+            filenameTC3GMM = os.path.join(strPathOutTC3, 'TC3+GMM.txt')
+            numpy.savetxt(filenameTC3GMM, tc3_gmm['label_matrix'], fmt='%d',delimiter='\t')
+            filenameTC3DHMM = os.path.join(strPathOutTC3, 'TC3+GMM+DHMM.txt')
+            numpy.savetxt(filenameTC3DHMM, tc3_gmm_chmm['label_matrix'], fmt='%d',delimiter='\t')
+            filenameTC3CHMM = os.path.join(strPathOutTC3, 'TC3+GMM+CHMM.txt')
+            numpy.savetxt(filenameTC3CHMM, tc3_gmm_chmm['label_matrix'], fmt='%d',delimiter='\t')
+            
+            # TC3 result with filename
+            Filenamelist = os.path.join(strPathOutTC3, 'filenames.txt') 
+            allFilenamesDel = allFilenamesDel[numpy.newaxis]
+            allFilenamesDel = allFilenamesDel.T
+            z=numpy.concatenate((allFilenamesDel,tc3['label_matrix']),axis=1);
+            numpy.savetxt(Filenamelist, z, fmt='%s',delimiter='\t')
 
 
     def exportChannelDataFlat(self, strFilename, strChannelId, strRegionId, lstFeatureNames):
@@ -1152,7 +1193,7 @@ class PlotCellTracker(CellTracker):
             write_table(strFilename, table, column_names=lstHeaderNames)
 
 
-        return np.array(allFeature)
+        return numpy.array(allFeature), strFilename
 
 
     def _forwardVisitor(self, strNodeId, dctResults, dctEdges, iLevel=0, strStartId=None):
@@ -1755,12 +1796,12 @@ class ClassificationCellTracker(SplitCellTracker):
 
 class ClassificationCellTracker2(ClassificationCellTracker):
 
-    OPTIONS = {"bAllowOneDaughterCell"   :   Option(True)}
-
+    OPTIONS = {"bAllowOneDaughterCell"   :   Option(True),
+               }
     @staticmethod
     def remove_constant_columns(A):
         ''' A function to remove constant columns from a 2D matrix'''
-        return A[:, np.sum(np.abs(np.diff(A, axis=0)), axis=0) != 0]
+        return A[:, numpy.sum(numpy.abs(numpy.diff(A, axis=0)), axis=0) != 0]
 
 
     def _forwardVisitor(self, strNodeId, dctResults, dctVisitedNodes, iLevel=0):
@@ -2034,5 +2075,7 @@ class ClassificationCellTracker2(ClassificationCellTracker):
                         f.write('%s\n' % sep.join(line1))
                         f.write('%s\n' % sep.join(line2))
                         f.write('%s\n' % sep.join(line3))
+
                     f.write('%s\n' % sep.join(map(str, prefix + items)))
+
                 f.close()
