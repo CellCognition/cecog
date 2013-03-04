@@ -17,6 +17,7 @@ __source__ = '$URL$'
 
 import numpy
 from sklearn import mixture
+import scipy.cluster.vq as scv
 
 def mylogsumexp(A, axis=None):
     """Computes the sum of A assuming A is in the log domain.
@@ -40,18 +41,18 @@ def mylogsumexp(A, axis=None):
 def binary_clustering(data):
 
     m, idx = scv.kmeans2(data, 2)
-    w = numpy.array([sum(idx==0)/float(len(idx)), sum(idx==1)/float(len(idx))]);
+    w = numpy.array([sum(idx==0)/float(len(idx)), sum(idx==1)/float(len(idx))])
 
-    c1 = numpy.cov(data[idx==0,:].T)
-    c2 = numpy.cov(data[idx==1,:].T)
-    c = numpy.dstack((c1,c2)).T
+    cov1 = numpy.cov(data[idx==0,:].T)
+    cov2 = numpy.cov(data[idx==1,:].T)
+    covs = numpy.dstack((cov1,cov2)).T
 
     # thresh=1e-6
     g = mixture.GMM(n_components=2,
                     covariance_type='full', init_params='')
     g.weights_ = w
     g.means_ = m
-    g.covars_ = c
+    g.covars_ = covs
 
     # n_iter=10, thresh=1e-2
     g.fit(data)

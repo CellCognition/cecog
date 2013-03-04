@@ -935,8 +935,8 @@ class PlotCellTracker(CellTracker):
             bcfname = os.path.join(strPathOutTC3, 'data_tc3.csv')
             numpy.savetxt(bcfname, data_pca, delimiter=",")
             binary_tmp = binary_clustering(data_pca)
-            binary_matrix = binary_tmp.reshape(dim[1],dim[0])
 
+            binary_matrix = binary_tmp.reshape(dim[1],dim[0])
             filename = os.path.join(strPathOutTC3, 'initial_binary_matrix.txt')
             numpy.savetxt(filename, binary_matrix, fmt='%d', delimiter='\t')
 
@@ -960,22 +960,22 @@ class PlotCellTracker(CellTracker):
                                                                    (i+1)*num_frames), 0)
                     num_tracks -= 1
                     idn.append(i)
-            
+
             # save file names
             Filenamelist = os.path.join(strPathOutTC3, 'initial_filenames.txt')
             numpy.savetxt(Filenamelist, allFilenames, fmt='%s',delimiter='\n')
             FilenamelistDel = os.path.join(strPathOutTC3, 'final_filenames.txt')
-            allFilenamesDel = scipy.delete(allFilenames, idn, 0) 
+            allFilenamesDel = scipy.delete(allFilenames, idn, 0)
             numpy.savetxt(FilenamelistDel, allFilenamesDel, fmt='%s',delimiter='\n')
-            
+
             # index of deleted trajectories.
             filename = os.path.join(strPathOutTC3, 'deleted_index.txt')
             numpy.savetxt(filename,idn, fmt='%d',delimiter='\t')
-            
+
             # binary matrix after unsupervised event selection
             filename = os.path.join(strPathOutTC3, 'final_binary_matrix.txt')
             numpy.savetxt(filename, binary_matrix, fmt='%d', delimiter='\t')
-            
+
             # update num_tracks
             dim = [num_frames, num_tracks]
 
@@ -1010,9 +1010,9 @@ class PlotCellTracker(CellTracker):
             numpy.savetxt(filenameTC3DHMM, tc3_gmm_chmm['label_matrix'], fmt='%d',delimiter='\t')
             filenameTC3CHMM = os.path.join(strPathOutTC3, 'TC3+GMM+CHMM.txt')
             numpy.savetxt(filenameTC3CHMM, tc3_gmm_chmm['label_matrix'], fmt='%d',delimiter='\t')
-            
+
             # TC3 result with filename
-            Filenamelist = os.path.join(strPathOutTC3, 'filenames.txt') 
+            Filenamelist = os.path.join(strPathOutTC3, 'filenames.txt')
             allFilenamesDel = allFilenamesDel[numpy.newaxis]
             allFilenamesDel = allFilenamesDel.T
             z=numpy.concatenate((allFilenamesDel,tc3['label_matrix']),axis=1);
