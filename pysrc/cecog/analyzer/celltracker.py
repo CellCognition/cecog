@@ -639,14 +639,15 @@ class CellTracker(OptionManager):
 
         # FIXME dimension of data_zscore
         # Zscore and PCA data
-        data_zscore = sss.zscore(data) #sss.zscore(self.remove_constant_columns(data))
+        data_zscore = sss.zscore(data)
+        # sss.zscore(self.remove_constant_columns(data))
         pca = mlab.PCA(data_zscore)
         num_features = numpy.nonzero(numpy.cumsum(pca.fracs) > 0.99)[0][0]
         data_pca = pca.project(data_zscore)[:,0:num_features]
 
         # just for debugging
-        bcfname = os.path.join(self.strPathOut, 'init_bc.csv')
-        numpy.savetxt(bcfname, data_pca, delimiter=",")
+        # bcfname = os.path.join(self.strPathOut, 'init_bc.csv')
+        # numpy.savetxt(bcfname, data_pca, delimiter=",")
 
         idx = binary_clustering(data_pca)
 
@@ -931,14 +932,14 @@ class PlotCellTracker(CellTracker):
                 raise RuntimeError(msg)
                 # data_pca = data_zscore
 
-            # data exprot for debugging
-            bcfname = os.path.join(strPathOutTC3, 'data_tc3.csv')
-            numpy.savetxt(bcfname, data_pca, delimiter=",")
+            # data export for debugging
+            # bcfname = os.path.join(strPathOutTC3, 'data_tc3.csv')
+            # numpy.savetxt(bcfname, data_pca, delimiter=",")
             binary_tmp = binary_clustering(data_pca)
 
             binary_matrix = binary_tmp.reshape(dim[1],dim[0])
-            filename = os.path.join(strPathOutTC3, 'initial_binary_matrix.txt')
-            numpy.savetxt(filename, binary_matrix, fmt='%d', delimiter='\t')
+            filename = os.path.join(strPathOutTC3, 'initial_binary_matrix.csv')
+            numpy.savetxt(filename, binary_matrix, fmt='%d', delimiter=',')
 
             idn = []
             # a predefined number of classes, given in GUI
@@ -963,18 +964,19 @@ class PlotCellTracker(CellTracker):
 
             # save file names
             Filenamelist = os.path.join(strPathOutTC3, 'initial_filenames.txt')
-            numpy.savetxt(Filenamelist, allFilenames, fmt='%s',delimiter='\n')
+            numpy.savetxt(Filenamelist, allFilenames, fmt='%s', delimiter=',')
             FilenamelistDel = os.path.join(strPathOutTC3, 'final_filenames.txt')
             allFilenamesDel = scipy.delete(allFilenames, idn, 0)
-            numpy.savetxt(FilenamelistDel, allFilenamesDel, fmt='%s',delimiter='\n')
+            numpy.savetxt(FilenamelistDel, allFilenamesDel,
+                          fmt='%s', delimiter=',')
 
             # index of deleted trajectories.
-            filename = os.path.join(strPathOutTC3, 'deleted_index.txt')
-            numpy.savetxt(filename,idn, fmt='%d',delimiter='\t')
+            filename = os.path.join(strPathOutTC3, 'deleted_index.csv')
+            numpy.savetxt(filename,idn, fmt='%d',delimiter=',')
 
             # binary matrix after unsupervised event selection
-            filename = os.path.join(strPathOutTC3, 'final_binary_matrix.txt')
-            numpy.savetxt(filename, binary_matrix, fmt='%d', delimiter='\t')
+            filename = os.path.join(strPathOutTC3, 'final_binary_matrix.csv')
+            numpy.savetxt(filename, binary_matrix, fmt='%d', delimiter=',')
 
             # update num_tracks
             dim = [num_frames, num_tracks]
@@ -991,32 +993,23 @@ class PlotCellTracker(CellTracker):
             tc3_gmm_chmm = tc.tc3_gmm_chmm(data_pca, tc3_gmm['model'],
                                            tc3_gmm_dhmm['model'])
 
-#            algorithms = {'TC3': tc3,
-#                          'TC3+GMM': tc3_gmm,
-#                          'TC3+GMM+DHMM': tc3_gmm_dhmm,
-#                          'TC3+GMM+CHMM': tc3_gmm_chmm}
-#
-#            algorithm = self.getOption('tc3Algorithms')
-#            result = algorithms[algorithm]
-#            filename = os.path.join(strPathOutTC3, '%s.txt'%algorithm)
-#            numpy.savetxt(filename, result['label_matrix'], fmt='%d',delimiter='\t')
 
             # for debug, output all results
-            filenameTC3 = os.path.join(strPathOutTC3, 'TC3.txt')
-            numpy.savetxt(filenameTC3, tc3['label_matrix'], fmt='%d',delimiter='\t')
-            filenameTC3GMM = os.path.join(strPathOutTC3, 'TC3+GMM.txt')
-            numpy.savetxt(filenameTC3GMM, tc3_gmm['label_matrix'], fmt='%d',delimiter='\t')
-            filenameTC3DHMM = os.path.join(strPathOutTC3, 'TC3+GMM+DHMM.txt')
-            numpy.savetxt(filenameTC3DHMM, tc3_gmm_chmm['label_matrix'], fmt='%d',delimiter='\t')
-            filenameTC3CHMM = os.path.join(strPathOutTC3, 'TC3+GMM+CHMM.txt')
-            numpy.savetxt(filenameTC3CHMM, tc3_gmm_chmm['label_matrix'], fmt='%d',delimiter='\t')
+            filenameTC3 = os.path.join(strPathOutTC3, 'TC3.csv')
+            numpy.savetxt(filenameTC3, tc3['label_matrix'], fmt='%d', delimiter=',')
+            filenameTC3GMM = os.path.join(strPathOutTC3, 'TC3_GMM.csv')
+            numpy.savetxt(filenameTC3GMM, tc3_gmm['label_matrix'], fmt='%d', delimiter=',')
+            filenameTC3DHMM = os.path.join(strPathOutTC3, 'TC3_GMM_DHMM.csv')
+            numpy.savetxt(filenameTC3DHMM, tc3_gmm_chmm['label_matrix'], fmt='%d', delimiter=',')
+            filenameTC3CHMM = os.path.join(strPathOutTC3, 'TC3_GMM_CHMM.csv')
+            numpy.savetxt(filenameTC3CHMM, tc3_gmm_chmm['label_matrix'], fmt='%d', delimiter=',')
 
             # TC3 result with filename
             Filenamelist = os.path.join(strPathOutTC3, 'filenames.txt')
             allFilenamesDel = allFilenamesDel[numpy.newaxis]
             allFilenamesDel = allFilenamesDel.T
             z=numpy.concatenate((allFilenamesDel,tc3['label_matrix']),axis=1);
-            numpy.savetxt(Filenamelist, z, fmt='%s',delimiter='\t')
+            numpy.savetxt(Filenamelist, z, fmt='%s', delimiter=',')
 
 
     def exportChannelDataFlat(self, strFilename, strChannelId, strRegionId, lstFeatureNames):
@@ -1906,6 +1899,7 @@ class ClassificationCellTracker2(ClassificationCellTracker):
 
             bFound = False
 
+            # XXX hardcoded transition
             if (iLabel_bc == 0 and iLabel_bc_next == 1):
                 bFound = True
 

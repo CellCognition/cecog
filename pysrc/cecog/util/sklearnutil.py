@@ -15,9 +15,10 @@ __revision__ = '$Rev$'
 __source__ = '$URL$'
 
 
-import numpy
+import numpy as np
 from sklearn import mixture
-import scipy.cluster.vq as scv
+from sklearn.cluster import KMeans
+
 
 def mylogsumexp(A, axis=None):
     """Computes the sum of A assuming A is in the log domain.
@@ -30,41 +31,41 @@ def mylogsumexp(A, axis=None):
         shape = list(A.shape)
         shape[axis] = 1
         Amax.shape = shape
-    Asum = numpy.log(numpy.sum(numpy.exp(A - Amax), axis))
+    Asum = np.log(np.sum(np.exp(A - Amax), axis))
     Asum += Amax.reshape(Asum.shape)
     if axis:
         # Look out for underflow.
-        Asum[numpy.isnan(Asum)] = - numpy.Inf
+        Asum[np.isnan(Asum)] = - np.Inf
     return Asum
 # overwrite the existing logsumexp with new mylogsumexp
 
-def binary_clustering(data):
+def binary_clustering(data, n_clusters=2):
 
-    m, idx = scv.kmeans2(data, 2)
-    w = numpy.array([sum(idx==0)/float(len(idx)), sum(idx==1)/float(len(idx))])
+    # at least n_init=5 for robustness
+    km = KMeans(n_clusters, n_init=5)
+    prd = km.fit_predict(data)
 
-    cov1 = numpy.cov(data[idx==0,:].T)
-    cov2 = numpy.cov(data[idx==1,:].T)
-    covs = numpy.dstack((cov1,cov2)).T
+    # XXX
+    # assign labels,
+    # from now on labels a biologial meaning
+    if np.sum(prd==1) > np.sum(prd==0) :
+        prd = np.where(prd, 0, 1)
+    return prd
 
-    # thresh=1e-6
-    g = mixture.GMM(n_components=2,
-                    covariance_type='full', init_params='')
-    g.weights_ = w
-    g.means_ = m
-    g.covars_ = covs
+# def binary_clustering(data, n_components=2):
 
-    # n_iter=10, thresh=1e-2
-    g.fit(data)
-    idx = g.predict(data)
+#     gmm = mixture.GMM(n_components, covariance_type='full',
+#                       n_iter=5, init_params='wmc')
+#     gmm.fit(data)
+#     prd = gmm.predict(data)
 
-    # map clusters to labels
-    if numpy.sum(idx==1) > numpy.sum(idx==0) :
-        idx[idx==0]=2
-        idx[idx==1]=0
-        idx[idx==2]=1
-    return idx
+#     # XXX
+#     # assign labels,
+#     # from now on labels a biologial meaning
+#     if np.sum(prd==1) > np.sum(prd==0) :
+#         prd = np.where(prd, 0, 1)
+#     return prd
 
 def remove_constant_columns(A):
-    ''' A function to remove constant columns from a 2D matrix'''
-    return A[:, numpy.sum(numpy.abs(numpy.diff(A, axis=0)), axis=0) != 0]
+    """A function to remove constant columns from a 2D matrix."""
+    return A[:, np.sum(np.abs(np.diff(A, axis=0)), axis=0) != 0]
