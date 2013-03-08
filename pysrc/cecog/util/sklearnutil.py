@@ -47,7 +47,7 @@ def binary_clustering(data, n_clusters=2):
 
     # XXX
     # assign labels,
-    # from now on labels a biologial meaning
+    # from now on labels have a biologial meaning
     if np.sum(prd==1) > np.sum(prd==0) :
         prd = np.where(prd, 0, 1)
     return prd

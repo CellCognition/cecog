@@ -23,7 +23,7 @@ import os, \
        itertools, \
        re, \
        shutil
-from types import ListType, FloatType
+from types import ListType
 from csv import DictWriter
 
 #-------------------------------------------------------------------------------
@@ -32,9 +32,7 @@ from csv import DictWriter
 from numpy import array, average
 
 import numpy
-import scipy.cluster.vq as scv
 from matplotlib import mlab
-from sklearn import mixture
 import scipy.stats.stats as sss
 import scipy
 
@@ -43,7 +41,7 @@ from pdk.optionmanagers import OptionManager
 from pdk.ordereddict import OrderedDict
 from pdk.map import dict_append_list
 from pdk.fileutils import safe_mkdirs, collect_files
-from pdk.iterator import unique, flatten, all_equal
+from pdk.iterator import unique, flatten
 from pdk.attributemanagers import (get_slot_values,
                                    set_slot_values)
 
