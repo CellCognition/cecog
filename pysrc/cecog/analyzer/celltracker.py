@@ -35,6 +35,7 @@ import numpy
 import scipy.cluster.vq as scv
 from matplotlib import mlab
 from sklearn import mixture
+from sklearn.hmm import MultinomialHMM
 import scipy.stats.stats as sss
 import scipy
 
@@ -646,10 +647,16 @@ class CellTracker(OptionManager):
         data_pca = pca.project(data_zscore)[:,0:num_features]
 
         # just for debugging
-        # bcfname = os.path.join(self.strPathOut, 'init_bc.csv')
-        # numpy.savetxt(bcfname, data_pca, delimiter=",")
+        bcfname = os.path.join(self.strPathOut, 'init_bc.csv')
+        numpy.savetxt(bcfname, data_pca, delimiter=",")
 
         idx = binary_clustering(data_pca)
+
+        # XXX
+        # assign labels, 0 for non-mitotic, 1 for mitotic
+        # from now on labels a biologial meaning
+        if idx[idx==1].size > idx[idx==0].size:
+            idx = numpy.where(idx, 0, 1)
 
         self.iLabel_bc = {}
         for i, node in enumerate(oGraph.node_list()):
@@ -847,6 +854,25 @@ class PlotCellTracker(CellTracker):
             shutil.rmtree(strPathOut, True)
             safe_mkdirs(strPathOut)
 
+    # remove this function in a later version and
+    # place it in a EventSelection class
+    def _smooth_tracks(self, tracks):
+        """Smooth trajectories using a MultinomialHMM.
+
+        Fit the Multinomial hmm using all tracks, but prediction is performed
+        on single tracks.
+        """
+
+        hmm = MultinomialHMM(n_components=2, n_iter=100)
+        # in newer version of hmm n_symbols can be set in the init method.
+        hmm.n_symbols = 2
+        hmm.fit(tracks)
+
+        tracks2 = []
+        for track in tracks:
+            tracks2.append(hmm.predict(track))
+        return numpy.array(tracks2)
+
     def analyze(self, dctChannels, channelId=None, clear_path=False):
 
         strPathOut = os.path.join(self.strPathOut, 'events')
@@ -902,10 +928,12 @@ class PlotCellTracker(CellTracker):
                                                    strRegionId,
                                                    lstFeatureNames)
 
-        if len(allFeatures) == 0:
-            raise RuntimeError("No events found for TC3 analysis")
-
         if self.getOption('tc3Analysis'):
+            if len(allFeatures) == 0:
+                self.oLogger.warning("No events found for TC3 analysis")
+                self.oLogger.warning("Stopping TC3 anlysis")
+                return
+
             allFeatures = numpy.array(allFeatures)
             data = allFeatures.reshape(allFeatures.shape[0]*allFeatures.shape[1],
                                        allFeatures.shape[2])
@@ -929,50 +957,67 @@ class PlotCellTracker(CellTracker):
             else:
                 msg = ("Not enough objects found (nobjects < nfeatures)",
                        "(%s, %s)" %data_zscore.shape)
-                raise RuntimeError(msg)
-                # data_pca = data_zscore
+                self.oLogger.warning(msg)
+                self.oLogger.warning("Stopping TC3 analysis")
+                return
 
             # data export for debugging
-            # bcfname = os.path.join(strPathOutTC3, 'data_tc3.csv')
-            # numpy.savetxt(bcfname, data_pca, delimiter=",")
+            bcfname = os.path.join(strPathOutTC3, 'data_tc3.csv')
+            numpy.savetxt(bcfname, data_pca, delimiter=",")
             binary_tmp = binary_clustering(data_pca)
-
             binary_matrix = binary_tmp.reshape(dim[1],dim[0])
+            # remove some noise from the tracks
+            # smoothing must take place before the track filter
+            binary_matrix = self._smooth_tracks(binary_matrix)
+
+            event_start = self.getOption('iBackwardRange')
+            event_tol = 2
+            # assigning 0 to non-mitotic, 1 to mitotic cells
+            pre = binary_matrix[:,:event_start]
+            if pre[pre==0].size <= pre[pre==1].size:
+                binary_matrix = numpy.where(binary_matrix, 0, 1)
+
             filename = os.path.join(strPathOutTC3, 'initial_binary_matrix.csv')
             numpy.savetxt(filename, binary_matrix, fmt='%d', delimiter=',')
 
-            idn = []
             # a predefined number of classes, given in GUI
             k = self.getOption('numClusters')
 
+            # XXX Event filter,
+            # one filter function for each condition
             # delete false positive trajectories, according to the following rules:
             # 1. No length of the event of interest < k
-            # 2. Event of interest should start from within frame event_start and event_start+event_tol due to event extraction algorithm
-            # 3. No 0*1*0*1* pattern (maybe omitted)
-            event_start = self.getOption('iBackwardRange')
-            event_tol = 2
-            for i in xrange(num_tracks-1, -1, -1):
-                # print num_tracks
+            # 2. No noise in the pre duration
+            # 3. Event of interest should start from within frame event_start and
+            #    event_start+event_tol due to event extraction algorithm
+            # 4. No 0*1*0*1* pattern (maybe omitted)
+            tracks_del = []
+            for i, track in enumerate(binary_matrix):
+                if (track.sum() < k) or \
+                        (track[0:event_start-1].sum() > 0) or \
+                        (track[event_start:event_start+event_tol].sum() == 0) or \
+                        ((numpy.diff(track)==1).sum() > 1):
+                    tracks_del.append(i)
 
-                if (sum(binary_matrix[i,:]) < k) or (sum(binary_matrix[i,0:event_start-1]) > 0) or \
-                    (sum(binary_matrix[i,event_start:event_start+event_tol]) == 0) or sum(numpy.diff(binary_matrix[i,:])==1) > 1:
-                    binary_matrix = scipy.delete(binary_matrix, i, 0)
-                    data_pca = scipy.delete(data_pca, numpy.arange(i*num_frames,
-                                                                   (i+1)*num_frames), 0)
-                    num_tracks -= 1
-                    idn.append(i)
+            binary_matrix = numpy.delete(binary_matrix, tracks_del, 0)
+            ne = [range(i*num_frames, (i+1)*num_frames, 1) for i in tracks_del]
+            data_pca = numpy.delete(data_pca, numpy.array(ne).flatten(), 0)
+            num_tracks, num_frames = binary_matrix.shape
+
+            # Event selection finished
+            ####################################################
 
             # save file names
             Filenamelist = os.path.join(strPathOutTC3, 'initial_filenames.txt')
             numpy.savetxt(Filenamelist, allFilenames, fmt='%s', delimiter=',')
             FilenamelistDel = os.path.join(strPathOutTC3, 'final_filenames.txt')
-            allFilenamesDel = scipy.delete(allFilenames, idn, 0)
+            allFilenamesDel = scipy.delete(allFilenames, tracks_del, 0)
             numpy.savetxt(FilenamelistDel, allFilenamesDel,
                           fmt='%s', delimiter=',')
 
             # index of deleted trajectories.
             filename = os.path.join(strPathOutTC3, 'deleted_index.csv')
-            numpy.savetxt(filename,idn, fmt='%d',delimiter=',')
+            numpy.savetxt(filename, tracks_del, fmt='%d',delimiter=',')
 
             # binary matrix after unsupervised event selection
             filename = os.path.join(strPathOutTC3, 'final_binary_matrix.csv')
@@ -1008,9 +1053,8 @@ class PlotCellTracker(CellTracker):
             Filenamelist = os.path.join(strPathOutTC3, 'filenames.txt')
             allFilenamesDel = allFilenamesDel[numpy.newaxis]
             allFilenamesDel = allFilenamesDel.T
-            z=numpy.concatenate((allFilenamesDel,tc3['label_matrix']),axis=1);
+            z=numpy.concatenate((allFilenamesDel, tc3['label_matrix']), axis=1);
             numpy.savetxt(Filenamelist, z, fmt='%s', delimiter=',')
-
 
     def exportChannelDataFlat(self, strFilename, strChannelId, strRegionId, lstFeatureNames):
 
