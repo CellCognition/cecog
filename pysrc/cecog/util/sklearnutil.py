@@ -44,12 +44,6 @@ def binary_clustering(data, n_clusters=2):
     # at least n_init=5 for robustness
     km = KMeans(n_clusters, n_init=5)
     prd = km.fit_predict(data)
-
-    # XXX
-    # assign labels,
-    # from now on labels have a biologial meaning
-    if np.sum(prd==1) > np.sum(prd==0) :
-        prd = np.where(prd, 0, 1)
     return prd
 
 # def binary_clustering(data, n_components=2):
@@ -57,14 +51,7 @@ def binary_clustering(data, n_clusters=2):
 #     gmm = mixture.GMM(n_components, covariance_type='full',
 #                       n_iter=5, init_params='wmc')
 #     gmm.fit(data)
-#     prd = gmm.predict(data)
-
-#     # XXX
-#     # assign labels,
-#     # from now on labels a biologial meaning
-#     if np.sum(prd==1) > np.sum(prd==0) :
-#         prd = np.where(prd, 0, 1)
-#     return prd
+#     return gmm.predict(data)
 
 def remove_constant_columns(A):
     """A function to remove constant columns from a 2D matrix."""
