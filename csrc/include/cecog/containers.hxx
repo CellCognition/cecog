@@ -873,6 +873,8 @@ namespace cecog
 
       if (objects.count(objId))
       {
+    	  ROIObject& o = objects[objId];
+
     	  // add a border of 1 pixel arround object image & mask
     	  // and fixes a segfault in vigra::exportImage
     	  int xul, yul, xlr, ylr;
@@ -882,8 +884,6 @@ namespace cecog
     	  ylr = (o.roi.lowerRight.y == img.height()) ? 0 : 1;
     	  const vigra::Diff2D ul_1px(xul, yul);
     	  const vigra::Diff2D lr_1px(xlr, ylr);
-
-      	ROIObject& o = objects[objId];
 
       	vigra::ImageExportInfo img_info(img_name.c_str());
       	img_info.setCompression(compression.c_str());
