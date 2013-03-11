@@ -949,7 +949,8 @@ class PlotCellTracker(CellTracker):
             # FIXME check shape of data_zscore
             data = filter_col_nans(data)
             data_zscore = sss.zscore(remove_constant_columns(data))
-
+            
+            # preserve 99% cumulative explained variance 
             if data_zscore.shape[0] > data_zscore.shape[1]:
                 pca = mlab.PCA(data_zscore)
                 num_features = numpy.nonzero(numpy.cumsum(pca.fracs) > 0.99)[0][0]

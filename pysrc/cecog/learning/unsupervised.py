@@ -23,7 +23,7 @@ class TemporalClustering:
         """
         t - number of frames
         k - number of clusters
-        m - minimal cluster size
+        m - minimum cluster size
         returns: The number of all possible ways to cluster using TC3
         """
         if t > 100 : exit('Number of frames should be no larger than 100');
@@ -35,7 +35,7 @@ class TemporalClustering:
         """
         t - number of frames
         k - number of clusters
-        m - minimal cluster size
+        m - minimum cluster size
         returns: A matrix that represents all possible ways to assign t frames into k clusters
         """
         intervalMatrix = [];
@@ -52,7 +52,7 @@ class TemporalClustering:
         """
         data - data sequence
         k - number of clusters
-        m - minimal cluster size
+        m - minimum cluster size
         returns: Final cluster assignment is found by TC3. Clusters are mapped to class labels.
         """
         t = data.shape[0]
@@ -115,9 +115,9 @@ class TemporalClustering:
             if (len(indRange) == 0) and i > 1 :
                 labelMatrix[i, :] = labelMatrix[i-1, :]
             else :
-                ###########
-                # 12|3456|1
-                ###########
+                #############################################################################
+                # 12|3456...k|1 (alternatively: 1|23456...k|1, can be determined by AIC/BIC)
+                #############################################################################
                 # interphase and prometaphase/Aster
                 k1 = 2;
                 intV = range(0,indRange[0][0])
@@ -125,7 +125,7 @@ class TemporalClustering:
                 intLabels = self._tc3_per_track(Rdata[intV,:],k1,1)
                 labelMatrix[i,intV] = intLabels
 
-                # mitosis: prometa, meta, ana, telo
+                # mitosis: prometa, meta, ana, telo, etc
                 k2 = k-k1;
                 intV = np.arange(indRange[0][0],indRange[-1][-1]+1)
                 intLabels = self._tc3_per_track(Rdata[intV,:],k2,m) + k1;
@@ -166,12 +166,14 @@ class TemporalClustering:
         # estimate initial transition matrix
         trans = np.zeros((self.n_clusters,self.n_clusters))
         hist, bin_edges = np.histogram(labels, bins=self.n_clusters)
+        # assign adjacent class label ratios to transition matrix, refer to R code
         for i in range(0,self.n_clusters) :
             if (i<self.n_clusters-1) :
                 trans[i,i:i+2] += [hist[i]/(hist[i]+hist[i+1]), hist[i+1]/(hist[i]+hist[i+1])]
             else :
                 trans[i,0] += hist[i]/(hist[i]+hist[0])
                 trans[i,-1] += hist[0]/(hist[i]+hist[0])
+        # ensure no zero entries
         trans = trans + eps
         trans /= trans.sum(axis=1)[:, np.newaxis]
         # start probability: [1, 0, 0, ...]
@@ -254,7 +256,7 @@ class TemporalClustering:
     n_clusters = property(_get_n_clusters, _set_n_clusters)
 
     def _gmm_int_parameters(self,data,labels,sharedcov=False) :
-
+        # initialize gmm parameters by sample statistics from TC3 labels
         n = data.shape[0]
         n_features =  data.shape[1]
         mu = np.zeros((self.n_clusters, n_features))
