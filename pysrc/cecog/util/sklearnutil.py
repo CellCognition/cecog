@@ -19,7 +19,6 @@ import numpy as np
 from sklearn import mixture
 from sklearn.cluster import KMeans
 
-
 def mylogsumexp(A, axis=None):
     """Computes the sum of A assuming A is in the log domain.
 
@@ -35,21 +34,19 @@ def mylogsumexp(A, axis=None):
     Asum += Amax.reshape(Asum.shape)
     if axis:
         # Look out for underflow.
-        Asum[np.isnan(Asum)] = - np.Inf
+        Asum[np.isnan(Asum)] = -np.Inf
     return Asum
 # overwrite the existing logsumexp with new mylogsumexp
 
 def binary_clustering(data, n_clusters=2):
-
     # at least n_init=5 for robustness
     km = KMeans(n_clusters, n_init=5)
     prd = km.fit_predict(data)
     return prd
 
 # def binary_clustering(data, n_components=2):
-
 #     gmm = mixture.GMM(n_components, covariance_type='full',
-#                       n_iter=5, init_params='wmc')
+#                       n_init=5, n_iter=200, init_params='wmc')
 #     gmm.fit(data)
 #     return gmm.predict(data)
 
