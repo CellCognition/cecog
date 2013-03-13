@@ -628,13 +628,14 @@ class HmmThreadPython(_ProcessingThread):
         # estimate initial transition matrix
         trans = numpy.zeros((n_clusters,n_clusters))
         hist, bin_edges = numpy.histogram(labels, bins=n_clusters)
+        # assign adjacent class label ratios to transition matrix, refer to R code
         for i in range(0,n_clusters) :
             if (i<n_clusters-1) :
                 trans[i,i:i+2] += [hist[i]/(hist[i]+hist[i+1]), hist[i+1]/(hist[i]+hist[i+1])]
             else :
                 trans[i,0] += hist[i]/(hist[i]+hist[0])
                 trans[i,-1] += hist[0]/(hist[i]+hist[0])
-
+        # ensure no zero entries
         trans = trans + eps
         trans /= trans.sum(axis=1)[:, numpy.newaxis]
         # start probability: [1, 0, 0, ...]
