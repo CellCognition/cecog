@@ -1502,8 +1502,8 @@ class CellAnalyzer(PropertyManager):
 
                 if (obj.oRoi.upperLeft[0] >= 0 and
                     obj.oRoi.upperLeft[1] >= 0 and
-                    obj.oRoi.lowerRight[0] < oContainer.width and
-                    obj.oRoi.lowerRight[1] < oContainer.height):
+                    obj.oRoi.lowerRight[0] <= oContainer.width and
+                    obj.oRoi.lowerRight[1] <= oContainer.height):
                     iCenterX, iCenterY = obj.oCenterAbs
 
                     strPathOutLabel = os.path.join(oLearner.dctEnvPaths['samples'],
@@ -1517,9 +1517,7 @@ class CellAnalyzer(PropertyManager):
 
                     strFilenameImg = os.path.join(strPathOutLabel, '%s___img.png' % strFilenameBase)
                     strFilenameMsk = os.path.join(strPathOutLabel, '%s___msk.png' % strFilenameBase)
-                    # FIXME: export Objects is segfaulting for objects
-                    #        where its bounding box is touching the border
-                    #        i.e. one corner point equals zero!
+
                     oContainer.exportObject(obj_id,
                                             strFilenameImg,
                                             strFilenameMsk)
@@ -1529,8 +1527,8 @@ class CellAnalyzer(PropertyManager):
                     #print obj_id, obj.oCenterAbs, iCenterX, iCenterY
                     ccore.drawFilledCircle(ccore.Diff2D(iCenterX, iCenterY),
                                            3, oContainer.img_rgb, rgb_value)
-
-
+                                            
+                    
         if len(learner_objects) > 0:
             oLearner.applyObjects(learner_objects)
             # we don't want to apply None for feature names
