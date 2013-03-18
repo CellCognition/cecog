@@ -901,7 +901,7 @@ class TimeHolder(OrderedDict):
             combined_region_name = self._convert_region_name( \
                 channel_name, region.name, prefix=None)
 
-            nr_classes = predictor.iClassNumber
+            nr_classes = predictor.n_classes
             nr_objects = len(region)
 
             ### 1) write global classifier definition
@@ -914,7 +914,9 @@ class TimeHolder(OrderedDict):
                                   ('name', '|S100'),
                                   ('color', '|S9')])
                 var = classification_group.create_dataset('class_labels', (nr_classes,), dt)
-                var[:] = zip(predictor.lstClassLabels, predictor.lstClassNames, predictor.lstHexColors)
+                var[:] = zip(predictor.class_names.keys(),
+                             predictor.class_names.values(),
+                             [clf.hexcolors[n] for n in predictor.class_names.values()])
 
                 # classifier
                 dt = numpy.dtype([('name', '|S512'),
@@ -1002,7 +1004,6 @@ class TimeHolder(OrderedDict):
                         for obj in region.values():
                             count[obj.strClassName] += 1
                     items += [total] + [count[x] for x in class_names]
-
 
                 if not has_header:
                     has_header = True

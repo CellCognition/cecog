@@ -30,7 +30,7 @@ class PostProcessingThread(CoreThread):
         self._mapping_files = {}
 
     def _run(self):
-        self._logger('post processing...')
+        self._logger.info('post processing...')
 
         plates = self._imagecontainer.plates
         self._settings.set_section(SECTION_NAME_POST_PROCESSING)
@@ -72,11 +72,11 @@ class PostProcessingThread(CoreThread):
         mapping_file = self._mapping_files[plate_id]
 
         class_colors = {}
-        for i, name in self._learner_dict['primary'].dctClassNames.items():
-            class_colors[i] = self._learner_dict['primary'].dctHexColors[name]
+        for i, name in self._learner_dict['primary'].class_names.items():
+            class_colors[i] = self._learner_dict['primary'].hex_colors[name]
 
         class_names = {}
-        for i, name in self._learner_dict['primary'].dctClassNames.items():
+        for i, name in self._learner_dict['primary'].class_names.items():
             class_names[i] = name
 
         self._settings.set_section(SECTION_NAME_POST_PROCESSING)

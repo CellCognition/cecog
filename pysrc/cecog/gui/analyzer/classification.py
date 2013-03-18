@@ -217,7 +217,7 @@ class ClassifierResultFrame(QGroupBox):
         return result['has_model'] and result['has_range']
 
     def _set_info_table(self, conf):
-        rows = len(self._learner.lstClassLabels)
+        rows = len(self._learner.class_labels)
         self._table_info.clear()
         names_horizontal = [('Name', 'class name'),
                             ('Samples', 'class samples'),
@@ -225,7 +225,7 @@ class ClassifierResultFrame(QGroupBox):
                             ('%PR', 'class precision in %'),
                             ('%SE', 'class sensitivity in %')]
 
-        names_vertical = [str(self._learner.nl2l[r]) for r in range(rows)] + ['','#']
+        names_vertical = [str(k) for k in self._learner.class_names.keys()] + ['', '#']
         self._table_info.setColumnCount(len(names_horizontal))
         self._table_info.setRowCount(len(names_vertical))
         self._table_info.setVerticalHeaderLabels(names_vertical)
@@ -234,16 +234,15 @@ class ClassifierResultFrame(QGroupBox):
             item = QTableWidgetItem(name)
             item.setToolTip(info)
             self._table_info.setHorizontalHeaderItem(c, item)
-        r = 0
-        for r in range(rows):
+
+        for r, label in enumerate(self._learner.class_names.keys()):
             self._table_info.setRowHeight(r, 20)
-            label = self._learner.nl2l[r]
-            name = self._learner.dctClassNames[label]
+            name = self._learner.class_names[label]
             samples = self._learner.names2samples[name]
             self._table_info.setItem(r, 0, QTableWidgetItem(name))
             self._table_info.setItem(r, 1, QTableWidgetItem(str(samples)))
             item = QTableWidgetItem(' ')
-            item.setBackground(QBrush(QColor(*hexToRgb(self._learner.dctHexColors[name]))))
+            item.setBackground(QBrush(QColor(*hexToRgb(self._learner.hexcolors[name]))))
             self._table_info.setItem(r, 2, item)
 
             if not conf is None and r < len(conf):
@@ -279,25 +278,26 @@ class ClassifierResultFrame(QGroupBox):
 
     def _init_conf_table(self, conf):
         self._table_conf.clear()
+
         if not conf is None:
             conf_array = conf.conf
             rows, cols = conf_array.shape
             self._table_conf.setColumnCount(cols)
             self._table_conf.setRowCount(rows)
-            for c in range(cols):
-                self._table_conf.setColumnWidth(c, 20)
-                label = self._learner.nl2l[c]
-                name = self._learner.dctClassNames[label]
-                item = QTableWidgetItem(str(label))
-                item.setToolTip('%d : %s' % (label, name))
-                self._table_conf.setHorizontalHeaderItem(c, item)
-            for r in range(rows):
-                self._table_conf.setRowHeight(r, 20)
-                label = self._learner.nl2l[r]
-                name = self._learner.dctClassNames[label]
-                item = QTableWidgetItem(str(label))
-                item.setToolTip('%d : %s' % (label, name))
-                self._table_conf.setVerticalHeaderItem(r, item)
+
+            for i, label in enumerate(self._learner.class_names):
+                h_item = QTableWidgetItem(str(label))
+                v_item = QTableWidgetItem(str(label))
+
+                tooltip = '%d : %s' %(label, self._learner.class_names[label])
+                v_item.setToolTip(tooltip)
+                h_item.setToolTip(tooltip)
+
+                self._table_conf.setHorizontalHeaderItem(i, h_item)
+                self._table_conf.setVerticalHeaderItem(i, v_item)
+
+                self._table_conf.setColumnWidth(i, 20)
+                self._table_conf.setRowHeight(i, 20)
 
     def _update_conf_table(self, conf):
         conf_array = conf.conf

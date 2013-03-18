@@ -347,7 +347,6 @@ class PositionPicker(PositionCore):
 
         for frame, channels in self._imagecontainer( \
             crd, interrupt_channel=True, interrupt_zslice=True):
-
             if self.is_aborted():
                 return 0
             else:
@@ -514,7 +513,9 @@ class PositionAnalyzer(PositionCore):
         # at least the total count for primary is always exported
         ch_info = OrderedDict([('Primary', ('primary', [], []))])
         for name, clf in self.classifiers.iteritems():
-            ch_info[name] = (clf.regions, clf.lstClassNames, clf.lstHexColors)
+            names = clf.class_names.values()
+            colors = [clf.hexcolors[n] for n in names]
+            ch_info[name] = (clf.regions, names, colors)
 
         timeholder.exportObjectCounts(fname, self.position, self.meta_data, ch_info)
         pplot_ymax = \

@@ -200,8 +200,8 @@ class HmmThread(CoreThread):
                     lines[i] = "FILENAME_GRAPH_P = '%s'\n" % primary_graph
                 elif line2 == '#CLASS_COLORS_P':
                     learner = self._learner_dict['primary']
-                    colors = ",".join(["'%s'" % learner.dctHexColors[x] \
-                                           for x in learner.lstClassNames])
+                    colors = ",".join(["'%s'" % learner.hexcolors[x] \
+                                           for x in learner.class_names.values()])
                     lines[i] = "CLASS_COLORS_P = c(%s)\n" % colors
                 elif line2 == '#REGION_NAME_P':
                     lines[i] = "REGION_NAME_P = '%s'\n" % region_name_primary
@@ -226,8 +226,8 @@ class HmmThread(CoreThread):
                     lines[i] = "FILENAME_GRAPH_S = '%s'\n" % secondary_graph
                 elif line2 == '#CLASS_COLORS_S':
                     learner = self._learner_dict['secondary']
-                    colors = ",".join(["'%s'" % learner.dctHexColors[x] \
-                                       for x in learner.lstClassNames])
+                    colors = ",".join(["'%s'" % learner.hexcolors[x] \
+                                       for x in learner.class_names.values()])
                     lines[i] = "CLASS_COLORS_S = c(%s)\n" % colors
                 elif line2 == '#REGION_NAME_S':
                     lines[i] = "REGION_NAME_S = '%s'\n" % region_name_secondary
@@ -284,15 +284,15 @@ class HmmThread(CoreThread):
         for line in f_in:
             line2 = line.strip()
             if line2 in ['#numberOfClasses', '#numberOfHiddenStates']:
-                f_out.write('%d\n' % len(learner.lstClassNames))
+                f_out.write('%d\n' % len(learner.class_names))
             elif line2 == '#startNodes':
-                f_out.write('%s\n' % '  '.join(map(str, learner.lstClassLabels)))
+                f_out.write('%s\n' % '  '.join(map(str, learner.class_labels)))
             elif line2 == '#transitionGraph':
                 f_out.write('%s -> %s\n' %
-                            (','.join(map(str, learner.lstClassLabels)),
-                             ','.join(map(str, learner.lstClassLabels))))
+                            (','.join(map(str, learner.class_labels)),
+                             ','.join(map(str, learner.class_labels))))
             elif line2 == '#hiddenNodeToClassificationNode':
-                for label in learner.lstClassLabels:
+                for label in learner.class_labels:
                     f_out.write('%s\n' % '  '.join(map(str, [label]*2)))
             else:
                 f_out.write(line)

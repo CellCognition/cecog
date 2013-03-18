@@ -30,6 +30,7 @@ from cecog.util.util import rgbToHex
 from cecog.util.logger import LoggerObject
 from cecog.util.util import makedirs
 
+
 class BaseLearner(LoggerObject):
 
     XML = "xml"
@@ -51,19 +52,18 @@ class BaseLearner(LoggerObject):
         self.color_channel = color_channel
         self.channels = channels
 
-        # XXX remove hungarian
-        self.strArffFileName = 'features.arff'
-        self.strSparseFileName ='features.sparse'
-        self.strDefinitionFileName = 'class_definition.txt'
+        self.arff_file = 'features.arff'
+        self.sparse_file ='features.sparse'
+        self.definitions_file = 'class_definition.txt'
         self._feature_names = None
 
         self._class_definitions = []
-        self.dctFeatureData = OrderedDict()
-        self.dctClassNames = {}
-        self.dctClassLabels = {}
-        self.hasZeroInsert = has_zero_insert
-        self.dctHexColors = {}
-        self.dctSampleNames = {}
+        self.feature_data = OrderedDict()
+        self.class_names = OrderedDict()
+        self.class_labels = {}
+        self.has_zero_insert = has_zero_insert
+        self.hexcolors = {}
+        self.sample_names = {}
 
     @property
     def regions(self):
@@ -112,104 +112,61 @@ class BaseLearner(LoggerObject):
             makedirs(subdir)
 
     @property
-    def lstClassDefinitions(self):
-        return self._class_definitions
+    def n_classes(self):
+        return len(self.class_names)
 
-    @lstClassDefinitions.deleter
-    def lstClassDefinitions(self):
-        del self._class_definitions
-
-    @lstClassDefinitions.setter
-    def lstClassDefinitions(self, definitions):
-        for class_description in definitions:
-            name = class_description['name']
-            label = class_description['label']
-            color = class_description['color']
-
-            # and what is this good for
-            self.dctClassNames[label] = name
-            self.dctClassLabels[name] = label
-            self.dctHexColors[name] = rgbToHex(*color)
 
     def clear(self):
         self.dctFeatureData.clear()
-        self.dctClassNames.clear()
-        self.dctClassLabels.clear()
+        self.class_names.clear()
+        self.class_labels.clear()
         self.feature_names = []
-        self.dctHexColors.clear()
-        self.dctSampleNames.clear()
-
-    @property
-    def lstClassNames(self):
-        return [self.dctClassNames[x] for x in self.lstClassLabels]
-
-    @property
-    def lstClassLabels(self):
-        return sorted(self.dctClassNames.keys())
-
-    @property
-    def iClassNumber(self):
-        return len(self.dctClassNames)
-
-    @property
-    def lstHexColors(self):
-        return [self.dctHexColors[x] for x in self.lstClassNames]
+        self.hexcolors.clear()
+        self.sample_names.clear()
 
     @property
     def names2samples(self):
-        return dict([(n, len(self.dctFeatureData.get(n, [])))
-                     for n in self.lstClassNames])
-
-    @property
-    def l2nl(self):
-        """Converts a label into a new label
-        (new labels are continuous from 0..number of classes
-        """
-        return dict([(l,i) for i,l in enumerate(self.lstClassLabels)])
-
-    @property
-    def nl2l(self):
-        """Converts a new label into the original label"""
-        return dict([(i,l) for i,l in enumerate(self.lstClassLabels)])
+        return dict([(n, len(self.feature_data.get(n, [])))
+                     for n in self.class_names.values()])
 
     def loadDefinition(self, path=None, filename=None):
         if filename is None:
-            filename = self.strDefinitionFileName
+            filename = self.definitions_file
         if path is None:
             path = self.clf_dir
 
         with open(join(path, filename), "rb") as f:
             reader = csv.reader(f, delimiter='\t', quoting=csv.QUOTE_NONE)
-            self.dctClassNames.clear()
-            self.dctClassLabels.clear()
-            self.dctHexColors.clear()
+            self.class_names.clear()
+            self.class_labels.clear()
+            self.hexcolors.clear()
             for row in reader:
                 label = int(row[0])
                 name = row[1]
                 color = row[2]
-                self.dctClassNames[label] = name
-                self.dctClassLabels[name] = label
-                self.dctHexColors[name] = color
+                self.class_names[label] = name
+                self.class_labels[name] = label
+                self.hexcolors[name] = color
 
     def saveDefinition(self, path=None, filename=None):
         if filename is None:
-            filename = self.strDefinitionFileName
+            filename = self.definitions_file
         if path is None:
             path = self.clf_dir
         with open(join(path, filename), "wb") as f:
             writer = csv.writer(f, delimiter='\t', quoting=csv.QUOTE_NONE)
-            for class_name in self.lstClassNames:
-                class_label = self.dctClassLabels[class_name]
-                color = self.dctHexColors[class_name]
+            for class_name in self.class_names.values():
+                class_label = self.class_labels[class_name]
+                color = self.hexcolors[class_name]
                 writer.writerow([class_label, class_name, color])
 
     def exportRanges(self, path=None, fname=None):
         if fname is None:
-            fname = splitext(self.strArffFileName)[0] + '.range'
+            fname = splitext(self.arff_file)[0] + '.range'
         if path is None:
             path = self.data_dir
 
-        all_features = np.vstack(self.dctFeatureData.values())
+        all_features = np.vstack(self.feature_data.values())
         features_min = np.min(all_features, 0)
         features_max = np.max(all_features, 0)
 
@@ -220,22 +177,22 @@ class BaseLearner(LoggerObject):
                 fp.write('%d %.10e %.10e\n' % (idx+1, m1, m2))
 
 
-    def importFromArff(self, strFilePath=None, strFileName=None):
-        if strFileName is None:
-            strFileName = self.strArffFileName
-        if strFilePath is None:
-            strFilePath = self.data_dir
+    def importFromArff(self, path=None, filename=None):
+        if filename is None:
+            filename = self.arff_file
+        if path is None:
+            path = self.data_dir
 
-        oReader = ArffReader(os.path.join(strFilePath, strFileName))
-        self.dctFeatureData = oReader.dctFeatureData
-        self.dctClassNames = oReader.dctClassNames
-        self.dctClassLabels = oReader.dctClassLabels
+        oReader = ArffReader(join(path, filename))
+        self.feature_data = oReader.dctFeatureData
+        self.class_names.update(oReader.dctClassNames)
+        self.class_labels.update(oReader.dctClassLabels)
         self.feature_names = oReader.lstFeatureNames
-        self.dctHexColors = oReader.dctHexColors
-        self.hasZeroInsert = oReader.hasZeroInsert
+        self.hexcolors = oReader.dctHexColors
+        self.has_zero_insert = oReader.hasZeroInsert
 
     def check(self):
-        filename = splitext(self.strArffFileName)[0]
+        filename = splitext(self.arff_file)[0]
         result = {'path_env': self.clf_dir,
                   'path_data': self.data_dir,
                   'path_samples': self.samples_dir,
@@ -243,8 +200,8 @@ class BaseLearner(LoggerObject):
                   'model': join(self.data_dir, '%s.model' %filename),
                   'range': join(self.data_dir, '%s.range' %filename),
                   'conf': join(self.data_dir, '%s.confusion.txt' %filename),
-                  'arff': join(self.data_dir, self.strArffFileName),
-                  'definition': join(self.clf_dir, self.strDefinitionFileName),
+                  'arff': join(self.data_dir, self.arff_file),
+                  'definition': join(self.clf_dir, self.definitions_file),
                   # result of validity checks
                   'has_path_data': isdir(self.data_dir),
                   'has_path_samples': isdir(self.data_dir),
@@ -252,70 +209,70 @@ class BaseLearner(LoggerObject):
                   'has_model': isfile(join(self.data_dir, '%s.model' %filename)),
                   'has_range': isfile(join(self.data_dir, '%s.range' %filename)),
                   'has_conf': isfile(join(self.data_dir, '%s.confusion.txt' %filename)),
-                  'has_arff': isfile(join(self.data_dir, self.strArffFileName)),
-                  'has_definition': isfile(join(self.clf_dir, self.strDefinitionFileName))}
+                  'has_arff': isfile(join(self.data_dir, self.arff_file)),
+                  'has_definition': isfile(join(self.clf_dir, self.definitions_file))}
         return result
 
     def exportToArff(self, path=None, filename=None):
         if filename is None:
-            filename = self.strArffFileName
+            filename = self.arff_file
         if path is None:
             path = self.data_dir
 
         writer = ArffWriter(join(path, filename),
                             self._feature_names,
-                            self.dctClassLabels,
-                            dctHexColors=self.dctHexColors,
-                            hasZeroInsert=self.hasZeroInsert)
-        writer.writeAllFeatureData(self.dctFeatureData)
+                            self.class_labels,
+                            dctHexColors=self.hexcolors,
+                            hasZeroInsert=self.has_zero_insert)
+        writer.writeAllFeatureData(self.feature_data)
         writer.close()
 
     def exportToSparse(self, directory=None, filename=None):
         if filename is None:
-            filename = self.strSparseFileName
+            filename = self.sparse_file
         if directory is None:
             directory = self.data_dir
 
         try:
             writer = SparseWriter(join(directory, filename),
                                   self._feature_names,
-                                  self.dctClassLabels)
-            writer.writeAllFeatureData(self.dctFeatureData)
+                                  self.class_labels)
+            writer.writeAllFeatureData(self.feature_data)
         finally:
             writer.close()
 
-    def importSampleNames(self, strFilePath=None, strFileName=None):
+    def importSampleNames(self, path=None, filename=None):
         if strFileName is None:
-            strFileName = os.path.splitext(self.strArffFileName)[0]
+            strFileName = os.path.splitext(self.arff_file)[0]
             strFileName = '%s.samples.txt' % strFileName
         if strFilePath is None:
             strFilePath = self.data_dir
         f = file(os.path.join(strFilePath, strFileName), 'r')
-        self.dctSampleNames = {}
+        self.sample_names = {}
         for line in f:
             class_name, file_name = line.strip().split('\t')
-            if class_name in self.dctClassLabels:
-                if not class_name in self.dctSampleNames:
-                    self.dctSampleNames[class_name] = []
-            self.dctSampleNames[class_name].append(file_name)
+            if class_name in self.class_labels:
+                if not class_name in self.sample_names:
+                    self.sample_names[class_name] = []
+            self.sample_names[class_name].append(file_name)
         f.close()
 
-    def export_sample_names(self, path=None, filename=None):
-        if filename is None:
-            filename = splitext(self.strArffFileName)[0]
-            filename = '%s.samples.txt' %filename
-        if path is None:
-            path = self.data_dir
-
-        with open(join(path, filename), 'w') as fp:
-            for class_name, samples in self.dctSampleNames.iteritems():
-                for sample_name in samples:
-                    fp.write('%s\t%s\n' % (class_name, sample_name))
+    def exportSampleNames(self, strFilePath=None, strFileName=None):
+        if strFileName is None:
+            strFileName = splitext(self.arff_file)[0]
+            strFileName = '%s.samples.txt' % strFileName
+        if strFilePath is None:
+            strFilePath = self.data_dir
+        f = file(os.path.join(strFilePath, strFileName), 'w')
+        for class_name, samples in self.sample_names.iteritems():
+            for sample_name in samples:
+                f.write('%s\t%s\n' % (class_name, sample_name))
+        f.close()
 
     def export(self):
         self.exportToArff()
         self.exportToSparse()
-        self.export_sample_names()
+        self.exportSampleNames()
 
 class CommonClassPredictor(BaseLearner):
 
@@ -326,20 +283,15 @@ class CommonClassPredictor(BaseLearner):
         self.nan_features = []
 
     def has_nan_features(self):
-        for data in self.dctFeatureData.itervalues():
+        for data in self.feature_data.itervalues():
             if np.any(np.isnan(data)):
                 return True
         return False
 
-    def loadClassifier(self):
-        if self.strModelPrefix is None:
-            strModelPrefix = splitext(self.strSparseFileName)[0]
-        else:
-            strModelPrefix = self.strModelPrefix
-
+    def loadClassifier(self, model_prefix="features"):
         self.classifier = Classifier(self.data_dir, self.logger,
-                                     strSvmPrefix=strModelPrefix,
-                                     hasZeroInsert=self.hasZeroInsert)
+                                     strSvmPrefix=model_prefix,
+                                     hasZeroInsert=self.has_zero_insert)
         self.bProbability = self.classifier.bProbability
 
     def predict(self, aFeatureData, feature_names):
@@ -353,8 +305,8 @@ class CommonClassPredictor(BaseLearner):
     def getData(self, normalize=True):
         labels = []
         samples = []
-        for name, data in self.dctFeatureData.iteritems():
-            label = self.dctClassLabels[name]
+        for name, data in self.feature_data.iteritems():
+            label = self.class_labels[name]
             labels += [label] * len(data)
             samples += data.tolist()
         labels = np.asarray(labels)
@@ -378,13 +330,13 @@ class CommonClassPredictor(BaseLearner):
         filter_idx = np.array([], int)
         feature_idx = np.arange(len(self._feature_names), dtype=int)
 
-        for data in self.dctFeatureData.itervalues():
+        for data in self.feature_data.itervalues():
             filter_idx = np.append(filter_idx, feature_idx[np.any(np.isnan(data), 0)])
         filter_idx = np.unique(filter_idx)
 
         if apply:
-            for name in self.dctFeatureData:
-                self.dctFeatureData[name] = np.delete(self.dctFeatureData[name],
+            for name in self.feature_data:
+                self.feature_data[name] = np.delete(self.feature_data[name],
                                                       filter_idx, 1)
             if filter_idx.size > 0:
                 self.nan_features = self.delete_feature_names(filter_idx)
@@ -393,7 +345,7 @@ class CommonClassPredictor(BaseLearner):
     def train(self, c, g, probability=True, compensation=True,
               path=None, filename=None, save=True):
         if filename is None:
-            filename = splitext(self.strArffFileName)[0]
+            filename = splitext(self.arff_file)[0]
             filename += '.model'
         if path is None:
             path = self.data_dir
@@ -404,7 +356,7 @@ class CommonClassPredictor(BaseLearner):
         labels, samples = self.getData(normalize=True)
 
         # because we train the SVM with dict we need to redefine the zero-insert
-        self.hasZeroInsert = False
+        self.has_zero_insert = False
         if not self.classifier is None:
             self.classifier.setOption('hasZeroInsert', True)
 
@@ -422,7 +374,7 @@ class CommonClassPredictor(BaseLearner):
 
     def exportConfusion(self, log2c, log2g, conf, path=None, filename=None):
         if filename is None:
-            filename = splitext(self.strArffFileName)[0]
+            filename = splitext(self.arff_file)[0]
             filename += '.confusion.txt'
         if path is None:
             path = self.data_dir
@@ -432,19 +384,16 @@ class CommonClassPredictor(BaseLearner):
             f.write('log2(g) = %f\n' % log2g)
             f.write('accuracy = %f\n' % conf.ac_sample)
             f.write('\n')
-            conf_array = conf.conf
-            rows, cols = conf_array.shape
             f.write('confusion matrix (absolute)\n')
-            f.write('%s\n' % '\t'.join([''] + ['%d' % self.nl2l[nl]
-                                               for nl in range(cols)]))
-            for r in range(rows):
-                f.write('%s\n' % '\t'.join([str(self.nl2l[r])] +
-                                           [str(conf_array[r,c])
-                                            for c in range(cols)]))
+            f.write('\t%s\n' %'\t'.join([str(k) for k in self.class_names.keys()]))
+
+            for label, row in zip(self.class_names.keys(), conf.conf):
+                f.write( ('%d\t' %label) + '\t'.join(['%d' %i for i in row]))
+                f.write('\n')
 
     def importConfusion(self, path=None, filename=None):
         if filename is None:
-            filename = os.path.splitext(self.strArffFileName)[0]
+            filename = os.path.splitext(self.arff_file)[0]
             filename += '.confusion.txt'
         if path is None:
             path = self.data_dir
@@ -537,7 +486,9 @@ class CommonClassPredictor(BaseLearner):
                 predictions = map(int, predictions)
 
                 #print n,c,g
-                conf = ConfusionMatrix.from_lists(labels, predictions, self.l2nl)
+
+                conf = ConfusionMatrix.from_lists(labels, predictions,
+                                                  self.class_names.keys())
                 yield n, l2c, l2g, conf
 
                 l2g += g_step
@@ -553,7 +504,7 @@ class CommonObjectLearner(BaseLearner):
         nfeatures = training_set.n_features
 
         for obj_label, sample in training_set.iteritems():
-            class_name = self.dctClassNames[sample.iLabel]
+            class_name = self.class_names[sample.iLabel]
 
             if sample.aFeatures.size != nfeatures:
                 msg = ('Incomplete feature set found (%d/%d): skipping sample '
@@ -564,13 +515,13 @@ class CommonObjectLearner(BaseLearner):
                 continue
 
             try:
-                self.dctFeatureData[class_name].extend([sample.aFeatures])
+                self.feature_data[class_name].extend([sample.aFeatures])
             except KeyError:
-                self.dctFeatureData[class_name] = [sample.aFeatures]
+                self.feature_data[class_name] = [sample.aFeatures]
             try:
-                self.dctSampleNames[class_name].extend([sample.file])
+                self.sample_names[class_name].extend([sample.file])
             except KeyError:
-                self.dctSampleNames[class_name] = [sample.file]
+                self.sample_names[class_name] = [sample.file]
 
 
 if __name__ ==  "__main__":

@@ -113,12 +113,13 @@ class ConfusionMatrix(object):
         f.close()
 
     @classmethod
-    def from_pairs(cls, pairs, mapping):
+    def from_pairs(cls, pairs, class_labels):
         """
         Constructs a ConfusionMatrix object from a list of pairs of the form
         (true label, predicted label).
-        Requires a mapping from original labels to new labels in a way that new
-        labels are ordered from 0 to k-1, for k classes
+
+        Requires a list of class labels in the same order as labels should appear
+        in the confusion matrix.
 
         @param pairs: list of pairs (tuples) in the form
           (true label, predicted label)
@@ -128,16 +129,17 @@ class ConfusionMatrix(object):
 
         @return: ConfusionMatrix
         """
-        k = len(mapping)
+
+        k = len(class_labels)
         conf = np.zeros((k, k))
         for l, v in pairs:
-            l2 = mapping[int(l)]
-            v2 = mapping[int(v)]
-            conf[l2,v2] += 1
+            l2 = class_labels.index(l)
+            v2 = class_labels.index(v)
+            conf[l2, v2] += 1
         return cls(conf)
 
     @classmethod
-    def from_lists(cls, labels, predictions, mapping):
+    def from_lists(cls, labels, predictions, class_labels):
         """
         Constructs a ConfusionMatrix object from two lists of labels.
         Requires a mapping from original labels to new labels in a way that new
@@ -152,4 +154,4 @@ class ConfusionMatrix(object):
 
         @return: ConfusionMatrix
         """
-        return cls.from_pairs(zip(labels, predictions), mapping)
+        return cls.from_pairs(zip(labels, predictions), class_labels)

@@ -257,7 +257,7 @@ class CellAnalyzer(LoggerObject):
             if coords is not None:
                 for data in coords:
                     label = data['iClassLabel']
-                    if (label in oLearner.dctClassNames and
+                    if (label in oLearner.class_names and
                         0 <= data['iPosX'] < oContainer.width and
                         0 <= data['iPosY'] < oContainer.height):
 
@@ -334,7 +334,7 @@ class CellAnalyzer(LoggerObject):
 
     def draw_annotation_images(self, plate, training_set, container, learner, rid=""):
         cldir = dict([(cname, join(learner.samples_dir, cname)) \
-                          for cname in learner.dctClassNames.values()])
+                          for cname in learner.class_names.values()])
         # create dir per class name
         for dir_ in cldir.values():
             makedirs(dir_)
@@ -360,8 +360,8 @@ class CellAnalyzer(LoggerObject):
         training_set.feature_names = region.feature_names
 
         for class_label, object_ids in sample_objects.iteritems():
-            class_name = learner.dctClassNames[class_label]
-            hex_color = learner.dctHexColors[class_name]
+            class_name = learner.class_names[class_label]
+            hex_color = learner.hexcolors[class_name]
 
             for obj_id in object_ids:
                 obj = region[obj_id]
@@ -384,6 +384,6 @@ class CellAnalyzer(LoggerObject):
                 label, probs = predictor.predict(obj.aFeatures, holder.feature_names)
                 obj.iLabel = label
                 obj.dctProb = probs
-                obj.strClassName = predictor.dctClassNames[label]
-                obj.strHexColor = predictor.dctHexColors[obj.strClassName]
+                obj.strClassName = predictor.class_names[label]
+                obj.strHexColor = predictor.hexcolors[obj.strClassName]
         self.time_holder.serialize_classification(predictor.name, holder, predictor)

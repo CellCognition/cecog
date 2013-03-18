@@ -68,4 +68,6 @@ class PickerThread(CoreThread):
                             learner=learner)
             picker.processPositions(self)
             learner = picker.learner
-        learner.export()
+
+        if not self.is_aborted():
+            learner.export()

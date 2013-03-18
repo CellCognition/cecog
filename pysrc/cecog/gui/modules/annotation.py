@@ -510,11 +510,11 @@ class AnnotationModule(Module):
     def _update_class_definition_table(self):
         class_table = self._class_table
         class_table.clearContents()
-        class_table.setRowCount(len(self._learner.dctClassLabels))
+        class_table.setRowCount(len(self._learner.class_labels))
         select_item = None
-        for idx, class_name in enumerate(self._learner.lstClassNames):
+        for idx, class_name in enumerate(self._learner.class_names):
             samples = 0
-            class_label = self._learner.dctClassLabels[class_name]
+            class_label = self._learner.class_labels[class_name]
             item = QTableWidgetItem(class_name)
             class_table.setItem(idx, self.COLUMN_CLASS_NAME, item)
             if select_item is None:
@@ -525,7 +525,7 @@ class AnnotationModule(Module):
                                 QTableWidgetItem(str(samples)))
             item = QTableWidgetItem(' ')
             item.setBackground(
-                QBrush(QColor(self._learner.dctHexColors[class_name])))
+                QBrush(QColor(self._learner.hexcolors[class_name])))
             class_table.setItem(idx, self.COLUMN_CLASS_COLOR, item)
         class_table.resizeColumnsToContents()
         class_table.resizeRowsToContents()
@@ -543,11 +543,11 @@ class AnnotationModule(Module):
         class_name = self._current_class
 
         if not class_name is None:
-            class_label = learner.dctClassLabels[class_name]
+            class_label = learner.class_labels[class_name]
 
-            class_labels = set(learner.lstClassLabels)
+            class_labels = set(learner.class_labels)
             class_labels.remove(class_label)
-            class_names = set(learner.lstClassNames)
+            class_names = set(learner.class_names)
             class_names.remove(class_name)
 
             if len(class_name_new) == 0:
@@ -556,17 +556,17 @@ class AnnotationModule(Module):
             elif (not class_name_new in class_names and
                   not class_label_new in class_labels):
 
-                del learner.dctClassNames[class_label]
-                del learner.dctClassLabels[class_name]
-                del learner.dctHexColors[class_name]
+                del learner.class_names[class_label]
+                del learner.class_labels[class_name]
+                del learner.hexcolors[class_name]
 
                 item = self._find_items_in_class_table(class_name,
                                                        self.COLUMN_CLASS_NAME)[0]
 
-                learner.dctClassNames[class_label_new] = class_name_new
-                learner.dctClassLabels[class_name_new] = class_label_new
+                learner.class_names[class_label_new] = class_name_new
+                learner.class_labels[class_name_new] = class_label_new
                 class_color = self._class_color_btn.current_color
-                learner.dctHexColors[class_name_new] = \
+                learner.hexcolors[class_name_new] = \
                     qcolor_to_hex(class_color)
 
                 item.setText(class_name_new)
@@ -603,8 +603,8 @@ class AnnotationModule(Module):
         class_name_new = str(self._class_text.text())
         class_label_new = self._class_sbox.value()
 
-        class_labels = set(learner.lstClassLabels)
-        class_names = set(learner.lstClassNames)
+        class_labels = set(learner.class_labels)
+        class_names = set(learner.class_names)
         if len(class_name_new) == 0:
             warning(self, "Invalid class name",
                     info="The class name must not be empty!")
@@ -612,10 +612,10 @@ class AnnotationModule(Module):
               not class_label_new in class_labels):
             self._current_class = class_name_new
 
-            learner.dctClassNames[class_label_new] = class_name_new
-            learner.dctClassLabels[class_name_new] = class_label_new
+            learner.class_names[class_label_new] = class_name_new
+            learner.class_labels[class_name_new] = class_label_new
             class_color = self._class_color_btn.current_color
-            learner.dctHexColors[class_name_new] = \
+            learner.hexcolors[class_name_new] = \
                 qcolor_to_hex(class_color)
 
             row = self._class_table.rowCount()
@@ -650,10 +650,10 @@ class AnnotationModule(Module):
 
             self._activate_objects_for_image(False)
             learner = self._learner
-            class_label = learner.dctClassLabels[class_name]
-            del learner.dctClassLabels[class_name]
-            del learner.dctClassNames[class_label]
-            del learner.dctHexColors[class_name]
+            class_label = learner.class_labels[class_name]
+            del learner.class_labels[class_name]
+            del learner.class_names[class_label]
+            del learner.hexcolors[class_name]
 
             item = self._find_items_in_class_table(class_name,
                                                    self.COLUMN_CLASS_NAME)[0]
@@ -711,7 +711,7 @@ class AnnotationModule(Module):
                 path2 = learner.annotations_dir
                 try:
                     has_invalid = self._annotations.import_from_xml(path2,
-                                                                    learner.dctClassNames,
+                                                                    learner.class_names,
                                                                     self._imagecontainer)
                 except:
                     exception(self, "Problems loading annotation data...")
@@ -760,7 +760,7 @@ class AnnotationModule(Module):
                         shutil.copy2(filename, path_backup)
                         os.remove(filename)
                     self._annotations.export_to_xml(path2,
-                                                    learner.dctClassLabels,
+                                                    learner.class_labels,
                                                     self._imagecontainer)
                 except:
                     exception(self, "Problems saving annotation data...")
@@ -792,7 +792,7 @@ class AnnotationModule(Module):
         update the class count for the class table
         '''
         counts = self._annotations.get_class_counts()
-        for class_name in self._learner.lstClassNames:
+        for class_name in self._learner.class_names.values():
             if class_name in counts:
                 items = self._find_items_in_class_table(class_name,
                                                         self.COLUMN_CLASS_NAME)
@@ -917,9 +917,9 @@ class AnnotationModule(Module):
     def _activate_object(self, item, point, class_name, state=True):
         if state:
             color = \
-                QColor(*hexToRgb(self._learner.dctHexColors[class_name]))
+                QColor(*hexToRgb(self._learner.hexcolors[class_name]))
             #color.setAlphaF(1.0)
-            label = self._learner.dctClassLabels[class_name]
+            label = self._learner.class_labels[class_name]
 #            item2 = QGraphicsEllipseItem(point.x(), point.y(), 3, 3,item)
 #            item2.setPen(QPen(color))
 #            item2.setBrush(QBrush(color))
@@ -970,14 +970,14 @@ class AnnotationModule(Module):
                                           self.COLUMN_CLASS_NAME)
             class_name = str(item.text())
             self._current_class = class_name
-            hex_col = self._learner.dctHexColors[class_name]
+            hex_col = self._learner.hexcolors[class_name]
             col = get_qcolor_hicontrast(QColor(hex_col))
             class_table = self._class_table
             css = "selection-background-color: %s; selection-color: %s;" % \
                   (hex_col, qcolor_to_hex(col))
             class_table.scrollToItem(item)
             self._class_text.setText(class_name)
-            class_label = self._learner.dctClassLabels[class_name]
+            class_label = self._learner.class_labels[class_name]
             self._class_sbox.setValue(class_label)
             self._class_color_btn.set_color(QColor(hex_col))
             class_table.setStyleSheet(css)

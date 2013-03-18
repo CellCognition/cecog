@@ -57,14 +57,12 @@ class Normalizer(object):
 
 
 class ArffReader(object):
-    '''
-    modified ARFF reader from Pradeep Kishore Gowda
+    """Modified ARFF reader from Pradeep Kishore Gowda
     http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/440533
-    '''
+    """
 
     DCT_DATA_TYPES = {'numeric': float,
-                      'string' : str,
-                     }
+                      'string' : str}
 
     def __init__(self, strFilename):
         self.oFile = file(strFilename, "r")
