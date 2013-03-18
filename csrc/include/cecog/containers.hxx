@@ -869,23 +869,23 @@ namespace cecog
     {
       if (objects.count(objId))
       {
-        ROIObject& o = objects[objId];
+    	  ROIObject& o = objects[objId];
 
-		// add a border of 1 pixel arround object image & mask
-		// and fixes a segfault in vigra::exportImage
-		int xul, yul, xlr, ylr;
-		xul = (o.roi.upperLeft.x == 0) ? 0 : -1;
-		yul = (o.roi.upperLeft.y == 0) ? 0 : -1;
-		xlr = (o.roi.lowerRight.x == img.width()) ? 0 : 1;
-		ylr = (o.roi.lowerRight.y == img.height()) ? 0 : 1;
-		const vigra::Diff2D ul_1px(xul, yul);
-        const vigra::Diff2D lr_1px(xlr, ylr);
+    	  // add a border of 1 pixel arround object image & mask
+    	  // and fixes a segfault in vigra::exportImage
+    	  int xul, yul, xlr, ylr;
+    	  xul = (o.roi.upperLeft.x == 0) ? 0 : -1;
+    	  yul = (o.roi.upperLeft.y == 0) ? 0 : -1;
+    	  xlr = (o.roi.lowerRight.x == img.width()) ? 0 : 1;
+    	  ylr = (o.roi.lowerRight.y == img.height()) ? 0 : 1;
+    	  const vigra::Diff2D ul_1px(xul, yul);
+    	  const vigra::Diff2D lr_1px(xlr, ylr);
 
-        vigra::ImageExportInfo img_info(img_name.c_str());
-        img_info.setCompression(compression.c_str());
+      	vigra::ImageExportInfo img_info(img_name.c_str());
+      	img_info.setCompression(compression.c_str());
 
-        vigra::ImageExportInfo msk_info(msk_name.c_str());
-        msk_info.setCompression(compression.c_str());
+      	vigra::ImageExportInfo msk_info(msk_name.c_str());
+      	msk_info.setCompression(compression.c_str());
 
     	vigra::Diff2D ul = o.roi.upperLeft + ul_1px;
         vigra::Diff2D lr = o.roi.lowerRight + lr_1px;
@@ -894,7 +894,7 @@ namespace cecog
                            img.upperLeft() + lr,
                            img.accessor(),
                            img_info);
-        
+
         binary_type mask(o.roi.width+2, o.roi.height+2);
 
         typedef binary_type::value_type binary_value;

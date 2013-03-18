@@ -352,10 +352,10 @@ class CellAnalyzer(LoggerObject):
             container.markObjects([obj.iId], rgb_value, False, True)
             ccore.drawFilledCircle(ccore.Diff2D(*obj.oCenterAbs),
                                    3, container.img_rgb, rgb_value)
-
+                                            
     def annotate(self, sample_objects, learner, container, region):
         """Annotate predefined class labels to picked samples."""
-
+                    
         training_set = ObjectHolder(region.name)
         training_set.feature_names = region.feature_names
 
