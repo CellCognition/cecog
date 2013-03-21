@@ -97,7 +97,7 @@ def cecog_job_template(jt, path_out, args, emails, version, batch_size=1,
     jt.joinFiles = True
 
     jt.email = emails
-    jt.nativeSpecification = '-m bea'
+    jt.nativeSpecification = '-m bea -q gerlich.q -P cellcognition'
 
     path_out_cluster = os.path.join(path_out, 'log_cluster')
     makedirs(path_out_cluster)

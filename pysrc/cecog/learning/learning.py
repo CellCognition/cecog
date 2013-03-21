@@ -26,7 +26,6 @@ import svm
 from cecog.learning.confusion_matrix import ConfusionMatrix
 from cecog.learning.util import SparseWriter, ArffWriter, ArffReader
 from cecog.learning.classifier import LibSvmClassifier as Classifier
-from cecog.util.util import rgbToHex
 from cecog.util.logger import LoggerObject
 from cecog.util.util import makedirs
 
