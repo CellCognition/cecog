@@ -1,7 +1,7 @@
 """
 channel_gallery.py
 
-make little image galleries for single objects vs. channel
+Make little image galleries for single objects vs. channel
 
 """
 
@@ -115,7 +115,7 @@ class ChannelGallery(object):
     def __init__(self, channel, frame, outdir, size=200):
 
         if not channel.is_virtual():
-            raise RuntimeError("ChannelGallery need a virtual channel")
+            raise RuntimeError("ChannelGallery needs a virtual channel")
         if not isdir(outdir):
             raise RuntimeError("Output directory does not exist")
 

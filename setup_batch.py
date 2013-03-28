@@ -8,12 +8,18 @@
                         See LICENSE.txt for details.
                  See AUTHORS.txt for author contributions.
 
-setup_windows.py - windows specific instructions for distuils
+setup_batch.py - windows specific instructions for distuils
 """
 
 __author__ = 'rudolf.hoefler@gmail.com'
 
-import os, sys, glob
+
+import sys
+from os.path import join
+sys.path.append(join("apps", "CecogAnalyzer"))
+sys.path.append(join("pysrc"))
+
+import os, glob
 from distutils.core import setup
 import py2exe
 
@@ -48,9 +54,6 @@ DLL_EXCLUDES = [ 'libgdk-win32-2.0-0.dll',
                  'libexpat-1.dll',
                  'libglib-2.0-0.dll',
                  'libgmodule-2.0-0.dll',
-                 # 'libifcoremd.dll',
-                 # 'libiomp5md.dll',
-                 # 'libmmd.dll',
                  'libpango-1.0-0.dll',
                  'sqlite3.dll',
                  'DNSAPI.dll',
@@ -84,9 +87,7 @@ setup( options = {"py2exe": { 'includes': INCLUDES,
                               'bundle_files': 3 }},
        data_files = get_data_files(),
        zipfile = "data.zip",
-       windows = [{'script': "CecogAnalyzer.py",
-                   'icon_resources': [(1, 'resources\cecog_analyzer_icon.ico')]
-                   }],
+       console = [{'script': join("pysrc", "cecog", "batch", "batch.py")}],
        **pkginfo.metadata)
 
 try:

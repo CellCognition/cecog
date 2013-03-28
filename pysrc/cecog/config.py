@@ -55,15 +55,16 @@ RESOURCE_PATH            = 'resources'
 if not os.path.isdir(RESOURCE_PATH):
     RESOURCE_PATH = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 'apps',
                                  'CecogAnalyzer', 'resources')
+    RESOURCE_PATH = os.path.normpath(RESOURCE_PATH)
     if not os.path.isdir(RESOURCE_PATH):
         raise IOError("Resource path '%s' not found." % RESOURCE_PATH)
 
 R_SOURCE_PATH = os.path.join(RESOURCE_PATH, 'rsrc')
 if not os.path.isdir(R_SOURCE_PATH):
     R_SOURCE_PATH = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 'rsrc')
+    R_SOURCE_PATH = os.path.normpath(R_SOURCE_PATH)
     if not os.path.isdir(R_SOURCE_PATH):
         raise IOError("R-source path '%s' not found." % R_SOURCE_PATH)
-
 
 # forward declarations defined in init_constants() (called upon import of cecog)
 APPLICATION_SUPPORT_PATH = None

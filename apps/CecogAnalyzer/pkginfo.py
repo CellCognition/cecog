@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
                            The CellCognition Project
                      Copyright (c) 2006 - 2012 Michael Held
