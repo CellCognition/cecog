@@ -232,7 +232,7 @@ namespace cecog{
 
         }
 
-        double Theta()
+        double old_Theta()
         {
             double phi=0.0;
 
@@ -243,8 +243,6 @@ namespace cecog{
                 else
                     phi = 0;
 
-                // theta_ is initialised as 3 * M_PI
-                // after calculation it lies between - M_PI/4 and M_PI/4
                 if( (central11 == 0) && ( (central20 - central02) < 0) )
                     theta_ = M_PI / 2.0;
                 if( (central11 > 0) && ( (central20 - central02) < 0) )
@@ -261,9 +259,32 @@ namespace cecog{
                     theta_ = - M_PI / 4.0;
                 if( (central11 < 0) && ( (central20 - central02) < 0) )
                     theta_ = phi - M_PI / 2.0;
+
             }
             return(theta_);
         }
+
+        double Theta()
+        {
+            double L=0.0;
+
+            if(theta_ > 2*M_PI)
+            {
+                if( (central11) == 0)
+                	theta_ = 0.0;
+                else
+                {
+                    L = 0.5 * (central02 - central20) / central11;
+                    if(central11 > 0)
+                    	theta_ = atan(L + sqrt(1 + L * L));
+                    else
+                    	theta_ = atan(L - sqrt(1 + L * L));
+                }
+            }
+            return(theta_);
+        }
+
+
 
         double Eccentricity()
         {

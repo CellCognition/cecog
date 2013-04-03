@@ -53,6 +53,7 @@ import numpy
 #
 from cecog.analyzer.object import (ImageObject,
                                    ObjectHolder,
+                                   Orientation
                                    )
 from cecog.segmentation.strategies import (PrimarySegmentation,
                                           SecondarySegmentation,
@@ -344,30 +345,11 @@ class _Channel(PropertyManager):
                             container.haralick_distance = iHaralickDistance
                             container.applyFeature(strHaralickCategory)
 
-                #lstValidObjectIds = []
-                #lstRejectedObjectIds = []
-
                 for obj_id, c_obj in container.getObjects().iteritems():
+                    
                     dctFeatures = c_obj.getFeatures()
 
                     bAcceptObject = True
-
-#                    # post-processing
-#                    if self.bPostProcessing:
-#
-#                        if not eval(self.strPostprocessingConditions, dctFeatures):
-#                            if self.bPostProcessDeleteObjects:
-#                                #del dctObjects[iObjectId]
-#                                oContainer.delObject(iObjectId)
-#                                bAcceptObject = False
-#                            lstRejectedObjectIds.append(iObjectId)
-#                        else:
-#                            lstValidObjectIds.append(iObjectId)
-#                    else:
-#                        lstValidObjectIds.append(iObjectId)
-#
-#                    oContainer.lstValidObjectIds = lstValidObjectIds
-#                    oContainer.lstRejectedObjectIds = lstRejectedObjectIds
 
                     if bAcceptObject:
                         # build a new ImageObject
@@ -381,6 +363,15 @@ class _Channel(PropertyManager):
                                  ]
                         obj.crack_contour = crack
 
+                        # ORIENTATION TEST: orientation of objects (for tracking) #
+                        # at the moment a bit of a hack #
+                        # The problem is that orientation cannot be a feature #
+                        # but moments need to be chosen to calculate the orientation. #
+                        if 'moments' in self.lstFeatureCategories:
+                            obj.orientation = Orientation(angle = c_obj.orientation,
+                                                          eccentricity = dctFeatures['eccentricity']
+                                                          )
+                            
                         if self.lstFeatureNames is None:
                             self.lstFeatureNames = sorted(dctFeatures.keys())
 
@@ -390,6 +381,13 @@ class _Channel(PropertyManager):
                                                       self.lstFeatureNames))
                         object_holder[obj_id] = obj
 
+#                        print 'orientation %s (%i, %i): %f (%f deg)' % (obj_id, 
+#                                                               obj.oRoi.upperLeft[0],
+#                                                               obj.oRoi.upperLeft[1],
+#                                                               obj.orientation,
+#                                                               180.0 * obj.orientation / numpy.pi)
+                #print
+                    
             if not self.lstFeatureNames is None:
                 object_holder.setFeatureNames(self.lstFeatureNames)
             self._dctRegions[region_name] = object_holder
