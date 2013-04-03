@@ -693,6 +693,9 @@ class TimeHolder(OrderedDict):
                 if 'center' not in global_def_group:
                     dset_tmp = global_def_group.create_dataset('center', (2,), [('name', '|S16')])
                     dset_tmp[:] = ['x', 'y']
+                if 'orientation' not in global_def_group:
+                    dset_tmp = global_def_group.create_dataset('orientation', (2,), [('name', '|S16')])
+                    dset_tmp[:] = ['angle', 'eccentricity']
                 if 'object_features' not in global_def_group:
                     dset_tmp = global_def_group.create_dataset('object_features', (nr_features,), [('name', '|S512')])
                     if nr_features > 0:
@@ -775,6 +778,21 @@ class TimeHolder(OrderedDict):
                     dset_center = grp_region_features['center']
                     dset_center.resize((nr_objects + offset,))
 
+                # Create dataset for orientation
+                if 'orientation' not in grp_region_features:
+                    dtype = numpy.dtype([('angle', 'float'),
+                                         ('eccentricity', 'float'),])
+
+                    dset_orientation = grp_region_features.create_dataset('orientation',
+                                                      (nr_objects,),
+                                                      dtype,
+                                                      chunks=(nr_objects if nr_objects > 0 else 1,),
+                                                      compression=self._hdf5_compression,
+                                                      maxshape=(None,))
+                else:
+                    dset_orientation = grp_region_features['orientation']
+                    dset_orientation.resize((nr_objects + offset,))
+
                 if (self._hdf5_include_features or self._hdf5_include_classification):
                     # Create dataset for center
                     if 'object_features' not in grp_region_features:
@@ -814,7 +832,8 @@ class TimeHolder(OrderedDict):
 
                     dset_bounding_box[idx + offset] = obj.oRoi.upperLeft[0], obj.oRoi.lowerRight[0], obj.oRoi.upperLeft[1], obj.oRoi.lowerRight[1]
                     dset_center[idx + offset] = obj.oCenterAbs
-
+                    dset_orientation[idx + offset] = obj.orientation.angle, obj.orientation.eccentricity
+                    
                     dset_idx_relation[idx + offset] = frame_idx, obj_id
 
                     if self._hdf5_include_features:
@@ -1502,8 +1521,8 @@ class CellAnalyzer(PropertyManager):
 
                 if (obj.oRoi.upperLeft[0] >= 0 and
                     obj.oRoi.upperLeft[1] >= 0 and
-                    obj.oRoi.lowerRight[0] < oContainer.width and
-                    obj.oRoi.lowerRight[1] < oContainer.height):
+                    obj.oRoi.lowerRight[0] <= oContainer.width and
+                    obj.oRoi.lowerRight[1] <= oContainer.height):
                     iCenterX, iCenterY = obj.oCenterAbs
 
                     strPathOutLabel = os.path.join(oLearner.dctEnvPaths['samples'],
@@ -1517,9 +1536,7 @@ class CellAnalyzer(PropertyManager):
 
                     strFilenameImg = os.path.join(strPathOutLabel, '%s___img.png' % strFilenameBase)
                     strFilenameMsk = os.path.join(strPathOutLabel, '%s___msk.png' % strFilenameBase)
-                    # FIXME: export Objects is segfaulting for objects
-                    #        where its bounding box is touching the border
-                    #        i.e. one corner point equals zero!
+
                     oContainer.exportObject(obj_id,
                                             strFilenameImg,
                                             strFilenameMsk)
@@ -1529,8 +1546,8 @@ class CellAnalyzer(PropertyManager):
                     #print obj_id, obj.oCenterAbs, iCenterX, iCenterY
                     ccore.drawFilledCircle(ccore.Diff2D(iCenterX, iCenterY),
                                            3, oContainer.img_rgb, rgb_value)
-
-
+                                            
+                    
         if len(learner_objects) > 0:
             oLearner.applyObjects(learner_objects)
             # we don't want to apply None for feature names
