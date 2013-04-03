@@ -23,7 +23,7 @@ __all__ = ['Browser']
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
-import math
+import math, pdb
 import numpy
 
 from PyQt4.QtGui import *
@@ -307,8 +307,15 @@ class Browser(QMainWindow):
     def set_coords(self, coords):
         self.image_viewer.remove_objects()
         self.image_viewer.set_objects_by_crackcoords(coords)
-        widget = self._module_manager.get_widget(TrackingModule.NAME)
-        widget.set_coords()
+        
+        name = self._module_manager.current_widget.NAME
+
+        if name==None:
+            name = TrackingModule.NAME
+        elif name in [TrackingModule.NAME, AnnotationModule.NAME]:
+            widget = self._module_manager.get_widget(name)
+#        widget = self._module_manager.get_widget(TrackingModule.NAME)
+            widget.set_coords()
 
     def set_image(self, image_dict):
         widget = self._module_manager.get_widget(DisplayModule.NAME)
