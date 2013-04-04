@@ -820,10 +820,10 @@ class TimeHolder(OrderedDict):
             for idx, edge in enumerate(graph.edges.itervalues()):
                 head_id, tail_id = edge[:2]
                 head_frame, head_obj_id = \
-                    tracker.getComponentsFromNodeId(head_id)[:2]
+                    tracker.split_nodeid(head_id)[:2]
                 head_frame_idx = self._frames_to_idx[head_frame]
                 tail_frame, tail_obj_id = \
-                    tracker.getComponentsFromNodeId(tail_id)[:2]
+                    tracker.split_nodeid(tail_id)[:2]
                 tail_frame_idx = self._frames_to_idx[tail_frame]
 
                 #head_obj_id_meta = self._object_coord_to_id[(prefix, (head_frame_idx, head_obj_id))]
@@ -841,7 +841,7 @@ class TimeHolder(OrderedDict):
             for events in tracker.dctVisitorData.itervalues():
                 for start_id, event in events.iteritems():
                     if start_id[0] != '_':
-                        key = tracker.getComponentsFromNodeId(start_id)[:2]
+                        key = tracker.split_nodeid(start_id)[:2]
                         event_lookup.setdefault(key, []).append(event)
             nr_events = len(event_lookup)
             nr_edges = 0
@@ -865,11 +865,11 @@ class TimeHolder(OrderedDict):
                     obj_id = obj_idx
                     track = events[0]['tracks'][0]
                     for head_id, tail_id in zip(track, track[1:]):
-                        head_frame, head_obj_id = tracker.getComponentsFromNodeId(head_id)[:2]
+                        head_frame, head_obj_id = tracker.split_nodeid(head_id)[:2]
                         haed_frame_idx = self._frames_to_idx[head_frame]
                         head_id_ = self._object_coord_to_idx[('primary', (haed_frame_idx, head_obj_id))]
 
-                        tail_frame, tail_obj_id = tracker.getComponentsFromNodeId(tail_id)[:2]
+                        tail_frame, tail_obj_id = tracker.split_nodeid(tail_id)[:2]
                         tail_frame_idx = self._frames_to_idx[tail_frame]
                         tail_id_ = self._object_coord_to_idx[('primary', (tail_frame_idx, tail_obj_id))]
 
@@ -879,11 +879,11 @@ class TimeHolder(OrderedDict):
                         splt = events[1]['splitIdx']
                         track = events[1]['tracks'][0][splt-1:]
                         for head_id, tail_id in zip(track, track[1:]):
-                            head_frame, head_obj_id = tracker.getComponentsFromNodeId(head_id)[:2]
+                            head_frame, head_obj_id = tracker.split_nodeid(head_id)[:2]
                             haed_frame_idx = self._frames_to_idx[head_frame]
                             head_id_ = self._object_coord_to_idx[('primary', (haed_frame_idx, head_obj_id))]
 
-                            tail_frame, tail_obj_id = tracker.getComponentsFromNodeId(tail_id)[:2]
+                            tail_frame, tail_obj_id = tracker.split_nodeid(tail_id)[:2]
                             tail_frame_idx = self._frames_to_idx[tail_frame]
                             tail_id_ = self._object_coord_to_idx[('primary', (tail_frame_idx, tail_obj_id))]
                             var_event[rel_idx] = (obj_id, head_id_, tail_id_)
@@ -916,7 +916,7 @@ class TimeHolder(OrderedDict):
                 var = classification_group.create_dataset('class_labels', (nr_classes,), dt)
                 var[:] = zip(predictor.class_names.keys(),
                              predictor.class_names.values(),
-                             [clf.hexcolors[n] for n in predictor.class_names.values()])
+                             [predictor.hexcolors[n] for n in predictor.class_names.values()])
 
                 # classifier
                 dt = numpy.dtype([('name', '|S512'),
@@ -926,11 +926,8 @@ class TimeHolder(OrderedDict):
                                           ('description', '|S512')])
                 var = classification_group.create_dataset('classifier', (1,), dt)
 
-                var[0] = (predictor.name,
-                          predictor.classifier.METHOD,
-                          predictor.classifier.NAME,
-                          '',
-                          '')
+                var[0] = (predictor.name, predictor.classifier.METHOD,
+                          predictor.classifier.NAME, '', '')
 
                 feature_names = predictor.feature_names
                 var = classification_group.create_dataset('features', (len(feature_names),), [('object_feautres','|S512'),])
@@ -967,7 +964,7 @@ class TimeHolder(OrderedDict):
 
             label_to_idx = dict([(label, i)
                                  for i, label in
-                                 enumerate(predictor.lstClassLabels)])
+                                 enumerate(predictor.class_names.keys())])
 
             for i, obj in enumerate(region.itervalues()):
                 dset_prediction[i+offset] = (label_to_idx[obj.iLabel],)

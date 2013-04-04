@@ -112,8 +112,8 @@ class PositionCore(LoggerObject):
                            'item_name': 'image set'})
 
     def zslice_par(self, ch_name):
-        """Returns either the number of the zslice to select or a tuple of parmeters
-        to control the zslice projcetion"""
+        """Returns either the number of the zslice to select or a tuple of
+        parmeters to control the zslice projcetion"""
         self.settings.set_section('ObjectDetection')
         if self.settings.get2(self._resolve_name(ch_name, 'zslice_selection')):
             par = self.settings.get2(self._resolve_name(
@@ -139,9 +139,9 @@ class PositionCore(LoggerObject):
         xs = [0]
         ys = [0]
         for prefix in [SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]:
-            if self.settings.get('Processing','%s_processchannel' % prefix):
-                reg_x = self.settings.get2('%s_channelregistration_x' % prefix)
-                reg_y = self.settings.get2('%s_channelregistration_y' % prefix)
+            if self.settings.get('Processing','%s_processchannel' %prefix):
+                reg_x = self.settings.get2('%s_channelregistration_x' %prefix)
+                reg_y = self.settings.get2('%s_channelregistration_y' %prefix)
                 xs.append(reg_x)
                 ys.append(reg_y)
         diff_x = []
@@ -320,6 +320,7 @@ class PositionCore(LoggerObject):
                     p_channel, 'classification_regionname'))
         return regions
 
+
 class PositionPicker(PositionCore):
 
     def __call__(self):
@@ -433,8 +434,7 @@ class PositionAnalyzer(PositionCore):
                 self.classifiers[p_channel] = clf
 
     def _convert_tracking_duration(self, option_name):
-        """
-        Converts a tracking duration according to the unit and the
+        """Converts a tracking duration according to the unit and the
         mean time-lapse of the current position.
         Returns number of frames.
         """
@@ -490,8 +490,7 @@ class PositionAnalyzer(PositionCore):
 
     def define_exp_features(self):
         features = {}
-        for name in [PrimaryChannel.NAME, SecondaryChannel.NAME,
-                     TertiaryChannel.NAME]:
+        for name in [PrimaryChannel.NAME, SecondaryChannel.NAME, TertiaryChannel.NAME]:
             region_features = {}
             for region in REGION_INFO.names[name.lower()]:
                 # export all features extracted per regions
@@ -504,7 +503,7 @@ class PositionAnalyzer(PositionCore):
                         self.settings.get('General',
                                           '%s_featureextraction_exportfeaturenames'
                                           % name.lower())
-            features[name] = region_features
+                features[name] = region_features
         return features
 
     def export_object_counts(self, timeholder):
@@ -570,25 +569,20 @@ class PositionAnalyzer(PositionCore):
             #        afterwards
             shutil.rmtree(cutter_in, ignore_errors=True)
 
-    def tracking(self, timeholder, celltracker):
-        """Invoke Tracking, just tracking"""
+    def export_tracks_hdf5(self, timeholder, celltracker):
+        """Save tracking data to hdf file"""
         self.logger.debug("--- serializing tracking start")
         timeholder.serialize_tracking(celltracker)
         self.logger.debug("--- serializing tracking ok")
 
-        if self.is_aborted():
-            return 0 # number of processed images
-        self.update_status({'text': "find events"})
+    def export_events(self, timeholder, celltracker):
+        """Export and save event selceciton data"""
 
-        self.logger.debug("--- visitor start")
-        celltracker.initVisitor()
-        self.logger.debug("--- visitor ok")
-
-    def event_selection(self, timeholder, celltracker):
-        """Invoke event_selection"""
-        celltracker.analyze(self.export_features, clear_path=True)
-
+        # writes to the event folder
+        import pdb; pdb.set_trace()
+        celltracker.export_track_features(self.export_features, clear_path=True)
         self.logger.debug("--- visitor analysis ok")
+        # writes event data to hdf5
         timeholder.serialize_events(celltracker)
         self.logger.debug("--- serializing events ok")
 
@@ -607,16 +601,16 @@ class PositionAnalyzer(PositionCore):
         self.settings.set_section('Tracking')
         # setup tracker
         if self.settings.get('Processing', 'tracking'):
-            self.tracker = CellTracker(timeholder=self.timeholder,
+            region = self.settings.get('Tracking', 'tracking_regionname')
+            self.tracker = CellTracker(color_channel=PrimaryChannel.NAME,
+                                       region=region,
+                                       timeholder=self.timeholder,
                                        meta_data=self.meta_data,
                                        position=self.position,
                                        path_out=self._statistics_dir,
                                        **self._tracking_options)
-            region = self.settings.get('Tracking', 'tracking_regionname')
-            self.tracker.initTrackingAtTimepoint(PrimaryChannel.NAME, region)
 
         stopwatch = StopWatch(start=True)
-        # object detection??
         ca = CellAnalyzer(time_holder=self.timeholder,
                           position = self.position,
                           create_images = True,
@@ -629,7 +623,16 @@ class PositionAnalyzer(PositionCore):
         n_images = self._analyze(ca)
 
         if n_images > 0:
-            # exports also
+            # invoke event selection
+            if self.settings.get('Processing', 'tracking_synchronize_trajectories'):
+                self.logger.debug("--- visitor start")
+                self.tracker.initVisitor()
+                self.logger.debug("--- visitor ok")
+                if self.is_aborted():
+                    return 0 # number of processed images
+
+            # save all the data of the position, no aborts from here on
+            # want all processed data saved
             if self.settings.get('Output', 'export_object_counts'):
                 self.export_object_counts(self.timeholder)
             if self.settings.get('Output', 'export_object_details'):
@@ -637,24 +640,17 @@ class PositionAnalyzer(PositionCore):
             if self.settings.get('Output', 'export_file_names'):
                 self.export_image_names(self.timeholder)
 
-            # invoke tracking
-            self.settings.set_section('Tracking')
             if self.settings.get('Processing', 'tracking'):
-                ret = self.tracking(self.timeholder, self.tracker)
-                if self.is_aborted() or ret == 0:
-                    return 0 # number of processed images
+                self.export_tracks_hdf5(self.timeholder, self.tracker)
                 self.update_status({'text': 'export events...'})
-                # invoke event selection
                 if self.settings.get('Processing', 'tracking_synchronize_trajectories'):
-                    self.event_selection(self.timeholder, self.tracker)
+                    self.export_events(self.timeholder, self.tracker)
 
                 if self.settings.get('Output', 'export_track_data'):
                     self.export_full_tracks(self.tracker)
                 if self.settings.get('Output', 'export_tracking_as_dot'):
                     self.export_graphviz(self.tracker)
 
-            if self.is_aborted():
-                return 0
             self.update_status({'text': 'export events...',
                                'max': 1,
                                'progress': 1})
