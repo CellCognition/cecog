@@ -40,9 +40,6 @@ from pdk.datetimeutils import StopWatch
 from pdk.ordereddict import OrderedDict
 from pdk.fileutils import safe_mkdirs
 
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 from cecog.gui.util import (exception,
                             information,
                             question,
@@ -66,19 +63,6 @@ from cecog.learning.learning import BaseLearner
 from cecog.gui.widgets.groupbox import QxtGroupBox
 from cecog.gui.widgets.colorbutton import ColorButton
 from cecog.gui.modules.module import Module
-#-------------------------------------------------------------------------------
-# constants:
-#
-
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 
 
 class Annotations(object):
@@ -512,9 +496,9 @@ class AnnotationModule(Module):
         class_table.clearContents()
         class_table.setRowCount(len(self._learner.class_labels))
         select_item = None
-        for idx, class_name in enumerate(self._learner.class_names):
+        for idx, class_label in enumerate(self._learner.class_names):
             samples = 0
-            class_label = self._learner.class_labels[class_name]
+            class_name = self._learner.class_names[class_label]
             item = QTableWidgetItem(class_name)
             class_table.setItem(idx, self.COLUMN_CLASS_NAME, item)
             if select_item is None:
@@ -796,6 +780,8 @@ class AnnotationModule(Module):
             if class_name in counts:
                 items = self._find_items_in_class_table(class_name,
                                                         self.COLUMN_CLASS_NAME)
+
+
                 item = self._class_table.item(items[0].row(),
                                               self.COLUMN_CLASS_COUNT)
                 item.setText(str(counts[class_name]))

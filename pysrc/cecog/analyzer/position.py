@@ -579,7 +579,6 @@ class PositionAnalyzer(PositionCore):
         """Export and save event selceciton data"""
 
         # writes to the event folder
-        import pdb; pdb.set_trace()
         celltracker.export_track_features(self.export_features, clear_path=True)
         self.logger.debug("--- visitor analysis ok")
         # writes event data to hdf5
@@ -624,7 +623,8 @@ class PositionAnalyzer(PositionCore):
 
         if n_images > 0:
             # invoke event selection
-            if self.settings.get('Processing', 'tracking_synchronize_trajectories'):
+            if self.settings.get('Processing', 'tracking_synchronize_trajectories') and \
+                    self.settings.get('Processing', 'tracking'):
                 self.logger.debug("--- visitor start")
                 self.tracker.initVisitor()
                 self.logger.debug("--- visitor ok")
@@ -715,7 +715,7 @@ class PositionAnalyzer(PositionCore):
             n_images += 1
             images = []
             if self.settings.get('Processing', 'tracking'):
-                self.tracker.trackAtTimepoint(frame)
+                self.tracker.track_next_frame(frame)
 
                 self.settings.set_section('Tracking')
                 if self.settings.get2('tracking_visualization'):

@@ -115,7 +115,6 @@ class CellTracker(LoggerObject):
         """Returns the index of the last frame currently processed."""
         return max(self._dctTimePoints.keys())
 
-    # rename function to frames
     @property
     def frames(self):
         return self._dctTimePoints
@@ -128,7 +127,7 @@ class CellTracker(LoggerObject):
     def split_nodeid(nodeid):
         return tuple([int(i) for i in nodeid.split('_')])
 
-    def trackAtTimepoint(self, frame):
+    def track_next_frame(self, frame):
         channel = self._timeholder[frame][self._channelId]
         holder = channel.get_region(self._region)
 
@@ -142,11 +141,13 @@ class CellTracker(LoggerObject):
 
         # connect time point only if any object is present
         if frame in self._dctTimePoints:
-            self._connectTimePoints(frame)
+            self.connect_nodes(frame)
 
-    def _getClosestPreviousT(self, iT):
-        iResultT = None
+    def closest_preceding_frame(self, frame):
+        assert self.iMaxTrackingGap > 0
+        pre_frame = None
         iTries = 0
+
 
         # iMaxGap is the maximal number of steps we might go into the past
         # in order to find segmentation results.
@@ -154,15 +155,15 @@ class CellTracker(LoggerObject):
         # we therefore go at least 1 step into the past.
         iMaxGap = max(self.iMaxTrackingGap, 1)
         start = self.start_frame
-        while iResultT is None and iTries < iMaxGap and iT > start:
-            iT -= 1
-            if iT in self._dctTimePoints:
-                iResultT = iT
+        while pre_frame is None and iTries < iMaxGap and frame > start:
+            frame -= 1
+            if frame in self._dctTimePoints:
+                pre_frame = frame
             else:
                 iTries += 1
-        return iResultT
+        return pre_frame
 
-    def _connectTimePoints(self, iT):
+    def connect_nodes(self, iT):
 
         fMaxObjectDistanceSquared = float(self.fMaxObjectDistance) ** 2
         iMaxSplitObjects = self.iMaxSplitObjects
@@ -174,7 +175,7 @@ class CellTracker(LoggerObject):
         # if there is an empty frame, look for the closest frame
         # that contains objects. For this go up to iMaxTrackingGap
         # into the past.
-        iPreviousT = self._getClosestPreviousT(iT)
+        iPreviousT = self.closest_preceding_frame(iT)
 
         if not iPreviousT is None:
             bReturnSuccess = True
@@ -266,7 +267,7 @@ class CellTracker(LoggerObject):
             if col > 255:
                 col = 255
             if current in self._dctTimePoints:
-                previous = self._getClosestPreviousT(current)
+                previous = self.closest_preceding_frame(current)
                 if not previous is None:
                     found = True
                     for objIdP in self._dctTimePoints[previous]:
@@ -314,7 +315,6 @@ class CellTracker(LoggerObject):
                                           edgeD,
                                           iMaxLevel=iMaxLevel,
                                           iLevel=iLevel+1)
-
 
     def initVisitor(self, lstRootIds=None, iStart=None, iEnd=None):
 
@@ -979,9 +979,3 @@ class CellTracker(LoggerObject):
 
                     f.write('%s\n' % sep.join(map(str, prefix + items)))
                 f.close()
-
-# class TransitionalEventSelection(object):
-#     """Event selection by class transition. """
-
-#     def __init__(self):
-#         super(EventSeleciton)
