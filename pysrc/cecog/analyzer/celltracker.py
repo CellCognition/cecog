@@ -47,12 +47,12 @@ class CellTracker(LoggerObject):
                  '_dctImageFilenames',
                  'dctVisitorData']
 
-    def __init__(self, timeholder, meta_data, position, path_out,
+    def __init__(self, color_channel, region, timeholder, meta_data, position,
+                 path_out,
                  fMaxObjectDistance, iMaxSplitObjects,
                  iMaxTrackingGap=5,
                  bHasClassificationData=False,
                  bExportTrackFeatures=False,
-                 bExportFlatFeatures=False,
                  featureCompression=None,
                  flatFeatureCompression=None,
                  transitions=None,
@@ -69,6 +69,11 @@ class CellTracker(LoggerObject):
                  allow_one_daughter_cell=True):
 
         super(CellTracker, self).__init__()
+
+        self._channelId = color_channel
+        self._region = region
+        self.graph = Graph()
+        self._dctTimePoints = OrderedDict()
 
         self.meta_data = meta_data
         self.position = position
@@ -93,16 +98,11 @@ class CellTracker(LoggerObject):
 
         self.bHasClassificationData = bHasClassificationData
         self.bExportTrackFeatures = bExportTrackFeatures
-        self.bExportFlatFeatures = bExportFlatFeatures
         self.featureCompression = featureCompression
         self.flatFeatureCompression = flatFeatureCompression
 
         self._timeholder = self.timeholder
         self._feature_names = None
-        self.graph = None
-        self._channelId = None
-        self._region = None
-        self._dctTimePoints = None
         self.dctVisitorData = {}
 
     @property
@@ -115,21 +115,24 @@ class CellTracker(LoggerObject):
         """Returns the index of the last frame currently processed."""
         return max(self._dctTimePoints.keys())
 
-    def getTimePoints(self):
+    @property
+    def frames(self):
         return self._dctTimePoints
 
-    def initTrackingAtTimepoint(self, color_channel, region):
-        self._channelId = color_channel
-        self._region = region
-        self.graph = Graph()
-        self._dctTimePoints = OrderedDict()
+    @staticmethod
+    def node_id(frame, object_label):
+        return '%d_%s' %(frame, object_label)
 
-    def trackAtTimepoint(self, frame):
+    @staticmethod
+    def split_nodeid(nodeid):
+        return tuple([int(i) for i in nodeid.split('_')])
+
+    def track_next_frame(self, frame):
         channel = self._timeholder[frame][self._channelId]
         holder = channel.get_region(self._region)
 
         for label, sample in holder.iteritems():
-            node_id = self.getNodeIdFromComponents(frame, label)
+            node_id = self.node_id(frame, label)
             self.graph.add_node(node_id, sample)
             try:
                 self._dctTimePoints[frame].append(label)
@@ -138,27 +141,29 @@ class CellTracker(LoggerObject):
 
         # connect time point only if any object is present
         if frame in self._dctTimePoints:
-            self._connectTimePoints(frame)
+            self.connect_nodes(frame)
 
-    def _getClosestPreviousT(self, iT):
-        iResultT = None
+    def closest_preceding_frame(self, frame):
+        assert self.iMaxTrackingGap > 0
+        pre_frame = None
         iTries = 0
 
+
         # iMaxGap is the maximal number of steps we might go into the past
-        # in order to find segmentation results. 
-        # a value of 0 or negative does not make any sense. 
+        # in order to find segmentation results.
+        # a value of 0 or negative does not make any sense.
         # we therefore go at least 1 step into the past.
         iMaxGap = max(self.iMaxTrackingGap, 1)
         start = self.start_frame
-        while iResultT is None and iTries < iMaxGap and iT > start:
-            iT -= 1
-            if iT in self._dctTimePoints:
-                iResultT = iT
+        while pre_frame is None and iTries < iMaxGap and frame > start:
+            frame -= 1
+            if frame in self._dctTimePoints:
+                pre_frame = frame
             else:
                 iTries += 1
-        return iResultT
+        return pre_frame
 
-    def _connectTimePoints(self, iT):
+    def connect_nodes(self, iT):
 
         fMaxObjectDistanceSquared = float(self.fMaxObjectDistance) ** 2
         iMaxSplitObjects = self.iMaxSplitObjects
@@ -167,10 +172,10 @@ class CellTracker(LoggerObject):
         oGraph = self.graph
 
         # search all nodes in the previous frame
-        # if there is an empty frame, look for the closest frame 
+        # if there is an empty frame, look for the closest frame
         # that contains objects. For this go up to iMaxTrackingGap
-        # into the past. 
-        iPreviousT = self._getClosestPreviousT(iT)
+        # into the past.
+        iPreviousT = self.closest_preceding_frame(iT)
 
         if not iPreviousT is None:
             bReturnSuccess = True
@@ -180,13 +185,13 @@ class CellTracker(LoggerObject):
             # for all nodes in this layer
             for iObjIdP in self._dctTimePoints[iPreviousT]:
 
-                strNodeIdP = self.getNodeIdFromComponents(iPreviousT, iObjIdP)
+                strNodeIdP = self.node_id(iPreviousT, iObjIdP)
                 oImageObjectP = oGraph.node_data(strNodeIdP)
 
                 lstNearest = []
 
                 for iObjIdC in self._dctTimePoints[iT]:
-                    strNodeIdC = self.getNodeIdFromComponents(iT, iObjIdC)
+                    strNodeIdC = self.node_id(iT, iObjIdC)
                     oImageObjectC = oGraph.node_data(strNodeIdC)
                     dist = oImageObjectC.squaredMagnitude(oImageObjectP)
 
@@ -194,8 +199,8 @@ class CellTracker(LoggerObject):
                     if dist < fMaxObjectDistanceSquared:
                         lstNearest.append((dist, strNodeIdC))
 
-                # lstNearest is the list of nodes in the current frame 
-                # whose distance to the previous node is smaller than the 
+                # lstNearest is the list of nodes in the current frame
+                # whose distance to the previous node is smaller than the
                 # fixed threshold.
                 if len(lstNearest) > 0:
                     # sort ascending by distance (first tuple element)
@@ -214,17 +219,17 @@ class CellTracker(LoggerObject):
                         except KeyError:
                             dctSplits[strNodeIdP] = [(dist, strNodeIdC)]
 
-            # dctSplits contains for each node the list of potential 
+            # dctSplits contains for each node the list of potential
             # successors with distance smaller than threshold.
-            # dctMerges contains for each node the list of potential 
-            # predecessors with distance smaller than threshold. 
-            
+            # dctMerges contains for each node the list of potential
+            # predecessors with distance smaller than threshold.
+
             # prevent split and merge for one node at the same time
             for id_c in dctMerges:
                 found_connection = False
-                
+
                 nodes = dctMerges[id_c]
-                # for all objects that have only one predecessor within the defined radius, 
+                # for all objects that have only one predecessor within the defined radius,
                 # take this predecessor.
                 if len(nodes) == 1:
                     oGraph.add_edge(nodes[0][1], id_c)
@@ -237,13 +242,13 @@ class CellTracker(LoggerObject):
                         if len(dctSplits[id_p]) == 1:
                             oGraph.add_edge(id_p, id_c)
                             found_connection = True
-                
-                # if there was no connection found, take the closest predecessor, 
+
+                # if there was no connection found, take the closest predecessor,
                 # unless there is none.
                 if not found_connection:
                     if len(nodes) > 0:
                         oGraph.add_edge(nodes[0][1], id_c)
-                        
+
         return iPreviousT, bReturnSuccess
 
     def visualizeTracks(self, iT, size, n=5, thick=True, radius=3):
@@ -262,11 +267,11 @@ class CellTracker(LoggerObject):
             if col > 255:
                 col = 255
             if current in self._dctTimePoints:
-                previous = self._getClosestPreviousT(current)
+                previous = self.closest_preceding_frame(current)
                 if not previous is None:
                     found = True
                     for objIdP in self._dctTimePoints[previous]:
-                        nodeIdP = self.getNodeIdFromComponents(previous, objIdP)
+                        nodeIdP = self.node_id(previous, objIdP)
                         objP = self.graph.node_data(nodeIdP)
 
                         if self.graph.out_degree(nodeIdP) > 1:
@@ -287,40 +292,12 @@ class CellTracker(LoggerObject):
 
         if not found and iT in self._dctTimePoints:
             for objId in self._dctTimePoints[iT]:
-                nodeId = self.getNodeIdFromComponents(iT, objId)
+                nodeId = self.node_id(iT, objId)
                 obj = self.graph.node_data(nodeId)
                 ccore.drawFilledCircle(ccore.Diff2D(*obj.oCenterAbs),
                                        radius, img_conn, col)
 
         return img_conn, img_split
-
-    @staticmethod
-    def getNodeIdFromComponents(iT, iObjectId):
-        return '%d_%s' % (iT, iObjectId)
-
-    @staticmethod
-    def getComponentsFromNodeId(strNodeId):
-        iT, iObjectId = map(int, strNodeId.split('_'))
-        return iT, iObjectId
-
-    @staticmethod
-    def callGraphviz(dot_filename, format = "png"):
-        cmd = "dot %s -T%s -o %s" %\
-               (dot_filename, format,
-                dot_filename.replace(".dot",".%s" % format))
-        # start a subprocess and do something else in between... :-)
-        p = subprocess.Popen(cmd, shell=True)
-        # we dont have to wait for the subprocess...
-        p.wait()
-
-    def _exportGraph(self, oTracker, strDotFilePath, bRunDot=False):
-        dot = DotWriter(strDotFilePath, oTracker)
-        if bRunDot:
-            self.callGraphviz(strDotFilePath)
-
-    def exportGraph(self, strDotFilePath, bRunDot=False):
-        self._exportGraph(self, strDotFilePath, bRunDot=bRunDot)
-        self.exportChannelDataFlat(strDotFilePath.split('.')[0] + '_features.txt', 'Primary', 'primary', None)
 
     def forwardReachable(self, node_id, reachableD, edgeD, iMaxLevel=None, iLevel=0):
         oGraph = self.graph
@@ -339,7 +316,6 @@ class CellTracker(LoggerObject):
                                           iMaxLevel=iMaxLevel,
                                           iLevel=iLevel+1)
 
-
     def initVisitor(self, lstRootIds=None, iStart=None, iEnd=None):
 
         # this was somehow stupid since only root tracks (starting in the first
@@ -357,7 +333,7 @@ class CellTracker(LoggerObject):
             lstStartIds = [strNodeId for strNodeId in self.graph.node_list()
                            if self.graph.in_degree(strNodeId) == 0]
             # sort by time
-            lstStartIds.sort(key = lambda x: self.getComponentsFromNodeId(x)[0])
+            lstStartIds.sort(key = lambda x: self.split_nodeid(x)[0])
         else:
             lstStartIds = lstRootIds
 
@@ -369,7 +345,7 @@ class CellTracker(LoggerObject):
         dctVisitedNodes = {}
         for strStartId in lstStartIds:
             self.dctVisitorData[strStartId] = {'_current': 0,
-                                               '_full'   : [[]],
+                                               '_full' : [[]],
                                                }
             self.logger.debug("root ID %s" % strStartId)
             self._forwardVisitor(strStartId, self.dctVisitorData[strStartId], dctVisitedNodes)
@@ -444,7 +420,7 @@ class CellTracker(LoggerObject):
         # find all nodes which are reachable from the first timepoint
         dctReachable = {}
         for iObjId in self._dctTimePoints[iStart][:]:
-            strStartId = self.getNodeIdFromComponents(iStart, iObjId)
+            strStartId = self.node_id(iStart, iObjId)
             self.forwardReachable(strStartId, dctReachable, {}, iMaxLevel=iMaxLevel)
 
         # remove all nodes from the entire graph which are not reachable
@@ -452,7 +428,7 @@ class CellTracker(LoggerObject):
         for strNodeId in lstNodes:
             if not strNodeId in dctReachable:
                 self.graph.delete_node(strNodeId)
-                iT, iObjId = self.getComponentsFromNodeId(strNodeId)
+                iT, iObjId = self.split_nodeid(strNodeId)
                 if iObjId in self._dctTimePoints[iT]:
                     self._dctTimePoints[iT].remove(iObjId)
 
@@ -465,7 +441,7 @@ class CellTracker(LoggerObject):
             if not strNodeId in dctReachable:
                 #print " * node not reachable", node_id
                 self.graph.delete_node(strNodeId)
-                iT, iObjId = self.getComponentsFromNodeId(strNodeId)
+                iT, iObjId = self.split_nodeid(strNodeId)
                 if iObjId in self._dctTimePoints[iT]:
                     self._dctTimePoints[iT].remove(iObjId)
         for iT in self._dctTimePoints.keys():
@@ -488,8 +464,8 @@ class CellTracker(LoggerObject):
                 for tplNodeIds in zip(*dctEventData['tracks']):
                     #print tplNodeIds
                     strNodeId = tplNodeIds[0]
-                    iT = self.getComponentsFromNodeId(strNodeId)[0]
-                    lstObjIds = [self.getComponentsFromNodeId(strNodeId)[1]
+                    iT = self.split_nodeid(strNodeId)[0]
+                    lstObjIds = [self.split_nodeid(strNodeId)[1]
                                  for strNodeId in tplNodeIds]
                     lstImageObjects = [self.graph.node_data(strNodeId)
                                        for strNodeId in tplNodeIds]
@@ -528,9 +504,9 @@ class CellTracker(LoggerObject):
 
                 tplBoundingBox = (iMinX-border, iMinY-border,
                                   iMaxX+border, iMaxY+border)
-                lstTimePoints = sorted(set([self.getComponentsFromNodeId(strNodeId)[0]
+                lstTimePoints = sorted(set([self.split_nodeid(strNodeId)[0]
                                             for strNodeId in lstNodeIds]))
-                lstObjIds = [[self.getComponentsFromNodeId(strNodeId)[1]
+                lstObjIds = [[self.split_nodeid(strNodeId)[1]
                               for strNodeId in tplNodeIds]
                              for tplNodeIds in zip(*dctEventData['tracks'])]
                 assert len(lstObjIds) == len(lstTimePoints)
@@ -538,239 +514,6 @@ class CellTracker(LoggerObject):
 
             dctBoundingBoxes[strStartId] = lstTimeData
         return dctBoundingBoxes
-
-    def analyze(self, dctChannels, clear_path=False):
-        strPathOut = os.path.join(self.path_out, 'events')
-
-        if clear_path:
-            shutil.rmtree(strPathOut, True)
-            makedirs(strPathOut)
-
-        for strRootId, dctTrackResults in self.dctVisitorData.iteritems():
-            self.logger.debug("* root %s, candidates %s" % (strRootId, dctTrackResults.keys()))
-            for strStartId, dctEventData in dctTrackResults.iteritems():
-
-                if strStartId[0] != '_':
-
-                    if self.bExportTrackFeatures:
-                        for strChannelId, dctRegions in dctChannels.iteritems():
-                            if strChannelId in self._timeholder.channels:
-                                for strRegionId, lstFeatureNames in dctRegions.iteritems():
-
-                                    if self.featureCompression is None:
-                                        strCompression = ''
-                                    else:
-                                        strCompression = '.%s' %self.featureCompression
-                                    strFilename = self._formatFilename('C%s__R%s' % (strChannelId, strRegionId),
-                                                                       nodeId=strStartId, prefix='features', subPath='events',
-                                                                       ext='.txt%s' % strCompression)
-                                    self.exportChannelData(dctEventData,
-                                                           strFilename,
-                                                           strChannelId,
-                                                           strRegionId,
-                                                           lstFeatureNames)
-
-                    self.logger.debug("* root %s ok" % strStartId)
-
-        if self.bExportFlatFeatures:
-            for strChannelId, dctRegions in dctChannels.iteritems():
-                if strChannelId in self._timeholder.channels:
-                    for strRegionId, lstFeatureNames in dctRegions.iteritems():
-                        if self.flatFeatureCompression is None:
-                            strCompression = ''
-                        else:
-                            strCompression = '.%s' % self.flatFeatureCompression
-                        strFilename = self._formatFilename('C%s__R%s' % (strChannelId, strRegionId),
-                                                            nodeId=strStartId, prefix='_flat_features', subPath='events',
-                                                            ext='.txt%s' % strCompression)
-                        self.exportChannelDataFlat(strFilename,
-                                                   strChannelId,
-                                                   strRegionId,
-                                                   lstFeatureNames)
-
-
-    def exportChannelDataFlat(self, strFilename, strChannelId, strRegionId, lstFeatureNames):
-
-        oTable = None
-        if not lstFeatureNames is None:
-            lstFeatureNames = sorted(lstFeatureNames)
-
-        for iT in self._timeholder:
-            oChannel = self._timeholder[iT][strChannelId]
-
-            if oChannel.has_region(strRegionId):
-                oRegion = oChannel.get_region(strRegionId)
-
-                if len(oRegion) > 0:
-                    if lstFeatureNames is None:
-                        lstFeatureNames = oRegion.feature_names
-
-                    if oTable is None:
-                        tracking_features = ['center_x','center_y',
-                                             'upperleft_x', 'upperleft_y',
-                                             'lowerright_x', 'lowerright_y']
-
-
-                        oTable = DictWriter(open(strFilename,'wb'), ['Frame', 'ObjectID'] +
-                                          [self.FEATURE_FLAT_PATTERN % f for f in lstFeatureNames] +
-                                          [self.CLASS_FLAT_PATTERN % x for x in ['name', 'label', 'probability']] +
-                                          [self.TRACKING_FLAT_PATTERN % x for x in tracking_features],
-                                          delimiter='\t')
-                        oTable.writeheader()
-
-                    for iObjId, oObj in oRegion.iteritems():
-                        dctData = {'Frame' : iT,
-                                   'ObjectID' : iObjId}
-                        aFeatures = oRegion.features_by_name(iObjId, lstFeatureNames)
-                        for fFeature, strName in zip(aFeatures, lstFeatureNames):
-                            dctData[self.FEATURE_FLAT_PATTERN % strName] = float(fFeature)
-                        if self.bHasClassificationData:
-                            dctData[self.CLASS_FLAT_PATTERN % 'label'] = oObj.iLabel
-                            dctData[self.CLASS_FLAT_PATTERN % 'name'] = oObj.strClassName
-                            dctData[self.CLASS_FLAT_PATTERN % 'probability'] =\
-                                ','.join(['%d:%.5f' % (int(x),y) for x,y in oObj.dctProb.iteritems()])
-
-                        dctData[self.TRACKING_FLAT_PATTERN % 'center_x'] = oObj.oCenterAbs[0]
-                        dctData[self.TRACKING_FLAT_PATTERN % 'center_y'] = oObj.oCenterAbs[1]
-                        dctData[self.TRACKING_FLAT_PATTERN % 'upperleft_x'] = oObj.oRoi.upperLeft[0]
-                        dctData[self.TRACKING_FLAT_PATTERN % 'upperleft_y'] = oObj.oRoi.upperLeft[1]
-                        dctData[self.TRACKING_FLAT_PATTERN % 'lowerright_x'] = oObj.oRoi.lowerRight[0]
-                        dctData[self.TRACKING_FLAT_PATTERN % 'lowerright_y'] = oObj.oRoi.lowerRight[1]
-
-                        oTable.writerow(dctData)
-
-
-    def exportChannelData(self, dctEventData, strFilename, strChannelId, strRegionId, lstFeatureNames):
-        bHasFeatures = False
-        strEventId = dctEventData['eventId']
-        iEventT, iObjId = self.getComponentsFromNodeId(strEventId)
-
-        bHasSplitId = 'splitId' in dctEventData
-
-        lstHeaderNames = ['Frame', 'Timestamp', 'isEvent']
-        lstHeaderTypes = ['i', 'f', 'b']
-        if bHasSplitId:
-            lstHeaderNames.append('isSplit')
-            lstHeaderTypes.append('b')
-            if not dctEventData['splitId'] is None:
-                iSplitT, iObjId = self.getComponentsFromNodeId(dctEventData['splitId'])
-            else:
-                iSplitT = None
-
-        table = []
-
-        # zip nodes with same time together
-        for tplNodes in zip(*dctEventData['tracks']):
-
-            lstObjectIds = []
-            iT = None
-            for strNodeId in tplNodes:
-                iNodeT, iObjId = self.getComponentsFromNodeId(strNodeId)
-                if iT is None:
-                    iT = iNodeT
-                else:
-                    assert iT == iNodeT
-                lstObjectIds.append(iObjId)
-
-            # FIXME
-            if iT is None:
-                return
-
-            oChannel = self._timeholder[iT][strChannelId]
-            oRegion = oChannel.get_region(strRegionId)
-
-            if not bHasFeatures:
-                bHasFeatures = True
-                if lstFeatureNames is None:
-                    lstFeatureNames = oRegion.feature_names
-                lstHeaderNames += [self.OBJID_COLUMN_PATTERN]
-
-                if self.bHasClassificationData:
-                    lstHeaderNames += [self.CLASS_COLUMN_PATTERN % x
-                                       for x in ['name', 'label', 'probability']]
-                lstHeaderNames += [self.FEATURE_COLUMN_PATTERN % strFeatureName
-                                   for strFeatureName in lstFeatureNames]
-
-                tracking_features = ['center_x','center_y',
-                                     'upperleft_x', 'upperleft_y',
-                                     'lowerright_x', 'lowerright_y']
-                lstHeaderNames += [self.TRACKING_COLUMN_PATTERN % strFeatureName
-                                   for strFeatureName in tracking_features]
-
-            coordinate = Coordinate(position=self.position, time=iT)
-            dctData = {'Frame' : iT,
-                       'Timestamp' : self.meta_data.get_timestamp_relative(coordinate),
-                       'isEvent' : 1 if iT == iEventT else 0,
-                       }
-            if bHasSplitId:
-                dctData['isSplit'] = 1 if iT == iSplitT else 0
-
-            #for iIdx, iObjId in enumerate(lstObjectIds):
-            iObjId = lstObjectIds[0]
-            if iObjId in oRegion:
-                oObj = oRegion[iObjId]
-
-                dctData[self.OBJID_COLUMN_PATTERN] = iObjId
-
-                # classification data
-                if self.bHasClassificationData:
-                    dctData[self.CLASS_COLUMN_PATTERN % 'label'] = oObj.iLabel
-                    dctData[self.CLASS_COLUMN_PATTERN % 'name'] = oObj.strClassName
-                    dctData[self.CLASS_COLUMN_PATTERN % 'probability'] =\
-                        ','.join(['%d:%.5f' % (int(x),y) for x,y in oObj.dctProb.iteritems()])
-
-                # object features
-                aFeatures = oRegion.features_by_name(iObjId, lstFeatureNames)
-                for fFeature, strFeatureName in zip(aFeatures, lstFeatureNames):
-                    dctData[self.FEATURE_COLUMN_PATTERN % strFeatureName] = fFeature
-
-                # object tracking data (absolute center)
-                dctData[self.TRACKING_COLUMN_PATTERN % 'center_x'] = oObj.oCenterAbs[0]
-                dctData[self.TRACKING_COLUMN_PATTERN % 'center_y'] = oObj.oCenterAbs[1]
-                dctData[self.TRACKING_COLUMN_PATTERN % 'upperleft_x'] = oObj.oRoi.upperLeft[0]
-                dctData[self.TRACKING_COLUMN_PATTERN % 'upperleft_y'] = oObj.oRoi.upperLeft[1]
-                dctData[self.TRACKING_COLUMN_PATTERN % 'lowerright_x'] = oObj.oRoi.lowerRight[0]
-                dctData[self.TRACKING_COLUMN_PATTERN % 'lowerright_y'] = oObj.oRoi.lowerRight[1]
-            else:
-                # we rather skip the entire event in case the object ID is not valid
-                return
-
-            #print dctData
-            table.append(dctData)
-
-        if len(table) > 0:
-            #print "exportChannelData, filenname: ", strFilename
-            write_table(strFilename, table, column_names=lstHeaderNames)
-
-
-    def _formatFilename(self, strSuffix=None, nodeId=None, prefix=None, subPath=None, branchId=None, ext='.txt'):
-        lstParts = []
-        if not prefix is None:
-            lstParts.append(prefix)
-        lstParts.append('P%s' % self.position)
-        if not nodeId is None:
-            items = self.getComponentsFromNodeId(nodeId)
-            frame, obj_id = items[:2]
-            if not branchId is None:
-                branch_id = branchId
-            else:
-                if len(items) == 3:
-                    branch_id = items[2]
-                else:
-                    branch_id = 1
-            lstParts += ['T%05d' % frame,
-                         'O%04d' % obj_id,
-                         'B%02d' % branch_id,
-                         ]
-        if not strSuffix is None:
-            lstParts.append(strSuffix)
-        strParts = '__'.join(lstParts)
-        if not subPath is None:
-            strPathOut = os.path.join(self.path_out, subPath)
-            makedirs(strPathOut)
-        else:
-            strPathOut = self.path_out
-        return os.path.join(strPathOut, strParts) + ext
 
     def _backwardCheck(self, strNodeId, lstNodeIds, iLevel=1):
         oGraph = self.graph
@@ -926,14 +669,242 @@ class CellTracker(LoggerObject):
                 self._forwardVisitor(strTailId, dctResults, dctVisitedNodes, iLevel=iLevel+1)
 
     @staticmethod
-    def getComponentsFromNodeId(strNodeId):
-        items = map(int, strNodeId.split('_'))
-        frame, obj_id = items[:2]
-        if len(items) < 3:
-            return frame, obj_id
+    def callGraphviz(dot_filename, format = "png"):
+        cmd = "dot %s -T%s -o %s" %\
+               (dot_filename, format,
+                dot_filename.replace(".dot",".%s" % format))
+        # start a subprocess and do something else in between... :-)
+        p = subprocess.Popen(cmd, shell=True)
+        # we dont have to wait for the subprocess...
+        p.wait()
+
+    def _exportGraph(self, oTracker, strDotFilePath, bRunDot=False):
+        dot = DotWriter(strDotFilePath, oTracker)
+        if bRunDot:
+            self.callGraphviz(strDotFilePath)
+
+    def exportGraph(self, strDotFilePath, bRunDot=False):
+        self._exportGraph(self, strDotFilePath, bRunDot=bRunDot)
+        self.exportChannelDataFlat(strDotFilePath.split('.')[0] + '_features.txt', 'Primary', 'primary', None)
+
+    def export_track_features(self, dctChannels, clear_path=False):
+        outdir = os.path.join(self.path_out, 'events')
+        if clear_path:
+            shutil.rmtree(outdir, True)
+            makedirs(outdir)
+
+
+        for strRootId, dctTrackResults in self.dctVisitorData.iteritems():
+            self.logger.debug("* root %s, candidates %s" % (strRootId, dctTrackResults.keys()))
+            for strStartId, dctEventData in dctTrackResults.iteritems():
+                if strStartId[0] != '_':
+                    if self.bExportTrackFeatures:
+                        for strChannelId, dctRegions in dctChannels.iteritems():
+                            if strChannelId in self._timeholder.channels:
+                                for strRegionId, lstFeatureNames in dctRegions.iteritems():
+                                    if self.featureCompression is None:
+                                        strCompression = ''
+                                    else:
+                                        strCompression = '.%s' %self.featureCompression
+                                    strFilename = self._formatFilename('C%s__R%s' % (strChannelId, strRegionId),
+                                                                       nodeId=strStartId, prefix='features', subPath='events',
+                                                                       ext='.txt%s' % strCompression)
+
+                                    self.exportChannelData(dctEventData,
+                                                           strFilename,
+                                                           strChannelId,
+                                                           strRegionId,
+                                                           lstFeatureNames)
+                    self.logger.debug("* root %s ok" % strStartId)
+
+
+    def exportChannelDataFlat(self, strFilename, strChannelId, strRegionId, lstFeatureNames):
+
+            oTable = None
+            if not lstFeatureNames is None:
+                lstFeatureNames = sorted(lstFeatureNames)
+
+            for iT in self._timeholder:
+                oChannel = self._timeholder[iT][strChannelId]
+
+                if oChannel.has_region(strRegionId):
+                    oRegion = oChannel.get_region(strRegionId)
+
+                    if len(oRegion) > 0:
+                        if lstFeatureNames is None:
+                            lstFeatureNames = oRegion.feature_names
+
+                        if oTable is None:
+                            tracking_features = ['center_x','center_y',
+                                                 'upperleft_x', 'upperleft_y',
+                                                 'lowerright_x', 'lowerright_y']
+
+
+                            oTable = DictWriter(open(strFilename,'wb'), ['Frame', 'ObjectID'] +
+                                              [self.FEATURE_FLAT_PATTERN % f for f in lstFeatureNames] +
+                                              [self.CLASS_FLAT_PATTERN % x for x in ['name', 'label', 'probability']] +
+                                              [self.TRACKING_FLAT_PATTERN % x for x in tracking_features],
+                                              delimiter='\t')
+                            oTable.writeheader()
+
+                        for iObjId, oObj in oRegion.iteritems():
+                            dctData = {'Frame' : iT,
+                                       'ObjectID' : iObjId}
+                            aFeatures = oRegion.features_by_name(iObjId, lstFeatureNames)
+                            for fFeature, strName in zip(aFeatures, lstFeatureNames):
+                                dctData[self.FEATURE_FLAT_PATTERN % strName] = float(fFeature)
+                            if self.bHasClassificationData:
+                                dctData[self.CLASS_FLAT_PATTERN % 'label'] = oObj.iLabel
+                                dctData[self.CLASS_FLAT_PATTERN % 'name'] = oObj.strClassName
+                                dctData[self.CLASS_FLAT_PATTERN % 'probability'] =\
+                                    ','.join(['%d:%.5f' % (int(x),y) for x,y in oObj.dctProb.iteritems()])
+
+                            dctData[self.TRACKING_FLAT_PATTERN % 'center_x'] = oObj.oCenterAbs[0]
+                            dctData[self.TRACKING_FLAT_PATTERN % 'center_y'] = oObj.oCenterAbs[1]
+                            dctData[self.TRACKING_FLAT_PATTERN % 'upperleft_x'] = oObj.oRoi.upperLeft[0]
+                            dctData[self.TRACKING_FLAT_PATTERN % 'upperleft_y'] = oObj.oRoi.upperLeft[1]
+                            dctData[self.TRACKING_FLAT_PATTERN % 'lowerright_x'] = oObj.oRoi.lowerRight[0]
+                            dctData[self.TRACKING_FLAT_PATTERN % 'lowerright_y'] = oObj.oRoi.lowerRight[1]
+
+                            oTable.writerow(dctData)
+
+
+    def exportChannelData(self, dctEventData, strFilename, strChannelId, strRegionId, lstFeatureNames):
+        bHasFeatures = False
+        strEventId = dctEventData['eventId']
+        iEventT, iObjId = self.split_nodeid(strEventId)
+
+        bHasSplitId = 'splitId' in dctEventData
+
+        lstHeaderNames = ['Frame', 'Timestamp', 'isEvent']
+        lstHeaderTypes = ['i', 'f', 'b']
+        if bHasSplitId:
+            lstHeaderNames.append('isSplit')
+            lstHeaderTypes.append('b')
+            if not dctEventData['splitId'] is None:
+                iSplitT, iObjId = self.split_nodeid(dctEventData['splitId'])
+            else:
+                iSplitT = None
+
+        table = []
+
+        # zip nodes with same time together
+        for tplNodes in zip(*dctEventData['tracks']):
+
+            lstObjectIds = []
+            iT = None
+            for strNodeId in tplNodes:
+                iNodeT, iObjId = self.split_nodeid(strNodeId)
+                if iT is None:
+                    iT = iNodeT
+                else:
+                    assert iT == iNodeT
+                lstObjectIds.append(iObjId)
+
+            # FIXME
+            if iT is None:
+                return
+
+            oChannel = self._timeholder[iT][strChannelId]
+            oRegion = oChannel.get_region(strRegionId)
+
+            if not bHasFeatures:
+                bHasFeatures = True
+                if lstFeatureNames is None:
+                    lstFeatureNames = oRegion.feature_names
+                lstHeaderNames += [self.OBJID_COLUMN_PATTERN]
+
+                if self.bHasClassificationData:
+                    lstHeaderNames += [self.CLASS_COLUMN_PATTERN % x
+                                       for x in ['name', 'label', 'probability']]
+                lstHeaderNames += [self.FEATURE_COLUMN_PATTERN % strFeatureName
+                                   for strFeatureName in lstFeatureNames]
+
+                tracking_features = ['center_x','center_y',
+                                     'upperleft_x', 'upperleft_y',
+                                     'lowerright_x', 'lowerright_y']
+                lstHeaderNames += [self.TRACKING_COLUMN_PATTERN % strFeatureName
+                                   for strFeatureName in tracking_features]
+
+            coordinate = Coordinate(position=self.position, time=iT)
+
+            dctData = {'Frame' : iT,
+                       'Timestamp' : self.meta_data.get_timestamp_relative(coordinate),
+                       'isEvent' : 1 if iT == iEventT else 0,}
+
+            if bHasSplitId:
+                dctData['isSplit'] = 1 if iT == iSplitT else 0
+
+            #for iIdx, iObjId in enumerate(lstObjectIds):
+            iObjId = lstObjectIds[0]
+            if iObjId in oRegion:
+                oObj = oRegion[iObjId]
+
+                dctData[self.OBJID_COLUMN_PATTERN] = iObjId
+
+                # classification data
+                if self.bHasClassificationData:
+                    dctData[self.CLASS_COLUMN_PATTERN % 'label'] = oObj.iLabel
+                    dctData[self.CLASS_COLUMN_PATTERN % 'name'] = oObj.strClassName
+                    dctData[self.CLASS_COLUMN_PATTERN % 'probability'] =\
+                        ','.join(['%d:%.5f' % (int(x),y) for x,y in oObj.dctProb.iteritems()])
+
+                common_ftr = [f for f in set(oRegion.feature_names).intersection(lstFeatureNames)]
+                aFeatures = oRegion.features_by_name(iObjId, common_ftr)
+                for fFeature, strFeatureName in zip(aFeatures, common_ftr):
+                    dctData[self.FEATURE_COLUMN_PATTERN % strFeatureName] = fFeature
+
+                # features not calculated are exported as NAN
+                diff_ftr = [f for f in set(lstFeatureNames).difference(oRegion.feature_names)]
+                for df in diff_ftr:
+                    dctData[self.FEATURE_COLUMN_PATTERN %df] = float("NAN")
+
+                # object tracking data (absolute center)
+                dctData[self.TRACKING_COLUMN_PATTERN %'center_x'] = oObj.oCenterAbs[0]
+                dctData[self.TRACKING_COLUMN_PATTERN %'center_y'] = oObj.oCenterAbs[1]
+                dctData[self.TRACKING_COLUMN_PATTERN %'upperleft_x'] = oObj.oRoi.upperLeft[0]
+                dctData[self.TRACKING_COLUMN_PATTERN %'upperleft_y'] = oObj.oRoi.upperLeft[1]
+                dctData[self.TRACKING_COLUMN_PATTERN %'lowerright_x'] = oObj.oRoi.lowerRight[0]
+                dctData[self.TRACKING_COLUMN_PATTERN %'lowerright_y'] = oObj.oRoi.lowerRight[1]
+            else:
+                # we rather skip the entire event in case the object ID is not valid
+                return
+
+            #print dctData
+            table.append(dctData)
+
+        if len(table) > 0:
+            #print "exportChannelData, filenname: ", strFilename
+            write_table(strFilename, table, column_names=lstHeaderNames)
+
+    def _formatFilename(self, strSuffix=None, nodeId=None, prefix=None, subPath=None, branchId=None, ext='.txt'):
+        lstParts = []
+        if not prefix is None:
+            lstParts.append(prefix)
+        lstParts.append('P%s' % self.position)
+        if not nodeId is None:
+            items = self.split_nodeid(nodeId)
+            frame, obj_id = items[:2]
+            if not branchId is None:
+                branch_id = branchId
+            else:
+                if len(items) == 3:
+                    branch_id = items[2]
+                else:
+                    branch_id = 1
+            lstParts += ['T%05d' % frame,
+                         'O%04d' % obj_id,
+                         'B%02d' % branch_id,
+                         ]
+        if not strSuffix is None:
+            lstParts.append(strSuffix)
+        strParts = '__'.join(lstParts)
+        if not subPath is None:
+            strPathOut = os.path.join(self.path_out, subPath)
+            makedirs(strPathOut)
         else:
-            branch_id = items[2]
-            return frame, obj_id, branch_id
+            strPathOut = self.path_out
+        return os.path.join(strPathOut, strParts) + ext
 
     def map_feature_names(self, feature_names):
         """Return a hash table to map feature names to new names."""
@@ -968,7 +939,7 @@ class CellTracker(LoggerObject):
                 f = file(filename, 'w')
 
                 for node_id in track:
-                    frame, obj_id = self.getComponentsFromNodeId(node_id)
+                    frame, obj_id = self.split_nodeid(node_id)
 
                     coordinate = Coordinate(position=self.position, time=frame)
                     prefix = [frame, self.meta_data.get_timestamp_relative(coordinate), obj_id]

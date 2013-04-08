@@ -97,7 +97,7 @@ class EventGallery(object):
 
         for strStartId, lstTimeData in oTracker.getBoundingBoxes(\
             method=method, size=size, border=border).iteritems():
-            items = oTracker.getComponentsFromNodeId(strStartId)
+            items = oTracker.split_nodeid(strStartId)
             iStartT, iObjId = items[:2]
             if len(items) == 3:
                 branch_id = items[2]
