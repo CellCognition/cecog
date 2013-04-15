@@ -89,9 +89,14 @@ def cecog_job_template(jt, path_out, args, emails, version, batch_size=1,
     else:
         os.putenv("PYTHONPATH", os.path.join(base_path, "pysrc"))
 
+    if os.environ.has_key('PYTHON_BIN'):
+	pybin = os.environ['PYTHON_BIN']
+    else:
+	pybin = 'python'
+
     jt.jobEnvironment = os.environ
     print jt.jobEnvironment
-    jt.remoteCommand = os.path.join(batch_path, 'python')
+    jt.remoteCommand = pybin
     print jt.remoteCommand
     jt.args = ['batch.py'] + args
     jt.joinFiles = True
