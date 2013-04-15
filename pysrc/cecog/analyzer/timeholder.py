@@ -656,6 +656,9 @@ class TimeHolder(OrderedDict):
                 if 'center' not in global_def_group:
                     dset_tmp = global_def_group.create_dataset('center', (2,), [('name', '|S16')])
                     dset_tmp[:] = ['x', 'y']
+                if 'orientation' not in global_def_group:
+                    dset_tmp = global_def_group.create_dataset('orientation', (2,), [('name', '|S16')])
+                    dset_tmp[:] = ['angle', 'eccentricity']
                 if 'object_features' not in global_def_group:
                     dset_tmp = global_def_group.create_dataset('object_features', (nr_features,), [('name', '|S512')])
                     if nr_features > 0:
@@ -723,6 +726,21 @@ class TimeHolder(OrderedDict):
                     dset_bounding_box = grp_region_features['bounding_box']
                     dset_bounding_box.resize((nr_objects + offset,))
 
+                # Create dataset for orientation
+                if 'orientation' not in grp_region_features:
+                    dtype = numpy.dtype([('angle', 'float'),
+                                         ('eccentricity', 'float'),])
+
+                    dset_orientation = grp_region_features.create_dataset('orientation',
+                                                      (nr_objects,),
+                                                      dtype,
+                                                      chunks=(nr_objects if nr_objects > 0 else 1,),
+                                                      compression=self._hdf5_compression,
+                                                      maxshape=(None,))
+                else:
+                    dset_orientation = grp_region_features['orientation']
+                    dset_orientation.resize((nr_objects + offset,))
+
                 # Create dataset for center
                 if 'center' not in grp_region_features:
                     dtype = numpy.dtype([('x', 'int32'),
@@ -777,6 +795,7 @@ class TimeHolder(OrderedDict):
 
                     dset_bounding_box[idx + offset] = obj.oRoi.upperLeft[0], obj.oRoi.lowerRight[0], obj.oRoi.upperLeft[1], obj.oRoi.lowerRight[1]
                     dset_center[idx + offset] = obj.oCenterAbs
+                    dset_orientation[idx + offset] = obj.orientation.angle, obj.orientation.eccentricity
 
                     dset_idx_relation[idx + offset] = frame_idx, obj_id
 

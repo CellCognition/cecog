@@ -33,7 +33,13 @@ class Region(object):
             self.upperLeft = None
             self.lowerRight = None
 
-
+class Orientation(object):
+    
+    def __init__(self, angle=None, eccentricity=None):
+        self.angle=angle
+        self.eccentricity=eccentricity
+        
+        
 class ImageObject(object):
 
     def __init__(self, oObject=None):
@@ -51,6 +57,8 @@ class ImageObject(object):
         self.aFeatures = None
         self.crack_contour = None
         self.file = None
+        # ORIENTATION TEST: orientation of objects (for tracking) #
+        self.orientation = None
 
     def squaredMagnitude(self, oObj):
         x = float(oObj.oCenterAbs[0] - self.oCenterAbs[0])

@@ -249,6 +249,8 @@ namespace cecog
               o.features["princ_gyration_ratio"] = o.features["princ_gyration_y"] / o.features["princ_gyration_x"];
               o.features["skewness_x"] = fabs(moments[id].PrincipalSkewnessX());
               o.features["skewness_y"] = fabs(moments[id].PrincipalSkewnessY());
+              o.orientation = moments[id].Theta();
+              //std::cout << o.orientation << std::endl;
           }
         }
         else if (name == "circularity")
