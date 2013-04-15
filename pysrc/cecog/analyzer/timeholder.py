@@ -36,6 +36,8 @@ from cecog.io.imagecontainer import Coordinate, MetaImage
 from cecog.analyzer.channel import PrimaryChannel
 from cecog.plugin.segmentation import REGION_INFO
 
+from cecog.analyzer.tracker import Tracker
+
 def chunk_size(shape):
     """Helper function to compute chunk size for image data cubes.
     """
@@ -108,7 +110,8 @@ class TimeHolder(OrderedDict):
                  hdf5_include_raw_images=True,
                  hdf5_include_label_images=True, hdf5_include_features=True,
                  hdf5_include_classification=True, hdf5_include_crack=True,
-                 hdf5_include_tracking=True, hdf5_include_events=True, hdf5_include_annotation=True):
+                 hdf5_include_tracking=True, hdf5_include_events=True,
+                 hdf5_include_annotation=True):
         super(TimeHolder, self).__init__()
         self.P = P
         self.plate_id = plate_id
@@ -788,8 +791,7 @@ class TimeHolder(OrderedDict):
                     if channel_name != PrimaryChannel.PREFIX:
                         dset_cross_rel[idx + offset] = (idx, idx)
 
-    def serialize_tracking(self, tracker):
-        graph = tracker.graph
+    def serialize_tracking(self, graph):
 
         # export full graph structure to .dot file
         #path_out = self._settings.get('General', 'pathout')
@@ -820,10 +822,10 @@ class TimeHolder(OrderedDict):
             for idx, edge in enumerate(graph.edges.itervalues()):
                 head_id, tail_id = edge[:2]
                 head_frame, head_obj_id = \
-                    tracker.split_nodeid(head_id)[:2]
+                    Tracker.split_nodeid(head_id)[:2]
                 head_frame_idx = self._frames_to_idx[head_frame]
                 tail_frame, tail_obj_id = \
-                    tracker.split_nodeid(tail_id)[:2]
+                    Tracker.split_nodeid(tail_id)[:2]
                 tail_frame_idx = self._frames_to_idx[tail_frame]
 
                 #head_obj_id_meta = self._object_coord_to_id[(prefix, (head_frame_idx, head_obj_id))]
@@ -838,10 +840,10 @@ class TimeHolder(OrderedDict):
     def serialize_events(self, tracker):
         if self._hdf5_create and self._hdf5_include_events:
             event_lookup = {}
-            for events in tracker.dctVisitorData.itervalues():
+            for events in tracker.visitor_data.itervalues():
                 for start_id, event in events.iteritems():
                     if start_id[0] != '_':
-                        key = tracker.split_nodeid(start_id)[:2]
+                        key = Tracker.split_nodeid(start_id)[:2]
                         event_lookup.setdefault(key, []).append(event)
             nr_events = len(event_lookup)
             nr_edges = 0
@@ -865,11 +867,11 @@ class TimeHolder(OrderedDict):
                     obj_id = obj_idx
                     track = events[0]['tracks'][0]
                     for head_id, tail_id in zip(track, track[1:]):
-                        head_frame, head_obj_id = tracker.split_nodeid(head_id)[:2]
+                        head_frame, head_obj_id = Tracker.split_nodeid(head_id)[:2]
                         haed_frame_idx = self._frames_to_idx[head_frame]
                         head_id_ = self._object_coord_to_idx[('primary', (haed_frame_idx, head_obj_id))]
 
-                        tail_frame, tail_obj_id = tracker.split_nodeid(tail_id)[:2]
+                        tail_frame, tail_obj_id = Tracker.split_nodeid(tail_id)[:2]
                         tail_frame_idx = self._frames_to_idx[tail_frame]
                         tail_id_ = self._object_coord_to_idx[('primary', (tail_frame_idx, tail_obj_id))]
 
@@ -879,11 +881,11 @@ class TimeHolder(OrderedDict):
                         splt = events[1]['splitIdx']
                         track = events[1]['tracks'][0][splt-1:]
                         for head_id, tail_id in zip(track, track[1:]):
-                            head_frame, head_obj_id = tracker.split_nodeid(head_id)[:2]
+                            head_frame, head_obj_id = Tracker.split_nodeid(head_id)[:2]
                             haed_frame_idx = self._frames_to_idx[head_frame]
                             head_id_ = self._object_coord_to_idx[('primary', (haed_frame_idx, head_obj_id))]
 
-                            tail_frame, tail_obj_id = tracker.split_nodeid(tail_id)[:2]
+                            tail_frame, tail_obj_id = Tracker.split_nodeid(tail_id)[:2]
                             tail_frame_idx = self._frames_to_idx[tail_frame]
                             tail_id_ = self._object_coord_to_idx[('primary', (tail_frame_idx, tail_obj_id))]
                             var_event[rel_idx] = (obj_id, head_id_, tail_id_)
