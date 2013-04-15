@@ -399,7 +399,13 @@ class Browser(QMainWindow):
         settings.set('General', 'rendering', {})
         analyzer = AnalyzerCore(self.coordinate.plate, settings,
                                 self._imagecontainer)
+
+        # as long the GIL is not released, if GIL is released
+        # just use self.setCursor
+        QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
         analyzer.processPositions(myhack=self)
+        QApplication.restoreOverrideCursor()
+
 
     def on_refresh(self):
         self._process_image()
