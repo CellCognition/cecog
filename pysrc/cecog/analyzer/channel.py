@@ -389,7 +389,7 @@ class MergedChannel(ChannelCore):
 
     def apply_features(self, *args, **kw):
         """Concatenate features of images objects of different channels"""
-        holder = ObjectHolder("merged")
+        holder = ObjectHolder("-".join(self._merge_regions.values()))
         for cname, region_name in self._merge_regions.iteritems():
             channel = self._channels[cname]
             holder0 = channel.get_region(region_name)

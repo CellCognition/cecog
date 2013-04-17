@@ -31,7 +31,6 @@ matplotlib.use('Agg')
 from matplotlib import pyplot
 
 from cecog import ccore
-from cecog import CHANNEL_PREFIX
 from cecog.io.imagecontainer import Coordinate, MetaImage
 from cecog.analyzer.channel import PrimaryChannel
 from cecog.plugin.segmentation import REGION_INFO
@@ -104,7 +103,7 @@ class TimeHolder(OrderedDict):
                      ('edge_idx1', 'uint32'),
                      ('edge_idx2', 'uint32'),])
 
-    def __init__(self, P, channels, filename_hdf5, meta_data, settings,
+    def __init__(self, P, channel_regions, filename_hdf5, meta_data, settings,
                  analysis_frames, plate_id,
                  hdf5_create=True, hdf5_reuse=True, hdf5_compression='gzip',
                  hdf5_include_raw_images=True,
@@ -116,7 +115,7 @@ class TimeHolder(OrderedDict):
         self.P = P
         self.plate_id = plate_id
         self._iCurrentT = None
-        self.channels = channels
+        self.channel_regions= channel_regions
         self._meta_data = meta_data
         self._settings = settings
         self._analysis_frames = analysis_frames
@@ -144,20 +143,28 @@ class TimeHolder(OrderedDict):
         self._object_coord_to_id = {}
         self._object_coord_to_idx = {}
 
+
+        # these are color channels
         channels = sorted(list(meta_data.channels))
-        self._region_names = REGION_INFO.names['primary'] + \
-            REGION_INFO.names['secondary'] + REGION_INFO.names['tertiary']
+        self._region_names = []
+
+        for rname in self.channel_regions.values():
+            if isinstance(rname, basestring):
+                self._region_names.append(rname)
+            else:
+                self._region_names.append('-'.join(rname))
 
         self._channel_info = []
         self._region_infos = []
         region_names2 = []
         # XXX hardcoded values
 
-        for prefix in CHANNEL_PREFIX:
-            for name in REGION_INFO.names[prefix]:
-                self._channel_info.append((prefix, settings.get('ObjectDetection', '%s_channelid' % prefix)))
-                self._region_infos.append((prefix, self._convert_region_name(prefix, name), name))
-                region_names2.append((prefix.capitalize(), name))
+        for prefix, name in self.channel_regions.iteritems():
+            if not isinstance(name, basestring):
+                name = '-'.join(name)
+            self._channel_info.append((prefix.lower(), settings.get('ObjectDetection', '%s_channelid' % prefix)))
+            self._region_infos.append((prefix.lower(), self._convert_region_name(prefix.lower(), name), name))
+            region_names2.append((prefix.capitalize(), name))
 
         self._feature_to_idx = OrderedDict()
 
@@ -213,6 +220,7 @@ class TimeHolder(OrderedDict):
 
             self._hdf5_create_file_structure(self.hdf5_filename, (label_image_str, label_image_cpy, label_image_valid),
                                                                  (raw_image_str, raw_image_cpy, raw_image_valid))
+
             self._hdf5_write_global_definition()
 
     def _hdf5_prepare_reuse(self):
@@ -287,9 +295,11 @@ class TimeHolder(OrderedDict):
         global_channel_desc = self._grp_def[self.HDF5_GRP_IMAGE].create_dataset( \
             'channel', (nr_channels,), dtype)
         for idx in self._regions_to_idx.values():
+            # XXX hardcoded values
+            is_physical = bool(self._channel_info[idx][1] is not None)
             data = (self._channel_info[idx][0],
                     self._channel_info[idx][1],
-                    True,
+                    is_physical,
                     (0, 0, 0))
             global_channel_desc[idx] = data
 
@@ -461,9 +471,14 @@ class TimeHolder(OrderedDict):
                 channel.purge(features={})
 
     def _convert_region_name(self, channel_name, region_name, prefix='region'):
+
+        if isinstance(region_name, tuple):
+            region_name = '-'.join(region_name)
+
         s = '%s__%s' % (channel_name.lower(), region_name)
         if not prefix is None and len(prefix) > 0:
             s = '%s___%s' % (prefix, s)
+
         return s
 
     def _convert_feature_name(self, feature_name, channel_name, region_name):
@@ -483,7 +498,6 @@ class TimeHolder(OrderedDict):
                                          channel.strChannelId)
 
         channel_name = channel.NAME.lower()
-
         label_images_valid = False
         if self._hdf5_found and self._hdf5_reuse:
             ### Try to load them
@@ -795,8 +809,10 @@ class TimeHolder(OrderedDict):
 
                     dset_bounding_box[idx + offset] = obj.oRoi.upperLeft[0], obj.oRoi.lowerRight[0], obj.oRoi.upperLeft[1], obj.oRoi.lowerRight[1]
                     dset_center[idx + offset] = obj.oCenterAbs
-                    dset_orientation[idx + offset] = obj.orientation.angle, obj.orientation.eccentricity
 
+                    # is case one don't wants nan's written to the hdf5 file
+                    # if np.isnan(obj.orientation.angle)
+                    dset_orientation[idx + offset] = obj.orientation.angle, obj.orientation.eccentricity
                     dset_idx_relation[idx + offset] = frame_idx, obj_id
 
                     if self._hdf5_include_features:

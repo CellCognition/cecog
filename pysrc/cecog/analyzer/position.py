@@ -318,22 +318,33 @@ class PositionCore(LoggerObject):
                         self.settings.get("Classification", "%s_%s_region"
                                           %(self.MERGED_CHANNEL.lower(), prefix))
         else:
-            regions[p_channel] = self.settings.get2(self._resolve_name( \
-                    p_channel, 'classification_regionname'))
+            regions[p_channel] = self.settings.get("Classification",
+                self._resolve_name(p_channel, 'classification_regionname'))
         return regions
+
+    @property
+    def _all_channel_regions(self):
+        chreg = OrderedDict()
+        for chname in self.processing_channels:
+            region = self._channel_regions(chname)
+            if isinstance(region, basestring):
+                chreg[chname] = region
+            else:
+                chreg[chname] = tuple(region.values())
+        return chreg
 
 
 class PositionPicker(PositionCore):
 
     def __call__(self):
-        self.timeholder = TimeHolder(self.position, self.processing_channels,
+        self.timeholder = TimeHolder(self.position, self._all_channel_regions,
                                      None,
                                      self.meta_data, self.settings,
                                      self._frames,
                                      self.plate_id,
                                      **self._hdf_options)
 
-        ca = CellAnalyzer(time_holder=self.timeholder,
+        ca = CellAnalyzer(timeholder=self.timeholder,
                           position = self.position,
                           create_images = True,
                           binning_factor = 1,
@@ -373,7 +384,8 @@ class PositionPicker(PositionCore):
                 n_images += 1
                 msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position,
                                                 frame)
-                self.set_image(image[self._qthread.renderer], msg, region=self._qthread.renderer)
+                self.set_image(image[self._qthread.renderer],
+                               msg, region=self._qthread.renderer)
 
 
 class PositionAnalyzer(PositionCore):
@@ -582,7 +594,7 @@ class PositionAnalyzer(PositionCore):
         # perhaps timeholder might be a good placke to read out the options
         # fils must not exist to proceed
         hdf5_fname = join(self._hdf5_dir, '%s.hdf5' % self.position)
-        self.timeholder = TimeHolder(self.position, self.processing_channels,
+        self.timeholder = TimeHolder(self.position, self._all_channel_regions,
                                      hdf5_fname,
                                      self.meta_data, self.settings,
                                      self._frames,
@@ -600,7 +612,7 @@ class PositionAnalyzer(PositionCore):
             self._tes = EventSelection(self._tracker.graph, **self._es_options)
 
         stopwatch = StopWatch(start=True)
-        ca = CellAnalyzer(time_holder=self.timeholder,
+        ca = CellAnalyzer(timeholder=self.timeholder,
                           position = self.position,
                           create_images = True,
                           binning_factor = 1,
