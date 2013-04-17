@@ -381,7 +381,7 @@ class MergedChannel(ChannelCore):
 
     @merge_regions.deleter
     def merged_regions(self):
-        del self._merged_regions
+        del self._merge_regions
 
     def apply_segmentation(self, channels, master="Primary"):
         self._channels = channels
