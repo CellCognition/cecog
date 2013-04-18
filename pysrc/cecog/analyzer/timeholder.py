@@ -870,7 +870,8 @@ class TimeHolder(OrderedDict):
 
                 data.append((head_obj_idx_meta,
                              tail_obj_idx_meta))
-            var_rel[:] = data
+            if len(data) > 0:
+                var_rel[:] = data
 
     def serialize_events(self, tracker):
         if self._hdf5_create and self._hdf5_include_events:
