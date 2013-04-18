@@ -875,7 +875,8 @@ class TimeHolder(OrderedDict):
                              tail_obj_idx_meta))
                 self._edge_to_idx[(head_id, tail_id)] = idx
 
-            var_rel[:] = data
+            if len(data) > 0:
+                var_rel[:] = data
             # traverse the graph structure by head nodes and save one object per head node
             # (with all forward-reachable nodes)
 #            data = []
