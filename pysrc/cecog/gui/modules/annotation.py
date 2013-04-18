@@ -482,14 +482,17 @@ class AnnotationModule(Module):
     def _on_import_class_definitions(self):
         if self._on_new_classifier():
             path = self._learner.clf_dir
+            if path is None:
+                path = os.path.expanduser('~')
             result = QFileDialog.getExistingDirectory(
                 self, 'Open classifier directory', os.path.abspath(path))
+
             if result:
                 learner = self._load_classifier(result)
-                if not learner is None:
+                if learner is not None:
                     self._learner = learner
                     self._update_class_definition_table()
-                    self._learner.clf_dir = None
+                    self._learner.unset_clf_dir()
 
     def _update_class_definition_table(self):
         class_table = self._class_table
@@ -655,7 +658,7 @@ class AnnotationModule(Module):
                 self._update_annotation_table()
 
     def _init_new_classifier(self):
-        learner = BaseLearner(".", None, None)
+        learner = BaseLearner(None, None, None)
         self._current_class = None
         self._class_sbox.setValue(1)
         self._class_text.setText('class1')
@@ -723,7 +726,7 @@ class AnnotationModule(Module):
     def _on_saveas_classifier(self, path=None):
         learner = self._learner
         if path is None:
-            path = learner.clf_dir
+            path = os.path.expanduser("~")
             result = QFileDialog.getExistingDirectory(
                 self, 'Save to classifier directory', os.path.abspath(path))
         else:

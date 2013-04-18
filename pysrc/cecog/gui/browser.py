@@ -326,11 +326,9 @@ class Browser(QMainWindow):
 
         # the slider is always working with frames.
         # reason: it is difficult to forbid slider values between allowed values.
-        frame = int(round(
-                          self.max_frame * (coordinate.time - self.min_time) /
-                          float(self.max_time - self.min_time)
-                          )
-                    )
+
+        frame = int(round(self.max_frame * (coordinate.time - self.min_time) /
+                          max(float(self.max_time - self.min_time), 1)))
 
         self._t_slider.setValue(frame)
 
@@ -393,6 +391,7 @@ class Browser(QMainWindow):
 
         if len(self._imagecontainer.channels) > 1:
             settings.set('Processing', 'secondary_processChannel', True)
+            settings.set('Processing', 'tertiary_processChannel', True)
             # need turn of virtual channels
             settings.set('Processing', 'merged_processChannel', False)
 
