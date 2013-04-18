@@ -14,7 +14,7 @@ VOLNAME = $(APPNAME)-$(VERSION)
 all: dmg
 
 osx:
-	python setup_mac.py py2app
+	python setup_mac.py py2app --arch x86_64
 
 dmg: osx
 	hdiutil create -srcfolder dist/$(APPNAME).app \
