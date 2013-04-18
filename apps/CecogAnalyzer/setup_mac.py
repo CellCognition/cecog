@@ -45,7 +45,7 @@ py2app_opts = {'argv_emulation': False,
                'excludes': EXCLUDES,
                'strip' : True,
                'packages': PACKAGES,
-               'optimize': 3,
+               'optimize': 2,
                'iconfile': 'resources/cecog_analyzer_icon.icns'}
 
 
