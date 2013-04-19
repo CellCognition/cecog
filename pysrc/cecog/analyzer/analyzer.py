@@ -201,6 +201,7 @@ class TimeHolder(OrderedDict):
         self._hdf5_found = False
         if os.path.exists(self.hdf5_filename):
             if self._hdf5_check_file():
+                # After this the hdf5_file handle is closed!
                 self._hdf5_found = True
                 if self._hdf5_prepare_reuse() > 0:
                     # Error
@@ -240,9 +241,6 @@ class TimeHolder(OrderedDict):
                     raw_image_cpy = None
                     raw_image_str = None
                     raw_image_valid = None
-                finally:
-                    if isinstance(self._hdf5_file, h5py._hl.files.File):
-                        self._hdf5_file.close()
 
             self._hdf5_create_file_structure(self.hdf5_filename, (label_image_str, label_image_cpy, label_image_valid),
                                                                  (raw_image_str, raw_image_cpy, raw_image_valid))
