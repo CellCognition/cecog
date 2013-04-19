@@ -249,8 +249,7 @@ class TimeHolder(OrderedDict):
             self._hdf5_write_global_definition()
 
     def _hdf5_prepare_reuse(self):
-        f = h5py.File(self.hdf5_filename, 'r')
-        self._hdf5_file = f
+        self._hdf5_file = h5py.File(self.hdf5_filename, 'r')
         try:
             meta_data = self._meta_data
 
@@ -263,15 +262,15 @@ class TimeHolder(OrderedDict):
                 position = self.P
 
 
-            self._grp_cur_position = f['/sample/0/plate/%s/experiment/%s/position/%s' % (self.plate_id,
+            self._grp_cur_position = self._hdf5_file ['/sample/0/plate/%s/experiment/%s/position/%s' % (self.plate_id,
                                                                                           well,
                                                                                           position)]
-            self._grp_def = f[self.HDF5_GRP_DEFINITION]
+            self._grp_def = self._hdf5_file[self.HDF5_GRP_DEFINITION]
             return 0
         except:
             return 1
         finally:
-            f.close()
+            self._hdf5_file.close()
 
 
     def _hdf5_check_file(self):
