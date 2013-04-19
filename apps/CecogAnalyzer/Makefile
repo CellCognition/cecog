@@ -8,6 +8,7 @@
 
 VERSION = 1.4.0rc2
 APPNAME = CecogAnalyzer
+TMPNAME = CecogAnalyzer.dmg
 DMGNAME = CecogAnalyzer-$(VERSION).dmg
 VOLNAME = $(APPNAME)-$(VERSION)
 
@@ -18,12 +19,12 @@ osx:
 
 dmg: osx
 	hdiutil create -srcfolder dist/$(APPNAME).app \
-	-volname $(VOLNAME) -fs HFS+ -format UDRW $(DMGNAME)
-	hdiutil attach -readwrite -noverify -noautoopen $(DMGNAME)
+	-volname $(VOLNAME) -fs HFS+ -format UDRW $(TMPNAME)
+	hdiutil attach -readwrite -noverify -noautoopen $(TMPNAME)
 	ln -s /Volumes/$(VOLNAME)/$(APPNAME).app/Contents/Resources/resources/battery_package/ /Volumes/$(VOLNAME)/battery_package
 	ln -s /Applications /Volumes/$(VOLNAME)/Applications
 	hdiutil detach /Volumes/$(VOLNAME)
-
+	hdiutil convert $(TMPNAME) -format UDZO -imagekey zlib-level=6 -o $(DMGNAME)
 clean:
 	rm -rfv build dist
-	rm -fv $(DMGNAME)
+	rm -fv *.dmg
