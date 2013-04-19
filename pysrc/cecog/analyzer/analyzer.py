@@ -269,8 +269,9 @@ class TimeHolder(OrderedDict):
             self._grp_def = f[self.HDF5_GRP_DEFINITION]
             return 0
         except:
-            f.close()
             return 1
+        finally:
+            f.close()
 
 
     def _hdf5_check_file(self):
