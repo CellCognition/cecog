@@ -184,7 +184,8 @@ namespace cecog {
         : roi(upperLeft, lowerRight),
           center(center),
           roisize(0.0),
-          oCenterAbs(upperLeft + center)
+          oCenterAbs(upperLeft + center),
+          orientation(-10.0)
     {};
 
     ROIObject(vigra::Diff2D upperLeft, vigra::Diff2D lowerRight,
@@ -194,14 +195,16 @@ namespace cecog {
           center(center),
           crack_start(crack_start),
           roisize(roisize),
-          oCenterAbs(upperLeft + center)
+          oCenterAbs(upperLeft + center),
+          orientation(-10.0)
     {};
 
     ROIObject()
         : roi(vigra::Diff2D(0,0), vigra::Diff2D(0,0)),
           center(0,0),
           roisize(0.0),
-          oCenterAbs(0,0)
+          oCenterAbs(0,0),
+          orientation(-10.0)
     {};
 
     vigra::Diff2D center, oCenterAbs, crack_start;
@@ -209,6 +212,7 @@ namespace cecog {
     FeatureMap measurements;
     Region roi;
     double roisize;
+    double orientation;
   };
 
 

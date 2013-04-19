@@ -7,11 +7,15 @@ Release
 Debug
 dist
 build
-*.py[cdo]
+resource.py
+*_flymake.py
+*~
+*.so
 *.dll
 *.pkl
 *.orig
 *.diff
+*.pyd
 build.info
 .project
 .pydevproject
