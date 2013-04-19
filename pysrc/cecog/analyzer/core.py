@@ -196,7 +196,10 @@ class AnalyzerCore(AnalyzerBase):
                                        % (args_[0], idx+1, len(job_args))})
                 qthread.update_status(stage_info)
             analyzer = PositionAnalyzer(*args_, **kw_)
-            nimages = analyzer()
+            try:
+                nimages = analyzer()
+            finally:
+                analyzer.clear()
 
             if self.settings.get('Output', 'hdf5_create_file') and \
                     self.settings.get('Output', 'hdf5_merge_positions'):
