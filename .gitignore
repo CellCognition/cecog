@@ -22,4 +22,5 @@ build.info
 .settings
 .DS_Store
 *~
+*.pyc
 resource.py

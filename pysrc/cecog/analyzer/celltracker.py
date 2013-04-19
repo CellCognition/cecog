@@ -25,6 +25,7 @@ import os, \
        shutil
 from types import ListType
 from csv import DictWriter
+from matplotlib import pyplot as plt
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -71,9 +72,26 @@ def filter_col_nans(data):
     col_nans = numpy.unique(numpy.where(nans)[1])
     return numpy.delete(data, col_nans, axis=1)
 
-#-------------------------------------------------------------------------------
-# classes:
-#
+
+def plot_trajectories(matrix, file_, title, show_ticks=True, cmap=None,
+                      sort_tracks=True, labels=(2, 3)):
+
+    def _sort_tracks(label_matrix, labels, reverse=False):
+        keyfunc = lambda track: len(filter(lambda l: l in labels, track))
+        slm = numpy.array(sorted(label_matrix, key=keyfunc, reverse=reverse))
+        return slm
+
+    fig = plt.figure(dpi=300)
+    ax = fig.add_subplot(111, frameon=False)
+
+    if sort_tracks:
+        matrix = _sort_tracks(matrix, labels=labels)
+
+    ax.matshow(matrix)
+    ax.get_xaxis().set_visible(show_ticks)
+    ax.get_yaxis().set_visible(show_ticks)
+    ax.set_title(title)
+    fig.savefig(file_, dpi=300)
 
 
 class DotWriter(object):
@@ -208,8 +226,6 @@ class DotWriter(object):
     def _writeEdge(self, strNodeId, strNodeIdN):
         self.oDotFile.write('"%s" -> "%s"%s;\n' % \
                             (strNodeId, strNodeIdN, self.EDGE_STYLE))
-
-
 
 
 class CellTracker(OptionManager):
@@ -393,9 +409,9 @@ class CellTracker(OptionManager):
         oGraph = self.graph
 
         # search all nodes in the previous frame
-        # if there is an empty frame, look for the closest frame 
+        # if there is an empty frame, look for the closest frame
         # that contains objects. For this go up to iMaxTrackingGap
-        # into the past. 
+        # into the past.
         iPreviousT = self._getClosestPreviousT(iT)
 
         if not iPreviousT is None:
@@ -420,8 +436,8 @@ class CellTracker(OptionManager):
                     if dist < fMaxObjectDistanceSquared:
                         lstNearest.append((dist, strNodeIdC))
 
-                # lstNearest is the list of nodes in the current frame 
-                # whose distance to the previous node is smaller than the 
+                # lstNearest is the list of nodes in the current frame
+                # whose distance to the previous node is smaller than the
                 # fixed threshold.
                 if len(lstNearest) > 0:
                     # sort ascending by distance (first tuple element)
@@ -440,17 +456,17 @@ class CellTracker(OptionManager):
                         except KeyError:
                             dctSplits[strNodeIdP] = [(dist, strNodeIdC)]
 
-            # dctSplits contains for each node the list of potential 
+            # dctSplits contains for each node the list of potential
             # successors with distance smaller than threshold.
-            # dctMerges contains for each node the list of potential 
-            # predecessors with distance smaller than threshold. 
-            
+            # dctMerges contains for each node the list of potential
+            # predecessors with distance smaller than threshold.
+
             # prevent split and merge for one node at the same time
             for id_c in dctMerges:
                 found_connection = False
-                
+
                 nodes = dctMerges[id_c]
-                # for all objects that have only one predecessor within the defined radius, 
+                # for all objects that have only one predecessor within the defined radius,
                 # take this predecessor.
                 if len(nodes) == 1:
                     oGraph.add_edge(nodes[0][1], id_c)
@@ -463,8 +479,8 @@ class CellTracker(OptionManager):
                         if len(dctSplits[id_p]) == 1:
                             oGraph.add_edge(id_p, id_c)
                             found_connection = True
-                
-                # if there was no connection found, take the closest predecessor, 
+
+                # if there was no connection found, take the closest predecessor,
                 # unless there is none.
                 if not found_connection:
                     if len(nodes) > 0:
@@ -498,7 +514,7 @@ class CellTracker(OptionManager):
                 safe_mkdirs(pathOut)
                 ccore.writeImage(img, os.path.join(pathOut, 'T%05d.jpg' % iT), '89')
 
-                        
+
         return iPreviousT, bReturnSuccess
 
     def _connectTimePoints(self, iT):
@@ -510,9 +526,9 @@ class CellTracker(OptionManager):
         oGraph = self._oGraph
 
         # search all nodes in the previous frame
-        # if there is an empty frame, look for the closest frame 
+        # if there is an empty frame, look for the closest frame
         # that contains objects. For this go up to iMaxTrackingGap
-        # into the past. 
+        # into the past.
         iPreviousT = self._getClosestPreviousT(iT)
 
         if not iPreviousT is None:
@@ -538,9 +554,9 @@ class CellTracker(OptionManager):
                     if dist < fMaxObjectDistanceSquared:
                         lstNearest.append((dist, strNodeIdC))
 
-                # lstNearest is the list of nodes in the current frame 
-                # whose distance to the previous node is smaller than the 
-                # fixed threshold.                
+                # lstNearest is the list of nodes in the current frame
+                # whose distance to the previous node is smaller than the
+                # fixed threshold.
                 if len(lstNearest) > 0:
                     # sort ascending by distance (first tuple element)
                     lstNearest.sort(key=lambda x: x[0])
@@ -553,18 +569,18 @@ class CellTracker(OptionManager):
                         dict_append_list(dctSplits, strNodeIdP,
                                          (dist, strNodeIdC))
 
-            # dctSplits contains for each node the list of potential 
+            # dctSplits contains for each node the list of potential
 
             ### FIXME: Here we loose alomost all cell mappings,
-            # predecessors with distance smaller than threshold. 
+            # predecessors with distance smaller than threshold.
             ### be an one-to-one mapping => the bigger the radius, the less mappings
 
             # prevent split and merge for one node at the same time
             for id_c in dctMerges:
                 found_connection = False
-                
+
                 nodes = dctMerges[id_c]
-                # for all objects that have only one predecessor within the defined radius, 
+                # for all objects that have only one predecessor within the defined radius,
                 # take this predecessor.
                 if len(nodes) == 1:
                     oGraph.add_edge(nodes[0][1], id_c)
@@ -577,14 +593,14 @@ class CellTracker(OptionManager):
                         if len(dctSplits[id_p]) == 1:
                             oGraph.add_edge(id_p, id_c)
                             found_connection = True
-                
-                # if there was no connection found, take the closest predecessor, 
+
+                # if there was no connection found, take the closest predecessor,
                 # unless there is none.
                 if not found_connection:
                     if len(nodes) > 0:
                         oGraph.add_edge(nodes[0][1], id_c)
-            
-                          
+
+
 
             if self.getOption('bVisualize'):
 
@@ -784,8 +800,8 @@ class CellTracker(OptionManager):
         data_pca = pca.project(data_zscore)[:,0:num_features]
 
         # just for debugging
-        bcfname = os.path.join(self.strPathOut, 'init_bc.csv')
-        numpy.savetxt(bcfname, data_pca, delimiter=",")
+        # bcfname = os.path.join(self.strPathOut, 'init_bc.csv')
+        # numpy.savetxt(bcfname, data_pca, delimiter=",")
 
         idx = binary_clustering(data_pca)
 
@@ -1086,8 +1102,8 @@ class PlotCellTracker(CellTracker):
             # FIXME check shape of data_zscore
             data = filter_col_nans(data)
             data_zscore = sss.zscore(remove_constant_columns(data))
-            
-            # preserve 99% cumulative explained variance 
+
+            # preserve 99% cumulative explained variance
             if data_zscore.shape[0] > data_zscore.shape[1]:
                 pca = mlab.PCA(data_zscore)
                 num_features = numpy.nonzero(numpy.cumsum(pca.fracs) > 0.99)[0][0]
@@ -1180,12 +1196,20 @@ class PlotCellTracker(CellTracker):
             # for debug, output all results
             filenameTC3 = os.path.join(strPathOutTC3, 'TC3.csv')
             numpy.savetxt(filenameTC3, tc3['label_matrix'], fmt='%d', delimiter=',')
+            plot_trajectories(tc3['label_matrix'], filenameTC3.replace('csv', 'pdf'), 'TC3')
+
             filenameTC3GMM = os.path.join(strPathOutTC3, 'TC3_GMM.csv')
             numpy.savetxt(filenameTC3GMM, tc3_gmm['label_matrix'], fmt='%d', delimiter=',')
+            plot_trajectories(tc3_gmm['label_matrix'], filenameTC3GMM.replace('csv', 'pdf'), 'TC3_GMM')
+
             filenameTC3DHMM = os.path.join(strPathOutTC3, 'TC3_GMM_DHMM.csv')
             numpy.savetxt(filenameTC3DHMM, tc3_gmm_chmm['label_matrix'], fmt='%d', delimiter=',')
+            plot_trajectories(tc3_gmm_dhmm['label_matrix'], filenameTC3DHMM.replace('csv', 'pdf'), 'TC3_GMM_DHMM')
+
             filenameTC3CHMM = os.path.join(strPathOutTC3, 'TC3_GMM_CHMM.csv')
             numpy.savetxt(filenameTC3CHMM, tc3_gmm_chmm['label_matrix'], fmt='%d', delimiter=',')
+            plot_trajectories(tc3_gmm_chmm['label_matrix'], filenameTC3CHMM.replace('csv', 'pdf'), 'TC3_GMM_CHMM')
+
 
             # TC3 result with filename
             Filenamelist = os.path.join(strPathOutTC3, 'filenames.txt')
