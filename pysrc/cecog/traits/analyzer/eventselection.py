@@ -17,15 +17,13 @@ __source__ = '$URL$'
 __all__ = ['SectionEventSelection']
 
 from cecog.traits.config import _Section
-from cecog.gui.guitraits import (StringTrait,
-                                 BooleanTrait,
+from cecog.gui.guitraits import (BooleanTrait,
+                                 StringTrait,
                                  FloatTrait,
                                  IntTrait,
-                                 SelectionTrait,
                                  SelectionTrait2,
                                  )
 from cecog.analyzer import TRACKING_DURATION_UNITS_DEFAULT
-from cecog.analyzer import TC3_ALGORITHMS
 
 SECTION_NAME_EVENT_SELECTION = 'EventSelection'
 
@@ -70,23 +68,16 @@ class SectionEventSelection(_Section):
         ('tracking_forwardcheck',
             FloatTrait(2, 0, 4000, label='Filter duration [post]')),
         ]),
+
       ('unsupervised_event_selection',
        [('unsupervised_event_selection',
-            BooleanTrait(False, label='Unsupervised',
-                                 widget_info=BooleanTrait.RADIOBUTTON)),
+         BooleanTrait(False, label='Unsupervised',
+                      widget_info=BooleanTrait.RADIOBUTTON)),
         ('min_event_duration',
-            IntTrait(3, 3, 30, label='Min event duration')),
-        ]),
-      ('tc3_analysis',
-        [('tc3_analysis',
-            BooleanTrait(False, label='Temporal clustering')),
-         ('num_clusters',
-            IntTrait(6, 2, 10, label='Number of clusters',)),
-         ('min_cluster_size',
-            IntTrait(2, 1, 10, label='Min cluster size',)),
-         ('tc3_algorithms',
-            SelectionTrait(TC3_ALGORITHMS[0],
-                           TC3_ALGORITHMS,
-                           label='Algorithms')),
-         ]),
+         IntTrait(3, 3, 30, label='Min event duration')),
+        ('num_clusters',
+         IntTrait(6, 2, 10, label='Number of clusters',)),
+        ('min_cluster_size',
+         IntTrait(2, 1, 10, label='Min cluster size',)),
+        ])
     ]

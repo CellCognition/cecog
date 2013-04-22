@@ -376,18 +376,13 @@ class PositionAnalyzer(object):
             if self.oSettings.get('EventSelection', 'supervised_event_selection'):
                 self.oSettings.set_section('EventSelection')
                 tracker_options.update({'supEventSelection'   : self.oSettings.get2('supervised_event_selection'),})
-            
+
             if self.oSettings.get('EventSelection', 'unsupervised_event_selection'):
                 self.oSettings.set_section('EventSelection')
                 tracker_options.update({'unsupEventSelection'   : self.oSettings.get2('unsupervised_event_selection'),
                                         'iForwardCheck2'        : self.__convert_tracking_duration('min_event_duration'),
-                                        })
-                
-            if self.oSettings.get('EventSelection', 'tc3_analysis'):
-                tracker_options.update({'tc3Analysis'           : self.oSettings.get2('tc3_analysis'),
                                         'numClusters'           : self.oSettings.get2('num_clusters'),
                                         'minClusterSize'        : self.oSettings.get2('min_cluster_size'),
-                                        'tc3Algorithms'         : self.oSettings.get2('tc3_algorithms'),
                                         })
 
             self.oCellTracker = clsCellTracker(oTimeHolder=oTimeHolder,
@@ -509,8 +504,8 @@ class PositionAnalyzer(object):
                 if not self._qthread is None:
                     if self._qthread.get_abort():
                         return 0
-                    self._qthread.set_stage_info(stage_info)  
-                
+                    self._qthread.set_stage_info(stage_info)
+
 #                self._oLogger.debug("--- visitor start")
 #                self.oCellTracker.initVisitor()
 #                self._oLogger.debug("--- visitor ok")

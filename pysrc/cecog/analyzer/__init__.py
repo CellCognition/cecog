@@ -94,5 +94,3 @@ TRACKING_DURATION_UNITS_TIMELAPSE = [TRACKING_DURATION_UNIT_FRAMES,
                                      ]
 
 R_LIBRARIES = ['hwriter', 'RColorBrewer', 'igraph']
-
-TC3_ALGORITHMS = ['TC3', 'TC3+GMM', 'TC3+GMM+DHMM', 'TC3+GMM+CHMM']

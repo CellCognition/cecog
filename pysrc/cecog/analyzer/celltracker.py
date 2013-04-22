@@ -91,6 +91,8 @@ def plot_trajectories(matrix, file_, title, show_ticks=True, cmap=None,
     ax.get_xaxis().set_visible(show_ticks)
     ax.get_yaxis().set_visible(show_ticks)
     ax.set_title(title)
+    ax.set_xlabel('frames')
+    ax.set_ylabel('tracks')
     fig.savefig(file_, dpi=300)
 
 
@@ -1081,7 +1083,7 @@ class PlotCellTracker(CellTracker):
                                                    strRegionId,
                                                    lstFeatureNames)
 
-        if self.getOption('tc3Analysis'):
+        if self.getOption('unsupEventSelection'):
             if len(allFeatures) == 0:
                 self.oLogger.warning("No events found for TC3 analysis")
                 self.oLogger.warning("Stopping TC3 anlysis")
@@ -1418,94 +1420,6 @@ class PlotCellTracker(CellTracker):
                 dctEdges[strKey] = True
                 self._forwardVisitor(strTailId, dctResults, dctEdges, iLevel=iLevel+1, strStartId=strStartId)
 
-#    def analyze(self):
-#
-#        from rpy import r
-#
-#        oPlotter = RPlotter(bUseCairo=self.getOption("bPlotterUseCairo"))
-#        for strRootId, dctTrackResults in self.dctVisitorData.iteritems():
-#
-#            if self.getOption("bExportRootGraph"):
-#                self.exportSubGraph(self._formatFilename("graph.dot", strRootId),
-#                                    strRootId,
-#                                    bRunDot=self.getOption("bRenderRootGraph"))
-#
-#            if 'chromatin' in dctTrackResults:
-#                aChromatin = array(dctTrackResults['chromatin'])
-#
-#                if self.getOption("bChromatinCreateTrackFiles"):
-#                    oTable = newTable(range(len(self.getOption("lstChromatinFeatureNames"))),
-#                                      data=aChromatin,
-#                                      columnLabels=self.getOption("lstChromatinFeatureNames"))
-#                    exportTable(oTable,
-#                                self._formatFilename("chromatin.dat", strRootId),
-#                                fieldDelimiter="\t",
-#                                writeColumnKeys=True,
-#                                writeRowLabels=False,
-#                                stringDelimiter="",
-#                                useLabelsAsKeys=True)
-#
-#                if self.getOption("bChromatinCreateTrackImages"):
-#                    oPlotter.figure(strFilename=self._formatFilename("chromatin.png", strRootId), width=900, height=600)
-#                    aChromatin2 = (aChromatin - min(aChromatin,0)) / (max(aChromatin,0) - min(aChromatin,0))
-#                    oPlotter.par(mar=(2.5, 0.5, 0.5, 5))
-#                    oPlotter.image(range(len(aChromatin2)),
-#                                   range(len(aChromatin2[0])),
-#                                   aChromatin2, axes=False,
-#                                   ylab="features", xlab="frames",
-#                                   zlim=(0,1), col=r.heat_colors(100))
-#                    oPlotter.box()
-#                    oPlotter.axis(1, range(len(aChromatin2)),
-#                                  labels=map(str, range(1,len(aChromatin2)+1)),
-#                                  las=1, cex=0.9, tick=1)
-#                    oPlotter.axis(4, range(len(aChromatin2[0])),
-#                                  labels=self.getOption("lstChromatinFeatureNames"),
-#                                  las=2, tick=1, cex=0.9)
-#                    oPlotter.close()
-#
-#
-#            if 'secondary' in dctTrackResults:
-#                aSecondary = array(dctTrackResults['secondary'])
-#
-#                if self.getOption("bSecondaryCreateTrackFiles"):
-#                    oTable = newTable(range(len(self.getOption("lstSecondaryFeatureNames"))),
-#                                      data=aSecondary,
-#                                      columnLabels=self.getOption("lstSecondaryFeatureNames"))
-#                    exportTable(oTable,
-#                                self._formatFilename("secondary.dat", strRootId),
-#                                fieldDelimiter="\t",
-#                                writeColumnKeys=True,
-#                                writeRowLabels=False,
-#                                stringDelimiter="",
-#                                useLabelsAsKeys=True)
-#
-#                if self.getOption("bSecondaryCreateTrackImages"):
-#                    dctData = {}
-#                    for iIdx, strFeatureName in enumerate(self.getOption("lstSecondaryFeatureNames")):
-#                        dctData[strFeatureName] = aSecondary[:,iIdx]
-#
-#                    tplYRange = r.range(dctData['second_in_avg'],
-#                                        dctData['second_out_avg'])
-#
-#                    if 'nan' not in [str(x).lower() for x in tplYRange]:
-#
-#                        oPlotter.figure(strTitle="Timeseries",
-#                                        strFilename=self._formatFilename("secondary.png", strRootId))
-#
-#                        r.plot(dctData['second_in_avg'], type='b', col='red', lwd=2,
-#                               xlab='Frames',
-#                               ylab='Secondary Intensity',
-#                               ylim=tplYRange)
-#                        r.grid()
-#                        r.lines(dctData['second_out_avg'], type='b', col='green', lwd=2,
-#                                ylim=tplYRange)
-#                        r.legend(1, tplYRange[0],
-#                                 legend=('in avg', 'out avg'),
-#                                 fill=('red', 'green'),
-#                                 xjust=0, yjust=0)
-#
-#                        oPlotter.close()
-
 
     def _formatFilename(self, strSuffix=None, nodeId=None, prefix=None, subPath=None, branchId=None, ext='.txt'):
         lstParts = []
@@ -1747,7 +1661,7 @@ class ClassificationCellTracker(SplitCellTracker):
                'unsupEventSelection'     :   Option(False, doc=""),
                'iForwardCheck2'          :   Option(None, doc=""),
 
-               'tc3Analysis'             :   Option(False, doc=""),
+#               'tc3Analysis'             :   Option(False, doc=""),
                'numClusters'             :   Option(None, doc=""),
                'minClusterSize'          :   Option(None, doc=""),
                'tc3Algorithms'           :   Option(None, doc=""),

@@ -84,6 +84,7 @@ class TraitDisplayMixin(object):
         if not trait_name is None:
             w_input = self.add_input(trait_name)
             trait = self._get_trait(trait_name)
+
         else:
             w_input = self._create_label(frame, label, link=link)
             frame_layout.addWidget(w_input, frame._input_cnt, 0,
@@ -105,7 +106,12 @@ class TraitDisplayMixin(object):
                 grid = None
                 alignment = None
                 last = False
-                if type(info[0]) == types.TupleType:
+
+                if isinstance(info[0], QLabel):
+                    w_group.layout().addWidget(info[0], *info[1])
+
+
+                elif type(info[0]) == types.TupleType:
                     if len(info) >= 2:
                         grid = info[1]
                     if len(info) >= 3:
@@ -162,6 +168,11 @@ class TraitDisplayMixin(object):
         w_label.setToolTip('Click on the label for help.')
         return w_label
 
+    def add_label(self, label, link, margin=3):
+        label = self._create_label(self, label, link)
+        label.setMargin(margin)
+        return label
+
     def add_input(self, trait_name, parent=None, grid=None, alignment=None,
                   last=False):
         if parent is None:
@@ -171,16 +182,10 @@ class TraitDisplayMixin(object):
         policy_expanding = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         trait = self._get_trait(trait_name)
-
         label = trait.label
         w_label = self._create_label(parent, label, link=trait_name)
         w_button = None
-        #w_doc = None
-        #w_label.setMinimumWidth(width)
-
-        # read value from settings-instance
         value = self._get_value(trait_name)
-
         handler = lambda name: lambda value: self._set_value(name, value)
 
         if isinstance(trait, StringTrait):
@@ -215,13 +220,6 @@ class TraitDisplayMixin(object):
             self.connect(w_input, SIGNAL('valueChanged(int)'),
                          handler(trait_name))
             trait.set_widget(w_input)
-#            w_input = CecogSpinBox(parent, trait.checkable)
-#            w_input.setRange(trait.min_value, trait.max_value)
-#            w_input.setSizePolicy(policy_fixed)
-#            trait.set_value(w_input, value)
-#            if not trait.step is None:
-#                w_input.setSingleStep(trait.step)
-#            self.connect(w_input.widget, SIGNAL('valueChanged(int)'), handler(name))
 
         elif isinstance(trait, FloatTrait):
             w_input = QDoubleSpinBox(parent)
@@ -251,9 +249,6 @@ class TraitDisplayMixin(object):
             w_input.setMaximumHeight(100)
             w_input.setSelectionMode(QListWidget.ExtendedSelection)
             w_input.setSizePolicy(policy_fixed)
-            #print "moo1", value
-            #value = trait.convert(value)
-            #print "moo2", value
             for item in trait.list_data:
                 w_input.addItem(str(item))
             trait.set_value(w_input, value)

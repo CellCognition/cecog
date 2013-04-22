@@ -36,7 +36,6 @@ class EventSelectionFrame(BaseProcessorFrame):
                                      AnalzyerThread,
                                      ('Start', 'Stop'))
 
-        self.add_line()
         self.add_group(None,
                        [('tracking_backwardrange', (0,0,1,1)),
                         ('tracking_forwardrange', (0,1,1,1)),
@@ -50,17 +49,13 @@ class EventSelectionFrame(BaseProcessorFrame):
                         ('tracking_forwardcheck', (3,1,1,1)),
                        ], layout='grid')
         self.add_group('unsupervised_event_selection',
-                       [('min_event_duration',),
-                       ], layout='flow')
-        self.add_line()
-        self.add_group('tc3_analysis', [
-                ('num_clusters', (0,0,1,1)),
-                ('min_cluster_size', (0,1,1,1)),
-#                ('tc3_algorithms', (0,2,1,1)),
-                ],
-                layout='grid', link='tc3_analysis')
-        self.add_expanding_spacer()
+                       [('min_event_duration', (2, 2, 1, 1)),
+                        (self.add_label('TC3 Analysis', 'tc3_analysis'), (3, 0, 1,1)),
+                        ('num_clusters', (3,2,1,1)),
+                        ('min_cluster_size', (3,3,1,1)),
+                       ], layout='grid',)
 
+        self.add_expanding_spacer()
         self._init_control(has_images=False)
 
 
@@ -68,8 +63,10 @@ class EventSelectionFrame(BaseProcessorFrame):
         settings = BaseProcessorFrame._get_modified_settings( \
             self, name, has_timelapse)
 
+        # tracking ON
         settings.set('Processing', 'tracking', True)
-        settings.set('Processing', 'tracking_synchronize_trajectories', False)
+        # event seleciton ON
+        settings.set('Processing', 'tracking_synchronize_trajectories', True)
         settings.set('General', 'rendering_class', {})
         settings.set('General', 'rendering', {})
 

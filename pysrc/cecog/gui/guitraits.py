@@ -54,7 +54,7 @@ class GuiTrait(object):
 
     def set_widget(self, widget):
         self._widget = widget
-        
+
     def get_widget(self):
         return self._widget
 
@@ -80,17 +80,17 @@ class IntTrait(traits.IntTrait, GuiNumberTrait):
         traits.IntTrait.__init__(self, default_value, min_value, max_value)
         GuiNumberTrait.__init__(self, label, step=step, tooltip=tooltip,
                                 doc=doc)
-        
+
     def set_min_value(self, min_value):
         traits.IntTrait.set_min_value(self, min_value)
         if self._widget is not None:
             self._widget.setMinimum(min_value)
-            
+
     def set_max_value(self, max_value):
         traits.IntTrait.set_max_value(self, max_value)
         if self._widget is not None:
             self._widget.setMaximum(max_value)
-        
+
 
 
 class FloatTrait(traits.FloatTrait, GuiNumberTrait):
@@ -116,7 +116,6 @@ class StringTrait(traits.StringTrait, GuiTrait):
     def set_value(self, widget, value):
         widget.setToolTip(value)
         widget.setText(value)
-
 
 class BooleanTrait(traits.BooleanTrait, GuiTrait):
 
@@ -210,4 +209,3 @@ class DictTrait(traits.DictTrait, GuiTrait):
 #-------------------------------------------------------------------------------
 # main:
 #
-
