@@ -14,6 +14,7 @@ setup_windows.py - windows specific instructions for distuils
 __author__ = 'rudolf.hoefler@gmail.com'
 
 import os, sys, glob
+from os.path import join
 from distutils.core import setup
 import py2exe
 
@@ -71,7 +72,7 @@ DLL_EXCLUDES = [ 'libgdk-win32-2.0-0.dll',
                  'API-MS-Win-Core-ProcessThreads-L1-1-0.dll',
                  'API-MS-Win-Core-ProcessEnvironment-L1-1-0.dll',
                  'API-MS-Win-Core-LocalRegistry-L1-1-0.dll',
-                 'w9xpopen.exe' ] # is not excluded for some reasion
+                 'w9xpopen.exe'] # is not excluded for some reasion
 
 setup( options = {"py2exe": { 'includes': INCLUDES,
                               'excludes': EXCLUDES,
@@ -87,6 +88,8 @@ setup( options = {"py2exe": { 'includes': INCLUDES,
        windows = [{'script': "CecogAnalyzer.py",
                    'icon_resources': [(1, 'resources\cecog_analyzer_icon.ico')]
                    }],
+       console = [{'script': join("..", "..", "pysrc", "cecog",
+                                  "batch", "batch.py")}],
        **pkginfo.metadata)
 
 try:

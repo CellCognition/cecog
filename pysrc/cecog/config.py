@@ -27,7 +27,9 @@ __all__ = ['NAMING_SCHEMAS',
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
+import sys
 import os
+from os.path import join, dirname, isdir, normpath
 import shutil
 from ConfigParser import RawConfigParser
 import csv
@@ -37,10 +39,7 @@ import csv
 #
 from pdk.fileutils import safe_mkdirs
 
-from pdk.platform import (is_mac,
-                          is_windows,
-                          is_linux,
-                          )
+from pdk.platform import is_mac, is_windows, is_linux
 
 #-------------------------------------------------------------------------------
 # cecog imports:
@@ -51,19 +50,25 @@ from cecog.util.mapping import map_path_to_os as _map_path_to_os
 #-------------------------------------------------------------------------------
 # constants:
 #
-RESOURCE_PATH            = 'resources'
+resource_paths = ['resources', join(dirname(sys.executable), 'resources')]
+
+for RESOURCE_PATH in resource_paths:
+    if isdir(RESOURCE_PATH):
+        break
+if not isdir(RESOURCE_PATH):
+    RESOURCE_PATH = join(dirname(__file__), os.pardir, os.pardir, 'apps',
+                         'CecogAnalyzer', 'resources')
+RESOURCE_PATH = normpath(RESOURCE_PATH)
+print RESOURCE_PATH
+
 if not os.path.isdir(RESOURCE_PATH):
-    RESOURCE_PATH = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 'apps',
-                                 'CecogAnalyzer', 'resources')
-    RESOURCE_PATH = os.path.normpath(RESOURCE_PATH)
-    if not os.path.isdir(RESOURCE_PATH):
-        raise IOError("Resource path '%s' not found." % RESOURCE_PATH)
+    raise IOError("Resource path '%s' not found." % RESOURCE_PATH)
 
 R_SOURCE_PATH = os.path.join(RESOURCE_PATH, 'rsrc')
 if not os.path.isdir(R_SOURCE_PATH):
-    R_SOURCE_PATH = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 'rsrc')
-    R_SOURCE_PATH = os.path.normpath(R_SOURCE_PATH)
-    if not os.path.isdir(R_SOURCE_PATH):
+    R_SOURCE_PATH = join(os.path.dirname(__file__), os.pardir, os.pardir, 'rsrc')
+    R_SOURCE_PATH = normpath(R_SOURCE_PATH)
+    if not isdir(R_SOURCE_PATH):
         raise IOError("R-source path '%s' not found." % R_SOURCE_PATH)
 
 # forward declarations defined in init_constants() (called upon import of cecog)

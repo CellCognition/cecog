@@ -7,13 +7,13 @@
 
   !include "MUI2.nsh"
   !include x64.nsh
-  
+
   ; Best Compression
   SetCompress Auto
   SetCompressor /SOLID lzma
   SetCompressorDictSize 32
   SetDatablockOptimize On
-  
+
 
 ;--------------------------------
 ;General
@@ -24,14 +24,14 @@
 
   ;Default installation folder
   InstallDir "$PROGRAMFILES64\CecogAnalyzer-${mver}"
-  
+
   ;Get installation folder from registry if available
   InstallDirRegKey HKCU "Software\CecogAnalyzer-${mver}" ""
 
   ;Request application privileges for Windows Vista
   ;RequestExecutionLevel admin
-  
-  ; MultiUser.nsh will set the RequestExecutionLevel flag to request privileges. 
+
+  ; MultiUser.nsh will set the RequestExecutionLevel flag to request privileges.
     !define MULTIUSER_EXECUTIONLEVEL Highest
     !define MULTIUSER_MUI
     ;!define MULTIUSER_NOUNINSTALL ;Uncomment if no uninstaller is created
@@ -45,8 +45,8 @@
     Function un.onInit
       !insertmacro MULTIUSER_UNINIT
     FunctionEnd
-      
-  
+
+
   ; !define MUI_WELCOMEFINISHPAGE_BITMAP ""
   ; !define MUI_WELCOMEFINISHPAGE_BITMAP_NOSTRETCH
   ; !define MUI_HEADERIMAGE
@@ -70,16 +70,16 @@
   !insertmacro MULTIUSER_PAGE_INSTALLMODE
   !insertmacro MUI_PAGE_COMPONENTS
   !insertmacro MUI_PAGE_DIRECTORY
-  
+
   ;Start Menu Folder Page Configuration
-  !define MUI_STARTMENUPAGE_REGISTRY_ROOT "HKCU" 
+  !define MUI_STARTMENUPAGE_REGISTRY_ROOT "HKCU"
   !define MUI_STARTMENUPAGE_REGISTRY_KEY "Software\CecogAnalyzer-${mver}"
   !define MUI_STARTMENUPAGE_REGISTRY_VALUENAME "Start Menu Folder"
-  
+
   !insertmacro MUI_PAGE_STARTMENU Application $StartMenuFolder
-  
+
   !insertmacro MUI_PAGE_INSTFILES
-  
+
   !insertmacro MUI_UNPAGE_CONFIRM
   !insertmacro MUI_UNPAGE_INSTFILES
   !define MUI_FINISHPAGE_NOAUTOCLOSE
@@ -93,10 +93,10 @@
 
 ;--------------------------------
 ;Languages
- 
+
   !insertmacro MUI_LANGUAGE "English"
 
-  
+
  Function LaunchLink
   SetShellVarContext all
   ;MessageBox MB_OK "Reached LaunchLink $\r$\n \
@@ -105,7 +105,7 @@
                    ;InstallDirectory: $INSTDIR "
   ExecShell "" "$SMPROGRAMS\$StartMenuFolder\CecogAnalyzer-${mver}.lnk"
 FunctionEnd
-  
+
 ; Function .onInit
   ; SetOutPath $TEMP
   ; File /oname=spltmp.bmp "logo\ilastik-splash.bmp"
@@ -127,47 +127,44 @@ Section "CecogAnalyzer" SecDummy
   SetOutPath "$INSTDIR"
   SetShellVarContext all
   RMDir /r "$%APPDATA%\CellCognition${mver}"
-  
-  File /r /x battery_package dist\*.*
-  
+
+  File /r /x battery_package /x batch.exe dist\*.*
+
   ;Store installation folder
   WriteRegStr HKCU "Software\CecogAnalyzer-${mver}" "" $INSTDIR
-  
+
   ;Create uninstaller
   WriteUninstaller "$INSTDIR\Uninstall.exe"
-  
+
   !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
-    
+
     ;Create shortcutsdist\resources\battery_package\Settings\demo_settings.conf
     SetShellVarContext all
     CreateDirectory "$SMPROGRAMS\$StartMenuFolder"
 
-    CreateShortCut "$SMPROGRAMS\$StartMenuFolder\CecogAnalyzer-${mver}.lnk" "$INSTDIR\CecogAnalyzer.exe" "" "$INSTDIR\CecogAnalyzer.exe"  
+    CreateShortCut "$SMPROGRAMS\$StartMenuFolder\CecogAnalyzer-${mver}.lnk" "$INSTDIR\CecogAnalyzer.exe" "" "$INSTDIR\CecogAnalyzer.exe"
     CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
-  
+
   AccessControl::GrantOnFile "$INSTDIR" "(S-1-5-32-545)" "FullAccess"
-  
+
   !insertmacro MUI_STARTMENU_WRITE_END
 
 SectionEnd
 
+Section /o "batch script" SecBatch
+  SetOutPath "$INSTDIR"
+  FILE dist\batch.exe
+SectionEnd
+
 Section /o "Battery package" SecDemo
-
   SetOutPath "$INSTDIR\resources\battery_package"
-  
   FILE /r dist\resources\battery_package\*.*
-
 SectionEnd
 
 ; Section "Demo Files" SecDemo
-
   ; SetOutPath "$INSTDIR"
-  
   ; FILE /r demo
-
 ; SectionEnd
-
-
 
 ;--------------------------------
 ;Descriptions
@@ -179,9 +176,10 @@ SectionEnd
   !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
     !insertmacro MUI_DESCRIPTION_TEXT ${SecDummy} $(DESC_SecDummy)
     !insertmacro MUI_DESCRIPTION_TEXT ${SecDemo} "Battery package - Example data"
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecBatch} "Console application"
     ; !insertmacro MUI_DESCRIPTION_TEXT ${SecDemo} "Demo Files will be copied into the installation folder."
   !insertmacro MUI_FUNCTION_DESCRIPTION_END
- 
+
 ;--------------------------------
 ;Uninstaller Section
 
@@ -194,13 +192,13 @@ Section "Uninstall"
   RMDir /r "$INSTDIR"
   SetShellVarContext all
   RMDir /r "$%APPDATA%\CellCognition${mver}"
-  
+
   !insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder
-    
+
   Delete "$SMPROGRAMS\$StartMenuFolder\CecogAnalyzer-${mver}.lnk"
   Delete "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk"
   RMDir /r "$SMPROGRAMS\$StartMenuFolder"
-  
+
   DeleteRegKey /ifempty HKCU "Software\CecogAnalyzer-${mver}"
 
 SectionEnd

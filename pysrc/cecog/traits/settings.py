@@ -26,7 +26,7 @@ import copy
 import cStringIO
 import os
 import shutil
-
+from cecog.config import RESOURCE_PATH
 from ConfigParser import RawConfigParser
 
 #-------------------------------------------------------------------------------
@@ -44,12 +44,6 @@ from cecog import PLUGIN_MANAGERS, VERSION
 # constants:
 #
 PACKAGE_PATH = ''
-RESOURCE_PATH            = 'resources'
-if not os.path.isdir(RESOURCE_PATH):
-    RESOURCE_PATH = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir, 'apps',
-                                 'CecogAnalyzer', 'resources')
-    if not os.path.isdir(RESOURCE_PATH):
-        raise IOError("Resource path '%s' not found." % RESOURCE_PATH)
 
 #-------------------------------------------------------------------------------
 # functions:
