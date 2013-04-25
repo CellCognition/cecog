@@ -1,0 +1,28 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="cecog_analyzer_icon">resources/cecog_analyzer_icon_128x128.png</file>
+        <file alias="cecog_logo_small_black">resources/cellcognition7_black_background.png</file>
+        <file alias="cecog_logo_w145">resources/cellcognition7_white_w145.png</file>
+        <file alias="cecog_splash">resources/cellcognition7_splash.png</file>
+        <file alias="cecog_about">resources/cellcognition7_about.png</file>
+        <file alias="question_mark">resources/question_mark.png</file>
+        <file>help/classification.html</file>
+        <file>help/errorcorrection.html</file>
+        <file>help/postprocessing.html</file>
+        <file>help/objectdetection.html</file>
+        <file>help/output.html</file>
+        <file>help/processing.html</file>
+        <file>help/tracking.html</file>
+        <file>help/_startup.html</file>
+        <file>help/general.html</file>
+        <file>help/help.css</file>
+        <file>help/_header.html</file>
+        <file>help/_footer.html</file>
+        <file alias="cecog_secondary_regions">resources/secondary_regions-01.png</file>
+        <file alias="cecog_workflow">resources/workflow-01.png</file>
+        <file alias="cecog_workflow_kinetic">resources/workflow_kinetic-01.png</file>
+        <file alias="extlink">resources/extlink.png</file>
+        <file alias="plugins/segmentation/expanded">resources/plugins/segmentation/segmentation_expanded.png</file>
+        <file alias="plugins/segmentation/local_adaptive_threshold">resources/plugins/segmentation/local_adaptive_threshold.html</file>
+    </qresource>
+</RCC>
