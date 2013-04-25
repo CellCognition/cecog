@@ -43,7 +43,6 @@ class LogWindow(QFrame):
         self._log_widget.setMaximumBlockCount(max_count)
         format = QTextCharFormat()
         format.setFontFixedPitch(True)
-#       format.setFontPointSize(11)
         self._log_widget.setCurrentCharFormat(format)
         layout.addWidget(self._log_widget, 0, 0, 1, 4)
         layout.setColumnStretch(0,2)

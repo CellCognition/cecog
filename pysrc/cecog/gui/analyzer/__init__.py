@@ -34,10 +34,10 @@ from PyQt4.Qt import *
 from collections import OrderedDict
 from pdk.datetimeutils import TimeInterval
 
-import warnings
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    import sklearn.hmm as hmm
+# import warnings
+# with warnings.catch_warnings():
+#     warnings.simplefilter("ignore")
+#     import sklearn.hmm as hmm
 
 from multiprocessing import cpu_count
 
@@ -62,14 +62,13 @@ from cecog.analyzer.channel import PrimaryChannel
 from cecog.analyzer.channel import SecondaryChannel
 from cecog.analyzer.channel import TertiaryChannel
 
+from cecog.environment import CecogEnvironment
 from cecog.analyzer.core import AnalyzerCore
 from cecog.io.imagecontainer import PIXEL_TYPES
-from cecog.config import R_SOURCE_PATH
 from cecog import ccore
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
 from cecog.traits.analyzer.postprocessing import SECTION_NAME_POST_PROCESSING
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
-from cecog.traits.settings import convert_package_path
 from cecog.analyzer.gallery import compose_galleries
 from cecog.plugin.display import PluginBay
 from cecog.gui.widgets.tabcontrol import TabControl
@@ -82,31 +81,6 @@ from cecog.threads.hmm_scafold import HmmThread_Python_Scafold
 from cecog.threads.hmm import HmmThread
 from cecog.threads.post_processing import PostProcessingThread
 from cecog.multiprocess.multianalyzer import MultiAnalyzerThread
-
-# def mk_stochastic(k):
-#     """function [T,Z] = mk_stochastic(T)
-#     MK_STOCHASTIC ensure the matrix is a stochastic matrix,
-#     i.e., the sum over the last dimension is 1."""
-#     raw_A = numpy.random.uniform( size = k * k ).reshape( ( k, k ) )
-#     return ( raw_A.T / raw_A.T.sum( 0 ) ).T
-
-# def dhmm_correction(n_clusters, labels):
-#     trans = mk_stochastic(n_clusters)
-#     eps = numpy.spacing(1)
-#     sprob = numpy.array([1-eps,eps,eps,eps,eps,eps])
-#     dhmm = hmm.MultinomialHMM(
-#         n_components=n_clusters,transmat = trans,startprob=sprob)
-#     eps = 1e-3;
-#     dhmm.emissionprob = numpy.array([[1-eps, eps, eps, eps, eps, eps],
-#                     [eps, 1-eps, eps, eps, eps, eps],
-#                     [eps, eps, 1-eps, eps, eps, eps],
-#                     [eps, eps, eps, 1-eps, eps, eps],
-#                     [eps, eps, eps, eps, 1-eps, eps],
-#                     [eps, eps, eps, eps, eps, 1-eps]]);
-#     dhmm.fit([labels], init_params ='')
-#     # vector format [1 x num_tracks *num_frames]
-#     labels_dhmm = dhmm.predict(labels)
-#     return labels_dhmm
 
 
 class BaseFrame(TraitDisplayMixin):
@@ -283,7 +257,7 @@ class _ProcessorMixin(object):
                     ]
         for section, option in converts:
             value = settings.get(section, option)
-            settings.set(section, option, convert_package_path(value))
+            settings.set(section, option, CecogEnvironment.convert_package_path(value))
         return settings
 
     def _get_modified_settings(self, name, has_timelapse):
@@ -457,7 +431,7 @@ class _ProcessorMixin(object):
                     learner_dict = {}
                     for kind in ['primary', 'secondary']:
                         _resolve = lambda x,y: self._settings.get(x, '%s_%s' % (kind, y))
-                        env_path = convert_package_path(_resolve('Classification', 'classification_envpath'))
+                        env_path = CecogEnvironment.convert_package_path(_resolve('Classification', 'classification_envpath'))
                         if (os.path.exists(env_path)
                               and (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))
                              ):
@@ -479,7 +453,7 @@ class _ProcessorMixin(object):
                     learner_dict = {}
                     for kind in ['primary', 'secondary']:
                         _resolve = lambda x,y: self._settings.get(x, '%s_%s' % (kind, y))
-                        env_path = convert_package_path(_resolve('Classification', 'classification_envpath'))
+                        env_path = CecogEnvironment.convert_package_path(_resolve('Classification', 'classification_envpath'))
                         if (_resolve('Processing', 'classification') and
                             (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))):
                             learner = CommonClassPredictor( \

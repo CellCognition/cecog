@@ -171,14 +171,15 @@ def load_qrc_text(name):
     return text
 
 
-def show_html(name, link='_top', title=None, header='_header', footer='_footer', html_text=None):
+def show_html(name, link='_top', title=None, header='_header', footer='_footer',
+              html_text=None):
     if not hasattr(qApp, 'cecog_help_dialog'):
         dialog = QFrame()
         if title is None:
             title = name
         dialog.setWindowTitle('CecogAnalyzer Help')
         layout = QVBoxLayout(dialog)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(2, 2, 2, 2)
         w_text = QTextBrowser(dialog)
         w_text.setOpenLinks(False)
         w_text.setOpenExternalLinks(False)
@@ -188,6 +189,7 @@ def show_html(name, link='_top', title=None, header='_header', footer='_footer',
         qApp.cecog_help_dialog = dialog
         qApp.cecog_help_wtext = w_text
     else:
+        #pass
         dialog = qApp.cecog_help_dialog
         w_text = qApp.cecog_help_wtext
 
@@ -215,14 +217,14 @@ def show_html(name, link='_top', title=None, header='_header', footer='_footer',
             doc.setDefaultStyleSheet(css_text)
         doc.setHtml(html_text)
         w_text.setDocument(doc)
-        #FIXME: will cause a segfault when ref is lost
+        # FIXME: will cause a segfault when ref is lost
         w_text._doc = doc
         if not link is None:
             w_text.scrollToAnchor(link)
     else:
         w_text.setHtml("We are sorry, but help for '%s' was not found." % name)
     dialog.show()
-    dialog.raise_()
+    #dialog.raise_()
 
 
 def on_anchor_clicked(link):

@@ -16,34 +16,23 @@ __source__ = '$URL$'
 
 __all__ = ['ClusterFrame']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-import types, \
-       copy, \
-       traceback,\
-       socket,\
-       urlparse
+import types
+import copy
+import traceback
+import socket
+import urlparse
 
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
 from pyamf.remoting.client import RemotingService
 
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 from cecog.traits.analyzer.cluster import SECTION_NAME_CLUSTER
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
-from cecog.config import (ANALYZER_CONFIG,
-                          map_path_to_os,
-                          )
-from cecog.gui.analyzer import (BaseFrame,
-                                )
+from cecog.environment import CecogEnvironment
+
+from cecog.gui.analyzer import BaseFrame
 from cecog.gui.analyzer.processing import ProcessingFrame
 from cecog.util.util import OS_LINUX
 from cecog.gui.util import (exception,
@@ -79,9 +68,9 @@ class ClusterDisplay(QGroupBox):
         self._toggle_state = JOB_CONTROL_SUSPEND
         self._service = None
 
-        self._host_url = ANALYZER_CONFIG.get('Cluster', 'host_url')
+        self._host_url = CecogEnvironment.analyzer_config.get('Cluster', 'host_url')
         try:
-            self._host_url_fallback = ANALYZER_CONFIG.get('Cluster', 'host_url_fallback')
+            self._host_url_fallback = CecogEnvironment.analyzer_config.get('Cluster', 'host_url_fallback')
         except:
             # old config file
             self._host_url_fallback = self._host_url
@@ -126,7 +115,7 @@ class ClusterDisplay(QGroupBox):
 
         label = QLabel('Mail addresses:', self)
         layout.addWidget(label, 4, 0, Qt.AlignRight)
-        mails = ANALYZER_CONFIG.get('Cluster', 'mail_adresses')
+        mails = CecogEnvironment.analyzer_config.get('Cluster', 'mail_adresses')
         self._txt_mail = QLineEdit(mails, self)
         layout.addWidget(self._txt_mail, 4, 1, 1, 4)
 
@@ -376,7 +365,7 @@ class ClusterDisplay(QGroupBox):
             self._table_info.setRowCount(len(mappable_paths))
             for idx, info in enumerate(mappable_paths):
                 value = self._settings.get(*info)
-                mapped = map_path_to_os(value, target_os=OS_LINUX, force=False)
+                mapped = CecogEnvironment.map_path_to_os(value, target_os=OS_LINUX, force=False)
                 self._submit_settings.set(info[0], info[1], mapped)
                 status = not mapped is None
                 item = QTableWidgetItem()

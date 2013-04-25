@@ -34,7 +34,8 @@ from cecog.threads.training import TrainingThread
 
 from cecog.learning.learning import CommonClassPredictor
 from cecog.util.util import hexToRgb
-from cecog.traits.settings import convert_package_path
+
+from cecog.environment import CecogEnvironment
 from cecog.plugin.segmentation import REGION_INFO
 
 
@@ -120,7 +121,7 @@ class ClassifierResultFrame(QGroupBox):
     def load_classifier(self, check=True):
         _resolve = lambda x,y: self._settings.get(x, '%s_%s'
                                                   % (self._channel, y))
-        clfdir = convert_package_path(_resolve('Classification',
+        clfdir = CecogEnvironment.convert_package_path(_resolve('Classification',
                                                'classification_envpath'))
         # XXX - where does the "." come
         if not isdir(clfdir) or clfdir == ".":

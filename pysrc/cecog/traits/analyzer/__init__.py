@@ -27,7 +27,7 @@ __all__ = ['SECTION_REGISTRY']
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
-from cecog.traits.settings import SectionRegistry
+from cecog.traits.config import SectionRegistry
 from cecog.traits.analyzer.general import SectionGeneral
 from cecog.traits.analyzer.objectdetection import SectionObjectdetection
 from cecog.traits.analyzer.featureextraction import SectionFeatureExtraction

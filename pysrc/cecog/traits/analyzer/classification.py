@@ -19,10 +19,11 @@ __all__ = ['SectionClassification']
 SECTION_NAME_CLASSIFICATION = 'Classification'
 
 from cecog import CHANNEL_PREFIX, CH_PRIMARY, CH_OTHER, CH_VIRTUAL
-from cecog.traits.settings import _Section
+
+from cecog.traits.analyzer.section_core import SectionCore
 from cecog.gui.guitraits import StringTrait, BooleanTrait, SelectionTrait2
 
-class SectionClassification(_Section):
+class SectionClassification(SectionCore):
 
     SECTION_NAME = SECTION_NAME_CLASSIFICATION
 

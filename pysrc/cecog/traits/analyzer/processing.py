@@ -16,36 +16,16 @@ __source__ = '$URL$'
 
 __all__ = ['SectionProcessing']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
 
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
-from cecog.traits.settings import _Section
+from cecog.traits.analyzer.section_core import SectionCore
 from cecog.gui.guitraits import BooleanTrait
 from cecog.util.util import unlist
 from cecog import CH_OTHER, CH_VIRTUAL
 
-#-------------------------------------------------------------------------------
-# constants:
-#
 SECTION_NAME_PROCESSING = 'Processing'
 
-#-------------------------------------------------------------------------------
-# functions:
-#
 
-
-#-------------------------------------------------------------------------------
-# classes:
-#
-class SectionProcessing(_Section):
+class SectionProcessing(SectionCore):
 
     SECTION_NAME = SECTION_NAME_PROCESSING
 

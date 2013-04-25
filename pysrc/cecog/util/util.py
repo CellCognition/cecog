@@ -169,18 +169,6 @@ def resolve_os_name():
         os_str = OS_LINUX
     return os_str
 
-def get_appdata_path():
-    if is_windows:
-        if 'APPDATA' in os.environ:
-            path = os.environ['APPDATA']
-        else:
-            path = os.path.expanduser("~/Application Data")
-    elif is_mac:
-        path = os.path.expanduser("~/Library/Application Support")
-    else:
-        path = os.path.expanduser("~")
-    return os.path.abspath(path)
-
 def print_memory_increase(func):
     try:
         import psutil

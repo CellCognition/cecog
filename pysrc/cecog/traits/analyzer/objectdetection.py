@@ -16,42 +16,16 @@ __source__ = '$URL$'
 
 __all__ = ['SectionObjectdetection']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
+from cecog.traits.analyzer.section_core import SectionCore
+from cecog.gui.guitraits import IntTrait, StringTrait, BooleanTrait, \
+    SelectionTrait, SelectionTrait2
 
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
-from cecog.traits.settings import _Section
-from cecog.gui.guitraits import (IntTrait,
-                                 StringTrait,
-                                 BooleanTrait,
-                                 SelectionTrait,
-                                 SelectionTrait2,
-                                 )
-from cecog.analyzer import (ZSLICE_PROJECTION_METHODS
-                            )
+from cecog.analyzer import ZSLICE_PROJECTION_METHODS
 from cecog.util.util import unlist
 
-#-------------------------------------------------------------------------------
-# constants:
-#
 SECTION_NAME_OBJECTDETECTION = 'ObjectDetection'
 
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-#-------------------------------------------------------------------------------
-# classes:
-#
-class SectionObjectdetection(_Section):
+class SectionObjectdetection(SectionCore):
 
     SECTION_NAME = SECTION_NAME_OBJECTDETECTION
 

@@ -16,43 +16,15 @@ __source__ = '$URL$'
 
 __all__ = ['SectionTracking']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
+from cecog.traits.analyzer.section_core import SectionCore
+from cecog.gui.guitraits import StringTrait, IntTrait, FloatTrait, \
+    BooleanTrait, SelectionTrait, SelectionTrait2
 
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
+from cecog.analyzer import COMPRESSION_FORMATS, TRACKING_DURATION_UNITS_DEFAULT
 
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
-from cecog.traits.settings import _Section
-from cecog.gui.guitraits import (StringTrait,
-                                 IntTrait,
-                                 FloatTrait,
-                                 BooleanTrait,
-                                 SelectionTrait,
-                                 SelectionTrait2,
-                                 )
-from cecog.analyzer import (COMPRESSION_FORMATS,
-                            TRACKING_DURATION_UNITS_DEFAULT,
-                            )
-
-#-------------------------------------------------------------------------------
-# constants:
-#
 SECTION_NAME_TRACKING = 'Tracking'
 
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
-class SectionTracking(_Section):
+class SectionTracking(SectionCore):
 
     SECTION_NAME = SECTION_NAME_TRACKING
 

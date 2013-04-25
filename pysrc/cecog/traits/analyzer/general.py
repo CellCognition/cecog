@@ -14,21 +14,11 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = []
+__all__ = ["SectionGeneral"]
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 from cecog import VERSION
-from cecog.traits.settings import _Section
+from cecog.traits.analyzer.section_core import SectionCore
+
 from cecog.gui.guitraits import (StringTrait,
                                  IntTrait,
                                  BooleanTrait,
@@ -36,23 +26,11 @@ from cecog.gui.guitraits import (StringTrait,
                                  DictTrait,
                                  ListTrait
                                  )
-from cecog.config import NAMING_SCHEMAS
+from cecog.environment import CecogEnvironment
 
-#-------------------------------------------------------------------------------
-# constants:
-#
 SECTION_NAME_GENERAL = 'General'
 
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
-
-class SectionGeneral(_Section):
+class SectionGeneral(SectionCore):
 
     SECTION_NAME = SECTION_NAME_GENERAL
 
@@ -74,8 +52,8 @@ class SectionGeneral(_Section):
             BooleanTrait(False, label='Import via coordinate file',
                          widget_info=BooleanTrait.RADIOBUTTON)),
         ('namingscheme',
-            SelectionTrait(NAMING_SCHEMAS.sections()[0],
-                           NAMING_SCHEMAS.sections(),
+            SelectionTrait(CecogEnvironment.naming_schema.sections()[0],
+                           CecogEnvironment.naming_schema.sections(),
                            label='Naming scheme')),
         ('structure_filename',
             StringTrait('', 1000, label='Coordinate filename',

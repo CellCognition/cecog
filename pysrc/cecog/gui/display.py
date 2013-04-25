@@ -16,24 +16,14 @@ __source__ = '$URL$'
 
 __all__ = ['TraitDisplayMixin']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
 import os
 import types
 import functools
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 from cecog.gui.guitraits import (StringTrait,
                                  IntTrait,
                                  FloatTrait,
@@ -44,22 +34,8 @@ from cecog.gui.guitraits import (StringTrait,
                                  DictTrait,
                                  ListTrait
                                  )
-from cecog.traits.settings import convert_package_path
+from cecog.environment import CecogEnvironment
 from cecog.gui.util import show_html
-
-#-------------------------------------------------------------------------------
-# constants:
-#
-
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 
 class TraitDisplayMixin(QFrame):
 
@@ -441,7 +417,7 @@ class TraitDisplayMixin(QFrame):
     def _on_browse_name(self, name, mode):
         # FIXME: signals are send during init were registry is not set yet
         if name in self._registry:
-            input = convert_package_path(str(self._registry[name].text()))
+            input = CecogEnvironment.convert_package_path(str(self._registry[name].text()))
             dir = os.path.abspath(input)
             if mode == StringTrait.STRING_FILE:
                 result = QFileDialog.getOpenFileName(self, 'Select a file', dir)

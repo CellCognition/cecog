@@ -16,19 +16,12 @@ __source__ = '$URL$'
 
 __all__ = ['Browser']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-import os, \
-       re, \
-       numpy, \
-       time, \
-       shutil, \
-       math
+import os
+import re
+import numpy
+import time
+import shutil
+import math
 
 from xml.dom import minidom
 
@@ -40,9 +33,6 @@ from pdk.datetimeutils import StopWatch
 from pdk.ordereddict import OrderedDict
 from pdk.fileutils import safe_mkdirs
 
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 from cecog.gui.util import (exception,
                             information,
                             question,
@@ -60,26 +50,11 @@ from cecog.analyzer.channel import (PrimaryChannel,
 from cecog.analyzer.core import AnalyzerCore
 from cecog import ccore
 from cecog.util.util import hexToRgb
-from cecog.traits.settings import convert_package_path
 from cecog.io.imagecontainer import Coordinate
 from cecog.learning.learning import BaseLearner
 from cecog.gui.widgets.groupbox import QxtGroupBox
 from cecog.gui.widgets.colorbutton import ColorButton
 from cecog.gui.modules.module import Module
-#-------------------------------------------------------------------------------
-# constants:
-#
-
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
-
 
 class Annotations(object):
 

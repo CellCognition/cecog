@@ -27,7 +27,7 @@ from cecog import ccore
 from cecog.threads.link_hdf import link_hdf5_files
 from cecog.analyzer.core import AnalyzerCore
 from cecog.threads.analyzer import AnalyzerThread
-from cecog.traits.settings import ConfigSettings
+from cecog.traits.config import ConfigSettings
 from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.multiprocess import mplogging as lg

@@ -17,7 +17,7 @@ __source__ = '$URL$'
 __all__ = ['GuiConfigSettings']
 
 import copy
-from cecog.traits.settings import ConfigSettings
+from cecog.traits.config import ConfigSettings
 
 class GuiConfigSettings(ConfigSettings):
     """Extended ConfigSettings to set the window modified flag of the parent

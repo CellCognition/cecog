@@ -16,38 +16,12 @@ __source__ = '$URL$'
 
 __all__ = ['SectionErrorcorrection']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
+from cecog.traits.analyzer.section_core import SectionCore
+from cecog.gui.guitraits import StringTrait, FloatTrait, BooleanTrait, IntTrait
 
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
-from cecog.traits.settings import _Section
-from cecog.gui.guitraits import (StringTrait,
-                                 FloatTrait,
-                                 BooleanTrait,
-                                 IntTrait,
-                                 )
-
-#-------------------------------------------------------------------------------
-# constants:
-#
 SECTION_NAME_ERRORCORRECTION = 'ErrorCorrection'
 
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
-class SectionErrorcorrection(_Section):
+class SectionErrorcorrection(SectionCore):
 
     SECTION_NAME = SECTION_NAME_ERRORCORRECTION
 

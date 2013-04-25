@@ -16,12 +16,12 @@ __source__ = '$URL$'
 
 __all__ = ['SectionOutput']
 
-from cecog.traits.settings import _Section
+from cecog.traits.analyzer.section_core import SectionCore
 from cecog.gui.guitraits import BooleanTrait, IntTrait
 
 SECTION_NAME_OUTPUT = 'Output'
 
-class SectionOutput(_Section):
+class SectionOutput(SectionCore):
 
     SECTION_NAME = SECTION_NAME_OUTPUT
 

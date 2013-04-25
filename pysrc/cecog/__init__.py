@@ -14,25 +14,15 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = ['VERSION', 'VERSION_NUM', 'PLUGIN_MANAGERS', 'CHANNEL_PREFIX', 'APPNAME']
+__all__ = ['VERSION', 'VERSION_NUM', 'PLUGIN_MANAGERS',
+           'CHANNEL_PREFIX', 'APPNAME']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-from collections import namedtuple
-
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
-from cecog.config import (init_constants,
-                          init_application_support_path)
-#-------------------------------------------------------------------------------
-# constants:
-#
+# move this constants to version.py module
 VERSION_NUM = (1, 4, 0)
-VERSION = '.'.join([str(digit) for digit in VERSION_NUM])
+VERSION = '.'.join([str(n) for n in VERSION_NUM])
 APPNAME = 'CecogAnalyzer'
 
+# XXX function in CecogEnvironment class
 HAS_GUI = False
 
 JOB_CONTROL_SUSPEND = 'Suspend'
@@ -42,10 +32,8 @@ JOB_CONTROL_TERMINATE = 'Terminate'
 SEGMENTATION_MANAGERS = []
 PLUGIN_MANAGERS = []
 
+# XXX move this constants to the channels module
 CH_PRIMARY = ["primary"]
 CH_VIRTUAL = ["merged"]
 CH_OTHER = ["secondary", "tertiary"]
 CHANNEL_PREFIX = CH_PRIMARY + CH_OTHER + CH_VIRTUAL
-
-init_application_support_path(VERSION)
-init_constants()

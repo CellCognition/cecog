@@ -35,8 +35,8 @@ from PyQt4.QtCore import *
 from collections import OrderedDict
 import vigra
 
-from cecog.config import NAMING_SCHEMAS
-from cecog.traits.settings import convert_package_path
+from cecog.environment import CecogEnvironment
+# from cecog.trai import convert_package_path
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog import ccore
 
@@ -534,8 +534,10 @@ class ImageContainer(object):
     @classmethod
     def iter_check_plates(cls, settings):
         settings.set_section(SECTION_NAME_GENERAL)
-        path_in = convert_package_path(settings.get2('pathin'))
-        path_out = convert_package_path(settings.get2('pathout'))
+        path_in = CecogEnvironment.convert_package_path(
+            settings.get2('pathin'))
+        path_out = CecogEnvironment.convert_package_path(
+            settings.get2('pathout'))
         has_multiple_plates = settings.get2('has_multiple_plates')
 
         if has_multiple_plates:
@@ -582,7 +584,7 @@ class ImageContainer(object):
             # (re)scan the file structure
             if scan_plate:
                 if settings.get2('image_import_namingschema'):
-                    config_parser = NAMING_SCHEMAS
+                    config_parser = CecogEnvironment.naming_schema
                     section_name = settings.get2('namingscheme')
                     importer = IniFileImporter(path_plate_in,
                                                config_parser, section_name)

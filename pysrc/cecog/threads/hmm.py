@@ -18,7 +18,8 @@ from os.path import join, isfile, abspath, isdir
 from PyQt4 import QtCore, QtGui
 
 from cecog.util.util import write_table, makedirs
-from cecog.config import R_SOURCE_PATH
+from cecog.environment import CecogEnvironment
+# from cecog.config import R_SOURCE_PATH
 from cecog.threads.corethread import CoreThread
 from cecog.analyzer.gallery import compose_galleries
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
@@ -105,7 +106,7 @@ class HmmThread(CoreThread):
 
         path_out = self._imagecontainer.get_path_out()
 
-        wd = abspath(join(R_SOURCE_PATH, 'hmm'))
+        wd = abspath(join(CecogEnvironment.R_SOURCE_PATH, 'hmm'))
         f = file(join(wd, 'run_hmm.R'), 'r')
         lines = f.readlines()
         f.close()

@@ -16,34 +16,12 @@ __source__ = '$URL$'
 
 __all__ = ['SectionCluster']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
-from cecog.traits.settings import _Section
+from cecog.traits.analyzer.section_core import SectionCore
 from cecog.gui.guitraits import IntTrait
 
-#-------------------------------------------------------------------------------
-# constants:
-#
 SECTION_NAME_CLUSTER = 'Cluster'
 
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
-class SectionCluster(_Section):
+class SectionCluster(SectionCore):
 
     SECTION_NAME = SECTION_NAME_CLUSTER
 

@@ -16,7 +16,7 @@ __source__ = '$URL$'
 
 __all__ = ['SectionFeatureExtraction']
 
-from cecog.traits.settings import _Section
+from cecog.traits.analyzer.section_core import SectionCore
 from cecog.gui.guitraits import StringTrait, BooleanTrait
 
 SECTION_NAME_FEATURE_EXTRACTION = 'FeatureExtraction'
@@ -33,7 +33,7 @@ FEATURE_CATEGORY_DESC = ['Basic shape features',
                          'Granulometry features',
                          'Moments']
 
-class SectionFeatureExtraction(_Section):
+class SectionFeatureExtraction(SectionCore):
 
     SECTION_NAME = SECTION_NAME_FEATURE_EXTRACTION
 

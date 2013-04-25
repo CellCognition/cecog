@@ -34,7 +34,7 @@ from pdk.datetimeutils import StopWatch
 from cecog.colors import Colors
 from cecog.gui.modules.module import Module
 from cecog.gui.widgets.colorbox import ColorBox
-from cecog.config import RESOURCE_PATH
+from cecog.environment import CecogEnvironment
 from cecog.util.palette import (NucMedPalette,
                                 ZeissPalette,
                                 SingleColorPalette)
@@ -510,10 +510,11 @@ class DisplayModule(Module):
         palettes = OrderedDict()
 
         for name in DEFAULT_LUT_COLORS:
-            p = SingleColorPalette.from_hex_color(name,
-                                                  COLOR_DEFINITIONS[name])
+            p = SingleColorPalette.from_hex_color(name, COLOR_DEFINITIONS[name])
             palettes[p.name] = p
-        path_zeiss = os.path.join(RESOURCE_PATH, 'palettes', 'zeiss')
+        # iterator over palettes
+        path_zeiss = os.path.join(CecogEnvironment.RESOURCE_DIR,
+                                  'palettes', 'zeiss')
         for filename in collect_files(path_zeiss, ['.zip'], absolute=True):
             with zipfile.ZipFile(filename, 'r') as f:
                 name = f.namelist()[0]

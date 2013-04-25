@@ -14,50 +14,45 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-import gc
 import os
 import sys
+import numpy
 import logging
+import argparse
+
+from os.path import join
 from multiprocessing import freeze_support
+from collections import OrderedDict
 
 # use agg as long no Figure canvas will draw any qwidget
 import matplotlib as mpl
 mpl.use('Agg')
 
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
 import sip
 # set PyQt API version to 2.0
 sip.setapi('QString', 2)
 sip.setapi('QVariant', 2)
 sip.setapi('QUrl', 2)
 
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
-from PyQt4.Qt import *
+from PyQt4 import QtGui
+from PyQt4 import QtCore
+from PyQt4.Qt import qApp
+from PyQt4.QtCore import Qt
+from PyQt4.QtGui import QMessageBox
 
 try:
     import cecog
 except ImportError:
     sys.path.append(os.path.join(os.pardir, os.pardir, "pysrc"))
+    import cecog
 
-from pdk.ordereddict import OrderedDict
-
-import numpy
-
-from cecog import VERSION, APPNAME
-from cecog.analyzer import R_LIBRARIES
+# from cecog import VERSION, APPNAME
+from cecog.util.util import makedirs
+from cecog.environment import CecogEnvironment
 from cecog.analyzer import TRACKING_DURATION_UNITS_TIMELAPSE
 from cecog.analyzer import TRACKING_DURATION_UNITS_DEFAULT
 
 from cecog.io.imagecontainer import ImageContainer
-from cecog.config import ANALYZER_CONFIG
-from cecog.config import APPLICATION_SUPPORT_PATH
-from cecog.config import init_application_support_path
 
 from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.gui.config import GuiConfigSettings
@@ -77,9 +72,6 @@ from cecog.gui.analyzer.cluster import ClusterFrame
 
 from cecog.gui.browser import Browser
 from cecog.gui.log import GuiLogHandler, LogWindow
-from cecog.traits.settings import convert_package_path
-from cecog.traits.settings import set_package_path
-from cecog.traits.settings import get_package_path
 
 
 from cecog.gui.util import (status,
@@ -91,94 +83,131 @@ from cecog.gui.util import (status,
                             warning,
                             waitingProgressDialog)
 
+# compiled from qrc file
 import resource
 
+def enable_eclipse_debuging():
+    try:
+        import pydevd
+        pydevd.connected = True
+        pydevd.settrace(suspend=False)
+        print 'Thread enabled interactive eclipse debuging...'
+    except:
+        pass
 
-class AnalyzerMainWindow(QMainWindow):
-
-    TITLE = '-'.join((APPNAME, VERSION))
-    NAME_FILTERS = ['Settings files (*.conf)', 'All files (*.*)']
-
-    modified = pyqtSignal('bool')
+class CecogAboutDialog(QtGui.QDialog):
 
     def __init__(self, *args, **kw):
-        super(AnalyzerMainWindow, self).__init__(*args, **kw)
-        qApp._main_window = self
+        super(CecogAboutDialog, self).__init__(*args, **kw)
+        self.setBackgroundRole(QtGui.QPalette.Dark)
+        self.setStyleSheet('background: #000000; '
+                           'background-image: url(:cecog_about)')
+        self.setWindowTitle('About CecogAnalyzer')
+        self.setFixedSize(400, 300)
+        layout = QtGui.QGridLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        label1 = QtGui.QLabel(self)
+        label1.setStyleSheet('background: transparent;')
+        label1.setAlignment(Qt.AlignCenter)
+        label1.setText('CecogAnalyzer\nVersion %s\n\n'
+                       'Copyright (c) 2006 - 2011\n' %cecog.VERSION)
+
+        label2 = QtGui.QLabel(self)
+        label2.setStyleSheet('background: transparent;')
+        label2.setTextFormat(Qt.AutoText)
+        label2.setOpenExternalLinks(True)
+        label2.setAlignment(Qt.AlignCenter)
+
+        label2.setText(('<style>a { color: green; } a:visited { color: green;'
+                        ' }</style><a href="http://cellcognition.org">'
+                        'cellcognition.org</a><br>'))
+        layout.addWidget(label1, 1, 0)
+        layout.addWidget(label2, 2, 0)
+        layout.setAlignment(Qt.AlignCenter|Qt.AlignBottom)
+        self.setLayout(layout)
+
+
+class CecogAnalyzer(QtGui.QMainWindow):
+
+    NAME_FILTERS = ['Settings files (*.conf)', 'All files (*.*)']
+    modified = QtCore.pyqtSignal('bool')
+
+    def __init__(self, appname, version, redirect, debug=False, *args, **kw):
+        super(CecogAnalyzer, self).__init__(*args, **kw)
+        self.setWindowTitle("%s-%s" %(appname, version) + '[*]')
+        self.setCentralWidget(QtGui.QFrame(self))
+        self.setObjectName(appname)
+
+        self.version = version
+        self.appname = appname
+        self.debug = debug
+
+        self.environ = CecogEnvironment(version, redirect=redirect, debug=debug)
+        if debug:
+            self.environ.pprint()
 
         self._is_initialized = False
-        self._debug = False
         self._imagecontainer = None
         self._meta_data = None
         self._browser = None
 
-        self.setWindowTitle(self.TITLE + '[*]')
-        self.setCentralWidget(QFrame(self))
-
-        action_about = self.create_action('&About', slot=self._on_about)
-        action_quit = self.create_action('&Quit', slot=self._on_quit)
+        action_quit = self.create_action('&Quit', slot=self.close)
         action_pref = self.create_action('&Preferences',
-                                         slot=self._on_preferences)
+                                         slot=self.open_preferences)
 
-        #action_new = self.create_action('&New...', shortcut=QKeySequence.New,
-        #                                  icon='filenew')
         action_open = self.create_action('&Open Settings...',
-                                         shortcut=QKeySequence.Open,
-                                         slot=self._on_file_open
-                                         )
+                                         shortcut=QtGui.QKeySequence.Open,
+                                         slot=self._on_file_open)
         action_save = self.create_action('&Save Settings',
-                                         shortcut=QKeySequence.Save,
-                                         slot=self._on_file_save
-                                         )
+                                         shortcut=QtGui.QKeySequence.Save,
+                                         slot=self._on_file_save)
         self.action_save = action_save
         action_save_as = self.create_action('&Save Settings As...',
-                                            shortcut=QKeySequence.SaveAs,
-                                            slot=self._on_file_save_as
-                                            )
+                                            shortcut=QtGui.QKeySequence.SaveAs,
+                                            slot=self._on_file_save_as)
         menu_file = self.menuBar().addMenu('&File')
-        self.add_actions(menu_file, (action_about, action_pref,
+        self.add_actions(menu_file, (action_pref,
                                      None, action_open,
                                      None, action_save, action_save_as,
                                      None, action_quit))
 
         action_open = self.create_action('&Open Browser...',
-                                         shortcut=QKeySequence('CTRL+B'),
-                                         slot=self._on_browser_open
-                                         )
+                                         shortcut=QtGui.QKeySequence('CTRL+B'),
+                                         slot=self._on_browser_open)
         menu_browser = self.menuBar().addMenu('&Browser')
-        self.add_actions(menu_browser, (action_open,
-                                     #None, action_save, action_save_as,
-                                     #None, action_quit
-                                     ))
+        self.add_actions(menu_browser, (action_open, ))
 
         action_log = self.create_action('&Show Log Window...',
-                                        shortcut=QKeySequence(Qt.CTRL + Qt.Key_L),
-                                        slot=self._on_show_log_window
-                                        )
+                                        shortcut=QtGui.QKeySequence(Qt.CTRL + Qt.Key_L),
+                                        slot=self._on_show_log_window)
         menu_window = self.menuBar().addMenu('&Window')
-        self.add_actions(menu_window, (action_log,
-                                       ))
+        self.add_actions(menu_window, (action_log,))
 
         action_help_startup = self.create_action('&Startup Help...',
-                                                 shortcut=QKeySequence.HelpContents,
-                                                 slot=self._on_help_startup
-                                                )
-        menu_help = self.menuBar().addMenu('&Help')
-        self.add_actions(menu_help, (action_help_startup,))
+                                                 shortcut=QtGui.QKeySequence.HelpContents,
+                                                 slot=self._on_help_startup)
+        action_about = self.create_action('&About', slot=self.on_about)
 
-        qApp._statusbar = QStatusBar(self)
+        menu_help = self.menuBar().addMenu('&Help')
+        self.add_actions(menu_help, (action_help_startup, action_about))
+
+        qApp._main_window = self
+        qApp._statusbar = QtGui.QStatusBar(self)
         self.setStatusBar(qApp._statusbar)
 
-        self._selection = QListWidget(self.centralWidget())
-        self._selection.setViewMode(QListView.IconMode)
-        self._selection.setIconSize(QSize(35, 35))
-        self._selection.setGridSize(QSize(140, 60))
-        self._selection.setMovement(QListView.Static)
+        self._selection = QtGui.QListWidget(self.centralWidget())
+        self._selection.setViewMode(QtGui.QListView.IconMode)
+        self._selection.setIconSize(QtCore.QSize(35, 35))
+        self._selection.setGridSize(QtCore.QSize(140, 60))
+        self._selection.setMovement(QtGui.QListView.Static)
         self._selection.setMaximumWidth(self._selection.gridSize().width() + 5)
         self._selection.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self._selection.setSizePolicy(QSizePolicy(QSizePolicy.Fixed,
-                                                  QSizePolicy.Expanding))
+        self._selection.setSizePolicy(
+            QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed,
+                              QtGui.QSizePolicy.Expanding))
 
-        self._pages = QStackedWidget(self.centralWidget())
+        self._pages = QtGui.QStackedWidget(self.centralWidget())
         self._pages.main_window = self
 
         self._settings_filename = None
@@ -193,9 +222,9 @@ class AnalyzerMainWindow(QMainWindow):
                       ErrorCorrectionFrame(self._settings, self._pages),
                       PostProcessingFrame(self._settings, self._pages),
                       OutputFrame(self._settings, self._pages),
-                      ProcessingFrame(self._settings, self._pages),
-                      ]
-        if ANALYZER_CONFIG.get('Analyzer', 'cluster_support'):
+                      ProcessingFrame(self._settings, self._pages)]
+
+        if self.environ.analyzer_config.get('Analyzer', 'cluster_support'):
             self._tabs.append(ClusterFrame(self._settings, self._pages))
 
         widths = []
@@ -208,10 +237,10 @@ class AnalyzerMainWindow(QMainWindow):
         self._selection.currentItemChanged.connect(self._on_change_page)
         self._selection.setCurrentRow(0)
 
-        w_logo = QLabel(self.centralWidget())
-        w_logo.setPixmap(QPixmap(':cecog_logo_w145'))
+        w_logo = QtGui.QLabel(self.centralWidget())
+        w_logo.setPixmap(QtGui.QPixmap(':cecog_logo_w145'))
 
-        layout = QGridLayout(self.centralWidget())
+        layout = QtGui.QGridLayout(self.centralWidget())
         layout.addWidget(self._selection, 0, 0)
         layout.addWidget(w_logo, 1, 0, Qt.AlignBottom | Qt.AlignHCenter)
         layout.addWidget(self._pages, 0, 1, 2, 1)
@@ -222,73 +251,31 @@ class AnalyzerMainWindow(QMainWindow):
         qApp._log_window.setGeometry(50, 50, 600, 300)
 
         logger = logging.getLogger()
-        qApp._log_handler.setLevel(logging.NOTSET)
+        qApp._log_handler.setLevel(logging.INFO)
         formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
         qApp._log_handler.setFormatter(formatter)
-        #logger.addHandler(self._handler)
-        logger.setLevel(logging.NOTSET)
+        logger.setLevel(logging.INFO)
 
         qApp._image_dialog = None
         qApp._graphics = None
 
         self.setGeometry(0, 0, 1200, 700)
-        self.setMinimumSize(QSize(700, 600))
-        self.show()
-        self.center()
-        self.raise_()
+        self.setMinimumSize(QtCore.QSize(700, 600))
         self._is_initialized = True
 
+    def show(self):
+        super(CecogAnalyzer, self).show()
+        self.center()
+
     def closeEvent(self, event):
-        '''
-        The app should quit when the main window is closed.
-        '''
-        if not self._exit_app():
+        # Quit dialog only if not debuging flag is not set
+        if self.debug:
+            return
+        ret = QMessageBox.question(self, "Quit %s" %self.appname,
+                                   "Do you really want to quit?",
+                                   QMessageBox.Yes|QMessageBox.No)
+        if self._check_settings_saved() and ret == QMessageBox.No:
             event.ignore()
-
-    def test_r_import(self):
-        try:
-            import rpy2.robjects as robjects
-            import rpy2.rinterface as rinterface
-            import rpy2.robjects.numpy2ri
-
-            # some tests
-            x = robjects.r['pi']
-            v = robjects.FloatVector([1.1, 2.2, 3.3, 4.4, 5.5, 6.6])
-            m = robjects.r['matrix'](v, nrow=2)
-            has_R_version = True
-            version = '%s.%s' % (robjects.r['version'][5][0],
-                                 robjects.r['version'][6][0])
-        except:
-            has_R_version = False
-            msg = 'R installation not found.\n\n'\
-                  'To use HMM error correction or plotting functions '\
-                  'R >= Version 2.9 must be installed together with these.'\
-                  'packages:\n'
-            msg += ', '.join(R_LIBRARIES)
-            msg += '\n\nSee http://www.r-project.org\n\n'
-            critical(self, 'R installation not found', info=msg, detail_tb=True)
-
-
-        if has_R_version:
-            missing_libs = []
-            buffer = []
-            rinterface.setWriteConsole(lambda x: buffer.append(x))
-            for lib_name in R_LIBRARIES:
-                try:
-                    robjects.r['library'](lib_name)
-                except:
-                    missing_libs.append(lib_name)
-            rinterface.setWriteConsole(None)
-            if len(missing_libs) > 0:
-                msg = 'Missing R package(s)\n\n'
-                msg += ', '.join(missing_libs)
-                msg += '\n\nSee http://www.r-project.org\n\n'
-                msg += '\n'.join(buffer)
-
-                critical(self, 'Missing R libraries', info=msg, detail_tb=True)
-                qApp.valid_R_version = False
-            else:
-                qApp.valid_R_version = True
 
     def settings_changed(self, changed):
         if self._is_initialized:
@@ -297,8 +284,8 @@ class AnalyzerMainWindow(QMainWindow):
             self.modified.emit(changed)
 
     def _add_page(self, widget):
-        button = QListWidgetItem(self._selection)
-        button.setIcon(QIcon(widget.ICON))
+        button = QtGui.QListWidgetItem(self._selection)
+        button.setIcon(QtGui.QIcon(widget.ICON))
         button.setText(widget.get_name())
         button.setTextAlignment(Qt.AlignHCenter)
         self._pages.addWidget(widget)
@@ -308,9 +295,7 @@ class AnalyzerMainWindow(QMainWindow):
         return widget.size()
 
     def _on_toggle_tabs(self, name):
-        '''
-        toggle ItemIsEnabled flag for all list items but name
-        '''
+        """Toggle ItemIsEnabled flag for all list items but name."""
         for name2 in self._tab_lookup:
             if name2 != name:
                 item, widget = self._tab_lookup[name2]
@@ -344,21 +329,8 @@ class AnalyzerMainWindow(QMainWindow):
             result = QMessageBox.No
         return result
 
-    def _exit_app(self):
-        do_exit = False
-        if not self._debug:
-            if question(self, 'Do you really want to exit?', modal=True):
-                if self._check_settings_saved() != QMessageBox.Cancel:
-                    do_exit = True
-                    qApp.exit()
-        else:
-            do_exit = True
-            qApp.exit()
-        return do_exit
-
-
     def center(self):
-        screen = QDesktopWidget().screenGeometry()
+        screen = QtGui.QDesktopWidget().screenGeometry()
         size = self.geometry()
         self.move((screen.width() - size.width()) / 2,
         (screen.height() - size.height()) / 2)
@@ -373,16 +345,16 @@ class AnalyzerMainWindow(QMainWindow):
     def create_action(self, text, slot=None, shortcut=None, icon=None,
                       tooltip=None, checkable=None, signal='triggered()',
                       checked=False):
-        action = QAction(text, self)
+        action = QtGui.QAction(text, self)
         if icon is not None:
-            action.setIcon(QIcon(':/%s.png' % icon))
+            action.setIcon(QtGui.QIcon(':/%s.png' % icon))
         if shortcut is not None:
             action.setShortcut(shortcut)
         if tooltip is not None:
             action.setToolTip(tooltip)
             action.setStatusTip(tooltip)
         if slot is not None:
-            self.connect(action, SIGNAL(signal), slot)
+            self.connect(action, QtCore.SIGNAL(signal), slot)
         if checkable is not None:
             action.setCheckable(True)
         action.setChecked(checked)
@@ -391,7 +363,7 @@ class AnalyzerMainWindow(QMainWindow):
     def save_settings(self, save_as=False):
         filename = self._settings_filename
         if filename is None or save_as:
-            filename = self.__get_save_as_filename()
+            filename = self._get_save_as_filename()
         if not filename is None:
             self._write_settings(filename)
 
@@ -406,7 +378,8 @@ class AnalyzerMainWindow(QMainWindow):
             status('Settings not successfully loaded.')
         else:
             self._settings_filename = filename
-            self.setWindowTitle('%s - %s[*]' % (self.TITLE, filename))
+            title = self.windowTitle().split(' - ')[0]
+            self.setWindowTitle('%s - %s[*]' % (title, filename))
             try:
                 for widget in self._tabs:
                     widget.update_input()
@@ -417,7 +390,7 @@ class AnalyzerMainWindow(QMainWindow):
                          detail_tb=True)
             else:
                 # convert settings
-                if VERSION > self._settings.get('General', 'version'):
+                if self.version > self._settings.get('General', 'version'):
                     print 'print new version'
 
 
@@ -444,51 +417,16 @@ class AnalyzerMainWindow(QMainWindow):
             status('Settings not successfully saved.')
         else:
             self._settings_filename = filename
-            self.setWindowTitle('%s - %s[*]' % (self.TITLE, filename))
+            self.setWindowTitle('%s - %s[*]' % (self.appname, filename))
             self.settings_changed(False)
             status('Settings successfully saved.')
 
-    def _on_about(self):
-        dialog = QDialog(self)
-        dialog.setBackgroundRole(QPalette.Dark)
-        dialog.setStyleSheet('background: #000000; '
-                             'background-image: url(:cecog_about)')
-        dialog.setWindowTitle('About CecogAnalyzer')
-        dialog.setFixedSize(400, 300)
-        layout = QGridLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        #image = QImage(':cecog_splash')
-        #label1 = QLabel(dialog)
-        #label1.setStyleSheet('background-image: url(:cecog_splash)')
-        #label1.setPixmap(QPixmap.fromImage(image))
-        #layout.addWidget(label1, 0, 0)
-        label2 = QLabel(dialog)
-        label2.setStyleSheet('background: transparent;')
-        label2.setAlignment(Qt.AlignCenter)
-        label2.setText('CecogAnalyzer\nVersion %s\n\n'
-                       'Copyright (c) 2006 - 2011\n' % VERSION)
-        label3 = QLabel(dialog)
-        label3.setStyleSheet('background: transparent;')
-        label3.setTextFormat(Qt.AutoText)
-        label3.setOpenExternalLinks(True)
-        label3.setAlignment(Qt.AlignCenter)
-        #palette = label2.palette()
-        #palette.link = QBrush(QColor(200,200,200))
-        #label3.setPalette(palette)
-        label3.setText('<style>a { color: green; } a:visited { color: green; }</style>'
-                       '<a href="http://cellcognition.org">cellcognition.org</a><br>')
-        layout.addWidget(label2, 1, 0)
-        layout.addWidget(label3, 2, 0)
-        layout.setAlignment(Qt.AlignCenter |
-                            Qt.AlignBottom)
-        dialog.setLayout(layout)
+    def on_about(self):
+        dialog = CecogAboutDialog(self)
         dialog.show()
 
-    def _on_preferences(self):
+    def open_preferences(self):
         print "pref"
-
-    def _on_quit(self):
-        self._exit_app()
 
     def _on_browser_open(self):
         if self._imagecontainer is None:
@@ -497,8 +435,7 @@ class AnalyzerMainWindow(QMainWindow):
                     'Please click "Load image data" in General.')
         elif self._browser is None:
             try:
-                browser = Browser(self._settings,
-                                  self._imagecontainer)
+                browser = Browser(self._settings, self._imagecontainer)
                 browser.show()
                 browser.raise_()
                 browser.setFocus()
@@ -515,7 +452,7 @@ class AnalyzerMainWindow(QMainWindow):
         if path_in == '':
             critical(self, txt, "Image path must be defined.")
         elif not os.path.isdir(path_in) and \
-             not os.path.isdir(os.path.join(get_package_path(), path_in)):
+             not os.path.isdir(os.path.join(self.environ.PACKAGE_DIR, path_in)):
             critical(self, txt, "Image path '%s' not found." % path_in)
         else:
             try:
@@ -547,17 +484,17 @@ class AnalyzerMainWindow(QMainWindow):
                                         ('\n'.join(found_plates),
                                          '\n'.join(missing_plates)))
                     if not has_missing:
-                        btn1 = QPushButton('No', box)
+                        btn1 = QtGui.QPushButton('No', box)
                         box.addButton(btn1, QMessageBox.NoRole)
                         box.setDefaultButton(btn1)
                     elif len(found_plates) > 0:
-                        btn1 = QPushButton('Rescan missing', box)
+                        btn1 = QtGui.QPushButton('Rescan missing', box)
                         box.addButton(btn1, QMessageBox.YesRole)
                         box.setDefaultButton(btn1)
                     else:
                         btn1 = None
 
-                    btn2 = QPushButton('Rescan all', box)
+                    btn2 = QtGui.QPushButton('Rescan all', box)
                     box.addButton(btn2, QMessageBox.YesRole)
 
                     if box.exec_() == QMessageBox.Cancel:
@@ -674,54 +611,56 @@ class AnalyzerMainWindow(QMainWindow):
                              self._imagecontainer.get_meta_data().dim_x, \
                              self._imagecontainer.get_meta_data().dim_y
 
-        trait_x0 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_x0')
-        trait_y0 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_y0')
-        trait_x1 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_x1')
-        trait_y1 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_y1')
+        tr_x0 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_x0')
+        tr_y0 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_y0')
+        tr_x1 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_x1')
+        tr_y1 = self._settings.get_trait(SECTION_NAME_GENERAL, 'crop_image_y1')
 
         # Check if the crop values are valid
-        if x0 > 0 and y0 > 0 and x1 <= x1_ and y1 <= y1_ and x0 != x1 and y0 != y1:
+        if x0 > 0 and y0 > 0 and x1 <= x1_ and y1 <= y1_ and \
+                x0 != x1 and y0 != y1:
             # Set to default values
-            trait_x0.set_value(trait_x0.get_widget(), x0)
-            trait_y0.set_value(trait_y0.get_widget(), y0)
-            trait_x1.set_value(trait_x1.get_widget(), x1)
-            trait_y0.set_value(trait_y1.get_widget(), y1)
+            tr_x0.set_value(tr_x0.get_widget(), x0)
+            tr_y0.set_value(tr_y0.get_widget(), y0)
+            tr_x1.set_value(tr_x1.get_widget(), x1)
+            tr_y0.set_value(tr_y1.get_widget(), y1)
         else:
-            trait_x0.set_value(trait_x0.get_widget(), x0_)
-            trait_y0.set_value(trait_y0.get_widget(), y0_)
-            trait_x1.set_value(trait_x1.get_widget(), x1_)
-            trait_y0.set_value(trait_y1.get_widget(), y1_)
+            tr_x0.set_value(tr_x0.get_widget(), x0_)
+            tr_y0.set_value(tr_y0.get_widget(), y0_)
+            tr_x1.set_value(tr_x1.get_widget(), x1_)
+            tr_y0.set_value(tr_y1.get_widget(), y1_)
 
         # Set GUI widget valid ranges
-        trait_x0.set_min_value(x0_)
-        trait_x0.set_max_value(x1_)
-        trait_y0.set_min_value(y0_)
-        trait_y0.set_max_value(y1_)
-        trait_x1.set_min_value(x0_)
-        trait_x1.set_max_value(x1_)
-        trait_y1.set_min_value(y0_)
-        trait_y1.set_max_value(y1_)
+        tr_x0.set_min_value(x0_)
+        tr_x0.set_max_value(x1_)
+        tr_y0.set_min_value(y0_)
+        tr_y0.set_max_value(y1_)
+        tr_x1.set_min_value(x0_)
+        tr_x1.set_max_value(x1_)
+        tr_y1.set_min_value(y0_)
+        tr_y1.set_max_value(y1_)
 
     def set_modules_active(self, state=True):
         for name, (button, widget) in self._tab_lookup.iteritems():
             widget.set_active(state)
 
-    @pyqtSlot()
+    @QtCore.pyqtSlot()
     def _on_file_open(self):
         if self._check_settings_saved() != QMessageBox.Cancel:
-            dir = ''
+            dir = ""
             if not self._settings_filename is None:
-                settings_filename = convert_package_path(self._settings_filename)
+                settings_filename = self.environ.convert_package_path(
+                    self._settings_filename)
                 if os.path.isfile(settings_filename):
                     dir = settings_filename
-            filename = QFileDialog.getOpenFileName(self, 'Open config file',
-                                                   dir, ';;'.join(self.NAME_FILTERS))
+            filename = QtGui.QFileDialog.getOpenFileName(self, 'Open config file',
+                                                          dir, ';;'.join(self.NAME_FILTERS))
             if filename:
                 self._read_settings(filename)
                 if self._settings.was_old_file_format():
                     information(self, ('Selected config file had an old '
                                        'version <= 1.3.0. The current version is %s. '
-                                       'The config file was  be updated...' % VERSION))
+                                       'The config file was  be updated...' %self.version))
                 else:
                     information(self, "Config file version %s found"  \
                                 %self._settings.get('General', 'version'))
@@ -729,11 +668,11 @@ class AnalyzerMainWindow(QMainWindow):
                 self.set_modules_active(state=False)
 
 
-    @pyqtSlot()
+    @QtCore.pyqtSlot()
     def _on_file_save(self):
         self.save_settings(False)
 
-    @pyqtSlot()
+    @QtCore.pyqtSlot()
     def _on_file_save_as(self):
         self.save_settings(True)
 
@@ -741,9 +680,6 @@ class AnalyzerMainWindow(QMainWindow):
         # close and delete the current browser instance
         if not self._browser is None:
             self._browser.close()
-            del self._browser
-            # FIXME: necessary step to prevent crash after loading of new image container
-            gc.collect()
             self._browser = None
 
     def _on_show_log_window(self):
@@ -752,96 +688,55 @@ class AnalyzerMainWindow(QMainWindow):
         qApp._log_window.show()
         qApp._log_window.raise_()
 
-    def __get_save_as_filename(self):
-        dir = ''
+    def _get_save_as_filename(self):
+        dir = ""
         if not self._settings_filename is None:
-            settings_filename = convert_package_path(self._settings_filename)
+            settings_filename = self.environ.convert_package_path(
+                self._settings_filename)
             if os.path.isfile(settings_filename):
                 dir = settings_filename
-        filename = QFileDialog.getSaveFileName(self, 'Save config file as', dir, ';;'.join(self.NAME_FILTERS))
+        filename = QtGui.QFileDialog.getSaveFileName(
+            self, 'Save config file as', dir, ';;'.join(self.NAME_FILTERS))
         return filename or None
 
     def _on_help_startup(self):
         show_html('_startup')
 
-def handle_exception(exc_type, exc_value, exc_traceback):
-  import traceback
-  filename, line, dummy, dummy = \
-    traceback.extract_tb(exc_traceback).pop()
-  filename = os.path.basename(filename)
-  error = "%s: %s" % (str(exc_type).split(".")[-1], exc_value)
-
-  QMessageBox.critical(None, "ERROR",
-    "There has been an error: "
-    + "<b>%s</b> " % error
-    + "on line %d, file %s" % (line, filename))
-
-
-#-------------------------------------------------------------------------------
-# main:
-#
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    splash = QSplashScreen(QPixmap(':cecog_splash'))
-    splash.show()
-    splash.raise_()
-
-    try:
-        import pydevd
-        pydevd.connected = True
-        pydevd.settrace(suspend=False)
-        print 'Thread enabled interactive eclipse debuging...'
-    except:
-        pass
-    freeze_support()
-
-    import time
-    import argparse
-    from pdk.fileutils import safe_mkdirs
+    enable_eclipse_debuging()
 
     parser = argparse.ArgumentParser(description='CellCognition Analyzer GUI')
-    parser.add_argument('--load', action='store_true', default=False,
-                        help='Load data from settings file.')
-    parser.add_argument('settings', nargs='?',
-                        help='Settings file.')
+    parser.add_argument('-l', '--load', action='store_true', default=False,
+                        help='Load structure file if a config was provied.')
+    parser.add_argument('-c''--configfile', dest='configfile',
+                        default=os.path.join("battery_package",
+                                             "Settings", "demo_settings.conf"),
+                        help='Load a config file. (default from battery package)')
+    parser.add_argument('-d', '--debug', action='store_true', default=False,
+                        help='Run applicaton in debug mode')
     args, _ = parser.parse_known_args()
 
+    freeze_support()
+    app = QtGui.QApplication(sys.argv)
+    app.setWindowIcon(QtGui.QIcon(':cecog_analyzer_icon'))
+    app.setApplicationName(cecog.APPNAME)
 
-    working_path = os.path.abspath(os.path.dirname(sys.argv[0]))
-    program_name = os.path.basename(sys.argv[0])
-
-    log_path = os.path.join(APPLICATION_SUPPORT_PATH, 'log')
-    safe_mkdirs(log_path)
+    splash = QtGui.QSplashScreen(QtGui.QPixmap(':cecog_splash'))
+    splash.show()
 
     is_app = hasattr(sys, 'frozen')
     if is_app:
-        package_path = os.path.join(APPLICATION_SUPPORT_PATH, 'battery_package')
-        set_package_path(package_path)
-        if sys.frozen == "windows_exe":
-            # redirection output of stream handler
-            log = open(os.path.abspath(sys.argv[0].replace("exe", "log")), "w")
-            sys.stdout = log
-            sys.stderr = log
-
-    app.setWindowIcon(QIcon(':cecog_analyzer_icon'))
-    app.setApplicationName('CecogAnalyzer')
-    main = AnalyzerMainWindow()
-    main.raise_()
-
-    if not args.settings is None:
-        filename = args.settings
+        redirect = (sys.frozen == "windows_exe")
     else:
-        filename = os.path.join(get_package_path(), 'Settings/demo_settings.conf')
+        redirect = False
 
-    if os.path.isfile(filename):
-        main._read_settings(filename)
+    main = CecogAnalyzer(cecog.APPNAME, cecog.VERSION, redirect,  args.debug)
+    main._read_settings(join(main.environ.user_config_dir, args.configfile))
 
-        if args.load or is_app:
-            infos = list(ImageContainer.iter_check_plates(main._settings))
-            main._load_image_container(infos, show_dlg=False)
+    if args.load or is_app:
+        infos = list(ImageContainer.iter_check_plates(main._settings))
+        main._load_image_container(infos, show_dlg=False)
 
-    if not is_app:
-        main._debug = True
-
+    main.show()
     splash.finish(main)
     sys.exit(app.exec_())
