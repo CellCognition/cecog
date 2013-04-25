@@ -1,3 +1,6 @@
 [submodule "apps/CecogAnalyzer/resources/battery_package"]
 	path = apps/CecogAnalyzer/resources/battery_package
 	url = git@github.com:CellCognition/battery_package.git
+[submodule "resources/battery_package"]
+	path = resources/battery_package
+	url = git@github.com:CellCognition/battery_package.git
