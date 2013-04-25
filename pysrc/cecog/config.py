@@ -59,7 +59,6 @@ if not isdir(RESOURCE_PATH):
     RESOURCE_PATH = join(dirname(__file__), os.pardir, os.pardir, 'apps',
                          'CecogAnalyzer', 'resources')
 RESOURCE_PATH = normpath(RESOURCE_PATH)
-print RESOURCE_PATH
 
 if not os.path.isdir(RESOURCE_PATH):
     raise IOError("Resource path '%s' not found." % RESOURCE_PATH)
