@@ -9,7 +9,7 @@
 VERSION = 1.4.0rc2
 APPNAME = CecogAnalyzer
 TMPNAME = CecogAnalyzer.dmg
-DMGNAME = CecogAnalyzer-$(VERSION).dmg
+DMGNAME = CecogAnalyzer_$(VERSION).dmg
 VOLNAME = $(APPNAME)-$(VERSION)
 
 all: dmg
