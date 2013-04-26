@@ -50,18 +50,16 @@ from cecog.util.mapping import map_path_to_os as _map_path_to_os
 #-------------------------------------------------------------------------------
 # constants:
 #
-resource_paths = ['resources', join(dirname(sys.executable), 'resources')]
+# search list for resource path
+resource_paths = ['resources', join(dirname(sys.executable), 'resources'),
+                  join(dirname(__file__), os.pardir, os.pardir, 'resources')]
 
 for RESOURCE_PATH in resource_paths:
     if isdir(RESOURCE_PATH):
         break
-if not isdir(RESOURCE_PATH):
-    RESOURCE_PATH = join(dirname(__file__), os.pardir, os.pardir, 'apps',
-                         'CecogAnalyzer', 'resources')
 RESOURCE_PATH = normpath(RESOURCE_PATH)
-print RESOURCE_PATH
 
-if not os.path.isdir(RESOURCE_PATH):
+if not isdir(RESOURCE_PATH):
     raise IOError("Resource path '%s' not found." % RESOURCE_PATH)
 
 R_SOURCE_PATH = os.path.join(RESOURCE_PATH, 'rsrc')
