@@ -21,22 +21,25 @@ from  distutils.command.build import build as _build
 
 
 class Build(_build):
+    """Custom build command for distutils to have the qrc files compiled before
+    before the build process.
+    """
 
-    # compile qrc file before build starts
     def run(self):
         self.run_command('pyrcc')
         _build.run(self)
 
 
 class PyRcc(Command):
+    """Custom command to compile Qt4-qrc files"""
 
     description = "Compile qt4-qrc files"
-    user_options = [('pyrcc_exe=', 'b', 'Path to pyrcc4 executable'),
+    user_options = [('pyrccbin=', 'b', 'Path to pyrcc4 executable'),
                     ('infile=', 'i', 'Input file'),
                     ('outfile=', 'o', 'Output file')]
 
     def initialize_options(self):
-        self.pyrcc_exe = 'pyrcc4'
+        self.pyrccbin = 'pyrcc4'
         self.infile = None
         self.outfile = None
 
@@ -48,6 +51,6 @@ class PyRcc(Command):
             raise RuntimeError("Check extension of the output file")
 
     def run(self):
-        cmd = '%s -o %s %s' %(self.pyrcc_exe, self.outfile, self.infile)
+        cmd = '%s -o %s %s' %(self.pyrccbin, self.outfile, self.infile)
         print "Compiling qrc file"
         os.system(cmd)

@@ -12,4 +12,4 @@ __url__ = 'www.cellcognition.org'
 
 from metadata import *
 from datafiles import *
-from rcccmd import *
+from commands import *

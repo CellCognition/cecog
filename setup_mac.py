@@ -17,11 +17,11 @@ __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
 import sys
-from os.path import join
+from os.path import join, abspath
 import numpy.distutils
 
 import py2app
-sys.path.append("pysrc")
+sys.path.append(abspath("pysrc"))
 
 from distutils.core import setup, Extension
 import build_helpers
@@ -45,7 +45,7 @@ py2app_opts = {'argv_emulation': False,
 
 pyrcc_opts = {'infile': 'resource.qrc',
               'outfile': join('scripts', 'resource.py'),
-              'pyrcc_exe': 'pyrcc4'}
+              'pyrccbin': 'pyrcc4'}
 
 cc_includes = ['/Users/hoefler/sandbox/lib-static/include',
                '/cecoglibs/vigra/include/',
@@ -87,7 +87,6 @@ packages = ['cecog',
             'pdk']
 
 scripts = [join('scripts', 'CecogAnalyzer.py')]
-
 
 setup(app = scripts,
       scripts = scripts,
