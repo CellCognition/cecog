@@ -10,6 +10,7 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
+__all__ = ['get_data_files']
 
 import os
 import glob
