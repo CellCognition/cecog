@@ -1,18 +1,17 @@
 """
-                           The CellCognition Project
-                     Copyright (c) 2006 - 2012 Michael Held
-                      Gerlich Lab, ETH Zurich, Switzerland
-                              www.cellcognition.org
+metadata.py
 
-              CellCognition is distributed under the LGPL License.
-                             See LICENSE.txt for details.
-                  See AUTHORS.txt for author contributions.
-
-
-pkginfo.py - distutils metadata (since python 2.7 does not support distutils2)
+Provides meta data for CeocogAnalyzer
 """
 
 __author__ = 'rudolf.hoefler@gmail.com'
+__copyright__ = ('The CellCognition Project'
+                 'Copyright (c) 2006 - 2012'
+                 'Gerlich Lab, IMBA Vienna, Austria'
+                 'see AUTHORS.txt for contributions')
+__licence__ = 'LGPL'
+__url__ = 'www.cellcognition.org'
+
 
 __all__ = ['metadata']
 
@@ -24,7 +23,7 @@ metadata = { 'name': 'CecogAnalyzer',
              'author_email': 'held(at)cellcognition.org',
              'maintainer': 'Christoph Sommer, Rudolf Hoefler',
              'maintainer_email' : ( 'christop.sommer@imba.oeaw.ac.at, '
-                                  'rudolf.hoefler@imba.oeaw.ac.at' ),
+                                    'rudolf.hoefler@imba.oeaw.ac.at' ),
              'license': 'LGPL',
              'description': ('CecogAnalyzer is a cross-platform standalone graphical '
                              'user interface for the time-resolved analysis of '
