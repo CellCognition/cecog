@@ -14,6 +14,8 @@ pkginfo.py - distutils metadata (since python 2.7 does not support distutils2)
 
 __author__ = 'rudolf.hoefler@gmail.com'
 
+__all__ = ['metadata']
+
 from cecog import VERSION_NUM, VERSION
 
 metadata = { 'name': 'CecogAnalyzer',
