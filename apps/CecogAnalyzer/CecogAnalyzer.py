@@ -276,6 +276,10 @@ class CecogAnalyzer(QtGui.QMainWindow):
                                    QMessageBox.Yes|QMessageBox.No)
         if self._check_settings_saved() and ret == QMessageBox.No:
             event.ignore()
+        else:
+            # FIXME - some dialogs are attributs of qApp
+            # --> QApplication does not exit automatically
+            QtGui.QApplication.exit()
 
     def settings_changed(self, changed):
         if self._is_initialized:
