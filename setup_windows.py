@@ -1,28 +1,34 @@
 """
-                           The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
-                      Gerlich Lab, ETH Zurich, Switzerland
-                              www.cellcognition.org
+setup_windows.py
 
-              CellCognition is distributed under the LGPL License.
-                        See LICENSE.txt for details.
-                 See AUTHORS.txt for author contributions.
+Setup script for Windows.
 
-setup_windows.py - windows specific instructions for distuils
+Usage:
+   python setup_windows.py py2exe
+
 """
-
 __author__ = 'rudolf.hoefler@gmail.com'
+__copyright__ = ('The CellCognition Project'
+                 'Copyright (c) 2006 - 2012'
+                 'Gerlich Lab, IMBA Vienna, Austria'
+                 'see AUTHORS.txt for contributions')
+__licence__ = 'LGPL'
+__url__ = 'www.cellcognition.org'
 
-import os, sys, glob
-from os.path import join
-from distutils.core import setup
+
+import os
+from os.path import join, abspath
+import sys
+import glob
+
+sys.path.append(abspath("pysrc"))
+sys.path.append(abspath('scripts'))
+
+from distutils.core import setup, Extension
 import py2exe
+import build_helpers
 
-import pkginfo
-from datafiles import get_data_files
-
-
-PACKAGES = [ 'cecog', 'h5py', 'vigra', 'matplotlib' ]
+PACKAGES = [ 'h5py', 'vigra']
 INCLUDES = [ 'sip',
              'scipy.sparse.csgraph._validation',
              'scipy.spatial.kdtree',
@@ -49,9 +55,6 @@ DLL_EXCLUDES = [ 'libgdk-win32-2.0-0.dll',
                  'libexpat-1.dll',
                  'libglib-2.0-0.dll',
                  'libgmodule-2.0-0.dll',
-                 # 'libifcoremd.dll',
-                 # 'libiomp5md.dll',
-                 # 'libmmd.dll',
                  'libpango-1.0-0.dll',
                  'sqlite3.dll',
                  'DNSAPI.dll',
@@ -74,25 +77,72 @@ DLL_EXCLUDES = [ 'libgdk-win32-2.0-0.dll',
                  'API-MS-Win-Core-LocalRegistry-L1-1-0.dll',
                  'w9xpopen.exe'] # is not excluded for some reasion
 
-setup( options = {"py2exe": { 'includes': INCLUDES,
-                              'excludes': EXCLUDES,
-                              'packages': PACKAGES,
-                              'dll_excludes': DLL_EXCLUDES,
-                              # optimize 2 would strip doc-strings
-                              'optimize': 1,
-                              'compressed': True,
-                              'skip_archive': False,
-                              'bundle_files': 3 }},
-       data_files = get_data_files(),
-       zipfile = "data.zip",
-       windows = [{'script': "CecogAnalyzer.py",
-                   'icon_resources': [(1, 'resources\cecog_analyzer_icon.ico')]
-                   }],
-       console = [{'script': join("..", "..", "pysrc", "cecog",
-                                  "batch", "batch.py")}],
-       **pkginfo.metadata)
+py2exe_opts = {'includes': INCLUDES,
+               'excludes': EXCLUDES,
+               'packages': PACKAGES,
+               'dll_excludes': DLL_EXCLUDES,
+               # optimize 2 would strip doc-strings
+               'optimize': 1,
+               'compressed': True,
+               'skip_archive': False,
+               'bundle_files': 3}
 
-try:
-    os.remove(join('dist', 'w9xpopen.exe'))
-except:
-    pass
+pyrcc_opts = {'infile': 'resource.qrc',
+              'outfile': join('scripts', 'resource.py'),
+              'pyrccbin': join('C:', 'Python27', 'Lib', 'site-packages',
+                               'PyQt4', 'pyrcc4.exe')}
+
+# ccore build paths
+includes = ['c:/python27/include',
+            'c:/Python27/Lib/site-packages/numpy/core/include',
+            'c:/lib/include',
+            'c:/vigra/include',
+            './csrc/include']
+libraries = ['boost_python-vc100-mt-1_45', 'libtiff', 'vigraimpex']
+library_dirs = ['c:/lib/lib', 'c:/vigra/lib']
+
+ccore = Extension('cecog.ccore._cecog',
+                  sources = [join('csrc','src', 'wrapper','cecog.cxx')],
+                  include_dirs = includes,
+                  libraries = libraries,
+                  library_dirs = library_dirs,
+                  extra_compile_args = ["/bigobj", "/EHsc"],
+                  language = 'c++')
+
+# python package to distribute
+packages = ['cecog',
+            'cecog.analyzer',
+            'cecog.ccore',
+            'cecog.experiment',
+            'cecog.export',
+            'cecog.extensions',
+            'cecog.gui',
+            'cecog.gui.analyzer',
+            'cecog.gui.modules',
+            'cecog.gui.widgets',
+            'cecog.io',
+            'cecog.learning',
+            'cecog.multiprocess',
+            'cecog.plugin',
+            'cecog.plugin.segmentation',
+            'cecog.threads',
+            'cecog.traits',
+            'cecog.traits.analyzer',
+            'cecog.util',
+            'pdk']
+
+setup(options = {"py2exe": py2exe_opts,
+                 'pyrcc': pyrcc_opts},
+      cmdclass = {'pyrcc': build_helpers.PyRcc,
+                  'build': build_helpers.Build},
+      packages = packages,
+      package_dir = {'cecog': join('pysrc', 'cecog'),
+                     'pdk': join('pysrc', 'pdk')},
+      data_files = build_helpers.get_data_files(),
+      # zipfile = "data.zip",
+      windows = [{'script': join('scripts', 'CecogAnalyzer.py'),
+                  'icon_resources': [(1, 'resources\cecog_analyzer_icon.ico')]
+                  }],
+      console = [{'script': join('scripts', 'batch.py')}],
+      ext_modules = [ccore],
+      **build_helpers.metadata)
