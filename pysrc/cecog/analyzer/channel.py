@@ -27,7 +27,7 @@ from collections import OrderedDict
 from cecog import ccore
 from cecog.colors import Colors
 from cecog.io.imagecontainer import MetaImage
-from cecog.analyzer.object import ImageObject, ObjectHolder
+from cecog.analyzer.object import ImageObject, ObjectHolder, Orientation
 
 from cecog.util.logger import LoggerObject
 from cecog.plugin.segmentation import (PRIMARY_SEGMENTATION_MANAGER,
@@ -210,6 +210,7 @@ class Channel(ChannelCore):
                             container.applyFeature(strHaralickCategory)
 
                 for obj_id, c_obj in container.getObjects().iteritems():
+
                     dctFeatures = c_obj.getFeatures()
                     # build a new ImageObject
                     obj = ImageObject(c_obj)
@@ -221,6 +222,15 @@ class Channel(ChannelCore):
                              container.getCrackCoordinates(obj_id)]
                     obj.crack_contour = crack
 
+
+                    # ORIENTATION TEST: orientation of objects (for tracking) #
+                    # at the moment a bit of a hack #
+                    # The problem is that orientation cannot be a feature #
+                    # but moments need to be chosen to calculate the orientation. #
+                    if 'moments' in self.lstFeatureCategories:
+                        obj.orientation = Orientation(angle = c_obj.orientation,
+                                                      eccentricity = dctFeatures['eccentricity'])
+
                     # why do wo sort the features according to their names??
                     # does it matter?
                     if self.lstFeatureNames is None:
@@ -230,6 +240,11 @@ class Channel(ChannelCore):
                     features = (dctFeatures[f] for f in self.lstFeatureNames)
                     obj.aFeatures = numpy.fromiter(features, dtype=float)
                     object_holder[obj_id] = obj
+                    # print 'orientation %s (%i, %i): %f (%f deg)' % (obj_id,
+                    #                                                 obj.oRoi.upperLeft[0],
+                    #                                                 obj.oRoi.upperLeft[1],
+                    #                                                 obj.orientation,
+                    #                                                 180.0 * obj.orientation / numpy.pi)
 
             if self.lstFeatureNames is not None:
                 object_holder.feature_names = self.lstFeatureNames
@@ -366,7 +381,7 @@ class MergedChannel(ChannelCore):
 
     @merge_regions.deleter
     def merged_regions(self):
-        del self._merged_regions
+        del self._merge_regions
 
     def apply_segmentation(self, channels, master="Primary"):
         self._channels = channels
@@ -374,7 +389,7 @@ class MergedChannel(ChannelCore):
 
     def apply_features(self, *args, **kw):
         """Concatenate features of images objects of different channels"""
-        holder = ObjectHolder("merged")
+        holder = ObjectHolder("-".join(self._merge_regions.values()))
         for cname, region_name in self._merge_regions.iteritems():
             channel = self._channels[cname]
             holder0 = channel.get_region(region_name)

@@ -31,10 +31,11 @@ matplotlib.use('Agg')
 from matplotlib import pyplot
 
 from cecog import ccore
-from cecog import CHANNEL_PREFIX
 from cecog.io.imagecontainer import Coordinate, MetaImage
 from cecog.analyzer.channel import PrimaryChannel
 from cecog.plugin.segmentation import REGION_INFO
+
+from cecog.analyzer.tracker import Tracker
 
 def chunk_size(shape):
     """Helper function to compute chunk size for image data cubes.
@@ -102,18 +103,19 @@ class TimeHolder(OrderedDict):
                      ('edge_idx1', 'uint32'),
                      ('edge_idx2', 'uint32'),])
 
-    def __init__(self, P, channels, filename_hdf5, meta_data, settings,
+    def __init__(self, P, channel_regions, filename_hdf5, meta_data, settings,
                  analysis_frames, plate_id,
                  hdf5_create=True, hdf5_reuse=True, hdf5_compression='gzip',
                  hdf5_include_raw_images=True,
                  hdf5_include_label_images=True, hdf5_include_features=True,
                  hdf5_include_classification=True, hdf5_include_crack=True,
-                 hdf5_include_tracking=True, hdf5_include_events=True, hdf5_include_annotation=True):
+                 hdf5_include_tracking=True, hdf5_include_events=True,
+                 hdf5_include_annotation=True):
         super(TimeHolder, self).__init__()
         self.P = P
         self.plate_id = plate_id
         self._iCurrentT = None
-        self.channels = channels
+        self.channel_regions= channel_regions
         self._meta_data = meta_data
         self._settings = settings
         self._analysis_frames = analysis_frames
@@ -141,20 +143,28 @@ class TimeHolder(OrderedDict):
         self._object_coord_to_id = {}
         self._object_coord_to_idx = {}
 
+
+        # these are color channels
         channels = sorted(list(meta_data.channels))
-        self._region_names = REGION_INFO.names['primary'] + \
-            REGION_INFO.names['secondary'] + REGION_INFO.names['tertiary']
+        self._region_names = []
+
+        for rname in self.channel_regions.values():
+            if isinstance(rname, basestring):
+                self._region_names.append(rname)
+            else:
+                self._region_names.append('-'.join(rname))
 
         self._channel_info = []
         self._region_infos = []
         region_names2 = []
         # XXX hardcoded values
 
-        for prefix in CHANNEL_PREFIX:
-            for name in REGION_INFO.names[prefix]:
-                self._channel_info.append((prefix, settings.get('ObjectDetection', '%s_channelid' % prefix)))
-                self._region_infos.append((prefix, self._convert_region_name(prefix, name), name))
-                region_names2.append((prefix.capitalize(), name))
+        for prefix, name in self.channel_regions.iteritems():
+            if not isinstance(name, basestring):
+                name = '-'.join(name)
+            self._channel_info.append((prefix.lower(), settings.get('ObjectDetection', '%s_channelid' % prefix)))
+            self._region_infos.append((prefix.lower(), self._convert_region_name(prefix.lower(), name), name))
+            region_names2.append((prefix.capitalize(), name))
 
         self._feature_to_idx = OrderedDict()
 
@@ -204,17 +214,14 @@ class TimeHolder(OrderedDict):
                     raw_image_cpy = None
                     raw_image_str = None
                     raw_image_valid = None
-                finally:
-                    if isinstance(self._hdf5_file, h5py._hl.files.File):
-                        self._hdf5_file.close()
 
             self._hdf5_create_file_structure(self.hdf5_filename, (label_image_str, label_image_cpy, label_image_valid),
                                                                  (raw_image_str, raw_image_cpy, raw_image_valid))
+
             self._hdf5_write_global_definition()
 
     def _hdf5_prepare_reuse(self):
-        f = h5py.File(self.hdf5_filename, 'r')
-        self._hdf5_file = f
+        self._hdf5_file = h5py.File(self.hdf5_filename, 'r')
         try:
             meta_data = self._meta_data
 
@@ -227,14 +234,15 @@ class TimeHolder(OrderedDict):
                 position = self.P
 
 
-            self._grp_cur_position = f['/sample/0/plate/%s/experiment/%s/position/%s' % (self.plate_id,
-                                                                                          well,
-                                                                                          position)]
-            self._grp_def = f[self.HDF5_GRP_DEFINITION]
+            self._grp_cur_position = self._hdf5_file['/sample/0/plate/%s/experiment/%s/position/%s' % (self.plate_id,
+                                                                                                       well,
+                                                                                                       position)]
+            self._grp_def = self._hdf5_file[self.HDF5_GRP_DEFINITION]
             return 0
         except:
-            f.close()
             return 1
+        finally:
+            self._hdf5_file.close()
 
 
     def _hdf5_check_file(self):
@@ -284,9 +292,11 @@ class TimeHolder(OrderedDict):
         global_channel_desc = self._grp_def[self.HDF5_GRP_IMAGE].create_dataset( \
             'channel', (nr_channels,), dtype)
         for idx in self._regions_to_idx.values():
+            # XXX hardcoded values
+            is_physical = bool(self._channel_info[idx][1] is not None)
             data = (self._channel_info[idx][0],
                     self._channel_info[idx][1],
-                    True,
+                    is_physical,
                     (0, 0, 0))
             global_channel_desc[idx] = data
 
@@ -458,9 +468,14 @@ class TimeHolder(OrderedDict):
                 channel.purge(features={})
 
     def _convert_region_name(self, channel_name, region_name, prefix='region'):
+
+        if isinstance(region_name, tuple):
+            region_name = '-'.join(region_name)
+
         s = '%s__%s' % (channel_name.lower(), region_name)
         if not prefix is None and len(prefix) > 0:
             s = '%s___%s' % (prefix, s)
+
         return s
 
     def _convert_feature_name(self, feature_name, channel_name, region_name):
@@ -480,7 +495,6 @@ class TimeHolder(OrderedDict):
                                          channel.strChannelId)
 
         channel_name = channel.NAME.lower()
-
         label_images_valid = False
         if self._hdf5_found and self._hdf5_reuse:
             ### Try to load them
@@ -653,6 +667,9 @@ class TimeHolder(OrderedDict):
                 if 'center' not in global_def_group:
                     dset_tmp = global_def_group.create_dataset('center', (2,), [('name', '|S16')])
                     dset_tmp[:] = ['x', 'y']
+                if 'orientation' not in global_def_group:
+                    dset_tmp = global_def_group.create_dataset('orientation', (2,), [('name', '|S16')])
+                    dset_tmp[:] = ['angle', 'eccentricity']
                 if 'object_features' not in global_def_group:
                     dset_tmp = global_def_group.create_dataset('object_features', (nr_features,), [('name', '|S512')])
                     if nr_features > 0:
@@ -720,6 +737,21 @@ class TimeHolder(OrderedDict):
                     dset_bounding_box = grp_region_features['bounding_box']
                     dset_bounding_box.resize((nr_objects + offset,))
 
+                # Create dataset for orientation
+                if 'orientation' not in grp_region_features:
+                    dtype = numpy.dtype([('angle', 'float'),
+                                         ('eccentricity', 'float'),])
+
+                    dset_orientation = grp_region_features.create_dataset('orientation',
+                                                      (nr_objects,),
+                                                      dtype,
+                                                      chunks=(nr_objects if nr_objects > 0 else 1,),
+                                                      compression=self._hdf5_compression,
+                                                      maxshape=(None,))
+                else:
+                    dset_orientation = grp_region_features['orientation']
+                    dset_orientation.resize((nr_objects + offset,))
+
                 # Create dataset for center
                 if 'center' not in grp_region_features:
                     dtype = numpy.dtype([('x', 'int32'),
@@ -775,6 +807,9 @@ class TimeHolder(OrderedDict):
                     dset_bounding_box[idx + offset] = obj.oRoi.upperLeft[0], obj.oRoi.lowerRight[0], obj.oRoi.upperLeft[1], obj.oRoi.lowerRight[1]
                     dset_center[idx + offset] = obj.oCenterAbs
 
+                    # is case one don't wants nan's written to the hdf5 file
+                    # if np.isnan(obj.orientation.angle)
+                    dset_orientation[idx + offset] = obj.orientation.angle, obj.orientation.eccentricity
                     dset_idx_relation[idx + offset] = frame_idx, obj_id
 
                     if self._hdf5_include_features:
@@ -788,8 +823,7 @@ class TimeHolder(OrderedDict):
                     if channel_name != PrimaryChannel.PREFIX:
                         dset_cross_rel[idx + offset] = (idx, idx)
 
-    def serialize_tracking(self, tracker):
-        graph = tracker.graph
+    def serialize_tracking(self, graph):
 
         # export full graph structure to .dot file
         #path_out = self._settings.get('General', 'pathout')
@@ -820,10 +854,10 @@ class TimeHolder(OrderedDict):
             for idx, edge in enumerate(graph.edges.itervalues()):
                 head_id, tail_id = edge[:2]
                 head_frame, head_obj_id = \
-                    tracker.getComponentsFromNodeId(head_id)[:2]
+                    Tracker.split_nodeid(head_id)[:2]
                 head_frame_idx = self._frames_to_idx[head_frame]
                 tail_frame, tail_obj_id = \
-                    tracker.getComponentsFromNodeId(tail_id)[:2]
+                    Tracker.split_nodeid(tail_id)[:2]
                 tail_frame_idx = self._frames_to_idx[tail_frame]
 
                 #head_obj_id_meta = self._object_coord_to_id[(prefix, (head_frame_idx, head_obj_id))]
@@ -833,15 +867,16 @@ class TimeHolder(OrderedDict):
 
                 data.append((head_obj_idx_meta,
                              tail_obj_idx_meta))
-            var_rel[:] = data
+            if len(data) > 0:
+                var_rel[:] = data
 
     def serialize_events(self, tracker):
         if self._hdf5_create and self._hdf5_include_events:
             event_lookup = {}
-            for events in tracker.dctVisitorData.itervalues():
+            for events in tracker.visitor_data.itervalues():
                 for start_id, event in events.iteritems():
                     if start_id[0] != '_':
-                        key = tracker.getComponentsFromNodeId(start_id)[:2]
+                        key = Tracker.split_nodeid(start_id)[:2]
                         event_lookup.setdefault(key, []).append(event)
             nr_events = len(event_lookup)
             nr_edges = 0
@@ -865,11 +900,11 @@ class TimeHolder(OrderedDict):
                     obj_id = obj_idx
                     track = events[0]['tracks'][0]
                     for head_id, tail_id in zip(track, track[1:]):
-                        head_frame, head_obj_id = tracker.getComponentsFromNodeId(head_id)[:2]
+                        head_frame, head_obj_id = Tracker.split_nodeid(head_id)[:2]
                         haed_frame_idx = self._frames_to_idx[head_frame]
                         head_id_ = self._object_coord_to_idx[('primary', (haed_frame_idx, head_obj_id))]
 
-                        tail_frame, tail_obj_id = tracker.getComponentsFromNodeId(tail_id)[:2]
+                        tail_frame, tail_obj_id = Tracker.split_nodeid(tail_id)[:2]
                         tail_frame_idx = self._frames_to_idx[tail_frame]
                         tail_id_ = self._object_coord_to_idx[('primary', (tail_frame_idx, tail_obj_id))]
 
@@ -879,11 +914,11 @@ class TimeHolder(OrderedDict):
                         splt = events[1]['splitIdx']
                         track = events[1]['tracks'][0][splt-1:]
                         for head_id, tail_id in zip(track, track[1:]):
-                            head_frame, head_obj_id = tracker.getComponentsFromNodeId(head_id)[:2]
+                            head_frame, head_obj_id = Tracker.split_nodeid(head_id)[:2]
                             haed_frame_idx = self._frames_to_idx[head_frame]
                             head_id_ = self._object_coord_to_idx[('primary', (haed_frame_idx, head_obj_id))]
 
-                            tail_frame, tail_obj_id = tracker.getComponentsFromNodeId(tail_id)[:2]
+                            tail_frame, tail_obj_id = Tracker.split_nodeid(tail_id)[:2]
                             tail_frame_idx = self._frames_to_idx[tail_frame]
                             tail_id_ = self._object_coord_to_idx[('primary', (tail_frame_idx, tail_obj_id))]
                             var_event[rel_idx] = (obj_id, head_id_, tail_id_)
@@ -916,7 +951,7 @@ class TimeHolder(OrderedDict):
                 var = classification_group.create_dataset('class_labels', (nr_classes,), dt)
                 var[:] = zip(predictor.class_names.keys(),
                              predictor.class_names.values(),
-                             [clf.hexcolors[n] for n in predictor.class_names.values()])
+                             [predictor.hexcolors[n] for n in predictor.class_names.values()])
 
                 # classifier
                 dt = numpy.dtype([('name', '|S512'),
@@ -926,11 +961,8 @@ class TimeHolder(OrderedDict):
                                           ('description', '|S512')])
                 var = classification_group.create_dataset('classifier', (1,), dt)
 
-                var[0] = (predictor.name,
-                          predictor.classifier.METHOD,
-                          predictor.classifier.NAME,
-                          '',
-                          '')
+                var[0] = (predictor.name, predictor.classifier.METHOD,
+                          predictor.classifier.NAME, '', '')
 
                 feature_names = predictor.feature_names
                 var = classification_group.create_dataset('features', (len(feature_names),), [('object_feautres','|S512'),])
@@ -967,7 +999,7 @@ class TimeHolder(OrderedDict):
 
             label_to_idx = dict([(label, i)
                                  for i, label in
-                                 enumerate(predictor.lstClassLabels)])
+                                 enumerate(predictor.class_names.keys())])
 
             for i, obj in enumerate(region.itervalues()):
                 dset_prediction[i+offset] = (label_to_idx[obj.iLabel],)

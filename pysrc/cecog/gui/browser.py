@@ -46,6 +46,7 @@ from cecog.analyzer.channel import (PrimaryChannel,
                                     TertiaryChannel,
                                     )
 from cecog.analyzer.core import AnalyzerCore
+from cecog.traits.settings import convert_package_path
 from cecog.io.imagecontainer import Coordinate
 from cecog.learning.learning import BaseLearner
 from cecog.gui.widgets.groupbox import QxtGroupBox
@@ -88,11 +89,13 @@ class Browser(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
 
         splitter = QSplitter(Qt.Horizontal, frame)
-
+        #splitter.setSizePolicy(QSizePolicy(QSizePolicy.Minimum,
+        #                                   QSizePolicy.Expanding))
         layout.addWidget(splitter)
 
         frame = QFrame(self)
         frame_side = QStackedWidget(splitter)
+        #splitter.setChildrenCollapsible(False)
         splitter.addWidget(frame)
         splitter.addWidget(frame_side)
         splitter.setStretchFactor(0, 1)
@@ -120,6 +123,7 @@ class Browser(QMainWindow):
         self._t_slider = QSlider(Qt.Horizontal, frame)
         self._t_slider.setMinimum(self.min_time)
         self._t_slider.setMaximum(self.max_time)
+#        self._t_slider.setMaximum(self.max_frame)
 
         self._t_slider.setTickPosition(QSlider.TicksBelow)
         self._t_slider.valueChanged.connect(self.on_time_changed_by_slider,
@@ -322,11 +326,9 @@ class Browser(QMainWindow):
 
         # the slider is always working with frames.
         # reason: it is difficult to forbid slider values between allowed values.
-        frame = int(round(
-                          self.max_frame * (coordinate.time - self.min_time) /
-                          float(self.max_time - self.min_time)
-                          )
-                    )
+
+        frame = int(round(self.max_frame * (coordinate.time - self.min_time) /
+                          max(float(self.max_time - self.min_time), 1)))
 
         self._t_slider.setValue(frame)
 
@@ -389,6 +391,7 @@ class Browser(QMainWindow):
 
         if len(self._imagecontainer.channels) > 1:
             settings.set('Processing', 'secondary_processChannel', True)
+            settings.set('Processing', 'tertiary_processChannel', True)
             # need turn of virtual channels
             settings.set('Processing', 'merged_processChannel', False)
 
@@ -396,10 +399,11 @@ class Browser(QMainWindow):
         analyzer = AnalyzerCore(self.coordinate.plate, settings,
                                 self._imagecontainer)
 
+        # as long the GIL is not released, if GIL is released
+        # just use self.setCursor
         QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
         analyzer.processPositions(myhack=self)
         QApplication.restoreOverrideCursor()
-
 
 
     def on_refresh(self):

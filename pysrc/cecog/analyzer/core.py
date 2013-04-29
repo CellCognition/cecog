@@ -196,7 +196,10 @@ class AnalyzerCore(AnalyzerBase):
                                        % (args_[0], idx+1, len(job_args))})
                 qthread.update_status(stage_info)
             analyzer = PositionAnalyzer(*args_, **kw_)
-            nimages = analyzer()
+            try:
+                nimages = analyzer()
+            finally:
+                analyzer.clear()
 
             if self.settings.get('Output', 'hdf5_create_file') and \
                     self.settings.get('Output', 'hdf5_merge_positions'):
@@ -221,6 +224,9 @@ class Picker(AnalyzerBase):
         frames_total = self.meta_data.times
         for annofile in glob.glob(pattern):
             result = anno_re.match(basename(annofile))
+            if result is None:
+                raise RuntimeError("Something is wrong with your annotation files in the classifier folder. " +
+                                   "Please make sure that the XML have consistent plate names.")
 
             # Taking only annotated samples for the specific plate
             if (result.group("plate") != self.plate):

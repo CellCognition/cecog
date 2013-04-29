@@ -96,6 +96,7 @@ static void wrap_shared_objects()
     .def_readwrite("width", &cecog::Region::width)
     .def_readwrite("height", &cecog::Region::height)
     .def_readwrite("area", &cecog::Region::area)
+
     //.def_readwrite("center", &cecog::Region::center)
     //.def_readwrite("rCenter", &cecog::Region::rCenter)
   ;
@@ -112,6 +113,8 @@ static void wrap_shared_objects()
     .def_readwrite("iSize", &cecog::ROIObject::roisize)
     .def("getFeatures", &feature_wrapper)
     .def("getMeasurements", &measurement_wrapper)
+    .def_readwrite("orientation", &cecog::ROIObject::orientation)
+
   ;
   register_ptr_to_python< std::auto_ptr<cecog::ROIObject> >();
 

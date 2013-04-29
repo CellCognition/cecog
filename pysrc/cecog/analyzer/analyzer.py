@@ -28,11 +28,11 @@ from cecog.util.util import hexToRgb
 
 class CellAnalyzer(LoggerObject):
 
-    def __init__(self, time_holder, position, create_images, binning_factor,
+    def __init__(self, timeholder, position, create_images, binning_factor,
                  detect_objects):
         super(CellAnalyzer, self).__init__()
 
-        self.time_holder = time_holder
+        self.timeholder = timeholder
         self.P = position
         self.bCreateImages = create_images
         self.iBinningFactor = binning_factor
@@ -44,7 +44,7 @@ class CellAnalyzer(LoggerObject):
     def initTimepoint(self, iT):
         self._channel_registry.clear()
         self._iT = iT
-        self.time_holder.initTimePoint(iT)
+        self.timeholder.initTimePoint(iT)
 
     # XXX rename it to "add_channel"
     def register_channel(self, channel):
@@ -82,29 +82,29 @@ class CellAnalyzer(LoggerObject):
         primary_channel = None
 
         for channel in channels:
-            self.time_holder.prepare_raw_image(channel)
+            self.timeholder.prepare_raw_image(channel)
             if self.detect_objects:
                 if channel.NAME == PrimaryChannel.NAME:
-                    self.time_holder.apply_segmentation(channel)
+                    self.timeholder.apply_segmentation(channel)
                     primary_channel = channel
                 elif channel.NAME == SecondaryChannel.NAME:
-                    self.time_holder.apply_segmentation(channel, primary_channel)
+                    self.timeholder.apply_segmentation(channel, primary_channel)
                     secondary_channel = channel
                 elif channel.NAME == TertiaryChannel.NAME:
-                    self.time_holder.apply_segmentation(channel, primary_channel, secondary_channel)
+                    self.timeholder.apply_segmentation(channel, primary_channel, secondary_channel)
                 elif channel.NAME == MergedChannel.NAME:
                     channel.meta_image = primary_channel.meta_image
-                    self.time_holder.apply_segmentation(channel, self._channel_registry)
+                    self.timeholder.apply_segmentation(channel, self._channel_registry)
                 else:
                     raise ValueError("Channel with name '%s' not supported." % channel.NAME)
 
                 if extract_features:
-                    self.time_holder.apply_features(channel)
+                    self.timeholder.apply_features(channel)
 
         if apply:
             # want apply also the pseudo channels
             for channel in sorted(self._channel_registry.values()):
-                self.time_holder.apply_channel(channel)
+                self.timeholder.apply_channel(channel)
 
     def purge(self, features=None):
         for channel in self._channel_registry.values():
@@ -299,9 +299,9 @@ class CellAnalyzer(LoggerObject):
         # want invoke time_holder for hdf5
         if oChannel.is_virtual():
             for mchannel, _ in oChannel.sub_channels():
-                self.time_holder.apply_features(mchannel)
+                self.timeholder.apply_features(mchannel)
 
-        self.time_holder.apply_features(oChannel)
+        self.timeholder.apply_features(oChannel)
         training_set = self.annotate(object_lookup,
                                      oLearner, oContainer,
                                      oChannel.get_region(region))
@@ -352,10 +352,10 @@ class CellAnalyzer(LoggerObject):
             container.markObjects([obj.iId], rgb_value, False, True)
             ccore.drawFilledCircle(ccore.Diff2D(*obj.oCenterAbs),
                                    3, container.img_rgb, rgb_value)
-                                            
+
     def annotate(self, sample_objects, learner, container, region):
         """Annotate predefined class labels to picked samples."""
-                    
+
         training_set = ObjectHolder(region.name)
         training_set.feature_names = region.feature_names
 
@@ -386,4 +386,4 @@ class CellAnalyzer(LoggerObject):
                 obj.dctProb = probs
                 obj.strClassName = predictor.class_names[label]
                 obj.strHexColor = predictor.hexcolors[obj.strClassName]
-        self.time_holder.serialize_classification(predictor.name, holder, predictor)
+        self.timeholder.serialize_classification(predictor.name, holder, predictor)

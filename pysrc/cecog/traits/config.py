@@ -38,7 +38,6 @@ class _ConfigParser(RawConfigParser):
                           (name, filename))
         self.read(filename)
 
-
 class ConfigSettings(RawConfigParser):
     """
     Extension of RawConfigParser which maps sections to parameter sections e.g.

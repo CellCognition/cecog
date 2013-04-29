@@ -33,12 +33,12 @@ class DotWriter(object):
               "fontname=\"Helvetica\"; rankdir=TB;\n"
         self._file.write(tmp)
 
-        timestrings = ["time %d" % x for x in tracker.getTimePoints()]
+        timestrings = ["time %d" % x for x in tracker.frames]
         self._file.write("node%s;\n" %self.NODE_STYLE)
 
-        for frame, node_ids in tracker.getTimePoints().iteritems():
+        for frame, node_ids in tracker.frames.iteritems():
             for object_id in node_ids:
-                node_id = tracker.getNodeIdFromComponents(frame, object_id)
+                node_id = tracker.node_id(frame, object_id)
                 if frame == tracker.start_frame:
                     self._traverseGraph(node_id)
                 # find appearing nuclei
@@ -74,9 +74,9 @@ class DotWriter(object):
             self._file.write(node)
 
         # write ranks (force node to be on the same ranks)
-        for node, (frame, object_ids) in zip(timestrings, tracker.getTimePoints().iteritems()):
+        for node, (frame, object_ids) in zip(timestrings, tracker.frames.iteritems()):
             tmp = "{%s}\n" % "; ".join(['rank=same'] +
-                                       ['"%s"' % tracker.getNodeIdFromComponents(frame, object_id)
+                                       ['"%s"' % tracker.node_id(frame, object_id)
                                         for object_id in object_ids])
             self._file.write(tmp)
 

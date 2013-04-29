@@ -40,11 +40,13 @@ class BaseLearner(LoggerObject):
                  extension=None, has_zero_insert=False):
         super(BaseLearner, self).__init__()
         self.add_stream_handler(self._lvl.INFO)
+        self._clf_dir = None
 
-        if not os.path.isdir(clf_dir):
-            raise IOError("Classifier path '%s' does not exist." %clf_dir)
+        if clf_dir is not None:
+            if not os.path.isdir(clf_dir):
+                raise IOError("Classifier path '%s' does not exist." %clf_dir)
+            self.clf_dir = clf_dir
 
-        self.clf_dir = clf_dir
         self.name = name
         self.extension = extension
 
@@ -100,15 +102,19 @@ class BaseLearner(LoggerObject):
 
     @clf_dir.setter
     def clf_dir(self, path):
-        if not isdir(path):
-            raise IOError("Path to classifier '%s' does not exist."
-                          %path)
-        self._clf_dir = path
 
+        if not isdir(path):
+            raise IOError("Path to classifier '%s' does not exist." %path)
+
+        self._clf_dir = path
         for dir_ in self._subdirs:
             subdir = join(path, dir_)
             setattr(self, "%s_dir" %dir_, subdir)
             makedirs(subdir)
+
+    # kind of a workaround for loading class definitons
+    def unset_clf_dir(self):
+        self._clf_dir = None
 
     @property
     def n_classes(self):

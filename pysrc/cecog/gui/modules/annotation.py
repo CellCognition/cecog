@@ -56,6 +56,7 @@ from cecog.gui.widgets.groupbox import QxtGroupBox
 from cecog.gui.widgets.colorbutton import ColorButton
 from cecog.gui.modules.module import Module
 
+
 class Annotations(object):
 
     def __init__(self):
@@ -473,23 +474,26 @@ class AnnotationModule(Module):
     def _on_import_class_definitions(self):
         if self._on_new_classifier():
             path = self._learner.clf_dir
+            if path is None:
+                path = os.path.expanduser('~')
             result = QFileDialog.getExistingDirectory(
                 self, 'Open classifier directory', os.path.abspath(path))
+
             if result:
                 learner = self._load_classifier(result)
-                if not learner is None:
+                if learner is not None:
                     self._learner = learner
                     self._update_class_definition_table()
-                    self._learner.clf_dir = None
+                    self._learner.unset_clf_dir()
 
     def _update_class_definition_table(self):
         class_table = self._class_table
         class_table.clearContents()
         class_table.setRowCount(len(self._learner.class_labels))
         select_item = None
-        for idx, class_name in enumerate(self._learner.class_names):
+        for idx, class_label in enumerate(self._learner.class_names):
             samples = 0
-            class_label = self._learner.class_labels[class_name]
+            class_name = self._learner.class_names[class_label]
             item = QTableWidgetItem(class_name)
             class_table.setItem(idx, self.COLUMN_CLASS_NAME, item)
             if select_item is None:
@@ -646,7 +650,7 @@ class AnnotationModule(Module):
                 self._update_annotation_table()
 
     def _init_new_classifier(self):
-        learner = BaseLearner(".", None, None)
+        learner = BaseLearner(None, None, None)
         self._current_class = None
         self._class_sbox.setValue(1)
         self._class_text.setText('class1')
@@ -714,7 +718,7 @@ class AnnotationModule(Module):
     def _on_saveas_classifier(self, path=None):
         learner = self._learner
         if path is None:
-            path = learner.clf_dir
+            path = os.path.expanduser("~")
             result = QFileDialog.getExistingDirectory(
                 self, 'Save to classifier directory', os.path.abspath(path))
         else:
@@ -771,6 +775,8 @@ class AnnotationModule(Module):
             if class_name in counts:
                 items = self._find_items_in_class_table(class_name,
                                                         self.COLUMN_CLASS_NAME)
+
+
                 item = self._class_table.item(items[0].row(),
                                               self.COLUMN_CLASS_COUNT)
                 item.setText(str(counts[class_name]))

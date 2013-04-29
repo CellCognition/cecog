@@ -1,18 +1,19 @@
-'''
+"""
 Copyright (c) 2005-2007 by Michael Held
-'''
+"""
 
 import os
 import shutil
 import random
 import logging
 
-from pdk.fileutils import (safe_mkdirs,
-                           collect_files,
-                           collect_files_by_regex)
+from pdk.fileutils import collect_files, collect_files_by_regex
+
+from cecog.util.util import makedirs
 
 from cecog import ccore
 from cecog.util.util import read_table
+from cecog.analyzer.tracker import Tracker
 
 def compose_galleries(path, path_hmm, quality="90",
                       one_daughter=True, sample=30):
@@ -20,8 +21,8 @@ def compose_galleries(path, path_hmm, quality="90",
     column_name = 'Trajectory'
     path_index = os.path.join(path_hmm, '_index')
     if not os.path.isdir(path_index):
-        logger.warning("Index path '%s' does not exist. Make sure the error correction was executed successfully." %
-                       path_index)
+        logger.warning(("Index path '%s' does not exist. Make sure the error"
+                        " correction was executed successfully." %path_index))
         return
 
     for filename in os.listdir(path_index):
@@ -69,35 +70,34 @@ def compose_galleries(path, path_hmm, quality="90",
 
         for gallery_name in results:
             path_out = os.path.join(path_hmm, '_gallery', gallery_name)
-            safe_mkdirs(path_out)
+            makedirs(path_out)
             image_name = os.path.join(path_out, '%s.jpg' % group_name)
             ccore.writeImage(results[gallery_name], image_name, quality)
             logger.debug("Gallery image '%s' successfully written." % image_name)
 
         yield group_name
 
+
 class EventGallery(object):
 
     IMAGE_CLASS = ccore.RGBImage
     PROCESS_LABEL = False
 
-    def __init__(self, oTracker, strPathIn, oP, strPathOut,
+    def __init__(self, eventselector, strPathIn, oP, strPathOut,
                  imageCompression="85",
                  imageSuffix=".jpg",
                  border=0,
                  writeSubdirs=True,
                  writeDescription=True,
-                 method='objectCentered',
-                 format=None,
                  size=None,
                  oneFilePerTrack=False):
 
         self._bHasImages = False
         dctTimePoints = {}
 
-        for strStartId, lstTimeData in oTracker.getBoundingBoxes(\
-            method=method, size=size, border=border).iteritems():
-            items = oTracker.getComponentsFromNodeId(strStartId)
+        for strStartId, lstTimeData in eventselector.bboxes( \
+            size=size, border=border).iteritems():
+            items = Tracker.split_nodeid(strStartId)
             iStartT, iObjId = items[:2]
             if len(items) == 3:
                 branch_id = items[2]
@@ -109,7 +109,7 @@ class EventGallery(object):
                                                self._format_name(oP, iStartT, iObjId, branch_id))
             else:
                 strPathOutEvent = strPathOut
-            safe_mkdirs(strPathOutEvent)
+            makedirs(strPathOutEvent)
 
             if writeDescription:
                 oFile = file(os.path.join(strPathOutEvent,
@@ -214,7 +214,7 @@ class EventGallery(object):
                                      filename_out)
 
                     path_out_info = os.path.join(path_out, '_info')
-                    safe_mkdirs(path_out_info)
+                    makedirs(path_out_info)
                     shutil.copy2(os.path.join(event_path, '_%s.txt' % event_id),
                                  os.path.join(path_out_info, '_%s.txt' % event_id))
                     shutil.rmtree(event_path, ignore_errors=True)

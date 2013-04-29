@@ -35,11 +35,7 @@ class CoreThread(QtCore.QThread):
                             'progress': 0,
                             'max': 0}
 
-    def run(self, *args, **kw):
-        # turn off tiff warings per thread
-        if not __debug__:
-            ccore.turn_off()
-
+    def _enable_eclipse_mt_debugging(self):
         try:
             import pydevd
             pydevd.connected = True
@@ -47,6 +43,12 @@ class CoreThread(QtCore.QThread):
             print 'Thread enabled interactive eclipse debuging...'
         except:
             pass
+
+    def run(self, *args, **kw):
+        # turn off tiff warings per thread
+        if not __debug__:
+            ccore.turn_off()
+            self._enable_eclipse_mt_debugging()
 
         try:
             self._run()

@@ -32,11 +32,11 @@ INCLUDES = [ 'sip',
              'scipy.spatial.kdtree',
              'scipy.sparse.csgraph._shortest_path' ]
 
-EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
-            'PyQt4.QtOpenGL', 'PyQt4.QtScript',
-            'PyQt4.QtSql', 'PyQt4.QtTest',
-            'PyQt4.QtWebKit', 'PyQt4.QtXml',
-            'PyQt4.phonon']
+EXCLUDES = ['QtDesigner', 'QtNetwork',
+            'QtOpenGL', 'QtScript',
+            'QtSql', 'QtTest',
+            'QtWebKit', 'QtXml',
+            'phonon']
 
 PACKAGES = ['cecog', 'pdk', 'h5py', 'vigra']
 
