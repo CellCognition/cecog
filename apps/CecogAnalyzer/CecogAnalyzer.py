@@ -246,14 +246,15 @@ class CecogAnalyzer(QtGui.QMainWindow):
         layout.addWidget(self._pages, 0, 1, 2, 1)
         layout.setContentsMargins(1, 1, 1, 1)
 
-        qApp._log_handler = GuiLogHandler(self)
-        qApp._log_window = LogWindow(qApp._log_handler)
-        qApp._log_window.setGeometry(50, 50, 600, 300)
+        handler = GuiLogHandler(self)
+        handler.setLevel(logging.INFO)
+        formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
+        handler.setFormatter(formatter)
+
+        self.log_window = LogWindow(self, handler)
+        self.log_window.setGeometry(50, 50, 600, 300)
 
         logger = logging.getLogger()
-        qApp._log_handler.setLevel(logging.INFO)
-        formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
-        qApp._log_handler.setFormatter(formatter)
         logger.setLevel(logging.INFO)
 
         qApp._image_dialog = None
@@ -688,9 +689,9 @@ class CecogAnalyzer(QtGui.QMainWindow):
 
     def _on_show_log_window(self):
         logger = logging.getLogger()
-        logger.addHandler(qApp._log_handler)
-        qApp._log_window.show()
-        qApp._log_window.raise_()
+        logger.addHandler(self.log_window.handler)
+        self.log_window.show()
+        #self.log_window.raise_()
 
     def _get_save_as_filename(self):
         dir = ""
@@ -707,6 +708,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
         show_html('_startup')
 
 if __name__ == "__main__":
+
     enable_eclipse_debuging()
 
     parser = argparse.ArgumentParser(description='CellCognition Analyzer GUI')
@@ -737,7 +739,7 @@ if __name__ == "__main__":
     main = CecogAnalyzer(cecog.APPNAME, cecog.VERSION, redirect,  args.debug)
     main._read_settings(join(main.environ.user_config_dir, args.configfile))
 
-    if args.load or is_app:
+    if (args.load and os.path.isfile(args.configfile)) or is_app:
         infos = list(ImageContainer.iter_check_plates(main._settings))
         main._load_image_container(infos, show_dlg=False)
 

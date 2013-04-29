@@ -19,7 +19,6 @@ from PyQt4 import QtCore, QtGui
 
 from cecog.util.util import write_table, makedirs
 from cecog.environment import CecogEnvironment
-# from cecog.config import R_SOURCE_PATH
 from cecog.threads.corethread import CoreThread
 from cecog.analyzer.gallery import compose_galleries
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
@@ -38,10 +37,6 @@ class HmmThread(CoreThread):
         # R on windows works better with '/' then '\'
         self._convert = lambda x: x.replace('\\','/')
         self._join = lambda *x: self._convert('/'.join(x))
-
-        # FIXME Thread should emit event to main window
-        QtGui.qApp._log_window.show()
-        QtGui.qApp._log_window.raise_()
 
     @classmethod
     def get_cmd(cls, filename):
@@ -106,7 +101,7 @@ class HmmThread(CoreThread):
 
         path_out = self._imagecontainer.get_path_out()
 
-        wd = abspath(join(CecogEnvironment.R_SOURCE_PATH, 'hmm'))
+        wd = abspath(join(CecogEnvironment.R_SOURCE_DIR, 'hmm'))
         f = file(join(wd, 'run_hmm.R'), 'r')
         lines = f.readlines()
         f.close()

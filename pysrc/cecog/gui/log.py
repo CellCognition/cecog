@@ -22,22 +22,27 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
-class LogWindow(QFrame):
+from PyQt4.QtCore import Qt
+
+class LogWindow(QDialog):
 
     LEVELS = {'DEBUG' : logging.DEBUG,
               'INFO'  : logging.INFO,
               'WARN'  : logging.WARNING,
               'ERROR' : logging.ERROR}
 
-    def __init__(self, handler, max_count=500):
-        QFrame.__init__(self)
+    def __init__(self, parent, handler,
+                 max_count=500, parents=None, flags=Qt.Window):
+        super(QDialog, self).__init__(parent, flags)
         self.setWindowTitle('Log window')
 
-        self._handler = handler
-        self._handler.message_received.connect(self._on_message_received)
+        self.setWindowModality(Qt.NonModal)
+
+        self.handler = handler
+        self.handler.message_received.connect(self._on_message_received)
 
         layout = QGridLayout(self)
-        layout.setContentsMargins(5,5,5,5)
+        layout.setContentsMargins(2, 2, 2, 2)
         self._log_widget = QPlainTextEdit(self)
         self._log_widget.setReadOnly(True)
         self._log_widget.setMaximumBlockCount(max_count)
@@ -55,18 +60,18 @@ class LogWindow(QFrame):
                      self._on_level_changed)
         for name in sorted(self.LEVELS, key=lambda x: self.LEVELS[x]):
             combo.addItem(name)
-
         self._msg_buffer = []
+        self.hide()
 
     def hideEvent(self, event):
         logger = logging.getLogger()
-        logger.removeHandler(self._handler)
-        QFrame.hideEvent(self, event)
+        logger.removeHandler(self.handler)
+        super(LogWindow, self).hideEvent(event)
 
     def showEvent(self, event):
         logger = logging.getLogger()
-        logger.addHandler(self._handler)
-        QFrame.showEvent(self, event)
+        logger.addHandler(self.handler)
+        super(LogWindow, self).showEvent(event)
 
     def _on_message_received(self, msg):
         self._msg_buffer.append(str(msg))
@@ -75,7 +80,7 @@ class LogWindow(QFrame):
         self._msg_buffer = []
 
     def _on_level_changed(self, name):
-        self._handler.setLevel(self.LEVELS[str(name)])
+        self.handler.setLevel(self.LEVELS[str(name)])
 
     def clear(self):
         self._msg_buffer = []
@@ -89,7 +94,7 @@ class GuiLogHandler(QObject, logging.Handler):
     def __init__(self, parent):
         self._mutex = QMutex()
         QObject.__init__(self, parent)
-        logging.Handler.__init__(self)#, strm=self._history)
+        logging.Handler.__init__(self)
 
     def emit(self, record):
         try:

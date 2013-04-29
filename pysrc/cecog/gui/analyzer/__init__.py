@@ -382,7 +382,7 @@ class _ProcessorMixin(object):
                 self._current_process = name
 
                 if not start_again:
-                    qApp._log_window.clear()
+                    self.parent().main_window.log_window.clear()
 
                     self._is_running = True
                     self._stage_infos = {}
@@ -448,6 +448,9 @@ class _ProcessorMixin(object):
                                          learner_dict,
                                          self.parent().main_window._imagecontainer)
                     self._analyzer.setTerminationEnabled(True)
+                    lw = self.parent().main_window.log_window
+                    lw.show()
+
 
                 elif cls is PostProcessingThread:
                     learner_dict = {}

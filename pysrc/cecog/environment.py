@@ -144,8 +144,6 @@ class CecogEnvironment(object):
 
     def _redirect(self):
 
-        import pdb; pdb.set_trace()
-
         logpath = join(self.user_config_dir, 'log')
         if not isdir(logpath):
             os.mkdir(logpath)
@@ -189,26 +187,28 @@ class CecogEnvironment(object):
             if not isfile(target):
                 shutil.copy2(src, target)
 
-    def _check_resources(self):
+    @classmethod
+    def _check_resources(cls):
         # ugly since resource will never be in the working directory
         # if it is found therer, it's by accident!
-        self.RESOURCE_DIR = abspath(self.RESOURCE_DIR)
-        if not isdir(self.RESOURCE_DIR):
-            self.RESOURCE_DIR = join(dirname(__file__),
+        cls.RESOURCE_DIR = abspath(cls.RESOURCE_DIR)
+        if not isdir(cls.RESOURCE_DIR):
+            cls.RESOURCE_DIR = join(dirname(__file__),
                                       os.pardir, os.pardir, 'apps',
                                      'CecogAnalyzer', 'resources')
-            self.RESOURCE_DIR = normpath(self.RESOURCE_DIR)
-            if not isdir(self.RESOURCE_DIR):
+            cls.RESOURCE_DIR = normpath(cls.RESOURCE_DIR)
+            if not isdir(cls.RESOURCE_DIR):
                 raise IOError("Resource directory not found (%s)."
-                              % self.RESOURCE_DIR)
+                              % cls.RESOURCE_DIR)
 
-        self.R_SOURCE_PATH = normpath(join(self.RESOURCE_DIR, 'rsrc'))
-        if not isdir(self.R_SOURCE_PATH):
-            self.R_SOURCE_PATH = join(dirname(__file__), os.pardir,
+        cls.R_SOURCE_DIR = normpath(join(cls.RESOURCE_DIR, 'rsrc'))
+        if not isdir(cls.R_SOURCE_DIR):
+            cls.R_SOURCE_DIR = join(dirname(__file__), os.pardir,
                                       os.pardir, 'rsrc')
-            if not isdir(self.R_SOURCE_PATH):
+            if not isdir(cls.R_SOURCE_DIR):
                 raise IOError("R-source directory not found (%s)."
-                          % self.R_SOURCE_PATH)
+                          % cls.R_SOURCE_DIR)
+            cls.R_SOURCE_DIR = abspath(normpath(cls.R_SOURCE_DIR))
 
     @property
     def user_config_dir(self):
@@ -236,7 +236,7 @@ class CecogEnvironment(object):
         return self.path_mapper.is_path_mappable(*args, **kw)
 
     def pprint(self):
-        print 'r-source-path: ', self.R_SOURCE_PATH
+        print 'r-source-path: ', self.R_SOURCE_DIR
         print 'resource-dir: ', self.RESOURCE_DIR
         print 'config.ini: ', self.ANALYZER_CONFIG_FILENAME
         print 'font12-file: ', self.FONT12_FILENAME
