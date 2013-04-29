@@ -476,7 +476,7 @@ class PositionAnalyzer(PositionCore):
         elif unit == TRACKING_DURATION_UNIT_SECONDS:
             result = value / info[0]
         else:
-            raise ValueError("Wrong unit '%s' specified." % unit)
+            raise ValueError("Wrong unit '%s' specified." %unit)
         return int(round(result))
 
     @property
@@ -484,8 +484,7 @@ class PositionAnalyzer(PositionCore):
         transitions = eval(self.settings.get2('tracking_labeltransitions'))
         if not isinstance(transitions[0], tuple):
             transitions = (transitions, )
-
-        evopts = {'transitions': eval(self.settings.get2('tracking_labeltransitions')),
+        evopts = {'transitions': transitions,
                   'backward_labels': map(int, self.settings.get2('tracking_backwardlabels').split(',')),
                   'forward_labels': map(int, self.settings.get2('tracking_forwardlabels').split(',')),
                   'backward_check': self._convert_tracking_duration('tracking_backwardCheck'),
@@ -521,7 +520,7 @@ class PositionAnalyzer(PositionCore):
         fname = join(self._statistics_dir, 'P%s__object_counts.txt' % self.position)
 
         # at least the total count for primary is always exported
-        
+
         # old: ch_info = OrderedDict([('Primary', ('primary', [], []))])
         ch_info = OrderedDict()
         for name, clf in self.classifiers.iteritems():
@@ -717,7 +716,7 @@ class PositionAnalyzer(PositionCore):
         self.timeholder.close_all()
         # close and remove handlers from logging object
         self.close()
-        
+
     def _analyze(self, cellanalyzer):
         super(PositionAnalyzer, self)._analyze()
         n_images = 0
