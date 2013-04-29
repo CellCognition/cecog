@@ -465,12 +465,15 @@ class PositionAnalyzer(PositionCore):
         elif unit == TRACKING_DURATION_UNIT_SECONDS:
             result = value / info[0]
         else:
-            raise ValueError("Wrong unit '%s' specified." % unit)
+            raise ValueError("Wrong unit '%s' specified." %unit)
         return int(round(result))
 
     @property
     def _es_options(self):
-        evopts = {'transitions': eval(self.settings.get2('tracking_labeltransitions')),
+        transitions = eval(self.settings.get2('tracking_labeltransitions'))
+        if not isinstance(transitions[0], tuple):
+            transitions = (transitions, )
+        evopts = {'transitions': transitions,
                   'backward_labels': map(int, self.settings.get2('tracking_backwardlabels').split(',')),
                   'forward_labels': map(int, self.settings.get2('tracking_forwardlabels').split(',')),
                   'backward_check': self._convert_tracking_duration('tracking_backwardCheck'),

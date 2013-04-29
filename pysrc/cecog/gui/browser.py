@@ -46,7 +46,6 @@ from cecog.analyzer.channel import (PrimaryChannel,
                                     TertiaryChannel,
                                     )
 from cecog.analyzer.core import AnalyzerCore
-from cecog.traits.settings import convert_package_path
 from cecog.io.imagecontainer import Coordinate
 from cecog.learning.learning import BaseLearner
 from cecog.gui.widgets.groupbox import QxtGroupBox
@@ -389,11 +388,19 @@ class Browser(QMainWindow):
         settings.set('Output', 'export_track_data', False)
         settings.set('Output', 'export_tracking_as_dot', False)
 
-        if len(self._imagecontainer.channels) > 1:
+        nchannels = len(self._imagecontainer.channels)
+
+        # XXX channel mapping unclear
+        # processing channel <--> color channel
+        # i.e problems if 2 processing channels have the
+        # same color
+        if nchannels == 2:
+            settings.set('Processing', 'secondary_processChannel', True)
+        elif nchannels == 3:
             settings.set('Processing', 'secondary_processChannel', True)
             settings.set('Processing', 'tertiary_processChannel', True)
-            # need turn of virtual channels
-            settings.set('Processing', 'merged_processChannel', False)
+        # need turn of virtual channels
+        settings.set('Processing', 'merged_processChannel', False)
 
         settings.set('General', 'rendering', {})
         analyzer = AnalyzerCore(self.coordinate.plate, settings,
