@@ -26,7 +26,7 @@ from os.path import join, isdir, isfile, dirname, normpath, abspath, realpath, \
     expanduser, basename
 
 from cecog.traits.config import _ConfigParser as ConfigParser
-from cecog import VERSION
+from cecog.util.mapping import map_path_to_os as _map_path_to_os
 from cecog import ccore
 
 
@@ -55,9 +55,10 @@ class BatteryPackage(object):
 
     def copy_demodata(self, dest_path):
         self._path = dest_path
+
+        import pdb; pdb.set_trace()
         if not isdir(dest_path) and isdir(self._demodata):
             shutil.copytree(self._demodata, dest_path)
-            os.mkdir(join(dest_path, 'Analysis'))
 
     @package_path.deleter
     def package_path(self):
@@ -97,81 +98,55 @@ class CecogEnvironment(object):
 
     __metaclass__ = Singleton
 
-    VERSION = VERSION
     RESOURCE_DIR = 'resources'
     BATTERY_PACKAGE_DIR = join(RESOURCE_DIR, "battery_package")
 
-    FONT12_FILENAME = "font12.png"
+    FONT12 = join(RESOURCE_DIR, "font12.png")
     NAMING_SCHEMA = join(RESOURCE_DIR, "naming_schemas.ini")
-    PATH_MAPPINGS = "path_mappings.txt"
+    PATH_MAPPINGS = join(RESOURCE_DIR, "path_mappings.txt")
     CONFIG = join(RESOURCE_DIR, "config.ini")
 
     R_SOURCE_DIR = 'rsrc'
 
-    _config_files = {'CONFIG': CONFIG,
-                     'NAMING_SCHEMA': NAMING_SCHEMA,
-                     'PATH_MAPPING': PATH_MAPPINGS,
-                     'FONT12': FONT12_FILENAME}
 
     # XXX want this away from class level
     naming_schema = ConfigParser(NAMING_SCHEMA, 'naming_schemas')
     analyzer_config = ConfigParser(CONFIG, 'analyzer_config')
+    path_mapper = PathMapper(PATH_MAPPINGS)
+
+    @classmethod
+    def map_path_to_os(cls, *args, **kw):
+        return cls.path_mapper.map_path_to_os(*args, **kw)
+
+    @classmethod
+    def is_path_mapable(cls, *args, **kw):
+        return cls.path_mapper.is_path_mappable(*args, **kw)
+
+    @classmethod
+    def convert_package_path(cls, path):
+        return normpath(join(cls.BATTERY_PACKAGE_DIR, path))
 
     def __init__(self, version, redirect=False, debug=False):
         super(CecogEnvironment, self).__init__()
         self._user_config_dir = None
         self.version = version
         self._check_resources()
-        self._copy_config()
+        self._copy_config(self)
 
         if redirect:
             self._redirect()
-
-        self.path_mapper = PathMapper(self._config_files['PATH_MAPPING'])
 
         self.battery_package = BatteryPackage(self.BATTERY_PACKAGE_DIR)
         self.battery_package.copy_demodata(
             join(self.user_config_dir, basename(self.BATTERY_PACKAGE_DIR)))
 
-        fontfile = join(self.user_config_dir, self.FONT12_FILENAME)
+        fontfile = join(self.user_config_dir, self.FONT12)
         ccore.Config.strFontFilepath = realpath(fontfile)
         if debug:
-            print 'ccorce.Config.strFontFilepath(FONT12_FILENAME) called'
+            print 'ccore.Config.strFontFilepath(%s) called' %self.FONT12
 
     @classmethod
-    def convert_package_path(cls, path):
-        return normpath(join(cls.BATTERY_PACKAGE_DIR, path))
-
-    def _redirect(self):
-
-        logpath = join(self.user_config_dir, 'log')
-        if not isdir(logpath):
-            os.mkdir(logpath)
-
-        sys.stdout = file(join(logpath, 'stdout.log'), 'w')
-        sys.stderr = file(join(logpath, 'stderr.log'), 'w')
-
-        # may cause troubles on windows
-        atexit.register(sys.stderr.close)
-        atexit.register(sys.stdout.close)
-
-    @property
-    def PATH_MAPPING_FILENAME(self):
-        return self._config_files['PATH_MAPPING']
-
-    @property
-    def NAMING_SCHEMA_FILENAME(self):
-        return self._config_files['NAMING_SCHEMA']
-
-    @property
-    def ANALYZER_CONFIG_FILENAME(self):
-        return self._config_files['CONFIG']
-
-    @property
-    def PACKAGE_DIR(self):
-        return self.battery_package.package_path
-
-    def _copy_config(self):
+    def _copy_config(cls, self):
         """Copy configuration files to user_config_dir
 
         Note: No file will be overwritten.
@@ -180,10 +155,14 @@ class CecogEnvironment(object):
         if not isdir(self.user_config_dir):
             os.mkdir(self.user_config_dir)
 
-        for key, file_ in self._config_files.iteritems():
-            src = join(self.RESOURCE_DIR, basename(file_))
+        cfiles = ('FONT12', 'CONFIG', 'PATH_MAPPINGS', 'NAMING_SCHEMA')
+        # copy the config config and update class attributes
+        for key in cfiles:
+            file_ = getattr(cls, key)
+            src = join(cls.RESOURCE_DIR, basename(file_))
             target = join(self.user_config_dir, basename(file_))
-            self._config_files[key] = target
+            setattr(cls, key, target)
+
             if not isfile(target):
                 shutil.copy2(src, target)
 
@@ -227,19 +206,28 @@ class CecogEnvironment(object):
             self._user_config_dir = path
         return self._user_config_dir
 
-    @staticmethod
-    def map_path_to_os(*args, **kw):
-        return self.path_mapper.map_path_to_os(*args, **kw)
+    def _redirect(self):
 
-    @staticmethod
-    def is_path_mapable(*args, **kw):
-        return self.path_mapper.is_path_mappable(*args, **kw)
+        logpath = join(self.user_config_dir, 'log')
+        if not isdir(logpath):
+            os.mkdir(logpath)
+
+        sys.stdout = file(join(logpath, 'stdout.log'), 'w')
+        sys.stderr = file(join(logpath, 'stderr.log'), 'w')
+
+        # may cause troubles on windows
+        atexit.register(sys.stderr.close)
+        atexit.register(sys.stdout.close)
+
+    @property
+    def package_dir(self):
+        return self.battery_package.package_path
 
     def pprint(self):
         print 'r-source-path: ', self.R_SOURCE_DIR
         print 'resource-dir: ', self.RESOURCE_DIR
-        print 'config.ini: ', self.ANALYZER_CONFIG_FILENAME
-        print 'font12-file: ', self.FONT12_FILENAME
-        print 'path-mapping-file:', self.PATH_MAPPING_FILENAME
-        print 'naming-scheme: ', self.NAMING_SCHEMA_FILENAME
-        print 'battery_package: ', self.PACKAGE_DIR
+        print 'config.ini: ', self.CONFIG
+        print 'font12-file: ', self.FONT12
+        print 'path-mapping-file:', self.PATH_MAPPINGS
+        print 'naming-scheme: ', self.NAMING_SCHEMA
+        print 'battery_package: ', self.package_dir

@@ -61,9 +61,10 @@ from cecog import (JOB_CONTROL_RESUME,
 #
 class ClusterDisplay(QGroupBox):
 
-    def __init__(self, parent, settings):
+    def __init__(self, parent, settings, imagecontainer):
         QGroupBox.__init__(self, parent)
         self._settings = settings
+        self._imagecontainer = imagecontainer
         self._jobid = None
         self._toggle_state = JOB_CONTROL_SUSPEND
         self._service = None
@@ -96,7 +97,6 @@ class ClusterDisplay(QGroupBox):
         label4.setSizePolicy(fixed)
 
         self._table_info = QTableWidget(self)
-        #self._table_info.setEditTriggers(QTableWidget.)
         self._table_info.setSelectionMode(QTableWidget.NoSelection)
         labels = ['status', 'your machine', 'on the cluster']
         self._table_info.setColumnCount(len(labels))
@@ -127,10 +127,6 @@ class ClusterDisplay(QGroupBox):
         line = QFrame(self)
         line.setFrameShape(QFrame.HLine)
         layout.addWidget(line, 6, 0, 1, 5)
-#        layout.addItem(QSpacerItem(1, 1,
-#                                   QSizePolicy.MinimumExpanding,
-#                                   QSizePolicy.Expanding|QSizePolicy.Maximum),
-#                       6, 0, 1, 5)
 
         label5 = QLabel('Current job ID:', self)
         layout.addWidget(label5, 7, 0, Qt.AlignRight)
@@ -164,6 +160,12 @@ class ClusterDisplay(QGroupBox):
                                    QSizePolicy.Expanding|QSizePolicy.Maximum),
                        10, 0, 1, 5)
 
+    @property
+    def imagecontainer(self):
+        if self._imagecontainer is None:
+            raise RuntimeError("Image container is not loaded yet")
+        return self._imagecontainer
+
     def _on_jobid_entered(self, txt):
         print txt
         self._jobid = str(txt)
@@ -172,12 +174,10 @@ class ClusterDisplay(QGroupBox):
     def _on_submit_job(self):
         self._submit_settings.set_section(SECTION_NAME_GENERAL)
         if not self._submit_settings.get2('constrain_positions'):
-            # FIXME:
-            imagecontainer = qApp._main_window._imagecontainer
             positions = []
-            for plate_id in imagecontainer.plates:
-                imagecontainer.set_plate(plate_id)
-                meta_data = imagecontainer.get_meta_data()
+            for plate_id in self.imagecontainer.plates:
+                self.imagecontainer.set_plate(plate_id)
+                meta_data = self.imagecontainer.get_meta_data()
                 positions += ['%s___%s' % (plate_id, p) for p in meta_data.positions]
             self._submit_settings.set2('positions', ','.join(positions))
             nr_items = len(positions)
@@ -350,12 +350,11 @@ class ClusterDisplay(QGroupBox):
         if self._connect():
             self._can_submit = True
 
-            imagecontainer = qApp._main_window._imagecontainer
-            if imagecontainer is None:
+            try:
+                self._submit_settings = ProcessingFrame.get_special_settings( \
+                    self._settings, self.imagecontainer.has_timelapse)
+            except:
                 self._submit_settings = ProcessingFrame.get_special_settings(self._settings)
-            else:
-                self._submit_settings = ProcessingFrame.get_special_settings(self._settings,
-                                                                             imagecontainer.has_timelapse)
 
             self._label_hosturl.setText(self._host_url)
             self._label_status.setText(self._service.get_service_info())
@@ -393,17 +392,17 @@ class ClusterFrame(BaseFrame):
 
     SECTION_NAME = SECTION_NAME_CLUSTER
 
-    def __init__(self, settings, parent):
+    def __init__(self, settings, parent, imagecontainer):
         super(ClusterFrame, self).__init__(settings, parent)
 
-        self._cluster_display = self._add_frame()
+        self._cluster_display = self._add_frame(imagecontainer)
         self.add_group(None,
                        [('position_granularity', (0,0,1,1)),
                         ], label='Cluster Settings')
 
-    def _add_frame(self):
+    def _add_frame(self, imagecontainer):
         frame = self._get_frame()
-        cluster_display = ClusterDisplay(frame, self._settings)
+        cluster_display = ClusterDisplay(frame, self._settings, imagecontainer)
         frame.layout().addWidget(cluster_display,
                                  frame._input_cnt, 0, 1, 2)
         frame._input_cnt += 1

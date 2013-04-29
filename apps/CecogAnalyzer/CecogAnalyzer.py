@@ -225,7 +225,8 @@ class CecogAnalyzer(QtGui.QMainWindow):
                       ProcessingFrame(self._settings, self._pages)]
 
         if self.environ.analyzer_config.get('Analyzer', 'cluster_support'):
-            self._tabs.append(ClusterFrame(self._settings, self._pages))
+            self._tabs.append(ClusterFrame(self._settings, self._pages,
+                                           self._imagecontainer))
 
         widths = []
         for tab in self._tabs:
@@ -457,7 +458,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
         if path_in == '':
             critical(self, txt, "Image path must be defined.")
         elif not os.path.isdir(path_in) and \
-             not os.path.isdir(os.path.join(self.environ.PACKAGE_DIR, path_in)):
+             not os.path.isdir(os.path.join(self.environ.package_dir, path_in)):
             critical(self, txt, "Image path '%s' not found." % path_in)
         else:
             try:
