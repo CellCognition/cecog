@@ -56,7 +56,6 @@ class BatteryPackage(object):
     def copy_demodata(self, dest_path):
         self._path = dest_path
 
-        import pdb; pdb.set_trace()
         if not isdir(dest_path) and isdir(self._demodata):
             shutil.copytree(self._demodata, dest_path)
 
@@ -98,6 +97,7 @@ class CecogEnvironment(object):
 
     __metaclass__ = Singleton
 
+    # need to rever to the executable path, or working directory...
     RESOURCE_DIR = 'resources'
     BATTERY_PACKAGE_DIR = join(RESOURCE_DIR, "battery_package")
 
