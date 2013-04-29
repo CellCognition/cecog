@@ -1,10 +1,7 @@
 @SETLOCAL
-@set CECOGPATH=Z:\workbench\cecog
-@set PYTHONPATH=%PYTHONPATH%;%CECOGPATH%\pysrc
-
-@set PATH=%PATH%;C:\Python27\Lib\site-packages\numpy
-@set PATH=%PATH%;C:\Python27\Lib\site-packages\numpy\core
-
+:: this line is one uses windows sdk build environment
+echo using Windows SDK's environment for x64 build
+set VS90COMNTOOLS=%VS100COMNTOOLS%
 @Set /P _clean=Clean directories manually? [Y/n] || Set _clean="n"
 
 @If "%_clean%"=="Y" goto:clean
@@ -33,6 +30,6 @@ for /F "delims=\" %%a in (build.info) do (
 SET mver="1.4.0"
 pause
 
-makensis /Dmver=%mver% build-win-installer-64.nsi
+makensis /Dmver=%mver% win-installer-64.nsi
 rename CecogAnalyzer-setup.exe CecogAnalyzer_%temp%_x86_64.exe
 @ENDLOCAL
