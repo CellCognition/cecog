@@ -10,6 +10,33 @@
 
 --------------------------------------------------------------------------------
 
+Building the C++ Extension
+***********************
+
+To compile the ccore extension you need to adopt the library/include
+paths in the setup-scripts accordingly
+
+Dependcies are:
+-) libvigraimpex
+-) libtiff
+-) liblzma (only if libtiff is statically linked)
+
+On MaxOSX simply run the make file. On Windows it depends on the developement environment.
+
+1) Using Windows SDK's:
+-----------------------
+
+Run the script build_helper\windows_sdk_env.bat.
+Run build_win64_bin.bat
+
+2) Using VCXX Professional
+--------------------------
+remove the "set VS90COMNTOOLS=%VS100COMNTOOLS%" from build_win64_bin.bat
+run the script
+
+
+##########################################################################
+
 The CecogAnalyzer package comes with batteries included.
 
 It contains
