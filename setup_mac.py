@@ -53,7 +53,7 @@ cc_includes = ['/Users/hoefler/sandbox/lib-static/include',
                numpy.distutils.misc_util.get_numpy_include_dirs()
 library_dirs = ['/Users/hoefler/sandbox/lib-static/lib',
                 '/cecoglibs/vigra/lib']
-libraries = ['boost_python', 'tiff', 'vigraimpex']
+libraries = ['boost_python', 'vigraimpex']
 
 
 ccore = Extension('cecog.ccore._cecog',
@@ -61,6 +61,7 @@ ccore = Extension('cecog.ccore._cecog',
                   include_dirs = cc_includes,
                   libraries = libraries,
                   library_dirs = library_dirs,
+                  extra_object = ['tiff'],
                   extra_compile_args = ['-O3', '-fPIC', '-arch x86_64'],
                   language = 'c++')
 
