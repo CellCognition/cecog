@@ -124,7 +124,7 @@ class CecogEnvironment(object):
 
     @classmethod
     def convert_package_path(cls, path):
-        return normpath(join(cls.BATTERY_PACKAGE_DIR, path))
+        return normpath(join(cls.RESOURCE_DIR, basename(cls.BATTERY_PACKAGE_DIR), path))
 
     def __init__(self, version, redirect=False, debug=False):
         super(CecogEnvironment, self).__init__()
@@ -165,11 +165,12 @@ class CecogEnvironment(object):
 
             if not isfile(target):
                 shutil.copy2(src, target)
+        # changing resource directory after copying the files
+        # copy also the r sources
+        cls.RESOURCE_DIR = self.user_config_dir
 
     @classmethod
     def _check_resources(cls):
-        # ugly since resource will never be in the working directory
-        # if it is found therer, it's by accident!
         cls.RESOURCE_DIR = abspath(cls.RESOURCE_DIR)
         if not isdir(cls.RESOURCE_DIR):
             cls.RESOURCE_DIR = join(dirname(__file__),
@@ -181,6 +182,7 @@ class CecogEnvironment(object):
                               % cls.RESOURCE_DIR)
 
         cls.R_SOURCE_DIR = normpath(join(cls.RESOURCE_DIR, 'rsrc'))
+
         if not isdir(cls.R_SOURCE_DIR):
             cls.R_SOURCE_DIR = join(dirname(__file__), os.pardir,
                                       os.pardir, 'rsrc')
