@@ -41,10 +41,13 @@ _palettes = join(RESOURCE_PATH, 'palettes', 'zeiss')
 _paltarget = join(TARGET_DIR, 'palettes', 'zeiss')
 _battery_package = join(RESOURCE_PATH, 'battery_package')
 
-def get_data_files(target_dir=TARGET_DIR):
+def get_data_files(target_dir=TARGET_DIR, mpl_data=True):
     """Pack data files into list of (target-dir, list-of-files)-tuples"""
 
-    dfiles = matplotlib.get_py2exe_datafiles()
+    dfiles = []
+    if mpl_data:
+        dfiles.extend(matplotlib.get_py2exe_datafiles())
+
     dfiles.append((target_dir, _rsc))
     dfiles.append((join(target_dir, 'rsrc', 'hmm'), _rfiles))
     dfiles.append((_paltarget, glob.glob(join(abspath(_palettes), '*.zip'))))
