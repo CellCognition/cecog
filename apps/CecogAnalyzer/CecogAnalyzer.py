@@ -741,9 +741,12 @@ if __name__ == "__main__":
     main._read_settings(join(main.environ.user_config_dir, args.configfile))
 
     if (args.load and os.path.isfile(args.configfile)) or is_app:
-        infos = list(ImageContainer.iter_check_plates(main._settings))
-        main._load_image_container(infos, show_dlg=False)
-
+        try:
+            infos = list(ImageContainer.iter_check_plates(main._settings))
+            main._load_image_container(infos, show_dlg=False)
+        except Exception, e:
+            msg = "Could not load images\n%s" %e.message
+            QMessageBox.critical(None, "Error", msg)
     main.show()
     splash.finish(main)
     sys.exit(app.exec_())

@@ -28,7 +28,7 @@ else:
     _rfiles = [join(os.pardir, os.pardir,
                     'rsrc', 'hmm', _rf) for _rf in _rfiles]
 
-_rsc = ( Ce.CONFIG, Ce.FONT12, Ce.NAMING_SCHEMA, Ce.PATH_MAPPING)
+_rsc = ( Ce.CONFIG, Ce.FONT12, Ce.NAMING_SCHEMA, Ce.PATH_MAPPINGS)
 _rsc = [join(abspath(Ce.RESOURCE_DIR), basename(rf)) for rf in _rsc]
 
 _palettes = join(Ce.RESOURCE_DIR, 'palettes', 'zeiss')
