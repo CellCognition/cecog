@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 environment.py - provides os independent path settings
                  e.g. path for ini-files
@@ -29,6 +28,24 @@ from cecog.traits.config import _ConfigParser as ConfigParser
 from cecog.util.mapping import map_path_to_os as _map_path_to_os
 from cecog import ccore
 
+def find_resource_dir():
+    """Return a normalized absolute path to the resource directory.
+
+    Function defines the search order for different locations i.e.
+    installations, bundeled binaries and the the source tree.
+    """
+    rdirs = [join(dirname(sys.executable), 'resources'),
+             'resources',
+             join(dirname(__file__), os.pardir, os.pardir, 'resources')]
+
+    for rdir in rdirs:
+        if isdir(rdir):
+            break
+    rdir = normpath(abspath(rdir))
+
+    if not isdir(rdir):
+        raise IOError("Resource path '%s' not found." %rdir)
+    return rdir
 
 # XXX - wrong module for design pattern
 class Singleton(type):
@@ -97,8 +114,8 @@ class CecogEnvironment(object):
 
     __metaclass__ = Singleton
 
-    # need to rever to the executable path, or working directory...
-    RESOURCE_DIR = 'resources'
+    # need to refer to the executable path, or working directory...
+    RESOURCE_DIR = find_resource_dir()
     BATTERY_PACKAGE_DIR = join(RESOURCE_DIR, "battery_package")
 
     FONT12 = join(RESOURCE_DIR, "font12.png")
@@ -107,7 +124,6 @@ class CecogEnvironment(object):
     CONFIG = join(RESOURCE_DIR, "config.ini")
 
     R_SOURCE_DIR = 'rsrc'
-
 
     # XXX want this away from class level
     naming_schema = ConfigParser(NAMING_SCHEMA, 'naming_schemas')
@@ -130,7 +146,7 @@ class CecogEnvironment(object):
         super(CecogEnvironment, self).__init__()
         self._user_config_dir = None
         self.version = version
-        self._check_resources()
+        self._check_r_sources()
         self._copy_config(self)
 
         if redirect:
@@ -170,22 +186,11 @@ class CecogEnvironment(object):
         cls.RESOURCE_DIR = self.user_config_dir
 
     @classmethod
-    def _check_resources(cls):
-        cls.RESOURCE_DIR = abspath(cls.RESOURCE_DIR)
-        if not isdir(cls.RESOURCE_DIR):
-            cls.RESOURCE_DIR = join(dirname(__file__),
-                                      os.pardir, os.pardir, 'apps',
-                                     'CecogAnalyzer', 'resources')
-            cls.RESOURCE_DIR = normpath(cls.RESOURCE_DIR)
-            if not isdir(cls.RESOURCE_DIR):
-                raise IOError("Resource directory not found (%s)."
-                              % cls.RESOURCE_DIR)
-
-        cls.R_SOURCE_DIR = normpath(join(cls.RESOURCE_DIR, 'rsrc'))
-
+    def _check_r_sources(cls):
+        cls.R_SOURCE_DIR = join(cls.RESOURCE_DIR, 'rsrc')
         if not isdir(cls.R_SOURCE_DIR):
-            cls.R_SOURCE_DIR = join(dirname(__file__), os.pardir,
-                                      os.pardir, 'rsrc')
+            cls.R_SOURCE_DIR = join(dirname(__file__),
+                                      os.pardir, os.pardir, 'rsrc')
             if not isdir(cls.R_SOURCE_DIR):
                 raise IOError("R-source directory not found (%s)."
                           % cls.R_SOURCE_DIR)

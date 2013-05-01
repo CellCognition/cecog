@@ -16,6 +16,7 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
+import os
 import sys
 from os.path import join, abspath
 import numpy.distutils
