@@ -87,8 +87,8 @@ py2exe_opts = {'includes': INCLUDES,
                'skip_archive': False,
                'bundle_files': 3}
 
-pyrcc_opts = {'infile': 'resource.qrc',
-              'outfile': join('scripts', 'resource.py'),
+pyrcc_opts = {'infile': 'cecog.qrc',
+              'outfile': join('pysrc', 'cecog', 'cecog_rc.py'),
               'pyrccbin': join('C:', 'Python27', 'Lib', 'site-packages',
                                'PyQt4', 'pyrcc4.exe')}
 
