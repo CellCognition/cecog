@@ -38,16 +38,6 @@ pyrcc_opts = {'infile': 'cecog.qrc',
               'outfile': join('pysrc', 'cecog', 'cecog_rc.py'),
               'pyrccbin': 'pyrcc4'}
 
-# cc_includes = ['/usr/include',
-#                '/biosw/debian5-x86_64/vigra/1.8.0/include',
-#                '/biosw/debian5-x86_64/boost/1.51.0/include',
-# 	       'csrc/include'] + \
-#                numpy.distutils.misc_util.get_numpy_include_dirs()
-# library_dirs = ['/biosw/debian5-x86_64/vigra/1.8.0/lib',
-# 	        '/biosw/debian5-x86_64/boost/1.51.0/lib']
-# libraries = ['boost_python', 'tiff', 'vigraimpex']
-
-
 cc_includes = ['/Users/hoefler/sandbox/lib-static/include',
                '/cecoglibs/vigra/include/',
                'csrc/include'] + \
@@ -88,6 +78,7 @@ packages = ['cecog',
             'pdk']
 
 scripts = [join('scripts', 'CecogAnalyzer.py'), join('scripts', 'batch.py')]
+datadir = join(sys.prefix, 'share', 'cellcognition')
 
 setup(scripts = scripts,
       data_files = build_helpers.get_data_files(mpl_data=False),
@@ -96,6 +87,7 @@ setup(scripts = scripts,
       packages = packages,
       package_dir = {'cecog': join('pysrc', 'cecog'),
                      'pdk': join('pysrc', 'pdk')},
-      options = {"pyrcc": pyrcc_opts},
+      options = {'pyrcc': pyrcc_opts,
+                 'install': {'install_data': datadir}},
       ext_modules = [ccore],
       **build_helpers.metadata)

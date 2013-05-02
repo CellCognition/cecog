@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
                            The CellCognition Project
         Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer

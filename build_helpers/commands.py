@@ -16,6 +16,7 @@ __all__ = ['Build', 'PyRcc']
 
 import os
 from os.path import isfile
+import subprocess
 from  distutils.core import Command
 from  distutils.command.build import build as _build
 
@@ -51,7 +52,12 @@ class PyRcc(Command):
             raise RuntimeError("Check extension of the output file")
 
     def run(self):
-        cmd = '%s -o %s %s' %(self.pyrccbin, self.outfile, self.infile)
         print "Compiling qrc file"
-        os.system(cmd)
         print self.outfile
+        try:
+            subprocess.check_call([self.pyrccbin, '-o', self.outfile,
+                                   self.infile])
+        except Exception, e:
+            cmd = "%s -o %s %s" %(self.pyrccbin, self.outfile, self.infile)
+            print "running command '%s' failed" %cmd
+            raise
