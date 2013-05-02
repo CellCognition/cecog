@@ -98,7 +98,7 @@ def cecog_job_template(jt, path_out, args, emails, version, batch_size=1,
     print jt.jobEnvironment
     jt.remoteCommand = pybin
     print jt.remoteCommand
-    jt.args = ['batch.py'] + args
+    jt.args = ['cecog_batch.py'] + args
     jt.joinFiles = True
 
     jt.email = emails

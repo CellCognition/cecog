@@ -39,6 +39,7 @@ pyrcc_opts = {'infile': 'cecog.qrc',
               'pyrccbin': 'pyrcc4'}
 
 cc_includes = ['/Users/hoefler/sandbox/lib-static/include',
+               '/Users/hoefler/pyshared',
                '/cecoglibs/vigra/include/',
                'csrc/include'] + \
                numpy.distutils.misc_util.get_numpy_include_dirs()
@@ -77,7 +78,7 @@ packages = ['cecog',
             'cecog.util',
             'pdk']
 
-scripts = [join('scripts', 'CecogAnalyzer.py'), join('scripts', 'batch.py')]
+scripts = [join('scripts', 'CecogAnalyzer.py'), join('scripts', 'cecog_batch.py')]
 datadir = join(sys.prefix, 'share', 'cellcognition')
 
 setup(scripts = scripts,
