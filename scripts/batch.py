@@ -18,8 +18,14 @@ import os
 import sys
 import logging
 
+try:
+    import cecog
+except ImportError:
+    sys.path.append(os.path.join(os.pardir, "pysrc"))
+    import cecog
+
 from cecog import VERSION
-from cecog.traits.settings import ConfigSettings
+from cecog.traits.config import ConfigSettings
 from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT

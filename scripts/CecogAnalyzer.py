@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
                            The CellCognition Project
         Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
@@ -84,7 +85,7 @@ from cecog.gui.util import (status,
                             waitingProgressDialog)
 
 # compiled from qrc file
-import resource
+import cecog.cecog_rc
 
 def enable_eclipse_debuging():
     try:
@@ -673,7 +674,6 @@ class CecogAnalyzer(QtGui.QMainWindow):
                 self._clear_browser()
                 self.set_modules_active(state=False)
 
-
     @QtCore.pyqtSlot()
     def _on_file_save(self):
         self.save_settings(False)
@@ -710,7 +710,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
 
 
 if __name__ == "__main__":
-    
+
     enable_eclipse_debuging()
 
     parser = argparse.ArgumentParser(description='CellCognition Analyzer GUI')
@@ -741,13 +741,13 @@ if __name__ == "__main__":
     main = CecogAnalyzer(cecog.APPNAME, cecog.VERSION, redirect,  args.debug)
     main._read_settings(join(main.environ.user_config_dir, args.configfile))
 
-    if (args.load and os.path.isfile(args.configfile)) or is_app:
-	try:
+    try:
+        if (args.load and os.path.isfile(args.configfile)) or is_app:
             infos = list(ImageContainer.iter_check_plates(main._settings))
             main._load_image_container(infos, show_dlg=False)
-        except Exception, e:
-            msg = "Could not load images\n%s" %e.message
-            QMessageBox.critical(None, "Error", msg)
+    except Exception, e:
+        msg = "Could not load images\n%s" %e.message
+        QMessageBox.critical(None, "Error", msg)
     main.show()
     splash.finish(main)
     sys.exit(app.exec_())

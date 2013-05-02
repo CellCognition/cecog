@@ -35,8 +35,9 @@ def find_resource_dir():
     installations, bundeled binaries and the the source tree.
     """
     rdirs = [join(dirname(sys.executable), 'resources'),
-             join(dirname(abspath(sys.argv[0])).replace('bin', 'share'), 'resources'),
-	     join(sys.exec_prefix, 'share', 'cellanalyzer', 'resources'),
+             join(dirname(abspath(sys.argv[0])).replace('bin', 'share'),
+                  'cellcognition', 'resources'),
+	     join(sys.exec_prefix, 'share', 'cellcognition', 'resources'),
              'resources',
              join(dirname(__file__), os.pardir, os.pardir, 'resources')]
 
@@ -190,6 +191,7 @@ class CecogEnvironment(object):
     @classmethod
     def _check_r_sources(cls):
         cls.R_SOURCE_DIR = join(cls.RESOURCE_DIR, 'rsrc')
+
         if not isdir(cls.R_SOURCE_DIR):
             cls.R_SOURCE_DIR = join(dirname(__file__),
                                       os.pardir, os.pardir, 'rsrc')

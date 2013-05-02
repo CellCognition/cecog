@@ -44,8 +44,8 @@ py2app_opts = {'argv_emulation': False,
                'optimize': 2,
                'iconfile': 'resources/cecog_analyzer_icon.icns'}
 
-pyrcc_opts = {'infile': 'resource.qrc',
-              'outfile': join('scripts', 'resource.py'),
+pyrcc_opts = {'infile': 'cecog.qrc',
+              'outfile': join('pysrc', 'cecog', 'cecog_rc.py'),
               'pyrccbin': 'pyrcc4'}
 
 cc_includes = ['/Users/hoefler/sandbox/lib-static/include',

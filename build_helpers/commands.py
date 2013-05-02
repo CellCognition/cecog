@@ -54,3 +54,4 @@ class PyRcc(Command):
         cmd = '%s -o %s %s' %(self.pyrccbin, self.outfile, self.infile)
         print "Compiling qrc file"
         os.system(cmd)
+        print self.outfile
