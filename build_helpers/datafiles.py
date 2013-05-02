@@ -17,10 +17,8 @@ import glob
 import matplotlib
 from os.path import basename, join, abspath
 
-from cecog.environment import CecogEnvironment as Ce
-
-TARGET_DIR = os.path.basename(Ce.RESOURCE_DIR)
-
+TARGET_DIR = 'resources'
+RESOURCE_DIR = 'resources'
 
 _rfiles = ['graph_template.txt', 'hmm.R', 'hmm_report.R', 'run_hmm.R']
 
@@ -32,12 +30,12 @@ else:
                     'rsrc', 'hmm', _rf) for _rf in _rfiles]
 
 
-_rsc = (Ce.CONFIG, Ce.FONT12, Ce.NAMING_SCHEMA, Ce.PATH_MAPPINGS)
-_rsc = [join(abspath(Ce.RESOURCE_DIR), basename(rf)) for rf in _rsc]
+_rsc = ('config.ini', 'naming_schemas.ini', 'path_mappings.txt', 'font12.png')
+_rsc = [join(abspath(RESOURCE_DIR), basename(rf)) for rf in _rsc]
 
-_palettes = join(Ce.RESOURCE_DIR, 'palettes', 'zeiss')
+_palettes = join(RESOURCE_DIR, 'palettes', 'zeiss')
 _paltarget = join(TARGET_DIR, 'palettes', 'zeiss')
-_battery_package = join(Ce.RESOURCE_DIR, 'battery_package')
+_battery_package = join(RESOURCE_DIR, 'battery_package')
 
 def get_data_files(target_dir=TARGET_DIR, mpl_data=True):
     """Pack data files into list of (target-dir, list-of-files)-tuples"""
@@ -53,6 +51,6 @@ def get_data_files(target_dir=TARGET_DIR, mpl_data=True):
     for root, subdirs, files in os.walk(_battery_package):
         for file_ in files:
             if file_ not in (".git", ):
-                target = root.replace(Ce.RESOURCE_DIR, TARGET_DIR)
+                target = root.replace(RESOURCE_DIR, TARGET_DIR)
                 dfiles.append((target, [join(abspath(root), file_)]))
     return dfiles

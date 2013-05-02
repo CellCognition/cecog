@@ -40,10 +40,11 @@ pyrcc_opts = {'infile': 'resource.qrc',
 
 cc_includes = ['/usr/include',
                '/biosw/debian5-x86_64/vigra/1.8.0/include',
-               'csrc/include'] + \
-               	numpy.distutils.misc_util.get_numpy_include_dirs()
-library_dirs = ['/usr/lib/',
-                '/biosw/debian5-x86_64/vigra/1.8.0/lib']
+               '/biosw/debian5-x86_64/boost/1.51.0/include',               
+	       'csrc/include'] + \
+               numpy.distutils.misc_util.get_numpy_include_dirs()
+library_dirs = ['/biosw/debian5-x86_64/vigra/1.8.0/lib',
+	        '/biosw/debian5-x86_64/boost/1.51.0/lib']
 libraries = ['boost_python', 'tiff', 'vigraimpex']
 
 
@@ -82,8 +83,7 @@ scripts = [join('scripts', 'CecogAnalyzer.py'), join('scripts', 'batch.py')]
 rcsdir = join(sys.prefix, 'share', 'cellcognition', 'resources')
 
 setup(scripts = scripts,
-      data_files = build_helpers.get_data_files(target_dir=rcsdir,
-                                                mpl_data=False),
+      data_files = build_helpers.get_data_files(mpl_data=False),
       cmdclass = {'pyrcc': build_helpers.PyRcc,
                   'build': build_helpers.Build},
       packages = packages,

@@ -710,44 +710,44 @@ class CecogAnalyzer(QtGui.QMainWindow):
 
 
 if __name__ == "__main__":
-    try:
-        enable_eclipse_debuging()
+    
+    enable_eclipse_debuging()
 
-        parser = argparse.ArgumentParser(description='CellCognition Analyzer GUI')
-        parser.add_argument('-l', '--load', action='store_true', default=False,
+    parser = argparse.ArgumentParser(description='CellCognition Analyzer GUI')
+    parser.add_argument('-l', '--load', action='store_true', default=False,
                             help='Load structure file if a config was provied.')
-        parser.add_argument('-c''--configfile', dest='configfile',
+    parser.add_argument('-c''--configfile', dest='configfile',
                             default=os.path.join("battery_package",
                                                  "Settings", "demo_settings.conf"),
                             help='Load a config file. (default from battery package)')
-        parser.add_argument('-d', '--debug', action='store_true', default=False,
+    parser.add_argument('-d', '--debug', action='store_true', default=False,
                             help='Run applicaton in debug mode')
-        args, _ = parser.parse_known_args()
+    args, _ = parser.parse_known_args()
 
-        freeze_support()
-        app = QtGui.QApplication(sys.argv)
-        app.setWindowIcon(QtGui.QIcon(':cecog_analyzer_icon'))
-        app.setApplicationName(cecog.APPNAME)
+    freeze_support()
+    app = QtGui.QApplication(sys.argv)
+    app.setWindowIcon(QtGui.QIcon(':cecog_analyzer_icon'))
+    app.setApplicationName(cecog.APPNAME)
 
-        splash = QtGui.QSplashScreen(QtGui.QPixmap(':cecog_splash'))
-        splash.show()
+    splash = QtGui.QSplashScreen(QtGui.QPixmap(':cecog_splash'))
+    splash.show()
 
-        is_app = hasattr(sys, 'frozen')
-        if is_app:
-            redirect = (sys.frozen == "windows_exe")
-        else:
-            redirect = False
+    is_app = hasattr(sys, 'frozen')
+    if is_app:
+        redirect = (sys.frozen == "windows_exe")
+    else:
+        redirect = False
 
-        main = CecogAnalyzer(cecog.APPNAME, cecog.VERSION, redirect,  args.debug)
-        main._read_settings(join(main.environ.user_config_dir, args.configfile))
+    main = CecogAnalyzer(cecog.APPNAME, cecog.VERSION, redirect,  args.debug)
+    main._read_settings(join(main.environ.user_config_dir, args.configfile))
 
-        if (args.load and os.path.isfile(args.configfile)) or is_app:
-
-                infos = list(ImageContainer.iter_check_plates(main._settings))
-                main._load_image_container(infos, show_dlg=False)
-        main.show()
-        splash.finish(main)
-    except Exception, e:
-        msg = "Could not load images\n%s" %e.message
-        QMessageBox.critical(None, "Error", msg)
+    if (args.load and os.path.isfile(args.configfile)) or is_app:
+	try:
+            infos = list(ImageContainer.iter_check_plates(main._settings))
+            main._load_image_container(infos, show_dlg=False)
+        except Exception, e:
+            msg = "Could not load images\n%s" %e.message
+            QMessageBox.critical(None, "Error", msg)
+    main.show()
+    splash.finish(main)
     sys.exit(app.exec_())

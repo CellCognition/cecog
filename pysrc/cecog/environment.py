@@ -35,7 +35,8 @@ def find_resource_dir():
     installations, bundeled binaries and the the source tree.
     """
     rdirs = [join(dirname(sys.executable), 'resources'),
-             join(sys.prefix, 'share', 'cellcognition', 'resources'),
+             join(dirname(abspath(sys.argv[0])).replace('bin', 'share'), 'resources'),
+	     join(sys.exec_prefix, 'share', 'cellanalyzer', 'resources'),
              'resources',
              join(dirname(__file__), os.pardir, os.pardir, 'resources')]
 
