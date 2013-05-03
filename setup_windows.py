@@ -28,19 +28,10 @@ from distutils.core import setup, Extension
 import py2exe
 import build_helpers
 
-PACKAGES = [ 'h5py', 'vigra']
-INCLUDES = [ 'sip',
-             'scipy.sparse.csgraph._validation',
-             'scipy.spatial.kdtree',
-             'scipy.sparse.csgraph._shortest_path' ]
-EXCLUDES = [ 'PyQt4.QtDesigner', 'PyQt4.QtNetwork',
-             'PyQt4.QtOpenGL', 'PyQt4.QtScript',
-             'PyQt4.QtSql', 'PyQt4.QtTest',
-             'PyQt4.QtWebKit', 'PyQt4.QtXml',
-             'PyQt4.phonon',
-             '_gtkagg', '_cairo', '_gtkcairo', '_fltkagg',
-             '_tkagg',
-             'Tkinter']
+pyrcc_opts = {'infile': 'cecog.qrc',
+              'outfile': join('pysrc', 'cecog', 'cecog_rc.py'),
+              'pyrccbin': join('C:', 'Python27', 'Lib', 'site-packages',
+                               'PyQt4', 'pyrcc4.exe')}
 
 DLL_EXCLUDES = [ 'libgdk-win32-2.0-0.dll',
                  'libgobject-2.0-0.dll',
@@ -77,22 +68,12 @@ DLL_EXCLUDES = [ 'libgdk-win32-2.0-0.dll',
                  'API-MS-Win-Core-LocalRegistry-L1-1-0.dll',
                  'w9xpopen.exe'] # is not excluded for some reasion
 
-py2exe_opts = {'includes': INCLUDES,
-               'excludes': EXCLUDES,
-               'packages': PACKAGES,
-               'dll_excludes': DLL_EXCLUDES,
-               # optimize 2 would strip doc-strings
-               'optimize': 1,
-               'compressed': True,
-               'skip_archive': False,
-               'bundle_files': 3}
-
-pyrcc_opts = {'infile': 'cecog.qrc',
-              'outfile': join('pysrc', 'cecog', 'cecog_rc.py'),
-              'pyrccbin': join('C:', 'Python27', 'Lib', 'site-packages',
-                               'PyQt4', 'pyrcc4.exe')}
+py2exe_opts = {'includes': build_helpers.INCLUDES,
+               'excludes': build_helpers.EXCLUDES,
+               'dll_excludes': DLL_EXCLUDES}
 
 # ccore build paths
+# or write these paths to setup.cfg
 includes = ['c:/python27/include',
             'c:/Python27/Lib/site-packages/numpy/core/include',
             'c:/lib/include',
