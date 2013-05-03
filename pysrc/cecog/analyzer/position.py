@@ -593,7 +593,7 @@ class PositionAnalyzer(PositionCore):
         # include hdf5 file name in hdf5_options
         # perhaps timeholder might be a good placke to read out the options
         # fils must not exist to proceed
-        hdf5_fname = join(self._hdf5_dir, '%s.hdf5' % self.position)
+        hdf5_fname = join(self._hdf5_dir, '%s.ch5' % self.position)
         self.timeholder = TimeHolder(self.position, self._all_channel_regions,
                                      hdf5_fname,
                                      self.meta_data, self.settings,

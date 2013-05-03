@@ -30,7 +30,7 @@ def link_hdf5_files(post_hdf5_link_list):
         return plate, well, position
 
     all_pos_hdf5_filename = join(split(post_hdf5_link_list[0])[0],
-                                 '_all_positions.h5')
+                                 '_all_positions.ch5')
 
     if exists(all_pos_hdf5_filename):
         f = h5py.File(all_pos_hdf5_filename, 'a')
