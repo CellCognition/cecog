@@ -10,10 +10,11 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-__all__ = ['get_data_files']
+__all__ = ['get_data_files', 'INCLUDES', 'EXCLUDES', 'CC_INCLUDES']
 
 import os
 import glob
+import numpy.distutils
 import matplotlib
 from os.path import basename, join, abspath
 
@@ -36,6 +37,21 @@ _rsc = [join(abspath(RESOURCE_DIR), basename(rf)) for rf in _rsc]
 _palettes = join(RESOURCE_DIR, 'palettes', 'zeiss')
 _paltarget = join(TARGET_DIR, 'palettes', 'zeiss')
 _battery_package = join(RESOURCE_DIR, 'battery_package')
+
+# for py2app and py2exe
+INCLUDES = [ 'sip',
+             'scipy.sparse.csgraph._validation',
+             'scipy.spatial.kdtree',
+             'scipy.sparse.csgraph._shortest_path']
+
+EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
+            'PyQt4.QtOpenGL', 'PyQt4.QtScript', 'PyQt4.QtSql',
+            'PyQt4.QtTest', 'PyQt4.QtWebKit', 'PyQt4.QtXml', 'PyQt4.phonon'
+            '_gtkagg', '_cairo', '_gtkcairo', '_fltkagg',
+            '_tkagg',
+            'Tkinter']
+
+CC_INCLUDES = ['csrc/include'] + numpy.distutils.misc_util.get_numpy_include_dirs()
 
 def get_data_files(target_dir=TARGET_DIR, mpl_data=True):
     """Pack data files into list of (target-dir, list-of-files)-tuples"""

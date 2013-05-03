@@ -18,41 +18,19 @@ __url__ = 'www.cellcognition.org'
 
 import sys
 from os.path import join, abspath
-import numpy.distutils
-
 sys.path.append(abspath("pysrc"))
 
 from distutils.core import setup, Extension
 import build_helpers
 
-INCLUDES = [ 'sip',
-             'scipy.sparse.csgraph._validation',
-             'scipy.spatial.kdtree',
-             'scipy.sparse.csgraph._shortest_path']
-
-EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
-            'PyQt4.QtOpenGL', 'PyQt4.QtScript', 'PyQt4.QtSql',
-            'PyQt4.QtTest', 'PyQt4.QtWebKit', 'PyQt4.QtXml', 'PyQt4.phonon']
-
 pyrcc_opts = {'infile': 'cecog.qrc',
               'outfile': join('pysrc', 'cecog', 'cecog_rc.py'),
               'pyrccbin': 'pyrcc4'}
 
-cc_includes = ['/Users/hoefler/sandbox/lib-static/include',
-               '/Users/hoefler/pyshared',
-               '/cecoglibs/vigra/include/',
-               'csrc/include'] + \
-               numpy.distutils.misc_util.get_numpy_include_dirs()
-library_dirs = ['/Users/hoefler/sandbox/lib-static/lib',
-                '/cecoglibs/vigra/lib']
-libraries = ['boost_python', 'tiff', 'vigraimpex']
-
-
 ccore = Extension('cecog.ccore._cecog',
                   sources = [join('csrc','src', 'wrapper','cecog.cxx')],
-                  include_dirs = cc_includes,
-                  libraries = libraries,
-                  library_dirs = library_dirs,
+                  include_dirs=build_helpers.CC_INCLUDES,
+                  libraries=['boost_python', 'tiff', 'vigraimpex'],
                   extra_compile_args = ['-O3', '-fPIC'],
                   language = 'c++')
 
