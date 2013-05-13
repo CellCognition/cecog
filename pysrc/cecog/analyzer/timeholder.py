@@ -361,6 +361,22 @@ class TimeHolder(OrderedDict):
                                           prim_obj_name,
                                           obj_name)
 
+        try:
+        # add basic relation for virtual channels
+            for channel_name, combined, region_name in self._virtual_region_infos():
+                obj_name = self._convert_region_name(channel_name, region_name, prefix='')
+                obj_name = '%s___to___%s' % (prim_obj_name, obj_name)
+                global_object_desc = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset( \
+                    obj_name, (1,), global_object_dtype)
+                global_object_desc[0] =  (obj_name, self.HDF5_OTYPE_RELATION,
+                                          prim_obj_name,
+                                          obj_name)
+
+        except Exception, e:
+            import traceback
+            traceback.print_exc()
+            import pdb; pdb.set_trace()
+
         # add special relation objects (events, tracking, etc)
         if self._hdf5_include_tracking:
             obj_name = 'tracking'
@@ -372,6 +388,23 @@ class TimeHolder(OrderedDict):
             global_object_desc = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset(obj_name, (1,), global_object_dtype)
             global_object_desc[0] = (obj_name, self.HDF5_OTYPE_OBJECT, prim_obj_name, prim_obj_name)
 
+    def _virtual_region_infos(self):
+        """Return a tuple of channel name (lower case), combined identifier
+        and region name as for virtual channels, as it is stored in
+        self._region_info.
+        """
+        chnames = [rinfo[0] for rinfo in self._region_infos]
+        for channel_name, regions in self.channel_regions.iteritems():
+            if channel_name.lower() not in chnames:
+                if len(regions) == 1 or isinstance(regions, basestring):
+                    regname = regions
+                else:
+                    regname = '-'.join(regions)
+                combined = "region__%s__%s" %(channel_name.lower(),
+                                              regname)
+                yield channel_name.lower(), combined, '-'.join(regions)
+
+        raise StopIteration
 
     def _hdf5_create_file_structure(self, filename, label_info=(None, None, None), raw_info=(None, None, None)):
         label_image_str, label_image_cpy, label_image_valid = label_info
@@ -531,7 +564,8 @@ class TimeHolder(OrderedDict):
         if not label_images_valid:
             # compute segmentation without (not loading from file)
             channel.apply_segmentation(*args)
-            self._logger.info('Label images %s computed in %s.' % (desc, stop_watch.current_interval()))
+            self._logger.info('Label images %s computed in %s.'
+                              %(desc, stop_watch.current_interval()))
             # write segmentation back to file
             if self._hdf5_create and self._hdf5_include_label_images:
                 meta = self._meta_data
