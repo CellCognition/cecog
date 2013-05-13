@@ -115,7 +115,7 @@ class TimeHolder(OrderedDict):
         self.P = P
         self.plate_id = plate_id
         self._iCurrentT = None
-        self.channel_regions= channel_regions
+        self.channel_regions = channel_regions
         self._meta_data = meta_data
         self._settings = settings
         self._analysis_frames = analysis_frames
@@ -148,24 +148,25 @@ class TimeHolder(OrderedDict):
         channels = sorted(list(meta_data.channels))
         self._region_names = []
 
-        for rname in self.channel_regions.values():
-            if isinstance(rname, basestring):
-                self._region_names.append(rname)
-            else:
-                self._region_names.append('-'.join(rname))
+        self._region_names = REGION_INFO.names['primary'] + \
+            REGION_INFO.names['secondary'] + \
+            REGION_INFO.names['tertiary']
+        if len(REGION_INFO.names['merged']):
+            self._region_names.append('-'.join(REGION_INFO.names['merged']))
 
         self._channel_info = []
         self._region_infos = []
         region_names2 = []
         # XXX hardcoded values
 
-        for prefix, name in self.channel_regions.iteritems():
-            if not isinstance(name, basestring):
-                name = '-'.join(name)
-            self._channel_info.append((prefix.lower(), settings.get('ObjectDetection', '%s_channelid' % prefix)))
-            self._region_infos.append((prefix.lower(), self._convert_region_name(prefix.lower(), name), name))
-            region_names2.append((prefix.capitalize(), name))
-
+        for prefix in self.channel_regions.keys():
+            for name in REGION_INFO.names[prefix.lower()]:
+                if not isinstance(name, basestring):
+                    name = '-'.join(name)
+                self._channel_info.append((prefix.lower(),
+                                           settings.get('ObjectDetection', '%s_channelid' % prefix)))
+                self._region_infos.append((prefix.lower(), self._convert_region_name(prefix.lower(), name), name))
+                region_names2.append((prefix.capitalize(), name))
         self._feature_to_idx = OrderedDict()
 
         self._hdf5_found = False
@@ -289,9 +290,11 @@ class TimeHolder(OrderedDict):
                              ])
 
         nr_channels = len(self._channel_info)
+
         global_channel_desc = self._grp_def[self.HDF5_GRP_IMAGE].create_dataset( \
             'channel', (nr_channels,), dtype)
-        for idx in self._regions_to_idx.values():
+
+        for idx in self._regions_to_idx2.values():
             # XXX hardcoded values
             is_physical = bool(self._channel_info[idx][1] is not None)
             data = (self._channel_info[idx][0],
@@ -308,7 +311,7 @@ class TimeHolder(OrderedDict):
 
         for tpl in self._region_infos:
             channel_name, combined, region_name = tpl
-            idx = self._regions_to_idx[region_name]
+            idx = self._regions_to_idx2[(channel_name.title(), region_name)]
             channel_idx = self._channels_to_idx[channel_name]
             global_region_desc[idx] = (combined, channel_idx)
 
@@ -538,10 +541,11 @@ class TimeHolder(OrderedDict):
                 t = len(self._frames_to_idx)
                 var_name = 'region'
                 grp = self._grp_cur_position[self.HDF5_GRP_IMAGE]
-                if var_name in grp and grp[var_name].shape[0] == len(self._regions_to_idx):
+                # create new group if it does not exist yet!
+                if var_name in grp and grp[var_name].shape[0] == len(self._regions_to_idx2):
                     var_labels = grp[var_name]
                 else:
-                    nr_labels = len(self._regions_to_idx)
+                    nr_labels = len(self._regions_to_idx2)
                     var_labels = \
                         grp.create_dataset(var_name,
                                            (nr_labels, t, z, h, w),
