@@ -361,21 +361,22 @@ class TimeHolder(OrderedDict):
                                           prim_obj_name,
                                           obj_name)
 
-        try:
         # add basic relation for virtual channels
-            for channel_name, combined, region_name in self._virtual_region_infos():
-                obj_name = self._convert_region_name(channel_name, region_name, prefix='')
-                obj_name = '%s___to___%s' % (prim_obj_name, obj_name)
-                global_object_desc = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset( \
-                    obj_name, (1,), global_object_dtype)
-                global_object_desc[0] =  (obj_name, self.HDF5_OTYPE_RELATION,
-                                          prim_obj_name,
-                                          obj_name)
+        for channel_name, combined, region_name in self._virtual_region_infos():
+            # basic virtual channel information
+            obj_name = self._convert_region_name(channel_name, region_name, prefix='')
+            global_object_desc = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset(obj_name, (1,),
+                                                                                    global_object_dtype)
+            global_object_desc[0] = (obj_name, self.HDF5_OTYPE_REGION, '', '')
 
-        except Exception, e:
-            import traceback
-            traceback.print_exc()
-            import pdb; pdb.set_trace()
+            # relations
+            obj_name = self._convert_region_name(channel_name, region_name, prefix='')
+            obj_name = '%s___to___%s' % (prim_obj_name, obj_name)
+            global_object_desc = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset( \
+                obj_name, (1,), global_object_dtype)
+            global_object_desc[0] =  (obj_name, self.HDF5_OTYPE_RELATION,
+                                      prim_obj_name,
+                                      obj_name)
 
         # add special relation objects (events, tracking, etc)
         if self._hdf5_include_tracking:
