@@ -524,9 +524,9 @@ class AnnotationModule(Module):
         if not class_name is None:
             class_label = learner.class_labels[class_name]
 
-            class_labels = set(learner.class_labels)
+            class_labels = learner.class_labels.values()
             class_labels.remove(class_label)
-            class_names = set(learner.class_names)
+            class_names = learner.class_names.values()
             class_names.remove(class_name)
 
             if len(class_name_new) == 0:
@@ -575,15 +575,15 @@ class AnnotationModule(Module):
                              (class_name_new, class_label_new))
 
     def _on_class_add(self):
-        '''
-        Add a new class
-        '''
+        """Add a new class to definition"""
+
         learner = self._learner
         class_name_new = str(self._class_text.text())
         class_label_new = self._class_sbox.value()
 
-        class_labels = set(learner.class_labels)
-        class_names = set(learner.class_names)
+        class_labels = learner.class_labels.values()
+        class_names = learner.class_names.values()
+
         if len(class_name_new) == 0:
             warning(self, "Invalid class name",
                     info="The class name must not be empty!")
@@ -611,6 +611,10 @@ class AnnotationModule(Module):
             self._class_table.resizeRowsToContents()
             self._class_table.resizeColumnsToContents()
             self._class_table.setCurrentItem(item)
+
+            ncl = len(learner.class_names)+1
+            self._class_text.setText('class%d' %ncl)
+            self._class_sbox.setValue(ncl)
         else:
             warning(self, "Class names and labels must be unique!",
                     info="Class name '%s' or label '%s' already used." %\

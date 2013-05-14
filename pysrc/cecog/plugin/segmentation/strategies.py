@@ -413,7 +413,7 @@ Non-overlapping expansion of the primary segmentation by a certain number of ste
 
     REQUIRES = ['primary_segmentation']
 
-    PARAMS = [('expansion_size', IntTrait(0, 0, 4000, label='Expansion size')),
+    PARAMS = [('expansion_size', IntTrait(10, 0, 4000, label='Expansion size')),
               ]
 
     @stopwatch()
@@ -442,7 +442,7 @@ class SegmentationPluginInside(_SegmentationPlugin):
 
     REQUIRES = ['primary_segmentation']
 
-    PARAMS = [('shrinking_size', IntTrait(0, 0, 4000, label='Shrinking size')),
+    PARAMS = [('shrinking_size', IntTrait(5, 0, 4000, label='Shrinking size')),
               ]
 
     @stopwatch()
@@ -468,8 +468,8 @@ class SegmentationPluginOutside(_SegmentationPlugin):
 
     REQUIRES = ['primary_segmentation']
 
-    PARAMS = [('expansion_size', IntTrait(0, 0, 4000, label='Expansion size')),
-              ('separation_size', IntTrait(0, 0, 4000, label='Separation size')),
+    PARAMS = [('expansion_size', IntTrait(10, 0, 4000, label='Expansion size')),
+              ('separation_size', IntTrait(5, 0, 4000, label='Separation size')),
               ]
 
     @stopwatch()
@@ -499,8 +499,8 @@ class SegmentationPluginRim(_SegmentationPlugin):
 
     REQUIRES = ['primary_segmentation']
 
-    PARAMS = [('expansion_size', IntTrait(0, 0, 4000, label='Expansion size')),
-              ('shrinking_size', IntTrait(0, 0, 4000, label='Shrinking size')),
+    PARAMS = [('expansion_size', IntTrait(5, 0, 4000, label='Expansion size')),
+              ('shrinking_size', IntTrait(5, 0, 4000, label='Shrinking size')),
               ]
 
     @stopwatch()
@@ -542,8 +542,8 @@ class SegmentationPluginModification(_SegmentationPlugin):
 
     REQUIRES = ['primary_segmentation']
 
-    PARAMS = [('expansion_size', IntTrait(0, 0, 4000, label='Expansion size')),
-              ('shrinking_size', IntTrait(0, 0, 4000, label='Shrinking size')),
+    PARAMS = [('expansion_size', IntTrait(5, 0, 4000, label='Expansion size')),
+              ('shrinking_size', IntTrait(5, 0, 4000, label='Shrinking size')),
               ]
 
     @stopwatch()

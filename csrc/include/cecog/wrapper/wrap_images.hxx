@@ -634,6 +634,8 @@ PyObject * pyRelabelImage(Image1 const &imgMask, Image2 const &imgLabel)
 template <class IMAGE>
 PyObject * pySubImage(IMAGE const & imgIn, vigra::Diff2D ul, vigra::Diff2D size)
 {
+  vigra_precondition(imgIn.width() >= ul.x + size.x && imgIn.height() >= ul.y + size.y,
+                     "coordinates out of range for subImage()");
   std::auto_ptr< IMAGE > imgPtr(new IMAGE(size));
   vigra::copyImage(imgIn.upperLeft()+ul,
                    imgIn.upperLeft()+ul+size,

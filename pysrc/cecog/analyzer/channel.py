@@ -185,8 +185,8 @@ class Channel(ChannelCore):
 
     def apply_registration(self):
         img_in = self.meta_image.image
-        # FIXME - cropping and shift do not work together
-        # image = img_in
+        
+        # ccore.subImage checks dimensions
         image = ccore.subImage(img_in,
                                ccore.Diff2D(*self.registration_start)-
                                ccore.Diff2D(*self.channelRegistration),

@@ -115,7 +115,7 @@ class TimeHolder(OrderedDict):
         self.P = P
         self.plate_id = plate_id
         self._iCurrentT = None
-        self.channel_regions= channel_regions
+        self.channel_regions = channel_regions
         self._meta_data = meta_data
         self._settings = settings
         self._analysis_frames = analysis_frames
@@ -148,24 +148,25 @@ class TimeHolder(OrderedDict):
         channels = sorted(list(meta_data.channels))
         self._region_names = []
 
-        for rname in self.channel_regions.values():
-            if isinstance(rname, basestring):
-                self._region_names.append(rname)
-            else:
-                self._region_names.append('-'.join(rname))
+        self._region_names = REGION_INFO.names['primary'] + \
+            REGION_INFO.names['secondary'] + \
+            REGION_INFO.names['tertiary']
+        if len(REGION_INFO.names['merged']):
+            self._region_names.append('-'.join(REGION_INFO.names['merged']))
 
         self._channel_info = []
         self._region_infos = []
         region_names2 = []
         # XXX hardcoded values
 
-        for prefix, name in self.channel_regions.iteritems():
-            if not isinstance(name, basestring):
-                name = '-'.join(name)
-            self._channel_info.append((prefix.lower(), settings.get('ObjectDetection', '%s_channelid' % prefix)))
-            self._region_infos.append((prefix.lower(), self._convert_region_name(prefix.lower(), name), name))
-            region_names2.append((prefix.capitalize(), name))
-
+        for prefix in self.channel_regions.keys():
+            for name in REGION_INFO.names[prefix.lower()]:
+                if not isinstance(name, basestring):
+                    name = '-'.join(name)
+                self._channel_info.append((prefix.lower(),
+                                           settings.get('ObjectDetection', '%s_channelid' % prefix)))
+                self._region_infos.append((prefix.lower(), self._convert_region_name(prefix.lower(), name), name))
+                region_names2.append((prefix.capitalize(), name))
         self._feature_to_idx = OrderedDict()
 
         self._hdf5_found = False
@@ -289,9 +290,11 @@ class TimeHolder(OrderedDict):
                              ])
 
         nr_channels = len(self._channel_info)
+
         global_channel_desc = self._grp_def[self.HDF5_GRP_IMAGE].create_dataset( \
             'channel', (nr_channels,), dtype)
-        for idx in self._regions_to_idx.values():
+
+        for idx in self._regions_to_idx2.values():
             # XXX hardcoded values
             is_physical = bool(self._channel_info[idx][1] is not None)
             data = (self._channel_info[idx][0],
@@ -308,7 +311,7 @@ class TimeHolder(OrderedDict):
 
         for tpl in self._region_infos:
             channel_name, combined, region_name = tpl
-            idx = self._regions_to_idx[region_name]
+            idx = self._regions_to_idx2[(channel_name.title(), region_name)]
             channel_idx = self._channels_to_idx[channel_name]
             global_region_desc[idx] = (combined, channel_idx)
 
@@ -358,6 +361,23 @@ class TimeHolder(OrderedDict):
                                           prim_obj_name,
                                           obj_name)
 
+        # add basic relation for virtual channels
+        for channel_name, combined, region_name in self._virtual_region_infos():
+            # basic virtual channel information
+            obj_name = self._convert_region_name(channel_name, region_name, prefix='')
+            global_object_desc = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset(obj_name, (1,),
+                                                                                    global_object_dtype)
+            global_object_desc[0] = (obj_name, self.HDF5_OTYPE_REGION, '', '')
+
+            # relations
+            obj_name = self._convert_region_name(channel_name, region_name, prefix='')
+            obj_name = '%s___to___%s' % (prim_obj_name, obj_name)
+            global_object_desc = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset( \
+                obj_name, (1,), global_object_dtype)
+            global_object_desc[0] =  (obj_name, self.HDF5_OTYPE_RELATION,
+                                      prim_obj_name,
+                                      obj_name)
+
         # add special relation objects (events, tracking, etc)
         if self._hdf5_include_tracking:
             obj_name = 'tracking'
@@ -369,6 +389,23 @@ class TimeHolder(OrderedDict):
             global_object_desc = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset(obj_name, (1,), global_object_dtype)
             global_object_desc[0] = (obj_name, self.HDF5_OTYPE_OBJECT, prim_obj_name, prim_obj_name)
 
+    def _virtual_region_infos(self):
+        """Return a tuple of channel name (lower case), combined identifier
+        and region name as for virtual channels, as it is stored in
+        self._region_info.
+        """
+        chnames = [rinfo[0] for rinfo in self._region_infos]
+        for channel_name, regions in self.channel_regions.iteritems():
+            if channel_name.lower() not in chnames:
+                if len(regions) == 1 or isinstance(regions, basestring):
+                    regname = regions
+                else:
+                    regname = '-'.join(regions)
+                combined = "region__%s__%s" %(channel_name.lower(),
+                                              regname)
+                yield channel_name.lower(), combined, '-'.join(regions)
+
+        raise StopIteration
 
     def _hdf5_create_file_structure(self, filename, label_info=(None, None, None), raw_info=(None, None, None)):
         label_image_str, label_image_cpy, label_image_valid = label_info
@@ -528,7 +565,8 @@ class TimeHolder(OrderedDict):
         if not label_images_valid:
             # compute segmentation without (not loading from file)
             channel.apply_segmentation(*args)
-            self._logger.info('Label images %s computed in %s.' % (desc, stop_watch.current_interval()))
+            self._logger.info('Label images %s computed in %s.'
+                              %(desc, stop_watch.current_interval()))
             # write segmentation back to file
             if self._hdf5_create and self._hdf5_include_label_images:
                 meta = self._meta_data
@@ -538,10 +576,11 @@ class TimeHolder(OrderedDict):
                 t = len(self._frames_to_idx)
                 var_name = 'region'
                 grp = self._grp_cur_position[self.HDF5_GRP_IMAGE]
-                if var_name in grp and grp[var_name].shape[0] == len(self._regions_to_idx):
+                # create new group if it does not exist yet!
+                if var_name in grp and grp[var_name].shape[0] == len(self._regions_to_idx2):
                     var_labels = grp[var_name]
                 else:
-                    nr_labels = len(self._regions_to_idx)
+                    nr_labels = len(self._regions_to_idx2)
                     var_labels = \
                         grp.create_dataset(var_name,
                                            (nr_labels, t, z, h, w),

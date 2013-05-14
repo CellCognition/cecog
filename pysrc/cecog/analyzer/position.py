@@ -133,8 +133,6 @@ class PositionCore(LoggerObject):
         return par
 
     def registration_shift(self):
-        # FIXME this function causses a segfault on c++ side in compination
-        # with cropping
         # compute values for the registration of multiple channels
         # (translation only)
         self.settings.set_section('ObjectDetection')
@@ -153,9 +151,22 @@ class PositionCore(LoggerObject):
                 diff_x.append(abs(xs[i]-xs[j]))
                 diff_y.append(abs(ys[i]-ys[j]))
 
+        image_width = self.meta_data.dim_x
+        image_height = self.meta_data.dim_y
+        
+        if self.settings.get('General', 'crop_image'):
+            y0 = self.settings.get('General', 'crop_image_y0')
+            y1 = self.settings.get('General', 'crop_image_y1')
+            x0 = self.settings.get('General', 'crop_image_x0')
+            x1 = self.settings.get('General', 'crop_image_x1')
+            
+            image_width = x1 - x0
+            image_height = y1 - y0
+            
+        
         # new image size after registration of all images
-        image_size = (self.meta_data.dim_x - max(diff_x),
-                      self.meta_data.dim_y - max(diff_y))
+        image_size = (image_width - max(diff_x),
+                      image_height - max(diff_y))
 
         self.meta_data.real_image_width = image_size[0]
         self.meta_data.real_image_height = image_size[1]
@@ -596,7 +607,8 @@ class PositionAnalyzer(PositionCore):
         # include hdf5 file name in hdf5_options
         # perhaps timeholder might be a good placke to read out the options
         # fils must not exist to proceed
-        hdf5_fname = join(self._hdf5_dir, '%s.hdf5' % self.position)
+        hdf5_fname = join(self._hdf5_dir, '%s.ch5' % self.position)
+
         self.timeholder = TimeHolder(self.position, self._all_channel_regions,
                                      hdf5_fname,
                                      self.meta_data, self.settings,
