@@ -16,42 +16,15 @@ __source__ = '$URL$'
 
 __all__ = ['ErrorCorrectionFrame']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
-from cecog.gui.analyzer import (BaseProcessorFrame,
-                                HmmThread,
-                                )
+from cecog.gui.analyzer import BaseProcessorFrame, HmmThread
 
-#-------------------------------------------------------------------------------
-# constants:
-#
-
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 class ErrorCorrectionFrame(BaseProcessorFrame):
 
-    SECTION_NAME = SECTION_NAME_ERRORCORRECTION
     DISPLAY_NAME = 'Error Correction'
 
-    def __init__(self, settings, parent):
-        super(ErrorCorrectionFrame, self).__init__(settings, parent)
+    def __init__(self, settings, parent, name):
+        super(ErrorCorrectionFrame, self).__init__(settings, parent, name)
 
         self.register_control_button('hmm',
                                      HmmThread,

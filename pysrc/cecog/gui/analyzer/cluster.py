@@ -17,8 +17,6 @@ __source__ = '$URL$'
 __all__ = ['ClusterFrame']
 
 import types
-import copy
-import traceback
 import socket
 import urlparse
 
@@ -28,37 +26,18 @@ from PyQt4.Qt import *
 
 from pyamf.remoting.client import RemotingService
 
-from cecog.traits.analyzer.cluster import SECTION_NAME_CLUSTER
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.environment import CecogEnvironment
 
 from cecog.gui.analyzer import BaseFrame
 from cecog.gui.analyzer.processing import ProcessingFrame
 from cecog.util.util import OS_LINUX
-from cecog.gui.util import (exception,
-                            information,
-                            warning,
-                            waitingProgressDialog,
-                            )
-from cecog import (JOB_CONTROL_RESUME,
-                   JOB_CONTROL_SUSPEND,
-                   JOB_CONTROL_TERMINATE,
-                   VERSION
-                   )
+from cecog.gui.util import exception, information, warning, \
+    waitingProgressDialog
 
-#-------------------------------------------------------------------------------
-# constants:
-#
+from cecog import JOB_CONTROL_RESUME, JOB_CONTROL_SUSPEND, \
+    JOB_CONTROL_TERMINATE, VERSION
 
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 class ClusterDisplay(QGroupBox):
 
     def __init__(self, parent, settings, imagecontainer):
@@ -390,10 +369,8 @@ class ClusterDisplay(QGroupBox):
 
 class ClusterFrame(BaseFrame):
 
-    SECTION_NAME = SECTION_NAME_CLUSTER
-
-    def __init__(self, settings, parent, imagecontainer):
-        super(ClusterFrame, self).__init__(settings, parent)
+    def __init__(self, settings, parent, name, imagecontainer):
+        super(ClusterFrame, self).__init__(settings, parent, name)
 
         self._cluster_display = self._add_frame(imagecontainer)
         self.add_group(None,

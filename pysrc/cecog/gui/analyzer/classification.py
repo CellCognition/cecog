@@ -332,15 +332,14 @@ class ClassifierResultFrame(QGroupBox):
 
 class ClassificationFrame(BaseProcessorFrame):
 
-    SECTION_NAME = SECTION_NAME_CLASSIFICATION
     TABS = ['Primary Channel', 'Secondary Channel',
             'Tertiary Channel', 'Merged Channel']
     PROCESS_PICKING = 'PROCESS_PICKING'
     PROCESS_TRAINING = 'PROCESS_TRAINING'
     PROCESS_TESTING = 'PROCESS_TESTING'
 
-    def __init__(self, settings, parent):
-        super(ClassificationFrame, self).__init__(settings, parent)
+    def __init__(self, settings, parent, name):
+        super(ClassificationFrame, self).__init__(settings, parent, name)
         self._result_frames = {}
 
         self.register_control_button(self.PROCESS_PICKING,

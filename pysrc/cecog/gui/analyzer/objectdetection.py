@@ -16,50 +16,25 @@ __source__ = '$URL$'
 
 __all__ = ['ObjectDetectionFrame']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 from cecog.gui.analyzer import BaseProcessorFrame
 from cecog.threads.analyzer import AnalyzerThread
-from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
-from cecog.plugin.segmentation import (PRIMARY_SEGMENTATION_MANAGER,
-                                       SECONDARY_SEGMENTATION_MANAGER,
-                                       TERTIARY_SEGMENTATION_MANAGER,
-                                       )
+from cecog.plugin.segmentation import PRIMARY_SEGMENTATION_MANAGER
+from cecog.plugin.segmentation import SECONDARY_SEGMENTATION_MANAGER
+from cecog.plugin.segmentation import TERTIARY_SEGMENTATION_MANAGER
+
 from cecog.plugin.segmentation import REGION_INFO
 
-#-------------------------------------------------------------------------------
-# constants:
-#
-
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 class ObjectDetectionFrame(BaseProcessorFrame):
 
-    SECTION_NAME = SECTION_NAME_OBJECTDETECTION
     DISPLAY_NAME = 'Object Detection'
     TABS = ['Primary Channel', 'Secondary Channel', 'Tertiary Channel']
 
-    def __init__(self, settings, parent):
-        super(ObjectDetectionFrame, self).__init__(settings, parent)
+    def __init__(self, settings, parent, name):
+        super(ObjectDetectionFrame, self).__init__(settings, parent, name)
 
         self.register_control_button('detect',
                                      AnalyzerThread,
