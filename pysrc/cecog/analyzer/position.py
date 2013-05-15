@@ -39,7 +39,6 @@ from cecog.learning.learning import CommonClassPredictor
 
 from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACTION
 from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
-from cecog.traits.analyzer.tracking import SECTION_NAME_TRACKING
 
 from cecog.analyzer.gallery import EventGallery
 from cecog.analyzer.channel_gallery import ChannelGallery
@@ -465,9 +464,8 @@ class PositionAnalyzer(PositionCore):
         mean time-lapse of the current position.
         Returns number of frames.
         """
-        value = self.settings.get(SECTION_NAME_TRACKING, option_name)
-        unit = self.settings.get(SECTION_NAME_TRACKING,
-                                  'tracking_duration_unit')
+        value = self.settings.get('EventSelection', option_name)
+        unit = self.settings.get('EventSelection', 'duration_unit')
 
         # get mean and stddev for the current position
         info = self.meta_data.get_timestamp_info(self.position)
@@ -483,20 +481,21 @@ class PositionAnalyzer(PositionCore):
 
     @property
     def _es_options(self):
-        transitions = eval(self.settings.get2('tracking_labeltransitions'))
+        transitions = eval(self.settings.get('EventSelection',
+                                             'labeltransitions'))
         if not isinstance(transitions[0], tuple):
             transitions = (transitions, )
         evopts = {'transitions': transitions,
-                  'backward_labels': map(int, self.settings.get2('tracking_backwardlabels').split(',')),
-                  'forward_labels': map(int, self.settings.get2('tracking_forwardlabels').split(',')),
-                  'backward_check': self._convert_tracking_duration('tracking_backwardCheck'),
-                  'forward_check': self._convert_tracking_duration('tracking_forwardCheck'),
-                  'backward_range': self._convert_tracking_duration('tracking_backwardrange'),
-                  'forward_range': self._convert_tracking_duration('tracking_forwardrange'),
-                  'backward_range_min': self.settings.get2('tracking_backwardrange_min'),
-                  'forward_range_min': self.settings.get2('tracking_forwardrange_min'),
-                  'max_in_degree': self.settings.get2('tracking_maxindegree'),
-                  'max_out_degree': self.settings.get2('tracking_maxoutdegree')}
+                  'backward_labels': map(int, self.settings.get('EventSelection', 'backwardlabels').split(',')),
+                  'forward_labels': map(int, self.settings.get('EventSelection', 'forwardlabels').split(',')),
+                  'backward_check': self._convert_tracking_duration('backwardCheck'),
+                  'forward_check': self._convert_tracking_duration('forwardCheck'),
+                  'backward_range': self._convert_tracking_duration('backwardrange'),
+                  'forward_range': self._convert_tracking_duration('forwardrange'),
+                  'backward_range_min': self.settings.get('EventSelection', 'backwardrange_min'),
+                  'forward_range_min': self.settings.get('EventSelection', 'forwardrange_min'),
+                  'max_in_degree': self.settings.get('EventSelection', 'maxindegree'),
+                  'max_out_degree': self.settings.get('EventSelection', 'maxoutdegree')}
         return evopts
 
     def define_exp_features(self):
@@ -654,7 +653,7 @@ class PositionAnalyzer(PositionCore):
 
         if n_images > 0:
             # invoke event selection
-            if self.settings.get('Processing', 'tracking_synchronize_trajectories') and \
+            if self.settings.get('Processing', 'eventselection') and \
                     self.settings.get('Processing', 'tracking'):
                 self.logger.debug("--- visitor start")
                 self._tes.find_events()
@@ -674,7 +673,7 @@ class PositionAnalyzer(PositionCore):
             if self.settings.get('Processing', 'tracking'):
                 self.export_tracks_hdf5()
                 self.update_status({'text': 'export events...'})
-                if self.settings.get('Processing', 'tracking_synchronize_trajectories'):
+                if self.settings.get('Processing', 'eventselection'):
                     self.export_events()
                 if self.settings.get('Output', 'export_track_data'):
                     self.export_full_tracks()

@@ -71,6 +71,18 @@ from cecog.threads.hmm import HmmThread
 from cecog.threads.post_processing import PostProcessingThread
 from cecog.multiprocess.multianalyzer import MultiAnalyzerThread
 
+from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
+from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
+from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACTION
+from cecog.traits.analyzer.postprocessing import SECTION_NAME_POST_PROCESSING
+from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
+from cecog.traits.analyzer.tracking import SECTION_NAME_TRACKING
+from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
+from cecog.traits.analyzer.eventselection import SECTION_NAME_EVENT_SELECTION
+from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
+from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
+from cecog.traits.analyzer.cluster import SECTION_NAME_CLUSTER
+
 
 class BaseFrame(TraitDisplayMixin):
 
@@ -80,8 +92,9 @@ class BaseFrame(TraitDisplayMixin):
 
     toggle_tabs = pyqtSignal(str)
 
-    def __init__(self, settings, parent):
+    def __init__(self, settings, parent, name):
         super(BaseFrame, self).__init__(settings, parent)
+        self.name = name
         self._is_active = False
         self._intervals = list()
 
@@ -312,7 +325,7 @@ class _ProcessorMixin(object):
                 cls = self._process_items[self._current_process_item]
 
 
-            if self.SECTION_NAME == 'Classification':
+            if self.name == SECTION_NAME_CLASSIFICATION:
                 result_frame = self._get_result_frame(self._tab_name)
                 result_frame.load_classifier(check=False)
                 learner = result_frame._learner
@@ -500,9 +513,9 @@ class _ProcessorMixin(object):
             # enable all section button of the main widget
             self.toggle_tabs.emit(self.get_name())
             if not self._is_abort and not self._has_error:
-                if self.SECTION_NAME == 'ObjectDetection':
+                if self.name == SECTION_NAME_OBJECTDETECTION:
                     msg = 'Object detection successfully finished.'
-                elif self.SECTION_NAME == 'Classification':
+                elif self.name == SECTION_NAME_CLASSIFICATION:
                     if self._current_process == self.PROCESS_PICKING:
                         msg = 'Samples successfully picked.\n\n'\
                               'Please train the classifier now based on the '\
@@ -520,16 +533,16 @@ class _ProcessorMixin(object):
                               'processing workflow.'
                     elif self._current_process == self.PROCESS_TESTING:
                         msg = 'Classifier testing successfully finished.'
-                elif self.SECTION_NAME == 'Tracking':
+                elif self.name == SECTION_NAME_TRACKING:
                     if self._current_process == self.PROCESS_TRACKING:
                         msg = 'Tracking successfully finished.'
                     elif self._current_process == self.PROCESS_SYNCING:
                         msg = 'Motif selection successfully finished.'
-                elif self.SECTION_NAME == 'ErrorCorrection':
+                elif self.name == SECTION_NAME_ERRORCORRECTION:
                     msg = 'HMM error correction successfully finished.'
-                elif self.SECTION_NAME == 'Processing':
+                elif self.name == SECTION_NAME_PROCESSING:
                     msg = 'Processing successfully finished.'
-                elif self.SECTION_NAME == "PostProcessing":
+                elif self.name == SECTION_NAME_POSTPROCESSING:
                     msg = 'Postprocessing successfully finished'
 
                 information(self, 'Process finished', msg)
@@ -639,8 +652,8 @@ class _ProcessorMixin(object):
 
 class BaseProcessorFrame(BaseFrame, _ProcessorMixin):
 
-    def __init__(self, settings, parent):
-        BaseFrame.__init__(self, settings, parent)
+    def __init__(self, settings, parent, name):
+        BaseFrame.__init__(self, settings, parent, name)
         _ProcessorMixin.__init__(self, parent)
 
     def set_active(self, state):

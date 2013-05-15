@@ -56,7 +56,7 @@ class ConfigSettings(RawConfigParser):
         self._old_file_format = False
 
         self._section_registry = section_registry
-        for section_name in section_registry.get_section_names():
+        for section_name in section_registry.section_names():
             self.add_section(section_name)
             section = section_registry.get_section(section_name)
             for trait_name in section.get_trait_names():
@@ -86,7 +86,7 @@ class ConfigSettings(RawConfigParser):
         return self._section_registry.get_section(section_name)
 
     def get_section_names(self):
-        return self._section_registry.get_section_names()
+        return self._section_registry.section_names()
 
     def get_trait(self, section_name, trait_name):
         section = self._section_registry.get_section(section_name)
@@ -122,7 +122,7 @@ class ConfigSettings(RawConfigParser):
         Merge sections and options, that are in the section registry
         but not in the file.
         """
-        section_names = self._section_registry.get_section_names()
+        section_names = self._section_registry.section_names()
         for sec_name in section_names:
             if not self.has_section(sec_name):
                 self.add_section(sec_name)
@@ -145,7 +145,7 @@ class ConfigSettings(RawConfigParser):
             self._old_file_format = True
 
         for section_name in self.sections():
-            if section_name in self._section_registry.get_section_names():
+            if section_name in self._section_registry.section_names():
                 section = self._section_registry.get_section(section_name)
                 for option_name in self.options(section_name):
                     if option_name in section.get_trait_names():
@@ -307,23 +307,23 @@ class ConfigSettings(RawConfigParser):
 class SectionRegistry(object):
 
     def __init__(self):
-        self._registry = OrderedDict()
+        self._sections = OrderedDict()
 
-    def register_section(self, section):
-        self._registry[section.SECTION_NAME] = section
+    def add(self, section):
+        self._sections[section.SECTION_NAME] = section
 
-    def unregister_section(self, name):
-        del self._registry[name]
+    def delete(self, name):
+        del self._sections[name]
 
     def get_section(self, name):
-        return self._registry[name]
+        return self._sections[name]
 
-    def get_section_names(self):
-        return self._registry.keys()
+    def section_names(self):
+        return self._sections.keys()
 
     def get_path_settings(self):
         result = []
-        for section_name, section in self._registry.iteritems():
+        for section_name, section in self._sections.iteritems():
             for trait_name in section.get_trait_names():
                 trait = section.get_trait(trait_name)
                 if (isinstance(trait, StringTrait) and

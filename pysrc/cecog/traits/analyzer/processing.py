@@ -40,8 +40,8 @@ class SectionProcessing(SectionCore):
             BooleanTrait(False, label='Classification')),
         ('tracking',
             BooleanTrait(False, label='Tracking')),
-        ('tracking_synchronize_trajectories',
-            BooleanTrait(False, label='Event selection')),
+        ('eventselection',
+         BooleanTrait(False, label='Event selection')),
         ('primary_errorcorrection',
             BooleanTrait(False, label='Error correction')),
         ] +\
