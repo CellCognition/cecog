@@ -25,6 +25,7 @@
 #include "cecog/seededregion.hxx"
 #include "cecog/segmentation.hxx"
 #include "cecog/thresholds.hxx"
+#include "vigra/python_utility.hxx"
 
 using namespace boost::python;
 
@@ -35,12 +36,14 @@ namespace cecog
     template <class IMAGE>
     void pyHoleFilling(IMAGE & img_bin, bool eightneigborhood=false)
     {
+       vigra::PyAllowThreads _pythread;
        cecog::holeFilling(img_bin, eightneigborhood);
     }
 
     template <class IMAGE1, class IMAGE2>
     PyObject * pyDiscMedian(IMAGE1 const &imgIn, int radius)
     {
+      vigra::PyAllowThreads _pythread;
       std::auto_ptr< IMAGE2 > imgPtr(new IMAGE2(imgIn.size()));
       vigra::discMedian(srcImageRange(imgIn), destImage(*imgPtr), radius);
       return incref(object(imgPtr).ptr());
@@ -53,6 +56,7 @@ namespace cecog
                            typename IMAGE2::PixelType noresult,
                            typename IMAGE2::PixelType yesresult)
     {
+      vigra::PyAllowThreads _pythread;
       std::auto_ptr< IMAGE2 > imgPtr(new IMAGE2(imgIn.size()));
       vigra::transformImage(srcImageRange(imgIn), destImage(*imgPtr),
                             vigra::Threshold<typename IMAGE1::PixelType,
@@ -64,6 +68,7 @@ namespace cecog
     template <class IMAGE1, class IMAGE2>
     PyObject * pyToggleMapping(IMAGE1 const &imgIn, int size)
     {
+	  vigra::PyAllowThreads _pythread;
       std::auto_ptr< IMAGE2 > imgPtr(new IMAGE2(imgIn.size()));
       using namespace cecog::morpho;
       structuringElement2D se(WITHCENTER8, size);
@@ -76,6 +81,7 @@ namespace cecog
                               IMAGE2 & img2,
                               bool eightNbh, typename IMAGE1::PixelType background)
     {
+      vigra::PyAllowThreads _pythread;
       return vigra::labelImageWithBackground(srcImageRange(img1),
                                              destImage(img2),
                                              eightNbh,
@@ -84,6 +90,7 @@ namespace cecog
 
     vigra::UInt8 pyOtsuThreshold(vigra::UInt8Image const &img)
     {
+      vigra::PyAllowThreads _pythread;
       typedef FindHistogram<vigra::UInt8> histogram;
       histogram f(255);
       vigra::inspectImage(srcImageRange(img), f);
@@ -97,6 +104,7 @@ namespace cecog
                                         typename Image1::value_type lower=vigra::NumericTraits<typename Image1::value_type>::min(),
                                         typename Image1::value_type higher=vigra::NumericTraits<typename Image1::value_type>::max())
     {
+	  vigra::PyAllowThreads _pythread;
       std::auto_ptr< Image2 > imgPtr(new Image2(imgIn.size()));
       cecog::windowAverageThreshold(imgIn, *imgPtr, size, contrastLimit, lower, higher);
       return incref(object(imgPtr).ptr());
@@ -108,6 +116,7 @@ namespace cecog
                                     float threshold,
                                     typename Image1::value_type contrastLimit=vigra::NumericTraits<typename Image1::value_type>::zero())
     {
+	  vigra::PyAllowThreads _pythread;
       std::auto_ptr< Image2 > imgPtr(new Image2(imgIn.size()));
       cecog::windowStdThreshold(imgIn, *imgPtr, size, threshold, contrastLimit);
       return incref(object(imgPtr).ptr());
@@ -122,6 +131,7 @@ namespace cecog
                                        int expansionRounds,
                                        int sepExpandRounds=0)
     {
+	  vigra::PyAllowThreads _pythread;
       std::auto_ptr< Image3 > imgPtr(new Image3(imgIn.size()));
       RegionStatisticsArray stats(labelNumber);
       cecog::seededRegionExpansion(srcImageRange(imgIn),
@@ -141,6 +151,7 @@ namespace cecog
                                        unsigned labelNumber,
                                        int shrinkingRounds)
     {
+	  vigra::PyAllowThreads _pythread;
       std::auto_ptr< Image3 > imgPtr(new Image3(imgIn.size()));
       RegionStatisticsArray stats(labelNumber);
       cecog::seededRegionShrinking(srcImageRange(imgIn),
@@ -159,6 +170,7 @@ namespace cecog
                                        int deltaWidth = 1,
                                        SRGType srgType = CompleteGrow)
     {
+		vigra::PyAllowThreads _pythread;
         std::auto_ptr< Image2 > imgPtr(new Image2(imgIn.size()));
         cecog::segmentationPropagate(imgIn, imgInBinary,
                                      imgLabelsIn, *imgPtr,
@@ -172,6 +184,7 @@ namespace cecog
                                              int gaussSize, int maximaSize,
                                              int iMinMergeSize)
     {
+	  vigra::PyAllowThreads _pythread;
       std::auto_ptr< vigra::BImage > imgPtr(new vigra::BImage(imgIn.size()));
       cecog::segmentationCorrection(imgIn, binIn, *imgPtr,
                                     rSize, gaussSize, maximaSize, iMinMergeSize,
@@ -185,6 +198,7 @@ namespace cecog
                                                  int gaussSize, int maximaSize,
                                                  int iMinMergeSize)
     {
+	  vigra::PyAllowThreads _pythread;
       std::auto_ptr< vigra::BImage > imgPtr(new vigra::BImage(imgIn.size()));
       cecog::segmentationCorrection(imgIn, binIn, *imgPtr,
                                     rSize, gaussSize, maximaSize, iMinMergeSize,

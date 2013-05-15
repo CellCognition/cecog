@@ -57,6 +57,7 @@
 #include "cecog/basic/integral_images.hxx"
 #include "cecog/morpho/basic.hxx"
 #include "cecog/basic/moments.hxx"
+#include "vigra/python_utility.hxx"
 
 namespace cecog
 {
@@ -134,6 +135,7 @@ namespace cecog
      */
     int applyFeature(std::string name, bool force=false)
     {
+      vigra::PyAllowThreads _pythread;
       int feature_exist = 1;
 
       // check if feature is already calculated (or force recalc.)
