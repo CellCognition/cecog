@@ -547,15 +547,14 @@ class _ProcessorMixin(object):
                     elif self._current_process == self.PROCESS_TESTING:
                         msg = 'Classifier testing successfully finished.'
                 elif self.name == SECTION_NAME_TRACKING:
-                    if self._current_process == self.PROCESS_TRACKING:
-                        msg = 'Tracking successfully finished.'
-                    elif self._current_process == self.PROCESS_SYNCING:
-                        msg = 'Motif selection successfully finished.'
+                    msg = 'Tracking successfully finished.'
+                elif self.name == SECTION_NAME_EVENT_SELECTION:
+                    msg = 'event selection successfully finished.'
                 elif self.name == SECTION_NAME_ERRORCORRECTION:
                     msg = 'HMM error correction successfully finished.'
                 elif self.name == SECTION_NAME_PROCESSING:
                     msg = 'Processing successfully finished.'
-                elif self.name == SECTION_NAME_POSTPROCESSING:
+                elif self.name == SECTION_NAME_POST_PROCESSING:
                     msg = 'Postprocessing successfully finished'
 
                 information(self, 'Process finished', msg)

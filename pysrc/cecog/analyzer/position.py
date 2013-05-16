@@ -29,6 +29,7 @@ from cecog.analyzer.timeholder import TimeHolder
 from cecog.analyzer.analyzer import CellAnalyzer
 from cecog.analyzer.tracker import Tracker
 from cecog.analyzer.eventselection import EventSelection
+from cecog.analyzer.eventselection import UnsupervisedEventSelection
 
 from cecog.analyzer.channel import (PrimaryChannel,
                                     SecondaryChannel,
@@ -457,6 +458,38 @@ class PositionAnalyzer(PositionCore):
                 clf.loadClassifier()
                 self.classifiers[p_channel] = clf
 
+
+    def setup_eventselection(self, graph):
+        """Setup the method for event selection."""
+
+        opts = {'backward_range': self._convert_tracking_duration('backwardrange'),
+                'forward_range': self._convert_tracking_duration('forwardrange'),
+                'backward_range_min': self.settings.get('EventSelection', 'backwardrange_min'),
+                'forward_range_min': self.settings.get('EventSelection', 'forwardrange_min'),
+                'max_in_degree': self.settings.get('EventSelection', 'maxindegree'),
+                'max_out_degree': self.settings.get('EventSelection', 'maxoutdegree')}
+
+        if self.settings.get('EventSelection', 'supervised_event_selection'):
+            transitions = eval(self.settings.get('EventSelection', 'labeltransitions'))
+            if not isinstance(transitions[0], tuple):
+                transitions = (transitions, )
+
+            opts.update({'transitions': transitions,
+                         'backward_labels': [int(i) for i in self.settings.get('EventSelection', 'backwardlabels').split(',')],
+                         'forward_labels': [int(i) for i in self.settings.get('EventSelection', 'forwardlabels').split(',')],
+                         'backward_check': self._convert_tracking_duration('backwardCheck'),
+                         'forward_check': self._convert_tracking_duration('forwardCheck')})
+            es = EventSelection(graph, **opts)
+
+        elif self.settings.get('EventSelection', 'unsupervised_event_selection'):
+            opts.update({'transitions': ((0, 1), ),
+                         'min_event_duration': self._convert_tracking_duration('min_event_duration'),
+                         'num_clusters': self.settings.get('EventSelection', 'num_clusters'),
+                         'min_cluster_size': self.settings.get('EventSelection', 'min_cluster_size')})
+            es = UnsupervisedEventSelection(graph, **opts)
+
+        return es
+
     def _convert_tracking_duration(self, option_name):
         """Converts a tracking duration according to the unit and the
         mean time-lapse of the current position.
@@ -476,25 +509,6 @@ class PositionAnalyzer(PositionCore):
         else:
             raise ValueError("Wrong unit '%s' specified." %unit)
         return int(round(result))
-
-    @property
-    def _es_options(self):
-        transitions = eval(self.settings.get('EventSelection',
-                                             'labeltransitions'))
-        if not isinstance(transitions[0], tuple):
-            transitions = (transitions, )
-        evopts = {'transitions': transitions,
-                  'backward_labels': map(int, self.settings.get('EventSelection', 'backwardlabels').split(',')),
-                  'forward_labels': map(int, self.settings.get('EventSelection', 'forwardlabels').split(',')),
-                  'backward_check': self._convert_tracking_duration('backwardCheck'),
-                  'forward_check': self._convert_tracking_duration('forwardCheck'),
-                  'backward_range': self._convert_tracking_duration('backwardrange'),
-                  'forward_range': self._convert_tracking_duration('forwardrange'),
-                  'backward_range_min': self.settings.get('EventSelection', 'backwardrange_min'),
-                  'forward_range_min': self.settings.get('EventSelection', 'forwardrange_min'),
-                  'max_in_degree': self.settings.get('EventSelection', 'maxindegree'),
-                  'max_out_degree': self.settings.get('EventSelection', 'maxoutdegree')}
-        return evopts
 
     def define_exp_features(self):
         features = {}
@@ -623,7 +637,7 @@ class PositionAnalyzer(PositionCore):
                       self.settings.get('Tracking', 'tracking_maxsplitobjects'),
                       self.settings.get('Tracking', 'tracking_maxtrackinggap'))
             self._tracker = Tracker(*tropts)
-            self._tes = EventSelection(self._tracker.graph, **self._es_options)
+            self._tes = self.setup_eventselection(self._tracker.graph)
 
         stopwatch = StopWatch(start=True)
         ca = CellAnalyzer(timeholder=self.timeholder,
