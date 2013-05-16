@@ -87,7 +87,8 @@ class TrackExporter(object):
                     data[CSVParams.class_ %'label'] = sample.iLabel
                     data[CSVParams.class_ %'name'] = sample.strClassName
                     data[CSVParams.class_ %'probability'] = \
-                        ','.join(['%d:%.5f' % (int(x), y) for x, y in sample.dctProb.iteritems()])
+                        ','.join(['%d:%.5f' % (int(x), y) for x, y in \
+                                  sample.dctProb.iteritems()])
 
                 data[CSVParams.tracking %'center_x'] = sample.oCenterAbs[0]
                 data[CSVParams.tracking %'center_y'] = sample.oCenterAbs[1]
