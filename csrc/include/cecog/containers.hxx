@@ -135,7 +135,6 @@ namespace cecog
      */
     int applyFeature(std::string name, bool force=false)
     {
-      vigra::PyAllowThreads _pythread;
       int feature_exist = 1;
 
       // check if feature is already calculated (or force recalc.)
