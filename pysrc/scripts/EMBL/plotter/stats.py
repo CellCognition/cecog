@@ -360,6 +360,11 @@ class Scatterplot(object):
         return
 
 class ScatterplotMatrix(object):
+    """Example:
+    
+    sm = ScatterplotMatrix()
+    sm(X)     
+    """
     def __call__(self,
                  datamatrix,
                  filename,
@@ -373,7 +378,6 @@ class ScatterplotMatrix(object):
                  histo_normed=True,
                  histo_same_scale=True,
                  ):
-
         if type(color) == types.StringType or \
            type(color[0]) in [types.FloatType, types.IntType]:
             nb_data_sets=1

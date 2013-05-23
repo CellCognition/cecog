@@ -59,13 +59,19 @@ namespace cecog
   inline
   double feature_circularity(double perimeter, double roisize)
   {
-    return perimeter /  (2.0 * sqrt(M_PI * roisize));
+	  if(roisize > 0)
+		  return perimeter /  (2.0 * sqrt(M_PI * roisize));
+	  else
+		  return 0.0;
   }
 
   inline
   double feature_irregularity(double centerdist, double roisize)
   {
-    return (1.0 + SQRT_PI * centerdist) / sqrt(roisize) - 1.0;
+	  if(roisize > 1.0)
+		  return (1.0 + SQRT_PI * centerdist) / sqrt(roisize) - 1.0;
+	  else
+		  return 0.0;
   }
 
 
@@ -130,11 +136,12 @@ namespace cecog
       }
 
       //if (!(minv == 0 and (greylevels - 1) == maxv))
-      transformImage(srcImageRange(simg_roi),
-                     destImage(simg_roi),
-                     vigra::linearIntensityTransform(
-                       (greylevels - 1) / double(maxv - minv), -minv)
-                     );
+      if (maxv > minv)
+		  transformImage(srcImageRange(simg_roi),
+						 destImage(simg_roi),
+						 vigra::linearIntensityTransform(
+						   (greylevels - 1) / double(maxv - minv), -minv)
+						 );
     }
 
   protected:
@@ -462,6 +469,8 @@ namespace cecog
     double COR()
     {
       double res = 0.0;
+      if(variance==0)
+    	  return 0.0;
       for (int j=0; j<size; ++j)
       {
         res += sqr((j - average)) * matrix(j,j) / sqr(variance);
@@ -564,7 +573,10 @@ namespace cecog
     inline
     double COV()
     {
-      return variance / average;
+    	if(average!=0)
+    		return variance / average;
+    	else
+    		return 0.0;
     }
 
     inline
