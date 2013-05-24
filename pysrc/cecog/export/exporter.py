@@ -18,13 +18,17 @@ __all__ = ['TrackExporter', 'EventExporter']
 import csv
 import shutil
 import subprocess
+import numpy as np
 from os.path import join
 from collections import OrderedDict
+from matplotlib.backends.backend_pdf import PdfPages
 
+from cecog import plots
 from cecog.io.imagecontainer import Coordinate
 from cecog.analyzer.tracker import Tracker
 from cecog.io.dotwriter import DotWriter
 from cecog.util.util import makedirs
+
 
 class CSVParams(object):
     """Column names, prefixes and spearator for csv files"""
@@ -38,6 +42,32 @@ class CSVParams(object):
 
     tracking_features = ['center_x', 'center_y', 'upperleft_x',
                          'upperleft_y', 'lowerright_x', 'lowerright_y']
+
+class TC3Exporter(object):
+
+    def __init__(self, data, outputdir):
+        assert isinstance(data, dict)
+        self._data = data
+        self._odir = outputdir
+
+    def __call__(self, labels=(2,3), filename='trajectory_plots.pdf'):
+
+        try:
+            pdf = PdfPages(join(self._odir, filename))
+            for title, tracks in self._data.iteritems():
+
+                # checking for binary matrix
+                if np.unique(tracks).size == 2:
+                    labels_ = (1, )
+                else:
+                    labels_ = labels
+
+                fig = plots.trajectories(tracks, labels_, title=title)
+                pdf.savefig(fig)
+                fname = title.lower().replace(' ','-')+'.csv'
+                np.savetxt(join(self._odir, fname), tracks, fmt='%d', delimiter=',')
+        finally:
+            pdf.close()
 
 class TrackExporter(object):
 
@@ -129,8 +159,8 @@ class EventExporter(object):
                                                region_name, feature_names, position)
 
 
-    def _data_per_channel(self, timeholder, event_data, filename, channel_name, region_name,
-                          feature_names, position):
+    def _data_per_channel(self, timeholder, event_data, filename, channel_name,
+                          region_name, feature_names, position):
 
         eventid = event_data['eventId']
         event_frame, _ = Tracker.split_nodeid(eventid)
@@ -166,7 +196,8 @@ class EventExporter(object):
             if CSVParams.objId not in header_names:
                 # setup header line
                 header_names.append(CSVParams.objId)
-                header_names += [CSVParams.class_ %x for x in ['name', 'label', 'probability']]
+                header_names += [CSVParams.class_ %x for x in
+                                 ['name', 'label', 'probability']]
                 # only feature_names scales according to settings
                 header_names += [CSVParams.feature %fn for fn in feature_names]
                 header_names += [CSVParams.tracking %tf for tf in CSVParams.tracking_features]
@@ -190,7 +221,8 @@ class EventExporter(object):
                     data[CSVParams.class_ %'label'] = sample.iLabel
                     data[CSVParams.class_ %'name'] = sample.strClassName
                     data[CSVParams.class_ %'probability'] = \
-                        ','.join(['%d:%.5f' % (int(x),y) for x,y in sample.dctProb.iteritems()])
+                        ','.join(['%d:%.5f' % (int(x),y) for x,y in
+                                  sample.dctProb.iteritems()])
 
                 common_ftr = [f for f in set(sample_holder.feature_names).intersection(feature_names)]
                 features = sample_holder.features_by_name(objid, common_ftr)
