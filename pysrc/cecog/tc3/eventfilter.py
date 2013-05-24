@@ -19,7 +19,7 @@ from sklearn.cluster import KMeans
 from cecog.learning import hmm
 
 class TC3EventFilter(object):
-    """Perform unsupervised envent selection in 4 steps:
+    """Additional Event filter for unsupervised event selection:
 
     1) smooth trajectories using an hmm (k=2)
     2) find mitotic trajectories using various filter conditions
@@ -32,13 +32,11 @@ class TC3EventFilter(object):
     EVENT_LENGTH = 3
     NOISE = 4
 
-    def __init__(self, data, tracks, nodes, n_frames, event_start, event_tol,
+    def __init__(self, tracks, n_frames, event_start, event_tol,
                  n_clusters, verbose=False):
         self.verbose = verbose
         self.tracks = tracks
-        self._nodes = nodes
         self._filter_stats = []
-        self._data = data
         self.n_frames = n_frames
         self.event_start = event_start
         self.event_tol = event_tol
@@ -95,6 +93,9 @@ class TC3EventFilter(object):
             tracks2.append(hmm_.predict(track))
         return np.array(tracks2)
 
+    def delete(self, array, axis=0):
+        return np.delete(array, self._non_events, axis)
+
     def _filter(self, tracks):
         """Filter out all non mitotic events. If no valid event is found,
         _filter returns an array of zeros is returned."""
@@ -103,15 +104,14 @@ class TC3EventFilter(object):
         for i, track in enumerate(tracks):
             if not self._is_event(track):
                 non_events.append(i)
+        self._non_events = non_events
 
         ftracks = np.delete(tracks, non_events, 0)
-        self._data = np.delete(self._data, non_events, 0)
-        self._nodes = np.delete(self._nodes, non_events, 0)
 
         if not ftracks.size:
             ftracks = np.zeros(tracks.shape)
 
-        return ftracks, self._data, self._nodes
+        return ftracks
 
     def _is_event(self, track):
         """Applys the filter condtions."""
