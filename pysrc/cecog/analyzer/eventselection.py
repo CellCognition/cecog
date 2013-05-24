@@ -61,10 +61,10 @@ class EventSelectionCore(LoggerObject):
                 yield start_id, event_data
 
     def itertracks(self):
-        for start_id, eventdata in self.iterevents():
+        for startid, eventdata in self.iterevents():
             if isinstance(eventdata, dict):
                 for track in eventdata['tracks']:
-                    yield track
+                    yield startid, track
 
     def start_nodes(self):
         """Return all start nodes i.e. nodes without incoming edges."""
@@ -387,6 +387,13 @@ class UnsupervisedEventSelection(EventSelectionCore):
             obj.strClassName = "unsupervied-%d" %label
             obj.dctProb = dict((i, v) for i, v in enumerate(probs))
 
+    def _delete_tracks(self, trackids):
+        """Delete tracks by trackid from visitor_data"""
+        for startid, results in self.visitor_data.items():
+            for trackid in results.keys():
+                if trackid in trackids:
+                    del self.visitor_data[startid][trackid]
+
     def _aligned_tracks(self, datadict):
         """Return trackwise aligned matrices of feature data, labels, node ids.
         Shape of matrices ntracks by nframes (by nfreatures).
@@ -395,33 +402,38 @@ class UnsupervisedEventSelection(EventSelectionCore):
         data = []
         labels = []
         nodes = []
-        for track in self.itertracks():
+        trackids = []
+        for trackid, track in self.itertracks():
             data.append([datadict[n] for n in track])
             labels.append([self.graph.node_data(n).iLabel for n in track])
             nodes.append(track)
-
-        # reshape to n_tracks by n_frames by n_features (after pca)
-        nodes = np.concatenate(nodes).reshape((-1, self.track_length))
+            trackids.append(trackid)
+        # take care of array shape,  n_tracks by n_frames by n_features (after pca)
+        nodes = np.array(nodes)
         labels = np.array(labels, dtype=int).reshape(nodes.shape)
-        data = np.concatenate(data).reshape(nodes.shape+(-1, ))
+        data = np.array(data)
+        trackids = np.array(trackids)
 
-        return data, labels, nodes
+        return data, labels, nodes, trackids
 
     def find_events(self):
         data, nodes = self.preprocess()
         self.binary_classification(data)
-        ret = super(UnsupervisedEventSelection, self).find_events()
-
-        _datadict = dict([(n, f) for n, f in zip(nodes, data)])
+        super(UnsupervisedEventSelection, self).find_events()
 
         # pca data, labels after binary classification nodes
-        trackdata, labels, tracknodes = self._aligned_tracks(_datadict)
+        _datadict = dict([(n, f) for n, f in zip(nodes, data)])
+        trackdata, labels, tracknodes, trackids = self._aligned_tracks(_datadict)
         event_tolerance = 2  # this parameter might be obsolete!!!
-        ues = TC3EventFilter(trackdata, labels, nodes, self.track_length,
-                                self.backward_range, event_tolerance,
-                                self.num_clusters)
-        labels, trackdata, nodes = ues()
+        ues = TC3EventFilter(labels, self.track_length, self.backward_range,
+                             event_tolerance, self.num_clusters)
 
+        labels = ues()
+        trackdata = ues.delete(trackdata)
+        tracknodes = ues.delete(tracknodes)
+        trackids_ = ues.delete(trackids)
+
+        self._delete_tracks(np.setdiff1d(trackids, trackids_))
         self.tc3data = self.tc3_analysis(labels, trackdata, tracknodes)
 
     def preprocess(self):
