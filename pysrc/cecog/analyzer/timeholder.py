@@ -27,7 +27,7 @@ from pdk.datetimeutils import StopWatch
 import numpy
 import h5py
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('Agg', warn=False)
 from matplotlib import pyplot
 
 from cecog import ccore

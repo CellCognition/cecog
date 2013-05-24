@@ -16,6 +16,7 @@ __source__ = '$URL$'
 
 import os
 import shutil
+import numpy as np
 from collections import OrderedDict
 from os.path import join, basename, isdir
 
@@ -25,6 +26,7 @@ from cecog.analyzer import (TRACKING_DURATION_UNIT_FRAMES,
                             TRACKING_DURATION_UNIT_MINUTES,
                             TRACKING_DURATION_UNIT_SECONDS)
 
+from cecog import plots
 from cecog.analyzer.timeholder import TimeHolder
 from cecog.analyzer.analyzer import CellAnalyzer
 from cecog.analyzer.tracker import Tracker
@@ -43,7 +45,7 @@ from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
 
 from cecog.analyzer.gallery import EventGallery
 from cecog.analyzer.channel_gallery import ChannelGallery
-from cecog.export.exporter import TrackExporter, EventExporter
+from cecog.export.exporter import TrackExporter, EventExporter, TC3Exporter
 from cecog.util.logger import LoggerObject
 from cecog.util.stopwatch import StopWatch
 from cecog.util.util import makedirs
@@ -429,6 +431,7 @@ class PositionAnalyzer(PositionCore):
                  join(self._out_dir, "hdf5"),
                  join(self._out_dir, "plots"),
                  join(self._position_dir, "statistics"),
+                 join(self._position_dir, "tc3"),
                  join(self._position_dir, "gallery"),
                  join(self._position_dir, "channel_gallery"),
                  join(self._position_dir, "images"),
@@ -460,32 +463,38 @@ class PositionAnalyzer(PositionCore):
                 clf.loadClassifier()
                 self.classifiers[p_channel] = clf
 
+    @property
+    def _transitions(self):
+        if self.settings.get('EventSelection', 'unsupervised_event_selection'):
+            transitions = np.array((0, 1))
+        else:
+            transitions = eval(self.settings.get('EventSelection', 'labeltransitions'))
+            transitions = np.array(transitions)
+        return transitions.reshape((-1, 2))
 
     def setup_eventselection(self, graph):
         """Setup the method for event selection."""
 
-        opts = {'backward_range': self._convert_tracking_duration('backwardrange'),
+        opts = {'transitions': self._transitions,
+                'backward_range': self._convert_tracking_duration('backwardrange'),
                 'forward_range': self._convert_tracking_duration('forwardrange'),
-                'backward_range_min': self.settings.get('EventSelection', 'backwardrange_min'),
-                'forward_range_min': self.settings.get('EventSelection', 'forwardrange_min'),
                 'max_in_degree': self.settings.get('EventSelection', 'maxindegree'),
                 'max_out_degree': self.settings.get('EventSelection', 'maxoutdegree')}
 
         if self.settings.get('EventSelection', 'supervised_event_selection'):
-            transitions = eval(self.settings.get('EventSelection', 'labeltransitions'))
-            if not isinstance(transitions[0], tuple):
-                transitions = (transitions, )
-
-            opts.update({'transitions': transitions,
-                         'backward_labels': [int(i) for i in self.settings.get('EventSelection', 'backwardlabels').split(',')],
+            opts.update({'backward_labels': [int(i) for i in self.settings.get('EventSelection', 'backwardlabels').split(',')],
                          'forward_labels': [int(i) for i in self.settings.get('EventSelection', 'forwardlabels').split(',')],
+                         'backward_range_min': self.settings.get('EventSelection', 'backwardrange_min'),
+                         'forward_range_min': self.settings.get('EventSelection', 'forwardrange_min'),
                          'backward_check': self._convert_tracking_duration('backwardCheck'),
                          'forward_check': self._convert_tracking_duration('forwardCheck')})
             es = EventSelection(graph, **opts)
 
         elif self.settings.get('EventSelection', 'unsupervised_event_selection'):
-            opts.update({'transitions': ((0, 1), ),
-                         'min_event_duration': self._convert_tracking_duration('min_event_duration'),
+            opts.update({'forward_check': self._convert_tracking_duration('min_event_duration'),
+                         'forward_labels': (1, ),
+                         'backward_check': -1, # unsused for unsupervised usecase
+                         'backward_labels': (0, ),
                          'num_clusters': self.settings.get('EventSelection', 'num_clusters'),
                          'min_cluster_size': self.settings.get('EventSelection', 'min_cluster_size')})
             es = UnsupervisedEventSelection(graph, **opts)
@@ -625,10 +634,13 @@ class PositionAnalyzer(PositionCore):
         odir = join(self._statistics_dir, "events")
         exporter.track_features(self.timeholder, self._tes.visitor_data,
                                 self.export_features, self.position, odir)
-        self.logger.debug("--- visitor analysis ok")
         # writes event data to hdf5
         self.timeholder.serialize_events(self._tes)
         self.logger.debug("--- serializing events ok")
+
+    def export_tc3(self):
+        exporter = TC3Exporter(self._tes.tc3data, self._tc3_dir)
+        exporter()
 
     def __call__(self):
         # include hdf5 file name in hdf5_options
@@ -689,6 +701,8 @@ class PositionAnalyzer(PositionCore):
                 self.update_status({'text': 'export events...'})
                 if self.settings.get('Processing', 'eventselection'):
                     self.export_events()
+                if self.settings.get('EventSelection', 'unsupervised_event_selection'):
+                    self.export_tc3()
                 if self.settings.get('Output', 'export_track_data'):
                     self.export_full_tracks()
                 if self.settings.get('Output', 'export_tracking_as_dot'):
