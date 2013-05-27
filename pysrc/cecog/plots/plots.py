@@ -15,8 +15,10 @@ __url__ = 'www.cellcognition.org'
 
 __all__ = ['trajectories_dict', 'trajectories', 'sort_tracks']
 
+
 import numpy as np
 import pylab as pl
+from cecog.colors import UNSUPERVISED_CMAP
 
 def sort_tracks(label_matrix, labels, reverse=False):
 
@@ -29,7 +31,8 @@ def sort_tracks(label_matrix, labels, reverse=False):
     slm = np.array(sorted(label_matrix, key=keyfunc, reverse=reverse))
     return slm
 
-def trajectories_dict(data, labels=None, reverse=False, window_title=None):
+def trajectories_dict(data, labels=None, reverse=False, window_title=None,
+                      cmap=UNSUPERVISED_CMAP):
     """Plot a dictionary of tracks"""
 
     fig = pl.figure(figsize=(len(data)*4, 4.1))
@@ -46,8 +49,9 @@ def trajectories_dict(data, labels=None, reverse=False, window_title=None):
         if labels is not None:
             tracks = sort_tracks(tracks, labels, reverse)
 
-        ax.matshow(tracks)
-        ax.set_aspect("auto")
+        ax.matshow(tracks, cmap=cmap)
+        if tracks.shape[0] > tracks.shape[1]:
+            ax.set_aspect("auto")
         ax.set_title(title)
         ax.set_xlabel("frames")
         if i == 1:
@@ -56,7 +60,7 @@ def trajectories_dict(data, labels=None, reverse=False, window_title=None):
     return fig
 
 def trajectories(tracks, labels=None, reverse=False, title=None,
-                           window_title=None):
+                 window_title=None, cmap=UNSUPERVISED_CMAP):
 
     fig = pl.figure()
     ax =  fig.add_subplot(1, 1, 1, frameon=False, aspect='equal')
@@ -67,7 +71,9 @@ def trajectories(tracks, labels=None, reverse=False, title=None,
     if labels is not None:
         tracks = sort_tracks(tracks, labels, reverse)
 
-    ax.matshow(tracks)
+    ax.matshow(tracks, cmap=cmap)
+    if tracks.shape[0] > tracks.shape[1]:
+        ax.set_aspect("auto")
     if title is not None:
         ax.set_title(title)
     ax.set_xlabel("frames")
