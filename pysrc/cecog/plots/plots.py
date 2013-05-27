@@ -38,10 +38,10 @@ def trajectories_dict(data, labels=None, reverse=False, window_title=None):
     if window_title is not None:
         fig.canvas.set_window_title(window_title)
 
-        nplots = len(data)
+    nplots = len(data)
     for i, title in enumerate(sorted(data), start=1):
         tracks = data[title]
-        ax =  fig.add_subplot(1, nplots, i)
+        ax =  fig.add_subplot(1, nplots, i, aspect='equal')
 
         if labels is not None:
             tracks = sort_tracks(tracks, labels, reverse)
@@ -59,7 +59,7 @@ def trajectories(tracks, labels=None, reverse=False, title=None,
                            window_title=None):
 
     fig = pl.figure()
-    ax =  fig.add_subplot(1, 1, 1)
+    ax =  fig.add_subplot(1, 1, 1, frameon=False, aspect='equal')
 
     if window_title is not None:
         fig.canvas.set_window_title(window_title)
@@ -68,7 +68,6 @@ def trajectories(tracks, labels=None, reverse=False, title=None,
         tracks = sort_tracks(tracks, labels, reverse)
 
     ax.matshow(tracks)
-    ax.set_aspect("auto")
     if title is not None:
         ax.set_title(title)
     ax.set_xlabel("frames")
