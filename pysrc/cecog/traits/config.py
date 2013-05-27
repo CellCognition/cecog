@@ -63,6 +63,10 @@ class ConfigSettings(RawConfigParser):
                 trait = section.get_trait(trait_name)
                 self.set(section_name, trait_name, trait.default_value)
 
+
+    def __call__(self, section, parameter):
+        return self.get(section, parameter)
+
     def was_old_file_format(self):
         return self._old_file_format
 
