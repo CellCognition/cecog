@@ -20,6 +20,8 @@ from scipy import stats
 from matplotlib import mlab
 from sklearn.cluster import KMeans
 
+
+from cecog.colors import rgb2hex, UNSUPERVISED_CMAP
 from cecog.util.logger import LoggerObject
 from cecog.analyzer.tracker import Tracker
 from cecog.tc3 import TC3EventFilter
@@ -142,8 +144,10 @@ class EventSelectionCore(LoggerObject):
                 maxY = max([obj.oRoi.lowerRight[1] for obj in objects])
                 width  = maxX - minX + 1
                 height = maxY - minY + 1
-                centerX = int(round(np.average([obj.oCenterAbs[0] for obj in objects])))
-                centerY = int(round(np.average([obj.oCenterAbs[1] for obj in objects])))
+                centerX = int(round(np.average([obj.oCenterAbs[0]
+                                                for obj in objects])))
+                centerY = int(round(np.average([obj.oCenterAbs[1]
+                                                for obj in objects])))
                 data.append((frame, centerX, centerY, width, height, objids))
             data1 = np.array(data, 'O')
             if not size is None and len(size) == 2:
@@ -372,20 +376,22 @@ class UnsupervisedEventSelection(EventSelectionCore):
         col_nans = np.unique(np.where(nans)[1])
         return np.delete(data, col_nans, axis=1), np.delete(nodes, col_nans)
 
-    def _save_class_labels(self, labels, nodes, probabilities):
+    def _save_class_labels(self, labels, nodes, probabilities, prefix='unsupervised'):
 
         # clear labels from binary classification
         for node in self.graph.node_list():
             obj = self.graph.node_data(node)
             obj.iLabel = None
             obj.strClassName = None
+            obj.strHexColor = None
             obj.dctProb.clear()
 
         for node, label, probs in zip(nodes, labels.flatten(), probabilities):
             obj = self.graph.node_data(node)
             obj.iLabel = label
-            obj.strClassName = "unsupervied-%d" %label
+            obj.strClassName = "%s-%d" %(prefix, label)
             obj.dctProb = dict((i, v) for i, v in enumerate(probs))
+            obj.strHexColor = rgb2hex(UNSUPERVISED_CMAP(label))
 
     def _delete_tracks(self, trackids):
         """Delete tracks by trackid from visitor_data"""
@@ -515,7 +521,7 @@ class UnsupervisedEventSelection(EventSelectionCore):
 
         if nodes is not None:
             self._save_class_labels(gmm.labels.flatten(), nodes.flatten(),
-                                    gmm.parameters.probabilities)
+                                    gmm.parameters.probabilities, prefix='gmm')
 
         return tc3data
 
@@ -543,7 +549,6 @@ class UnsupervisedEventSelection(EventSelectionCore):
 
     def _forward_check(self, node_id, node_ids, level=1, found_splitid=None):
         node_ids.append(node_id)
-
 
         if ((self.forward_range == -1 and self.graph.out_degree(node_id) == 0) or
             (level >= self.forward_range and self.graph.out_degree(node_id) == 0) or

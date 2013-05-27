@@ -12,8 +12,12 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
+__all__ = ['Colors', 'hex2color', 'rgb2hex', 'UNSUPERVISED_CMAP']
 
-from matplotlib.colors import hex2color
+from matplotlib.colors import hex2color, rgb2hex
+from matplotlib.cm import jet
+
+UNSUPERVISED_CMAP = jet
 
 class Colors(object):
 
