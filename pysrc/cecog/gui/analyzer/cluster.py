@@ -175,7 +175,7 @@ class ClusterDisplay(QGroupBox):
 
         # FIXME: we need to get the current value for 'position_granularity'
         settings_dummy = ProcessingFrame.get_special_settings(self._settings)
-        position_granularity = settings_dummy.get(SECTION_NAME_CLUSTER, 'position_granularity')
+        position_granularity = settings_dummy.get('Cluster', 'position_granularity')
 
         path_out = self._submit_settings.get2('pathout')
         emails = str(self._txt_mail.text()).split(',')
