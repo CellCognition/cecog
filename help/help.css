@@ -34,9 +34,15 @@ a.footer {
 }
 
 h4 {
-  margin-top: 20;
-  margin-bottom: 6;
-  margin-left: 20;
+    margin-top: 20;
+    margin-bottom: 6;
+    margin-left: 20;
+}
+
+p.introtext {
+    margin-top: 20;
+    margin-bottom: 6;
+    margin-left: 20;
 }
 
 p.mtext {
