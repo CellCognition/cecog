@@ -69,7 +69,7 @@ from cecog.gui.analyzer.tracking import TrackingFrame, SECTION_NAME_TRACKING
 from cecog.gui.analyzer.errorcorrection import ErrorCorrectionFrame
 from cecog.gui.analyzer.output import OutputFrame
 from cecog.gui.analyzer.processing import ProcessingFrame
-from cecog.gui.analyzer.cluster import ClusterFrame
+from cecog.gui.analyzer.cluster import ClusterFrame, SECTION_NAME_CLUSTER
 
 from cecog.gui.browser import Browser
 from cecog.gui.log import GuiLogHandler, LogWindow
@@ -226,8 +226,9 @@ class CecogAnalyzer(QtGui.QMainWindow):
                       ProcessingFrame(self._settings, self._pages)]
 
         if self.environ.analyzer_config.get('Analyzer', 'cluster_support'):
-            self._tabs.append(ClusterFrame(self._settings, self._pages,
-                                           self._imagecontainer))
+            clusterframe = ClusterFrame(self._settings, self._pages)
+            clusterframe.set_imagecontainer(self._imagecontainer)
+            self._tabs.append(clusterframe)
 
         widths = []
         for tab in self._tabs:
@@ -534,6 +535,11 @@ class CecogAnalyzer(QtGui.QMainWindow):
         self._clear_browser()
         imagecontainer = ImageContainer()
         self._imagecontainer = imagecontainer
+
+        try: # I hate lookup tables!
+            self._tab_lookup['Cluster'][1].set_imagecontainer(imagecontainer)
+        except KeyError:
+            pass
 
         if scan_plates is None:
             scan_plates = dict((info[0], False) for info in plate_infos)
