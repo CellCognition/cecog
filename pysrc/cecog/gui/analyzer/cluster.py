@@ -40,10 +40,10 @@ from cecog import JOB_CONTROL_RESUME, JOB_CONTROL_SUSPEND, \
 
 class ClusterDisplay(QGroupBox):
 
-    def __init__(self, parent, settings, imagecontainer):
+    def __init__(self, parent, settings):
         QGroupBox.__init__(self, parent)
         self._settings = settings
-        self._imagecontainer = imagecontainer
+        self._imagecontainer = None
         self._jobid = None
         self._toggle_state = JOB_CONTROL_SUSPEND
         self._service = None
@@ -145,6 +145,14 @@ class ClusterDisplay(QGroupBox):
             raise RuntimeError("Image container is not loaded yet")
         return self._imagecontainer
 
+    @imagecontainer.deleter
+    def imagecontainer(self):
+        del self._imagecontainer
+
+    @imagecontainer.setter
+    def imagecontainer(self, imagecontainer):
+        self._imagecontainer = imagecontainer
+
     def _on_jobid_entered(self, txt):
         print txt
         self._jobid = str(txt)
@@ -154,6 +162,7 @@ class ClusterDisplay(QGroupBox):
         self._submit_settings.set_section(SECTION_NAME_GENERAL)
         if not self._submit_settings.get2('constrain_positions'):
             positions = []
+
             for plate_id in self.imagecontainer.plates:
                 self.imagecontainer.set_plate(plate_id)
                 meta_data = self.imagecontainer.get_meta_data()
@@ -369,21 +378,23 @@ class ClusterDisplay(QGroupBox):
 
 class ClusterFrame(BaseFrame):
 
-    def __init__(self, settings, parent, name, imagecontainer):
+    def __init__(self, settings, parent, name):
         super(ClusterFrame, self).__init__(settings, parent, name)
 
-        self._cluster_display = self._add_frame(imagecontainer)
+        self._cluster_display = self._add_frame()
         self.add_group(None,
                        [('position_granularity', (0,0,1,1)),
                         ], label='Cluster Settings')
 
-    def _add_frame(self, imagecontainer):
+    def _add_frame(self):
         frame = self._get_frame()
-        cluster_display = ClusterDisplay(frame, self._settings, imagecontainer)
-        frame.layout().addWidget(cluster_display,
-                                 frame._input_cnt, 0, 1, 2)
+        cluster_display = ClusterDisplay(frame, self._settings)
+        frame.layout().addWidget(cluster_display, frame._input_cnt, 0, 1, 2)
         frame._input_cnt += 1
         return cluster_display
 
     def page_changed(self):
         self._cluster_display.update_display(self._is_active)
+
+    def set_imagecontainer(self, imagecontainer):
+        self._cluster_display.imagecontainer = imagecontainer
