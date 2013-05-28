@@ -33,6 +33,7 @@ from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
 from cecog.analyzer.core import AnalyzerCore
 from cecog.io.imagecontainer import ImageContainer
 from cecog.threads.link_hdf import link_hdf5_files
+from cecog.environment import CecogEnvironment
 
 ENV_INDEX_SGE = 'SGE_TASK_ID'
 
@@ -98,6 +99,8 @@ if __name__ ==  "__main__":
 
     if options.settings is None:
         parser.error('Settings filename required.')
+
+    environ = CecogEnvironment(cecog.VERSION, redirect=False, debug=False)
 
     filename_settings = os.path.abspath(options.settings)
 
