@@ -23,6 +23,7 @@ from multiprocessing import Pool, cpu_count
 from PyQt4 import QtCore
 
 from pdk.datetimeutils import StopWatch
+import cecog
 from cecog import ccore
 from cecog.threads.link_hdf import link_hdf5_files
 from cecog.analyzer.core import AnalyzerCore
@@ -31,10 +32,12 @@ from cecog.traits.config import ConfigSettings
 from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.multiprocess import mplogging as lg
+from cecog.environment import CecogEnvironment
 
 # see http://stackoverflow.com/questions/3288595/
 # multiprocessing-using-pool-map-on-a-function-defined-in-a-class
-def core_helper(plate_id, settings_str, imagecontainer, position):
+def core_helper(plate_id, settings_str, imagecontainer, position,
+                version, redirect=True, debug=False):
 
     settings = ConfigSettings(SECTION_REGISTRY)
     settings.from_string(settings_str)
@@ -42,6 +45,9 @@ def core_helper(plate_id, settings_str, imagecontainer, position):
     settings.set(SECTION_NAME_GENERAL, 'positions', position)
 
     try:
+        environ = CecogEnvironment(version, redirect=redirect, debug=debug)
+        if debug:
+            environ.pprint()
         analyzer = AnalyzerCore(plate_id, settings, imagecontainer)
         result = analyzer.processPositions()
     except Exception:
@@ -215,11 +221,13 @@ class MultiAnalyzerThread(AnalyzerThread, MultiProcessingMixin):
             for pos_id in meta_data.positions:
                 if self.lstPositions is None:
                     job_list.append((plate_id, settings_str,
-                                     self._imagecontainer, pos_id))
+                                     self._imagecontainer, pos_id,
+                                     cecog.VERSION))
                 else:
                     if pos_id in self.lstPositions:
                         job_list.append((plate_id, settings_str,
-                                         self._imagecontainer, pos_id))
+                                         self._imagecontainer, pos_id,
+                                         cecog.VERSION))
 
         self.submit_jobs(job_list)
         self.join()

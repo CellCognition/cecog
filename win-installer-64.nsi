@@ -128,7 +128,7 @@ Section "CecogAnalyzer" SecDummy
   SetShellVarContext all
   RMDir /r "$%APPDATA%\CellCognition${mver}"
 
-  File /r /x battery_package /x batch.exe dist\*.*
+  File /r /x battery_package /x cecog_batch.exe dist\*.*
 
   ;Store installation folder
   WriteRegStr HKCU "Software\CecogAnalyzer-${mver}" "" $INSTDIR
@@ -153,7 +153,7 @@ SectionEnd
 
 Section /o "batch script" SecBatch
   SetOutPath "$INSTDIR"
-  FILE dist\batch.exe
+  FILE dist\cecog_batch.exe
 SectionEnd
 
 Section /o "Battery package" SecDemo
