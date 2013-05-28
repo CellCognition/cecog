@@ -249,8 +249,9 @@ class CecogAnalyzer(QtGui.QMainWindow):
                       ProcessingFrame(self._settings, self._pages, SECTION_NAME_PROCESSING)]
 
         if self.environ.analyzer_config.get('Analyzer', 'cluster_support'):
-            self._tabs.append(ClusterFrame(self._settings, self._pages, SECTION_NAME_CLUSTER,
-                                           self._imagecontainer))
+            clusterframe = ClusterFrame(self._settings, self._pages, SECTION_NAME_CLUSTER)
+            clusterframe.set_imagecontainer(self._imagecontainer)
+            self._tabs.append(clusterframe)
 
         widths = []
         for tab in self._tabs:
@@ -554,6 +555,11 @@ class CecogAnalyzer(QtGui.QMainWindow):
         self._clear_browser()
         imagecontainer = ImageContainer()
         self._imagecontainer = imagecontainer
+
+        try: # I hate lookup tables!
+            self._tab_lookup['Cluster'][1].set_imagecontainer(imagecontainer)
+        except KeyError:
+            pass
 
         if scan_plates is None:
             scan_plates = dict((info[0], False) for info in plate_infos)
