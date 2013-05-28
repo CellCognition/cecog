@@ -282,7 +282,7 @@ class TemporalClustering(object):
         return normalize(transmat, axis=1)
 
     def tc3_gmm_dhmm(self, tracks, left2right=False):
-        assert (tracks.dtype == int)
+        assert np.issubdtype(tracks.dtype, int)
 
         trans = self._estimate_transmat(tracks, left2right)
         emis = self._estimate_emission_matrix()
