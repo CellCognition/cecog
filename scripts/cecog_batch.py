@@ -19,6 +19,9 @@ import os
 import sys
 import logging
 
+import matplotlib
+matplotlib.use("Agg")
+
 try:
     import cecog
 except ImportError:
