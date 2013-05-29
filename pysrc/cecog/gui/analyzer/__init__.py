@@ -36,7 +36,7 @@ from cecog.gui.display import TraitDisplayMixin
 from cecog.learning.learning import CommonClassPredictor
 from cecog.learning.learning import ConfusionMatrix
 
-from cecog.util.util import hexToRgb, write_table
+from cecog.util.util import write_table
 
 
 from cecog.gui.util import (question,
@@ -45,8 +45,8 @@ from cecog.gui.util import (question,
                             status,
                             waitingProgressDialog,
                             )
-from cecog.analyzer import CONTROL_1, CONTROL_2
 
+from cecog.analyzer import CONTROL_1, CONTROL_2
 from cecog.analyzer.channel import PrimaryChannel
 from cecog.analyzer.channel import SecondaryChannel
 from cecog.analyzer.channel import TertiaryChannel

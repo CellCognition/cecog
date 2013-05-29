@@ -14,77 +14,24 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-
 import os
 import bz2
 import gzip
 import types
 
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-
-from pdk.options import Option
-from pdk.optionmanagers import OptionManager
 from pdk.platform import is_linux, is_mac, is_windows
-from pdk.fileutils import safe_mkdirs
-
-
-#-------------------------------------------------------------------------------
-# constants:
-#
 
 OS_WINDOWS = 'windows'
 OS_MAC = 'mac'
 OS_LINUX = 'linux'
 
-#-------------------------------------------------------------------------------
-# functions:
-#
-
 def makedirs(path):
-    """
-    Recursively make directory if path doesn't already exist.
+    """Recursively make directory if path doesn't already exist.
     If permission is not set, an exception (os.error) is raised.
     """
     path = os.path.normpath(path)
     if not os.path.isdir(path):
         os.makedirs(path)
-
-
-def singleton(cls):
-    '''
-    singleton class decorator
-    Example:
-    @singleton
-    class Foo():
-        pass
-
-    foo1 = Foo()
-    foo2 = Foo()
-    assert foo1 is foo2
-    '''
-    instances = {}
-    def getinstance(*args, **options):
-        if cls not in instances:
-            instances[cls] = cls(*args, **options)
-        return instances[cls]
-    return getinstance
-
-def hexToRgb(string):
-    hex = eval(string.replace('#','0x'))
-    b = hex & 0xff
-    g = hex >> 8 & 0xff
-    r = hex >> 16 & 0xff
-    return (r,g,b)
-
-def rgbToHex(r,g,b, scale=1):
-    r,g,b = [int(x*float(scale)) for x in (r,g,b)]
-    return "#%s" % "".join(map(lambda c: hex(c)[2:].zfill(2), (r, g, b)))
-
 
 def get_file_handle(filename, mode, guess_compression=True, compress_level=6):
     ext = os.path.splitext(filename)[1].lower()
@@ -100,8 +47,6 @@ def get_file_handle(filename, mode, guess_compression=True, compress_level=6):
     else:
         fh = file(filename, mode)
     return fh
-
-
 
 def read_table(filename, has_column_names=True, skip=0, sep='\t',
                guess_compression=True):
@@ -184,4 +129,3 @@ def print_memory_increase(func):
         return wrapper
     except:
         return runc
-

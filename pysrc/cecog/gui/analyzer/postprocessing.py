@@ -16,22 +16,7 @@ __source__ = '$URL$'
 
 __all__ = ['PostProcessingFrame']
 
-import numpy
-
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
-from PyQt4.Qt import *
-
-from cecog.gui.util import information, exception
-
 from cecog.gui.analyzer import BaseProcessorFrame,  PostProcessingThread
-from cecog.analyzer.channel import PrimaryChannel
-from cecog.analyzer.channel import SecondaryChannel
-from cecog.analyzer.channel import TertiaryChannel
-
-from cecog.learning.learning import CommonClassPredictor
-from cecog.util.util import hexToRgb
-
 
 class PostProcessingFrame(BaseProcessorFrame):
 
