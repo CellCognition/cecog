@@ -33,6 +33,7 @@ from pdk.datetimeutils import StopWatch
 from pdk.ordereddict import OrderedDict
 from pdk.fileutils import safe_mkdirs
 
+from cecog import ccore
 from cecog.gui.util import (exception,
                             information,
                             question,
@@ -48,8 +49,7 @@ from cecog.analyzer.channel import (PrimaryChannel,
                                     TertiaryChannel,
                                     )
 from cecog.analyzer.core import AnalyzerCore
-from cecog import ccore
-from cecog.util.util import hexToRgb
+from cecog.colors import hex2rgb
 from cecog.io.imagecontainer import Coordinate
 from cecog.learning.learning import BaseLearner
 from cecog.gui.widgets.groupbox import QxtGroupBox
@@ -902,7 +902,7 @@ class AnnotationModule(Module):
     def _activate_object(self, item, point, class_name, state=True):
         if state:
             color = \
-                QColor(*hexToRgb(self._learner.hexcolors[class_name]))
+                QColor(*hex2rgb(self._learner.hexcolors[class_name]))
             #color.setAlphaF(1.0)
             label = self._learner.class_labels[class_name]
 #            item2 = QGraphicsEllipseItem(point.x(), point.y(), 3, 3,item)

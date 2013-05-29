@@ -38,11 +38,11 @@ from multiprocessing import cpu_count
 
 from cecog import CHANNEL_PREFIX
 from cecog.gui.display import TraitDisplayMixin
-from cecog.learning.learning import (CommonObjectLearner,
-                                     CommonClassPredictor,
-                                     ConfusionMatrix,
-                                     )
-from cecog.util.util import hexToRgb, write_table
+from cecog.learning.learning import CommonObjectLearner
+from cecog.learning.learning import CommonClassPredictor
+from cecog.learning.learning import ConfusionMatrix
+
+from cecog.util.util import write_table
 from cecog.gui.util import (ImageRatioDisplay,
                             numpy_to_qimage,
                             question,
@@ -51,8 +51,8 @@ from cecog.gui.util import (ImageRatioDisplay,
                             status,
                             waitingProgressDialog,
                             )
-from cecog.analyzer import CONTROL_1, CONTROL_2
 
+from cecog.analyzer import CONTROL_1, CONTROL_2
 from cecog.analyzer.channel import PrimaryChannel
 from cecog.analyzer.channel import SecondaryChannel
 from cecog.analyzer.channel import TertiaryChannel

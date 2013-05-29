@@ -17,7 +17,13 @@ __all__ = ['Colors', 'hex2color', 'rgb2hex', 'UNSUPERVISED_CMAP']
 from matplotlib.colors import hex2color, rgb2hex
 from matplotlib.cm import jet
 
+# use this colormap for all unsupervised/clustering plots
 UNSUPERVISED_CMAP = jet
+
+def hex2rgb(color):
+    """Return the rgb color as python int in the range 0-255"""
+    rgb = [int(i*255.0) for i in hex2color(color)]
+    return tuple(rgb)
 
 class Colors(object):
 

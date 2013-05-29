@@ -33,7 +33,7 @@ from cecog.threads.analyzer import AnalyzerThread
 from cecog.threads.training import TrainingThread
 
 from cecog.learning.learning import CommonClassPredictor
-from cecog.util.util import hexToRgb
+from cecog.colors import hex2rgb
 
 from cecog.environment import CecogEnvironment
 from cecog.plugin.segmentation import REGION_INFO
@@ -130,7 +130,9 @@ class ClassifierResultFrame(QGroupBox):
             self._learner = CommonClassPredictor( \
                 clf_dir=clfdir,
                 name=self._channel,
-                channels={self._channel.title(): _resolve('Classification', 'classification_regionname')},
+                channels = \
+                    {self._channel.title():
+                         _resolve('Classification', 'classification_regionname')},
                 color_channel=_resolve('ObjectDetection', 'channelid'))
             result = self._learner.check()
 
@@ -243,7 +245,8 @@ class ClassifierResultFrame(QGroupBox):
             self._table_info.setItem(r, 0, QTableWidgetItem(name))
             self._table_info.setItem(r, 1, QTableWidgetItem(str(samples)))
             item = QTableWidgetItem(' ')
-            item.setBackground(QBrush(QColor(*hexToRgb(self._learner.hexcolors[name]))))
+            item.setBackground(QBrush(\
+                    QColor(*hex2rgb(self._learner.hexcolors[name]))))
             self._table_info.setItem(r, 2, item)
 
             if not conf is None and r < len(conf):
@@ -264,7 +267,7 @@ class ClassifierResultFrame(QGroupBox):
             self._table_info.setItem(r, 0, QTableWidgetItem(name))
             self._table_info.setItem(r, 1, QTableWidgetItem(str(samples)))
             item = QTableWidgetItem(' ')
-            item.setBackground(QBrush(QColor(*hexToRgb('#FFFFFF'))))
+            item.setBackground(QBrush(QColor(*hex2rgb('#FFFFFF'))))
             self._table_info.setItem(r, 2, item)
 
             item = QTableWidgetItem('%.1f' % (conf.wav_ppv * 100.))

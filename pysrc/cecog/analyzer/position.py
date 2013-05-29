@@ -26,7 +26,6 @@ from cecog.analyzer import (TRACKING_DURATION_UNIT_FRAMES,
                             TRACKING_DURATION_UNIT_MINUTES,
                             TRACKING_DURATION_UNIT_SECONDS)
 
-from cecog import plots
 from cecog.analyzer.timeholder import TimeHolder
 from cecog.analyzer.analyzer import CellAnalyzer
 from cecog.analyzer.tracker import Tracker

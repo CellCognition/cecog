@@ -24,7 +24,7 @@ from cecog.analyzer.object import ObjectHolder
 
 from cecog.util.logger import LoggerObject
 from cecog.util.util import makedirs
-from cecog.util.util import hexToRgb
+from cecog.colors import hex2rgb
 
 class CellAnalyzer(LoggerObject):
 
@@ -219,7 +219,7 @@ class CellAnalyzer(LoggerObject):
 
         if len(lstImages) > 0:
             imgRgb = ccore.makeRGBImage([x[0].getView() for x in lstImages],
-                                        [ccore.RGBValue(*hexToRgb(x[1])) for x in lstImages],
+                                        [ccore.RGBValue(*hex2rgb(x[1])) for x in lstImages],
                                         [x[2] for x in lstImages])
 
             if writeToDisc:
@@ -340,7 +340,7 @@ class CellAnalyzer(LoggerObject):
             makedirs(dir_)
 
         for obj in training_set.itervalues():
-            rgb_value = ccore.RGBValue(*hexToRgb(obj.strHexColor))
+            rgb_value = ccore.RGBValue(*hex2rgb(obj.strHexColor))
 
             file_ = 'PL%s___P%s___T%05d___X%04d___Y%04d' \
                 %(plate, self.P, self._iT,
