@@ -1,3 +1,4 @@
+.Rhistory
 cecog_rc.py
 dist
 build
@@ -22,6 +23,8 @@ resource.py
 .DS_Store
 .RHistory
 .RData
+.Rhistory
+.Rdata
 *.o
 *.suo
 *.sparseimage
