@@ -133,9 +133,10 @@ class PostProcessingAnalysis(object):
         self.mapping_file = mapping_file
         self.class_colors = class_colors
         self.class_names = class_names
+        self.plate = None
 
     def _readScreen(self):
-        self.plate = Plate.load(self.path_in, self.plate_name)
+        #self.plate = Plate.load(self.path_in, self.plate_name)
         if self.plate is None:
             self.plate = Plate(self.plate_name, self.path_in, self.mapping_file)
 
@@ -371,7 +372,7 @@ class IBBAnalysis(PostProcessingAnalysis):
                 print pos.position, ":::",
                 cnt_single_plot = 0
                 for event_idx, (event_id, event_dicts) in enumerate(sorted(pos.items())):
-                    print event_idx,
+                    print event_idx, event_id,
                     h2b = event_dicts['Primary']['primary']
                     ibb_inside = event_dicts['Secondary']['inside']
                     ibb_outside = event_dicts['Secondary']['outside']
@@ -385,7 +386,6 @@ class IBBAnalysis(PostProcessingAnalysis):
 
                     time = h2b['timestamp']
                     time = time - time[0]
-
 
                     if rejection_code == IBBAnalysis.REJECTION.OK:
                         separation_frame, ibb_onset_frame, nebd_onset_frame, prophase_onset, prophase_last_frame = ibb_result
@@ -409,7 +409,6 @@ class IBBAnalysis(PostProcessingAnalysis):
                 print ""
             if group_name in self._plotter:
                 self._plotter[group_name].close()
-
         self.export_class_timing(result)
         self.export_timing(result, "nebd_to_sep_time")
         self.export_timing(result, "sep_to__ibb_time")
@@ -845,8 +844,8 @@ class Plate(object):
     GROUP_BY = enum('POS', "OLIGO", "GENE", "GROUP")
 
     POSITION_REGEXP = re.compile(r"^[A-Z]\d{1,5}_\d{1,5}$|^\d{1,6}$")
-    EVENT_REGEXP = re.compile(r"features__P(?P<pos>\d+|[A-Z]\d+_\d+)__T(?P<time>\d+)"
-                               "__O(?P<obj>\d+)__B(?P<branch>\d+)__C(?P<channel>.+?)__R(?P<region>.*)\.txt")
+    EVENT_REGEXP = re.compile(r"features_P(?P<pos>\d+|[A-Z]\d+_\d+)_T(?P<time>\d+)"
+                               "_O(?P<obj>\d+)_B(?P<branch>\d+)_C(?P<channel>.+?)_R(?P<region>.*)\.txt")
     def __init__(self, plate_id, path_in, mapping_file, group_by=0):
         self._logger =  self._logger = logging.getLogger(self.__class__.__name__)
         self.class_label_selector = 'class__label'
@@ -870,14 +869,26 @@ class Plate(object):
             res += "%s with %d events\n" % (pos, len(self._positions[pos]))
         return res
 
+    def _get_positions_dirs(self):
+        pos_list = []
+        for pos_candidate in sorted(os.listdir(self.path_in)):
+            if self.POSITION_REGEXP.search(pos_candidate) is not None:
+                pos_list.append(pos_candidate)
+
+        if len(pos_list) == 0:
+            raise RuntimeError("No positions folder found for path %s" % self.path_in)
+
+        return pos_list
+
     def readEvents(self):
         self.mapping = self._readMappingFile()
         self.pos_list = self._get_positions_dirs()
 
+        fmt = "%%0%dd" %(len(self.pos_list[0]))
         for pos_idx, pos_name in enumerate(self.mapping['position']):
             if isinstance(pos_name, int):
-                pos_name = '%04d' % pos_name
-
+                pos_name = fmt %pos_name
+            print pos_name, pos_name in self.pos_list
             if pos_name not in self.pos_list:
 #                raise RuntimeError("Position from Mapping file %s not found in in path %s" % (pos_name, self.path_in))
                 print "Position from Mapping file %s not found in in path %s" % (pos_name, self.path_in)
@@ -980,18 +991,6 @@ class Plate(object):
         self._logger.info('Found mapping file: %s' % self.mapping_file)
 
         return mapping
-
-
-    def _get_positions_dirs(self):
-        pos_list = []
-        for pos_candidate in sorted(os.listdir(self.path_in)):
-            if self.POSITION_REGEXP.search(pos_candidate) is not None:
-                pos_list.append(pos_candidate)
-
-        if len(pos_list) == 0:
-            raise RuntimeError("No positions folder found for path %s" % self.path_in)
-
-        return pos_list
 
     def get_events(self):
         res = {}
