@@ -22,9 +22,7 @@ from os.path import join, basename, isdir
 
 from cecog.io.imagecontainer import Coordinate
 from cecog.plugin.segmentation import REGION_INFO
-from cecog.analyzer import (TRACKING_DURATION_UNIT_FRAMES,
-                            TRACKING_DURATION_UNIT_MINUTES,
-                            TRACKING_DURATION_UNIT_SECONDS)
+from cecog.analyzer import TimeUnit
 
 from cecog.analyzer.timeholder import TimeHolder
 from cecog.analyzer.analyzer import CellAnalyzer
@@ -510,11 +508,11 @@ class PositionAnalyzer(PositionCore):
 
         # get mean and stddev for the current position
         info = self.meta_data.get_timestamp_info(self.position)
-        if unit == TRACKING_DURATION_UNIT_FRAMES or info is None:
+        if unit == TimeUnit.FRAMES or info is None:
             result = value
-        elif unit == TRACKING_DURATION_UNIT_MINUTES:
+        elif unit == TimeUnit.MINUTES:
             result = (value * 60.) / info[0]
-        elif unit == TRACKING_DURATION_UNIT_SECONDS:
+        elif unit == TimeUnit.SECONDS:
             result = value / info[0]
         else:
             raise ValueError("Wrong unit '%s' specified." %unit)
@@ -638,7 +636,12 @@ class PositionAnalyzer(PositionCore):
         self.logger.debug("--- serializing events ok")
 
     def export_tc3(self):
-        exporter = TC3Exporter(self._tes.tc3data, self._tc3_dir)
+        t_mean = self.meta_data.get_timestamp_info(self.position)[0]
+        tu = TimeUnit(t_mean, TimeUnit.SECONDS)
+        increment = self.settings('General', 'frameincrement')
+        t_step = tu.frames2any(t_mean, TimeUnit.MINUTES)
+        exporter = TC3Exporter(self._tes.tc3data, self._tc3_dir, t_step,
+                               TimeUnit.MINUTES)
         exporter()
 
     def __call__(self):

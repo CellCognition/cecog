@@ -27,6 +27,7 @@ from cecog.util.logger import LoggerObject
 from cecog.util.util import makedirs
 
 
+
 # XXX - fix class names
 class AnalyzerBase(LoggerObject):
 
