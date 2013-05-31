@@ -43,7 +43,12 @@ class CSVParams(object):
     tracking_features = ['center_x', 'center_y', 'upperleft_x',
                          'upperleft_y', 'lowerright_x', 'lowerright_y']
 
+
 class TC3Exporter(object):
+    """Export and plot tc3 data. That include trajectory plots,
+    label matrices as csv files and box plots.
+    """
+
 
     def __init__(self, data, outputdir):
         assert isinstance(data, dict)
@@ -65,7 +70,8 @@ class TC3Exporter(object):
                 fig = plots.trajectories(tracks, labels_, title=title)
                 pdf.savefig(fig)
                 fname = title.lower().replace(' ','-')+'.csv'
-                np.savetxt(join(self._odir, fname), tracks, fmt='%d', delimiter=',')
+                np.savetxt(join(self._odir, fname), tracks, fmt='%d',
+                           delimiter=',')
         finally:
             pdf.close()
 

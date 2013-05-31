@@ -12,11 +12,10 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-
-import os
 import numpy as np
 from os.path import join, isfile, abspath
 
+from cecog.util.util import makedirs
 from cecog.analyzer.ibb import IBBAnalysis, SecurinAnalysis
 from cecog.threads.corethread import CoreThread
 from cecog.traits.analyzer.postprocessing import SECTION_NAME_POST_PROCESSING
@@ -67,8 +66,7 @@ class PostProcessingThread(CoreThread):
         path_out = self._imagecontainer.get_path_out()
 
         path_analyzed = join(path_out, 'analyzed')
-        if not os.path.isdir(path_analyzed):
-            os.makedirs(path_analyzed)
+        makedirs(path_analyzed)
 
         mapping_file = self._mapping_files[plate_id]
 
@@ -130,7 +128,7 @@ class PostProcessingThread(CoreThread):
                 self._settings.get2('plot_ylim1_high')
 
             path_out_ibb = join(path_out, 'ibb')
-            os.makedirs(path_out_ibb)
+            makedirs(path_out_ibb)
             ibb_analyzer = IBBAnalysis(path_analyzed,
                                        path_out_ibb,
                                        plate_id,
@@ -142,7 +140,7 @@ class PostProcessingThread(CoreThread):
 
         if self._settings.get2('securin_analysis'):
             path_out_securin = join(path_out, 'sec')
-            os.makedirs(path_out_securin)
+            makedirs(path_out_securin)
 
             securin_options = {}
             securin_analyzer = SecurinAnalysis(path_analyzed,
