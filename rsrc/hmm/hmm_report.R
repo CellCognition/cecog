@@ -20,36 +20,25 @@ read.screen <- function(dir,filenameLayout,regionName,graph,fuseClasses=NULL,sin
     screen <- list()
     screen$dir <- dir
     screen$layout <- read.delim(filenameLayout, as.is=TRUE)
-    screen$nrOfPositions <- dim(screen$layout)[1]
+    pdirs <- list.dirs(dir, recursive=FALSE)
+    screen$nrOfPositions <- length(as.list(pdirs))
     screen$nrOfCells <- 0
     screen$K <- graph$K
     screen$fuseClasses <- fuseClasses
     screen$regionName <- regionName
     nr <- screen$nrOfPositions
+    
     for (i in 1:nr)
     {
-        if (!is.null(screen$layout$Stage.position.nr))
-            pos.name = "Stage.position.nr."
-        else
-            pos.name = "Position"
-        pos = screen$layout[i, pos.name]
-        #print(paste(pos, pos.name))
-        if (is.integer(pos))
-            str.pos <- sprintf("%04d", as.integer(pos))
-        else
-            str.pos = pos
-        #path = paste(str.pos, "_tracking/_features_events", sep="/")
-        #spath = paste(str.pos, "_tracking", sep="/")
-        spath = paste(str.pos, "statistics", "events", sep="/")
-        path = paste(dir, spath, sep="/")
-        #print(paste(str.pos, path,file.exists(path)))
-		print(path)
+        str.pos = basename(pdirs[i])
+        spath = paste(basename(str.pos), "statistics", "events", sep="/")
+        path = paste(dirname(pdirs[i]), spath , sep="/")
+		    print(path)
         if (file.exists(path))
         {
             filename <- list.files(path, paste(".*",regionName,".*",sep=""))
             if (singleBranch)
                 filename = filename[grep('_B01_', filename)]
-            #if (length(filename) > 0)
             {
                 if (length(filename) > 0)
                   valid = rep(TRUE, length(filename))
@@ -80,11 +69,17 @@ read.screen <- function(dir,filenameLayout,regionName,graph,fuseClasses=NULL,sin
                     screen$cell <- cell
                 else
                     screen$cell <- rbind(screen$cell,cell)
-            } #else
-            #    screen$nrOfPositions = screen$nrOfPositions - 1
-        } else
+            }
+        } else {
+            print(sprintf("WARNING: File or directory not found: %d", screen$layout[i, 1]))
             screen$nrOfPositions = screen$nrOfPositions - 1
+        }
     }
+
+    if (screen$nrOfPositions == 0) {
+      print(screen$nrOfPositions)
+      stop("No positions to process")
+      }
     return(screen)
 }
 
@@ -260,10 +255,7 @@ plot.transition.graph <- function(hmm, loops=FALSE,type=NULL,filename=NULL,weigh
         T <- hmm$trans
         K <- hmm$K
     }
-    #cat("start ", K,"\n")
-    #cat("HMM=",length(hmm),"\n")
-    #cat("filename",filename,"\n")
-    #cat("weights",weights,"\n")
+    
     if (!loops)
         diag(T) <- 0
 
@@ -275,11 +267,9 @@ plot.transition.graph <- function(hmm, loops=FALSE,type=NULL,filename=NULL,weigh
     }
     if (weights)
     {
-    #print(paste('moo',K))
         w.K = rep(1, K)
         for (i in 1:K)
         {
-#            w.K[i] <- hmm$trans.raw[i,i]
             w.K[i] <- T[i,i]
         }
         s <- sum(w.K)
@@ -295,7 +285,6 @@ plot.transition.graph <- function(hmm, loops=FALSE,type=NULL,filename=NULL,weigh
     w <- rep(0,M,nc=2)
     z <- 0
     max.w <- c()
-  #print(K)
     for (i in 1:K)
     {
         z.start <- z
@@ -311,12 +300,6 @@ plot.transition.graph <- function(hmm, loops=FALSE,type=NULL,filename=NULL,weigh
         if (z > z.start) {
             max.w <- append(max.w, which.max(w[z.start+1:z]) + z.start)
         }
-        # FIXME: capturing isolated nodes (no outgoing edge)
-        #if (sum(T[i,]) < isolation_threshold) {
-        #  z <- z+1
-        #  el[z,] <- c(i,i)
-        #  w[z] <- 0
-        #}
     }
     z.start <- z
 
@@ -355,7 +338,6 @@ plot.transition.graph <- function(hmm, loops=FALSE,type=NULL,filename=NULL,weigh
 	# just numbering the nodes, no class names
 	V(g)$label = as.character(seq(0,K  ))
 
-    #par(family = 'sans')
     V(g)$size <- 25
     E(g)$width <- 2
     V(g)$label.font <- 2
@@ -430,11 +412,7 @@ write.decode <- function(screen, cell, hmm)
 	                for (n in 1:length(C))
 	                    Cs[as.numeric(C[[n]][1])] <- as.numeric(C[[n]][2])
 	                p = rep(0,K)
-	                #k <- length(C)
-	                #if (k != K) {
-	                #    cat("ERROR: The number of classes in file ", screen$cell$filename[i], " number of classes is ", k,". Expected number of classes is ",K,"\n")
-	                #    stop()
-	                #}
+
 	                for (k in 1:K)
 	                {
 	                    if (!is.null(fuseClasses) && k %in% fuseClasses[,2])
@@ -454,7 +432,6 @@ write.decode <- function(screen, cell, hmm)
 	        write.table(t(Sequence2), paste(dirHmm, cell$name[f], sep="/"), quote=FALSE, sep="\t",
 	                row.names=FALSE,
 	                col.names=colNames)
-	        #write.table(Sequence2, paste(dirHmm, cell$name[f], sep="/"), quote=FALSE, sep="\t")
 	    }
     }
 
