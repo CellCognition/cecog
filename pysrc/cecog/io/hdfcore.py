@@ -9,9 +9,6 @@
                  See trunk/AUTHORS.txt for author contributions.
 """
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
 import numpy
 import matplotlib.pyplot as mpl
 import h5py
@@ -21,20 +18,14 @@ import base64
 import zlib
 from collections import defaultdict
 
+from cecog.colors import hex2rgb
+
 try:
     import vigra
 except ImportError:
-    print 'VIGRA is not installed. Please, install from source of download binary at http://www.lfd.uci.edu/~gohlke/pythonlibs/'
+    print ('VIGRA is not installed. Please, install from source of'
+           ' download binary at http://www.lfd.uci.edu/~gohlke/pythonlibs/')
 
-#-------------------------------------------------------------------------------
-# Constants:
-#
-
-GALLERY_SIZE = 100
-
-#-------------------------------------------------------------------------------
-# Functions:
-#
 
 class memoize(object):
     """cache the return value of a method
@@ -72,38 +63,6 @@ class memoize(object):
             res = cache[key] = self.func(*args, **kw)
         return res
 
-
-def hex_to_rgb(hex_string, truncate_to_one=False):
-    """
-    Converts the hex representation of a RGB value (8bit per channel) to
-    its integer components.
-
-    Example: hex_to_rgb('#559988') = (85, 153, 136)
-             hex_to_rgb('559988') = (85, 153, 136)
-
-    @param hexString: the RGB value
-    @type hexString: string
-    @return: RGB integer components (tuple)
-    """
-    if hex_string[:2] == '0x':
-        hex_value = int(hex_string, 16)
-    elif hex_string[0] == '#':
-        hex_value = int('0x'+hex_string[1:], 16)
-    else:
-        hex_value = int('0x'+hex_string, 16)
-    b = hex_value & 0xff
-    g = hex_value >> 8 & 0xff
-    r = hex_value >> 16 & 0xff
-
-    if truncate_to_one:
-        r = r / float(255)
-        g = g / float(255)
-        b = b / float(255)
-    return (r, g, b)
-
-#-------------------------------------------------------------------------------
-# Classes:
-#
 
 class CH5Position(object):
     def __init__(self, plate, well, pos, grp_pos, parent):
@@ -220,7 +179,7 @@ class CH5Position(object):
                 class_color = [color]*len(crack)
 
             for i, (cr, col) in enumerate(zip(crack, class_color)):
-                col_tmp = hex_to_rgb(col)
+                col_tmp = hex2rgb(col)
                 for x, y in cr:
                     for c in range(3):
                         img[y, x + i* GALLERY_SIZE, c] = col_tmp[c]

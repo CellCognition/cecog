@@ -275,6 +275,7 @@ class HmmThread(CoreThread):
     def _generate_graph(self, channel, wd, hmm_path, region_name):
         f_in = file(join(wd, 'graph_template.txt'), 'rU')
         filename_out = self._join(hmm_path, 'graph_%s.txt' % region_name)
+
         f_out = file(filename_out, 'w')
         learner = self._learner_dict[channel]
         for line in f_in:

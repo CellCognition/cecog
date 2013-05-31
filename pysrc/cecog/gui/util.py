@@ -33,8 +33,6 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
-from cecog.util.color import rgb_to_hex
-
 QRC_TOKEN = 'qrc:/'
 
 def message(icon, text, parent, info=None, detail=None, buttons=None,
@@ -185,7 +183,7 @@ def on_anchor_clicked(link):
         QDesktopServices.openUrl(link)
 
 def qcolor_to_hex(qcolor):
-    return rgb_to_hex(qcolor.red(), qcolor.green(), qcolor.blue())
+    return rgb2hex((qcolor.red(), qcolor.green(), qcolor.blue()))
 
 def get_qcolor_hicontrast(qcolor, threshold=0.5):
     lightness = qcolor.lightnessF()
@@ -196,16 +194,14 @@ def get_qcolor_hicontrast(qcolor, threshold=0.5):
 
 
 class ProgressDialog(QProgressDialog):
+    """Subclass of QProgressDialog to:
+         -) ignore the ESC key during dialog exec_()
+         -) to provide mechanism to show the dialog only
+            while a target function is running
+    """
 
     targetFinished = pyqtSignal()
     targetSetValue = pyqtSignal(int)
-
-    '''
-    inherited QProgressDialog to ...
-       ... ignore the ESC key during dialog exec_()
-       ... to provide mechanism to show the dialog only
-           while a target function is running
-    '''
 
     def setCancelButton(self, cancelButton):
         self.hasCancelButton = cancelButton is not None

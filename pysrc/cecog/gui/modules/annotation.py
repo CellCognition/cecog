@@ -679,7 +679,6 @@ class AnnotationModule(Module):
 
         return ok
 
-
     def _on_open_classifier(self):
         try:
             path = os.path.abspath(self._learner.clf_dir)
