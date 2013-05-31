@@ -67,13 +67,14 @@ class PostProcessingThread(CoreThread):
         path_out = self._imagecontainer.get_path_out()
 
         path_analyzed = join(path_out, 'analyzed')
-        os.makedirs(path_analyzed)
+        if not os.path.isdir(path_analyzed):
+            os.makedirs(path_analyzed)
 
         mapping_file = self._mapping_files[plate_id]
 
         class_colors = {}
         for i, name in self._learner_dict['primary'].class_names.items():
-            class_colors[i] = self._learner_dict['primary'].hex_colors[name]
+            class_colors[i] = self._learner_dict['primary'].hexcolors[name]
 
         class_names = {}
         for i, name in self._learner_dict['primary'].class_names.items():

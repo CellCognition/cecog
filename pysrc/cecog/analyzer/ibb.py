@@ -7,12 +7,10 @@ import re
 import os
 import cPickle as pickle
 from itertools import cycle
-from cecog.util.color import rgb_to_hex
+from cecog.colors import rgb2hex
+
 from matplotlib.backends.backend_pdf import PdfPages
 from vigra.impex import readImage
-#mpl.rcParams["axes.facecolor"] = 'k'
-#mpl.rcParams["axes.edgecolor"] = 'w'
-#mpl.rcParams["axes.labelcolor"] = 'w'
 mpl.rcParams["figure.facecolor"] = 'w'
 mpl.rcParams["pdf.compression"] = 0
 
@@ -57,7 +55,8 @@ class GalleryDecorationPlotter(EventPlotterPdf):
 
 
 
-    def add_gallery_deco(self, event_id, pos_name, path_in, time, class_labels, class_colors, channel=('primary', 'secondary')):
+    def add_gallery_deco(self, event_id, pos_name, path_in, time, class_labels,
+                         class_colors, channel=('primary', 'secondary')):
         if 'gallery' not in self.add_axes:
             self.add_axes['gallery'] = self.figure.add_axes((0.1, 0.1, 0.8, 0.4))
 
@@ -443,7 +442,6 @@ class IBBAnalysis(PostProcessingAnalysis):
                             group_data.append(class_counts[class_index])
 
                 data.append(group_data)
-
             self._export_data_list(filename, data, names)
 
     def _export_data_list(self, filename, data, names):
@@ -458,7 +456,6 @@ class IBBAnalysis(PostProcessingAnalysis):
         dtype = [(n, 'float') for n in names]
         fnan = FormatFloatNaN()
         formatd = dict([(n, fnan) for n in names])
-
         data_t = numpy.array(map(None, *data), dtype=dtype)
         mpl.mlab.rec2csv(data_t, filename, formatd=formatd, delimiter='\t')
 
@@ -659,9 +656,6 @@ class IBBAnalysis(PostProcessingAnalysis):
         axes.set_title("%s - %s" % (group_name, event_id))
         axes.set_ylabel("IBB ratio")
         axes.set_xlabel("Time [min]")
-#        pylab.text(time[separation_frame]+0.5, ratio.max(), "Sep", verticalalignment='top', color='r')
-#        pylab.text(time[ibb_onset_frame]+0.5, ratio.max(), "Ibb", verticalalignment='top', color='g')
-#        pylab.text(time[nebd_onset_frame]+0.5, ratio.max(), "Nebd", verticalalignment='top', color='b')
         axes.legend(loc="lower right", prop={'size': 6})
         axes.grid('on')
 
@@ -706,7 +700,7 @@ class IBBAnalysis(PostProcessingAnalysis):
         data = []
         names = []
         bar_labels = ('valid', 'signal', 'split', 'ibb_onset', 'nebd_onset', 'prophase_onset')
-        bar_colors = map(lambda x:rgb_to_hex(*x), [[int(x*255) for x in pyplot.cm.Greens(2)[0:3]],] +
+        bar_colors = map(lambda x:rgb2hex(x), [[int(x*255) for x in pyplot.cm.Greens(2)[0:3]],] +
                                                   [tuple(x) for x in (pyplot.cm.RdBu(range(0,256,62))*255)[:,:3].astype('uint8')[:,:3]]
                           )
 
@@ -757,11 +751,11 @@ class IBBAnalysis(PostProcessingAnalysis):
         ax1 = fig.add_subplot(111)
         ax1.set_title('IBB Analysis %s' % self.PLOT_LABELS[id_])
         ax1.bar(range(len(data_list)), map(numpy.mean, numpy.array(data_list)),
-               yerr=map(numpy.std, numpy.array(data_list)),
-               color=map(lambda x:rgb_to_hex(*x), colors),
-               ecolor='k',
-               align='center',
-               )
+                yerr=map(numpy.std, numpy.array(data_list)),
+                color=map(lambda x:rgb2hex(x), colors),
+                ecolor='k',
+                align='center',
+                )
         #ax1.set_xticks([x+0.8 for x in range(len(data_list))])
 
         if len(neg_ctrl) > 0:
@@ -797,7 +791,7 @@ class IBBAnalysis(PostProcessingAnalysis):
         for c, d in zip(colors, data_list):
             if len(d) > 0:
                 b = bp['boxes'][i]
-                pyplot.setp(b, facecolor=rgb_to_hex(*c))
+                pyplot.setp(b, facecolor=rgb2hex(c))
                 i += 1
 
         #ax1.set_xticks([x+0.8 for x in range(len(data_list))])

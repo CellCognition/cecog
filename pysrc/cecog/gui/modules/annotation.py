@@ -680,7 +680,6 @@ class AnnotationModule(Module):
 
         return ok
 
-
     def _on_open_classifier(self):
         path = self._learner.clf_dir
         result = QFileDialog.getExistingDirectory(self, 'Open classifier directory', os.path.abspath(path))

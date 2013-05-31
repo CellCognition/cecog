@@ -12,18 +12,24 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-__all__ = ['Colors', 'hex2color', 'rgb2hex', 'UNSUPERVISED_CMAP']
+__all__ = ['Colors', 'rgb2hex', 'UNSUPERVISED_CMAP', 'hex2rgb']
 
-from matplotlib.colors import hex2color, rgb2hex
+from matplotlib.colors import hex2color
+from matplotlib.colors import rgb2hex as mpl_rgb2hex
 from matplotlib.cm import jet
 
 # use this colormap for all unsupervised/clustering plots
 UNSUPERVISED_CMAP = jet
 
+def rgb2hex(color):
+    return mpl_rgb2hex((color[0]/255.0, color[1]/255.0, color[2]/255.0))
+
 def hex2rgb(color):
-    """Return the rgb color as python int in the range 0-255"""
+    """Return the rgb color as python int in the range 0-255."""
+    assert color.startswith("#")
     rgb = [int(i*255.0) for i in hex2color(color)]
     return tuple(rgb)
+
 
 class Colors(object):
 
