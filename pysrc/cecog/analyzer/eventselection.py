@@ -26,8 +26,17 @@ from cecog.analyzer.tracker import Tracker
 from cecog.tc3 import TC3EventFilter
 from cecog.tc3 import TemporalClustering
 
+
 class EventSelectionError(Exception):
     pass
+
+### TODO: Recursion limit has to be set higher than 1000,
+###       due to the current implementation of _forward_visitor(),
+###       which calls for 'full' tracks itself recursively for each
+###       node_id. In case of long time_lapse movies this might be
+###       more than 1000 (default python rec limit)
+import sys
+sys.setrecursionlimit(10000)
 
 class EventSelectionCore(LoggerObject):
     """Parent for all transition based event selection classes."""
@@ -47,7 +56,6 @@ class EventSelectionCore(LoggerObject):
         self.max_in_degree = max_in_degree
         self.max_out_degree = max_out_degree
         self.allow_one_daughter_cell = allow_one_daughter_cell
-
         self.visitor_data = dict()
 
     def iterevents(self):
@@ -120,8 +128,16 @@ class EventSelectionCore(LoggerObject):
         for start_id in start_ids:
             self.visitor_data[start_id] = {'_current': 0, '_full' : [[]]}
             self.logger.debug("root ID %s" %start_id)
-            self._forward_visitor(start_id, self.visitor_data[start_id],
-                                 visited_nodes)
+            try:
+                self._forward_visitor(start_id, self.visitor_data[start_id],
+                                      visited_nodes)
+            except RuntimeError as e:
+                if e.message.startswith('maximum recursion'):
+                    raise RuntimeError(('eventselection failed: maximum '
+                                        'recursion reached in _forward_visitor()'))
+                else:
+                   raise(e)
+
 
     def _forward_visitor(self, nodeid, results, visited_nodes, level=0):
 
