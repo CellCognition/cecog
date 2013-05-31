@@ -129,7 +129,6 @@ class TC3EventFilter(object):
 
         # transition within certain frames
         if track[self.event_start:self.event_start+self.event_tol].sum() == 0:
-            raise RuntimeError("transition within certain frames")
             self._filter_stats.append(self.EVENT_LENGTH)
             return False
 
