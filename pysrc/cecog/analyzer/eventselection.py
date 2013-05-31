@@ -21,7 +21,7 @@ from matplotlib import mlab
 from sklearn.cluster import KMeans
 
 
-from cecog.colors import rgb2hex, UNSUPERVISED_CMAP
+from cecog.colors import rgb2hex, UNSUPERVISED_CMAP, BINARY_CMAP
 from cecog.util.logger import LoggerObject
 from cecog.analyzer.tracker import Tracker
 from cecog.tc3 import TC3EventFilter
@@ -85,7 +85,7 @@ class EventSelectionCore(LoggerObject):
         for node in nodes:
             obj = self.graph.node_data(node)
             data.append(obj.aFeatures)
-        data = np.concatenate(data).reshape((nodes.size, -1))
+        data = np.array(data)
         assert data.shape[0] == nodes.size
         return data, nodes
 
@@ -98,16 +98,16 @@ class EventSelectionCore(LoggerObject):
         # ie. graph.out_degree!!!!
         return [i for i, n in enumerate(nodes) if isinstance(n, list)]
 
-    def track_data(self):
-        features = list()
-        for tracks in self.visitor_data.itervalues():
-            for startid, event_data in tracks.iteritems():
-                if not startid.startswith('_'):
-                    continue
-                for tracks in event_data["tracks"]:
-                    for track in tracks:
-                        features.append([self.graph.node_data(n) for n in track])
-        return np.concatenate(features)
+    # def track_data(self):
+    #     features = list()
+    #     for tracks in self.visitor_data.itervalues():
+    #         for startid, event_data in tracks.iteritems():
+    #             if not startid.startswith('_'):
+    #                 continue
+    #             for tracks in event_data["tracks"]:
+    #                 for track in tracks:
+    #                     features.append([self.graph.node_data(n) for n in track])
+    #     return np.array(features)
 
     # XXX rewrite this function
     def bboxes(self, size=None, border=0):
@@ -163,7 +163,8 @@ class EventSelectionCore(LoggerObject):
 
     def _forward_visitor(self, nodeid, results, visited_nodes, level=0):
 
-        if self.graph.out_degree(nodeid) == 1 and self.graph.in_degree(nodeid) == 1:
+        if self.graph.out_degree(nodeid) == 1 and \
+                self.graph.in_degree(nodeid) == 1:
             sample = self.graph.node_data(nodeid)
             successor = self.graph.node_data(
                 self.graph.tail(self.graph.out_arcs(nodeid)[0]))
@@ -360,7 +361,8 @@ class UnsupervisedEventSelection(EventSelectionCore):
         col_nans = np.unique(np.where(nans)[1])
         return np.delete(data, col_nans, axis=1), np.delete(nodes, col_nans)
 
-    def _save_class_labels(self, labels, nodes, probabilities, prefix='unsupervised'):
+    def _save_class_labels(self, labels, nodes, probabilities,
+                           prefix='unsupervised'):
 
         # clear labels from binary classification
         for node in self.graph.node_list():
@@ -375,7 +377,8 @@ class UnsupervisedEventSelection(EventSelectionCore):
             obj.iLabel = label
             obj.strClassName = "%s-%d" %(prefix, label)
             obj.dctProb = dict((i, v) for i, v in enumerate(probs))
-            obj.strHexColor = rgb2hex(UNSUPERVISED_CMAP(label))
+            rgb = UNSUPERVISED_CMAP(float(label)/(self.num_clusters-1))
+            obj.strHexColor = rgb2hex(rgb)
 
     def _delete_tracks(self, trackids):
         """Delete tracks by trackid from visitor_data"""
@@ -398,7 +401,8 @@ class UnsupervisedEventSelection(EventSelectionCore):
             labels.append([self.graph.node_data(n).iLabel for n in track])
             nodes.append(track)
             trackids.append(trackid)
-        # take care of array shape,  n_tracks by n_frames by n_features (after pca)
+        # take care of array shape,  n_tracks by n_frames by n_features
+        # (after pca)
         nodes = np.array(nodes)
         labels = np.array(labels, dtype=int).reshape(nodes.shape)
         data = np.array(data)
@@ -437,6 +441,7 @@ class UnsupervisedEventSelection(EventSelectionCore):
 
         data, nodes = self.data_matrix()
 
+        #import pdb; pdb.set_trace()
         if data.shape[0] <= data.shape[1]:
             msg = ("Not enough objects in data set to proceed",
                    "Number of object is smaller than the number of features",
@@ -456,7 +461,6 @@ class UnsupervisedEventSelection(EventSelectionCore):
         # XXX take the minimum to make it more readable
         num_features = np.nonzero(np.cumsum(pca.fracs) > self.varfrac)[0][0]
         data_pca = pca.project(data_zs)[:, 0:num_features]
-
         return data_pca, nodes
 
     def binary_classification(self, data):
@@ -481,6 +485,7 @@ class UnsupervisedEventSelection(EventSelectionCore):
             obj = self.graph.node_data(node)
             obj.iLabel = labels[i]
             obj.strClassName = binary_class_names[obj.iLabel]
+            obj.strHexColor = rgb2hex(BINARY_CMAP(obj.iLabel), mpl=True)
             obj.dctProb.update({0:np.nan, 1:np.nan})
 
     def tc3_analysis(self, labels, trackdata, nodes=None):
@@ -493,7 +498,8 @@ class UnsupervisedEventSelection(EventSelectionCore):
 
         gmm = tc.tc3_gmm(trackdata, tc3.labels.flatten())
         dhmm = tc.tc3_gmm_dhmm(gmm.labels)
-        chmm = tc.tc3_gmm_chmm(trackdata, gmm.parameters.means, gmm.parameters.covars,
+        chmm = tc.tc3_gmm_chmm(trackdata, gmm.parameters.means,
+                               gmm.parameters.covars,
                                dhmm.parameters.transmat)
 
         tc3data = dict()

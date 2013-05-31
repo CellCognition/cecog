@@ -10,5 +10,5 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-
-from plots import *
+from boxplot import *
+from trajectories import *

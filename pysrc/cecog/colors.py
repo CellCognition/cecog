@@ -12,22 +12,34 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-__all__ = ['Colors', 'rgb2hex', 'UNSUPERVISED_CMAP', 'hex2rgb']
+__all__ = ['Colors', 'rgb2hex', 'UNSUPERVISED_CMAP', 'hex2rgb', 'BINARY_CMAP']
 
+from matplotlib.colors import ListedColormap
 from matplotlib.colors import hex2color
 from matplotlib.colors import rgb2hex as mpl_rgb2hex
 from matplotlib.cm import jet
 
 # use this colormap for all unsupervised/clustering plots
 UNSUPERVISED_CMAP = jet
+BINARY_CMAP = ListedColormap(["#DEDEDE","#FA1D2F"], name='binary_cmap')
 
-def rgb2hex(color):
-    return mpl_rgb2hex((color[0]/255.0, color[1]/255.0, color[2]/255.0))
+def rgb2hex(color, mpl=True):
+    """Converts an rgb-tuple into the corresponding hexcolor. if mpl is True,
+    the rgb-tuple has to follow the matplotlib convention i.e. values must
+    range from 0-1 otherwise from 0-255."""
+
+    if mpl:
+        fac = 1.0
+    else:
+        fac = 255.0
+
+    return mpl_rgb2hex((color[0]/fac, color[1]/fac, color[2]/fac))
 
 def hex2rgb(color):
     """Return the rgb color as python int in the range 0-255."""
     assert color.startswith("#")
-    rgb = [int(i*255.0) for i in hex2color(color)]
+    fac=255.0
+    rgb = [int(i*fac) for i in hex2color(color)]
     return tuple(rgb)
 
 
