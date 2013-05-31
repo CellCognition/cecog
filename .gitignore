@@ -20,6 +20,8 @@ resource.py
 .pydevproject
 .settings
 .DS_Store
+.RHistory
+.RData
 *.o
 *.suo
 *.sparseimage
