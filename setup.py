@@ -35,27 +35,7 @@ ccore = Extension('cecog.ccore._cecog',
                   language = 'c++')
 
 # python packages to distribute
-packages = ['cecog',
-            'cecog.analyzer',
-            'cecog.ccore',
-            'cecog.experiment',
-            'cecog.export',
-            'cecog.extensions',
-            'cecog.gui',
-            'cecog.gui.analyzer',
-            'cecog.gui.modules',
-            'cecog.gui.widgets',
-            'cecog.io',
-            'cecog.learning',
-            'cecog.multiprocess',
-            'cecog.plugin',
-            'cecog.plugin.segmentation',
-            'cecog.threads',
-            'cecog.traits',
-            'cecog.traits.analyzer',
-            'cecog.util',
-            'pdk']
-
+packages = build_helpers.find_submodules("./pysrc/cecog", "cecog") + ['pdk']
 scripts = [join('scripts', 'CecogAnalyzer.py'), join('scripts', 'cecog_batch.py')]
 
 setup(scripts = scripts,

@@ -13,3 +13,4 @@ __url__ = 'www.cellcognition.org'
 from metadata import *
 from datafiles import *
 from commands import *
+from submodule import *
