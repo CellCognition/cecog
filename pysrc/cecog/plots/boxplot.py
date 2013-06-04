@@ -22,9 +22,9 @@ from matplotlib.patches import Polygon
 
 from cecog.colors import UNSUPERVISED_CMAP
 
-def dwell_boxplot(data, title,
-                  xlabel='class label', ylabel='dwell time (frames)',
-                  exclude_labels=None, cmap=UNSUPERVISED_CMAP):
+def dwell_boxplot(data, title, xlabel='class label',
+                  ylabel='dwell time (frames)', exclude_labels=None,
+                  cmap=UNSUPERVISED_CMAP):
 
     # remove keys only in this scope
     data = data.copy()
@@ -70,8 +70,7 @@ def dwell_boxplot(data, title,
                 color=color)
     return fig
 
-def barplot(data, title,
-            xlabel='class label', ylabel='dwell time (frames)',
+def barplot(data, title, xlabel='class label', ylabel='dwell time (frames)',
             exclude_labels=None, cmap=UNSUPERVISED_CMAP):
 
     # remove keys only in this scop
@@ -83,6 +82,10 @@ def barplot(data, title,
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+
     values = [np.average(v) for v in data.values()]
     colors = [cmap(k/(nclasses-1)) for k in data.keys()]
     width = 2/3
