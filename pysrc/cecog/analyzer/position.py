@@ -22,7 +22,7 @@ from os.path import join, basename, isdir
 
 from cecog.io.imagecontainer import Coordinate
 from cecog.plugin.segmentation import REGION_INFO
-from cecog.analyzer import TimeUnit
+from cecog.units.time import TimeConverter
 
 from cecog.analyzer.timeholder import TimeHolder
 from cecog.analyzer.analyzer import CellAnalyzer
@@ -506,11 +506,11 @@ class PositionAnalyzer(PositionCore):
 
         # get mean and stddev for the current position
         info = self.meta_data.get_timestamp_info(self.position)
-        if unit == TimeUnit.FRAMES or info is None:
+        if unit == TimeConverter.FRAMES or info is None:
             result = value
-        elif unit == TimeUnit.MINUTES:
+        elif unit == TimeConverter.MINUTES:
             result = (value * 60.) / info[0]
-        elif unit == TimeUnit.SECONDS:
+        elif unit == TimeConverter.SECONDS:
             result = value / info[0]
         else:
             raise ValueError("Wrong unit '%s' specified." %unit)
@@ -623,11 +623,11 @@ class PositionAnalyzer(PositionCore):
 
     def export_tc3(self):
         t_mean = self.meta_data.get_timestamp_info(self.position)[0]
-        tu = TimeUnit(t_mean, TimeUnit.SECONDS)
+        tu = TimeConverter(t_mean, TimeConverter.SECONDS)
         increment = self.settings('General', 'frameincrement')
         t_step = tu.sec2min(t_mean)
         exporter = TC3Exporter(self._tes.tc3data, self._tc3_dir, t_step,
-                               TimeUnit.MINUTES)
+                               TimeConverter.MINUTES)
         exporter()
 
     def __call__(self):
