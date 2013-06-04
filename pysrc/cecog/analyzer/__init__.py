@@ -74,6 +74,14 @@ class TimeUnit(object):
         else:
             self._timelapse = timelapse
 
+    @staticmethod
+    def sec2min(secs):
+        return secs/60.0
+
+    @staticmethod
+    def min2secs(minutes):
+        return minutes/60.0
+
     def frames2minutes(self, frames):
         return frames*self._timelapse/60.0
 

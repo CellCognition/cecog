@@ -625,7 +625,7 @@ class PositionAnalyzer(PositionCore):
         t_mean = self.meta_data.get_timestamp_info(self.position)[0]
         tu = TimeUnit(t_mean, TimeUnit.SECONDS)
         increment = self.settings('General', 'frameincrement')
-        t_step = tu.frames2any(t_mean, TimeUnit.MINUTES)
+        t_step = tu.sec2min(t_mean)
         exporter = TC3Exporter(self._tes.tc3data, self._tc3_dir, t_step,
                                TimeUnit.MINUTES)
         exporter()
