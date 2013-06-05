@@ -16,7 +16,9 @@ __all__ = ['SectionEventSelection']
 from cecog.traits.analyzer.section_core import SectionCore
 from cecog.gui.guitraits import BooleanTrait, StringTrait, FloatTrait, \
     IntTrait, SelectionTrait2
-from cecog.analyzer import TRACKING_DURATION_UNITS_DEFAULT
+
+from cecog.units.time import TimeConverter
+
 
 SECTION_NAME_EVENT_SELECTION = 'EventSelection'
 
@@ -34,8 +36,8 @@ class SectionEventSelection(SectionCore):
            FloatTrait(0, -1, 4000, label='Duration [post]')),
 
           ('duration_unit',
-           SelectionTrait2(TRACKING_DURATION_UNITS_DEFAULT[0],
-                           TRACKING_DURATION_UNITS_DEFAULT,
+           SelectionTrait2(TimeConverter.FRAMES,
+                           TimeConverter.units,
                            label='Duration unit')),
           ('backwardrange_min', BooleanTrait(False, label='Min.')),
           ('forwardrange_min', BooleanTrait(False, label='Min.')),

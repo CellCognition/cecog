@@ -51,8 +51,7 @@ except ImportError:
 from cecog.util.util import makedirs
 from cecog.environment import CecogEnvironment
 
-from cecog.analyzer import TRACKING_DURATION_UNITS_TIMELAPSE
-from cecog.analyzer import TRACKING_DURATION_UNITS_DEFAULT
+from cecog.units.time import TimeConverter
 
 from cecog.io.imagecontainer import ImageContainer
 
@@ -612,9 +611,9 @@ class CecogAnalyzer(QtGui.QMainWindow):
             # information is present
             meta_data = imagecontainer.get_meta_data()
             if meta_data.has_timestamp_info:
-                result = trait.set_list_data(TRACKING_DURATION_UNITS_TIMELAPSE)
+                result = trait.set_list_data(TimeUnit.units)
             else:
-                result = trait.set_list_data(TRACKING_DURATION_UNITS_DEFAULT)
+                result = trait.set_list_data([TimeUnit.FRAMES])
             if result is None:
                 critical(self, "Could not set tracking duration units",
                          "The tracking duration units selected to match the load data. Please check your settings.")

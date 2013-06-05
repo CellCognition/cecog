@@ -20,6 +20,8 @@ class TimeConverter(object):
     FRAMES = 'frames'
     SECONDS = 'seconds'
 
+    units = (FRAMES, MINUTES, SECONDS)
+
     def __init__(self, timelapse, unit):
 
         if unit not in (self.MINUTES, self.SECONDS):
