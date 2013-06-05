@@ -20,6 +20,7 @@ from cecog.analyzer.ibb import IBBAnalysis, SecurinAnalysis
 from cecog.threads.corethread import CoreThread
 from cecog.traits.analyzer.postprocessing import SECTION_NAME_POST_PROCESSING
 
+
 class PostProcessingThread(CoreThread):
 
     def __init__(self, parent, settings, learner_dict, imagecontainer):

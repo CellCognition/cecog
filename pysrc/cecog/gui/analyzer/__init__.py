@@ -72,7 +72,6 @@ from cecog.analyzer.ibb import IBBAnalysis, SecurinAnalysis
 from cecog.threads.picker import PickerThread
 from cecog.threads.analyzer import AnalyzerThread
 from cecog.threads.training import TrainingThread
-from cecog.threads.hmm_scafold import HmmThread_Python_Scafold
 from cecog.threads.hmm import HmmThread
 from cecog.threads.post_processing import PostProcessingThread
 from cecog.multiprocess.multianalyzer import MultiAnalyzerThread
@@ -366,17 +365,7 @@ class _ProcessorMixin(object):
                     is_valid = False
                     result_frame.msg_apply_classifier(self)
 
-            elif cls is HmmThread:
-
-                success, cmd = HmmThread.test_executable(self._settings.get('ErrorCorrection', 'filename_to_R'))
-                if not success:
-                    critical(self, 'Error running R',
-                             "The R command line program '%s' could not be executed.\n\n"\
-                             "Make sure that the R-project is installed.\n\n"\
-                             "See README.txt for details." % cmd)
-                    is_valid = False
-
-            elif cls is MultiAnalyzerThread:
+            if cls is MultiAnalyzerThread:
                 ncpu = cpu_count()
                 (ncpu, ok) = QInputDialog.getInt(None, "On your machine are %d processers available." % ncpu, \
                                              "Select the number of processors", \
@@ -455,8 +444,7 @@ class _ProcessorMixin(object):
                                          learner_dict,
                                          self.parent().main_window._imagecontainer)
                     self._analyzer.setTerminationEnabled(True)
-                    lw = self.parent().main_window.log_window
-                    lw.show()
+                    self.parent().main_window.log_window.show()
 
 
                 elif cls is PostProcessingThread:
