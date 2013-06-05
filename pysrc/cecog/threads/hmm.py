@@ -282,13 +282,13 @@ class HmmThread(CoreThread):
             if line2 in ['#numberOfClasses', '#numberOfHiddenStates']:
                 f_out.write('%d\n' % len(learner.class_names))
             elif line2 == '#startNodes':
-                f_out.write('%s\n' % '  '.join(map(str, learner.class_labels)))
+                f_out.write('%s\n' % '  '.join(map(str, learner.class_names.keys())))
             elif line2 == '#transitionGraph':
                 f_out.write('%s -> %s\n' %
-                            (','.join(map(str, learner.class_labels)),
-                             ','.join(map(str, learner.class_labels))))
+                            (','.join(map(str, learner.class_names.keys())),
+                             ','.join(map(str, learner.class_names.keys()))))
             elif line2 == '#hiddenNodeToClassificationNode':
-                for label in learner.class_labels:
+                for label in learner.class_names.keys():
                     f_out.write('%s\n' % '  '.join(map(str, [label]*2)))
             else:
                 f_out.write(line)

@@ -408,9 +408,16 @@ class Browser(QMainWindow):
 
         # as long the GIL is not released, if GIL is released
         # just use self.setCursor
-        QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
-        analyzer.processPositions(myhack=self)
-        QApplication.restoreOverrideCursor()
+        
+        try:
+            QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+            analyzer.processPositions(myhack=self)
+        except Exception, e:
+            import traceback
+            traceback.print_exc()
+            raise(e)
+        finally:
+            QApplication.restoreOverrideCursor()
 
 
     def on_refresh(self):

@@ -684,6 +684,7 @@ PyObject * pySubstractImages2(Image1 const & imgIn1, Image2 const & imgIn2, type
 template <class Image1, class Image2>
 PyObject * pyFlatfieldCorrection(Image1 const & imgIn, Image2 const & imgBack, float offset, bool normalizeBackground)
 {
+  vigra::PyAllowThreads _pythread;
   using namespace vigra::functor;
   typedef vigra::FImage Image3;
 
@@ -712,6 +713,7 @@ PyObject * pyFlatfieldCorrection(Image1 const & imgIn, Image2 const & imgBack, f
 template <class Image1, class Image2>
 PyObject * pyLinearTransform(Image1 const &imgIn, double ratio, typename Image1::value_type offset)
 {
+   vigra::PyAllowThreads _pythread;
    std::auto_ptr< Image2 > imgPtr(new Image2(imgIn.size()));
    vigra::transformImage(srcImageRange(imgIn), destImage(*imgPtr),
                          vigra::linearIntensityTransform(ratio, offset));
@@ -721,6 +723,7 @@ PyObject * pyLinearTransform(Image1 const &imgIn, double ratio, typename Image1:
 template <class Image1, class Image2>
 PyObject * pyLinearTransform2(Image1 const &imgIn, typename Image1::value_type srcMin, typename Image1::value_type srcMax, typename Image2::value_type destMin, typename Image2::value_type destMax, typename Image2::value_type minV, typename Image2::value_type maxV)
 {
+   vigra::PyAllowThreads _pythread;
    std::auto_ptr< Image2 > imgPtr(new Image2(imgIn.size()));
    vigra::transformImage(srcImageRange(imgIn), destImage(*imgPtr),
                          cecog::ImageLinearTransform<typename Image1::value_type, typename Image2::value_type>(srcMin, srcMax, destMin, destMax, minV, maxV));
@@ -751,6 +754,7 @@ PyObject * pyHistogramEqualization(Image1 const &imgIn, typename Image1::value_t
 template <class IMAGE>
 double pyImageMean(IMAGE const & img)
 {
+  vigra::PyAllowThreads _pythread;
   vigra::FindAverage<typename IMAGE::PixelType> functor;
   vigra::inspectImage(srcImageRange(img), functor);
   return double(functor());
@@ -759,6 +763,7 @@ double pyImageMean(IMAGE const & img)
 template <class IMAGE>
 PyObject * pyImageMinmax(IMAGE const & imin)
 {
+   vigra::PyAllowThreads _pythread;
    vigra::FindMinMax<typename IMAGE::value_type> minmax;
    inspectImage(srcImageRange(imin), minmax);
    return incref(make_tuple(minmax.min, minmax.max).ptr());
@@ -767,6 +772,7 @@ PyObject * pyImageMinmax(IMAGE const & imin)
 template <class IMAGE1>
 list pyImageHistogram(IMAGE1 const &imin, unsigned int valueCount)
 {
+   vigra::PyAllowThreads _pythread;
    cecog::FindHistogram<typename IMAGE1::value_type> hist(valueCount);
    inspectImage(srcImageRange(imin), hist);
    std::vector<double> p(hist.probabilities());

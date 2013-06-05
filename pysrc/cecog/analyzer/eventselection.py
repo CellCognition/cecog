@@ -19,6 +19,14 @@ import numpy as np
 from cecog.util.logger import LoggerObject
 from cecog.analyzer.tracker import Tracker
 
+### TODO: Recursion limit has to be set higher than 1000, 
+###       due to the current implementation of _forward_visitor(),
+###       which calls for 'full' tracks itself recursively for each
+###       node_id. In case of long time_lapse movies this might be 
+###       more than 1000 (default python rec limit)
+import sys
+sys.setrecursionlimit(10000)
+
 class EventSelection(LoggerObject):
 
     def __init__(self, graph, transitions, forward_labels, backward_labels,
@@ -63,8 +71,17 @@ class EventSelection(LoggerObject):
         for start_id in start_ids:
             self.visitor_data[start_id] = {'_current': 0, '_full' : [[]]}
             self.logger.debug("root ID %s" %start_id)
-            self._forward_visitor(start_id, self.visitor_data[start_id],
+            try:
+                self._forward_visitor(start_id, self.visitor_data[start_id],
                                  visited_nodes)
+            except RuntimeError as e:
+                if e.message.startswith('maximum recursion'):
+                    raise RuntimeError(('eventselection failed: maximum '
+                                        'recursion reached in _forward_visitor()'))
+                else:
+                    raise(e)
+                
+                
 
     def iterevents(self):
         for results in self.visitor_data.itervalues():

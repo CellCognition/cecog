@@ -57,6 +57,7 @@
 #include "cecog/basic/integral_images.hxx"
 #include "cecog/morpho/basic.hxx"
 #include "cecog/basic/moments.hxx"
+#include "vigra/python_utility.hxx"
 
 namespace cecog
 {
