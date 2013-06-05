@@ -33,19 +33,5 @@ FEATURE_CATEGORIES = ['roisize',
                       'distance',
                       'moments']
 
-
 ZSLICE_PROJECTION_METHODS = ['maximum', 'average']
-
 COMPRESSION_FORMATS = ['raw', 'bz2', 'gz']
-TRACKING_METHODS = ['ClassificationCellTracker',]
-
-TRACKING_DURATION_UNIT_FRAMES = 'frames'
-TRACKING_DURATION_UNIT_MINUTES = 'minutes'
-TRACKING_DURATION_UNIT_SECONDS = 'seconds'
-TRACKING_DURATION_UNITS_DEFAULT = [TRACKING_DURATION_UNIT_FRAMES]
-
-TRACKING_DURATION_UNITS_TIMELAPSE = [TRACKING_DURATION_UNIT_FRAMES,
-                                     TRACKING_DURATION_UNIT_MINUTES,
-                                     TRACKING_DURATION_UNIT_SECONDS]
-
-R_LIBRARIES = ['hwriter', 'igraph']
