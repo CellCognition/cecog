@@ -611,9 +611,9 @@ class CecogAnalyzer(QtGui.QMainWindow):
             # information is present
             meta_data = imagecontainer.get_meta_data()
             if meta_data.has_timestamp_info:
-                result = trait.set_list_data(TimeUnit.units)
+                result = trait.set_list_data(TimeConverter.units)
             else:
-                result = trait.set_list_data([TimeUnit.FRAMES])
+                result = trait.set_list_data([TimeConverter.FRAMES])
             if result is None:
                 critical(self, "Could not set tracking duration units",
                          "The tracking duration units selected to match the load data. Please check your settings.")
