@@ -38,7 +38,8 @@ class PostProcessingFrame(BaseProcessorFrame):
                         ('ibb_onset_factor_threshold', (1,0,1,1)),
                         ('nebd_onset_factor_threshold', (1,1,1,1)),
                         ],
-                       layout='grid', link='ibb_analysis_params', label='Group by')
+                       layout='grid', link='ibb_analysis_params',
+                       label='Group by')
 
         self.add_group(None, [
                         ('group_by_position', (0,0,1,1)),

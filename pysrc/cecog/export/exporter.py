@@ -84,7 +84,8 @@ class TC3Exporter(object):
 
         return counts
 
-    def __call__(self, labels=(2,3), filename='trajectory_plots.pdf'):
+    def __call__(self, labels=(2,3), filename='trajectory_plots.pdf',
+                 exclude_labels=(0, )):
 
         try:
             pdf = PdfPages(join(self._odir, filename))
@@ -113,9 +114,10 @@ class TC3Exporter(object):
                     dwell_times = self.dwell_times(tracks)
                     fig1 = plots.dwell_boxplot(dwell_times, title,
                                                ylabel=ylabel, xlabel=xlabel,
-                                               exclude_labels=[0])
+                                               exclude_labels=exclude_labels)
                     fig2 = plots.barplot(dwell_times, title, xlabel=xlabel,
-                                         ylabel=ylabel, exclude_labels=[0])
+                                         ylabel=ylabel,
+                                         exclude_labels=exclude_labels)
                     pdf.savefig(fig1)
                     pdf.savefig(fig2)
         finally:
