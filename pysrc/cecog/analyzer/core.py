@@ -26,6 +26,8 @@ from cecog.io.imagecontainer import MetaImage
 from cecog.util.logger import LoggerObject
 from cecog.util.util import makedirs
 
+
+
 # XXX - fix class names
 class AnalyzerBase(LoggerObject):
 
@@ -198,6 +200,11 @@ class AnalyzerCore(AnalyzerBase):
             analyzer = PositionAnalyzer(*args_, **kw_)
             try:
                 nimages = analyzer()
+            except Exception as e:
+                import traceback
+                print e.message
+                traceback.print_exc()
+                raise(e)
             finally:
                 analyzer.clear()
 
