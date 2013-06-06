@@ -85,7 +85,7 @@ class TC3EventFilter(object):
         if self.verbose:
             print "# hmm iterations: ", iterations
         if not converged:
-            print "Warning: HMM is not converged after %d" %str(iterations)
+            print "Warning: HMM is not converged after %d" %iterations
 
         tracks2 = []
         for track in tracks:
