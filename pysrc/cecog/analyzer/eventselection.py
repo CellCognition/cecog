@@ -20,7 +20,6 @@ from scipy import stats
 from matplotlib import mlab
 from sklearn.cluster import KMeans
 
-
 from cecog.colors import rgb2hex, UNSUPERVISED_CMAP, BINARY_CMAP
 from cecog.util.logger import LoggerObject
 from cecog.analyzer.tracker import Tracker
@@ -193,7 +192,8 @@ class EventSelectionCore(LoggerObject):
                     backward_nodes = []
                     is_candidate = self._backward_check(nodeid, backward_nodes)
                     self.logger.debug("    %s - backwards %s    %s"
-                                      %(nodeid, {True: 'ok', False: 'failed'}[is_candidate], backward_nodes))
+                                      %(nodeid, {True: 'ok', False: 'failed'}[is_candidate],
+                                        backward_nodes))
 
                 if is_candidate:
                     forward_nodes = []

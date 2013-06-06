@@ -42,7 +42,7 @@ from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
 
 from cecog.analyzer.gallery import EventGallery
 from cecog.analyzer.channel_gallery import ChannelGallery
-from cecog.export.exporter import TrackExporter, EventExporter, TC3Exporter
+from cecog.export import TrackExporter, EventExporter, TC3Exporter
 from cecog.util.logger import LoggerObject
 from cecog.util.stopwatch import StopWatch
 from cecog.util.util import makedirs
@@ -641,7 +641,7 @@ class PositionAnalyzer(PositionCore):
         increment = self.settings('General', 'frameincrement')
         t_step = tu.sec2min(t_mean)
         exporter = TC3Exporter(self._tes.tc3data, self._tc3_dir, t_step,
-                               TimeConverter.MINUTES)
+                               TimeConverter.MINUTES, self.position)
         exporter()
 
     def __call__(self):

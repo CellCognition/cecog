@@ -18,12 +18,9 @@ __all__ = ['TrackExporter', 'EventExporter']
 import csv
 import shutil
 import subprocess
-import numpy as np
 from os.path import join
 from collections import OrderedDict
-from matplotlib.backends.backend_pdf import PdfPages
 
-from cecog import plots
 from cecog.io.imagecontainer import Coordinate
 from cecog.analyzer.tracker import Tracker
 from cecog.io.dotwriter import DotWriter
@@ -43,85 +40,6 @@ class CSVParams(object):
     tracking_features = ['center_x', 'center_y', 'upperleft_x',
                          'upperleft_y', 'lowerright_x', 'lowerright_y']
 
-
-class TC3Exporter(object):
-    """Export and plot tc3 data. That include trajectory plots,
-    label matrices as csv files and box plots.
-    """
-
-    def __init__(self, data, outputdir, timelapse=1.0, timeunit='frames'):
-        assert isinstance(data, dict)
-        self._data = data
-        self._odir = outputdir
-        self.timelapse = timelapse
-        self.timeunit = timeunit
-
-
-    def dwell_times(self, labels):
-        """Determine the dwell time for each consecutive labels sequence.
-        Returns an ordered dict with labels as keys and list of duration time as
-        values."""
-
-        classes = np.unique(labels)
-        counts = OrderedDict()
-        for class_ in classes:
-            counts.setdefault(class_, [])
-
-        labels = labels.flatten()
-        counter = 0
-        for i, label in enumerate(labels):
-            try:
-                if labels[i] == labels[i+1]:
-                    counter += 1
-                else:
-                    counts[label].append(counter)
-                    counter = 1 # at least one frame
-            except IndexError:
-                pass # no index i+1
-
-        for key, value in counts.iteritems():
-            counts[key]  = np.array(value)*self.timelapse
-
-        return counts
-
-    def __call__(self, labels=(2,3), filename='trajectory_plots.pdf',
-                 exclude_labels=(0, )):
-
-        try:
-            pdf = PdfPages(join(self._odir, filename))
-            for title, tracks in self._data.iteritems():
-
-                # checking for binary matrix
-                if np.unique(tracks).size == 2:
-                    is_binary = True
-                    labels_ = (1, )
-                else:
-                    is_binary = False
-                    labels_ = labels
-
-                # trajectory plots
-                fig = plots.trajectories(tracks, labels_, title=title)
-                pdf.savefig(fig)
-                fname = title.lower().replace(' ','-')+'.csv'
-                np.savetxt(join(self._odir, fname), tracks, fmt='%d',
-                           delimiter=',')
-
-                # boxplots
-                if not is_binary:
-                    ylabel = "dwell time (%s)" %self.timeunit
-                    xlabel = "class labels"
-
-                    dwell_times = self.dwell_times(tracks)
-                    fig1 = plots.dwell_boxplot(dwell_times, title,
-                                               ylabel=ylabel, xlabel=xlabel,
-                                               exclude_labels=exclude_labels)
-                    fig2 = plots.barplot(dwell_times, title, xlabel=xlabel,
-                                         ylabel=ylabel,
-                                         exclude_labels=exclude_labels)
-                    pdf.savefig(fig1)
-                    pdf.savefig(fig2)
-        finally:
-            pdf.close()
 
 class TrackExporter(object):
 
