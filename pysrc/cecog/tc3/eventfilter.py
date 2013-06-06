@@ -15,7 +15,6 @@ __url__ = 'www.cellcognition.org'
 __all__ = ['TC3EventFilter']
 
 import numpy as np
-from sklearn.cluster import KMeans
 from cecog.learning import hmm
 
 class TC3EventFilter(object):
@@ -78,7 +77,7 @@ class TC3EventFilter(object):
         on single tracks.
         """
 
-        hmm_ = hmm.MultinomialHMM(n_components=2, n_iter=100)
+        hmm_ = hmm.MultinomialHMM(n_components=2, n_iter=250)
         # in newer version of hmm n_symbols can be set in the init method.
         hmm_.n_symbols = 2
         converged, iterations = hmm_.fit(tracks)
