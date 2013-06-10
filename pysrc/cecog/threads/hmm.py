@@ -53,7 +53,8 @@ class HmmThread(CoreThread):
         # if the option 'position_labels' is not enabled a
         # dummy mapping file is generated
         if self._settings('ErrorCorrection', 'position_labels'):
-            path_mapping = self._convert(self._settings('ErrorCorrection', 'mappingfile_path'))
+            path_mapping = self._convert(self._settings( \
+                    'ErrorCorrection', 'mappingfile_path'))
             for plate_id in plates:
                 mapping_file = join(path_mapping, '%s.tsv' % plate_id)
                 if not isfile(mapping_file):

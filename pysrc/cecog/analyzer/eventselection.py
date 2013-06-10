@@ -467,7 +467,8 @@ class UnsupervisedEventSelection(EventSelectionCore):
         """Perform an initial binary classifcation to distinguish between
         mitotic and non-mitotic objects/cells.
 
-        1) Perform kmeans clustering (at least 5 initialisation, emperically determined)
+        1) Perform kmeans clustering (at least 5 initialisation,
+           emperically determined)
         2) and assing mitotic labels (0 means "non-mitotic", 1 "mitotic")
            assuming is that non-mitotic cell are the larger population.
         """

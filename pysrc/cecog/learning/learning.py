@@ -29,6 +29,37 @@ from cecog.learning.classifier import LibSvmClassifier as Classifier
 from cecog.util.logger import LoggerObject
 from cecog.util.util import makedirs
 
+class ClassDefinition(object):
+    """Load as save class definitions to csv files."""
+
+    _fieldnames = ('label', 'name', 'color')
+    DELIM = '\t'
+
+    def __init__(self, filename):
+        self._filename = filename
+        self.hexcolors = dict()
+        self.class_labels = dict()
+        self.class_names = OrderedDict()
+
+    def load(self):
+        with open(self._filename, "r") as f:
+            reader = csv.reader(f, delimiter=self.DELIM, quoting=csv.QUOTE_NONE)
+            for (label_, name, color) in reader:
+                label = int(label_)
+                self.class_labels[name] = label
+                self.class_names[label] = name
+                self.hexcolors[name] = color
+
+    def save(self, writeheader=False):
+        with open(self._filename, "w") as f:
+            writer = csv.DictWriter(f, self._fieldnames, delimiter=self.DELIM)
+            if writeheader:
+                writer.writeheader()
+            for label, name in self.class_names.iteritems():
+                writer.writerow({'label': label,
+                                 'name': name,
+                                 'color': self.hexcolors[name]})
+
 
 class BaseLearner(LoggerObject):
 
