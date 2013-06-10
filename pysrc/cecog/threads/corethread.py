@@ -17,6 +17,31 @@ import traceback
 from PyQt4 import QtCore
 from cecog import ccore
 
+
+class ProgressMsg(dict):
+
+    def __init__(self, min=0, max=1, stage=0, meta="", progress=0, text=''):
+        self['min'] = min
+        self['max'] = max
+        self['stage'] = stage
+        self['meta'] = meta
+        self['progress'] = progress
+        self['text'] = text
+
+    def __getattr__(self, attr):
+
+        if self.has_key(attr):
+            return self[attr]
+        else:
+            return super(ProgressMsg, self).__getattr__(attr)
+
+    def __setattr__(self, attr, value):
+        if self.has_key(attr):
+            self[attr] = value
+        else:
+            super(ProgressMsg, self).__setattr__(attr, value)
+
+
 class CoreThread(QtCore.QThread):
 
     stage_info = QtCore.pyqtSignal(dict)
@@ -73,6 +98,7 @@ class CoreThread(QtCore.QThread):
             self._mutex.unlock()
         if wait:
             self.wait()
+        self.aborted.emit()
 
     def is_aborted(self):
         return self._abort

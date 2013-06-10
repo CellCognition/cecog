@@ -16,8 +16,10 @@ __source__ = '$URL$'
 
 __all__ = ['ErrorCorrectionFrame']
 
-from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
-from cecog.gui.analyzer import BaseProcessorFrame, HmmThread
+
+from cecog.threads.hmm import HmmThread
+from cecog.threads.pyhmm import PyHmmThread
+from cecog.gui.analyzer import BaseProcessorFrame
 
 class ErrorCorrectionFrame(BaseProcessorFrame):
 
@@ -26,19 +28,28 @@ class ErrorCorrectionFrame(BaseProcessorFrame):
     def __init__(self, settings, parent, name):
         super(ErrorCorrectionFrame, self).__init__(settings, parent, name)
 
-        self.register_control_button('hmm',
-                                     HmmThread,
-                                     ('Correct errors', 'Stop correction'))
+        # R implementation
+        self.register_control_button(
+            'hmm', HmmThread,
+            ('start error correction', 'stop error correction'))
+        self.register_control_button( \
+            'pyhmm', PyHmmThread,
+            ('start py-error correction', 'stop py-error correction'))
 
         self.add_input('filename_to_r')
         self.add_line()
+        self.add_group(None, [('primary', (0, 0, 1, 1)),
+                              ('secondary', (0, 1, 1, 1)),
+                              ('tertiary', (0, 2, 1, 1)),
+                              ('merged', (0, 3, 1, 1))], label='Channels')
         self.add_group('constrain_graph',
                        [('primary_graph',),
                         ('secondary_graph',),
-                        ])
+                        ('tertiary_graph',),
+                        ('merged_graph',)])
+
         self.add_group('position_labels',
-                       [('mappingfile_path',),
-                        ])
+                       [('mappingfile_path',)])
         self.add_group(None,
                        [('groupby_position',),
                         ('groupby_oligoid',),

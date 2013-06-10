@@ -67,16 +67,14 @@ from cecog.threads.picker import PickerThread
 from cecog.threads.analyzer import AnalyzerThread
 from cecog.threads.training import TrainingThread
 from cecog.threads.hmm import HmmThread
+from cecog.threads.pyhmm import PyHmmThread
 from cecog.threads.post_processing import PostProcessingThread
 from cecog.multiprocess.multianalyzer import MultiAnalyzerThread
 
-from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
 from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACTION
-from cecog.traits.analyzer.postprocessing import SECTION_NAME_POST_PROCESSING
 from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
 from cecog.traits.analyzer.tracking import SECTION_NAME_TRACKING
-from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
 from cecog.traits.analyzer.eventselection import SECTION_NAME_EVENT_SELECTION
 from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
 from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
@@ -406,6 +404,11 @@ class _ProcessorMixin(object):
                     self._analyzer = cls(self, self._current_settings, imagecontainer, ncpu)
 
 
+                elif cls is PyHmmThread:
+                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
+                    self._analyzer = cls(self, self._current_settings,
+                                         self.parent().main_window._imagecontainer)
+
                 elif cls is HmmThread:
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
 
@@ -420,13 +423,14 @@ class _ProcessorMixin(object):
                         env_path = CecogEnvironment.convert_package_path(classifier_path)
 
                         if (os.path.exists(env_path)
-                              and (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))
-                             ):
+                            and (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))
+                            ):
 
                             learner = CommonClassPredictor( \
                                 env_path,
                                 _resolve('ObjectDetection', 'channelid'),
                                 _resolve('Classification', 'classification_regionname'))
+
                             learner.importFromArff()
                             learner_dict[kind] = learner
 
