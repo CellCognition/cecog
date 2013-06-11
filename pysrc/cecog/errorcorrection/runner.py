@@ -58,58 +58,6 @@ class PlateMapping(dict):
                 line.update({"Position": k})
                 writer.writerow(line)
 
-class PositionRunner(QtCore.QObject):
-
-    def __init__(self, plate, outdir, ecopts, class_definition,
-                 positions=None, *args, **kw):
-        super(PositionRunner, self).__init__(*args, **kw)
-        self.ecopts = ecopts # error correction options
-        self.plate = plate
-        self._outdir = outdir
-        self.class_definition = class_definition
-
-        self._channel_dirs = dict()
-        self._makedirs()
-
-        self.positions = positions
-        if positions is None:
-            self.positions = self._listdirs(self._analyzed_dir)
-
-    def _listdirs(self, path):
-        return [x for x in os.listdir(path)
-                if isdir(join(path, x)) and not x.startswith('_')]
-
-    def _makedirs(self):
-        """Create/setup output directories.
-
-        -) <analyzed-dir>/analyzed (already exists)
-        -) <analysis-dir>/hmm
-        -) <analysis-dir>/hmm/<channel-region>
-        """
-        assert isinstance(self._outdir, basestring)
-        self._analyzed_dir = join(self._outdir, "analyzed")
-
-        odirs = (join(self._outdir, "hmm"),)
-        for odir in odirs:
-            try:
-                makedirs(odir)
-            except os.error: # no permissions
-                raise OSError("Missing permissions to create dir\n(%s)" %odir)
-            else:
-                setattr(self, "_%s_dir" %basename(odir.lower()).strip("_"), odir)
-
-        for channel, region in self.ecopts.regionnames.iteritems():
-            chdir = "%s-%s" %(channel, region)
-            self._channel_dirs[channel] = join(self._hmm_dir, chdir)
-            try:
-                makedirs(self._channel_dirs[channel])
-            except os.error:
-                raise OSError("Missing permissions to create dir\n(%s)"
-                              %self._channels_dir[channel])
-
-    def __call__(self):
-        self._makedirs()
-
 
 class PlateRunner(QtCore.QObject):
 
@@ -163,6 +111,58 @@ class PlateRunner(QtCore.QObject):
                 progress.progress  = i + 1
                 self.progressUpdate.emit(progress)
 
+
+class PositionRunner(QtCore.QObject):
+
+    def __init__(self, plate, outdir, ecopts, class_definition,
+                 positions=None, *args, **kw):
+        super(PositionRunner, self).__init__(*args, **kw)
+        self.ecopts = ecopts # error correction options
+        self.plate = plate
+        self._outdir = outdir
+        self.class_definition = class_definition
+
+        self._channel_dirs = dict()
+        self._makedirs()
+
+        self.positions = positions
+        if positions is None:
+            self.positions = self._listdirs(self._analyzed_dir)
+
+    def _listdirs(self, path):
+        return [x for x in os.listdir(path)
+                if isdir(join(path, x)) and not x.startswith('_')]
+
+    def _makedirs(self):
+        """Create/setup output directories.
+
+        -) <analyzed-dir>/analyzed (already exists)
+        -) <analysis-dir>/hmm
+        -) <analysis-dir>/hmm/<channel-region>
+        """
+        assert isinstance(self._outdir, basestring)
+        self._analyzed_dir = join(self._outdir, "analyzed")
+
+        odirs = (join(self._outdir, "hmm"),)
+        for odir in odirs:
+            try:
+                makedirs(odir)
+            except os.error: # no permissions
+                raise OSError("Missing permissions to create dir\n(%s)" %odir)
+            else:
+                setattr(self, "_%s_dir" %basename(odir.lower()).strip("_"), odir)
+
+        for channel, region in self.ecopts.regionnames.iteritems():
+            chdir = "%s-%s" %(channel, region)
+            self._channel_dirs[channel] = join(self._hmm_dir, chdir)
+            try:
+                makedirs(self._channel_dirs[channel])
+            except os.error:
+                raise OSError("Missing permissions to create dir\n(%s)"
+                              %self._channels_dir[channel])
+
+    def __call__(self):
+        self._makedirs()
 
 if __name__ == "__main__":
 
