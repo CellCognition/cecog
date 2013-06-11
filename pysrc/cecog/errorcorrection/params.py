@@ -28,6 +28,10 @@ class ECParams(object):
                  'sorting', 'sorting_sequence', 'max_plot_time',
                  'tracking_branches', 'write_gallery', 'n_galleries']
 
+    POS = 'pos'
+    OLIGO = 'oligo'
+    GENESYMBOL = 'genesymbol'
+
     def __init__(self, settings):
 
         self.constrain_graph = settings('ErrorCorrection', 'constrain_graph')
@@ -50,11 +54,11 @@ class ECParams(object):
         self.position_labels = settings('ErrorCorrection', 'position_labels')
         self.mapping_dir = settings('ErrorCorrection', 'mappingfile_path')
         if settings('ErrorCorrection', 'groupby_oligoid'):
-            self.sortby = 'byoligo'
+            self.sortby = self.OLIGO
         elif settings('ErrorCorrection', 'groupby_genesymbol'):
-            self.sortby = 'bysymbol'
+            self.sortby = self.GENESYMBOL
         else:
-            self.sortby = 'bypos'
+            self.sortby = self.POS
         self.skip_plates = settings('ErrorCorrection', 'skip_processed_plates')
         self.overwrite_timelapse = settings('ErrorCorrection', 'overwrite_time_lapse')
         self.timelapse = settings('ErrorCorrection', 'timelapse')
