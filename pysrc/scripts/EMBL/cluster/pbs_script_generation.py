@@ -216,7 +216,6 @@ cd %s
        self.oBatchSettings.ncpus, self.oBatchSettings.mem,
        self.oBatchSettings.pbsOutDir, self.oBatchSettings.pbsErrDir,
        self.oBatchSettings.jobArrayOption, jobCount,
-       self.oBatchSettings.clusterName,
        self.oBatchSettings.pbsMail,
        os.path.join(self.oBatchSettings.baseScriptDir, self.oBatchSettings.scriptPrefix))
 
