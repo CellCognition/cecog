@@ -199,20 +199,23 @@ cd %s
         # write the main script
         array_script_name = '%s.sh' % os.path.join(self.oBatchSettings.baseScriptDir, self.oBatchSettings.scriptPrefix)
         main_script_file = file(array_script_name, 'w')
+        
+        # modification for the CBIO cluster : 
+        # FIX ME: removed: #PBS -q %s (for clustername) 
+
         main_content = """#!/bin/bash
 #PBS -l walltime=%i:%02i:00
 #PBS -l select=ncpus=%i:mem=%iGb
 #PBS -o %s
 #PBS -e %s
-#PBS -J 1-%i
-#PBS -q %s
+#PBS -%s 1-%i
 #PBS -M %s
 #PBS -m ae
 %s$PBS_ARRAY_INDEX.sh
 """ % (self.oBatchSettings.hours, self.oBatchSettings.minutes,
        self.oBatchSettings.ncpus, self.oBatchSettings.mem,
        self.oBatchSettings.pbsOutDir, self.oBatchSettings.pbsErrDir,
-       jobCount,
+       self.oBatchSettings.jobArrayOption, jobCount,
        self.oBatchSettings.clusterName,
        self.oBatchSettings.pbsMail,
        os.path.join(self.oBatchSettings.baseScriptDir, self.oBatchSettings.scriptPrefix))
@@ -326,9 +329,9 @@ cd %s
 
         return
 
-    def getFinishedJobs(self, i):
-        finished_pos = os.listdir(os.path.join(self.oBatchSettings.baseOutDir, plate, 'log', '_finished'))
-        return
+    #def getFinishedJobs(self, i):
+    #    finished_pos = os.listdir(os.path.join(self.oBatchSettings.baseOutDir, plate, 'log', '_finished'))
+    #    return
 
     def getListOfExperiments(self):
         settings = ConfigSettings(SECTION_REGISTRY)
