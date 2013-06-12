@@ -1,5 +1,8 @@
 import os, sys, time, re
 
+from collections import OrderedDict
+from utilities import *
+
 class Settings(object):
     """
     Simple container to hold all settings from an external python file as own
@@ -18,6 +21,7 @@ class Settings(object):
         if dctGlobals is None:
             dctGlobals = globals()
 
+        #self.settings_dir = os.path.abspath(os.path.dirname(self.strFilename))
         execfile(self.strFilename, dctGlobals, self.__dict__)
 
     def update(self, dctNew, bExcludeNone=False):

@@ -12,20 +12,27 @@ export PYTHONPATH=/g/software/linux/pack/cellcognition-%s/SRC/cecog_git/pysrc"""
 
 # settings for scripts
 raw_image_path = '/g/ellenberg/JKH/PTP4A3'
-base_analysis_dir = '/g/ellenberg/JKH/cecog/output'
-plate_regex = re.compile('^plate')
+base_analysis_dir = '/g/ellenberg/JKH/cecog'
+
+#raw_image_path = '/g/ellenberg/JKH/chr_cond_scree'
+#base_analysis_dir = '/g/mitocheck/Thomas/data/JKH'
+#plate_regex = re.compile('^plate')
+plate_regex = re.compile('^[^_.-]')
 
 baseScriptDir = os.path.join(base_analysis_dir, 'scripts')
 track_data_dir = os.path.join(base_analysis_dir, 'track_data')
-scriptPrefix = 'Moore'
+cecog_output_dir = os.path.join(base_analysis_dir, 'output')
 
+scriptPrefix = 'PostPaperCutout'
+
+#/g/ellenberg/JKH/cecog/pbs_PTP4A3_settings.py 
 additional_attributes = {
                          'raw_image_path': '"%s"' % raw_image_path,
                          'out_path': os.path.join(base_analysis_dir, 'galleries'),
                          'skip_done': True,
                          'image_container_regex':  '"cecog_imagecontainer___PL(?P<plate>.+)\.pkl"',
                          'settings_filename': os.path.join('..', 'settings_files', 'chromosome_condensation',
-                                                           'chromosome_condensation_postprocessing.py')
+                                                           'chromosome_condensation_postprocessing_20130125.py')                         
                          }
 
 # plates=None means that all plates found in baseInDir are going to be processed.
@@ -45,7 +52,7 @@ hours = 16
 minutes = 0
 ncpus = 1
 mem = 7
-jobSize = 12
+jobSize = 4
 
 processWholePlates = False
 
