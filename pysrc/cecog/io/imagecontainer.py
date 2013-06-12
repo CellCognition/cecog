@@ -559,7 +559,7 @@ class ImageContainer(object):
         return os.path.join(path_structure, filename_container)
 
     @classmethod
-    def iter_check_plates(cls, settings):
+    def iter_check_plates(cls, settings, param_plates=None):
         settings.set_section(SECTION_NAME_GENERAL)
         path_in = convert_package_path(settings.get2('pathin'))
         path_out = convert_package_path(settings.get2('pathout'))
@@ -568,6 +568,11 @@ class ImageContainer(object):
         if has_multiple_plates:
             plate_folders = [x for x in os.listdir(path_in)
                              if os.path.isdir(os.path.join(path_in, x))]
+            if not param_plates is None:
+                plate_folders = filter(lambda x: x in plate_folders, param_plates)
+                if not len(plate_folders) == len(param_plates):
+                    print ' *** WARNING: only %i out of %i plates were found in %s' % (len(plate_folders), len(param_plates), 
+                                                                                       path_in)                    
         else:
             plate_folders = [os.path.split(path_in)[1]]
 
@@ -589,13 +594,13 @@ class ImageContainer(object):
                     filename = None
             yield plate_id, path_plate_in, path_plate_out, filename
 
-    def iter_import_from_settings(self, settings, scan_plates=None):
+    def iter_import_from_settings(self, settings, scan_plates=None, param_plates=None):
         from cecog.io.importer import (IniFileImporter,
                                        FlatFileImporter,
                                        )
         settings.set_section(SECTION_NAME_GENERAL)
 
-        for info in self.iter_check_plates(settings):
+        for info in self.iter_check_plates(settings, param_plates):
             plate_id, path_plate_in, path_plate_out, filename = info
 
             # check whether this plate has to be rescanned
@@ -638,5 +643,5 @@ class ImageContainer(object):
 
             yield info
 
-    def import_from_settings(self, settings, scan_plates=None):
-        list(self.iter_import_from_settings(settings, scan_plates))
+    def import_from_settings(self, settings, scan_plates=None, param_plates=None):
+        list(self.iter_import_from_settings(settings, scan_plates, param_plates=param_plates))

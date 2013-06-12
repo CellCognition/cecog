@@ -342,7 +342,7 @@ cd %s
         settings.set2('pathout', self.oBatchSettings.baseOutDir)
 
         imagecontainer = ImageContainer()
-        imagecontainer.import_from_settings(settings)
+        imagecontainer.import_from_settings(settings, param_plates=self.oBatchSettings.plates)
 
         if self.oBatchSettings.plates is None:
             plates = imagecontainer.plates
