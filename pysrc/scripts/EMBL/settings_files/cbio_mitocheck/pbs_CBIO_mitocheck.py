@@ -31,17 +31,19 @@ pythonBinary = 'python'
 batchScript = 'batch.py'
 
 # PBS settings (cluster, walltime, log folders)
+#pbsArrayEnvVar = 'PBS_ARRAY_INDEX'
+pbsArrayEnvVar = 'GE_TASK_ID'
 jobArrayOption = 't'
 clusterName = None
-pbsOutDir = '/cbio/donnees/twalter/PBS'
-pbsErrDir = '/cbio/donnees/twalter/PBS'
+pbsOutDir = ':/cbio/donnees/twalter/PBS'
+pbsErrDir = ':/cbio/donnees/twalter/PBS'
 pbsMail = 'thomas.walter@mines-paristech.fr'
 
 hours = 16
 minutes = 0
 ncpus = 1
 mem = 2
-jobSize = 96
+jobSize = 30
 omit_processed_positions = False
 
 additional_flags = []

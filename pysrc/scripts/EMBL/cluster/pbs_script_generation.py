@@ -214,13 +214,14 @@ cd %s""" % (path_command, self.oBatchSettings.batchScriptDirectory)
 #PBS -%s 1-%i
 #PBS -M %s
 #PBS -m ae
-%s$PBS_ARRAY_INDEX.sh
+%s$%s.sh
 """ % (self.oBatchSettings.hours, self.oBatchSettings.minutes,
        self.oBatchSettings.ncpus, self.oBatchSettings.mem,
        self.oBatchSettings.pbsOutDir, self.oBatchSettings.pbsErrDir,
        self.oBatchSettings.jobArrayOption, jobCount,
        self.oBatchSettings.pbsMail,
-       os.path.join(self.oBatchSettings.baseScriptDir, self.oBatchSettings.scriptPrefix))
+       os.path.join(self.oBatchSettings.baseScriptDir, self.oBatchSettings.scriptPrefix),
+       self.oBatchSettings.pbsArrayEnvVar)
 
         main_script_file.write(main_content)
         os.system('chmod a+x %s' % array_script_name)
