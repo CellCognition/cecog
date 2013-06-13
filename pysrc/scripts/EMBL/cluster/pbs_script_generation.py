@@ -134,6 +134,10 @@ class BatchProcessor(object):
         jobSize = self.oBatchSettings.jobSize
         nb_jobs = int(math.ceil(len(lstExperiments)/float(jobSize)))
 
+        print 'found : %i experiments' % len(lstExperiments)
+        print 'job size (settings file) : %i' % jobSize
+        print 'number of jobs : %i' % nb_jobs
+        
         # get the list of plates from the tuple list [(plate, pos), (plate, pos), ...]
         lstPlates = list(set([x[0] for x in lstExperiments]))
         dctPlateFolder = self.getPlateDirectories(lstPlates)
@@ -153,8 +157,7 @@ class BatchProcessor(object):
         # head of each single job script of the array
         head = """#!/bin/bash
 %s
-cd %s
-""" % (path_command, self.oBatchSettings.batchScriptDirectory)
+cd %s""" % (path_command, self.oBatchSettings.batchScriptDirectory)
 
         additional_options = ''
         for attribute in self.oBatchSettings.additional_flags:
@@ -223,7 +226,7 @@ cd %s
         os.system('chmod a+x %s' % array_script_name)
 
         # the submission commando is:
-        sub_cmd = '/usr/pbs/bin/qsub -q %s -J1-%i %s' % (self.oBatchSettings.clusterName, jobCount, array_script_name)
+        sub_cmd = 'qsub -t 1-%i %s' % (jobCount, array_script_name)
         print sub_cmd
         print 'array containing %i jobs' % jobCount
 
