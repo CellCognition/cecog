@@ -145,19 +145,9 @@ class BatchProcessor(object):
         # the folders are made at this level in oder to avoid conflicts between parallel jobs.
         self.makeOutputDirectories(lstPlates, dctPlateFolder)
 
-        # the path command is the first command to be executed in each single job
-        # script. This is practical for setting environment variables,
-        # in particular if there are several version of the same software that are
-        # installed on the cluster.
-        if self.oBatchSettings.path_command is None:
-            path_command = ''
-        else:
-            path_command = self.oBatchSettings.path_command
-
         # head of each single job script of the array
         head = """#!/bin/bash
-%s
-cd %s""" % (path_command, self.oBatchSettings.batchScriptDirectory)
+cd %s""" % self.oBatchSettings.batchScriptDirectory
 
         additional_options = ''
         for attribute in self.oBatchSettings.additional_flags:
@@ -206,20 +196,29 @@ cd %s""" % (path_command, self.oBatchSettings.batchScriptDirectory)
         # modification for the CBIO cluster : 
         # FIX ME: removed: #PBS -q %s (for clustername) 
 
+        # the path command is the first command to be executed in each single job
+        # script. This is practical for setting environment variables,
+        # in particular if there are several version of the same software that are
+        # installed on the cluster.
+        if self.oBatchSettings.path_command is None:
+            path_command = ''
+        else:
+            path_command = self.oBatchSettings.path_command
+
         main_content = """#!/bin/bash
+%s
 #PBS -l walltime=%i:%02i:00
 #PBS -l select=ncpus=%i:mem=%iGb
 #PBS -o %s
 #PBS -e %s
 #PBS -%s 1-%i
-#PBS -M %s
-#PBS -m ae
 %s$%s.sh
-""" % (self.oBatchSettings.hours, self.oBatchSettings.minutes,
+""" % (path_command,
+       self.oBatchSettings.hours, self.oBatchSettings.minutes,
        self.oBatchSettings.ncpus, self.oBatchSettings.mem,
-       self.oBatchSettings.pbsOutDir, self.oBatchSettings.pbsErrDir,
+       self.oBatchSettings.pbsOutDir,  
+       self.oBatchSettings.pbsErrDir, 
        self.oBatchSettings.jobArrayOption, jobCount,
-       self.oBatchSettings.pbsMail,
        os.path.join(self.oBatchSettings.baseScriptDir, self.oBatchSettings.scriptPrefix),
        self.oBatchSettings.pbsArrayEnvVar)
 
@@ -227,9 +226,11 @@ cd %s""" % (path_command, self.oBatchSettings.batchScriptDirectory)
         os.system('chmod a+x %s' % array_script_name)
 
         # the submission commando is:
-        sub_cmd = 'qsub -t 1-%i %s' % (jobCount, array_script_name)
-        print sub_cmd
+        sub_cmd = 'qsub -o %s -e %s -t 1-%i %s' % (self.oBatchSettings.pbsOutDir,  
+                                                   self.oBatchSettings.pbsErrDir, 
+                                                   jobCount, array_script_name)
         print 'array containing %i jobs' % jobCount
+        print sub_cmd
 
         return
 
