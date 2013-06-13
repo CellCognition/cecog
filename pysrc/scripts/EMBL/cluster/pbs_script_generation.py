@@ -207,14 +207,12 @@ cd %s""" % self.oBatchSettings.batchScriptDirectory
 
         main_content = """#!/bin/sh
 %s
-#$ -l walltime=%i:%02i:00
 #$ -l select=ncpus=%i:mem=%iGb
 #$ -o %s
 #$ -e %s
 #$ -%s 1-%i
 %s$%s.sh
 """ % (path_command,
-       self.oBatchSettings.hours, self.oBatchSettings.minutes,
        self.oBatchSettings.ncpus, self.oBatchSettings.mem,
        self.oBatchSettings.pbsOutDir,  
        self.oBatchSettings.pbsErrDir, 
