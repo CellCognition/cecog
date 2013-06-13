@@ -146,7 +146,7 @@ class BatchProcessor(object):
         self.makeOutputDirectories(lstPlates, dctPlateFolder)
 
         # head of each single job script of the array
-        head = """#!/bin/bash
+        head = """#!/bin/sh
 cd %s""" % self.oBatchSettings.batchScriptDirectory
 
         additional_options = ''
@@ -205,13 +205,13 @@ cd %s""" % self.oBatchSettings.batchScriptDirectory
         else:
             path_command = self.oBatchSettings.path_command
 
-        main_content = """#!/bin/bash
+        main_content = """#!/bin/sh
 %s
-#PBS -l walltime=%i:%02i:00
-#PBS -l select=ncpus=%i:mem=%iGb
-#PBS -o %s
-#PBS -e %s
-#PBS -%s 1-%i
+#$ -l walltime=%i:%02i:00
+#$ -l select=ncpus=%i:mem=%iGb
+#$ -o %s
+#$ -e %s
+#$ -%s 1-%i
 %s$%s.sh
 """ % (path_command,
        self.oBatchSettings.hours, self.oBatchSettings.minutes,
