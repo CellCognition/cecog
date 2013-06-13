@@ -7,11 +7,11 @@
 # python-2.7 pbs_script_generation.py -b ../settings_files/lamin/pbs_laminb_settings.py
 
 
-path_command = """setenv PATH ${PATH}:/cbio/donnees/nvaroquaux/.local/bin
+path_command = """setenv PATH /cbio/donnees/nvaroquaux/.local/bin:${PATH}
 setenv LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:/cbio/donnees/nvaroquaux/.local/lib
-setenv LIBRARY_PATH ${LD_LIBRARY_PATH}:/cbio/donnees/nvaroquaux/.local/lib
-setenv PYTHONPATH ${PYTHONPATH}:/cbio/donnees/twalter/workspace/cecog/pysrc
-setenv DRMAA_LIBRARY_PATH ${DRMAA_LIBRARY_PATH}:/opt/gridengine/lib/lx26-amd64/libdrmaa.so
+setenv LIBRARY_PATH /cbio/donnees/nvaroquaux/.local/lib
+setenv PYTHONPATH /cbio/donnees/twalter/workspace/cecog/pysrc
+setenv DRMAA_LIBRARY_PATH /opt/gridengine/lib/lx26-amd64/libdrmaa.so
 """
 
 # data directories
