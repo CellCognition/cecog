@@ -48,7 +48,28 @@ ENV_INDEX_SGE = 'SGE_TASK_ID'
 #-------------------------------------------------------------------------------
 # functions:
 #
+def get_plates_from_position_list(positions):
+    """returns a dictionary of plates (keys) and positions (values)"""
+    # group positions by plate
+    plates = {}
+    for item in positions:
+        compound = item.split('___')
+        if len(compound) == 2:
+            plate_id, pos = compound
+        elif len(compound) == 1:
+            if not multiple_plates:
+                plate_id = os.path.split(path_input)[1]
+                pos = compound[0]
+            else:
+                parser.error("Position must be of the form 'plateid___position'. Found '%s' instead." % item)
+        else:
+            parser.error("Position must be of the form 'position' or 'plateid___position'. Found '%s' instead." % item)
 
+        if not plate_id in plates:
+            plates[plate_id] = []
+        plates[plate_id].append(pos)
+
+    return plates
 
 #-------------------------------------------------------------------------------
 # classes:
@@ -158,9 +179,6 @@ if __name__ ==  "__main__":
         logger.info('Overwrite has_multiple_plates by %s' % multiple_plates)
 
 
-    imagecontainer = ImageContainer()
-    imagecontainer.import_from_settings(settings)
-
     # FIXME: Could be more generally specified. SGE is setting the job item index via an environment variable
     if index is None:
         pass
@@ -185,6 +203,16 @@ if __name__ ==  "__main__":
             position_list = settings.get(SECTION_NAME_GENERAL, 'positions') or None
 
 
+    plates_from_position_list = None
+    
+    if not position_list is None:
+        positions = position_list.split(',')
+        plates = get_plates_from_position_list(positions)
+        plates_from_position_list = plates.keys()
+        
+    imagecontainer = ImageContainer()
+    imagecontainer.import_from_settings(settings, param_plates=plates_from_position_list)
+
     # construct a dummy string containing all plates and positions known to imagecontainer
     if position_list is None:
         positions = []
@@ -192,8 +220,8 @@ if __name__ ==  "__main__":
             imagecontainer.set_plate(plate_id)
             meta_data = imagecontainer.get_meta_data()
             positions += ['%s___%s' % (plate_id, pos) for pos in meta_data.positions]
-    else:
-        positions = position_list.split(',')
+    #else:
+    #    positions = position_list.split(',')
 
 
     if index is not None and (index < 0 or index >= len(positions)):
@@ -221,23 +249,24 @@ if __name__ ==  "__main__":
 
 
     # group positions by plate
-    plates = {}
-    for item in positions:
-        compound = item.split('___')
-        if len(compound) == 2:
-            plate_id, pos = compound
-        elif len(compound) == 1:
-            if not multiple_plates:
-                plate_id = os.path.split(path_input)[1]
-                pos = compound[0]
-            else:
-                parser.error("Position must be of the form 'plateid___position'. Found '%s' instead." % item)
-        else:
-            parser.error("Position must be of the form 'position' or 'plateid___position'. Found '%s' instead." % item)
-
-        if not plate_id in plates:
-            plates[plate_id] = []
-        plates[plate_id].append(pos)
+    plates = get_plates_from_position_list(positions)
+#    plates = {}
+#    for item in positions:
+#        compound = item.split('___')
+#        if len(compound) == 2:
+#            plate_id, pos = compound
+#        elif len(compound) == 1:
+#            if not multiple_plates:
+#                plate_id = os.path.split(path_input)[1]
+#                pos = compound[0]
+#            else:
+#                parser.error("Position must be of the form 'plateid___position'. Found '%s' instead." % item)
+#        else:
+#            parser.error("Position must be of the form 'position' or 'plateid___position'. Found '%s' instead." % item)
+#
+#        if not plate_id in plates:
+#            plates[plate_id] = []
+#        plates[plate_id].append(pos)
 
     # start one analyzer per plate with the corresponding positions
     post_hdf5_link_list = []
