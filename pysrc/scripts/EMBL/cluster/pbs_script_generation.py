@@ -207,16 +207,12 @@ cd %s""" % self.oBatchSettings.batchScriptDirectory
 
         main_content = """#!/bin/sh
 %s
-#$ -l select=ncpus=%i:mem=%iGb
 #$ -o %s
 #$ -e %s
-#$ -%s 1-%i
 %s$%s.sh
 """ % (path_command,
-       self.oBatchSettings.ncpus, self.oBatchSettings.mem,
        self.oBatchSettings.pbsOutDir,  
        self.oBatchSettings.pbsErrDir, 
-       self.oBatchSettings.jobArrayOption, jobCount,
        os.path.join(self.oBatchSettings.baseScriptDir, self.oBatchSettings.scriptPrefix),
        self.oBatchSettings.pbsArrayEnvVar)
 
@@ -224,9 +220,11 @@ cd %s""" % self.oBatchSettings.batchScriptDirectory
         os.system('chmod a+x %s' % array_script_name)
 
         # the submission commando is:
-        sub_cmd = 'qsub -o %s -e %s -t 1-%i %s' % (self.oBatchSettings.pbsOutDir,  
-                                                   self.oBatchSettings.pbsErrDir, 
-                                                   jobCount, array_script_name)
+        #sub_cmd = 'qsub -o %s -e %s -t 1-%i %s' % (self.oBatchSettings.pbsOutDir,  
+        #                                           self.oBatchSettings.pbsErrDir, 
+        #                                           jobCount, array_script_name)
+        sub_cmd = 'qsub -t 1-%i %s' % (jobCount, array_script_name)
+
         print 'array containing %i jobs' % jobCount
         print sub_cmd
 
