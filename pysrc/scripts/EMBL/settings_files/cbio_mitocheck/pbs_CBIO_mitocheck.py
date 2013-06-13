@@ -7,7 +7,12 @@
 # python-2.7 pbs_script_generation.py -b ../settings_files/lamin/pbs_laminb_settings.py
 
 
-path_command = ""
+path_command = """setenv PATH ${PATH}:/cbio/donnees/nvaroquaux/.local/bin
+setenv LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:/cbio/donnees/nvaroquaux/.local/lib
+setenv LIBRARY_PATH ${LD_LIBRARY_PATH}:/cbio/donnees/nvaroquaux/.local/lib
+setenv PYTHONPATH ${PYTHONPATH}:/cbio/donnees/twalter/workspace/cecog/pysrc
+setenv DRMAA_LIBRARY_PATH ${DRMAA_LIBRARY_PATH}:/opt/gridengine/lib/lx26-amd64/libdrmaa.so
+"""
 
 # data directories
 baseInDir = '/share/data/mitocheck/compressed_data'
