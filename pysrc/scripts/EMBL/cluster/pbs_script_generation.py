@@ -2,6 +2,7 @@ import os, re, time, sys
 import math
 
 from optparse import OptionParser
+import operator as op
 
 from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
@@ -384,13 +385,26 @@ if __name__ ==  "__main__":
     parser.add_option("-b", "--batch_configuration_filename", dest="batch_configuration_filename",
                       help="Filename of the configuration file of the"
                            "job array to be sent to the PBS-cluster")
+    parser.add_option("-p", "--position_file", dest="position_file",
+                      help="File containing all positions to be processed."
+                           "This overrides the plates settings in the settings file."
+                           "Conversely, if not filename is given, all spots for the" 
+                           "specified plates are processed.")
+
     (options, args) = parser.parse_args()
 
     if (options.batch_configuration_filename is None):
         parser.error("incorrect number of arguments!")
-
+    
     oSettings = Settings(os.path.abspath(options.batch_configuration_filename), dctGlobals=globals())
     bp = BatchProcessor(oSettings)
-    lstExperiments = bp.getListOfExperiments()
-    bp.exportPBSJobArray(lstExperiments)
+    if (options.position_file is None):        
+        lstExperiments = bp.getListOfExperiments()
+    else: 
+        fp = open(options.position_file, 'r')
+        lstExperiments = [x.strip('\n').split('\t') for x in fp.readlines()]
+        fp.close()
+        lstExperiments.sort(key=op.itemgetter(0))
 
+    bp.exportPBSJobArray(lstExperiments)
+    

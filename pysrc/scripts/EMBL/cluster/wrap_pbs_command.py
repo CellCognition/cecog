@@ -7,10 +7,12 @@ from scripts.EMBL.settings import Settings
 from scripts.EMBL.projects.chromosome_condensation import *
 
 path_command = 'cd /g/software/linux/pack/cellcognition-1.2.4/SRC/cecog_git/pysrc/scripts/EMBL/projects'
-command = 'python-2.7 chromosome_condensation.py -s ../settings_files/chromosome_condensation/chromosome_condensation_postprocessing.py --export --plate %s' #--plot_generation --panel_generation'
+#command = 'python-2.7 chromosome_condensation.py -s ../settings_files/chromosome_condensation/chromosome_condensation_postprocessing.py --export --plate %s' #--plot_generation --panel_generation'
+command = 'python-2.7 '
 
-array_script_name = 'EXPORT'
-script_dir = '/g/mitocheck/Thomas/data/JKH/scripts'
+array_script_name = 'CONVMISSING'
+#script_dir = '/g/mitocheck/Thomas/data/JKH/scripts'
+script_dir = '/g/mitocheck/Thomas/conversion/scripts'
 
 job_size = 1
 
