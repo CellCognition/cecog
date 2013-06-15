@@ -48,7 +48,7 @@ hours = 10
 minutes = 0
 ncpus = 1
 mem = 2
-jobSize = 10
+jobSize = 5
 omit_processed_positions = False
 
 additional_flags = []
