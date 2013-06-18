@@ -27,7 +27,6 @@ from cecog.util.logger import LoggerObject
 from cecog.util.util import makedirs
 
 
-
 # XXX - fix class names
 class AnalyzerBase(LoggerObject):
 
@@ -75,7 +74,7 @@ class AnalyzerBase(LoggerObject):
 
         if self._frames is None:
             frames_total = self.meta_data.times
-            f_start, f_end, f_incr = 1, len(frames_total), 1
+            f_start, f_end, f_incr = 0, len(frames_total), 1
 
             if self.settings.get('General', 'frameRange'):
                 f_start = max(self.settings.get('General', 'frameRange_begin'),
@@ -88,9 +87,16 @@ class AnalyzerBase(LoggerObject):
                 if f_start > f_end:
                     raise RuntimeError(("Invalid time constraints "
                                         "(upper_bound <= lower_bound)!"))
-                self._frames = frames_total[f_start-1:f_end:f_incr]
+
+                if min(frames_total) == 0:
+                    delta = 0
+                else:
+                    delta = -1
+
+                self._frames = frames_total[f_start+delta:f_end+delta+1:f_incr]
             else:
                 self._frames = frames_total
+
         return self._frames
 
 
