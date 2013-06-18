@@ -139,11 +139,6 @@ hmm.read.graph.structure <- function(filename) {
     i <- i+1
   }
 
-  graph$col <- sample(rainbow(graph$C))
-  for (i in 1:graph$C) { graph$col[i] = substr(graph$col[i],1,7) }
-  graph$name <- LETTERS[1:graph$C]
-  graph$name.short <- LETTERS[1:graph$C]
-
   cat("number of classes ",graph$C,"\n")
   cat("number of hidden states ",graph$K,"\n")
   cat("start states ",graph$start,"\n")
@@ -154,7 +149,7 @@ hmm.read.graph.structure <- function(filename) {
   return(graph)
 }
 
-read.probabilities <- function(screen)
+read.probabilities <- function(screen, verbose=TRUE)
 {
     T <- NULL
     K <- screen$K
@@ -163,8 +158,9 @@ read.probabilities <- function(screen)
     for (i in 1:screen$nrOfCells)
     {
         valid = screen$cell$valid[i]
-        print(paste("Read file: ", screen$dir, "/", screen$cell$filename[i], ", valid=", valid, sep=" "))
-
+        if (verbose) {
+            print(paste("Read file: ", screen$dir, "/", screen$cell$filename[i], ", valid=", valid, sep=" "))
+        }
         if (valid)
         {
         t <- read.delim(paste(screen$dir,"/",screen$cell$filename[i],sep=""), as.is=TRUE)
@@ -540,7 +536,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
     }
 
     T1 <- matrix("", nr=3, nc=groups)
-  cat("groups=",groups,"\n")
+    cat("groups=",groups,"\n")
 
     fn <- matrix("",nr=groups,nc=2)
     fn.raw <- matrix("",nr=groups,nc=2)
@@ -596,25 +592,13 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
         }
         N.gene <- sum(I)
         print(paste("Generate HMM:", pos.name, " Pos:", str.pos.list, " Group:", i, " Samples:", N.gene))
-
-
-#    if (!is.null(features) & !is.null(feature_filter_range))
-#   {
-#      I2 <- seq(1,length(I))[I]
-#      #print(I2)
-#      feature.means <- apply(features[I,], 1, mean)
-#      #print(feature.meaeans)
-#      I[I2[feature.means < feature_filter_range[0] | feature.means > feature_filter_range[1]]] <- FALSE
-#      #print(I)
-#    }
-
-    if (N.gene <= 1)
-    {
-        I[c(1,2)] = TRUE
-        N.gene <- sum(I)
+        
+    if (N.gene <= 1) {
+      I[c(1,2)] = TRUE
+      N.gene <- sum(I)
     }
-
-  N.gene.old = N.gene
+  
+    N.gene.old = N.gene
         {
 
             hmm[[i]] <- hmm.learn(prob[I,,], graph, steps=hmm_em_steps, initial_emission=hmm_initial_emission)
@@ -658,15 +642,12 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             }
             if (write_decode2)
             {
-                #print(Sequence2)
                 mcell <- screen$cell[I,]
                 for (f in 1:dim(mcell)[1])
                 {
                     dirHmm2 <- paste(screen$dir, mcell$tracking[f], "_hmm2", sep="/")
                     if (!file.exists(dirHmm2))
                         dir.create(dirHmm2)
-                    #print(dim(mcell))
-                    #print(Sequence[I,][f,])
                     write.table(Sequence[I,][f,], paste(dirHmm2, mcell$name[f], sep="/"), quote=FALSE, sep="\t",
                         row.names=FALSE,
                         col.names=c("class__A__label"))
@@ -685,29 +666,10 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             fn.b[i,1] <- paste(rel_sequences,"/sequence_boxplot__",pos.name,".png",sep="")
             fn.b[i,2] <- paste(rel_sequences,"/sequence_barplot__",pos.name,".png",sep="")
 
-
-
-            #print(paste("Generate plots: ", L[i], N.gene))
-
-            # Plot transition graphs
-
-            # write PNG and PDF
-            #plot.transition.graph(hmm[[i]], type="PNG", filename=paste(outdir_sequences,"/graph_loop__",pos.name,".png",sep=""), loops=TRUE, weights=TRUE)
-            #plotTransitionGraph(hmm[[i]], type="PDF", filename=paste(outdir_sequences,"/graph_loop__",pos.name,".pdf",sep=""), loops=TRUE, weights=TRUE)
-            #plot.transition.graph(hmm[[i]], type="PS",  filename=paste(outdir_sequences,"/graph_loop__",pos.name,".ps",sep=""), loops=TRUE, weights=TRUE)
-
             plot.transition.graph(hmm[[i]], type="PNG", filename=paste(outdir_sequences,"/graph__",pos.name,".png",sep=""), loops=FALSE, weights=TRUE)
-            #plotTransitionGraph(hmm[[i]], type="PDF", filename=paste(outdir_sequences,"/graph__",pos.name,".pdf",sep=""), loops=FALSE, weights=TRUE)
-            #plot.transition.graph(hmm[[i]], type="PS",  filename=paste(outdir_sequences,"/graph_",i,".ps",sep=""), loops=FALSE, weights=TRUE)
-
 
             # write HTML
-            #T1[2,i] <- hwriteImage(paste("graph_loop_",i,".png",sep=""), link=paste("graph_loop_",i,".pdf",sep=""))
             T1[2,i] <- hwriteImage(paste(rel_sequences,"/graph__",pos.name,".png",sep=""), link=paste(rel_sequences,"/graph__",pos.name,".png",sep=""), width=400, height=400)
-            #T1[3,i] <- hwriteImage(paste(rel_sequences,"/graph__loop",pos.name,".png",sep=""), link=paste(rel_sequences,"/graph__loop",pos.name,".png",sep=""), width=400, height=400)
-            #T1[2,i] <- hwriteImage(paste("graph_",i,".png",sep=""), link=paste("graph_",i,".pdf",sep=""))
-            #T1[i,3] <- hwrite(hmm[[i]]$trans)
-
 
             if (!is.null(galleries))
             {
@@ -715,22 +677,16 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
                                   link=paste('_gallery',galleries,sprintf("%s.jpg", pos.name), sep='/'),
                                   border=0, center=T, cellspacing=10)
             }
-
-#            sq <- Sequence[I,seq(1,T)]
             sq <- Sequence[I,]
             sq.raw <- Sequence.Raw[I,]
 
           realign.starts.nofilter <- rep(0,0)
           if (!is.null(realign_onset) || !is.null(realign)) {
-            #print(dim(sq))
-            #print(T)
-            #I3 <- rep(FALSE, sum(I))
 
-              if (is.null(realign))
+            if (is.null(realign))
                   onsets <- apply(sq, 1, subsearch, realign_onset)
             else {
                   I.id = realign$id == i
-                  #print(sum(I.id))
                     realign.i <- realign$ix[I.id]
         }
 
@@ -773,27 +729,18 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
                   overall_realign$id = c(overall_realign$id, rep(i, length(realign.starts.nofilter)))
                   overall_realign$ix = c(overall_realign$ix, realign.starts.nofilter)
                  }
-                #print(length(realign.starts.nofilter))
 
                 T <- T - realign_truncate
-    #            print(dim(nsq))
-    #            print(T)
                 I2 <- seq(1,length(I))[I]
                 check <- rep(0,0)
                 Kn <- dim(nsq)[1]
-                #sq <- matrix(0, nc=T, nr=0)
-                #sq.raw <- matrix(0, nc=T, nr=0)
+
                 sq = nsq
                 sq.raw = nsq.raw
                 check = 1:Kn
                 if (Kn > 0 && FALSE)
                 for (k in 1:Kn) {
-                    #print("moo1")
-                    #print(dim(nsq))
-                    #print(k)
-                    #print(T)
                     if (nsq[k,T] != 0) {
-                       #print("moo2")
                         sq <- rbind(sq, nsq[k,1:T])
                         sq.raw <- rbind(sq.raw, nsq.raw[k,1:T])
                         check <- append(check, k)
@@ -810,9 +757,7 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             else
             {
                 I.id = indices$id == i
-                #print(sum(I.id))
                 I.indices <- indices$ix[I.id]
-                #print(length(I.indices))
                 sq <- sq[I.indices,]
                 sq.raw  <- sq.raw[I.indices,]
                 N.gene <- dim(sq)[1]
@@ -820,33 +765,6 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             }
             I.sort <- rep(TRUE, N.gene)
 
-    #        sq.r <- Sequence.Raw[I,][I.indices,]
-    #        idx <- apply(sq.r[,1:9], 1, max) <= 2
-    #        #print(idx)
-    #        #idx <- idx[80:160]
-    #        #print(length(idx))
-    #        I.indices <- I.indices[idx][81:160]
-    #        print(I.indices)
-    #        sq <- Sequence[I,][I.indices,]
-    #        print(dim(sq))
-    #        N.gene <- length(sq)
-
-    #        if (!is.null(indices))
-    #        {
-    #            sq <- sq[indices,]
-    #            N.gene <- length(sq)
-    #        } else
-    #        {
-    #            N.gene <- length(sq)
-    #            indices <- rep(TRUE, N.gene)
-    #        }
-    #        I.filter <- rep(TRUE, N.gene)
-    #        if (!is.null(filterClasses))
-    #        {
-    #            I.filter <- as.logical(apply(apply(sq, 1, function (x) !x %in% filterClasses), 2, min))
-    #            N.gene <- sum(I.filter)
-    #            sq <- sq[I.filter,]
-    #        }
             if (!is.null(sortClasses))
             {
                 occurence <- sq
@@ -906,19 +824,13 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
         T.trunc = T
 
             png(paste(outdir_region,"/",fn[i,1],sep=""), width=1000, height=1000, bg='transparent')
-            #CairoPS(paste(outdir,"/",fn[i,2],sep=""), width=15, height=15, bg='transparent')
-            #layout(matrix(c(1,2), 2, 1), heights=c(10,10))
-            #par(mar=c(1,1,0,0))
             par(mar=c(0,0,0,0))
 
             if (N.gene > 1)
       {
             image(t(sq), col=class.colors.hmm,
-                  #xlab=paste("cells", " (", N.gene, ")", sep=""),
-                  #ylab="time",
                   zlim=c(1,K), xaxt="n", yaxt="n")
             box()
-            #axis(1, seq(T))
             }
             dev.off()
 
@@ -926,13 +838,10 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             for (k in 1:K)
             {
                 s <- sq == k
-                #print(sq)
-                #print(dim(s))
                 if (is.null(dim(s)))
                     counts[k,] <- NA
                 else
                     counts[k,] <- apply(s, 1, sum)
-                #print(apply(sq == k, 1, sum))
             }
 
             counts.time <- counts * timelapse
@@ -962,8 +871,6 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
       # motif can not be found)
       if (!is.null(motif_sequence) && N.gene > 1)
       {
-        #print(sq)
-        #print(motif_sequence$start)
         start = apply(sq, 1, subsearch, motif_sequence$start)
         end = apply(sq, 1, subsearch, motif_sequence$end)
         T.sq = dim(sq)[2]
@@ -987,39 +894,15 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
         nas = is.na(end2)
         end2[nas] <- T.sq
 
-        #print(start)
-        #print(end)
         counts = (end2 - start2 + 1) * timelapse
-        #print(counts)
-        #print(paste(T.old, T, T.trunc, dim(sq)))
         counts[counts < 0] <- NA
         countsMotif[i,1] = sum(!is.na(counts))
         countsMotif[i,2] = mean(counts, na.rm=TRUE)
         countsMotif[i,3] = sd(counts, na.rm=TRUE)
         countsMotif[i,4] = median(counts, na.rm=TRUE)
-        #print(counts)
       }
 
-            #apply(counts, 1, mean)
 
-            #print('class 4')
-            #timelapse =
-            #v <- counts.time[4,]
-            #print(v)
-            #v <- v * timelapse
-            #print(paste('mean:',mean(v, na.rm=TRUE)))
-            #print(paste('  sd:',sd(v, na.rm=TRUE)))
-            #print(paste('size:',length(v)))
-
-            #print('class 3+4')
-            #v <- (counts.time[3,] + counts.time[4,])
-            #print(v)
-            #v <- v[-c(seq(1,14),17,18,19,22,23,24,25,63,84)]
-            #print(v)
-            #v <- v * timelapse
-            #print(paste('mean:',mean(v, na.rm=TRUE)))
-            #print(paste('  sd:',sd(v, na.rm=TRUE)))
-            #print(paste('size:',length(v)))
 
             png(paste(outdir_region,"/",fn.b[i,1],sep=""), width=400, height=400)
             boxplot(as.data.frame(t(counts.time), optional=TRUE), col=class.colors.hmm, ylim=c(0,max_time),
@@ -1033,21 +916,13 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             title(plot_title)
             dev.off()
 
-    #        counts <- matrix(0,nr=K,nc=T)
-    #        for (k in 1:K)
-    #            counts[k,] <- apply(Sequence.Raw[I,] == k, 2, sum)
-    #        Single.Sequence <- matrix(0, nr=1, nc=T)
-    #        Single.Sequence[1,] <- apply(counts, 2, which.max)
-
             png(paste(outdir_region,"/",fn.raw[i,1],sep=""), width=1000, height=1000, bg='transparent')
-            #CairoPS(paste(outdir,"/",fn.raw[i,2],sep=""), width=15, height=15, bg='transparent')
             par(mar=c(0,0,0,0))
             if (N.gene > 1)
       {
             sq.raw <- sq.raw[I.sort,1:T.trunc]
             image(t(sq.raw), col=class.colors, zlim=c(1,C), xaxt="n", yaxt="n")
             box()
-            #axis(1, seq(T))
       }
             dev.off()
 
@@ -1055,15 +930,12 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
             {
                 png(paste(outdir_region,"/",fn.f[i,1],sep=""), width=1000, height=1000, bg='transparent')
                 par(mar=c(0,0,0,0))
-                #limit = 1.2
-                #limit = 255
                 features2 <- features
                 features2[features2 > feature_range[2]] <- feature_range[2]
                 features2[features2 < feature_range[1]] <- feature_range[1]
                 sq.f <- features2[I,][I.indices,][I.sort,]
                 image(t(sq.f), xaxt="n", yaxt="n", col=bwcol_features, zlim=feature_range)
                 box()
-                #axis(1, seq(T))
                 dev.off()
 
                 png(paste(outdir_region,"/",fn.f[i,2],sep=""), width=1000, height=1000)
@@ -1143,8 +1015,6 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
     title('Number of events')
     dev.off()
 
-
-
     T3 <- hwriteImage(fn[,1], width=400, height=400, link=fn[,1])
     T4 <- hwriteImage(fn.raw[,1], width=400, height=400, link=fn.raw[,1])
     T5 <- hwriteImage(fn.f[,1], width=400, height=400, link=fn.f[,1])
@@ -1153,18 +1023,13 @@ write.hmm.report <- function(screen, prob, outdir, graph, openHTML=TRUE,
     T8 <- hwriteImage(fn.b[,2], width=400, height=400, link=fn.b[,2])
 
 # html-page
-
     p <- openPage(paste(outdir_region,"/index.html",sep=""),
                   title=paste('CellCognition HMM Summary'))
 
-#        plotTransitionGraph(graph, type="PS", filename=paste(outdir,"/graph_prior.ps",sep=""),loops=FALSE,weights=FALSE)
     plot.transition.graph(graph, type="PNG", filename=paste(outdir_sequences,"/graph_prior.png",sep=""),loops=FALSE,weights=FALSE)
-#    plotTransitionGraph(graph, type="PS", filename=paste(outdir,"/graph_prior_loop.ps",sep=""),loops=TRUE,weights=FALSE)
     plot.transition.graph(graph, type="PNG", filename=paste(outdir_sequences,"/graph_prior_loop.png",sep=""),loops=TRUE,weights=FALSE)
-#        #plotTransitionGraph(graph, type="PDF", filename=paste(outdir,"/graph_prior.pdf",sep=""),loops=FALSE,weights=FALSE)
     hwrite("Prior Selected Graph Structure",p,heading=3)
     hwriteImage(paste(rel_sequences, "/graph_prior.png",sep=""),p,link=paste(rel_sequences,"/graph_prior.png",sep=""))
-
     hwrite(paste("Summary per", grouping_name),p,heading=1)
 
     hwrite("Transition probabilities",p,heading=3)
