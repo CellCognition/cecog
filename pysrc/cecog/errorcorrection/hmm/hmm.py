@@ -13,10 +13,14 @@ __url__ = 'www.cellcognition.org'
 import os
 import numpy as np
 import sklearn.hmm as hmm
+
+from cecog.errorcorrection import HMMReport
+from cecog.errorcorrection import HMMBucket
 from cecog.errorcorrection.hmm import estimator
 from cecog.tc3 import normalize
-
 from cecog.plots import trajectories
+
+
 
 class HMM(object):
 
@@ -31,6 +35,7 @@ class HMM(object):
     def __call__(self):
 
         np.set_printoptions(precision=2, linewidth=100)
+        hmmdata = dict()
 
         for (name, tracks, probs) in self.dtable.iterby(self.ecopts.sortby):
             est = estimator.HMMProbBasedEsitmator(probs)
@@ -50,6 +55,11 @@ class HMM(object):
                 for track in self.classdef.label2index(tracks):
                     tracks2.append(hmm_.predict(track))
                 tracks2 = self.classdef.index2labels(np.array(tracks2, dtype=int))
+
+
+
+
+
 
                 fig = trajectories(tracks, labels=(3,4), title='svm',
                                    cmap=self.classdef.colormap,

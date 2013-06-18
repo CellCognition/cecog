@@ -14,6 +14,7 @@ from cecog.util.util import makedirs
 from cecog import ccore
 from cecog.util.util import read_table
 from cecog.analyzer.tracker import Tracker
+from cecog.export.regexp import re_events
 
 def compose_galleries(path, path_hmm, quality="90",
                       one_daughter=True, sample=30):
@@ -33,8 +34,15 @@ def compose_galleries(path, path_hmm, quality="90",
 
         if one_daughter:
             for record in t[:]:
-                if record[column_name].split('__')[4] != 'B01':
+                match = re_events.match(record[column_name])
+                if match is None:
+                    raise RuntimeError("file name does not regular expression:")
+
+                if match.group('branch') != '01':
                     t.remove(record)
+
+                # if record[column_name].split('__')[4] != 'B01':
+                #     t.remove(record)
 
         n = len(t)
         if not sample is None and sample <= n:
@@ -47,18 +55,18 @@ def compose_galleries(path, path_hmm, quality="90",
         n = len(d)
         results = {}
         for idx, record in enumerate(d):
-            #print idx, record
-            traj = record[column_name]
-            items = traj.split('__')
-            pos = items[1][1:]
-            key = '__'.join(items[1:5])
+            match = re_events.match(record[column_name])
+            pos = match.group('position')
+            key = 'P%s__T%s__O%s__B%s' %match.groups()[1:5]
 
             gallery_path = os.path.join(path, 'analyzed', pos, 'gallery')
             if os.path.isdir(gallery_path):
                 for gallery_name in os.listdir(gallery_path):
+                    imgdir = os.path.join(gallery_path, gallery_name)
+                    if not os.path.isdir(imgdir):
+                        continue
 
-                    img = ccore.readImageRGB(os.path.join(gallery_path, gallery_name, '%s.jpg' % key))
-
+                    img = ccore.readImageRGB(os.path.join(imgdir, '%s.jpg' %key))
                     if gallery_name not in results:
                         results[gallery_name] = ccore.RGBImage(img.width, img.height*n)
                     img_out = results[gallery_name]

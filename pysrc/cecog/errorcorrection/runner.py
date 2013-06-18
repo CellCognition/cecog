@@ -1,5 +1,5 @@
 """
-pyhmm.py
+runner.py
 """
 
 __author__ = 'rudolf.hoefler@gmail.com'
@@ -14,10 +14,8 @@ __url__ = 'www.cellcognition.org'
 __all__ = ['PlateMapping', 'PositionRunner', 'PlateRunner']
 
 import os
-import csv
 import glob
 import numpy as np
-from collections import OrderedDict
 
 from os.path import join, isfile, isdir, basename
 from PyQt4 import QtCore
