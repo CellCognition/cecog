@@ -13,41 +13,32 @@
 # Source: $URL:$'
 
 hmm.export <- function(hmm, filename) {
-    write.table(hmm$trans, filename, quote=FALSE, sep="\t",
-                row.names=FALSE)
+  write.table(hmm$trans, filename, quote=FALSE, sep="\t",  row.names=FALSE)
 }
 
-hmm.summarize <- function(prob, post, emission) {
+hmm.summarize <- function(post, ntracks, nframes, nclasses, nsymbols, emission) {
   hmm <- list()
-  N <- dim(prob)[1]
-  T <- dim(prob)[2]
-  C <- dim(prob)[3]
-  K <- dim(post)[3]
-  hmm$T <- T
-  hmm$start <- rep(0,K)
-  hmm$trans <- matrix(0,nr=K,nc=K)
-  for (i in 1:N) {
-    for (j in 2:T) {
-      P <- matrix(post[i,j-1,],nr=K,nc=1) %*% matrix(post[i,j,],nr=1,nc=K)
+  hmm$T <- nframes
+  hmm$start <- rep(0, nclasses)
+  hmm$trans <- matrix(0, nr=nclasses, nc=nclasses)
+  
+  for (i in 1:ntracks) {
+    for (j in 2:nframes) {
+      # conditional prediction probabilities averaged over all transitions
+      # sum( P(t_j=t|t_j=t+1) )
+      P <- matrix(post[i,j-1,], nr=nclasses, nc=1) %*% matrix(post[i,j,], nr=1, nc=nclasses)
       hmm$trans <- hmm$trans + P
     }
-    hmm$start <- hmm$start + post[i,1,]
+    # sum over all prediction probabilities of the first frame of each track
+    hmm$start <- hmm$start + post[i, 1, ]
   }
-  if (is.null(emission))
-  {
-    emission = matrix(0, nr=K, nc=C)
-    diag(emission) = 1
+  # use a simple diagonal matrix as emmistion matrix if no custom emission matrix is given
+  if (is.null(emission)) {
+    emission = matrix(0, nr=nclasses, nc=nsymbols)
+    diag(emission) = 1  
   }
-  hmm$e = emission
+  hmm$e = emission  
 
-# learn emission prob. from posterior prob. (used by EM)
-#  hmm$e <- matrix(0,nr=K,nc=C)
-#  for (i in 1:N) {
-#    for (j in 1:T) {
-#      P <- matrix(post[i,j,],nr=K,nc=1) %*% matrix(prob[i,j,],nr=1,nc=C)
-#      hmm$e <- hmm$e + P
-#    }
-#  }
   return(hmm)
 }
 
@@ -58,23 +49,31 @@ hmm.add <- function(hmm1,hmm2) {
   return(hmm1)
 }
 
+# acctually normalize and apply constraints!
 hmm.normalize <- function(hmm, graph) {
 
-  ## normalize transition probabilities
+  # normalize transition probabilities
   for (i in 1:graph$K) {
     I <- graph$trans[i,] > 0
-    if (sum(I) ==0) {
+    
+    # if no transitions are defined at all
+    # stop with error message would be better!
+    if (sum(I) == 0) {
       graph$trans[i,] = 0
       graph$trans[i,i] = 1
- #     cat("ERROR: Each node has to have one outgoing edge.")
-#      stop()
     }
-    s <- sum(hmm$trans[i,I])
+    
+    s <- sum(hmm$trans[i, I])
     if (s > 0) {
       hmm$trans[i,I] = hmm$trans[i,I] / s
     } else {
+      # if no allowed transitions are defined, the model defaults to 
+      # equal probabilities
+      # is it ok this way, it would mix up different constr
       hmm$trans[i,I] = 1 / graph$K
     }
+    
+    # why not a matrix multiplication?
     if (sum(I) < graph$K) {
       hmm$trans[i,!I] = 0
     }
@@ -109,7 +108,7 @@ hmm.normalize <- function(hmm, graph) {
   return(hmm)
 }
 
-hmm.posterior <- function(prob,hmm) {
+hmm.posterior <- function(prob, hmm) {
   N <- dim(prob)[1]
   T <- dim(prob)[2]
   C <- dim(prob)[3]
@@ -187,11 +186,18 @@ hmm.decode <- function(prob,hmm) {
   return(Sequence)
 }
 
-hmm.post.init <- function(prob,graph) {
-  N <- dim(prob)[1]
-  T <- dim(prob)[2]
+hmm.post.init <- function(prob, graph) {
+  # number of tracks
+  N <- dim(prob)[1]  
+  # number of frames
+  T <- dim(prob)[2]  
+  # number of classes
   K <- graph$K
-  post <- array(0.0,dim=c(N,T,K))
+  
+  # if the association between hidden states and emisstions is 1 to 1
+  # i.e. a hidden state corresponds to one destinct emission
+  # post equals prob, otherwise only columns are exchanged.
+  post <- array(0.0, dim=c(N,T,K))
   for (i in 1:K) {
     post[,,i] = prob[,,graph$h2o[i]]
   }
@@ -211,12 +217,15 @@ hmm.learn <- function(prob, graph, steps = 1, initial_emission=NULL) {
   }
 
   for (i in 1:steps) {
-    if (i == 1)
-        post <- hmm.post.init(prob,graph)
-    else
-        post <- hmm.posterior(prob,hmm)
-    hmm <- hmm.summarize(prob,post,initial_emission)
-    hmm <- hmm.normalize(hmm,graph)
+    if (i == 1) {
+           post <- hmm.post.init(prob, graph)
+    }
+    else {
+        post <- hmm.posterior(prob, hmm)
+    }
+        
+    hmm <- hmm.summarize(post, dim(prob)[1], dim(prob)[2], dim(prob)[3], dim(prob)[3], initial_emission)
+    hmm <- hmm.normalize(hmm, graph)
   }
   return(hmm)
 }
