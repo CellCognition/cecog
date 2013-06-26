@@ -10,7 +10,6 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-from platemapping import *
-from params import *
-from runner import *
-from datatable import *
+
+from hmm import *
+from estimator import *

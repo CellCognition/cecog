@@ -79,7 +79,7 @@ hmm.normalize <- function(hmm, graph) {
     }
   }
 
-  ## normalize start probabilities
+  # normalize start probabilities
   I <- graph$start > 0
   if (sum(I) ==0) {
     cat("ERROR: There has to be at least one start node.")
