@@ -15,6 +15,9 @@ __all__ = ['PlateMapping', 'PositionRunner', 'PlateRunner']
 
 import os
 import csv
+import glob
+import numpy as np
+from collections import OrderedDict
 
 from os.path import join, isfile, isdir, basename
 from PyQt4 import QtCore
@@ -22,15 +25,24 @@ from PyQt4 import QtCore
 from cecog.util.util import makedirs
 from cecog.threads.corethread import ProgressMsg
 from cecog.learning.learning import ClassDefinition
+from cecog.export.regexp import re_events
+from cecog.errorcorrection.datatable import HmmDataTable
 
-
-class PlateMapping(dict):
+class PlateMapping(OrderedDict):
     """Read/Write plate mappings files. Default for all positions is None.
     After reading, all values are set according to the file."""
 
 
-    _colnames = ['Position', 'Well', 'Site', 'Row', 'Column', 'Gene Symbol',
-                 'OligoID', 'Group']
+    POSITION = 'Position'
+    WELL = 'Well'
+    SITE = 'Site'
+    ROW = 'Row'
+    COLUMN = 'Column'
+    GENE = 'Gene Symbol'
+    OLIGO = 'OligoId'
+    GROUP = 'Group'
+
+    _colnames = [POSITION, WELL, SITE, ROW, COLUMN, GENE, OLIGO, GROUP]
 
     def __init__(self, positions):
         super(PlateMapping, self).__init__()
@@ -94,7 +106,6 @@ class PlateRunner(QtCore.QObject):
             self._check_mapping_files()
 
         progress = ProgressMsg(max=len(self.plates), meta="Error correction...")
-
         classdef = self.load_class_definitions(self.params_ec.classifier_dirs)
 
         for i, plate in enumerate(self.plates):
@@ -151,7 +162,6 @@ class PositionRunner(QtCore.QObject):
                 raise OSError("Missing permissions to create dir\n(%s)" %odir)
             else:
                 setattr(self, "_%s_dir" %basename(odir.lower()).strip("_"), odir)
-
         for channel, region in self.ecopts.regionnames.iteritems():
             chdir = "%s-%s" %(channel, region)
             self._channel_dirs[channel] = join(self._hmm_dir, chdir)
@@ -161,8 +171,40 @@ class PositionRunner(QtCore.QObject):
                 raise OSError("Missing permissions to create dir\n(%s)"
                               %self._channels_dir[channel])
 
+    def _load_data(self, mappings, channel, class_definition):
+        dtable = HmmDataTable()
+        for pos in self.positions:
+            files = glob.glob(join(self._analyzed_dir, pos, 'statistics',
+                                   'events')+os.sep+"*.txt")
+
+            for file_ in files:
+                matched = re_events.match(basename(file_))
+                try:
+                    ch = matched.group('channel')
+                except AttributeError:
+                    pass
+                else:
+                    if ch.lower() == channel:
+                        data = np.recfromcsv(file_, delimiter="\t")
+
+                        labels = data['class__label']
+                        probs = list()
+                        for prob in data['class__probability']:
+                            probs.append(np.array([float(p.split(':')[1]) \
+                               for p in prob.strip('"').split(',')]))
+                        probs = np.array(probs)
+                        dtable.add_track(labels, probs, pos, mappings[pos])
+        import pdb; pdb.set_trace()
+
     def __call__(self):
         self._makedirs()
+        mappings = PlateMapping(self.positions)
+        if self.ecopts.position_labels:
+            mpfile = join(self.ecopts.mapping_dir, "%s.txt" %self.plate)
+            mappings.read(mpfile)
+
+        for channel, cld in self.class_definition.iteritems():
+            self._load_data(mappings, channel, cld)
 
 if __name__ == "__main__":
 

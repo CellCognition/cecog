@@ -44,7 +44,8 @@ class ECParams(object):
         for channel in CHANNEL_PREFIX:
             if settings('ErrorCorrection', channel):
                 self.regionnames[channel] = \
-                    settings('Classification', '%s_classification_regionname' %channel)
+                    settings('Classification', '%s_classification_regionname'
+                             %channel)
                 self.constrain_files[channel] = \
                     settings('ErrorCorrection', '%s_graph' %channel)
                 _setting = '%s_classification_envpath' %channel
