@@ -70,6 +70,6 @@ class ECParams(object):
         self.write_gallery = settings('ErrorCorrection', 'compose_galleries')
         self.n_galleries = settings('ErrorCorrection', 'compose_galleries_sample')
 
-    def pprint(self):
-        for slot in self.__slots__:
-            print slot, ': ', getattr(self, slot)
+    def __repr__(self):
+        return '\n'.join(["%s : %s" (slot, getattr(self, slot))
+                          for slot in self.__slots__])
