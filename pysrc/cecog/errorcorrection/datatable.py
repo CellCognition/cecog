@@ -34,8 +34,11 @@ class HmmDataTable(object):
             self._probs[0, :, :] = prob[:, :]
 
             self._pos[pm.POSITION] = np.array([pos])
-            for k, v in mapping.iteritems():
-                self._pos[k] = np.array([v])
+            try:
+                for k, v in mapping.iteritems():
+                    self._pos[k] = np.array([v])
+            except AttributeError:
+                pass
 
         else:
             assert track.shape == self._tracks.shape[1:]
@@ -44,8 +47,11 @@ class HmmDataTable(object):
             self._probs = np.vstack((self._probs, prob[np.newaxis,::]))
 
             self._pos[pm.POSITION] = np.concatenate((self._pos[pm.POSITION], np.array([pos])))
-            for k, v in mapping.iteritems():
-                self._pos[k] = np.concatenate((self._pos[k], np.array([v])))
+            try:
+                for k, v in mapping.iteritems():
+                    self._pos[k] = np.concatenate((self._pos[k], np.array([v])))
+            except AttributeError:
+                pass
 
     @property
     def tracks(self):
@@ -56,6 +62,10 @@ class HmmDataTable(object):
         return self._probs
 
     def _iterator(self, key):
+
+        if not self._pos.has_key(key):
+            raise StopIteration()
+
         for k in np.unique(self._pos[key]):
             i = (k == self._pos[key])
             yield k, self._tracks[i], self._probs[i]

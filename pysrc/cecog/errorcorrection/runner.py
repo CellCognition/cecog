@@ -27,6 +27,7 @@ from cecog.threads.corethread import ProgressMsg
 from cecog.learning.learning import ClassDefinition
 from cecog.export.regexp import re_events
 from cecog.errorcorrection.datatable import HmmDataTable
+from cecog.errorcorrection.hmm import HMM
 
 class PlateMapping(OrderedDict):
     """Read/Write plate mappings files. Default for all positions is None.
@@ -194,7 +195,7 @@ class PositionRunner(QtCore.QObject):
                                for p in prob.strip('"').split(',')]))
                         probs = np.array(probs)
                         dtable.add_track(labels, probs, pos, mappings[pos])
-        import pdb; pdb.set_trace()
+        return dtable
 
     def __call__(self):
         self._makedirs()
@@ -204,7 +205,10 @@ class PositionRunner(QtCore.QObject):
             mappings.read(mpfile)
 
         for channel, cld in self.class_definition.iteritems():
-            self._load_data(mappings, channel, cld)
+            dtable = self._load_data(mappings, channel, cld)
+            hmm = HMM(dtable, channel, cld, self._hmm_dir, self.ecopts)
+            hmm()
+
 
 if __name__ == "__main__":
 

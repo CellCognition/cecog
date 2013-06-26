@@ -13,7 +13,7 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-__all__ =['TemporalClustering', 'TC3Error']
+__all__ =['normalize', 'TemporalClustering', 'TC3Error']
 
 import numpy as np
 import scipy
