@@ -112,6 +112,14 @@ packages = ['cecog',
             'cecog.util',
             'pdk']
 
+# special casing for system installation or py2exe bundle
+if "py2exe" in sys.argv:
+    dfiles = build_helpers.get_data_files(build_helpers.TARGET_BUNDLE)
+else:
+    build_helpers.metadata['name'] = 'cellcognition'
+    dfiles = build_helpers.get_data_files(build_helpers.TARGET_SYS,
+                                          mpl_data=False)
+
 setup(options = {"py2exe": py2exe_opts,
                  'pyrcc': pyrcc_opts},
       cmdclass = {'pyrcc': build_helpers.PyRcc,
@@ -119,7 +127,7 @@ setup(options = {"py2exe": py2exe_opts,
       packages = packages,
       package_dir = {'cecog': join('pysrc', 'cecog'),
                      'pdk': join('pysrc', 'pdk')},
-      data_files = build_helpers.get_data_files(),
+      data_files = dfiles,
       # zipfile = "data.zip",
       windows = [{'script': join('scripts', 'CecogAnalyzer.py'),
                   'icon_resources': [(1, 'resources\cecog_analyzer_icon.ico')]

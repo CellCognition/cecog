@@ -62,7 +62,7 @@ datadir = join(sys.prefix, 'share', 'cellcognition')
 setup(scripts = scripts,
       data_files = build_helpers.get_data_files(mpl_data=False),
       cmdclass = {'pyrcc': build_helpers.PyRcc,
-                  'build': build_helpers.Build},
+                  'build': build_he lpers.Build},
       packages = packages,
       package_dir = {'cecog': join('pysrc', 'cecog'),
                      'pdk': join('pysrc', 'pdk')},
