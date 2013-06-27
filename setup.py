@@ -57,16 +57,15 @@ packages = ['cecog',
             'pdk']
 
 scripts = [join('scripts', 'CecogAnalyzer.py'), join('scripts', 'cecog_batch.py')]
-datadir = join(sys.prefix, 'share', 'cellcognition')
 
 setup(scripts = scripts,
-      data_files = build_helpers.get_data_files(mpl_data=False),
+      data_files = build_helpers.get_data_files(build_helpers.TARGET_SYS,
+                                                mpl_data=False),
       cmdclass = {'pyrcc': build_helpers.PyRcc,
-                  'build': build_he lpers.Build},
+                  'build': build_helpers.Build},
       packages = packages,
       package_dir = {'cecog': join('pysrc', 'cecog'),
                      'pdk': join('pysrc', 'pdk')},
-      options = {'pyrcc': pyrcc_opts,
-                 'install': {'install_data': datadir}},
+      options = {'pyrcc': pyrcc_opts},
       ext_modules = [ccore],
       **build_helpers.metadata)
