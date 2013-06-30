@@ -74,13 +74,20 @@ class AnalyzerBase(LoggerObject):
 
         if self._frames is None:
             frames_total = self.meta_data.times
+            if min(frames_total) == 0:
+                delta = 0
+            else:
+                delta = -1
+
             f_start, f_end, f_incr = 0, len(frames_total), 1
 
             if self.settings.get('General', 'frameRange'):
-                f_start = max(self.settings.get('General', 'frameRange_begin'),
-                              f_start)
-                f_end = min(self.settings.get('General', 'frameRange_end'),
-                            f_end)
+                f_start = max( \
+                    self.settings.get('General', 'frameRange_begin')+delta,
+                    f_start)
+                f_end = min( \
+                    self.settings.get('General', 'frameRange_end')+delta,
+                    f_end)
                 f_incr = self.settings.get('General', 'frameincrement')
 
                 # > for picking >= anything else
@@ -88,12 +95,7 @@ class AnalyzerBase(LoggerObject):
                     raise RuntimeError(("Invalid time constraints "
                                         "(upper_bound <= lower_bound)!"))
 
-                if min(frames_total) == 0:
-                    delta = 0
-                else:
-                    delta = -1
-
-                self._frames = frames_total[f_start+delta:f_end+delta+1:f_incr]
+                self._frames = frames_total[f_start:f_end+1:f_incr]
             else:
                 self._frames = frames_total
 
