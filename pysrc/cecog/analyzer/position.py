@@ -153,17 +153,17 @@ class PositionCore(LoggerObject):
 
         image_width = self.meta_data.dim_x
         image_height = self.meta_data.dim_y
-        
+
         if self.settings.get('General', 'crop_image'):
             y0 = self.settings.get('General', 'crop_image_y0')
             y1 = self.settings.get('General', 'crop_image_y1')
             x0 = self.settings.get('General', 'crop_image_x0')
             x1 = self.settings.get('General', 'crop_image_x1')
-            
+
             image_width = x1 - x0
             image_height = y1 - y0
-            
-        
+
+
         # new image size after registration of all images
         image_size = (image_width - max(diff_x),
                       image_height - max(diff_y))
@@ -671,7 +671,8 @@ class PositionAnalyzer(PositionCore):
             # remove all features from all channels to free memory
             # for the generation of gallery images
             self.timeholder.purge_features()
-            if self.settings.get('Output', 'events_export_gallery_images'):
+            if self.settings.get('Output', 'events_export_gallery_images') and \
+                    self.settings.get('Processing', 'tracking_synchronize_trajectories'):
                 self.export_gallery_images()
 
         try:
