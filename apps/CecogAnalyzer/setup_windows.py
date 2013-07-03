@@ -13,7 +13,7 @@ setup_windows.py - windows specific instructions for distuils
 
 __author__ = 'rudolf.hoefler@gmail.com'
 
-import os, sys, glob
+import os, sys
 from os.path import join
 from distutils.core import setup
 import py2exe
