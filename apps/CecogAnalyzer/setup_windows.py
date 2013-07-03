@@ -34,7 +34,7 @@ EXCLUDES = [ 'PyQt4.QtDesigner', 'PyQt4.QtNetwork',
              'PyQt4.phonon',
              '_gtkagg', '_cairo', '_gtkcairo', '_fltkagg',
              '_tkagg',
-             'Tkinter']
+             'Tkinter', 'zmq']
 
 DLL_EXCLUDES = [ 'libgdk-win32-2.0-0.dll',
                  'libgobject-2.0-0.dll',
