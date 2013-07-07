@@ -172,11 +172,9 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(pyOverloads_ImageToArray, pyImageToArray, 1, 2)
         memcpy(arr_data, (void*)img[0], sizeof(typename IMAGE::PixelType) * n);
         return extract<numeric::array>(obj);
       }
-      else
-      {
-        npy_intp strides[] = {sizeof(typename IMAGE::PixelType), img.width() * sizeof(typename IMAGE::PixelType)};
+      else {
         object obj(handle<>(PyArray_SimpleNewFromData(2, &dims[0],
-                                     TypeAsNumPyType<typename IMAGE::PixelType>::result(), (char*)img[0])));
+                                                      TypeAsNumPyType<typename IMAGE::PixelType>::result(), (char*)img[0])));
         ((PyArrayObject*) obj.ptr())->strides[0] = img.width() * sizeof(typename IMAGE::PixelType);
         ((PyArrayObject*) obj.ptr())->strides[1] = sizeof(typename IMAGE::PixelType);
         return extract<numeric::array>(obj);
@@ -268,8 +266,7 @@ pyNumpyToImage(PyObject *obj, bool copy=false)
   } else if (array->nd == 3 && array->dimensions[2] == 3)
   // convert 3D arrays to 2D RGB images/views
   {
-    if (copy)
-    {
+    if (copy) {
       if (descr->type_num == NPY_UBYTE)
         return _numpyToImage< vigra::UInt8RGBImage >(array);
       else if (descr->type_num == NPY_BYTE)
@@ -286,8 +283,8 @@ pyNumpyToImage(PyObject *obj, bool copy=false)
         return _numpyToImage< vigra::FImage >(array);
       else if (descr->type_num == NPY_DOUBLE)
         return _numpyToImage< vigra::DImage >(array);
-    } else
-    {
+    }
+	else {
       if (descr->type_num == NPY_UBYTE)
         return _numpyToImageView< vigra::UInt8RGBImageView >(array);
       else if (descr->type_num == NPY_BYTE)
@@ -305,8 +302,8 @@ pyNumpyToImage(PyObject *obj, bool copy=false)
       else if (descr->type_num == NPY_DOUBLE)
         return _numpyToImageView< vigra::DImageView >(array);
     }
-
   }
+  return Py_None;
 }
 
 template <class IMAGE>
@@ -777,8 +774,9 @@ list pyImageHistogram(IMAGE1 const &imin, unsigned int valueCount)
    inspectImage(srcImageRange(imin), hist);
    std::vector<double> p(hist.probabilities());
    list h;
-   for (int i=0; i<p.size(); i++)
+   for (unsigned i = 0; i < p.size(); i++) {
      h.append(p[i]);
+   }
    return h;
 }
 
@@ -1022,12 +1020,12 @@ struct PySequenceToArrayVector
 
   static void* convertibleFromSequence(PyObject* obj)
   {
-    if (!PySequence_Check(obj)) return false;
+    if (!PySequence_Check(obj)) return Py_None;
     object oSequence = extract<object>(obj)();
     int iNumberElements = (int)PySequence_Size(obj);
     for(int iIndex=0;iIndex<iNumberElements;iIndex++)
       if(!extract<T>(oSequence.attr("__getitem__")(iIndex)).check())
-        return false;
+        return Py_None;
     return obj;
   }
 
@@ -1064,22 +1062,6 @@ void convert_dict_to_map(dict const &d, std::map<KEY, VALUE> &m)
     }
 }
 
-//template <class IMAGE>
-//PyObject* pyProjectImage(PyObject * lstImages, cecog::ProjectionType pType)
-//{
-//  typedef vigra::ArrayVector< IMAGE > ImageVector;
-//  ImageVector oImageVector = extract<ImageVector>(lstImages)();
-//  if (oImageVector.size() > 0)
-//  {
-//    std::auto_ptr< IMAGE >
-//      imgPtr(new IMAGE(oImageVector[0].size()));
-//    cecog::projectImage(oImageVector, *imgPtr, pType);
-//    return incref(object(imgPtr).ptr());
-//  }
-//  else
-//    return Py_None;
-//}
-
 template <class IMAGE>
 PyObject* pyProjectImage(vigra::ArrayVector< IMAGE > oImageVector, cecog::ProjectionType pType)
 {
@@ -1097,17 +1079,11 @@ PyObject* pyProjectImage(vigra::ArrayVector< IMAGE > oImageVector, cecog::Projec
 template <class T>
   vigra::BasicImage< vigra::RGBValue<T> > pyMakeRGBImage1(PyObject * lstImages, PyObject * lstRGBValues)
   {
-    //typedef vigra::BasicImageView<T> ImageType;
-    //int iSize = extract< ImageType >(lstImages.attr("__len__")());
-
     typedef vigra::ArrayVector< vigra::BasicImageView<T> > ImageVector;
     ImageVector oImageVector = extract<ImageVector>(lstImages)();
 
     vigra_precondition(oImageVector.size() > 0,
                        "pyMakeRGBImage: List of images must contain at least one item!");
-
-    //vigra::BasicImageView<T> iview2D = makeBasicImageView(view2D);
-    //vigra::exportImage(vigra::srcImageRange(iview2D), vigra::ImageExportInfo("moo2d.png"));
 
     typedef vigra::ArrayVector< vigra::RGBValue<T> > RGBValueVector;
     RGBValueVector oRGBValueVector = extract<RGBValueVector>(lstRGBValues)();
@@ -1119,17 +1095,11 @@ template <class T>
   vigra::BasicImage< vigra::RGBValue<T> > pyMakeRGBImage2(PyObject * lstImages, PyObject * lstRGBValues,
                                                           PyObject * lstAlphas)
   {
-    //typedef vigra::BasicImageView<T> ImageType;
-    //int iSize = extract< ImageType >(lstImages.attr("__len__")());
-
     typedef vigra::ArrayVector< vigra::BasicImageView<T> > ImageVector;
     ImageVector oImageVector = extract<ImageVector>(lstImages)();
 
     vigra_precondition(oImageVector.size() > 0,
                        "pyMakeRGBImage: List of images must contain at least one item!");
-
-    //vigra::BasicImageView<T> iview2D = makeBasicImageView(view2D);
-    //vigra::exportImage(vigra::srcImageRange(iview2D), vigra::ImageExportInfo("moo2d.png"));
 
     typedef vigra::ArrayVector< vigra::RGBValue<T> > RGBValueVector;
     RGBValueVector oRGBValueVector = extract<RGBValueVector>(lstRGBValues)();
@@ -1139,19 +1109,6 @@ template <class T>
 
     return cecog::makeRGBImage(oImageVector, oRGBValueVector, oAlphas);
   }
-
-//vigra::BasicImage<vigra::RGBValue<uint8> > pyMakeRGBImage1(vigra::ArrayVector< vigra::BasicImageView<uint8> > const & oImageVector,
-//                                                           vigra::ArrayVector< vigra::RGBValue<uint8> > const & oChannelVector)
-//{
-//  cecog::makeRGBImage(oImageVector, oChannelVector);
-//}
-//
-//vigra::BasicImage<vigra::RGBValue<uint8> > pyMakeRGBImage2(vigra::ArrayVector< vigra::BasicImageView<uint8> > const & oImageVector,
-//                                                           vigra::ArrayVector< vigra::RGBValue<uint8> > const & oChannelVector,
-//                                                           vigra::ArrayVector< float > const & oAlphaVector)
-//{
-//  cecog::makeRGBImage(oImageVector, oChannelVector, oAlphaVector);
-//}
 
 
 void pyMaxIntensityRGB(vigra::BRGBImage const &imgIn, vigra::BRGBImage &imgOut, float fAlpha)
@@ -1301,24 +1258,6 @@ PyObject* pyCopyImageIfLabel(Image1 const &imgIn, Image2 const &imgMask, typenam
   return incref(object(imgPtr).ptr());
 }
 
-//template <class VALUE_TYPE>
-//static void wrapKernel1D(const char * name)
-//{
-//  typedef vigra::Kernel1D<VALUE_TYPE> Kernel;
-//  class_< Kernel > oKernelWrapper(name);
-//  baseKernelWrapper(oKernelWrapper);
-//}
-//
-//template <class VALUE_TYPE>
-//static void wrapKernel2D(const char * name)
-//{
-//  typedef vigra::Kernel2D<VALUE_TYPE> Kernel;
-//  class_< Kernel >(name)
-//    .def("initExplicitly", ((Kernel&)(vigra::Diff2D, vigra::Diff2D))&Kernel::initExplicitly)
-//    ;
-//  register_ptr_to_python< std::auto_ptr< Kernel > >();
-//}
-
 
 template <class IMAGE>
 static void baseImageWrapper(class_< IMAGE > &oImageWrapper)
@@ -1456,57 +1395,47 @@ static void wrap_images()
   def("readImageMito", pyReadImageMito);
 
   def("readImage", pyReadImage< vigra::UInt8 >,
-      ("strFilename", arg("imageIndex")=-1), "Read UInt8 image from file.");
+      (arg("strFilename"), arg("imageIndex")=-1), "Read UInt8 image from file.");
   def("readImageUInt16", pyReadImage< vigra::UInt16 >,
-      ("strFilename", arg("imageIndex")=-1), "Read UInt16 image from file.");
+      (arg("strFilename"), arg("imageIndex")=-1), "Read UInt16 image from file.");
   def("readImageInt16", pyReadImage< vigra::Int16 >,
-      ("strFilename", arg("imageIndex")=-1), "Read Int16 image from file.");
+      (arg("strFilename"), arg("imageIndex")=-1), "Read Int16 image from file.");
   def("readImageUInt32", pyReadImage< vigra::UInt32 >,
-      ("strFilename", arg("imageIndex")=-1), "Read UInt32 image from file.");
+      (arg("strFilename"), arg("imageIndex")=-1), "Read UInt32 image from file.");
   def("readImageInt32", pyReadImage< vigra::Int32 >,
-      ("strFilename", arg("imageIndex")=-1), "Read Int32 image from file.");
+      (arg("strFilename"), arg("imageIndex")=-1), "Read Int32 image from file.");
   def("readImageFloat", pyReadImage< float >,
-      ("strFilename", arg("imageIndex")=-1), "Read float image from file.");
+      (arg("strFilename"), arg("imageIndex")=-1), "Read float image from file.");
   def("readImageRGB", pyReadImage< vigra::RGBValue< vigra::UInt8 > >,
-      ("strFilename", arg("imageIndex")=-1), "Read RGB image (3xUInt8) from file.");
-
-//  def("readImage", pyReadImage< vigra::UInt8 >,
-//      ("strFilename"), "Read UInt8 image from file.");
-//  def("readImageUInt16", pyReadImage< vigra::UInt16 >,
-//      ("strFilename"), "Read UInt16 image from file.");
-//  def("readImageInt16", pyReadImage< vigra::Int16 >,
-//      ("strFilename"), "Read Int16 image from file.");
-//  def("readRGBImage", pyReadImage< vigra::RGBValue< vigra::UInt8 > >,
-//      ("strFilename"), "Read RGB image (3xUInt8) from file.");
+      (arg("strFilename"), arg("imageIndex")=-1), "Read RGB image (3xUInt8) from file.");
 
   def("writeImage", pyWriteImage< vigra::UInt8Image >,
-      ("image", "filename", arg("compression")="100"), "Write UInt8 image to file.");
-  def("writeImage", pyWriteImage< vigra::UInt16Image >,
-      ("image", "filename", arg("compression")="100"), "Write UInt16 image to file.");
-  def("writeImage", pyWriteImage< vigra::Int16Image >,
-      ("image", "filename", arg("compression")="100"), "Write Int16 image to file.");
-  def("writeImage", pyWriteImage< vigra::UInt32Image >,
-      ("image", "filename", arg("compression")="100"), "Write UInt32 image to file.");
-  def("writeImage", pyWriteImage< vigra::Int32Image >,
-      ("image", "filename", arg("compression")="100"), "Write Int32 image to file.");
-  def("writeImage", pyWriteImage< vigra::UInt8RGBImage >,
-      ("image", "filename", arg("compression")="100"), "Write RGB image (3xUInt8) to file.");
-  def("writeImage", pyWriteImage< vigra::FImage >,
-      ("image", "filename", arg("compression")="100"), "Write float image to file.");
+      (args("image"),"filename", arg("compression")="100"), "Write UInt8 image to file.");
+  // def("writeImage", pyWriteImage< vigra::UInt16Image >,
+  //     ("image", "filename", arg("compression")="100"), "Write UInt16 image to file.");
+  // def("writeImage", pyWriteImage< vigra::Int16Image >,
+  //     ("image", "filename", arg("compression")="100"), "Write Int16 image to file.");
+  // def("writeImage", pyWriteImage< vigra::UInt32Image >,
+  //     ("image", "filename", arg("compression")="100"), "Write UInt32 image to file.");
+  // def("writeImage", pyWriteImage< vigra::Int32Image >,
+  //     ("image", "filename", arg("compression")="100"), "Write Int32 image to file.");
+  // def("writeImage", pyWriteImage< vigra::UInt8RGBImage >,
+  //     ("image", "filename", arg("compression")="100"), "Write RGB image (3xUInt8) to file.");
+  // def("writeImage", pyWriteImage< vigra::FImage >,
+  //     ("image", "filename", arg("compression")="100"), "Write float image to file.");
 
-  def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::UInt8 > >,
-      ("image", "filename", arg("compression")="100"), "Write UInt8 image to file.");
-  def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::UInt16 > >,
-      ("image", "filename", arg("compression")="100"), "Write UInt16 image to file.");
-  def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::Int16 > >,
-      ("image", "filename", arg("compression")="100"), "Write Int16 image to file.");
-  def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::UInt32 > >,
-      ("image", "filename", arg("compression")="100"), "Write UInt32 image to file.");
-  def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::Int32 > >,
-      ("image", "filename", arg("compression")="100"), "Write Int32 image to file.");
-  def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::RGBValue< vigra::UInt8 > > >,
-      ("image", "filename", arg("compression")="100"), "Write RGB image (3xUInt8) to file.");
-
+  // def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::UInt8 > >,
+  //     ("image", "filename", arg("compression")="100"), "Write UInt8 image to file.");
+  // def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::UInt16 > >,
+  //     ("image", "filename", arg("compression")="100"), "Write UInt16 image to file.");
+  // def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::Int16 > >,
+  //     ("image", "filename", arg("compression")="100"), "Write Int16 image to file.");
+  // def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::UInt32 > >,
+  //     ("image", "filename", arg("compression")="100"), "Write UInt32 image to file.");
+  // def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::Int32 > >,
+  //     ("image", "filename", arg("compression")="100"), "Write Int32 image to file.");
+  // def("writeImage", pyWriteImage< vigra::BasicImageView<vigra::RGBValue<vigra::UInt8 > > >,
+  //     ("image", "filename", arg("compression")="100"), "Write RGB image (3xUInt8) to file.");
 
 
   wrapImage<vigra::UInt8>("Image");

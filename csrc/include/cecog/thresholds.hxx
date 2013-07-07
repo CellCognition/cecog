@@ -32,7 +32,7 @@ namespace cecog
 
   /**
    * Handling and caching of window average
-   * CALCULATE_STD=0 optimizes the algorithm at compile time,
+   * CALCULATE_STD = 0 optimizes the algorithm at compile time,
    * otherwise the std is computed along with the mean
    */
   template <class IMAGE, int CALCULATE_STD=0>
@@ -42,11 +42,13 @@ namespace cecog
     typedef std::vector<long int> Columns;
 
     // constructor
-    FastWindowAverage(IMAGE const &imgIn,
-                      int rsize)
-      : sum_values(0), ssum_values(0), count(0),
-        imgIn(imgIn),
-        rsize(rsize), size(rsize+1)
+    FastWindowAverage(IMAGE const &imgIn, int rsize):
+      imgIn(imgIn),
+      rsize(rsize),
+      size(rsize+1),
+      sum_values(0),
+      ssum_values(0),
+      count(0)
     {
       width = imgIn.width();
       height = imgIn.height();
@@ -56,15 +58,13 @@ namespace cecog
       {
         int col_sum = 0;
         long int scol_sum = 0;
-        for (int y = 0; y <= rsize; ++y)
-        {
+        for (int y = 0; y <= rsize; ++y) {
           pvalue = imgIn(x, y);
           col_sum += pvalue;
           if (CALCULATE_STD)
             scol_sum += pvalue*pvalue;
         }
-        if (x <= rsize)
-        {
+        if (x <= rsize) {
           sum_values += col_sum;
           if (CALCULATE_STD)
             ssum_values += scol_sum;
@@ -179,12 +179,13 @@ namespace cecog
     }
 
   protected:
-    long int sum_values, ssum_values, count, current_size;
-    int rsize, width, height, size, c_in, c_out, r_in, r_out;
-    Columns columns, scolumns;
     const IMAGE &imgIn;
+    int rsize, size;
+    long int sum_values, ssum_values, count;
+    int width, height, c_in, c_out, r_in, r_out;
+    long int current_size;
+    Columns columns, scolumns;
   };
-
 
   template <class IMAGE, class BIMAGE, int CALCULATE_STD=0>
   class WindowAverageThreshold
@@ -271,12 +272,11 @@ namespace cecog
         }
       }
     }
-
-    FastWindowAverage<IMAGE, CALCULATE_STD> oFWA;
     const IMAGE &imgIn;
     BIMAGE &imgBin;
     unsigned iRSize;
     typename IMAGE::value_type contrastLimit, lower, higher;
+    FastWindowAverage<IMAGE, CALCULATE_STD> oFWA;
   };
 
 
@@ -345,7 +345,7 @@ namespace cecog
       double m0Low, m0High, m1Low, m1High, varLow, varHigh;
       double varWithin, varWMin;
       long thresh;
-      long i, j, n;
+      long i, j;
       long nHistM1 = VCOUNT - 1;
 
       for (i = 1, thresh = 0, varWMin = LONG_MAX; i < nHistM1; ++i)

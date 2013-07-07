@@ -41,7 +41,6 @@ namespace cecog {
       int label_;
       int dist_;
       int max_dist_;
-      double a_, b_;
 
       SeedRgPixel()
       : location_(0,0), nearest_(0,0), cost_(0), count_(0), label_(0)
@@ -55,8 +54,6 @@ namespace cecog {
         int dx = location_.x - nearest_.x;
         int dy = location_.y - nearest_.y;
         dist_ = dx * dx + dy * dy;
-        //a_ = 1.0/255;
-        //b_ = 1.0/sqrt(max_dist_);
       }
 
       struct Compare
@@ -73,7 +70,6 @@ namespace cecog {
               return r.dist_ < l.dist_;
           } else
             return r.cost_ < l.cost_;
-          //return r.a_*r.cost_ + r.b_*r.dist_ < l.a_*l.cost_ + l.b_*l.dist_;
         }
       };
     };
@@ -117,7 +113,7 @@ namespace cecog {
                           int deltaWidth = 1,
                           SRGType srgType = KeepContours
                           )
-     : imgIn(imgIn), imgLabelsOut(imgLabelsOut), imgInBinary(imgInBinary),
+      : imgIn(imgIn), imgInBinary(imgInBinary), imgLabelsOut(imgLabelsOut),
        lambda(lambda), deltaWidth(deltaWidth), pixelQueue()
     {
       width  = imgIn.width();
@@ -159,7 +155,6 @@ namespace cecog {
                 {
                   p.label = -1;
                   imgLabelsOut(p.i, p.j) = p.label;
-                  //printf("border\n");
                   break;
                 }
               }
@@ -242,13 +237,13 @@ namespace cecog {
       }
     }
 
-    PixelQueue pixelQueue;
     int width, height;
+    const T &imgIn;
+    const vigra::BImage &imgInBinary;
+    B &imgLabelsOut;
     double lambda;
     int deltaWidth;
-    const vigra::BImage &imgInBinary;
-    const T &imgIn;
-    B &imgLabelsOut;
+    PixelQueue pixelQueue;
   };
 
 
@@ -292,9 +287,6 @@ namespace cecog {
     // initial costs regions based on their seeds
     inspectTwoImages(srcul, srclr, as, seedsul, aseeds, stats);
 
-    //for (int i=1; i<stats.size(); i++)
-      //printf("init: %d  %.1f\n", i, stats[i]());
-
     // copy seed image in an image with border
     vigra::IImage regions(w+2, h+2);
     vigra::IImage::Iterator ir = regions.upperLeft() + vigra::Diff2D(1,1);
@@ -323,14 +315,12 @@ namespace cecog {
         int label = *irx;
         if (label > 0)
         {
-          //printf("- (%3d,%3d) %d\n", pos.x, pos.y, label);
           // find candidate pixels for growing and fill heap
           for (int i=0; i<8; ++i)
           {
             if (irx[dist8[i]] == SRGFreeLabel)
             {
               CostType cost = stats[label].cost(as(isx, dist8[i]));
-              //printf("  %d - %.1f\n", label, cost);
 
               Pixel pixel(pos+dist8[i], pos, cost, count++, label, max_dist);
               pheap.push(pixel);
@@ -351,8 +341,6 @@ namespace cecog {
       vigra::Point2D nearest = pixel.nearest_;
       int lab = pixel.label_;
 
-      //printf("%d  - %.1f %d\n", lab, pixel.cost_, pixel.dist_);
-
       irx = ir + pos;
       isx = srcul + pos;
 
@@ -363,7 +351,6 @@ namespace cecog {
           if (cneighbor > 0 && cneighbor != lab)
           {
             lab = SRGWatershedLabel;
-            //printf("border\n");
             break;
           }
         }
@@ -383,8 +370,6 @@ namespace cecog {
           if (irx[dist8[i]] == SRGFreeLabel)
           {
             CostType cost = stats[lab].cost(as(isx, dist8[i]));
-            //printf("  %d - %.1f\n", lab, cost);
-
             Pixel new_pixel(pos+dist8[i], nearest, cost, count++, lab, max_dist);
             pheap.push(new_pixel);
             irx[dist8[i]] = SRGListedLabel;
@@ -392,7 +377,6 @@ namespace cecog {
         }
       }
     }
-
     // write result
     transformImage(ir, ir + vigra::Point2D(w,h), regions.accessor(), destul, ad,
                    detail::UnlabelWatersheds());
@@ -447,16 +431,6 @@ namespace cecog {
                           img4.first, img4.second,
                           stats, CompleteGrow);
   }
-
-
-//  template <class Iterator>
-//  inline
-//  bool
-//  isInsideImage(Iterator &it, vigra::Diff2D const &p, int w, int h)
-//  {
-//    return ((it.x + p.x >= 0) and (it.y + p.y >= 0) and
-//            (it.x + p.x < w)  and ());
-//  }
 
   template <class SrcImageIterator, class SrcAccessor,
             class SeedImageIterator, class SeedAccessor,
@@ -520,7 +494,6 @@ namespace cecog {
         int label = *ies_x;
         if (label > 0)
         {
-          //printf("- (%3d,%3d) %d\n", pos.x, pos.y, label);
           // find candidate pixels for growing and fill heap
           for (int i = 0; i < neighborhoodA[eightNBH]; ++i)
           {
@@ -538,8 +511,6 @@ namespace cecog {
       }
     round_cnt = pqueue.size();
 
-    //printf("SRG moo1\n");
-
     // perform region expansion
     int round = 0;
     int sep_expand_cnt = sep_expand_rounds - 1;
@@ -556,49 +527,33 @@ namespace cecog {
       vigra::Point2D pos = pixel.location_;
       int lab = pixel.label_;
 
-      //printf(" %d - %u - %u\n", round, round_cnt, pqueue.size());
-
       ies_x = ies + pos;
       isx = srcul + pos;
 
       bool accept_point = true;
       bool valid_source_point = (pos.x >= 0 && pos.x < w && pos.y >= 0 && pos.y < h);
 
-      //printf("SRG moo2\n");
-
       if (is_stats_active && valid_source_point)
       {
         CostType cost = stats[lab].cost(as(isx));
-        //printf("%d %d - %.1f %.1f - %d\n", round, lab, stats[lab](), cost, as(isx));
         if (cost > cost_threshold)
           accept_point = false;
       }
 
-      //printf("SRG moo3\n");
-
-      if (accept_point)
-      {
-
+      if (accept_point) {
         if (srgType == KeepContours)
-          for (int i = 0; i < neighborhoodA[eightNBH]; i++)
-          {
+          for (int i = 0; i < neighborhoodA[eightNBH]; i++){
             cneighbor = ies_x[dist8A[i]];
-            if (cneighbor > 0 && cneighbor != lab)
-            {
+            if (cneighbor > 0 && cneighbor != lab){
               lab = SRGWatershedLabel;
-              //printf("border\n");
               break;
             }
           }
-
-        //printf("SRG moo4\n");
 
         if (sep_expand_cnt > 0)
           pvector.push_back(pos);
 
         *ies_x = lab;
-
-        //printf("SRG moo5\n");
 
         if (lab > 0)
         {
@@ -639,7 +594,6 @@ namespace cecog {
         sep_expand_cnt--;
       }
     }
-    //printf("SRG moo7\n");
 
     PointVector::iterator pl_it = pvector.begin();
     for (; pl_it != pvector.end(); ++pl_it)
@@ -648,8 +602,6 @@ namespace cecog {
     // write result
     transformImage(ies, ies + vigra::Point2D(w,h), expanded_seeds.accessor(), dexpandul, ade,
                    detail::UnlabelWatersheds());
-    //printf("SRG moo8\n");
-
   }
 
   template <class SrcImageIterator, class SrcAccessor,
@@ -672,7 +624,6 @@ namespace cecog {
                             srgType,
                             stats, cost_threshold,
                             expansion_rounds, sep_expand_rounds);
-      //printf("SRG moo9\n");
  }
 
   template <class Image1, class Image2, class Image3, class RegionStatisticsArray>
@@ -692,10 +643,7 @@ namespace cecog {
                           srgType,
                           stats, cost_threshold,
                           expansion_rounds, sep_expand_rounds);
-    //printf("SRG moo10\n");
   }
-
-
 
   template <class SrcImageIterator, class SrcAccessor,
             class SeedImageIterator, class SeedAccessor,
@@ -728,7 +676,6 @@ namespace cecog {
       vigra::IImage::Iterator iss = shrinked_seeds.upperLeft() + vigra::Diff2D(border, border);
       vigra::IImage::Iterator iss_y, iss_x;
 
-      //initImageBorder(destImageRange(shrinked_seeds), 1, SRGWatershedLabel);
       copyImage(seedsul, seedsul+vigra::Diff2D(w,h), aseeds, iss, shrinked_seeds.accessor());
 
       // init stats
@@ -738,9 +685,6 @@ namespace cecog {
       typedef std::list<PointLabelPair> PointList;
 
       PointList pslist;
-      int cneighbor;
-      int max_dist = w*w + h*h;
-
       enum NeigborhoodType { fourNBH = 0, eightNBH = 1 };
 
       const int neighborhoodA[] = {4, 8};
@@ -753,7 +697,6 @@ namespace cecog {
 
       // collect candidates
       // performs already one round of shrinking
-
       vigra::Point2D pos(0,0);
       for (iss_y=iss, pos.y=0; pos.y<h; ++pos.y, ++iss_y.y)
         for (iss_x=iss_y, pos.x=0; pos.x<w; ++pos.x, ++iss_x.x)
@@ -771,14 +714,13 @@ namespace cecog {
           }
         }
 
-
       // perform region shrinking
       int nh = fourNBH;
       int sep_seed_cnt = sep_seed_rounds - 1;
       while (sep_seed_cnt > 0 && pslist.size() > 0)
       {
         int psl_size = pslist.size();
-        //printf("*** shrink round: %d, %d\n", sep_seed_cnt, psl_size);
+
         for (; psl_size > 0; --psl_size)
         {
           PointLabelPair plp = pslist.front();
@@ -792,8 +734,6 @@ namespace cecog {
           is_x = is + pos;
 
           // update stats
-          //stats[label](as(is_x), *iss_x);
-
           // check if removal of point is accepted by stats
           if (!(stats[label]()))
           {
@@ -802,7 +742,6 @@ namespace cecog {
             // find new candidates
             for (int i = 0; i < neighborhoodA[nh]; ++i)
             {
-              //int &label = iss_x[dist8A[i]];
               if (iss_x[dist8A[i]] == label)
               {
                 pslist.push_back(PointLabelPair(pos + dist8A[i], label));
@@ -1008,53 +947,6 @@ namespace cecog {
     private:
       result_type count, count_shrink;
   };
-
-
-
-  // simplified functions to wrap
-//
-//
-//
-//
-//  template <class IMAGE1, class IMAGE2, class IMAGE3>
-//  IMAGE3 seededRegionExpansion(IMAGE1 const &imgIn, IMAGE2 const &imgInLabels,
-//                             int iExpansionSize,
-//                             int iExpansionSeparationSize,
-//                             double dExpansionCostThreshold,
-//                             int iLabelSize,
-//                             bool bMeanValueFunctor=false)
-//  {
-//    IMAGE3 imgOutLabels(imgIn.size());
-//    if (bMeanValueFunctor)
-//    {
-//      vigra::ArrayOfRegionStatistics<SRGNormMeanValueFunctor<double> >
-//        oStatsExpand(iLabelSize);
-//      seededRegionExpansion(srcImageRange(imgIn),
-//                            srcImage(imgInLabels),
-//                            destImage(imgOutLabels),
-//                            KeepContours,
-//                            oStatsExpand,
-//                            dExpansionCostThreshold,
-//                            iExpansionSize,
-//                            iExpansionSeparationSize);
-//    } else
-//    {
-//      vigra::ArrayOfRegionStatistics<SRGConstValueFunctor<double> >
-//        oStatsExpand(iLabelSize);
-//      seededRegionExpansion(srcImageRange(imgIn),
-//                            srcImage(imgInLabels),
-//                            destImage(imgOutLabels),
-//                            KeepContours,
-//                            oStatsExpand,
-//                            dExpansionCostThreshold,
-//                            iExpansionSize,
-//                            iExpansionSeparationSize);
-//    }
-//    return imgOutLabels;
-//  }
-//
-//
-//
 } // namespace cecog
 
 #endif // CECOG_SEEDEDREGION_HXX

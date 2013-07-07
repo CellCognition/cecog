@@ -145,8 +145,8 @@ namespace cecog
     }
 
   private:
-    result_type sum, square_sum;
     unsigned long int count;
+    result_type sum, square_sum;
   };
 
 
@@ -324,7 +324,7 @@ namespace cecog
     std::vector<double> probabilities()
     {
       std::vector<double> prob(value_count);
-      for(int i=0; i<value_count; ++i)
+      for(unsigned i=0; i<value_count; ++i)
         prob[i] = (double)histogram[i] / (double)count;
       return prob;
     }
@@ -533,8 +533,8 @@ namespace cecog
   {
   public:
 
-    BlockFunctorBase_NewSave(SrcIterator si, SrcAccessor sa, int width, int height,
-                             int nbh=8,
+    BlockFunctorBase_NewSave(SrcIterator si, SrcAccessor sa, int width,
+                             int height, int nbh=8,
                              typename SrcAccessor::value_type label=0)
       : si(si), sa(sa), width(width), height(height), nbh(nbh), label(label)
     {}
@@ -577,8 +577,8 @@ namespace cecog
   private:
     SrcIterator si;
     SrcAccessor sa;
-    typename SrcAccessor::value_type label;
     int width, height, nbh;
+    typename SrcAccessor::value_type label;
   };
 
   /**
@@ -596,7 +596,6 @@ namespace cecog
     SrcIterator xs(upperleft);
     int w = lowerright.x - upperleft.x;
     int h = lowerright.y - upperleft.y;
-    int x, y;
     bool found = false;
     vigra::Diff2D start(0,0);
 

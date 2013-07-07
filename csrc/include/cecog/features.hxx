@@ -182,8 +182,7 @@ namespace cecog
 
       double sqrt_roisize = sqrt(obj_roisize);
 
-      for (int t = 1; t < greylevels-1; t++)
-      {
+      for (unsigned t = 1; t < greylevels-1; t++) {
         unsigned count[2];
         MIMAGE level(o.roi.width, o.roi.height);
         IIMAGE label[2] = {IIMAGE(o.roi.width, o.roi.height),
@@ -200,9 +199,9 @@ namespace cecog
 
         // without change: the regions above t
         count[1] =
-            labelImageWithBackground(srcImageRange(level),
-                                     destImage(label[1]),
-                                     false, 0);
+          labelImageWithBackground(srcImageRange(level),
+                                   destImage(label[1]),
+                                   false, 0);
 
         // transform greylevels to label regions below t
         // STEP1: convert all '0' pixels to 'lower'
@@ -263,28 +262,25 @@ namespace cecog
         // INTERIA -- Average Clump Interia
         // CAREA -- Average Clump Area
         // TAREA -- Total Clump Area
-        for (int i = 0; i < 2; ++i)
-        {
+        for (unsigned i = 0; i < 2; ++i) {
           double sum_rsize = 0.0, sum_irgl_rsize = 0.0;
           double dsum = 0.0, isum = 0.0;
-          for (int j = 1; j <= count[i]; ++j)
-          {
+          for (unsigned j = 1; j <= count[i]; ++j) {
             double rs = roisize[i][j]();
-            if (rs > 1.0)
-            {
+            if (rs > 1.0) {
               vigra::Diff2D c = center[i][j]() -
                 boundary[i][j].upperLeft;
 
               axes_4tuple tuple =
-              calculateAxes(label[i].upperLeft() +
-                            boundary[i][j].upperLeft,
-                            label[i].upperLeft() +
-                            boundary[i][j].lowerRight,
-                            label[i].accessor(), c, j);
+                calculateAxes(label[i].upperLeft() +
+                              boundary[i][j].upperLeft,
+                              label[i].upperLeft() +
+                              boundary[i][j].lowerRight,
+                              label[i].accessor(), c, j);
               double dist_max = tuple.first;
               sum_irgl_rsize +=
-                  ((1 + SQRT_PI * dist_max)
-                   / sqrt(rs) - 1) * rs;
+                ((1 + SQRT_PI * dist_max)
+                 / sqrt(rs) - 1) * rs;
 
               double d = (SQRT_PI * (obj_center - c).magnitude() /
                           sqrt_roisize);
@@ -301,11 +297,8 @@ namespace cecog
           NCA[i][t] = count[i] / obj_roisize;
         }
       }
-
-
       // calculate final statistics for "0" and "1" regions
-      for (int i = 0; i < 2; ++i)
-      {
+      for (unsigned i = 0; i < 2; ++i) {
         char dStr[10];
         sprintf(dStr, "ls%d_", i);
         statistics(values, DISP[i],    std::string(dStr) + "DISP");
@@ -321,7 +314,7 @@ namespace cecog
     void statistics(FeatureMap &values, d_vector vec, std::string prefix)
     {
       double max_value = 0.0, v_sum = 0.0, v_wsum = 0.0;
-      for (int t = 0; t < vec.size(); ++t)
+      for (unsigned t = 0; t < vec.size(); ++t)
       {
         v_sum += vec[t];
         v_wsum += t * vec[t];
@@ -331,7 +324,7 @@ namespace cecog
       double sample_mean = v_wsum / v_sum;
 
       double t_sum = 0.0;
-      for (int t = 0; t < vec.size(); ++t)
+      for (unsigned t = 0; t < vec.size(); ++t)
         t_sum += sqr((t - sample_mean)) * vec[t];
       double sample_sd = sqrt(t_sum / v_sum);
 
@@ -384,10 +377,10 @@ namespace cecog
     double ASM()
     {
       double res = 0.0;
-      for (int j=0; j<size; ++j)
+      for (unsigned j = 0; j < size; ++j)
       {
         res += sqr(matrix(j,j));
-        for (int i=j+1; i<size; ++i)
+        for (unsigned i = j+1; i < size; ++i)
           res += 2 * sqr(matrix(j,i));
       }
       return res;
@@ -400,10 +393,9 @@ namespace cecog
     double IDM()
     {
       double res = 0.0;
-      for (int j=0; j<size; ++j)
-      {
+      for (unsigned j = 0; j < size; ++j) {
         res += matrix(j,j);
-        for (int i=j+1; i<size; ++i)
+        for (unsigned i = j+1; i < size; ++i)
           res += 2 * (matrix(j,i) / (1 + sqr((i - j))));
       }
       return res;
@@ -417,10 +409,9 @@ namespace cecog
     {
       double res = 0.0;
       double shift = 0.0001;
-      for (int j=0; j<size; ++j)
-      {
+      for (unsigned j = 0; j < size; ++j) {
         res += matrix(j,j) * log(matrix(j,j) + shift);
-        for (int i=j+1; i<size; ++i)
+        for (unsigned i = j+1; i < size; ++i)
           res += 2 * matrix(j,i) * log(matrix(j,i) + shift);
       }
       return (-1) * res;
@@ -433,10 +424,9 @@ namespace cecog
     double VAR()
     {
       double res = 0.0;
-      for (int j=0; j<size; ++j)
-      {
+      for (unsigned j = 0; j < size; ++j) {
         res += matrix(j,j) * sqr((j - average));
-        for (int i=j+1; i<size; ++i)
+        for (unsigned i = j+1; i < size; ++i)
           res += 2 * matrix(i,j) * sqr((j - average));
       }
       return res;
@@ -449,25 +439,23 @@ namespace cecog
     double CON()
     {
       double res = 0.0;
-      for (int j=0; j<size; ++j)
-        for (int i=j+1; i<size; ++i)
+      for (unsigned j = 0;  j < size; ++j)
+        for (unsigned i = j+1; i < size; ++i)
           res += 2 * matrix(i,j) * sqr((i - j));
       return res;
     }
 
-    /**
-     * Correlation
-     */
+
+    // Correlation
     inline
     double COR()
     {
       double res = 0.0;
-      for (int j=0; j<size; ++j)
-      {
+      for (unsigned j = 0; j < size; ++j) {
         res += sqr((j - average)) * matrix(j,j) / sqr(variance);
-        for (int i=j+1; i<size; ++i)
-          res += (2 * (i - average) * (j - average) *  matrix(i,j) /
-                  sqr(variance));
+        for (unsigned i = j+1; i < size; ++i) {
+          res += (2*(i - average)*(j - average)*matrix(i,j)/sqr(variance));
+        }
       }
       return res;
     }
@@ -479,11 +467,11 @@ namespace cecog
     double PRO()
     {
       double res = 0.0;
-      for (int j=0; j<size; ++j)
-      {
+      for (unsigned j = 0; j < size; ++j) {
         res += pow((2 * j - 2 * average),4) * matrix(j,j);
-        for (int i=j+1; i<size; ++i)
+        for (unsigned i = j+1; i < size; ++i) {
           res += 2 * pow((i + j - 2 * average),4) * matrix(i,j);
+        }
       }
       return res;
     }
@@ -495,10 +483,10 @@ namespace cecog
     double SHA()
     {
       double res = 0.0;
-      for (int j=0; j<size; ++j)
+      for (unsigned j = 0; j < size; ++j)
       {
         res += pow((2 * j - 2 * average),3) * matrix(j,j);
-        for (int i=j+1; i<size; ++i)
+        for (unsigned i = j+1; i < size; ++i)
           res += 2 * pow((i + j - 2 * average),3) * matrix(i,j);
       }
       return res;
@@ -511,7 +499,7 @@ namespace cecog
     double SAV()
     {
       double res = 0.0;
-      for (int n=2; n <= 2*size; ++n)
+      for (unsigned n=2; n <= 2*size; ++n)
         res += n * condAddSum(n);
       return res;
     }
@@ -524,7 +512,7 @@ namespace cecog
     {
       double res = 0.0;
       double sav = SAV();
-      for (int n=2; n <= 2*size; ++n)
+      for (unsigned n = 2; n <= 2*size; ++n)
         res += sqr((n - sav)) * condAddSum(n);
       return res;
     }
@@ -536,9 +524,8 @@ namespace cecog
     double SET()
     {
       double res = 0.0;
-      double sav = SAV();
       double shift = 0.0001;
-      for (int n=2; n <= 2*size; ++n)
+      for (unsigned n=2; n <= 2*size; ++n)
       {
         double cas = condAddSum(n) + shift;
         res += cas * log(cas);
@@ -553,7 +540,7 @@ namespace cecog
     double DAV()
     {
       double res = 0.0;
-      for (int n=0; n < size; ++n)
+      for (unsigned n = 0; n < size; ++n)
         res += n * condSubSum(n);
       return res;
     }
@@ -585,14 +572,14 @@ namespace cecog
      * sum over all matrix elements where (i,j), where i+j == n
      */
     inline
-    double condAddSum(int n)
+    double condAddSum(unsigned n)
     {
       double s = 0.0;
-      for (int j=0; j<size; ++j)
+      for (unsigned j=0; j<size; ++j)
       {
         if (2*j == n)
           s += matrix(j,j);
-        for (int i=j+1; i<size; ++i)
+        for (unsigned i=j+1; i<size; ++i)
           if (i + j == n)
             s += 2 * matrix(i,j);
       }
@@ -603,11 +590,11 @@ namespace cecog
      * sum over all matrix elements where (i,j), where i-j == n
      */
     inline
-    double condSubSum(int n)
+    double condSubSum(unsigned n)
     {
       double s = (n == 0) ? matrix(0,0) : 0.0;
-      for (int j=0; j<size; ++j)
-        for (int i=j+1; i<size; ++i)
+      for (unsigned j = 0; j < size; ++j)
+        for (unsigned i = j+1; i < size; ++i)
           if (abs(i - j) == n)
             s += 2 * matrix(i,j);
       return s;
@@ -672,36 +659,26 @@ namespace cecog
       count *= 2;
 
       // normalize
-      for (int j=0; j<size; ++j)
-        for (int i=j; i<size; ++i)
+      for (unsigned j = 0; j < size; ++j)
+        for (unsigned i = j; i<size; ++i)
           matrix(i,j) /= double(count);
 
       // calculate the mean (average)
       average = 0.0;
-      for (int j=0; j<size; ++j)
-      {
+      for (unsigned j = 0; j < size; ++j) {
         average += j*matrix(j,j);
-        for (int i=j+1; i<size; ++i)
+        for (unsigned i = j+1; i < size; ++i)
           average += 2*j*matrix(i,j);
       }
 
       // calculate the variance
       variance = 0.0;
-      for (int j=0; j<size; ++j)
-      {
+      for (unsigned j = 0; j < size; ++j) {
         double var_i = matrix(j,j);
-        for (int i=j+1; i<size; ++i)
+        for (unsigned  i = j+1; i < size; ++i)
           var_i += 2 * matrix(i,j);
         variance += var_i * sqr((j - average));
       }
-
-      /*
-      #ifdef __DEBUG__
-            std::cout << matrix << std::endl << count << std::endl
-                << "avg: " << average << std::endl
-                << "var: " << variance << std::endl;
-      #endif
-      */
     }
 
     symmetric_matrix<double, upper> matrix;
@@ -852,7 +829,6 @@ namespace cecog
                    ROIObject const & o, lab_type label)
             : borderSize(1),
               imgSize(o.roi.width + 2 * borderSize, o.roi.height + 2 * borderSize),
-              areaSignificanceThresh_(16),
               imBinRoi_(imgSize),
               imConvexHull_(imgSize),
               imDiff_(imgSize),
@@ -862,10 +838,9 @@ namespace cecog
               nb(morpho::WITHOUTCENTER8, vigra::Diff2D(imgSize)),
               objId_(label)
         {
-
-            const vigra::Point2D ul(o.roi.upperLeft);
-            const vigra::Point2D lr(o.roi.lowerRight);
-            vigra::Rect2D rec(ul, lr);
+          const vigra::Point2D ul(o.roi.upperLeft);
+          const vigra::Point2D lr(o.roi.lowerRight);
+          vigra::Rect2D rec(ul, lr);
 
             vigra::Diff2D borderOffset(borderSize, borderSize);
 
@@ -912,8 +887,8 @@ namespace cecog
             // preliminaries
             std::string prefix = "ch";
             // attention: the label=0 is for the background
-            for(int i = 0; i <= numberOfConnectedComponents_; ++i)
-                areaContainer_.push_back(0);
+            for(unsigned i = 0; i <= numberOfConnectedComponents_; ++i)
+              areaContainer_.push_back(0);
 
             double acd = 0.0;
             unsigned numberOfLargeConnectedComponents = 0;
@@ -937,46 +912,41 @@ namespace cecog
                                  srcImage(imLabel_), centers);
 
                 // average clump displacement: with weight of the area
-                for(int i = 1; i <= numberOfConnectedComponents_; ++i)
-                {
+                for(unsigned i = 1; i <= numberOfConnectedComponents_; ++i) {
                     acd += diffDistance(centers[i](), o.center) * areaContainer_[i];
                 }
                 acd *= SQRT_PI/(sqrt(areaCell_) * ( (double)numberOfConnectedComponents_ * areaDiff_));
 
-                for(int i = 1; i <= numberOfConnectedComponents_; ++i)
-                {
-                    if(areaContainer_[i] > areaSignificanceThresh_)
-                        numberOfLargeConnectedComponents++;
+                for(unsigned i = 1; i <= numberOfConnectedComponents_; ++i) {
+                  if(areaContainer_[i] > areaSignificanceThresh_)
+                    numberOfLargeConnectedComponents++;
                 }
 
                 std::sort(areaContainer_.begin(), areaContainer_.end());
 
-                for(int i = 1; i<4; ++i)
-                {
-                    if(areaContainer_.size() >= i)
-                        maxVal[i-1] = (double)(*(areaContainer_.end() - i)) / areaCell_ ;
-                        //maxVal[i-1] = (double)(*(areaContainer_.end() - i));
-                    else
-                        maxVal[i-1] = 0.0;
+                for(unsigned i = 1; i < 4; ++i) {
+                  if(areaContainer_.size() >= i)
+                    maxVal[i-1] = (double)(*(areaContainer_.end() - i)) / areaCell_ ;
+                  else
+                    maxVal[i-1] = 0.0;
                 }
             }
             else
             {
-                // area for connected components
-                areaDiff_ = 0.0;
-                areaConvexHull_ = areaCell_ + areaDiff_;
+              // area for connected components
+              areaDiff_ = 0.0;
+              areaConvexHull_ = areaCell_ + areaDiff_;
 
-                perimeter_ = perimeterCell_;
-                areaMean_ = 0.0;
-                areaVariance_ = 0.0;
-                areaSkewness_ = 0.0;
-                areaKurtosis_ = 0.0;
-                acd = 0.0;
-                maxVal[0] = 0.0;
-                maxVal[1] = 0.0;
-                maxVal[2] = 0.0;
+              perimeter_ = perimeterCell_;
+              areaMean_ = 0.0;
+              areaVariance_ = 0.0;
+              areaSkewness_ = 0.0;
+              areaKurtosis_ = 0.0;
+              acd = 0.0;
+              maxVal[0] = 0.0;
+              maxVal[1] = 0.0;
+              maxVal[2] = 0.0;
             }
-
 
             // assignment of features
             o.features[prefix + "_thresh_cc"] = (double)numberOfLargeConnectedComponents;
@@ -1132,27 +1102,28 @@ namespace cecog
             areaVariance_ = areaVariance_/ n ;
         }
 
-        unsigned numberOfConnectedComponents_;
-        const unsigned areaSignificanceThresh_;
-        const unsigned borderSize;
-        vigra::Diff2D imgSize;
-        UnsignedVector areaContainerClean_;
-        UnsignedVector areaContainer_;
-        double areaConvexHull_;
-        double areaDiff_;
-        double areaCell_;
-        double areaMean_;
-        double areaVariance_;
-        double areaSkewness_;
-        double areaKurtosis_;
-        double perimeter_, perimeterCell_;
-        vigra::Diff2D center_;
-        BIMAGE imBinRoi_;
-        BIMAGE imConvexHull_;
-        BIMAGE imDiff_;
-        LIMAGE imLabel_;
-        morpho::neighborhood2D nb;
-        lab_type objId_;
+      const unsigned areaSignificanceThresh_ = 16;
+      const unsigned borderSize;
+      vigra::Diff2D imgSize;
+      BIMAGE imBinRoi_;
+      BIMAGE imConvexHull_;
+      BIMAGE imDiff_;
+      LIMAGE imLabel_;
+      vigra::Diff2D center_;
+      double areaCell_;
+      morpho::neighborhood2D nb;
+      lab_type objId_;
+
+      UnsignedVector areaContainerClean_;
+      UnsignedVector areaContainer_;
+      double areaConvexHull_;
+      double areaDiff_;
+      double areaMean_;
+      double areaVariance_;
+      double areaSkewness_;
+      double areaKurtosis_;
+      double perimeter_, perimeterCell_;
+      unsigned numberOfConnectedComponents_;
     };
 
 
@@ -1248,7 +1219,7 @@ namespace cecog
             CalculateNumberOfHighDynamics_();
             CalculateHighDynamicValues_();
 
-            for(int i = 0; i < NB_HIGH_VALUES_; ++i)
+            for(unsigned i = 0; i < NB_HIGH_VALUES_; ++i)
             {
                 std::string featureName = prefix_ + itos(i, 0);
                 o.features[featureName] = maxVal[i];
@@ -1467,34 +1438,34 @@ namespace cecog
         {
             std::sort(dynVec_.begin(), dynVec_.end());
 
-            for(int i = 1; i <= NB_HIGH_VALUES_; ++i)
-            {
+            for(unsigned i = 1; i <= NB_HIGH_VALUES_; ++i) {
                 if(dynVec_.size() >= i)
-                    maxVal.push_back((double)(*(dynVec_.end() - i)) );
+                  maxVal.push_back((double)(*(dynVec_.end() - i)) );
                 else
-                    maxVal.push_back(0.0);
+                  maxVal.push_back(0.0);
             }
         }
 
-        const unsigned NB_HIGH_VALUES_;
-        std::vector<double> maxVal;
-        double dynMean_;
-        double dynVariance_;
-        double dynSkewness_;
-        double dynKurtosis_;
-        value_type dynMaxVal_;
+      unsigned borderSize_;
+      vigra::Diff2D imgSize_;
+      SIMAGE imSrcRoi_;
+      morpho::neighborhood2D nb_;
+      lab_type objId_;
+      value_type dynThresh_;
+      std::string prefix_;
+      double dynMean_;
+      double dynVariance_;
+      double dynSkewness_;
+      double dynKurtosis_;
+      value_type dynMaxVal_;
+      unsigned dynLowCount_;
+      unsigned dynHighCount_;
+      const unsigned NB_HIGH_VALUES_;
+      bool calcMaximumValues__;
 
-        bool calcMaximumValues__;
-        unsigned borderSize_;
-        std::string prefix_;
-        vigra::Diff2D imgSize_;
-        SIMAGE imSrcRoi_;
-        morpho::neighborhood2D nb_;
-        lab_type objId_;
-        DynamicsVector dynVec_;
-        unsigned dynLength_;
-        unsigned dynLowCount_, dynHighCount_;
-        value_type dynThresh_;
+      std::vector<double> maxVal;
+      DynamicsVector dynVec_;
+      unsigned dynLength_;
     };
 
     template <class SIMAGE, class LIMAGE>
@@ -1560,19 +1531,15 @@ namespace cecog
 
 
     protected:
-
-        vigra::Diff2D imgSize_;
-        unsigned borderSize_;
-
-        SIMAGE imSrcRoi_;
-
-        unsigned objId_;
-
-        std::string prefix_;
-        se_size_vec seSizeVec_;
-        unsigned operatorFlag_;
-        result_vec areaVec_;
-        result_vec volVec_;
+      unsigned borderSize_;
+      vigra::Diff2D imgSize_;
+      SIMAGE imSrcRoi_;
+      unsigned objId_;
+      unsigned operatorFlag_;
+      std::string prefix_;
+      se_size_vec seSizeVec_;
+      result_vec areaVec_;
+      result_vec volVec_;
 
     };
 
@@ -1648,116 +1615,85 @@ namespace cecog
             dynLength_ = dynVec_.size();
         }
 
-//        void DistanceOut()
-//        {
-//            cout << endl;
-//            cout << (int)objId_;
-//            cout << " : ";
-//            iterator_type valit = valVec_.begin();
-//            for(iterator_type iter = dynVec_.begin();
-//                iter != dynVec_.end(); ++iter, ++valit)
-//            {
-//                if( iter != dynVec_.begin())
-//                    cout << " , ";
-//                cout << "(" << (int)(*iter) << ":" << (int)(*valit) << ")";
-//            }
-//            cout << endl;
-//            globalDebEnv.DebugWriteImage(imDistInv_, "distance");
-//        }
+      void CalculateFeatures(ROIObject & o)
+      {
+        FilterLowValues_();
+        o.features[prefix_ + "_nb_max"] = dynLength_;
+        SortVectors_();
 
-        void CalculateFeatures(ROIObject & o)
-        {
-            FilterLowValues_();
+        std::string featureName = prefix_ + "_radius_0";
+        o.features[featureName] = (double)maxVal_[0];
 
-            o.features[prefix_ + "_nb_max"] = dynLength_;
-
-            SortVectors_();
-
-            std::string featureName = prefix_ + "_radius_0";
-            o.features[featureName] = (double)maxVal_[0];
-
-            for(int i = 1; i < NB_HIGH_VALUES_; ++i)
-            {
-                std::string featureName = prefix_ + "_radius_" + itos(i, 0);
-                o.features[featureName] = (double)maxVal_[i] / (double)maxVal_[0];
-            }
+        for(unsigned i = 1; i < NB_HIGH_VALUES_; ++i) {
+          std::string featureName = prefix_ + "_radius_" + itos(i, 0);
+          o.features[featureName] = (double)maxVal_[i] / (double)maxVal_[0];
         }
+      }
 
 
     private:
+      void FilterLowValues_()
+      {
+        iterator_type dyniter = dynVec_.begin();
+        iterator_type valiter = valVec_.begin();
 
-        void FilterLowValues_()
-        {
-            iterator_type dyniter = dynVec_.begin();
-            iterator_type valiter = valVec_.begin();
-
-            while(dyniter != dynVec_.end())
-            {
-                if(*dyniter < dynThresh_)
-                {
-                    dyniter = dynVec_.erase(dyniter);
-                    valiter = valVec_.erase(valiter);
-                }
-                else
-                {
-                    ++dyniter;
-                    ++valiter;
-                }
+        while(dyniter != dynVec_.end())
+          {
+            if(*dyniter < dynThresh_) {
+              dyniter = dynVec_.erase(dyniter);
+              valiter = valVec_.erase(valiter);
             }
-            dynLength_ = dynVec_.size();
+            else {
+              ++dyniter;
+              ++valiter;
+            }
+          }
+        dynLength_ = dynVec_.size();
+      }
 
+      void SortVectors_()
+      {
+        iterator_type a_iter = dynVec_.begin();
+        iterator_type b_iter = valVec_.begin();
+
+        while(a_iter != dynVec_.end())
+          {
+            iterator_type a_current(a_iter);
+            iterator_type b_current(b_iter);
+            while(a_current != dynVec_.end())
+              {
+                if( *a_current > *a_iter)
+                  {
+                    std::iter_swap(a_current, a_iter);
+                    std::iter_swap(b_current, b_iter);
+                  }
+                a_current++; b_current++;
+              }
+            a_iter++; b_iter++;
+          }
+
+        for(unsigned i = 0; i < NB_HIGH_VALUES_; ++i) {
+          if(i < valVec_.size())
+            maxVal_.push_back(valVec_[i]);
+          else
+            maxVal_.push_back(0);
         }
+      }
 
-        void SortVectors_()
-        {
-            iterator_type a_iter = dynVec_.begin();
-            iterator_type b_iter = valVec_.begin();
 
-            while(a_iter != dynVec_.end())
-            {
-                iterator_type a_current(a_iter);
-                iterator_type b_current(b_iter);
-                while(a_current != dynVec_.end())
-                {
-                    if( *a_current > *a_iter)
-                    {
-                        std::iter_swap(a_current, a_iter);
-                        std::iter_swap(b_current, b_iter);
-                    }
-                    a_current++; b_current++;
-                }
-                a_iter++; b_iter++;
-            }
-
-            for(int i = 0; i < NB_HIGH_VALUES_; ++i)
-            {
-                if(i < valVec_.size())
-                    maxVal_.push_back(valVec_[i]);
-                else
-                    maxVal_.push_back(0);
-            }
-
-        }
-
-        LIMAGE imDist_;
-        LIMAGE imDistInv_;
-
-        const unsigned NB_HIGH_VALUES_;
-
-        bool calcMaximumValues__;
-        unsigned borderSize_;
-
-        std::string prefix_;
-        vigra::Diff2D imgSize_;
-        morpho::neighborhood2D nb_;
-        lab_type objId_;
-        DynamicsVector dynVec_, valVec_, maxVal_;
-
-        unsigned dynLength_;
-        lab_type dynThresh_;
-
+      unsigned borderSize_;
+      vigra::Diff2D imgSize_;
+      morpho::neighborhood2D nb_;
+      lab_type objId_;
+      lab_type dynThresh_;
+      std::string prefix_;
+      const unsigned NB_HIGH_VALUES_;
+      LIMAGE imDist_;
+      LIMAGE imDistInv_;
+      bool calcMaximumValues__;
+      DynamicsVector dynVec_, valVec_, maxVal_;
+      unsigned dynLength_;
     };
-
 }
 
 #endif // CECOG_FEATURES

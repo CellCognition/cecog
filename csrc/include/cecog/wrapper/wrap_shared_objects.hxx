@@ -77,8 +77,9 @@ struct to_python_Diff2D
 list known_feature_wrapper()
 {
   list result;
-  for (int i=0; i < cecog::FEATURE_COUNT; ++i)
+  for (unsigned i=0; i < cecog::FEATURE_COUNT; ++i) {
     result.append(cecog::FEATURES[i]);
+  }
   return result;
 }
 
