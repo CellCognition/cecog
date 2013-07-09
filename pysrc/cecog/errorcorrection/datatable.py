@@ -28,7 +28,7 @@ class HmmDataTable(object):
 
     def add_track(self, track, prob, pos, mapping):
         if self._probs is None and self._tracks is None:
-            self._tracks = np.empty(track.shape)[np.newaxis, :]
+            self._tracks = np.empty(track.shape, dtype=int)[np.newaxis, :]
             self._tracks[0, :] = track[:]
             self._probs = np.empty(prob.shape)[np.newaxis, :, :]
             self._probs[0, :, :] = prob[:, :]
@@ -61,7 +61,7 @@ class HmmDataTable(object):
     def probabilities(self):
         return self._probs
 
-    def _iterator(self, key):
+    def iterby(self, key):
 
         if not self._pos.has_key(key):
             raise StopIteration()
@@ -71,10 +71,10 @@ class HmmDataTable(object):
             yield k, self._tracks[i], self._probs[i]
 
     def iterpos(self):
-        return self._iterator(pm.POSITION)
+        return self.iterby(pm.POSITION)
 
     def iteroligo(self):
-        return self._iterator(pm.OLIGO)
+        return self.iterby(pm.OLIGO)
 
     def itergene(self):
-        return self._iterator(pm.GENE)
+        return self.iterby(pm.GENE)
