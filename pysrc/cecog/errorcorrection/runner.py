@@ -28,48 +28,7 @@ from cecog.learning.learning import ClassDefinition
 from cecog.export.regexp import re_events
 from cecog.errorcorrection.datatable import HmmDataTable
 from cecog.errorcorrection.hmm import HMM
-
-class PlateMapping(OrderedDict):
-    """Read/Write plate mappings files. Default for all positions is None.
-    After reading, all values are set according to the file."""
-
-
-    POSITION = 'Position'
-    WELL = 'Well'
-    SITE = 'Site'
-    ROW = 'Row'
-    COLUMN = 'Column'
-    GENE = 'Gene Symbol'
-    OLIGO = 'OligoId'
-    GROUP = 'Group'
-
-    _colnames = [POSITION, WELL, SITE, ROW, COLUMN, GENE, OLIGO, GROUP]
-
-    def __init__(self, positions):
-        super(PlateMapping, self).__init__()
-        for pos in positions:
-            self.setdefault(pos, None)
-
-    def read(self, filename):
-        if not isfile(filename):
-            raise IOError("Plate mapping file not found\n(%s)" %filename)
-
-        with open(filename, "r") as fp:
-            reader = csv.DictReader(fp, delimiter='\t')
-            for line in reader:
-                pos = line['Position']
-                del line['Position']
-                self[pos] = line
-
-    def save(self, filename, mode="w"):
-        with open(filename, mode=mode) as fp:
-            writer = csv.DictWriter(fp, fieldnames=self._colnames,
-                                    delimiter='\t')
-            writer.writeheader()
-            for k, v in self.iteritems():
-                line = v.copy()
-                line.update({"Position": k})
-                writer.writerow(line)
+from cecog.errorcorrection import PlateMapping
 
 
 class PlateRunner(QtCore.QObject):
@@ -191,8 +150,19 @@ class PositionRunner(QtCore.QObject):
                         labels = data['class__label']
                         probs = list()
                         for prob in data['class__probability']:
-                            probs.append(np.array([float(p.split(':')[1]) \
-                               for p in prob.strip('"').split(',')]))
+                            pstr = prob.strip('"').split(',')
+
+                            # sanity check for class labels in the definition and
+                            # the data file
+                            lbs = [int(p.split(':')[0]) for p in pstr]
+                            if class_definition.class_names.keys() != lbs:
+                                msg = ("The labels in the class definition and "
+                                       " the data files are inconsistent.\n%s, %s"
+                                       %(str(lbs),
+                                         str(class_definition.class_names.keys())))
+                                raise RuntimeError(msg)
+
+                            probs.append(np.array([float(p.split(':')[1]) for p in pstr]))
                         probs = np.array(probs)
                         dtable.add_track(labels, probs, pos, mappings[pos])
         return dtable

@@ -18,6 +18,7 @@ __all__ = ['trajectories_dict', 'trajectories', 'sort_tracks']
 
 import numpy as np
 import pylab as pl
+from matplotlib import mpl
 from cecog.colors import UNSUPERVISED_CMAP
 
 def sort_tracks(label_matrix, labels, reverse=False):
@@ -60,7 +61,8 @@ def trajectories_dict(data, labels=None, reverse=False, window_title=None,
     return fig
 
 def trajectories(tracks, labels=None, reverse=False, title=None,
-                 window_title=None, cmap=UNSUPERVISED_CMAP):
+                 window_title=None, cmap=UNSUPERVISED_CMAP,
+                 norm=None):
 
     fig = pl.figure()
     ax =  fig.add_subplot(1, 1, 1, frameon=False, aspect='equal')
@@ -71,13 +73,21 @@ def trajectories(tracks, labels=None, reverse=False, title=None,
     if labels is not None:
         tracks = sort_tracks(tracks, labels, reverse)
 
-    ax.matshow(tracks, cmap=cmap)
-    if tracks.shape[0] > tracks.shape[1]:
-        ax.set_aspect("auto")
+    ax.matshow(tracks, cmap=cmap, norm=norm)
+
     if title is not None:
         ax.set_title(title)
+
     ax.set_xlabel("frames")
     ax.set_ylabel("trajectories")
     ax.tick_params(labeltop=False, labelbottom=True)
+
+    if tracks.shape[0] > tracks.shape[1]:
+            ax.set_aspect("auto")
+
+    # ax = fig.add_axes([0.8, 0.15, 0.015, 0.7], frameon=False)
+    # norm = mpl.colors.BoundaryNorm(range(tracks.min(), cmap.N+1, 1), cmap.N)
+    # cbar = mpl.colorbar.ColorbarBase(ax, cmap=cmap, norm=norm,
+    #                                   orientation='vertical')
 
     return fig

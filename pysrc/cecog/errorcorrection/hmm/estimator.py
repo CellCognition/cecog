@@ -13,7 +13,12 @@ __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
 import numpy as np
-from lxml import objectify
+
+# py2app demands import hooks like this, and it sucks
+import lxml.objectify
+import lxml.etree
+import lxml._elementpath
+
 from cecog.tc3 import normalize
 
 
@@ -22,7 +27,7 @@ class HMMConstraint(object):
     def __init__(self, filename):
 
         with open(filename, 'r') as fp:
-            xml = objectify.fromstring(fp.read())
+            xml = lxml.objectify.fromstring(fp.read())
             self.nsymbols = int(xml.numberOfClasses)
             self.nstates = int(xml.numberOfHiddenStates)
             self.start = np.fromstring(str(xml.startNodes), dtype=int, sep=" ")
@@ -111,10 +116,6 @@ class HMMProbBasedEsitmator(HMMEstimator):
         self._probs = probs
         nstates = probs.shape[-1]
         super(HMMProbBasedEsitmator, self).__init__(nstates)
-
-    def _estimate_startprob(self):
-        super(HMMProbBasedEsitmator, self)._estimate_startprob()
-        self._startprob[:] = 1.0
 
     def _estimate_trans(self):
         super(HMMProbBasedEsitmator, self)._estimate_trans()

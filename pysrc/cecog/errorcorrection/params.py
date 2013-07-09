@@ -13,9 +13,10 @@ __url__ = 'www.cellcognition.org'
 
 __all__ = ['ECParams']
 
-from os.path import isfile
 
 from cecog import CHANNEL_PREFIX
+from cecog.errorcorrection import PlateMapping
+
 
 # XXX belongs to the settings module/class
 class ECParams(object):
@@ -27,10 +28,6 @@ class ECParams(object):
                  'sortby', 'skip_plates', 'overwrite_timelapse', 'timelapse',
                  'sorting', 'sorting_sequence', 'max_plot_time',
                  'tracking_branches', 'write_gallery', 'n_galleries']
-
-    POS = 'pos'
-    OLIGO = 'oligo'
-    GENESYMBOL = 'genesymbol'
 
     def __init__(self, settings):
 
@@ -55,11 +52,11 @@ class ECParams(object):
         self.position_labels = settings('ErrorCorrection', 'position_labels')
         self.mapping_dir = settings('ErrorCorrection', 'mappingfile_path')
         if settings('ErrorCorrection', 'groupby_oligoid'):
-            self.sortby = self.OLIGO
+            self.sortby = PlateMapping.OLIGO
         elif settings('ErrorCorrection', 'groupby_genesymbol'):
-            self.sortby = self.GENESYMBOL
+            self.sortby = PlateMapping.GENE
         else:
-            self.sortby = self.POS
+            self.sortby = PlateMapping.POSITION
         self.skip_plates = settings('ErrorCorrection', 'skip_processed_plates')
         self.overwrite_timelapse = settings('ErrorCorrection', 'overwrite_time_lapse')
         self.timelapse = settings('ErrorCorrection', 'timelapse')

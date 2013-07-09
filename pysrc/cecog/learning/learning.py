@@ -20,6 +20,11 @@ import csv
 from os.path import join, isdir, splitext, isfile
 from collections import OrderedDict
 
+from matplotlib.colors import ListedColormap
+from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.colors import hex2color
+from matplotlib import mpl
+
 import numpy as np
 import svm
 
@@ -40,6 +45,39 @@ class ClassDefinition(object):
         self.hexcolors = dict()
         self.class_labels = dict()
         self.class_names = OrderedDict()
+        self.colormap = None
+
+    @property
+    def normalize(self):
+        """Return a matplotlib normalization instance to the class lables
+        corretly mapped to the colors"""
+        return mpl.colors.Normalize(vmin=min(self.class_names.keys()),
+                                    vmax=max(self.class_names.keys()))
+
+    @property
+    def vmin(self):
+        # suitable for mp.colors.Normalize
+        return float(min(self.class_names.keys()))
+
+    @property
+    def vmax(self):
+        # suitabel for mpl.colors.Normalize
+        return float(max(self.class_names.keys()))
+
+    def label2index(self, labels):
+        """Map arb. labels to [0, ..., n-1] that it can used as
+        array index."""
+        indices = np.empty(labels.shape, dtype=int)
+        for index, label in enumerate(self.class_names.keys()):
+            indices[labels==label] = index
+        return indices
+
+    def index2labels(self, indices):
+        """Reverse label index mapping."""
+        labels = np.empty(indices.shape, dtype=int)
+        for index, label in enumerate(self.class_names.keys()):
+            labels[indices==index] = label
+        return labels
 
     def load(self):
         with open(self._filename, "r") as f:
@@ -49,6 +87,11 @@ class ClassDefinition(object):
                 self.class_labels[name] = label
                 self.class_names[label] = name
                 self.hexcolors[name] = color
+
+        colors = [self.hexcolors[n]  for n in self.class_names.values()]
+        # better would be a linear segemented cmap, to allow unevenly spaced
+        # class labels
+        self.colormap = ListedColormap(colors, 'svm-cmap')
 
     def save(self, writeheader=False):
         with open(self._filename, "w") as f:

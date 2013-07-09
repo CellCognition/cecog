@@ -14,12 +14,12 @@ __url__ = 'www.cellcognition.org'
 __all__ = ['PlateMapping']
 
 import csv
+from os.path import isfile
 from collections import OrderedDict
 
 class PlateMapping(OrderedDict):
     """Read/Write plate mappings files. Default for all positions is None.
     After reading, all values are set according to the file."""
-
 
     POSITION = 'Position'
     WELL = 'Well'
@@ -27,7 +27,7 @@ class PlateMapping(OrderedDict):
     ROW = 'Row'
     COLUMN = 'Column'
     GENE = 'Gene Symbol'
-    OLIGO = 'OligoId'
+    OLIGO = 'OligoID'
     GROUP = 'Group'
 
     _colnames = [POSITION, WELL, SITE, ROW, COLUMN, GENE, OLIGO, GROUP]
