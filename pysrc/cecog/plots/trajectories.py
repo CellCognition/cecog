@@ -19,7 +19,7 @@ __all__ = ['trajectories_dict', 'trajectories', 'sort_tracks']
 import numpy as np
 import pylab as pl
 from matplotlib import mpl
-from cecog.colors import UNSUPERVISED_CMAP
+from cecog.colors import DCMAP
 
 def sort_tracks(label_matrix, labels, reverse=False):
 
@@ -33,7 +33,7 @@ def sort_tracks(label_matrix, labels, reverse=False):
     return slm
 
 def trajectories_dict(data, labels=None, reverse=False, window_title=None,
-                      cmap=UNSUPERVISED_CMAP):
+                      cmap=DCMAP):
     """Plot a dictionary of tracks"""
 
     fig = pl.figure(figsize=(len(data)*4, 4.1))
@@ -61,7 +61,7 @@ def trajectories_dict(data, labels=None, reverse=False, window_title=None,
     return fig
 
 def trajectories(tracks, labels=None, reverse=False, title=None,
-                 window_title=None, cmap=UNSUPERVISED_CMAP,
+                 window_title=None, cmap=DCMAP,
                  norm=None):
 
     fig = pl.figure()
@@ -84,10 +84,5 @@ def trajectories(tracks, labels=None, reverse=False, title=None,
 
     if tracks.shape[0] > tracks.shape[1]:
             ax.set_aspect("auto")
-
-    # ax = fig.add_axes([0.8, 0.15, 0.015, 0.7], frameon=False)
-    # norm = mpl.colors.BoundaryNorm(range(tracks.min(), cmap.N+1, 1), cmap.N)
-    # cbar = mpl.colorbar.ColorbarBase(ax, cmap=cmap, norm=norm,
-    #                                   orientation='vertical')
 
     return fig

@@ -19,18 +19,16 @@ __all__ = ["dwell_boxplot", "barplot"]
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.patches import Polygon
-
-from cecog.colors import UNSUPERVISED_CMAP
+from cecog.colors import DCMAP
 
 def dwell_boxplot(data, title, xlabel='class label',
                   ylabel='dwell time (frames)', exclude_labels=None,
-                  cmap=UNSUPERVISED_CMAP):
+                  cmap=DCMAP, ymax=None):
 
     # remove keys only in this scope
     data = data.copy()
-    nclasses = len(data)
     for k in data.keys():
-        if k in exclude_labels:
+        if exclude_labels is not None and k in exclude_labels:
             del data[k]
 
     fig = plt.figure()
@@ -46,7 +44,10 @@ def dwell_boxplot(data, title, xlabel='class label',
              fillstyle='none')
 
     yr = np.array(ax.get_ylim())
-    ax.set_ylim(yr+np.array((-1, 1))*0.05*yr.ptp())
+    yr = yr+np.array((-1, 1))*0.05*yr.ptp()
+    if ymax is not None and ymax < yr[1]:
+        yr[1] = ymax
+    ax.set_ylim(yr)
     ax.set_xticklabels(data.keys(), rotation=45)
 
     pos = dict((k, v) for k, v in zip(data.keys(), ax.get_xticks()))
@@ -58,7 +59,7 @@ def dwell_boxplot(data, title, xlabel='class label',
             boxX.append(box.get_xdata()[j])
             boxY.append(box.get_ydata()[j])
             coords = zip(boxX, boxY)
-        color = cmap(label/(nclasses-1))
+        color = cmap(label)
         polygon = Polygon(coords, facecolor=color)
         ax.add_patch(polygon)
 
@@ -68,16 +69,16 @@ def dwell_boxplot(data, title, xlabel='class label',
         ax.text(pos[label], top-(top*0.05), median,
                 horizontalalignment='center', size='medium',
                 color=color)
+
     return fig
 
 def barplot(data, title, xlabel='class label', ylabel='dwell time (frames)',
-            exclude_labels=None, cmap=UNSUPERVISED_CMAP):
+            exclude_labels=None, cmap=DCMAP, ymax=None):
 
     # remove keys only in this scop
     data = data.copy()
-    nclasses = len(data)
     for k in data.keys():
-        if k in exclude_labels:
+        if exclude_labels is not None and k in exclude_labels:
             del data[k]
 
     fig = plt.figure()
@@ -87,14 +88,17 @@ def barplot(data, title, xlabel='class label', ylabel='dwell time (frames)',
     ax.set_title(title)
 
     values = [np.average(v) for v in data.values()]
-    colors = [cmap(k/(nclasses-1)) for k in data.keys()]
+    colors = [cmap(k) for k in data.keys()]
     width = 2/3
     ind = np.arange(len(data))
     bp = plt.bar(ind-width/2, values, width=width, color=colors)
     ax.set_xlim((ind.min()-0.5, ind.max()+0.5))
 
     yr = np.array(ax.get_ylim())
-    ax.set_ylim(yr+np.array((0.0, 1.0))*0.05*yr.ptp())
+    yr = yr+np.array((-1, 1))*0.05*yr.ptp()
+    if ymax is not None and ymax < yr[1]:
+        yr[1] = ymax
+    ax.set_ylim(yr)
     ax.set_xticks(ind)
     ax.set_xticklabels(data.keys(), rotation=45)
 
@@ -106,5 +110,5 @@ def barplot(data, title, xlabel='class label', ylabel='dwell time (frames)',
         top = ax.get_ylim()[1]
         ax.text(pos[k], top-(top*0.05), average,
                 horizontalalignment='center', size='medium',
-                color=cmap(float(k)/(nclasses-1)))
+                color=cmap(k))
     return fig

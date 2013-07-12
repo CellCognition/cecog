@@ -21,13 +21,13 @@ from os.path import join, isfile, isdir, basename
 from PyQt4 import QtCore
 
 from cecog.util.util import makedirs
+from cecog.export.regexp import re_events
 from cecog.threads.corethread import ProgressMsg
 from cecog.learning.learning import ClassDefinition
-from cecog.export.regexp import re_events
-from cecog.errorcorrection.datatable import HmmDataTable
-from cecog.errorcorrection.hmm import HMM
+from cecog.errorcorrection.hmm import HmmSklearn as Hmm
+from cecog.errorcorrection import HmmReport
 from cecog.errorcorrection import PlateMapping
-
+from cecog.errorcorrection.datatable import HmmDataTable
 
 class PlateRunner(QtCore.QObject):
 
@@ -51,6 +51,7 @@ class PlateRunner(QtCore.QObject):
             if not isfile(mpfile):
                 raise IOError('Mapping file not found\n(%s)' %mpfile)
 
+    # XXX move this function to params_ec as property
     def load_class_definitions(self, classifier_directories,
                                filename='class_definition.txt'):
         class_definitions = dict()
@@ -83,13 +84,13 @@ class PlateRunner(QtCore.QObject):
 
 class PositionRunner(QtCore.QObject):
 
-    def __init__(self, plate, outdir, ecopts, class_definition,
+    def __init__(self, plate, outdir, ecopts, classdef,
                  positions=None, *args, **kw):
         super(PositionRunner, self).__init__(*args, **kw)
         self.ecopts = ecopts # error correction options
         self.plate = plate
         self._outdir = outdir
-        self.class_definition = class_definition
+        self.classdef = classdef
 
         self._channel_dirs = dict()
         self._makedirs()
@@ -129,7 +130,9 @@ class PositionRunner(QtCore.QObject):
                 raise OSError("Missing permissions to create dir\n(%s)"
                               %self._channels_dir[channel])
 
-    def _load_data(self, mappings, channel, class_definition):
+    def _load_data(self, mappings, channel, classdef):
+        # XXX perhaps the data table should also implement the import
+        # --> having a data table for csv and cellh5...
         dtable = HmmDataTable()
         for pos in self.positions:
             files = glob.glob(join(self._analyzed_dir, pos, 'statistics',
@@ -153,11 +156,11 @@ class PositionRunner(QtCore.QObject):
                             # sanity check for class labels in the definition and
                             # the data file
                             lbs = [int(p.split(':')[0]) for p in pstr]
-                            if class_definition.class_names.keys() != lbs:
+                            if classdef.class_names.keys() != lbs:
                                 msg = ("The labels in the class definition and "
                                        " the data files are inconsistent.\n%s, %s"
                                        %(str(lbs),
-                                         str(class_definition.class_names.keys())))
+                                         str(classdef.class_names.keys())))
                                 raise RuntimeError(msg)
 
                             probs.append(np.array([float(p.split(':')[1]) for p in pstr]))
@@ -172,10 +175,15 @@ class PositionRunner(QtCore.QObject):
             mpfile = join(self.ecopts.mapping_dir, "%s.txt" %self.plate)
             mappings.read(mpfile)
 
-        for channel, cld in self.class_definition.iteritems():
+        for channel, cld in self.classdef.iteritems():
             dtable = self._load_data(mappings, channel, cld)
-            hmm = HMM(dtable, channel, cld, self._hmm_dir, self.ecopts)
-            hmm()
+            # error correction
+            hmm = Hmm(dtable, channel, cld, self.ecopts)
+            data = hmm()
+
+            # plotting and export
+            report = HmmReport(data, self.ecopts, cld, self._hmm_dir)
+            report()
 
 
 if __name__ == "__main__":

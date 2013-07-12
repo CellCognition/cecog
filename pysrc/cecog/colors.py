@@ -12,15 +12,22 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-__all__ = ['Colors', 'rgb2hex', 'UNSUPERVISED_CMAP', 'hex2rgb', 'BINARY_CMAP']
+__all__ = ['Colors', 'rgb2hex', 'DCMAP', 'hex2rgb', 'BINARY_CMAP',
+           'DiscreteColormap', 'unsupervised_cmap']
+
+import numpy as np
 
 from matplotlib.colors import ListedColormap
 from matplotlib.colors import hex2color
 from matplotlib.colors import rgb2hex as mpl_rgb2hex
 from matplotlib.cm import jet
 
-# use this colormap for all unsupervised/clustering plots
-UNSUPERVISED_CMAP = jet
+
+def unsupervised_cmap(n):
+    return ListedColormap([jet(i) for i in np.linspace(0, 1, n)])
+
+# DCMAP is a fallback
+DCMAP = unsupervised_cmap(10)
 BINARY_CMAP = ListedColormap(["#DEDEDE","#FA1D2F"], name='binary_cmap')
 
 def rgb2hex(color, mpl=True):
@@ -41,7 +48,6 @@ def hex2rgb(color):
     fac=255.0
     rgb = [int(i*fac) for i in hex2color(color)]
     return tuple(rgb)
-
 
 class Colors(object):
 

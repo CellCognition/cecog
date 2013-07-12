@@ -21,8 +21,6 @@ from os.path import join, isdir, splitext, isfile
 from collections import OrderedDict
 
 from matplotlib.colors import ListedColormap
-from matplotlib.colors import LinearSegmentedColormap
-from matplotlib.colors import hex2color
 from matplotlib import mpl
 
 import numpy as np
@@ -33,6 +31,7 @@ from cecog.learning.util import SparseWriter, ArffWriter, ArffReader
 from cecog.learning.classifier import LibSvmClassifier as Classifier
 from cecog.util.logger import LoggerObject
 from cecog.util.util import makedirs
+
 
 class ClassDefinition(object):
     """Load as save class definitions to csv files."""
@@ -51,18 +50,8 @@ class ClassDefinition(object):
     def normalize(self):
         """Return a matplotlib normalization instance to the class lables
         corretly mapped to the colors"""
-        return mpl.colors.Normalize(vmin=min(self.class_names.keys()),
+        return mpl.colors.Normalize(vmin=0,
                                     vmax=max(self.class_names.keys()))
-
-    @property
-    def vmin(self):
-        # suitable for mp.colors.Normalize
-        return float(min(self.class_names.keys()))
-
-    @property
-    def vmax(self):
-        # suitabel for mpl.colors.Normalize
-        return float(max(self.class_names.keys()))
 
     def label2index(self, labels):
         """Map arb. labels to [0, ..., n-1] that it can used as
@@ -88,10 +77,12 @@ class ClassDefinition(object):
                 self.class_names[label] = name
                 self.hexcolors[name] = color
 
-        colors = [self.hexcolors[n]  for n in self.class_names.values()]
-        # better would be a linear segemented cmap, to allow unevenly spaced
-        # class labels
-        self.colormap = ListedColormap(colors, 'svm-cmap')
+        colors = ["#ffffff"]*(len(self.class_names)+1)
+        for k, v in self.class_names.iteritems():
+            colors[k] = self.hexcolors[v]
+
+        print colors
+        self.colormap = ListedColormap(colors, 'svm-colors')
 
     def save(self, writeheader=False):
         with open(self._filename, "w") as f:
