@@ -299,7 +299,8 @@ class TemporalClustering(object):
             tracks2.append(dhmm.predict(track))
         labels = np.array(tracks2)
 
-        model_params = DHmmParams(dhmm.emissionprob_, dhmm.transmat_)
+        model_params = DHmmParams(dhmm.emissionprob_, dhmm.transmat_,
+                                  dhmm.startprob_)
         data = TC3Container('DHMM', model_params, labels)
         return data
 

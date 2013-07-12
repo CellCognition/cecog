@@ -15,20 +15,23 @@ __url__ = 'www.cellcognition.org'
 __all__ = ['TC3Exporter']
 
 import numpy as np
+from  numpy.lib._iotools import NameValidator
 from os.path import join
 from collections import OrderedDict
 from matplotlib.backends.backend_pdf import PdfPages
 
 from cecog import plots
+from cecog.colors import unsupervised_cmap
 
 class TC3Exporter(object):
     """Export and plot tc3 data. That include trajectory plots,
     label matrices as csv files and box plots.
     """
 
-    def __init__(self, data, outputdir, stepwidth=1.0, timeunit='frames',
+    def __init__(self, data, outputdir, nclusters, stepwidth=1.0, timeunit='frames',
                  position=''):
         assert isinstance(data, dict)
+        self._nclusters = nclusters
         self._data = data
         self._odir = outputdir
         self.stepwidth = stepwidth
@@ -65,6 +68,7 @@ class TC3Exporter(object):
     def __call__(self, labels=(2,3), filename='trajectory_plots.pdf',
                  exclude_labels=(0, )):
 
+        cmap = unsupervised_cmap(self._nclusters)
         try:
             pdf = PdfPages(join(self._odir, filename))
             for title_, tracks in self._data.iteritems():
@@ -79,9 +83,13 @@ class TC3Exporter(object):
                     labels_ = labels
 
                 # trajectory plots
-                fig = plots.trajectories(tracks, labels_, title=title)
+                fig = plots.trajectories(tracks, labels_, title=title, cmap=cmap)
                 pdf.savefig(fig)
-                fname = title.lower().replace(' ','-')+'.csv'
+
+                delchars = NameValidator.defaultdeletechars.copy()
+                delchars.remove('-')
+                validator = NameValidator(case_sensitive='lower', deletechars=delchars)
+                fname = validator.validate(title)[0]+'.csv'
                 np.savetxt(join(self._odir, fname), tracks, fmt='%d',
                            delimiter=',')
 
@@ -93,10 +101,12 @@ class TC3Exporter(object):
                     dwell_times = self.dwell_times(tracks)
                     fig1 = plots.dwell_boxplot(dwell_times, title,
                                                ylabel=ylabel, xlabel=xlabel,
-                                               exclude_labels=exclude_labels)
+                                               exclude_labels=exclude_labels,
+                                               cmap=cmap)
                     fig2 = plots.barplot(dwell_times, title, xlabel=xlabel,
                                          ylabel=ylabel,
-                                         exclude_labels=exclude_labels)
+                                         exclude_labels=exclude_labels,
+                                         cmap=cmap)
                     pdf.savefig(fig1)
                     pdf.savefig(fig2)
         finally:

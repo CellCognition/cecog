@@ -16,6 +16,7 @@ from cecog.util.util import read_table
 from cecog.analyzer.tracker import Tracker
 from cecog.export.regexp import re_events
 
+
 def compose_galleries(path, path_hmm, quality="90",
                       one_daughter=True, sample=30):
     logger = logging.getLogger('compose_galleries')
@@ -40,9 +41,6 @@ def compose_galleries(path, path_hmm, quality="90",
 
                 if match.group('branch') != '01':
                     t.remove(record)
-
-                # if record[column_name].split('__')[4] != 'B01':
-                #     t.remove(record)
 
         n = len(t)
         if not sample is None and sample <= n:

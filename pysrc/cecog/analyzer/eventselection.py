@@ -20,7 +20,7 @@ from scipy import stats
 from matplotlib import mlab
 from sklearn.cluster import KMeans
 
-from cecog.colors import rgb2hex, UNSUPERVISED_CMAP, BINARY_CMAP
+from cecog.colors import rgb2hex, unsupervised_cmap, BINARY_CMAP
 from cecog.util.logger import LoggerObject
 from cecog.analyzer.tracker import Tracker
 from cecog.tc3 import TC3EventFilter
@@ -379,6 +379,7 @@ class UnsupervisedEventSelection(EventSelectionCore):
 
     def _save_class_labels(self, labels, nodes, probabilities,
                            prefix='unsupervised'):
+        cmap = unsupervised_cmap(self.num_clusters)
 
         # clear labels from binary classification
         for node in self.graph.node_list():
@@ -393,7 +394,7 @@ class UnsupervisedEventSelection(EventSelectionCore):
             obj.iLabel = label
             obj.strClassName = "%s-%d" %(prefix, label)
             obj.dctProb = dict((i, v) for i, v in enumerate(probs))
-            rgb = UNSUPERVISED_CMAP(float(label)/(self.num_clusters-1))
+            rgb = cmap(label)
             obj.strHexColor = rgb2hex(rgb)
 
     def _delete_tracks(self, trackids):

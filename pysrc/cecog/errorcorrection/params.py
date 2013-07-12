@@ -25,11 +25,11 @@ class ECParams(object):
     __slots__ = ['regionnames',
                  'constrain_graph', 'constrain_files', 'classifier_dirs',
                  'position_labels', 'mapping_dir',
-                 'sortby', 'skip_plates', 'overwrite_timelapse', 'timelapse',
-                 'sorting', 'sorting_sequence', 'max_plot_time',
+                 'sortby', 'skip_plates', 'timeunit', 'overwrite_timelapse', 'timelapse',
+                 'sorting', 'sorting_sequence', 'tmax',
                  'tracking_branches', 'write_gallery', 'n_galleries']
 
-    def __init__(self, settings):
+    def __init__(self, settings, tstep, timeunit):
 
         self.constrain_graph = settings('ErrorCorrection', 'constrain_graph')
         self.constrain_files = dict()
@@ -58,15 +58,23 @@ class ECParams(object):
         else:
             self.sortby = PlateMapping.POSITION
         self.skip_plates = settings('ErrorCorrection', 'skip_processed_plates')
+
+        # timelapse in minutes
         self.overwrite_timelapse = settings('ErrorCorrection', 'overwrite_time_lapse')
-        self.timelapse = settings('ErrorCorrection', 'timelapse')
+        self.timeunit = timeunit
+        if self.overwrite_timelapse:
+            self.timelapse = settings('ErrorCorrection', 'timelapse')
+        else:
+            self.timelapse = tstep
+
         self.sorting = settings('ErrorCorrection', 'enable_sorting')
-        self.sorting_sequence= settings('ErrorCorrection', 'sorting_sequence')
-        self.max_plot_time = settings('ErrorCorrection', 'max_time')
+        self.sorting_sequence = \
+            eval('('+settings('ErrorCorrection', 'sorting_sequence')+',)')
+        self.tmax = settings('ErrorCorrection', 'max_time')
         self.tracking_branches = settings('ErrorCorrection', 'ignore_tracking_branches')
         self.write_gallery = settings('ErrorCorrection', 'compose_galleries')
         self.n_galleries = settings('ErrorCorrection', 'compose_galleries_sample')
 
-    def __repr__(self):
-        return '\n'.join(["%s : %s" (slot, getattr(self, slot))
+    def __str__(self):
+        return '\n'.join(["%s : %s" %(slot, getattr(self, slot))
                           for slot in self.__slots__])

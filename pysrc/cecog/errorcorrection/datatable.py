@@ -16,6 +16,7 @@ __url__ = 'www.cellcognition.org'
 __all__ = ['HmmDataTable']
 
 import numpy as np
+
 from cecog.errorcorrection import PlateMapping as pm
 
 class HmmDataTable(object):
@@ -54,12 +55,24 @@ class HmmDataTable(object):
                 pass
 
     @property
-    def tracks(self):
+    def ntracks(self):
+        """Total number of tracks."""
         return self._tracks
 
     @property
     def probabilities(self):
         return self._probs
+
+    def groups(self, key, name):
+        """Plate mapping for a destinct sorting scheme (key) and name."""
+        grps = dict()
+        for k, v in self._pos.iteritems():
+            grps[k] = v[self._pos[key] == name][0]
+        return grps
+
+    def ntracks_of_group(self, key):
+        """Number of tracks for a given key (position, gene, ...)"""
+        return len(np.unique(self._pos[key]))
 
     def iterby(self, key):
 
