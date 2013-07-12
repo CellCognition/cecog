@@ -79,8 +79,7 @@ class BaseLearner(LoggerObject):
 
     @feature_names.setter
     def feature_names(self, feature_names):
-        if self._feature_names is None:
-            self._feature_names = feature_names
+        self._feature_names = feature_names
         assert self._feature_names == feature_names
 
     def delete_feature_names(self, indices):
