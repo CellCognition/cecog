@@ -28,6 +28,9 @@ class ProgressMsg(dict):
         self['progress'] = progress
         self['text'] = text
 
+    def increment_progress(self):
+        self.progress += 1
+
     def __getattr__(self, attr):
 
         if self.has_key(attr):
@@ -44,7 +47,7 @@ class ProgressMsg(dict):
 
 class CoreThread(QtCore.QThread):
 
-    stage_info = QtCore.pyqtSignal(dict)
+    stage_info = QtCore.pyqtSignal('PyQt_PyObject')
     analyzer_error = QtCore.pyqtSignal(str)
     image_ready = QtCore.pyqtSignal(ccore.RGBImage, str, str)
     aborted = QtCore.pyqtSignal()
@@ -89,6 +92,7 @@ class CoreThread(QtCore.QThread):
             logger = logging.getLogger()
             logger.error(msg)
             self.analyzer_error.emit(msg)
+            # can cause a sefault on macosx
             raise
 
     def abort(self, wait=False):

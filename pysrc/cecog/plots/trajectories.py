@@ -62,27 +62,28 @@ def trajectories_dict(data, labels=None, reverse=False, window_title=None,
 
 def trajectories(tracks, labels=None, reverse=False, title=None,
                  window_title=None, cmap=DCMAP,
-                 norm=None):
+                 norm=None, axes=None):
 
-    fig = pl.figure()
-    ax =  fig.add_subplot(1, 1, 1, frameon=False, aspect='equal')
+    if axes is None:
+        fig = pl.figure()
+        axes =  fig.add_subplot(1, 1, 1, frameon=False, aspect='equal')
 
     if window_title is not None:
-        fig.canvas.set_window_title(window_title)
+        axes.get_figure().canvas.set_window_title(window_title)
 
     if labels is not None:
         tracks = sort_tracks(tracks, labels, reverse)
 
-    ax.matshow(tracks, cmap=cmap, norm=norm)
+    axes.matshow(tracks, cmap=cmap, norm=norm)
 
     if title is not None:
-        ax.set_title(title)
+        axes.set_title(title)
 
-    ax.set_xlabel("frames")
-    ax.set_ylabel("trajectories")
-    ax.tick_params(labeltop=False, labelbottom=True)
+    axes.set_xlabel("frames")
+    axes.set_ylabel("trajectories")
+    axes.tick_params(labeltop=False, labelbottom=True)
 
     if tracks.shape[0] > tracks.shape[1]:
-            ax.set_aspect("auto")
+            axes.set_aspect("auto")
 
-    return fig
+    return axes.get_figure()

@@ -80,8 +80,6 @@ class ClassDefinition(object):
         colors = ["#ffffff"]*(len(self.class_names)+1)
         for k, v in self.class_names.iteritems():
             colors[k] = self.hexcolors[v]
-
-        print colors
         self.colormap = ListedColormap(colors, 'svm-colors')
 
     def save(self, writeheader=False):

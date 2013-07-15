@@ -55,6 +55,6 @@ class HmmSklearn(object):
                 bucket = HmmBucket(tracks, tracks2,
                                    est.startprob, est.emis, est.trans,
                                    self.dtable.groups(self.ecopts.sortby, name),
-                                   tracks.shape[0])
+                                   tracks.shape[0], self.ecopts.timelapse)
                 hmmdata[name] = bucket
         return hmmdata

@@ -51,12 +51,18 @@ class ECParams(object):
 
         self.position_labels = settings('ErrorCorrection', 'position_labels')
         self.mapping_dir = settings('ErrorCorrection', 'mappingfile_path')
+
         if settings('ErrorCorrection', 'groupby_oligoid'):
             self.sortby = PlateMapping.OLIGO
         elif settings('ErrorCorrection', 'groupby_genesymbol'):
             self.sortby = PlateMapping.GENE
         else:
             self.sortby = PlateMapping.POSITION
+
+        # special case, sort by position if no mappings file is provided
+        if not self.position_labels:
+            self.sortby = PlateMapping.POSITION
+
         self.skip_plates = settings('ErrorCorrection', 'skip_processed_plates')
 
         # timelapse in minutes

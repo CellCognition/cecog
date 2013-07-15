@@ -43,7 +43,7 @@ def _connectionsstyle(phi, rad=30):
     phi = np.degrees(phi)
     return "arc,angleA=%d,angleB=%d,armA=50,armB=50,rad=%d" %(phi+90, phi, rad)
 
-def hmm_network(transmat, classes, rad=0.15, title='hmm network'):
+def hmm_network(transmat, classes, rad=0.15, title='hmm network', axes=None):
     """Plot a network of a hidden markov model providing the transition matrix
     and the classes (dict of labels, hexcolors).
     """
@@ -52,9 +52,13 @@ def hmm_network(transmat, classes, rad=0.15, title='hmm network'):
     x = (np.cos(phi) - np.sin(phi))/np.sqrt(2)
     y = (np.sin(phi) + np.cos(phi))/np.sqrt(2)
 
-    fig = plt.figure()
-    ax = fig.add_subplot(1, 1 ,1, aspect='equal', frameon=False)
-    ax.set_title(title)
+    if axes is None:
+        fig = plt.figure()
+        axes = fig.add_subplot(1, 1 ,1)
+
+    axes.set_aspect('equal')
+    axes.set_frame_on(False)
+    axes.set_title(title)
 
     # add arrows
     for i in xrange(n):
@@ -62,9 +66,9 @@ def hmm_network(transmat, classes, rad=0.15, title='hmm network'):
             # arrows btw. different classes
             if i != j:
                 x_, y_, dx, dy = _arrow_coords(x, y, i, j, rad)
-                ax.arrow(x_, y_, dx, dy, width=0.015, fc='k', ec='k', head_length=0.15,
-                         length_includes_head=True, head_width=0.075,
-                         alpha = _alpha(transmat[i, j]))
+                axes.arrow(x_, y_, dx, dy, width=0.015, fc='k', ec='k',
+                           head_length=0.15, length_includes_head=True,
+                           head_width=0.075, alpha=_alpha(transmat[i, j]))
             else:
                 # arrow loop
                 phi2 = phi[i] + np.pi/4.
@@ -74,16 +78,17 @@ def hmm_network(transmat, classes, rad=0.15, title='hmm network'):
                               connectionstyle=_connectionsstyle(phi[i]),
                               lw=2, ec='k', fc='k', alpha=_alpha(transmat[i, j]))
 
-                ax.annotate("", x1, x2, arrowprops=aprops)
+                axes.annotate("", x1, x2, arrowprops=aprops)
 
     # add circles and labels
     for label, xi, yi in zip(classes.keys(), x, y):
-        ax.add_patch(patches.Circle((xi, yi), rad, color=hex2color(classes[label])))
-        ax.text(xi, yi, str(label), horizontalalignment='center', verticalalignment='center',
-                fontsize=14, )
+        axes.add_patch(patches.Circle((xi, yi), rad,
+                                      color=hex2color(classes[label])))
+        axes.text(xi, yi, str(label), horizontalalignment='center',
+                  verticalalignment='center', fontsize=14, )
 
-    ax.set_xlim((-1.5, 1.5))
-    ax.set_ylim((-1.5, 1.5))
-    ax.get_xaxis().set_visible(False)
-    ax.get_yaxis().set_visible(False)
-    return fig
+    axes.set_xlim((-1.5, 1.5))
+    axes.set_ylim((-1.5, 1.5))
+    axes.get_xaxis().set_visible(False)
+    axes.get_yaxis().set_visible(False)
+    return axes.get_figure()
