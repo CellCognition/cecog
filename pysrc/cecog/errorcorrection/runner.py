@@ -76,17 +76,15 @@ class PlateRunner(QtCore.QObject):
                 self.progressUpdate.emit(progress)
                 # self._imagecontainer.set_plate(plate)
                 runner = PositionRunner(plate, self._outdirs[plate],
-                                        self.params_ec, classdef)
+                                        self.params_ec, classdef, parent=self)
                 runner()
-                progress.progress  = i + 1
                 self.progressUpdate.emit(progress)
-
 
 class PositionRunner(QtCore.QObject):
 
     def __init__(self, plate, outdir, ecopts, classdef,
-                 positions=None, *args, **kw):
-        super(PositionRunner, self).__init__(*args, **kw)
+                 positions=None, parent=None, *args, **kw):
+        super(PositionRunner, self).__init__(parent, *args, **kw)
         self.ecopts = ecopts # error correction options
         self.plate = plate
         self._outdir = outdir
@@ -108,7 +106,6 @@ class PositionRunner(QtCore.QObject):
 
         -) <analyzed-dir>/analyzed (already exists)
         -) <analysis-dir>/hmm
-        -) <analysis-dir>/hmm/<channel-region>
         """
         assert isinstance(self._outdir, basestring)
         self._analyzed_dir = join(self._outdir, "analyzed")
@@ -121,30 +118,27 @@ class PositionRunner(QtCore.QObject):
                 raise OSError("Missing permissions to create dir\n(%s)" %odir)
             else:
                 setattr(self, "_%s_dir" %basename(odir.lower()).strip("_"), odir)
-        for channel, region in self.ecopts.regionnames.iteritems():
-            chdir = "%s-%s" %(channel, region)
-            self._channel_dirs[channel] = join(self._hmm_dir, chdir)
-            try:
-                makedirs(self._channel_dirs[channel])
-            except os.error:
-                raise OSError("Missing permissions to create dir\n(%s)"
-                              %self._channels_dir[channel])
 
     def _load_data(self, mappings, channel, classdef):
         # XXX perhaps the data table should also implement the import
         # --> having a data table for csv and cellh5...
         dtable = HmmDataTable()
-        for pos in self.positions:
+        for pi, pos in enumerate(self.positions):
             files = glob.glob(join(self._analyzed_dir, pos, 'statistics',
                                    'events')+os.sep+"*.txt")
 
-            for file_ in files:
+            progress = ProgressMsg(max=len(files),
+                                   meta="loading %s (%d/%d)" %(pos, pi+1, len(self.positions)))
+            for i, file_ in enumerate(files):
                 matched = re_events.match(basename(file_))
                 try:
                     ch = matched.group('channel')
                 except AttributeError:
                     pass
                 else:
+                    progress.text = basename(file_)
+                    progress.increment_progress()
+                    self.parent().progressUpdate.emit(progress)
                     if ch.lower() == channel:
                         data = np.recfromcsv(file_, delimiter="\t")
 
@@ -183,7 +177,12 @@ class PositionRunner(QtCore.QObject):
 
             # plotting and export
             report = HmmReport(data, self.ecopts, cld, self._hmm_dir)
-            report()
+
+            prefix = "%s_%s" %(channel.title(), self.ecopts.regionnames[channel])
+            sby = self.ecopts.sortby.replace(" ", "_")
+
+            report.overview(join(self._hmm_dir, '%s-%s.pdf' %(prefix, sby)))
+            report.bars_and_boxes(join(self._hmm_dir, '%s-%s_boxbars.pdf' %(prefix, sby)))
 
 
 if __name__ == "__main__":

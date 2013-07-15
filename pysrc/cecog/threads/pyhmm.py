@@ -11,6 +11,7 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
+from PyQt4.QtCore import Qt
 
 from cecog.threads.corethread import CoreThread
 from cecog.errorcorrection import PlateRunner
@@ -31,8 +32,8 @@ class PyHmmThread(CoreThread):
             outdirs.append(self._imagecontainer.get_path_out())
         # CAUTION params_ec is plate specific !!
         platerunner = PlateRunner(plates, outdirs, self.params_ec)
-        platerunner.progressUpdate.connect(self.update_status)
-        self.aborted.connect(platerunner.abort)
+        platerunner.progressUpdate.connect(self.update_status, Qt.QueuedConnection)
+        self.aborted.connect(platerunner.abort, Qt.QueuedConnection)
         try:
             platerunner()
         finally:
