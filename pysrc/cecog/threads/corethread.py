@@ -17,6 +17,8 @@ import traceback
 from PyQt4 import QtCore
 from cecog import ccore
 
+class StopProcessing(Exception):
+    pass
 
 class ProgressMsg(dict):
 
@@ -79,6 +81,8 @@ class CoreThread(QtCore.QThread):
 
         try:
             self._run()
+        except StopProcessing:
+            pass
         except Exception, e:
             msg = traceback.format_exc(e)
             traceback.print_exc(e)
@@ -121,6 +125,10 @@ class CoreThread(QtCore.QThread):
     @renderer.deleter
     def renderer(self):
         del self._renderer
+
+    def interruption_point(self):
+        if self._abort:
+            raise StopProcessing()
 
     def show_image(self, images, message, stime=0):
         self.image_ready.emit(images, message)

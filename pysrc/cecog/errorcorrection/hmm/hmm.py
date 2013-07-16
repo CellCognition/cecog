@@ -38,23 +38,24 @@ class HmmSklearn(object):
             if self.ecopts.constrain_graph:
                 cfile = self.ecopts.constrain_files[self.channel]
                 hmmc = estimator.HMMConstraint(cfile)
-                est.constrain(hmmc)
+            else:
+                hmmc = estimator.HMMSimpleLeft2RightConstraint(est.nstates)
+            est.constrain(hmmc)
 
-                # ugly sklearn
-                hmm_ = hmm.MultinomialHMM(n_components=est.nstates)
-                hmm_._set_startprob(est.startprob)
-                hmm_._set_transmat(est.trans)
-                hmm_._set_emissionprob(est.emis)
+            # ugly sklearn
+            hmm_ = hmm.MultinomialHMM(n_components=est.nstates)
+            hmm_._set_startprob(est.startprob)
+            hmm_._set_transmat(est.trans)
+            hmm_._set_emissionprob(est.emis)
 
-                # trackwise error correction
-                tracks2 = []
-                for track in self.classdef.label2index(tracks):
-                    tracks2.append(hmm_.predict(track))
-                tracks2 = self.classdef.index2labels(np.array(tracks2, dtype=int))
+            # trackwise error correction
+            tracks2 = []
+            for track in self.classdef.label2index(tracks):
+                tracks2.append(hmm_.predict(track))
+            tracks2 = self.classdef.index2labels(np.array(tracks2, dtype=int))
 
-                bucket = HmmBucket(tracks, tracks2,
-                                   est.startprob, est.emis, est.trans,
-                                   self.dtable.groups(self.ecopts.sortby, name),
-                                   tracks.shape[0], self.ecopts.timelapse)
-                hmmdata[name] = bucket
+            bucket = HmmBucket(tracks, tracks2, est.startprob, est.emis, est.trans,
+                               self.dtable.groups(self.ecopts.sortby, name),
+                               tracks.shape[0], self.ecopts.timelapse)
+            hmmdata[name] = bucket
         return hmmdata

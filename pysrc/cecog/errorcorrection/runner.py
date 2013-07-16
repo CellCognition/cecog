@@ -19,6 +19,7 @@ import numpy as np
 
 from os.path import join, isfile, isdir, basename
 from PyQt4 import QtCore
+from PyQt4.QtCore import QThread
 
 from cecog.util.util import makedirs
 from cecog.export.regexp import re_events
@@ -56,8 +57,12 @@ class PlateRunner(QtCore.QObject):
                                filename='class_definition.txt'):
         class_definitions = dict()
         for channel, clfdir in classifier_directories.iteritems():
-            class_definitions[channel] = ClassDefinition(join(clfdir, filename))
-            class_definitions[channel].load()
+            try:
+                class_definitions[channel] = ClassDefinition(join(clfdir, filename))
+                class_definitions[channel].load()
+            except Exception as e:
+                raise IOError("could not load class definition for channel '%s'" %(channel))
+
         return class_definitions
 
     def __call__(self):
@@ -68,17 +73,14 @@ class PlateRunner(QtCore.QObject):
         classdef = self.load_class_definitions(self.params_ec.classifier_dirs)
 
         for i, plate in enumerate(self.plates):
-            if self._is_aborted:
-                break
-            else:
-                progress.text = "Plate: '%s' (%d / %d)" \
-                    %(plate, i+1, len(self.plates))
-                self.progressUpdate.emit(progress)
-                # self._imagecontainer.set_plate(plate)
-                runner = PositionRunner(plate, self._outdirs[plate],
-                                        self.params_ec, classdef, parent=self)
-                runner()
-                self.progressUpdate.emit(progress)
+            QThread.currentThread().interruption_point()
+            progress.text = "Plate: '%s' (%d / %d)" %(plate, i+1, len(self.plates))
+            self.progressUpdate.emit(progress)
+            # self._imagecontainer.set_plate(plate)
+            runner = PositionRunner(plate, self._outdirs[plate],
+                                    self.params_ec, classdef, parent=self)
+            runner()
+            self.progressUpdate.emit(progress)
 
 class PositionRunner(QtCore.QObject):
 
@@ -130,14 +132,18 @@ class PositionRunner(QtCore.QObject):
             progress = ProgressMsg(max=len(files),
                                    meta="loading %s (%d/%d)" %(pos, pi+1, len(self.positions)))
             for i, file_ in enumerate(files):
+                QThread.currentThread().interruption_point()
                 matched = re_events.match(basename(file_))
                 try:
                     ch = matched.group('channel')
+                    branch = matched.group('branch')
                 except AttributeError:
                     pass
                 else:
-                    progress.text = basename(file_)
                     progress.increment_progress()
+                    if self.ecopts.ignore_tracking_branches and branch == '01':
+                        continue
+                    progress.text = basename(file_)
                     self.parent().progressUpdate.emit(progress)
                     if ch.lower() == channel:
                         data = np.recfromcsv(file_, delimiter="\t")
@@ -170,7 +176,12 @@ class PositionRunner(QtCore.QObject):
             mappings.read(mpfile)
 
         for channel, cld in self.classdef.iteritems():
+            QThread.currentThread().interruption_point()
             dtable = self._load_data(mappings, channel, cld)
+
+            self.parent().progressUpdate.emit( \
+                ProgressMsg(meta="performing errorcorrection on %s channel" %channel))
+
             # error correction
             hmm = Hmm(dtable, channel, cld, self.ecopts)
             data = hmm()
@@ -181,7 +192,7 @@ class PositionRunner(QtCore.QObject):
             prefix = "%s_%s" %(channel.title(), self.ecopts.regionnames[channel])
             sby = self.ecopts.sortby.replace(" ", "_")
 
-            report.overview(join(self._hmm_dir, '%s-%s.pdf' %(prefix, sby)))
+            report.overview(join(self._hmm_dir, '%s-%s_.pdf' %(prefix, sby)))
             report.bars_and_boxes(join(self._hmm_dir, '%s-%s_boxbars.pdf' %(prefix, sby)))
 
 

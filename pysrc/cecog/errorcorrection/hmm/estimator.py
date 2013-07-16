@@ -22,6 +22,25 @@ import lxml._elementpath
 from cecog.tc3 import normalize
 
 
+class HMMSimpleLeft2RightConstraint(object):
+    """"Simplest constraint on an Hidden Markov Models
+    1) number of emission is equal to the number of states
+    2) equal start probabilities
+    3) simple left 2 right Models
+    """
+
+    def __init__(self, nstates):
+        self.trans = np.eye(nstates)
+        for i in xrange(nstates):
+            try:
+                self.trans[i, i+1] = 1
+            except IndexError:
+                self.trans[i, 0] = 1
+
+        self.emis= np.eye(nstates)
+        self.start = np.ones(nstates, dtype=float)/nstates
+
+
 class HMMConstraint(object):
 
     def __init__(self, filename):
@@ -39,15 +58,6 @@ class HMMConstraint(object):
                                       sep=" ")
             self.emis.shape = self.nstates, self.nsymbols
             self.emis += float(xml.emissionMatrix.attrib['epsilon'])
-
-            # FIXME, try to not use this option for error correction
-            h2s0 = np.fromstring(str(xml.hiddenNode2ClassificationNode.current),
-                                 dtype=int, sep=' ')
-            h2s1 = np.fromstring(str(xml.hiddenNode2ClassificationNode.next),
-                                 dtype=int, sep=' ')
-
-            self.hidden2state = h2s1[np.argsort(h2s0)]
-
 
 class HMMEstimator(object):
     """Setup a (naive) default hidden markov (left-to-right model)
