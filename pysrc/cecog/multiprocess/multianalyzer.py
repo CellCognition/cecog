@@ -12,7 +12,6 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-import os
 import copy
 import logging
 import traceback
@@ -34,6 +33,10 @@ from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.multiprocess import mplogging as lg
 from cecog.environment import CecogEnvironment
 
+
+class MultiProcessingError(Exception):
+    pass
+
 # see http://stackoverflow.com/questions/3288595/
 # multiprocessing-using-pool-map-on-a-function-defined-in-a-class
 def core_helper(plate_id, settings_str, imagecontainer, position,
@@ -54,12 +57,6 @@ def core_helper(plate_id, settings_str, imagecontainer, position,
         traceback.print_exc()
         raise
     return plate_id, position, copy.deepcopy(result['post_hdf5_link_list'])
-
-class MultiProcessingError(Exception):
-    def __init__(self, exceptions):
-        self.msg = ('%s-----------%sError in job item:%s' \
-                        %(os.linesep, os.linesep, os.linesep)).join(
-            [str(e) for e in exceptions])
 
 # XXX perhaps a QObject
 class ProcessCallback(object):
@@ -167,9 +164,11 @@ class MultiProcessingMixin(object):
                     plate, pos, hdf_files = r.get()
                     if len(hdf_files) > 0:
                         self.post_hdf5_link_list.append(hdf_files)
+
             if len(exceptions) > 0:
-                error = MultiProcessingError(exceptions)
-                raise error
+                sep = 79*'-'+'\n'
+                msg = sep.join([traceback.format_exc(e) for e in exceptions])
+                raise MultiProcessingError(msg)
         self.finish()
 
     @property
