@@ -72,8 +72,8 @@ class CoreThread(QtCore.QThread):
         except:
             pass
 
-    def run(self, *args, **kw):
-        # turn off tiff warings per thread
+    def run(self):
+        # turn off vigra tiff warnings
         if not __debug__:
             ccore.turn_off()
             self._enable_eclipse_mt_debugging()
@@ -81,19 +81,14 @@ class CoreThread(QtCore.QThread):
         try:
             self._run()
         except Exception, e:
-            # XXX
-            if hasattr(e, 'msg'):
-                # MultiprocessingError
-                msg = e.msg
-            else:
-                msg = traceback.format_exc()
-            traceback.print_exc()
+            msg = traceback.format_exc(e)
+            traceback.print_exc(e)
 
             logger = logging.getLogger()
             logger.error(msg)
             self.analyzer_error.emit(msg)
             # can cause a sefault on macosx
-            raise
+            # raise
 
     def abort(self, wait=False):
         self._mutex.lock()
