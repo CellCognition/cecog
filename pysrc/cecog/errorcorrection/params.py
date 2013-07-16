@@ -27,7 +27,7 @@ class ECParams(object):
                  'position_labels', 'mapping_dir',
                  'sortby', 'skip_plates', 'timeunit', 'overwrite_timelapse', 'timelapse',
                  'sorting', 'sorting_sequence', 'tmax',
-                 'tracking_branches', 'write_gallery', 'n_galleries']
+                 'ignore_tracking_branches', 'write_gallery', 'n_galleries']
 
     def __init__(self, settings, tstep, timeunit):
 
@@ -77,7 +77,7 @@ class ECParams(object):
         self.sorting_sequence = \
             eval('('+settings('ErrorCorrection', 'sorting_sequence')+',)')
         self.tmax = settings('ErrorCorrection', 'max_time')
-        self.tracking_branches = settings('ErrorCorrection', 'ignore_tracking_branches')
+        self.ignore_tracking_branches = settings('ErrorCorrection', 'ignore_tracking_branches')
         self.write_gallery = settings('ErrorCorrection', 'compose_galleries')
         self.n_galleries = settings('ErrorCorrection', 'compose_galleries_sample')
 
