@@ -141,7 +141,7 @@ class PositionRunner(QtCore.QObject):
                     pass
                 else:
                     progress.increment_progress()
-                    if self.ecopts.ignore_tracking_branches and branch == '01':
+                    if self.ecopts.ignore_tracking_branches and branch != '01':
                         continue
                     progress.text = basename(file_)
                     self.parent().progressUpdate.emit(progress)
