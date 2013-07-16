@@ -72,7 +72,7 @@ class SectionErrorcorrection(SectionCore):
          FloatTrait(1, 0, 2000, digits=2,
                     label='Time-lapse [min]')),
         ('max_time',
-         FloatTrait(100, 1, 2000, digits=2,
+         FloatTrait(-1, -1, 2000, digits=2,
                     label='Max. time in plot [min]')),
         ('ignore_tracking_branches',
          BooleanTrait(False, label='Ignore tracking branches')),
