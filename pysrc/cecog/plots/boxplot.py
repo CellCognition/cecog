@@ -19,12 +19,11 @@ __all__ = ["dwell_boxplot", "dwell_boxplot2", "barplot", "barplot2"]
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.patches import Polygon
-from matplotlib.colors import Colormap
 from cecog.colors import DCMAP
 
 def dwell_boxplot(data, title=None, xlabel='class label',
                   ylabel='dwell time (frames)', exclude_labels=None,
-                  cmap=DCMAP, ymax=None, axes=None):
+                  cmap=DCMAP, ymax=-1, axes=None):
 
     # remove keys only in this scope
     data = data.copy()
@@ -49,7 +48,7 @@ def dwell_boxplot(data, title=None, xlabel='class label',
 
     yr = np.array(axes.get_ylim())
     yr = yr+np.array((-1, 1))*0.05*yr.ptp()
-    if ymax is not None and ymax < yr[1]:
+    if ymax != -1:
         yr[1] = ymax
     axes.set_ylim(yr)
     axes.set_xticklabels([str(k) for k in data.keys()], rotation=45)
@@ -71,7 +70,7 @@ def dwell_boxplot(data, title=None, xlabel='class label',
         median = "%.2f" %np.median(data[label])
         top = axes.get_ylim()[1]
         axes.text(pos[label], top-(top*0.05), median,
-                  horizontalalignment='center', size='medium',
+                  horizontalalignment='center', size='small',
                   color=color)
     return axes.get_figure()
 
@@ -116,7 +115,7 @@ def dwell_boxplot2(data, title=None, xlabel='', ylabel='dwell time (frames)',
         median = "%.2f" %np.median(data[label])
         top = axes.get_ylim()[1]
         axes.text(pos[label], top-(top*0.05), median,
-                  horizontalalignment='center', size='medium',
+                  horizontalalignment='center', size='small',
                   color=color)
     return axes.get_figure()
 
@@ -149,7 +148,7 @@ def barplot(data, title=None, xlabel='class label', ylabel='dwell time (frames)'
 
     yr = np.array(axes.get_ylim())
     yr = yr+np.array((-1, 1))*0.05*yr.ptp()
-    if ymax is not None and ymax < yr[1]:
+    if ymax != -1:
         yr[1] = ymax
     axes.set_ylim(yr)
     axes.set_xticks(ind)
@@ -162,7 +161,7 @@ def barplot(data, title=None, xlabel='class label', ylabel='dwell time (frames)'
         average = "%.2f" %np.average(v)
         top = axes.get_ylim()[1]
         axes.text(pos[k], top-(top*0.05), average,
-                  horizontalalignment='center', size='medium',
+                  horizontalalignment='center', size='small',
                   color=cmap(k))
     return axes.get_figure()
 
@@ -176,9 +175,7 @@ def barplot2(data, title=None, xlabel='class label', ylabel='dwell time (frames)
 
     axes.set_xlabel(xlabel)
     axes.set_ylabel(ylabel)
-
-    if title is not None:
-        axes.set_title(title)
+    axes.set_title(title)
 
     values = [np.average(v) for v in data.values()]
     colors = len(data)*[color]
@@ -201,6 +198,6 @@ def barplot2(data, title=None, xlabel='class label', ylabel='dwell time (frames)
         average = "%.2f" %np.average(v)
         top = axes.get_ylim()[1]
         axes.text(pos[k], top-(top*0.05), average,
-                  horizontalalignment='center', size='medium',
+                  horizontalalignment='center', size='small',
                   color=color)
     return axes.get_figure()

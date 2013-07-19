@@ -17,8 +17,7 @@ __all__ = ['trajectories_dict', 'trajectories', 'sort_tracks']
 
 
 import numpy as np
-import pylab as pl
-from matplotlib import mpl
+from matplotlib import pyplot as pl
 from cecog.colors import DCMAP
 
 def sort_tracks(label_matrix, labels, reverse=False):
@@ -75,7 +74,6 @@ def trajectories(tracks, labels=None, reverse=False, title=None,
         tracks = sort_tracks(tracks, labels, reverse)
 
     axes.matshow(tracks, cmap=cmap, norm=norm)
-
     if title is not None:
         axes.set_title(title)
 

@@ -87,8 +87,8 @@ def hmm_network(transmat, classes, rad=0.15, title='hmm network', axes=None):
         axes.text(xi, yi, str(label), horizontalalignment='center',
                   verticalalignment='center', fontsize=14, )
 
-    axes.set_xlim((-1.5, 1.5))
-    axes.set_ylim((-1.5, 1.5))
+    axes.set_xlim((-2, 2))
+    axes.set_ylim((-2, 2))
     axes.get_xaxis().set_visible(False)
     axes.get_yaxis().set_visible(False)
     return axes.get_figure()

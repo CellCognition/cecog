@@ -112,7 +112,7 @@ class PositionRunner(QtCore.QObject):
         assert isinstance(self._outdir, basestring)
         self._analyzed_dir = join(self._outdir, "analyzed")
 
-        odirs = (join(self._outdir, "hmm"),)
+        odirs = (join(self._outdir, "hmm"), )
         for odir in odirs:
             try:
                 makedirs(odir)
@@ -120,6 +120,13 @@ class PositionRunner(QtCore.QObject):
                 raise OSError("Missing permissions to create dir\n(%s)" %odir)
             else:
                 setattr(self, "_%s_dir" %basename(odir.lower()).strip("_"), odir)
+
+    def _gallery_image(self, pos, groupdict, channel, ext='jpg'):
+        fname = ("P%(position)s__T%(time)s__O%(object)s__B%(branch)s."
+                 "%(ext)s" %dict({'ext': ext}.items() + groupdict.items()))
+        fname = join(self._analyzed_dir, pos, 'gallery', channel, fname)
+        if isfile:
+            return fname
 
     def _load_data(self, mappings, channel, classdef):
         # XXX perhaps the data table should also implement the import
@@ -141,7 +148,7 @@ class PositionRunner(QtCore.QObject):
                     pass
                 else:
                     progress.increment_progress()
-                    if self.ecopts.ignore_tracking_branches and branch == '01':
+                    if self.ecopts.ignore_tracking_branches and branch != '01':
                         continue
                     progress.text = basename(file_)
                     self.parent().progressUpdate.emit(progress)
@@ -165,7 +172,10 @@ class PositionRunner(QtCore.QObject):
 
                             probs.append(np.array([float(p.split(':')[1]) for p in pstr]))
                         probs = np.array(probs)
-                        dtable.add_track(labels, probs, pos, mappings[pos])
+
+                gfile = self._gallery_image(pos, matched.groupdict(), channel)
+                dtable.add_track(labels, probs, pos, mappings[pos], gfile)
+
         return dtable
 
     def __call__(self):
@@ -192,8 +202,12 @@ class PositionRunner(QtCore.QObject):
             prefix = "%s_%s" %(channel.title(), self.ecopts.regionnames[channel])
             sby = self.ecopts.sortby.replace(" ", "_")
 
-            report.overview(join(self._hmm_dir, '%s-%s_.pdf' %(prefix, sby)))
+            report.overview(join(self._hmm_dir, '%s-%s.pdf' %(prefix, sby)))
             report.bars_and_boxes(join(self._hmm_dir, '%s-%s_boxbars.pdf' %(prefix, sby)))
+
+            if self.ecopts.write_gallery:
+                report.image_gallery(join(self._hmm_dir, '%s-%s_gallery.pdf' %(prefix, sby)),
+                                     self.ecopts.n_galleries)
 
 
 if __name__ == "__main__":
