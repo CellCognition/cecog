@@ -25,14 +25,16 @@ class HmmDataTable(object):
         super(HmmDataTable, self).__init__(*args, **kw)
         self._probs = None
         self._tracks = None
+        self._gallery_files = None
         self._pos = dict()
 
-    def add_track(self, track, prob, pos, mapping):
+    def add_track(self, track, prob, pos, mapping, gallery_file):
         if self._probs is None and self._tracks is None:
             self._tracks = np.empty(track.shape, dtype=int)[np.newaxis, :]
             self._tracks[0, :] = track[:]
             self._probs = np.empty(prob.shape)[np.newaxis, :, :]
             self._probs[0, :, :] = prob[:, :]
+            self._gallery_files = np.array([gallery_file])
 
             self._pos[pm.POSITION] = np.array([pos])
             try:
@@ -46,7 +48,7 @@ class HmmDataTable(object):
             assert prob.shape == self._probs.shape[1:]
             self._tracks = np.vstack((self._tracks, track[np.newaxis, ::]))
             self._probs = np.vstack((self._probs, prob[np.newaxis,::]))
-
+            self._gallery_files = np.concatenate((self._gallery_files, [gallery_file]))
             self._pos[pm.POSITION] = np.concatenate((self._pos[pm.POSITION], np.array([pos])))
             try:
                 for k, v in mapping.iteritems():
@@ -81,7 +83,7 @@ class HmmDataTable(object):
 
         for k in np.unique(self._pos[key]):
             i = (k == self._pos[key])
-            yield k, self._tracks[i], self._probs[i]
+            yield k, self._tracks[i], self._probs[i], self._gallery_files[i]
 
     def iterpos(self):
         return self.iterby(pm.POSITION)

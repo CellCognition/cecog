@@ -33,7 +33,7 @@ class HmmSklearn(object):
         np.set_printoptions(precision=2, linewidth=100)
         hmmdata = dict()
 
-        for (name, tracks, probs) in self.dtable.iterby(self.ecopts.sortby):
+        for (name, tracks, probs, finfo) in self.dtable.iterby(self.ecopts.sortby):
             est = estimator.HMMProbBasedEsitmator(probs)
             if self.ecopts.constrain_graph:
                 cfile = self.ecopts.constrain_files[self.channel]
@@ -56,6 +56,6 @@ class HmmSklearn(object):
 
             bucket = HmmBucket(tracks, tracks2, est.startprob, est.emis, est.trans,
                                self.dtable.groups(self.ecopts.sortby, name),
-                               tracks.shape[0], self.ecopts.timelapse)
+                               tracks.shape[0], self.ecopts.timelapse, finfo)
             hmmdata[name] = bucket
         return hmmdata

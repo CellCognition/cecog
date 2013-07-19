@@ -592,7 +592,7 @@ class PositionAnalyzer(PositionCore):
         for ch_name in self.processing_channels:
             cutter_in = join(self._images_dir, ch_name)
             if isdir(cutter_in):
-                cutter_out = join(self._gallery_dir, ch_name)
+                cutter_out = join(self._gallery_dir, ch_name.lower())
                 self.logger.info("running Cutter for '%s'..." %ch_name)
                 image_size = \
                     self.settings.get('Output', 'events_gallery_image_size')

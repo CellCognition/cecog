@@ -23,7 +23,6 @@ from cecog.colors import Colors
 from cecog.util.util import makedirs
 
 
-
 class GalleryRGBImage(np.ndarray):
 
     def __new__(cls, shape, nsub=1, *args, **kw):
