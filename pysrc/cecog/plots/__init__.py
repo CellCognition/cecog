@@ -13,3 +13,4 @@ __url__ = 'www.cellcognition.org'
 from boxplot import *
 from trajectories import *
 from hmmnetwork import *
+from trjgallery import *

@@ -70,7 +70,7 @@ def dwell_boxplot(data, title=None, xlabel='class label',
         median = "%.2f" %np.median(data[label])
         top = axes.get_ylim()[1]
         axes.text(pos[label], top-(top*0.05), median,
-                  horizontalalignment='center', size='medium',
+                  horizontalalignment='center', size='small',
                   color=color)
     return axes.get_figure()
 
@@ -115,7 +115,7 @@ def dwell_boxplot2(data, title=None, xlabel='', ylabel='dwell time (frames)',
         median = "%.2f" %np.median(data[label])
         top = axes.get_ylim()[1]
         axes.text(pos[label], top-(top*0.05), median,
-                  horizontalalignment='center', size='medium',
+                  horizontalalignment='center', size='small',
                   color=color)
     return axes.get_figure()
 
@@ -161,7 +161,7 @@ def barplot(data, title=None, xlabel='class label', ylabel='dwell time (frames)'
         average = "%.2f" %np.average(v)
         top = axes.get_ylim()[1]
         axes.text(pos[k], top-(top*0.05), average,
-                  horizontalalignment='center', size='medium',
+                  horizontalalignment='center', size='small',
                   color=cmap(k))
     return axes.get_figure()
 
@@ -175,9 +175,7 @@ def barplot2(data, title=None, xlabel='class label', ylabel='dwell time (frames)
 
     axes.set_xlabel(xlabel)
     axes.set_ylabel(ylabel)
-
-    if title is not None:
-        axes.set_title(title)
+    axes.set_title(title)
 
     values = [np.average(v) for v in data.values()]
     colors = len(data)*[color]
@@ -200,6 +198,6 @@ def barplot2(data, title=None, xlabel='class label', ylabel='dwell time (frames)
         average = "%.2f" %np.average(v)
         top = axes.get_ylim()[1]
         axes.text(pos[k], top-(top*0.05), average,
-                  horizontalalignment='center', size='medium',
+                  horizontalalignment='center', size='small',
                   color=color)
     return axes.get_figure()
