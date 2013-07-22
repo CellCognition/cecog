@@ -214,7 +214,8 @@ class HmmReport(object):
                 for file_, track in data.iter_gallery(n_galleries):
                     tracks.append(track)
                     try:
-                        image = np.vstack((image, np.mean(plt.imread(file_), axis=2)))
+                        image = np.vstack((image, np.mean(plt.imread(file_),
+                                                          axis=2)))
                     except ValueError:
                         image = np.mean(plt.imread(file_), axis=2)
 
@@ -225,8 +226,13 @@ class HmmReport(object):
                         image = np.array([])
                         tracks = list()
 
-                fig = self._trj_figure(image, tracks, (6, 6), name)
+                if len(tracks) > 0:
+                    fig = self._trj_figure(image, tracks, (6, 6), name)
+
+                else:
+                    fig = plt.figure()
                 pdf.savefig(fig, dpi=200)
+
         finally:
             pdf.close()
 
