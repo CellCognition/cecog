@@ -111,6 +111,8 @@ class HmmReport(object):
                                               figsize=figsize)
                     fig.subplots_adjust(**sp_props)
 
+                    title = '%s, %s, (%d tracks)' %(name, data.groups[PlateMapping.GENE],
+                        %(name, data.groups[PlateMapping.GENE],
                 title = '%s, (%d tracks)' %(name, data.ntracks)
 
                 # hmm network
