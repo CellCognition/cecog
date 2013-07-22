@@ -178,6 +178,12 @@ class PositionRunner(QtCore.QObject):
 
         return dtable
 
+    def interruption_point(self, message=None):
+        if message is not None:
+            prgs = ProgressMsg(meta=message)
+        self.parent().progressUpdate.emit(prgs)
+        QThread.currentThread().interruption_point()
+
     def __call__(self):
         self._makedirs()
         mappings = PlateMapping(self.positions)
@@ -185,12 +191,11 @@ class PositionRunner(QtCore.QObject):
             mpfile = join(self.ecopts.mapping_dir, "%s.txt" %self.plate)
             mappings.read(mpfile)
 
-        for channel, cld in self.classdef.iteritems():
-            QThread.currentThread().interruption_point()
-            dtable = self._load_data(mappings, channel, cld)
 
-            self.parent().progressUpdate.emit( \
-                ProgressMsg(meta="performing errorcorrection on %s channel" %channel))
+        for channel, cld in self.classdef.iteritems():
+            dtable = self._load_data(mappings, channel, cld)
+            msg = 'performing error correction on channel %s' %channel
+            self.interruption_point(msg)
 
             # error correction
             hmm = Hmm(dtable, channel, cld, self.ecopts)
@@ -202,11 +207,17 @@ class PositionRunner(QtCore.QObject):
             prefix = "%s_%s" %(channel.title(), self.ecopts.regionnames[channel])
             sby = self.ecopts.sortby.replace(" ", "_")
 
+            self.interruption_point("plotting overview")
             report.overview(join(self._hmm_dir, '%s-%s.pdf' %(prefix, sby)))
-            report.bars_and_boxes(join(self._hmm_dir, '%s-%s_boxbars.pdf' %(prefix, sby)))
+
+            self.interruption_point("plotting bar- and boxplots")
+            report.bars_and_boxes(join(self._hmm_dir, '%s-%s_boxbars.pdf'
+                                       %(prefix, sby)))
 
             if self.ecopts.write_gallery:
-                report.image_gallery(join(self._hmm_dir, '%s-%s_gallery.pdf' %(prefix, sby)),
+                self.interruption_point("plotting image gallery")
+                report.image_gallery(join(self._hmm_dir, '%s-%s_gallery.pdf'
+                                          %(prefix, sby)),
                                      self.ecopts.n_galleries)
 
 

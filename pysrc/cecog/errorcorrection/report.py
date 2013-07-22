@@ -51,7 +51,8 @@ class HmmBucket(object):
             np.random.shuffle(idx)
             idx = idx[:n]
 
-        for track, gallery_file in zip(self.hmm_labels[idx], self.gallery_files[idx]):
+        for track, gallery_file in zip(self.hmm_labels[idx],
+                                       self.gallery_files[idx]):
             yield gallery_file, track
 
     @property
@@ -96,7 +97,8 @@ class HmmReport(object):
 
     def overview(self, filename, figsize=(25, 20)):
         pdf = PdfPages(filename)
-        sp_props = dict(top=0.95, bottom=0.05, hspace=0.2, wspace=0.2, left=0.03, right=0.97)
+        sp_props = dict(top=0.95, bottom=0.05, hspace=0.2, wspace=0.2,
+                        left=0.03, right=0.97)
         try:
             nrows, ncols =  5, len(self.data)
             fig, axarr = plt.subplots(nrows=5, ncols=6, figsize=figsize)
@@ -105,10 +107,12 @@ class HmmReport(object):
                 i = j%6
                 if not i and j:
                     pdf.savefig(fig)
-                    fig, axarr = plt.subplots(nrows=5, ncols=6, dpi=300, figsize=figsize)
+                    fig, axarr = plt.subplots(nrows=5, ncols=6, dpi=300,
+                                              figsize=figsize)
                     fig.subplots_adjust(**sp_props)
                 try:
-                    title = '%s, %s, (%d tracks)' %(name, data.groups[PlateMapping.GENE],
+                    title = '%s, %s, (%d tracks)' \
+                        %(name, data.groups[PlateMapping.GENE],
                                                     data.ntracks)
                 except KeyError: # if not plate mapping is present
                     title = '%s, (%d tracks)' %(name, data.ntracks)
@@ -116,7 +120,8 @@ class HmmReport(object):
                 # hmm network
                 clcol = dict([(k, self.classdef.hexcolors[v])
                               for k, v in self.classdef.class_names.iteritems()])
-                plots.hmm_network(data.transmat, clcol, title=title, axes=axarr[0][i])
+                plots.hmm_network(data.transmat, clcol, title=title,
+                                  axes=axarr[0][i])
 
                 # trajectories
                 plots.trajectories(data.labels,
@@ -135,7 +140,9 @@ class HmmReport(object):
                 ylabel = "dwell time (%s)" %self.ecopts.timeunit
                 xlabel = "class labels"
 
-                plots.dwell_boxplot(data.dwell_times, ylabel=ylabel, xlabel=xlabel,
+                plots.dwell_boxplot(data.dwell_times,
+                                    ylabel=ylabel,
+                                    xlabel=xlabel,
                                     cmap=self.classdef.colormap,
                                     ymax=self.ecopts.tmax,
                                     axes=axarr[3][i])
@@ -154,7 +161,8 @@ class HmmReport(object):
         boxes = []
 
         for label in self.classdef.class_names.keys():
-            dwell_times = OrderedDict([(k, np.array([])) for k in sorted(self.data.keys())])
+            dwell_times = OrderedDict([(k, np.array([]))
+                                       for k in sorted(self.data.keys())])
             for name, data in self.data.iteritems():
                 try:
                     dwell_times[name] = np.concatenate((dwell_times[name],
@@ -171,7 +179,8 @@ class HmmReport(object):
             else:
                 fsize = (8, 6)
 
-            sp_props = dict(bottom=0.2, top=0.9, left=0.1*8/(len(dwell_times)*0.8),
+            sp_props = dict(bottom=0.2, top=0.9,
+                            left=0.1*8/(len(dwell_times)*0.8),
                             right=1-0.1*8/len(dwell_times))
 
             fig = plt.figure(figsize=fsize)
