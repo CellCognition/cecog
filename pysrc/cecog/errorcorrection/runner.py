@@ -173,8 +173,8 @@ class PositionRunner(QtCore.QObject):
                             probs.append(np.array([float(p.split(':')[1]) for p in pstr]))
                         probs = np.array(probs)
 
-                gfile = self._gallery_image(pos, matched.groupdict(), channel)
-                dtable.add_track(labels, probs, pos, mappings[pos], gfile)
+                        gfile = self._gallery_image(pos, matched.groupdict(), channel)
+                        dtable.add_track(labels, probs, pos, mappings[pos], gfile)
 
         return dtable
 
@@ -203,7 +203,6 @@ class PositionRunner(QtCore.QObject):
 
             # plotting and export
             report = HmmReport(data, self.ecopts, cld, self._hmm_dir)
-
             prefix = "%s_%s" %(channel.title(), self.ecopts.regionnames[channel])
             sby = self.ecopts.sortby.replace(" ", "_")
 

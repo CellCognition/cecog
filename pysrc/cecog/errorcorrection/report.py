@@ -110,12 +110,8 @@ class HmmReport(object):
                     fig, axarr = plt.subplots(nrows=5, ncols=6, dpi=300,
                                               figsize=figsize)
                     fig.subplots_adjust(**sp_props)
-                try:
-                    title = '%s, %s, (%d tracks)' \
-                        %(name, data.groups[PlateMapping.GENE],
-                                                    data.ntracks)
-                except KeyError: # if not plate mapping is present
-                    title = '%s, (%d tracks)' %(name, data.ntracks)
+
+                title = '%s, (%d tracks)' %(name, data.ntracks)
 
                 # hmm network
                 clcol = dict([(k, self.classdef.hexcolors[v])
@@ -218,7 +214,8 @@ class HmmReport(object):
                 for file_, track in data.iter_gallery(n_galleries):
                     tracks.append(track)
                     try:
-                        image = np.vstack((image, np.mean(plt.imread(file_), axis=2)))
+                        image = np.vstack((image, np.mean(plt.imread(file_),
+                                                          axis=2)))
                     except ValueError:
                         image = np.mean(plt.imread(file_), axis=2)
 
@@ -229,13 +226,18 @@ class HmmReport(object):
                         image = np.array([])
                         tracks = list()
 
-                fig = self._trj_figure(image, tracks, (6, 6), name)
-                pdf.savefig(fig)
+                if len(tracks) > 0:
+                    fig = self._trj_figure(image, tracks, (6, 6), name)
+
+                else:
+                    fig = plt.figure()
+                pdf.savefig(fig, dpi=200)
+
         finally:
             pdf.close()
 
     def _trj_figure(self, image, tracks, size, name):
-        fig = plt.figure(dpi=300, figsize=size)
+        fig = plt.figure(dpi=200, figsize=size)
         axes = fig.add_subplot(111, frameon=False)
         plots.trj_gallery(image, np.array(tracks),
                           title=name, cmap=self.classdef.colormap, axes=axes,
