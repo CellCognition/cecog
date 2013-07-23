@@ -28,8 +28,8 @@ class TC3Exporter(object):
     label matrices as csv files and box plots.
     """
 
-    def __init__(self, data, outputdir, nclusters, stepwidth=1.0, timeunit='frames',
-                 position=''):
+    def __init__(self, data, outputdir, nclusters,
+                 stepwidth=1.0, timeunit='frames', position=''):
         assert isinstance(data, dict)
         self._nclusters = nclusters
         self._data = data
@@ -88,7 +88,8 @@ class TC3Exporter(object):
 
                 delchars = NameValidator.defaultdeletechars.copy()
                 delchars.remove('-')
-                validator = NameValidator(case_sensitive='lower', deletechars=delchars)
+                validator = NameValidator(case_sensitive='lower',
+                                          deletechars=delchars)
                 fname = validator.validate(title)[0]+'.csv'
                 np.savetxt(join(self._odir, fname), tracks, fmt='%d',
                            delimiter=',')

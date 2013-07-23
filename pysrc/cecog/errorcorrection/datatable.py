@@ -2,7 +2,6 @@
 datatable.py
 
 Custumized data table for hmm error correction.
-
 """
 
 __author__ = 'rudolf.hoefler@gmail.com'
@@ -48,8 +47,10 @@ class HmmDataTable(object):
             assert prob.shape == self._probs.shape[1:]
             self._tracks = np.vstack((self._tracks, track[np.newaxis, ::]))
             self._probs = np.vstack((self._probs, prob[np.newaxis,::]))
-            self._gallery_files = np.concatenate((self._gallery_files, [gallery_file]))
-            self._pos[pm.POSITION] = np.concatenate((self._pos[pm.POSITION], np.array([pos])))
+            self._gallery_files = np.concatenate( \
+                (self._gallery_files, [gallery_file]))
+            self._pos[pm.POSITION] = np.concatenate( \
+                (self._pos[pm.POSITION], np.array([pos])))
             try:
                 for k, v in mapping.iteritems():
                     self._pos[k] = np.concatenate((self._pos[k], np.array([v])))
@@ -72,10 +73,6 @@ class HmmDataTable(object):
             grps[k] = v[self._pos[key] == name][0]
         return grps
 
-    def ntracks_of_group(self, key):
-        """Number of tracks for a given key (position, gene, ...)"""
-        return len(np.unique(self._pos[key]))
-
     def iterby(self, key):
 
         if not self._pos.has_key(key):
@@ -84,12 +81,3 @@ class HmmDataTable(object):
         for k in np.unique(self._pos[key]):
             i = (k == self._pos[key])
             yield k, self._tracks[i], self._probs[i], self._gallery_files[i]
-
-    def iterpos(self):
-        return self.iterby(pm.POSITION)
-
-    def iteroligo(self):
-        return self.iterby(pm.OLIGO)
-
-    def itergene(self):
-        return self.iterby(pm.GENE)

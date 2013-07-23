@@ -113,17 +113,6 @@ class EventSelectionCore(LoggerObject):
         # ie. graph.out_degree!!!!
         return [i for i, n in enumerate(nodes) if isinstance(n, list)]
 
-    # def track_data(self):
-    #     features = list()
-    #     for tracks in self.visitor_data.itervalues():
-    #         for startid, event_data in tracks.iteritems():
-    #             if not startid.startswith('_'):
-    #                 continue
-    #             for tracks in event_data["tracks"]:
-    #                 for track in tracks:
-    #                     features.append([self.graph.node_data(n) for n in track])
-    #     return np.array(features)
-
     # XXX rewrite this function
     def bboxes(self, size=None, border=0):
         bboxes = {}

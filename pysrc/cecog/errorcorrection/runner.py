@@ -25,15 +25,16 @@ from cecog.util.util import makedirs
 from cecog.export.regexp import re_events
 from cecog.threads.corethread import ProgressMsg
 from cecog.learning.learning import ClassDefinition
+from cecog.learning.learning import ClassDefinitionUnsup
 from cecog.errorcorrection.hmm import HmmSklearn as Hmm
 from cecog.errorcorrection import HmmReport
 from cecog.errorcorrection import PlateMapping
 from cecog.errorcorrection.datatable import HmmDataTable
 
+
 class PlateRunner(QtCore.QObject):
 
-    # check if signal works with dict
-    progressUpdate = QtCore.pyqtSignal('PyQt_PyObject')
+    progressUpdate = QtCore.pyqtSignal(dict)
 
     def __init__(self, plates, outdirs, params_ec, *args, **kw):
         super(PlateRunner, self).__init__(*args, **kw)
@@ -52,45 +53,30 @@ class PlateRunner(QtCore.QObject):
             if not isfile(mpfile):
                 raise IOError('Mapping file not found\n(%s)' %mpfile)
 
-    # XXX move this function to params_ec as property
-    def load_class_definitions(self, classifier_directories,
-                               filename='class_definition.txt'):
-        class_definitions = dict()
-        for channel, clfdir in classifier_directories.iteritems():
-            try:
-                class_definitions[channel] = ClassDefinition(join(clfdir, filename))
-                class_definitions[channel].load()
-            except Exception as e:
-                raise IOError("could not load class definition for channel '%s'" %(channel))
-
-        return class_definitions
-
     def __call__(self):
         if self.params_ec.position_labels:
             self._check_mapping_files()
 
         progress = ProgressMsg(max=len(self.plates), meta="Error correction...")
-        classdef = self.load_class_definitions(self.params_ec.classifier_dirs)
 
         for i, plate in enumerate(self.plates):
             QThread.currentThread().interruption_point()
-            progress.text = "Plate: '%s' (%d / %d)" %(plate, i+1, len(self.plates))
+            progress.text = ("Plate: '%s' (%d / %d)"
+                             %(plate, i+1, len(self.plates)))
             self.progressUpdate.emit(progress)
-            # self._imagecontainer.set_plate(plate)
             runner = PositionRunner(plate, self._outdirs[plate],
-                                    self.params_ec, classdef, parent=self)
+                                    self.params_ec, parent=self)
             runner()
             self.progressUpdate.emit(progress)
 
 class PositionRunner(QtCore.QObject):
 
-    def __init__(self, plate, outdir, ecopts, classdef,
-                 positions=None, parent=None, *args, **kw):
+    def __init__(self, plate, outdir, ecopts, positions=None, parent=None,
+                 *args, **kw):
         super(PositionRunner, self).__init__(parent, *args, **kw)
         self.ecopts = ecopts # error correction options
         self.plate = plate
         self._outdir = outdir
-        self.classdef = classdef
 
         self._channel_dirs = dict()
         self._makedirs()
@@ -191,8 +177,7 @@ class PositionRunner(QtCore.QObject):
             mpfile = join(self.ecopts.mapping_dir, "%s.txt" %self.plate)
             mappings.read(mpfile)
 
-
-        for channel, cld in self.classdef.iteritems():
+        for channel, cld in self.ecopts.class_definition.iteritems():
             dtable = self._load_data(mappings, channel, cld)
             msg = 'performing error correction on channel %s' %channel
             self.interruption_point(msg)
