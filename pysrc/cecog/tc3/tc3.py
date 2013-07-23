@@ -148,17 +148,19 @@ class TemporalClustering(object):
         return intLabels
 
     def tc3_clustering(self, data, min_cluster_size) :
-        """
-        data - data sequence, [nCells x nFeaures], which can be reshaped to
+        """data - data sequence, [nCells x nFeaures], which can be reshaped to
         [nTracks x nFrames x nFeaures], where nCells = nTracks x nFrames.
         m - minimal cluster size
-        returns: TC3 label sequences formed by reshaping X according to data.dim. They are
-                 estimated by TC3 per cell trajectory. Due to boundary of binary clustering
-                 and limited frames of prophase, one pattern is 1|23...k|1 and the other
-                 is 12|34...k|1, where |34...k| is the mitotic subgraph defined in the
-                 paper, and |23...k| is the alternative. When considering both cases, then
-                 the algorithm is more general. The preference of either subgraph assignments
-                 can be determined by AIC or BIC in an unsupervised way.
+
+        Returns:
+        TC3 label sequences formed by reshaping X according to data.dim.
+        They are estimated by TC3 per cell trajectory. Due to boundary of binary
+        clustering and limited frames of prophase, one pattern is 1|23...k|1 and
+        the other is 12|34...k|1, where |34...k| is the mitotic subgraph defined
+        in the paper, and |23...k| is the alternative. When considering both
+        cases, then the algorithm is more general. The preference of either
+        subgraph assignments can be determined by AIC or BIC in an unsupervised
+        way.
         """
 
         assert data.ndim == 2
@@ -290,7 +292,6 @@ class TemporalClustering(object):
         dhmm = hmm.MultinomialHMM(n_components=self.n_clusters,
                                   transmat=trans,
                                   startprob=self.startprob,
-                                  # init_params = '',
                                   n_iter=100)
         dhmm.emissionprob_ = emis
 
@@ -305,8 +306,7 @@ class TemporalClustering(object):
         return data
 
     def tc3_gmm_chmm(self, data, means, covars, transmat):
-        """Setup a Hidden Markov Model with Gausian emissions and predict all tracks
-        at once for the whole data set."""
+        """Hidden Markov Model with Gausian emission."""
 
         chmm =  hmm.GaussianHMM(n_components=self.n_clusters,
                                transmat=transmat,
