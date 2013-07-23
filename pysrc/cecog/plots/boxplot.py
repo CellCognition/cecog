@@ -23,7 +23,7 @@ from cecog.colors import DCMAP
 
 def dwell_boxplot(data, title=None, xlabel='class label',
                   ylabel='dwell time (frames)', exclude_labels=None,
-                  cmap=DCMAP, ymax=-1, axes=None):
+                  cmap=DCMAP, ymax=None, axes=None):
 
     # remove keys only in this scope
     data = data.copy()
@@ -48,7 +48,7 @@ def dwell_boxplot(data, title=None, xlabel='class label',
 
     yr = np.array(axes.get_ylim())
     yr = yr+np.array((-1, 1))*0.05*yr.ptp()
-    if ymax != -1:
+    if ymax in (-1, None):
         yr[1] = ymax
     axes.set_ylim(yr)
     axes.set_xticklabels([str(k) for k in data.keys()], rotation=45)
@@ -120,7 +120,8 @@ def dwell_boxplot2(data, title=None, xlabel='', ylabel='dwell time (frames)',
     return axes.get_figure()
 
 
-def barplot(data, title=None, xlabel='class label', ylabel='dwell time (frames)',
+def barplot(data,
+            title=None, xlabel='class label', ylabel='dwell time (frames)',
             exclude_labels=None, cmap=DCMAP, ymax=None, axes=None):
 
     # remove keys only in this scop
@@ -148,7 +149,7 @@ def barplot(data, title=None, xlabel='class label', ylabel='dwell time (frames)'
 
     yr = np.array(axes.get_ylim())
     yr = yr+np.array((-1, 1))*0.05*yr.ptp()
-    if ymax != -1:
+    if ymax in (-1, None):
         yr[1] = ymax
     axes.set_ylim(yr)
     axes.set_xticks(ind)
@@ -166,7 +167,8 @@ def barplot(data, title=None, xlabel='class label', ylabel='dwell time (frames)'
     return axes.get_figure()
 
 
-def barplot2(data, title=None, xlabel='class label', ylabel='dwell time (frames)',
+def barplot2(data,
+             title=None, xlabel='class label', ylabel='dwell time (frames)',
              color='k', axes=None):
 
     if axes is None:

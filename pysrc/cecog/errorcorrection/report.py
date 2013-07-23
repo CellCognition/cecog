@@ -17,13 +17,12 @@ import numpy as np
 
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-#from matplotlib.figure import SubplotParams
 
 from cecog import plots
-from cecog.errorcorrection import PlateMapping
 
 
 class HmmBucket(object):
+    """Container class to store and operate on 'cell trajectories'."""
 
     __slots__ = ['labels', 'hmm_labels', 'startprob', 'emismat', 'transmat',
                  'groups', 'ntracks', 'stepwidth', '_dwell_times', 'fileinfo',
@@ -115,7 +114,7 @@ class HmmReport(object):
 
                 # hmm network
                 clcol = dict([(k, self.classdef.hexcolors[v])
-                              for k, v in self.classdef.class_names.iteritems()])
+                             for k, v in self.classdef.class_names.iteritems()])
                 plots.hmm_network(data.transmat, clcol, title=title,
                                   axes=axarr[0][i])
 
@@ -161,8 +160,8 @@ class HmmReport(object):
                                        for k in sorted(self.data.keys())])
             for name, data in self.data.iteritems():
                 try:
-                    dwell_times[name] = np.concatenate((dwell_times[name],
-                                                        data.dwell_times[label]))
+                    dwell_times[name] = np.concatenate( \
+                        (dwell_times[name], data.dwell_times[label]))
                 except KeyError:
                     pass
 

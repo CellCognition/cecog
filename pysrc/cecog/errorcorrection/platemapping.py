@@ -17,6 +17,7 @@ import csv
 from os.path import isfile
 from collections import OrderedDict
 
+
 class PlateMapping(OrderedDict):
     """Read/Write plate mappings files. Default for all positions is None.
     After reading, all values are set according to the file."""
@@ -58,11 +59,11 @@ class PlateMapping(OrderedDict):
                 line.update({"Position": k})
                 writer.writerow(line)
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
+    # for testing
     path_in = '/Users/hoefler/demo_data/ibb/mappings/input.txt'
     path_out = '/Users/hoefler/demo_data/ibb/mappings/output.txt'
-
     positons = ["018", "028", "051", "067"]
     pm = PlateMapping(positons)
     pm.read(path_in)
