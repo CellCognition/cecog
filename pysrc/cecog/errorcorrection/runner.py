@@ -24,8 +24,6 @@ from PyQt4.QtCore import QThread
 from cecog.util.util import makedirs
 from cecog.export.regexp import re_events
 from cecog.threads.corethread import ProgressMsg
-from cecog.learning.learning import ClassDefinition
-from cecog.learning.learning import ClassDefinitionUnsup
 from cecog.errorcorrection.hmm import HmmSklearn as Hmm
 from cecog.errorcorrection import HmmReport
 from cecog.errorcorrection import PlateMapping
@@ -159,8 +157,10 @@ class PositionRunner(QtCore.QObject):
                             probs.append(np.array([float(p.split(':')[1]) for p in pstr]))
                         probs = np.array(probs)
 
-                        gfile = self._gallery_image(pos, matched.groupdict(), channel)
-                        dtable.add_track(labels, probs, pos, mappings[pos], gfile)
+                        gfile = self._gallery_image(pos, matched.groupdict(),
+                                                    channel)
+                        dtable.add_track(labels, probs, pos, mappings[pos],
+                                         gfile)
 
         return dtable
 
