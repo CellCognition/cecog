@@ -48,7 +48,7 @@ def dwell_boxplot(data, title=None, xlabel='class label',
 
     yr = np.array(axes.get_ylim())
     yr = yr+np.array((-1, 1))*0.05*yr.ptp()
-    if ymax in (-1, None):
+    if ymax not in (-1, None):
         yr[1] = ymax
     axes.set_ylim(yr)
     axes.set_xticklabels([str(k) for k in data.keys()], rotation=45)
@@ -149,7 +149,7 @@ def barplot(data,
 
     yr = np.array(axes.get_ylim())
     yr = yr+np.array((-1, 1))*0.05*yr.ptp()
-    if ymax in (-1, None):
+    if ymax not in (-1, None):
         yr[1] = ymax
     axes.set_ylim(yr)
     axes.set_xticks(ind)
