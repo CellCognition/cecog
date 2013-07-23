@@ -20,21 +20,40 @@ from cecog.errorcorrection import HmmBucket
 from cecog.errorcorrection.hmm import estimator
 
 
-class HmmSklearn(object):
+class HMMCore(object):
 
     def __init__(self, dtable, channel, classdef, ecopts):
-        super(HmmSklearn, self).__init__()
+        super(HMMCore, self).__init__()
         self.dtable = dtable
         self.channel = channel
         self.classdef = classdef
         self.ecopts = ecopts
 
+    def _get_estimator(self, probs, tracks):
+        """Helper function to return the hmm-estimator instance i.e.
+
+        - probability based estimator for svm classifier
+        - transition count based estimator for unsupervied clustering
+        """
+
+        if self.ecopts.eventselection == self.ecopts.EVENTSELECTION_SUPERVISED:
+            return estimator.HMMProbBasedEsitmator(probs)
+        else:
+            states = np.array(self.classdef.class_names.keys())
+            return estimator.HMMTransitionCountEstimator(tracks, states)
+
+
+class HmmSklearn(HMMCore):
+
+    def __init__(self, *args, **kw):
+        super(HmmSklearn, self).__init__(*args, **kw)
+
     def __call__(self):
-        np.set_printoptions(precision=2, linewidth=100)
         hmmdata = dict()
 
-        for (name, tracks, probs, finfo) in self.dtable.iterby(self.ecopts.sortby):
-            est = estimator.HMMProbBasedEsitmator(probs)
+        for (name, tracks, probs, finfo) in  \
+                self.dtable.iterby(self.ecopts.sortby):
+            est = self._get_estimator(probs, tracks)
             if self.ecopts.constrain_graph:
                 cfile = self.ecopts.constrain_files[self.channel]
                 hmmc = estimator.HMMConstraint(cfile)
@@ -54,8 +73,13 @@ class HmmSklearn(object):
                 tracks2.append(hmm_.predict(track))
             tracks2 = self.classdef.index2labels(np.array(tracks2, dtype=int))
 
-            bucket = HmmBucket(tracks, tracks2, est.startprob, est.emis, est.trans,
+            bucket = HmmBucket(tracks,
+                               tracks2,
+                               est.startprob,
+                               est.emis,
+                               est.trans,
                                self.dtable.groups(self.ecopts.sortby, name),
-                               tracks.shape[0], self.ecopts.timelapse, finfo)
+                               tracks.shape[0],
+                               self.ecopts.timelapse, finfo)
             hmmdata[name] = bucket
         return hmmdata
