@@ -14,7 +14,7 @@ __url__ = 'www.cellcognition.org'
 
 import numpy as np
 
-# py2app demands import hooks like this, and it sucks
+# py2app demands import hooks like this and it sucks
 import lxml.objectify
 import lxml.etree
 import lxml._elementpath
@@ -120,7 +120,8 @@ class HMMEstimator(object):
 
 class HMMProbBasedEsitmator(HMMEstimator):
     """Estimate a hidden markov model from using the prediction
-    probabilities from an arbitrary classifier"""
+    probabilities from an arbitrary classifier.
+    """
 
     def __init__(self, probs):
         self._probs = probs
@@ -146,3 +147,40 @@ class HMMProbBasedEsitmator(HMMEstimator):
             self._startprob += self._probs[i, 1, :]
 
         self._startprob = normalize(self._startprob)
+
+
+class HMMTransitionCountEstimator(HMMEstimator):
+
+    def __init__(self, tracks, states):
+        self._tracks = tracks
+        self._states = states
+        super(HMMTransitionCountEstimator, self).__init__(states.size)
+
+    def _estimate_trans(self):
+        """Estimates the transition probaility by counting."""
+
+        super(HMMTransitionCountEstimator, self)._estimate_trans()
+        self._trans[:] = 0.0
+        index_of = lambda label: np.where(self._states==label)[0][0]
+        _tracks = self._tracks.flatten()
+        for i, label in enumerate(_tracks):
+            for state in self._states:
+                try:
+                    if (_tracks[i+1] == state) and (label >= state):
+                        self._trans[index_of(state), index_of(label)] += 1.0
+                except IndexError:
+                    pass
+
+        # make transisition cyclic
+        self._trans[-1, 0] = self._trans[0,-1]
+        self._trans =  normalize(self._trans, axis=1)
+        return self._trans
+
+    def _estimate_startprob(self):
+        super(HMMTransitionCountEstimator, self)._estimate_startprob()
+        self.startprob[:] = 0.0
+        counts =  np.bincount(self._tracks[:, 0].flatten())
+        for i, c in enumerate(counts):
+            self.startprob[i] = c
+        self._startprob = normalize(self._startprob)
+        return self._startprob
