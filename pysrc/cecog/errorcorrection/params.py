@@ -112,7 +112,7 @@ class ECParams(object):
                         join(clfdir, LearnerFiles.DEFINITION))
                 else:
                     classdef[channel] = ClassDefinitionUnsup(self.nclusters)
-                    classdef[channel].load()
+                classdef[channel].load()
             self._classdef = classdef
 
         return self._classdef
