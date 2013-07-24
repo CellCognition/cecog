@@ -345,7 +345,7 @@ namespace cecog
       double m0Low, m0High, m1Low, m1High, varLow, varHigh;
       double varWithin, varWMin;
       long thresh;
-      long i, j, n;
+      long i, j;
       long nHistM1 = VCOUNT - 1;
 
       for (i = 1, thresh = 0, varWMin = LONG_MAX; i < nHistM1; ++i)
