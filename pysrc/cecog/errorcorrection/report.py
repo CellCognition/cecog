@@ -178,6 +178,10 @@ class HmmReport(object):
                             left=0.1*8/(len(dwell_times)*0.8),
                             right=1-0.1*8/len(dwell_times))
 
+            if sp_props['left'] > sp_props['right']:
+                del sp_props['left']
+                del sp_props['right']
+
             fig = plt.figure(figsize=fsize)
             axes = fig.add_subplot(111)
 

@@ -60,7 +60,13 @@ class HmmDataTable(object):
     @property
     def ntracks(self):
         """Total number of tracks."""
-        return self._tracks
+        return self._tracks.shape[0]
+
+    def is_empty(self):
+        if self._tracks is None:
+            return True
+        else:
+            return False
 
     @property
     def probabilities(self):
