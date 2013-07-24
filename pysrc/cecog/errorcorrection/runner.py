@@ -162,6 +162,9 @@ class PositionRunner(QtCore.QObject):
                         dtable.add_track(labels, probs, pos, mappings[pos],
                                          gfile)
 
+            if dtable.is_empty():
+                raise RuntimeError("No data found for channel '%s'" %channel)
+
         return dtable
 
     def interruption_point(self, message=None):
