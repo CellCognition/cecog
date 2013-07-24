@@ -6,7 +6,7 @@
 # 14/02/2013
 # This software can be distribute under the term of the LGPL
 
-VERSION = 1.4.0rc3
+VERSION = 1.4.0
 APPNAME = CecogAnalyzer
 TMPNAME = CecogAnalyzer.dmg
 DMGNAME = CecogAnalyzer-$(VERSION).dmg
