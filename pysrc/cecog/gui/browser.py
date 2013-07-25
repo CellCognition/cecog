@@ -26,9 +26,16 @@ __all__ = ['Browser']
 import math
 import numpy
 
+import sip
+# set PyQt API version to 2.0
+sip.setapi('QString', 2)
+sip.setapi('QVariant', 2)
+
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
+
+
 
 from cecog.gui.util import (exception,
                             information,
@@ -45,7 +52,7 @@ from cecog.analyzer.channel import (PrimaryChannel,
                                     SecondaryChannel,
                                     TertiaryChannel,
                                     )
-from cecog.analyzer.core import AnalyzerCore
+from cecog.analyzer.core import AnalyzerBrowser
 from cecog.traits.settings import convert_package_path
 from cecog.io.imagecontainer import Coordinate
 from cecog.learning.learning import BaseLearner
@@ -53,10 +60,14 @@ from cecog.gui.widgets.groupbox import QxtGroupBox
 
 from cecog.gui.modules.navigation import NavigationModule
 from cecog.gui.modules.display import DisplayModule
-from cecog.gui.modules.annotation import AnnotationModule
+from cecog.gui.modules.annotation import AnnotationModule, InteractiveAnnotationModule
 
 from cecog.plugin.segmentation import REGION_INFO
 
+from cecog.io.imagecontainer import ImageContainer
+from cecog.gui.config import GuiConfigSettings
+from cecog.traits.analyzer import SECTION_REGISTRY
+from cecog.traits.settings import ConfigSettings
 
 
 class Browser(QMainWindow):
@@ -251,6 +262,9 @@ class Browser(QMainWindow):
 
         AnnotationModule(self._module_manager, self, self._settings,
                          self._imagecontainer)
+        
+        InteractiveAnnotationModule(self._module_manager, self, self._settings,
+                         self._imagecontainer)
 
         # set the Navigation module activated
         self._module_manager.activate_tab(NavigationModule.NAME)
@@ -396,15 +410,16 @@ class Browser(QMainWindow):
             settings.set('Processing', 'merged_processChannel', False)
 
         settings.set('General', 'rendering', {})
-        analyzer = AnalyzerCore(self.coordinate.plate, settings,
+        analyzer = AnalyzerBrowser(self.coordinate.plate, settings,
                                 self._imagecontainer)
+        analyzer.add_stream_handler()
 
         # as long the GIL is not released, if GIL is released
         # just use self.setCursor
 
         try:
             QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
-            analyzer.processPositions(myhack=self)
+            res = analyzer.processPositions()
         except Exception, e:
             import traceback
             traceback.print_exc()
@@ -547,3 +562,33 @@ class Browser(QMainWindow):
         if ev.type() == QEvent.Gesture:
             return self.gestureEvent(ev)
         return QWidget.event(self, ev)
+
+def load_image_container_from_settings(settings):
+    imagecontainer = ImageContainer()
+    infos = imagecontainer.iter_check_plates(settings)
+    scan_plates = dict((info[0], False) for info in infos)
+    import_iter = imagecontainer.iter_import_from_settings(settings, scan_plates)
+    for idx, info in enumerate(import_iter):
+        print idx, info
+
+    if len(imagecontainer.plates) > 0:
+        plate = imagecontainer.plates[0]
+        imagecontainer.set_plate(plate)
+    return imagecontainer
+
+def load_settings(settings_file):
+    settings = GuiConfigSettings(None, SECTION_REGISTRY)
+    settings.read(settings_file)
+    return settings
+
+
+if __name__ == "__main__":
+    import sys
+    app = QApplication(sys.argv) 
+    
+    settings = load_settings('C:/Users/sommerc/data/cecog/Settings/exp911_version_140.conf')
+    imagecontainer = load_image_container_from_settings(settings)
+        
+    browser = Browser(settings, imagecontainer)
+    browser.show()
+    app.exec_()

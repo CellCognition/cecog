@@ -85,7 +85,7 @@ class PositionCore(LoggerObject):
 
     def __init__(self, plate_id, position, out_dir, settings, frames,
                  sample_readers, sample_positions, learner,
-                 image_container, qthread=None, myhack=None):
+                 image_container, qthread=None):
         super(PositionCore, self).__init__()
 
         self._out_dir = out_dir
@@ -104,7 +104,6 @@ class PositionCore(LoggerObject):
         self.classifiers = OrderedDict()
 
         self._qthread = qthread
-        self._myhack = myhack
 
     def _analyze(self):
         self._info.update({'stage': 2,
@@ -400,7 +399,6 @@ class PositionPicker(PositionCore):
 
 
 class PositionAnalyzer(PositionCore):
-
     def __init__(self, *args, **kw):
         super(PositionAnalyzer, self).__init__(*args, **kw)
 
@@ -748,7 +746,7 @@ class PositionAnalyzer(PositionCore):
 
             ##############################################################
             # FIXME - part for browser
-            if not self._myhack is None:
+            if 0:
                 self.render_browser(cellanalyzer)
             ##############################################################
 
@@ -815,3 +813,84 @@ class PositionAnalyzer(PositionCore):
             for obj_id, obj in region.iteritems():
                 coords[obj_id] = obj.crack_contour
             self._myhack.set_coords(coords)
+            
+            
+class PositionAnalyzerForBrowser(PositionCore):
+    def __init__(self, *args, **kw):
+        super(PositionAnalyzerForBrowser, self).__init__(*args, **kw)
+        
+    def __call__(self):
+
+        self.timeholder = TimeHolder(self.position, self._all_channel_regions,
+                                     None,
+                                     self.meta_data, self.settings,
+                                     self._frames,
+                                     self.plate_id,
+                                     **self._hdf_options)
+
+        self.settings.set_section('Tracking')
+        # setup tracker
+        if self.settings.get('Processing', 'tracking'):
+            region = self.settings.get('Tracking', 'tracking_regionname')
+            tropts = (self.settings.get('Tracking', 'tracking_maxobjectdistance'),
+                      self.settings.get('Tracking', 'tracking_maxsplitobjects'),
+                      self.settings.get('Tracking', 'tracking_maxtrackinggap'))
+            self._tracker = Tracker(*tropts)
+            self._tes = EventSelection(self._tracker.graph, **self._es_options)
+
+        stopwatch = StopWatch(start=True)
+        ca = CellAnalyzer(timeholder=self.timeholder,
+                          position = self.position,
+                          create_images = True,
+                          binning_factor = 1,
+                          detect_objects = True)
+
+        #self.setup_classifiers()
+        #self.export_features = self.define_exp_features()
+        n_images = self._analyze(ca)
+
+        
+    
+    def _analyze(self, cellanalyzer):
+        n_images = 0
+        stopwatch = StopWatch(start=True)
+        crd = Coordinate(self.plate_id, self.position,
+                         self._frames, list(set(self.ch_mapping.values())))
+        print crd
+
+        for frame, channels in self._imagecontainer( \
+            crd, interrupt_channel=True, interrupt_zslice=True):
+
+            if self.is_aborted():
+                self.clear()
+                return 0
+            else:
+                txt = 'T %d (%d/%d)' %(frame, self._frames.index(frame)+1,
+                                       len(self._frames))
+                self.update_status({'progress': self._frames.index(frame)+1,
+                                    'text': txt,
+                                    'interval': stopwatch.interim()})
+
+            stopwatch.reset(start=True)
+            cellanalyzer.initTimepoint(frame)
+            self.register_channels(cellanalyzer, channels)
+
+            cellanalyzer.process()
+            n_images += 1
+            images = []
+
+            for clf in self.classifiers.itervalues():
+                cellanalyzer.classify_objects(clf)
+                print 'classifying'
+
+            ##############################################################
+            # FIXME - part for browser
+            if 0:
+                self.render_browser(cellanalyzer)
+            ##############################################################
+
+
+        return n_images
+    
+    def clear(self):
+        print 'Clean up'

@@ -1045,3 +1045,18 @@ class AnnotationModule(Module):
         self.browser.image_viewer.image_mouse_pressed.disconnect(self._on_new_point)
         self.browser.image_viewer.purify_objects()
         self._action_grp.setEnabled(False)
+        
+class InteractiveAnnotationModule(AnnotationModule):
+    NAME = 'Interactive Annotation'
+    def __init__(self, *args, **kwargs):
+        super(InteractiveAnnotationModule, self).__init__(*args, **kwargs)
+        layout = self.layout()
+        self.btn_train = QPushButton('Train')
+        self.btn_train.clicked.connect(self.train)
+        layout.addWidget(self.btn_train)
+        
+    def train(self):
+        for a in self._annotations.iter_all():
+            print a
+        
+        

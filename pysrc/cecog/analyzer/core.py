@@ -20,7 +20,7 @@ import glob
 from os.path import join, basename, isdir
 
 from cecog.learning.collector import CellCounterReader, CellCounterReaderXML
-from cecog.analyzer.position import PositionAnalyzer
+from cecog.analyzer.position import PositionAnalyzer, PositionAnalyzerForBrowser
 from cecog.analyzer.position import PositionPicker
 from cecog.io.imagecontainer import MetaImage
 from cecog.util.logger import LoggerObject
@@ -103,7 +103,6 @@ class AnalyzerBase(LoggerObject):
 
 
 class AnalyzerCore(AnalyzerBase):
-
     def __init__(self, plate, settings, imagecontainer):
         super(AnalyzerCore, self).__init__(plate, settings, imagecontainer)
         self._makedirs()
@@ -177,7 +176,7 @@ class AnalyzerCore(AnalyzerBase):
             MetaImage.disable_cropping()
             self.logger.info("cropping disabled")
 
-    def processPositions(self, qthread=None, myhack=None):
+    def processPositions(self, qthread=None):
         job_args = []
         for pos in self.positions:
             self.logger.info('Process positions: %r' % pos)
@@ -191,7 +190,7 @@ class AnalyzerCore(AnalyzerBase):
                          self.sample_positions,
                          None,
                          self._imagecontainer)
-                kw_ = dict(qthread = qthread, myhack = myhack)
+                kw_ = dict(qthread = qthread)
                 job_args.append((args_, kw_))
 
         stage_info = {'stage': 1, 'min': 1, 'max': len(job_args)}
@@ -220,6 +219,40 @@ class AnalyzerCore(AnalyzerBase):
                     self.settings.get('Output', 'hdf5_merge_positions'):
                 hdf5_links.append(analyzer.hdf5_filename)
         return hdf5_links
+    
+class AnalyzerBrowser(AnalyzerCore):
+    def __init__(self, plate, settings, imagecontainer):
+        super(AnalyzerBrowser, self).__init__(plate, settings, imagecontainer)
+        
+    def processPositions(self):
+        job_args = []
+        for pos in self.positions:
+            self.logger.info('Process positions: %r' % pos)
+            if len(self.frames) > 0:
+                args_ = (self.plate,
+                         pos,
+                         self._out_dir,
+                         self.settings,
+                         self.frames,
+                         self.sample_reader,
+                         self.sample_positions,
+                         None,
+                         self._imagecontainer)
+                job_args.append(args_)
+
+        for args in job_args:
+
+            analyzer = PositionAnalyzerForBrowser(*args)
+            analyzer.add_stream_handler()
+#             try:
+            analyzer()
+#             except Exception as e:
+#                 import traceback
+#                 print e.message
+#                 traceback.print_exc()
+#                 raise(e)
+#             finally:
+            analyzer.clear()
 
 
 class Picker(AnalyzerBase):
@@ -275,7 +308,7 @@ class Picker(AnalyzerBase):
         return True
 
 
-    def processPositions(self, qthread=None, myhack=None):
+    def processPositions(self, qthread=None):
         imax = len(self.sample_positions)
 
         for i, (posid, frames) in enumerate(self.sample_positions.iteritems()):
@@ -293,5 +326,5 @@ class Picker(AnalyzerBase):
                                     self.settings,
                                     frames, self.sample_reader,
                                     self.sample_positions, self.learner,
-                                    self._imagecontainer, qthread, myhack)
+                                    self._imagecontainer, qthread)
             result = picker()
