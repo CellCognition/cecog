@@ -58,7 +58,6 @@ from cecog import ccore
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
 from cecog.traits.analyzer.postprocessing import SECTION_NAME_POST_PROCESSING
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
-from cecog.analyzer.gallery import compose_galleries
 from cecog.plugin.display import PluginBay
 from cecog.gui.widgets.tabcontrol import TabControl
 from cecog.analyzer.ibb import IBBAnalysis, SecurinAnalysis

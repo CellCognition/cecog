@@ -48,6 +48,7 @@ class ImageObject(object):
         else:
             self.oCenterAbs = None
             self.oRoi = None
+
         self.iLabel = None
         self.dctProb = {}
         self.strClassName = None

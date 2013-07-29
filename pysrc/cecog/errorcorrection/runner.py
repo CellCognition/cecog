@@ -105,7 +105,7 @@ class PositionRunner(QtCore.QObject):
             else:
                 setattr(self, "_%s_dir" %basename(odir.lower()).strip("_"), odir)
 
-    def _gallery_image(self, pos, groupdict, channel, ext='jpg'):
+    def _gallery_image(self, pos, groupdict, channel, ext='png'):
         fname = ("P%(position)s__T%(time)s__O%(object)s__B%(branch)s."
                  "%(ext)s" %dict({'ext': ext}.items() + groupdict.items()))
         fname = join(self._analyzed_dir, pos, 'gallery', channel, fname)
