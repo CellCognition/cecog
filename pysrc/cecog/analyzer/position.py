@@ -816,9 +816,42 @@ class PositionAnalyzer(PositionCore):
             
             
 class PositionAnalyzerForBrowser(PositionCore):
+    @property
+    def _hdf_options(self):
+        self.settings.set_section('Output')
+        h5opts = {"hdf5_include_tracking": False,
+                  "hdf5_include_events": False,
+                  "hdf5_compression": False,
+                  "hdf5_create": False,
+                  "hdf5_reuse": False,
+                  "hdf5_include_raw_images": False,
+                  "hdf5_include_label_images": False,
+                  "hdf5_include_features": False,
+                  "hdf5_include_crack": False,
+                  "hdf5_include_classification": False}
+
+        return h5opts
+    
     def __init__(self, *args, **kw):
         super(PositionAnalyzerForBrowser, self).__init__(*args, **kw)
         
+    def setup_classifiers(self):
+        sttg = self.settings
+        # processing channel, color channel
+        for p_channel, c_channel in self.ch_mapping.iteritems():
+            self.settings.set_section('Processing')
+            if sttg.get2(self._resolve_name(p_channel, 'classification')):
+                sttg.set_section('Classification')
+                clf = CommonClassPredictor(
+                    clf_dir=sttg.get2(self._resolve_name(p_channel,
+                                                         'classification_envpath')),
+                    name=p_channel,
+                    channels=self._channel_regions(p_channel),
+                    color_channel=c_channel)
+                clf.importFromArff()
+                clf.loadClassifier()
+                self.classifiers[p_channel] = clf
+                
     def __call__(self):
 
         self.timeholder = TimeHolder(self.position, self._all_channel_regions,
@@ -828,26 +861,18 @@ class PositionAnalyzerForBrowser(PositionCore):
                                      self.plate_id,
                                      **self._hdf_options)
 
-        self.settings.set_section('Tracking')
-        # setup tracker
-        if self.settings.get('Processing', 'tracking'):
-            region = self.settings.get('Tracking', 'tracking_regionname')
-            tropts = (self.settings.get('Tracking', 'tracking_maxobjectdistance'),
-                      self.settings.get('Tracking', 'tracking_maxsplitobjects'),
-                      self.settings.get('Tracking', 'tracking_maxtrackinggap'))
-            self._tracker = Tracker(*tropts)
-            self._tes = EventSelection(self._tracker.graph, **self._es_options)
 
         stopwatch = StopWatch(start=True)
         ca = CellAnalyzer(timeholder=self.timeholder,
                           position = self.position,
                           create_images = True,
                           binning_factor = 1,
-                          detect_objects = True)
+                          detect_objects = self.settings.get('Processing', 'objectdetection'))
 
         #self.setup_classifiers()
         #self.export_features = self.define_exp_features()
-        n_images = self._analyze(ca)
+        self._analyze(ca)
+        return ca
 
         
     
@@ -876,18 +901,21 @@ class PositionAnalyzerForBrowser(PositionCore):
             self.register_channels(cellanalyzer, channels)
 
             cellanalyzer.process()
-            n_images += 1
-            images = []
+
+            self.setup_classifiers()
+
 
             for clf in self.classifiers.itervalues():
-                cellanalyzer.classify_objects(clf)
-                print 'classifying'
+                try:
+                    cellanalyzer.classify_objects(clf)
+                    print 'classifying'
+                    for label, obj in cellanalyzer.get_channel('Primary').get_region('primary').iteritems():
+                        print label, obj.strHexColor
+                except KeyError:
+                    pass
 
-            ##############################################################
-            # FIXME - part for browser
-            if 0:
-                self.render_browser(cellanalyzer)
-            ##############################################################
+         
+                
 
 
         return n_images

@@ -226,33 +226,22 @@ class AnalyzerBrowser(AnalyzerCore):
         
     def processPositions(self):
         job_args = []
-        for pos in self.positions:
-            self.logger.info('Process positions: %r' % pos)
-            if len(self.frames) > 0:
-                args_ = (self.plate,
-                         pos,
-                         self._out_dir,
-                         self.settings,
-                         self.frames,
-                         self.sample_reader,
-                         self.sample_positions,
-                         None,
-                         self._imagecontainer)
-                job_args.append(args_)
+        pos = self.positions[0]
+        self.logger.info('Browser(): Process positions: %r' % pos)
+        job_args = (self.plate,
+                     pos,
+                     self._out_dir,
+                     self.settings,
+                     self.frames,
+                     self.sample_reader,
+                     self.sample_positions,
+                     None,
+                     self._imagecontainer)
 
-        for args in job_args:
-
-            analyzer = PositionAnalyzerForBrowser(*args)
-            analyzer.add_stream_handler()
-#             try:
-            analyzer()
-#             except Exception as e:
-#                 import traceback
-#                 print e.message
-#                 traceback.print_exc()
-#                 raise(e)
-#             finally:
-            analyzer.clear()
+        analyzer = PositionAnalyzerForBrowser(*job_args)
+        analyzer.add_stream_handler()
+        res = analyzer()
+        return res
 
 
 class Picker(AnalyzerBase):
