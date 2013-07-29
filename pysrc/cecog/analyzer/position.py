@@ -568,9 +568,13 @@ class PositionAnalyzer(PositionCore):
 
     def export_gallery_images(self):
         for ch_name in self.processing_channels:
-            cutter_in = join(self._images_dir, ch_name)
-            if isdir(cutter_in):
-                cutter_out = join(self._gallery_dir, ch_name)
+            cutter_in = join(self._images_dir, ch_name.lower())
+
+            if not isdir(cutter_in):
+                self.logger.warning('directory not found (%s)' %cutter_in)
+                self.logger.warning('can not write the gallery images')
+            else:
+                cutter_out = join(self._gallery_dir, ch_name.lower())
                 self.logger.info("running Cutter for '%s'..." %ch_name)
                 image_size = \
                     self.settings.get('Output', 'events_gallery_image_size')
