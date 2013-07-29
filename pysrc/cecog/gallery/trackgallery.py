@@ -24,13 +24,12 @@ from cecog.util.util import makedirs
 
 class TrackGallery(object):
 
-    def __init__(self, centers, indir, outdir, position, meta_data,
+    def __init__(self, centers, indir, outdir, position,
                  size=200, write_tables=True):
         self.centers = centers
         self._indir = indir
         self._outdir = outdir
         self.position = position
-        self.meta_data = meta_data
 
         if size%2:
             size += 1
@@ -104,9 +103,6 @@ class TrackGallery(object):
             for i, (frame, objid, center) in enumerate(centers):
                 ifile = join(self._indir, 'P%s_T%05d.jpg' %(self.position, frame))
                 image = self.load_image(ifile)
-                print "cache size: ", len(self._image_cache)
-                print ifile,
-                print image.shape, center
                 bbox = self._i_sub_image(center, image.shape[:2])
                 sub_img = self.cut(image, bbox)
                 gallery.set_sub_image(i, sub_img)
