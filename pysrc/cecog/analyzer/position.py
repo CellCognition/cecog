@@ -40,8 +40,8 @@ from cecog.learning.learning import CommonClassPredictor
 from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACTION
 from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
 
-from cecog.analyzer.gallery import EventGallery
-from cecog.analyzer.channel_gallery import ChannelGallery
+from cecog.gallery import TrackGallery
+from cecog.gallery import ChannelGallery
 from cecog.export import TrackExporter, EventExporter, TC3Exporter
 from cecog.util.logger import LoggerObject
 from cecog.util.stopwatch import StopWatch
@@ -600,9 +600,8 @@ class PositionAnalyzer(PositionCore):
                 self.logger.info("running Cutter for '%s'..." %ch_name)
                 image_size = \
                     self.settings.get('Output', 'events_gallery_image_size')
-                EventGallery(self._tes, cutter_in, self.position, cutter_out,
-                             self.meta_data, oneFilePerTrack=True,
-                             size=(image_size, image_size))
+                TrackGallery(self._tes.centers(),
+                             cutter_in, cutter_out, self.position, size=image_size)
             # FIXME: be careful here. normally only raw images are
             #        used for the cutter and can be deleted
             #        afterwards

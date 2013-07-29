@@ -243,7 +243,7 @@ class TimeHolder(OrderedDict):
         except:
             self._hdf5_file.close()
             return 1
-            
+
 
 
     def _hdf5_check_file(self):
@@ -412,9 +412,9 @@ class TimeHolder(OrderedDict):
         raw_image_str, raw_image_cpy, raw_image_valid = raw_info
 
         if hasattr(self, "_hdf5_file") and self._hdf5_file is not None:
-            try: 
-                self._hdf5_file.close() 
-            except: 
+            try:
+                self._hdf5_file.close()
+            except:
                 print '_hdf5_create_file_structure(): Closing already opended file for rewrite'
         f = h5py.File(filename, 'w')
         self._hdf5_file = f
@@ -584,7 +584,7 @@ class TimeHolder(OrderedDict):
                 # create new group if it does not exist yet!
                 if var_name in grp and grp[var_name].shape[0] == len(self._regions_to_idx2):
                     var_labels = grp[var_name]
-                else:  
+                else:
                     nr_labels = len(self._regions_to_idx2)
                     var_labels = \
                         grp.create_dataset(var_name,
@@ -612,7 +612,7 @@ class TimeHolder(OrderedDict):
         if channel.is_virtual():
             # no raw image in a merged channel
             return
-        
+
         stop_watch = StopWatch()
         desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
                                          channel.strChannelId)

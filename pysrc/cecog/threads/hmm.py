@@ -19,8 +19,9 @@ from PyQt4 import QtCore, QtGui
 from cecog.util.util import write_table, makedirs
 from cecog.environment import CecogEnvironment
 from cecog.threads.corethread import CoreThread
-from cecog.analyzer.gallery import compose_galleries
+from cecog.gallery import compose_galleries
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
+
 
 class HmmThread(CoreThread):
 

@@ -14,11 +14,10 @@ __all__ = ['HmmBucket', 'HmmReport']
 
 from collections import OrderedDict
 import numpy as np
-
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-
 from cecog import plots
+import vigra
 
 
 class HmmBucket(object):
@@ -217,13 +216,16 @@ class HmmReport(object):
                 for file_, track in data.iter_gallery(n_galleries):
                     tracks.append(track)
                     try:
-                        image = np.vstack((image, np.mean(plt.imread(file_),
-                                                          axis=2)))
+                        img = np.squeeze(vigra.readImage(file_).swapaxes( \
+                                0, 1).view(np.ndarray))
+                        image = np.vstack((image, np.mean(img, axis=2)))
                     except ValueError:
-                        image = np.mean(plt.imread(file_), axis=2)
+                        img = np.squeeze(vigra.readImage(file_).swapaxes( \
+                                0, 1).view(np.ndarray))
+                        image = np.mean(img, axis=2)
 
                     aspect = image.shape[0]/image.shape[1]
-                    if aspect >= 1.0:
+                    if aspect >= 0.99:
                         fig = self._trj_figure(image, tracks, (6, 6), name)
                         pdf.savefig(fig)
                         image = np.array([])
@@ -231,10 +233,7 @@ class HmmReport(object):
 
                 if len(tracks) > 0:
                     fig = self._trj_figure(image, tracks, (6, 6), name)
-
-                else:
-                    fig = plt.figure()
-                pdf.savefig(fig, dpi=200)
+                    pdf.savefig(fig, dpi=200)
 
         finally:
             pdf.close()

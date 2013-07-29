@@ -97,46 +97,20 @@ class EventSelectionCore(LoggerObject):
         # ie. graph.out_degree!!!!
         return [i for i, n in enumerate(nodes) if isinstance(n, list)]
 
-    # XXX rewrite this function
-    def bboxes(self, size=None, border=0):
-        bboxes = {}
+    def centers(self):
+        """Return the a list of the object centers for each track."""
+        centers = dict()
         for startid, eventdata in self.iterevents():
-            if startid  in ['_full', '_current']:
+            if startid in ['_full', '_current']:
                 continue
-            data = []
+            data = list()
             for nodeids in zip(*eventdata['tracks']):
-                nodeid = nodeids[0]
-                frame = Tracker.split_nodeid(nodeid)[0]
-                objids = [Tracker.split_nodeid(n)[1] for n in nodeids]
-                objects = [self.graph.node_data(n) for n in nodeids]
-
-                minX = min([obj.oRoi.upperLeft[0] for obj in objects])
-                minY = min([obj.oRoi.upperLeft[1] for obj in objects])
-                maxX = max([obj.oRoi.lowerRight[0] for obj in objects])
-                maxY = max([obj.oRoi.lowerRight[1] for obj in objects])
-                width  = maxX - minX + 1
-                height = maxY - minY + 1
-                centerX = int(round(np.average([obj.oCenterAbs[0]
-                                                for obj in objects])))
-                centerY = int(round(np.average([obj.oCenterAbs[1]
-                                                for obj in objects])))
-                data.append((frame, centerX, centerY, width, height, objids))
-            data1 = np.array(data, 'O')
-            if not size is None and len(size) == 2:
-                diffX = int(size[0] / 2)
-                diffY = int(size[1] / 2)
-            else:
-                diffX = int(max(data1[:,3])/2 + border)
-                diffY = int(max(data1[:,4])/2 + border)
-            # convert to float to for numpy float64 type
-            timedata = [(int(d[0]),
-                         (d[1] - diffX,
-                          d[2] - diffY,
-                          d[1] + diffX - 1 + size[0] %2,
-                          d[2] + diffY - 1 + size[1] %2),
-                         d[5]) for d in data1]
-            bboxes[startid] = timedata
-        return bboxes
+                for nodeid in nodeids:
+                    obj = self.graph.node_data(nodeid)
+                    frame = Tracker.split_nodeid(nodeid)[0]
+                    data.append((int(frame), obj.iId, obj.oCenterAbs))
+            centers[startid] = data
+        return centers
 
     def find_events(self):
         start_ids = self.start_nodes()
