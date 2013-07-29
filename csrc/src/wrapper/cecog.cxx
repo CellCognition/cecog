@@ -43,9 +43,15 @@ static void turn_off()
   TIFFSetWarningHandler(NULL);
 }
 
+static void turn_tiff_warnings_off()
+{
+  TIFFSetWarningHandler(0);
+}
+
 BOOST_PYTHON_MODULE(_cecog)
 {
   def("turn_off", turn_off);
+  def("turn_tiff_warnings_off", turn_tiff_warnings_off);
 
   conversions::from_python_sequence<std::vector<unsigned>,
   conversions::variable_capacity_policy>();

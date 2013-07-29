@@ -54,7 +54,7 @@ class CellAnalyzer(LoggerObject):
         return self._channel_registry.keys()
 
     def get_channel(self, name):
-        return self._channel_registry[name]
+        return self._channel_registry[str(name)]
 
     @property
     def proc_channels(self):

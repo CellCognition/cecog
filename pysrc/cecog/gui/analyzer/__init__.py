@@ -427,7 +427,7 @@ class _ProcessorMixin(object):
                 elif cls is HmmThread:
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
 
-                      # FIXME: classifier handling needs revision!!!
+                    # FIXME: classifier handling needs revision!!!
                     learner_dict = {}
                     for kind in ['primary', 'secondary']:
                         _resolve = lambda x,y: self._settings.get(x, '%s_%s' % (kind, y))

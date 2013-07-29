@@ -682,8 +682,13 @@ class AnnotationModule(Module):
 
 
     def _on_open_classifier(self):
-        path = self._learner.clf_dir
-        result = QFileDialog.getExistingDirectory(self, 'Open classifier directory', os.path.abspath(path))
+        try:
+            path = os.path.abspath(self._learner.clf_dir)
+        except:
+            path = os.path.expanduser('~/')
+
+        result = QFileDialog.getExistingDirectory( \
+            self, 'Open classifier directory', path)
         if result:
             learner = self._load_classifier(result)
             if not learner is None:
@@ -1032,3 +1037,18 @@ class AnnotationModule(Module):
         self.browser.image_viewer.image_mouse_pressed.disconnect(self._on_new_point)
         self.browser.image_viewer.purify_objects()
         self._action_grp.setEnabled(False)
+        
+class InteractiveAnnotationModule(AnnotationModule):
+    NAME = 'Interactive Annotation'
+    def __init__(self, *args, **kwargs):
+        super(InteractiveAnnotationModule, self).__init__(*args, **kwargs)
+        layout = self.layout()
+        self.btn_train = QPushButton('Train')
+        self.btn_train.clicked.connect(self.train)
+        layout.addWidget(self.btn_train)
+        
+    def train(self):
+        for a in self._annotations.iter_all():
+            print a
+        
+        
