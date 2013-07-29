@@ -209,6 +209,15 @@ class HmmReport(object):
         finally:
             pdf.close()
 
+    def _read_image(self, file_):
+        """try different file extensio to read."""
+        try:
+            image = vigra.readImage(file_)
+        except RuntimeError:
+            file_ = file_.replace('png', 'jpg')
+            image = vigra.readImage(file_)
+        return np.squeeze(image.swapaxes(0, 1).view(np.ndarray))
+
     def image_gallery(self, filename, n_galleries=50):
         pdf = PdfPages(filename)
         try:
@@ -218,12 +227,10 @@ class HmmReport(object):
                 for file_, track in data.iter_gallery(n_galleries):
                     tracks.append(track)
                     try:
-                        img = np.squeeze(vigra.readImage(file_).swapaxes( \
-                                0, 1).view(np.ndarray))
+                        img = self._read_image(file_)
                         image = np.vstack((image, np.mean(img, axis=2)))
                     except ValueError:
-                        img = np.squeeze(vigra.readImage(file_).swapaxes( \
-                                0, 1).view(np.ndarray))
+                        img = self._read_image(file_)
                         image = np.mean(img, axis=2)
 
                     aspect = image.shape[0]/image.shape[1]
