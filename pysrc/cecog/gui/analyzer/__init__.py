@@ -276,7 +276,7 @@ class _ProcessorMixin(object):
         converts = [('General', 'pathin'),
                     ('General', 'pathout'),
                     ('Classification', 'primary_classification_envpath'),
-                    ('Classification', 'secondary_classification_envpath'),
+                    #('Classification', 'secondary_classification_envpath'),
                     ('ErrorCorrection', 'primary_graph'),
                     ('ErrorCorrection', 'secondary_graph'),
                     ('ErrorCorrection', 'mappingfile_path'),
@@ -453,11 +453,15 @@ class _ProcessorMixin(object):
                 elif cls is HmmThread:
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
 
-                      # FIXME: classifier handling needs revision!!!
+                    # FIXME: classifier handling needs revision!!!
                     learner_dict = {}
                     for kind in ['primary', 'secondary']:
                         _resolve = lambda x,y: self._settings.get(x, '%s_%s' % (kind, y))
-                        env_path = convert_package_path(_resolve('Classification', 'classification_envpath'))
+                        classifier_path = _resolve('Classification', 'classification_envpath')
+                        if classifier_path is None:
+                            print 'HMMThread(): No classifier given for %s' % kind
+                            continue
+                        env_path = convert_package_path(classifier_path)
                         if (os.path.exists(env_path)
                               and (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))
                              ):

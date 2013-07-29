@@ -75,6 +75,8 @@ def set_package_path(dest_path):
     PACKAGE_PATH = dest_path
 
 def convert_package_path(path):
+    if len(path) == 0 or path is None:
+        return ''
     return os.path.normpath(os.path.join(PACKAGE_PATH, path))
 
 #-------------------------------------------------------------------------------
