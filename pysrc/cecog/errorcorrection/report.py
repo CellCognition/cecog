@@ -101,7 +101,8 @@ class HmmReport(object):
             nrows, ncols =  5, len(self.data)
             fig, axarr = plt.subplots(nrows=5, ncols=6, figsize=figsize)
             fig.subplots_adjust(**sp_props)
-            for j, (name, data) in enumerate(self.data.iteritems()):
+            for j, name in enumerate(sorted(self.data.keys())):
+                data = self.data[name]
                 i = j%6
                 if not i and j:
                     pdf.savefig(fig)
@@ -219,7 +220,8 @@ class HmmReport(object):
     def image_gallery(self, filename, n_galleries=50):
         pdf = PdfPages(filename)
         try:
-            for name, data in self.data.iteritems():
+            for name in sorted(self.data.keys()):
+                data = self.data[name]
                 image = np.array([])
                 tracks = list()
                 for file_, track in data.iter_gallery(n_galleries):

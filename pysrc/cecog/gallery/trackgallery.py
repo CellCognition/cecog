@@ -17,7 +17,6 @@ from os.path import join
 
 import vigra
 import numpy as np
-from matplotlib import pyplot as plt
 from cecog.gallery import GalleryRGBImage
 from cecog.analyzer.tracker import Tracker
 from cecog.util.util import makedirs

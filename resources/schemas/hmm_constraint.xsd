@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <xsd:element name="constraints">
+    <xsd:complexType>
+      <xsd:all>
+        <xsd:element name="numberOfClasses" type="xsd:nonNegativeInteger"/>
+        <xsd:element name="numberOfHiddenStates" type="xsd:nonNegativeInteger"/>
+        <xsd:element name="startNodes" type="nonNegIntList"/>
+        <xsd:element name="transitionGraph" type="nonNegIntList"/>
+
+        <xsd:element name="emissionMatrix">
+          <xsd:complexType>
+            <xsd:simpleContent>
+              <xsd:extension base="Probability">
+                <xsd:attribute name="epsilon" type="xsd:double"/>
+              </xsd:extension>
+            </xsd:simpleContent>
+          </xsd:complexType>
+        </xsd:element>
+
+      </xsd:all>
+    </xsd:complexType>
+  </xsd:element>
+
+  <xsd:simpleType name="nonNegIntList">
+    <xsd:list itemType="xsd:nonNegativeInteger"/>
+  </xsd:simpleType>
+
+  <xsd:simpleType name="Probability">
+    <xsd:list itemType="positiveDouble"/>
+  </xsd:simpleType>
+
+  <xsd:simpleType name="positiveDouble">
+    <xsd:restriction base="xsd:double">
+      <xsd:minInclusive value="0"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+
+</xsd:schema>

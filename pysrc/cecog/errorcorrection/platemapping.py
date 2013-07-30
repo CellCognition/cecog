@@ -31,7 +31,7 @@ class PlateMapping(OrderedDict):
     OLIGO = 'OligoID'
     GROUP = 'Group'
 
-    _colnames = [POSITION, WELL, SITE, ROW, COLUMN, GENE, OLIGO, GROUP]
+    colnames = (POSITION, WELL, SITE, ROW, COLUMN, GENE, OLIGO, GROUP)
 
     def __init__(self, positions):
         super(PlateMapping, self).__init__()
@@ -51,7 +51,7 @@ class PlateMapping(OrderedDict):
 
     def save(self, filename, mode="w"):
         with open(filename, mode=mode) as fp:
-            writer = csv.DictWriter(fp, fieldnames=self._colnames,
+            writer = csv.DictWriter(fp, fieldnames=self.colnames,
                                     delimiter='\t')
             writer.writeheader()
             for k, v in self.iteritems():

@@ -48,18 +48,23 @@ class HmmSklearn(HMMCore):
     def __init__(self, *args, **kw):
         super(HmmSklearn, self).__init__(*args, **kw)
 
+    def hmmc(self, est):
+        """Return either the default constrain for the hidden markov model or
+        the one that is provided by the options."""
+        if self.ecopts.hmm_constrain[self.channel] is None:
+            # default constrain for hidden markov model
+            hmmc = estimator.HMMSimpleLeft2RightConstraint(est.nstates)
+        else:
+            hmmc = self.ecopts.hmm_constrain[self.channel]
+        return hmmc
+
     def __call__(self):
         hmmdata = dict()
 
         for (name, tracks, probs, finfo) in  \
                 self.dtable.iterby(self.ecopts.sortby):
             est = self._get_estimator(probs, tracks)
-            if self.ecopts.constrain_graph:
-                cfile = self.ecopts.constrain_files[self.channel]
-                hmmc = estimator.HMMConstraint(cfile)
-            else:
-                hmmc = estimator.HMMSimpleLeft2RightConstraint(est.nstates)
-            est.constrain(hmmc)
+            est.constrain(self.hmmc(est))
 
             # ugly sklearn
             hmm_ = hmm.MultinomialHMM(n_components=est.nstates)
