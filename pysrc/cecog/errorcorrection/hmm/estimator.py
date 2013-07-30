@@ -12,6 +12,7 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
+from os.path import join
 import numpy as np
 
 # py2app demands import hooks like this and it sucks
@@ -20,7 +21,7 @@ import lxml.etree
 import lxml._elementpath
 
 from cecog.tc3 import normalize
-
+from cecog.environment import find_resource_dir
 
 class HMMSimpleLeft2RightConstraint(object):
     """"Simplest constraint on an Hidden Markov Models
@@ -47,6 +48,7 @@ class HMMConstraint(object):
 
         with open(filename, 'r') as fp:
             xml = lxml.objectify.fromstring(fp.read())
+            self.validate(xml)
             self.nsymbols = int(xml.numberOfClasses)
             self.nstates = int(xml.numberOfHiddenStates)
             self.start = np.fromstring(str(xml.startNodes), dtype=int, sep=" ")
@@ -58,6 +60,11 @@ class HMMConstraint(object):
                                       sep=" ")
             self.emis.shape = self.nstates, self.nsymbols
             self.emis += float(xml.emissionMatrix.attrib['epsilon'])
+
+    def validate(self, xml):
+        schemafile = join(find_resource_dir(), "schemas", "hmm_constraint.xsd")
+        schema_doc =  lxml.etree.parse(schemafile)
+        return lxml.etree.XMLSchema(schema_doc).assertValid(xml)
 
 class HMMEstimator(object):
     """Setup a (naive) default hidden markov (left-to-right model)

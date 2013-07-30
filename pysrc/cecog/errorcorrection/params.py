@@ -17,6 +17,7 @@ from os.path import join
 
 from cecog import CHANNEL_PREFIX
 from cecog.errorcorrection import PlateMapping
+from cecog.errorcorrection.hmm import estimator
 from cecog.learning.learning import LearnerFiles
 from cecog.learning.learning import ClassDefinition
 from cecog.learning.learning import ClassDefinitionUnsup
@@ -29,7 +30,7 @@ class ECParams(object):
     EVENTSELECTION_UNSUPERVISED = 1
     EVENTSELECTION = (EVENTSELECTION_SUPERVISED, EVENTSELECTION_UNSUPERVISED)
 
-    __slots__ = ['regionnames', 'constrain_graph', 'constrain_files',
+    __slots__ = ['regionnames', 'constrain_graph', 'hmm_constrain',
                  'classifier_dirs', 'position_labels', 'mapping_dir',
                  'sortby', 'skip_plates', 'timeunit', 'overwrite_timelapse',
                  'timelapse', 'sorting', 'sorting_sequence', 'tmax',
@@ -41,7 +42,7 @@ class ECParams(object):
         self._classdef = None
 
         self.constrain_graph = settings('ErrorCorrection', 'constrain_graph')
-        self.constrain_files = dict()
+        self.hmm_constrain = dict()
         self.classifier_dirs = dict()
         self.regionnames = dict()
 
@@ -52,8 +53,8 @@ class ECParams(object):
                 self.regionnames[channel] = \
                     settings('Classification', '%s_classification_regionname'
                              %channel)
-                self.constrain_files[channel] = \
-                    settings('ErrorCorrection', '%s_graph' %channel)
+                self.hmm_constrain[channel] = self._hmm_constrain( \
+                    settings('ErrorCorrection', '%s_graph' %channel))
                 _setting = '%s_classification_envpath' %channel
                 self.classifier_dirs[channel] = \
                     settings('Classification', _setting)
@@ -117,6 +118,15 @@ class ECParams(object):
 
         return self._classdef
 
+    def _hmm_constrain(self, cfile):
+        """Load and validate (xsd-schema) the 'hmm constraints file'."""
+
+        hmmc = None
+        if self.constrain_graph:
+            # __init of HMMConstraint perform a xsd schema validation
+            # it is essential to do it here, before all the data is loaded
+            hmmc = estimator.HMMConstraint(cfile)
+        return hmmc
 
     def __str__(self):
         return '\n'.join(["%s : %s" %(slot, getattr(self, slot))

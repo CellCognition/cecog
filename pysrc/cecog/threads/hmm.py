@@ -98,7 +98,8 @@ class HmmThread(CoreThread):
 
         # don't do anything if the 'hmm' folder already exists and
         # the skip-option is on
-        if isdir(path_out_hmm) and self._settings('ErrorCorrection', 'skip_processed_plates'):
+        if isdir(path_out_hmm) and self._settings('ErrorCorrection',
+                                                  'skip_processed_plates'):
             return
 
         makedirs(path_out_hmm)
@@ -148,17 +149,21 @@ class HmmThread(CoreThread):
                 lines[i] = "PATH_INPUT = '%s'\n" % path_analyzed
             elif line2 == '#GROUP_BY_GENE':
                 lines[i] = "GROUP_BY_GENE = %s\n" \
-                    % str(self._settings('ErrorCorrection', 'groupby_genesymbol')).upper()
+                    % str(self._settings('ErrorCorrection',
+                                         'groupby_genesymbol')).upper()
             elif line2 == '#GROUP_BY_OLIGOID':
                 lines[i] = "GROUP_BY_OLIGOID = %s\n" \
-                    % str(self._settings('ErrorCorrection', 'groupby_oligoid')).upper()
+                    % str(self._settings('ErrorCorrection',
+                                         'groupby_oligoid')).upper()
             elif line2 == '#TIMELAPSE':
                 lines[i] = "TIMELAPSE = %s\n" % time_lapse
             elif line2 == '#MAX_TIME':
-                lines[i] = "MAX_TIME = %s\n" % self._settings('ErrorCorrection', 'max_time')
+                lines[i] = "MAX_TIME = %s\n" % self._settings('ErrorCorrection',
+                                                              'max_time')
             elif line2 == '#SINGLE_BRANCH':
                 lines[i] = "SINGLE_BRANCH = %s\n" \
-                % str(self._settings('ErrorCorrection', 'ignore_tracking_branches')).upper()
+                % str(self._settings('ErrorCorrection',
+                                     'ignore_tracking_branches')).upper()
             elif line2 == '#GALLERIES':
                 if gallery_names is None:
                     lines[i] = "GALLERIES = NULL\n"
@@ -178,6 +183,8 @@ class HmmThread(CoreThread):
                 else:
                     primary_graph = self._generate_graph(
                         'primary', wd, path_out_hmm, region_name_primary)
+                self._check_constraints_file(primary_graph)
+
 
                 if line2 == '#FILENAME_GRAPH_P':
                     lines[i] = "FILENAME_GRAPH_P = '%s'\n" % primary_graph
@@ -191,7 +198,8 @@ class HmmThread(CoreThread):
                 elif line2 == '#SORT_CLASSES_P':
                     if self._settings('ErrorCorrection', 'enable_sorting'):
                         lines[i] = "SORT_CLASSES_P = c(%s)\n" \
-                            % self._settings('ErrorCorrection', 'sorting_sequence')
+                            % self._settings('ErrorCorrection',
+                                             'sorting_sequence')
                     else:
                         lines[i] = "SORT_CLASSES_P = NULL\n"
                 elif line2 == "#PATH_OUT_P":
@@ -204,6 +212,7 @@ class HmmThread(CoreThread):
                 else:
                     secondary_graph = self._generate_graph(
                         'secondary', wd, path_out_hmm, region_name_secondary)
+                self._check_constraints_file(secondary_graph)
 
                 if line2 == '#FILENAME_GRAPH_S':
                     lines[i] = "FILENAME_GRAPH_S = '%s'\n" % secondary_graph
@@ -215,7 +224,8 @@ class HmmThread(CoreThread):
                 elif line2 == '#REGION_NAME_S':
                     lines[i] = "REGION_NAME_S = '%s'\n" % region_name_secondary
                 elif line2 == '#SORT_CLASSES_S':
-                    secondary_sort = self._settings('ErrorCorrection', 'secondary_sort')
+                    secondary_sort = self._settings('ErrorCorrection',
+                                                    'secondary_sort')
                     if secondary_sort == '':
                         lines[i] = "SORT_CLASSES_S = NULL\n"
                     else:
@@ -322,3 +332,9 @@ class HmmThread(CoreThread):
     def set_abort(self, wait=False):
         self._process.kill()
         super(HmmThread, self).set_abort(wait=wait)
+
+    def _check_constraints_file(self, filename):
+        if filename.endswith(".xml"):
+            raise RuntimeError(("R implementation of th error correction "
+                                "does not support xml file format. Use txt-file"
+                                "from battery package as template"))
