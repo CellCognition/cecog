@@ -10,6 +10,7 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
+from emptyfigure import *
 from boxplot import *
 from trajectories import *
 from hmmnetwork import *

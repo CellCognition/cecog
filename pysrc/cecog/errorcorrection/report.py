@@ -93,6 +93,14 @@ class HmmReport(object):
         self.outdir = outdir
         self.classdef = classdef
 
+    def _empty_figure(self, axarr, name, i):
+        for k in xrange(5):
+            if k == 0:
+                plots.empty_figure(axarr[k][i], title="%s (0 tracks)" %name)
+            else:
+                plots.empty_figure(axarr[k][i])
+
+
     def overview(self, filename, figsize=(25, 20)):
         pdf = PdfPages(filename)
         sp_props = dict(top=0.95, bottom=0.05, hspace=0.2, wspace=0.2,
@@ -110,8 +118,11 @@ class HmmReport(object):
                                               figsize=figsize)
                     fig.subplots_adjust(**sp_props)
 
-                title = '%s, (%d tracks)' %(name, data.ntracks)
+                if data is None:
+                    self._empty_figure(axarr, name, i)
+                    continue
 
+                title = '%s, (%d tracks)' %(name, data.ntracks)
                 # hmm network
                 clcol = dict([(k, self.classdef.hexcolors[v])
                              for k, v in self.classdef.class_names.iteritems()])
@@ -162,7 +173,7 @@ class HmmReport(object):
                 try:
                     dwell_times[name] = np.concatenate( \
                         (dwell_times[name], data.dwell_times[label]))
-                except KeyError:
+                except (KeyError, AttributeError):
                     pass
 
             title = "class %d (%s)" %(label, self.classdef.class_names[label])
@@ -222,6 +233,8 @@ class HmmReport(object):
         try:
             for name in sorted(self.data.keys()):
                 data = self.data[name]
+                if data is None:
+                    continue
                 image = np.array([])
                 tracks = list()
                 for file_, track in data.iter_gallery(n_galleries):

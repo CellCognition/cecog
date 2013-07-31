@@ -62,7 +62,10 @@ class HmmSklearn(HMMCore):
         hmmdata = dict()
 
         for (name, tracks, probs, finfo) in  \
-                self.dtable.iterby(self.ecopts.sortby):
+                self.dtable.iterby(self.ecopts.sortby, True):
+            if tracks is probs is finfo is None:
+                hmmdata[name] = None
+                continue
             est = self._get_estimator(probs, tracks)
             est.constrain(self.hmmc(est))
 

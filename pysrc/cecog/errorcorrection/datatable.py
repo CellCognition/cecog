@@ -26,6 +26,19 @@ class HmmDataTable(object):
         self._tracks = None
         self._gallery_files = None
         self._pos = dict()
+        self._all_pos = dict()
+        for cn in pm.colnames:
+            self._all_pos.setdefault(cn, [])
+            self._pos.setdefault(cn, [])
+
+    def _update_pos(self, pos, mapping, concatenate=False):
+        self._pos[pm.POSITION].append(pos)
+        try:
+            for k, v in mapping.iteritems():
+                self._pos[k].append(v)
+        except AttributeError:
+            for cn in (cols for cols in pm.colnames if cols != pm.POSITION):
+                self._pos[cn].append(None)
 
     def add_track(self, track, prob, pos, mapping, gallery_file):
 
@@ -35,16 +48,7 @@ class HmmDataTable(object):
             self._probs = np.empty(prob.shape)[np.newaxis, :, :]
             self._probs[0, :, :] = prob[:, :]
             self._gallery_files = np.array([gallery_file])
-
-            self._pos[pm.POSITION] = np.array([pos])
-            try:
-                for k, v in mapping.iteritems():
-                    self._pos[k] = np.array([v])
-            except AttributeError:
-                for cn in pm.colnames:
-                    if cn is pm.POSITION:
-                        continue
-                    self._pos[cn] = np.array([None])
+            self._update_pos(pos, mapping, concatenate=False)
         else:
             assert track.shape == self._tracks.shape[1:]
             assert prob.shape == self._probs.shape[1:]
@@ -52,18 +56,18 @@ class HmmDataTable(object):
             self._probs = np.vstack((self._probs, prob[np.newaxis,::]))
             self._gallery_files = np.concatenate( \
                 (self._gallery_files, [gallery_file]))
-            self._pos[pm.POSITION] = np.concatenate( \
-                (self._pos[pm.POSITION], np.array([pos])))
-            try:
-                for k, v in mapping.iteritems():
-                    self._pos[k] = np.concatenate((self._pos[k], np.array([v])))
-            except AttributeError:
-                for cn in pm.colnames:
-                    if cn is pm.POSITION:
-                        continue
-                    self._pos[cn] = np.concatenate((self._pos[cn],
-                                                    np.array([None])))
+            self._update_pos(pos, mapping, concatenate=True)
 
+    def add_position(self, pos, mapping):
+        self._all_pos[pm.POSITION].append(pos)
+        try:
+            for k, v in mapping.iteritems():
+                self._all_pos[k].append(v)
+        except AttributeError:
+            for cn in pm.colnames:
+                if cn is pm.POSITION:
+                    continue
+                self._all_pos[cn].append(None)
 
     @property
     def ntracks(self):
@@ -87,14 +91,18 @@ class HmmDataTable(object):
             grps[k] = v[self._pos[key] == name][0]
         return grps
 
-    def iterby(self, key):
+    def iterby(self, key, include_empty_positions=False):
 
         if not self._pos.has_key(key):
             raise StopIteration()
 
-        for k in np.unique(self._pos[key]):
+        for k in np.unique(self._all_pos[key]):
             if k is None: # no rich comparision here...
                 i = np.array([v is None for v in self._pos[key]])
             else:
-                i = (k == self._pos[key])
-            yield k, self._tracks[i], self._probs[i], self._gallery_files[i]
+                i = (k == np.array(self._pos[key]))
+
+            if k not in self._pos[key] and include_empty_positions:
+                yield (k, None, None, None)
+            else:
+                yield k, self._tracks[i], self._probs[i], self._gallery_files[i]
