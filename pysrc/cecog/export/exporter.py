@@ -120,7 +120,7 @@ class EventExporter(object):
                         except ValueError:
                             frame, obj_label = Tracker.split_nodeid(startid)
                             branch = 1
-                        filename = 'features_P%s_T%05d_O%04d_B%02d_C%s_R%s.txt' \
+                        filename = 'features__P%s__T%05d__O%04d__B%02d__C%s__R%s.txt' \
                             %(position, frame, obj_label, branch, chname, region_name)
                         filename = join(outdir, filename)
 

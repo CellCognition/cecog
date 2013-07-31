@@ -408,7 +408,7 @@ class Browser(QMainWindow):
 
         # as long the GIL is not released, if GIL is released
         # just use self.setCursor
-        
+
         try:
             QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
             analyzer.processPositions(myhack=self)
