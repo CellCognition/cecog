@@ -30,8 +30,9 @@ class PlateMapping(OrderedDict):
     GENE = 'Gene Symbol'
     OLIGO = 'OligoID'
     GROUP = 'Group'
+    SIRNAID = 'siRNA ID'
 
-    colnames = (POSITION, WELL, SITE, ROW, COLUMN, GENE, OLIGO, GROUP)
+    colnames = (POSITION, WELL, SITE, ROW, COLUMN, GENE, OLIGO, SIRNAID, GROUP)
 
     def __init__(self, positions):
         super(PlateMapping, self).__init__()
