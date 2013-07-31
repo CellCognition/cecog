@@ -88,7 +88,10 @@ class HmmDataTable(object):
         """Plate mapping for a destinct sorting scheme (key) and name."""
         grps = dict()
         for k, v in self._pos.iteritems():
-            grps[k] = v[self._pos[key] == name][0]
+            try:
+                grps[k] = v[self._pos[key].index(name)]
+            except IndexError:
+                grps[k] = None
         return grps
 
     def iterby(self, key, include_empty_positions=False):
