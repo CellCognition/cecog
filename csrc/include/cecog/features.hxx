@@ -1102,7 +1102,7 @@ namespace cecog
             areaVariance_ = areaVariance_/ n ;
         }
 
-      const unsigned areaSignificanceThresh_ = 16;
+      const static unsigned areaSignificanceThresh_ = 16;
       const unsigned borderSize;
       vigra::Diff2D imgSize;
       BIMAGE imBinRoi_;
