@@ -161,18 +161,16 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(pyOverloads_ImageToArray, pyImageToArray, 1, 2)
     pyImageToArray(IMAGE const & img, bool copy=false)
     {
       npy_intp dims[] = { img.height(), img.width() };
-      if(copy)
-      {
+      if(copy) {
     	object obj(handle<>(PyArray_SimpleNew(2, dims,
-    	                               TypeAsNumPyType<typename IMAGE::PixelType>::result())));
+                                              TypeAsNumPyType<typename IMAGE::PixelType>::result())));
         void* arr_data = PyArray_DATA((PyArrayObject*) obj.ptr());
         ((PyArrayObject*) obj.ptr())->strides[0] = img.width() * sizeof(typename IMAGE::PixelType);
         ((PyArrayObject*) obj.ptr())->strides[1] = sizeof(typename IMAGE::PixelType);
         npy_intp n = img.width() * img.height();
         memcpy(arr_data, (void*)img[0], sizeof(typename IMAGE::PixelType) * n);
         return extract<numeric::array>(obj);
-      }
-      else {
+      } else {
         object obj(handle<>(PyArray_SimpleNewFromData(2, &dims[0],
                                                       TypeAsNumPyType<typename IMAGE::PixelType>::result(), (char*)img[0])));
         ((PyArrayObject*) obj.ptr())->strides[0] = img.width() * sizeof(typename IMAGE::PixelType);
@@ -283,8 +281,7 @@ pyNumpyToImage(PyObject *obj, bool copy=false)
         return _numpyToImage< vigra::FImage >(array);
       else if (descr->type_num == NPY_DOUBLE)
         return _numpyToImage< vigra::DImage >(array);
-    }
-	else {
+    } else {
       if (descr->type_num == NPY_UBYTE)
         return _numpyToImageView< vigra::UInt8RGBImageView >(array);
       else if (descr->type_num == NPY_BYTE)
@@ -303,6 +300,7 @@ pyNumpyToImage(PyObject *obj, bool copy=false)
         return _numpyToImageView< vigra::DImageView >(array);
     }
   }
+  std::cout << "foobar the unthinkable happend!" << std::endl;
   return Py_None;
 }
 
@@ -1390,8 +1388,6 @@ static void wrap_images()
     .export_values()
     ;
 
-
-
   def("readImageMito", pyReadImageMito);
 
   def("readImage", pyReadImage< vigra::UInt8 >,
@@ -1410,33 +1406,32 @@ static void wrap_images()
       (arg("strFilename"), arg("imageIndex")=-1), "Read RGB image (3xUInt8) from file.");
 
   def("writeImage", pyWriteImage< vigra::UInt8Image >,
-      (args("image"),"filename", arg("compression")="100"), "Write UInt8 image to file.");
-  // def("writeImage", pyWriteImage< vigra::UInt16Image >,
-  //     ("image", "filename", arg("compression")="100"), "Write UInt16 image to file.");
-  // def("writeImage", pyWriteImage< vigra::Int16Image >,
-  //     ("image", "filename", arg("compression")="100"), "Write Int16 image to file.");
-  // def("writeImage", pyWriteImage< vigra::UInt32Image >,
-  //     ("image", "filename", arg("compression")="100"), "Write UInt32 image to file.");
-  // def("writeImage", pyWriteImage< vigra::Int32Image >,
-  //     ("image", "filename", arg("compression")="100"), "Write Int32 image to file.");
-  // def("writeImage", pyWriteImage< vigra::UInt8RGBImage >,
-  //     ("image", "filename", arg("compression")="100"), "Write RGB image (3xUInt8) to file.");
-  // def("writeImage", pyWriteImage< vigra::FImage >,
-  //     ("image", "filename", arg("compression")="100"), "Write float image to file.");
+      (arg("image"), arg("filename"), arg("compression")="100"), "Write UInt8 image to file.");
+  def("writeImage", pyWriteImage< vigra::UInt16Image >,
+      (arg("image"), arg("filename"), arg("compression")="100"), "Write UInt16 image to file.");
+  def("writeImage", pyWriteImage< vigra::Int16Image >,
+      (arg("image"), args("filename"), arg("compression")="100"), "Write Int16 image to file.");
+  def("writeImage", pyWriteImage< vigra::UInt32Image >,
+      (arg("image"), args("filename"), arg("compression")="100"), "Write UInt32 image to file.");
+  def("writeImage", pyWriteImage< vigra::Int32Image >,
+      (arg("image"), args("filename"), arg("compression")="100"), "Write Int32 image to file.");
+  def("writeImage", pyWriteImage< vigra::UInt8RGBImage >,
+      (arg("image"), args("filename"), arg("compression")="100"), "Write RGB image (3xUInt8) to file.");
+  def("writeImage", pyWriteImage< vigra::FImage >,
+      (arg("image"), args("filename"), arg("compression")="100"), "Write float image to file.");
 
-  // def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::UInt8 > >,
-  //     ("image", "filename", arg("compression")="100"), "Write UInt8 image to file.");
-  // def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::UInt16 > >,
-  //     ("image", "filename", arg("compression")="100"), "Write UInt16 image to file.");
-  // def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::Int16 > >,
-  //     ("image", "filename", arg("compression")="100"), "Write Int16 image to file.");
-  // def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::UInt32 > >,
-  //     ("image", "filename", arg("compression")="100"), "Write UInt32 image to file.");
-  // def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::Int32 > >,
-  //     ("image", "filename", arg("compression")="100"), "Write Int32 image to file.");
-  // def("writeImage", pyWriteImage< vigra::BasicImageView<vigra::RGBValue<vigra::UInt8 > > >,
-  //     ("image", "filename", arg("compression")="100"), "Write RGB image (3xUInt8) to file.");
-
+  def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::UInt8 > >,
+      (arg("image"), args("filename"), arg("compression")="100"), "Write UInt8 image to file.");
+  def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::UInt16 > >,
+      (arg("image"), args("filename"), arg("compression")="100"), "Write UInt16 image to file.");
+  def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::Int16 > >,
+      (arg("image"), args("filename"), arg("compression")="100"), "Write Int16 image to file.");
+  def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::UInt32 > >,
+      (arg("image"), args("filename"), arg("compression")="100"), "Write UInt32 image to file.");
+  def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::Int32 > >,
+      (arg("image"), args("filename"), arg("compression")="100"), "Write Int32 image to file.");
+  def("writeImage", pyWriteImage< vigra::BasicImageView<vigra::RGBValue<vigra::UInt8 > > >,
+      (arg("image"), args("filename"), arg("compression")="100"), "Write RGB image (3xUInt8) to file.");
 
   wrapImage<vigra::UInt8>("Image");
   //wrapImage<vigra::UInt8>("ImageUInt8");
@@ -1460,7 +1455,6 @@ static void wrap_images()
   //wrapRGBImage<uint8>("ImageRGB");
 
   //implicitly_convertible< vigra::BasicImage<uint8>, vigra::BasicImageView<uint8> >();
-
 
   wrapRGBValue<vigra::UInt8>("RGBValue");
 
