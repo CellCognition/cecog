@@ -185,7 +185,7 @@ class Channel(ChannelCore):
 
     def apply_registration(self):
         img_in = self.meta_image.image
-        
+
         # ccore.subImage checks dimensions
         image = ccore.subImage(img_in,
                                ccore.Diff2D(*self.registration_start)-

@@ -95,7 +95,6 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(pyOverloads_RGBImageToArray, pyRGBImageToArray, 
 BOOST_PYTHON_FUNCTION_OVERLOADS(pyOverloads_ImageToArray, pyImageToArray, 1, 2)
 
 
-
     template <class T>
     struct TypeAsNumPyType
     {
@@ -300,7 +299,6 @@ pyNumpyToImage(PyObject *obj, bool copy=false)
         return _numpyToImageView< vigra::DImageView >(array);
     }
   }
-  std::cout << "foobar the unthinkable happend!" << std::endl;
   return Py_None;
 }
 
@@ -526,9 +524,6 @@ template <class IMAGE1>
 PyObject * pyImInfimum(IMAGE1 const &a, IMAGE1 const &b)
 {
   std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(a.size()));
-
-  //typedef typename Accessor1::value_type INTYPE;
-  //vigra::combineTwoImages(srcImageRange(a), srcImage(b), destImage(*imgPtr), std::min );
 
   using namespace cecog::morpho;
   ImInfimum(srcImageRange(a), srcImage(b), destImage(*imgPtr));
@@ -829,21 +824,6 @@ PyObject * pyBinImage(IMAGE_IN const &imgIn,
   return incref(object(imgPtr).ptr());
 }
 
-//template <class IMAGE_IN, class IMAGE_OUT>
-//void pyBinResampleImage(IMAGE_IN const &imgIn,
-//                        IMAGE_OUT &imgOut,
-//                        int iFactor)
-//{
-//  vigra::Kernel1D<float> oKernel;
-//  oKernel.initExplicitly(0, iFactor-1) = 1.0 / iFactor;
-//  vigra::Rational<float> oRational(1.0 / iFactor);
-//  vigra::Rational<int> oOffset(0);
-//  resamplingConvolveImage(srcImageRange(imgIn), destImage(imgOut),
-//                          oKernel, oRational, oOffset,
-//                          oKernel, oRational, oOffset);
-//}
-
-
 template <class IMAGE1, class IMAGE2>
 void pyLocalThreshold(IMAGE1 const & imin, IMAGE2 & imout, unsigned int region_size, typename IMAGE1::value_type limit)
 {
@@ -859,13 +839,11 @@ void pyBackgroundSubtraction(IMAGE1 const & imin, IMAGE2 & imout, unsigned int r
 
 template <class PixelType>
 inline static PyObject * pyReadImage(std::string strFilename, int imageIndex=-1)
-//inline static PyObject * pyReadImage(std::string strFilename)
 {
   typedef vigra::BasicImage< PixelType > ImageType;
   vigra::ImageImportInfo oInfo(strFilename.c_str());
-  if (imageIndex > -1)
-  {
-	  oInfo.setImageIndex(imageIndex);
+  if (imageIndex > -1) {
+    oInfo.setImageIndex(imageIndex);
   }
   std::auto_ptr< ImageType > imgPtr(new ImageType(oInfo.size()));
   vigra::importImage(oInfo, vigra::destImage(*imgPtr));
@@ -1061,20 +1039,32 @@ void convert_dict_to_map(dict const &d, std::map<KEY, VALUE> &m)
 }
 
 template <class IMAGE>
-PyObject* pyProjectImage(vigra::ArrayVector< IMAGE > oImageVector, cecog::ProjectionType pType)
+void pyZProject(IMAGE &imgIN, vigra::ArrayVector< IMAGE > ImageVector,
+                 cecog::ProjectionType pType)
 {
-  if (oImageVector.size() > 0)
-  {
-    std::auto_ptr< IMAGE >
-      imgPtr(new IMAGE(oImageVector[0].size()));
-    cecog::projectImage(oImageVector, *imgPtr, pType);
-    return incref(object(imgPtr).ptr());
-  }
+  if (ImageVector.size() > 0)
+    {
+      //      std::auto_ptr< IMAGE > imgPtr(imgIN);
+      cecog::projectImage< IMAGE >(ImageVector, imgIN, pType);
+    }
+}
+
+template <class IMAGE>
+PyObject* pyProjectImage(vigra::ArrayVector< IMAGE > ImageVector,
+                         cecog::ProjectionType pType)
+{
+
+  if (ImageVector.size() > 0)
+    {
+      std::auto_ptr< IMAGE > imgPtr(new IMAGE(ImageVector[0].size()));
+      cecog::projectImage< IMAGE >(ImageVector, *imgPtr, pType);
+      return incref(object(imgPtr).ptr());
+    }
   else
     return Py_None;
 }
 
-template <class T>
+ template <class T>
   vigra::BasicImage< vigra::RGBValue<T> > pyMakeRGBImage1(PyObject * lstImages, PyObject * lstRGBValues)
   {
     typedef vigra::ArrayVector< vigra::BasicImageView<T> > ImageVector;
@@ -1410,15 +1400,15 @@ static void wrap_images()
   def("writeImage", pyWriteImage< vigra::UInt16Image >,
       (arg("image"), arg("filename"), arg("compression")="100"), "Write UInt16 image to file.");
   def("writeImage", pyWriteImage< vigra::Int16Image >,
-      (arg("image"), args("filename"), arg("compression")="100"), "Write Int16 image to file.");
+      (arg("image"), arg("filename"), arg("compression")="100"), "Write Int16 image to file.");
   def("writeImage", pyWriteImage< vigra::UInt32Image >,
-      (arg("image"), args("filename"), arg("compression")="100"), "Write UInt32 image to file.");
+      (arg("image"), arg("filename"), arg("compression")="100"), "Write UInt32 image to file.");
   def("writeImage", pyWriteImage< vigra::Int32Image >,
-      (arg("image"), args("filename"), arg("compression")="100"), "Write Int32 image to file.");
+      (arg("image"), arg("filename"), arg("compression")="100"), "Write Int32 image to file.");
   def("writeImage", pyWriteImage< vigra::UInt8RGBImage >,
-      (arg("image"), args("filename"), arg("compression")="100"), "Write RGB image (3xUInt8) to file.");
+      (arg("image"), arg("filename"), arg("compression")="100"), "Write RGB image (3xUInt8) to file.");
   def("writeImage", pyWriteImage< vigra::FImage >,
-      (arg("image"), args("filename"), arg("compression")="100"), "Write float image to file.");
+      (arg("image"), arg("filename"), arg("compression")="100"), "Write float image to file.");
 
   def("writeImage", pyWriteImage< vigra::BasicImageView< vigra::UInt8 > >,
       (arg("image"), args("filename"), arg("compression")="100"), "Write UInt8 image to file.");
@@ -1692,17 +1682,19 @@ static void wrap_images()
   def("drawFilledCircle", pyDrawFilledCircle< vigra::UInt16Image >, (arg("p"), arg("r"), arg("image"), arg("color")), "Draws a filled circle at point p with radius r.");
   def("drawFilledCircle", pyDrawFilledCircle< vigra::BRGBImage >, (arg("p"), arg("r"), arg("image"), arg("color")), "Draws a filled circle at point p with radius r.");
 
-
-
   enum_<cecog::ProjectionType>("ProjectionType")
   .value("MaxProjection",  cecog::MaxProjection)
   .value("MinProjection",  cecog::MinProjection)
   .value("MeanProjection", cecog::MeanProjection)
   ;
 
-  def("projectImage", pyProjectImage< vigra::UInt8Image >);
-  def("projectImage", pyProjectImage< vigra::Int16Image >);
-  def("projectImage", pyProjectImage< vigra::UInt16Image >);
+  def("projectImage", pyProjectImage<vigra::Int16Image>);
+  def("projectImage", pyProjectImage<vigra::UInt8Image>);
+  def("projectImage", pyProjectImage<vigra::UInt16Image>);
+
+  def("zproject", pyZProject<vigra::UInt8Image>);
+  def("zproject", pyZProject<vigra::UInt16Image>);
+  def("zproject", pyZProject<vigra::Int16Image>);
 
 }
 
