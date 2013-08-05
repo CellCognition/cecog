@@ -1019,8 +1019,6 @@ struct PySequenceToArrayVector
 
 };
 
-
-
 template <class KEY, class VALUE>
 inline
 void convert_dict_to_map(dict const &d, std::map<KEY, VALUE> &m)
@@ -1044,10 +1042,14 @@ void pyZProject(IMAGE &imgIN, vigra::ArrayVector< IMAGE > ImageVector,
 {
   if (ImageVector.size() > 0)
     {
-      //      std::auto_ptr< IMAGE > imgPtr(imgIN);
       cecog::projectImage< IMAGE >(ImageVector, imgIN, pType);
     }
+  else {
+    PyErr_SetString(PyExc_IndexError, "Image list is empty");
+    throw_error_already_set();
+  }
 }
+
 
 template <class IMAGE>
 PyObject* pyProjectImage(vigra::ArrayVector< IMAGE > ImageVector,
@@ -1064,7 +1066,7 @@ PyObject* pyProjectImage(vigra::ArrayVector< IMAGE > ImageVector,
     return Py_None;
 }
 
- template <class T>
+template <class T>
   vigra::BasicImage< vigra::RGBValue<T> > pyMakeRGBImage1(PyObject * lstImages, PyObject * lstRGBValues)
   {
     typedef vigra::ArrayVector< vigra::BasicImageView<T> > ImageVector;
