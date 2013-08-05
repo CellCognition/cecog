@@ -173,15 +173,22 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
         image = meta_image.image
 
         img_prefiltered = self.prefilter(image)
-        img_bin = self.threshold(img_prefiltered, self.params['latwindowsize'], self.params['latlimit'])
+        img_bin1 = self.threshold(img_prefiltered, self.params['latwindowsize'], self.params['latlimit'])
 
         if self.params['holefilling']:
-            ccore.fill_holes(img_bin, False)
-
+            ccore.fill_holes(img_bin1, False)
 
         if self.params['lat2']:
-            img_bin2 = self.threshold(img_prefiltered, self.params['latwindowsize2'], self.params['latlimit2'])
-            img_bin = ccore.projectImage([img_bin, img_bin2], ccore.ProjectionType.MaxProjection)
+            img_bin2 = self.threshold(img_prefiltered, self.params['latwindowsize2'],
+                                      self.params['latlimit2'])
+
+            # replacement for not working ccore.projectImage
+            img_bin = numpy.zeros((img_bin2.height, img_bin2.width),
+                                 dtype=meta_image.format.lower())
+            img_bin = ccore.numpy_to_image(img_bin, copy=True)
+            ccore.zproject(img_bin, [img_bin1, img_bin2], ccore.ProjectionType.MaxProjection)
+        else:
+            img_bin = img_bin1
 
 
         if self.params['shapewatershed']:
