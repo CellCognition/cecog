@@ -91,7 +91,7 @@ namespace cecog
                                                       vigra::ArrayVector< vigra::RGBValue<T> > const & oChannelVector)
   {
     vigra::ArrayVector< float > oAlphaVector;
-    for (int iIdx=0; iIdx < oChannelVector.size(); iIdx++)
+    for (size_t iIdx=0; iIdx < oChannelVector.size(); iIdx++)
       oAlphaVector.push_back(1.0);
     return makeRGBImage(oImageVector, oChannelVector, oAlphaVector);
   }
@@ -151,7 +151,7 @@ namespace cecog
   vigra::MultiArray<4, uint8> transformImageListToArray4D(std::vector<vigra::BImage> const &vImages,
                                                           int iDim3, int iDim4)
   {
-    vigra_precondition(vImages.size() == iDim3 * iDim4,
+    vigra_precondition(vImages.size() == static_cast<unsigned>(iDim3*iDim4),
         "transformImageListToArrayView4D: size of image list must match dimensions!");
 
     vigra_precondition(vImages.size() > 0,

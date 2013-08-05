@@ -143,9 +143,9 @@ namespace cecog {
         lowerRight(x + width, y + height),
         x(x),
         y(y),
+        size(width, height),
         width(width),
         height(height),
-        size(width, height),
         area(width * height)
     {}
 
@@ -162,9 +162,9 @@ namespace cecog {
 
     vigra::Diff2D upperLeft;
     vigra::Diff2D lowerRight;
-    vigra::Diff2D size;
     int x;
     int y;
+    vigra::Diff2D size;
     int width;
     int height;
     unsigned int area;
@@ -207,12 +207,14 @@ namespace cecog {
           orientation(-10.0)
     {};
 
-    vigra::Diff2D center, oCenterAbs, crack_start;
+    Region roi;
+    vigra::Diff2D center;
+    vigra::Diff2D crack_start;
+    double roisize;
+    vigra::Diff2D oCenterAbs;
+    double orientation;
     FeatureMap features;
     FeatureMap measurements;
-    Region roi;
-    double roisize;
-    double orientation;
   };
 
 

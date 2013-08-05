@@ -57,10 +57,6 @@ namespace cecog {
 
   typedef std::vector<ImageLabel> LabelVec;
 
-  //Font Font12("font12.png", 3, 16);
-  //Font Font14("font14.png", 3, 16);
-  //Font Font16("font16.png", 3, 16);
-
 };
 
 #endif /*PROJECT_DEFINITIONS_HXX_*/

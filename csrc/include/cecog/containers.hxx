@@ -39,7 +39,6 @@
 #include "vigra/tuple.hxx"
 #include "vigra/pixelneighborhood.hxx"
 
-
 #include "boost/config.hpp"
 #include "boost/lexical_cast.hpp"
 
@@ -129,7 +128,6 @@ namespace cecog
 
     };
 
-
     /**
      * Apply a feature by name to all objects of this container
      */
@@ -142,33 +140,28 @@ namespace cecog
       {
         // simple features
 
-        if (name == "minmax")
-        {
+        if (name == "minmax") {
           vigra::ArrayOfRegionStatistics<vigra::FindMinMax
-          <value_type> > functor(total_labels);
+                                         <value_type> > functor(total_labels);
           inspectTwoImages(srcImageRange(img), srcImage(img_labels),
                            functor);
           ObjectMap::iterator it = objects.begin();
-          for (; it != objects.end(); ++it)
-          {
+          for (; it != objects.end(); ++it) {
             ObjectMap::key_type id = (*it).first;
             ROIObject& o = (*it).second;
             o.features["min"] = FeatureValue(functor[id].min);
             o.features["max"] = FeatureValue(functor[id].max);
           }
         }
-        else if (name == "roisize")
-        {
+        else if (name == "roisize") {
           ObjectMap::iterator it = objects.begin();
-          for (; it != objects.end(); ++it)
-          {
+          for (; it != objects.end(); ++it) {
             ROIObject& o = (*it).second;
             o.features["roisize"] = o.roisize;
           }
         }
         // shape features
-        else if (name == "perimeter")
-        {
+        else if (name == "perimeter") {
           // old: __blockFeature<BlockPerimeter>(name);
           // The problem of the BlockPerimeter functor is that it does not
           // ask whether the pixel is on the image border (-> segmentation fault)
@@ -176,24 +169,21 @@ namespace cecog
           // the borders.
           // The call is now according to the axes feature.
           ObjectMap::iterator it = objects.begin();
-          for (; it != objects.end(); ++it)
-          {
+          for (; it != objects.end(); ++it) {
             ROIObject& o = (*it).second;
             o.features["perimeter"] = (double)calculatePerimeter(
-              img_labels.upperLeft(),
-              img_labels.upperLeft(),
-              img_labels.accessor(),
-              o.roi.upperLeft,
-              o.roi.lowerRight,
-              (*it).first,
-              width, height
-            );
-            //std::cout << o.features["perimeter"] << "  ";
+                                                                 img_labels.upperLeft(),
+                                                                 img_labels.upperLeft(),
+                                                                 img_labels.accessor(),
+                                                                 o.roi.upperLeft,
+                                                                 o.roi.lowerRight,
+                                                                 (*it).first,
+                                                                 width, height
+                                                                 );
           }
-          //std::cout << std::endl;
         }
         else if (name == "axes")
-        {
+          {
           ObjectMap::iterator it = objects.begin();
           for (; it != objects.end(); ++it)
           {
@@ -542,8 +532,7 @@ namespace cecog
           img_rgb = mergeRGB(img, img_rgb, vFlag[0], dAlpha);
         }
       }
-      for (int i=1, j=0; i < vFlag.size() && j < extra_img_vector.size(); i++, j++)
-      {
+      for (unsigned i = 1, j = 0; i < vFlag.size() && j < extra_img_vector.size(); i++, j++) {
         dAlpha = (vAlpha.size() > 0) ? vAlpha[i] : 1.0;
         img_rgb = mergeRGB(extra_img_vector[j], img_rgb, vFlag[i], dAlpha);
       }
@@ -934,32 +923,32 @@ namespace cecog
                             );
     }
 
-
-//   void regionExpansion()
-//    {
-//
-//    }
-
-    /**
+    /*
      * returns the number of objects initially calculated.
      */
     unsigned labelCount() { return total_labels; }
 
-    /**
+    /*
      * the current number of objects (items in ObjectMap).
      */
     unsigned size() { return objects.size(); }
 
     // FIXME: these attributes should be private
-
-    // ObjectMap is std::map<unsigned, ROIObject>
-    ObjectMap objects;
+    // font for text labels
+    Font font;
 
     // feature settings
     unsigned haralick_levels, haralick_distance, levelset_levels;
 
+    bool rgb_made;
     // region properties
     unsigned region_size, width, height, required_ext;
+
+    // flag indicating if border objects shall be removed in __buildObjects
+    bool bRemoveBorderObjects;
+
+    // ObjectMap is std::map<unsigned, ROIObject>
+    ObjectMap objects;
 
     unsigned total_labels;
 
@@ -974,9 +963,6 @@ namespace cecog
     // or for visualization using the combineExtraRGB-method
     // FIXME: concept be improved (especially for 5D data)
     ImageVector extra_img_vector;
-
-    // flag indicating if border objects shall be removed in __buildObjects
-    bool bRemoveBorderObjects;
 
 
   protected:
@@ -1039,39 +1025,28 @@ namespace cecog
       inspectTwoImages(srcImageRange(this->img_labels),
                        srcImage(this->img_labels), roisize);
 
-//      // FIXME: some stupid bugfix
-//      vigra::IImage imgLabels2(img_labels.size()+vigra::Diff2D(2,2));
-//      copyImage(this->img_labels.upperLeft(),
-//                this->img_labels.lowerRight(),
-//                this->img_labels.accessor(),
-//                imgLabels2.upperLeft() + vigra::Diff2D(1,1),
-//                imgLabels2.accessor());
-
-      for (int i=1; i <= this->total_labels; ++i)
-      {
+      for (unsigned i = 1; i <= this->total_labels; ++i) {
         vigra::Diff2D ul = bounds[i].upperLeft;
         vigra::Diff2D lr = bounds[i].lowerRight;
         vigra::Diff2D diff = lr - ul;
 
         // check for border and size greater 1 pixel
         if ((!removeSinglePixel ||
-			 (diff.x > 1 && diff.y > 1)) &&
+             (diff.x > 1 && diff.y > 1)) &&
             (!bRemoveBorderObjects ||
-             (ul.x > this->region_size &&
-              ul.y > this->region_size &&
-              lr.x < this->img.width()-this->region_size &&
-              lr.y < this->img.height()-this->region_size)
+             (ul.x > static_cast<int>(this->region_size) &&
+              ul.y > static_cast<int>(this->region_size) &&
+              lr.x < static_cast<int>(this->img.width()-this->region_size) &&
+              lr.y < static_cast<int>(this->img.height()-this->region_size))
             )
            )
         {
           vigra::Diff2D cn = center[i]() - ul;
           vigra::Diff2D cs(0,0);
-//          vigra::Diff2D cs2(0,0);
-          if (findCrack)
-          {
-//            cs = findCrackStart(imgLabels2.upperLeft() + ul + vigra::Diff2D(1,1),
-//                                imgLabels2.upperLeft() + lr + vigra::Diff2D(1,1),
-//                                imgLabels2.accessor(), i);
+          if (findCrack) {
+            // cs = findCrackStart(imgLabels2.upperLeft() + ul + vigra::Diff2D(1,1),
+            //                     imgLabels2.upperLeft() + lr + vigra::Diff2D(1,1),
+            //                     imgLabels2.accessor(), i);
             cs = findCrackStart(this->img_labels.upperLeft() + ul,
                                 this->img_labels.upperLeft() + lr,
                                 this->img_labels.accessor(), i);
@@ -1092,9 +1067,6 @@ namespace cecog
       }
     }
 
-    // font for text labels
-    Font font;
-    bool rgb_made;
 
     // calculated_features stores the information if the feature has been
     // already calculated (look-up-table for LAZY calculation)
@@ -1333,9 +1305,8 @@ namespace cecog
     typedef typename Base::rgb_type rgb_type;
     using Base::GREYLEVELS;
 
-    SingleObjectContainer(std::string img_name,
-                          std::string msk_name)
-        : Base()
+    SingleObjectContainer(std::string img_name, std::string msk_name)
+      : Base()
     {
       vigra::ImageImportInfo img_info(img_name.c_str());
       vigra::ImageImportInfo msk_info(msk_name.c_str());
@@ -1356,10 +1327,10 @@ namespace cecog
 
       this->width = this->img.width();
       this->height = this->img.height();
-      if (this->img_binary.width() != this->width ||
-          this->img_binary.height() != this->height)
-        std::cerr << "size conflict of img and mask!"
-        << std::endl;
+      // why is image_binary width signed?
+      if (static_cast<unsigned>(this->img_binary.width()) != this->width ||
+          static_cast<unsigned>(this->img_binary.height()) != this->height)
+        std::cerr << "size conflict of img and mask!" << std::endl;
 
       unsigned single_id = 1;
       this->total_labels = single_id;
@@ -1527,13 +1498,6 @@ namespace cecog
     {
       if (this->img.size() != this->img_binary.size())
         std::cerr << "size conflict of img and mask!" << std::endl;
-
-//      // FIXME: in case we get an label-image (non-binary) as mask-image
-//      transformImageIf(srcImageRange(this->img_binary),
-//                       maskImage(this->img_binary),
-//                       destImage(this->img_binary),
-//                       Param(static_cast<typename binary_type::value_type>(FOREGROUND))
-//                       );
 
       this->img_seg = image_type(this->img.size());
       this->img_labels = label_type(this->img.size());

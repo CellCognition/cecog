@@ -35,7 +35,6 @@ namespace cecog
 {
   namespace python
   {
-
     BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(apply_feature_overloads, applyFeature, 1, 2)
     BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(export_rgb_overloads, exportRGB, 1, 3)
     BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(draw_ellipse_overloads, drawEllipse, 4, 6)

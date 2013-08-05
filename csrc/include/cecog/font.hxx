@@ -61,9 +61,8 @@ namespace cecog
         dest_i(dest.upperLeft() + p);
 
         // char inside? check x-values
-        for (int i=0; i < text.size() &&
-             dest_i.x+charw < dest.width()-1; ++i)
-        {
+        for (std::string::size_type i = 0; i < text.size() &&
+               dest_i.x+charw < dest.width()-1; ++i) {
           unsigned char letter = text[i];
           int cx = (letter % tiles) * charw;
           int cy = (letter / tiles) * charh;

@@ -158,6 +158,8 @@ class Channel(ChannelCore):
         if type(self.oZSliceOrProjection) == types.TupleType:
             method, zbegin, zend, zstep = self.oZSliceOrProjection
             images = [img.image for img in self._zslices][(zbegin-1):zend:zstep]
+            # single images don't carry the dtype
+            dtype = img.format.lower()
 
             if method == "maximum":
                 method_const = ccore.ProjectionType.MaxProjection
@@ -167,12 +169,14 @@ class Channel(ChannelCore):
                 method_const = ccore.ProjectionType.MeanProjection
 
             self.logger.debug("* applying %s Z-Projection to stack of %d images..." % (method, len(images)))
-            img_proj = ccore.projectImage(images, method_const)
-
+            imgprj = numpy.zeros((images[0].height, images[0].width),
+                                 dtype=dtype)
+            imgprj = ccore.numpy_to_image(imgprj, copy=True)
+            ccore.zproject(imgprj, images, method_const)
 
             # overwrite the first MetaImage found with the projected image data
             meta_image = self._zslices[0]
-            meta_image.set_image(img_proj)
+            meta_image.set_image(imgprj)
         else:
             self.oZSliceOrProjection = int(self.oZSliceOrProjection)
             self.logger.debug("* selecting z-slice %d..." % self.oZSliceOrProjection)
@@ -185,7 +189,7 @@ class Channel(ChannelCore):
 
     def apply_registration(self):
         img_in = self.meta_image.image
-        
+
         # ccore.subImage checks dimensions
         image = ccore.subImage(img_in,
                                ccore.Diff2D(*self.registration_start)-
