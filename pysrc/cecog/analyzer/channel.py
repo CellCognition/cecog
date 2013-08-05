@@ -323,10 +323,6 @@ class Channel(ChannelCore):
         the defined plugin instances (managed via the PluginManger of this
         channel).
         """
-# Check and raise is not needed
-#         if self.SEGMENTATION.number_loaded_plugins() == 0:
-#             raise RuntimeError("%s channel has no loaded segmentation plugins!"
-#                                %self.NAME)
         self.containers = self.SEGMENTATION.run(self.meta_image,
                                                 requirements=args)
 
