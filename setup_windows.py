@@ -83,7 +83,7 @@ libraries = ['boost_python-vc100-mt-1_45', 'libtiff', 'vigraimpex']
 library_dirs = ['c:/lib/lib', 'c:/vigra/lib']
 
 ccore = Extension('cecog.ccore._cecog',
-                  sources = [join('csrc','src', 'wrapper','cecog.cxx')],
+                  sources = [join('csrc','src', 'cecog.cxx')],
                   include_dirs = includes,
                   libraries = libraries,
                   library_dirs = library_dirs,

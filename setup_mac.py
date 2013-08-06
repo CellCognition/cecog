@@ -31,7 +31,7 @@ pyrcc_opts = {'infile': 'cecog.qrc',
               'pyrccbin': 'pyrcc4'}
 
 ccore = Extension('cecog.ccore._cecog',
-                  sources = [join('csrc','src', 'wrapper','cecog.cxx')],
+                  sources = [join('csrc','src', 'cecog.cxx')],
                   libraries = ['vigraimpex', 'boost_python'],
                   include_dirs = build_helpers.CC_INCLUDES,
                   extra_object = ['tiff'],
