@@ -9,7 +9,7 @@
 # move this to .bashrc after migration
 module load gridengine
 export PYTHONPATH=$PYTHONPATH:$HOME/sandbox/cellcognition/pysrc
-export CECOGVERSION=$HOME/cecog_versions
+export CECOG_VERSIONS=$HOME/cecog_versions
 
 CECOG_GATEWAY_HOME=$HOME/gateway
 LOG_DIR=$CECOG_GATEWAY_HOME
