@@ -53,8 +53,8 @@ DRMAA_CONTROL_ACTIONS = {
     JOB_CONTROL_TERMINATE : drmaa.JobControlAction.TERMINATE,
     }
 
-CECOG_VERSIONS_PATH = '/clusterfs/gerlich/cecog_versions'
-CECOG_DEFAULT_VERSION = '1.4.0'
+CECOG_VERSIONS_PATH = os.environ['CECOG_VERSIONS']
+CECOG_DEFAULT_VERSION = cecog.VERSION
 
 def parse_args(args):
     """Parse commandline options."""
