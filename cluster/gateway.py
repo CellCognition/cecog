@@ -27,7 +27,6 @@ cecog_root = join(os.sep.join(cecog_root), "pysrc")
 sys.path.append(cecog_root)
 
 from cecog.util.util import makedirs
-import cecog.batch
 from cecog import (VERSION,
                    JOB_CONTROL_RESUME,
                    JOB_CONTROL_SUSPEND,

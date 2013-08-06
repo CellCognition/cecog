@@ -3,12 +3,22 @@
 # 04/02/2013 Rudolf Hoefler
 #
 
-if [ -r $HOME/cellcognition ]; then
-    . $HOME/cellcognition
-    echo "configuration from $HOME/cellcognition"
-elif [ -r /etc/defaults/cellcogntion ]; then
-    . /etc/default/cellcognition
-    echo "configuration from /etc/defaults/cellcognition"
+RCFILE=cellcognition_debian7
+
+if [ -r /etc/profile.d/modules.sh ]; then
+    . /etc/profile.d/modules.sh
+fi
+
+if [ -r ~cecog/.bashrc ]; then
+    . ~cecog/.bashrc
+fi
+
+if [ -r $HOME/gateway/$RCFILE ]; then
+    . $HOME/gateway/$RCFILE
+    echo "configuration from $HOME/$RCFILE"
+elif [ -r /etc/defaults/$RCFILE ]; then
+    . /etc/default/$RCFILE
+    echo "configuration from /etc/defaults/$RCFILE"
 else
     echo "No gateway configuration found!"
     exit 1
@@ -31,7 +41,9 @@ start() {
 stop() {
     echo "Stopping gateway"
     /sbin/start-stop-daemon --stop --pidfile ${PIDFILE} --verbose
-    rm -f ${PIDFILE}
+    if [ $? -eq 0 ]; then
+        rm -f ${PIDFILE}
+    fi
 }
 
 
@@ -50,4 +62,3 @@ case "$1" in
         *)
                 echo "Usage: $0 {start|stop|restart}"
 esac
-
