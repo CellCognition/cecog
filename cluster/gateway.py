@@ -54,7 +54,7 @@ DRMAA_CONTROL_ACTIONS = {
     }
 
 CECOG_VERSIONS_PATH = os.environ['CECOG_VERSIONS']
-CECOG_DEFAULT_VERSION = cecog.VERSION
+CECOG_DEFAULT_VERSION = VERSION
 
 def parse_args(args):
     """Parse commandline options."""
