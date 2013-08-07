@@ -32,7 +32,7 @@ setup(name="CecogClusterGateway",
       platforms = 'Linux',
       py_modules = ['gateway','cecog.__init__', 'cecog.util.util'],
       package_dir = {'cecog': os.path.join(os.pardir, 'pysrc', 'cecog')},
-      data_files = ['cecog-gateway', 'readme.txt', 'cellcognition',
-                    'cellcognition_debian7'],
+      data_files = ['cecog-gateway', 'readme.txt', 'cellcognition.albert',
+                    'cellcognition.haring'],
       options = {'install': install_opts}
 )
