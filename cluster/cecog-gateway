@@ -3,7 +3,7 @@
 # 04/02/2013 Rudolf Hoefler
 #
 
-RCFILE=cellcognition_debian7
+RCFILE=cellcognition.haring
 
 if [ -r /etc/profile.d/modules.sh ]; then
     . /etc/profile.d/modules.sh
@@ -24,7 +24,6 @@ else
     exit 1
 fi
 
-# start
 start() {
     echo "Starting gateway"
     echo $CMD
@@ -37,7 +36,6 @@ start() {
         --exec ${CMD} -- $GATEWAYOPTS
 }
 
-# stop
 stop() {
     echo "Stopping gateway"
     /sbin/start-stop-daemon --stop --pidfile ${PIDFILE} --verbose
