@@ -17,8 +17,6 @@ __source__ = '$URL$'
 __all__ = ['ClusterFrame']
 
 import types
-import copy
-import traceback
 import socket
 import urlparse
 
@@ -34,17 +32,15 @@ from cecog.environment import CecogEnvironment
 
 from cecog.gui.analyzer import BaseFrame
 from cecog.gui.analyzer.processing import ProcessingFrame
-from cecog.util.util import OS_LINUX
 from cecog.gui.util import (exception,
                             information,
                             warning,
-                            waitingProgressDialog,
-                            )
+                            waitingProgressDialog)
+
 from cecog import (JOB_CONTROL_RESUME,
                    JOB_CONTROL_SUSPEND,
                    JOB_CONTROL_TERMINATE,
-                   VERSION
-                   )
+                   VERSION)
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -364,7 +360,8 @@ class ClusterDisplay(QGroupBox):
             self._table_info.setRowCount(len(mappable_paths))
             for idx, info in enumerate(mappable_paths):
                 value = self._settings.get(*info)
-                mapped = CecogEnvironment.map_path_to_os(value, target_os=OS_LINUX, force=False)
+                mapped = CecogEnvironment.map_path_to_os(
+                    value, target_os='linux', force=False)
                 self._submit_settings.set(info[0], info[1], mapped)
                 status = not mapped is None
                 item = QTableWidgetItem()
