@@ -14,36 +14,11 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-
 import os
+import sys
 import bz2
 import gzip
 import types
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-
-from pdk.options import Option
-from pdk.optionmanagers import OptionManager
-from pdk.platform import is_linux, is_mac, is_windows
-from pdk.fileutils import safe_mkdirs
-
-
-#-------------------------------------------------------------------------------
-# constants:
-#
-
-OS_WINDOWS = 'windows'
-OS_MAC = 'mac'
-OS_LINUX = 'linux'
-
-#-------------------------------------------------------------------------------
-# functions:
-#
 
 def makedirs(path):
     """
@@ -53,26 +28,6 @@ def makedirs(path):
     path = os.path.normpath(path)
     if not os.path.isdir(path):
         os.makedirs(path)
-
-
-def singleton(cls):
-    '''
-    singleton class decorator
-    Example:
-    @singleton
-    class Foo():
-        pass
-
-    foo1 = Foo()
-    foo2 = Foo()
-    assert foo1 is foo2
-    '''
-    instances = {}
-    def getinstance(*args, **options):
-        if cls not in instances:
-            instances[cls] = cls(*args, **options)
-        return instances[cls]
-    return getinstance
 
 def hexToRgb(string):
     hex = eval(string.replace('#','0x'))
@@ -160,14 +115,12 @@ def yesno(state):
     return 'yes' if state else 'no'
 
 def resolve_os_name():
-    os_str = None
-    if is_windows:
-        os_str = OS_WINDOWS
-    elif is_mac:
-        os_str = OS_MAC
-    elif is_linux:
-        os_str = OS_LINUX
-    return os_str
+    if sys.platform.startswith("win"):
+        return 'windows'
+    elif sys.platform.startswith("darwin"):
+        return 'mac'
+    elif sys.platform.startswith('linux'):
+        return 'linux'
 
 def print_memory_increase(func):
     try:
@@ -184,4 +137,3 @@ def print_memory_increase(func):
         return wrapper
     except:
         return runc
-
