@@ -81,7 +81,7 @@ class BaseLearner(LoggerObject):
     def feature_names(self, feature_names):
         if self._feature_names is None:
             self._feature_names = feature_names
-        assert self._feature_names == feature_names
+        #assert self._feature_names == feature_names
 
     def delete_feature_names(self, indices):
         """Remove feature names given a list of indices."""
