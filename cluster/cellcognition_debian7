@@ -10,6 +10,7 @@
 module load gridengine
 export PYTHONPATH=$PYTHONPATH:$HOME/sandbox/cellcognition/pysrc
 export CECOG_VERSIONS=$HOME/cecog_versions
+export JOB_PARAMS="-m bea -q public.q -P CellCognition"
 
 CECOG_GATEWAY_HOME=$HOME/gateway
 LOG_DIR=$CECOG_GATEWAY_HOME

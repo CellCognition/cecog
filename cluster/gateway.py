@@ -18,7 +18,6 @@ import os
 from os.path import join, isdir, normpath
 import sys
 
-#import pyamf
 import drmaa
 
 from cecog.util.util import makedirs
@@ -75,7 +74,7 @@ def cecog_job_template(jt, path_out, args, emails, version, batch_size=1,
     if os.environ.has_key('PYTHONPATH'):
         os.environ["PYTHONPATH"] = pypath+os.pathsep+os.environ["PYTHONPATH"]
     else:
-        os.putenv("PYTHONPATH", pypath
+        os.putenv("PYTHONPATH", pypath)
 
     jt.jobName = job_name
     jt.workingDirectory = os.environ['HOME']
@@ -93,7 +92,7 @@ def cecog_job_template(jt, path_out, args, emails, version, batch_size=1,
     jt.joinFiles = True
 
     jt.email = emails
-    jt.nativeSpecification = '-m bea -q gerlich.q -P cellcognition'
+    jt.nativeSpecification = os.environ['JOB_PARAMS']
 
     path_out_cluster = join(path_out, 'log_cluster')
     makedirs(path_out_cluster)
