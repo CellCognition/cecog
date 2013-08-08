@@ -23,7 +23,7 @@ __all__ = ['Browser']
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
-import math
+import h5py
 import numpy
 
 import sip
@@ -623,14 +623,11 @@ if __name__ == "__main__":
     import sys
     app = QApplication(sys.argv) 
     
-    #settings = load_settings('C:/Users/sommerc/data/cecog/Settings/exp911_version_140.conf')
-    #imagecontainer = load_image_container_from_settings(settings)
+    settings = load_settings('C:/Users/sommerc/data/cecog/Settings/exp911_version_140.conf')
+    imagecontainer = load_image_container_from_settings(settings)
         
-    #browser = Browser(settings, imagecontainer)
-    import cellh5
-    f = cellh5.CH5File(r'C:\Users\sommerc\data\hdf5\all_positions.ch5')
-    print f._file_handle['/sample/0/plate/H2b_aTub_MD20x_exp911/experiment/0/position/0038/object/event'].value
+    browser = Browser(settings, imagecontainer)
     
     
-    #browser.show()
+    browser.show()
     app.exec_()

@@ -121,7 +121,7 @@ class ImageViewer(QGraphicsView):
 
         self._qimage = numpy_to_qimage(data)
         # safe the data for garbage collection
-        self._qimage.ndarray = data
+        #self._qimage.ndarray = data
         self._update()
 
     def from_vigra(self, image):

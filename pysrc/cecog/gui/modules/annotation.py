@@ -57,6 +57,9 @@ from cecog.gui.widgets.groupbox import QxtGroupBox
 from cecog.gui.widgets.colorbutton import ColorButton
 from cecog.gui.modules.module import Module
 
+from cecog.gui.util import numpy_to_qimage
+from cecog.gui.modules.display import blend_images_max 
+
 
 class Annotations(object):
 
@@ -1055,7 +1058,7 @@ class CellH5AnnotationModule(Module):
         self.pos_table.setColumnCount(2)
         self.pos_table.setHorizontalHeaderLabels(['Well', 'Site'])
         self.pos_table.resizeColumnsToContents()
-        #self.pos_table.currentItemChanged.connect(self._on_pos_changed)
+        self.pos_table.currentItemChanged.connect(self._on_pos_changed)
         self.pos_table.setStyleSheet('font-size: 10px;')
         self.layout.addWidget(self.pos_table)
         
@@ -1089,6 +1092,7 @@ class CellH5AnnotationModule(Module):
         self.browser.set_display_module(self)
         self.clear_image_viewer()
         
+        
     def clear_image_viewer(self):
         self.browser.image_viewer.clear()
         
@@ -1103,21 +1107,16 @@ class CellH5AnnotationModule(Module):
         self.show_tracks(well, pos)
         
     def show_tracks(self, well, pos):
-        #self.clear_image_viewer()
+        self.clear_image_viewer()
         pos = self.ch5file.get_position(well, pos)
 
         print 'Before get events'
         events = pos.get_events()
         print 'Before get events'
         gallery = pos.get_gallery_image(tuple(events[0]))
-        print gallery.shape
-        
-        #self.browser.image_viewer.from_numpy(gallery)
-        
-        
-        
-        
-        
+        print gallery.max(), gallery.min()
+        self.browser.image_viewer.init_pixmap()
+        self.browser.image_viewer.from_pixmap( blend_images_max([numpy_to_qimage(gallery, [qRgb(i,i,i) for i in range(256)])]))
     
     def set_image_dict(self, image_dict):
         print 'CellH5Annotator.set_image_dict()'  
