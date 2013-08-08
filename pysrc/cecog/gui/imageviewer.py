@@ -105,13 +105,17 @@ class ImageViewer(QGraphicsView):
         self.contour_color = QColor('white')
         self.show_contours = True
         self.show_mouseover = True
-
+        
+    
+        self.init_pixmap()
+        
+        self.grabGesture(Qt.PinchGesture)
+        
+    def init_pixmap(self):
         self._pixmap = QGraphicsPixmapItem()
         self._pixmap.setShapeMode(QGraphicsPixmapItem.BoundingRectShape)
         self._pixmap.setTransformationMode(Qt.SmoothTransformation)
         self._scene.addItem(self._pixmap)
-
-        self.grabGesture(Qt.PinchGesture)
 
     def from_numpy(self, data):
 
@@ -273,6 +277,9 @@ class ImageViewer(QGraphicsView):
         return found_item
 
     # protected method overload
+    
+    def clear(self):
+        self._scene.clear()
 
     def event(self, ev):
         if ev.type() == QEvent.Gesture:

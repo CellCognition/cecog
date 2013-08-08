@@ -32,6 +32,7 @@ from PyQt4.Qt import *
 from pdk.datetimeutils import StopWatch
 from pdk.ordereddict import OrderedDict
 from pdk.fileutils import safe_mkdirs
+import cellh5
 
 from cecog.gui.util import (exception,
                             information,
@@ -463,7 +464,7 @@ class AnnotationModule(Module):
             self._action_grp.addAction(action)
             browser.addAction(action)
 
-        browser.coordinates_changed.connect(self._on_coordinates_changed)
+        #browser.coordinates_changed.connect(self._on_coordinates_changed)
         browser.show_objects_toggled.connect(self._on_show_objects)
         browser.show_contours_toggled.connect(self._on_show_contours_toggled)
 
@@ -1038,17 +1039,89 @@ class AnnotationModule(Module):
         self.browser.image_viewer.purify_objects()
         self._action_grp.setEnabled(False)
         
-class InteractiveAnnotationModule(AnnotationModule):
-    NAME = 'Interactive Annotation'
-    def __init__(self, *args, **kwargs):
-        super(InteractiveAnnotationModule, self).__init__(*args, **kwargs)
-        layout = self.layout()
-        self.btn_train = QPushButton('Train')
-        self.btn_train.clicked.connect(self.train)
-        layout.addWidget(self.btn_train)
+
         
-    def train(self):
-        for a in self._annotations.iter_all():
-            print a
+class CellH5AnnotationModule(Module):
+    NAME = 'CellH5 Track Annotation'
+    def __init__(self, parent, browser, settings, imagecontainer):
+        Module.__init__(self, parent, browser)
         
+
+        self.layout = QVBoxLayout(self)
+        self.pos_table = QTableWidget(self)
+        self.pos_table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.pos_table.setSelectionMode(QTableWidget.SingleSelection)
+        self.pos_table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.pos_table.setColumnCount(2)
+        self.pos_table.setHorizontalHeaderLabels(['Well', 'Site'])
+        self.pos_table.resizeColumnsToContents()
+        #self.pos_table.currentItemChanged.connect(self._on_pos_changed)
+        self.pos_table.setStyleSheet('font-size: 10px;')
+        self.layout.addWidget(self.pos_table)
+        
+        self.btn = QPushButton('Show tracks')
+        self.btn.clicked.connect(self.do)
+        self.layout.addWidget(self.btn)
+        
+        self._settings = settings
+        self.hdf_file = os.path.join(self._settings.get('General', 'pathout'), 'hdf5', 'all_positions.ch5')
+        
+        if not os.path.exists(self.hdf_file):
+            warning(self, "Invalid hdf5 files",
+                        info="%s does not exist!"%self.hdf_file)
+            
+        print cellh5.__file__
+        self.ch5file = cellh5.CH5File(self.hdf_file)
+        
+        for i, (w, p, pos) in enumerate(self.ch5file.iter_positions()):
+            self.pos_table.insertRow(i)
+            w_item = QTableWidgetItem(str(w))
+            p_item = QTableWidgetItem(str(p))
+            self.pos_table.setItem(i, 0, w_item)
+            self.pos_table.setItem(i, 1, p_item)
+            print i, w, p
+            
+        self.pos_table.resizeColumnsToContents()
+        self.pos_table.resizeRowsToContents()
+        
+        
+    def activate(self):
+        self.browser.set_display_module(self)
+        self.clear_image_viewer()
+        
+    def clear_image_viewer(self):
+        self.browser.image_viewer.clear()
+        
+    def deactivate(self):
+        self.browser.set_display_module(self.browser._module_manager.get_widget('Display'))
+        self.browser.image_viewer.init_pixmap()
+            
+    def _on_pos_changed(self, current, previous):
+        well = str(self.pos_table.item(current.row(), 0).text())         
+        pos = str(self.pos_table.item(current.row(), 1).text())   
+        print 'CellH5Annotator._on_pos_changed()', well, pos    
+        self.show_tracks(well, pos)
+        
+    def show_tracks(self, well, pos):
+        #self.clear_image_viewer()
+        pos = self.ch5file.get_position(well, pos)
+
+        print 'Before get events'
+        events = pos.get_events()
+        print 'Before get events'
+        gallery = pos.get_gallery_image(tuple(events[0]))
+        print gallery.shape
+        
+        #self.browser.image_viewer.from_numpy(gallery)
+        
+        
+        
+        
+        
+    
+    def set_image_dict(self, image_dict):
+        print 'CellH5Annotator.set_image_dict()'  
+    
+    def do(self):
+        self.show_tracks('0', '0038')
         

@@ -33,7 +33,6 @@ import cPickle as pickle
 from PyQt4.QtCore import *
 
 from collections import OrderedDict
-import vigra
 
 from cecog.environment import CecogEnvironment
 # from cecog.trai import convert_package_path
@@ -412,7 +411,6 @@ class AxisIterator(object):
 
 
 class Coordinate(object):
-
     def __init__(self, plate=None, position=None, time=None, channel=None,
                  zslice=None):
 

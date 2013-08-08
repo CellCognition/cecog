@@ -37,36 +37,24 @@ from PyQt4.Qt import *
 
 
 
-from cecog.gui.util import (exception,
-                            information,
-                            question,
-                            warning,
-                            numpy_to_qimage,
-                            get_qcolor_hicontrast,
-                            qcolor_to_hex,
-                            )
 from cecog.gui.imageviewer import ImageViewer
 from cecog.gui.modules.module import ModuleManager
 from cecog.gui.analyzer import _ProcessorMixin
 from cecog.analyzer.channel import (PrimaryChannel,
-                                    SecondaryChannel,
-                                    TertiaryChannel,
                                     )
 from cecog.analyzer.core import AnalyzerBrowser
+
 from cecog.io.imagecontainer import Coordinate
-from cecog.learning.learning import BaseLearner
-from cecog.gui.widgets.groupbox import QxtGroupBox
 
 from cecog.gui.modules.navigation import NavigationModule
 from cecog.gui.modules.display import DisplayModule
-from cecog.gui.modules.annotation import AnnotationModule, InteractiveAnnotationModule
+from cecog.gui.modules.annotation import AnnotationModule, CellH5AnnotationModule
 
 from cecog.plugin.segmentation import REGION_INFO
 
 from cecog.io.imagecontainer import ImageContainer
 from cecog.gui.config import GuiConfigSettings
 from cecog.traits.analyzer import SECTION_REGISTRY
-from cecog.traits.config import ConfigSettings
 
 
 class Browser(QMainWindow):
@@ -75,7 +63,7 @@ class Browser(QMainWindow):
 
     show_objects_toggled = pyqtSignal('bool')
     show_contours_toggled = pyqtSignal('bool')
-    coordinates_changed = pyqtSignal(Coordinate)
+    #coordinates_changed = pyqtSignal(Coordinate)
 
     def __init__(self, settings, imagecontainer):
         super(Browser, self).__init__()
@@ -263,12 +251,15 @@ class Browser(QMainWindow):
 
         NavigationModule(self._module_manager, self, self._imagecontainer)
 
-        DisplayModule(self._module_manager, self, self._imagecontainer, region_names)
+        defautl_display_module = DisplayModule(self._module_manager, self, self._imagecontainer, region_names)
+        
+        self.set_display_module(defautl_display_module)
 
         AnnotationModule(self._module_manager, self, self._settings,
                          self._imagecontainer)
         
-        InteractiveAnnotationModule(self._module_manager, self, self._settings,
+        
+        CellH5AnnotationModule(self._module_manager, self, self._settings,
                          self._imagecontainer)
 
         # set the Navigation module activated
@@ -316,9 +307,15 @@ class Browser(QMainWindow):
         widget.set_coords()
 
     def show_image(self, image_dict):
-        widget = self._module_manager.get_widget(DisplayModule.NAME)
+        widget = self.get_display_module()
         widget.set_image_dict(image_dict)
         self.update_statusbar()
+        
+    def set_display_module(self, display_module ):
+        self.display_module = display_module
+        
+    def get_display_module(self):
+        return self.display_module
 
     def update_statusbar(self):
         meta_data = self._imagecontainer.get_meta_data()
@@ -360,7 +357,7 @@ class Browser(QMainWindow):
         self._t_slider.blockSignals(False)
         self._process_image()
         # propagate the signal further to other modules
-        self.coordinates_changed.emit(coordinate)
+        #self.coordinates_changed.emit(coordinate)
 
     def set_coordinate(self, coordinate):
         """
@@ -622,14 +619,18 @@ def load_settings(settings_file):
     settings.read(settings_file)
     return settings
 
-
 if __name__ == "__main__":
     import sys
     app = QApplication(sys.argv) 
     
-    settings = load_settings('C:/Users/sommerc/data/cecog/Settings/exp911_version_140.conf')
-    imagecontainer = load_image_container_from_settings(settings)
+    #settings = load_settings('C:/Users/sommerc/data/cecog/Settings/exp911_version_140.conf')
+    #imagecontainer = load_image_container_from_settings(settings)
         
-    browser = Browser(settings, imagecontainer)
-    browser.show()
+    #browser = Browser(settings, imagecontainer)
+    import cellh5
+    f = cellh5.CH5File(r'C:\Users\sommerc\data\hdf5\all_positions.ch5')
+    print f._file_handle['/sample/0/plate/H2b_aTub_MD20x_exp911/experiment/0/position/0038/object/event'].value
+    
+    
+    #browser.show()
     app.exec_()
