@@ -1,17 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-  <xsd:element name="constraints">
+  <xsd:element name="constraint">
     <xsd:complexType>
       <xsd:all>
-        <xsd:element name="numberOfClasses" type="xsd:nonNegativeInteger"/>
-        <xsd:element name="numberOfHiddenStates" type="xsd:nonNegativeInteger"/>
-        <xsd:element name="startNodes" type="nonNegIntList"/>
-        <xsd:element name="transitionGraph" type="nonNegIntList"/>
+        <xsd:element name="n_emissions" type="xsd:nonNegativeInteger"/>
+        <xsd:element name="n_states" type="xsd:nonNegativeInteger"/>
 
-        <xsd:element name="emissionMatrix">
+        <xsd:element name="start_probabilities">
           <xsd:complexType>
             <xsd:simpleContent>
-              <xsd:extension base="Probability">
+              <xsd:extension base="posDoubleList">
+                <xsd:attribute name="epsilon" type="xsd:double"/>
+              </xsd:extension>
+            </xsd:simpleContent>
+          </xsd:complexType>
+        </xsd:element>
+
+        <xsd:element name="transition_matrix">
+          <xsd:complexType>
+            <xsd:simpleContent>
+              <xsd:extension base="posDoubleList">
+                <xsd:attribute name="epsilon" type="xsd:double"/>
+              </xsd:extension>
+            </xsd:simpleContent>
+          </xsd:complexType>
+        </xsd:element>
+
+        <xsd:element name="emission_matrix">
+          <xsd:complexType>
+            <xsd:simpleContent>
+              <xsd:extension base="posDoubleList">
                 <xsd:attribute name="epsilon" type="xsd:double"/>
               </xsd:extension>
             </xsd:simpleContent>
@@ -22,11 +40,19 @@
     </xsd:complexType>
   </xsd:element>
 
+  <xsd:complexType name="doubleListWithEpsilon">
+    <xsd:simpleContent>
+      <xsd:extension base="posDoubleList">
+        <xsd:attribute name="epsilon" type="xsd:double"/>
+      </xsd:extension>
+    </xsd:simpleContent>
+  </xsd:complexType>
+
   <xsd:simpleType name="nonNegIntList">
     <xsd:list itemType="xsd:nonNegativeInteger"/>
   </xsd:simpleType>
 
-  <xsd:simpleType name="Probability">
+  <xsd:simpleType name="posDoubleList">
     <xsd:list itemType="positiveDouble"/>
   </xsd:simpleType>
 
