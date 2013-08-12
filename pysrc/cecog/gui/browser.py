@@ -635,7 +635,8 @@ if __name__ == "__main__":
     import sys
     app = QApplication(sys.argv) 
     
-    settings = load_settings(r'M:\members\Claudia Blaukopf\Experiments\130710_Mitotic_slippage_and_cell_death\_meta\Cecog\130710_mitotic_slippage_and_cell_death_v04_with_split_TESTTESTTEST.conf')
+    #settings = load_settings(r'M:\members\Claudia Blaukopf\Experiments\130710_Mitotic_slippage_and_cell_death\_meta\Cecog\130710_mitotic_slippage_and_cell_death_v04_with_split_TESTTESTTEST.conf')
+    settings = load_settings(r'C:\Users\sommerc\data\cecog\Settings\exp911_version_140.conf')
     imagecontainer = load_image_container_from_settings(settings)
         
     browser = Browser(settings, imagecontainer)
