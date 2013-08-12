@@ -49,17 +49,22 @@ class HMMConstraint(object):
         with open(filename, 'r') as fp:
             xml = lxml.objectify.fromstring(fp.read())
             self.validate(xml)
-            self.nsymbols = int(xml.numberOfClasses)
-            self.nstates = int(xml.numberOfHiddenStates)
-            self.start = np.fromstring(str(xml.startNodes), dtype=int, sep=" ")
-            self.trans = np.fromstring(str(xml.transitionGraph), dtype=int,
+            self.nsymbols = int(xml.n_emissions)
+            self.nstates = int(xml.n_states)
+
+            self.start = np.fromstring(str(xml.start_probabilities),
+                                       dtype=float, sep=" ")
+            self.start += float(xml.start_probabilities.attrib['epsilon'])
+
+            self.trans = np.fromstring(str(xml.transition_matrix), dtype=float,
                                        sep=" ")
+            self.trans += float(xml.transition_matrix.attrib['epsilon'])
             self.trans.shape = self.nstates, self.nstates
 
-            self.emis = np.fromstring(str(xml.emissionMatrix), dtype=float,
+            self.emis = np.fromstring(str(xml.emission_matrix), dtype=float,
                                       sep=" ")
             self.emis.shape = self.nstates, self.nsymbols
-            self.emis += float(xml.emissionMatrix.attrib['epsilon'])
+            self.emis += float(xml.emission_matrix.attrib['epsilon'])
 
     def validate(self, xml):
         schemafile = join(find_resource_dir(), "schemas", "hmm_constraint.xsd")
@@ -120,9 +125,9 @@ class HMMEstimator(object):
         return self._startprob
 
     def constrain(self, hmmc):
-        self._trans = normalize(hmmc.trans*self._trans, axis=1)
-        self._startprob = normalize(hmmc.start*self._startprob)
-        self._emis = normalize(hmmc.emis, axis=1)
+        self._trans = normalize(hmmc.trans*self._trans, axis=1, eps=0.0)
+        self._startprob = normalize(hmmc.start*self._startprob, eps=0.0)
+        self._emis = normalize(hmmc.emis, axis=1, eps=0.0)
 
 
 class HMMProbBasedEsitmator(HMMEstimator):
@@ -145,7 +150,7 @@ class HMMProbBasedEsitmator(HMMEstimator):
                 condprob = np.matrix(prob0).T*np.matrix(prob1)
                 self._trans += condprob
 
-        self._trans = normalize(self._trans, axis=1)
+        self._trans = normalize(self._trans, axis=1, eps=0.0)
 
     def _estimate_startprob(self):
         super(HMMProbBasedEsitmator, self)._estimate_startprob()
@@ -153,7 +158,7 @@ class HMMProbBasedEsitmator(HMMEstimator):
         for i in xrange(self._probs.shape[0]):
             self._startprob += self._probs[i, 1, :]
 
-        self._startprob = normalize(self._startprob)
+        self._startprob = normalize(self._startprob, eps=0.0)
 
 
 class HMMTransitionCountEstimator(HMMEstimator):
@@ -180,7 +185,7 @@ class HMMTransitionCountEstimator(HMMEstimator):
 
         # make transisition cyclic
         self._trans[-1, 0] = self._trans[0,-1]
-        self._trans =  normalize(self._trans, axis=1)
+        self._trans =  normalize(self._trans, axis=1, eps=0.0)
         return self._trans
 
     def _estimate_startprob(self):
@@ -189,5 +194,5 @@ class HMMTransitionCountEstimator(HMMEstimator):
         counts =  np.bincount(self._tracks[:, 0].flatten())
         for i, c in enumerate(counts):
             self.startprob[i] = c
-        self._startprob = normalize(self._startprob)
+        self._startprob = normalize(self._startprob, eps=0.0)
         return self._startprob
