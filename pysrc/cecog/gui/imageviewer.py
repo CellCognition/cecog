@@ -24,8 +24,27 @@ from PyQt4.Qt import *
 
 from cecog.gui.util import numpy_to_qimage
 
-class ItemHoverMixin:
+class ZoomedQGraphicsView(QGraphicsView):  
+    def wheelEvent(self, event):
+        keys = QApplication.keyboardModifiers()
+        k_ctrl = (keys == Qt.ControlModifier)
 
+        self.mousePos = self.mapToScene(event.pos())
+        grviewCenter  = self.mapToScene(self.viewport().rect().center())
+
+        if k_ctrl is True:
+            if event.delta() > 0:
+                scaleFactor = 1.1
+            else:
+                scaleFactor = 0.9
+            self.scale(scaleFactor, scaleFactor)
+            
+            mousePosAfterScale = self.mapToScene(event.pos())
+            offset = self.mousePos - mousePosAfterScale
+            newGrviewCenter = grviewCenter + offset
+            self.centerOn(newGrviewCenter)
+
+class ItemHoverMixin(object):
     SCALE = 1.1
 
     def __init__(self):
@@ -51,10 +70,28 @@ class ItemHoverMixin:
     def hoverLeaveEvent(self, ev):
         self.setPen(self._old_pen)
         QGraphicsItem.hoverLeaveEvent(self, ev)
+        
+class QGraphicsPixmapHoverItem(QGraphicsPixmapItem):
+    SCALE = 3
+    
+    def __init__(self, parent):
+        QGraphicsPixmapItem.__init__(self, parent)
+        self.setAcceptHoverEvents(True)
+        self.setTransformOriginPoint(self.boundingRect().width()/2, self.boundingRect().height()/2)
+        
+        
+    def hoverEnterEvent(self, ev):
+        QGraphicsPixmapItem.hoverEnterEvent(self, ev)
+        self.setScale(self.SCALE)
+        self.setZValue(99)
+
+    def hoverLeaveEvent(self, ev):
+        QGraphicsPixmapItem.hoverLeaveEvent(self, ev)
+        self.setScale(1.0)
+        self.setZValue(1)
 
 
 class HoverPolygonItem(QGraphicsPolygonItem, ItemHoverMixin):
-
     def __init__(self, polygon):
         QGraphicsPolygonItem.__init__(self, polygon)
         ItemHoverMixin.__init__(self)
@@ -65,6 +102,33 @@ class ImageScene(QGraphicsScene):
     def __init__(self, parent):
         super(ImageScene, self).__init__(parent)
 
+class GalleryViewer(ZoomedQGraphicsView):
+    image_mouse_pressed = pyqtSignal(QPointF, int, int)
+    def __init__(self, parent):
+        super(GalleryViewer, self).__init__(parent)
+        self._scene = QGraphicsScene()
+        self.setScene(self._scene)
+        #self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        #self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        #self.setDragMode(self.NoDrag)
+        #self.setTransformationAnchor(self.AnchorViewCenter)
+        #self.setResizeAnchor(self.AnchorViewCenter)
+        #self.setRenderHints(QPainter.Antialiasing |
+        #                    QPainter.SmoothPixmapTransform)
+        #self.setViewportUpdateMode(self.SmartViewportUpdate)
+        self.setBackgroundBrush(QBrush(QColor('#66CCCC')))
+        self.setMouseTracking(True)
+        self.hide()
+        
+    def clear(self):
+        self._scene.clear()
+        
+    def mousePressEvent(self, ev):
+        super(GalleryViewer, self).mousePressEvent(ev)
+        
+        # mouse position and mapped scene point do not match exactly, correcting by 1 in x and y
+        point = self.mapToScene(ev.pos()-QPoint(1,1))
+        self.image_mouse_pressed.emit(point, ev.button(), ev.modifiers())
 
 class ImageViewer(QGraphicsView):
 
@@ -78,7 +142,6 @@ class ImageViewer(QGraphicsView):
 
     def __init__(self, parent, auto_resize=False):
         super(ImageViewer, self).__init__(parent)
-        #self.setMouseTracking(True)
 
         self._scene = QGraphicsScene()
         self.setScene(self._scene)

@@ -42,7 +42,7 @@ from cecog.gui.util import (exception,
                             get_qcolor_hicontrast,
                             qcolor_to_hex,
                             )
-from cecog.gui.imageviewer import ImageViewer
+from cecog.gui.imageviewer import ImageViewer, QGraphicsPixmapHoverItem
 from cecog.gui.analyzer import _ProcessorMixin
 from cecog.analyzer.channel import (PrimaryChannel,
                                     SecondaryChannel,
@@ -58,8 +58,9 @@ from cecog.gui.widgets.colorbutton import ColorButton
 from cecog.gui.modules.module import Module
 
 from cecog.gui.util import numpy_to_qimage
-from cecog.gui.modules.display import blend_images_max 
+from cecog.gui.modules.display import blend_images_max
 
+from profilehooks import timecall, profile
 
 class Annotations(object):
 
@@ -1042,15 +1043,90 @@ class AnnotationModule(Module):
         self.browser.image_viewer.purify_objects()
         self._action_grp.setEnabled(False)
         
-
         
 class CellH5AnnotationModule(Module):
     NAME = 'CellH5 Track Annotation'
     def __init__(self, parent, browser, settings, imagecontainer):
         Module.__init__(self, parent, browser)
         
-
+        
+        self._settings = settings
+        self.hdf_file = os.path.join(self._settings.get('General', 'pathout'), 'hdf5', '_all_positions.ch5')
+        
+        if not os.path.exists(self.hdf_file):
+            warning(self, "Invalid hdf5 files",
+                        info="%s does not exist!" % self.hdf_file)
+        
+        
+        self.ch5file = cellh5.CH5File(self.hdf_file)
+        
+        
+        
+        self.cmap = [qRgb(i,i,i) for i in range(256)]
         self.layout = QVBoxLayout(self)
+        
+        
+        
+        self._init_pos_table()
+        self._init_event_table()
+        self._init_class_table()
+        self._init_options_box()
+    
+        
+        for i, (w, p, pos) in enumerate(self.ch5file.iter_positions()):
+            self.pos_table.insertRow(i)
+            w_item = QTableWidgetItem(str(w))
+            p_item = QTableWidgetItem(str(p))
+            self.pos_table.setItem(i, 0, w_item)
+            self.pos_table.setItem(i, 1, p_item)
+            if i == 0:
+                self.update_track_table(pos)
+                self.cur_pos = pos
+            
+            
+        self.pos_table.resizeColumnsToContents()
+        self.pos_table.resizeRowsToContents()
+        
+        self.browser.image_viewers['gallery'].image_mouse_pressed.connect(self._on_new_point)
+        
+    @timecall
+    def update_track_table(self, pos):
+        self.event_table.setRowCount(0)
+        events = pos.get_events()
+        
+        onset_frame = 0
+        events_before_frame = 500
+    
+        selected_track = []
+        cnt = 0
+        for e in events:
+            time_idx = pos.get_time_idx(e[0]) 
+            if time_idx < events_before_frame:
+                selected_track.append(e)
+                self.event_table.insertRow(cnt)
+                id_item = QTableWidgetItem(str(cnt))
+                len_item = QTableWidgetItem(str(len(e)))
+                time_item = QTableWidgetItem(str(time_idx))
+                self.event_table.setItem(cnt, 0, id_item)
+                self.event_table.setItem(cnt, 1, len_item)
+                self.event_table.setItem(cnt, 2, time_item)
+                
+                cnt+=1
+        self.event_table.resizeColumnsToContents()
+        self.event_table.resizeRowsToContents()
+                
+        
+        
+        if False:
+            self.tracks = []
+            for e in selected_track:
+                self.tracks.append(e[:-1] + pos.track_first(e[-1]))
+        else:
+            self.tracks = selected_track
+             
+
+    @timecall
+    def _init_pos_table(self):
         self.pos_table = QTableWidget(self)
         self.pos_table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.pos_table.setSelectionMode(QTableWidget.SingleSelection)
@@ -1062,61 +1138,164 @@ class CellH5AnnotationModule(Module):
         self.pos_table.setStyleSheet('font-size: 10px;')
         self.layout.addWidget(self.pos_table)
         
-        self.btn = QPushButton('Show tracks')
-        self.btn.clicked.connect(self.do)
+    @timecall
+    def _init_event_table(self):
+        self.event_table = QTableWidget(self)
+        self.event_table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.event_table.setSelectionMode(QTableWidget.SingleSelection)
+        self.event_table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.event_table.setColumnCount(3)
+        self.event_table.setHorizontalHeaderLabels(['Event Id', 'Event Length', 'Start Frame',])
+        self.event_table.resizeColumnsToContents()
+        self.event_table.currentItemChanged.connect(self._on_track_changed)
+        self.event_table.setStyleSheet('font-size: 10px;')
+        self.layout.addWidget(self.event_table)
+        
+    @timecall
+    def _init_class_table(self):
+        grp_box = QGroupBox('Classes', self)
+        layout = QBoxLayout(QBoxLayout.TopToBottom, grp_box)
+        layout.setContentsMargins(5, 10, 5, 5)
+
+        self.class_table = QTableWidget(grp_box)
+        self.class_table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.class_table.setSelectionMode(QTableWidget.SingleSelection)
+        self.class_table.setSelectionBehavior(QTableWidget.SelectRows)
+        #self.class_table.setSortingEnabled(True)
+        self.class_table.setColumnCount(4)
+        self.class_table.setHorizontalHeaderLabels(['Name', 'Label', 'Color',
+                                               'Samples',
+                                               ])
+        self.class_table.resizeColumnsToContents()
+        self.class_table.currentItemChanged.connect(self._on_class_changed)
+        self.class_table.setStyleSheet('font-size: 10px;')
+        layout.addWidget(self.class_table)
+
+        frame2 = QFrame(grp_box)
+        layout2 = QBoxLayout(QBoxLayout.LeftToRight, frame2)
+        layout2.setContentsMargins(0,0,0,0)
+        self._import_class_definitions_btn = QPushButton('Import class definitions')
+        layout2.addWidget(self._import_class_definitions_btn)
+        self._import_class_definitions_btn.clicked.connect(self._on_import_class_definitions)
+        layout.addWidget(frame2)
+
+        frame2 = QFrame(grp_box)
+        layout2 = QBoxLayout(QBoxLayout.LeftToRight, frame2)
+        layout2.setContentsMargins(0,0,0,0)
+        self._class_sbox = QSpinBox(frame2)
+        self._class_color_btn = ColorButton(None, frame2)
+        self._class_sbox.setRange(0, 1000)
+        self._class_text = QLineEdit(frame2)
+        layout2.addWidget(self._class_color_btn)
+        layout2.addWidget(self._class_sbox)
+        layout2.addWidget(self._class_text)
+        layout.addWidget(frame2)
+
+        frame2 = QFrame(grp_box)
+        layout2 = QBoxLayout(QBoxLayout.LeftToRight, frame2)
+        layout2.setContentsMargins(0,0,0,0)
+        btn = QPushButton('Apply', frame2)
+        btn.clicked.connect(self._on_class_apply)
+        layout2.addWidget(btn)
+        btn = QPushButton('Add', frame2)
+        btn.clicked.connect(self._on_class_add)
+        layout2.addWidget(btn)
+        btn = QPushButton('Remove', frame2)
+        btn.clicked.connect(self._on_class_remove)
+        layout2.addWidget(btn)
+        layout.addWidget(frame2)
+
+        self.layout.addWidget(grp_box)
+        
+    def _init_options_box(self):
+        self.btn = QPushButton('Load Tracks')
+        self.btn.clicked.connect(self.show_tracks)
         self.layout.addWidget(self.btn)
-        
-        self._settings = settings
-        self.hdf_file = os.path.join(self._settings.get('General', 'pathout'), 'hdf5', 'all_positions.ch5')
-        
-        if not os.path.exists(self.hdf_file):
-            warning(self, "Invalid hdf5 files",
-                        info="%s does not exist!"%self.hdf_file)
-            
-        print cellh5.__file__
-        self.ch5file = cellh5.CH5File(self.hdf_file)
-        
-        for i, (w, p, pos) in enumerate(self.ch5file.iter_positions()):
-            self.pos_table.insertRow(i)
-            w_item = QTableWidgetItem(str(w))
-            p_item = QTableWidgetItem(str(p))
-            self.pos_table.setItem(i, 0, w_item)
-            self.pos_table.setItem(i, 1, p_item)
-            print i, w, p
-            
-        self.pos_table.resizeColumnsToContents()
-        self.pos_table.resizeRowsToContents()
-        
-        
+    
+    def _on_class_changed(self, *args):
+        pass
+    
+    def _on_import_class_definitions(self):
+        pass
+    
+    def _on_class_add(self):
+        pass
+    
+    def _on_class_remove(self):
+        pass
+    
+    def _on_class_apply(self):
+        pass
+    
     def activate(self):
+        print 'CellH5Annotator.activate()'
         self.browser.set_display_module(self)
-        self.clear_image_viewer()
+        self.browser.set_image_viewer('gallery')
         
-        
-    def clear_image_viewer(self):
-        self.browser.image_viewer.clear()
         
     def deactivate(self):
+        print 'CellH5Annotator.deactivate()'
         self.browser.set_display_module(self.browser._module_manager.get_widget('Display'))
-        self.browser.image_viewer.init_pixmap()
+        self.browser.set_image_viewer('image')
             
     def _on_pos_changed(self, current, previous):
+        print '_on_pos_changed'
         well = str(self.pos_table.item(current.row(), 0).text())         
         pos = str(self.pos_table.item(current.row(), 1).text())   
-        print 'CellH5Annotator._on_pos_changed()', well, pos    
-        self.show_tracks(well, pos)
+        print 'CellH5Annotator._on_pos_changed()', well, pos
+        pos = self.ch5file.get_position(well, str(pos))    
+        self.update_track_table(pos)
         
-    def show_tracks(self, well, pos):
-        self.clear_image_viewer()
-        pos = self.ch5file.get_position(well, pos)
+        self.cur_pos = pos
+        
+    def _on_track_changed(self, current, previous):
+        print '_on_track_changed'
+        track_idx = int(self.event_table.item(current.row(), 0).text())            
+        self.show_tracks(track_idx)
+        
+    def _on_new_point(self, point, button, modifier):
+        print point, button, modifier
+         
+    @timecall
+    def show_tracks(self, idx):
+        self.browser.image_viewer.clear()
+        pos = self.cur_pos
 
-        print 'Before get events'
+        
         events = pos.get_events()
-        print 'Before get events'
-        gallery = pos.get_gallery_image(tuple(events[0]))
-        print gallery.max(), gallery.min()
-        self.browser.image_viewer.init_pixmap()
-        self.browser.image_viewer.from_pixmap( blend_images_max([numpy_to_qimage(gallery, [qRgb(i,i,i) for i in range(256)])]))
+        
+        onset_frame = 0
+        events_before_frame = 108
+        
+
+
+        
+        cellh5.GALLERY_SIZE = 52
+        
+        x_max = 1000
+        
+        x, y = 0, 0
+        step = cellh5.GALLERY_SIZE
+        
+        track = self.tracks[idx]
+        
+        for gallery_numpy in pos.get_gallery_image_generator(track):
+            gallery_item = QGraphicsPixmapHoverItem(QPixmap(numpy_to_qimage(gallery_numpy, self.cmap )))
+            gallery_item.setPos(x, y)
+            self.browser.image_viewer._scene.addItem(gallery_item)
+            self.browser.image_viewer.viewport().update()
+            x += step
+            if x > x_max:
+                x = 0
+                y += step
+            print gallery_numpy.shape
+
+                
+                
+                
+
+        #self.browser.image_viewer.init_pixmap()
+        #self.browser.image_viewer.from_pixmap( blend_images_max([numpy_to_qimage(gallery, [qRgb(i,i,i) for i in range(256)])]))
     
     def set_image_dict(self, image_dict):
         print 'CellH5Annotator.set_image_dict()'  

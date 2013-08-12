@@ -37,7 +37,7 @@ from PyQt4.Qt import *
 
 
 
-from cecog.gui.imageviewer import ImageViewer
+from cecog.gui.imageviewer import ImageViewer, GalleryViewer
 from cecog.gui.modules.module import ModuleManager
 from cecog.gui.analyzer import _ProcessorMixin
 from cecog.analyzer.channel import (PrimaryChannel,
@@ -114,8 +114,13 @@ class Browser(QMainWindow):
 
         layout = QGridLayout(frame)
         layout.setContentsMargins(0, 0, 0, 0)
-        self.image_viewer = ImageViewer(frame, auto_resize=True)
-        layout.addWidget(self.image_viewer, 0, 0)
+        self.image_viewers = {
+                             'image'   : ImageViewer(frame, auto_resize=True),
+                             'gallery' : GalleryViewer(frame)
+                             }
+        
+        self.image_viewer = self.image_viewers['image']
+        layout.addWidget(self.image_viewer , 0, 0)
 
         #self.image_viewer.image_mouse_dblclk.connect(self._on_dbl_clk)
         self.image_viewer.zoom_info_updated.connect(self.on_zoom_info_updated)
@@ -265,9 +270,16 @@ class Browser(QMainWindow):
         # set the Navigation module activated
         self._module_manager.activate_tab(NavigationModule.NAME)
 
+        self.layout = layout
         # process and display the first image
         self._process_image()
 
+    def set_image_viewer(self, viewer_type):
+        self.image_viewer.hide()
+        self.layout.removeWidget(self.image_viewer)
+        self.image_viewer = self.image_viewers[viewer_type]
+        self.layout.addWidget(self.image_viewer, 0, 0)
+        self.image_viewer.show()
 
     def create_action(self, text, slot=None, shortcut=None, icon=None,
                       tooltip=None, checkable=None, signal='triggered()',
@@ -573,13 +585,13 @@ class Browser(QMainWindow):
 
     # Qt method overwrites
 
-    def keyPressEvent(self, ev):
-        super(Browser, self).keyPressEvent(self, ev)
-        # allow to return from fullscreen via the Escape key
-        if self.isFullScreen() and ev.key() == Qt.Key_Escape:
-            self.showNormal()
-            self._act_fullscreen.setChecked(False)
-            self.raise_()
+#     def keyPressEvent(self, ev):
+#         super(Browser, self).keyPressEvent(self, ev)
+#         # allow to return from fullscreen via the Escape key
+#         if self.isFullScreen() and ev.key() == Qt.Key_Escape:
+#             self.showNormal()
+#             self._act_fullscreen.setChecked(False)
+#             self.raise_()
 
     def gestureEvent(self, ev):
         # determine whether a swipe gesture was detected
@@ -623,7 +635,7 @@ if __name__ == "__main__":
     import sys
     app = QApplication(sys.argv) 
     
-    settings = load_settings('C:/Users/sommerc/data/cecog/Settings/exp911_version_140.conf')
+    settings = load_settings(r'M:\members\Claudia Blaukopf\Experiments\130710_Mitotic_slippage_and_cell_death\_meta\Cecog\130710_mitotic_slippage_and_cell_death_v04_with_split_TESTTESTTEST.conf')
     imagecontainer = load_image_container_from_settings(settings)
         
     browser = Browser(settings, imagecontainer)
