@@ -34,14 +34,23 @@ class HMMCore(object):
 
         - probability based estimator for svm classifier
         - transition count based estimator for unsupervied clustering
+
+        There are 2 levels:
+        1) inital estimate by counting or conditional probalilities, those
+           values are used as inital trans, emis startprob for the
+        2) Baum Welch algorithm.
         """
 
         if self.ecopts.eventselection == self.ecopts.EVENTSELECTION_SUPERVISED:
-            return estimator.HMMProbBasedEsitmator(probs)
+            est = estimator.HMMProbBasedEsitmator(probs)
         else:
             states = np.array(self.classdef.class_names.keys())
-            return estimator.HMMTransitionCountEstimator(tracks, states)
+            est = estimator.HMMTransitionCountEstimator(tracks, states)
 
+        # Baum Welch performs bad with bad start values
+        est = estimator.HMMBaumWelchEstimator(
+            est, self.classdef.label2index(tracks))
+        return est
 
 class HmmSklearn(HMMCore):
 
@@ -53,7 +62,7 @@ class HmmSklearn(HMMCore):
         the one that is provided by the options."""
         if self.ecopts.hmm_constrain[self.channel] is None:
             # default constrain for hidden markov model
-            hmmc = estimator.HMMSimpleLeft2RightConstraint(est.nstates)
+            hmmc = estimator.HMMSimpleConstraint(est.nstates)
         else:
             hmmc = self.ecopts.hmm_constrain[self.channel]
         return hmmc
@@ -71,11 +80,10 @@ class HmmSklearn(HMMCore):
 
             # ugly sklearn
             hmm_ = hmm.MultinomialHMM(n_components=est.nstates)
-            hmm_._set_startprob(est.startprob)
-            hmm_._set_transmat(est.trans)
-            hmm_._set_emissionprob(est.emis)
+            hmm_.startprob_ = est.startprob
+            hmm_.transmat_ = est.trans
+            hmm_.emissionprob_ = est.emis
 
-            # trackwise error correction
             tracks2 = []
             for track in self.classdef.label2index(tracks):
                 tracks2.append(hmm_.predict(track))
