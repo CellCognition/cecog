@@ -20,6 +20,8 @@ import lxml.objectify
 import lxml.etree
 import lxml._elementpath
 
+import sklearn.hmm as hmm
+
 from cecog.tc3 import normalize
 from cecog.environment import find_resource_dir
 
@@ -39,6 +41,19 @@ class HMMSimpleLeft2RightConstraint(object):
                 self.trans[i, 0] = 1
 
         self.emis= np.eye(nstates)
+        self.start = np.ones(nstates, dtype=float)/nstates
+
+class HMMSimpleConstraint(object):
+    """Simple Constraint for Hidden Markov Models
+
+    1) all state transitions are allowed
+    2) all states are allowed as start states
+    3) emissions with just a little noise
+    """
+
+    def __init__(self, nstates):
+        self.trans = np.ones((nstates, nstates))
+        self.emis= np.eye(nstates) + 0.05
         self.start = np.ones(nstates, dtype=float)/nstates
 
 
@@ -196,3 +211,19 @@ class HMMTransitionCountEstimator(HMMEstimator):
             self.startprob[i] = c
         self._startprob = normalize(self._startprob, eps=0.0)
         return self._startprob
+
+class HMMBaumWelchEstimator(HMMEstimator):
+
+    def __init__(self, estimator, tracks):
+        super(HMMBaumWelchEstimator, self).__init__(estimator.nstates)
+        # the initialisation is essential!
+        hmm_ = hmm.MultinomialHMM(n_components=estimator.nstates,
+                                  transmat=estimator.trans,
+                                  startprob=estimator.startprob,
+                                  init_params="", n_iter=500)
+        hmm_.emissionprob_ = estimator.emis
+        hmm_.fit(tracks)
+
+        self._trans = hmm_.transmat_
+        self._emis = hmm_.emissionprob_
+        self._startprob = hmm_.startprob_
