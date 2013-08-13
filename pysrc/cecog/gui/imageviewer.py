@@ -72,14 +72,15 @@ class ItemHoverMixin(object):
         QGraphicsItem.hoverLeaveEvent(self, ev)
         
 class QGraphicsPixmapHoverItem(QGraphicsPixmapItem):
-    SCALE = 3
-    
+
     def __init__(self, parent):
         QGraphicsPixmapItem.__init__(self, parent)
         self.setAcceptHoverEvents(True)
-        self.setTransformOriginPoint(self.boundingRect().width()/2, self.boundingRect().height()/2)
+        #self.setTransformOriginPoint(self.boundingRect().width()/2, self.boundingRect().height()/2)
         
-        
+class ItemScaleHover(object):
+    SCALE = 3
+      
     def hoverEnterEvent(self, ev):
         QGraphicsPixmapItem.hoverEnterEvent(self, ev)
         self.setScale(self.SCALE)
