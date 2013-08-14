@@ -117,7 +117,18 @@ class GalleryViewer(ZoomedQGraphicsView):
         #self.setRenderHints(QPainter.Antialiasing |
         #                    QPainter.SmoothPixmapTransform)
         #self.setViewportUpdateMode(self.SmartViewportUpdate)
-        self.setBackgroundBrush(QBrush(QColor('#66CCCC')))
+        self.setBackgroundBrush(QBrush(QColor('#0C7A0C')))
+        gradient = QRadialGradient (200, 100, 800);
+        gradient.setColorAt(0.9, QColor.fromRgb(0, 150,140));
+        gradient.setColorAt(0.6, QColor.fromRgb(255, 0, 0));
+        gradient.setColorAt(0.2, QColor.fromRgb(0, 0, 0));
+        gradient.setColorAt(0, QColor.fromRgb(0, 200, 0));
+  
+        brush = QBrush(gradient);
+        self.setBackgroundBrush(brush);
+        
+        
+        
         self.setMouseTracking(True)
         self.hide()
         

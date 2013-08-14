@@ -22,6 +22,9 @@ import numpy
 import time
 import shutil
 import math
+import datetime
+
+import h5py
 
 from xml.dom import minidom
 
@@ -1077,6 +1080,20 @@ class AnnotationsContainer(object):
                 for g_ in self.graphics_items[begin_idx:k]:
                     g_.setBrush(class_def.get_color(self._annotations[k]))
                 begin_idx = k+1
+                
+    def encode(self):
+        return ",".join(["%d,%d"%(t[0],t[1]) for t in tuple(sorted(self._annotations.items()))])
+    
+    def decode(self, code_string):
+        code = code_string.split(',')
+        self._annotations = {}
+        for a,b in zip(code[::2], code[1::2]):
+            self._annotations[int(a)] = int(b)
+        
+        
+        
+    def __len__(self):
+        return len(self._annotations)
                     
         
 class ClassDefinitions(object):
@@ -1097,6 +1114,15 @@ class ClassDefinitions(object):
     
     def get_names(self):
         return [self.get_name(x) for x in self.classes]
+    
+    def get_definition_table(self):
+        n = len(self.classes)
+        table = numpy.ndarray((n,), dtype=[('class_label', 'uint8'), ('class_name', '|S64'), ('class_color', '|S8'),])
+        for k, c in enumerate(sorted(self.classes)):
+            table[k] = (c, self.get_name(c),qcolor_to_hex(self.get_color(c)))
+        return table
+            
+        
         
 class CellH5AnnotationModule(Module):
     NAME = 'CellH5 Track Annotation'
@@ -1106,7 +1132,7 @@ class CellH5AnnotationModule(Module):
     COLUMN_CLASS_COUNT = 3
     def __init__(self, parent, browser, settings, imagecontainer):
         Module.__init__(self, parent, browser)
-        
+        self._imagecontainer = imagecontainer
         
         self._settings = settings
         self.hdf_file = os.path.join(self._settings.get('General', 'pathout'), 'hdf5', 'all_positions.ch5')
@@ -1192,18 +1218,81 @@ class CellH5AnnotationModule(Module):
         self.event_table.resizeRowsToContents()                  
         
     def load_annotations(self, filename):
-        pass
+        plate_id = self._imagecontainer.plates[0]
+        object_name = 'event_annotation'
+        
+        definitions_template = '/definition/feature/%s'
+        sample_template = 'sample/0/plate/%s/experiment/%s/position/%s/feature/'
+        
+        with h5py.File(filename, 'r') as ann_hdf5_handle:     
+            # save definition
+            class_def = ClassDefinitions()
+            def_group = ann_hdf5_handle[definitions_template % object_name]
+            table = def_group['class_definition']
+            for class_label, class_name, class_color in table:
+                class_def.add(class_label, class_name, QColor(str(class_color)))
+                   
+            # loop over all annotations 
+            for w, p in self.annotations:
+                ann_prefix = sample_template % (plate_id, w, str(p))
+                annotation_group = ann_hdf5_handle[ann_prefix]
+                ann_dset = annotation_group[object_name]
+                for k, (track_id, anno_string) in enumerate(sorted(ann_dset)):
+                    anno = AnnotationsContainer(w, p, track_id)
+                    anno.decode(anno_string)
+                    self.annotations[(w, p)][track_id] = anno
+                    
+        self.class_def = class_def
+        self._update_class_definition_table()
     
     def save_annotations(self, filename):
-        pass
-         
-    def _on_load_annotations(self):
-        filename = 'test.h5'
-        self.load_annotations(filename)
+        annotations = self.annotations
+        plate_id = self._imagecontainer.plates[0]
+        object_name = 'event_annotation'
         
-    def on_save_annotations(self):
-        filename = 'test.h5'
+        definitions_template = '/definition/feature/%s'
+        sample_template = 'sample/0/plate/%s/experiment/%s/position/%s/feature/'
+        
+        with h5py.File(filename, 'a') as ann_hdf5_handle:
+            # Backup of old annotations
+            now_string = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+            if 'sample' in ann_hdf5_handle:
+                ann_hdf5_handle[now_string + '/sample'] = ann_hdf5_handle['sample']
+                del ann_hdf5_handle['sample']
+            if 'definition' in ann_hdf5_handle:
+                ann_hdf5_handle[now_string + '/definition'] = ann_hdf5_handle['definition']
+                del ann_hdf5_handle['definition']
+                
+            # save definition
+            def_group = ann_hdf5_handle.create_group(definitions_template % object_name)
+            table = self.class_def.get_definition_table()
+            def_group.create_dataset('class_definition', shape=table.shape, dtype=table.dtype, data=table)
+            
+            
+                
+            # loop over all annotations 
+            for (w, p), annotation_dict in annotations.items():
+                ann_prefix = sample_template % (plate_id, w, str(p))
+                annotation_group = ann_hdf5_handle.create_group(ann_prefix)
+                ann_dset = annotation_group.create_dataset(object_name, (len(annotation_dict),), [('event_id', 'int32'), ('annotation', h5py.new_vlen(str))])
+                for k, track_id in enumerate(sorted(annotation_dict)):
+                    a = annotation_dict[track_id]
+                    assert track_id == a.track_id
+                    ann_dset[k] = (track_id, a.encode())
+                
+     
+    def _on_load_annotations(self):
+        filename = os.path.join(self._settings.get('General', 'pathout'), 'hdf5', 'annotations_all_positions.ch5')
+        if os.path.exists(filename):
+            self.load_annotations(filename)
+            information(self, 'Track annotations successfully loaded', filename)
+        else:
+            warning(self, 'No annotations found...', filename)
+        
+    def _on_save_annotations(self):
+        filename = os.path.join(self._settings.get('General', 'pathout'), 'hdf5', 'annotations_all_positions.ch5')
         self.save_annotations(filename)
+        information(self, 'Annotations successfully saved!', filename)
         
     @timecall
     def _init_pos_table(self):
@@ -1284,6 +1373,21 @@ class CellH5AnnotationModule(Module):
         layout2.addWidget(btn)
         layout.addWidget(frame2)
         
+        frame2 = QFrame(grp_box)
+        layout2 = QBoxLayout(QBoxLayout.LeftToRight, frame2)
+        layout2.setContentsMargins(0,0,0,0)
+        btn = QPushButton('Save', frame2)
+        btn.clicked.connect(self._on_save_annotations)
+        layout2.addWidget(btn)
+        btn = QPushButton('Load', frame2)
+        btn.clicked.connect(self._on_load_annotations)
+        layout2.addWidget(btn)
+        layout.addWidget(frame2)
+        
+        
+        
+        
+        
         self._class_sbox.setValue(1)
         self._class_text.setText('class 1')
         self._class_color_btn.set_color(QColor('red'))
@@ -1303,7 +1407,7 @@ class CellH5AnnotationModule(Module):
         layout.addWidget(QLabel('Regions'))
         self._cbb_object = QComboBox()
         for o in self.ch5file.object_definition.keys():
-            if self.ch5file.has_classification(o):
+            if self.ch5file.has_object_features(o):
                 self._cbb_object.addItem(str(o))
         layout.addWidget(self._cbb_object)
         frame.setLayout(layout)
@@ -1467,7 +1571,7 @@ class CellH5AnnotationModule(Module):
         if len(class_name_new) == 0:
             warning(self, "Invalid class name",
                     info="The class name must not be empty!")
-        elif (not class_label_new in class_def.classes):
+        elif (not class_label_new in class_def.classes) and (not class_name_new in class_def.get_names()):
             self._current_class = class_label_new
 
             class_color = self._class_color_btn.current_color
@@ -1567,9 +1671,7 @@ class CellH5AnnotationModule(Module):
         self.cur_w = w
         self.cur_p = p
         self.update_track_table(pos)
-        
-        
-        
+             
     def _on_track_changed(self, current, previous):
         print '_on_track_changed'
         track_idx = current.row()         
