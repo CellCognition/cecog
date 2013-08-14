@@ -1410,6 +1410,8 @@ class CellH5AnnotationModule(Module):
             if self.ch5file.has_object_features(o):
                 self._cbb_object.addItem(str(o))
         layout.addWidget(self._cbb_object)
+        self._cbb_object.currentIndexChanged.connect(self._cbb_object_changed)
+        
         frame.setLayout(layout)
         grp_layout.addWidget(frame)
         
@@ -1418,6 +1420,7 @@ class CellH5AnnotationModule(Module):
         layout = QHBoxLayout(frame)
         self._cb_track = QCheckBox('Event Fate', self)
         self._cb_track.setCheckState(False)
+        self._cb_track.stateChanged.connect(self._cb_track_changed)
         layout.addWidget(self._cb_track)
         frame.setLayout(layout)
         grp_layout.addWidget(frame)
@@ -1430,6 +1433,8 @@ class CellH5AnnotationModule(Module):
         self._sb_events_from.setMaximum(9999)
         self._sb_events_from.setValue(0)
         layout.addWidget(self._sb_events_from)
+        self._sb_events_from.valueChanged.connect(self._sb_events_from_changed)
+        
         frame.setLayout(layout)
         grp_layout.addWidget(frame)
         
@@ -1440,6 +1445,7 @@ class CellH5AnnotationModule(Module):
         self._sb_events_until.setMaximum(9999)
         self._sb_events_until.setValue(9999)
         layout.addWidget(self._sb_events_until)
+        self._sb_events_until.valueChanged.connect(self._sb_events_until_changed)
         frame.setLayout(layout)
         grp_layout.addWidget(frame)
         
@@ -1452,6 +1458,8 @@ class CellH5AnnotationModule(Module):
         self._sb_gallery_size.setMinimum(52)
         self._sb_gallery_size.setSingleStep(4)
         layout.addWidget(self._sb_gallery_size)
+        self._sb_gallery_size.valueChanged.connect(self._sb_gallery_size_changed)
+        
         frame.setLayout(layout)
         grp_layout.addWidget(frame)
         
@@ -1461,26 +1469,51 @@ class CellH5AnnotationModule(Module):
         self._cb_segmentation = QCheckBox('Show Segmentation', self)
         self._cb_segmentation.setCheckState(False)
         layout.addWidget(self._cb_segmentation)
+        
+        self._cb_segmentation.stateChanged.connect(self._cb_segmentation_changed)
+        
         frame.setLayout(layout)
         grp_layout.addWidget(frame)
         
         # show classificaton
         frame = QFrame(grp_box)
         layout = QHBoxLayout(frame)
-        self._cb_classification = QCheckBox('Show Segmentation', self)
+        self._cb_classification = QCheckBox('Show Classification', self)
         self._cb_classification.setCheckState(False)
         layout.addWidget(self._cb_classification)
+        self._cb_classification.stateChanged.connect(self._cb_classification_changed)
+        
         frame.setLayout(layout)
         grp_layout.addWidget(frame)
         
         self.layout.addWidget(grp_box)
         
-        self.btn = QPushButton('Update')
-        self.btn.clicked.connect(self.update_options)
-        self.layout.addWidget(self.btn)
-    
-    def update_options(self):
+        
+    def _cb_track_changed(self, check_state):
         self.update_track_table(self.cur_pos)
+        self.show_tracks(self.cur_track_idx, self.cur_track_id)
+    
+    def _cb_segmentation_changed(self, check_state):
+        self.show_tracks(self.cur_track_idx, self.cur_track_id)
+    
+    def _cb_classification_changed(self, check_state):
+        if check_state > 0:
+            self._cb_segmentation.setCheckState(2)
+            return
+        self.show_tracks(self.cur_track_idx, self.cur_track_id)
+    
+    def _sb_events_from_changed(self, value):
+        self.update_track_table(self.cur_pos)
+        
+    def _sb_events_until_changed(self, value):
+        self.update_track_table(self.cur_pos)
+        
+    def _sb_gallery_size_changed(self, value):
+        self.show_tracks(self.cur_track_idx, self.cur_track_id)
+    
+    def _cbb_object_changed(self, value):
+        self.show_tracks(self.cur_track_idx, self.cur_track_id)
+        
     
     def _on_class_changed(self, current, previous):
         if not current is None:
@@ -1731,6 +1764,9 @@ class CellH5AnnotationModule(Module):
         x_max = 1000
         x, y = 0, 0
         
+        if idx > len(self.tracks) - 1:
+            warning(self, 'Track does not exist', 'after updating...')
+            return
         
         track = self.tracks[idx]
         
