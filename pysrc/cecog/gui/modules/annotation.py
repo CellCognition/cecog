@@ -1149,7 +1149,6 @@ class CellH5AnnotationModule(Module):
         
         self.class_def = ClassDefinitions()
         
-        
         self.cmap = [qRgb(i,i,i) for i in range(256)]
         self.layout = QVBoxLayout(self)
         
@@ -1161,6 +1160,9 @@ class CellH5AnnotationModule(Module):
         self.annotations = {}
         
         for i, (w, p, pos) in enumerate(self.ch5file.iter_positions()):
+            # Annotations
+            self.annotations[w, p] = {}
+            
             # Navigation Table
             self.pos_table.insertRow(i)
             w_item = QTableWidgetItem(str(w))
@@ -1168,13 +1170,12 @@ class CellH5AnnotationModule(Module):
             self.pos_table.setItem(i, 0, w_item)
             self.pos_table.setItem(i, 1, p_item)
             if i == 0:
-                self.update_track_table(pos)
                 self.cur_pos = pos
                 self.cur_w = w
                 self.cur_p = p
+                self.update_track_table(pos)
                 
-            # Annotations
-            self.annotations[w, p] = {}
+            
             
         class_fct = lambda id_: lambda : self._on_shortcut_class_selected(id_)
         for action, x in zip(self.browser._action_grp.actions(), range(1,11)):
@@ -1221,7 +1222,14 @@ class CellH5AnnotationModule(Module):
                 
                 selected_track.append(e)
                 self.event_table.insertRow(cnt)
-                self.event_table.setItem(cnt, 0, QTableWidgetItem(str(e_id)))
+                
+                event_id_item = QTableWidgetItem(str(e_id))
+                if e_id in self.annotations[(self.cur_w, self.cur_p)] and len(self.annotations[(self.cur_w, self.cur_p)][e_id]) > 0:
+                    font = QFont()
+                    font.setBold(True)
+                    event_id_item.setFont(font)
+                
+                self.event_table.setItem(cnt, 0, event_id_item)
                 self.event_table.setItem(cnt, 1, QTableWidgetItem(str(len(track))))
                 self.event_table.setItem(cnt, 2, QTableWidgetItem(str(time_idx)))    
                 cnt+=1
@@ -1479,6 +1487,29 @@ class CellH5AnnotationModule(Module):
         self._sb_gallery_size.setSingleStep(4)
         layout.addWidget(self._sb_gallery_size)
         self._sb_gallery_size.valueChanged.connect(self._sb_gallery_size_changed)
+        
+        frame.setLayout(layout)
+        grp_layout.addWidget(frame)
+        
+        # Image Min Image Maxe
+        frame = QWidget(grp_box)
+        layout = QHBoxLayout(frame)
+        layout.setContentsMargins(*padding)
+        layout.addWidget(QLabel('Min:'))
+        self._sb_image_min = QSpinBox(self)
+        self._sb_image_min.setValue(0)
+        self._sb_image_min.setSingleStep(10)
+        self._sb_gallery_size.setMinimum(0)
+        layout.addWidget(self._sb_image_min)
+        layout.addWidget(QLabel('Max:'))
+        self._sb_image_max = QSpinBox(self)
+        self._sb_image_max.setMaximum(255)
+        self._sb_image_max.setValue(255)
+        self._sb_image_max.setSingleStep(10)
+        layout.addWidget(self._sb_image_max)
+        
+        self._sb_image_min.valueChanged.connect(self._sb_gallery_size_changed)
+        self._sb_image_max.valueChanged.connect(self._sb_gallery_size_changed)
         
         frame.setLayout(layout)
         grp_layout.addWidget(frame)
@@ -1796,8 +1827,15 @@ class CellH5AnnotationModule(Module):
         
         object_ = str(self._cbb_object.currentText())
         
+        
+        event_text_item = QGraphicsTextItem()
+        event_text_item.setHtml("<span style='color:white; font:bold 12px'>Well: %s Position: %s Track Id: %s</span>" % (self.cur_w, self.cur_p, track_id))
+        event_text_item.setPos(0, -30)
+        self.browser.image_viewer._scene.addItem(event_text_item)
+        
+        
         for i, gallery_numpy in enumerate(pos.get_gallery_image_generator(track, object_)):
-            gallery_item = QGraphicsPixmapHoverItem(QPixmap(numpy_to_qimage(gallery_numpy, self.cmap )))
+            gallery_item = QGraphicsPixmapHoverItem(QPixmap(numpy_to_qimage(self.transform_image(gallery_numpy), self.cmap )))
             gallery_item.setPos(x, y)
             self.browser.image_viewer._scene.addItem(gallery_item)
             
@@ -1828,7 +1866,16 @@ class CellH5AnnotationModule(Module):
         self.update_annotations()
         
             
-        
+    def transform_image(self, image):
+        image = image.astype(numpy.float32)
+        image *= 255.0 / (self._sb_image_max.value() - self._sb_image_min.value() )
+        image -= self._sb_image_min.value()
+
+        image = image.clip(0, 255)
+
+        image2 = numpy.require(image, numpy.uint8)
+        print image2.min(), image2.max()
+        return image2
     
     def set_image_dict(self, image_dict):
         print 'CellH5Annotator.set_image_dict()'  
