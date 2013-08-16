@@ -366,10 +366,8 @@ class AnnotationModule(Module):
         class_table.setSelectionMode(QTableWidget.SingleSelection)
         class_table.setSelectionBehavior(QTableWidget.SelectRows)
         #class_table.setSortingEnabled(True)
-        class_table.setColumnCount(4)
-        class_table.setHorizontalHeaderLabels(['Name', 'Label', 'Color',
-                                               'Samples',
-                                               ])
+        class_table.setColumnCount(3)
+        class_table.setHorizontalHeaderLabels(['Name', 'Label', 'Color',])
         class_table.resizeColumnsToContents()
         class_table.currentItemChanged.connect(self._on_class_changed)
         class_table.setStyleSheet('font-size: 10px;')
@@ -461,14 +459,15 @@ class AnnotationModule(Module):
 
         self._learner = self._init_new_classifier()
 
-        self._action_grp = QActionGroup(browser)
+        self.browser._action_grp = QActionGroup(browser)
         class_fct = lambda id: lambda : self._on_shortcut_class_selected(id)
         for x in range(1,11):
             action = browser.create_action(
                 'Select Class Label %d' % x,
                  shortcut=QKeySequence(str(x) if x < 10 else '0'),
                  slot=class_fct(x))
-            self._action_grp.addAction(action)
+            self.browser._action_grp.addAction(action)
+            
             browser.addAction(action)
 
         #browser.coordinates_changed.connect(self._on_coordinates_changed)
@@ -997,7 +996,7 @@ class AnnotationModule(Module):
         items = self._find_items_in_class_table(str(class_label),
                                                 self.COLUMN_CLASS_LABEL)
         if len(items) == 1:
-            self._class_table.setCurrentItem(items[0])
+            self.class_table.setCurrentItem(items[0])
 
     def _load_classifier(self, path):
         learner = None
@@ -1035,7 +1034,7 @@ class AnnotationModule(Module):
         self._activate_objects_for_image(True, clear=True)
         self._update_class_table()
         self.browser.image_viewer.image_mouse_pressed.connect(self._on_new_point)
-        self._action_grp.setEnabled(True)
+        self.browser._action_grp.setEnabled(True)
         self._find_annotation_row(self.browser.get_coordinate())
 
     def deactivate(self):
@@ -1043,7 +1042,7 @@ class AnnotationModule(Module):
         self._activate_objects_for_image(False, clear=True)
         self.browser.image_viewer.image_mouse_pressed.disconnect(self._on_new_point)
         self.browser.image_viewer.purify_objects()
-        self._action_grp.setEnabled(False)
+        self.browser._action_grp.setEnabled(False)
         
         
 class AnnotationsContainer(object):
@@ -1125,7 +1124,7 @@ class ClassDefinitions(object):
         
         
 class CellH5AnnotationModule(Module):
-    NAME = 'CellH5 Track Annotation'
+    NAME = 'Track Annotation'
     COLUMN_CLASS_NAME = 0
     COLUMN_CLASS_LABEL = 1
     COLUMN_CLASS_COLOR = 2
@@ -1138,6 +1137,10 @@ class CellH5AnnotationModule(Module):
         self.hdf_file = os.path.join(self._settings.get('General', 'pathout'), 'hdf5', 'all_positions.ch5')
         
         if not os.path.exists(self.hdf_file):
+            self.hdf_file = os.path.join(self._settings.get('General', 'pathout'), 'hdf5', '_all_positions.ch5')
+          
+        if not os.path.exists(self.hdf_file):  
+            
             warning(self, "Invalid hdf5 files",
                         info="%s does not exist!" % self.hdf_file)
         
@@ -1173,13 +1176,23 @@ class CellH5AnnotationModule(Module):
             # Annotations
             self.annotations[w, p] = {}
             
-            
+        class_fct = lambda id_: lambda : self._on_shortcut_class_selected(id_)
+        for action, x in zip(self.browser._action_grp.actions(), range(1,11)):
+            #action = browser.findChild(QAction, u'Select Class Label %d' % x)
+            action.setShortcut(QKeySequence(str(x) if x < 10 else '0'))
+            action.triggered.connect(class_fct(x))
             
         self.pos_table.resizeColumnsToContents()
         self.pos_table.resizeRowsToContents()
         
         self.browser.image_viewers['gallery'].image_mouse_pressed.connect(self._on_new_point)
         
+    def _on_shortcut_class_selected(self, class_label):
+        items = self._find_items_in_class_table(str(class_label),
+                                                self.COLUMN_CLASS_LABEL)
+        if len(items) == 1:
+            self.class_table.setCurrentItem(items[0])
+            
     @timecall
     def update_track_table(self, pos):
         self.event_table.setRowCount(0)
@@ -1398,13 +1411,16 @@ class CellH5AnnotationModule(Module):
     def _init_options_box(self):
         grp_box = QGroupBox('Options', self)
         grp_layout = QVBoxLayout(grp_box)
-        grp_layout.setContentsMargins(0, 0, 0, 0)
+
+        padding = (5,0,0,5)
         
+        grp_layout.setContentsMargins(5,10,5,5)
         
         # object type
         frame = QWidget(self)
         layout = QHBoxLayout(frame)
         layout.addWidget(QLabel('Regions'))
+        layout.setContentsMargins(*padding)
         self._cbb_object = QComboBox()
         for o in self.ch5file.object_definition.keys():
             if self.ch5file.has_object_features(o):
@@ -1418,6 +1434,7 @@ class CellH5AnnotationModule(Module):
         # fate tracking
         frame = QWidget(grp_box)
         layout = QHBoxLayout(frame)
+        layout.setContentsMargins(*padding)
         self._cb_track = QCheckBox('Event Fate', self)
         self._cb_track.setCheckState(False)
         self._cb_track.stateChanged.connect(self._cb_track_changed)
@@ -1426,8 +1443,9 @@ class CellH5AnnotationModule(Module):
         grp_layout.addWidget(frame)
         
         # event selection
-        frame = QFrame(grp_box)
+        frame = QWidget(grp_box)
         layout = QHBoxLayout(frame)
+        layout.setContentsMargins(*padding)
         layout.addWidget(QLabel('Event Onset From'))
         self._sb_events_from = QSpinBox(self)
         self._sb_events_from.setMaximum(9999)
@@ -1438,8 +1456,9 @@ class CellH5AnnotationModule(Module):
         frame.setLayout(layout)
         grp_layout.addWidget(frame)
         
-        frame = QFrame(grp_box)
+        frame = QWidget(grp_box)
         layout = QHBoxLayout(frame)
+        layout.setContentsMargins(*padding)
         layout.addWidget(QLabel('Event Onset Until'))
         self._sb_events_until = QSpinBox(self)
         self._sb_events_until.setMaximum(9999)
@@ -1450,8 +1469,9 @@ class CellH5AnnotationModule(Module):
         grp_layout.addWidget(frame)
         
         # Gallery Size
-        frame = QFrame(grp_box)
+        frame = QWidget(grp_box)
         layout = QHBoxLayout(frame)
+        layout.setContentsMargins(*padding)
         layout.addWidget(QLabel('Gallery Size'))
         self._sb_gallery_size = QSpinBox(self)
         self._sb_gallery_size.setValue(52)
@@ -1464,8 +1484,9 @@ class CellH5AnnotationModule(Module):
         grp_layout.addWidget(frame)
         
         # show seg
-        frame = QFrame(grp_box)
+        frame = QWidget(grp_box)
         layout = QHBoxLayout(frame)
+        layout.setContentsMargins(*padding)
         self._cb_segmentation = QCheckBox('Show Segmentation', self)
         self._cb_segmentation.setCheckState(False)
         layout.addWidget(self._cb_segmentation)
@@ -1476,8 +1497,9 @@ class CellH5AnnotationModule(Module):
         grp_layout.addWidget(frame)
         
         # show classificaton
-        frame = QFrame(grp_box)
+        frame = QWidget(grp_box)
         layout = QHBoxLayout(frame)
+        layout.setContentsMargins(*padding)
         self._cb_classification = QCheckBox('Show Classification', self)
         self._cb_classification.setCheckState(False)
         layout.addWidget(self._cb_classification)
@@ -1687,12 +1709,14 @@ class CellH5AnnotationModule(Module):
         print 'CellH5Annotator.activate()'
         self.browser.set_display_module(self)
         self.browser.set_image_viewer('gallery')
+        self.browser._action_grp.setEnabled(True)
         
         
     def deactivate(self):
         print 'CellH5Annotator.deactivate()'
         self.browser.set_display_module(self.browser._module_manager.get_widget('Display'))
         self.browser.set_image_viewer('image')
+        self.browser._action_grp.setEnabled(False)
             
     def _on_pos_changed(self, current, previous):
         print '_on_pos_changed'
