@@ -24,7 +24,7 @@ import sklearn.hmm as hmm
 from cecog.tc3 import TC3Container
 from cecog.tc3 import TC3Params, GmmParams, DHmmParams, CHmmParams
 
-np.set_printoptions(precision=2)
+# np.set_printoptions(precision=2)
 EPS = np.spacing(1)
 
 # recycled from sklearn.hmm be able to control the eps parameter!
@@ -39,10 +39,8 @@ def normalize(A, axis=None, eps=EPS):
         Asum.shape = shape
     return A / Asum
 
-
 class TC3Error(Exception):
     pass
-
 
 class TemporalClustering(object):
 

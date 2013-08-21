@@ -14,11 +14,10 @@ __all__ = ['HmmSklearn']
 
 
 import numpy as np
-import sklearn.hmm as hmm
 
 from cecog.errorcorrection import HmmBucket
 from cecog.errorcorrection.hmm import estimator
-
+from cecog.errorcorrection.hmm.skhmm import MultinomialHMM
 
 class HMMCore(object):
 
@@ -79,7 +78,7 @@ class HmmSklearn(HMMCore):
             est.constrain(self.hmmc(est))
 
             # ugly sklearn
-            hmm_ = hmm.MultinomialHMM(n_components=est.nstates)
+            hmm_ = MultinomialHMM(n_components=est.nstates)
             hmm_.startprob_ = est.startprob
             hmm_.transmat_ = est.trans
             hmm_.emissionprob_ = est.emis
