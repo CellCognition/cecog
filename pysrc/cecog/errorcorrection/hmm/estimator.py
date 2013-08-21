@@ -20,10 +20,9 @@ import lxml.objectify
 import lxml.etree
 import lxml._elementpath
 
-import sklearn.hmm as hmm
-
 from cecog.tc3 import normalize
 from cecog.environment import find_resource_dir
+from cecog.errorcorrection.hmm.skhmm import MultinomialHMM
 
 class HMMSimpleLeft2RightConstraint(object):
     """"Simplest constraint on an Hidden Markov Models
@@ -217,11 +216,14 @@ class HMMBaumWelchEstimator(HMMEstimator):
     def __init__(self, estimator, tracks):
         super(HMMBaumWelchEstimator, self).__init__(estimator.nstates)
         # the initialisation is essential!
-        hmm_ = hmm.MultinomialHMM(n_components=estimator.nstates,
-                                  transmat=estimator.trans,
-                                  startprob=estimator.startprob,
-                                  init_params="", n_iter=500)
-        hmm_.emissionprob_ = estimator.emis
+        t = normalize(estimator.trans, axis=1, eps=0.0)
+        s = normalize(estimator.startprob, eps=0.0)
+
+        hmm_ = MultinomialHMM(n_components=estimator.nstates,
+                              transmat=t,
+                              startprob=s,
+                              init_params="", n_iter=500)
+        hmm_.emissionprob_ = normalize(estimator.emis, axis=1, eps=0.0)
         hmm_.fit(tracks)
 
         self._trans = hmm_.transmat_
