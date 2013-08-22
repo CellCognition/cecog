@@ -7,11 +7,12 @@
 # Gateway setup for the cellcognition cluster environment
 
 # move this to .bashrc after migration
-module load gridengine
-export CECOG_VERSIONS=$HOME/cecog_versions
+# module load gridengine
+export CECOG_VERSIONS=/home/imba/cecog/cecog_versions
+# export CECOG_VERSIONS=/groups/gerlich/cluster/cecog_versions
 export JOB_PARAMS="-m bea -q public.q"
 
-CECOG_GATEWAY_HOME=$HOME/gateway
+CECOG_GATEWAY_HOME=/home/imba/cecog/gateway
 LOG_DIR=$CECOG_GATEWAY_HOME
 LOGFILE=$LOG_DIR/gateway.log
 
@@ -24,8 +25,10 @@ C_GROUP=Gerlich.GRP
 
 # PYTHONP_BIN should be exported by .profile
 export PYTHON_BIN=$(which python)
-GATEWAY_PY="$HOME/gateway/gateway.py"
+GATEWAY_PY="/home/imba/cecog/gateway/gateway.py"
 CMD="$PYTHON_BIN $GATEWAY_PY"
 GATEWAYOPTS="--host=$C_HOST --port=$C_PORT >$LOGFILE 2>$LOGFILE"
 
-PIDFILE=${LOG_DIR}/gateway.pid
+#PIDFILE=${LOG_DIR}/gateway.pid
+PIDFILE=/var/run/gateway.pid
+

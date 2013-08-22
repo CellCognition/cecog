@@ -187,7 +187,7 @@ class ClusterControl(object):
 if __name__ == '__main__':
     from pyamf.remoting.gateway.wsgi import WSGIGateway
     from wsgiref import simple_server
-
+    
     options = parse_args(sys.argv[1:])[0]
     service = {'clustercontrol': ClusterControl()}
 
