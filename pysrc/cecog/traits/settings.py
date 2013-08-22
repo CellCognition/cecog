@@ -387,7 +387,12 @@ class TraitGroup(object):
         self._registry[name] = trait
 
     def unregister_trait(self, name):
-        del self._registry[name]
+        try:
+            del self._registry[name]
+        except KeyError:
+            # See _Section.unregister_trait()
+            pass
+        
 
     def get_trait(self, name):
         return self._registry[name]
@@ -424,7 +429,11 @@ class _Section(object):
 
     def unregister_trait(self, group_name, trait_name):
         grp = self._registry[group_name]
-        del self._traitname_grpname[trait_name]
+        try:
+            del self._traitname_grpname[trait_name]
+        except KeyError:
+            # Has already been deleted (Multiprocessing hickup)
+            pass
         grp.unregister_trait(trait_name)
 
     def get_group_names(self):

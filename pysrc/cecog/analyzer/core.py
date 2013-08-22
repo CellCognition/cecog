@@ -208,17 +208,17 @@ class AnalyzerCore(AnalyzerBase):
             analyzer = PositionAnalyzer(*args_, **kw_)
             try:
                 nimages = analyzer()
+                if self.settings.get('Output', 'hdf5_create_file') and \
+                    self.settings.get('Output', 'hdf5_merge_positions'):
+                    hdf5_links.append(analyzer.hdf5_filename)
+                
             except Exception as e:
                 import traceback
                 print e.message
                 traceback.print_exc()
                 raise(e)
             finally:
-                analyzer.clear()
-
-            if self.settings.get('Output', 'hdf5_create_file') and \
-                    self.settings.get('Output', 'hdf5_merge_positions'):
-                hdf5_links.append(analyzer.hdf5_filename)
+                analyzer.clear() 
         return hdf5_links
 
 

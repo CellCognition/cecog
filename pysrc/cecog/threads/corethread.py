@@ -64,7 +64,7 @@ class CoreThread(QtCore.QThread):
             logger = logging.getLogger()
             logger.error(msg)
             self.analyzer_error.emit(msg)
-            raise
+            raise e
 
     def abort(self, wait=False):
         self._mutex.lock()

@@ -27,33 +27,34 @@ from cecog import ccore
 from cecog.threads.link_hdf import link_hdf5_files
 from cecog.analyzer.core import AnalyzerCore
 from cecog.threads.analyzer import AnalyzerThread
-from cecog.traits.settings import ConfigSettings
-from cecog.traits.analyzer import SECTION_REGISTRY
+
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.multiprocess import mplogging as lg
 
+import sys
 # see http://stackoverflow.com/questions/3288595/
 # multiprocessing-using-pool-map-on-a-function-defined-in-a-class
 def core_helper(plate_id, settings_str, imagecontainer, position):
-
-    settings = ConfigSettings(SECTION_REGISTRY)
-    settings.from_string(settings_str)
-    settings.set(SECTION_NAME_GENERAL, 'constrain_positions', True)
-    settings.set(SECTION_NAME_GENERAL, 'positions', position)
-
     try:
+        from cecog.traits.settings import ConfigSettings
+        from cecog.traits.analyzer import SECTION_REGISTRY
+        settings = ConfigSettings(SECTION_REGISTRY)
+        settings.from_string(settings_str)
+        settings.set(SECTION_NAME_GENERAL, 'constrain_positions', True)
+        settings.set(SECTION_NAME_GENERAL, 'positions', position)
+
         analyzer = AnalyzerCore(plate_id, settings, imagecontainer)
-        result = analyzer.processPositions()
-    except Exception:
-        traceback.print_exc()
-        raise
-    return plate_id, position, copy.deepcopy(result['post_hdf5_link_list'])
+        post_hdf5_link_list = analyzer.processPositions()
+        result = plate_id, position, copy.deepcopy(post_hdf5_link_list)
+    except Exception, e:
+        raise e.__class__("".join(traceback.format_exception(*sys.exc_info())))
+    return result
 
 class MultiProcessingError(Exception):
     def __init__(self, exceptions):
         self.msg = ('%s-----------%sError in job item:%s' \
                         %(os.linesep, os.linesep, os.linesep)).join(
-            [str(e) for e in exceptions])
+            [str(e) + "\n" + traceback.format_exc() for e in exceptions])
 
 # XXX perhaps a QObject
 class ProcessCallback(object):
@@ -146,6 +147,13 @@ class MultiProcessingMixin(object):
         self.parent().process_log_window.close()
 
     def join(self):
+        try:
+            import pydevd
+            pydevd.connected = True
+            pydevd.settrace(suspend=False)
+            print 'Thread enabled interactive eclipse debuging...'
+        except:
+            pass
         self.pool.close()
         self.pool.join()
         self.post_hdf5_link_list = []
@@ -175,7 +183,7 @@ class MultiProcessingMixin(object):
 
         self.job_result = list()
         for args in job_list:
-            self.pool.apply_async(self.target, args, callback=self.process_callback)
+            self.job_result.append(self.pool.apply_async(self.target, args, callback=self.process_callback))
 
 
 class MultiAnalyzerThread(AnalyzerThread, MultiProcessingMixin):
