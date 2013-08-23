@@ -20,9 +20,9 @@
 #ifndef CECOG_CONTAINER
 #define CECOG_CONTAINER
 
+#include <limits>
 #include <map>
 #include <string>
-
 #include "vigra/impex.hxx"
 #include "vigra/stdimage.hxx"
 #include "vigra/transformimage.hxx"
@@ -38,6 +38,7 @@
 #include "vigra/convolution.hxx"
 #include "vigra/tuple.hxx"
 #include "vigra/pixelneighborhood.hxx"
+#include "vigra/error.hxx"
 
 #include "boost/config.hpp"
 #include "boost/lexical_cast.hpp"
@@ -89,7 +90,11 @@ namespace cecog
     typedef std::map<unsigned, ROIObject> ObjectMap;
     typedef Image<BIT_DEPTH> image_type;
     typedef vigra::BImage binary_type;
+
+    // ugly but vigra images don't provide a propper method for determining the pixel type
     typedef vigra::Int16Image label_type;
+    typedef vigra::Int16Image::PixelType label_image_pixel_type;
+
     typedef vigra::BRGBImage rgb_type;
     typedef vigra::BasicImageView<vigra::UInt8> image_view;
     typedef typename image_type::value_type value_type;
@@ -105,7 +110,6 @@ namespace cecog
     BOOST_STATIC_CONSTANT(unsigned, DEF_HARALICK_LEVELS = 32);
     BOOST_STATIC_CONSTANT(unsigned, DEF_HARALICK_DIST = 1);
     BOOST_STATIC_CONSTANT(unsigned, DEF_LEVELSET_LEVELS = 32);
-
 
     // constructor
     ObjectContainerBase()
@@ -1006,12 +1010,23 @@ namespace cecog
      */
     void _buildObjects(bool findCrack=true, bool removeSinglePixel=true)
     {
+
+      // maximum number of objects is restricted by the label_type
+      // having more objects would cause a segfault in inspectTwoImages(...)
+      unsigned max_objects = std::numeric_limits<label_image_pixel_type>::max();
+      if (this->total_labels >= max_objects) {
+        std::stringstream msg;
+        msg << "Max. number of objets exceeded (" << max_objects << ")";
+        vigra::throw_runtime_error(msg.str(), __FILE__, __LINE__);
+      }
+
       vigra::ArrayOfRegionStatistics< vigra::FindBoundingRectangle >
-        bounds(this->total_labels);
+        bounds(this->total_labels+1);
+
       inspectTwoImages(srcIterRange(vigra::Diff2D(0,0),
                                     vigra::Diff2D(0,0) +
                                     this->img_labels.size()),
-                       srcImage(this->img_labels), bounds);
+                                    srcImage(this->img_labels), bounds);
 
       vigra::ArrayOfRegionStatistics< FindAVGCenter >
         center(this->total_labels);
@@ -1097,6 +1112,8 @@ namespace cecog
     using Base::GREYLEVELS;
     using Base::FOREGROUND;
     using Base::BACKGROUND;
+
+
 
     ObjectContainer(image_type const & img)
       : Base()
@@ -1362,6 +1379,7 @@ namespace cecog
     typedef typename Base::binary_type binary_type;
     typedef typename Base::value_type value_type;
     typedef typename Base::label_type label_type;
+    typedef typename Base::label_image_pixel_type label_image_pixel_type;
     typedef typename Base::rgb_type rgb_type;
     using Base::GREYLEVELS;
     using Base::FOREGROUND;
@@ -1507,14 +1525,12 @@ namespace cecog
 
       this->total_labels =
         labelImageWithBackground(srcImageRange(this->img_binary),
-                                 destImage(this->img_labels), true, BACKGROUND);
+        destImage(this->img_labels), true, BACKGROUND);
 
       this->region_size = 0;
-
       this->_buildObjects();
     }
   };
-
 }
 
 #endif // CECOG_CONTAINER
