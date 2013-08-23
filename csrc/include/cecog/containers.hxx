@@ -20,7 +20,6 @@
 #ifndef CECOG_CONTAINER
 #define CECOG_CONTAINER
 
-#include <limits>
 #include <map>
 #include <string>
 #include "vigra/impex.hxx"
