@@ -209,6 +209,8 @@ class PositionRunner(QtCore.QObject):
                                           %(prefix, sby)),
                                      self.ecopts.n_galleries)
 
+            report.export_hmm(join(self._hmm_dir, "%s-hmm.csv" %channel), True)
+
 
 if __name__ == "__main__":
 

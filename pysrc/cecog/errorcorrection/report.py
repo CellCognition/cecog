@@ -11,7 +11,8 @@ __licence__ = 'LGPL'
 
 __all__ = ['HmmBucket', 'HmmReport']
 
-
+import csv
+from os.path import splitext, basename
 from collections import OrderedDict
 import numpy as np
 from matplotlib import pyplot as plt
@@ -267,3 +268,30 @@ class HmmReport(object):
                           title=name, cmap=self.classdef.colormap, axes=axes,
                           linewidth=1.5, offset=-5)
         fig.subplots_adjust(top=0.95, bottom=0.01, right=0.99, left=0.01)
+
+    def export_hmm(self, filename, align_in_lines=False):
+        """Export a table of tracks names and hmm_labels"""
+
+        with open(filename, "w") as fp:
+            if align_in_lines:
+                writer = csv.writer(fp, delimiter=",")
+                for name, bucket in self.data.iteritems():
+                    for fname, hmm_labels in bucket.iter_gallery():
+                        writer.writerow([basename(splitext(fname)[0])] + \
+                                            hmm_labels.tolist())
+
+            # transpose lines and columns
+            else:
+                fields = []
+                tracks = []
+                for name, bucket in self.data.iteritems():
+                    for fname, hmm_labels in bucket.iter_gallery():
+                        fields.append(basename(splitext(fname)[0]))
+                        tracks.append(hmm_labels)
+
+                writer = csv.writer(fp, fields, delimiter=",")
+                writer.writerow(fields)
+                for line in zip(*tracks):
+                    writer.writerow(line)
+
+
