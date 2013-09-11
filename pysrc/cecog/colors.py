@@ -48,7 +48,7 @@ class Colors(object):
         if name not in cls.channel_table.keys():
             if __debug__:
                 print "channel color (%s) not defined. Using fallback" %name
-            return getattr(cls, cls.channel_table[cls.fallback])
+            return cls.fallback
         return getattr(cls, cls.channel_table[name])
 
     @classmethod
