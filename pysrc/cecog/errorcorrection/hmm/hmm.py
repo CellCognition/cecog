@@ -45,7 +45,6 @@ class HMMCore(object):
         else:
             states = np.array(self.classdef.class_names.keys())
             est = estimator.HMMTransitionCountEstimator(tracks, states)
-
         # Baum Welch performs bad with bad start values
         est = estimator.HMMBaumWelchEstimator(
             est, self.classdef.label2index(tracks))

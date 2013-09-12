@@ -52,8 +52,8 @@ class HMMSimpleConstraint(object):
 
     def __init__(self, nstates):
         self.trans = np.ones((nstates, nstates))
-        self.emis= np.eye(nstates) + 0.05
-        self.start = np.ones(nstates, dtype=float)/nstates
+        self.emis = np.ones((nstates, nstates))
+        self.start = np.ones(nstates)
 
 
 class HMMConstraint(object):
@@ -120,7 +120,7 @@ class HMMEstimator(object):
                 row[0] = 0.1
 
     def _estimate_emis(self):
-        self._emis = np.eye(self.nstates)
+        self._emis = np.eye(self.nstates) + 0.05
 
     def _estimate_startprob(self):
         self._startprob = np.zeros(self.nstates)
@@ -141,8 +141,7 @@ class HMMEstimator(object):
     def constrain(self, hmmc):
         self._trans = normalize(hmmc.trans*self._trans, axis=1, eps=0.0)
         self._startprob = normalize(hmmc.start*self._startprob, eps=0.0)
-        self._emis = normalize(hmmc.emis, axis=1, eps=0.0)
-
+        self._emis = normalize(hmmc.emis*self._emis, axis=1, eps=0.0)
 
 class HMMProbBasedEsitmator(HMMEstimator):
     """Estimate a hidden markov model from using the prediction
@@ -222,7 +221,8 @@ class HMMBaumWelchEstimator(HMMEstimator):
         hmm_ = MultinomialHMM(n_components=estimator.nstates,
                               transmat=t,
                               startprob=s,
-                              init_params="", n_iter=500)
+                              n_iter=1000,
+                              init_params="")
         hmm_.emissionprob_ = normalize(estimator.emis, axis=1, eps=0.0)
         hmm_.fit(tracks)
 
