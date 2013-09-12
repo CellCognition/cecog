@@ -704,7 +704,9 @@ class PositionAnalyzer(PositionCore):
     def clear(self):
         # closes hdf5
         self.timeholder.close_all()
-
+        # close and remove handlers from logging object
+        self.close()
+        
     def _analyze(self, cellanalyzer):
         super(PositionAnalyzer, self)._analyze()
         n_images = 0

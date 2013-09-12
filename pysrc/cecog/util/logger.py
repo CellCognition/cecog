@@ -62,3 +62,8 @@ class LoggerObject(object):
         self._file_handler.setLevel(level)
         self._file_handler.setFormatter(fmt)
         self.logger.addHandler(self._file_handler)
+
+    def close(self):
+        self._file_handler.close()
+        self.logger.removeHandler(self._file_handler)        
+        return
