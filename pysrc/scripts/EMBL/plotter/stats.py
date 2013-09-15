@@ -150,10 +150,12 @@ class Barplot(object):
 class Histogram(object):
     def __call__(self, datamatrix, filename,
                  colorvec=None, alpha=0.8,
-                 xlabel='data', ylabel='frequency', title='Histogram',
+                 xlabel='data', ylabel='frequency', 
+                 title='Histogram',
                  axis=None, vertical_lines=None,
                  bins=30, normed=True,
-                 side_by_side=True):
+                 side_by_side=True, 
+                 dataset_names=None):
 
         #hist(x, bins=30, range=None, normed=False, cumulative=False,
         #     bottom=None, histtype='bar', align='mid',
@@ -162,17 +164,18 @@ class Histogram(object):
         # new figure
         fig = plt.figure(1)
         ax = plt.subplot(1,1,1)
-
+        
+        nb_datasets = len(datamatrix)
         if colorvec is None:
-            nb_data_sets = len(datamatrix)
             cm = colors.ColorMap()
-            colorvec = cm.makeDivergentColorRamp(nb_data_sets)
+            colorvec = cm.makeDivergentColorRamp(nb_datasets)
 
         #if not xlim is None:
 
         histo = plt.hist(datamatrix, color=colorvec, alpha=alpha,
                          normed=normed,
-                         bins=bins)
+                         bins=bins, 
+                         label=dataset_names)
         ymin = numpy.min(histo[0])
         ymax = numpy.max(histo[0])
         xmin = numpy.min(histo[1])
@@ -181,10 +184,11 @@ class Histogram(object):
         if not side_by_side:
             plt.clf()
             bins = histo[1]
+            h = {}
             for i in range(len(datamatrix)):
-                h = plt.hist(datamatrix[i], color=colorvec[i],
-                             alpha=alpha, normed=normed,
-                             bins=bins)
+                h[i] = plt.hist(datamatrix[i], color=colorvec[i],
+                                alpha=alpha, normed=normed,
+                                bins=bins)
 
         plt.grid(b=True, which='major', linewidth=1.5)
 
@@ -229,6 +233,14 @@ class Histogram(object):
                             ls=ls)
 
 
+        #print nb_datasets
+        #if not dataset_names is None and nb_datasets > 1:
+        #    print 'i am legened'
+        #    leg = ax.legend([h[i] for i in range(nb_datasets)], 
+        #                    dataset_names, loc=1)
+
+        plt.legend()
+        
         # write and close
         plt.savefig(filename)
         plt.close(1)
@@ -257,18 +269,17 @@ class Scatterplot(object):
 
         nb_data_sets = len(xvecs)
 
-        xmin = numpy.min(numpy.min(xvecs))
-        xmax = numpy.max(numpy.max(xvecs))
-        ymin = numpy.min(numpy.min(yvecs))
-        ymax = numpy.max(numpy.max(yvecs))
-
-
+        xmin = numpy.min([numpy.min(xvec) for xvec in xvecs])
+        xmax = numpy.max([numpy.max(xvec) for xvec in xvecs])
+        ymin = numpy.min([numpy.min(yvec) for yvec in yvecs])
+        ymax = numpy.max([numpy.max(yvec) for yvec in yvecs])
+        
         if colorvec is None:
             cm = colors.ColorMap()
             colorvec = cm.makeDivergentColorRamp(nb_data_sets)
 
         if markervec is None:
-            markervec = ['o' for i in range(nb_data_set)]
+            markervec = ['o' for i in range(nb_data_sets)]
 
         # adjust axis
         if not axis is None:
@@ -282,10 +293,11 @@ class Scatterplot(object):
 
         sobj = {}
         for i in range(nb_data_sets):
-            sobj[i] = plt.scatter(xvecs[i], yvec[i],
+            sobj[i] = plt.scatter(xvecs[i], yvecs[i],
                                   color = colorvec[i],
                                   marker=markervec[i],
-                                  edgecolor=edgecolor)
+                                  edgecolor=edgecolor,
+                                  label=dataset_names[i])
 
         # add labels/title
         plt.xlabel(xlabel)
@@ -293,8 +305,9 @@ class Scatterplot(object):
         plt.title(title)
 
         if not dataset_names is None:
-            leg = ax.legend([sobj[i][0] for i in range(nb_data_set)],
-                            dataset_names)
+            plt.legend()
+            #leg = ax.legend([sobj[i][0] for i in range(nb_data_sets)],
+            #                dataset_names)
 
         # write and close
         plt.savefig(filename)
