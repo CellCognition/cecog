@@ -5,61 +5,15 @@
       <xsd:all>
         <xsd:element name="n_emissions" type="xsd:nonNegativeInteger"/>
         <xsd:element name="n_states" type="xsd:nonNegativeInteger"/>
-
-        <xsd:element name="start_probabilities">
-          <xsd:complexType>
-            <xsd:simpleContent>
-              <xsd:extension base="posDoubleList">
-                <xsd:attribute name="epsilon" type="xsd:double"/>
-              </xsd:extension>
-            </xsd:simpleContent>
-          </xsd:complexType>
-        </xsd:element>
-
-        <xsd:element name="transition_matrix">
-          <xsd:complexType>
-            <xsd:simpleContent>
-              <xsd:extension base="posDoubleList">
-                <xsd:attribute name="epsilon" type="xsd:double"/>
-              </xsd:extension>
-            </xsd:simpleContent>
-          </xsd:complexType>
-        </xsd:element>
-
-        <xsd:element name="emission_matrix">
-          <xsd:complexType>
-            <xsd:simpleContent>
-              <xsd:extension base="posDoubleList">
-                <xsd:attribute name="epsilon" type="xsd:double"/>
-              </xsd:extension>
-            </xsd:simpleContent>
-          </xsd:complexType>
-        </xsd:element>
-
+        <xsd:element name="start_probabilities" type="nonNegIntList"/>
+        <xsd:element name="transition_matrix" type="nonNegIntList"/>
+        <xsd:element name="emission_matrix" type="nonNegIntList"/>
       </xsd:all>
     </xsd:complexType>
   </xsd:element>
 
-  <xsd:complexType name="doubleListWithEpsilon">
-    <xsd:simpleContent>
-      <xsd:extension base="posDoubleList">
-        <xsd:attribute name="epsilon" type="xsd:double"/>
-      </xsd:extension>
-    </xsd:simpleContent>
-  </xsd:complexType>
-
   <xsd:simpleType name="nonNegIntList">
     <xsd:list itemType="xsd:nonNegativeInteger"/>
-  </xsd:simpleType>
-
-  <xsd:simpleType name="posDoubleList">
-    <xsd:list itemType="positiveDouble"/>
-  </xsd:simpleType>
-
-  <xsd:simpleType name="positiveDouble">
-    <xsd:restriction base="xsd:double">
-      <xsd:minInclusive value="0"/>
-    </xsd:restriction>
   </xsd:simpleType>
 
 </xsd:schema>
