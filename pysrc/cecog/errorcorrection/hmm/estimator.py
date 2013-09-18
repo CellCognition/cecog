@@ -68,17 +68,14 @@ class HMMConstraint(object):
 
             self.start = np.fromstring(str(xml.start_probabilities),
                                        dtype=float, sep=" ")
-            self.start += float(xml.start_probabilities.attrib['epsilon'])
 
             self.trans = np.fromstring(str(xml.transition_matrix), dtype=float,
                                        sep=" ")
-            self.trans += float(xml.transition_matrix.attrib['epsilon'])
             self.trans.shape = self.nstates, self.nstates
 
             self.emis = np.fromstring(str(xml.emission_matrix), dtype=float,
                                       sep=" ")
             self.emis.shape = self.nstates, self.nsymbols
-            self.emis += float(xml.emission_matrix.attrib['epsilon'])
 
     def validate(self, xml):
         schemafile = join(find_resource_dir(), "schemas", "hmm_constraint.xsd")
