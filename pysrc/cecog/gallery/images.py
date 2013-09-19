@@ -49,8 +49,6 @@ class GalleryRGBImage(np.ndarray):
         return self._swidth
 
     def set_sub_image(self, position, image, color=Colors.white):
-        print "image in ", image.shape
-
         if len(image.shape) in (3, 4):
             rgb_img = image
         else:

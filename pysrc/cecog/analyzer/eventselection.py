@@ -462,17 +462,11 @@ class UnsupervisedEventSelection(EventSelectionCore):
         tc3 = tc.tc3_clustering(trackdata, self.min_cluster_size)
 
         gmm = tc.tc3_gmm(trackdata, tc3.labels.flatten())
-        dhmm = tc.tc3_gmm_dhmm(gmm.labels)
-        chmm = tc.tc3_gmm_chmm(trackdata, gmm.parameters.means,
-                               gmm.parameters.covars,
-                               dhmm.parameters.transmat)
 
         tc3data = dict()
         tc3data["Binary classification"] = labels
         tc3data["TC3"] = tc3.labels
         tc3data["TC3 GMM"] = gmm.labels
-        tc3data["TC3 GMM CHMM"] = chmm.labels
-        tc3data["TC3 GMM DHMM"] = dhmm.labels
 
         if nodes is not None:
             self._save_class_labels(gmm.labels.flatten(), nodes.flatten(),
