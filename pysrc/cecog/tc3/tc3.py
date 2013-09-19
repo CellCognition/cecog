@@ -19,10 +19,9 @@ import numpy as np
 import scipy
 import scipy.spatial.distance as ssd
 import sklearn.mixture as mixture
-import sklearn.hmm as hmm
 
 from cecog.tc3 import TC3Container
-from cecog.tc3 import TC3Params, GmmParams, DHmmParams, CHmmParams
+from cecog.tc3 import TC3Params, GmmParams
 
 # np.set_printoptions(precision=2)
 EPS = np.spacing(1)
@@ -67,15 +66,6 @@ class TemporalClustering(object):
     def __repr__(self):
         return "TC3(n_frames=%s, n_tracks=%s, n_clusters=%s)" \
             %(self.n_frames,self.n_tracks, self.n_clusters)
-
-    @property
-    def startprob(self, eps=EPS):
-        """Estimate start probabilities for the hidden markov models as
-        (1-eps, eps/n, eps/n,..), where n is the number of states.
-        """
-        sprob = np.ones(self.n_clusters)*eps/(self.n_clusters-1)
-        sprob[0] = 1 - eps
-        return sprob
 
     def ntc3(self, nframes, nclusters, min_cluster_size):
         """Calculates the number of all possible ways to cluster using TC3."""
@@ -135,14 +125,17 @@ class TemporalClustering(object):
                 iM2 = iM2 + int(intervalMatrix[i,j])
                 iM1 = int(iM1)
                 intv = range(iM1,iM2)
-                d =  d + sum(ssd.cdist(data[intv,:],np.array([np.mean(data[intv,:], axis = 0)])))
+                d =  d + sum(ssd.cdist(data[intv,:],
+                                       np.array([np.mean(data[intv,:],
+                                                         axis = 0)])))
             obj.append(d)
 
         objN = np.asarray(obj)
         ind = objN.argmin()
 
         for j in range(0,k) :
-            intLabels = np.append(intLabels, np.kron(np.ones((1,intervalMatrix[ind,j])),j))
+            intLabels = np.append(intLabels,
+                                  np.kron(np.ones((1,intervalMatrix[ind,j])),j))
         return intLabels
 
     def tc3_clustering(self, data, min_cluster_size) :
@@ -238,85 +231,3 @@ class TemporalClustering(object):
             weights[i] = pts/float(n_samples)
 
         return mu, covar.T, weights
-
-    def _estimate_emission_matrix(self, eps=EPS):
-        """Estimates the emission matrix for a Hidden Markov Model as 1-eps for
-        diagonal elements and eps/(nclusters-1) for off diagonal elements i.e.
-
-        It is assumed to have the same number of states and signals and that a state
-        almost certainly emits one destinct signal.
-        """
-        emis = np.eye(self.n_clusters) + eps/(self.n_clusters-1)
-        emis[range(self.n_clusters), range(self.n_clusters)] = 1.0 - eps
-        return emis
-
-    def _estimate_transmat(self, tracks, left2right):
-        """Estimates the transition probaility according to all observations.
-
-        If left2right is True, all matrix element, except the diagonal and the
-        first off diagonal are zero.
-        """
-        states = np.unique(tracks)
-        states.sort()
-        transmat = np.zeros((states.size, states.size), dtype="float64")
-        _tracks = tracks.flatten()
-        for i, label in enumerate(_tracks):
-            for state in states:
-                try:
-                    if (_tracks[i+1] == state) and (label >= state):
-                        transmat[state, label] += 1
-                except IndexError:
-                    pass
-
-        # make transisition cyclic
-        transmat[-1, 0] = transmat[0,-1]
-
-        # enforce a pure left-to-right model
-        if left2right:
-            ti = np.eye(states.size)
-            idx = np.arange(0, states.size)
-            ti[-1, 0] = 1
-            ti[idx[:-1], idx[:-1]+1] = 1
-            transmat *= ti
-
-        return normalize(transmat, axis=1)
-
-    def tc3_gmm_dhmm(self, tracks, left2right=False):
-        assert np.issubdtype(tracks.dtype, int)
-
-        trans = self._estimate_transmat(tracks, left2right)
-        emis = self._estimate_emission_matrix()
-
-        dhmm = hmm.MultinomialHMM(n_components=self.n_clusters,
-                                  transmat=trans,
-                                  startprob=self.startprob,
-                                  n_iter=100)
-        dhmm.emissionprob_ = emis
-
-        tracks2 = []
-        for track in tracks:
-            tracks2.append(dhmm.predict(track))
-        labels = np.array(tracks2)
-
-        model_params = DHmmParams(dhmm.emissionprob_, dhmm.transmat_,
-                                  dhmm.startprob_)
-        data = TC3Container('DHMM', model_params, labels)
-        return data
-
-    def tc3_gmm_chmm(self, data, means, covars, transmat):
-        """Hidden Markov Model with Gausian emission."""
-
-        chmm =  hmm.GaussianHMM(n_components=self.n_clusters,
-                               transmat=transmat,
-                               startprob=self.startprob,
-                               covariance_type='full',
-                               n_iter=1000)
-        chmm.means_ = means
-        chmm.covars_ = covars
-
-        # Predict all tracks at once. The difference seems to be negligible
-        labels = chmm.predict(data)
-        labels = labels.reshape(self.n_tracks, self.n_frames)
-        model_params = CHmmParams(chmm.means_, chmm.covars_, chmm.transmat_)
-        data = TC3Container('CHMM', model_params, labels)
-        return data

@@ -12,7 +12,7 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-__all__ = ['TC3Container', 'TC3Params', 'GmmParams', 'CHmmParams', 'DHmmParams']
+__all__ = ['TC3Container', 'TC3Params', 'GmmParams']
 
 from collections import namedtuple
 
@@ -20,5 +20,3 @@ TC3Container = namedtuple('TC3Container', ['model', 'parameters', 'labels'])
 
 TC3Params = namedtuple('TC3Params', ['n_clusters'])
 GmmParams = namedtuple('GmmParams', ['means', 'covars', 'weigths', 'probabilities'])
-CHmmParams = namedtuple('CHmmParams', ['means', 'covars','transmat'])
-DHmmParams= namedtuple('DHMMParams', ['emmissionprob', 'transmat', 'startprob'])
