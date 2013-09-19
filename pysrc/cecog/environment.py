@@ -126,6 +126,7 @@ class CecogEnvironment(object):
     PATH_MAPPINGS = join(RESOURCE_DIR, "path_mappings.txt")
     CONFIG = join(RESOURCE_DIR, "config.ini")
 
+    PALETTES = join('palettes', 'zeiss')
     R_SOURCE_DIR = 'rsrc'
 
     # XXX want this away from class level
@@ -143,7 +144,8 @@ class CecogEnvironment(object):
 
     @classmethod
     def convert_package_path(cls, path):
-        return normpath(join(cls.RESOURCE_DIR, basename(cls.BATTERY_PACKAGE_DIR), path))
+        return normpath(join(cls.RESOURCE_DIR,
+                             basename(cls.BATTERY_PACKAGE_DIR), path))
 
     def __init__(self, version, redirect=False, debug=False):
         super(CecogEnvironment, self).__init__()
@@ -184,6 +186,12 @@ class CecogEnvironment(object):
 
             if not isfile(target):
                 shutil.copy2(src, target)
+
+        target = join(self.user_config_dir, cls.PALETTES)
+        src = join(cls.RESOURCE_DIR, cls.PALETTES)
+        if not isdir(target):
+            shutil.copytree(src, target)
+
         # changing resource directory after copying the files
         # copy also the r sources
         cls.RESOURCE_DIR = self.user_config_dir
@@ -199,6 +207,10 @@ class CecogEnvironment(object):
                 raise IOError("R-source directory not found (%s)."
                           % cls.R_SOURCE_DIR)
             cls.R_SOURCE_DIR = abspath(normpath(cls.R_SOURCE_DIR))
+
+    @property
+    def palettes_dir(self):
+        return join(self.user_config_dir, self.PALETTES)
 
     @property
     def user_config_dir(self):
