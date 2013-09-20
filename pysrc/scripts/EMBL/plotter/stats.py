@@ -455,7 +455,7 @@ class ScatterplotMatrix(object):
                     #print histo[0]
                     #print numpy.max(histo[0])
                     total_bins = histo[1]
-
+                        
                     if nb_data_sets > 1:
                         ax.clear()
                         #print 'bins: ', bins
