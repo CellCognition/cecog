@@ -517,19 +517,26 @@ class PositionAnalyzer(PositionCore):
         fname = join(self._statistics_dir, 'P%s__object_counts.txt' % self.position)
 
         # at least the total count for primary is always exported
-        ch_info = OrderedDict([('Primary', ('primary', [], []))])
+        
+        # old: ch_info = OrderedDict([('Primary', ('primary', [], []))])
+        ch_info = OrderedDict()
         for name, clf in self.classifiers.iteritems():
             names = clf.class_names.values()
             colors = [clf.hexcolors[n] for n in names]
             ch_info[name] = (clf.regions, names, colors)
+
+        # if no classifier has been loaded, no counts can be exported.
+        if len(ch_info) == 0:
+            return
 
         self.timeholder.exportObjectCounts(fname, self.position, self.meta_data, ch_info)
         pplot_ymax = \
             self.settings.get('Output', 'export_object_counts_ylim_max')
 
         # plot only for primary channel so far!
-        self.timeholder.exportPopulationPlots(fname, self._plots_dir, self.position,
-                                              self.meta_data, ch_info['Primary'], pplot_ymax)
+        if 'Primary' in ch_info:
+            self.timeholder.exportPopulationPlots(fname, self._plots_dir, self.position,
+                                                  self.meta_data, ch_info['Primary'], pplot_ymax)
 
 
     def export_object_details(self):
