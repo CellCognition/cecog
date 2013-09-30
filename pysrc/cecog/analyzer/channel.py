@@ -408,7 +408,18 @@ class MergedChannel(ChannelCore):
     def _new_container(self, master):
         # not sure if it makes a difference to have a master
         # perhaps a method to get an rgb image
-        mcnt = self._channels[master].containers['primary']
+
+        # find the region of the primary channel
+        # it does not feel a great piece of code ... 
+        available_regions = self._channels[master].containers.keys()
+        if 'primary' in available_regions:
+            default_region = 'primary'
+        elif 'primary' in [x[:len('primary')] for x in available_regions]:
+            default_region = filter(lambda x: x[:len('primary')]=='primary', available_regions)[0]
+        else:
+            default_region = available_regions[0]
+
+        mcnt = self._channels[master].containers[default_region]
         self.containers[self.regkey] = mcnt
 
     @property

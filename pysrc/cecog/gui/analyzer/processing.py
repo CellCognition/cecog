@@ -164,10 +164,21 @@ class ProcessingFrame(BaseProcessorFrame):
         # setup rendering properties for merged channel
         # want the same rendering properties as for the primary channel!
         if settings.get('Processing', 'merged_processchannel'):
+
+            # color are defined for regions (not for channels)
+            # therefore, we first retrieve the regions for the primary channel
+            # and (in the case there are some) we assign the color of the first 
+            # ROI of the primary channel to the merged contour.
+            regions_primary = reginfo.names[CH_PRIMARY[0]]
+            if len(regions_primary) == 0:
+                default_color = '#FF00FF'
+            else:
+                default_color = reginfo.colors[regions_primary[0]]
+            
             regions = cls._merged_regions(settings)
             d = {'merged_contours_%s' %'-'.join(regions):
                      {"Merged": {'raw': ('#FFFFFF', 1.0),
-                                 'contours': [(regions, reginfo.colors["primary"], 1, show_ids)]}}}
+                                 'contours': [(regions, default_color, 1, show_ids)]}}}
             settings.get("General", "rendering").update(d)
             if settings.get('Processing', 'merged_classification'):
                 d = {'merged_classification_%s' %'-'.join(regions):
