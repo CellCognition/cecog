@@ -282,5 +282,5 @@ class EventSelection(LoggerObject):
                 # make a copy of the list for the new branch
                 if i > 0:
                     results['_full'].append(results['_full'][base][:depth])
-                    results['_current'] += i
+                    results['_current'] += 1
                 self._forward_visitor(tailid, results, visited_nodes, level=level+1)
