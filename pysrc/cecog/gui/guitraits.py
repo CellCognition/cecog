@@ -193,7 +193,7 @@ class SelectionTrait2(traits.SelectionTrait2, GuiTrait):
                 self._widget.setCurrentIndex(index)
             else:
                 index = None
-        return index
+            return index
 
     def init(self):
         pass
