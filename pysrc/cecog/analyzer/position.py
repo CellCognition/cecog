@@ -481,7 +481,6 @@ class PositionAnalyzer(PositionCore):
 
     @property
     def _es_options(self):
-        
         transitions = eval(self.settings.get2('tracking_labeltransitions'))
         if not isinstance(transitions[0], tuple):
             transitions = (transitions, )
