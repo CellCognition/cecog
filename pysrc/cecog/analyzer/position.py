@@ -481,6 +481,11 @@ class PositionAnalyzer(PositionCore):
 
     @property
     def _es_options(self):
+        
+        transitions = eval(self.settings.get2('tracking_labeltransitions'))
+        if not isinstance(transitions[0], tuple):
+            transitions = (transitions, )
+
         evopts = {'transitions': eval(self.settings.get2('tracking_labeltransitions')),
                   'backward_labels': map(int, self.settings.get2('tracking_backwardlabels').split(',')),
                   'forward_labels': map(int, self.settings.get2('tracking_forwardlabels').split(',')),
