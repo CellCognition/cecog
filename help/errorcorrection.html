@@ -1,107 +1,95 @@
 <html>
-<head>
-<link rel="stylesheet"  type="text/css" href="help.css">
-</head>
-<body>
+  <head>
+    <link rel="stylesheet"  type="text/css" href="help.css">
+  </head>
+  <body>
+    <h1>Error Correction</h1>
+    <h3>Introduction</h3>
+    <p>
+      Sequences of class labels (tracks) contain a number of miss-classified observations. The miss-classifications appear as noise which can be smoothed with help of <img class="extlink" src=":extlink"/><a href="http://en.wikipedia.org/wiki/Hidden_Markov_model">hidden Markov models</a> (HMM). The HMM learns its parameters from the tracks of one experimental condition i.e <i>position</i>, <i>Oligo-Id</i> or <i>Gene Symbol</i> separately. Besides the noise one can <a href="#constrain_graph">apply</a> additional biological constraints to the HMM to model e.g. mitotic progression or prohibit a transition from an apoptotic cell to any other state.<br><br>
 
-<!-- HEADER -->
+      The association between individual movies i.e. <i>positions</i> and experimental information such as <i>Oligo-Id</i> or the name of the targeted <i>Gene Symbol</i> can be defined in a simple <a href="#position_labels">text file</a>.
+      <br><br>
+      It is important to note that the error correction depends <b>not</b> on the type of the event selection. Those types are supervised and unsupervised methods. The HMM estimates in both cases its model parameters using the
+<img class="extlink" src=":extlink"/><a href="http://en.wikipedia.org/wiki/Baum%E2%80%93Welch_algorithm">Baum-Welch algorithm</a>. The only difference lies in the estimation of the initial-/ or start parameters of the Baum-Welch algorithm. The supervised method (support vector machine) provides prediction probabilities that are used to estimate the initial parameters. In the unsupervised case (TC3 and Gaussian Mixture Models), the initial parameters are simply estimated by counting the transitions.
+      <br><br>
+      The error correction creates a sub folder called in the <tt>analysis</tt> folder, where the output is saved.
+    </p>
 
-<h1>Error Correction</h1>
-<p>
-Sequences of class labels as obtained by the event selection can be corrected for errors by incorporation of time information.
-<br/>
-<br/>
-Correction of errors is performed by a <img class="extlink" src=":extlink"/><a href="http://en.wikipedia.org/wiki/Hidden_Markov_model">hidden Markov model</a> (HMM), which is learned from all event-sequences of one experimental condition.
-<br/>
-The HMM is implemented in scripts of the <img class="extlink" src=":extlink"/><a href="http://www.r-project.org]">R-project</a> and requires installation of additional packages (this is going to change soon). CecogAnalyzer calls the R script, which reads the event-based trajectory files and generates the HMMs. The visualized results are written to one HTML page per channel, which opens automatically after processing is completed. The user can constrain graphs by specifying one text file per channel. The fully connected graph implying no constrains is used per default. The association between positions (individual movies) and experimental information such as oligo identifier or the name of the targeted gene symbol can also be defined in a simple text file (see example files in the generated <tt>hmm</tt> folder). Based on this information trajectories are grouped by position, oligo ID or gene symbol and HMMs are generated per group.<br>
-Error correction can be tested separately for already picked events, e.g. by motif selection in <a href="qrc:/tracking">Tracking</a>.
-</p>
+    <h3>Parameters</h3>
+    <a name="channels">
+      <h4>Channels</h4>
+      <p class="text">Select the channels where the error correction is to be applied.</p>
+    </a>
 
-<hr></hr>
+    <a name="constrain_graph">
+      <h4>Constrain graph</h4>
+      <p class="text">To apply biological constraints to the HMM one has to provide a XML-file that contains information about the allowed transitions, emissions and start probabilities. Those files are automatically validated to avoid typing errors. An example file that works with the <img class="extlink" src=":extlink"/><a href="http://cellcognition.org/downloads/data">reference data</a>
+        from the Cellcognition website can be found <a href="qrc:/hmm_constraints">here</a>.
+        <br><br>
+        The transition, emission and start probabilities of the HMM are learned from the raw data obtained from the motif selection. A constraint file defines only a mask that is applied to the model parameters accordingly to allow or disallow a specific transitions or emissions. If this option is omitted, all transitions, emissions and start values are allowed. This is equivalent to set all values in the constraint files to one. Each channel needs a separate constraint file, since the number of classes are not necessarily the same.
+      </p>
+    </a>
 
-<h3>Parameters</h3>
+    <a name="position_labels">
+      <a name="mappingfile">
+        <h4>Position labels</h4>
+        <p class="text">Provide a table that associates the experimental condition to a position (AKA <i>plate mapping</i> or <i>plate layout</i>). For now only <i>Oligo Id</i> and <i>Gene Symbol</i> are supported. To use this option one needs to provide a simple tab-separated text file with three columns: <tt>Position</tt> (must match the position names), <tt>Oligo-Id</tt> (any string), and <tt>Gene Symbol</tt> (any string).</p>
+      </a>
+    </a>
 
-<a name="filename_to_r">
-<h4>R-project executable</h4>
-<p class="text">Filename of the R executable. If the R-project is not part of the system's <tt>PATH</tt> variable the full filename is required, e.g. <tt>C:\Program Files\R\R-2.10.0\bin\R.exe</tt> on Windows for R 2.10.0.
-</p>
-</a>
+    <a name="groupby">
+      <h4>Group by</h4>
+      <p class="text">Define on what groups <i>(Position, Oligo-Id, Gene Symbol)</i> the HMM's are applied.
+        <a name="groupby_position">
+          <h4 class="sub">Position</h4>
+          <p class="subtext">Group by Position (no position labels necessary).</p>
+        </a>
+        <a name="groupby_oligoid">
+          <h4 class="sub">Oligo-Id</h4>
+          <p class="subtext">Group by Oligo-Id (defined in the position labels).</p>
+        </a>
+        <a name="groupby_genesymbol">
+          <h4 class="sub">Gene Symbol</h4>
+          <p class="subtext">Group by Gene Symbol (defined in the position labels).</p>
+        </a>
+      </p>
+    </a>
 
-<a name="constrain_graph">
-<h4>Constrain graph</h4>
-<p class="text">A priori information about a cellular process can be applied by constraining the transition between cellular states. These transitions can be expressed as a graph structure and per default the fully connected graph (all connections between states are possible) is used. The transition probabilities of the HMM are learned according to the underlying graph (the probability is zero for all missing edges).
-<br/>If this option is omitted the fully connected graph is used and written as text file to the <tt>hmm</tt> folder (which can be modified and used as example).
+    <a name="plot_parameter">
+      <h4>Plot parameter</h4>
+      <p class="text">Parameters for plot generation.
+        <a name="overwrite_time_lapse">
+          <h4 class="sub">Overwrite time-lapse</h4>
+          <p class="subtext">In certain cases it is not possible to determine the time lapse automatically. Therefore it is possible to enter the time lapse manually.</p>
+        </a>
+        <a name="max_time">
+          <h4 class="sub">Max. time in plot [min]</h4>
+          <p class="subtext">The maximal time (y-axis) in a bar- and box plots. All plots are synchronized to the same y-limit. If <tt>-1</tt> is used as limit, this option is ignored.</p>
+        </a>
+        <a name="ignore_tracking_branches">
+          <h4 class="sub">Ignore tracking branches</h4>
+          <p class="subtext">
+            If a cell splits the event selection finds two tracks. If this option is on, only one track is used for analysis. Be careful because this option reduces the number of analyzed events.
+          </p>
+        </a>
+        <a name="compose_galleries">
+          <h4 class="sub">Compose gallery images</h4>
+            <p class="subtext">
+              It is possible to generate track images with color-coded bars at the bottom of each track according to the class color after error correction. Generation of the galleries is time consuming and files will be large. Therefore it is strongly advised to limit the number of tracks. Using the value <tt>-1</tt> means that the track gallery contains all tracks.
+            </p>
+        </a>
+      </p>
+    </a>
 
-
-<a name="primary_graph">
-<h4 class="sub">Primary file</h4>
-<p class="subtext">Text file defining the graph structure for the classifier of the primary channel./p>
-</a>
-
-<a name="secondary_graph">
-<h4 class="sub">Secondary file</h4>
-<p class="subtext">Text file defining the graph structure for the classifier of the secondary channel.</p>
-</a>
-</p>
-</a>
-
-<a name="position_labels">
-<h4>Position labels</h4>
-<p class="text">Association of the experimental condition to a position (also named <i>plate mapping</i> or <i>plate layout</i>). For now only <i>oligo ID</i> and <i>gene symbol</i> are supported. If omitted the position names are used for identification of the experiment and a sample file <tt>&lt;OUTPUT&gt;/hmm/layout.txt</tt> is created.
-
-<a name="mappingfile">
-<h4 class="sub">File</h4>
-<p class="subtext">Simple tab-separated text file with three columns: <tt>Position</tt> (must match the position names), <tt>OligoID</tt> (any string), and <tt>GeneSymbol</tt> (any string).</p>
-</a>
-</p>
-</a>
-
-<a name="groupby">
-<h4>Group by</h4>
-<p class="text">The HMM is learned and errors are corrected per experimental condition. How positions are grouped can be defined here based on the position labels above.
-
-<a name="groupby_position">
-<h4 class="sub">Position</h4>
-<p class="subtext">Group by Position (no position labels necessary).</p>
-</a>
-<a name="groupby_oligoid">
-<h4 class="sub">Oligo ID</h4>
-<p class="subtext">Group by oligo ID (defined in the position labels).</p>
-</a>
-<a name="groupby_genesymbol">
-<h4 class="sub">Gene symbol</h4>
-<p class="subtext">Group by gene symbol (defined in the position labels).</p>
-</a>
-</p>
-</a>
-
-<a name="plot_parameter">
-<h4>Plot parameter</h4>
-<p class="text">Parameters for plot generation.
-
-<a name="timelapse">
-<h4 class="sub">Time-lapse [min]</h4>
-<p class="subtext">Specifies the time-lapse.</p>
-</a>
-<a name="max_time">
-<h4 class="sub">Max. time in plot [min]</h4>
-<p class="subtext">The maximal time (y-axis) in a bar plot or box plot.</p>
-</a>
-</p>
-</a>
-
-<hr></hr>
-<a name="controlpanel">
-<h3>Control Panel</h3>
-<p>
-<ul>
-<li><b>Correct errors</b> - Performs HMM error correction on event trajectories already present in the output sub-folders (e.g. generated either by <a href="qrc:/processing">Processing</a> or <a href="qrc:/tracking#controlpanel">Apply event selection</a> in Tracking. Error correction is only performed for primary and/or secondary channel if the corresponding classification is enabled in <a href="qrc:/processing">Processing</a>.</li>
-</ul>
-</p>
-</a>
-
-
-<!-- FOOTER -->
-
-</body>
+    <a name="controlpanel">
+      <h3>Control Panel</h3>
+      <p>
+        <ul>
+          <li><b>Correct errors</b> - Starts error correction on event trajectories (e.g. generated either by <a href="qrc:/processing">Processing</a> or <a href="qrc:/tracking#controlpanel">Apply event selection</a> in Tracking).
+          </li>
+        </ul>
+      </p>
+    </a>
+  </body>
 </html>
