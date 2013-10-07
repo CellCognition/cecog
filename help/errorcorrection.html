@@ -6,52 +6,120 @@
     <h1>Error Correction</h1>
     <h3>Introduction</h3>
     <p>
-      Sequences of class labels (tracks) contain a number of miss-classified observations. The miss-classifications appear as noise which can be smoothed with help of <img class="extlink" src=":extlink"/><a href="http://en.wikipedia.org/wiki/Hidden_Markov_model">hidden Markov models</a> (HMM). The HMM learns its parameters from the tracks of one experimental condition i.e <i>position</i>, <i>Oligo-Id</i> or <i>Gene Symbol</i> separately. Besides the noise one can <a href="#constrain_graph">apply</a> additional biological constraints to the HMM to model e.g. mitotic progression or prohibit a transition from an apoptotic cell to any other state.<br><br>
+      Sequences of class labels (tracks) contain a number of
+      miss-classified observations. The miss-classifications appear as
+      noise which can be smoothed with help of <img class="extlink"
+      src=":extlink"/><a href="http://en.wikipedia.org/wiki/Hidden_Markov_model">hidden
+      Markov models</a> (HMM). The HMM learns its parameters from the
+      tracks of one experimental condition
+      i.e <i>position</i>, <i>Oligo-Id</i> or <i>Gene Symbol</i>
+      separately. Besides the noise one
+      can <a href="#constrain_graph">apply</a> additional biological
+      constraints to the HMM to model e.g. mitotic progression or
+      prohibit a transition from an apoptotic cell to any other
+      state.<br><br>
 
-      The association between individual movies i.e. <i>positions</i> and experimental information such as <i>Oligo-Id</i> or the name of the targeted <i>Gene Symbol</i> can be defined in a simple <a href="#position_labels">text file</a>.
+
+      The association between individual movies i.e. <i>positions</i>
+      and experimental information such as <i>Oligo-Id</i> or the name
+      of the targeted <i>Gene Symbol</i> can be defined in a
+      simple <a href="#position_labels">text file</a>.
       <br><br>
-      It is important to note that the error correction depends <b>not</b> on the type of the event selection. Those types are supervised and unsupervised methods. The HMM estimates in both cases its model parameters using the
-<img class="extlink" src=":extlink"/><a href="http://en.wikipedia.org/wiki/Baum%E2%80%93Welch_algorithm">Baum-Welch algorithm</a>. The only difference lies in the estimation of the initial-/ or start parameters of the Baum-Welch algorithm. The supervised method (support vector machine) provides prediction probabilities that are used to estimate the initial parameters. In the unsupervised case (TC3 and Gaussian Mixture Models), the initial parameters are simply estimated by counting the transitions.
+      It is important to note that the error correction
+      depends <b>not</b> on the type of the event selection. Those
+      types are supervised and unsupervised methods. The HMM estimates
+      in both cases its model parameters using the <img class="extlink"
+      src=":extlink"/>
+      <a href="http://en.wikipedia.org/wiki/Baum%E2%80%93Welch_algorithm">Baum-Welch
+        algorithm</a>. The only difference lies in the estimation of the
+      initial-/ or start parameters of the Baum-Welch algorithm. The
+      supervised method (support vector machine) provides prediction
+      probabilities that are used to estimate the initial
+      parameters. In the unsupervised case (TC3 and Gaussian Mixture
+      Models), the initial parameters are simply estimated by counting
+      the transitions.
+
       <br><br>
-      The error correction creates a sub folder called in the <tt>analysis</tt> folder, where the output is saved.
+      The error correction creates a sub folder called in
+      the <tt>analysis</tt> folder, where the output is saved.
     </p>
 
     <h3>Parameters</h3>
     <a name="channels">
       <h4>Channels</h4>
-      <p class="text">Select the channels where the error correction is to be applied.</p>
+      <p class="text">Select the channels where the error correction
+      is to be applied.</p>
+
     </a>
 
     <a name="constrain_graph">
       <h4>Constrain graph</h4>
-      <p class="text">To apply biological constraints to the HMM one has to provide a XML-file that contains information about the allowed transitions, emissions and start probabilities. Those files are automatically validated to avoid typing errors. An example file that works with the <img class="extlink" src=":extlink"/><a href="http://cellcognition.org/downloads/data">reference data</a>
-        from the Cellcognition website can be found <a href="qrc:/hmm_constraints">here</a>.
+      <p class="text">To apply biological constraints to the HMM one
+      has to provide a XML-file that contains information about the
+      allowed transitions, emissions and start probabilities. Those
+      files are automatically validated to avoid typing errors. An
+      example file that works with the <img class="extlink"
+      src=":extlink"/><a href="http://cellcognition.org/downloads/data">reference
+      data</a>
+
+        from the Cellcognition website can be
+        found <a href="qrc:/hmm_constraints">here</a>.
+
         <br><br>
-        The transition, emission and start probabilities of the HMM are learned from the raw data obtained from the motif selection. A constraint file defines only a mask that is applied to the model parameters accordingly to allow or disallow a specific transitions or emissions. If this option is omitted, all transitions, emissions and start values are allowed. This is equivalent to set all values in the constraint files to one. Each channel needs a separate constraint file, since the number of classes are not necessarily the same.
+        The transition, emission and start probabilities of the HMM
+        are learned from the raw data obtained from the motif
+        selection. A constraint file defines only a mask that is
+        applied to the model parameters accordingly to allow or
+        disallow a specific transitions or emissions. If this option
+        is omitted, all transitions, emissions and start values are
+        allowed. This is equivalent to set all values in the
+        constraint files to one. Each channel needs a separate
+        constraint file, since the number of classes are not
+        necessarily the same.
+
       </p>
     </a>
 
     <a name="position_labels">
       <a name="mappingfile">
         <h4>Position labels</h4>
-        <p class="text">Provide a table that associates the experimental condition to a position (AKA <i>plate mapping</i> or <i>plate layout</i>). For now only <i>Oligo Id</i> and <i>Gene Symbol</i> are supported. To use this option one needs to provide a simple tab-separated text file with three columns: <tt>Position</tt> (must match the position names), <tt>Oligo-Id</tt> (any string), and <tt>Gene Symbol</tt> (any string).</p>
+        <p class="text">Provide a table that associates the
+        experimental condition to a position (AKA <i>plate mapping</i>
+        or <i>plate layout</i>). For now only <i>Oligo Id</i>
+        and <i>Gene Symbol</i> are supported. To use this option one
+        needs to provide a simple tab-separated text file with three
+        columns: <tt>Position</tt> (must match the position
+        names), <tt>Oligo-Id</tt> (any string), and <tt>Gene
+        Symbol</tt> (any string).<br><br>
+        Be aware of the fact that different positions can have the
+        same <i>Oligo-Id</i> or <i>Gene Symbol</i>. That means
+        tracks from more than one position can fall into the same
+        plot. Positions that are not listed in the plate mapping table
+        falls also into one plot (better than ignoring them in the
+        output). Best practice is to use a mapping table that is
+        complete i.e. the table should list all positions and should
+        not contain empty cells.</p>
       </a>
     </a>
 
     <a name="groupby">
       <h4>Group by</h4>
-      <p class="text">Define on what groups <i>(Position, Oligo-Id, Gene Symbol)</i> the HMM's are applied.
+      <p class="text">Define on what groups <i>(Position, Oligo-Id,
+      Gene Symbol)</i> the HMM's are applied.
         <a name="groupby_position">
           <h4 class="sub">Position</h4>
-          <p class="subtext">Group by Position (no position labels necessary).</p>
+          <p class="subtext">Group by Position (no position labels
+          necessary).</p>
         </a>
         <a name="groupby_oligoid">
           <h4 class="sub">Oligo-Id</h4>
-          <p class="subtext">Group by Oligo-Id (defined in the position labels).</p>
+          <p class="subtext">Group by Oligo-Id (defined in the
+          position labels).</p>
         </a>
         <a name="groupby_genesymbol">
           <h4 class="sub">Gene Symbol</h4>
-          <p class="subtext">Group by Gene Symbol (defined in the position labels).</p>
+          <p class="subtext">Group by Gene Symbol (defined in the
+          position labels).</p>
         </a>
       </p>
     </a>
@@ -61,22 +129,36 @@
       <p class="text">Parameters for plot generation.
         <a name="overwrite_time_lapse">
           <h4 class="sub">Overwrite time-lapse</h4>
-          <p class="subtext">In certain cases it is not possible to determine the time lapse automatically. Therefore it is possible to enter the time lapse manually.</p>
+          <p class="subtext">In certain cases it is not possible to
+          determine the time lapse automatically. Therefore it is
+          possible to enter the time lapse manually.</p>
         </a>
         <a name="max_time">
           <h4 class="sub">Max. time in plot [min]</h4>
-          <p class="subtext">The maximal time (y-axis) in a bar- and box plots. All plots are synchronized to the same y-limit. If <tt>-1</tt> is used as limit, this option is ignored.</p>
+          <p class="subtext">The maximal time (y-axis) in a bar- and
+          box plots. All plots are synchronized to the same
+          y-limit. If <tt>-1</tt> is used as limit, this option is
+          ignored.</p>
         </a>
         <a name="ignore_tracking_branches">
           <h4 class="sub">Ignore tracking branches</h4>
           <p class="subtext">
-            If a cell splits the event selection finds two tracks. If this option is on, only one track is used for analysis. Be careful because this option reduces the number of analyzed events.
+            If a cell splits the event selection finds two tracks. If
+            this option is on, only one track is used for analysis. Be
+            careful because this option reduces the number of analyzed
+            events.
           </p>
         </a>
         <a name="compose_galleries">
           <h4 class="sub">Compose gallery images</h4>
             <p class="subtext">
-              It is possible to generate track images with color-coded bars at the bottom of each track according to the class color after error correction. Generation of the galleries is time consuming and files will be large. Therefore it is strongly advised to limit the number of tracks. Using the value <tt>-1</tt> means that the track gallery contains all tracks.
+              It is possible to generate track images with color-coded
+              bars at the bottom of each track according to the class
+              color after error correction. Generation of the
+              galleries is time consuming and files will be
+              large. Therefore it is strongly advised to limit the
+              number of tracks. Using the value <tt>-1</tt> means that
+              the track gallery contains all tracks.
             </p>
         </a>
       </p>
@@ -86,7 +168,11 @@
       <h3>Control Panel</h3>
       <p>
         <ul>
-          <li><b>Correct errors</b> - Starts error correction on event trajectories (e.g. generated either by <a href="qrc:/processing">Processing</a> or <a href="qrc:/tracking#controlpanel">Apply event selection</a> in Tracking).
+          <li><b>Correct errors</b> - Starts error correction on event
+          trajectories (e.g. generated either
+          by <a href="qrc:/processing">Processing</a>
+          or <a href="qrc:/tracking#controlpanel">Apply event
+          selection</a> in Tracking).
           </li>
         </ul>
       </p>
