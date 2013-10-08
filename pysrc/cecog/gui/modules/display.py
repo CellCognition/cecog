@@ -81,8 +81,8 @@ class ChannelItem(QFrame):
         self.name = name
         self._show_image = True
 
-        if name.lower() in DEFAULT_COLORS_BY_NAME:
-            self._current = DEFAULT_COLORS_BY_NAME[name.lower()]
+        if name in DEFAULT_COLORS_BY_NAME:
+            self._current = DEFAULT_COLORS_BY_NAME[name]
         else:
             self._current = DEFAULT_LUT_COLORS[idx]
 

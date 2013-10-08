@@ -33,7 +33,8 @@ class Colors(object):
                      'gfp': 'green',
                      'yfp': 'yellow',
                      'cfp': 'cyan',
-                     'cy5': 'cyan'}
+                     'cy5': 'cyan',
+                     'FRET': 'magenta'}
 
     @classmethod
     def channel_color(cls, name):
