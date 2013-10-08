@@ -1,0 +1,11 @@
+This is only a workaround for version 1.4.x.
+To install cellcogniton 1.4.1 open a terminal:
+
+cd app/CecogAnalyzer
+pyrcc4 -o resource.py resource.qrc
+cd ../../
+python setup.py install --prefix <prefix>
+cp apps/CecogAnalyzer/resourse.py <prefix>/bin/resource.py
+cd <prefix>/bin/
+ln -s batch.py cecog_batch.py
+
