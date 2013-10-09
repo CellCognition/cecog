@@ -30,7 +30,7 @@ from datafiles import get_data_files
 INCLUDES = [ 'sip',
              'scipy.sparse.csgraph._validation',
              'scipy.spatial.kdtree',
-             'scipy.sparse.csgraph._shortest_path' ]
+             'scipy.sparse.csgraph._shortest_path']
 
 EXCLUDES = ['QtDesigner', 'QtNetwork',
             'QtOpenGL', 'QtScript',
@@ -38,14 +38,16 @@ EXCLUDES = ['QtDesigner', 'QtNetwork',
             'QtWebKit', 'QtXml',
             'phonon']
 
-PACKAGES = ['cecog', 'pdk', 'h5py', 'vigra']
+PACKAGES = ['cecog', 'pdk', 'h5py', 'vigra', 'sklearn']
 
 # setting argv_emulation causes the app to get stuck in the splash screen
 py2app_opts = {'argv_emulation': False,
                'excludes': EXCLUDES,
                'strip' : True,
                'packages': PACKAGES,
-               'optimize': 2,
+               # don't use 2, some packages use
+               # __doc__ += PCA.__doc__, that causes the bundle to crash
+               'optimize': 1,
                'iconfile': 'resources/cecog_analyzer_icon.icns'}
 
 
