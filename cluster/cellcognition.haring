@@ -10,7 +10,7 @@
 # module load gridengine
 export CECOG_VERSIONS=/home/imba/cecog/cecog_versions
 # export CECOG_VERSIONS=/groups/gerlich/cluster/cecog_versions
-export JOB_PARAMS="-m bea -q public.q"
+export JOB_PARAMS="-m bea -q public.q -tc 96"
 
 CECOG_GATEWAY_HOME=/home/imba/cecog/gateway
 LOG_DIR=$CECOG_GATEWAY_HOME
@@ -31,4 +31,3 @@ GATEWAYOPTS="--host=$C_HOST --port=$C_PORT >$LOGFILE 2>$LOGFILE"
 
 #PIDFILE=${LOG_DIR}/gateway.pid
 PIDFILE=/var/run/gateway.pid
-
