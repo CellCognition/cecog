@@ -396,7 +396,7 @@ class Browser(QMainWindow):
         # same color
         if nchannels == 2:
             settings.set('Processing', 'secondary_processChannel', True)
-        elif nchannels == 3:
+        elif nchannels >= 3:
             settings.set('Processing', 'secondary_processChannel', True)
             settings.set('Processing', 'tertiary_processChannel', True)
         # need turn of virtual channels
