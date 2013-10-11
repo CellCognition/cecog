@@ -47,7 +47,11 @@ APP = [MAIN_SCRIPT]
 INCLUDES = [ 'sip',
              'scipy.sparse.csgraph._validation',
              'scipy.spatial.kdtree',
-             'scipy.sparse.csgraph._shortest_path' ]
+             'scipy.sparse.csgraph._shortest_path',
+             'sklearn.utils.sparsetools._graph_validation',
+             'sklearn.utils.lgamma',
+             'sklearn.neighbors.typedefs',
+             'sklearn.utils.weight_vector']
 
 EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
             'PyQt4.QtOpenGL', 'PyQt4.QtScript',
@@ -57,7 +61,7 @@ EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
             'rpy',
             '_gtkagg', '_tkagg', '_agg2', '_cairo', '_cocoaagg',
             '_fltkagg', '_gtk', '_gtkcairo',
-            'Tkconstants', 'Tkinter', 'tcl']
+            'Tkconstants', 'Tkinter', 'tcl', 'zmq']
 
 PACKAGES = ['cecog', 'h5py', 'vigra', 'matplotlib']
 
