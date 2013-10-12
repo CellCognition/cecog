@@ -250,24 +250,6 @@ def get_qcolor_hicontrast(qcolor, threshold=0.5):
     return QColor('white' if value <= threshold else 'black')
 
 
-
-#-------------------------------------------------------------------------------
-# classes:
-#
-class ImageRatioDisplay(QLabel):
-
-    def __init__(self, parent, ratio):
-        QLabel.__init__(self, parent,
-                        Qt.CustomizeWindowHint|Qt.WindowCloseButtonHint|
-                        Qt.WindowMinimizeButtonHint|Qt.SubWindow)
-        self._ratio = ratio
-
-    def set_ratio(self, ratio):
-        self._ratio = ratio
-
-    def heightForWidth(self, w):
-        return int(w*self._ratio)
-
 class ProgressDialog(QProgressDialog):
 
     targetFinished = pyqtSignal()

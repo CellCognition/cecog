@@ -23,7 +23,6 @@ class CoreThread(QtCore.QThread):
     analyzer_error = QtCore.pyqtSignal(str)
     image_ready = QtCore.pyqtSignal(ccore.RGBImage, str, str)
 
-
     def __init__(self, parent, settings):
         super(CoreThread, self).__init__(parent)
         self._logger = logging.getLogger(self.__class__.__name__)

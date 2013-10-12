@@ -10,6 +10,8 @@
                  See trunk/AUTHORS.txt for author contributions.
 """
 
+from __future__ import division
+
 __author__ = 'Michael Held'
 __date__ = '$Date$'
 __revision__ = '$Rev$'
@@ -18,13 +20,7 @@ __source__ = '$URL$'
 __all__ = []
 
 import types
-import traceback
-import logging
-import logging.handlers
-import sys
 import os
-import time
-import copy
 import numpy
 
 from PyQt4.QtGui import *
@@ -33,12 +29,6 @@ from PyQt4.Qt import *
 
 from collections import OrderedDict
 from pdk.datetimeutils import TimeInterval
-
-# import warnings
-# with warnings.catch_warnings():
-#     warnings.simplefilter("ignore")
-#     import sklearn.hmm as hmm
-
 from multiprocessing import cpu_count
 
 from cecog import CHANNEL_PREFIX
@@ -48,8 +38,8 @@ from cecog.learning.learning import (CommonObjectLearner,
                                      ConfusionMatrix,
                                      )
 from cecog.util.util import hexToRgb, write_table
-from cecog.gui.util import (ImageRatioDisplay,
-                            numpy_to_qimage,
+
+from cecog.gui.util import (numpy_to_qimage,
                             question,
                             critical,
                             information,
@@ -94,7 +84,7 @@ class BaseFrame(TraitDisplayMixin):
     def __init__(self, settings, parent):
         super(BaseFrame, self).__init__(settings, parent)
         self._is_active = False
-
+        self.idialog = parent.idialog
         self._intervals = list()
 
         self._tab_name = None
@@ -117,7 +107,6 @@ class BaseFrame(TraitDisplayMixin):
 
         layout.addWidget(self._tab)
         layout.addWidget(self._control)
-
 
     @pyqtSlot('int')
     def on_tab_changed(self, index):
@@ -293,12 +282,7 @@ class _ProcessorMixin(object):
 
     def _clear_image(self):
         """Pop up and clear the image display"""
-        if not qApp._image_dialog is None:
-            pix = qApp._graphics.pixmap()
-            pix2 = QPixmap(pix.size())
-            pix2.fill(Qt.black)
-            qApp._graphics.setPixmap(pix2)
-            qApp._image_dialog.raise_()
+        self.idialog.clearImage()
 
     def _on_process_start(self, name, start_again=False):
         if not self._is_running or start_again:
@@ -653,6 +637,7 @@ class _ProcessorMixin(object):
                     self._analyzer_label2.setText(info['text'])
 
     def _on_update_image(self, image_rgb, info, filename):
+
         if self._show_image.isChecked():
             # FIXME:
             if image_rgb.width % 4 != 0:
@@ -661,53 +646,18 @@ class _ProcessorMixin(object):
                                (image_rgb.width % 4), image_rgb.height))
             qimage = numpy_to_qimage(image_rgb.toArray(copy=False))
 
-            if qApp._image_dialog is None:
-                qApp._image_dialog = QFrame()
-                ratio = qimage.height()/float(qimage.width())
-                qApp._image_dialog.setGeometry(50, 50, 800, 800*ratio)
-
-                shortcut = QShortcut(QKeySequence(Qt.Key_Escape), qApp._image_dialog)
+            if not self.idialog.hasPixmap():
+                aspect_ratio = qimage.height()/qimage.width()
+                self.idialog.resize(800, int(800*aspect_ratio))
+                shortcut = QShortcut(QKeySequence(Qt.Key_Escape), self.idialog)
                 shortcut.activated.connect(self._on_esc_pressed)
-
-                layout = QVBoxLayout(qApp._image_dialog)
-                layout.setContentsMargins(0,0,0,0)
-
-                qApp._graphics = ImageRatioDisplay(qApp._image_dialog, ratio)
-                qApp._graphics.setScaledContents(True)
-                qApp._graphics.resize(800, 800*ratio)
-                qApp._graphics.setMinimumSize(QSize(100,100))
-                policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-                policy.setHeightForWidth(True)
-                qApp._graphics.setSizePolicy(policy)
-                layout.addWidget(qApp._graphics)
-
-                dummy = QFrame(qApp._image_dialog)
-                dymmy_layout = QHBoxLayout(dummy)
-                dymmy_layout.setContentsMargins(5,5,5,5)
-
-                qApp._image_combo = QComboBox(dummy)
-                qApp._image_combo.setSizePolicy(QSizePolicy(QSizePolicy.Expanding,
-                                                            QSizePolicy.Fixed))
                 self._set_display_renderer_info()
 
-                dymmy_layout.addStretch()
-                dymmy_layout.addWidget(qApp._image_combo)
-                dymmy_layout.addStretch()
-                layout.addWidget(dummy)
-                layout.addStretch()
-
-                qApp._image_dialog.show()
-                qApp._image_dialog.raise_()
-            #else:
-            #    qApp._graphics_pixmap.setPixmap(QPixmap.fromImage(qimage))
-            qApp._graphics.setPixmap(QPixmap.fromImage(qimage))
-            qApp._image_dialog.setWindowTitle(info)
-            qApp._image_dialog.setToolTip(filename)
-
-            if not qApp._image_dialog.isVisible():
-                qApp._image_dialog.show()
-                qApp._image_dialog.raise_()
-
+            self.idialog.setImage(qimage)
+            self.idialog.setWindowTitle(info)
+            self.idialog.setToolTip(filename)
+            if not self.idialog.isVisible():
+                self.idialog.raise_()
 
     def _set_display_renderer_info(self):
         # WTF - to exclude properties for gallery images
@@ -716,20 +666,8 @@ class _ProcessorMixin(object):
         rendering += self._current_settings.get('General', 'rendering_class').keys()
         rendering.sort()
 
-        idx = 0
-        if not qApp._image_dialog is None:
-            widget = qApp._image_combo
-            current = widget.currentText()
-            widget.clear()
-            if len(rendering) > 1:
-                widget.addItems(rendering)
-                widget.show()
-                widget.currentIndexChanged[str].connect(self._on_render_changed)
-                if current in rendering:
-                    widget.setCurrentIndex(widget.findText(current, Qt.MatchExactly))
-                    idx = rendering.index(current)
-            else:
-                widget.hide()
+        idx = self.idialog.setRegionNames(rendering)
+        self.idialog.combobox.currentIndexChanged[str].connect(self._on_render_changed)
 
         if len(rendering) > 0:
             self._analyzer.renderer = rendering[idx]
