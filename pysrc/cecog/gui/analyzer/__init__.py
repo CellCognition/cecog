@@ -33,10 +33,9 @@ from multiprocessing import cpu_count
 
 from cecog import CHANNEL_PREFIX
 from cecog.gui.display import TraitDisplayMixin
-from cecog.learning.learning import (CommonObjectLearner,
-                                     CommonClassPredictor,
-                                     ConfusionMatrix,
-                                     )
+from cecog.learning.learning import CommonClassPredictor
+from cecog.learning.learning import ConfusionMatrix
+
 from cecog.util.util import hexToRgb, write_table
 
 from cecog.gui.util import (numpy_to_qimage,
@@ -84,7 +83,6 @@ class BaseFrame(TraitDisplayMixin):
     def __init__(self, settings, parent):
         super(BaseFrame, self).__init__(settings, parent)
         self._is_active = False
-        self.idialog = parent.idialog
         self._intervals = list()
 
         self._tab_name = None
@@ -171,7 +169,8 @@ class BaseFrame(TraitDisplayMixin):
 
 
 class _ProcessorMixin(object):
-    def __init__(self):
+    def __init__(self, parent):
+        self.idialog = parent.idialog
         self._is_running = False
         self._is_abort = False
         self._has_error = True
@@ -383,13 +382,11 @@ class _ProcessorMixin(object):
                 if cls is PickerThread:
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
                     self._analyzer = cls(self, self._current_settings, imagecontainer)
-                    self._set_display_renderer_info()
                     self._clear_image()
 
                 elif cls is AnalyzerThread:
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
                     self._analyzer = cls(self, self._current_settings, imagecontainer)
-                    self._set_display_renderer_info()
                     self._clear_image()
 
                 elif cls is TrainingThread:
@@ -406,7 +403,6 @@ class _ProcessorMixin(object):
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
                     self._analyzer = cls(self, self._current_settings, imagecontainer, ncpu)
 
-                    self._set_display_renderer_info()
 
                 elif cls is HmmThread:
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
@@ -420,6 +416,7 @@ class _ProcessorMixin(object):
                             print 'HMMThread(): No classifier given for %s' % kind
                             continue
                         env_path = convert_package_path(classifier_path)
+
                         if (os.path.exists(env_path)
                               and (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))
                              ):
@@ -461,6 +458,7 @@ class _ProcessorMixin(object):
                 self._analyzer.finished.connect(self._on_process_finished)
                 self._analyzer.stage_info.connect(self._on_update_stage_info, Qt.QueuedConnection)
                 self._analyzer.analyzer_error.connect(self._on_error, Qt.QueuedConnection)
+                self._analyzer.image_ready.connect(self._on_update_image)
 
                 self._analyzer.start(QThread.LowestPriority)
                 if self._current_process_item == 0:
@@ -481,15 +479,12 @@ class _ProcessorMixin(object):
         self.dlg.exec_()
         self.setCursor(Qt.ArrowCursor)
 
-    def _on_render_changed(self, name):
-        #FIXME: proper sub-classing needed
-        self._analyzer.renderer = name
-
     def _on_error(self, msg):
         self._has_error = True
         critical(self, 'An error occurred during processing.', detail=msg)
 
     def _on_process_finished(self):
+        self._analyzer.image_ready.disconnect(self._on_update_image)
 
         if (not self._process_items is None and
             self._current_process_item+1 < len(self._process_items) and
@@ -499,8 +494,6 @@ class _ProcessorMixin(object):
             self._on_process_start(self._current_process, start_again=True)
         else:
             self._is_running = False
-            #logger = logging.getLogger()
-            #logger.removeHandler(self._handler)
             self._set_control_button_text(idx=0)
             self._toggle_control_buttons()
             self._toggle_tabs(True)
@@ -553,6 +546,7 @@ class _ProcessorMixin(object):
     def _on_esc_pressed(self):
         if self._is_running:
             self._abort_processing()
+            self._analyzer.image_ready.disconnect(self._on_update_image)
 
     def _on_update_stage_info(self, info):
         sep = '   |   '
@@ -636,51 +630,18 @@ class _ProcessorMixin(object):
                 else:
                     self._analyzer_label2.setText(info['text'])
 
-    def _on_update_image(self, image_rgb, info, filename):
-
+    def _on_update_image(self, images, message):
         if self._show_image.isChecked():
-            # FIXME:
-            if image_rgb.width % 4 != 0:
-                image_rgb = ccore.subImage(
-                    image_rgb, ccore.Diff2D(0,0), ccore.Diff2D(image_rgb.width - \
-                               (image_rgb.width % 4), image_rgb.height))
-            qimage = numpy_to_qimage(image_rgb.toArray(copy=False))
-
-            if not self.idialog.hasPixmap():
-                aspect_ratio = qimage.height()/qimage.width()
-                self.idialog.resize(800, int(800*aspect_ratio))
-                shortcut = QShortcut(QKeySequence(Qt.Key_Escape), self.idialog)
-                shortcut.activated.connect(self._on_esc_pressed)
-                self._set_display_renderer_info()
-
-            self.idialog.setImage(qimage)
-            self.idialog.setWindowTitle(info)
-            self.idialog.setToolTip(filename)
+            self.idialog.updateImages(images, message)
             if not self.idialog.isVisible():
                 self.idialog.raise_()
 
-    def _set_display_renderer_info(self):
-        # WTF - to exclude properties for gallery images
-        rendering = [x for x in self._current_settings.get('General', 'rendering')
-                     if not x in CHANNEL_PREFIX]
-        rendering += self._current_settings.get('General', 'rendering_class').keys()
-        rendering.sort()
-
-        idx = self.idialog.setRegionNames(rendering)
-        self.idialog.combobox.currentIndexChanged[str].connect(self._on_render_changed)
-
-        if len(rendering) > 0:
-            self._analyzer.renderer = rendering[idx]
-        else:
-            self._analyzer.renderer = None
-
-        self._analyzer.image_ready.connect(self._on_update_image)
 
 class BaseProcessorFrame(BaseFrame, _ProcessorMixin):
 
     def __init__(self, settings, parent):
         BaseFrame.__init__(self, settings, parent)
-        _ProcessorMixin.__init__(self)
+        _ProcessorMixin.__init__(self, parent)
 
     def set_active(self, state):
         # set internl state and enable/disable control buttons

@@ -21,7 +21,7 @@ class CoreThread(QtCore.QThread):
 
     stage_info = QtCore.pyqtSignal(dict)
     analyzer_error = QtCore.pyqtSignal(str)
-    image_ready = QtCore.pyqtSignal(ccore.RGBImage, str, str)
+    image_ready = QtCore.pyqtSignal(dict, str)
 
     def __init__(self, parent, settings):
         super(CoreThread, self).__init__(parent)
@@ -97,7 +97,6 @@ class CoreThread(QtCore.QThread):
     def renderer(self):
         del self._renderer
 
-    def show_image(self, name, image, message, filename='', stime=0):
-        if name == self._renderer:
-            self.image_ready.emit(image, message, filename)
+    def show_image(self, images, message, stime=0):
+        self.image_ready.emit(images, message)
         self.msleep(stime)

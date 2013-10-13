@@ -4,8 +4,6 @@ imagedialog.py
 
 from __future__ import division
 
-
-
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
                  'Copyright (c) 2006 - 2012'
@@ -22,12 +20,14 @@ from PyQt4 import QtGui
 from PyQt4 import QtCore
 from PyQt4.QtCore import Qt
 
+from cecog.gui.util import numpy_to_qimage
 
 class ImageDialog(QtGui.QWidget):
     """Popup dialog to show classification and contour images."""
 
     def __init__(self, *args, **kw):
         super(ImageDialog, self).__init__(*args, **kw)
+        self._images = None
         self.setWindowFlags(Qt.Window)
 
         layout = QtGui.QVBoxLayout(self)
@@ -57,22 +57,7 @@ class ImageDialog(QtGui.QWidget):
         bbar_layout.addStretch()
         layout.addWidget(self.bottombar)
 
-    def setRegionNames(self, rnames):
-        current = self.combobox.currentText()
-        self.combobox.clear()
-        self.combobox.addItems(rnames)
-
-        idx = 0
-        if len(rnames) > 1:
-            self.bottombar.show()
-            if current in rnames:
-                self.combobox.setCurrentIndex(
-                    self.combobox.findText(current, Qt.MatchExactly))
-                idx = rnames.index(current)
-        else:
-            self.bottombar.hide()
-
-        return idx
+        self.combobox.activated[str].connect(self.setImage)
 
     def raise_(self):
         self.show()
@@ -84,8 +69,13 @@ class ImageDialog(QtGui.QWidget):
         else:
             return True
 
-    def setImage(self, qimage):
-        pixmap = QtGui.QPixmap.fromImage(qimage)
+    def setImage(self, name):
+        assert isinstance(name, basestring)
+
+        image = self._images[name]
+        image = numpy_to_qimage(image.toArray(copy=False))
+        pixmap = QtGui.QPixmap.fromImage(image)
+
         self.graphics.setPixmap(
             pixmap.scaled(self.size(), Qt.IgnoreAspectRatio,
                           Qt.SmoothTransformation))
@@ -99,3 +89,28 @@ class ImageDialog(QtGui.QWidget):
             pix2.fill(Qt.black)
             self.graphics.setPixmap(pix2)
             self.raise_()
+
+    def updateImages(self, images, message):
+        self.setWindowTitle(message)
+        if self._images is None:
+            image = images.values()[0]
+            aspect = image.height/image.width
+            self.resize(800, int(800*aspect))
+
+        self._images = images
+        current = self.combobox.currentText()
+        self.combobox.clear()
+        self.combobox.addItems(images.keys())
+
+        if current in images.keys():
+            self.combobox.setCurrentIndex(
+                self.combobox.findText(current, Qt.MatchExactly))
+        else:
+            current = self.combobox.currentText()
+            self.combobox.setCurrentIndex(0)
+
+        if len(images) > 1:
+            self.bottombar.show()
+        else:
+            self.bottombar.hide()
+        self.setImage(current)
