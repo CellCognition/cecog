@@ -415,7 +415,7 @@ class _ProcessorMixin(object):
                         if classifier_path is None:
                             print 'HMMThread(): No classifier given for %s' % kind
                             continue
-                        env_path = convert_package_path(classifier_path)
+                        env_path = CecogEnvironment.convert_package_path(classifier_path)
 
                         if (os.path.exists(env_path)
                               and (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))
