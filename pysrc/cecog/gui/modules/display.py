@@ -19,8 +19,6 @@ __all__ = []
 import os
 import zipfile
 from collections import OrderedDict
-import os
-import zipfile
 
 import numpy
 
@@ -28,17 +26,16 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
+from qimage2ndarray import array2qimage
+
 from pdk.fileutils import collect_files
-from pdk.datetimeutils import StopWatch
 
 from cecog.colors import Colors
 from cecog.gui.modules.module import Module
 from cecog.gui.widgets.colorbox import ColorBox
 from cecog.environment import CecogEnvironment
-from cecog.util.palette import (NucMedPalette,
-                                ZeissPalette,
-                                SingleColorPalette)
-from cecog.gui.util import numpy_to_qimage
+from cecog.util.palette import ZeissPalette
+from cecog.util.palette import SingleColorPalette
 from cecog.gui.widgets.colorbutton import ColorButton
 
 DEFAULT_COLORS_BY_NAME = Colors.channel_table
@@ -103,9 +100,9 @@ class ChannelItem(QFrame):
     def render_image(self, image):
         if self._show_image:
             palette = self._palettes[self._current]
-            qimage = numpy_to_qimage(image, palette.qt)
-            # seems to be not necessary although result is Index8
-            #qimage = qimage.convertToFormat(QImage.Format_ARGB32_Premultiplied)
+            qimage = array2qimage(image)
+            qimage = qimage.convertToFormat(qimage.Format_Indexed8)
+            qimage.setColorTable(palette.qt)
         else:
             height, width = image.shape
             qimage = QImage(width, height, QImage.Format_ARGB32_Premultiplied)

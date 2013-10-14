@@ -20,7 +20,7 @@ from PyQt4 import QtGui
 from PyQt4 import QtCore
 from PyQt4.QtCore import Qt
 
-from cecog.gui.util import numpy_to_qimage
+from qimage2ndarray import array2qimage
 
 class ImageDialog(QtGui.QWidget):
     """Popup dialog to show classification and contour images."""
@@ -73,7 +73,7 @@ class ImageDialog(QtGui.QWidget):
         assert isinstance(name, basestring)
 
         image = self._images[name]
-        image = numpy_to_qimage(image.toArray(copy=False))
+        image = array2qimage(image.toArray(copy=False))
         pixmap = QtGui.QPixmap.fromImage(image)
 
         self.graphics.setPixmap(

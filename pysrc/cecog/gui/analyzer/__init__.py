@@ -38,8 +38,8 @@ from cecog.learning.learning import ConfusionMatrix
 
 from cecog.util.util import hexToRgb, write_table
 
-from cecog.gui.util import (numpy_to_qimage,
-                            question,
+
+from cecog.gui.util import (question,
                             critical,
                             information,
                             status,

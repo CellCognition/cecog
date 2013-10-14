@@ -14,10 +14,7 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = ['QRC_TOKEN',
-           'ImageRatioDisplay',
-           'numpy_to_qimage',
-           'message',
+__all__ = ['message',
            'information',
            'question',
            'warning',
@@ -26,71 +23,19 @@ __all__ = ['QRC_TOKEN',
            'status',
            'load_qrc_text',
            'show_html',
-           'on_anchor_clicked',
-           ]
+           'on_anchor_clicked']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
 import sys
 import traceback
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
 import numpy
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 from cecog.util.color import rgb_to_hex
 
-#-------------------------------------------------------------------------------
-# constants:
-#
 QRC_TOKEN = 'qrc:/'
-
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-def numpy_to_qimage(data, colors=None):
-    h, w = data.shape[:2]
-    #print data.dtype, data.ndim, data.shape
-    if data.dtype == numpy.uint8:
-        if data.ndim == 2:
-            shape = (h, w / 4 * 4)
-            if shape != data.shape:
-                h, w = shape
-                image = data[:,:w]
-            else:
-                image = data
-            image = numpy.require(image, numpy.uint8, 'C')
-            format = QImage.Format_Indexed8
-            if colors is None:
-                colors = [QColor(i,i,i) for i in range(256)]
-        elif data.ndim == 3:
-            if data.shape[2] == 3:
-                c = data.shape[2]
-                shape = (h, w / 4 * 4, c)
-                if shape != data.shape:
-                    image = numpy.zeros(shape, numpy.uint8)
-                else:
-                    image = data
-                format = QImage.Format_RGB888
-            elif data.shape[0] == 3:
-                w, h = data.shape[1:3]
-                image = data
-                format = QImage.Format_RGB32
-    qimage = QImage(image, w, h, format)
-    qimage.ndarray = image
-    if not colors is None:
-        qimage.setColorTable(colors)
-    return qimage
 
 def message(icon, text, parent, info=None, detail=None, buttons=None,
             title=None, default=None, escape=None, modal=True):
