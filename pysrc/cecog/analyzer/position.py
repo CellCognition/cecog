@@ -770,8 +770,12 @@ class PositionAnalyzer(PositionCore):
             ##############################################################
 
             self.settings.set_section('General')
-            self.render_classification_images(cellanalyzer, images, frame)
-            self.render_contour_images(cellanalyzer, images, frame)
+            # want emit all images at once
+            imgs = {}
+            imgs.update(self.render_classification_images(cellanalyzer, images, frame))
+            imgs.update(self.render_contour_images(cellanalyzer, images, frame))
+            msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position, frame)
+            self.set_image(imgs, msg, 50)
 
             if self.settings.get('Output', 'rendering_channel_gallery'):
                 self.render_channel_gallery(cellanalyzer, frame)
@@ -805,9 +809,7 @@ class PositionAnalyzer(PositionCore):
             # gallery images are treated differenty
             else:
                 ca.render(out_dir, dctRenderInfo=render_par, writeToDisc=True)
-
-        msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position, frame)
-        self.set_image(images_, msg, 50)
+        return images_
 
     def render_classification_images(self, cellanalyzer, images, frame):
         images_ = dict()
@@ -819,8 +821,7 @@ class PositionAnalyzer(PositionCore):
                                                  writeToDisc=write,
                                                  images=images)
             images_[region] = image
-        msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position, frame)
-        self.set_image(images_, msg, 50)
+        return images_
 
     def render_browser(self, cellanalyzer):
         d = {}
