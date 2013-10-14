@@ -32,7 +32,7 @@ class ImageDialog(QtGui.QWidget):
 
         layout = QtGui.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setMargin(0)
+        layout.setSpacing(0)
 
         self.graphics = QtGui.QLabel(self)
         self.graphics.setSizePolicy(
@@ -55,6 +55,7 @@ class ImageDialog(QtGui.QWidget):
         bbar_layout.addStretch()
         bbar_layout.addWidget(self.combobox)
         bbar_layout.addStretch()
+        bbar_layout.setSpacing(0)
         layout.addWidget(self.bottombar)
 
         self.combobox.activated[str].connect(self.setImage)
