@@ -1,4 +1,3 @@
-
                           The CellCognition Project
     Copyright (c) 2006 - 2012 Christoph Sommer, Michael Held & Daniel Gerlich
                       Gerlich Lab, ETH Zurich, Switzerland
@@ -10,82 +9,78 @@
 
 --------------------------------------------------------------------------------
 
-Building the C++ Extension
-***********************
+### Building the C++ Extension
+
 
 To compile the ccore extension you need to adopt the library/include
 paths in the setup-scripts accordingly
 
 Dependcies are:
--) libvigraimpex
--) libtiff
--) liblzma (only if libtiff is statically linked)
+- libvigraimpex
+- libtiff
+- liblzma (only if libtiff is statically linked)
 
 On MaxOSX simply run the make file. On Windows it depends on the developement environment.
 
-1) Using Windows SDK's:
------------------------
+#### 1) VCXX Professional
 
-Run the script build_helper\windows_sdk_env.bat.
-Run build_win64_bin.bat
+run ```python setup_windows.py build_ext --inplace```
+for a development build or 
+```build_win64_bin.bat``` to build the installer.
 
-2) Using VCXX Professional
---------------------------
-remove the "set VS90COMNTOOLS=%VS100COMNTOOLS%" from build_win64_bin.bat
-run the script
+#### 2) Using Windows SDK's:
 
-
-##########################################################################
+Run additionally the script ```build_helper\windows_sdk_env.bat```. Anything else is the same.
 
 The CecogAnalyzer package comes with batteries included.
 
 It contains
 
-    * a small set of raw images (10 timepoints of H2b-aTubulin)
-    * the two classifiers for H2b and aTubulin to test classification
-    * a pre-configured settings file which is loaded on start-up.
+- a small set of raw images (10 timepoints of H2b-aTubulin)
+- the two classifiers for H2b and aTubulin to test classification
+- a pre-configured settings file which is loaded on start-up.
 
 You can
 
-    * test Object Detection of the primary (H2b) and secondary (aTubulin)
-      channels
-    * retrain and test the classifier for H2b and aTubulin in Classification
-    * test the tracking and select events in Tracking (only six tracks are found
-      within the 10 frames)
-    * for Error correction you need to install the R-project (see below)
+- test Object Detection of the primary (H2b) and secondary (aTubulin)
+  channels
+- retrain and test the classifier for H2b and aTubulin in Classification
+- test the tracking and select events in Tracking (only six tracks are found
+  within the 10 frames).
+- for Error correction you need to install the R-project (see below)
 
 
-Package data
-************
+#### Package data
+
 
 The package contains a sub-folder Data with
 
-    * Settings
-          o demo_settings.conf, the settings file which is loaded on startup
-          o graph_primary.txt, an example for a graph definition file (H2b)
-          o graph_secondary.txt, an example for a graph definition file
-            (Tubulin)
-          o position_labels.txt, position labels such as OligoID or GeneSymbol
+* Settings
+  - demo_settings.conf, the settings file which is loaded on startup
+  - graph_primary.txt, an example for a graph definition file (H2b)
+  - graph_secondary.txt, an example for a graph definition file
+    (Tubulin)
+  - position_labels.txt, position labels such as OligoID or GeneSymbol
 
-    * Classifier
-          o the class definition and sample annotations to pick samples with the
-            larger data set, feature and SVM models to test (or train) the H2b
-            and aTubulin classifiers
+* Classifier
+  - the class definition and sample annotations to pick samples with the
+    larger data set, feature and SVM models to test (or train) the H2b
+    and aTubulin classifiers
 
-    * Images
-          o the input folder of the raw images
+* Images
+  - the input folder of the raw images
 
-    * Analysis
-          o the output folder where results are written to
+* Analysis
+  - the output folder where results are written to
 
-Note
+###### Note
 With the included raw images picking of classifier samples is not possible since
 not all necessary positions/timepoints are included.
 Please download the larger H2b-Tubulin data.
 
 
-Motif selection & error correction
-**********************************
+#### Motif selection & error correction
+
 
 With the included data and settings only six mitotic events with four frames
 duration are selected.
@@ -99,31 +94,7 @@ after the pro-prometa onset. Increase therefore the values in
 Tracking -> Timepoints [post] and Timepoints [pre].
 
 
-R-project dependency
-********************
+#### R-project dependency
 
-Error correction requires the installation of the statistics project R.
-See http://r-project.org
-
-The R-packages hwriter, igraph and Cairo are needed as well. These packages can
-be installed via the R's Package Installer or by running following commands from
-the R command line:
-
-install.packages('hwriter')
-install.packages('igraph')
-install.packages('Cairo')
-
-The R executable which needs to be specified is NOT the R-GUI and should be
-found automatically for MacOSX and Windows. Otherwise try
-
-MacOSX
-
-/Library/Frameworks/R.framework/Versions/Current/Resources/bin/R32
-
-or
-
-/Library/Frameworks/R.framework/Versions/Current/Resources/bin/R
-
-Windows
-
-C:\Program Files\R\R-2.10.0\bin\R.exe
+This part of cellcognition is legacy. A python replacement is already in 
+testing phase
