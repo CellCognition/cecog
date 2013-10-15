@@ -8,7 +8,7 @@ import numpy as np
 import scipy.misc as sm
 import scipy.spatial.distance as ssd
 import sklearn.mixture as mixture
-import sklearn.hmm as hmm
+import skhmm as hmm
 import collections
 
 class TemporalClustering:

@@ -34,7 +34,7 @@ from numpy import array, average
 
 import numpy
 from matplotlib import mlab
-from sklearn.hmm import MultinomialHMM
+from cecog.learning.skhmm import MultinomialHMM
 import scipy.stats.stats as sss
 import scipy
 
