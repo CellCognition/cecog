@@ -237,8 +237,11 @@ class Browser(QMainWindow):
             region_names.extend(['%s - %s' % (prefix.capitalize(), name) \
                                  for name in REGION_INFO.names[prefix]])
 
-        # FIXME: something went wrong with setting up the current region
-        self._object_region = region_names[0].split(' - ')
+        # Creating fallback if no Segmentation plugins have been specified so far
+        if len(region_names) > 0:
+            self._object_region = region_names[0].split(' - ')
+        else:
+            self._object_region = ('Primary', 'primary')
 
 
         # create a new ModuleManager with a QToolbar and QStackedFrame
