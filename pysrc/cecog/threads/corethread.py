@@ -131,6 +131,10 @@ class CoreThread(QtCore.QThread):
         if self._abort:
             raise StopProcessing()
 
+    def interruption_point(self):
+        if self._abort:
+            raise StopProcessing()
+
     def show_image(self, images, message, stime=0):
         self.image_ready.emit(images, message)
         self.msleep(stime)

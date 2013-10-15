@@ -19,6 +19,12 @@
       prohibit a transition from an apoptotic cell to any other
       state.<br><br>
 
+      <br><br>
+      It is important to note that the error correction depends <b>not</b> on the type of the event selection. Those types are supervised and unsupervised methods. The HMM estimates in both cases its model parameters using the
+<img class="extlink" src=":extlink"/><a href="http://en.wikipedia.org/wiki/Baum%E2%80%93Welch_algorithm">Baum-Welch algorithm</a>. The only difference lies in the estimation of the initial-/ or start parameters of the Baum-Welch algorithm. The supervised method (support vector machine) provides prediction probabilities that are used to estimate the initial parameters. In the unsupervised case (TC3 and Gaussian Mixture Models), the initial parameters are simply estimated by counting the transitions.
+      <br><br>
+      The error correction creates a sub folder called in the <tt>analysis</tt> folder, where the output is saved.
+    </p>
 
       The association between individual movies i.e. <i>positions</i>
       and experimental information such as <i>Oligo-Id</i> or the name
@@ -38,7 +44,6 @@
       parameters. In the unsupervised case (TC3 and Gaussian Mixture
       Models), the initial parameters are simply estimated by counting
       the transitions.
-
       <br><br>
       The error correction creates a sub folder called in
       the <tt>analysis</tt> folder, where the output is saved.
@@ -61,10 +66,8 @@
       example file that works with the <img class="extlink"
       src=":extlink"/><a href="http://cellcognition.org/downloads/data">reference
       data</a>
-
         from the Cellcognition website can be
         found <a href="qrc:/hmm_constraints">here</a>.
-
         <br><br>
         The transition, emission and start probabilities of the HMM
         are learned from the raw data obtained from the motif
@@ -76,7 +79,6 @@
         constraint files to one. Each channel needs a separate
         constraint file, since the number of classes are not
         necessarily the same.
-
       </p>
     </a>
 

@@ -408,6 +408,11 @@ class _ProcessorMixin(object):
                     self._analyzer = cls(self, self._current_settings,
                                          self.parent().main_window._imagecontainer)
 
+                elif cls is PyHmmThread:
+                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
+                    self._analyzer = cls(self, self._current_settings,
+                                         self.parent().main_window._imagecontainer)
+
                 elif cls is HmmThread:
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
 
