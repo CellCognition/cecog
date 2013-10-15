@@ -1,4 +1,5 @@
 setup.cfg
+setup.cfg.mac
 .Rhistory
 cecog_rc.py
 dist
