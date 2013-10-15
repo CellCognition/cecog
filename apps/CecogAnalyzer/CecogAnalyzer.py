@@ -621,10 +621,10 @@ class AnalyzerMainWindow(QMainWindow):
 
             # report problems about a mismatch between channel IDs found in the data and specified by the user
             if len(problems) > 0:
-                critical(self, "Selected channel IDs not valid",
-                         "The selected channel IDs for %s are not valid.\nValid IDs are %s." %
-                         (", ".join(["'%s Channel'" % s.capitalize() for s in problems]),
-                          ", ".join(["'%s'" % s for s in channels])))
+#                 critical(self, "Selected channel IDs not valid",
+#                          "The selected channel IDs for %s are not valid.\nValid IDs are %s." %
+#                          (", ".join(["'%s Channel'" % s.capitalize() for s in problems]),
+#                           ", ".join(["'%s'" % s for s in channels])))
                 # a mismatch between settings and data will cause changed settings
                 self.settings_changed(True)
 
