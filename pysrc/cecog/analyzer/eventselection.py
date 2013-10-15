@@ -97,16 +97,6 @@ class EventSelectionCore(LoggerObject):
     @property
     def track_length(self):
         return self.backward_range + self.forward_range
-            try:
-                self._forward_visitor(start_id, self.visitor_data[start_id],
-            except RuntimeError as e:
-                if e.message.startswith('maximum recursion'):
-                    raise RuntimeError(('eventselection failed: maximum '
-                                        'recursion reached in _forward_visitor()'))
-                else:
-                    raise(e)
-                
-                
 
     def _split_nodes(self, nodes):
         # XXX use the tracking graph to identiy splits

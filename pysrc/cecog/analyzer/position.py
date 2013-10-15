@@ -828,6 +828,7 @@ class PositionAnalyzer(PositionCore):
 
     def render_contour_images(self, ca, images, frame):
         images_ = dict()
+        for region, render_par in self.settings.get2('rendering').iteritems():
             out_dir = join(self._images_dir, region)
             write = self.settings('Output', 'rendering_contours_discwrite')
 
@@ -844,6 +845,7 @@ class PositionAnalyzer(PositionCore):
 
     def render_classification_images(self, cellanalyzer, images, frame):
         images_ = dict()
+        for region, render_par in self.settings.get2('rendering_class').iteritems():
             out_images = join(self._images_dir, region)
             write = self.settings('Output', 'rendering_class_discwrite')
             image, _ = cellanalyzer.render(out_images,

@@ -52,6 +52,7 @@ class CoreThread(QtCore.QThread):
     stage_info = QtCore.pyqtSignal('PyQt_PyObject')
     analyzer_error = QtCore.pyqtSignal(str)
     image_ready = QtCore.pyqtSignal(dict, str)
+    aborted = QtCore.pyqtSignal()
 
     def __init__(self, parent, settings):
         super(CoreThread, self).__init__(parent)
