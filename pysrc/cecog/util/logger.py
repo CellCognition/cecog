@@ -66,4 +66,4 @@ class LoggerObject(object):
     def close(self):
         self._file_handler.close()
         self.logger.removeHandler(self._file_handler)        
-        return
+        
