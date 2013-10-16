@@ -85,8 +85,16 @@ class ECParams(object):
             self.timelapse = tstep
 
         self.sorting = settings('ErrorCorrection', 'enable_sorting')
-        self.sorting_sequence = \
-            eval('('+settings('ErrorCorrection', 'sorting_sequence')+',)')
+        if self.sorting:
+            try:
+                self.sorting_sequence = \
+                    eval('('+settings('ErrorCorrection', 'sorting_sequence')+',)')
+            except SyntaxError:
+                raise SyntaxError(("Error Correction: invalid Label sequence - "
+                                   "use a comma separated list of integers"))
+        else:
+            self.sorting_sequence = None
+
         self.tmax = settings('ErrorCorrection', 'max_time')
         self.ignore_tracking_branches = \
             settings('ErrorCorrection', 'ignore_tracking_branches')

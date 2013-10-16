@@ -122,7 +122,8 @@ class PositionRunner(QtCore.QObject):
                                    'events')+os.sep+"*.txt")
 
             progress = ProgressMsg(max=len(files),
-                                   meta="loading %s (%d/%d)" %(pos, pi+1, len(self.positions)))
+                                   meta="loading plate: %s, position:%s, (%d/%d)"
+                                   %(self.plate, pos, pi+1, len(self.positions)))
 
             for i, file_ in enumerate(files):
                 QThread.currentThread().interruption_point()
