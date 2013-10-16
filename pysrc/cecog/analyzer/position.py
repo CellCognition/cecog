@@ -312,10 +312,12 @@ class PositionCore(LoggerObject):
         if not self._qthread is None:
             self._qthread.update_status(self._info, stime=50)
 
-    def set_image(self, image, msg, filename='', region=None, stime=0):
-        """Propagate a rendered image to QThread"""
-        if not (self._qthread is None or image is None):
-            self._qthread.show_image(region, image, msg, filename, stime)
+    def set_image(self, images, message, stime=0):
+        """Propagate a rendered image to QThread."""
+        assert isinstance(images, dict)
+        assert isinstance(message, basestring)
+        if not (self._qthread is None or not images):
+            self._qthread.show_image(images, message, stime)
 
     def _channel_regions(self, p_channel):
         """Return a dict of of channel region pairs according to the classifier"""
@@ -395,8 +397,8 @@ class PositionPicker(PositionCore):
                 n_images += 1
                 msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position,
                                                 frame)
-                self.set_image(image[self._qthread.renderer],
-                               msg, region=self._qthread.renderer)
+                self.set_image(image, msg)
+
 
 
 class PositionAnalyzer(PositionCore):
@@ -520,19 +522,27 @@ class PositionAnalyzer(PositionCore):
         fname = join(self._statistics_dir, 'P%s__object_counts.txt' % self.position)
 
         # at least the total count for primary is always exported
-        ch_info = OrderedDict([('Primary', ('primary', [], []))])
+        # OLD: ch_info = OrderedDict([('Primary', ('primary', [], []))])
+        # but this does not work any more if we admit merged channels
+        # (which might be the only ones we are interested in)
+        ch_info = OrderedDict()
         for name, clf in self.classifiers.iteritems():
             names = clf.class_names.values()
             colors = [clf.hexcolors[n] for n in names]
             ch_info[name] = (clf.regions, names, colors)
+
+        # if no classifier has been loaded, no counts can be exported.
+        if len(ch_info) == 0:
+            return
 
         self.timeholder.exportObjectCounts(fname, self.position, self.meta_data, ch_info)
         pplot_ymax = \
             self.settings.get('Output', 'export_object_counts_ylim_max')
 
         # plot only for primary channel so far!
-        self.timeholder.exportPopulationPlots(fname, self._plots_dir, self.position,
-                                              self.meta_data, ch_info['Primary'], pplot_ymax)
+        if 'Primary' in ch_info:
+            self.timeholder.exportPopulationPlots(fname, self._plots_dir, self.position,
+                                                  self.meta_data, ch_info['Primary'], pplot_ymax)
 
 
     def export_object_details(self):
@@ -760,8 +770,12 @@ class PositionAnalyzer(PositionCore):
             ##############################################################
 
             self.settings.set_section('General')
-            self.render_classification_images(cellanalyzer, images, frame)
-            self.render_contour_images(cellanalyzer, images, frame)
+            # want emit all images at once
+            imgs = {}
+            imgs.update(self.render_classification_images(cellanalyzer, images, frame))
+            imgs.update(self.render_contour_images(cellanalyzer, images, frame))
+            msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position, frame)
+            self.set_image(imgs, msg, 50)
 
             if self.settings.get('Output', 'rendering_channel_gallery'):
                 self.render_channel_gallery(cellanalyzer, frame)
@@ -781,31 +795,33 @@ class PositionAnalyzer(PositionCore):
             chgal.make_gallery()
 
     def render_contour_images(self, ca, images, frame):
+        images_ = dict()
         for region, render_par in self.settings.get2('rendering').iteritems():
             out_dir = join(self._images_dir, region)
             write = self.settings.get('Output', 'rendering_contours_discwrite')
 
             if region not in self.CHANNELS.keys():
-                img, fname = ca.render(out_dir, dctRenderInfo=render_par,
+                img, _ = ca.render(out_dir, dctRenderInfo=render_par,
                                        writeToDisc=write, images=images)
-                msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position,
-                                                frame)
-                self.set_image(img, msg, fname, region, 50)
+
+
+                images_[region] = img
             # gallery images are treated differenty
             else:
                 ca.render(out_dir, dctRenderInfo=render_par, writeToDisc=True)
+        return images_
 
     def render_classification_images(self, cellanalyzer, images, frame):
+        images_ = dict()
         for region, render_par in self.settings.get2('rendering_class').iteritems():
             out_images = join(self._images_dir, region)
             write = self.settings.get('Output', 'rendering_class_discwrite')
-            img_rgb, fname = cellanalyzer.render(out_images,
+            image, _ = cellanalyzer.render(out_images,
                                                  dctRenderInfo=render_par,
                                                  writeToDisc=write,
                                                  images=images)
-
-            msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position, frame)
-            self.set_image(img_rgb, msg, fname, region, 50)
+            images_[region] = image
+        return images_
 
     def render_browser(self, cellanalyzer):
         d = {}

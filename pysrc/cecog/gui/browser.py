@@ -34,7 +34,6 @@ from cecog.gui.util import (exception,
                             information,
                             question,
                             warning,
-                            numpy_to_qimage,
                             get_qcolor_hicontrast,
                             qcolor_to_hex,
                             )

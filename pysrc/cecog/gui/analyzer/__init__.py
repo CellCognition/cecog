@@ -10,6 +10,8 @@
                  See trunk/AUTHORS.txt for author contributions.
 """
 
+from __future__ import division
+
 __author__ = 'Michael Held'
 __date__ = '$Date$'
 __revision__ = '$Rev$'
@@ -18,13 +20,7 @@ __source__ = '$URL$'
 __all__ = []
 
 import types
-import traceback
-import logging
-import logging.handlers
-import sys
 import os
-import time
-import copy
 import numpy
 
 from PyQt4.QtGui import *
@@ -33,24 +29,17 @@ from PyQt4.Qt import *
 
 from collections import OrderedDict
 from pdk.datetimeutils import TimeInterval
-
-# import warnings
-# with warnings.catch_warnings():
-#     warnings.simplefilter("ignore")
-#     import sklearn.hmm as hmm
-
 from multiprocessing import cpu_count
 
 from cecog import CHANNEL_PREFIX
 from cecog.gui.display import TraitDisplayMixin
-from cecog.learning.learning import (CommonObjectLearner,
-                                     CommonClassPredictor,
-                                     ConfusionMatrix,
-                                     )
+from cecog.learning.learning import CommonClassPredictor
+from cecog.learning.learning import ConfusionMatrix
+
 from cecog.util.util import hexToRgb, write_table
-from cecog.gui.util import (ImageRatioDisplay,
-                            numpy_to_qimage,
-                            question,
+
+
+from cecog.gui.util import (question,
                             critical,
                             information,
                             status,
@@ -94,7 +83,6 @@ class BaseFrame(TraitDisplayMixin):
     def __init__(self, settings, parent):
         super(BaseFrame, self).__init__(settings, parent)
         self._is_active = False
-
         self._intervals = list()
 
         self._tab_name = None
@@ -117,7 +105,6 @@ class BaseFrame(TraitDisplayMixin):
 
         layout.addWidget(self._tab)
         layout.addWidget(self._control)
-
 
     @pyqtSlot('int')
     def on_tab_changed(self, index):
@@ -182,7 +169,8 @@ class BaseFrame(TraitDisplayMixin):
 
 
 class _ProcessorMixin(object):
-    def __init__(self):
+    def __init__(self, parent):
+        self.idialog = parent.idialog
         self._is_running = False
         self._is_abort = False
         self._has_error = True
@@ -293,12 +281,7 @@ class _ProcessorMixin(object):
 
     def _clear_image(self):
         """Pop up and clear the image display"""
-        if not qApp._image_dialog is None:
-            pix = qApp._graphics.pixmap()
-            pix2 = QPixmap(pix.size())
-            pix2.fill(Qt.black)
-            qApp._graphics.setPixmap(pix2)
-            qApp._image_dialog.raise_()
+        self.idialog.clearImage()
 
     def _on_process_start(self, name, start_again=False):
         if not self._is_running or start_again:
@@ -399,13 +382,11 @@ class _ProcessorMixin(object):
                 if cls is PickerThread:
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
                     self._analyzer = cls(self, self._current_settings, imagecontainer)
-                    self._set_display_renderer_info()
                     self._clear_image()
 
                 elif cls is AnalyzerThread:
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
                     self._analyzer = cls(self, self._current_settings, imagecontainer)
-                    self._set_display_renderer_info()
                     self._clear_image()
 
                 elif cls is TrainingThread:
@@ -422,7 +403,6 @@ class _ProcessorMixin(object):
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
                     self._analyzer = cls(self, self._current_settings, imagecontainer, ncpu)
 
-                    self._set_display_renderer_info()
 
                 elif cls is HmmThread:
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
@@ -435,7 +415,8 @@ class _ProcessorMixin(object):
                         if classifier_path is None:
                             print 'HMMThread(): No classifier given for %s' % kind
                             continue
-                        env_path = convert_package_path(classifier_path)
+                        env_path = CecogEnvironment.convert_package_path(classifier_path)
+
                         if (os.path.exists(env_path)
                               and (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))
                              ):
@@ -477,6 +458,7 @@ class _ProcessorMixin(object):
                 self._analyzer.finished.connect(self._on_process_finished)
                 self._analyzer.stage_info.connect(self._on_update_stage_info, Qt.QueuedConnection)
                 self._analyzer.analyzer_error.connect(self._on_error, Qt.QueuedConnection)
+                self._analyzer.image_ready.connect(self._on_update_image)
 
                 self._analyzer.start(QThread.LowestPriority)
                 if self._current_process_item == 0:
@@ -497,15 +479,12 @@ class _ProcessorMixin(object):
         self.dlg.exec_()
         self.setCursor(Qt.ArrowCursor)
 
-    def _on_render_changed(self, name):
-        #FIXME: proper sub-classing needed
-        self._analyzer.renderer = name
-
     def _on_error(self, msg):
         self._has_error = True
         critical(self, 'An error occurred during processing.', detail=msg)
 
     def _on_process_finished(self):
+        self._analyzer.image_ready.disconnect(self._on_update_image)
 
         if (not self._process_items is None and
             self._current_process_item+1 < len(self._process_items) and
@@ -515,8 +494,6 @@ class _ProcessorMixin(object):
             self._on_process_start(self._current_process, start_again=True)
         else:
             self._is_running = False
-            #logger = logging.getLogger()
-            #logger.removeHandler(self._handler)
             self._set_control_button_text(idx=0)
             self._toggle_control_buttons()
             self._toggle_tabs(True)
@@ -569,6 +546,7 @@ class _ProcessorMixin(object):
     def _on_esc_pressed(self):
         if self._is_running:
             self._abort_processing()
+            self._analyzer.image_ready.disconnect(self._on_update_image)
 
     def _on_update_stage_info(self, info):
         sep = '   |   '
@@ -652,97 +630,18 @@ class _ProcessorMixin(object):
                 else:
                     self._analyzer_label2.setText(info['text'])
 
-    def _on_update_image(self, image_rgb, info, filename):
+    def _on_update_image(self, images, message):
         if self._show_image.isChecked():
-            # FIXME:
-            if image_rgb.width % 4 != 0:
-                image_rgb = ccore.subImage(
-                    image_rgb, ccore.Diff2D(0,0), ccore.Diff2D(image_rgb.width - \
-                               (image_rgb.width % 4), image_rgb.height))
-            qimage = numpy_to_qimage(image_rgb.toArray(copy=False))
+            self.idialog.updateImages(images, message)
+            if not self.idialog.isVisible():
+                self.idialog.raise_()
 
-            if qApp._image_dialog is None:
-                qApp._image_dialog = QFrame()
-                ratio = qimage.height()/float(qimage.width())
-                qApp._image_dialog.setGeometry(50, 50, 800, 800*ratio)
-
-                shortcut = QShortcut(QKeySequence(Qt.Key_Escape), qApp._image_dialog)
-                shortcut.activated.connect(self._on_esc_pressed)
-
-                layout = QVBoxLayout(qApp._image_dialog)
-                layout.setContentsMargins(0,0,0,0)
-
-                qApp._graphics = ImageRatioDisplay(qApp._image_dialog, ratio)
-                qApp._graphics.setScaledContents(True)
-                qApp._graphics.resize(800, 800*ratio)
-                qApp._graphics.setMinimumSize(QSize(100,100))
-                policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-                policy.setHeightForWidth(True)
-                qApp._graphics.setSizePolicy(policy)
-                layout.addWidget(qApp._graphics)
-
-                dummy = QFrame(qApp._image_dialog)
-                dymmy_layout = QHBoxLayout(dummy)
-                dymmy_layout.setContentsMargins(5,5,5,5)
-
-                qApp._image_combo = QComboBox(dummy)
-                qApp._image_combo.setSizePolicy(QSizePolicy(QSizePolicy.Expanding,
-                                                            QSizePolicy.Fixed))
-                self._set_display_renderer_info()
-
-                dymmy_layout.addStretch()
-                dymmy_layout.addWidget(qApp._image_combo)
-                dymmy_layout.addStretch()
-                layout.addWidget(dummy)
-                layout.addStretch()
-
-                qApp._image_dialog.show()
-                qApp._image_dialog.raise_()
-            #else:
-            #    qApp._graphics_pixmap.setPixmap(QPixmap.fromImage(qimage))
-            qApp._graphics.setPixmap(QPixmap.fromImage(qimage))
-            qApp._image_dialog.setWindowTitle(info)
-            qApp._image_dialog.setToolTip(filename)
-
-            if not qApp._image_dialog.isVisible():
-                qApp._image_dialog.show()
-                qApp._image_dialog.raise_()
-
-
-    def _set_display_renderer_info(self):
-        # WTF - to exclude properties for gallery images
-        rendering = [x for x in self._current_settings.get('General', 'rendering')
-                     if not x in CHANNEL_PREFIX]
-        rendering += self._current_settings.get('General', 'rendering_class').keys()
-        rendering.sort()
-
-        idx = 0
-        if not qApp._image_dialog is None:
-            widget = qApp._image_combo
-            current = widget.currentText()
-            widget.clear()
-            if len(rendering) > 1:
-                widget.addItems(rendering)
-                widget.show()
-                widget.currentIndexChanged[str].connect(self._on_render_changed)
-                if current in rendering:
-                    widget.setCurrentIndex(widget.findText(current, Qt.MatchExactly))
-                    idx = rendering.index(current)
-            else:
-                widget.hide()
-
-        if len(rendering) > 0:
-            self._analyzer.renderer = rendering[idx]
-        else:
-            self._analyzer.renderer = None
-
-        self._analyzer.image_ready.connect(self._on_update_image)
 
 class BaseProcessorFrame(BaseFrame, _ProcessorMixin):
 
     def __init__(self, settings, parent):
         BaseFrame.__init__(self, settings, parent)
-        _ProcessorMixin.__init__(self)
+        _ProcessorMixin.__init__(self, parent)
 
     def set_active(self, state):
         # set internl state and enable/disable control buttons

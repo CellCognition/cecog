@@ -70,6 +70,7 @@ from cecog.gui.analyzer.errorcorrection import ErrorCorrectionFrame
 from cecog.gui.analyzer.output import OutputFrame
 from cecog.gui.analyzer.processing import ProcessingFrame
 from cecog.gui.analyzer.cluster import ClusterFrame, SECTION_NAME_CLUSTER
+from cecog.gui.imagedialog import ImageDialog
 
 from cecog.gui.browser import Browser
 from cecog.gui.log import GuiLogHandler, LogWindow
@@ -127,6 +128,14 @@ class CecogAboutDialog(QtGui.QDialog):
         layout.addWidget(label2, 2, 0)
         layout.setAlignment(Qt.AlignCenter|Qt.AlignBottom)
         self.setLayout(layout)
+
+class FrameStack(QtGui.QStackedWidget):
+
+    def __init__(self, parent):
+        super(FrameStack, self).__init__(parent)
+        self.main_window = parent
+        self.idialog = ImageDialog(parent)
+        self.idialog.hide()
 
 
 class CecogAnalyzer(QtGui.QMainWindow):
@@ -208,8 +217,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
             QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed,
                               QtGui.QSizePolicy.Expanding))
 
-        self._pages = QtGui.QStackedWidget(self.centralWidget())
-        self._pages.main_window = self
+        self._pages = FrameStack(self)
 
         self._settings_filename = None
         self._settings = GuiConfigSettings(self, SECTION_REGISTRY)
@@ -259,9 +267,6 @@ class CecogAnalyzer(QtGui.QMainWindow):
 
         logger = logging.getLogger()
         logger.setLevel(logging.INFO)
-
-        qApp._image_dialog = None
-        qApp._graphics = None
 
         self.setGeometry(0, 0, 1200, 700)
         self.setMinimumSize(QtCore.QSize(700, 600))

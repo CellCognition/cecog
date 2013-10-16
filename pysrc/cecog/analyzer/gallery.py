@@ -195,7 +195,7 @@ class EventGallery(object):
                     ext = os.path.splitext(filenames[0])[1]
 
                     # stitch image horizontally
-                    for idx, filename in enumerate(filenames):
+                    for idx, filename in enumerate(sorted(filenames)):
                         img = cls.read_image(filename)
                         if img_out is None:
                             size = img.width, img.height
