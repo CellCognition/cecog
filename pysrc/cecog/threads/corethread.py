@@ -49,7 +49,6 @@ class CoreThread(QtCore.QThread):
         if not __debug__:
             ccore.turn_off()
             self._enable_eclipse_mt_debugging()
-        self._enable_eclipse_mt_debugging()
         try:
             self._run()
         except Exception, e:
@@ -60,11 +59,9 @@ class CoreThread(QtCore.QThread):
             else:
                 msg = traceback.format_exc()
             traceback.print_exc()
-
             logger = logging.getLogger()
             logger.error(msg)
             self.analyzer_error.emit(msg)
-            import sys
             raise
 
     def abort(self, wait=False):
