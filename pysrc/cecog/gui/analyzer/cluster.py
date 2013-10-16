@@ -17,8 +17,6 @@ __source__ = '$URL$'
 __all__ = ['ClusterFrame']
 
 import types
-import copy
-import traceback
 import socket
 import urlparse
 
@@ -34,17 +32,15 @@ from cecog.environment import CecogEnvironment
 
 from cecog.gui.analyzer import BaseFrame
 from cecog.gui.analyzer.processing import ProcessingFrame
-from cecog.util.util import OS_LINUX
 from cecog.gui.util import (exception,
                             information,
                             warning,
-                            waitingProgressDialog,
-                            )
+                            waitingProgressDialog)
+
 from cecog import (JOB_CONTROL_RESUME,
                    JOB_CONTROL_SUSPEND,
                    JOB_CONTROL_TERMINATE,
-                   VERSION
-                   )
+                   VERSION)
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -61,10 +57,10 @@ from cecog import (JOB_CONTROL_RESUME,
 #
 class ClusterDisplay(QGroupBox):
 
-    def __init__(self, parent, settings, imagecontainer):
+    def __init__(self, parent, settings):
         QGroupBox.__init__(self, parent)
         self._settings = settings
-        self._imagecontainer = imagecontainer
+        self._imagecontainer = None
         self._jobid = None
         self._toggle_state = JOB_CONTROL_SUSPEND
         self._service = None
@@ -166,6 +162,14 @@ class ClusterDisplay(QGroupBox):
             raise RuntimeError("Image container is not loaded yet")
         return self._imagecontainer
 
+    @imagecontainer.deleter
+    def imagecontainer(self):
+        del self._imagecontainer
+
+    @imagecontainer.setter
+    def imagecontainer(self, imagecontainer):
+        self._imagecontainer = imagecontainer
+
     def _on_jobid_entered(self, txt):
         print txt
         self._jobid = str(txt)
@@ -175,6 +179,7 @@ class ClusterDisplay(QGroupBox):
         self._submit_settings.set_section(SECTION_NAME_GENERAL)
         if not self._submit_settings.get2('constrain_positions'):
             positions = []
+
             for plate_id in self.imagecontainer.plates:
                 self.imagecontainer.set_plate(plate_id)
                 meta_data = self.imagecontainer.get_meta_data()
@@ -364,7 +369,8 @@ class ClusterDisplay(QGroupBox):
             self._table_info.setRowCount(len(mappable_paths))
             for idx, info in enumerate(mappable_paths):
                 value = self._settings.get(*info)
-                mapped = CecogEnvironment.map_path_to_os(value, target_os=OS_LINUX, force=False)
+                mapped = CecogEnvironment.map_path_to_os(
+                    value, target_os='linux', force=False)
                 self._submit_settings.set(info[0], info[1], mapped)
                 status = not mapped is None
                 item = QTableWidgetItem()
@@ -392,21 +398,23 @@ class ClusterFrame(BaseFrame):
 
     SECTION_NAME = SECTION_NAME_CLUSTER
 
-    def __init__(self, settings, parent, imagecontainer):
+    def __init__(self, settings, parent):
         super(ClusterFrame, self).__init__(settings, parent)
 
-        self._cluster_display = self._add_frame(imagecontainer)
+        self._cluster_display = self._add_frame()
         self.add_group(None,
                        [('position_granularity', (0,0,1,1)),
                         ], label='Cluster Settings')
 
-    def _add_frame(self, imagecontainer):
+    def _add_frame(self):
         frame = self._get_frame()
-        cluster_display = ClusterDisplay(frame, self._settings, imagecontainer)
-        frame.layout().addWidget(cluster_display,
-                                 frame._input_cnt, 0, 1, 2)
+        cluster_display = ClusterDisplay(frame, self._settings)
+        frame.layout().addWidget(cluster_display, frame._input_cnt, 0, 1, 2)
         frame._input_cnt += 1
         return cluster_display
 
     def page_changed(self):
         self._cluster_display.update_display(self._is_active)
+
+    def set_imagecontainer(self, imagecontainer):
+        self._cluster_display.imagecontainer = imagecontainer

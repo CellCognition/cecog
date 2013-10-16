@@ -28,8 +28,13 @@ def map_path_to_os(path, path_mappings, target_os=None):
     for mapping in path_mappings:
         for path_prefix in mapping.values():
             if path.find(path_prefix) == 0:
-                path_mapped = mapping[target_os] + os.sep + \
-                              path[len(path_prefix):]
+                try:
+                    path_mapped = mapping[target_os] + os.sep + \
+                        path[len(path_prefix):]
+                except KeyError:
+                    raise KeyError(("OS name is wrong.\nfile %s:\n%s\n"
+                                    "change path mappings file") \
+                                       %(str(mapping.keys()), target_os))
                 path_mapped = os.path.normpath(path_mapped)
                 found = True
                 break
