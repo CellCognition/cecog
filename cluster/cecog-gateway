@@ -3,18 +3,44 @@
 # 04/02/2013 Rudolf Hoefler
 #
 
-if [ -r $HOME/cellcognition ]; then
-    . $HOME/cellcognition
-    echo "configuration from $HOME/cellcognition"
-elif [ -r /etc/defaults/cellcogntion ]; then
-    . /etc/default/cellcognition
-    echo "configuration from /etc/defaults/cellcognition"
+#---------------------------------------------------------------------------
+# The following lines provide the necessary info for adding a startup script
+# according to the Linux Standard Base Specification (LSB) which can
+# be found at:
+#
+#    http://www.linuxfoundation.org/spec/booksets/LSB-Core-generic/LSB-Core-generic/initscrcomconv.html
+#
+### BEGIN INIT INFO
+# Provides:       cecog-gateway
+# Required-Start: $network $remote_fs
+# Required-Stop:
+# Default-Start:  2 3 4 5
+# Default-Stop: 0 1 6
+# Description:  start Cellcognition gateway
+### END INIT INFO
+#---------------------------------------------------------------------------
+
+RCFILE=cellcognition.haring
+
+if [ -r /etc/profile.d/modules.sh ]; then
+    . /etc/profile.d/modules.sh
+fi
+
+if [ -r ~cecog/.bashrc ]; then
+    . ~cecog/.bashrc
+fi
+
+if [ -r /home/imba/cecog/gateway/$RCFILE ]; then
+    . /home/imba/cecog/gateway/$RCFILE
+    echo "configuration from /home/imba/cecog/gateway/$RCFILE"
+elif [ -r /etc/defaults/$RCFILE ]; then
+    . /etc/default/$RCFILE
+    echo "configuration from /etc/defaults/$RCFILE"
 else
     echo "No gateway configuration found!"
     exit 1
 fi
 
-# start
 start() {
     echo "Starting gateway"
     echo $CMD
@@ -27,11 +53,12 @@ start() {
         --exec ${CMD} -- $GATEWAYOPTS
 }
 
-# stop
 stop() {
     echo "Stopping gateway"
     /sbin/start-stop-daemon --stop --pidfile ${PIDFILE} --verbose
-    rm -f ${PIDFILE}
+    if [ $? -eq 0 ]; then
+        rm -f ${PIDFILE}
+    fi
 }
 
 
@@ -50,4 +77,3 @@ case "$1" in
         *)
                 echo "Usage: $0 {start|stop|restart}"
 esac
-
