@@ -49,7 +49,7 @@ class CoreThread(QtCore.QThread):
         if not __debug__:
             ccore.turn_off()
             self._enable_eclipse_mt_debugging()
-
+        self._enable_eclipse_mt_debugging()
         try:
             self._run()
         except Exception, e:
@@ -64,7 +64,8 @@ class CoreThread(QtCore.QThread):
             logger = logging.getLogger()
             logger.error(msg)
             self.analyzer_error.emit(msg)
-            raise e
+            import sys
+            raise
 
     def abort(self, wait=False):
         self._mutex.lock()

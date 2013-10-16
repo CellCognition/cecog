@@ -713,7 +713,8 @@ class PositionAnalyzer(PositionCore):
 
     def clear(self):
         # closes hdf5
-        self.timeholder.close_all()
+        if self.timeholder is not None:
+            self.timeholder.close_all()
         # close and remove handlers from logging object
         self.close()
 

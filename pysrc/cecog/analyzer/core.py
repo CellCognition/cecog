@@ -208,12 +208,11 @@ class AnalyzerCore(AnalyzerBase):
                 if self.settings.get('Output', 'hdf5_create_file') and \
                     self.settings.get('Output', 'hdf5_merge_positions'):
                     hdf5_links.append(analyzer.hdf5_filename)
-
             except Exception as e:
-                import traceback
                 print e.message
+                import traceback, sys
                 traceback.print_exc()
-                raise(e)
+                raise
             finally:
                 analyzer.clear()
         return hdf5_links
