@@ -33,6 +33,9 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
+from cecog.colors import rgb2hex
+
+
 QRC_TOKEN = 'qrc:/'
 
 def message(icon, text, parent, info=None, detail=None, buttons=None,
@@ -183,7 +186,7 @@ def on_anchor_clicked(link):
         QDesktopServices.openUrl(link)
 
 def qcolor_to_hex(qcolor):
-    return rgb2hex((qcolor.red(), qcolor.green(), qcolor.blue()))
+    return rgb2hex((qcolor.red(), qcolor.green(), qcolor.blue()), mpl=False)
 
 def get_qcolor_hicontrast(qcolor, threshold=0.5):
     lightness = qcolor.lightnessF()

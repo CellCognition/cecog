@@ -41,6 +41,7 @@ import sys
 # multiprocessing-using-pool-map-on-a-function-defined-in-a-class
 def core_helper(plate_id, settings_str, imagecontainer, position,
                 version, redirect=True, debug=False):
+    try:
         from cecog.traits.settings import ConfigSettings
         from cecog.traits.analyzer import SECTION_REGISTRY
         settings = ConfigSettings(SECTION_REGISTRY)

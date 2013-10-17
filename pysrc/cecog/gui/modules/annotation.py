@@ -906,7 +906,7 @@ class AnnotationModule(Module):
         if state:
             color = \
                 QColor(*hex2rgb(self._learner.hexcolors[class_name]))
-            #color.setAlphaF(1.0)
+            # color.setAlphaF(1.0)
             label = self._learner.class_labels[class_name]
 #            item2 = QGraphicsEllipseItem(point.x(), point.y(), 3, 3,item)
 #            item2.setPen(QPen(color))

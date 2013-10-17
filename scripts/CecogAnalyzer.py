@@ -82,7 +82,7 @@ from cecog.gui.analyzer.errorcorrection import ErrorCorrectionFrame
 from cecog.gui.analyzer.eventselection import EventSelectionFrame
 from cecog.gui.analyzer.output import OutputFrame
 from cecog.gui.analyzer.processing import ProcessingFrame
-from cecog.gui.analyzer.cluster import ClusterFrame, SECTION_NAME_CLUSTER
+from cecog.gui.analyzer.cluster import ClusterFrame
 from cecog.gui.imagedialog import ImageDialog
 
 from cecog.gui.browser import Browser
