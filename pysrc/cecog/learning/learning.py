@@ -80,7 +80,7 @@ class BaseLearner(LoggerObject):
     @feature_names.setter
     def feature_names(self, feature_names):
         self._feature_names = feature_names
-        assert self._feature_names == feature_names
+        #assert self._feature_names == feature_names
 
     def delete_feature_names(self, indices):
         """Remove feature names given a list of indices."""

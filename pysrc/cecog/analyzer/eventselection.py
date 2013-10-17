@@ -212,7 +212,6 @@ class EventSelection(LoggerObject):
                                        level=level+1, found_splitid=found_splitid)
 
     def _forward_visitor(self, nodeid, results, visited_nodes, level=0):
-
         if self.graph.out_degree(nodeid) == 1 and self.graph.in_degree(nodeid) == 1:
             sample = self.graph.node_data(nodeid)
             successor = self.graph.node_data(
@@ -272,6 +271,7 @@ class EventSelection(LoggerObject):
         # record the full trajectory in a liniearized way
         base = results['_current']
         results['_full'][base].append(nodeid)
+
         depth = len(results['_full'][base])
 
         for i, out_edgeid in enumerate(self.graph.out_arcs(nodeid)):
