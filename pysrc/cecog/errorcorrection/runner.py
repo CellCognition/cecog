@@ -199,10 +199,13 @@ class PositionRunner(QtCore.QObject):
 
             self.interruption_point("plotting overview")
             report.overview(join(self._hmm_dir, '%s-%s.pdf' %(prefix, sby)))
+            report.close_figures()
 
             self.interruption_point("plotting bar- and boxplots")
             report.bars_and_boxes(join(self._hmm_dir, '%s-%s_boxbars.pdf'
                                        %(prefix, sby)))
+            report.close_figures()
+
 
             if self.ecopts.write_gallery:
                 self.interruption_point("plotting image gallery")
@@ -210,6 +213,7 @@ class PositionRunner(QtCore.QObject):
                                           %(prefix, sby)),
                                      self.ecopts.n_galleries)
 
+                report.close_figures()
             report.export_hmm(join(self._hmm_dir, "%s-hmm.csv" %channel), True)
 
 

@@ -94,6 +94,9 @@ class HmmReport(object):
         self.outdir = outdir
         self.classdef = classdef
 
+    def close_figures(self):
+        plt.close("all")
+
     def _empty_figure(self, axarr, name, i):
         for k in xrange(5):
             if k == 0:
@@ -293,5 +296,3 @@ class HmmReport(object):
                 writer.writerow(fields)
                 for line in zip(*tracks):
                     writer.writerow(line)
-
-
