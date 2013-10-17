@@ -93,7 +93,7 @@ class SectionGeneral(SectionCore):
 
 
         ('redofailedonly',
-            BooleanTrait(True, label='Skip processed positions')),
+            BooleanTrait(False, label='Skip processed positions')),
         ('framerange',
             BooleanTrait(False, label='Constrain timepoints')),
         ('framerange_begin',

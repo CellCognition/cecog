@@ -79,7 +79,6 @@ class CoreThread(QtCore.QThread):
         if not __debug__:
             ccore.turn_off()
             self._enable_eclipse_mt_debugging()
-
         try:
             self._run()
         except StopProcessing:
@@ -87,7 +86,6 @@ class CoreThread(QtCore.QThread):
         except Exception, e:
             msg = traceback.format_exc(e)
             traceback.print_exc(e)
-
             logger = logging.getLogger()
             logger.error(msg)
             self.analyzer_error.emit(msg)

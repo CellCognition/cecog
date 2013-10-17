@@ -82,7 +82,7 @@ from cecog.gui.analyzer.errorcorrection import ErrorCorrectionFrame
 from cecog.gui.analyzer.eventselection import EventSelectionFrame
 from cecog.gui.analyzer.output import OutputFrame
 from cecog.gui.analyzer.processing import ProcessingFrame
-from cecog.gui.analyzer.cluster import ClusterFrame
+from cecog.gui.analyzer.cluster import ClusterFrame, SECTION_NAME_CLUSTER
 from cecog.gui.imagedialog import ImageDialog
 
 from cecog.gui.browser import Browser
@@ -416,11 +416,6 @@ class CecogAnalyzer(QtGui.QMainWindow):
                                 "settings file again." % filename,
                          detail_tb=True)
             else:
-                # convert settings
-                if self.version > self._settings.get('General', 'version'):
-                    print 'print new version'
-
-
                 # set settings to not-changed (assume no changed since loaded from file)
                 self.settings_changed(False)
                 # notify tabs about new settings loaded
@@ -597,10 +592,10 @@ class CecogAnalyzer(QtGui.QMainWindow):
 
             # report problems about a mismatch between channel IDs found in the data and specified by the user
             if len(problems) > 0:
-                critical(self, "Selected channel IDs not valid",
-                         "The selected channel IDs for %s are not valid.\nValid IDs are %s." %
-                         (", ".join(["'%s Channel'" % s.capitalize() for s in problems]),
-                          ", ".join(["'%s'" % s for s in channels])))
+#                 critical(self, "Selected channel IDs not valid",
+#                          "The selected channel IDs for %s are not valid.\nValid IDs are %s." %
+#                          (", ".join(["'%s Channel'" % s.capitalize() for s in problems]),
+#                           ", ".join(["'%s'" % s for s in channels])))
                 # a mismatch between settings and data will cause changed settings
                 self.settings_changed(True)
 

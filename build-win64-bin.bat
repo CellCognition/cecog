@@ -27,7 +27,7 @@ CALL git describe --tags > build.info
 for /F "delims=\" %%a in (build.info) do (
 	set temp=%%a
 )
-SET mver="1.4.0"
+SET mver="1.5.0"
 pause
 
 makensis /Dmver=%mver% win-installer-64.nsi

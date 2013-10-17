@@ -15,19 +15,12 @@ __revision__ = '$Rev$'
 __source__ = '$URL$'
 
 import os
-from os.path import dirname, abspath, join
+from os.path import join, isdir, normpath
 import sys
 
-import pyamf
 import drmaa
 
-#FIXME - remove all CECOG PYTHONPATHS from bash profiles!
-cecog_root = dirname(abspath(__file__)).split(os.sep)[:-1]
-cecog_root = join(os.sep.join(cecog_root), "pysrc")
-sys.path.append(cecog_root)
-
 from cecog.util.util import makedirs
-import cecog.batch
 from cecog import (VERSION,
                    JOB_CONTROL_RESUME,
                    JOB_CONTROL_SUSPEND,
@@ -54,8 +47,8 @@ DRMAA_CONTROL_ACTIONS = {
     JOB_CONTROL_TERMINATE : drmaa.JobControlAction.TERMINATE,
     }
 
-CECOG_VERSIONS_PATH = '/clusterfs/gerlich/cecog_versions'
-CECOG_DEFAULT_VERSION = '1.4.0'
+CECOG_VERSIONS_PATH = os.environ['CECOG_VERSIONS']
+CECOG_DEFAULT_VERSION = VERSION
 
 def parse_args(args):
     """Parse commandline options."""
@@ -72,39 +65,36 @@ def parse_args(args):
 def cecog_job_template(jt, path_out, args, emails, version, batch_size=1,
                        is_bulk_job=False):
 
-    job_name = 'cecog_batch_analyzer'
-    env_variables = ['PATH', 'LD_LIBRARY_PATH']
-
-    base_path = os.path.join(CECOG_VERSIONS_PATH, version)
-    batch_path = os.path.join(base_path, 'pysrc', 'cecog', 'batch')
-
-    jt.jobName = job_name
-    jt.workingDirectory = batch_path
-    print jt.workingDirectory
+    job_name = 'CellCognition'
+    base_path = join(CECOG_VERSIONS_PATH, version)
+    batchpy = join(base_path, 'bin', 'cecog_batch.py')
 
     # I want the almost the same environment as for the gateway!
+    pypath = join(base_path, 'lib', 'python2.7', 'site-packages')
     if os.environ.has_key('PYTHONPATH'):
-        os.environ["PYTHONPATH"] = os.path.join(base_path, "pysrc")+os.pathsep+ \
-            os.environ["PYTHONPATH"]
+        os.environ["PYTHONPATH"] = pypath+os.pathsep+os.environ["PYTHONPATH"]
     else:
-        os.putenv("PYTHONPATH", os.path.join(base_path, "pysrc"))
+        os.putenv("PYTHONPATH", pypath)
 
+    jt.jobName = job_name
+    jt.workingDirectory = os.environ['HOME']
+    print jt.workingDirectory
+
+    pybin = 'python'
     if os.environ.has_key('PYTHON_BIN'):
-	pybin = os.environ['PYTHON_BIN']
-    else:
-	pybin = 'python'
+        pybin = os.environ['PYTHON_BIN']
 
     jt.jobEnvironment = os.environ
     print jt.jobEnvironment
     jt.remoteCommand = pybin
     print jt.remoteCommand
-    jt.args = ['cecog_batch.py'] + args
+    jt.args = [batchpy] + args
     jt.joinFiles = True
 
     jt.email = emails
-    jt.nativeSpecification = '-m bea -q gerlich.q -P cellcognition'
+    jt.nativeSpecification = os.environ['JOB_PARAMS']
 
-    path_out_cluster = os.path.join(path_out, 'log_cluster')
+    path_out_cluster = join(path_out, 'log_cluster')
     makedirs(path_out_cluster)
     path_out_cluster = ':' + path_out_cluster
     if is_bulk_job:
@@ -130,11 +120,10 @@ class ClusterControl(object):
                    batch_size=1, version=CECOG_DEFAULT_VERSION):
         path_out = str(path_out.replace('\\', '/'))
         settings = settings.replace('\\', '/')
-        path_out = os.path.normpath(path_out)
-        path_out_settings = os.path.join(path_out, 'settings')
+        path_out = normpath(path_out)
+        path_out_settings = join(path_out, 'settings')
         makedirs(path_out_settings)
-        filename_settings = os.path.join(path_out_settings,
-                                         'cecog_settings.conf')
+        filename_settings = join(path_out_settings, 'cecog_settings.conf')
 
         f = file(filename_settings, 'w')
         f.write(settings)
@@ -187,7 +176,7 @@ class ClusterControl(object):
     def get_cecog_versions(self):
         """Returns a list of supported cecog versions."""
         names = [n for n in os.listdir(CECOG_VERSIONS_PATH)
-                 if os.path.isdir(os.path.join(CECOG_VERSIONS_PATH, n))]
+                 if isdir(join(CECOG_VERSIONS_PATH, n))]
         return sorted(names)
 
     def _check_jobid(self, job_id):
@@ -198,7 +187,7 @@ class ClusterControl(object):
 if __name__ == '__main__':
     from pyamf.remoting.gateway.wsgi import WSGIGateway
     from wsgiref import simple_server
-
+    
     options = parse_args(sys.argv[1:])[0]
     service = {'clustercontrol': ClusterControl()}
 

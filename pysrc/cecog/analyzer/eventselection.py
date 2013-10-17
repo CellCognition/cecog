@@ -308,7 +308,6 @@ class EventSelection(EventSelectionCore):
                                        level=level+1, found_splitid=found_splitid)
 
 class UnsupervisedEventSelection(EventSelectionCore):
-
     def __init__(self, graph, transitions, forward_range, backward_range,
                  forward_labels, backward_labels, forward_check,
                  backward_check, num_clusters, min_cluster_size,

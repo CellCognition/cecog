@@ -15,15 +15,10 @@ __revision__ = '$Rev$'
 __source__ = '$URL$'
 
 import os
+import sys
 import bz2
 import gzip
 import types
-
-from pdk.platform import is_linux, is_mac, is_windows
-
-OS_WINDOWS = 'windows'
-OS_MAC = 'mac'
-OS_LINUX = 'linux'
 
 def makedirs(path):
     """Recursively make directory if path doesn't already exist.
@@ -105,14 +100,12 @@ def yesno(state):
     return 'yes' if state else 'no'
 
 def resolve_os_name():
-    os_str = None
-    if is_windows:
-        os_str = OS_WINDOWS
-    elif is_mac:
-        os_str = OS_MAC
-    elif is_linux:
-        os_str = OS_LINUX
-    return os_str
+    if sys.platform.startswith("win"):
+        return 'windows'
+    elif sys.platform.startswith("darwin"):
+        return 'mac'
+    elif sys.platform.startswith('linux'):
+        return 'linux'
 
 def print_memory_increase(func):
     try:

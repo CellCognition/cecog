@@ -118,6 +118,7 @@ class ProcessingFrame(BaseProcessorFrame):
 
     @classmethod
     def get_export_settings(cls, settings, has_timelapse=True):
+                
         settings = BaseProcessorFrame.get_special_settings(settings, has_timelapse)
 
         settings.set('General', 'version', VERSION)

@@ -354,8 +354,8 @@ class TertiaryChannel(Channel):
 # This channel is 'virtual'
 class MergedChannel(ChannelCore):
     """
-    Virtal or PseudoChannel which is meant to concatenate features of
-    other channels. It cannot perform an segmentation or ohter operation
+    Virtual or PseudoChannel which is meant to concatenate features of
+    other channels. It cannot perform an segmentation or other operation
     on images.
     """
 
