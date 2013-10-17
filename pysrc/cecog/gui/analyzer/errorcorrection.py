@@ -34,7 +34,8 @@ class ErrorCorrectionFrame(BaseProcessorFrame):
             ('start error correction', 'stop error correction'))
         self.register_control_button( \
             'pyhmm', PyHmmThread,
-            ('start py-error correction', 'stop py-error correction'))
+            ('start py-error correction (experimental)',
+             'stop py-error correction'))
 
         self.add_input('filename_to_r')
         self.add_line()
