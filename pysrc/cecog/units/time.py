@@ -16,8 +16,8 @@ import datetime
 
 def seconds2datetime(seconds):
     secs = int(seconds % 60)
-    minutes = int((seconds/60) % 60)
-    hours = int((seconds/3600) % 24)
+    minutes = int(((seconds - secs)/60) % 60)
+    hours = int((seconds - minutes*60 - secs)/3600)
     return datetime.time(hour=hours, minute=minutes, second=secs)
 
 

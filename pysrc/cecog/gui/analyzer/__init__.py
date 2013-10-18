@@ -577,7 +577,7 @@ class _ProcessorMixin(object):
                         interval = info['interval']
                         self._intervals.append(interval)
                         avg = numpy.average(self._intervals)
-                        estimate = seconds2datetime(avg*info['max']-info['progress'])
+                        estimate = seconds2datetime(avg*float(info['max']-info['progress']))
                         msg += '%s~ %.1fs / %s%s%s remaining' % (sep,
                                                                  avg,
                                                                  info['item_name'],
@@ -606,8 +606,8 @@ class _ProcessorMixin(object):
                     if current > 1 and ('interval' in info.keys()):
                         interval = info['interval']
                         self._intervals.append(interval)
-                        estimate = seconds2datetime(numpy.average(self._intervals) *
-                                                    total-current)
+                        estimate = seconds2datetime(
+                            numpy.average(self._intervals)*float(total-current))
                         msg += '%s%.1fs / %s%s%s remaining' % (sep,
                                                                interval,
                                                                self._stage_infos[2]['item_name'],
