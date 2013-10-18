@@ -21,7 +21,7 @@ from multiprocessing import Pool, cpu_count
 
 from PyQt4 import QtCore
 
-from pdk.datetimeutils import StopWatch
+from cecog.util.stopwatch import StopWatch
 import cecog
 from cecog import ccore
 from cecog.threads.link_hdf import link_hdf5_files
@@ -68,7 +68,7 @@ class ProcessCallback(object):
         self.ncpu = None
         self.cnt = 0
         self.job_count = None
-        self._timer = StopWatch()
+        self._timer = StopWatch(start=True)
 
     def notify_execution(self, job_list, ncpu):
         self.job_count = len(job_list)
@@ -91,10 +91,10 @@ class ProcessCallback(object):
                       'stage': 0,
                       'min': 0,
                       'item_name': 'position',
-                      'interval': self._timer.current_interval(),
+                      'interval': self._timer.interim(),
                       'max': self.job_count}
         self.parent.update_status(stage_info)
-        self._timer.reset()
+        self._timer.reset(start=True)
         return plate, pos, hdf_files
 
 class MultiProcessingMixin(object):

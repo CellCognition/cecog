@@ -16,6 +16,7 @@ __url__ = 'www.cellcognition.org'
 import time
 from collections import OrderedDict
 
+
 class StopWatch(object):
     """StopWatch holds the start time, interims and end total time."""
 

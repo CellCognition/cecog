@@ -11,60 +11,12 @@
 
 __all__ = ['PluginManager', '_Plugin']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-import os, logging
-from functools import wraps
+import logging
+from collections import OrderedDict
 
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-from pdk.datetimeutils import StopWatch
-from pdk.ordereddict import OrderedDict
-
-#-------------------------------------------------------------------------------
-# cecog module imports:
-#
 from cecog import PLUGIN_MANAGERS
 from cecog.gui.guitraits import SelectionTrait2
-
-#-------------------------------------------------------------------------------
-# constants:
-#
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-#-------------------------------------------------------------------------------
-# classes:
-#
-class stopwatch(object):
-    """
-    Decorator wrapping methods (e.g. of class _Plugin) by measuring its
-    execution time and reporting to a logger. The instance requires a 'name'
-    attribute, e.g. the name of the current plugin instance
-    """
-
-    def __init__(self, level=logging.DEBUG):
-        self._level = level
-
-    def __call__(self, method):
-        @wraps(method)
-        def wrapped_f(*args, **options):
-            _self = args[0]
-            fname = method.__name__
-            class_name = _self.__class__.__name__
-            name = _self.name
-            s = StopWatch()
-            logger = logging.getLogger()
-            logger.log(self._level, '%s[%s].%s - start' % (class_name, name, fname))
-            result = method(*args, **options)
-            logger.log(self._level, '%s[%s].%s - finished in %s' % (class_name, name, fname, s))
-            return result
-        return wrapped_f
-
+from cecog.util.decorator import stopwatch
 
 class PluginManager(object):
 

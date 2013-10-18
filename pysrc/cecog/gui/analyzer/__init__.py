@@ -23,12 +23,12 @@ import types
 import os
 import numpy
 
+
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
 from collections import OrderedDict
-from pdk.datetimeutils import TimeInterval
 from multiprocessing import cpu_count
 
 from cecog import CHANNEL_PREFIX
@@ -37,14 +37,13 @@ from cecog.learning.learning import CommonClassPredictor
 from cecog.learning.learning import ConfusionMatrix
 
 from cecog.util.util import write_table
-
+from cecog.units.time import seconds2datetime
 
 from cecog.gui.util import (question,
                             critical,
                             information,
                             status,
-                            waitingProgressDialog,
-                            )
+                            waitingProgressDialog)
 
 from cecog.analyzer import CONTROL_1, CONTROL_2
 from cecog.analyzer.channel import PrimaryChannel
@@ -578,13 +577,12 @@ class _ProcessorMixin(object):
                         interval = info['interval']
                         self._intervals.append(interval)
                         avg = numpy.average(self._intervals)
-                        estimate = TimeInterval(avg * float(info['max']-info['progress']))
+                        estimate = seconds2datetime(avg*info['max']-info['progress'])
                         msg += '%s~ %.1fs / %s%s%s remaining' % (sep,
-                                                               #interval.get_interval(),
-                                                               avg,
-                                                               info['item_name'],
-                                                               sep,
-                                                               estimate.format())
+                                                                 avg,
+                                                                 info['item_name'],
+                                                                 sep,
+                                                                 estimate.strftime("%H:%M:%S"))
                     else:
                         self._intervals = []
                     status(msg)
@@ -608,13 +606,13 @@ class _ProcessorMixin(object):
                     if current > 1 and ('interval' in info.keys()):
                         interval = info['interval']
                         self._intervals.append(interval)
-                        estimate = TimeInterval(numpy.average(self._intervals) *
-                                                float(total-current))
+                        estimate = seconds2datetime(numpy.average(self._intervals) *
+                                                    total-current)
                         msg += '%s%.1fs / %s%s%s remaining' % (sep,
                                                                interval,
                                                                self._stage_infos[2]['item_name'],
                                                                sep,
-                                                               estimate.format())
+                                                               estimate.strftime("%H:%M:%S"))
                     else:
                         self._intervals = []
                     status(msg)

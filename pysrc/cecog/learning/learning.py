@@ -394,10 +394,10 @@ class CommonClassPredictor(BaseLearner):
         return False
 
     def loadClassifier(self, model_prefix="features"):
-        self.classifier = Classifier(self.data_dir, self.logger,
-                                     strSvmPrefix=model_prefix,
-                                     hasZeroInsert=self.has_zero_insert)
-        self.bProbability = self.classifier.bProbability
+        self.classifier = Classifier(self.data_dir,
+                                     svm_prefix=model_prefix,
+                                     has_zero_insert=self.has_zero_insert)
+        self.bProbability = self.classifier.probability
 
     def predict(self, aFeatureData, feature_names):
         # ensurse to get the right fearues in the right order

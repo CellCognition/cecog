@@ -17,12 +17,9 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
-from pdk.ordereddict import OrderedDict
-
+from collections import OrderedDict
 from cecog.gui.display import TraitDisplayMixin
-from cecog.gui.widgets.collapsible import CollapsibleFrame
-from cecog.gui.widgets.tabcontrol import TAB_STYLE
-from cecog.gui.util import question, warning, load_qrc_text, show_html
+from cecog.gui.util import question, load_qrc_text, show_html
 
 
 class PluginParamFrame(TraitDisplayMixin):

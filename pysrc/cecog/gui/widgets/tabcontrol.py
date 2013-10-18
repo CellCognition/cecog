@@ -16,27 +16,14 @@ __source__ = '$URL: $'
 
 __all__ = ['TabControl']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
 import functools
 
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
-from pdk.ordereddict import OrderedDict
+from collections import OrderedDict
 
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
-
-#-------------------------------------------------------------------------------
-# constants:
-#
 TAB_STYLE = \
 '''
     QPushButton#tab {
@@ -56,13 +43,6 @@ TAB_STYLE = \
     }
 '''
 
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 class TabControl(QFrame):
     """General tab control: list of buttons at the top and stacked widget below"""
 
@@ -127,7 +107,7 @@ class TabControl(QFrame):
             btn.setChecked(True)
         self._stacked_frame.setCurrentWidget(scroll_area)
         self._current_name = name
-        self.current_changed.emit(self._tabs.index(name))
+        self.current_changed.emit(self._tabs.keys().index(name))
 
     def set_active_index(self, index):
         name = self._tabs.keys()[index]
@@ -151,8 +131,4 @@ class TabControl(QFrame):
 
     @property
     def current_index(self):
-        return self._tabs.index(self._current_name)
-
-#-------------------------------------------------------------------------------
-# main:
-#
+        return self._tabs.keys().index(self._current_name)

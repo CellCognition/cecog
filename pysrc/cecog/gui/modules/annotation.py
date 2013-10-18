@@ -29,9 +29,8 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
-from pdk.datetimeutils import StopWatch
-from pdk.ordereddict import OrderedDict
-from pdk.fileutils import safe_mkdirs
+from collections import OrderedDict
+from cecog.util.util import makedirs
 
 from cecog import ccore
 from cecog.gui.util import (exception,
@@ -39,8 +38,7 @@ from cecog.gui.util import (exception,
                             question,
                             warning,
                             get_qcolor_hicontrast,
-                            qcolor_to_hex,
-                            )
+                            qcolor_to_hex)
 from cecog.gui.imageviewer import ImageViewer
 from cecog.gui.analyzer import _ProcessorMixin
 from cecog.analyzer.channel import (PrimaryChannel,
@@ -741,7 +739,7 @@ class AnnotationModule(Module):
                                  os.path.splitext(f)[1].lower() == '.xml']
                     fmt = time.strftime('_backup__%Y%m%d_%H%M%S')
                     path_backup = os.path.join(path2, fmt)
-                    safe_mkdirs(path_backup)
+                    makedirs(path_backup)
                     for filename in filenames:
                         shutil.copy2(filename, path_backup)
                         os.remove(filename)

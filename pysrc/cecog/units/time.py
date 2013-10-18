@@ -12,6 +12,14 @@ __url__ = 'www.cellcognition.org'
 
 __all__ = ["TimeConverter"]
 
+import datetime
+
+def seconds2datetime(seconds):
+    secs = int(seconds % 60)
+    minutes = int((seconds/60) % 60)
+    hours = int((seconds/3600) % 24)
+    return datetime.time(hour=hours, minute=minutes, second=secs)
+
 
 class TimeConverter(object):
     """Convert time units from frames to minutes or seconds and vice versa."""

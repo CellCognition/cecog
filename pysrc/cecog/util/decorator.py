@@ -11,46 +11,44 @@
 
 __all__ = ['stopwatch']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
 import logging
+from functools import wraps
+from cecog.util.stopwatch import StopWatch
 
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-from pdk.datetimeutils import StopWatch
+# def stopwatch(f):
+#     """Simple decorator wrapping a function by measuring its execution time
+#     and print result to a logger instance.
+#     """
+#     def wrap(*args, **options):
+#         fname = f.__name__
+#         sw = StopWatch(start=True)
+#         logger = logging.getLogger()
+#         logger.debug('%s start' % fname)
+#         result = f(*args, **options)
+#         logger.debug('%s finished: %s' % (fname, sw.stop()))
+#         return result
+#     return wrap
 
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 
-#-------------------------------------------------------------------------------
-# constants:
-#
+class stopwatch(object):
+    """Decorator class for measuring the execution time of methods."""
 
-#-------------------------------------------------------------------------------
-# functions:
-#
-def stopwatch(f):
-    """
-    Simple decorator wrapping a function by measuring its execution time and reporting to a logger
-    """
-    def wrap(*args, **options):
-        fname = f.__name__
-        s = StopWatch()
-        logger = logging.getLogger()
-        logger.debug('%s start' % fname)
-        result = f(*args, **options)
-        logger.debug('%s finished: %s' % (fname, s))
-        return result
-    return wrap
+    def __init__(self, level=logging.DEBUG):
+        self._level = level
 
-#-------------------------------------------------------------------------------
-# classes:
-#
-
-#-------------------------------------------------------------------------------
-# main:
-#
-
+    def __call__(self, method):
+        @wraps(method)
+        def wrapped_f(*args, **options):
+            _self = args[0]
+            fname = method.__name__
+            class_name = _self.__class__.__name__
+            name = _self.name
+            sw = StopWatch(start=True)
+            logger = logging.getLogger()
+            logger.log(self._level, '%s[%s].%s - start'
+                       %(class_name, name, fname))
+            result = method(*args, **options)
+            logger.log(self._level, '%s[%s].%s - finished in %s'
+                       %(class_name, name, fname, sw.stop()))
+            return result
+        return wrapped_f
