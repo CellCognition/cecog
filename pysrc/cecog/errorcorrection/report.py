@@ -279,15 +279,18 @@ class HmmReport(object):
             if align_in_lines:
                 writer = csv.writer(fp, delimiter=",")
                 for name, bucket in self.data.iteritems():
+                    if bucket is None:
+                        continue
                     for fname, hmm_labels in bucket.iter_gallery():
                         writer.writerow([basename(splitext(fname)[0])] + \
                                             hmm_labels.tolist())
-
             # transpose lines and columns
             else:
                 fields = []
                 tracks = []
                 for name, bucket in self.data.iteritems():
+                    if bucket is None:
+                        continue
                     for fname, hmm_labels in bucket.iter_gallery():
                         fields.append(basename(splitext(fname)[0]))
                         tracks.append(hmm_labels)

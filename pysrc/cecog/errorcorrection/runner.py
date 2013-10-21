@@ -84,8 +84,8 @@ class PositionRunner(QtCore.QObject):
             self.positions = self._listdirs(self._analyzed_dir)
 
     def _listdirs(self, path):
-        return [x for x in os.listdir(path)
-                if isdir(join(path, x)) and not x.startswith('_')]
+        return sorted([x for x in os.listdir(path)
+                       if isdir(join(path, x)) and not x.startswith('_')])
 
     def _makedirs(self):
         """Create/setup output directories.
@@ -120,7 +120,6 @@ class PositionRunner(QtCore.QObject):
             dtable.add_position(pos, mappings[pos])
             files = glob.glob(join(self._analyzed_dir, pos, 'statistics',
                                    'events')+os.sep+"*.txt")
-
             progress = ProgressMsg(max=len(files),
                                    meta="loading plate: %s, position:%s, (%d/%d)"
                                    %(self.plate, pos, pi+1, len(self.positions)))
@@ -165,8 +164,9 @@ class PositionRunner(QtCore.QObject):
                         dtable.add_track(labels, probs, pos, mappings[pos],
                                          gfile)
 
-            if dtable.is_empty():
-                raise RuntimeError("No data found for channel '%s'" %channel)
+        if dtable.is_empty():
+            raise RuntimeError("No data found for position '%s' and channel '%s' "
+                               %(self.plate, channel))
 
         return dtable
 
