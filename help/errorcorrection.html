@@ -18,10 +18,15 @@
       constraints to the HMM to model e.g. mitotic progression or
       prohibit a transition from an apoptotic cell to any other
       state.<br><br>
-
-      <br><br>
-      It is important to note that the error correction depends <b>not</b> on the type of the event selection. Those types are supervised and unsupervised methods. The HMM estimates in both cases its model parameters using the
-<img class="extlink" src=":extlink"/><a href="http://en.wikipedia.org/wiki/Baum%E2%80%93Welch_algorithm">Baum-Welch algorithm</a>. The only difference lies in the estimation of the initial-/ or start parameters of the Baum-Welch algorithm. The supervised method (support vector machine) provides prediction probabilities that are used to estimate the initial parameters. In the unsupervised case (TC3 and Gaussian Mixture Models), the initial parameters are simply estimated by counting the transitions.
+      It is important to note that the error correction depends <b>not</b> on
+      the type of the event selection. Those types are supervised and
+      unsupervised methods. The HMM estimates in both cases its model
+      parameters using the
+      <img class="extlink"src=":extlink"/>
+      <a href="http://en.wikipedia.org/wiki/Baum%E2%80%93Welch_algorithm">
+        Baum-Welch algorithm</a>.
+      The only difference lies in the estimation of the initial-/ or
+      start parameters of the Baum-Welch algorithm. The supervised method (support vector machine) provides prediction probabilities that are used to estimate the initial parameters. In the unsupervised case (TC3 and Gaussian Mixture Models), the initial parameters are simply estimated by counting the transitions.
       <br><br>
       The error correction creates a sub folder called in the <tt>analysis</tt> folder, where the output is saved.
     </p>
@@ -30,24 +35,7 @@
       and experimental information such as <i>Oligo-Id</i> or the name
       of the targeted <i>Gene Symbol</i> can be defined in a
       simple <a href="#position_labels">text file</a>.
-      <br><br>
-      It is important to note that the error correction
-      depends <b>not</b> on the type of the event selection. Those
-      types are supervised and unsupervised methods. The HMM estimates
-      in both cases its model parameters using the <img class="extlink"
-      src=":extlink"/>
-      <a href="http://en.wikipedia.org/wiki/Baum%E2%80%93Welch_algorithm">Baum-Welch
-        algorithm</a>. The only difference lies in the estimation of the
-      initial-/ or start parameters of the Baum-Welch algorithm. The
-      supervised method (support vector machine) provides prediction
-      probabilities that are used to estimate the initial
-      parameters. In the unsupervised case (TC3 and Gaussian Mixture
-      Models), the initial parameters are simply estimated by counting
-      the transitions.
-      <br><br>
-      The error correction creates a sub folder called in
-      the <tt>analysis</tt> folder, where the output is saved.
-    </p>
+         </p>
 
     <h3>Parameters</h3>
     <a name="channels">
