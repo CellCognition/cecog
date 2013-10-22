@@ -15,6 +15,7 @@ __all__ = ['PlateMapping', 'PositionRunner', 'PlateRunner']
 
 import os
 import glob
+import traceback
 import numpy as np
 
 from os.path import join, isfile, isdir, basename
@@ -209,11 +210,18 @@ class PositionRunner(QtCore.QObject):
 
             if self.ecopts.write_gallery:
                 self.interruption_point("plotting image gallery")
-                report.image_gallery(join(self._hmm_dir, '%s-%s_gallery.pdf'
-                                          %(prefix, sby)),
-                                     self.ecopts.n_galleries)
+                try:
+                    report.image_gallery(join(self._hmm_dir, '%s-%s_gallery.pdf'
+                                              %(prefix, sby)),
+                                         self.ecopts.n_galleries)
 
-                report.close_figures()
+                    report.close_figures()
+                # don't stopp error correcetion if no gallery images are found
+                except Exception as e:
+                    with open(join(self._hmm_dir, '%s-%s_error_readme.txt'
+                                   %(prefix, sby)), 'w') as fp:
+                        traceback.print_exc(file=fp)
+                        fp.write("Check if gallery images exist!")
             report.export_hmm(join(self._hmm_dir, "%s-hmm.csv" %channel), True)
 
 
