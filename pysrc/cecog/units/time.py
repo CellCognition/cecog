@@ -20,7 +20,6 @@ def seconds2datetime(seconds):
     hours = int((seconds - minutes*60 - secs)/3600)
     return datetime.time(hour=hours, minute=minutes, second=secs)
 
-
 class TimeConverter(object):
     """Convert time units from frames to minutes or seconds and vice versa."""
 
