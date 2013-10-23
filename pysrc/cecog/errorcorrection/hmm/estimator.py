@@ -42,6 +42,7 @@ class HMMSimpleLeft2RightConstraint(object):
         self.emis= np.eye(nstates)
         self.start = np.ones(nstates, dtype=float)/nstates
 
+
 class HMMSimpleConstraint(object):
     """Simple Constraint for Hidden Markov Models
 
@@ -82,6 +83,7 @@ class HMMConstraint(object):
         schema_doc =  lxml.etree.parse(schemafile)
         return lxml.etree.XMLSchema(schema_doc).assertValid(xml)
 
+
 class HMMEstimator(object):
     """Setup a (naive) default hidden markov (left-to-right model)
 
@@ -108,6 +110,7 @@ class HMMEstimator(object):
         self._estimate_emis()
         self._estimate_startprob()
 
+
     def _estimate_trans(self):
         self._trans = 0.9*np.eye(self.nstates)
         for i, row in enumerate(self.trans):
@@ -116,8 +119,12 @@ class HMMEstimator(object):
             except IndexError:
                 row[0] = 0.1
 
+    @property
+    def _emission_noise(self):
+        return 0.05
+
     def _estimate_emis(self):
-        self._emis = np.eye(self.nstates) + 0.05
+        self._emis = np.eye(self.nstates) + self._emission_noise
 
     def _estimate_startprob(self):
         self._startprob = np.zeros(self.nstates)
@@ -140,15 +147,23 @@ class HMMEstimator(object):
         self._startprob = normalize(hmmc.start*self._startprob, eps=0.0)
         self._emis = normalize(hmmc.emis*self._emis, axis=1, eps=0.0)
 
+
 class HMMProbBasedEsitmator(HMMEstimator):
     """Estimate a hidden markov model from using the prediction
     probabilities from an arbitrary classifier.
     """
 
+    # number of frames to consider as noise
+    N_NOISE_FRAMES = 2.0
+
     def __init__(self, probs):
         self._probs = probs
         nstates = probs.shape[-1]
         super(HMMProbBasedEsitmator, self).__init__(nstates)
+
+    @property
+    def _emission_noise(self):
+        return self.N_NOISE_FRAMES/self._probs.shape[1]
 
     def _estimate_trans(self):
         super(HMMProbBasedEsitmator, self)._estimate_trans()
@@ -173,10 +188,17 @@ class HMMProbBasedEsitmator(HMMEstimator):
 
 class HMMTransitionCountEstimator(HMMEstimator):
 
+    # number of frames to consider as noise
+    N_NOISE_FRAMES = 2.0
+
     def __init__(self, tracks, states):
         self._tracks = tracks
         self._states = states
         super(HMMTransitionCountEstimator, self).__init__(states.size)
+
+    @property
+    def _emission_noise(self):
+        return self.N_NOISE_FRAMES/self._tracks.shape[1]
 
     def _estimate_trans(self):
         """Estimates the transition probaility by counting."""
