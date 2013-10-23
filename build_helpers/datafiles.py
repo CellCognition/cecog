@@ -54,7 +54,10 @@ EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
             'Tkinter',
             'zmq']
 
-CC_INCLUDES = ['csrc/include'] + numpy.distutils.misc_util.get_numpy_include_dirs()
+CC_INCLUDES = ['csrc/include'] + \
+    numpy.distutils.misc_util.get_numpy_include_dirs()
+
+
 
 def get_data_files(target_dir=TARGET_BUNDLE, mpl_data=True):
     """Pack data files into list of (target-dir, list-of-files)-tuples"""
@@ -67,6 +70,10 @@ def get_data_files(target_dir=TARGET_BUNDLE, mpl_data=True):
     dfiles.append((target_dir, _rsc))
     dfiles.append((join(target_dir, 'rsrc', 'hmm'), _rfiles))
     dfiles.append((paltarget, glob.glob(join(abspath(_palettes), '*.zip'))))
+    # schema files
+    dfiles.append((join(target_dir, 'schemas'),
+                   glob.glob(join(RESOURCE_DIR, 'schemas', "*.xsd"))))
+
 
     for root, subdirs, files in os.walk(_battery_package):
         for file_ in files:

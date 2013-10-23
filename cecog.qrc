@@ -13,8 +13,10 @@
         <file>help/output.html</file>
         <file>help/processing.html</file>
         <file>help/tracking.html</file>
+        <file>help/eventselection.html</file>
         <file>help/_startup.html</file>
         <file>help/general.html</file>
+        <file>help/hmm_constraints.html</file>
         <file>help/help.css</file>
         <file>help/_header.html</file>
         <file>help/_footer.html</file>
@@ -22,6 +24,7 @@
         <file alias="cecog_workflow">resources/workflow-01.png</file>
         <file alias="cecog_workflow_kinetic">resources/workflow_kinetic-01.png</file>
         <file alias="extlink">resources/extlink.png</file>
+        <file alias="umes">resources/umes.png</file>
         <file alias="plugins/segmentation/expanded">resources/plugins/segmentation/segmentation_expanded.png</file>
         <file alias="plugins/segmentation/local_adaptive_threshold">resources/plugins/segmentation/local_adaptive_threshold.html</file>
     </qresource>

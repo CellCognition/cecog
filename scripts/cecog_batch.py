@@ -19,6 +19,9 @@ import os
 import sys
 import logging
 
+import matplotlib
+matplotlib.use("Agg")
+
 try:
     import cecog
 except ImportError:
@@ -101,6 +104,8 @@ if __name__ ==  "__main__":
 
     if options.settings is None:
         parser.error('Settings filename required.')
+
+    environ = CecogEnvironment(cecog.VERSION, redirect=False, debug=False)
 
     filename_settings = os.path.abspath(options.settings)
 

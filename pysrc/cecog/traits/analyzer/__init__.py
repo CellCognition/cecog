@@ -16,17 +16,6 @@ __source__ = '$URL$'
 
 __all__ = ['SECTION_REGISTRY']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
 from cecog.traits.config import SectionRegistry
 from cecog.traits.analyzer.general import SectionGeneral
 from cecog.traits.analyzer.objectdetection import SectionObjectdetection
@@ -38,23 +27,22 @@ from cecog.traits.analyzer.output import SectionOutput
 from cecog.traits.analyzer.processing import SectionProcessing
 from cecog.traits.analyzer.cluster import SectionCluster
 from cecog.traits.analyzer.postprocessing import SectionPostProcessing
+from cecog.traits.analyzer.eventselection import SectionEventSelection
 
 from cecog.extensions.graphLib import Graph
 
-#-------------------------------------------------------------------------------
-# constants:
-#
 SECTION_REGISTRY = SectionRegistry()
-SECTION_REGISTRY.register_section(SectionGeneral())
-SECTION_REGISTRY.register_section(SectionObjectdetection())
-SECTION_REGISTRY.register_section(SectionFeatureExtraction())
-SECTION_REGISTRY.register_section(SectionClassification())
-SECTION_REGISTRY.register_section(SectionTracking())
-SECTION_REGISTRY.register_section(SectionErrorcorrection())
-SECTION_REGISTRY.register_section(SectionPostProcessing())
-SECTION_REGISTRY.register_section(SectionOutput())
-SECTION_REGISTRY.register_section(SectionProcessing())
-SECTION_REGISTRY.register_section(SectionCluster())
+SECTION_REGISTRY.add(SectionGeneral())
+SECTION_REGISTRY.add(SectionObjectdetection())
+SECTION_REGISTRY.add(SectionFeatureExtraction())
+SECTION_REGISTRY.add(SectionClassification())
+SECTION_REGISTRY.add(SectionTracking())
+SECTION_REGISTRY.add(SectionEventSelection())
+SECTION_REGISTRY.add(SectionErrorcorrection())
+SECTION_REGISTRY.add(SectionPostProcessing())
+SECTION_REGISTRY.add(SectionOutput())
+SECTION_REGISTRY.add(SectionProcessing())
+SECTION_REGISTRY.add(SectionCluster())
 
 class UpdateDependency(object):
 

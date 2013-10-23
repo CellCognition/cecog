@@ -16,39 +16,12 @@ __source__ = '$URL$'
 
 __all__ = ['OutputFrame']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
-from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
 from cecog.gui.analyzer import BaseFrame
 
-#-------------------------------------------------------------------------------
-# constants:
-#
-
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 class OutputFrame(BaseFrame):
 
-    SECTION_NAME = SECTION_NAME_OUTPUT
-
-    def __init__(self, settings, parent):
-        super(OutputFrame, self).__init__(settings, parent)
+    def __init__(self, settings, parent, name):
+        super(OutputFrame, self).__init__(settings, parent, name)
 
         self.add_group(None,
                        [('rendering_labels_discwrite', (0,0,1,1)),

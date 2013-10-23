@@ -27,6 +27,7 @@ from cecog.util.logger import LoggerObject
 from cecog.util.util import makedirs
 
 
+
 # XXX - fix class names
 class AnalyzerBase(LoggerObject):
 
@@ -229,11 +230,12 @@ class Picker(AnalyzerBase):
         self.learner = learner
 
         pattern = join(self.learner.annotations_dir, "*%s" %learner.extension)
-        anno_re = re.compile(('((.*?_{3})?PL(?P<plate>.*?)_{3})?P(?P'
+        anno_re = re.compile(('((.*?_{1,3})?PL(?P<plate>.*?)_{1,3})?P(?P'
                               '<position>.+?)_{1,3}T(?P<time>\d+).*?'))
 
         frames_total = self.meta_data.times
         for annofile in glob.glob(pattern):
+
             result = anno_re.match(basename(annofile))
             if result is None:
                 raise RuntimeError("Something is wrong with your annotation files in the classifier folder. " +

@@ -222,10 +222,6 @@ class MultiSelectionTrait(traits.MultiSelectionTrait, GuiTrait):
 
     def set_value(self, widget, value):
         widget.clearSelection()
-#        for item in value:
-#            w_listitem = widget.findItems(str(item), Qt.MatchExactly)
-#            #if len(w_listitem) > 0:
-#            widget.setCurrentItem(w_listitem[0], QItemSelectionModel.Select)
 
 
 class DictTrait(traits.DictTrait, GuiTrait):
@@ -233,8 +229,3 @@ class DictTrait(traits.DictTrait, GuiTrait):
     def __init__(self, default_value, label=None, tooltip=None, doc=None):
         traits.DictTrait.__init__(self, default_value)
         GuiTrait.__init__(self, label, tooltip=tooltip, doc=doc)
-
-
-#-------------------------------------------------------------------------------
-# main:
-#

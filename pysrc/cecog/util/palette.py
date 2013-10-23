@@ -16,29 +16,12 @@ __source__ = '$URL$'
 
 __all__ = []
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-import os, \
-       struct
+import os
+import struct
 import numpy
 
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
+from cecog.colors import hex2rgb
 
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
-from cecog.util.color import hex_to_rgb
-
-#-------------------------------------------------------------------------------
-# constants:
-#
-
-#-------------------------------------------------------------------------------
-# functions:
-#
 def unpack_at(fmt, string, offset):
     """
     unpack that supports offset and does not require exact string length
@@ -47,11 +30,6 @@ def unpack_at(fmt, string, offset):
     size = struct.calcsize(fmt)
     assert len(string) >= size, 'Data string is too short'
     return struct.unpack(fmt, string[:size])
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 
 class MyStruct(struct.Struct):
 
@@ -154,12 +132,9 @@ class SingleColorPalette(_Palette):
 
     @classmethod
     def from_hex_color(cls, name, string):
-        return cls(name, hex_to_rgb(string))
+        return cls(name, hex2rgb(string))
 
 
-#-------------------------------------------------------------------------------
-# main:
-#
 if __name__ == "__main__":
 
     z = ZeissPalette.from_file('/Users/miheld/src/cecog_svn/trunk/apps/CecogAnalyzer/resources/palettes/Zeiss/004_Magenta.lut')
@@ -173,4 +148,3 @@ if __name__ == "__main__":
     z = SingleColorPalette('test', (255,18,100))
     print '"%s"' % z.name
     print z.lut
-

@@ -61,6 +61,7 @@ class PickerThread(CoreThread):
         return learner
 
     def _run(self):
+        frame_count = 0
         learner = self._setup_learner()
         for plate in self._imagecontainer.plates:
             picker = Picker(plate, self._settings,
@@ -68,6 +69,11 @@ class PickerThread(CoreThread):
                             learner=learner)
             picker.processPositions(self)
             learner = picker.learner
+            frame_count =+ len(picker.positions)
+
+        if frame_count == 0:
+            raise RuntimeError("Didn't pick any samples from 0 frames. Check plate names")
+
 
         if not self.is_aborted():
             learner.export()

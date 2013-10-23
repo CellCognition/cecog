@@ -26,35 +26,17 @@ from PyQt4.Qt import *
 
 from pyamf.remoting.client import RemotingService
 
-from cecog.traits.analyzer.cluster import SECTION_NAME_CLUSTER
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.environment import CecogEnvironment
 
 from cecog.gui.analyzer import BaseFrame
 from cecog.gui.analyzer.processing import ProcessingFrame
-from cecog.gui.util import (exception,
-                            information,
-                            warning,
-                            waitingProgressDialog)
+from cecog.gui.util import exception, information, warning, \
+    waitingProgressDialog
 
-from cecog import (JOB_CONTROL_RESUME,
-                   JOB_CONTROL_SUSPEND,
-                   JOB_CONTROL_TERMINATE,
-                   VERSION)
+from cecog import JOB_CONTROL_RESUME, JOB_CONTROL_SUSPEND, \
+    JOB_CONTROL_TERMINATE, VERSION
 
-#-------------------------------------------------------------------------------
-# constants:
-#
-
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 class ClusterDisplay(QGroupBox):
 
     def __init__(self, parent, settings):
@@ -192,7 +174,7 @@ class ClusterDisplay(QGroupBox):
 
         # FIXME: we need to get the current value for 'position_granularity'
         settings_dummy = ProcessingFrame.get_special_settings(self._settings)
-        position_granularity = settings_dummy.get(SECTION_NAME_CLUSTER, 'position_granularity')
+        position_granularity = settings_dummy.get('Cluster', 'position_granularity')
 
         path_out = self._submit_settings.get2('pathout')
         emails = str(self._txt_mail.text()).split(',')
@@ -396,10 +378,8 @@ class ClusterDisplay(QGroupBox):
 
 class ClusterFrame(BaseFrame):
 
-    SECTION_NAME = SECTION_NAME_CLUSTER
-
-    def __init__(self, settings, parent):
-        super(ClusterFrame, self).__init__(settings, parent)
+    def __init__(self, settings, parent, name):
+        super(ClusterFrame, self).__init__(settings, parent, name)
 
         self._cluster_display = self._add_frame()
         self.add_group(None,

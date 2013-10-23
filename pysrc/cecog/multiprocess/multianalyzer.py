@@ -12,7 +12,6 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-import os
 import copy
 import logging
 import traceback
@@ -22,7 +21,8 @@ from multiprocessing import Pool, cpu_count
 
 from PyQt4 import QtCore
 
-from pdk.datetimeutils import StopWatch
+from cecog.util.stopwatch import StopWatch
+import cecog
 from cecog import ccore
 from cecog.threads.link_hdf import link_hdf5_files
 from cecog.analyzer.core import AnalyzerCore
@@ -30,11 +30,17 @@ from cecog.threads.analyzer import AnalyzerThread
 
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.multiprocess import mplogging as lg
+from cecog.environment import CecogEnvironment
+
+
+class MultiProcessingError(Exception):
+    pass
 
 import sys
 # see http://stackoverflow.com/questions/3288595/
 # multiprocessing-using-pool-map-on-a-function-defined-in-a-class
-def core_helper(plate_id, settings_str, imagecontainer, position):
+def core_helper(plate_id, settings_str, imagecontainer, position,
+                version, redirect=True, debug=False):
     try:
         from cecog.traits.settings import ConfigSettings
         from cecog.traits.analyzer import SECTION_REGISTRY
@@ -43,18 +49,15 @@ def core_helper(plate_id, settings_str, imagecontainer, position):
         settings.set(SECTION_NAME_GENERAL, 'constrain_positions', True)
         settings.set(SECTION_NAME_GENERAL, 'positions', position)
 
+        environ = CecogEnvironment(version, redirect=redirect, debug=debug)
+        if debug:
+            environ.pprint()
         analyzer = AnalyzerCore(plate_id, settings, imagecontainer)
         post_hdf5_link_list = analyzer.processPositions()
         result = plate_id, position, copy.deepcopy(post_hdf5_link_list)
     except Exception, e:
         raise e.__class__("".join(traceback.format_exception(*sys.exc_info())))
     return result
-
-class MultiProcessingError(Exception):
-    def __init__(self, exceptions):
-        self.msg = ('%s-----------%sError in job item:%s' \
-                        %(os.linesep, os.linesep, os.linesep)).join(
-            [str(e) + "\n" + traceback.format_exc() for e in exceptions])
 
 # XXX perhaps a QObject
 class ProcessCallback(object):
@@ -65,7 +68,7 @@ class ProcessCallback(object):
         self.ncpu = None
         self.cnt = 0
         self.job_count = None
-        self._timer = StopWatch()
+        self._timer = StopWatch(start=True)
 
     def notify_execution(self, job_list, ncpu):
         self.job_count = len(job_list)
@@ -88,10 +91,10 @@ class ProcessCallback(object):
                       'stage': 0,
                       'min': 0,
                       'item_name': 'position',
-                      'interval': self._timer.current_interval(),
+                      'interval': self._timer.interim(),
                       'max': self.job_count}
         self.parent.update_status(stage_info)
-        self._timer.reset()
+        self._timer.reset(start=True)
         return plate, pos, hdf_files
 
 class MultiProcessingMixin(object):
@@ -169,9 +172,11 @@ class MultiProcessingMixin(object):
                     plate, pos, hdf_files = r.get()
                     if len(hdf_files) > 0:
                         self.post_hdf5_link_list.append(hdf_files)
+
             if len(exceptions) > 0:
-                error = MultiProcessingError(exceptions)
-                raise error
+                sep = 79*'-'+'\n'
+                msg = sep.join([traceback.format_exc(e) for e in exceptions])
+                raise MultiProcessingError(msg)
         self.finish()
 
     @property
@@ -223,11 +228,13 @@ class MultiAnalyzerThread(AnalyzerThread, MultiProcessingMixin):
             for pos_id in meta_data.positions:
                 if self.lstPositions is None:
                     job_list.append((plate_id, settings_str,
-                                     self._imagecontainer, pos_id))
+                                     self._imagecontainer, pos_id,
+                                     cecog.VERSION))
                 else:
                     if pos_id in self.lstPositions:
                         job_list.append((plate_id, settings_str,
-                                         self._imagecontainer, pos_id))
+                                         self._imagecontainer, pos_id,
+                                         cecog.VERSION))
 
         self.submit_jobs(job_list)
         self.join()

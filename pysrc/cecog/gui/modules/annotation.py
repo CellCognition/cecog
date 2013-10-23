@@ -29,17 +29,16 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
-from pdk.datetimeutils import StopWatch
-from pdk.ordereddict import OrderedDict
-from pdk.fileutils import safe_mkdirs
+from collections import OrderedDict
+from cecog.util.util import makedirs
 
+from cecog import ccore
 from cecog.gui.util import (exception,
                             information,
                             question,
                             warning,
                             get_qcolor_hicontrast,
-                            qcolor_to_hex,
-                            )
+                            qcolor_to_hex)
 from cecog.gui.imageviewer import ImageViewer
 from cecog.gui.analyzer import _ProcessorMixin
 from cecog.analyzer.channel import (PrimaryChannel,
@@ -47,8 +46,7 @@ from cecog.analyzer.channel import (PrimaryChannel,
                                     TertiaryChannel,
                                     )
 from cecog.analyzer.core import AnalyzerCore
-from cecog import ccore
-from cecog.util.util import hexToRgb
+from cecog.colors import hex2rgb
 from cecog.io.imagecontainer import Coordinate
 from cecog.learning.learning import BaseLearner
 from cecog.gui.widgets.groupbox import QxtGroupBox
@@ -679,7 +677,6 @@ class AnnotationModule(Module):
 
         return ok
 
-
     def _on_open_classifier(self):
         try:
             path = os.path.abspath(self._learner.clf_dir)
@@ -742,7 +739,7 @@ class AnnotationModule(Module):
                                  os.path.splitext(f)[1].lower() == '.xml']
                     fmt = time.strftime('_backup__%Y%m%d_%H%M%S')
                     path_backup = os.path.join(path2, fmt)
-                    safe_mkdirs(path_backup)
+                    makedirs(path_backup)
                     for filename in filenames:
                         shutil.copy2(filename, path_backup)
                         os.remove(filename)
@@ -906,8 +903,8 @@ class AnnotationModule(Module):
     def _activate_object(self, item, point, class_name, state=True):
         if state:
             color = \
-                QColor(*hexToRgb(self._learner.hexcolors[class_name]))
-            #color.setAlphaF(1.0)
+                QColor(*hex2rgb(self._learner.hexcolors[class_name]))
+            # color.setAlphaF(1.0)
             label = self._learner.class_labels[class_name]
 #            item2 = QGraphicsEllipseItem(point.x(), point.y(), 3, 3,item)
 #            item2.setPen(QPen(color))

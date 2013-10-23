@@ -13,20 +13,17 @@ __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
 import os
-import sys
 from os.path import join, isfile, abspath, isdir
 from PyQt4 import QtCore, QtGui
 
 from cecog.util.util import write_table, makedirs
 from cecog.environment import CecogEnvironment
 from cecog.threads.corethread import CoreThread
-from cecog.analyzer.gallery import compose_galleries
+from cecog.gallery import compose_galleries
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
 
-class HmmThread(CoreThread):
 
-    DEFAULT_CMD_MAC = 'R32'
-    DEFAULT_CMD_WIN = r'C:\Program Files\R\R-2.10.0\bin\R.exe'
+class HmmThread(CoreThread):
 
     def __init__(self, parent, settings, learner_dict, imagecontainer):
         super(HmmThread, self).__init__(parent, settings)
@@ -38,24 +35,13 @@ class HmmThread(CoreThread):
         self._convert = lambda x: x.replace('\\','/')
         self._join = lambda *x: self._convert('/'.join(x))
 
-    @classmethod
-    def get_cmd(cls, filename):
-        filename = filename.strip()
-        if filename != '':
-            cmd = filename
-        elif sys.platform == 'darwin':
-            cmd = cls.DEFAULT_CMD_MAC
-        else:
-            cmd = cls.DEFAULT_CMD_WIN
+    @property
+    def r_executable(self):
+        cmd = self._settings("ErrorCorrection", "filename_to_r")
+        if not isfile(cmd):
+            raise RuntimeError(("R executable not found (%s)\n"
+                                "See documentation for details.") %cmd)
         return cmd
-
-    @classmethod
-    def test_executable(cls, filename):
-        cmd = cls.get_cmd(filename)
-        process = QtCore.QProcess()
-        process.start(cmd, ['--version'])
-        success = process.waitForFinished()
-        return success and process.exitCode() == QtCore.QProcess.NormalExit, cmd
 
     def _run(self):
         plates = self._imagecontainer.plates
@@ -67,8 +53,9 @@ class HmmThread(CoreThread):
         # the form <plate_id>.txt or .tsv
         # if the option 'position_labels' is not enabled a
         # dummy mapping file is generated
-        if self._settings.get2('position_labels'):
-            path_mapping = self._convert(self._settings.get2('mappingfile_path'))
+        if self._settings('ErrorCorrection', 'position_labels'):
+            path_mapping = self._convert(self._settings( \
+                    'ErrorCorrection', 'mappingfile_path'))
             for plate_id in plates:
                 mapping_file = join(path_mapping, '%s.tsv' % plate_id)
                 if not isfile(mapping_file):
@@ -83,6 +70,7 @@ class HmmThread(CoreThread):
                 'stage': 0,
                 'meta': 'Error correction...',
                 'progress': 0}
+
         for idx, plate_id in enumerate(plates):
             if not self._abort:
                 info['text'] = "Plate: '%s' (%d / %d)" \
@@ -90,15 +78,14 @@ class HmmThread(CoreThread):
                 self.update_status(info)
                 self._imagecontainer.set_plate(plate_id)
                 self._run_plate(plate_id)
-                info['progress'] = idx+1
+                info['progress'] = idx + 1
                 self.update_status(info)
             else:
                 break
 
     def _run_plate(self, plate_id):
-        filename = self._settings.get2('filename_to_R')
-        cmd = self.get_cmd(filename)
 
+        cmd = self.r_executable
         path_out = self._imagecontainer.get_path_out()
 
         wd = abspath(join(CecogEnvironment.R_SOURCE_DIR, 'hmm'))
@@ -111,7 +98,8 @@ class HmmThread(CoreThread):
 
         # don't do anything if the 'hmm' folder already exists and
         # the skip-option is on
-        if isdir(path_out_hmm) and self._settings.get2('skip_processed_plates'):
+        if isdir(path_out_hmm) and self._settings('ErrorCorrection',
+                                                  'skip_processed_plates'):
             return
 
         makedirs(path_out_hmm)
@@ -133,8 +121,8 @@ class HmmThread(CoreThread):
             mapping_file = self._generate_mapping(
                 wd, path_out_hmm, path_analyzed)
 
-        if self._settings.get2('overwrite_time_lapse'):
-            time_lapse = self._settings.get2('timelapse')
+        if self._settings('ErrorCorrection', 'overwrite_time_lapse'):
+            time_lapse = self._settings('ErrorCorrection', 'timelapse')
         else:
             meta_data = self._imagecontainer.get_meta_data()
             if meta_data.has_timestamp_info:
@@ -144,7 +132,7 @@ class HmmThread(CoreThread):
                                  "Please define (overwrite) the value manually."
                                  % plate_id)
 
-        if self._settings.get2('compose_galleries'):
+        if self._settings('ErrorCorrection', 'compose_galleries'):
             gallery_names = ['primary'] + \
                 [x for x in ['secondary','tertiary']
                  if self._settings.get('Processing', '%s_processchannel' % x)]
@@ -161,17 +149,21 @@ class HmmThread(CoreThread):
                 lines[i] = "PATH_INPUT = '%s'\n" % path_analyzed
             elif line2 == '#GROUP_BY_GENE':
                 lines[i] = "GROUP_BY_GENE = %s\n" \
-                    % str(self._settings.get2('groupby_genesymbol')).upper()
+                    % str(self._settings('ErrorCorrection',
+                                         'groupby_genesymbol')).upper()
             elif line2 == '#GROUP_BY_OLIGOID':
                 lines[i] = "GROUP_BY_OLIGOID = %s\n" \
-                    % str(self._settings.get2('groupby_oligoid')).upper()
+                    % str(self._settings('ErrorCorrection',
+                                         'groupby_oligoid')).upper()
             elif line2 == '#TIMELAPSE':
                 lines[i] = "TIMELAPSE = %s\n" % time_lapse
             elif line2 == '#MAX_TIME':
-                lines[i] = "MAX_TIME = %s\n" % self._settings.get2('max_time')
+                lines[i] = "MAX_TIME = %s\n" % self._settings('ErrorCorrection',
+                                                              'max_time')
             elif line2 == '#SINGLE_BRANCH':
                 lines[i] = "SINGLE_BRANCH = %s\n" \
-                % str(self._settings.get2('ignore_tracking_branches')).upper()
+                % str(self._settings('ErrorCorrection',
+                                     'ignore_tracking_branches')).upper()
             elif line2 == '#GALLERIES':
                 if gallery_names is None:
                     lines[i] = "GALLERIES = NULL\n"
@@ -185,12 +177,14 @@ class HmmThread(CoreThread):
                                     'your classifications settings...'))
             ##
             if 'primary' in self._learner_dict:
-                if self._settings.get2('constrain_graph'):
+                if self._settings('ErrorCorrection', 'constrain_graph'):
                     primary_graph = self._convert(
-                        self._settings.get2('primary_graph'))
+                        self._settings('ErrorCorrection', 'primary_graph'))
                 else:
                     primary_graph = self._generate_graph(
                         'primary', wd, path_out_hmm, region_name_primary)
+                self._check_constraints_file(primary_graph)
+
 
                 if line2 == '#FILENAME_GRAPH_P':
                     lines[i] = "FILENAME_GRAPH_P = '%s'\n" % primary_graph
@@ -202,21 +196,23 @@ class HmmThread(CoreThread):
                 elif line2 == '#REGION_NAME_P':
                     lines[i] = "REGION_NAME_P = '%s'\n" % region_name_primary
                 elif line2 == '#SORT_CLASSES_P':
-                    if self._settings.get2('enable_sorting'):
+                    if self._settings('ErrorCorrection', 'enable_sorting'):
                         lines[i] = "SORT_CLASSES_P = c(%s)\n" \
-                            % self._settings.get2('sorting_sequence')
+                            % self._settings('ErrorCorrection',
+                                             'sorting_sequence')
                     else:
                         lines[i] = "SORT_CLASSES_P = NULL\n"
                 elif line2 == "#PATH_OUT_P":
                     lines[i] = "PATH_OUT_P = '%s'\n" % path_out_hmm_region
             ##
             if 'secondary' in self._learner_dict:
-                if self._settings.get2('constrain_graph'):
+                if self._settings('ErrorCorrection', 'constrain_graph'):
                     secondary_graph = self._convert(
-                        self._settings.get2('secondary_graph'))
+                        self._settings('ErrorCorrection', 'secondary_graph'))
                 else:
                     secondary_graph = self._generate_graph(
                         'secondary', wd, path_out_hmm, region_name_secondary)
+                self._check_constraints_file(secondary_graph)
 
                 if line2 == '#FILENAME_GRAPH_S':
                     lines[i] = "FILENAME_GRAPH_S = '%s'\n" % secondary_graph
@@ -228,7 +224,8 @@ class HmmThread(CoreThread):
                 elif line2 == '#REGION_NAME_S':
                     lines[i] = "REGION_NAME_S = '%s'\n" % region_name_secondary
                 elif line2 == '#SORT_CLASSES_S':
-                    secondary_sort = self._settings.get2('secondary_sort')
+                    secondary_sort = self._settings('ErrorCorrection',
+                                                    'secondary_sort')
                     if secondary_sort == '':
                         lines[i] = "SORT_CLASSES_S = NULL\n"
                     else:
@@ -257,8 +254,8 @@ class HmmThread(CoreThread):
             self.analyzer_error.emit(msg)
             self.abort()
 
-        elif self._settings.get2('compose_galleries') and not self._abort:
-            sample = self._settings.get2('compose_galleries_sample')
+        elif self._settings('ErrorCorrection', 'compose_galleries') and not self._abort:
+            sample = self._settings('ErrorCorrection', 'compose_galleries_sample')
             if sample == -1:
                 sample = None
             for group_name in compose_galleries(
@@ -267,7 +264,7 @@ class HmmThread(CoreThread):
                 if self._abort:
                     break
 
-        if self._settings.get2('show_html') and not self._abort:
+        if self._settings('ErrorCorrection', 'show_html') and not self._abort:
             QtGui.QDesktopServices.openUrl(
                 QtCore.QUrl('file://'+join(path_out_hmm_region, 'index.html'),
                             QtCore.QUrl.TolerantMode))
@@ -275,6 +272,7 @@ class HmmThread(CoreThread):
     def _generate_graph(self, channel, wd, hmm_path, region_name):
         f_in = file(join(wd, 'graph_template.txt'), 'rU')
         filename_out = self._join(hmm_path, 'graph_%s.txt' % region_name)
+
         f_out = file(filename_out, 'w')
         learner = self._learner_dict[channel]
         for line in f_in:
@@ -321,9 +319,9 @@ class HmmThread(CoreThread):
         self._logger.info(msg)
 
     def _get_path_out(self, path, prefix):
-        if self._settings.get2('groupby_oligoid'):
+        if self._settings('ErrorCorrection', 'groupby_oligoid'):
             suffix = 'byoligo'
-        elif self._settings.get2('groupby_genesymbol'):
+        elif self._settings('ErrorCorrection', 'groupby_genesymbol'):
             suffix = 'bysymbol'
         else:
             suffix = 'bypos'
@@ -334,3 +332,9 @@ class HmmThread(CoreThread):
     def set_abort(self, wait=False):
         self._process.kill()
         super(HmmThread, self).set_abort(wait=wait)
+
+    def _check_constraints_file(self, filename):
+        if filename.endswith(".xml"):
+            raise RuntimeError(("R implementation of th error correction "
+                                "does not support xml file format. Use txt-file"
+                                "from battery package as template"))

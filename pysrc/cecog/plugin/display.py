@@ -9,47 +9,18 @@
                  See trunk/AUTHORS.txt for author contributions.
 """
 
-__all__ = ['PluginBay',
-           'PluginParamFrame',
-           'PluginItem']
+__all__ = ['PluginBay', 'PluginParamFrame', 'PluginItem']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
 import functools
 
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
-from pdk.ordereddict import OrderedDict
-
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
+from collections import OrderedDict
 from cecog.gui.display import TraitDisplayMixin
-from cecog.gui.widgets.collapsible import CollapsibleFrame
-from cecog.gui.widgets.tabcontrol import TAB_STYLE
-from cecog.gui.util import (question,
-                            warning,
-                            load_qrc_text,
-                            show_html,
-                            )
+from cecog.gui.util import question, load_qrc_text, show_html
 
-#-------------------------------------------------------------------------------
-# constants:
-#
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 
 class PluginParamFrame(TraitDisplayMixin):
 
@@ -59,7 +30,7 @@ class PluginParamFrame(TraitDisplayMixin):
         super(PluginParamFrame, self).__init__(
             param_manager._settings,
             parent, label_click_callback=self._show_help)
-        self.SECTION_NAME = param_manager._section
+        self.name = param_manager._section
         self.param_manager = param_manager
         QGridLayout(self)
 
@@ -100,7 +71,8 @@ class PluginDocumentation(QFrame):
 
         self._content = plugin.DOC
         if len(self._content) > 0 and self._content[0] == ':':
-            self._content = load_qrc_text('plugins/%s/%s' % (plugin.QRC_PREFIX or '', self._content[1:]))
+            self._content = load_qrc_text( \
+                'plugins/%s/%s' %(plugin.QRC_PREFIX or '', self._content[1:]))
 
     def on_label_clicked(self, trait_name=None):
         param_name = self._plugin.param_manager.get_param_name(str(trait_name))
@@ -119,7 +91,7 @@ class PluginItem(QFrame):
         super(QFrame, self).__init__(parent)
 
         layout = QVBoxLayout(self)
-        #layout.setContentsMargins(5, 5, 5, 5)
+        # layout.setContentsMargins(5, 5, 5, 5)
 
         frame1 = QFrame(self)
         frame1.setStyleSheet("QFrame { background: #CCCCCC; }")
@@ -139,7 +111,8 @@ class PluginItem(QFrame):
         layout.addWidget(label)
         layout.addWidget(txt, 1)
 
-        # add a collapsible documentation to the plugin (image and/or html-compatible text)
+        # add a collapsible documentation to the plugin
+        # (image and/or html-compatible text)
         if PluginDocumentation.has_content(plugin):
             doc = PluginDocumentation(self, plugin)
             frame2.label_clicked.connect(doc.on_label_clicked)
@@ -158,7 +131,8 @@ class PluginItem(QFrame):
         # add requirements in special group
         if len(requirements) > 0:
             frame2.add_group(None,
-                             [(name, (idx, 0, 1, 1)) for idx, name in enumerate(requirements)],
+                             [(name, (idx, 0, 1, 1)) for idx, name in
+                              enumerate(requirements)],
                              link='requirements', label='Plugin dependencies')
 
 
@@ -223,7 +197,8 @@ class PluginBay(QFrame):
     def add_plugin(self, plugin_name):
         plugin = self.plugin_manager.get_plugin_instance(plugin_name)
         item = PluginItem(self._frame2, plugin, self.settings)
-        item.remove_item.connect(functools.partial(self._on_remove_plugin, plugin_name))
+        item.remove_item.connect(functools.partial(\
+                self._on_remove_plugin, plugin_name))
         layout = self._frame2.layout()
         layout.insertWidget(0, item)
         self._plugins[plugin_name] = item
@@ -245,7 +220,8 @@ class PluginBay(QFrame):
         result = False
         n = len(instance.referees)
         if n == 0:
-            result = question(None, 'Removing the plugin "%s"' % plugin_name, "Are you sure to remove this plugin?")
+            result = question(None, 'Removing the plugin "%s"' %plugin_name,
+                              "Are you sure to remove this plugin?")
         elif n > 0:
             detail = '\n'.join(['%s (%s)' % x[:2] for x in instance.referees])
             result = question(None, 'Removing the plugin "%s"' % plugin_name,
@@ -255,8 +231,3 @@ class PluginBay(QFrame):
         if result:
             self.remove_plugin(plugin_name)
             self.plugin_manager.remove_instance(plugin_name, self.settings)
-
-
-#-------------------------------------------------------------------------------
-# main:
-#

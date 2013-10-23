@@ -17,6 +17,7 @@ __source__ = '$URL$'
 __all__ = []
 
 import os
+import glob
 import zipfile
 from collections import OrderedDict
 
@@ -27,8 +28,6 @@ from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
 from qimage2ndarray import array2qimage
-
-from pdk.fileutils import collect_files
 
 from cecog.colors import Colors
 from cecog.gui.modules.module import Module
@@ -511,7 +510,7 @@ class DisplayModule(Module):
         # iterator over palettes
         path_zeiss = os.path.join(CecogEnvironment.RESOURCE_DIR,
                                   'palettes', 'zeiss')
-        for filename in collect_files(path_zeiss, ['.zip'], absolute=True):
+        for filename in glob.glob(os.path.join(path_zeiss+'/*.zip')):
             with zipfile.ZipFile(filename, 'r') as f:
                 name = f.namelist()[0]
                 data = f.read(name)

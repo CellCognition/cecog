@@ -76,7 +76,6 @@ class Graph(object):
         self.hidden_edges={}
         self.hidden_nodes={}
 
-
     def copy(self, G):
         """
         Performs a copy of the graph, G, into self.hidden edges and
@@ -105,7 +104,7 @@ class Graph(object):
     def add_node(self, node_id, node_data=None):
         """
         Creates a new node with id node_id.  Arbitrary data can be attached
-  to the node viea the node_data parameter.
+        to the node viea the node_data parameter.
         """
         if (not node_id in self.nodes) and \
                (not node_id in self.hidden_nodes):
@@ -113,6 +112,12 @@ class Graph(object):
         else:
             #print "WARNING: Duplicate node id's. Latest node id was ignored."
             raise Graph_duplicate_node, node_id
+
+    # def is_split_node(self, node_id):
+    #     return self.out_degree(node_id) == 0
+
+    # def is_merge_node(self, node_id):
+    #     return self.in_degree == 0
 
     def update_node_data(self, node_id, node_data):
         t = self.nodes[node_id]
@@ -147,8 +152,8 @@ class Graph(object):
 
     def add_edge(self, head_id, tail_id, edge_data=None):
         """
-  Adds an edge (head_id, tail_id).
-  Arbitrary data can be attached to the edge via edge_data
+        Adds an edge (head_id, tail_id).
+        Arbitrary data can be attached to the edge via edge_data
         """
         edge_id=self.next_edge_id
         self.next_edge_id=self.next_edge_id+1
@@ -161,9 +166,9 @@ class Graph(object):
 
     def hide_edge(self, edge_id):
         """
-  Removes the edge from the normal graph, but does not delete
-  its information.  The edge is held in a separate structure
-  and can be unhidden at some later time.
+        Removes the edge from the normal graph, but does not delete
+        its information.  The edge is held in a separate structure
+        and can be unhidden at some later time.
         """
         self.hidden_edges[edge_id]=self.edges[edge_id]
         ed=map(None, self.edges[edge_id])
@@ -177,10 +182,10 @@ class Graph(object):
 
     def hide_node(self, node_id):
         """
-  Similar to above.
-  Stores a tuple of the node data, and the edges that are incident
-  to and from
-  the node.  It also hides the incident edges.
+        Similar to above.
+        Stores a tuple of the node data, and the edges that are incident
+        to and from
+        the node.  It also hides the incident edges.
         """
         degree_list=self.arc_list(node_id)
         self.hidden_nodes[node_id]=(self.nodes[node_id],degree_list)
@@ -190,7 +195,7 @@ class Graph(object):
 
     def restore_edge(self, edge_id):
         """
-  Restores a previously hidden edge back into the graph.
+        Restores a previously hidden edge back into the graph.
         """
         self.edges[edge_id]=self.hidden_edges[edge_id]
         ed=map(None,self.hidden_edges[edge_id])
@@ -204,15 +209,15 @@ class Graph(object):
 
     def restore_all_edges(self):
         """
-  Restores all hidden edges.
+        Restores all hidden edges.
         """
         for edge in self.hidden_edges:
             self.restore_edge(edge)
 
     def restore_node(self, node_id):
         """
-  Restores a previously hidden node back into the graph
-  and restores all of the hidden incident edges, too.
+        Restores a previously hidden node back into the graph
+        and restores all of the hidden incident edges, too.
         """
         hidden_node_data=map(None,self.hidden_nodes[node_id])
         self.nodes[node_id]=hidden_node_data[0]
@@ -231,7 +236,7 @@ class Graph(object):
 
     def has_node(self, node_id):
         """
-  Returns 1 if the node_id is in the graph and 0 otherwise.
+        Returns 1 if the node_id is in the graph and 0 otherwise.
         """
         return node_id in self.nodes
 
@@ -253,7 +258,7 @@ class Graph(object):
 
     def node_list(self):
         """
-  Return a list of the node id's of all visible nodes in the graph.
+        Return a list of the node id's of all visible nodes in the graph.
         """
         nl=self.nodes.keys()
         return nl
@@ -281,21 +286,21 @@ class Graph(object):
 
     def node_data(self, node_id):
         """
-  Returns a reference to the data attached to a node.
+        Returns a reference to the data attached to a node.
         """
         mapped_data=map(None, self.nodes[node_id])
         return mapped_data[2]
 
     def edge_data(self, edge_id):
         """
-  Returns a reference to the data attached to an edge.
+        Returns a reference to the data attached to an edge.
         """
         mapped_data=map(None, self.edges[edge_id])
         return mapped_data[2]
 
     def head(self, edge):
         """
-  Returns a reference to the head of the edge.
+        Returns a reference to the head of the edge.
         (A reference to the head id)
         """
         mapped_data=map(None, self.edges[edge])
@@ -308,7 +313,7 @@ class Graph(object):
 
     def out_arcs(self, node_id):
         """
-  Returns a copy of the list of edges of the node's out arcs.
+        Returns a copy of the list of edges of the node's out arcs.
         """
         mapped_data=map(None, self.nodes[node_id])
         return mapped_data[1][:]
@@ -346,9 +351,9 @@ class Graph(object):
     def topological_sort(self):
         """
         Performs a topological sort of the nodes by "removing" nodes with
-  indegree 0.
-  If the graph has a cycle, the Graph_topological_error is thrown
-  with the list of successfully ordered nodes.
+        indegree 0.
+        If the graph has a cycle, the Graph_topological_error is thrown
+        with the list of successfully ordered nodes.
         """
         topological_list=[]
         topological_queue=GraphQueue()
@@ -379,9 +384,9 @@ class Graph(object):
     def reverse_topological_sort(self):
         """
         Performs a reverse topological sort by iteratively "removing" nodes
-  with out_degree=0
-  If the graph is cyclic, this method throws Graph_topological_error
-  with the list of successfully ordered nodes.
+        with out_degree=0
+        If the graph is cyclic, this method throws Graph_topological_error
+        with the list of successfully ordered nodes.
         """
         topological_list=[]
         topological_queue=GraphQueue()
@@ -425,7 +430,7 @@ class Graph(object):
                     nodes_already_stacked[self.tail(edge)]=0
                     dfs_stack.push(self.tail(edge))
         return dfs_list
-    
+
     def dfs_edges(self, source_id):
         """
         Returns a list of nodes in some DFS order.
@@ -436,10 +441,10 @@ class Graph(object):
         dfs_stack=GraphStack()
         dfs_stack.push(source_id)
 
-  
+
         while not dfs_stack.empty():
             current_node=dfs_stack.pop()
-            
+
             out_edges=self.out_arcs(current_node)
             for edge in out_edges:
                 if not self.tail(edge) in nodes_already_stacked:
@@ -471,8 +476,8 @@ class Graph(object):
 
     def back_bfs(self, source_id):
         """
-  Returns a list of nodes in some BACKWARDS BFS order.
-  Starting from the source node, BFS proceeds along back edges.
+        Returns a list of nodes in some BACKWARDS BFS order.
+        Starting from the source node, BFS proceeds along back edges.
         """
         nodes_already_queued={source_id:0}
         bfs_list=[]

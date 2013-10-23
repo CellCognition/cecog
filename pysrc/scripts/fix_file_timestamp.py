@@ -14,7 +14,8 @@ import os, sys, shutil
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
-from pdk.fileutils import safe_mkdirs
+
+from cecog.util.util import makedirs
 
 #-------------------------------------------------------------------------------
 # cecog imports:
@@ -49,7 +50,7 @@ for pos in os.listdir(path_in):
         shutil.copytree(path_in_pos, path_out_pos)
         continue
 
-    safe_mkdirs(path_out_pos)
+    makedirs(path_out_pos)
     start = None
 
     for idx, filename in enumerate(os.listdir(path_in_pos)):
@@ -67,7 +68,3 @@ for pos in os.listdir(path_in):
         mtime = start + idx * timelapse
 
         os.utime(path_out_pos_filename, (atime, mtime))
-
-
-
-

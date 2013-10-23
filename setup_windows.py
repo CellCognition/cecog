@@ -76,11 +76,11 @@ py2exe_opts = {'includes': build_helpers.INCLUDES,
 # or write these paths to setup.cfg
 includes = ['c:/python27/include',
             'c:/Python27/Lib/site-packages/numpy/core/include',
-            'c:/depend64/include',
-            'c:/Program Files/vigra/include',
+            'c:/lib/include',
+            'c:/vigra/include',
             './csrc/include']
 libraries = ['boost_python-vc100-mt-1_45', 'libtiff', 'vigraimpex']
-library_dirs = ['c:/depend64/lib', 'c:/Program Files/vigra/lib']
+library_dirs = ['c:/lib/lib', 'c:/vigra/lib']
 
 ccore = Extension('cecog.ccore._cecog',
                   sources = [join('csrc','src', 'cecog.cxx')],
@@ -91,26 +91,7 @@ ccore = Extension('cecog.ccore._cecog',
                   language = 'c++')
 
 # python package to distribute
-packages = ['cecog',
-            'cecog.analyzer',
-            'cecog.ccore',
-            'cecog.experiment',
-            'cecog.export',
-            'cecog.extensions',
-            'cecog.gui',
-            'cecog.gui.analyzer',
-            'cecog.gui.modules',
-            'cecog.gui.widgets',
-            'cecog.io',
-            'cecog.learning',
-            'cecog.multiprocess',
-            'cecog.plugin',
-            'cecog.plugin.segmentation',
-            'cecog.threads',
-            'cecog.traits',
-            'cecog.traits.analyzer',
-            'cecog.util',
-            'pdk']
+packages = build_helpers.find_submodules("./pysrc/cecog", "cecog") + ['pdk']
 
 # special casing for system installation or py2exe bundle
 if "py2exe" in sys.argv:

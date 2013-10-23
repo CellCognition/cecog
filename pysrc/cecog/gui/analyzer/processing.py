@@ -21,15 +21,12 @@ import logging
 
 from cecog import CHANNEL_PREFIX, VERSION
 from cecog import CH_OTHER, CH_VIRTUAL, CH_PRIMARY
-from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
-from cecog.gui.analyzer import (BaseProcessorFrame,
-                                AnalyzerThread,
-                                HmmThread,
-                                MultiAnalyzerThread,
-                                )
-from cecog.analyzer.channel import (PrimaryChannel,
-                                    SecondaryChannel,
-                                    TertiaryChannel)
+from cecog.gui.analyzer import BaseProcessorFrame, AnalyzerThread
+from cecog.gui.analyzer import HmmThread, MultiAnalyzerThread
+
+from cecog.analyzer.channel import PrimaryChannel
+from cecog.analyzer.channel import SecondaryChannel
+from cecog.analyzer.channel import TertiaryChannel
 
 from cecog.plugin.segmentation import REGION_INFO as reginfo
 from PyQt4.QtGui import *
@@ -82,10 +79,8 @@ class SubProcessLogWindow(QFrame):
 
 class ProcessingFrame(BaseProcessorFrame):
 
-    SECTION_NAME = SECTION_NAME_PROCESSING
-
-    def __init__(self, settings, parent):
-        super(ProcessingFrame, self).__init__(settings, parent)
+    def __init__(self, settings, parent, name):
+        super(ProcessingFrame, self).__init__(settings, parent, name)
 
         self.register_control_button('process',
                                      [AnalyzerThread,
@@ -101,7 +96,7 @@ class ProcessingFrame(BaseProcessorFrame):
                        [('primary_featureextraction', (0,0,1,1)),
                         ('primary_classification', (1,0,1,1)),
                         ('tracking', (2,0,1,1)),
-                        ('tracking_synchronize_trajectories', (3,0,1,1)),
+                        ('eventselection', (3,0,1,1)),
                         ('primary_errorcorrection', (4,0,1,1))
                         ], link='primary_channel', label='Primary channel')
 
@@ -222,7 +217,7 @@ class ProcessingFrame(BaseProcessorFrame):
         if not has_timelapse:
             # disable some tracking related settings in case no time-lapse data is present
             settings.set('Processing', 'tracking', False)
-            settings.set('Processing', 'tracking_synchronize_trajectories', False)
+            settings.set('Processing', 'eventselection', False)
             settings.set('Output', 'events_export_gallery_images', False)
             settings.set('Output', 'events_export_all_features', False)
             settings.set('Output', 'export_track_data', False)

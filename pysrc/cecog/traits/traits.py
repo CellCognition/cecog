@@ -17,8 +17,6 @@ __source__ = '$URL$'
 __all__ = []
 
 import types, pprint
-from pdk.ordereddict import OrderedDict
-
 
 class Trait(object):
 

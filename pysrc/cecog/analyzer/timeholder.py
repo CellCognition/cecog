@@ -21,41 +21,40 @@ import base64
 import csv
 
 from collections import OrderedDict
-from pdk.iterator import flatten
-from pdk.datetimeutils import StopWatch
+
 
 import numpy
 import h5py
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('Agg', warn=False)
 from matplotlib import pyplot
 
 from cecog import ccore
-from cecog.io.imagecontainer import Coordinate, MetaImage
+from cecog.util.stopwatch import StopWatch
+from cecog.io.imagecontainer import Coordinate
+from cecog.io.imagecontainer import MetaImage
 from cecog.analyzer.channel import PrimaryChannel
 from cecog.plugin.segmentation import REGION_INFO
 
 from cecog.analyzer.tracker import Tracker
 
 def chunk_size(shape):
-    """Helper function to compute chunk size for image data cubes.
-    """
+    """Helper function to compute chunk size for image data cubes."""
     c = shape[0]
     t = 1
     z = 1
     y = shape[3] / 4
     x = shape[4] / 4
-    return (c,t,z,y,x)
+    return (c, t, z, y, x)
 
 def max_shape(shape):
-    """Helper function to compute chunk size for image data cubes.
-    """
+    """Helper function to compute chunk size for image data cubes."""
     c = 8 # 8 is kind of arbitrary, but better than None to help h5py to reserve the space
     t = shape[1]
     z = 1
     y = shape[3]
     x = shape[4]
-    return (c,t,z,y,x)
+    return (c, t, z, y, x)
 
 #-------------------------------------------------------------------------------
 # classes:
@@ -243,7 +242,7 @@ class TimeHolder(OrderedDict):
         except:
             self._hdf5_file.close()
             return 1
-            
+
 
 
     def _hdf5_check_file(self):
@@ -412,9 +411,9 @@ class TimeHolder(OrderedDict):
         raw_image_str, raw_image_cpy, raw_image_valid = raw_info
 
         if hasattr(self, "_hdf5_file") and self._hdf5_file is not None:
-            try: 
-                self._hdf5_file.close() 
-            except: 
+            try:
+                self._hdf5_file.close()
+            except:
                 print '_hdf5_create_file_structure(): Closing already opended file for rewrite'
         f = h5py.File(filename, 'w')
         self._hdf5_file = f
@@ -531,7 +530,7 @@ class TimeHolder(OrderedDict):
         self[iT][channel.NAME] = channel
 
     def apply_segmentation(self, channel, *args):
-        stop_watch = StopWatch()
+        stop_watch = StopWatch(start=True)
 
         desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
                                          channel.strChannelId)
@@ -571,7 +570,7 @@ class TimeHolder(OrderedDict):
             # compute segmentation without (not loading from file)
             channel.apply_segmentation(*args)
             self._logger.info('Label images %s computed in %s.'
-                              %(desc, stop_watch.current_interval()))
+                              %(desc, stop_watch.interim()))
             # write segmentation back to file
             if self._hdf5_create and self._hdf5_include_label_images:
                 meta = self._meta_data
@@ -584,7 +583,7 @@ class TimeHolder(OrderedDict):
                 # create new group if it does not exist yet!
                 if var_name in grp and grp[var_name].shape[0] == len(self._regions_to_idx2):
                     var_labels = grp[var_name]
-                else:  
+                else:
                     nr_labels = len(self._regions_to_idx2)
                     var_labels = \
                         grp.create_dataset(var_name,
@@ -606,14 +605,14 @@ class TimeHolder(OrderedDict):
                     var_labels.attrs['valid'] = tmp
         else:
             self._logger.info('Label images %s loaded from hdf5 file in %s.'
-                              % (desc, stop_watch.current_interval()))
+                              % (desc, stop_watch.interim()))
 
     def prepare_raw_image(self, channel):
         if channel.is_virtual():
             # no raw image in a merged channel
             return
-        
-        stop_watch = StopWatch()
+
+        stop_watch = StopWatch(start=True)
         desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
                                          channel.strChannelId)
         frame_valid = False
@@ -644,12 +643,12 @@ class TimeHolder(OrderedDict):
             meta_image.set_raw_image(img)
             channel.meta_image = meta_image
             self._logger.info('Raw image %s loaded from hdf5 file in %s.'
-                              % (desc, stop_watch.current_interval()))
+                              % (desc, stop_watch.interim()))
         else:
             channel.apply_zselection()
             channel.normalize_image(self.plate_id)
             channel.apply_registration()
-            self._logger.info('Raw image %s prepared in %s.' % (desc, stop_watch.current_interval()))
+            self._logger.info('Raw image %s prepared in %s.' % (desc, stop_watch.interim()))
 
             if self._hdf5_create and self._hdf5_include_raw_images:
                 meta = self._meta_data
@@ -861,7 +860,7 @@ class TimeHolder(OrderedDict):
                             dset_object_features[idx + offset] = obj.aFeatures
 
                     if self._hdf5_include_crack:
-                        data = ','.join(map(str, flatten(obj.crack_contour)))
+                        data = ','.join(map(str, numpy.array(obj.crack_contour).flatten()))
                         dset_crack_contour[idx + offset] = base64.b64encode(zlib.compress(data))
 
                     if channel_name != PrimaryChannel.PREFIX:

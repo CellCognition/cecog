@@ -50,26 +50,39 @@ except ImportError:
 # from cecog import VERSION, APPNAME
 from cecog.util.util import makedirs
 from cecog.environment import CecogEnvironment
-from cecog.analyzer import TRACKING_DURATION_UNITS_TIMELAPSE
-from cecog.analyzer import TRACKING_DURATION_UNITS_DEFAULT
+
+from cecog.units.time import TimeConverter
 
 from cecog.io.imagecontainer import ImageContainer
 
 from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.gui.config import GuiConfigSettings
 
+
+from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
+from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
+from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACTION
+from cecog.traits.analyzer.postprocessing import SECTION_NAME_POST_PROCESSING
+from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
+from cecog.traits.analyzer.tracking import SECTION_NAME_TRACKING
+from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
+from cecog.traits.analyzer.eventselection import SECTION_NAME_EVENT_SELECTION
+from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
+from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
+from cecog.traits.analyzer.cluster import SECTION_NAME_CLUSTER
+
 # Frames
-from cecog.gui.analyzer.general import GeneralFrame, SECTION_NAME_GENERAL
+from cecog.gui.analyzer.general import GeneralFrame
 from cecog.gui.analyzer.objectdetection import ObjectDetectionFrame
-from cecog.gui.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
 from cecog.gui.analyzer.featureextraction import FeatureExtractionFrame
 from cecog.gui.analyzer.postprocessing import PostProcessingFrame
 from cecog.gui.analyzer.classification import ClassificationFrame
-from cecog.gui.analyzer.tracking import TrackingFrame, SECTION_NAME_TRACKING
+from cecog.gui.analyzer.tracking import TrackingFrame
 from cecog.gui.analyzer.errorcorrection import ErrorCorrectionFrame
+from cecog.gui.analyzer.eventselection import EventSelectionFrame
 from cecog.gui.analyzer.output import OutputFrame
 from cecog.gui.analyzer.processing import ProcessingFrame
-from cecog.gui.analyzer.cluster import ClusterFrame, SECTION_NAME_CLUSTER
+from cecog.gui.analyzer.cluster import ClusterFrame
 from cecog.gui.imagedialog import ImageDialog
 
 from cecog.gui.browser import Browser
@@ -189,7 +202,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
         self.add_actions(menu_browser, (action_open, ))
 
         action_log = self.create_action('&Show Log Window...',
-                                        shortcut=QtGui.QKeySequence(Qt.CTRL + Qt.Key_L),
+                                        shortcut=QtGui.QKeySequence(Qt.CTRL+Qt.Key_L),
                                         slot=self._on_show_log_window)
         menu_window = self.menuBar().addMenu('&Window')
         self.add_actions(menu_window, (action_log,))
@@ -223,18 +236,19 @@ class CecogAnalyzer(QtGui.QMainWindow):
         self._settings = GuiConfigSettings(self, SECTION_REGISTRY)
 
         self._tab_lookup = OrderedDict()
-        self._tabs = [GeneralFrame(self._settings, self._pages),
-                      ObjectDetectionFrame(self._settings, self._pages),
-                      FeatureExtractionFrame(self._settings, self._pages),
-                      ClassificationFrame(self._settings, self._pages),
-                      TrackingFrame(self._settings, self._pages),
-                      ErrorCorrectionFrame(self._settings, self._pages),
-                      PostProcessingFrame(self._settings, self._pages),
-                      OutputFrame(self._settings, self._pages),
-                      ProcessingFrame(self._settings, self._pages)]
+        self._tabs = [GeneralFrame(self._settings, self._pages, SECTION_NAME_GENERAL),
+                      ObjectDetectionFrame(self._settings, self._pages, SECTION_NAME_OBJECTDETECTION),
+                      FeatureExtractionFrame(self._settings, self._pages, SECTION_NAME_FEATURE_EXTRACTION),
+                      ClassificationFrame(self._settings, self._pages, SECTION_NAME_CLASSIFICATION),
+                      TrackingFrame(self._settings, self._pages, SECTION_NAME_TRACKING),
+                      EventSelectionFrame(self._settings, self._pages, SECTION_NAME_EVENT_SELECTION),
+                      ErrorCorrectionFrame(self._settings, self._pages, SECTION_NAME_ERRORCORRECTION),
+                      PostProcessingFrame(self._settings, self._pages, SECTION_NAME_POST_PROCESSING),
+                      OutputFrame(self._settings, self._pages, SECTION_NAME_OUTPUT),
+                      ProcessingFrame(self._settings, self._pages, SECTION_NAME_PROCESSING)]
 
         if self.environ.analyzer_config.get('Analyzer', 'cluster_support'):
-            clusterframe = ClusterFrame(self._settings, self._pages)
+            clusterframe = ClusterFrame(self._settings, self._pages, SECTION_NAME_CLUSTER)
             clusterframe.set_imagecontainer(self._imagecontainer)
             self._tabs.append(clusterframe)
 
@@ -268,7 +282,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
         logger = logging.getLogger()
         logger.setLevel(logging.INFO)
 
-        self.setGeometry(0, 0, 1200, 700)
+        self.setGeometry(0, 0, 1250, 750)
         self.setMinimumSize(QtCore.QSize(700, 600))
         self._is_initialized = True
 
@@ -553,9 +567,11 @@ class CecogAnalyzer(QtGui.QMainWindow):
                 plate = imagecontainer.plates[0]
                 imagecontainer.set_plate(plate)
 
-        self.dlg = waitingProgressDialog('Please wait until the input structure is scanned\n'
-                                    'or the structure data loaded...', self, load, (0, len(scan_plates)))
-        self.dlg.exec_(passDialog=True)
+
+        msg = ('Please wait until the input structure is scanned\n'
+               'or the structure data loaded...')
+        dlg = waitingProgressDialog(msg, self, load, (0, len(scan_plates)))
+        dlg.exec_(passDialog=True)
 
         if len(imagecontainer.plates) > 0:
             imagecontainer.check_dimensions()
@@ -583,16 +599,16 @@ class CecogAnalyzer(QtGui.QMainWindow):
                 # a mismatch between settings and data will cause changed settings
                 self.settings_changed(True)
 
-            trait = self._settings.get_trait(SECTION_NAME_TRACKING,
-                                             'tracking_duration_unit')
+            trait = self._settings.get_trait(SECTION_NAME_EVENT_SELECTION,
+                                             'duration_unit')
 
             # allow time-base tracking durations only if time-stamp
             # information is present
             meta_data = imagecontainer.get_meta_data()
             if meta_data.has_timestamp_info:
-                result = trait.set_list_data(TRACKING_DURATION_UNITS_TIMELAPSE)
+                result = trait.set_list_data(TimeConverter.units)
             else:
-                result = trait.set_list_data(TRACKING_DURATION_UNITS_DEFAULT)
+                result = trait.set_list_data([TimeConverter.FRAMES])
             if result is None:
                 critical(self, "Could not set tracking duration units",
                          "The tracking duration units selected to match the load data. Please check your settings.")

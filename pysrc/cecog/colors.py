@@ -12,8 +12,42 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
+__all__ = ['Colors', 'rgb2hex', 'DCMAP', 'hex2rgb', 'BINARY_CMAP',
+           'DiscreteColormap', 'unsupervised_cmap']
 
+import numpy as np
+
+from matplotlib.colors import ListedColormap
 from matplotlib.colors import hex2color
+from matplotlib.colors import rgb2hex as mpl_rgb2hex
+from matplotlib.cm import jet
+
+
+def unsupervised_cmap(n):
+    return ListedColormap([jet(i) for i in np.linspace(0, 1, n)])
+
+# DCMAP is a fallback
+DCMAP = unsupervised_cmap(10)
+BINARY_CMAP = ListedColormap(["#DEDEDE","#FA1D2F"], name='binary_cmap')
+
+def rgb2hex(color, mpl=True):
+    """Converts an rgb-tuple into the corresponding hexcolor. if mpl is True,
+    the rgb-tuple has to follow the matplotlib convention i.e. values must
+    range from 0-1 otherwise from 0-255."""
+
+    if mpl:
+        fac = 1.0
+    else:
+        fac = 255.0
+
+    return mpl_rgb2hex((color[0]/fac, color[1]/fac, color[2]/fac))
+
+def hex2rgb(color):
+    """Return the rgb color as python int in the range 0-255."""
+    assert color.startswith("#")
+    fac=255.0
+    rgb = [int(i*fac) for i in hex2color(color)]
+    return tuple(rgb)
 
 class Colors(object):
 

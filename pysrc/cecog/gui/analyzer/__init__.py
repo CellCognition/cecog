@@ -28,7 +28,6 @@ from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
 from collections import OrderedDict
-from pdk.datetimeutils import TimeInterval
 from multiprocessing import cpu_count
 
 from cecog import CHANNEL_PREFIX
@@ -36,8 +35,8 @@ from cecog.gui.display import TraitDisplayMixin
 from cecog.learning.learning import CommonClassPredictor
 from cecog.learning.learning import ConfusionMatrix
 
-from cecog.util.util import hexToRgb, write_table
-
+from cecog.util.util import write_table
+from cecog.units.time import seconds2datetime
 
 from cecog.gui.util import (question,
                             critical,
@@ -45,8 +44,8 @@ from cecog.gui.util import (question,
                             status,
                             waitingProgressDialog,
                             )
-from cecog.analyzer import CONTROL_1, CONTROL_2
 
+from cecog.analyzer import CONTROL_1, CONTROL_2
 from cecog.analyzer.channel import PrimaryChannel
 from cecog.analyzer.channel import SecondaryChannel
 from cecog.analyzer.channel import TertiaryChannel
@@ -58,7 +57,6 @@ from cecog import ccore
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
 from cecog.traits.analyzer.postprocessing import SECTION_NAME_POST_PROCESSING
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
-from cecog.analyzer.gallery import compose_galleries
 from cecog.plugin.display import PluginBay
 from cecog.gui.widgets.tabcontrol import TabControl
 from cecog.analyzer.ibb import IBBAnalysis, SecurinAnalysis
@@ -66,10 +64,19 @@ from cecog.analyzer.ibb import IBBAnalysis, SecurinAnalysis
 from cecog.threads.picker import PickerThread
 from cecog.threads.analyzer import AnalyzerThread
 from cecog.threads.training import TrainingThread
-from cecog.threads.hmm_scafold import HmmThread_Python_Scafold
 from cecog.threads.hmm import HmmThread
+from cecog.threads.pyhmm import PyHmmThread
 from cecog.threads.post_processing import PostProcessingThread
 from cecog.multiprocess.multianalyzer import MultiAnalyzerThread
+
+from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
+from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACTION
+from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
+from cecog.traits.analyzer.tracking import SECTION_NAME_TRACKING
+from cecog.traits.analyzer.eventselection import SECTION_NAME_EVENT_SELECTION
+from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
+from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
+from cecog.traits.analyzer.cluster import SECTION_NAME_CLUSTER
 
 
 class BaseFrame(TraitDisplayMixin):
@@ -80,8 +87,9 @@ class BaseFrame(TraitDisplayMixin):
 
     toggle_tabs = pyqtSignal(str)
 
-    def __init__(self, settings, parent):
+    def __init__(self, settings, parent, name):
         super(BaseFrame, self).__init__(settings, parent)
+        self.name = name
         self._is_active = False
         self._intervals = list()
 
@@ -238,8 +246,7 @@ class _ProcessorMixin(object):
         converts = [('General', 'pathin'),
                     ('General', 'pathout'),
                     ('Classification', 'primary_classification_envpath'),
-                    ('Classification', 'secondary_classification_envpath'),
-                    ('Classification', 'tertiary_classification_envpath'),
+                    #('Classification', 'secondary_classification_envpath'),
                     ('ErrorCorrection', 'primary_graph'),
                     ('ErrorCorrection', 'secondary_graph'),
                     ('ErrorCorrection', 'mappingfile_path'),
@@ -313,7 +320,7 @@ class _ProcessorMixin(object):
                 cls = self._process_items[self._current_process_item]
 
 
-            if self.SECTION_NAME == 'Classification':
+            if self.name == SECTION_NAME_CLASSIFICATION:
                 result_frame = self._get_result_frame(self._tab_name)
                 result_frame.load_classifier(check=False)
                 learner = result_frame._learner
@@ -343,17 +350,7 @@ class _ProcessorMixin(object):
                     is_valid = False
                     result_frame.msg_apply_classifier(self)
 
-            elif cls is HmmThread:
-
-                success, cmd = HmmThread.test_executable(self._settings.get('ErrorCorrection', 'filename_to_R'))
-                if not success:
-                    critical(self, 'Error running R',
-                             "The R command line program '%s' could not be executed.\n\n"\
-                             "Make sure that the R-project is installed.\n\n"\
-                             "See README.txt for details." % cmd)
-                    is_valid = False
-
-            elif cls is MultiAnalyzerThread:
+            if cls is MultiAnalyzerThread:
                 ncpu = cpu_count()
                 (ncpu, ok) = QInputDialog.getInt(None, "On your machine are %d processers available." % ncpu, \
                                              "Select the number of processors", \
@@ -405,6 +402,16 @@ class _ProcessorMixin(object):
                     self._analyzer = cls(self, self._current_settings, imagecontainer, ncpu)
 
 
+                elif cls is PyHmmThread:
+                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
+                    self._analyzer = cls(self, self._current_settings,
+                                         self.parent().main_window._imagecontainer)
+
+                elif cls is PyHmmThread:
+                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
+                    self._analyzer = cls(self, self._current_settings,
+                                         self.parent().main_window._imagecontainer)
+
                 elif cls is HmmThread:
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
 
@@ -419,13 +426,14 @@ class _ProcessorMixin(object):
                         env_path = CecogEnvironment.convert_package_path(classifier_path)
 
                         if (os.path.exists(env_path)
-                              and (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))
-                             ):
+                            and (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))
+                            ):
 
                             learner = CommonClassPredictor( \
                                 env_path,
                                 _resolve('ObjectDetection', 'channelid'),
                                 _resolve('Classification', 'classification_regionname'))
+
                             learner.importFromArff()
                             learner_dict[kind] = learner
 
@@ -434,8 +442,7 @@ class _ProcessorMixin(object):
                                          learner_dict,
                                          self.parent().main_window._imagecontainer)
                     self._analyzer.setTerminationEnabled(True)
-                    lw = self.parent().main_window.log_window
-                    lw.show()
+                    self.parent().main_window.log_window.show()
 
 
                 elif cls is PostProcessingThread:
@@ -501,9 +508,9 @@ class _ProcessorMixin(object):
             # enable all section button of the main widget
             self.toggle_tabs.emit(self.get_name())
             if not self._is_abort and not self._has_error:
-                if self.SECTION_NAME == 'ObjectDetection':
+                if self.name == SECTION_NAME_OBJECTDETECTION:
                     msg = 'Object detection successfully finished.'
-                elif self.SECTION_NAME == 'Classification':
+                elif self.name == SECTION_NAME_CLASSIFICATION:
                     if self._current_process == self.PROCESS_PICKING:
                         msg = 'Samples successfully picked.\n\n'\
                               'Please train the classifier now based on the '\
@@ -521,16 +528,15 @@ class _ProcessorMixin(object):
                               'processing workflow.'
                     elif self._current_process == self.PROCESS_TESTING:
                         msg = 'Classifier testing successfully finished.'
-                elif self.SECTION_NAME == 'Tracking':
-                    if self._current_process == self.PROCESS_TRACKING:
-                        msg = 'Tracking successfully finished.'
-                    elif self._current_process == self.PROCESS_SYNCING:
-                        msg = 'Motif selection successfully finished.'
-                elif self.SECTION_NAME == 'ErrorCorrection':
+                elif self.name == SECTION_NAME_TRACKING:
+                    msg = 'Tracking successfully finished.'
+                elif self.name == SECTION_NAME_EVENT_SELECTION:
+                    msg = 'event selection successfully finished.'
+                elif self.name == SECTION_NAME_ERRORCORRECTION:
                     msg = 'HMM error correction successfully finished.'
-                elif self.SECTION_NAME == 'Processing':
+                elif self.name == SECTION_NAME_PROCESSING:
                     msg = 'Processing successfully finished.'
-                elif self.SECTION_NAME == "PostProcessing":
+                elif self.name == SECTION_NAME_POST_PROCESSING:
                     msg = 'Postprocessing successfully finished'
 
                 information(self, 'Process finished', msg)
@@ -570,13 +576,12 @@ class _ProcessorMixin(object):
                         interval = info['interval']
                         self._intervals.append(interval)
                         avg = numpy.average(self._intervals)
-                        estimate = TimeInterval(avg * float(info['max']-info['progress']))
+                        estimate = seconds2datetime(avg*float(info['max']-info['progress']))
                         msg += '%s~ %.1fs / %s%s%s remaining' % (sep,
-                                                               #interval.get_interval(),
-                                                               avg,
-                                                               info['item_name'],
-                                                               sep,
-                                                               estimate.format())
+                                                                 avg,
+                                                                 info['item_name'],
+                                                                 sep,
+                                                                 estimate.strftime("%H:%M:%S"))
                     else:
                         self._intervals = []
                     status(msg)
@@ -600,13 +605,13 @@ class _ProcessorMixin(object):
                     if current > 1 and ('interval' in info.keys()):
                         interval = info['interval']
                         self._intervals.append(interval)
-                        estimate = TimeInterval(numpy.average(self._intervals) *
-                                                float(total-current))
+                        estimate = seconds2datetime(
+                            numpy.average(self._intervals)*float(total-current))
                         msg += '%s%.1fs / %s%s%s remaining' % (sep,
                                                                interval,
                                                                self._stage_infos[2]['item_name'],
                                                                sep,
-                                                               estimate.format())
+                                                               estimate.strftime("%H:%M:%S"))
                     else:
                         self._intervals = []
                     status(msg)
@@ -640,8 +645,8 @@ class _ProcessorMixin(object):
 
 class BaseProcessorFrame(BaseFrame, _ProcessorMixin):
 
-    def __init__(self, settings, parent):
-        BaseFrame.__init__(self, settings, parent)
+    def __init__(self, settings, parent, name):
+        BaseFrame.__init__(self, settings, parent, name)
         _ProcessorMixin.__init__(self, parent)
 
     def set_active(self, state):

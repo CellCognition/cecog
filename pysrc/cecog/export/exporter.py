@@ -26,6 +26,7 @@ from cecog.analyzer.tracker import Tracker
 from cecog.io.dotwriter import DotWriter
 from cecog.util.util import makedirs
 
+
 class CSVParams(object):
     """Column names, prefixes and spearator for csv files"""
 
@@ -38,6 +39,7 @@ class CSVParams(object):
 
     tracking_features = ['center_x', 'center_y', 'upperleft_x',
                          'upperleft_y', 'lowerright_x', 'lowerright_y']
+
 
 class TrackExporter(object):
 
@@ -87,7 +89,8 @@ class TrackExporter(object):
                     data[CSVParams.class_ %'label'] = sample.iLabel
                     data[CSVParams.class_ %'name'] = sample.strClassName
                     data[CSVParams.class_ %'probability'] = \
-                        ','.join(['%d:%.5f' % (int(x), y) for x, y in sample.dctProb.iteritems()])
+                        ','.join(['%d:%.5f' % (int(x), y) for x, y in \
+                                  sample.dctProb.iteritems()])
 
                 data[CSVParams.tracking %'center_x'] = sample.oCenterAbs[0]
                 data[CSVParams.tracking %'center_y'] = sample.oCenterAbs[1]
@@ -128,8 +131,8 @@ class EventExporter(object):
                                                region_name, feature_names, position)
 
 
-    def _data_per_channel(self, timeholder, event_data, filename, channel_name, region_name,
-                          feature_names, position):
+    def _data_per_channel(self, timeholder, event_data, filename, channel_name,
+                          region_name, feature_names, position):
 
         eventid = event_data['eventId']
         event_frame, _ = Tracker.split_nodeid(eventid)
@@ -165,7 +168,8 @@ class EventExporter(object):
             if CSVParams.objId not in header_names:
                 # setup header line
                 header_names.append(CSVParams.objId)
-                header_names += [CSVParams.class_ %x for x in ['name', 'label', 'probability']]
+                header_names += [CSVParams.class_ %x for x in
+                                 ['name', 'label', 'probability']]
                 # only feature_names scales according to settings
                 header_names += [CSVParams.feature %fn for fn in feature_names]
                 header_names += [CSVParams.tracking %tf for tf in CSVParams.tracking_features]
@@ -189,7 +193,8 @@ class EventExporter(object):
                     data[CSVParams.class_ %'label'] = sample.iLabel
                     data[CSVParams.class_ %'name'] = sample.strClassName
                     data[CSVParams.class_ %'probability'] = \
-                        ','.join(['%d:%.5f' % (int(x),y) for x,y in sample.dctProb.iteritems()])
+                        ','.join(['%d:%.5f' % (int(x),y) for x,y in
+                                  sample.dctProb.iteritems()])
 
                 common_ftr = [f for f in set(sample_holder.feature_names).intersection(feature_names)]
                 features = sample_holder.features_by_name(objid, common_ftr)

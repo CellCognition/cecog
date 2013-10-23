@@ -15,7 +15,7 @@ __revision__ = '$Rev$'
 __source__ = '$URL$'
 
 from xml.dom.minidom import parse
-from pdk.ordereddict import OrderedDict
+from collections import OrderedDict
 
 class CellCounterReader(OrderedDict):
 
@@ -31,9 +31,7 @@ class CellCounterReader(OrderedDict):
             iOffset = self._oReference.index(self.getTimePoint())
         else:
             iOffset = self._oReference.index(self.getPosition())
-
         self._importData(iOffset)
-        self.sort()
 
     def _importData(self, iOffset):
         self._oTable = importTable(self.strFilename,
