@@ -24,6 +24,7 @@ from cecog.tc3 import normalize
 from cecog.environment import find_resource_dir
 from cecog.errorcorrection.hmm.skhmm import MultinomialHMM
 
+
 class HMMSimpleLeft2RightConstraint(object):
     """"Simplest constraint on an Hidden Markov Models
     1) number of emission is equal to the number of states
@@ -125,6 +126,7 @@ class HMMEstimator(object):
 
     def _estimate_emis(self):
         self._emis = np.eye(self.nstates) + self._emission_noise
+        self._emis = normalize(self._emis, axis=1, eps=0.0)
 
     def _estimate_startprob(self):
         self._startprob = np.zeros(self.nstates)
@@ -234,15 +236,13 @@ class HMMBaumWelchEstimator(HMMEstimator):
     def __init__(self, estimator, tracks):
         super(HMMBaumWelchEstimator, self).__init__(estimator.nstates)
         # the initialisation is essential!
-        t = normalize(estimator.trans, axis=1, eps=0.0)
-        s = normalize(estimator.startprob, eps=0.0)
-
         hmm_ = MultinomialHMM(n_components=estimator.nstates,
-                              transmat=t,
-                              startprob=s,
+                              transmat=estimator.trans,
+                              startprob=estimator.startprob,
                               n_iter=1000,
                               init_params="")
-        hmm_.emissionprob_ = normalize(estimator.emis, axis=1, eps=0.0)
+        hmm_.emissionprob_ = estimator.emis
+
         hmm_.fit(tracks)
 
         self._trans = hmm_.transmat_

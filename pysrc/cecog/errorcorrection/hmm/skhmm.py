@@ -23,6 +23,9 @@ EPS = 1e-99
 
 class MultinomialHMM(hmm.MultinomialHMM):
 
+    def __init__(self, *args, **kw):
+        super(MultinomialHMM, self).__init__(*args, **kw)
+
     def _get_startprob(self, *args, **kw):
         return super(MultinomialHMM, self)._get_startprob(*args, **kw)
 
@@ -60,6 +63,8 @@ class MultinomialHMM(hmm.MultinomialHMM):
             != (self.n_components, self.n_components)):
             raise ValueError('transmat must have shape '
                              '(n_components, n_components)')
+
+
         if not np.all(np.allclose(np.sum(transmat, axis=1), 1.0)):
             raise ValueError('Rows of transmat must sum to 1.0')
 

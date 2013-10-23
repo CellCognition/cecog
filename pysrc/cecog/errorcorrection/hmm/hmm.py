@@ -19,6 +19,7 @@ from cecog.errorcorrection import HmmBucket
 from cecog.errorcorrection.hmm import estimator
 from cecog.errorcorrection.hmm.skhmm import MultinomialHMM
 
+
 class HMMCore(object):
 
     def __init__(self, dtable, channel, classdef, ecopts):
@@ -40,15 +41,17 @@ class HMMCore(object):
         2) Baum Welch algorithm.
         """
 
+        states = np.array(self.classdef.class_names.keys())
         if self.ecopts.eventselection == self.ecopts.EVENTSELECTION_SUPERVISED:
             est = estimator.HMMProbBasedEsitmator(probs)
         else:
-            states = np.array(self.classdef.class_names.keys())
             est = estimator.HMMTransitionCountEstimator(tracks, states)
+
         # Baum Welch performs bad with bad start values
         est = estimator.HMMBaumWelchEstimator(
             est, self.classdef.label2index(tracks))
         return est
+
 
 class HmmSklearn(HMMCore):
 
