@@ -46,10 +46,11 @@ class HMMCore(object):
             est = estimator.HMMProbBasedEsitmator(probs)
         else:
             est = estimator.HMMTransitionCountEstimator(tracks, states)
+            probs = None # can't use probs for unsupervied learning yet
 
         # Baum Welch performs bad with bad start values
         est = estimator.HMMBaumWelchEstimator(
-            est, self.classdef.label2index(tracks))
+            est, self.classdef.label2index(tracks), probs)
         return est
 
 
@@ -84,6 +85,9 @@ class HmmSklearn(HMMCore):
             hmm_.startprob_ = est.startprob
             hmm_.transmat_ = est.trans
             hmm_.emissionprob_ = est.emis
+            # line below may improve the performance if
+            # e.g. on class (apo) is not present
+            # hmm_.emissionprob_ = est.mean_probs*est.emis
 
             tracks2 = []
             for track in self.classdef.label2index(tracks):

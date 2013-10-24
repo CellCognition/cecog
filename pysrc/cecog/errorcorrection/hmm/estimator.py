@@ -122,7 +122,7 @@ class HMMEstimator(object):
 
     @property
     def _emission_noise(self):
-        return 0.05
+        return 0.03
 
     def _estimate_emis(self):
         self._emis = np.eye(self.nstates) + self._emission_noise
@@ -156,7 +156,7 @@ class HMMProbBasedEsitmator(HMMEstimator):
     """
 
     # number of frames to consider as noise
-    N_NOISE_FRAMES = 2.0
+    NOISE_FACTOR = 1.0
 
     def __init__(self, probs):
         self._probs = probs
@@ -165,7 +165,7 @@ class HMMProbBasedEsitmator(HMMEstimator):
 
     @property
     def _emission_noise(self):
-        return self.N_NOISE_FRAMES/self._probs.shape[1]
+        return self.NOISE_FACTOR/self._probs.shape[1]/self.nstates
 
     def _estimate_trans(self):
         super(HMMProbBasedEsitmator, self)._estimate_trans()
@@ -190,8 +190,8 @@ class HMMProbBasedEsitmator(HMMEstimator):
 
 class HMMTransitionCountEstimator(HMMEstimator):
 
-    # number of frames to consider as noise
-    N_NOISE_FRAMES = 2.0
+    # a noise factor fo 1 considers one frame as noise
+    NOISE_FACTOR = 1.0
 
     def __init__(self, tracks, states):
         self._tracks = tracks
@@ -200,7 +200,7 @@ class HMMTransitionCountEstimator(HMMEstimator):
 
     @property
     def _emission_noise(self):
-        return self.N_NOISE_FRAMES/self._tracks.shape[1]
+        return self.NOISE_FACTOR/self._tracks.shape[1]/self.nstates
 
     def _estimate_trans(self):
         """Estimates the transition probaility by counting."""
@@ -233,18 +233,38 @@ class HMMTransitionCountEstimator(HMMEstimator):
 
 class HMMBaumWelchEstimator(HMMEstimator):
 
-    def __init__(self, estimator, tracks):
+    def __init__(self, estimator, tracks, probs=None):
+        # tracks have been mapped to array indices already
         super(HMMBaumWelchEstimator, self).__init__(estimator.nstates)
+        self._trans = estimator.trans
+        self._emis = estimator.emis
+        self._startprob = estimator.startprob
+
+        if probs is not None:
+            self.mean_probs = self.mean_precition_probability(probs, tracks)
+
         # the initialisation is essential!
         hmm_ = MultinomialHMM(n_components=estimator.nstates,
                               transmat=estimator.trans,
                               startprob=estimator.startprob,
                               n_iter=1000,
                               init_params="")
-        hmm_.emissionprob_ = estimator.emis
 
+        hmm_.emissionprob_ = estimator.emis
         hmm_.fit(tracks)
 
         self._trans = hmm_.transmat_
         self._emis = hmm_.emissionprob_
         self._startprob = hmm_.startprob_
+
+    def mean_precition_probability(self, probs, tracks):
+        """Calculate the mean prediction probabiliy for each class. The result
+        is a matrix where each row sums up to one"""
+        mprobs = np.zeros((self.nstates, self.nstates))
+
+        probs = probs.reshape((-1, self.nstates))
+        tracks = tracks.flatten()
+
+        for i in xrange(self.nstates):
+            mprobs[i, :] = probs[tracks == i].mean(axis=0)
+        return normalize(mprobs, axis=1)
