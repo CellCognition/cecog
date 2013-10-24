@@ -1,15 +1,11 @@
-                          The CellCognition Project
-    Copyright (c) 2006 - 2012 Christoph Sommer, Michael Held & Daniel Gerlich
-                      Gerlich Lab, ETH Zurich, Switzerland
-                              www.cellcognition.org
+# The CellCognition Project
+ Copyright (c) 2006 - 2012 Christoph Sommer, Michael Held & Daniel Gerlich  
+ Gerlich Lab, IMBA Vienna, Austria. CellCognition is distributed under the term of LGPL License. 
 
-           CellCognition is distributed under the LGPL License.
-                     See trunk/LICENSE.txt for details.
-               See trunk/AUTHORS.txt for author contributions.
+ www.cellcognition.org  
+ www.doc.cellcognition.org
 
-
-Building the C++ Extension
---------------------------
+### Building the C++ Extension
 
 To compile the ccore extension you need to adopt the library/include
 paths in the setup.cfg accordingly.
@@ -24,7 +20,7 @@ Dependcies are:
   python setup.py build_ext --inplace
 
 #### System installation:
-  python setup.py install --prefix=<path-to-prefix>
+  python setup.py install --prefix=\<path-to-prefix\>
 
 #### MacOSX
 run the make file.
@@ -84,7 +80,7 @@ not all necessary positions/timepoints are included.
 Please download the larger H2b-Tubulin data.
 
 
-#### Motif selection & error correction
+#### Motif selection
 
 
 With the included data and settings only six mitotic events with four frames
