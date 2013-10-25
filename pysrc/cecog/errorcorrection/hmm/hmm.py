@@ -53,7 +53,6 @@ class HMMCore(object):
             est, self.classdef.label2index(tracks), probs)
         return est
 
-
 class HmmSklearn(HMMCore):
 
     def __init__(self, *args, **kw):

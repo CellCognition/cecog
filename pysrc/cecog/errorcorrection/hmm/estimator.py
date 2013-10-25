@@ -182,9 +182,7 @@ class HMMProbBasedEsitmator(HMMEstimator):
     def _estimate_startprob(self):
         super(HMMProbBasedEsitmator, self)._estimate_startprob()
         self._startprob[:] = 0.0
-        for i in xrange(self._probs.shape[0]):
-            self._startprob += self._probs[i, 1, :]
-
+        self._startprob = self._probs[:, 0, :].sum(axis=0)
         self._startprob = normalize(self._startprob, eps=0.0)
 
 
@@ -204,30 +202,32 @@ class HMMTransitionCountEstimator(HMMEstimator):
 
     def _estimate_trans(self):
         """Estimates the transition probaility by counting."""
-
         super(HMMTransitionCountEstimator, self)._estimate_trans()
         self._trans[:] = 0.0
         index_of = lambda label: np.where(self._states==label)[0][0]
         _tracks = self._tracks.flatten()
+
         for i, label in enumerate(_tracks):
             for state in self._states:
                 try:
-                    if (_tracks[i+1] == state) and (label >= state):
-                        self._trans[index_of(state), index_of(label)] += 1.0
+                    if (_tracks[i+1] == state):
+                        self._trans[index_of(label), index_of(state)] += 1.0
+                        continue
                 except IndexError:
                     pass
 
-        # make transisition cyclic
-        self._trans[-1, 0] = self._trans[0,-1]
         self._trans =  normalize(self._trans, axis=1, eps=0.0)
         return self._trans
 
     def _estimate_startprob(self):
         super(HMMTransitionCountEstimator, self)._estimate_startprob()
         self.startprob[:] = 0.0
+
+        index_of = lambda label: np.where(self._states==label)[0][0]
         counts =  np.bincount(self._tracks[:, 0].flatten())
-        for i, c in enumerate(counts):
-            self.startprob[i] = c
+        for label in np.unique(self._tracks[:, 0]):
+            self.startprob[index_of(label)] = counts[label]
+
         self._startprob = normalize(self._startprob, eps=0.0)
         return self._startprob
 
