@@ -59,7 +59,7 @@ from cecog.gui.widgets.groupbox import QxtGroupBox
 
 from cecog.gui.modules.navigation import NavigationModule
 from cecog.gui.modules.display import DisplayModule
-from cecog.gui.modules.annotation import AnnotationModule, InteractiveAnnotationModule
+from cecog.gui.modules.annotation import AnnotationModule
 
 from cecog.plugin.segmentation import REGION_INFO
 
@@ -266,9 +266,6 @@ class Browser(QMainWindow):
         DisplayModule(self._module_manager, self, self._imagecontainer, region_names)
 
         AnnotationModule(self._module_manager, self, self._settings,
-                         self._imagecontainer)
-        
-        InteractiveAnnotationModule(self._module_manager, self, self._settings,
                          self._imagecontainer)
 
         # set the Navigation module activated
