@@ -391,17 +391,20 @@ class ObjectsFrame(QFrame):
         layout.addWidget(box, 1, 0, 1, 2)
         self._box_region = box
 
-        box = QCheckBox('Show Contours', self)
+        box = QRadioButton('Show Contours', self)
         box.setEnabled(box_detect.checkState() == Qt.Checked)
         box.setChecked(self.browser.image_viewer.show_contours)
         box.toggled.connect(self.browser.on_act_show_contours)
         layout.addWidget(box, 2, 0)
         self._box_contours = box
         
-        box_classify = QCheckBox('Classify Objects', self)
+        box_classify = QRadioButton('Classify Objects', self)
+        box.setEnabled(box_detect.checkState() == Qt.Checked)
+        box.setChecked(self.browser.image_viewer.show_contours)
         box_classify.toggled.connect(self._on_classify_objects)
         box_classify.setChecked(self._classify_objects)
         layout.addWidget(box_classify, 3, 0)
+        self._box_classify = box_classify
 
         self._btn_contour_color = ColorButton(None, self)
         self._btn_contour_color.setEnabled(box_detect.checkState() == Qt.Checked)
@@ -421,14 +424,11 @@ class ObjectsFrame(QFrame):
     def _on_show_objects(self, state):
         self._box_region.setEnabled(state)
         self._box_contours.setEnabled(state)
+        self._box_classify.setEnabled(state)
         self._btn_contour_color.setEnabled(state)
         self.show_objects_toggled.emit(state)
         
     def _on_classify_objects(self, state):
-        self._box_detect.setEnabled(state)
-        self._box_region.setEnabled(state)
-        self._box_contours.setEnabled(state)
-        self._btn_contour_color.setEnabled(state)
         self.show_classify_toggled.emit(state)
 
     def _on_set_contour_state(self, state):

@@ -584,7 +584,7 @@ class Browser(QMainWindow):
     # Qt method overwrites
 
     def keyPressEvent(self, ev):
-        super(Browser, self).keyPressEvent(self, ev)
+        QMainWindow.keyPressEvent(self, ev)
         # allow to return from fullscreen via the Escape key
         if self.isFullScreen() and ev.key() == Qt.Key_Escape:
             self.showNormal()
