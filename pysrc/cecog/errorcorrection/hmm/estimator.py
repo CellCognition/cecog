@@ -181,10 +181,13 @@ class HMMProbBasedEsitmator(HMMEstimator):
 
     def _estimate_startprob(self):
         super(HMMProbBasedEsitmator, self)._estimate_startprob()
+        weights = np.bincount(np.argmax(self._probs[:,0,:], axis=1),
+                              minlength=self.nstates).astype(float)
+        weights /= weights.sum()
+
         self._startprob[:] = 0.0
         self._startprob = self._probs[:, 0, :].sum(axis=0)
-        self._startprob = normalize(self._startprob, eps=0.0)
-
+        self._startprob = normalize(self._startprob*weights, eps=0.0)
 
 class HMMTransitionCountEstimator(HMMEstimator):
 
