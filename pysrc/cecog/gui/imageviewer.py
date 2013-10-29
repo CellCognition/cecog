@@ -24,6 +24,26 @@ from PyQt4.Qt import *
 
 from cecog.gui.util import numpy_to_qimage
 
+class ZoomedQGraphicsView(QGraphicsView):  
+    def wheelEvent(self, event):
+        keys = QApplication.keyboardModifiers()
+        k_ctrl = (keys == Qt.ControlModifier)
+
+        self.mousePos = self.mapToScene(event.pos())
+        grviewCenter  = self.mapToScene(self.viewport().rect().center())
+
+        if k_ctrl is True:
+            if event.delta() > 0:
+                scaleFactor = 1.1
+            else:
+                scaleFactor = 0.9
+            self.scale(scaleFactor, scaleFactor)
+            
+            mousePosAfterScale = self.mapToScene(event.pos())
+            offset = self.mousePos - mousePosAfterScale
+            newGrviewCenter = grviewCenter + offset
+            self.centerOn(newGrviewCenter)
+
 class ItemHoverMixin:
 
     SCALE = 1.1
@@ -66,7 +86,7 @@ class ImageScene(QGraphicsScene):
         super(ImageScene, self).__init__(parent)
 
 
-class ImageViewer(QGraphicsView):
+class ImageViewer(ZoomedQGraphicsView):
 
     MOVE_KEY = Qt.Key_Space
     MAX_SCALE = 200
