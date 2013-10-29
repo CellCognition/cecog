@@ -361,6 +361,8 @@ class EnhancementFrame(QFrame):
 class ObjectsFrame(QFrame):
 
     show_objects_toggled = pyqtSignal('bool')
+    show_classify_toggled = pyqtSignal('bool')
+    
     object_region_changed = pyqtSignal(str, str)
 
     def __init__(self, browser, region_names, parent):
@@ -369,13 +371,16 @@ class ObjectsFrame(QFrame):
         layout.setContentsMargins(5, 5, 5, 5)
 
         self.show_objects_toggled.connect(browser.on_show_objects)
+        self.show_classify_toggled.connect(browser.on_classify_objects)
         self._show_objects = False
+        self._classify_objects = False
         self.browser = browser
 
-        box_detect = QCheckBox('Show / Detect Objects', self)
+        box_detect = QCheckBox('Detect Objects', self)
         box_detect.toggled.connect(self._on_show_objects)
         box_detect.setChecked(self._show_objects)
         layout.addWidget(box_detect, 0, 0)
+        self._box_detect = box_detect
 
         box = QComboBox(self)
         box.setEnabled(box_detect.checkState() == Qt.Checked)
@@ -392,6 +397,11 @@ class ObjectsFrame(QFrame):
         box.toggled.connect(self.browser.on_act_show_contours)
         layout.addWidget(box, 2, 0)
         self._box_contours = box
+        
+        box_classify = QCheckBox('Classify Objects', self)
+        box_classify.toggled.connect(self._on_classify_objects)
+        box_classify.setChecked(self._classify_objects)
+        layout.addWidget(box_classify, 3, 0)
 
         self._btn_contour_color = ColorButton(None, self)
         self._btn_contour_color.setEnabled(box_detect.checkState() == Qt.Checked)
@@ -413,6 +423,13 @@ class ObjectsFrame(QFrame):
         self._box_contours.setEnabled(state)
         self._btn_contour_color.setEnabled(state)
         self.show_objects_toggled.emit(state)
+        
+    def _on_classify_objects(self, state):
+        self._box_detect.setEnabled(state)
+        self._box_region.setEnabled(state)
+        self._box_contours.setEnabled(state)
+        self._btn_contour_color.setEnabled(state)
+        self.show_classify_toggled.emit(state)
 
     def _on_set_contour_state(self, state):
         self._box_contours.blockSignals(True)
@@ -446,8 +463,6 @@ class DisplayFrame(QFrame):
 class DisplayModule(Module):
 
     NAME = 'Display'
-
-    #show_objects_toggled = pyqtSignal('bool')
     object_region_changed = pyqtSignal(str, str)
 
     def __init__(self, parent, browser, image_container, region_names):

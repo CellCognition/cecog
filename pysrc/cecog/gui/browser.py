@@ -86,6 +86,7 @@ class Browser(QMainWindow):
         self._settings = settings
         self._imagecontainer = imagecontainer
         self._show_objects = False
+        self._classify_objects = False
         self._object_region = None
 
         self.coordinate = Coordinate()
@@ -366,7 +367,7 @@ class Browser(QMainWindow):
         nav = self._module_manager.get_widget(NavigationModule.NAME)
         nav.nav_to_coordinate(coordinate)
 
-    def _process_image(self):
+    def _process_image(self, ):
         settings = _ProcessorMixin.get_special_settings(self._settings)
         settings.set_section('General')
         settings.set2('constrain_positions', True)
@@ -382,8 +383,8 @@ class Browser(QMainWindow):
         #sec_regions = settings.get2('secondary_regions')
         settings.set_section('Processing')
         settings.set2('primary_classification', True)
-        settings.set2('secondary_classification', False)
-        settings.set2('tertiary_classification', False)
+        settings.set2('secondary_classification', True)
+        settings.set2('tertiary_classification', True)
         settings.set2('merged_classification', False)
         settings.set2('primary_featureextraction', True)
         settings.set2('secondary_featureextraction', True)
@@ -462,7 +463,10 @@ class Browser(QMainWindow):
             for obj_id, obj in region.iteritems():
                 coords[obj_id] = obj.crack_contour
                 colors[obj_id] = obj.strHexColor
-            self.set_classified_crack_contours(coords, colors)
+            if self._classify_objects:
+                self.set_classified_crack_contours(coords, colors)
+            else:
+                self.set_coords(coords)
             
 
 
@@ -569,7 +573,13 @@ class Browser(QMainWindow):
         self._show_objects = state
         self.image_viewer.remove_objects()
         self._process_image()
-        self.show_objects_toggled.emit(state)
+        #self.show_objects_toggled.emit(state)
+        
+    def on_classify_objects(self, state):
+        self._classify_objects = state
+        self.image_viewer.remove_objects()
+        self._process_image()
+        #self.show_objects_toggled.emit(state)
 
     # Qt method overwrites
 
