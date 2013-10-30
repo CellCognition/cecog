@@ -228,6 +228,11 @@ class ImageViewer(ZoomedQGraphicsView):
 
     def set_contour_color(self, color):
         self.contour_color = color
+        for item in self._objects:
+            pen = item.pen()
+            pen.setColor(QColor(self.contour_color))
+            item.setPen(pen)
+            item.setAcceptHoverEvents(self.show_mouseover)
         self._update_contours()
 
     def set_show_contours(self, state=True):
@@ -237,14 +242,13 @@ class ImageViewer(ZoomedQGraphicsView):
     def set_show_mouseover(self, state=True):
         self.show_mouseover = state
         self._update_contours()
+  
 
-    def _update_contours(self, reset_color=True):
-        print 'reset_color', reset_color
-        pen = QPen(self.contour_color)
-        pen.setStyle(Qt.SolidLine if self.show_contours else Qt.NoPen)
+    def _update_contours(self):
         for item in self._objects:
-            if reset_color:
-                item.setPen(pen)
+            pen = item.pen()
+            pen.setStyle(Qt.SolidLine if self.show_contours else Qt.NoPen)
+            item.setPen(pen)
             item.setAcceptHoverEvents(self.show_mouseover)
 
     def set_objects_by_crackcoords(self, coords):
@@ -253,6 +257,7 @@ class ImageViewer(ZoomedQGraphicsView):
             poly = QPolygonF([QPointF(*pos) for pos in crack])
             item = HoverPolygonItem(poly)
             item.setData(0, obj_id)
+            item.setPen(QPen(self.contour_color))
             scene.addItem(item)
             self._objects.add(item)
         self._update_contours()
@@ -267,7 +272,7 @@ class ImageViewer(ZoomedQGraphicsView):
             scene.addItem(item)
             self._objects.add(item)
             item.setPen(QColor(colors[obj_id]))
-        self._update_contours(reset_color=False)
+        self._update_contours()
 
     def remove_objects(self):
         scene = self.scene()

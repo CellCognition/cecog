@@ -85,9 +85,13 @@ class Browser(QMainWindow):
 
         self._settings = settings
         self._imagecontainer = imagecontainer
-        self._show_objects = False
-        self._classify_objects = False
+        
+        # These params are used by process_image and contour visualization
+        self._detect_objects = False
+        self._show_objects_by = 'color'
         self._object_region = None
+        self._contour_color = '#000000'
+        self._show_objects = True
 
         self.coordinate = Coordinate()
 
@@ -302,13 +306,11 @@ class Browser(QMainWindow):
                 target.addAction(action)
 
     def set_coords(self, coords):
-        self.image_viewer.remove_objects()
         self.image_viewer.set_objects_by_crackcoords(coords)
         widget = self._module_manager.get_widget(AnnotationModule.NAME)
         widget.set_coords()
         
     def set_classified_crack_contours(self, coords, colors):
-        self.image_viewer.remove_objects()
         self.image_viewer.set_objects_by_crackcoords_with_colors(coords, colors)
         widget = self._module_manager.get_widget(AnnotationModule.NAME)
         widget.set_coords()
@@ -368,6 +370,7 @@ class Browser(QMainWindow):
         nav.nav_to_coordinate(coordinate)
 
     def _process_image(self, ):
+        self.image_viewer.remove_objects()
         settings = _ProcessorMixin.get_special_settings(self._settings)
         settings.set_section('General')
         settings.set2('constrain_positions', True)
@@ -382,14 +385,17 @@ class Browser(QMainWindow):
         #sec_id = SecondaryChannel.NAME
         #sec_regions = settings.get2('secondary_regions')
         settings.set_section('Processing')
-        settings.set2('primary_classification', True)
-        settings.set2('secondary_classification', True)
-        settings.set2('tertiary_classification', True)
-        settings.set2('merged_classification', False)
+        
+        _classify_objects = self._show_objects_by == 'classification'
+        
+        settings.set2('primary_classification', _classify_objects )
+        settings.set2('secondary_classification', _classify_objects)
+        settings.set2('tertiary_classification', _classify_objects)
+        settings.set2('merged_classification', _classify_objects)
         settings.set2('primary_featureextraction', True)
         settings.set2('secondary_featureextraction', True)
 
-        settings.set2('objectdetection', self._show_objects)
+        settings.set2('objectdetection', self._detect_objects)
         settings.set2('tracking', False)
         settings.set_section('Output')
         settings.set2('rendering_contours_discwrite', False)
@@ -422,30 +428,30 @@ class Browser(QMainWindow):
             settings.set('Processing', 'secondary_processChannel', True)
         elif nchannels == 3:
             settings.set('Processing', 'secondary_processChannel', True)
-            settings.set('Processing', 'tertiary_processChannel', True)
+            settings.set('Processing', 'tertfiary_processChannel', True)
         # need turn of virtual channels
         settings.set('Processing', 'merged_processChannel', False)
 
         settings.set('General', 'rendering', {})
         analyzer = AnalyzerBrowser(self.coordinate.plate, settings, self._imagecontainer)
-        analyzer.add_stream_handler()
-
-        # as long the GIL is not released, if GIL is released
-        # just use self.setCursor
+        #analyzer.add_stream_handler()
 
         res = None
-#         try:
-        QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
-        res = analyzer.processPositions()
-#         except Exception, e:
-#             import traceback
-#             traceback.print_exc()
-#             raise(e)
-#         finally:
-#             QApplication.restoreOverrideCursor()
-#         return res
+        try:
+            QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+            res = analyzer.processPositions()
+        except Exception, e:
+            import traceback
+            from cecog.gui.util import exception
+            traceback.print_exc()
+            exception(self, str(e))
+            raise
+        finally:
+            QApplication.restoreOverrideCursor()
+        
         self.render_browser(res)
         QApplication.setOverrideCursor(QCursor(Qt.ArrowCursor))
+        return res
 
     def render_browser(self, cellanalyzer):
         d = {}
@@ -463,7 +469,7 @@ class Browser(QMainWindow):
             for obj_id, obj in region.iteritems():
                 coords[obj_id] = obj.crack_contour
                 colors[obj_id] = obj.strHexColor
-            if self._classify_objects:
+            if self._show_objects_by == 'classification':
                 self.set_classified_crack_contours(coords, colors)
             else:
                 self.set_coords(coords)
@@ -484,8 +490,12 @@ class Browser(QMainWindow):
 
     def on_object_region_changed(self, channel, region):
         self._object_region = channel, region
-        self._process_image()
+        self.on_refresh()
 
+    def on_object_color_changed(self, channel, region):
+        self._object_region = channel, region
+        self.image_viewer._update_contours()
+        
     def on_act_prev_t(self):
         self._t_slider.setValue(self._t_slider.value()-1)
 
@@ -569,20 +579,15 @@ class Browser(QMainWindow):
         if len(items) == 1:
             self._class_table.setCurrentItem(items[0])
 
-    def on_show_objects(self, state):
-        self._show_objects = state
-        self.image_viewer.remove_objects()
-        self._process_image()
-        #self.show_objects_toggled.emit(state)
+    def detect_objects_toggled(self, state):
+        if state:
+            self.on_refresh()
         
-    def on_classify_objects(self, state):
-        self._classify_objects = state
-        self.image_viewer.remove_objects()
-        self._process_image()
-        #self.show_objects_toggled.emit(state)
+    def on_toggle_show_contours(self, state):
+        self._show_objects = state
+        self.image_viewer._update()
 
     # Qt method overwrites
-
     def keyPressEvent(self, ev):
         QMainWindow.keyPressEvent(self, ev)
         # allow to return from fullscreen via the Escape key
