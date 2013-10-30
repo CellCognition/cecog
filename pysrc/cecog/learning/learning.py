@@ -49,21 +49,6 @@ class ClassDefinitionCore(object):
         return mpl.colors.Normalize(vmin=0,
                                     vmax=max(self.class_names.keys()))
 
-    def label2index(self, labels):
-        """Map arb. labels to [0, ..., n-1] that it can used as
-        array index."""
-        indices = np.empty(labels.shape, dtype=int)
-        for index, label in enumerate(self.class_names.keys()):
-            indices[labels==label] = index
-        return indices
-
-    def index2labels(self, indices):
-        """Reverse label index mapping."""
-        labels = np.empty(indices.shape, dtype=int)
-        for index, label in enumerate(self.class_names.keys()):
-            labels[indices==index] = label
-        return labels
-
     def load(self):
         raise NotImplementedError
 
