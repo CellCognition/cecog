@@ -12,7 +12,7 @@ __url__ = 'www.cellcognition.org'
 
 __all__ = ['HmmSklearn']
 
-
+from copy import deepcopy
 import numpy as np
 
 from cecog.errorcorrection import HmmBucket
@@ -41,16 +41,19 @@ class HMMCore(object):
         2) Baum Welch algorithm.
         """
 
-        states = np.array(self.classdef.class_names.keys())
+        #states = np.array(self.classdef.class_names.keys())
+        states = np.unique(tracks)
+        probs = probs[:, :, self.classdef.label2index(states)]
+
         if self.ecopts.eventselection == self.ecopts.EVENTSELECTION_SUPERVISED:
-            est = estimator.HMMProbBasedEsitmator(probs)
+            est = estimator.HMMProbBasedEsitmator(states, probs)
         else:
-            est = estimator.HMMTransitionCountEstimator(tracks, states)
+            est = estimator.HMMTransitionCountEstimator(states, tracks)
             probs = None # can't use probs for unsupervied learning yet
 
         # Baum Welch performs bad with bad start values
         est = estimator.HMMBaumWelchEstimator(
-            est, self.classdef.label2index(tracks), probs)
+            states, est, self.classdef.label2index(tracks), probs)
         return est
 
 class HmmSklearn(HMMCore):
@@ -65,7 +68,17 @@ class HmmSklearn(HMMCore):
             # default constrain for hidden markov model
             hmmc = estimator.HMMSimpleConstraint(est.nstates)
         else:
-            hmmc = self.ecopts.hmm_constrain[self.channel]
+
+            hmmc = deepcopy(self.ecopts.hmm_constrain[self.channel])
+
+            # if certain labels are not measured in a track, their constraints
+            # has to be removed.
+            delstates = np.setdiff1d(np.arange(hmmc.nstates, dtype=int),
+                                 self.classdef.label2index(est.states))
+
+            if len(delstates) > 0:
+                hmmc.remove_spare_constraints(delstates)
+
         return hmmc
 
     def __call__(self):

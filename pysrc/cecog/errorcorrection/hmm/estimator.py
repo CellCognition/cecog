@@ -25,7 +25,14 @@ from cecog.environment import find_resource_dir
 from cecog.errorcorrection.hmm.skhmm import MultinomialHMM
 
 
-class HMMSimpleLeft2RightConstraint(object):
+class HMMConstraintCore(object):
+
+    def __init__(self, nstates):
+        super(HMMConstraintCore, self).__init__()
+        self.nstates = nstates
+
+
+class HMMSimpleLeft2RightConstraint(HMMConstraintCore):
     """"Simplest constraint on an Hidden Markov Models
     1) number of emission is equal to the number of states
     2) equal start probabilities
@@ -33,6 +40,7 @@ class HMMSimpleLeft2RightConstraint(object):
     """
 
     def __init__(self, nstates):
+        super(HMMSimpleLeft2RightConstraint, self).__init__(nstates)
         self.trans = np.eye(nstates)
         for i in xrange(nstates):
             try:
@@ -44,7 +52,7 @@ class HMMSimpleLeft2RightConstraint(object):
         self.start = np.ones(nstates, dtype=float)/nstates
 
 
-class HMMSimpleConstraint(object):
+class HMMSimpleConstraint(HMMConstraintCore):
     """Simple Constraint for Hidden Markov Models
 
     1) all state transitions are allowed
@@ -53,12 +61,13 @@ class HMMSimpleConstraint(object):
     """
 
     def __init__(self, nstates):
+        super(HMMSimpleConstraint, self).__init__(nstates)
         self.trans = np.ones((nstates, nstates))
         self.emis = np.ones((nstates, nstates))
         self.start = np.ones(nstates)
 
 
-class HMMConstraint(object):
+class HMMConstraint(HMMConstraintCore):
 
     def __init__(self, filename):
 
@@ -66,24 +75,34 @@ class HMMConstraint(object):
             xml = lxml.objectify.fromstring(fp.read())
             self.validate(xml)
             self.nsymbols = int(xml.n_emissions)
-            self.nstates = int(xml.n_states)
+            nstates = int(xml.n_states)
 
             self.start = np.fromstring(str(xml.start_probabilities),
                                        dtype=float, sep=" ")
 
             self.trans = np.fromstring(str(xml.transition_matrix), dtype=float,
                                        sep=" ")
-            self.trans.shape = self.nstates, self.nstates
+            self.trans.shape = nstates, nstates
 
             self.emis = np.fromstring(str(xml.emission_matrix), dtype=float,
                                       sep=" ")
-            self.emis.shape = self.nstates, self.nsymbols
+            self.emis.shape = nstates, self.nsymbols
+        super(HMMConstraint, self).__init__(nstates)
 
     def validate(self, xml):
         schemafile = join(find_resource_dir(), "schemas", "hmm_constraint.xsd")
         schema_doc =  lxml.etree.parse(schemafile)
         return lxml.etree.XMLSchema(schema_doc).assertValid(xml)
 
+    def remove_spare_constraints(self, indices):
+        """Remove rows and columns from the masks for transition, emission and
+        start probablity matrices.
+        """
+        self.start = np.delete(self.start, indices)
+        self.emis = np.delete(self.emis, indices, axis=0)
+        self.emis = np.delete(self.emis, indices, axis=1)
+        self.trans = np.delete(self.trans, indices, axis=0)
+        self.trans = np.delete(self.trans, indices, axis=1)
 
 class HMMEstimator(object):
     """Setup a (naive) default hidden markov (left-to-right model)
@@ -103,14 +122,17 @@ class HMMEstimator(object):
     # start probabilities
     PI = (1, 0, 0)
     """
-    def __init__(self, nstates):
+    def __init__(self, states):
         super(HMMEstimator, self).__init__()
-        self.nstates = nstates
+        self.states = states
 
         self._estimate_trans()
         self._estimate_emis()
         self._estimate_startprob()
 
+    @property
+    def nstates(self):
+        return self.states.size
 
     def _estimate_trans(self):
         self._trans = 0.9*np.eye(self.nstates)
@@ -158,10 +180,9 @@ class HMMProbBasedEsitmator(HMMEstimator):
     # number of frames to consider as noise
     NOISE_FACTOR = 1.0
 
-    def __init__(self, probs):
+    def __init__(self, states, probs):
         self._probs = probs
-        nstates = probs.shape[-1]
-        super(HMMProbBasedEsitmator, self).__init__(nstates)
+        super(HMMProbBasedEsitmator, self).__init__(states)
 
     @property
     def _emission_noise(self):
@@ -194,10 +215,9 @@ class HMMTransitionCountEstimator(HMMEstimator):
     # a noise factor fo 1 considers one frame as noise
     NOISE_FACTOR = 1.0
 
-    def __init__(self, tracks, states):
+    def __init__(self, states, tracks):
         self._tracks = tracks
-        self._states = states
-        super(HMMTransitionCountEstimator, self).__init__(states.size)
+        super(HMMTransitionCountEstimator, self).__init__(states)
 
     @property
     def _emission_noise(self):
@@ -207,11 +227,11 @@ class HMMTransitionCountEstimator(HMMEstimator):
         """Estimates the transition probaility by counting."""
         super(HMMTransitionCountEstimator, self)._estimate_trans()
         self._trans[:] = 0.0
-        index_of = lambda label: np.where(self._states==label)[0][0]
+        index_of = lambda label: np.where(self.states==label)[0][0]
         _tracks = self._tracks.flatten()
 
         for i, label in enumerate(_tracks):
-            for state in self._states:
+            for state in self.states:
                 try:
                     if (_tracks[i+1] == state):
                         self._trans[index_of(label), index_of(state)] += 1.0
@@ -226,7 +246,7 @@ class HMMTransitionCountEstimator(HMMEstimator):
         super(HMMTransitionCountEstimator, self)._estimate_startprob()
         self.startprob[:] = 0.0
 
-        index_of = lambda label: np.where(self._states==label)[0][0]
+        index_of = lambda label: np.where(self.states==label)[0][0]
         counts =  np.bincount(self._tracks[:, 0].flatten())
         for label in np.unique(self._tracks[:, 0]):
             self.startprob[index_of(label)] = counts[label]
@@ -236,9 +256,9 @@ class HMMTransitionCountEstimator(HMMEstimator):
 
 class HMMBaumWelchEstimator(HMMEstimator):
 
-    def __init__(self, estimator, tracks, probs=None):
+    def __init__(self, states, estimator, tracks, probs=None):
         # tracks have been mapped to array indices already
-        super(HMMBaumWelchEstimator, self).__init__(estimator.nstates)
+        super(HMMBaumWelchEstimator, self).__init__(states)
         self._trans = estimator.trans
         self._emis = estimator.emis
         self._startprob = estimator.startprob

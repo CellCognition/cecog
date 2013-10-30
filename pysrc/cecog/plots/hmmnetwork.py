@@ -64,6 +64,7 @@ def hmm_network(transmat, classes, rad=0.15, title='hmm network', axes=None):
     for i in xrange(n):
         for j in xrange(n):
             # arrows btw. different classes
+
             if i != j:
                 x_, y_, dx, dy = _arrow_coords(x, y, i, j, rad)
                 axes.arrow(x_, y_, dx, dy, width=0.015, fc='k', ec='k',

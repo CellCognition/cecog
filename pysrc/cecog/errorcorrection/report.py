@@ -26,7 +26,7 @@ class HmmBucket(object):
 
     __slots__ = ['labels', 'hmm_labels', 'startprob', 'emismat', 'transmat',
                  'groups', 'ntracks', 'stepwidth', '_dwell_times', 'fileinfo',
-                 'gallery_files']
+                 'gallery_files', '_states']
 
     def __init__(self, labels, hmm_labels, startprob, emismat, transmat, groups,
                  ntracks, stepwidth=None, gallery_files=None):
@@ -41,6 +41,13 @@ class HmmBucket(object):
         self.ntracks = ntracks
         self.stepwidth = stepwidth
         self.gallery_files = gallery_files
+        self._states = None
+
+    @property
+    def states(self):
+        if self._states is None:
+            self._states = np.unique(self.labels)
+        return self._states
 
     def iter_gallery(self, n=None):
         """Iterator over gallery images and tracks."""
@@ -129,7 +136,9 @@ class HmmReport(object):
                 title = '%s, (%d tracks)' %(name, data.ntracks)
                 # hmm network
                 clcol = dict([(k, self.classdef.hexcolors[v])
-                             for k, v in self.classdef.class_names.iteritems()])
+                             for k, v in self.classdef.class_names.iteritems()
+                              if k in data.states])
+
                 plots.hmm_network(data.transmat, clcol, title=title,
                                   axes=axarr[0][i])
 
