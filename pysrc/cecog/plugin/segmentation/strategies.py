@@ -281,8 +281,9 @@ class SegmentationPluginIlastik(SegmentationPluginPrimary):
 
     REQUIRES = None
 
-    PARAMS = [('ilastik_classifier', StringTrait('', 1000, label='Ilastik classifier file',
+    PARAMS = [('ilastik_classifier', StringTrait('', 1000, label='ilastik Classifier File',
                                                  widget_info=StringTrait.STRING_FILE)),
+              ('ilastik_class_selector', IntTrait(1, 0, 1000, label='Output class')),
               ('medianradius', IntTrait(2, 0, 1000, label='Median radius')),
               ('latwindowsize', IntTrait(20, 1, 1000, label='Window size')),
               ('latlimit', IntTrait(1, 0, 255, label='Min. contrast')),
@@ -321,7 +322,9 @@ class SegmentationPluginIlastik(SegmentationPluginPrimary):
         return ccore.numpy_to_image((np_img > 128).astype(numpy.uint8), True)
 
     def render_to_gui(self, panel):
-        panel.add_group(None, [('ilastik_classifier', (0, 0, 1, 1))])
+        panel.add_group(None, [('ilastik_classifier', (0, 0, 1, 1)),
+                               ('ilastik_class_selector', (1, 0, 1, 1)),
+                               ], label='ilastik')
         SegmentationPluginPrimary.render_to_gui(self, panel)
 
     def _predict_image_with_ilastik(self, image_):
@@ -353,6 +356,7 @@ class SegmentationPluginIlastik(SegmentationPluginPrimary):
         dataMgr.append(di, alreadyLoaded=True)
 
         fileName = self.params["ilastik_classifier"]
+        ilastik_class = self.params["ilastik_class_selector"]
 
         hf = h5py.File(fileName,'r')
         temp = hf['classifiers'].keys()
@@ -392,9 +396,12 @@ class SegmentationPluginIlastik(SegmentationPluginPrimary):
         classificationPredict = ClassifierPredictThread(dataMgr)
         classificationPredict.start()
         classificationPredict.wait()
+        
+        if ilastik_class >= classificationPredict._prediction[0].shape[-1]:
+            raise RuntimeError('ilastik output class not valid...')
 
         # Produce output image and select the probability map
-        probMap = (classificationPredict._prediction[0][0,0,:,:, 1] * 255).astype(numpy.uint8)
+        probMap = (classificationPredict._prediction[0][0,0,:,:, ilastik_class] * 255).astype(numpy.uint8)
         img_out = ccore.numpy_to_image(probMap, True)
         return img_out
 
