@@ -143,7 +143,7 @@ class CecogEnvironment(object):
 
     @classmethod
     def convert_package_path(cls, path):
-        return normpath(join(cls.RESOURCE_DIR, basename(cls.BATTERY_PACKAGE_DIR), path))
+        return normpath(join(cls.RESOURCE_DIR, basename(cls.BATTERY_PACKAGE_DIR), path)) if path else ""
 
     def __init__(self, version, redirect=False, debug=False):
         super(CecogEnvironment, self).__init__()
