@@ -845,9 +845,11 @@ class PositionAnalyzerForBrowser(PositionCore):
             self.settings.set_section('Processing')
             if sttg.get2(self._resolve_name(p_channel, 'classification')):
                 sttg.set_section('Classification')
+                clf_dir = sttg.get2(self._resolve_name(p_channel, 'classification_envpath'))
+                if not os.path.exists(clf_dir):
+                    continue
                 clf = CommonClassPredictor(
-                    clf_dir=sttg.get2(self._resolve_name(p_channel,
-                                                         'classification_envpath')),
+                    clf_dir=clf_dir,
                     name=p_channel,
                     channels=self._channel_regions(p_channel),
                     color_channel=c_channel)
