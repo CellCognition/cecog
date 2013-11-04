@@ -125,12 +125,12 @@ class HmmSklearn(HMMCore):
 
         for (name, tracks, probs, finfo) in  \
                 self.dtable.iterby(self.ecopts.sortby, True):
-            labelmapper = LabelMapper(np.unique(tracks),
-                                      self.classdef.class_names.keys())
-
             if tracks is probs is finfo is None:
                 hmmdata[name] = None
                 continue
+
+            labelmapper = LabelMapper(np.unique(tracks),
+                                      self.classdef.class_names.keys())
 
             probs = probs[:, :, labelmapper.index_from_classdef(np.unique(tracks))]
             est = self._get_estimator(probs, labelmapper.label2index(tracks))
