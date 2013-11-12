@@ -91,7 +91,7 @@ ccore = Extension('cecog.ccore._cecog',
                   language = 'c++')
 
 # python package to distribute
-packages = build_helpers.find_submodules("./pysrc/cecog", "cecog") + ['pdk']
+packages = build_helpers.find_submodules("./pysrc/cecog", "cecog")
 
 # special casing for system installation or py2exe bundle
 if "py2exe" in sys.argv:
@@ -106,8 +106,7 @@ setup(options = {"py2exe": py2exe_opts,
       cmdclass = {'pyrcc': build_helpers.PyRcc,
                   'build': build_helpers.Build},
       packages = packages,
-      package_dir = {'cecog': join('pysrc', 'cecog'),
-                     'pdk': join('pysrc', 'pdk')},
+      package_dir = {'cecog': join('pysrc', 'cecog')},
       data_files = dfiles,
       # zipfile = "data.zip",
       windows = [{'script': join('scripts', 'CecogAnalyzer.py'),
