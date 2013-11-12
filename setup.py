@@ -35,7 +35,7 @@ ccore = Extension('cecog.ccore._cecog',
                   language = 'c++')
 
 # python packages to distribute
-packages = build_helpers.find_submodules("./pysrc/cecog", "cecog") + ['pdk']
+packages = build_helpers.find_submodules("./pysrc/cecog", "cecog")
 scripts = [join('scripts', 'CecogAnalyzer.py'), join('scripts', 'cecog_batch.py')]
 
 setup(scripts = scripts,
@@ -44,8 +44,7 @@ setup(scripts = scripts,
       cmdclass = {'pyrcc': build_helpers.PyRcc,
                   'build': build_helpers.Build},
       packages = packages,
-      package_dir = {'cecog': join('pysrc', 'cecog'),
-                     'pdk': join('pysrc', 'pdk')},
+      package_dir = {'cecog': join('pysrc', 'cecog')},
       options = {'pyrcc': pyrcc_opts},
       ext_modules = [ccore],
       **build_helpers.metadata)
