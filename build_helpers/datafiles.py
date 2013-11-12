@@ -44,7 +44,11 @@ _battery_package = join(RESOURCE_DIR, 'battery_package')
 INCLUDES = [ 'sip',
              'scipy.sparse.csgraph._validation',
              'scipy.spatial.kdtree',
-             'scipy.sparse.csgraph._shortest_path']
+             'scipy.sparse.csgraph._shortest_path',
+             'sklearn.utils.sparsetools._graph_validation',
+             'sklearn.utils.lgamma',
+             'sklearn.neighbors.typedefs',
+             'sklearn.utils.weight_vector' ]
 
 EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
             'PyQt4.QtOpenGL', 'PyQt4.QtScript', 'PyQt4.QtSql',

@@ -15,6 +15,8 @@ Dependcies are:
 - libtiff
 - liblzma (only if libtiff is statically linked)
 
+Remove the build- and dist directories and also the file
+cecog/ccore/_cecog.so(pyd)
 
 #### Development build
   python setup.py build_ext --inplace

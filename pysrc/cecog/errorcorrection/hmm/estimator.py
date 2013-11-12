@@ -254,6 +254,7 @@ class HMMTransitionCountEstimator(HMMEstimator):
         self._startprob = normalize(self._startprob, eps=0.0)
         return self._startprob
 
+
 class HMMBaumWelchEstimator(HMMEstimator):
 
     def __init__(self, states, estimator, tracks, probs=None):

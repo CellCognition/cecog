@@ -19,6 +19,46 @@ from cecog.errorcorrection import HmmBucket
 from cecog.errorcorrection.hmm import estimator
 from cecog.errorcorrection.hmm.skhmm import MultinomialHMM
 
+class LabelMapper(object):
+    """Map class labels to array index.
+
+    One can define two different mappings:
+    The first is used to map observation from tracks to array indices
+    of e.g. a transition matrix of an hmm. The second one is used to map
+    the class labels (from a svm class definition) to array indices.
+    """
+
+    def __init__(self, labels, class_labels):
+        self._labels = labels
+        self._class_labels = class_labels
+
+    def label2index(self, labels):
+        """Map arb. labels to [0, ..., n-1] that they can used as
+        array index."""
+        indices = np.empty(labels.shape, dtype=int)
+        for index, label in enumerate(self._labels):
+            indices[labels==label] = index
+        return indices
+
+    def index2labels(self, indices):
+        """Reverse label index mapping."""
+        labels = np.empty(indices.shape, dtype=int)
+        for index, label in enumerate(self._labels):
+            labels[indices==index] = label
+        return labels
+
+    def index_from_classdef(self, labels):
+        """Maps labels from a class defintion to an array index.
+
+        Basic functionality is the same as in 'labes2index' but a trajectory
+        contains not necessarily  all class labels defined in the
+        class defintion.
+        """
+        indices = np.empty(labels.shape, dtype=int)
+        for index, label in enumerate(self._class_labels):
+            indices[labels==label] = index
+        return indices
+
 
 class HMMCore(object):
 
@@ -41,10 +81,7 @@ class HMMCore(object):
         2) Baum Welch algorithm.
         """
 
-        #states = np.array(self.classdef.class_names.keys())
         states = np.unique(tracks)
-        probs = probs[:, :, self.classdef.label2index(states)]
-
         if self.ecopts.eventselection == self.ecopts.EVENTSELECTION_SUPERVISED:
             est = estimator.HMMProbBasedEsitmator(states, probs)
         else:
@@ -53,15 +90,16 @@ class HMMCore(object):
 
         # Baum Welch performs bad with bad start values
         est = estimator.HMMBaumWelchEstimator(
-            states, est, self.classdef.label2index(tracks), probs)
+            states, est, tracks, probs)
         return est
+
 
 class HmmSklearn(HMMCore):
 
     def __init__(self, *args, **kw):
         super(HmmSklearn, self).__init__(*args, **kw)
 
-    def hmmc(self, est):
+    def hmmc(self, est, labelmapper):
         """Return either the default constrain for the hidden markov model or
         the one that is provided by the options."""
         if self.ecopts.hmm_constrain[self.channel] is None:
@@ -71,10 +109,11 @@ class HmmSklearn(HMMCore):
 
             hmmc = deepcopy(self.ecopts.hmm_constrain[self.channel])
 
-            # if certain labels are not measured in a track, their constraints
-            # has to be removed.
-            delstates = np.setdiff1d(np.arange(hmmc.nstates, dtype=int),
-                                 self.classdef.label2index(est.states))
+            # if certain labels are not measured in a track, one
+            # must remove their constraints.
+            labels = labelmapper.index_from_classdef(
+                labelmapper.index2labels(est.states))
+            delstates = np.setdiff1d(np.arange(hmmc.nstates, dtype=int), labels)
 
             if len(delstates) > 0:
                 hmmc.remove_spare_constraints(delstates)
@@ -89,8 +128,13 @@ class HmmSklearn(HMMCore):
             if tracks is probs is finfo is None:
                 hmmdata[name] = None
                 continue
-            est = self._get_estimator(probs, tracks)
-            est.constrain(self.hmmc(est))
+
+            labelmapper = LabelMapper(np.unique(tracks),
+                                      self.classdef.class_names.keys())
+
+            probs = probs[:, :, labelmapper.index_from_classdef(np.unique(tracks))]
+            est = self._get_estimator(probs, labelmapper.label2index(tracks))
+            est.constrain(self.hmmc(est, labelmapper))
 
             # ugly sklearn
             hmm_ = MultinomialHMM(n_components=est.nstates)
@@ -102,9 +146,9 @@ class HmmSklearn(HMMCore):
             # hmm_.emissionprob_ = est.mean_probs*est.emis
 
             tracks2 = []
-            for track in self.classdef.label2index(tracks):
+            for track in labelmapper.label2index(tracks):
                 tracks2.append(hmm_.predict(track))
-            tracks2 = self.classdef.index2labels(np.array(tracks2, dtype=int))
+            tracks2 = labelmapper.index2labels(np.array(tracks2, dtype=int))
 
             bucket = HmmBucket(tracks,
                                tracks2,
