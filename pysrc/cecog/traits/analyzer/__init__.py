@@ -14,35 +14,9 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = ['SECTION_REGISTRY']
-
-from cecog.traits.config import SectionRegistry
-from cecog.traits.analyzer.general import SectionGeneral
 from cecog.traits.analyzer.objectdetection import SectionObjectdetection
-from cecog.traits.analyzer.featureextraction import SectionFeatureExtraction
 from cecog.traits.analyzer.classification import SectionClassification
-from cecog.traits.analyzer.tracking import SectionTracking
-from cecog.traits.analyzer.errorcorrection import SectionErrorcorrection
-from cecog.traits.analyzer.output import SectionOutput
-from cecog.traits.analyzer.processing import SectionProcessing
-from cecog.traits.analyzer.cluster import SectionCluster
-from cecog.traits.analyzer.postprocessing import SectionPostProcessing
-from cecog.traits.analyzer.eventselection import SectionEventSelection
-
 from cecog.extensions.graphLib import Graph
-
-SECTION_REGISTRY = SectionRegistry()
-SECTION_REGISTRY.add(SectionGeneral())
-SECTION_REGISTRY.add(SectionObjectdetection())
-SECTION_REGISTRY.add(SectionFeatureExtraction())
-SECTION_REGISTRY.add(SectionClassification())
-SECTION_REGISTRY.add(SectionTracking())
-SECTION_REGISTRY.add(SectionEventSelection())
-SECTION_REGISTRY.add(SectionErrorcorrection())
-SECTION_REGISTRY.add(SectionPostProcessing())
-SECTION_REGISTRY.add(SectionOutput())
-SECTION_REGISTRY.add(SectionProcessing())
-SECTION_REGISTRY.add(SectionCluster())
 
 class UpdateDependency(object):
 

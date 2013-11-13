@@ -17,7 +17,7 @@ __source__ = '$URL$'
 __all__ = ['SectionFeatureExtraction']
 
 from cecog.traits.analyzer.section_core import SectionCore
-from cecog.gui.guitraits import StringTrait, BooleanTrait
+from cecog.gui.guitraits import BooleanTrait
 
 SECTION_NAME_FEATURE_EXTRACTION = 'FeatureExtraction'
 

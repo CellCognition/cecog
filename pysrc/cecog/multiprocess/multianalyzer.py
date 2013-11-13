@@ -42,9 +42,8 @@ import sys
 def core_helper(plate_id, settings_str, imagecontainer, position,
                 version, redirect=True, debug=False):
     try:
-        from cecog.traits.settings import ConfigSettings
-        from cecog.traits.analyzer import SECTION_REGISTRY
-        settings = ConfigSettings(SECTION_REGISTRY)
+        from cecog.traits.config import ConfigSettings
+        settings = ConfigSettings()
         settings.from_string(settings_str)
         settings.set(SECTION_NAME_GENERAL, 'constrain_positions', True)
         settings.set(SECTION_NAME_GENERAL, 'positions', position)

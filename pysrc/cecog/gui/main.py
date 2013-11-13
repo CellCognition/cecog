@@ -30,7 +30,6 @@ from cecog.units.time import TimeConverter
 from cecog.environment import CecogEnvironment
 from cecog.io.imagecontainer import ImageContainer
 
-from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.gui.config import GuiConfigSettings
 
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
@@ -164,7 +163,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
         self._pages = FrameStack(self)
 
         self._settings_filename = None
-        self._settings = GuiConfigSettings(self, SECTION_REGISTRY)
+        self._settings = GuiConfigSettings(self)
 
         self._tab_lookup = OrderedDict()
         self._tabs = [GeneralFrame(self._settings, self._pages, SECTION_NAME_GENERAL),

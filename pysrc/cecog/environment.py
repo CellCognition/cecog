@@ -21,12 +21,15 @@ import sys
 import csv
 import atexit
 import shutil
-from os.path import join, isdir, isfile, dirname, normpath, abspath, realpath, \
-    expanduser, basename
+from os.path import join, isdir, isfile, dirname, normpath, abspath, \
+    realpath, expanduser, basename
 
-from cecog.traits.config import _ConfigParser as ConfigParser
+from ConfigParser import RawConfigParser
+
+from cecog.util.pattern import Singleton
 from cecog.util.mapping import map_path_to_os as _map_path_to_os
 from cecog import ccore
+
 
 def find_resource_dir():
     """Return a normalized absolute path to the resource directory.
@@ -50,17 +53,19 @@ def find_resource_dir():
         raise IOError("Resource path '%s' not found." %rdir)
     return rdir
 
-# XXX - wrong module for design pattern
-class Singleton(type):
 
-    def __init__(cls, name, bases, dict):
-        super(Singleton, cls).__init__(cls, bases, dict)
-        cls._instance = None
+class ConfigParser(RawConfigParser):
+    """Custom config parser with sanity check."""
 
-    def __call__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instance
+    def __init__(self, filename, name):
+        RawConfigParser.__init__(self)
+        self.filename = filename
+        self.name = name
+        if not os.path.isfile(filename):
+            raise IOError("File for %s with name '%s' not found." %
+                          (name, filename))
+        self.read(filename)
+
 
 class BatteryPackage(object):
 
@@ -112,6 +117,7 @@ class PathMapper(object):
                                  delimiter="\t")
             for row in self._path_mappings:
                 pmp.writerow(row)
+
 
 class CecogEnvironment(object):
 

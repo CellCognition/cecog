@@ -22,9 +22,6 @@ VERSION_NUM = (1, 5, 0)
 VERSION = '.'.join([str(n) for n in VERSION_NUM])
 APPNAME = 'CecogAnalyzer'
 
-# XXX function in CecogEnvironment class
-HAS_GUI = False
-
 JOB_CONTROL_SUSPEND = 'Suspend'
 JOB_CONTROL_RESUME = 'Resume'
 JOB_CONTROL_TERMINATE = 'Terminate'

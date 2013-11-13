@@ -3,7 +3,6 @@ import math
 
 from optparse import OptionParser
 
-from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.traits.config import ConfigSettings
 from cecog.io.imagecontainer import ImageContainer
@@ -159,7 +158,7 @@ cd %s
         return
 
     def getListOfExperiments(self):
-        settings = ConfigSettings(SECTION_REGISTRY)
+        settings = ConfigSettings()
         settings.read(self.oBatchSettings.settingsFilename)
 
         settings.set_section(SECTION_NAME_GENERAL)
@@ -215,4 +214,3 @@ if __name__ ==  "__main__":
     bp = BatchProcessor(oSettings)
     lstExperiments = bp.getListOfExperiments()
     bp.exportPBSJobArray(lstExperiments)
-

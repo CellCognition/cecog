@@ -20,7 +20,6 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
-from cecog import VERSION
 from cecog.gui.analyzer import BaseFrame
 
 class GeneralFrame(BaseFrame):
