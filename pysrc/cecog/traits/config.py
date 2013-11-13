@@ -14,29 +14,16 @@ __date__ = '$Date: $'
 __revision__ = '$Rev:  $'
 __source__ = '$URL: $'
 
-__all__ = ['ConfigSettings', 'SectionRegistry']
+__all__ = ['ConfigSettings']
 
-import os
+
 import copy
 import cStringIO
 from collections import OrderedDict
-
 from ConfigParser import RawConfigParser
 
-from cecog.traits.traits import StringTrait
 from cecog import PLUGIN_MANAGERS, VERSION
-
-
-class _ConfigParser(RawConfigParser):
-
-    def __init__(self, filename, name):
-        RawConfigParser.__init__(self)
-        self.filename = filename
-        self.name = name
-        if not os.path.isfile(filename):
-            raise IOError("File for %s with name '%s' not found." %
-                          (name, filename))
-        self.read(filename)
+from cecog.traits.analyzer.section_registry import SectionRegistry
 
 class ConfigSettings(RawConfigParser):
     """
@@ -47,22 +34,19 @@ class ConfigSettings(RawConfigParser):
     to modules and traits) are allowed.
     """
 
-    def __init__(self, section_registry):
-        RawConfigParser.__init__(self,
-                                 dict_type=OrderedDict,
-                                 allow_no_value=True)
+    def __init__(self):
+        RawConfigParser.__init__(self, allow_no_value=True)
         self._registry = OrderedDict()
         self._current_section = None
         self._old_file_format = False
 
-        self._section_registry = section_registry
-        for section_name in section_registry.section_names():
+        self._section_registry = SectionRegistry()
+        for section_name in self._section_registry.section_names():
             self.add_section(section_name)
-            section = section_registry.get_section(section_name)
+            section = self._section_registry.get_section(section_name)
             for trait_name in section.get_trait_names():
                 trait = section.get_trait(trait_name)
                 self.set(section_name, trait_name, trait.default_value)
-
 
     def __call__(self, section, parameter):
         return self.get(section, parameter)
@@ -306,32 +290,3 @@ class ConfigSettings(RawConfigParser):
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__propagate__propagate__presegmentation_alpha' % prefix , value)
 
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__constrained_watershed__constrained_watershed__require00' % prefix , 'primary')
-
-
-class SectionRegistry(object):
-
-    def __init__(self):
-        self._sections = OrderedDict()
-
-    def add(self, section):
-        self._sections[section.SECTION_NAME] = section
-
-    def delete(self, name):
-        del self._sections[name]
-
-    def get_section(self, name):
-        return self._sections[name]
-
-    def section_names(self):
-        return self._sections.keys()
-
-    def get_path_settings(self):
-        result = []
-        for section_name, section in self._sections.iteritems():
-            for trait_name in section.get_trait_names():
-                trait = section.get_trait(trait_name)
-                if (isinstance(trait, StringTrait) and
-                    trait.widget_info in [StringTrait.STRING_FILE,
-                                          StringTrait.STRING_PATH]):
-                    result.append((section_name, trait_name, trait))
-        return result
