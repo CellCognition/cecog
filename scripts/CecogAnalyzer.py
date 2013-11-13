@@ -20,6 +20,7 @@ import sys
 import numpy
 import logging
 import argparse
+import traceback
 
 from os.path import join
 from multiprocessing import freeze_support
@@ -567,11 +568,22 @@ class CecogAnalyzer(QtGui.QMainWindow):
                 plate = imagecontainer.plates[0]
                 imagecontainer.set_plate(plate)
 
-
         msg = ('Please wait until the input structure is scanned\n'
                'or the structure data loaded...')
         dlg = waitingProgressDialog(msg, self, load, (0, len(scan_plates)))
-        dlg.exec_(passDialog=True)
+
+        try:
+            dlg.exec_(passDialog=True)
+        except ImportError as e:
+            # structure file from versios older thane 1.3 contain
+            # pdk which is removed
+            if 'pdk' in str(e):
+                critical(self, ("Your structure file format is outdated.\n"
+                                "You have to rescan the plate(s)"))
+            else:
+                critical(self, traceback.format_exc())
+            return
+
 
         if len(imagecontainer.plates) > 0:
             imagecontainer.check_dimensions()
@@ -592,10 +604,6 @@ class CecogAnalyzer(QtGui.QMainWindow):
 
             # report problems about a mismatch between channel IDs found in the data and specified by the user
             if len(problems) > 0:
-#                 critical(self, "Selected channel IDs not valid",
-#                          "The selected channel IDs for %s are not valid.\nValid IDs are %s." %
-#                          (", ".join(["'%s Channel'" % s.capitalize() for s in problems]),
-#                           ", ".join(["'%s'" % s for s in channels])))
                 # a mismatch between settings and data will cause changed settings
                 self.settings_changed(True)
 
