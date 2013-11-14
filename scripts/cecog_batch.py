@@ -30,7 +30,6 @@ except ImportError:
 
 from cecog import VERSION
 from cecog.traits.config import ConfigSettings
-from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
 from cecog.analyzer.core import AnalyzerCore
@@ -110,7 +109,7 @@ if __name__ ==  "__main__":
     filename_settings = os.path.abspath(options.settings)
 
     # read the settings data from file
-    settings = ConfigSettings(SECTION_REGISTRY)
+    settings = ConfigSettings()
     settings.read(filename_settings)
 
     settings.set_section(SECTION_NAME_GENERAL)
