@@ -95,6 +95,8 @@ class HmmBucket(object):
 
 class HmmReport(object):
 
+    GALLERY_DPI = 200
+
     def __init__(self, data, ecopts, classdef, outdir):
         self.data = data
         self.ecopts = ecopts
@@ -262,24 +264,25 @@ class HmmReport(object):
                     aspect = image.shape[0]/image.shape[1]
                     if aspect >= 0.99:
                         fig = self._trj_figure(image, tracks, (6, 6), name)
-                        pdf.savefig(fig)
+                        pdf.savefig(fig, dpi=self.GALLERY_DPI)
                         image = np.array([])
                         tracks = list()
 
                 if len(tracks) > 0:
                     fig = self._trj_figure(image, tracks, (6, 6), name)
-                    pdf.savefig(fig, dpi=200)
+                    pdf.savefig(fig, dpi=self.GALLERY_DPI)
 
         finally:
             pdf.close()
 
     def _trj_figure(self, image, tracks, size, name):
-        fig = plt.figure(dpi=200, figsize=size)
+        fig = plt.figure(dpi=self.GALLERY_DPI, figsize=size)
         axes = fig.add_subplot(111, frameon=False)
         plots.trj_gallery(image, np.array(tracks),
                           title=name, cmap=self.classdef.colormap, axes=axes,
                           linewidth=1.5, offset=-5)
         fig.subplots_adjust(top=0.95, bottom=0.01, right=0.99, left=0.01)
+        return fig
 
     def export_hmm(self, filename, align_in_lines=False):
         """Export a table of tracks names and hmm_labels"""
