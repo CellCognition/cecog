@@ -211,12 +211,11 @@ class PositionRunner(QtCore.QObject):
             if self.ecopts.write_gallery:
                 self.interruption_point("plotting image gallery")
                 try:
-                    report.image_gallery(join(self._hmm_dir, '%s-%s_gallery.pdf'
-                                              %(prefix, sby)),
-                                         self.ecopts.n_galleries)
-
+                    # replace image_gallery_png with image_gallery_pdf
+                    fn = join(self._hmm_dir,
+                              '%s-%s_gallery.png' %(prefix, sby))
+                    report.image_gallery_png(fn, self.ecopts.n_galleries)
                     report.close_figures()
-                # don't stopp error correcetion if no gallery images are found
                 except Exception as e:
                     with open(join(self._hmm_dir, '%s-%s_error_readme.txt'
                                    %(prefix, sby)), 'w') as fp:
