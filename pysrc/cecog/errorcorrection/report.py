@@ -17,7 +17,10 @@ from collections import OrderedDict
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib.colors import hex2color
+
 from cecog import plots
+from cecog.colors import hex2rgb
 import vigra
 
 
@@ -243,7 +246,9 @@ class HmmReport(object):
             image = vigra.readImage(file_)
         return np.squeeze(image.swapaxes(0, 1).view(np.ndarray))
 
-    def image_gallery(self, filename, n_galleries=50):
+    def image_gallery_pdf(self, filename, n_galleries=50):
+        """Pdf gallery has smaller file size, less resolution of cource but
+        is easier to print."""
         pdf = PdfPages(filename)
         try:
             for name in sorted(self.data.keys()):
@@ -283,6 +288,44 @@ class HmmReport(object):
                           linewidth=1.5, offset=-5)
         fig.subplots_adjust(top=0.95, bottom=0.01, right=0.99, left=0.01)
         return fig
+
+    def image_gallery_png(self, filename, n_galleries=50, rsfactor=0.4):
+        """Resolution of png gallerie can be adjusted by the resampling factor
+        (default=0.4). File size is large"""
+
+        for name in sorted(self.data.keys()):
+            data = self.data[name]
+            if data is None:
+                continue
+            image = np.array([])
+            tracks = list()
+            for file_, track in data.iter_gallery(n_galleries):
+                tracks.append(track)
+                try:
+                    img = self._read_image(file_)
+                    img = self._draw_labels(img, track)
+                    image = np.vstack((image, img))
+                except ValueError:
+                    img = self._read_image(file_)
+                    img = self._draw_labels(img, track)
+                    image = img
+
+            fn = filename.replace('.png', '%s.png' %name)
+            vimage = vigra.RGBImage(image.swapaxes(1, 0))
+            vimage = vigra.sampling.resampleImage(vimage, rsfactor)
+            vimage.writeImage(fn)
+
+    def _draw_labels(self, image, track, markersize=0.20):
+        nframes = len(track)
+        size = image.shape[1]/nframes, image.shape[0]
+        msize = int(round(size[0]*markersize, 0))
+        image[size[1]-int(msize/4):size[1], :] = hex2rgb("#FFFFFF")
+
+        for i, label in enumerate(track):
+            name = self.classdef.class_names[label]
+            color = hex2rgb(self.classdef.hexcolors[name], mpl=False)
+            image[size[1]-msize:size[1], i*size[0]:i*size[0]+msize] = color
+        return image
 
     def export_hmm(self, filename, align_in_lines=False):
         """Export a table of tracks names and hmm_labels"""

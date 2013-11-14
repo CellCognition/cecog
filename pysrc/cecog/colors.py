@@ -42,10 +42,13 @@ def rgb2hex(color, mpl=True):
 
     return mpl_rgb2hex((color[0]/fac, color[1]/fac, color[2]/fac))
 
-def hex2rgb(color):
+def hex2rgb(color, mpl=False):
     """Return the rgb color as python int in the range 0-255."""
     assert color.startswith("#")
-    fac=255.0
+    if mpl:
+        fac = 1.0
+    else:
+        fac = 255.0
     rgb = [int(i*fac) for i in hex2color(color)]
     return tuple(rgb)
 
