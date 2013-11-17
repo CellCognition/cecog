@@ -14,6 +14,7 @@ __url__ = 'www.cellcognition.org'
 __all__ = ['ECParams']
 
 from os.path import join
+from collections import OrderedDict
 
 from cecog import CHANNEL_PREFIX
 from cecog.errorcorrection import PlateMapping
@@ -35,7 +36,8 @@ class ECParams(object):
                  'sortby', 'skip_plates', 'timeunit', 'overwrite_timelapse',
                  'timelapse', 'sorting', 'sorting_sequence', 'tmax',
                  'ignore_tracking_branches', 'write_gallery', 'n_galleries',
-                 'eventselection', 'nclusters', '_classdef']
+                 'eventselection', 'nclusters', '_classdef',
+                 'multichannel_galleries']
 
     def __init__(self, settings, tstep, timeunit):
 
@@ -44,7 +46,7 @@ class ECParams(object):
         self.constrain_graph = settings('ErrorCorrection', 'constrain_graph')
         self.hmm_constrain = dict()
         self.classifier_dirs = dict()
-        self.regionnames = dict()
+        self.regionnames = OrderedDict()
 
         # settings that depend whether if the channel is checked for
         # error correction or not
@@ -101,6 +103,8 @@ class ECParams(object):
         self.write_gallery = settings('ErrorCorrection', 'compose_galleries')
         self.n_galleries = \
             settings('ErrorCorrection', 'compose_galleries_sample')
+        self.multichannel_galleries = \
+            settings('ErrorCorrection', 'multichannel_galleries')
 
         if settings('EventSelection', 'supervised_event_selection'):
             self.eventselection = self.EVENTSELECTION_SUPERVISED

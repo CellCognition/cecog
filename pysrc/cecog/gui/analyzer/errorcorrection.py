@@ -71,6 +71,7 @@ class ErrorCorrectionFrame(BaseProcessorFrame):
         self.add_input('ignore_tracking_branches')
         self.add_input('show_html')
         self.add_line()
+        self.add_input('multichannel_galleries')
         self.add_group('compose_galleries',
                        [('compose_galleries_sample',),
                         ], layout='flow')

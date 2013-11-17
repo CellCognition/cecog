@@ -52,13 +52,18 @@ class HmmBucket(object):
             self._states = np.unique(self.labels)
         return self._states
 
-    def iter_gallery(self, n=None):
+    def iter_gallery(self, n=None, idx=None):
         """Iterator over gallery images and tracks."""
 
-        idx = np.arange(0, self.gallery_files.size, 1)
-        if n is not None:
-            np.random.shuffle(idx)
-            idx = idx[:n]
+        if n is not None and idx is not None:
+            raise RuntimeError(('you can not provide idx and n. '
+                                'arguments are exclusive'))
+
+        if idx is None:
+            idx = np.arange(0, self.gallery_files.size, 1)
+            if n is not None:
+                np.random.shuffle(idx)
+                idx = idx[:n]
 
         for track, gallery_file in zip(self.hmm_labels[idx],
                                        self.gallery_files[idx]):
@@ -298,9 +303,7 @@ class HmmReport(object):
             if data is None:
                 continue
             image = np.array([])
-            tracks = list()
             for file_, track in data.iter_gallery(n_galleries):
-                tracks.append(track)
                 try:
                     img = self._read_image(file_)
                     img = self._draw_labels(img, track)
@@ -310,7 +313,7 @@ class HmmReport(object):
                     img = self._draw_labels(img, track)
                     image = img
 
-            fn = filename.replace('.png', '%s.png' %name)
+            fn = filename.replace('_gallery.png', '-%s_gallery.png' %name)
             vimage = vigra.RGBImage(image.swapaxes(1, 0))
             vimage = vigra.sampling.resampleImage(vimage, rsfactor)
             vimage.writeImage(fn)
