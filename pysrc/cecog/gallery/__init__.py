@@ -15,4 +15,5 @@ __url__ = 'www.cellcognition.org'
 from images import *
 from channelgallery import *
 from trackgallery import *
+from multichannel_gallery import *
 from compose_gallery import compose_galleries

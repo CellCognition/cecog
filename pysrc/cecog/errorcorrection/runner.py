@@ -29,6 +29,7 @@ from cecog.errorcorrection.hmm import HmmSklearn as Hmm
 from cecog.errorcorrection import HmmReport
 from cecog.errorcorrection import PlateMapping
 from cecog.errorcorrection.datatable import HmmDataTable
+from cecog.gallery import MultiChannelGallery
 
 
 class PlateRunner(QtCore.QObject):
@@ -174,7 +175,7 @@ class PositionRunner(QtCore.QObject):
     def interruption_point(self, message=None):
         if message is not None:
             prgs = ProgressMsg(meta=message)
-        self.parent().progressUpdate.emit(prgs)
+            self.parent().progressUpdate.emit(prgs)
         QThread.currentThread().interruption_point()
 
     def __call__(self):
@@ -184,6 +185,7 @@ class PositionRunner(QtCore.QObject):
             mpfile = join(self.ecopts.mapping_dir, "%s.txt" %self.plate)
             mappings.read(mpfile)
 
+        alldata = dict()
         for channel, cld in self.ecopts.class_definition.iteritems():
             dtable = self._load_data(mappings, channel, cld)
             msg = 'performing error correction on channel %s' %channel
@@ -192,6 +194,7 @@ class PositionRunner(QtCore.QObject):
             # error correction
             hmm = Hmm(dtable, channel, cld, self.ecopts)
             data = hmm()
+            alldata[channel] =  data
 
             # plotting and export
             report = HmmReport(data, self.ecopts, cld, self._hmm_dir)
@@ -221,7 +224,15 @@ class PositionRunner(QtCore.QObject):
                                    %(prefix, sby)), 'w') as fp:
                         traceback.print_exc(file=fp)
                         fp.write("Check if gallery images exist!")
-            report.export_hmm(join(self._hmm_dir, "%s-hmm.csv" %channel), True)
+            report.export_hmm(join(self._hmm_dir, "%s-hmm.csv" %channel.title()), True)
+
+        if self.ecopts.multichannel_galleries:
+            fn = join(self._hmm_dir, 'MultiChannelGallery_%s.png'
+                      %sby)
+            self.interruption_point("plotting multichannel gallery")
+            mcg = MultiChannelGallery(self.ecopts.class_definition, alldata,
+                                      imagefrom="primary")
+            mcg(fn, self.ecopts.regionnames.keys())
 
 
 if __name__ == "__main__":
