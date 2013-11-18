@@ -231,6 +231,7 @@ class PositionRunner(QtCore.QObject):
                       %sby)
             self.interruption_point("plotting multichannel gallery")
             mcg = MultiChannelGallery(self.ecopts.class_definition, alldata,
+                                      n_galleries=self.ecopts.n_galleries,
                                       imagefrom="primary")
             mcg(fn, self.ecopts.regionnames.keys())
 
