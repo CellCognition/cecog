@@ -219,7 +219,8 @@ class PositionRunner(QtCore.QObject):
                     # replace image_gallery_png with image_gallery_pdf
                     fn = join(self._gallery_dir,
                               '%s-%s_gallery.png' %(prefix, sby))
-                    report.image_gallery_png(fn, self.ecopts.n_galleries)
+                    report.image_gallery_png(fn, self.ecopts.n_galleries,
+                                             self.ecopts.resampling_factor)
                     report.close_figures()
                 except Exception as e:
                     with open(join(self._gallery_dir, '%s-%s_error_readme.txt'
@@ -233,8 +234,8 @@ class PositionRunner(QtCore.QObject):
                       %sby)
             self.interruption_point("plotting multichannel gallery")
             mcg = MultiChannelGallery(self.ecopts.class_definition, alldata,
-                                      n_galleries=self.ecopts.n_galleries,
-                                      imagefrom="primary")
+                                      'primary', self.ecopts.n_galleries,
+                                      self.ecopts.resampling_factor)
             mcg(fn, self.ecopts.regionnames.keys())
 
 

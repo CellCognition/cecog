@@ -37,7 +37,7 @@ class ECParams(object):
                  'timelapse', 'sorting', 'sorting_sequence', 'tmax',
                  'ignore_tracking_branches', 'write_gallery', 'n_galleries',
                  'eventselection', 'nclusters', '_classdef',
-                 'multichannel_galleries']
+                 'multichannel_galleries', 'resampling_factor']
 
     def __init__(self, settings, tstep, timeunit):
 
@@ -111,6 +111,7 @@ class ECParams(object):
         else:
             self.eventselection = self.EVENTSELECTION_UNSUPERVISED
         self.nclusters = settings('EventSelection', 'num_clusters')
+        self.resampling_factor = settings('ErrorCorrection', 'resampling_factor')
 
     @property
     def class_definition(self):
