@@ -74,6 +74,7 @@ class ErrorCorrectionFrame(BaseProcessorFrame):
         self.add_input('compose_galleries')
         self.add_input('multichannel_galleries')
         self.add_input('compose_galleries_sample')
+        self.add_input('resampling_factor')
         self.add_expanding_spacer()
         self._init_control(has_images=False)
 
