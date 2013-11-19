@@ -94,11 +94,13 @@ class PositionRunner(QtCore.QObject):
 
         -) <analyzed-dir>/analyzed (already exists)
         -) <analysis-dir>/hmm
+        -) <analysis-dir>/hmm/gallery
         """
         assert isinstance(self._outdir, basestring)
         self._analyzed_dir = join(self._outdir, "analyzed")
 
-        odirs = (join(self._outdir, "hmm"), )
+        odirs = (join(self._outdir, "hmm"),
+                 join(self._outdir, "hmm", "gallery"))
         for odir in odirs:
             try:
                 makedirs(odir)
@@ -215,19 +217,19 @@ class PositionRunner(QtCore.QObject):
                 self.interruption_point("plotting image gallery")
                 try:
                     # replace image_gallery_png with image_gallery_pdf
-                    fn = join(self._hmm_dir,
+                    fn = join(self._gallery_dir,
                               '%s-%s_gallery.png' %(prefix, sby))
                     report.image_gallery_png(fn, self.ecopts.n_galleries)
                     report.close_figures()
                 except Exception as e:
-                    with open(join(self._hmm_dir, '%s-%s_error_readme.txt'
+                    with open(join(self._gallery_dir, '%s-%s_error_readme.txt'
                                    %(prefix, sby)), 'w') as fp:
                         traceback.print_exc(file=fp)
                         fp.write("Check if gallery images exist!")
             report.export_hmm(join(self._hmm_dir, "%s-hmm.csv" %channel.title()), True)
 
         if self.ecopts.multichannel_galleries:
-            fn = join(self._hmm_dir, 'MultiChannelGallery_%s.png'
+            fn = join(self._gallery_dir, 'MultiChannelGallery_%s.png'
                       %sby)
             self.interruption_point("plotting multichannel gallery")
             mcg = MultiChannelGallery(self.ecopts.class_definition, alldata,
