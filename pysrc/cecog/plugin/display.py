@@ -72,7 +72,6 @@ class PluginDocumentation(QFrame):
 
         self._content = plugin.DOC
         if len(self._content) > 0 and self._content[0] == ':':
-            pass
             self._content = self.helpbrowser.load_qrc_text( \
                 'plugins/%s/%s' %(plugin.QRC_PREFIX or '', self._content[1:]))
 
