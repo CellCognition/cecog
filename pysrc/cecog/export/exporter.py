@@ -214,7 +214,7 @@ class EventExporter(object):
             table.append(data)
 
         if len(table) > 0:
-            with open(filename, 'w') as fp:
+            with open(filename, 'wb') as fp:
                 writer = csv.DictWriter(fp, fieldnames=header_names,
                                         delimiter=CSVParams.sep)
                 writer.writeheader()
