@@ -22,7 +22,6 @@ from collections import OrderedDict
 
 from PyQt4 import QtGui
 from PyQt4 import QtCore
-from PyQt4.Qt import qApp
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QMessageBox
 
@@ -60,11 +59,11 @@ from cecog.gui.imagedialog import ImageDialog
 from cecog.gui.aboutdialog import CecogAboutDialog
 
 from cecog.gui.browser import Browser
+from cecog.gui.helpbrowser import HelpBrowser
 from cecog.gui.log import GuiLogHandler, LogWindow
 
-from cecog.gui.util import (status,
-                            show_html,
-                            critical,
+
+from cecog.gui.util import (critical,
                             question,
                             exception,
                             information,
@@ -79,6 +78,9 @@ class FrameStack(QtGui.QStackedWidget):
         self.main_window = parent
         self.idialog = ImageDialog(parent)
         self.idialog.hide()
+
+        self.helpbrowser = HelpBrowser(self)
+        self.helpbrowser.hide()
 
 
 class CecogAnalyzer(QtGui.QMainWindow):
@@ -145,9 +147,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
         menu_help = self.menuBar().addMenu('&Help')
         self.add_actions(menu_help, (action_help_startup, action_about))
 
-        qApp._main_window = self
-        qApp._statusbar = QtGui.QStatusBar(self)
-        self.setStatusBar(qApp._statusbar)
+        self.setStatusBar(QtGui.QStatusBar(self))
 
         self._selection = QtGui.QListWidget(self.centralWidget())
         self._selection.setViewMode(QtGui.QListView.IconMode)
@@ -176,6 +176,11 @@ class CecogAnalyzer(QtGui.QMainWindow):
                       PostProcessingFrame(self._settings, self._pages, SECTION_NAME_POST_PROCESSING),
                       OutputFrame(self._settings, self._pages, SECTION_NAME_OUTPUT),
                       ProcessingFrame(self._settings, self._pages, SECTION_NAME_PROCESSING)]
+
+        # connections for the section frames
+        self._tabs[3].connect_browser_btn(self._on_browser_open)
+        for frame in self._tabs:
+            frame.status_message.connect(self.statusBar().showMessage)
 
         if self.environ.analyzer_config.get('Analyzer', 'cluster_support'):
             clusterframe = ClusterFrame(self._settings, self._pages, SECTION_NAME_CLUSTER)
@@ -229,10 +234,6 @@ class CecogAnalyzer(QtGui.QMainWindow):
                                    QMessageBox.Yes|QMessageBox.No)
         if self._check_settings_saved() and ret == QMessageBox.No:
             event.ignore()
-        else:
-            # FIXME - some dialogs are attributs of qApp
-            # --> QApplication does not exit automatically
-            QtGui.QApplication.exit()
 
     def settings_changed(self, changed):
         if self._is_initialized:
@@ -332,7 +333,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
                      "Error loading settings file",
                      info="Could not load settings file '%s'." % filename,
                      detail_tb=True)
-            status('Settings not successfully loaded.')
+            self.statusBar().showMessage('Settings not successfully loaded.')
         else:
             self._settings_filename = filename
             title = self.windowTitle().split(' - ')[0]
@@ -351,7 +352,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
                 # notify tabs about new settings loaded
                 for tab in self._tabs:
                     tab.settings_loaded()
-                status('Settings successfully loaded.')
+                self.statusBar().showMessage('Settings successfully loaded.')
 
     def _write_settings(self, filename):
         try:
@@ -366,12 +367,12 @@ class CecogAnalyzer(QtGui.QMainWindow):
                      "Error saving settings file",
                      info="Could not save settings file as '%s'." % filename,
                      detail_tb=True)
-            status('Settings not successfully saved.')
+            self.statusBar().showMessage('Settings not successfully saved.')
         else:
             self._settings_filename = filename
             self.setWindowTitle('%s - %s[*]' % (self.appname, filename))
             self.settings_changed(False)
-            status('Settings successfully saved.')
+            self.statusBar().showMessage('Settings successfully saved.')
 
     def on_about(self):
         dialog = CecogAboutDialog(self)
@@ -499,10 +500,10 @@ class CecogAnalyzer(QtGui.QMainWindow):
 
         msg = ('Please wait until the input structure is scanned\n'
                'or the structure data loaded...')
-        dlg = waitingProgressDialog(msg, self, load, (0, len(scan_plates)))
+        self._dlg = waitingProgressDialog(msg, self, load, (0, len(scan_plates)))
 
         try:
-            dlg.exec_(passDialog=True)
+            self._dlg.exec_(passDialog=True)
         except ImportError as e:
             # structure file from versios older thane 1.3 contain
             # pdk which is removed

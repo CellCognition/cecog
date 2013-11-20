@@ -21,9 +21,7 @@ __all__ = ['message',
            'critical',
            'exception',
            'status',
-           'load_qrc_text',
-           'show_html',
-           'on_anchor_clicked']
+           ]
 
 import sys
 import traceback
@@ -34,9 +32,6 @@ from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
 from cecog.colors import rgb2hex
-
-
-QRC_TOKEN = 'qrc:/'
 
 def message(icon, text, parent, info=None, detail=None, buttons=None,
             title=None, default=None, escape=None, modal=True):
@@ -100,90 +95,6 @@ def exception(parent, text, tb_limit=None, modal=True):
                    info='%s : %s ' % (str(type.__name__), str(value)),
                    detail=traceback.format_exc(tb_limit), modal=modal,
                    buttons=QMessageBox.Ok, default=QMessageBox.Ok)
-
-
-def status(msg, timeout=0):
-    qApp._statusbar.showMessage(msg, timeout)
-
-
-def load_qrc_text(name):
-    file_name = ':%s' % name
-    f = QFile(file_name)
-    text = None
-    if f.open(QIODevice.ReadOnly | QIODevice.Text):
-        s = QTextStream(f)
-        text = str(s.readAll())
-        f.close()
-    return text
-
-
-def show_html(name, link='_top', title=None, header='_header', footer='_footer',
-              html_text=None):
-    if not hasattr(qApp, 'cecog_help_dialog'):
-        dialog = QFrame()
-        if title is None:
-            title = name
-        dialog.setWindowTitle('CecogAnalyzer Help')
-        layout = QVBoxLayout(dialog)
-        layout.setContentsMargins(2, 2, 2, 2)
-        w_text = QTextBrowser(dialog)
-        w_text.setOpenLinks(False)
-        w_text.setOpenExternalLinks(False)
-        w_text.anchorClicked.connect(on_anchor_clicked)
-        layout.addWidget(w_text)
-        dialog.setMinimumSize(QSize(900,600))
-        qApp.cecog_help_dialog = dialog
-        qApp.cecog_help_wtext = w_text
-    else:
-        #pass
-        dialog = qApp.cecog_help_dialog
-        w_text = qApp.cecog_help_wtext
-
-    w_text.clear()
-
-    # if no content was given try to load the context via the name
-    if html_text is None:
-        html_text = load_qrc_text('help/%s.html' % name.lower())
-
-    if not html_text is None:
-        css_text = load_qrc_text('help/help.css')
-
-        if not header is None:
-            header_text = load_qrc_text('help/%s.html' % header)
-            if not header_text is None:
-                html_text = header_text + html_text
-
-        if not footer is None:
-            footer_text = load_qrc_text('help/%s.html' % footer)
-            if not footer_text is None:
-                html_text = html_text + footer_text
-
-        doc = QTextDocument()
-        if not css_text is None:
-            doc.setDefaultStyleSheet(css_text)
-        doc.setHtml(html_text)
-        w_text.setDocument(doc)
-        # FIXME: will cause a segfault when ref is lost
-        w_text._doc = doc
-        if not link is None:
-            w_text.scrollToAnchor(link)
-    else:
-        w_text.setHtml("We are sorry, but help for '%s' was not found." % name)
-    dialog.show()
-    #dialog.raise_()
-
-
-def on_anchor_clicked(link):
-    slink = str(link.toString())
-    if slink.find(QRC_TOKEN) == 0:
-        items = slink.split('#')
-        show_html(items[0].replace(QRC_TOKEN, ''))
-        if len(items) > 1:
-            qApp.cecog_help_wtext.scrollToAnchor(items[1])
-    elif slink.find('#') == 0:
-        qApp.cecog_help_wtext.scrollToAnchor(slink[1:])
-    else:
-        QDesktopServices.openUrl(link)
 
 def qcolor_to_hex(qcolor):
     return rgb2hex((qcolor.red(), qcolor.green(), qcolor.blue()), mpl=False)
