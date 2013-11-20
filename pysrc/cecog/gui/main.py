@@ -666,4 +666,4 @@ class CecogAnalyzer(QtGui.QMainWindow):
         return filename or None
 
     def _on_help_startup(self):
-        show_html('_startup')
+        self._pages.helpbrowser.show('_startup')

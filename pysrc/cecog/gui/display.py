@@ -406,7 +406,7 @@ class TraitDisplayMixin(QFrame):
         return self._settings.get_trait(self.name, name)
 
     def _on_show_help(self, link):
-        self.parent().helpbrowser.show_help( \
+        self.parent().helpbrowser.show( \
             self.name, link=link, header='_header', footer='_footer')
 
     def _on_set_radio_button(self, name, value):
