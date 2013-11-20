@@ -99,9 +99,8 @@ class ClassifierResultFrame(QGroupBox):
         layout_desc.addWidget(self._label_c, Qt.AlignLeft)
         self._label_g = QLabel(self.LABEL_G % float('NAN'), desc)
         layout_desc.addWidget(self._label_g, Qt.AlignLeft)
-        btn = QPushButton('Show Browser', desc)
-        btn.clicked.connect(qApp._main_window._on_browser_open)
-        layout_desc.addWidget(btn)
+        self.browserBtn = QPushButton('Show Browser', desc)
+        layout_desc.addWidget(self.browserBtn)
         layout.addWidget(desc)
 
         self._has_data = False
@@ -390,6 +389,10 @@ class ClassificationFrame(BaseProcessorFrame):
                              frame_results.on_load)
 
         self._init_control()
+
+    def connect_browser_btn(self, func):
+        for name, frame in self._result_frames.iteritems():
+            frame.browserBtn.clicked.connect(func)
 
     def _get_modified_settings(self, name, has_timelapse=True):
         settings = BaseProcessorFrame._get_modified_settings( \
