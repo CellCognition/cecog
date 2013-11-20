@@ -43,7 +43,7 @@ class HelpBrowser(QtGui.QDialog):
         slink = str(link.toString())
         if slink.find(self.QRC_TOKEN) == 0:
             items = slink.split('#')
-            self.show_help(items[0].replace(self.QRC_TOKEN, ''))
+            self.show(items[0].replace(self.QRC_TOKEN, ''))
             if len(items) > 1:
                 self.text_widget.scrollToAnchor(items[1])
         elif slink.find('#') == 0:
@@ -61,7 +61,7 @@ class HelpBrowser(QtGui.QDialog):
             fp.close()
         return text
 
-    def show_help(self, name, link='_top', title=None, header='_header',
+    def show(self, name, link='_top', title=None, header='_header',
                   footer='_footer', html_text=None):
         self.text_widget.clear()
 
@@ -93,5 +93,5 @@ class HelpBrowser(QtGui.QDialog):
         else:
             self.text_widget.setHtml(("We are sorry, but help for '%s' "
                                       "was not found." %name))
-        self.show()
+        super(HelpBrowser, self).show()
         self.raise_()

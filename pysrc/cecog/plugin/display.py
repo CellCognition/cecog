@@ -78,7 +78,7 @@ class PluginDocumentation(QFrame):
 
     def on_label_clicked(self, trait_name=None):
         param_name = self._plugin.param_manager.get_param_name(str(trait_name))
-        self.helpbrowser.show_help( \
+        self.helpbrowser.show( \
             self._plugin.name, html_text=self._content, link=param_name)
 
     @classmethod
