@@ -134,7 +134,7 @@ class EventSelectionCore(LoggerObject):
                     raise RuntimeError(('eventselection failed: maximum '
                                         'recursion reached in _forward_visitor()'))
                 else:
-                   raise(e)
+                    raise 
 
 
     def _forward_visitor(self, nodeid, results, visited_nodes, level=0):
