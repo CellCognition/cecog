@@ -118,10 +118,7 @@ if __name__ == '__main__':
     app = QtGui.QApplication([''])
 
     import time
-    dlg = ProgressDialog()
-    dlg.setLabelText('labeltext')
-    dlg.setRange(0, 0)
-    dlg.setCancelButton(None)
+    dlg = ProgressDialog('labeltext', "buttontext", 0, 0, None)
 
     def foo(t):
         print 'running long long target function for %d seconds' % t,
