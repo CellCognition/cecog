@@ -70,6 +70,7 @@ class ProgressDialog(QtGui.QProgressDialog):
 
         self.thread = ProgressThread(self)
         self.thread.finished.connect(self.close)
+        self.thread.finished.connect(self.hide)
         self.thread.result.connect(self.setTargetResult)
         self.thread.error.connect(self.onError)
 
