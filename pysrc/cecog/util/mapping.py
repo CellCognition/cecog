@@ -17,7 +17,15 @@ __source__ = '$URL$'
 __all__ = ["map_path_to_os"]
 
 import os
-from cecog.util.util import resolve_os_name
+import sys
+
+def resolve_os_name():
+    if sys.platform.startswith("win"):
+        return 'windows'
+    elif sys.platform.startswith("darwin"):
+        return 'mac'
+    elif sys.platform.startswith('linux'):
+        return 'linux'
 
 def map_path_to_os(path, path_mappings, target_os=None):
     path = os.path.normpath(path)

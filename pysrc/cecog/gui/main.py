@@ -62,13 +62,13 @@ from cecog.gui.browser import Browser
 from cecog.gui.helpbrowser import HelpBrowser
 from cecog.gui.log import GuiLogHandler, LogWindow
 
-
+from cecog.gui.progressdialog import ProgressDialog
+from cecog.gui.progressdialog import ProgressObject
 from cecog.gui.util import (critical,
                             question,
                             exception,
                             information,
-                            warning,
-                            waitingProgressDialog)
+                            warning)
 
 
 class FrameStack(QtGui.QStackedWidget):
@@ -476,37 +476,42 @@ class CecogAnalyzer(QtGui.QMainWindow):
                     self._load_image_container(infos, scan_plates)
 
     def _load_image_container(self, plate_infos, scan_plates=None, show_dlg=True):
-
         self._clear_browser()
+
         imagecontainer = ImageContainer()
         self._imagecontainer = imagecontainer
-
-        try: # I hate lookup tables!
-            self._tab_lookup['Cluster'][1].set_imagecontainer(imagecontainer)
-        except KeyError:
-            pass
 
         if scan_plates is None:
             scan_plates = dict((info[0], False) for info in plate_infos)
 
-        def load(dlg):
-            iter = imagecontainer.iter_import_from_settings(self._settings, scan_plates)
-            for idx, info in enumerate(iter):
-                dlg.targetSetValue.emit(idx + 1)
+        def load(emitter, icontainer, settings, splates):
+            iter_ = icontainer.iter_import_from_settings(settings, splates)
+            for idx, info in enumerate(iter_):
+                emitter.setValue.emit(idx)
 
-            if len(imagecontainer.plates) > 0:
-                plate = imagecontainer.plates[0]
-                imagecontainer.set_plate(plate)
+            emitter.setLabelText.emit("checking dimensions...")
+            emitter.setRange.emit(0, 0)
+            QtCore.QCoreApplication.processEvents()
 
-        msg = ('Please wait until the input structure is scanned\n'
-               'or the structure data loaded...')
-        self._dlg = waitingProgressDialog(msg, self, load, (0, len(scan_plates)))
+            if len(icontainer.plates) > 0:
+                icontainer.set_plate(icontainer.plates[0])
+            icontainer.check_dimensions()
+
+
+        label = ('Please wait until the input structure is scanned\n'
+                 'or the structure data loaded...')
+        self._dlg = ProgressDialog(label, None, 0, len(scan_plates), self)
+        emitter = ProgressObject()
+        emitter.setRange.connect(self._dlg.setRange)
+        emitter.setValue.connect(self._dlg.setValue)
+        emitter.setLabelText.connect(self._dlg.setLabelText)
 
         try:
-            self._dlg.exec_(passDialog=True)
+            func = lambda: load(emitter, imagecontainer, self._settings, scan_plates)
+            self._dlg.exec_(func, (emitter, ))
         except ImportError as e:
-            # structure file from versios older thane 1.3 contain
-            # pdk which is removed
+            # structure file from versions older than 1.3 contain pdk which is
+            # removed
             if 'pdk' in str(e):
                 critical(self, ("Your structure file format is outdated.\n"
                                 "You have to rescan the plate(s)"))
@@ -514,9 +519,12 @@ class CecogAnalyzer(QtGui.QMainWindow):
                 critical(self, traceback.format_exc())
             return
 
+        try: # I hate lookup tables!
+            self._tab_lookup['Cluster'][1].set_imagecontainer(imagecontainer)
+        except KeyError:
+            pass
 
         if len(imagecontainer.plates) > 0:
-            imagecontainer.check_dimensions()
             channels = imagecontainer.channels
 
             # do not report value changes to the main window
@@ -532,7 +540,8 @@ class CecogAnalyzer(QtGui.QMainWindow):
                     problems.append(prefix)
                 self._tabs[1].get_widget('%s_channelid' % prefix).update()
 
-            # report problems about a mismatch between channel IDs found in the data and specified by the user
+            # report problems about a mismatch between channel IDs found in the data
+            # and specified by the user
             if len(problems) > 0:
                 # a mismatch between settings and data will cause changed settings
                 self.settings_changed(True)
@@ -549,7 +558,8 @@ class CecogAnalyzer(QtGui.QMainWindow):
                 result = trait.set_list_data([TimeConverter.FRAMES])
             if result is None:
                 critical(self, "Could not set tracking duration units",
-                         "The tracking duration units selected to match the load data. Please check your settings.")
+                         ("The tracking duration units selected to match the "
+                          "load data. Please check your settings."))
                 # a mismatch between settings and data will cause changed settings
                 self.settings_changed(True)
 
