@@ -41,7 +41,7 @@ from cecog.units.time import seconds2datetime
 from cecog.gui.util import question
 from cecog.gui.util import critical
 from cecog.gui.util import information
-from cecog.gui.util import waitingProgressDialog
+
 
 from cecog.analyzer import CONTROL_1, CONTROL_2
 from cecog.analyzer.channel import PrimaryChannel
@@ -75,7 +75,7 @@ from cecog.traits.analyzer.eventselection import SECTION_NAME_EVENT_SELECTION
 from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
 from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
 from cecog.traits.analyzer.cluster import SECTION_NAME_CLUSTER
-
+from cecog.gui.progressdialog import ProgressDialog
 
 class BaseFrame(TraitDisplayMixin):
 
@@ -479,9 +479,8 @@ class _ProcessorMixin(object):
     def _abort_processing(self):
         self.setCursor(Qt.BusyCursor)
         self._is_abort = True
-        self.dlg = waitingProgressDialog('Please wait until the processing has been terminated...', self)
-        self.dlg.setTarget(self._analyzer.abort, wait=True)
-        self.dlg.exec_()
+        self.dlg = ProgressDialog('terminating...', None, 0, 0, self)
+        self.dlg.exec_(lambda: self._analyzer.abort(wait=True))
         self.setCursor(Qt.ArrowCursor)
 
     def _on_error(self, msg):

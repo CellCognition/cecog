@@ -36,7 +36,7 @@ import numpy
 from cecog.gui.modules.module import Module
 from cecog.util.util import yesno
 from cecog.io.imagecontainer import Coordinate
-from cecog.gui.util import waitingProgressDialog
+from cecog.gui.progressdialog import ProgressDialog
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -347,11 +347,9 @@ class NavigationModule(Module):
     def _set_plate(self, coordinate_new, set_current=False):
         coordinate_old = self.browser.get_coordinate()
         plate = coordinate_new.plate
-
-        self.dlg = waitingProgressDialog(\
-            "Please wait until the plate has been loaded...", self)
-        self.dlg.setTarget(self._imagecontainer.set_plate, plate)
-        self.dlg.exec_()
+        func = lambda: self._imagecontainer.set_plate(plate)
+        self.dlg = ProgressDialog("Loading plate...", None, 0, 0, self)
+        self.dlg.exec_(func)
 
         meta_data = self._imagecontainer.get_meta_data()
         if set_current:
