@@ -42,6 +42,7 @@ _battery_package = join(RESOURCE_DIR, 'battery_package')
 
 # for py2app and py2exe
 INCLUDES = [ 'sip',
+             'h5py.*',
              'scipy.sparse.csgraph._validation',
              'scipy.spatial.kdtree',
              'scipy.sparse.csgraph._shortest_path',
