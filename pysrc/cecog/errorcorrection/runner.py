@@ -222,7 +222,7 @@ class PositionRunner(QtCore.QObject):
                     report.image_gallery_png(fn, self.ecopts.n_galleries,
                                              self.ecopts.resampling_factor)
                     report.close_figures()
-                except Exception as e:
+                except Exception as e: # don't stop error corection
                     with open(join(self._gallery_dir, '%s-%s_error_readme.txt'
                                    %(prefix, sby)), 'w') as fp:
                         traceback.print_exc(file=fp)
@@ -233,10 +233,18 @@ class PositionRunner(QtCore.QObject):
             fn = join(self._gallery_dir, 'MultiChannelGallery_%s.png'
                       %sby)
             self.interruption_point("plotting multichannel gallery")
-            mcg = MultiChannelGallery(self.ecopts.class_definition, alldata,
-                                      'primary', self.ecopts.n_galleries,
-                                      self.ecopts.resampling_factor)
-            mcg(fn, self.ecopts.regionnames.keys())
+
+            try:
+                mcg = MultiChannelGallery(self.ecopts.class_definition, alldata,
+                                          'primary', self.ecopts.n_galleries,
+                                          self.ecopts.resampling_factor)
+                mcg(fn, self.ecopts.regionnames.keys())
+            # don't stop error correction
+            except Exception as e:
+                with open(join(self._gallery_dir, '%s-%s_error_readme.txt'
+                               %(prefix, sby)), 'w') as fp:
+                    traceback.print_exc(file=fp)
+                    fp.write("Check if gallery images exist!")
 
 
 if __name__ == "__main__":
