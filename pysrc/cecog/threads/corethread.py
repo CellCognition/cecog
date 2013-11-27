@@ -22,13 +22,15 @@ class StopProcessing(Exception):
 
 class ProgressMsg(dict):
 
-    def __init__(self, min=0, max=1, stage=0, meta="", progress=0, text=''):
+    def __init__(self, min=0, max=1, stage=0, meta="", progress=0, text='',
+                 item_name=''):
         self['min'] = min
         self['max'] = max
         self['stage'] = stage
         self['meta'] = meta
         self['progress'] = progress
         self['text'] = text
+        self['item_name'] = item_name
 
     def increment_progress(self):
         self.progress += 1
@@ -98,6 +100,7 @@ class CoreThread(QtCore.QThread):
             self._abort = True
         finally:
             self._mutex.unlock()
+
         if wait:
             self.wait()
         self.aborted.emit()
@@ -124,10 +127,6 @@ class CoreThread(QtCore.QThread):
     @renderer.deleter
     def renderer(self):
         del self._renderer
-
-    def interruption_point(self):
-        if self._abort:
-            raise StopProcessing()
 
     def interruption_point(self):
         if self._abort:
