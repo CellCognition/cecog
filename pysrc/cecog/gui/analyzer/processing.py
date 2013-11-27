@@ -16,34 +16,32 @@ __source__ = '$URL$'
 
 __all__ = ['ProcessingFrame']
 
-import threading
+
 import logging
+from PyQt4 import QtGui
+from PyQt4 import QtCore
 
 from cecog import CHANNEL_PREFIX, VERSION
 from cecog import CH_OTHER, CH_VIRTUAL, CH_PRIMARY
 from cecog.gui.analyzer import BaseProcessorFrame, AnalyzerThread
 from cecog.gui.analyzer import HmmThread, MultiAnalyzerThread
-
-from cecog.analyzer.channel import PrimaryChannel
-from cecog.analyzer.channel import SecondaryChannel
-from cecog.analyzer.channel import TertiaryChannel
-
 from cecog.plugin.segmentation import REGION_INFO as reginfo
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
 
 
-class SubProcessLogWindow(QFrame):
-    lock = threading.Lock()
-    on_msg_received = pyqtSignal(str, str, int)
+class SubProcessLogWindow(QtGui.QDialog):
 
-    def __init__(self, parent):
-        QFrame.__init__(self)
-        self.setWindowTitle('Process log window')
-        self.setGeometry(50,50,800,400)
-        self._layout = QVBoxLayout(self)
-        self._layout.addWidget(QLabel('Process logs for each child process'))
-        self.tab_widget = QTabWidget()
+    on_msg_received = QtCore.pyqtSignal(str, str, int)
+
+    def __init__(self, *args, **kw):
+        super(SubProcessLogWindow, self).__init__(*args, **kw)
+        self.setWindowTitle('Multiprocessing logger')
+        self.setWindowModality(QtCore.Qt.NonModal)
+        self.resize(800, 600)
+
+        self._layout = QtGui.QVBoxLayout(self)
+        self._layout.setContentsMargins(4, 4, 4, 4)
+        self._layout.addWidget(QtGui.QLabel('Process logs for each child process'))
+        self.tab_widget = QtGui.QTabWidget()
         self.tab_widget.setUsesScrollButtons(True)
         self._layout.addWidget(self.tab_widget)
         self.on_msg_received.connect(self.on_show_msg)
@@ -52,29 +50,28 @@ class SubProcessLogWindow(QFrame):
         self.tab_widget.clear()
         self.items = {}
         for p in sub_process_names:
-            lw = QPlainTextEdit(self.tab_widget)
+            lw = QtGui.QPlainTextEdit(self.tab_widget)
+            lw.setReadOnly(True)
             self.items[p] = lw
             self.tab_widget.addTab(lw, p)
 
     def on_show_msg(self, name, msg, level):
-        print '+'*10, msg, level
-        if level == logging.INFO:
-            msg = "<font color='black'>" + msg + '</font>'
-            self.items[name].appendHtml(msg)
-        elif level == logging.DEBUG:
+
+        if level == logging.DEBUG:
             msg = "<font color='green'>" + msg + '</font>'
-            self.items[name].appendHtml(msg)
         elif level == logging.WARNING:
-            msg = "<font color='blue'><b>" + msg + '</b></font>'
-            self.items[name].appendHtml(msg)
-        elif level > logging.WARNING:
+            msg = "<font color='orange'><b>" + msg + '</b></font>'
+            self.tab_widget.setCurrentWidget(self.items[name])
+        elif level == logging.ERROR:
             msg = "<font color='red'><b>" + msg + '</b></font>'
+            self.tab_widget.setCurrentWidget(self.items[name])
         else:
-            self.items[name].appendPlainText(msg)
+            msg = "<font color='black'>" + msg + '</font>'
+        self.items[name].appendHtml(msg.replace('\n', '<br>'))
+        self.items[name].moveCursor(QtGui.QTextCursor.End)
 
     def on_msg_received_emit(self, record, formated_msg):
         self.on_msg_received.emit(record.name, formated_msg, record.levelno)
-
 
 
 class ProcessingFrame(BaseProcessorFrame):
@@ -114,11 +111,11 @@ class ProcessingFrame(BaseProcessorFrame):
 
         self.add_expanding_spacer()
         self._init_control()
-        self.process_log_window = SubProcessLogWindow(self)
+        self.log_window = SubProcessLogWindow(self)
 
     @classmethod
     def get_export_settings(cls, settings, has_timelapse=True):
-                
+
         settings = BaseProcessorFrame.get_special_settings(settings, has_timelapse)
 
         settings.set('General', 'version', VERSION)
@@ -163,14 +160,14 @@ class ProcessingFrame(BaseProcessorFrame):
 
             # color are defined for regions (not for channels)
             # therefore, we first retrieve the regions for the primary channel
-            # and (in the case there are some) we assign the color of the first 
+            # and (in the case there are some) we assign the color of the first
             # ROI of the primary channel to the merged contour.
             regions_primary = reginfo.names[CH_PRIMARY[0]]
             if len(regions_primary) == 0:
                 default_color = '#FF00FF'
             else:
                 default_color = reginfo.colors[regions_primary[0]]
-            
+
             regions = cls._merged_regions(settings)
             d = {'merged_contours_%s' %'-'.join(regions):
                      {"Merged": {'raw': ('#FFFFFF', 1.0),

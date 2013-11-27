@@ -175,6 +175,7 @@ class BaseFrame(TraitDisplayMixin):
 class _ProcessorMixin(object):
     def __init__(self, parent):
         self.idialog = parent.idialog
+
         self._is_running = False
         self._is_abort = False
         self._has_error = True
