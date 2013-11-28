@@ -47,6 +47,7 @@ from cecog.analyzer import CONTROL_1, CONTROL_2
 from cecog.analyzer.channel import PrimaryChannel
 from cecog.analyzer.channel import SecondaryChannel
 from cecog.analyzer.channel import TertiaryChannel
+from cecog.plugin.metamanager import MetaPluginManager
 
 from cecog.environment import CecogEnvironment
 from cecog.analyzer.core import AnalyzerCore
@@ -88,6 +89,7 @@ class BaseFrame(TraitDisplayMixin):
 
     def __init__(self, settings, parent, name):
         super(BaseFrame, self).__init__(settings, parent)
+        self.plugin_mgr = MetaPluginManager()
         self.name = name
         self._is_active = False
         self._intervals = list()
@@ -199,7 +201,7 @@ class _ProcessorMixin(object):
 
     def _init_control(self, has_images=True):
         layout = QHBoxLayout(self._control)
-        layout.setContentsMargins(0,0,0,0)
+        layout.setContentsMargins(0, 0, 0, 0)
 
         self._progress_label0 = QLabel(self._control)
         self._progress_label0.setText('')

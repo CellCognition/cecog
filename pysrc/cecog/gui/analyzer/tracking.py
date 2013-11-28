@@ -18,7 +18,7 @@ __all__ = ['TrackingFrame']
 
 from cecog import CH_VIRTUAL, CH_PRIMARY, CH_OTHER
 from cecog.gui.analyzer import BaseProcessorFrame, AnalyzerThread
-from cecog.plugin.segmentation import REGION_INFO
+
 
 class TrackingFrame(BaseProcessorFrame):
 
@@ -78,42 +78,10 @@ class TrackingFrame(BaseProcessorFrame):
         settings.set('General', 'rendering', pct)
         return settings
 
-    # def _channel_render_settings(self, settings, ch_name, show_class_ids):
-    #     pfx = ch_name.lower()
-    #     if ((settings.get2('%s_featureextraction' %pfx) or pfx in CH_VIRTUAL) and
-    #         settings.get2('%s_classification' %pfx) and
-    #         settings.get2('%s_processchannel' %pfx)):
-    #         settings.get('General', 'rendering_class').update( \
-    #             self._class_rendering_params(ch_name.lower(), settings))
-
-    # def _class_rendering_params(self, prefix, settings):
-    #     """Setup rendering prameters for images to show classified objects"""
-    #     showids = settings.get('Output', 'rendering_class_showids')
-
-    #     if prefix in CH_VIRTUAL:
-    #         region = list()
-    #         for pfx in (CH_PRIMARY+CH_OTHER):
-    #             if settings.get('Classification', 'merge_%s' %pfx):
-    #                 region.append(settings.get("Classification", "merged_%s_region" %pfx))
-    #         region = tuple(region)
-    #         region_str = '-'.join(region)
-    #     else:
-    #         region = settings.get('Classification',
-    #                               '%s_classification_regionname' %prefix)
-    #         region_str = region
-
-    #     rpar = {prefix.title():
-    #                 {'raw': ('#FFFFFF', 1.0),
-    #                  'contours': [(region, 'class_label', 1, False),
-    #                               (region, '#000000', 1, showids)]}}
-    #     cl_rendering = {'%s_classification_%s' %(prefix, region_str): rpar}
-    #    return cl_rendering
-
-
     def page_changed(self):
         self.settings_loaded()
 
     def settings_loaded(self):
         # FIXME: set the trait list data to plugin instances of the current channel
         trait = self._settings.get_trait('Tracking', 'tracking_regionname')
-        trait.set_list_data(REGION_INFO.names['primary'])
+        trait.set_list_data(self.plugin_mgr.region_info.names['primary'])

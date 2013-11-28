@@ -25,7 +25,6 @@ from cecog import CHANNEL_PREFIX, VERSION
 from cecog import CH_OTHER, CH_VIRTUAL, CH_PRIMARY
 from cecog.gui.analyzer import BaseProcessorFrame, AnalyzerThread
 from cecog.gui.analyzer import HmmThread, MultiAnalyzerThread
-from cecog.plugin.segmentation import REGION_INFO as reginfo
 
 
 class SubProcessLogWindow(QtGui.QWidget):
@@ -115,9 +114,7 @@ class ProcessingFrame(BaseProcessorFrame):
         self._init_control()
         self.log_window = SubProcessLogWindow()
 
-    @classmethod
-    def get_export_settings(cls, settings, has_timelapse=True):
-
+    def get_export_settings(self, settings, has_timelapse=True):
         settings = BaseProcessorFrame.get_special_settings(settings, has_timelapse)
 
         settings.set('General', 'version', VERSION)
@@ -128,23 +125,21 @@ class ProcessingFrame(BaseProcessorFrame):
         show_ids_class = settings.get('Output', 'rendering_class_showids')
 
         # set propertys of merged channel to the same as for Primary
-        # unfortunately REGION_INFO is like a global variable
-
         d = {}
         for prefix in CH_PRIMARY+CH_OTHER:
             if prefix == CH_PRIMARY[0] \
                     or settings.get('Processing', '%s_processchannel' % prefix):
-                for x in reginfo.names[prefix]:
+                for x in self.plugin_mgr.region_info.names[prefix]:
                     d = {'%s_contours_%s' % (prefix, x):
                              {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
-                                                    'contours': [(x, reginfo.colors[x], 1, show_ids)]
+                                                    'contours': [(x, self.plugin_mgr.region_info.colors[x], 1, show_ids)]
                                                     }
                               }
                          }
 
                 settings.get('General', 'rendering').update(d)
                 if settings.get('Processing', '%s_classification' % prefix):
-                    for x in reginfo.names[prefix]:
+                    for x in self.plugin_mgr.region_info.names[prefix]:
                         if x == settings.get('Classification', '%s_classification_regionname' % prefix) or \
                                 prefix == CH_VIRTUAL[0]:
                             d = {'%s_classification_%s' % (prefix, x):
@@ -164,13 +159,13 @@ class ProcessingFrame(BaseProcessorFrame):
             # therefore, we first retrieve the regions for the primary channel
             # and (in the case there are some) we assign the color of the first
             # ROI of the primary channel to the merged contour.
-            regions_primary = reginfo.names[CH_PRIMARY[0]]
+            regions_primary = self.plugion_mgr.region_info.names[CH_PRIMARY[0]]
             if len(regions_primary) == 0:
                 default_color = '#FF00FF'
             else:
-                default_color = reginfo.colors[regions_primary[0]]
+                default_color = self.plugin_mgr.region_info.colors[regions_primary[0]]
 
-            regions = cls._merged_regions(settings)
+            regions = self._merged_regions(settings)
             d = {'merged_contours_%s' %'-'.join(regions):
                      {"Merged": {'raw': ('#FFFFFF', 1.0),
                                  'contours': [(regions, default_color, 1, show_ids)]}}}
@@ -191,7 +186,6 @@ class ProcessingFrame(BaseProcessorFrame):
                                                                                    {'raw': ('#FFFFFF', 1.0)}}})
         return settings
 
-    @staticmethod
     def _merged_regions(settings):
         """Return the regions seletected for segmentation in the
         order (primary, secondary, tertiary)."""
@@ -203,9 +197,9 @@ class ProcessingFrame(BaseProcessorFrame):
         # want regions hashable
         return tuple(regions)
 
-    @classmethod
-    def get_special_settings(cls, settings, has_timelapse=True):
-        settings = cls.get_export_settings(settings, has_timelapse)
+
+    def get_special_settings(self, settings, has_timelapse=True):
+        settings = self.get_export_settings(settings, has_timelapse)
 
         settings.set_section('Processing')
         for prefix in CHANNEL_PREFIX[1:]:

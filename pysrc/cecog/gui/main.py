@@ -228,12 +228,14 @@ class CecogAnalyzer(QtGui.QMainWindow):
     def closeEvent(self, event):
         # Quit dialog only if not debuging flag is not set
         if self.debug:
-            return
+            QtGui.QApplication.exit()
         ret = QMessageBox.question(self, "Quit %s" %self.appname,
                                    "Do you really want to quit?",
                                    QMessageBox.Yes|QMessageBox.No)
         if self._check_settings_saved() and ret == QMessageBox.No:
             event.ignore()
+        else:
+            QtGui.QApplication.exit()
 
     def settings_changed(self, changed):
         if self._is_initialized:
@@ -359,7 +361,8 @@ class CecogAnalyzer(QtGui.QMainWindow):
             f = file(filename, 'w')
             # create a new version (copy) of the current
             # settings which add the needed rendering information
-            settings_dummy = ProcessingFrame.get_export_settings(self._settings)
+            pframe = self._tab_lookup[SECTION_NAME_PROCESSING][1]
+            settings_dummy = pframe.get_export_settings(self._settings)
             settings_dummy.write(f)
             f.close()
         except Exception as e:

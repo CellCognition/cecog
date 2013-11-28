@@ -9,38 +9,16 @@
                  See trunk/AUTHORS.txt for author contributions.
 """
 
-__all__ = ['RegionInformation', 'SegmentationPluginManager',
-           '_SegmentationPlugin']
+__all__ = ['SegmentationPluginManager', '_SegmentationPlugin']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
-from cecog import CHANNEL_PREFIX
 from cecog.plugin import PluginManager, _Plugin
 
-#-------------------------------------------------------------------------------
-# constants:
-#
 
-#-------------------------------------------------------------------------------
-# functions:
-#
+class _SegmentationPlugin(_Plugin):
 
-#-------------------------------------------------------------------------------
-# classes:
-#
-class RegionInformation(object):
+    COLOR = '#FFFFFF'
+    QRC_PREFIX = 'segmentation'
 
-    names = dict([(p, list()) for p in CHANNEL_PREFIX])
-    colors = {}
 
 class SegmentationPluginManager(PluginManager):
 
@@ -59,13 +37,3 @@ class SegmentationPluginManager(PluginManager):
         self.region_info.colors.update( \
             dict([(name, self.get_plugin_instance(name).COLOR)
                   for name in self.get_plugin_names()]))
-
-class _SegmentationPlugin(_Plugin):
-
-    COLOR = '#FFFFFF'
-    QRC_PREFIX = 'segmentation'
-
-
-#-------------------------------------------------------------------------------
-# main:
-#

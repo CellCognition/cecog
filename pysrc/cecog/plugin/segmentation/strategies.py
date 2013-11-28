@@ -9,19 +9,9 @@
                  See trunk/AUTHORS.txt for author contributions.
 """
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
+import os
+import re
 import numpy
-import os, re
-
-#-------------------------------------------------------------------------------
-# cecog module imports:
-#
 from cecog import ccore
 from cecog.gui.guitraits import (BooleanTrait,
                                  IntTrait,
@@ -32,17 +22,7 @@ from cecog.gui.guitraits import (BooleanTrait,
 from cecog.plugin import stopwatch
 from cecog.plugin.segmentation.manager import _SegmentationPlugin
 
-#-------------------------------------------------------------------------------
-# constants:
-#
 
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 class SegmentationPluginPrimary(_SegmentationPlugin):
 
     LABEL = 'Local adaptive threshold w/ split&merge'
@@ -403,7 +383,7 @@ class SegmentationPluginIlastik(SegmentationPluginPrimary):
         classificationPredict = ClassifierPredictThread(dataMgr)
         classificationPredict.start()
         classificationPredict.wait()
-        
+
         if ilastik_class >= classificationPredict._prediction[0].shape[-1]:
             raise RuntimeError('ilastik output class not valid...')
 

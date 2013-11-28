@@ -22,9 +22,9 @@ import cStringIO
 from collections import OrderedDict
 from ConfigParser import RawConfigParser
 
-from cecog import PLUGIN_MANAGERS, VERSION
+from cecog import VERSION
+from cecog.plugin.metamanager import MetaPluginManager
 from cecog.traits.analyzer.section_registry import SectionRegistry
-
 
 class ConfigSettings(RawConfigParser):
     """Extension of RawConfigParser which maps sections to parameter sections e.g.
@@ -121,7 +121,7 @@ class ConfigSettings(RawConfigParser):
                     self.set(sec_name, opt_name, value)
 
     def readfp(self, fp):
-        for plugin_manager in PLUGIN_MANAGERS:
+        for plugin_manager in MetaPluginManager():
             plugin_manager.clear()
         for section in self.sections():
             self.remove_section(section)
@@ -157,7 +157,7 @@ class ConfigSettings(RawConfigParser):
                 self.remove_section(section_name)
 
         self._merge_registry()
-        for plugin_manager in PLUGIN_MANAGERS:
+        for plugin_manager in MetaPluginManager():
             plugin_manager.init_from_settings(self)
 
         return result
@@ -175,8 +175,8 @@ class ConfigSettings(RawConfigParser):
             for option, value in group.iteritems():
                 RawConfigParser.set(self, section, option, value)
 
-        # update the plugins
-        for plugin_manager in PLUGIN_MANAGERS:
+        # # update the plugins
+        for plugin_manager in MetaPluginManager():
             plugin_manager.clear()
             plugin_manager.init_from_settings(self)
 

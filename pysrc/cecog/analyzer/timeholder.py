@@ -34,7 +34,7 @@ from cecog.util.stopwatch import StopWatch
 from cecog.io.imagecontainer import Coordinate
 from cecog.io.imagecontainer import MetaImage
 from cecog.analyzer.channel import PrimaryChannel
-from cecog.plugin.segmentation import REGION_INFO
+from cecog.plugin.metamanager import MetaPluginManager
 
 from cecog.analyzer.tracker import Tracker
 
@@ -118,6 +118,7 @@ class TimeHolder(OrderedDict):
         self._meta_data = meta_data
         self._settings = settings
         self._analysis_frames = analysis_frames
+        self.reginfo = MetaPluginManager().region_info
 
         self._hdf5_create = hdf5_create
         self._hdf5_include_raw_images = hdf5_include_raw_images
@@ -147,11 +148,11 @@ class TimeHolder(OrderedDict):
         channels = sorted(list(meta_data.channels))
         self._region_names = []
 
-        self._region_names = REGION_INFO.names['primary'] + \
-            REGION_INFO.names['secondary'] + \
-            REGION_INFO.names['tertiary']
-        if len(REGION_INFO.names['merged']):
-            self._region_names.append('-'.join(REGION_INFO.names['merged']))
+        self._region_names = self.reginfo.names['primary'] + \
+            self.reginfo.names['secondary'] + \
+            self.reginfo.names['tertiary']
+        if len(self.reginfo.names['merged']):
+            self._region_names.append('-'.join(self.reginfo.names['merged']))
 
         self._channel_info = []
         self._region_infos = []
@@ -159,7 +160,7 @@ class TimeHolder(OrderedDict):
         # XXX hardcoded values
 
         for prefix in self.channel_regions.keys():
-            for name in REGION_INFO.names[prefix.lower()]:
+            for name in self.reginfo.names[prefix.lower()]:
                 if not isinstance(name, basestring):
                     name = '-'.join(name)
                 self._channel_info.append((prefix.lower(),
@@ -540,7 +541,7 @@ class TimeHolder(OrderedDict):
         if self._hdf5_found and self._hdf5_reuse:
             ### Try to load them
             frame_idx = self._frames_to_idx[self._iCurrentT]
-            for region_name in REGION_INFO.names[channel_name]:
+            for region_name in self.reginfo.names[channel_name]:
                 if 'region' in self._grp_cur_position[self.HDF5_GRP_IMAGE]:
                     dset_label_image = self._grp_cur_position[self.HDF5_GRP_IMAGE]['region']
                     frame_valid = dset_label_image.attrs['valid'][frame_idx]
@@ -594,7 +595,7 @@ class TimeHolder(OrderedDict):
                     var_labels.attrs['valid'] = numpy.zeros(t)
 
                 frame_idx = self._frames_to_idx[self._iCurrentT]
-                for region_name in REGION_INFO.names[channel_name]:
+                for region_name in self.reginfo.names[channel_name]:
                     idx = self._regions_to_idx2[(channel.NAME, region_name)]
                     container = channel.containers[region_name]
                     array = container.img_labels.toArray(copy=False)
@@ -1225,7 +1226,7 @@ class TimeHolder(OrderedDict):
         for frame, channels in self.iteritems():
 
             items = []
-            prim_region = channels.values()[0].get_region(REGION_INFO.names['primary'][0])
+            prim_region = channels.values()[0].get_region(self.reginfo.names['primary'][0])
 
             for obj_id in prim_region:
 
