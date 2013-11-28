@@ -28,7 +28,7 @@ from cecog.gui.analyzer import HmmThread, MultiAnalyzerThread
 from cecog.plugin.segmentation import REGION_INFO as reginfo
 
 
-class SubProcessLogWindow(QtGui.QDialog):
+class SubProcessLogWindow(QtGui.QWidget):
 
     on_msg_received = QtCore.pyqtSignal(str, str, int)
 
@@ -36,6 +36,8 @@ class SubProcessLogWindow(QtGui.QDialog):
         super(SubProcessLogWindow, self).__init__(*args, **kw)
         self.setWindowTitle('Multiprocessing logger')
         self.setWindowModality(QtCore.Qt.NonModal)
+        self.setWindowFlags(QtCore.Qt.Window)
+
         self.resize(800, 600)
 
         self._layout = QtGui.QVBoxLayout(self)
@@ -111,7 +113,7 @@ class ProcessingFrame(BaseProcessorFrame):
 
         self.add_expanding_spacer()
         self._init_control()
-        self.log_window = SubProcessLogWindow(self)
+        self.log_window = SubProcessLogWindow()
 
     @classmethod
     def get_export_settings(cls, settings, has_timelapse=True):
