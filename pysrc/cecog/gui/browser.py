@@ -23,7 +23,7 @@ __all__ = ['Browser']
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
-import math
+
 import numpy
 
 from PyQt4.QtGui import *
@@ -37,24 +37,19 @@ from cecog.gui.util import (exception,
                             get_qcolor_hicontrast,
                             qcolor_to_hex,
                             )
+
 from cecog.gui.imageviewer import ImageViewer
 from cecog.gui.modules.module import ModuleManager
 from cecog.gui.analyzer import _ProcessorMixin
-from cecog.analyzer.channel import (PrimaryChannel,
-                                    SecondaryChannel,
-                                    TertiaryChannel,
-                                    )
+from cecog.analyzer.channel import PrimaryChannel
 from cecog.analyzer.core import AnalyzerCore
 from cecog.io.imagecontainer import Coordinate
-from cecog.learning.learning import BaseLearner
-from cecog.gui.widgets.groupbox import QxtGroupBox
 
 from cecog.gui.modules.navigation import NavigationModule
 from cecog.gui.modules.display import DisplayModule
 from cecog.gui.modules.annotation import AnnotationModule
 
-from cecog.plugin.segmentation import REGION_INFO
-
+from cecog.plugin.metamanager import MetaPluginManager
 
 
 class Browser(QMainWindow):
@@ -232,9 +227,10 @@ class Browser(QMainWindow):
         toolbar.setFloatable(False)
 
         region_names = []
+        reginfo = MetaPluginManager().region_info
         for prefix in ['primary', 'secondary', 'tertiary']:
             region_names.extend(['%s - %s' % (prefix.capitalize(), name) \
-                                 for name in REGION_INFO.names[prefix]])
+                                 for name in reginfo.names[prefix]])
 
         # Creating fallback if no Segmentation plugins have been specified so far
         if len(region_names) > 0:

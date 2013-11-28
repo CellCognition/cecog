@@ -22,11 +22,6 @@ from PyQt4.Qt import *
 
 from cecog.gui.analyzer import BaseProcessorFrame
 from cecog.threads.analyzer import AnalyzerThread
-from cecog.plugin.segmentation import PRIMARY_SEGMENTATION_MANAGER
-from cecog.plugin.segmentation import SECONDARY_SEGMENTATION_MANAGER
-from cecog.plugin.segmentation import TERTIARY_SEGMENTATION_MANAGER
-
-from cecog.plugin.segmentation import REGION_INFO
 
 class ObjectDetectionFrame(BaseProcessorFrame):
 
@@ -61,7 +56,7 @@ class ObjectDetectionFrame(BaseProcessorFrame):
                        [('primary_flat_field_correction_image_dir',),
                         ], layout='flow')
         self.add_line()
-        self.add_plugin_bay(PRIMARY_SEGMENTATION_MANAGER, settings)
+        self.add_plugin_bay(self.plugin_mgr['primary'], settings)
 
         self.add_expanding_spacer()
 
@@ -93,11 +88,7 @@ class ObjectDetectionFrame(BaseProcessorFrame):
             self.add_group('%s_flat_field_correction' % prefix,[('%s_flat_field_correction_image_dir' % prefix,)],layout='flow')
 
             self.add_line()
-            if prefix == 'secondary':
-                self.add_plugin_bay(SECONDARY_SEGMENTATION_MANAGER, settings)
-            else:
-                self.add_plugin_bay(TERTIARY_SEGMENTATION_MANAGER, settings)
-
+            self.add_plugin_bay(self.plugin_mgr[prefix], settings)
             self.add_expanding_spacer()
 
         self._init_control()
@@ -146,13 +137,14 @@ class ObjectDetectionFrame(BaseProcessorFrame):
             settings.set('Processing', 'tertiary_processchannel', True)
             prefix = 'tertiary'
 
-        colors = REGION_INFO.colors
+        region_info = self.plugin_mgr.region_info
+        colors = region_info.colors
         rdn = dict([('%s_contours_%s' % (prefix, x),
                      {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
                                             'contours': [(x, colors[x] , 1, show_ids)]
                                             }
                       }
-                     ) for x in REGION_INFO.names[prefix]])
+                     ) for x in region_info.names[prefix]])
 
         settings.set('General', 'rendering', rdn)
 

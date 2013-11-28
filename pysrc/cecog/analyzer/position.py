@@ -21,7 +21,7 @@ from collections import OrderedDict
 from os.path import join, basename, isdir
 
 from cecog.io.imagecontainer import Coordinate
-from cecog.plugin.segmentation import REGION_INFO
+from cecog.plugin.metamanager import MetaPluginManager
 from cecog.units.time import TimeConverter
 
 from cecog.analyzer.timeholder import TimeHolder
@@ -522,7 +522,7 @@ class PositionAnalyzer(PositionCore):
         features = {}
         for name in self.processing_channels:
             region_features = {}
-            for region in REGION_INFO.names[name.lower()]:
+            for region in MetaPluginManager().region_info.names[name.lower()]:
                 # export all features extracted per regions
                 if self.settings.get('Output', 'events_export_all_features') or \
                         self.settings.get('Output', 'export_track_data'):

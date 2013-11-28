@@ -31,6 +31,7 @@ from cecog.threads.corethread import ProgressMsg
 from cecog.multiprocess import mplogging as lg
 from cecog.environment import CecogEnvironment
 from cecog.traits.config import ConfigSettings
+from cecog.plugin.metamanager import MetaPluginManager
 
 
 class MultiProcessingError(Exception):
