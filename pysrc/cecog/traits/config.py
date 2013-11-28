@@ -173,11 +173,12 @@ class ConfigSettings(RawConfigParser):
     def from_dict(self, settings):
         for section, group in settings.iteritems():
             for option, value in group.iteritems():
-                try:
-                    self.set(section, option, value)
-                except:
-                    print section, option, value
-                    raise
+                RawConfigParser.set(self, section, option, value)
+
+        # update the plugins
+        for plugin_manager in PLUGIN_MANAGERS:
+            plugin_manager.clear()
+            plugin_manager.init_from_settings(self)
 
     def to_string(self):
         stringio = cStringIO.StringIO()
