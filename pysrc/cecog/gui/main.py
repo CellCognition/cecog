@@ -76,10 +76,10 @@ class FrameStack(QtGui.QStackedWidget):
     def __init__(self, parent):
         super(FrameStack, self).__init__(parent)
         self.main_window = parent
-        self.idialog = ImageDialog(parent)
+        self.idialog = ImageDialog()
         self.idialog.hide()
 
-        self.helpbrowser = HelpBrowser(self)
+        self.helpbrowser = HelpBrowser()
         self.helpbrowser.hide()
 
 
