@@ -42,13 +42,12 @@ def core_helper(plate, settings_dict, imagecontainer, position, version,
     """Embeds analysis of a positon in a single function"""
     # see http://stackoverflow.com/questions/3288595/
     # multiprocessing-using-pool-map-on-a-function-defined-in-a-class
-
+    logger =  logging.getLogger(str(os.getpid()))
     try:
         settings = ConfigSettings()
         settings.from_dict(settings_dict)
         settings.set('General', 'constrain_positions', True)
         settings.set('General', 'positions', position)
-        logger =  logging.getLogger(str(os.getpid()))
 
         environ = CecogEnvironment(version, redirect=redirect, debug=debug)
         if debug:
@@ -159,10 +158,17 @@ class MultiAnalyzerThread(AnalyzerThread):
                 hdf5_link_list = reduce(lambda x, y: x + y, hdf5_link_list)
             link_hdf5_files(sorted(hdf5_link_list))
 
-
     def abort(self, wait=False):
+        self._mutex.lock()
+        try:
+            self._abort = True
+        finally:
+            self._mutex.unlock()
+        # timing is essential, flag must be set before terminate is called
         self.pool.terminate()
-        super(MultiAnalyzerThread, self).abort(wait)
+        if wait:
+            self.wait()
+        self.aborted.emit()
 
     def _run(self):
         self._abort = False
@@ -178,7 +184,7 @@ class MultiAnalyzerThread(AnalyzerThread):
             meta_data = self._imagecontainer.get_meta_data()
 
             if positions is not None:
-                _position = tuple(set(meta_data.positions).intersection(positions))
+                _positions = tuple(set(meta_data.positions).intersection(positions))
             else:
                 _positions = meta_data.positions
 
