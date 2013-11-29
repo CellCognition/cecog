@@ -721,7 +721,7 @@ class PositionAnalyzer(PositionCore):
             # for the generation of gallery images
             self.timeholder.purge_features()
             if self.settings.get('Output', 'events_export_gallery_images') and \
-                    self.settings.get('Processing', 'tracking_synchronize_trajectories'):
+                    self.settings.get('Processing', 'eventselection'):
                 self.export_gallery_images()
 
         try:
