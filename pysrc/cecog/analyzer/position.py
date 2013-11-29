@@ -733,7 +733,7 @@ class PositionAnalyzer(PositionCore):
                              (n_images, intval))
 
         self.touch_finished()
-#        self.clear()
+        self.clear()
         return n_images
 
     @property
