@@ -23,13 +23,16 @@ class Singleton(type):
 
     def __init__(cls, name, bases, dict):
         super(Singleton, cls).__init__(cls, bases, dict)
-        cls._instance = None
+        cls._instances = {}
         cls._pid = os.getpid()
 
     def __call__(cls, *args, **kwargs):
-        if cls._instance is None or cls._pid == os.getpid():
-            cls._instance = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instance
+        pid = os.getpid()
+
+        if not cls._instances.has_key(pid):
+            cls._instances[pid] = super(Singleton, cls).__call__(*args, **kwargs)
+
+        return cls._instances[pid]
 
 
 class QSingleton(pyqtWrapperType):
