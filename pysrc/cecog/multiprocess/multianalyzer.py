@@ -31,7 +31,6 @@ from cecog.threads.corethread import ProgressMsg
 from cecog.multiprocess import mplogging as lg
 from cecog.environment import CecogEnvironment
 from cecog.traits.config import ConfigSettings
-from cecog.plugin.metamanager import MetaPluginManager
 
 
 class MultiProcessingError(Exception):
@@ -44,6 +43,7 @@ def core_helper(plate, settings_dict, imagecontainer, position, version,
     # see http://stackoverflow.com/questions/3288595/
     # multiprocessing-using-pool-map-on-a-function-defined-in-a-class
     logger =  logging.getLogger(str(os.getpid()))
+
     try:
         settings = ConfigSettings()
         settings.from_dict(settings_dict)
@@ -68,7 +68,6 @@ class ProgressCallback(QtCore.QObject):
     """Helper class to send progress signals to the main window"""
 
     def __init__(self, parent, job_count, ncpu):
-        #super(ProgressCallback, self).__init__(parent=parent)
         self.parent = parent
         self.ncpu = ncpu
         self._timer = StopWatch(start=True)
