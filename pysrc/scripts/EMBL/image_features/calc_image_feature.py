@@ -119,8 +119,8 @@ class BackgroundLevel(ImageFeatureCalculator):
                 break
 
         res = {'mean': meanval_background,
-              'median': medianval_background,
-              '25quantile': quantile25
+               'median': medianval_background,
+               '25quantile': quantile25
               }
 
         return res
@@ -147,7 +147,7 @@ class BackgroundLevel(ImageFeatureCalculator):
                 outFilenameBase = None
             res[channel] = self.getBackgroundForImage(imgIn, imgMask, outFilenameBase)
 
-        return
+        return res
 
 
     # can be replaced by the object detection (inverted).
