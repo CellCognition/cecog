@@ -65,18 +65,6 @@ def enable_eclipse_debuging():
         pass
 
 
-        try:
-        except ImportError as e:
-            # structure file from versios older thane 1.3 contain
-            # pdk which is removed
-            if 'pdk' in str(e):
-                critical(self, ("Your structure file format is outdated.\n"
-                                "You have to rescan the plate(s)"))
-            else:
-                critical(self, traceback.format_exc())
-            return
-
-
 if __name__ == "__main__":
     enable_eclipse_debuging()
     parser = argparse.ArgumentParser(description='CellCognition Analyzer GUI')
