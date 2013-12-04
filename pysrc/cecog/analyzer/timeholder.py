@@ -1112,7 +1112,7 @@ class TimeHolder(OrderedDict):
                         count[obj.strClassName] += 1
                 for class_name in class_names:
                     all_counts[(chname, region_name)][class_name].append(count[class_name])
-                    all_counts[(chname, region_name)]['total'].append(total)
+                all_counts[(chname, region_name)]['total'].append(total)
                     
         return all_counts
 
@@ -1136,7 +1136,7 @@ class TimeHolder(OrderedDict):
             timevec = range(X.shape[1])
 
             if len(timevec) > 1:            
-
+                #import pdb; pdb.set_trace()
                 if relative:
                     total = numpy.array(all_counts[(chname, region_name)]['total'])
                     X = X.astype('float') / total.astype('float')
@@ -1208,28 +1208,6 @@ class TimeHolder(OrderedDict):
                 fig.savefig(join(pop_plot_output_dir, '%s__%s__%s__%s.png' % (plate, pos, chname, region_name)))
                 pyplot.close(1)
         return
-    
-    def _exportPopulationPlots(self, input_filename, pop_plot_output_dir, pos,
-                               meta_data, cinfo, ylim):
-        if exists(input_filename):
-            channel, classes, colors = cinfo
-            case = "lower"
-            if len(classes) > 1:
-                data = numpy.recfromcsv(input_filename, delimiter='\t', skip_header=3,
-                                        case_sensitive=case)
-
-                time = data['time'] / 60.0
-                fig = pyplot.figure(figsize=(20,10))
-                ax = pyplot.gca()
-
-                # numpy wants nice attribute names
-                validator = numpy.lib._iotools.NameValidator(case_sensitive=case)
-                keys = validator.validate(classes)
-
-                for lb, key, color in zip(classes[1:], keys[1:],
-                                          colors[1:]):
-                    ax.plot(time, data[key], color=color, label=lb)
-                fig.savefig(join(pop_plot_output_dir, '%s_%s.png'%(channel, pos)))
 
     def exportObjectDetails(self, filename, sep='\t', excel_style=False):
         f = file(filename, 'w')
