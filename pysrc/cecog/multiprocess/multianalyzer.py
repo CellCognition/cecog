@@ -42,11 +42,9 @@ def core_helper(plate, settings_dict, imagecontainer, position, version,
     """Embeds analysis of a positon in a single function"""
     # see http://stackoverflow.com/questions/3288595/
     # multiprocessing-using-pool-map-on-a-function-defined-in-a-class
-
-    # to overcome segfaults comming from numpy, ATLAS
-    import numpy as np
     logger =  logging.getLogger(str(os.getpid()))
-
+    import numpy
+    reload(numpy)
     try:
         settings = ConfigSettings()
         settings.from_dict(settings_dict)
