@@ -1047,7 +1047,7 @@ class TimeHolder(OrderedDict):
             for i, obj in enumerate(region.itervalues()):
                 dset_prediction[i+offset] = (label_to_idx[obj.iLabel],)
                 dset_pobability[i+offset] = obj.dctProb.values()
-
+    
     def exportObjectCounts(self, filename, pos, meta_data, ch_info,
                            sep='\t', has_header=False):
 
@@ -1089,7 +1089,127 @@ class TimeHolder(OrderedDict):
                     fp.write('%s\n' % sep.join(prefix_names + line4))
                 fp.write('%s\n' % sep.join(map(str, prefix + items)))
 
-    def exportPopulationPlots(self, input_filename, pop_plot_output_dir, pos,
+    def getObjectCounts(self, ch_info):
+        
+        all_counts = {}
+        for chname, (region_name, class_names, _) in ch_info.iteritems():
+            all_counts[(chname, region_name)] = {}
+            
+        for frame, channels in self.iteritems():
+            
+            for chname, (region_name, class_names, _) in ch_info.iteritems():
+
+                if len(all_counts[(chname, region_name)])==0:
+                    all_counts[(chname, region_name)] = OrderedDict([(x, []) 
+                                                                     for x in ['total'] + class_names])
+                channel = channels[chname]
+                region = channel.get_region(region_name)
+                total = len(region)
+                count = dict([(x, 0) for x in class_names])
+                # in case just total counts are needed
+                if len(class_names) > 0:
+                    for obj in region.values():
+                        count[obj.strClassName] += 1
+                for class_name in class_names:
+                    all_counts[(chname, region_name)][class_name].append(count[class_name])
+                    all_counts[(chname, region_name)]['total'].append(total)
+                    
+        return all_counts
+
+    def exportPopulationPlots(self, ch_info, pop_plot_output_dir, plate, pos, 
+                              ymax=None, 
+                              all_counts=None, grid=True, legend=True, 
+                              relative=True):        
+        if all_counts is None:
+            all_counts = self.getObjectCounts(ch_info)
+
+        if relative:
+            ylab = 'Class Percentage'
+        else: 
+            ylab = 'Class counts (raw)'
+            
+        for chname, (region_name, class_names, colors) in ch_info.iteritems():
+            if len(class_names) < 2:
+                continue
+                        
+            X = numpy.array([all_counts[(chname, region_name)][x] for x in class_names])
+            timevec = range(X.shape[1])
+
+            if len(timevec) > 1:            
+
+                if relative:
+                    total = numpy.array(all_counts[(chname, region_name)]['total'])
+                    X = X.astype('float') / total.astype('float')
+
+                fig = pyplot.figure(1, figsize=(20,10))
+                ax = pyplot.subplot(1,1,1)
+                
+                # in this case we have more than one time point and we can visualize the time series
+                for i, lb, color in zip(range(len(class_names)), class_names, colors):                
+                    ax.plot(timevec, X[i,:], color=color, label=lb, linewidth=2.0)
+    
+                if not ymax is None and ymax > -1: 
+                    ax.axis([min(timevec), max(timevec), 0, ymax])
+                pyplot.title('Population time series: %s %s %s %s' % (plate, pos, chname, region_name), size='medium')
+                pyplot.xlabel('Time (in frames)', size='medium')
+                pyplot.ylabel(ylab, size='medium')
+                
+                # legend
+                if legend:
+                    handles, labels = ax.get_legend_handles_labels()
+                    ax.legend(handles[::-1], labels[::-1])
+                
+                if grid:
+                    ax.grid(b=True, which='major', linewidth=1.5)
+    
+                fig.savefig(join(pop_plot_output_dir, '%s__%s__%s__%s.png' % (plate, pos, chname, region_name)))
+                pyplot.close(1)
+                
+            else: 
+                # in this case we have only one timepoint. We can visualize a barplot instead. 
+                # ---                 
+                bottom = 0.2
+                width = 0.7
+                
+                nb_bars = X.shape[0]
+                
+                fig = pyplot.figure(1, figsize=(int(0.8*nb_bars + 1),10))
+                ax = pyplot.subplot(1,1,1)
+
+                ind = numpy.array(range(nb_bars))
+                ax.set_position(numpy.array([0.125, bottom, 0.8, 0.9 - bottom]))
+
+                if relative:
+                    X = X.astype('float') / numpy.sum(X.astype('float'))
+                
+                rects = pyplot.bar(ind, X[:,0], width=width, color=colors,
+                                   edgecolor='none')
+
+                xmin = min(ind)
+                xmax = max(ind)
+                xlim = (xmin - .5 * width - (xmax-xmin) * 0.05,
+                        xmax - .5 * width + (xmax-xmin) * (0.05 + 1.0 / nb_bars) )
+
+                if ymax is None or ymax < 0 or ymax > 1.0: 
+                    ymax = 1.0
+
+                ax.axis([xlim[0], xlim[1], 0, ymax])
+                
+                pyplot.xticks(ind+.5* width, class_names, rotation="vertical",
+                             fontsize='small', ha='center')
+        
+                pyplot.title('Classification results:\n%s %s\n%s %s' % (plate, pos, chname, region_name), size='medium')
+                pyplot.xlabel('')
+                pyplot.ylabel(ylab, size='medium')
+                
+                if grid:
+                    pyplot.grid(b=True, axis='y', which='major', linewidth=1.5)
+
+                fig.savefig(join(pop_plot_output_dir, '%s__%s__%s__%s.png' % (plate, pos, chname, region_name)))
+                pyplot.close(1)
+        return
+    
+    def _exportPopulationPlots(self, input_filename, pop_plot_output_dir, pos,
                                meta_data, cinfo, ylim):
         if exists(input_filename):
             channel, classes, colors = cinfo
