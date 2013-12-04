@@ -559,9 +559,13 @@ class PositionAnalyzer(PositionCore):
             self.settings.get('Output', 'export_object_counts_ylim_max')
 
         # plot only for primary channel so far!
-        if 'Primary' in ch_info:
-            self.timeholder.exportPopulationPlots(fname, self._plots_dir, self.position,
-                                                  self.meta_data, ch_info['Primary'], pplot_ymax)
+        #if 'Primary' in ch_info:
+        #    self.timeholder.exportPopulationPlots(fname, self._plots_dir, self.position,
+        #                                          self.meta_data, ch_info['Primary'], pplot_ymax)
+        self.timeholder.exportPopulationPlots(ch_info, self._plots_dir, 
+                                              self.plate_id, self.position, 
+                                              ymax=pplot_ymax)
+
 
 
     def export_object_details(self):

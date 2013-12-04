@@ -5,20 +5,14 @@ import os, sys, re, time, pickle
 
 from optparse import OptionParser
 
-from collections import OrderedDict
-
 class Cutter(object):
 
-    def __init__(self, imoutDir, width=50, img_container_regex=None):
+    def __init__(self, imoutDir, width=50):
         self.baseOutDir = imoutDir
         self.width = width
         self.track_channel = 'primary'
         self.track_region = 'primary'
-        if img_container_regex is None:
-            self.img_container_regex = re.compile('\.cecog_imagecontainer___PL(?P<plate>.+)\.pkl')
-        else:
-            #self.img_container_regex = re.compile('cecog_imagecontainer___PL(?P<plate>.+)\.pkl')
-            self.img_container_regex  = re.compile(img_container_regex)
+        self.img_container_regex = re.compile('\.cecog_imagecontainer___PL(?P<plate>.+)\.pkl')
 
     def readImageContainer(self, image_container_filename):
 
@@ -35,19 +29,15 @@ class Cutter(object):
         return img_container
 
     def __call__(self, raw_img_dir, plate, track_data_filename,
-                 positions=None, skip_done=True, post_analysis_settings_name=None,
-                 img_container_filename=None):
-
-        startTime = time.time()
+                 positions=None, skip_done=True, post_analysis_settings_name=None):
 
         if not os.path.isfile(track_data_filename):
             if not post_analysis_settings_name is None:
 
                 from scripts.EMBL.io.flatfileimporter import EventDescriptionImporter
                 event_importer = EventDescriptionImporter(settings_filename=post_analysis_settings_name)
-                impdata = event_importer(plates=[plate], positions=positions)
+                impdata = event_importer(plates=[plate])
 
-                print 'len(impdata[%s][%s]): %i' % (plate, positions[0], len(impdata[plate][positions[0]]))
                 # dump the result back to a pickle file
                 print 'data imported - dump file: %s' % track_data_filename
                 track_data_dir = os.path.dirname(track_data_filename)
@@ -66,47 +56,41 @@ class Cutter(object):
         track_data = pickle.load(track_data_file)
         track_data_file.close()
 
-        if img_container_filename is None:
-            img_in_dir = os.path.join(raw_img_dir, plate)
-            print 'searching img_container file in ' , img_in_dir
-            img_container_filenames = filter(lambda x:
-                                             not self.img_container_regex.search(x) is None and
-                                             self.img_container_regex.search(x).groupdict()['plate'] == plate,
-                                             os.listdir(img_in_dir))
+        img_in_dir = os.path.join(raw_img_dir, plate)
+        img_container_filenames = filter(lambda x:
+                                         not self.img_container_regex.search(x) is None and
+                                         self.img_container_regex.search(x).groupdict()['plate'] == plate,
+                                         os.listdir(img_in_dir))
 
-            if len(img_container_filenames) == 0:
-                raise ValueError("No container file found.")
-            if len(img_container_filenames) > 1:
-                print img_container_filenames
-                raise ValueError("More than one container file found.")
+        if len(img_container_filenames) == 0:
+            raise ValueError("No container file found.")
+        if len(img_container_filenames) > 1:
+            print img_container_filenames
+            raise ValueError("More than one container file found.")
 
-            img_container_filename = img_container_filenames[0]
-            print 'importing image container from %s' % os.path.join(img_in_dir,
-                                                                     img_container_filename)
-
-        # reading image container from img_container_filename
+        img_container_filename = img_container_filenames[0]
+        print 'importing image container from %s' % os.path.join(img_in_dir,
+                                                                 img_container_filename)
         img_container = self.readImageContainer(os.path.join(img_in_dir,
                                                              img_container_filename))
 
         if positions is None:
             positions = img_container.meta_data.positions
 
-        print 'positions to be processed ', positions
-
         not_worked = []
         for pos in positions:
             print
             print ' *** PROCESSING POSITION %s %s ***' % (plate, pos)
-            try:
+            if True:
                 self.cutTracks(track_data, img_container, plate, pos, skip_done=skip_done)
-            except:
+            else:
                 print 'a problem occurred while processing %s %s' % (plate, pos)
                 not_worked.append(pos)
                 continue
 
         total = len(positions)
         worked = len(not_worked) - total
-        diffTime = time.time() - startTime
+
         print 'processed %i out of %i positions' % (worked, total)
         print 'elapsed time: %02i:%02i:%02i' % ((diffTime/3600), ((diffTime%3600)/60), (diffTime%60))
         print 'DONE!'
@@ -124,8 +108,6 @@ class Cutter(object):
         if channels is None:
             channels = img_container.meta_data.channels
 
-        print '*** cutting tracks for %s %s. Channels: %s' % (plate, pos, str(channels))
-
         imoutDir = os.path.join(self.baseOutDir, plate, pos)
         if not os.path.exists(imoutDir):
             print 'generating the folder %s' % imoutDir
@@ -133,8 +115,6 @@ class Cutter(object):
 
         if lstTracks is None:
             lstTracks = sorted(full_track_data[plate][pos].keys())
-
-        print '*** cutting %i tracks' % len(lstTracks)
 
         for trackId in lstTracks:
             center_values = zip(full_track_data[plate][pos][trackId][self.track_channel][self.track_region]['tracking__center_x'],
@@ -197,10 +177,6 @@ if __name__ == "__main__":
                       help="if this option is set, tracks with existing galleries are not skipped.")
     parser.add_option("--settings_filename", dest="settings_filename",
                       help="settings filename for post processing workflow")
-    parser.add_option("--image_container_regex", dest="image_container_regex",
-                      help="regular expression for the image container"
-                           "generated by cellcognition",
-                      default=None)
 
 
     (options, args) = parser.parse_args()
@@ -221,7 +197,7 @@ if __name__ == "__main__":
     else:
         positions = None
 
-    cutter = Cutter(options.out_path, img_container_regex=options.image_container_regex)
+    cutter = Cutter(options.out_path)
     cutter(options.raw_image_path, options.plate, options.track_data_filename,
            positions=positions, skip_done=options.skip_done,
            post_analysis_settings_name=options.settings_filename)
