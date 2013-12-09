@@ -522,6 +522,7 @@ class PositionAnalyzer(PositionCore):
         features = {}
         for name in self.processing_channels:
             region_features = {}
+
             for region in MetaPluginManager().region_info.names[name.lower()]:
                 # export all features extracted per regions
                 if self.settings.get('Output', 'events_export_all_features') or \
@@ -534,8 +535,23 @@ class PositionAnalyzer(PositionCore):
                         self.settings.get('General',
                                           '%s_featureextraction_exportfeaturenames'
                                           % name.lower())
+
                 features[name] = region_features
+
+            # special case for merged channel
+            if name is self.MERGED_CHANNEL:
+                mftrs = list()
+                for channel, region in self._channel_regions(name).iteritems():
+                    if features[channel][region] is None:
+                        mftrs = None
+                    else:
+                        for feature in features[channel][region]:
+                            mftrs.append("_".join((channel, region, feature)))
+                region_features[self._all_channel_regions[name]] = mftrs
+                features[name] = region_features
+
         return features
+
 
     def export_object_counts(self):
         fname = join(self._statistics_dir, 'P%s__object_counts.txt' % self.position)
@@ -562,8 +578,8 @@ class PositionAnalyzer(PositionCore):
         #if 'Primary' in ch_info:
         #    self.timeholder.exportPopulationPlots(fname, self._plots_dir, self.position,
         #                                          self.meta_data, ch_info['Primary'], pplot_ymax)
-        self.timeholder.exportPopulationPlots(ch_info, self._plots_dir, 
-                                              self.plate_id, self.position, 
+        self.timeholder.exportPopulationPlots(ch_info, self._plots_dir,
+                                              self.plate_id, self.position,
                                               ymax=pplot_ymax)
 
 
@@ -572,9 +588,6 @@ class PositionAnalyzer(PositionCore):
         fname = join(self._statistics_dir,
                         'P%s__object_details.txt' % self.position)
         self.timeholder.exportObjectDetails(fname, excel_style=False)
-        fname = join(self._statistics_dir,
-                        'P%s__object_details_excel.txt' % self.position)
-        self.timeholder.exportObjectDetails(fname, excel_style=True)
 
     def export_image_names(self):
         self.timeholder.exportImageFileNames(self._statistics_dir,
@@ -628,12 +641,13 @@ class PositionAnalyzer(PositionCore):
         self.logger.debug("--- serializing tracking ok")
 
     def export_events(self):
-        """Export and save event selceciton data"""
+        """Export and save event selection data"""
         exporter = EventExporter(self.meta_data)
         # writes to the event folder
         odir = join(self._statistics_dir, "events")
         exporter.track_features(self.timeholder, self._tes.visitor_data,
                                 self.export_features, self.position, odir)
+
         # writes event data to hdf5
         self.timeholder.serialize_events(self._tes)
         self.logger.debug("--- serializing events ok")
