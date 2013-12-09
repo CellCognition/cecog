@@ -159,7 +159,7 @@ class ProcessingFrame(BaseProcessorFrame):
             # therefore, we first retrieve the regions for the primary channel
             # and (in the case there are some) we assign the color of the first
             # ROI of the primary channel to the merged contour.
-            regions_primary = self.plugion_mgr.region_info.names[CH_PRIMARY[0]]
+            regions_primary = self.plugin_mgr.region_info.names[CH_PRIMARY[0]]
             if len(regions_primary) == 0:
                 default_color = '#FF00FF'
             else:
@@ -186,7 +186,7 @@ class ProcessingFrame(BaseProcessorFrame):
                                                                                    {'raw': ('#FFFFFF', 1.0)}}})
         return settings
 
-    def _merged_regions(settings):
+    def _merged_regions(self, settings):
         """Return the regions seletected for segmentation in the
         order (primary, secondary, tertiary)."""
         regions = []
