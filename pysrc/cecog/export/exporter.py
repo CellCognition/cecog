@@ -118,13 +118,18 @@ class EventExporter(object):
                     continue
                 for chname, region in channel_regions.iteritems():
                     for region_name, feature_names in region.iteritems():
+                        # XXX CTuple in in channel class
+                        if isinstance(region_name, tuple):
+                            rname = '-'.join(region_name)
+                        else:
+                            rname = region_name
                         try:
                             frame, obj_label, branch = Tracker.split_nodeid(startid)
                         except ValueError:
                             frame, obj_label = Tracker.split_nodeid(startid)
                             branch = 1
                         filename = 'features__P%s__T%05d__O%04d__B%02d__C%s__R%s.txt' \
-                            %(position, frame, obj_label, branch, chname, region_name)
+                            %(position, frame, obj_label, branch, chname, rname)
                         filename = join(outdir, filename)
 
                         self._data_per_channel(timeholder, event_data, filename, chname,
