@@ -587,7 +587,7 @@ class PositionAnalyzer(PositionCore):
     def export_object_details(self):
         fname = join(self._statistics_dir,
                         'P%s__object_details.txt' % self.position)
-        self.timeholder.exportObjectDetails(fname, excel_style=False)
+        self.timeholder.exportObjectDetails(fname)
 
     def export_image_names(self):
         self.timeholder.exportImageFileNames(self._statistics_dir,
