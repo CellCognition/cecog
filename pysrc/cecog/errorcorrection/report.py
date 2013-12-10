@@ -320,7 +320,7 @@ class HmmReport(object):
 
     def _draw_labels(self, image, track, markersize=0.20):
         nframes = len(track)
-        size = image.shape[1]/nframes, image.shape[0]
+        size = int(round(image.shape[1]/nframes, 0)), image.shape[0]
         msize = int(round(size[0]*markersize, 0))
         image[size[1]-int(msize/4):size[1], :] = hex2rgb("#FFFFFF")
 
