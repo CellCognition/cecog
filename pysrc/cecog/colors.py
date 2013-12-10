@@ -20,11 +20,11 @@ import numpy as np
 from matplotlib.colors import ListedColormap
 from matplotlib.colors import hex2color
 from matplotlib.colors import rgb2hex as mpl_rgb2hex
-from matplotlib.cm import jet
+from matplotlib import cm
 
 
 def unsupervised_cmap(n):
-    return ListedColormap([jet(i) for i in np.linspace(0, 1, n)])
+    return ListedColormap([cm.Accent(i) for i in np.linspace(0, 1, n)])
 
 # DCMAP is a fallback
 DCMAP = unsupervised_cmap(10)
