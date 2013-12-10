@@ -44,7 +44,7 @@ def core_helper(plate, settings_dict, imagecontainer, position, version,
     # multiprocessing-using-pool-map-on-a-function-defined-in-a-class
     logger =  logging.getLogger(str(os.getpid()))
     import numpy
-    reload(numpy)
+    reload(numpy.core._dotblas)
     try:
         settings = ConfigSettings()
         settings.from_dict(settings_dict)
