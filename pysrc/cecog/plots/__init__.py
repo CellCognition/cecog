@@ -15,3 +15,4 @@ from boxplot import *
 from trajectories import *
 from hmmnetwork import *
 from trjgallery import *
+from matrix import *

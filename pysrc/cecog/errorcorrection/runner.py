@@ -212,6 +212,9 @@ class PositionRunner(QtCore.QObject):
                                        %(prefix, sby)))
             report.close_figures()
 
+            self.interruption_point("plotting hmm model")
+            report.hmm_model(join(self._hmm_dir, "%s_%s_model.pdf")
+                             %(prefix, sby))
 
             if self.ecopts.write_gallery:
                 self.interruption_point("plotting image gallery")

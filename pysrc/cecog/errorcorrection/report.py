@@ -17,7 +17,6 @@ from collections import OrderedDict
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-from matplotlib.colors import hex2color
 
 from cecog import plots
 from cecog.colors import hex2rgb
@@ -114,6 +113,15 @@ class HmmReport(object):
     def close_figures(self):
         plt.close("all")
 
+    def _frame_off(self, axarr, icol, nrows):
+        while True:
+            try:
+                icol += 1
+                for irow in xrange(nrows):
+                    plots.empty_figure(axarr[irow, icol], text=None)
+            except IndexError:
+                break
+
     def _empty_figure(self, axarr, name, i):
         for k in xrange(5):
             if k == 0:
@@ -127,7 +135,7 @@ class HmmReport(object):
         sp_props = dict(top=0.95, bottom=0.05, hspace=0.2, wspace=0.2,
                         left=0.03, right=0.97)
         try:
-            nrows, ncols =  5, len(self.data)
+            # nrows, _ =  5, len(self.data)
             fig, axarr = plt.subplots(nrows=5, ncols=6, figsize=figsize)
             fig.subplots_adjust(**sp_props)
             for j, name in enumerate(sorted(self.data.keys())):
@@ -181,6 +189,7 @@ class HmmReport(object):
                               cmap=self.classdef.colormap,
                               ymax=self.ecopts.tmax,
                               axes=axarr[4][i])
+            self._frame_off(axarr, i, 5)
             pdf.savefig(fig)
         finally:
             pdf.close()
@@ -357,3 +366,40 @@ class HmmReport(object):
                 writer.writerow(fields)
                 for line in zip(*tracks):
                     writer.writerow(line)
+
+    def hmm_model(self, filename, figsize=(20, 12)):
+        from cecog import plots
+        reload(plots)
+        pdf = PdfPages(filename)
+        sp_props = dict(top=0.85, bottom=0.05, hspace=0.25, wspace=0.25,
+                        left=0.03, right=0.97)
+        try:
+            fig, axarr = plt.subplots(nrows=3, ncols=6, figsize=figsize)
+            fig.subplots_adjust(**sp_props)
+
+            for j, name in enumerate(sorted(self.data.keys())):
+                data = self.data[name]
+                i = j%6
+                if not i and j:
+                    pdf.savefig(fig)
+                    fig, axarr = plt.subplots(nrows=2, ncols=6,
+                                              figsize=figsize)
+                    fig.subplots_adjust(**sp_props)
+
+                if data is None:
+                    self._empty_figure(axarr, name, i)
+                    continue
+
+                title = '%s, (%d tracks)' %(name, data.ntracks)
+
+                plots.hmm_matrix(data.startprob.reshape(-1, 1).T, self.classdef,
+                                 xlabel='start prob.', text=title,
+                                 axes=axarr[0, i])
+                plots.hmm_matrix(data.transmat, self.classdef,
+                                 xlabel='transition matrix', axes=axarr[1, i])
+                plots.hmm_matrix(data.emismat, self.classdef,
+                                 xlabel='emission matrix', axes=axarr[2, i])
+            self._frame_off(axarr, i, 3)
+            pdf.savefig(fig)
+        finally:
+            pdf.close()
