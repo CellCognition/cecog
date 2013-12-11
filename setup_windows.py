@@ -76,10 +76,8 @@ py2exe_opts = {'includes': build_helpers.INCLUDES,
 # or write these paths to setup.cfg
 includes = ['c:/python27/include',
             'c:/Python27/Lib/site-packages/numpy/core/include',
-            'c:/lib/include',
-            'c:/vigra/include',
             './csrc/include']
-libraries = ['boost_python-vc100-mt-1_45', 'libtiff', 'vigraimpex']
+libraries = ['libtiff', 'vigraimpex']
 library_dirs = ['c:/lib/lib', 'c:/vigra/lib']
 
 ccore = Extension('cecog.ccore._cecog',
