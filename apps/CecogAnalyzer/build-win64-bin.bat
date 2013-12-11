@@ -1,5 +1,5 @@
 @SETLOCAL
-@set CECOGPATH=Z:\workbench\cecog
+@set CECOGPATH=C:\Users\sommerc\src\cecog
 @set PYTHONPATH=%PYTHONPATH%;%CECOGPATH%\pysrc
 
 @set PATH=%PATH%;C:\Python27\Lib\site-packages\numpy
