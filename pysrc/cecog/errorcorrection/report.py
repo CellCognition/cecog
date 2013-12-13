@@ -382,7 +382,7 @@ class HmmReport(object):
                 i = j%6
                 if not i and j:
                     pdf.savefig(fig)
-                    fig, axarr = plt.subplots(nrows=2, ncols=6,
+                    fig, axarr = plt.subplots(nrows=3, ncols=6,
                                               figsize=figsize)
                     fig.subplots_adjust(**sp_props)
 
