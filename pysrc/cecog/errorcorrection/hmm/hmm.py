@@ -132,7 +132,10 @@ class HmmSklearn(HMMCore):
             labelmapper = LabelMapper(np.unique(tracks),
                                       self.classdef.class_names.keys())
 
-            probs = probs[:, :, labelmapper.index_from_classdef(np.unique(tracks))]
+            # np.unique -> sorted ndarray
+            idx = labelmapper.index_from_classdef(np.unique(tracks))
+            idx.sort()
+            probs = probs[:, :, idx]
             est = self._get_estimator(probs, labelmapper.label2index(tracks))
             est.constrain(self.hmmc(est, labelmapper))
 

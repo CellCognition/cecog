@@ -210,6 +210,7 @@ class HMMProbBasedEsitmator(HMMEstimator):
         self._startprob = self._probs[:, 0, :].sum(axis=0)
         self._startprob = normalize(self._startprob*weights, eps=0.0)
 
+
 class HMMTransitionCountEstimator(HMMEstimator):
 
     # a noise factor fo 1 considers one frame as noise

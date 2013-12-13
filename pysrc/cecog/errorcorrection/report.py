@@ -371,8 +371,8 @@ class HmmReport(object):
         from cecog import plots
         reload(plots)
         pdf = PdfPages(filename)
-        sp_props = dict(top=0.85, bottom=0.05, hspace=0.25, wspace=0.25,
-                        left=0.03, right=0.97)
+        sp_props = dict(top=0.85, bottom=0.05, hspace=0.28, wspace=0.28,
+                        left=0.05, right=0.95)
         try:
             fig, axarr = plt.subplots(nrows=3, ncols=6, figsize=figsize)
             fig.subplots_adjust(**sp_props)
@@ -391,13 +391,15 @@ class HmmReport(object):
                     continue
 
                 title = '%s, (%d tracks)' %(name, data.ntracks)
-
-                plots.hmm_matrix(data.startprob.reshape(-1, 1).T, self.classdef,
+                classnames = [self.classdef.class_names[k]
+                              for k in sorted(self.classdef.class_names.keys())]
+                plots.hmm_matrix(data.startprob.reshape(-1, 1).T,
+                                 xticks=classnames,
                                  xlabel='start prob.', text=title,
                                  axes=axarr[0, i])
-                plots.hmm_matrix(data.transmat, self.classdef,
+                plots.hmm_matrix(data.transmat, xticks=classnames, yticks=classnames,
                                  xlabel='transition matrix', axes=axarr[1, i])
-                plots.hmm_matrix(data.emismat, self.classdef,
+                plots.hmm_matrix(data.emismat, xticks=classnames, yticks=classnames,
                                  xlabel='emission matrix', axes=axarr[2, i])
             self._frame_off(axarr, i, 3)
             pdf.savefig(fig)

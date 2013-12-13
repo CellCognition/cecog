@@ -17,10 +17,11 @@ __all__ = ["hmm_matrix"]
 
 from matplotlib import cm
 from matplotlib import pyplot as plt
-from matplotlib.ticker import FixedLocator
+from matplotlib.ticker import FixedLocator, NullLocator
 
 
-def hmm_matrix(matrix, classdef, text=None, axes=None, cmap=None, xlabel=None):
+def hmm_matrix(matrix, xticks=None, yticks=None, text=None, axes=None,
+               cmap=None, xlabel=None):
 
     if axes is None:
         fig = plt.figure()
@@ -38,10 +39,17 @@ def hmm_matrix(matrix, classdef, text=None, axes=None, cmap=None, xlabel=None):
 
     axes.matshow(matrix, cmap=cm.Greens)
 
-    axes.xaxis.set_major_locator(FixedLocator(range(matrix.shape[1])))
-    axes.yaxis.set_major_locator(FixedLocator(range(matrix.shape[0])))
-    axes.set_xticklabels(classdef.class_names.values(), rotation=45, size=8)
-    axes.set_yticklabels(classdef.class_names.values(), rotation=45, size=8)
+    if xticks is not None:
+        axes.xaxis.set_major_locator(FixedLocator(range(matrix.shape[1])))
+        axes.set_xticklabels(xticks, rotation=45, size=8)
+    else:
+        axes.xaxis.set_major_locator(NullLocator())
+
+    if yticks is not None:
+        axes.yaxis.set_major_locator(FixedLocator(range(matrix.shape[0])))
+        axes.set_yticklabels(yticks, rotation=45, size=8)
+    else:
+        axes.yaxis.set_major_locator(NullLocator())
     axes.grid(False)
 
     def color(value):
