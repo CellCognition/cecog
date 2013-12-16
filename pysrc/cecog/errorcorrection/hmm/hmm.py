@@ -83,14 +83,13 @@ class HMMCore(object):
 
         states = np.unique(tracks)
         if self.ecopts.eventselection == self.ecopts.EVENTSELECTION_SUPERVISED:
-            est = estimator.HMMProbBasedEsitmator(states, probs)
+            est = estimator.HMMProbBasedEsitmator(states, probs, tracks)
         else:
             est = estimator.HMMTransitionCountEstimator(states, tracks)
             probs = None # can't use probs for unsupervied learning yet
 
         # Baum Welch performs bad with bad start values
-        est = estimator.HMMBaumWelchEstimator(
-            states, est, tracks, probs)
+        est = estimator.HMMBaumWelchEstimator(states, est, tracks)
         return est
 
 
