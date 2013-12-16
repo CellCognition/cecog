@@ -89,7 +89,9 @@ class HMMCore(object):
             probs = None # can't use probs for unsupervied learning yet
 
         # Baum Welch performs bad with bad start values
-        est = estimator.HMMBaumWelchEstimator(states, est, tracks)
+        if self.ecopts.hmm_algorithm == self.ecopts.HMM_BAUMWELCH:
+            est = estimator.HMMBaumWelchEstimator(states, est, tracks)
+
         return est
 
 
