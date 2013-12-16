@@ -122,8 +122,8 @@ class HmmReport(object):
             except IndexError:
                 break
 
-    def _empty_figure(self, axarr, name, i):
-        for k in xrange(5):
+    def _empty_figure(self, axarr, name, i, nrows=5):
+        for k in xrange(nrows):
             if k == 0:
                 plots.empty_figure(axarr[k][i], title="%s (0 tracks)" %name)
             else:
@@ -148,7 +148,7 @@ class HmmReport(object):
                     fig.subplots_adjust(**sp_props)
 
                 if data is None:
-                    self._empty_figure(axarr, name, i)
+                    self._empty_figure(axarr, name, i, nrows=5)
                     continue
 
                 title = '%s, (%d tracks)' %(name, data.ntracks)
@@ -387,7 +387,7 @@ class HmmReport(object):
                     fig.subplots_adjust(**sp_props)
 
                 if data is None:
-                    self._empty_figure(axarr, name, i)
+                    self._empty_figure(axarr, name, i, nrows=3)
                     continue
 
                 title = '%s, (%d tracks)' %(name, data.ntracks)
