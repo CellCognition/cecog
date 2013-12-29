@@ -141,7 +141,7 @@ class MultiAnalyzerThread(AnalyzerThread):
             exceptions = []
             if not self.is_aborted():
                 for r in self.job_result:
-                    if not r.successful():
+                    if r.successful():
                         try:
                             plate, pos, hdf_files = r.get()
                             if len(hdf_files) > 0:
