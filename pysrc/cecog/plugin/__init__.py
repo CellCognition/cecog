@@ -14,17 +14,18 @@ __all__ = ['PluginManager', '_Plugin']
 import logging
 from collections import OrderedDict
 
-from cecog import PLUGIN_MANAGERS
-from cecog.gui.guitraits import SelectionTrait2
 from cecog.util.decorator import stopwatch
+from cecog.gui.guitraits import SelectionTrait2
+
 
 class PluginManager(object):
 
     PREFIX = 'plugin'
     LABEL = ''
 
-    def __init__(self, display_name, name, section):
+    def __init__(self, metamanager, display_name, name, section):
         super(PluginManager, self).__init__()
+        self.metamanager = metamanager
         self.display_name = display_name
         self.name = name
         self.section = section
@@ -52,7 +53,8 @@ class PluginManager(object):
             plugin_cls_name = plugin_cls_names[plugin_name]
             plugin_cls = self._plugins[plugin_cls_name]
             param_manager = \
-                ParamManager.from_settings(plugin_cls, plugin_name, settings, self, plugin_params[plugin_name])
+                ParamManager.from_settings( \
+                plugin_cls, plugin_name, settings, self, plugin_params[plugin_name])
             instance = plugin_cls(plugin_name, param_manager)
             self._instances[plugin_name] = instance
             self.notify_instance_modified(plugin_name)
@@ -68,7 +70,8 @@ class PluginManager(object):
 
     def add_instance(self, plugin_cls_name, settings):
         if not plugin_cls_name in self._plugins:
-            raise ValueError("Plugin '%s' not registered for '%s'." % (plugin_cls_name, self.name))
+            raise ValueError("Plugin '%s' not registered for '%s'."
+                             %(plugin_cls_name, self.name))
 
         plugin_cls = self._plugins[plugin_cls_name]
         plugin_name = self._get_plugin_name(plugin_cls)
@@ -80,7 +83,8 @@ class PluginManager(object):
 
     def remove_instance(self, plugin_name, settings):
         if not plugin_name in self._instances:
-            raise ValueError("Plugin instance '%s' not found for '%s'." % (plugin_name, self.name))
+            raise ValueError("Plugin instance '%s' not found for '%s'."
+                             %(plugin_name, self.name))
 
         plugin = self._instances[plugin_name]
         plugin.close()
@@ -92,8 +96,8 @@ class PluginManager(object):
             observer.notify(plugin_name, removed)
 
     def _get_plugin_name(self, plugin_cls):
-        """
-        generate new plugin name which is not used yet. starting at the plugin class NAME and appending numbers from
+        """Generate new plugin name which is not used yet.
+        starting at the plugin class NAME and appending numbers from
         2 to n, like 'primary', 'primary2', 'primary3'
         """
         cnt = 2
@@ -189,7 +193,7 @@ class ParamManager(object):
         trait_name_template = manager.get_trait_name_template(plugin_cls.NAME, plugin_name)
 
         # inject traits controlling plugin requirements dynamically
-        foreign_managers = dict([(mngr.name, mngr) for mngr in PLUGIN_MANAGERS])
+        foreign_managers = dict([(mngr.name, mngr) for mngr in manager.metamanager])
         if not plugin_cls.REQUIRES is None:
             for idx, require in enumerate(plugin_cls.REQUIRES):
                 # get the foreign manager that controls the requirement

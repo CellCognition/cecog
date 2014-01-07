@@ -30,7 +30,7 @@ from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.environment import CecogEnvironment
 
 from cecog.gui.analyzer import BaseFrame
-from cecog.gui.analyzer.processing import ProcessingFrame
+from cecog.gui.analyzer.processing import ExportSettings
 from cecog.gui.util import exception, information, warning
 from cecog.gui.progressdialog import ProgressDialog
 
@@ -39,9 +39,10 @@ from cecog import JOB_CONTROL_RESUME, JOB_CONTROL_SUSPEND, \
 
 class ClusterDisplay(QGroupBox):
 
-    def __init__(self, parent, settings):
+    def __init__(self, parent, clusterframe,  settings):
         QGroupBox.__init__(self, parent)
         self._settings = settings
+        self._clusterframe = clusterframe
         self._imagecontainer = None
         self._jobid = None
         self._toggle_state = JOB_CONTROL_SUSPEND
@@ -173,7 +174,7 @@ class ClusterDisplay(QGroupBox):
             nr_items = len(positions.split(','))
 
         # FIXME: we need to get the current value for 'position_granularity'
-        settings_dummy = ProcessingFrame.get_special_settings(self._settings)
+        settings_dummy = self._clusterframe.get_special_settings(self._settings)
         position_granularity = settings_dummy.get('Cluster', 'position_granularity')
 
         path_out = self._submit_settings.get2('pathout')
@@ -338,10 +339,10 @@ class ClusterDisplay(QGroupBox):
             self._can_submit = True
 
             try:
-                self._submit_settings = ProcessingFrame.get_special_settings( \
+                self._submit_settings = self._clusterframe.get_special_settings( \
                     self._settings, self.imagecontainer.has_timelapse)
             except:
-                self._submit_settings = ProcessingFrame.get_special_settings(self._settings)
+                self._submit_settings = self._clusterframe.get_special_settings(self._settings)
 
             self._label_hosturl.setText(self._host_url)
             self._label_status.setText(self._service.get_service_info())
@@ -376,7 +377,7 @@ class ClusterDisplay(QGroupBox):
             self._btn_update.setEnabled(False)
 
 
-class ClusterFrame(BaseFrame):
+class ClusterFrame(BaseFrame, ExportSettings):
 
     def __init__(self, settings, parent, name):
         super(ClusterFrame, self).__init__(settings, parent, name)
@@ -388,7 +389,7 @@ class ClusterFrame(BaseFrame):
 
     def _add_frame(self):
         frame = self._get_frame()
-        cluster_display = ClusterDisplay(frame, self._settings)
+        cluster_display = ClusterDisplay(frame, self, self._settings)
         frame.layout().addWidget(cluster_display, frame._input_cnt, 0, 1, 2)
         frame._input_cnt += 1
         return cluster_display

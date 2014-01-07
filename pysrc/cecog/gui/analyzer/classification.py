@@ -36,7 +36,6 @@ from cecog.learning.learning import CommonClassPredictor
 from cecog.colors import hex2rgb
 
 from cecog.environment import CecogEnvironment
-from cecog.plugin.segmentation import REGION_INFO
 
 
 class ClassifierResultFrame(QGroupBox):
@@ -520,9 +519,6 @@ class ClassificationFrame(BaseProcessorFrame):
     def classifiers(self):
         classifiers = dict()
         for k, v in self._result_frames.iteritems():
-            from PyQt4.QtCore import pyqtRemoveInputHook; pyqtRemoveInputHook()
-            import pdb; pdb.set_trace()
-
             classifiers[k] = v.classifier
         return classifiers
 
@@ -539,14 +535,14 @@ class ClassificationFrame(BaseProcessorFrame):
         else:
             trait = self._settings.get_trait(SECTION_NAME_CLASSIFICATION,
                                              '%s_classification_regionname' % prefix)
-            trait.set_list_data(REGION_INFO.names[prefix])
+            trait.set_list_data(self.plugin_mgr.region_info.names[prefix])
 
     def _merged_channel_and_region(self, prefix):
         for ch in (CH_PRIMARY+CH_OTHER):
             trait = self._settings.get_trait(SECTION_NAME_CLASSIFICATION,
                                              '%s_%s_region' %(prefix, ch))
 
-            regions = REGION_INFO.names[ch]
+            regions = self.plugin_mgr.region_info.names[ch]
 
             # ugly workaround for due to trait concept
             if regions:

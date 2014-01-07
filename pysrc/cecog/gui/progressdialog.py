@@ -11,7 +11,7 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-import sys
+
 import traceback
 from PyQt4 import QtGui
 from PyQt4 import QtCore
