@@ -120,6 +120,7 @@ class PositionRunner(QtCore.QObject):
         # XXX perhaps the data table should also implement the import
         # --> having a data table for csv and cellh5...
         dtable = HmmDataTable()
+
         for pi, pos in enumerate(self.positions):
             dtable.add_position(pos, mappings[pos])
             files = glob.glob(join(self._analyzed_dir, pos, 'statistics',
@@ -153,13 +154,12 @@ class PositionRunner(QtCore.QObject):
                             # sanity check for class labels in the definition and
                             # the data file
                             lbs = [int(p.split(':')[0]) for p in pstr]
-                            if classdef.class_names.keys() != lbs:
+                            if set(classdef.class_names.keys()) != set(lbs):
                                 msg = ("The labels in the class definition and "
                                        " the data files are inconsistent.\n%s, %s"
                                        %(str(lbs),
                                          str(classdef.class_names.keys())))
                                 raise RuntimeError(msg)
-
                             probs.append(np.array([float(p.split(':')[1]) for p in pstr]))
                         probs = np.array(probs)
 
@@ -212,6 +212,9 @@ class PositionRunner(QtCore.QObject):
                                        %(prefix, sby)))
             report.close_figures()
 
+            self.interruption_point("plotting hmm model")
+            report.hmm_model(join(self._hmm_dir, "%s_%s_model.pdf")
+                             %(prefix, sby))
 
             if self.ecopts.write_gallery:
                 self.interruption_point("plotting image gallery")
@@ -222,7 +225,7 @@ class PositionRunner(QtCore.QObject):
                     report.image_gallery_png(fn, self.ecopts.n_galleries,
                                              self.ecopts.resampling_factor)
                     report.close_figures()
-                except Exception as e:
+                except Exception as e: # don't stop error corection
                     with open(join(self._gallery_dir, '%s-%s_error_readme.txt'
                                    %(prefix, sby)), 'w') as fp:
                         traceback.print_exc(file=fp)
@@ -233,10 +236,18 @@ class PositionRunner(QtCore.QObject):
             fn = join(self._gallery_dir, 'MultiChannelGallery_%s.png'
                       %sby)
             self.interruption_point("plotting multichannel gallery")
-            mcg = MultiChannelGallery(self.ecopts.class_definition, alldata,
-                                      'primary', self.ecopts.n_galleries,
-                                      self.ecopts.resampling_factor)
-            mcg(fn, self.ecopts.regionnames.keys())
+
+            try:
+                mcg = MultiChannelGallery(self.ecopts.class_definition, alldata,
+                                          'primary', self.ecopts.n_galleries,
+                                          self.ecopts.resampling_factor)
+                mcg(fn, self.ecopts.regionnames.keys())
+            # don't stop error correction
+            except Exception as e:
+                with open(join(self._gallery_dir, '%s-%s_error_readme.txt'
+                               %(prefix, sby)), 'w') as fp:
+                    traceback.print_exc(file=fp)
+                    fp.write("Check if gallery images exist!")
 
 
 if __name__ == "__main__":

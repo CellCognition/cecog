@@ -180,8 +180,9 @@ class HMMProbBasedEsitmator(HMMEstimator):
     # number of frames to consider as noise
     NOISE_FACTOR = 1.0
 
-    def __init__(self, states, probs):
+    def __init__(self, states, probs, tracks):
         self._probs = probs
+        self._tracks = tracks
         super(HMMProbBasedEsitmator, self).__init__(states)
 
     @property
@@ -209,6 +210,21 @@ class HMMProbBasedEsitmator(HMMEstimator):
         self._startprob[:] = 0.0
         self._startprob = self._probs[:, 0, :].sum(axis=0)
         self._startprob = normalize(self._startprob*weights, eps=0.0)
+
+
+    def _estimate_emis(self):
+        """Estimate the emission matrix by calculating the mean prediction
+        probabiliy for each class. The result is normalized row wise.
+        """
+        mprobs = np.zeros((self.nstates, self.nstates))
+
+        probs = self._probs.reshape((-1, self.nstates))
+        tracks = self._tracks.flatten()
+
+        for i in xrange(self.nstates):
+            mprobs[i, :] = probs[tracks == i].mean(axis=0)
+        self._emis = normalize(mprobs, axis=1)
+
 
 class HMMTransitionCountEstimator(HMMEstimator):
 
@@ -257,15 +273,12 @@ class HMMTransitionCountEstimator(HMMEstimator):
 
 class HMMBaumWelchEstimator(HMMEstimator):
 
-    def __init__(self, states, estimator, tracks, probs=None):
+    def __init__(self, states, estimator, tracks):
         # tracks have been mapped to array indices already
         super(HMMBaumWelchEstimator, self).__init__(states)
         self._trans = estimator.trans
         self._emis = estimator.emis
         self._startprob = estimator.startprob
-
-        if probs is not None:
-            self.mean_probs = self.mean_precition_probability(probs, tracks)
 
         # the initialisation is essential!
         hmm_ = MultinomialHMM(n_components=estimator.nstates,
@@ -280,15 +293,3 @@ class HMMBaumWelchEstimator(HMMEstimator):
         self._trans = hmm_.transmat_
         self._emis = hmm_.emissionprob_
         self._startprob = hmm_.startprob_
-
-    def mean_precition_probability(self, probs, tracks):
-        """Calculate the mean prediction probabiliy for each class. The result
-        is a matrix where each row sums up to one"""
-        mprobs = np.zeros((self.nstates, self.nstates))
-
-        probs = probs.reshape((-1, self.nstates))
-        tracks = tracks.flatten()
-
-        for i in xrange(self.nstates):
-            mprobs[i, :] = probs[tracks == i].mean(axis=0)
-        return normalize(mprobs, axis=1)

@@ -43,6 +43,13 @@ class ErrorCorrectionFrame(BaseProcessorFrame):
                               ('secondary', (0, 1, 1, 1)),
                               ('tertiary', (0, 2, 1, 1)),
                               ('merged', (0, 3, 1, 1))], label='Channels')
+
+        self.add_group(None,
+                       [('hmm_simple', ),
+                        ('hmm_baumwelch', )],
+                       layout='flow', link='hmm_learning',
+                       label='HMM learning algorithm')
+
         self.add_group('constrain_graph',
                        [('primary_graph',),
                         ('secondary_graph',),

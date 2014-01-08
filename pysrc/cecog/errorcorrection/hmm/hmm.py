@@ -83,14 +83,15 @@ class HMMCore(object):
 
         states = np.unique(tracks)
         if self.ecopts.eventselection == self.ecopts.EVENTSELECTION_SUPERVISED:
-            est = estimator.HMMProbBasedEsitmator(states, probs)
+            est = estimator.HMMProbBasedEsitmator(states, probs, tracks)
         else:
             est = estimator.HMMTransitionCountEstimator(states, tracks)
             probs = None # can't use probs for unsupervied learning yet
 
         # Baum Welch performs bad with bad start values
-        est = estimator.HMMBaumWelchEstimator(
-            states, est, tracks, probs)
+        if self.ecopts.hmm_algorithm == self.ecopts.HMM_BAUMWELCH:
+            est = estimator.HMMBaumWelchEstimator(states, est, tracks)
+
         return est
 
 
@@ -132,7 +133,10 @@ class HmmSklearn(HMMCore):
             labelmapper = LabelMapper(np.unique(tracks),
                                       self.classdef.class_names.keys())
 
-            probs = probs[:, :, labelmapper.index_from_classdef(np.unique(tracks))]
+            # np.unique -> sorted ndarray
+            idx = labelmapper.index_from_classdef(np.unique(tracks))
+            idx.sort()
+            probs = probs[:, :, idx]
             est = self._get_estimator(probs, labelmapper.label2index(tracks))
             est.constrain(self.hmmc(est, labelmapper))
 

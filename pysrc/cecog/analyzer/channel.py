@@ -30,15 +30,12 @@ from cecog.io.imagecontainer import MetaImage
 from cecog.analyzer.object import ImageObject, ObjectHolder, Orientation
 
 from cecog.util.logger import LoggerObject
-from cecog.plugin.segmentation import (PRIMARY_SEGMENTATION_MANAGER,
-                                       SECONDARY_SEGMENTATION_MANAGER,
-                                       TERTIARY_SEGMENTATION_MANAGER)
+from cecog.plugin.metamanager import MetaPluginManager
 
 class ChannelCore(LoggerObject):
 
     NAME = None
     _rank = None
-    SEGMENTATION = None
     _is_virtual = False
 
     def __init__(self,
@@ -87,6 +84,11 @@ class ChannelCore(LoggerObject):
         self._regions = {}
         self.meta_image = None
         self._features_calculated = False
+
+        try:
+            self.plugin_mgr = MetaPluginManager()[self.NAME.lower()]
+        except KeyError:
+            self.plugin_mgr = None
 
     def __cmp__(self, channel):
         return cmp(self._rank, channel._rank)
@@ -168,7 +170,8 @@ class Channel(ChannelCore):
             elif method == "average":
                 method_const = ccore.ProjectionType.MeanProjection
 
-            self.logger.debug("* applying %s Z-Projection to stack of %d images..." % (method, len(images)))
+            self.logger.debug("* applying %s Z-Projection to stack of %d images..."
+                              %(method, len(images)))
             imgprj = numpy.zeros((images[0].height, images[0].width),
                                  dtype=dtype)
             imgprj = ccore.numpy_to_image(imgprj, copy=True)
@@ -323,38 +326,32 @@ class Channel(ChannelCore):
         the defined plugin instances (managed via the PluginManger of this
         channel).
         """
-        self.containers = self.SEGMENTATION.run(self.meta_image,
-                                                requirements=args)
+        self.containers = self.plugin_mgr.run(self.meta_image,
+                                              requirements=args)
 
 # XXX remove prefix in future version just use name
 class PrimaryChannel(Channel):
 
     NAME = 'Primary'
     PREFIX = NAME.lower()
-
     _rank = 1
-    SEGMENTATION = PRIMARY_SEGMENTATION_MANAGER
 
 class SecondaryChannel(Channel):
 
     NAME = 'Secondary'
     PREFIX = NAME.lower()
-
     _rank = 2
-    SEGMENTATION = SECONDARY_SEGMENTATION_MANAGER
 
 class TertiaryChannel(Channel):
 
     NAME = 'Tertiary'
     PREFIX = NAME.lower()
-
     _rank = 3
-    SEGMENTATION = TERTIARY_SEGMENTATION_MANAGER
+
 
 # This channel is 'virtual'
 class MergedChannel(ChannelCore):
-    """
-    Virtual or PseudoChannel which is meant to concatenate features of
+    """Virtual or PseudoChannel which is meant to concatenate features of
     other channels. It cannot perform an segmentation or other operation
     on images.
     """
@@ -362,7 +359,6 @@ class MergedChannel(ChannelCore):
     NAME = 'Merged'
     PREFIX = NAME.lower()
     _rank = 4
-    SEGMENTATION = None
     _is_virtual = True
 
     def __init__(self, *args, **kw):
@@ -410,7 +406,7 @@ class MergedChannel(ChannelCore):
         # perhaps a method to get an rgb image
 
         # find the region of the primary channel
-        # it does not feel a great piece of code ... 
+        # it does not feel a great piece of code ...
         available_regions = self._channels[master].containers.keys()
         if 'primary' in available_regions:
             default_region = 'primary'

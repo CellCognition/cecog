@@ -36,7 +36,6 @@ from cecog.learning.learning import CommonClassPredictor
 from cecog.colors import hex2rgb
 
 from cecog.environment import CecogEnvironment
-from cecog.plugin.segmentation import REGION_INFO
 
 
 class ClassifierResultFrame(QGroupBox):
@@ -99,9 +98,8 @@ class ClassifierResultFrame(QGroupBox):
         layout_desc.addWidget(self._label_c, Qt.AlignLeft)
         self._label_g = QLabel(self.LABEL_G % float('NAN'), desc)
         layout_desc.addWidget(self._label_g, Qt.AlignLeft)
-        btn = QPushButton('Show Browser', desc)
-        btn.clicked.connect(qApp._main_window._on_browser_open)
-        layout_desc.addWidget(btn)
+        self.browserBtn = QPushButton('Show Browser', desc)
+        layout_desc.addWidget(self.browserBtn)
         layout.addWidget(desc)
 
         self._has_data = False
@@ -391,6 +389,10 @@ class ClassificationFrame(BaseProcessorFrame):
 
         self._init_control()
 
+    def connect_browser_btn(self, func):
+        for name, frame in self._result_frames.iteritems():
+            frame.browserBtn.clicked.connect(func)
+
     def _get_modified_settings(self, name, has_timelapse=True):
         settings = BaseProcessorFrame._get_modified_settings( \
             self, name, has_timelapse)
@@ -517,9 +519,6 @@ class ClassificationFrame(BaseProcessorFrame):
     def classifiers(self):
         classifiers = dict()
         for k, v in self._result_frames.iteritems():
-            from PyQt4.QtCore import pyqtRemoveInputHook; pyqtRemoveInputHook()
-            import pdb; pdb.set_trace()
-
             classifiers[k] = v.classifier
         return classifiers
 
@@ -536,14 +535,14 @@ class ClassificationFrame(BaseProcessorFrame):
         else:
             trait = self._settings.get_trait(SECTION_NAME_CLASSIFICATION,
                                              '%s_classification_regionname' % prefix)
-            trait.set_list_data(REGION_INFO.names[prefix])
+            trait.set_list_data(self.plugin_mgr.region_info.names[prefix])
 
     def _merged_channel_and_region(self, prefix):
         for ch in (CH_PRIMARY+CH_OTHER):
             trait = self._settings.get_trait(SECTION_NAME_CLASSIFICATION,
                                              '%s_%s_region' %(prefix, ch))
 
-            regions = REGION_INFO.names[ch]
+            regions = self.plugin_mgr.region_info.names[ch]
 
             # ugly workaround for due to trait concept
             if regions:

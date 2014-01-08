@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
 """
-mplogging.py - simple
+mplogging.py
 """
 
 __author__ = 'rudolf.hoefler@gmail.com'
@@ -12,6 +11,7 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
+
 import os
 import cPickle
 import struct
@@ -20,6 +20,7 @@ import logging
 import logging.handlers
 import SocketServer
 
+
 def initialyze_process(port):
     logger = logging.getLogger(str(os.getpid()))
     logger.setLevel(logging.NOTSET)
@@ -27,6 +28,7 @@ def initialyze_process(port):
     socketHandler.setLevel(logging.NOTSET)
     logger.addHandler(socketHandler)
     logger.info('logger init')
+
 
 class LogRecordStreamHandler(SocketServer.BaseRequestHandler):
     """Handler for a streaming logging request"""
@@ -44,16 +46,13 @@ class LogRecordStreamHandler(SocketServer.BaseRequestHandler):
                 chunk = self.request.recv(slen)
                 while len(chunk) < slen:
                     chunk = chunk + self.request.recv(slen - len(chunk))
-                obj = self.unPickle(chunk)
+                obj = cPickle.loads(chunk)
                 record = logging.makeLogRecord(obj)
                 self.handleLogRecord(record)
 
             except socket.error:
                 print 'socket handler abort'
                 break
-
-    def unPickle(self, data):
-        return cPickle.loads(data)
 
     def handleLogRecord(self, record):
         # if a name is specified, we use the named logger rather than the one
@@ -69,6 +68,7 @@ class LogRecordStreamHandler(SocketServer.BaseRequestHandler):
         # cycles and network bandwidth!
         logger.handle(record)
 
+
 class LoggingReceiver(SocketServer.ThreadingTCPServer):
     'Simple TCP socket-based logging receiver'
 
@@ -81,6 +81,7 @@ class LoggingReceiver(SocketServer.ThreadingTCPServer):
         if port is None:
             port = logging.handlers.DEFAULT_TCP_LOGGING_PORT
         SocketServer.ThreadingTCPServer.__init__(self, (host, port), handler)
+
 
 class NicePidHandler(logging.Handler):
 

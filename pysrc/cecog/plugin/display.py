@@ -19,8 +19,8 @@ from PyQt4.Qt import *
 
 from collections import OrderedDict
 from cecog.gui.display import TraitDisplayMixin
-from cecog.gui.util import question, load_qrc_text, show_html
-
+from cecog.gui.util import question
+from cecog.gui.helpbrowser import HelpBrowser
 
 class PluginParamFrame(TraitDisplayMixin):
 
@@ -58,7 +58,8 @@ class PluginParamFrame(TraitDisplayMixin):
 class PluginDocumentation(QFrame):
 
     def __init__(self, parent, plugin):
-        QFrame.__init__(self, parent)
+        super(PluginDocumentation, self).__init__(parent)
+        self.helpbrowser = HelpBrowser(parent=None)
         self._plugin = plugin
 
         layout = QHBoxLayout(self)
@@ -71,12 +72,13 @@ class PluginDocumentation(QFrame):
 
         self._content = plugin.DOC
         if len(self._content) > 0 and self._content[0] == ':':
-            self._content = load_qrc_text( \
+            self._content = self.helpbrowser.load_qrc_text( \
                 'plugins/%s/%s' %(plugin.QRC_PREFIX or '', self._content[1:]))
 
     def on_label_clicked(self, trait_name=None):
         param_name = self._plugin.param_manager.get_param_name(str(trait_name))
-        show_html(self._plugin.name, html_text=self._content, link=param_name)
+        self.helpbrowser.show( \
+            self._plugin.name, html_text=self._content, link=param_name)
 
     @classmethod
     def has_content(cls, plugin):

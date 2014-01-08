@@ -38,17 +38,16 @@ from cecog.learning.learning import ConfusionMatrix
 from cecog.util.util import write_table
 from cecog.units.time import seconds2datetime
 
-from cecog.gui.util import (question,
-                            critical,
-                            information,
-                            status,
-                            waitingProgressDialog,
-                            )
+from cecog.gui.util import question
+from cecog.gui.util import critical
+from cecog.gui.util import information
+
 
 from cecog.analyzer import CONTROL_1, CONTROL_2
 from cecog.analyzer.channel import PrimaryChannel
 from cecog.analyzer.channel import SecondaryChannel
 from cecog.analyzer.channel import TertiaryChannel
+from cecog.plugin.metamanager import MetaPluginManager
 
 from cecog.environment import CecogEnvironment
 from cecog.analyzer.core import AnalyzerCore
@@ -77,7 +76,7 @@ from cecog.traits.analyzer.eventselection import SECTION_NAME_EVENT_SELECTION
 from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
 from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
 from cecog.traits.analyzer.cluster import SECTION_NAME_CLUSTER
-
+from cecog.gui.progressdialog import ProgressDialog
 
 class BaseFrame(TraitDisplayMixin):
 
@@ -86,9 +85,11 @@ class BaseFrame(TraitDisplayMixin):
     CONTROL = CONTROL_1
 
     toggle_tabs = pyqtSignal(str)
+    status_message = pyqtSignal(str)
 
     def __init__(self, settings, parent, name):
         super(BaseFrame, self).__init__(settings, parent)
+        self.plugin_mgr = MetaPluginManager()
         self.name = name
         self._is_active = False
         self._intervals = list()
@@ -153,16 +154,13 @@ class BaseFrame(TraitDisplayMixin):
         frame._input_cnt += 1
 
     def page_changed(self):
-        '''
-          Abstract method. Invoked by the AnalyzerMainWindow when this frame
+        """Abstract method. Invoked by the AnalyzerMainWindow when this frame
         is activated for display.
-        '''
+        """
         pass
 
     def settings_loaded(self):
-        '''
-        change notification called after a settings file is loaded
-        '''
+        """change notification called after a settings file is loaded."""
         pass
 
     def tab_changed(self, index):
@@ -179,6 +177,7 @@ class BaseFrame(TraitDisplayMixin):
 class _ProcessorMixin(object):
     def __init__(self, parent):
         self.idialog = parent.idialog
+
         self._is_running = False
         self._is_abort = False
         self._has_error = True
@@ -202,7 +201,7 @@ class _ProcessorMixin(object):
 
     def _init_control(self, has_images=True):
         layout = QHBoxLayout(self._control)
-        layout.setContentsMargins(0,0,0,0)
+        layout.setContentsMargins(0, 0, 0, 0)
 
         self._progress_label0 = QLabel(self._control)
         self._progress_label0.setText('')
@@ -471,7 +470,7 @@ class _ProcessorMixin(object):
 
                 self._analyzer.start(QThread.LowestPriority)
                 if self._current_process_item == 0:
-                    status('Process started...')
+                    self.status_message.emit('Process started...')
 
         else:
             self._abort_processing()
@@ -483,9 +482,8 @@ class _ProcessorMixin(object):
     def _abort_processing(self):
         self.setCursor(Qt.BusyCursor)
         self._is_abort = True
-        self.dlg = waitingProgressDialog('Please wait until the processing has been terminated...', self)
-        self.dlg.setTarget(self._analyzer.abort, wait=True)
-        self.dlg.exec_()
+        self.dlg = ProgressDialog('terminating...', None, 0, 0, self)
+        self.dlg.exec_(lambda: self._analyzer.abort(wait=True))
         self.setCursor(Qt.ArrowCursor)
 
     def _on_error(self, msg):
@@ -541,12 +539,12 @@ class _ProcessorMixin(object):
                     msg = 'Postprocessing successfully finished'
 
                 information(self, 'Process finished', msg)
-                status(msg)
+                self.status_message.emit(msg)
             else:
                 if self._is_abort:
-                    status('Process aborted by user.')
+                    self.status_message.emit('Process aborted by user.')
                 elif self._has_error:
-                    status('Process aborted by error.')
+                    self.status_message.emit('Process aborted by error.')
 
             self._current_process = None
             self._process_items = None
@@ -585,7 +583,7 @@ class _ProcessorMixin(object):
                                                                  estimate.strftime("%H:%M:%S"))
                     else:
                         self._intervals = []
-                    status(msg)
+                    self.status_message.emit(msg)
                 else:
                     self._progress_label0.setText('')
             else:
@@ -615,7 +613,7 @@ class _ProcessorMixin(object):
                                                                estimate.strftime("%H:%M:%S"))
                     else:
                         self._intervals = []
-                    status(msg)
+                    self.status_message.emit(msg)
         elif self.CONTROL == CONTROL_2:
             if info['stage'] == 1:
                 if 'progress' in info:

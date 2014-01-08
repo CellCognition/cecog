@@ -15,7 +15,6 @@ __revision__ = '$Rev$'
 __source__ = '$URL$'
 
 import os
-import sys
 import bz2
 import gzip
 import types
@@ -99,14 +98,6 @@ def unlist(a):
 def yesno(state):
     return 'yes' if state else 'no'
 
-def resolve_os_name():
-    if sys.platform.startswith("win"):
-        return 'windows'
-    elif sys.platform.startswith("darwin"):
-        return 'mac'
-    elif sys.platform.startswith('linux'):
-        return 'linux'
-
 def print_memory_increase(func):
     try:
         import psutil
@@ -116,7 +107,8 @@ def print_memory_increase(func):
             m1 = p.get_memory_info().rss/1024.0/1024.0
             res = func(*arg, **kwargs)
             m2 = p.get_memory_info().rss/1024.0/1024.0
-            name = str(func.__class__) + '\t' + func.func_name if hasattr(func, '__class__') else func.func_name
+            name = str(func.__class__) + '\t' + \
+                func.func_name if hasattr(func, '__class__') else func.func_name
             print '%s\t%6.2f\t%6.2f\t%6.2f' % (name, (m2-m1), m1, m2)
             return res
         return wrapper

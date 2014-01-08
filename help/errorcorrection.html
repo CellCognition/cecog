@@ -45,6 +45,23 @@
 
     </a>
 
+    <h3>HMM learing algorithm</h3>
+    <a name="hmm_learning">
+      <h4>HMM learning algorithm</h4>
+      <p class="text"><i>Simple estimate</i> learns the HMM parameters by
+        counting the transitions (unsupervised event selection) or
+        counting the conditional prediction probabilities resp. in case of the
+        SVM classifier. On top of that one can choose to run the
+        Baum-Welch algorithm (the standard way to estimate hmm
+        parameters).
+        <br><br>
+        The first option is more robust but has less smoothing
+        performance. The Baum-Welch algorthim (EM-algorithm) may
+        converge against a local minimium and the result may not be
+        satisfactory.
+      </p>
+    </a>
+
     <a name="constrain_graph">
       <h4>Constrain graph</h4>
       <p class="text">To apply biological constraints to the HMM one

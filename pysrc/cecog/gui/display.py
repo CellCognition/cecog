@@ -35,7 +35,7 @@ from cecog.gui.guitraits import (StringTrait,
                                  ListTrait
                                  )
 from cecog.environment import CecogEnvironment
-from cecog.gui.util import show_html
+
 
 class TraitDisplayMixin(QFrame):
 
@@ -406,8 +406,8 @@ class TraitDisplayMixin(QFrame):
         return self._settings.get_trait(self.name, name)
 
     def _on_show_help(self, link):
-        show_html(self.name, link=link,
-                  header='_header', footer='_footer')
+        self.parent().helpbrowser.show( \
+            self.name, link=link, header='_header', footer='_footer')
 
     def _on_set_radio_button(self, name, value):
         # FIXME: this is somehow hacky. we need to inform all the radio-buttons

@@ -31,17 +31,25 @@ class ECParams(object):
     EVENTSELECTION_UNSUPERVISED = 1
     EVENTSELECTION = (EVENTSELECTION_SUPERVISED, EVENTSELECTION_UNSUPERVISED)
 
+    HMM_SIMPLE = 0
+    HMM_BAUMWELCH = 1
+
     __slots__ = ['regionnames', 'constrain_graph', 'hmm_constrain',
                  'classifier_dirs', 'position_labels', 'mapping_dir',
                  'sortby', 'skip_plates', 'timeunit', 'overwrite_timelapse',
                  'timelapse', 'sorting', 'sorting_sequence', 'tmax',
                  'ignore_tracking_branches', 'write_gallery', 'n_galleries',
                  'eventselection', 'nclusters', '_classdef',
-                 'multichannel_galleries', 'resampling_factor']
+                 'multichannel_galleries', 'resampling_factor', 'hmm_algorithm']
 
     def __init__(self, settings, tstep, timeunit):
 
         self._classdef = None
+
+        if settings('ErrorCorrection', 'hmm_baumwelch'):
+            self.hmm_algorithm = self.HMM_BAUMWELCH
+        else:
+            self.hmm_algorithm = self.HMM_SIMPLE
 
         self.constrain_graph = settings('ErrorCorrection', 'constrain_graph')
         self.hmm_constrain = dict()

@@ -27,12 +27,11 @@ from cecog.tc3 import TC3EventFilter
 from cecog.tc3 import TemporalClustering
 
 
-
-### TODO: Recursion limit has to be set higher than 1000,
-###       due to the current implementation of _forward_visitor(),
-###       which calls for 'full' tracks itself recursively for each
-###       node_id. In case of long time_lapse movies this might be
-###       more than 1000 (default python rec limit)
+# TODO: Recursion limit has to be set higher than 1000,
+#       due to the current implementation of _forward_visitor(),
+#       which calls for 'full' tracks itself recursively for each
+#       node_id. In case of long time_lapse movies this might be
+#       more than 1000 (default python rec limit)
 import sys
 sys.setrecursionlimit(10000)
 

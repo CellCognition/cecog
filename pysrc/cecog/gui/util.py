@@ -14,16 +14,8 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = ['message',
-           'information',
-           'question',
-           'warning',
-           'critical',
-           'exception',
-           'status',
-           'load_qrc_text',
-           'show_html',
-           'on_anchor_clicked']
+__all__ = ['message','information', 'question',
+           'warning', 'critical', 'exception']
 
 import sys
 import traceback
@@ -34,9 +26,6 @@ from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
 from cecog.colors import rgb2hex
-
-
-QRC_TOKEN = 'qrc:/'
 
 def message(icon, text, parent, info=None, detail=None, buttons=None,
             title=None, default=None, escape=None, modal=True):
@@ -101,90 +90,6 @@ def exception(parent, text, tb_limit=None, modal=True):
                    detail=traceback.format_exc(tb_limit), modal=modal,
                    buttons=QMessageBox.Ok, default=QMessageBox.Ok)
 
-
-def status(msg, timeout=0):
-    qApp._statusbar.showMessage(msg, timeout)
-
-
-def load_qrc_text(name):
-    file_name = ':%s' % name
-    f = QFile(file_name)
-    text = None
-    if f.open(QIODevice.ReadOnly | QIODevice.Text):
-        s = QTextStream(f)
-        text = str(s.readAll())
-        f.close()
-    return text
-
-
-def show_html(name, link='_top', title=None, header='_header', footer='_footer',
-              html_text=None):
-    if not hasattr(qApp, 'cecog_help_dialog'):
-        dialog = QFrame()
-        if title is None:
-            title = name
-        dialog.setWindowTitle('CecogAnalyzer Help')
-        layout = QVBoxLayout(dialog)
-        layout.setContentsMargins(2, 2, 2, 2)
-        w_text = QTextBrowser(dialog)
-        w_text.setOpenLinks(False)
-        w_text.setOpenExternalLinks(False)
-        w_text.anchorClicked.connect(on_anchor_clicked)
-        layout.addWidget(w_text)
-        dialog.setMinimumSize(QSize(900,600))
-        qApp.cecog_help_dialog = dialog
-        qApp.cecog_help_wtext = w_text
-    else:
-        #pass
-        dialog = qApp.cecog_help_dialog
-        w_text = qApp.cecog_help_wtext
-
-    w_text.clear()
-
-    # if no content was given try to load the context via the name
-    if html_text is None:
-        html_text = load_qrc_text('help/%s.html' % name.lower())
-
-    if not html_text is None:
-        css_text = load_qrc_text('help/help.css')
-
-        if not header is None:
-            header_text = load_qrc_text('help/%s.html' % header)
-            if not header_text is None:
-                html_text = header_text + html_text
-
-        if not footer is None:
-            footer_text = load_qrc_text('help/%s.html' % footer)
-            if not footer_text is None:
-                html_text = html_text + footer_text
-
-        doc = QTextDocument()
-        if not css_text is None:
-            doc.setDefaultStyleSheet(css_text)
-        doc.setHtml(html_text)
-        w_text.setDocument(doc)
-        # FIXME: will cause a segfault when ref is lost
-        w_text._doc = doc
-        if not link is None:
-            w_text.scrollToAnchor(link)
-    else:
-        w_text.setHtml("We are sorry, but help for '%s' was not found." % name)
-    dialog.show()
-    #dialog.raise_()
-
-
-def on_anchor_clicked(link):
-    slink = str(link.toString())
-    if slink.find(QRC_TOKEN) == 0:
-        items = slink.split('#')
-        show_html(items[0].replace(QRC_TOKEN, ''))
-        if len(items) > 1:
-            qApp.cecog_help_wtext.scrollToAnchor(items[1])
-    elif slink.find('#') == 0:
-        qApp.cecog_help_wtext.scrollToAnchor(slink[1:])
-    else:
-        QDesktopServices.openUrl(link)
-
 def qcolor_to_hex(qcolor):
     return rgb2hex((qcolor.red(), qcolor.green(), qcolor.blue()), mpl=False)
 
@@ -194,104 +99,3 @@ def get_qcolor_hicontrast(qcolor, threshold=0.5):
     # decrease the lightness by the color blueness
     value = lightness - 0.2 * blue
     return QColor('white' if value <= threshold else 'black')
-
-
-class ProgressDialog(QProgressDialog):
-    """Subclass of QProgressDialog to:
-         -) ignore the ESC key during dialog exec_()
-         -) to provide mechanism to show the dialog only
-            while a target function is running
-    """
-
-    targetFinished = pyqtSignal()
-    targetSetValue = pyqtSignal(int)
-
-    def setCancelButton(self, cancelButton):
-        self.hasCancelButton = cancelButton is not None
-        super(ProgressDialog, self).setCancelButton(cancelButton)
-
-    def keyPressEvent(self, event):
-        if event.key() != Qt.Key_Escape or getattr(self, 'hasCancelButton', False):
-            QProgressDialog.keyPressEvent(self, event)
-
-    def setTarget(self, target, *args, **options):
-        self._target = target
-        self._args = args
-        self._options = options
-
-    def getTargetResult(self):
-        return getattr(self, '_target_result', None)
-
-    def _onSetValue(self, value):
-        self.setValue(value)
-
-    def exec_(self, finished=None, started=None, passDialog=False):
-        dlg_result = None
-        self.targetSetValue.connect(self._onSetValue)
-        if hasattr(self, '_target'):
-            t = QThread()
-            if finished is None:
-                finished = self.close
-            t.finished.connect(finished)
-            if started is not None:
-                t.started.connect(started)
-
-            def foo():
-                # optional passing of this dialog instance to the target function
-                try:
-                    if passDialog:
-                        t.result = self._target(self, *self._args, **self._options)
-                    else:
-                        t.result = self._target(*self._args, **self._options)
-                except Exception, e:
-                    import traceback
-                    traceback.print_exc()
-                    t.exception = e
-                else:
-                    self.targetFinished.emit()
-
-            t.result = None
-            t.run = foo
-            t.start()
-            dlg_result = super(QProgressDialog, self).exec_()
-            t.wait()
-            # that doesn't feel right to raise the thread exception again in the GUI thread
-            if hasattr(t, 'exception'):
-                raise t.exception
-            self._target_result = t.result
-        else:
-            dlg_result = super(QProgressDialog, self).exec_()
-        return dlg_result
-
-
-def waitingProgressDialog(msg, parent=None, target=None, range=(0,0)):
-    dlg = ProgressDialog(parent, Qt.CustomizeWindowHint | Qt.WindowTitleHint)
-    dlg.setWindowModality(Qt.WindowModal)
-    dlg.setLabelText(msg)
-    dlg.setCancelButton(None)
-    dlg.setRange(*range)
-    if target is not None:
-        dlg.setTarget(target)
-    return dlg
-
-
-if __name__ == '__main__':
-    app = QApplication([''])
-
-    import time
-    dlg = ProgressDialog('still running...', 'Cancel', 0, 0, None)
-
-    def foo(t):
-        print 'running long long target function for %d seconds' % t,
-        time.sleep(t)
-        print ' ...finished'
-        return 42
-
-    # This is optional.
-    # If not specified, the standard ProgressDialog is used
-    dlg.setTarget(foo, 3)
-
-    res = dlg.exec_()
-    print 'result of dialog target function is:', res
-
-    app.exec_()
