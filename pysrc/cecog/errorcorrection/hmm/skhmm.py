@@ -17,9 +17,13 @@ __url__ = 'www.cellcognition.org'
 
 import numpy as np
 from sklearn import hmm
+from sklearn.utils.extmath import logsumexp
+
 from cecog.tc3 import normalize
 
 EPS = 1e-99
+decoder_algorithms = ("viterbi", "map")
+
 
 class MultinomialHMM(hmm.MultinomialHMM):
 
@@ -93,3 +97,37 @@ class MultinomialHMM(hmm.MultinomialHMM):
         #     return False
 
         # return True
+
+    def fit(self, obs):
+
+        # same implementation as in sklearn, but returns the learning curve
+        if self.algorithm not in decoder_algorithms:
+            self._algorithm = "viterbi"
+
+        self._init(obs, self.init_params)
+
+        logprob = []
+        for i in range(self.n_iter):
+            # Expectation step
+            stats = self._initialize_sufficient_statistics()
+            curr_logprob = 0
+            for seq in obs:
+                framelogprob = self._compute_log_likelihood(seq)
+                lpr, fwdlattice = self._do_forward_pass(framelogprob)
+                bwdlattice = self._do_backward_pass(framelogprob)
+                gamma = fwdlattice + bwdlattice
+                posteriors = np.exp(gamma.T - logsumexp(gamma, axis=1)).T
+                curr_logprob += lpr
+                self._accumulate_sufficient_statistics(
+                    stats, seq, framelogprob, posteriors, fwdlattice,
+                    bwdlattice, self.params)
+            logprob.append(curr_logprob)
+
+            # Check for convergence.
+            if i > 0 and abs(logprob[-1] - logprob[-2]) < self.thresh:
+                break
+
+            # Maximization step
+            self._do_mstep(stats, self.params)
+
+        return logprob
