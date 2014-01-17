@@ -192,24 +192,26 @@ class HMMProbBasedEsitmator(HMMEstimator):
     def _estimate_trans(self):
         super(HMMProbBasedEsitmator, self)._estimate_trans()
         self._trans[:] = 0.0
-        for i in xrange(self._probs.shape[0]):
-            for j in xrange(1, self._probs.shape[1]-1, 1):
-                prob0 = self._probs[i, j, :]
-                prob1 = self._probs[i, j+1, :]
+        for i in xrange(self._probs.shape[0]): # tracks
+            for j in xrange(1, self._probs.shape[1], 1): # frames
+                prob0 = self._probs[i, j-1, :]
+                prob1 = self._probs[i, j, :]
                 condprob = np.matrix(prob0).T*np.matrix(prob1)
                 self._trans += condprob
-
         self._trans = normalize(self._trans, axis=1, eps=0.0)
 
     def _estimate_startprob(self):
         super(HMMProbBasedEsitmator, self)._estimate_startprob()
-        weights = np.bincount(np.argmax(self._probs[:,0,:], axis=1),
-                              minlength=self.nstates).astype(float)
-        weights /= weights.sum()
-
         self._startprob[:] = 0.0
         self._startprob = self._probs[:, 0, :].sum(axis=0)
-        self._startprob = normalize(self._startprob*weights, eps=0.0)
+        self._startprob = normalize(self._startprob, eps=0.0)
+
+        # using weights takes only classes into accout that appear into
+        # the first frame
+        # weights = np.bincount(np.argmax(self._probs[:,0,:], axis=1),
+        #                       minlength=self.nstates).astype(float)
+        # weights /= weights.sum()
+        # self._startprob = normalize(self._startprob*weights, eps=0.0)
 
 
     def _estimate_emis(self):
@@ -223,6 +225,7 @@ class HMMProbBasedEsitmator(HMMEstimator):
 
         for i in xrange(self.nstates):
             mprobs[i, :] = probs[tracks == i].mean(axis=0)
+
         self._emis = normalize(mprobs, axis=1)
 
 
