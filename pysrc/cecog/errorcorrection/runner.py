@@ -25,7 +25,9 @@ from PyQt4.QtCore import QThread
 from cecog.util.util import makedirs
 from cecog.export.regexp import re_events
 from cecog.threads.corethread import ProgressMsg
-from cecog.errorcorrection.hmm import HmmSklearn as Hmm
+from cecog.errorcorrection.hmm import HmmSklearn
+from cecog.errorcorrection.hmm import HmmTde
+
 from cecog.errorcorrection import HmmReport
 from cecog.errorcorrection import PlateMapping
 from cecog.errorcorrection.datatable import HmmDataTable
@@ -194,7 +196,11 @@ class PositionRunner(QtCore.QObject):
             self.interruption_point(msg)
 
             # error correction
-            hmm = Hmm(dtable, channel, cld, self.ecopts)
+            if self.ecopts.hmm_algorithm == self.ecopts.HMM_BAUMWELCH:
+                hmm = HmmSklearn(dtable, channel, cld, self.ecopts)
+            else:
+                hmm = HmmTde(dtable, channel, cld, self.ecopts)
+
             data = hmm()
             alldata[channel] =  data
 

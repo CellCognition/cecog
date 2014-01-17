@@ -22,7 +22,6 @@ import lxml._elementpath
 
 from cecog.tc3 import normalize
 from cecog.environment import find_resource_dir
-from cecog.errorcorrection.hmm.skhmm import MultinomialHMM
 
 
 class HMMConstraintCore(object):
@@ -104,6 +103,7 @@ class HMMConstraint(HMMConstraintCore):
         self.trans = np.delete(self.trans, indices, axis=0)
         self.trans = np.delete(self.trans, indices, axis=1)
 
+
 class HMMEstimator(object):
     """Setup a (naive) default hidden markov (left-to-right model)
 
@@ -172,7 +172,7 @@ class HMMEstimator(object):
         self._emis = normalize(hmmc.emis*self._emis, axis=1, eps=0.0)
 
 
-class HMMProbBasedEsitmator(HMMEstimator):
+class HMMProbBasedEstimator(HMMEstimator):
     """Estimate a hidden markov model from using the prediction
     probabilities from an arbitrary classifier.
     """
@@ -183,14 +183,14 @@ class HMMProbBasedEsitmator(HMMEstimator):
     def __init__(self, states, probs, tracks):
         self._probs = probs
         self._tracks = tracks
-        super(HMMProbBasedEsitmator, self).__init__(states)
+        super(HMMProbBasedEstimator, self).__init__(states)
 
     @property
     def _emission_noise(self):
         return self.NOISE_FACTOR/self._probs.shape[1]/self.nstates
 
     def _estimate_trans(self):
-        super(HMMProbBasedEsitmator, self)._estimate_trans()
+        super(HMMProbBasedEstimator, self)._estimate_trans()
         self._trans[:] = 0.0
         for i in xrange(self._probs.shape[0]): # tracks
             for j in xrange(1, self._probs.shape[1], 1): # frames
@@ -201,7 +201,7 @@ class HMMProbBasedEsitmator(HMMEstimator):
         self._trans = normalize(self._trans, axis=1, eps=0.0)
 
     def _estimate_startprob(self):
-        super(HMMProbBasedEsitmator, self)._estimate_startprob()
+        super(HMMProbBasedEstimator, self)._estimate_startprob()
         self._startprob[:] = 0.0
         self._startprob = self._probs[:, 0, :].sum(axis=0)
         self._startprob = normalize(self._startprob, eps=0.0)
@@ -272,27 +272,3 @@ class HMMTransitionCountEstimator(HMMEstimator):
 
         self._startprob = normalize(self._startprob, eps=0.0)
         return self._startprob
-
-
-class HMMBaumWelchEstimator(HMMEstimator):
-
-    def __init__(self, states, estimator, tracks):
-        # tracks have been mapped to array indices already
-        super(HMMBaumWelchEstimator, self).__init__(states)
-        self._trans = estimator.trans
-        self._emis = estimator.emis
-        self._startprob = estimator.startprob
-
-        # the initialisation is essential!
-        hmm_ = MultinomialHMM(n_components=estimator.nstates,
-                              transmat=estimator.trans,
-                              startprob=estimator.startprob,
-                              n_iter=1000,
-                              init_params="")
-
-        hmm_.emissionprob_ = estimator.emis
-        hmm_.fit(tracks)
-
-        self._trans = hmm_.transmat_
-        self._emis = hmm_.emissionprob_
-        self._startprob = hmm_.startprob_

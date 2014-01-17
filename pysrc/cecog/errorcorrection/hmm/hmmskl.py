@@ -5,6 +5,7 @@ fixes some issues of sklearn.hmm
 
 1) Epsilon value in the normalize function
 2) check_input_symbols is disabled (returns always True)
+3) fit method returns list of log-likelihoods
 """
 
 __author__ = 'rudolf.hoefler@gmail.com'
@@ -15,17 +16,28 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
+__all__ = ["HmmSklearn"]
+
+
 import numpy as np
 from sklearn import hmm
 from sklearn.utils.extmath import logsumexp
 
 from cecog.tc3 import normalize
+from cecog.errorcorrection import HmmBucket
+from cecog.errorcorrection.hmm import HmmCore
+from cecog.errorcorrection.hmm import estimator
+from cecog.errorcorrection.hmm import LabelMapper
+
 
 EPS = 1e-99
 decoder_algorithms = ("viterbi", "map")
 
 
 class MultinomialHMM(hmm.MultinomialHMM):
+    """Subclass of sklearns MultinomialHMM. It fixes numerical issues and
+    and overwrite the method check_input_symbols. Furhter the fit method
+    return the learning curve (log-likelihood) after each iteration."""
 
     def __init__(self, *args, **kw):
         super(MultinomialHMM, self).__init__(*args, **kw)
@@ -81,23 +93,6 @@ class MultinomialHMM(hmm.MultinomialHMM):
     def _check_input_symbols(self, obs):
         return True
 
-        # """Sanity checks on the emissions.."""
-        # assert isinstance(obs, np.ndarray)
-
-        # # input symbols must be integer
-        # if symbols.dtype.kind != 'i':
-        #     return False
-
-        # # input too short
-        # if len(symbols) < 2:
-        #     return False
-
-        # # input contains negative intigers
-        # if np.any(symbols < 0):
-        #     return False
-
-        # return True
-
     def fit(self, obs):
 
         # same implementation as in sklearn, but returns the learning curve
@@ -131,3 +126,101 @@ class MultinomialHMM(hmm.MultinomialHMM):
             self._do_mstep(stats, self.params)
 
         return logprob
+
+
+class HMMBaumWelchEstimator(estimator.HMMEstimator):
+    """Baum-Welch estimator based on sklearn MultinomialHMM"""
+
+    def __init__(self, states, estimator, tracks):
+        # tracks have been mapped to array indices already
+        super(HMMBaumWelchEstimator, self).__init__(states)
+        self._trans = estimator.trans
+        self._emis = estimator.emis
+        self._startprob = estimator.startprob
+
+        # the initialisation is essential!
+        hmm_ = MultinomialHMM(n_components=estimator.nstates,
+                              transmat=estimator.trans,
+                              startprob=estimator.startprob,
+                              n_iter=1000,
+                              init_params="")
+
+        hmm_.emissionprob_ = estimator.emis
+        hmm_.fit(tracks)
+
+        self._trans = hmm_.transmat_
+        self._emis = hmm_.emissionprob_
+        self._startprob = hmm_.startprob_
+
+
+class HmmSklearn(HmmCore):
+
+    def __init__(self, *args, **kw):
+        super(HmmSklearn, self).__init__(*args, **kw)
+
+    def _get_estimator(self, probs, tracks):
+        """Helper function to return the hmm-estimator instance i.e.
+
+        - probability based estimator for svm classifier
+        - transition count based estimator for unsupervied clustering
+
+        There are 2 levels:
+        1) inital estimate by counting or conditional probalilities, those
+           values are used as inital trans, emis startprob for the
+        2) Baum Welch algorithm.
+        """
+
+        states = np.unique(tracks)
+        if self.ecopts.eventselection == self.ecopts.EVENTSELECTION_SUPERVISED:
+            est = estimator.HMMProbBasedEstimator(states, probs, tracks)
+        else:
+            est = estimator.HMMTransitionCountEstimator(states, tracks)
+            probs = None # can't use probs for unsupervied learning yet
+
+        # Baum Welch performs bad with bad start values
+        # if self.ecopts.hmm_algorithm == self.ecopts.HMM_BAUMWELCH:
+        est = HMMBaumWelchEstimator(states, est, tracks)
+
+        return est
+
+
+    def __call__(self):
+        hmmdata = dict()
+
+        for (name, tracks, probs, finfo) in  \
+                self.dtable.iterby(self.ecopts.sortby, True):
+            if tracks is probs is finfo is None:
+                hmmdata[name] = None
+                continue
+
+            labelmapper = LabelMapper(np.unique(tracks),
+                                      self.classdef.class_names.keys())
+
+            # np.unique -> sorted ndarray
+            idx = labelmapper.index_from_classdef(np.unique(tracks))
+            idx.sort()
+            probs = probs[:, :, idx]
+            est = self._get_estimator(probs, labelmapper.label2index(tracks))
+            est.constrain(self.hmmc(est, labelmapper))
+
+            # ugly sklearn
+            hmm_ = MultinomialHMM(n_components=est.nstates)
+            hmm_.startprob_ = est.startprob
+            hmm_.transmat_ = est.trans
+            hmm_.emissionprob_ = est.emis
+
+            tracks2 = []
+            for track in labelmapper.label2index(tracks):
+                tracks2.append(hmm_.predict(track))
+            tracks2 = labelmapper.index2labels(np.array(tracks2, dtype=int))
+
+            bucket = HmmBucket(tracks,
+                               tracks2,
+                               est.startprob,
+                               est.emis,
+                               est.trans,
+                               self.dtable.groups(self.ecopts.sortby, name),
+                               tracks.shape[0],
+                               self.ecopts.timelapse, finfo)
+            hmmdata[name] = bucket
+        return hmmdata

@@ -18,19 +18,19 @@ __url__ = 'www.cellcognition.org'
 
 __all__ = ['HmmTde']
 
+
+import numpy as np
+from cecog.tc3 import normalize
+from cecog.errorcorrection import HmmBucket
 from cecog.errorcorrection.hmm import HmmCore
 from cecog.errorcorrection.hmm import estimator
+from cecog.errorcorrection.hmm import LabelMapper
 
 
 class TdeEstimator(estimator.HMMProbBasedEstimator):
 
     def __init__(self, *args, **kw):
         super(TdeEstimator, self).__init__(*args, **kw)
-
-    def __init__(self, states, probs, tracks):
-        self._probs = probs
-        self._tracks = tracks
-        super(TdeEstimator, self).__init__(states)
 
     @property
     def _emission_noise(self):
@@ -47,7 +47,7 @@ class HmmTde(HmmCore):
     """Hidden Markov model that uses a time dependend emission."""
 
     def __init__(self, *args, **kw):
-        super(HmmTDE, self).__init__(*args, **kw)
+        super(HmmTde, self).__init__(*args, **kw)
 
     def _get_estimator(self, probs, tracks):
         """Helper function to return the hmm-estimator instance i.e.
@@ -62,7 +62,7 @@ class HmmTde(HmmCore):
         """
 
         states = np.unique(tracks)
-        est = estimator.TdeEstimator(states, probs, tracks)
+        est = TdeEstimator(states, probs, tracks)
 
         return est
 
