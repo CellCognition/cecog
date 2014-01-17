@@ -335,7 +335,8 @@ class HmmReport(object):
 
         for i, label in enumerate(track):
             name = self.classdef.class_names[label]
-            color = np.int(hex2rgb(self.classdef.hexcolors[name], mpl=False))
+            color = np.array(hex2rgb(self.classdef.hexcolors[name], mpl=False),
+                             dtype=int)
             image[size[1]-msize:size[1], i*size[0]:i*size[0]+msize] = color
         return image
 
