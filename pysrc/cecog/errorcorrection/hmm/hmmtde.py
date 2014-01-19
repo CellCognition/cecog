@@ -50,16 +50,6 @@ class HmmTde(HmmCore):
         super(HmmTde, self).__init__(*args, **kw)
 
     def _get_estimator(self, probs, tracks):
-        """Helper function to return the hmm-estimator instance i.e.
-
-        - probability based estimator for svm classifier
-        - transition count based estimator for unsupervied clustering
-
-        There are 2 levels:
-        1) inital estimate by counting or conditional probalilities, those
-           values are used as inital trans, emis startprob for the
-        2) Baum Welch algorithm.
-        """
 
         states = np.unique(tracks)
         est = TdeEstimator(states, probs, tracks)
