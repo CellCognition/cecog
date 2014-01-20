@@ -31,11 +31,11 @@ class ErrorCorrectionFrame(BaseProcessorFrame):
         # R implementation
         self.register_control_button(
             'hmm', HmmThread,
-            ('start error correction', 'stop error correction'))
+            ('start error correction (legacy)', 'stop error correction'))
         self.register_control_button( \
             'pyhmm', PyHmmThread,
-            ('start py-error correction (experimental)',
-             'stop py-error correction'))
+            ('start error correction',
+             'stop error correction'))
 
         self.add_input('filename_to_r')
         self.add_line()
