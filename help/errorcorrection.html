@@ -49,25 +49,18 @@
     <a name="hmm_learning">
       <h4>HMM learning algorithm</h4>
       <p class="text"><i>Simple estimate</i> learns the HMM parameters by
-        counting the transitions (unsupervised event selection) or
-        counting the conditional prediction probabilities resp. in case of the
-        SVM classifier. On top of that one can choose to run the
-        Baum-Welch algorithm (the standard way to estimate hmm
-        parameters).
+        counting the conditional prediction probabilities.
+        No Baum-Welch estimation (the standard way to estimate hmm
+        parameters) is performed afterwards.
+        This method is a 1:1 replacement of the R-implementation
+        (CecogAnalyzer &le; 1.4.x).<br>
         <br><br>
-        The first option results by design in a smoothing model i.e.
-        the emission matrix has the largest values in its
-        diagonal. E.g a cell in interphase has a high emission
-        probability towards interphase and low emission probabilities
-        towards anything else.<br>
-        This method works only in combination with supervised
-        eventselction (SVM-classifier), which provides prediction
-        probabilities. For unsupervised event selection and tc3 one
-        has to use the Baum-Welch algorithm.
-        <br>
-        The Baum-Welch algorthim (EM-algorithm) may
-        converge against a local minimium and the result may not be
-        satisfactory. But works well if mitotic progression is constrained.
+        The first option results in a robust smoothing model by
+        suppressing off-diagonal emissions (adhoc assumption).
+        Further it relies on confident prediction probabilies
+        provided by the support vector machine.
+        It is recommended to use Baum-Welch option for TC3
+        (unsupervised event selection).
       </p>
     </a>
 
