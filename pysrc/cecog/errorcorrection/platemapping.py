@@ -40,6 +40,7 @@ class PlateMapping(OrderedDict):
             self.setdefault(pos, None)
 
     def read(self, filename):
+
         if not isfile(filename):
             raise IOError("Plate mapping file not found\n(%s)" %filename)
 

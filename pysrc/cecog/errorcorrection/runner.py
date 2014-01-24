@@ -18,12 +18,13 @@ import glob
 import traceback
 import numpy as np
 
-from os.path import join, isfile, isdir, basename
+from os.path import join, isfile, basename, dirname, splitext
 from PyQt4 import QtCore
 from PyQt4.QtCore import QThread
 
+import cellh5
+
 from cecog.util.util import makedirs
-from cecog.export.regexp import re_events
 from cecog.threads.corethread import ProgressMsg
 from cecog.errorcorrection.hmm import HmmSklearn
 from cecog.errorcorrection.hmm import HmmTde
@@ -32,6 +33,7 @@ from cecog.errorcorrection import HmmReport
 from cecog.errorcorrection import PlateMapping
 from cecog.errorcorrection.datatable import HmmDataTable
 from cecog.gallery import MultiChannelGallery
+from cecog.learning.learning import ClassDefinition
 
 
 class PlateRunner(QtCore.QObject):
@@ -42,8 +44,9 @@ class PlateRunner(QtCore.QObject):
         super(PlateRunner, self).__init__(*args, **kw)
         self.plates = plates
         self._outdirs = dict([(p, d) for p, d in zip(plates, outdirs)])
-        self.params_ec = params_ec
         self._is_aborted = False
+
+        self.params_ec = params_ec
 
     def abort(self):
         self._is_aborted = True
@@ -66,14 +69,18 @@ class PlateRunner(QtCore.QObject):
             progress.text = ("Plate: '%s' (%d / %d)"
                              %(plate, i+1, len(self.plates)))
             self.progressUpdate.emit(progress)
+
+            ch5file = join(self._outdirs[plate], 'hdf5', "_all_positions.ch5")
             runner = PositionRunner(plate, self._outdirs[plate],
-                                    self.params_ec, parent=self)
+                                    self.params_ec, parent=self,
+                                    ch5file=ch5file)
             runner()
             self.progressUpdate.emit(progress)
 
+
 class PositionRunner(QtCore.QObject):
 
-    def __init__(self, plate, outdir, ecopts, positions=None, parent=None,
+    def __init__(self, plate, outdir, ecopts, ch5file, parent=None,
                  *args, **kw):
         super(PositionRunner, self).__init__(parent, *args, **kw)
         self.ecopts = ecopts # error correction options
@@ -83,13 +90,9 @@ class PositionRunner(QtCore.QObject):
         self._channel_dirs = dict()
         self._makedirs()
 
-        self.positions = positions
-        if positions is None:
-            self.positions = self._listdirs(self._analyzed_dir)
-
-    def _listdirs(self, path):
-        return sorted([x for x in os.listdir(path)
-                       if isdir(join(path, x)) and not x.startswith('_')])
+        self.ch5file = ch5file
+        self.files = glob.glob(dirname(ch5file)+"/*.ch5")
+        self.files = [f for f in self.files if "_all_positions" not in f]
 
     def _makedirs(self):
         """Create/setup output directories.
@@ -111,70 +114,64 @@ class PositionRunner(QtCore.QObject):
             else:
                 setattr(self, "_%s_dir" %basename(odir.lower()).strip("_"), odir)
 
-    def _gallery_image(self, pos, groupdict, channel, ext='png'):
-        fname = ("P%(position)s__T%(time)s__O%(object)s__B%(branch)s."
-                 "%(ext)s" %dict({'ext': ext}.items() + groupdict.items()))
-        fname = join(self._analyzed_dir, pos, 'gallery', channel, fname)
-        if isfile:
-            return fname
+    def _load_classdef(self, region):
+        classdef = ClassDefinition()
+        try:
+            ch5 = cellh5.CH5File(self.ch5file, "r")
+            cld = ch5.class_definition(region)
+        finally:
+            ch5.close()
+        classdef.load(cld)
+        return classdef
 
-    def _load_data(self, mappings, channel, classdef):
-        # XXX perhaps the data table should also implement the import
-        # --> having a data table for csv and cellh5...
+    # XXX use contextlib to close file pointer
+    def iterpos(self, ch5):
+        """Iterate over (sub)positions in a linearized way"""
+        for well, positions in ch5.positions.iteritems():
+            for position in positions:
+                yield ch5.get_position(well, position)
+
+    def _load_data(self, mappings, channel):
         dtable = HmmDataTable()
 
-        for pi, pos in enumerate(self.positions):
-            dtable.add_position(pos, mappings[pos])
-            files = glob.glob(join(self._analyzed_dir, pos, 'statistics',
-                                   'events')+os.sep+"*.txt")
-            progress = ProgressMsg(max=len(files),
-                                   meta="loading plate: %s, position:%s, (%d/%d)"
-                                   %(self.plate, pos, pi+1, len(self.positions)))
+        if isinstance(self.ecopts.regionnames[channel], tuple):
+            chreg = "__".join((channel,
+                               "-".join(self.ecopts.regionnames[channel])))
+        else:
+            chreg = "__".join((channel, self.ecopts.regionnames[channel]))
 
-            for i, file_ in enumerate(files):
-                QThread.currentThread().interruption_point()
-                matched = re_events.match(basename(file_))
-                try:
-                    ch = matched.group('channel')
-                    branch = matched.group('branch')
-                except AttributeError:
-                    pass
-                else:
-                    progress.increment_progress()
-                    if self.ecopts.ignore_tracking_branches and branch != '01':
-                        continue
-                    progress.text = basename(file_)
-                    self.parent().progressUpdate.emit(progress)
-                    if ch.lower() == channel:
-                        data = np.recfromcsv(file_, delimiter="\t")
+        progress = ProgressMsg(max=len(self.files))
 
-                        labels = data['class__label']
-                        probs = list()
-                        for prob in data['class__probability']:
-                            pstr = prob.strip('"').split(',')
+        for file_ in self.files:
+            position = splitext(basename(file_))[0]
+            progress.meta = meta=("loading plate: %s, file: %s"
+                                  %(self.plate, position))
+            progress.increment_progress()
 
-                            # sanity check for class labels in the definition and
-                            # the data file
-                            lbs = [int(p.split(':')[0]) for p in pstr]
-                            if set(classdef.class_names.keys()) != set(lbs):
-                                msg = ("The labels in the class definition and "
-                                       " the data files are inconsistent.\n%s, %s"
-                                       %(str(lbs),
-                                         str(classdef.class_names.keys())))
-                                raise RuntimeError(msg)
-                            probs.append(np.array([float(p.split(':')[1]) for p in pstr]))
-                        probs = np.array(probs)
+            QThread.currentThread().interruption_point()
+            self.parent().progressUpdate.emit(progress)
+            QtCore.QCoreApplication.processEvents()
 
-                        gfile = self._gallery_image(pos, matched.groupdict(),
-                                                    channel)
-                        dtable.add_track(labels, probs, pos, mappings[pos],
-                                         gfile)
+            ch5 = cellh5.CH5File(file_, "r")
+            for pos in self.iterpos(ch5):
+
+                objidx = np.array( \
+                    pos.get_events(output_second_branch=self.ecopts.ignore_tracking_branches),
+                    dtype=int)
+                tracks = pos.get_class_label(objidx, chreg)
+
+                probs = pos.get_prediction_probabilities(chreg)[objidx]
+                objids = pos.get_object_table(chreg)[objidx]
+
+                dtable.add_position(position, mappings[position])
+                dtable.add_tracks(tracks, probs, position, mappings[position],
+                                  objids)
+            ch5.close()
 
         if dtable.is_empty():
             raise RuntimeError("No data found for position '%s' and channel '%s' "
                                %(self.plate, channel))
-
-        return dtable
+        return dtable, self._load_classdef(chreg)
 
     def interruption_point(self, message=None):
         if message is not None:
@@ -184,14 +181,15 @@ class PositionRunner(QtCore.QObject):
 
     def __call__(self):
         self._makedirs()
-        mappings = PlateMapping(self.positions)
+
+        mappings = PlateMapping([splitext(basename(f))[0] for f in self.files])
         if self.ecopts.position_labels:
             mpfile = join(self.ecopts.mapping_dir, "%s.txt" %self.plate)
             mappings.read(mpfile)
 
         alldata = dict()
-        for channel, cld in self.ecopts.class_definition.iteritems():
-            dtable = self._load_data(mappings, channel, cld)
+        for channel in self.ecopts.regionnames.keys():
+            dtable, cld = self._load_data(mappings, channel)
             msg = 'performing error correction on channel %s' %channel
             self.interruption_point(msg)
 
@@ -236,7 +234,9 @@ class PositionRunner(QtCore.QObject):
                                    %(prefix, sby)), 'w') as fp:
                         traceback.print_exc(file=fp)
                         fp.write("Check if gallery images exist!")
-            report.export_hmm(join(self._hmm_dir, "%s-hmm.csv" %channel.title()), True)
+
+            report.export_hmm(join(self._hmm_dir, "%s-hmm.csv" %channel.title()),
+                              self.ecopts.sortby)
 
         if self.ecopts.multichannel_galleries:
             fn = join(self._gallery_dir, 'MultiChannelGallery_%s.png'

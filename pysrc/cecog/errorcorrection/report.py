@@ -12,7 +12,6 @@ __licence__ = 'LGPL'
 __all__ = ['HmmBucket', 'HmmReport']
 
 import csv
-from os.path import splitext, basename
 from collections import OrderedDict
 import numpy as np
 from matplotlib import pyplot as plt
@@ -27,11 +26,11 @@ class HmmBucket(object):
     """Container class to store and operate on 'cell trajectories'."""
 
     __slots__ = ['labels', 'hmm_labels', 'startprob', 'emismat', 'transmat',
-                 'groups', 'ntracks', 'stepwidth', '_dwell_times', 'fileinfo',
-                 'gallery_files', '_states']
+                 'groups', 'ntracks', 'stepwidth', '_dwell_times', 'startids',
+                 'nframes', '_states']
 
     def __init__(self, labels, hmm_labels, startprob, emismat, transmat, groups,
-                 ntracks, stepwidth=None, gallery_files=None):
+                 ntracks, startids, stepwidth=None):
         super(HmmBucket, self).__init__()
         self._dwell_times = None
         self.labels = labels
@@ -41,8 +40,9 @@ class HmmBucket(object):
         self.transmat = transmat
         self.groups = groups
         self.ntracks = ntracks
+        self.nframes = labels.shape[1]
         self.stepwidth = stepwidth
-        self.gallery_files = gallery_files
+        self.startids = startids
         self._states = None
 
     @property
@@ -51,7 +51,7 @@ class HmmBucket(object):
             self._states = np.unique(self.labels)
         return self._states
 
-    def iter_gallery(self, n=None, idx=None):
+    def itertracks(self, n=None, idx=None):
         """Iterator over gallery images and tracks."""
 
         if n is not None and idx is not None:
@@ -59,14 +59,14 @@ class HmmBucket(object):
                                 'arguments are exclusive'))
 
         if idx is None:
-            idx = np.arange(0, self.gallery_files.size, 1)
+            idx = np.arange(0, self.startids.size, 1)
             if n is not None:
                 np.random.shuffle(idx)
                 idx = idx[:n]
 
-        for track, gallery_file in zip(self.hmm_labels[idx],
-                                       self.gallery_files[idx]):
-            yield gallery_file, track
+        for track, startid in zip(self.hmm_labels[idx],
+                                       self.startids[idx]):
+            yield startid, track
 
     @property
     def dwell_times(self):
@@ -271,7 +271,7 @@ class HmmReport(object):
                     continue
                 image = np.array([])
                 tracks = list()
-                for file_, track in data.iter_gallery(n_galleries):
+                for startid, track in data.itertracks(n_galleries):
                     tracks.append(track)
                     try:
                         img = self._read_image(file_)
@@ -312,13 +312,13 @@ class HmmReport(object):
             if data is None:
                 continue
             image = np.array([])
-            for file_, track in data.iter_gallery(n_galleries):
+            for startid, track in data.itertracks(n_galleries):
                 try:
-                    img = self._read_image(file_)
+                    img = self._read_image(startid)
                     img = self._draw_labels(img, track)
                     image = np.vstack((image, img))
                 except ValueError:
-                    img = self._read_image(file_)
+                    img = self._read_image(startid)
                     img = self._draw_labels(img, track)
                     image = img
 
@@ -340,37 +340,20 @@ class HmmReport(object):
             image[size[1]-msize:size[1], i*size[0]:i*size[0]+msize] = color
         return image
 
-    def export_hmm(self, filename, align_in_lines=False):
+    def export_hmm(self, filename, grouping="Position"):
         """Export a table of tracks names and hmm_labels"""
 
         with open(filename, "w") as fp:
-            if align_in_lines:
-                writer = csv.writer(fp, delimiter=",")
-                for name, bucket in self.data.iteritems():
-                    if bucket is None:
-                        continue
-                    for fname, hmm_labels in bucket.iter_gallery():
-                        writer.writerow([basename(splitext(fname)[0])] + \
-                                            hmm_labels.tolist())
-            # transpose lines and columns
-            else:
-                fields = []
-                tracks = []
-                for name, bucket in self.data.iteritems():
-                    if bucket is None:
-                        continue
-                    for fname, hmm_labels in bucket.iter_gallery():
-                        fields.append(basename(splitext(fname)[0]))
-                        tracks.append(hmm_labels)
-
-                writer = csv.writer(fp, fields, delimiter=",")
-                writer.writerow(fields)
-                for line in zip(*tracks):
-                    writer.writerow(line)
+            writer = csv.writer(fp, delimiter=",")
+            writer.writerow(["# start_frame", "start_id", grouping] +
+                            range(1, self.data.values()[0].nframes+1, 1))
+            for name, bucket in self.data.iteritems():
+                if bucket is None:
+                    continue
+                for startid, hmm_labels in bucket.itertracks():
+                    writer.writerow(list(startid) + [name] + hmm_labels.tolist())
 
     def hmm_model(self, filename, figsize=(20, 12)):
-        from cecog import plots
-        reload(plots)
         pdf = PdfPages(filename)
         sp_props = dict(top=0.85, bottom=0.05, hspace=0.28, wspace=0.28,
                         left=0.05, right=0.95)
@@ -398,9 +381,11 @@ class HmmReport(object):
                                  xticks=classnames,
                                  xlabel='start prob.', text=title,
                                  axes=axarr[0, i])
-                plots.hmm_matrix(data.transmat, xticks=classnames, yticks=classnames,
+                plots.hmm_matrix(data.transmat, xticks=classnames,
+                                 yticks=classnames,
                                  xlabel='transition matrix', axes=axarr[1, i])
-                plots.hmm_matrix(data.emismat, xticks=classnames, yticks=classnames,
+                plots.hmm_matrix(data.emismat, xticks=classnames,
+                                 yticks=classnames,
                                  xlabel='emission matrix', axes=axarr[2, i])
             self._frame_off(axarr, i, 3)
             pdf.savefig(fig)

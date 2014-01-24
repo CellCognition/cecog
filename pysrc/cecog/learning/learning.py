@@ -56,45 +56,7 @@ class ClassDefinitionCore(object):
         raise NotImplementedError
 
 
-class ClassDefinition(ClassDefinitionCore):
-    """Load as save class definitions to csv files."""
-
-    _fieldnames = ('label', 'name', 'color')
-    DELIM = '\t'
-
-    def __init__(self, filename, *args, **kw):
-        self._filename = filename
-        self.hexcolors = dict()
-        self.class_labels = dict()
-        self.class_names = OrderedDict()
-        self.colormap = None
-
-    def load(self):
-        with open(self._filename, "r") as f:
-            reader = csv.reader(f, delimiter=self.DELIM, quoting=csv.QUOTE_NONE)
-            for (label_, name, color) in reader:
-                label = int(label_)
-                self.class_labels[name] = label
-                self.class_names[label] = name
-                self.hexcolors[name] = color
-
-        colors = ["#ffffff"]*(len(self.class_names)+1)
-        for k, v in self.class_names.iteritems():
-            colors[k] = self.hexcolors[v]
-        self.colormap = ListedColormap(colors, 'svm-colors')
-
-    def save(self, writeheader=False):
-        with open(self._filename, "w") as f:
-            writer = csv.DictWriter(f, self._fieldnames, delimiter=self.DELIM)
-            if writeheader:
-                writer.writeheader()
-            for label, name in self.class_names.iteritems():
-                writer.writerow({'label': label,
-                                 'name': name,
-                                 'color': self.hexcolors[name]})
-
-
-class ClassDefinitionUnsup(ClassDefinition):
+class ClassDefinitionUnsup(ClassDefinitionCore):
     """Unsupervised class definition has hard wired class labels and
     a destinct colormap to make it easy distinguishable from user defined
     class definitions.
@@ -114,6 +76,28 @@ class ClassDefinitionUnsup(ClassDefinition):
             self.class_labels[name] = i
             self.class_names[i] = name
             self.hexcolors[name] = rgb2hex(self.colormap(i))
+
+
+class ClassDefinition(ClassDefinitionCore):
+    """Class definition based on a recarray return from a ch5 file"""
+
+    def __init__(self):
+        self.hexcolors = dict()
+        self.class_labels = dict()
+        self.class_names = OrderedDict()
+        self.colormap = None
+
+    def load(self, classes):
+
+        for (label, name, color) in classes:
+            self.class_labels[name] = label
+            self.class_names[label] = name
+            self.hexcolors[name] = color
+
+        colors = ["#ffffff"]*(len(self.class_names)+1)
+        for k, v in self.class_names.iteritems():
+            colors[k] = self.hexcolors[v]
+        self.colormap = ListedColormap(colors, 'svm-colors')
 
 
 class BaseLearner(LoggerObject):

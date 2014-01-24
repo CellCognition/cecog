@@ -187,9 +187,9 @@ class HmmSklearn(HmmCore):
     def __call__(self):
         hmmdata = dict()
 
-        for (name, tracks, probs, finfo) in  \
+        for (name, tracks, probs, objids) in  \
                 self.dtable.iterby(self.ecopts.sortby, True):
-            if tracks is probs is finfo is None:
+            if tracks is probs is None:
                 hmmdata[name] = None
                 continue
 
@@ -221,6 +221,7 @@ class HmmSklearn(HmmCore):
                                est.trans,
                                self.dtable.groups(self.ecopts.sortby, name),
                                tracks.shape[0],
-                               self.ecopts.timelapse, finfo)
+                               objids[:, 0], # startids
+                               self.ecopts.timelapse)
             hmmdata[name] = bucket
         return hmmdata

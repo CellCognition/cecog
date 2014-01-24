@@ -13,15 +13,12 @@ __url__ = 'www.cellcognition.org'
 
 __all__ = ['ECParams']
 
-from os.path import join
+
 from collections import OrderedDict
 
-from cecog import CHANNEL_PREFIX
+from cecog import CHANNEL_PREFIX, CH_VIRTUAL
 from cecog.errorcorrection import PlateMapping
 from cecog.errorcorrection.hmm import estimator
-from cecog.learning.learning import LearnerFiles
-from cecog.learning.learning import ClassDefinition
-from cecog.learning.learning import ClassDefinitionUnsup
 
 
 # XXX belongs to the settings module/class
@@ -39,12 +36,10 @@ class ECParams(object):
                  'sortby', 'skip_plates', 'timeunit', 'overwrite_timelapse',
                  'timelapse', 'sorting', 'sorting_sequence', 'tmax',
                  'ignore_tracking_branches', 'write_gallery', 'n_galleries',
-                 'eventselection', 'nclusters', '_classdef',
+                 'eventselection', 'nclusters',
                  'multichannel_galleries', 'resampling_factor', 'hmm_algorithm']
 
     def __init__(self, settings, tstep, timeunit):
-
-        self._classdef = None
 
         if settings('ErrorCorrection', 'hmm_baumwelch'):
             self.hmm_algorithm = self.HMM_BAUMWELCH
@@ -60,9 +55,7 @@ class ECParams(object):
         # error correction or not
         for channel in CHANNEL_PREFIX:
             if settings('ErrorCorrection', channel):
-                self.regionnames[channel] = \
-                    settings('Classification', '%s_classification_regionname'
-                             %channel)
+                self.regionnames[channel] = self._regionname(settings, channel)
                 self.hmm_constrain[channel] = self._hmm_constrain( \
                     settings('ErrorCorrection', '%s_graph' %channel))
                 _setting = '%s_classification_envpath' %channel
@@ -121,23 +114,6 @@ class ECParams(object):
         self.nclusters = settings('EventSelection', 'num_clusters')
         self.resampling_factor = settings('ErrorCorrection', 'resampling_factor')
 
-    @property
-    def class_definition(self):
-        """Distinguish btw. supervised and unsupervised class/cluster-
-        definitinion.
-        """
-        if self._classdef is None:
-            classdef = dict()
-            for channel, clfdir in self.classifier_dirs.iteritems():
-                if self.eventselection == self.EVENTSELECTION_SUPERVISED:
-                    classdef[channel] = ClassDefinition( \
-                        join(clfdir, LearnerFiles.DEFINITION))
-                else:
-                    classdef[channel] = ClassDefinitionUnsup(self.nclusters)
-                classdef[channel].load()
-            self._classdef = classdef
-
-        return self._classdef
 
     def _hmm_constrain(self, cfile):
         """Load and validate (xsd-schema) the 'hmm constraints file'."""
@@ -148,6 +124,20 @@ class ECParams(object):
             # it is essential to do it here, before all the data is loaded
             hmmc = estimator.HMMConstraint(cfile)
         return hmmc
+
+    def _regionname(self, settings, channel):
+
+        if channel in CH_VIRTUAL:
+            region = tuple()
+            for channel2 in CHANNEL_PREFIX:
+                if channel2 in CH_VIRTUAL:
+                    continue
+                region += (settings.get("Classification", "%s_%s_region"
+                                        %(channel, channel2)), )
+        else:
+            region = settings("Classification",
+                              "%s_classification_regionname" %channel)
+        return region
 
     def __str__(self):
         return '\n'.join(["%s : %s" %(slot, getattr(self, slot))
