@@ -145,7 +145,7 @@ class PositionRunner(QtCore.QObject):
         for file_ in self.files:
             position = splitext(basename(file_))[0]
             progress.meta = meta=("loading plate: %s, file: %s"
-                                  %(self.plate, position))
+                                  %(self.plate, file_))
             progress.increment_progress()
 
             QThread.currentThread().interruption_point()
@@ -154,13 +154,11 @@ class PositionRunner(QtCore.QObject):
 
             ch5 = cellh5.CH5File(file_, "r")
             for pos in self.iterpos(ch5):
-
                 objidx = np.array( \
-                    pos.get_events(output_second_branch=self.ecopts.ignore_tracking_branches),
+                    pos.get_events(self.ecopts.ignore_tracking_branches),
                     dtype=int)
                 tracks = pos.get_class_label(objidx, chreg)
-
-                probs = pos.get_prediction_probabilities(chreg)[objidx]
+                probs = pos.get_prediction_probabilities(objidx, chreg)
                 objids = pos.get_object_table(chreg)[objidx]
 
                 dtable.add_position(position, mappings[position])
@@ -169,8 +167,9 @@ class PositionRunner(QtCore.QObject):
             ch5.close()
 
         if dtable.is_empty():
-            raise RuntimeError("No data found for position '%s' and channel '%s' "
-                               %(self.plate, channel))
+            raise RuntimeError(
+                "No data found for position '%s' and channel '%s' "
+                %(self.plate, channel))
         return dtable, self._load_classdef(chreg)
 
     def interruption_point(self, message=None):
