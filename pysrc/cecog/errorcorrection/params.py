@@ -130,8 +130,10 @@ class ECParams(object):
         if channel in CH_VIRTUAL:
             region = tuple()
             for channel2 in CHANNEL_PREFIX:
-                if channel2 in CH_VIRTUAL:
+                if channel2 in CH_VIRTUAL or not settings(
+                    "Classification", "merge_%s" %channel2):
                     continue
+
                 region += (settings.get("Classification", "%s_%s_region"
                                         %(channel, channel2)), )
         else:

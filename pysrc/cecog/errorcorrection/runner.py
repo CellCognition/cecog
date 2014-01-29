@@ -140,6 +140,7 @@ class PositionRunner(QtCore.QObject):
         else:
             chreg = "__".join((channel, self.ecopts.regionnames[channel]))
 
+
         progress = ProgressMsg(max=len(self.files))
 
         for file_ in self.files:
@@ -148,12 +149,18 @@ class PositionRunner(QtCore.QObject):
                                   %(self.plate, file_))
             progress.increment_progress()
 
+
             QThread.currentThread().interruption_point()
             self.parent().progressUpdate.emit(progress)
             QtCore.QCoreApplication.processEvents()
 
             ch5 = cellh5.CH5File(file_, "r")
             for pos in self.iterpos(ch5):
+                if not pos.has_classification(chreg):
+                    raise RuntimeError(("There is not classifier definition"
+                                        "\nwell: %s, positin %s"
+                                        %(pos.well, pos.pos)))
+
                 objidx = np.array( \
                     pos.get_events(self.ecopts.ignore_tracking_branches),
                     dtype=int)
