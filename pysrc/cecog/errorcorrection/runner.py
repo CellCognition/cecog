@@ -124,13 +124,6 @@ class PositionRunner(QtCore.QObject):
         classdef.load(cld)
         return classdef
 
-    # XXX use contextlib to close file pointer
-    def iterpos(self, ch5):
-        """Iterate over (sub)positions in a linearized way"""
-        for well, positions in ch5.positions.iteritems():
-            for position in positions:
-                yield ch5.get_position(well, position)
-
     def _load_data(self, mappings, channel):
         dtable = HmmDataTable()
 
@@ -155,10 +148,10 @@ class PositionRunner(QtCore.QObject):
             QtCore.QCoreApplication.processEvents()
 
             ch5 = cellh5.CH5File(file_, "r")
-            for pos in self.iterpos(ch5):
+            for pos in ch5.iter_positions():
                 if not pos.has_classification(chreg):
                     raise RuntimeError(("There is not classifier definition"
-                                        "\nwell: %s, positin %s"
+                                        "\nwell: %s, position %s"
                                         %(pos.well, pos.pos)))
 
                 objidx = np.array( \
