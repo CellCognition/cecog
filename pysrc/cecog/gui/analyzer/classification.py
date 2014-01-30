@@ -26,6 +26,7 @@ from PyQt4.Qt import *
 from cecog import CHANNEL_PREFIX, CH_VIRTUAL, CH_PRIMARY, CH_OTHER
 from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
 from cecog.gui.util import information
+from cecog.util.ctuple import CTuple
 from cecog.gui.analyzer import BaseProcessorFrame
 
 from cecog.threads.picker import PickerThread
@@ -36,7 +37,6 @@ from cecog.learning.learning import CommonClassPredictor
 from cecog.colors import hex2rgb
 
 from cecog.environment import CecogEnvironment
-
 
 class ClassifierResultFrame(QGroupBox):
 
@@ -484,18 +484,16 @@ class ClassificationFrame(BaseProcessorFrame):
             for pfx in (CH_PRIMARY+CH_OTHER):
                 if settings.get('Classification', 'merge_%s' %pfx):
                     region.append(settings.get("Classification", "merged_%s_region" %pfx))
-            region = tuple(region)
-            region_str = '-'.join(region)
+            region = CTuple(region)
         else:
             region = settings.get('Classification',
                                   '%s_classification_regionname' %prefix)
-            region_str = region
 
         rpar = {prefix.title():
                     {'raw': ('#FFFFFF', 1.0),
                      'contours': [(region, 'class_label', 1, False),
                                   (region, '#000000', 1, showids)]}}
-        cl_rendering = {'%s_classification_%s' %(prefix, region_str): rpar}
+        cl_rendering = {'%s_classification_%s' %(prefix, str(region)): rpar}
         return cl_rendering
 
 

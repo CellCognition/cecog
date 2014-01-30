@@ -25,7 +25,7 @@ from cecog import CHANNEL_PREFIX, VERSION
 from cecog import CH_OTHER, CH_VIRTUAL, CH_PRIMARY
 from cecog.gui.analyzer import BaseProcessorFrame, AnalyzerThread
 from cecog.gui.analyzer import HmmThread, MultiAnalyzerThread
-
+from cecog.util.ctuple import CTuple
 
 class ExportSettings(object):
     """Mixing for custom 'get_settings' methods."""
@@ -82,12 +82,12 @@ class ExportSettings(object):
                 default_color = self.plugin_mgr.region_info.colors[regions_primary[0]]
 
             regions = self._merged_regions(settings)
-            d = {'merged_contours_%s' %'-'.join(regions):
+            d = {'merged_contours_%s' %str(regions):
                      {"Merged": {'raw': ('#FFFFFF', 1.0),
                                  'contours': [(regions, default_color, 1, show_ids)]}}}
             settings.get("General", "rendering").update(d)
             if settings.get('Processing', 'merged_classification'):
-                d = {'merged_classification_%s' %'-'.join(regions):
+                d = {'merged_classification_%s' %str(regions):
                          {"Merged": {'raw': ('#FFFFFF', 1.0),
                                      'contours': [(regions, 'class_label', 1, False),
                                                   (regions, '#000000' , 1, show_ids_class)]}}}
@@ -111,7 +111,7 @@ class ExportSettings(object):
                 regions.append(settings.get("Classification",
                                             "merged_%s_region" %ch))
         # want regions hashable
-        return tuple(regions)
+        return CTuple(regions)
 
 
     def get_special_settings(self, settings, has_timelapse=True):

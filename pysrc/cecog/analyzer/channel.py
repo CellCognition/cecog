@@ -22,7 +22,7 @@ import glob
 import copy
 import types
 import numpy
-from collections import OrderedDict
+
 
 from cecog import ccore
 from cecog.colors import Colors
@@ -31,6 +31,7 @@ from cecog.analyzer.object import ImageObject, ObjectHolder, Orientation
 
 from cecog.util.logger import LoggerObject
 from cecog.plugin.metamanager import MetaPluginManager
+from cecog.util.ctuple import COrderedDict, CTuple
 
 class ChannelCore(LoggerObject):
 
@@ -364,7 +365,7 @@ class MergedChannel(ChannelCore):
     def __init__(self, *args, **kw):
         super(MergedChannel, self).__init__(*args, **kw)
         # defines channels an regions to concatenate
-        self._merge_regions = OrderedDict()
+        self._merge_regions = COrderedDict()
         self._channels = None
 
     @property
@@ -411,7 +412,8 @@ class MergedChannel(ChannelCore):
         if 'primary' in available_regions:
             default_region = 'primary'
         elif 'primary' in [x[:len('primary')] for x in available_regions]:
-            default_region = filter(lambda x: x[:len('primary')]=='primary', available_regions)[0]
+            default_region = filter(lambda x: x[:len('primary')]=='primary',
+                                    available_regions)[0]
         else:
             default_region = available_regions[0]
 
@@ -420,8 +422,7 @@ class MergedChannel(ChannelCore):
 
     @property
     def regkey(self):
-        # tuples are hashable
-        return tuple(self._merge_regions.values())
+        return self._merge_regions.values()
 
     def meta_images(self, alpha=1.0):
         """Return a list of image, hexcolor, alpha-value tripples, which

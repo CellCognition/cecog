@@ -18,6 +18,7 @@ from cecog.analyzer.core import Picker
 
 from cecog.learning.learning import CommonObjectLearner
 from cecog import CH_PRIMARY, CH_OTHER, CH_VIRTUAL
+from cecog.util.ctuple import COrderedDict
 
 class PickerThread(CoreThread):
 
@@ -28,7 +29,7 @@ class PickerThread(CoreThread):
     def _channel_regions(self, pchannel, chid):
         """Return a dict that contains the processing channel an the region
         used for feature extraction."""
-        regions = OrderedDict()
+        regions = COrderedDict()
         if chid is None:
             for prefix in (CH_PRIMARY+CH_OTHER):
                 if self._settings.get("Classification", "merge_%s" %prefix):

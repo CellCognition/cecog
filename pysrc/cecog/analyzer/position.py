@@ -46,6 +46,7 @@ from cecog.export import TrackExporter, EventExporter, TC3Exporter
 from cecog.util.logger import LoggerObject
 from cecog.util.stopwatch import StopWatch
 from cecog.util.util import makedirs
+from cecog.util.ctuple import COrderedDict
 
 FEATURE_MAP = {'featurecategory_intensity': ['normbase', 'normbase2'],
                'featurecategory_haralick': ['haralick', 'haralick2'],
@@ -320,7 +321,7 @@ class PositionCore(LoggerObject):
 
     def _channel_regions(self, p_channel):
         """Return a dict of of channel region pairs according to the classifier"""
-        regions = OrderedDict()
+        regions = COrderedDict()
         if self.CHANNELS[p_channel.lower()].is_virtual():
             for prefix, channel in self.CHANNELS.iteritems():
                 if channel.is_virtual():
@@ -342,7 +343,7 @@ class PositionCore(LoggerObject):
             if isinstance(region, basestring):
                 chreg[chname] = region
             else:
-                chreg[chname] = tuple(region.values())
+                chreg[chname] = region.values()
         return chreg
 
 
@@ -556,10 +557,6 @@ class PositionAnalyzer(PositionCore):
     def export_object_counts(self):
         fname = join(self._statistics_dir, 'P%s__object_counts.txt' % self.position)
 
-        # at least the total count for primary is always exported
-        # OLD: ch_info = OrderedDict([('Primary', ('primary', [], []))])
-        # but this does not work any more if we admit merged channels
-        # (which might be the only ones we are interested in)
         ch_info = OrderedDict()
         for name, clf in self.classifiers.iteritems():
             names = clf.class_names.values()
@@ -574,10 +571,6 @@ class PositionAnalyzer(PositionCore):
         pplot_ymax = \
             self.settings.get('Output', 'export_object_counts_ylim_max')
 
-        # plot only for primary channel so far!
-        #if 'Primary' in ch_info:
-        #    self.timeholder.exportPopulationPlots(fname, self._plots_dir, self.position,
-        #                                          self.meta_data, ch_info['Primary'], pplot_ymax)
         self.timeholder.exportPopulationPlots(ch_info, self._plots_dir,
                                               self.plate_id, self.position,
                                               ymax=pplot_ymax)

@@ -141,7 +141,7 @@ class BaseLearner(LoggerObject):
         if len(self.channels) == 1:
             return self.channels.values()[0]
         else:
-            return tuple(self.channels.values())
+            return self.channels.values()
 
     @property
     def feature_names(self):

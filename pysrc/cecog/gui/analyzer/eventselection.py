@@ -73,6 +73,8 @@ class EventSelectionFrame(BaseProcessorFrame):
         settings.set('Processing', 'tertiary_featureextraction', False)
         settings.set('Processing', 'tertiary_classification', False)
         settings.set('Processing', 'tertiary_processChannel', False)
+        settings.set('Processing', 'merged_classification', False)
+        settings.set('Processing', 'merged_processChannel', False)
 
         show_ids = settings.get('Output', 'rendering_contours_showids')
         show_ids_class = settings.get('Output', 'rendering_class_showids')

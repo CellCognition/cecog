@@ -1066,18 +1066,12 @@ class TimeHolder(OrderedDict):
                 for chname, (region_name, class_names, _) in ch_info.iteritems():
                     channel = channels[chname]
 
-                    # XXX - class ctuple in channel.py
-                    if isinstance(region_name, tuple):
-                        rname = '-'.join(region_name)
-                    else:
-                        rname = region_name
-
                     if not has_header:
                         keys = ['total'] + class_names
                         line4 += keys
                         line3 += ['total'] + ['class']*len(class_names)
                         line1 += [chname.upper()]*len(keys)
-                        line2 += [str(rname)]*len(keys)
+                        line2 += [str(region_name)]*len(keys)
 
                     region = channel.get_region(region_name)
                     total = len(region)
@@ -1243,9 +1237,9 @@ class TimeHolder(OrderedDict):
 
                 for channel in channels.values():
 
-                    for region_id in channel.region_names():
+                    for rname in channel.region_names():
 
-                        region = channel.get_region(region_id)
+                        region = channel.get_region(rname)
                         if obj_id in region:
                             #FIXME:
                             feature_lookup2 = feature_lookup.copy()
@@ -1258,12 +1252,6 @@ class TimeHolder(OrderedDict):
                                 if channel.NAME == 'Primary':
                                     keys += ['centerX', 'centerY']
                                 keys += feature_lookup2.keys()
-
-                                # XXX ctuple class in file channel.py
-                                if isinstance(region_id, tuple):
-                                    rname ="-".join(region_id)
-                                else:
-                                    rname = region_id
 
                                 line1 += ['%s_%s_%s' % (channel.NAME.upper(),
                                                         rname, key)

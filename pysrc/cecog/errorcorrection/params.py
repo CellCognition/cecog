@@ -19,6 +19,7 @@ from collections import OrderedDict
 from cecog import CHANNEL_PREFIX, CH_VIRTUAL
 from cecog.errorcorrection import PlateMapping
 from cecog.errorcorrection.hmm import estimator
+from cecog.util.ctuple import CTuple
 
 
 # XXX belongs to the settings module/class
@@ -128,7 +129,7 @@ class ECParams(object):
     def _regionname(self, settings, channel):
 
         if channel in CH_VIRTUAL:
-            region = tuple()
+            region = CTuple()
             for channel2 in CHANNEL_PREFIX:
                 if channel2 in CH_VIRTUAL or not settings(
                     "Classification", "merge_%s" %channel2):
