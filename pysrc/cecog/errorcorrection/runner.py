@@ -115,13 +115,12 @@ class PositionRunner(QtCore.QObject):
                 setattr(self, "_%s_dir" %basename(odir.lower()).strip("_"), odir)
 
     def _load_classdef(self, region):
-        classdef = ClassDefinition()
         try:
             ch5 = cellh5.CH5File(self.ch5file, "r")
             cld = ch5.class_definition(region)
         finally:
             ch5.close()
-        classdef.load(cld)
+        classdef = ClassDefinition(cld)
         return classdef
 
     def _load_data(self, mappings, channel):
@@ -155,7 +154,7 @@ class PositionRunner(QtCore.QObject):
                                         %(pos.well, pos.pos)))
 
                 objidx = np.array( \
-                    pos.get_events(self.ecopts.ignore_tracking_branches),
+                    pos.get_events(not self.ecopts.ignore_tracking_branches),
                     dtype=int)
                 tracks = pos.get_class_label(objidx, chreg)
                 probs = pos.get_prediction_probabilities(objidx, chreg)
@@ -201,7 +200,6 @@ class PositionRunner(QtCore.QObject):
             data = hmm()
             alldata[channel] =  data
 
-            # plotting and export
             report = HmmReport(data, self.ecopts, cld, self._hmm_dir)
             prefix = "%s_%s" %(channel.title(), self.ecopts.regionnames[channel])
             sby = self.ecopts.sortby.replace(" ", "_")

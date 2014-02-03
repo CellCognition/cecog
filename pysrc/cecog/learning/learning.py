@@ -32,6 +32,7 @@ from cecog.learning.util import SparseWriter, ArffWriter, ArffReader
 from cecog.learning.classifier import LibSvmClassifier as Classifier
 from cecog.util.logger import LoggerObject
 from cecog.util.util import makedirs
+from cecog.learning.classifier import GaussianMixtureModel
 
 class LearnerFiles(object):
     # to collect the file names at one place
@@ -42,18 +43,22 @@ class LearnerFiles(object):
 
 class ClassDefinitionCore(object):
 
+    def __init__(self, *args, **kw):
+        self.feature_names = None
+        self.hexcolors = dict()
+        self.class_labels = dict()
+        self.class_names = OrderedDict()
+
+    @property
+    def n_classes(self):
+        return len(self.class_names)
+
     @property
     def normalize(self):
         """Return a matplotlib normalization instance to the class lables
         corretly mapped to the colors"""
         return mpl.colors.Normalize(vmin=0,
                                     vmax=max(self.class_names.keys()))
-
-    def load(self):
-        raise NotImplementedError
-
-    def save(self):
-        raise NotImplementedError
 
 
 class ClassDefinitionUnsup(ClassDefinitionCore):
@@ -63,14 +68,12 @@ class ClassDefinitionUnsup(ClassDefinitionCore):
     """
 
     def __init__(self, nclusters, *args, **kw):
+        super(ClassDefinitionUnsup, self).__init__(*args, **kw)
         self.nclusters = nclusters
-        self.hexcolors = dict()
-        self.class_labels = dict()
-        self.class_names = OrderedDict()
-        self.colormap = None
-
-    def load(self):
         self.colormap = unsupervised_cmap(self.nclusters)
+        # dummy attribute to recyle export function in timeholder
+        self.classifier = GaussianMixtureModel()
+
         for i in xrange(self.nclusters):
             name = "cluster-%d" %i
             self.class_labels[name] = i
@@ -81,23 +84,17 @@ class ClassDefinitionUnsup(ClassDefinitionCore):
 class ClassDefinition(ClassDefinitionCore):
     """Class definition based on a recarray return from a ch5 file"""
 
-    def __init__(self):
-        self.hexcolors = dict()
-        self.class_labels = dict()
-        self.class_names = OrderedDict()
-        self.colormap = None
-
-    def load(self, classes):
-
+    def __init__(self, classes, *args, **kw):
+        super(ClassDefinition, self).__init__(*args, **kw)
         for (label, name, color) in classes:
             self.class_labels[name] = label
             self.class_names[label] = name
             self.hexcolors[name] = color
 
-        colors = ["#ffffff"]*(len(self.class_names)+1)
+        colors = ["#ffffff"]*(max(self.class_names)+1)
         for k, v in self.class_names.iteritems():
             colors[k] = self.hexcolors[v]
-        self.colormap = ListedColormap(colors, 'svm-colors')
+        self.colormap = ListedColormap(colors, 'cmap-from-table')
 
 
 class BaseLearner(LoggerObject):
@@ -188,7 +185,6 @@ class BaseLearner(LoggerObject):
     @property
     def n_classes(self):
         return len(self.class_names)
-
 
     def clear(self):
         self.dctFeatureData.clear()
@@ -347,6 +343,7 @@ class BaseLearner(LoggerObject):
         self.exportToArff()
         self.exportToSparse()
         self.exportSampleNames()
+
 
 class CommonClassPredictor(BaseLearner):
 
@@ -559,8 +556,6 @@ class CommonClassPredictor(BaseLearner):
                 predictions = svm.cross_validation(problem, param, fold)
                 predictions = map(int, predictions)
 
-                #print n,c,g
-
                 conf = ConfusionMatrix.from_lists(labels, predictions,
                                                   self.class_names.keys())
                 yield n, l2c, l2g, conf
@@ -604,7 +599,6 @@ if __name__ ==  "__main__":
         learner = CommonClassPredictor(sys.argv[1])
         learner.importFromArff()
 #        c, g, conf = learner.importConfusion()
-        import pdb; pdb.set_trace()
     else:
         raise IOError("%s\n is not a valid directory" %sys.argv[1])
     #learner.statsFromConfusion(conf)

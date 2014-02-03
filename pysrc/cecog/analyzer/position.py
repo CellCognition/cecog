@@ -446,6 +446,7 @@ class PositionAnalyzer(PositionCore):
 
     def setup_classifiers(self):
         sttg = self.settings
+
         # processing channel, color channel
         for p_channel, c_channel in self.ch_mapping.iteritems():
             self.settings.set_section('Processing')
@@ -655,6 +656,15 @@ class PositionAnalyzer(PositionCore):
         exporter = TC3Exporter(self._tes.tc3data, self._tc3_dir, nclusters, t_step,
                                TimeConverter.MINUTES, self.position)
         exporter()
+
+        # export tc3 labels to hdf5:
+        for frame, channels in self.timeholder.iteritems():
+            for chname, channel in channels.iteritems():
+                holder = channel.get_region(channel.region_names()[0])
+                # this is special to UES
+                if self._tes.classdef.feature_names is None:
+                    self._tes.classdef.feature_names = holder.feature_names
+                self.timeholder.save_classlabels(channel, holder, self._tes.classdef)
 
     def __call__(self):
         # include hdf5 file name in hdf5_options

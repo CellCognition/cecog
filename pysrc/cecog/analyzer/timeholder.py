@@ -22,12 +22,13 @@ import csv
 
 from collections import OrderedDict
 
-
 import numpy
 import h5py
 import matplotlib
 matplotlib.use('Agg', warn=False)
 from matplotlib import pyplot
+
+from cellh5 import CH5Const
 
 from cecog import ccore
 from cecog.util.stopwatch import StopWatch
@@ -35,7 +36,6 @@ from cecog.io.imagecontainer import Coordinate
 from cecog.io.imagecontainer import MetaImage
 from cecog.analyzer.channel import PrimaryChannel
 from cecog.plugin.metamanager import MetaPluginManager
-
 from cecog.analyzer.tracker import Tracker
 
 def chunk_size(shape):
@@ -56,11 +56,12 @@ def max_shape(shape):
     x = shape[4]
     return (c, t, z, y, x)
 
-#-------------------------------------------------------------------------------
-# classes:
-#
 
 class TimeHolder(OrderedDict):
+
+    # label for unlabled objects
+    UNLABELED = CH5Const.UNLABELED_PRED
+    UNLABELED_PROB = CH5Const.UNLABELED_PROB
 
     HDF5_GRP_DEFINITION = "definition"
     HDF5_GRP_RELATION = "relation"
@@ -511,8 +512,9 @@ class TimeHolder(OrderedDict):
 
     def _convert_region_name(self, channel_name, region_name, prefix='region'):
 
-        if isinstance(region_name, tuple):
-            region_name = '-'.join(region_name)
+        # if isinstance(region_name, tuple):
+        #     # import pdb; pdb.set_trace()
+        #     region_name = '-'.join(region_name)
 
         s = '%s__%s' % (channel_name.lower(), region_name)
         if not prefix is None and len(prefix) > 0:
@@ -870,8 +872,6 @@ class TimeHolder(OrderedDict):
     def serialize_tracking(self, graph):
 
         # export full graph structure to .dot file
-        #path_out = self._settings.get('General', 'pathout')
-        #tracker.exportGraph(join(path_out, 'graph.dot'))
         if self._hdf5_create and self._hdf5_include_tracking:
             grp = self._grp_cur_position[self.HDF5_GRP_OBJECT]
 
@@ -880,18 +880,11 @@ class TimeHolder(OrderedDict):
             nr_edges = graph.number_of_edges()
             nr_objects = len(head_nodes)
 
-            # export graph structure of every head node to .dot file
-            #for node_id in head_nodes:
-            #    tracker.exportSubGraph(join(path_out, 'graph__%s.dot' % node_id), node_id)
-
             var_rel = grp.create_dataset('tracking',
                                          (nr_edges, ),
                                          self.HDF5_DTYPE_RELATION,
                                          chunks=(nr_edges if nr_edges > 0 else 1,),
                                          compression=self._hdf5_compression)
-#            grp = self._grp_cur_position[self.HDF5_GRP_OBJECT]
-#            grp_cur_obj = grp.create_group('track')
-#            var_id = grp_cur_obj.create_dataset(self.HDF5_NAME_ID, (nr_objects,), self.HDF5_DTYPE_ID)
 
             prefix = PrimaryChannel.PREFIX
             data = []
@@ -904,9 +897,7 @@ class TimeHolder(OrderedDict):
                     Tracker.split_nodeid(tail_id)[:2]
                 tail_frame_idx = self._frames_to_idx[tail_frame]
 
-                #head_obj_id_meta = self._object_coord_to_id[(prefix, (head_frame_idx, head_obj_id))]
                 head_obj_idx_meta = self._object_coord_to_idx[(prefix, (head_frame_idx, head_obj_id))]
-                #tail_obj_id_meta = self._object_coord_to_id[(prefix, (tail_frame_idx, tail_obj_id))]
                 tail_obj_idx_meta = self._object_coord_to_idx[(prefix, (tail_frame_idx, tail_obj_id))]
 
                 data.append((head_obj_idx_meta,
@@ -973,10 +964,13 @@ class TimeHolder(OrderedDict):
                                                       self.HDF5_DTYPE_EDGE,
                                                       chunks=(1,), maxshape=(None,))
 
+
+
+
     def serialize_classification(self, channel_name, region, predictor):
         if self._hdf5_create and self._hdf5_include_classification:
             channel = self[self._iCurrentT][channel_name]
-            #region = channel.get_region(region_name)
+
             combined_region_name = self._convert_region_name( \
                 channel_name, region.name, prefix=None)
 
@@ -1048,6 +1042,7 @@ class TimeHolder(OrderedDict):
             for i, obj in enumerate(region.itervalues()):
                 dset_prediction[i+offset] = (label_to_idx[obj.iLabel],)
                 dset_pobability[i+offset] = obj.dctProb.values()
+
 
     def exportObjectCounts(self, filename, pos, meta_data, ch_info,
                            sep='\t', has_header=False):
@@ -1290,3 +1285,83 @@ class TimeHolder(OrderedDict):
                         file_ = importer.dimension_lookup[position][frame][color][zslice]
                         table[chname] = join(importer.path, file_)
                 writer.writerow(table)
+
+    def save_classlabels(self, channel, region, predictor):
+        if not (self._hdf5_create and self._hdf5_include_classification):
+            return
+
+        channel_region = ("%s__%s" %(channel.NAME, region.name)).lower()
+
+        nr_classes = predictor.n_classes
+        nr_objects = len(region)
+
+        # 1) write /definition - classifier definition
+        global_def_group = self._grp_def[self.HDF5_GRP_FEATURE].require_group(channel_region)
+        classification_group = global_def_group.require_group('object_classification')
+
+        # class labels
+        if 'class_labels' not in classification_group:
+            dt = numpy.dtype([('label', 'int32'),
+                              ('name', '|S100'),
+                              ('color', '|S9')])
+            var = classification_group.create_dataset('class_labels', (nr_classes,), dt)
+            var[:] = zip(predictor.class_names.keys(),
+                         predictor.class_names.values(),
+                         [predictor.hexcolors[n] for n in predictor.class_names.values()])
+
+            # classifier
+            dt = numpy.dtype([('name', '|S512'),
+                              ('method', '|S512'),
+                              ('version', '|S512'),
+                              ('parameter', '|S512'),
+                              ('description', '|S512')])
+            var = classification_group.create_dataset('classifier', (1,), dt)
+
+            var[0] = (channel.NAME, predictor.classifier.METHOD,
+                      predictor.classifier.NAME, '', '')
+
+            # feature names
+            feature_names = predictor.feature_names
+            var = classification_group.create_dataset('features', (len(feature_names),), [('object_feautres','|S512'),])
+            var[:] = feature_names
+
+        # 2) write to /sample  prediction and probablilities
+        current_classification_grp =  \
+            self._grp_cur_position[self.HDF5_GRP_FEATURE].require_group(channel_region)
+        current_classification_grp = current_classification_grp.require_group('object_classification')
+
+        if 'prediction' not in current_classification_grp:
+            dt = numpy.dtype([('label_idx', 'int32')])
+            dset_prediction = current_classification_grp.create_dataset('prediction',
+                                                                        (nr_objects, ), dt,
+                                                                        chunks=(nr_objects if nr_objects > 0 else 1,),
+                                                                        compression=self._hdf5_compression,
+                                                                        maxshape=(None,))
+            offset = 0
+        else:
+            dset_prediction = current_classification_grp['prediction']
+            offset = len(dset_prediction)
+            dset_prediction.resize((nr_objects + offset,))
+
+        var_name = 'probability'
+        if not var_name in current_classification_grp:
+            dset_probability = current_classification_grp.create_dataset(var_name, (nr_objects, nr_classes),
+                                       'float',
+                                       chunks=(nr_objects if nr_objects > 0 else 1, nr_classes),
+                                       compression=self._hdf5_compression,
+                                       maxshape=(None, nr_classes)
+                                       )
+        else:
+            dset_probability = current_classification_grp[var_name]
+            dset_probability.resize((offset+nr_objects, nr_classes))
+
+        label2idx = dict([(l, i) for i, l in enumerate(predictor.class_names.keys())])
+
+        for i, obj in enumerate(region.itervalues()):
+            # replace default for unlabeld object with numerical values
+            if obj.iLabel is None:
+                dset_prediction[i+offset] = (self.UNLABELED, )
+                dset_probability[i+offset] = [self.UNLABELED_PROB]*predictor.n_classes
+            else:
+                dset_prediction[i+offset] = (label2idx[obj.iLabel], )
+                dset_probability[i+offset] = obj.dctProb.values()

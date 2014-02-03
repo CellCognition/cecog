@@ -53,7 +53,6 @@ class HmmTde(HmmCore):
 
         states = np.unique(tracks)
         est = TdeEstimator(states, probs, tracks)
-
         return est
 
     def decode(self, tracks, probs, est):

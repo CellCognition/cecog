@@ -25,6 +25,7 @@ from cecog.util.logger import LoggerObject
 from cecog.analyzer.tracker import Tracker
 from cecog.tc3 import TC3EventFilter
 from cecog.tc3 import TemporalClustering
+from cecog.learning.learning import ClassDefinitionUnsup
 
 
 # TODO: Recursion limit has to be set higher than 1000,
@@ -307,6 +308,7 @@ class EventSelection(EventSelectionCore):
                                        level=level+1, found_splitid=found_splitid)
 
 class UnsupervisedEventSelection(EventSelectionCore):
+
     def __init__(self, graph, transitions, forward_range, backward_range,
                  forward_labels, backward_labels, forward_check,
                  backward_check, num_clusters, min_cluster_size,
@@ -327,6 +329,8 @@ class UnsupervisedEventSelection(EventSelectionCore):
         self.num_clusters = num_clusters
         self.min_cluster_size = min_cluster_size
         self.tc3data = None
+        self.classdef = ClassDefinitionUnsup(self.num_clusters)
+
 
     def _filter_nans(self, data, nodes):
         """Delete columns from data that contain NAN delete items from
@@ -338,7 +342,6 @@ class UnsupervisedEventSelection(EventSelectionCore):
 
     def _save_class_labels(self, labels, nodes, probabilities,
                            prefix='unsupervised'):
-        cmap = unsupervised_cmap(self.num_clusters)
 
         # clear labels from binary classification
         for node in self.graph.node_list():
@@ -353,7 +356,7 @@ class UnsupervisedEventSelection(EventSelectionCore):
             obj.iLabel = label
             obj.strClassName = "%s-%d" %(prefix, label)
             obj.dctProb = dict((i, v) for i, v in enumerate(probs))
-            rgb = cmap(label)
+            rgb = self.classdef.colormap(label)
             obj.strHexColor = rgb2hex(rgb)
 
     def _delete_tracks(self, trackids):
