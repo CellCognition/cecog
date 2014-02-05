@@ -27,6 +27,7 @@ from cecog.gui.analyzer import BaseProcessorFrame, AnalyzerThread
 from cecog.gui.analyzer import HmmThread, MultiAnalyzerThread
 from cecog.util.ctuple import CTuple
 
+
 class ExportSettings(object):
     """Mixing for custom 'get_settings' methods."""
 
@@ -220,3 +221,23 @@ class ProcessingFrame(BaseProcessorFrame, ExportSettings):
         self.add_expanding_spacer()
         self._init_control()
         self.log_window = SubProcessLogWindow()
+
+
+    def _get_modified_settings(self, name, has_timelapse=True):
+        settings = BaseProcessorFrame._get_modified_settings( \
+            self, name, has_timelapse)
+
+        # special clase for UES, clustering takes place afterwards
+        if settings('EventSelection', 'unsupervised_event_selection'):
+            settings.get('General', 'rendering_class').clear()
+            settings.set('Processing', 'primary_classification', True)
+            settings.set('Processing', 'secondary_featureextraction', False)
+            settings.set('Processing', 'secondary_classification', False)
+            settings.set('Processing', 'secondary_processChannel', False)
+            settings.set('Processing', 'tertiary_featureextraction', False)
+            settings.set('Processing', 'tertiary_classification', False)
+            settings.set('Processing', 'tertiary_processChannel', False)
+            settings.set('Processing', 'merged_classification', False)
+            settings.set('Processing', 'merged_processChannel', False)
+
+        return settings

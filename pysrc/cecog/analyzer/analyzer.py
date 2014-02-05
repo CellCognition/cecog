@@ -26,6 +26,7 @@ from cecog.util.logger import LoggerObject
 from cecog.util.util import makedirs
 from cecog.colors import hex2rgb
 
+
 class CellAnalyzer(LoggerObject):
 
     def __init__(self, timeholder, position, create_images, binning_factor,
@@ -386,4 +387,3 @@ class CellAnalyzer(LoggerObject):
                 obj.dctProb = probs
                 obj.strClassName = predictor.class_names[label]
                 obj.strHexColor = predictor.hexcolors[obj.strClassName]
-        self.timeholder.serialize_classification(predictor.name, holder, predictor)

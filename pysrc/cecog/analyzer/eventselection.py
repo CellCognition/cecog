@@ -20,12 +20,11 @@ from scipy import stats
 from matplotlib import mlab
 from sklearn.cluster import KMeans
 
-from cecog.colors import rgb2hex, unsupervised_cmap, BINARY_CMAP
+from cecog.colors import rgb2hex, BINARY_CMAP
 from cecog.util.logger import LoggerObject
 from cecog.analyzer.tracker import Tracker
 from cecog.tc3 import TC3EventFilter
 from cecog.tc3 import TemporalClustering
-from cecog.learning.learning import ClassDefinitionUnsup
 
 
 # TODO: Recursion limit has to be set higher than 1000,
@@ -309,7 +308,7 @@ class EventSelection(EventSelectionCore):
 
 class UnsupervisedEventSelection(EventSelectionCore):
 
-    def __init__(self, graph, transitions, forward_range, backward_range,
+    def __init__(self, graph, classdef, transitions, forward_range, backward_range,
                  forward_labels, backward_labels, forward_check,
                  backward_check, num_clusters, min_cluster_size,
                  allow_one_daughter_cell=True, varfrac=0.99, max_in_degree=1,
@@ -329,7 +328,7 @@ class UnsupervisedEventSelection(EventSelectionCore):
         self.num_clusters = num_clusters
         self.min_cluster_size = min_cluster_size
         self.tc3data = None
-        self.classdef = ClassDefinitionUnsup(self.num_clusters)
+        self.classdef = classdef
 
 
     def _filter_nans(self, data, nodes):

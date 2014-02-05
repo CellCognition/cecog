@@ -965,85 +965,6 @@ class TimeHolder(OrderedDict):
                                                       chunks=(1,), maxshape=(None,))
 
 
-
-
-    def serialize_classification(self, channel_name, region, predictor):
-        if self._hdf5_create and self._hdf5_include_classification:
-            channel = self[self._iCurrentT][channel_name]
-
-            combined_region_name = self._convert_region_name( \
-                channel_name, region.name, prefix=None)
-
-            nr_classes = predictor.n_classes
-            nr_objects = len(region)
-
-            ### 1) write global classifier definition
-            global_def_group = self._grp_def[self.HDF5_GRP_FEATURE].require_group(combined_region_name)
-            classification_group = global_def_group.require_group('object_classification')
-
-            # class labels
-            if 'class_labels' not in classification_group:
-                dt = numpy.dtype([('label', 'int32'),
-                                  ('name', '|S100'),
-                                  ('color', '|S9')])
-                var = classification_group.create_dataset('class_labels', (nr_classes,), dt)
-                var[:] = zip(predictor.class_names.keys(),
-                             predictor.class_names.values(),
-                             [predictor.hexcolors[n] for n in predictor.class_names.values()])
-
-                # classifier
-                dt = numpy.dtype([('name', '|S512'),
-                                          ('method', '|S512'),
-                                          ('version', '|S512'),
-                                          ('parameter', '|S512'),
-                                          ('description', '|S512')])
-                var = classification_group.create_dataset('classifier', (1,), dt)
-
-                var[0] = (predictor.name, predictor.classifier.METHOD,
-                          predictor.classifier.NAME, '', '')
-
-                feature_names = predictor.feature_names
-                var = classification_group.create_dataset('features', (len(feature_names),), [('object_feautres','|S512'),])
-                var[:] = feature_names
-
-            ### 2) write prediction and probablilities
-            current_classification_grp = self._grp_cur_position[self.HDF5_GRP_FEATURE].require_group(combined_region_name)
-            current_classification_grp = current_classification_grp.require_group('object_classification')
-
-            if 'prediction' not in current_classification_grp:
-                dt = numpy.dtype([('label_idx', 'int32')])
-                dset_prediction = current_classification_grp.create_dataset('prediction',
-                                                                            (nr_objects, ), dt,
-                                                                            chunks=(nr_objects if nr_objects > 0 else 1,),
-                                                                            compression=self._hdf5_compression,
-                                                                            maxshape=(None,))
-                offset = 0
-            else:
-                dset_prediction = current_classification_grp['prediction']
-                offset = len(dset_prediction)
-                dset_prediction.resize((nr_objects + offset,))
-
-            var_name = 'probability'
-            if not var_name in current_classification_grp:
-                dset_pobability = current_classification_grp.create_dataset(var_name, (nr_objects, nr_classes),
-                                           'float',
-                                           chunks=(nr_objects if nr_objects > 0 else 1, nr_classes),
-                                           compression=self._hdf5_compression,
-                                           maxshape=(None, nr_classes)
-                                           )
-            else:
-                dset_pobability = current_classification_grp[var_name]
-                dset_pobability.resize((offset+nr_objects, nr_classes))
-
-            label_to_idx = dict([(label, i)
-                                 for i, label in
-                                 enumerate(predictor.class_names.keys())])
-
-            for i, obj in enumerate(region.itervalues()):
-                dset_prediction[i+offset] = (label_to_idx[obj.iLabel],)
-                dset_pobability[i+offset] = obj.dctProb.values()
-
-
     def exportObjectCounts(self, filename, pos, meta_data, ch_info,
                            sep='\t', has_header=False):
 
@@ -1287,6 +1208,7 @@ class TimeHolder(OrderedDict):
                 writer.writerow(table)
 
     def save_classlabels(self, channel, region, predictor):
+        """Save class labels and preditions to hdf5."""
         if not (self._hdf5_create and self._hdf5_include_classification):
             return
 
@@ -1322,7 +1244,8 @@ class TimeHolder(OrderedDict):
 
             # feature names
             feature_names = predictor.feature_names
-            var = classification_group.create_dataset('features', (len(feature_names),), [('object_feautres','|S512'),])
+            var = classification_group.create_dataset('features', (len(feature_names),), \
+                                                          [('object_feautres','|S512'),])
             var[:] = feature_names
 
         # 2) write to /sample  prediction and probablilities

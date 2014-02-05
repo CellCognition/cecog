@@ -91,7 +91,10 @@ class EventSelectionFrame(BaseProcessorFrame):
         # setting up primary channel and live rendering
         if settings.get('EventSelection', 'unsupervised_event_selection'):
             settings.set('Processing', 'primary_featureextraction', True)
-            settings.set('Processing', 'primary_classification', False)
+            settings.set('Processing', 'primary_classification', True)
+            settings.set('Processing', 'secondary_classification', False)
+            settings.set('Processing', 'tertiary_classification', False)
+            settings.set('Processing', 'merged_classification', False)
             settings.set('General', 'rendering',
                          {'primary_contours': render_contours})
 
