@@ -18,6 +18,7 @@ import numpy as np
 
 from cecog.errorcorrection import PlateMapping as pm
 
+
 class HmmDataTable(object):
 
     def __init__(self, *args, **kw):
@@ -43,16 +44,17 @@ class HmmDataTable(object):
 
     def add_tracks(self, tracks, probs, pos, mapping, objids):
 
-        if self._probs is None and self._tracks is None and self._objids is None:
+        if self._tracks is None and self._objids is None:
             self._tracks = tracks
-            self._probs = probs
+            if probs is not None:
+                self._probs = probs
             self._objids = objids
             self._update_pos(pos, mapping, tracks.shape[0])
         else:
             assert tracks.shape[1:] == self._tracks.shape[1:]
-            assert probs.shape[1:] == self._probs.shape[1:]
             self._tracks = np.vstack((self._tracks, tracks))
-            self._probs = np.vstack((self._probs, probs))
+            if probs is not None:
+                self._probs = np.vstack((self._probs, probs))
             self._objids = np.vstack((self._objids, objids))
             self._update_pos(pos, mapping, tracks.shape[0])
 
@@ -103,7 +105,12 @@ class HmmDataTable(object):
             else:
                 i = (k == np.array(self._pos[key]))
 
+            # return only the key, no tracks available
             if k not in self._pos[key] and include_empty_positions:
                 yield (k, None, None, None)
+            # tracks but no prediction probabilities
+            elif self._probs is None:
+                yield k, self._tracks[i], None, self._objids[i]
+            # tracks with prediction probabilities
             else:
                 yield k, self._tracks[i], self._probs[i], self._objids[i]

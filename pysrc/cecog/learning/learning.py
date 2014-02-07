@@ -67,6 +67,8 @@ class ClassDefinitionUnsup(ClassDefinitionCore):
     class definitions.
     """
 
+    SAVE_PROBS = False
+
     def __init__(self, nclusters, *args, **kw):
         super(ClassDefinitionUnsup, self).__init__(*args, **kw)
         self.nclusters = nclusters
@@ -100,6 +102,8 @@ class ClassDefinition(ClassDefinitionCore):
 class BaseLearner(LoggerObject):
 
     XML = "xml"
+    SAVE_PROBS = True
+
     # directory substructure
     _subdirs = ('annotations', 'data', 'samples', 'controls')
 

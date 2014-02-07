@@ -171,7 +171,8 @@ class HmmSklearn(HmmCore):
         """
 
         states = np.unique(tracks)
-        if self.ecopts.eventselection == self.ecopts.EVENTSELECTION_SUPERVISED:
+        if self.ecopts.eventselection == self.ecopts.EVENTSELECTION_SUPERVISED \
+                and probs is not None:
             est = estimator.HMMProbBasedEstimator(states, probs, tracks)
         else:
             est = estimator.HMMTransitionCountEstimator(states, tracks)
@@ -199,7 +200,9 @@ class HmmSklearn(HmmCore):
             # np.unique -> sorted ndarray
             idx = labelmapper.index_from_classdef(np.unique(tracks))
             idx.sort()
-            probs = probs[:, :, idx]
+            # no prediction probabilities available
+            if probs is not None:
+                probs = probs[:, :, idx]
             est = self._get_estimator(probs, labelmapper.label2index(tracks))
             est.constrain(self.hmmc(est, labelmapper))
 

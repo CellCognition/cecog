@@ -116,7 +116,7 @@ class PositionRunner(QtCore.QObject):
 
     def _load_classdef(self, region):
         try:
-            ch5 = cellh5.CH5File(self.ch5file, "r")
+            ch5 = cellh5.CH5File(self.ch5file, "r", cached=True)
             cld = ch5.class_definition(region)
         finally:
             ch5.close()
@@ -146,7 +146,7 @@ class PositionRunner(QtCore.QObject):
             self.parent().progressUpdate.emit(progress)
             QtCore.QCoreApplication.processEvents()
 
-            ch5 = cellh5.CH5File(file_, "r")
+            ch5 = cellh5.CH5File(file_, "r", cached=True)
             for pos in ch5.iter_positions():
                 if not pos.has_classification(chreg):
                     raise RuntimeError(("There is not classifier definition"
@@ -157,7 +157,11 @@ class PositionRunner(QtCore.QObject):
                     pos.get_events(not self.ecopts.ignore_tracking_branches),
                     dtype=int)
                 tracks = pos.get_class_label(objidx, chreg)
-                probs = pos.get_prediction_probabilities(objidx, chreg)
+                try:
+                    probs = pos.get_prediction_probabilities(objidx, chreg)
+                except KeyError as e:
+                    probs = None
+
                 objids = pos.get_object_table(chreg)[objidx]
 
                 dtable.add_position(position, mappings[position])

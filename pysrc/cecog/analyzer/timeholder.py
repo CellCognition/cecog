@@ -60,8 +60,8 @@ def max_shape(shape):
 class TimeHolder(OrderedDict):
 
     # label for unlabled objects
-    UNLABELED = CH5Const.UNLABELED_PRED
-    UNLABELED_PROB = CH5Const.UNLABELED_PROB
+    UNPREDICTED_LABEL = CH5Const.UNPREDICTED_LABEL
+    UNPREDICTED_PROB = CH5Const.UNPREDICTED_PROB
 
     HDF5_GRP_DEFINITION = "definition"
     HDF5_GRP_RELATION = "relation"
@@ -1227,6 +1227,8 @@ class TimeHolder(OrderedDict):
                               ('name', '|S100'),
                               ('color', '|S9')])
             var = classification_group.create_dataset('class_labels', (nr_classes,), dt)
+            var.attrs["UNPREDICED_LABEL"] = numpy.int32(self.UNPREDICTED_LABEL)
+            var.attrs['UNPREDICED_PROB'] = numpy.float32(self.UNPREDICTED_PROB)
             var[:] = zip(predictor.class_names.keys(),
                          predictor.class_names.values(),
                          [predictor.hexcolors[n] for n in predictor.class_names.values()])
@@ -1266,25 +1268,29 @@ class TimeHolder(OrderedDict):
             offset = len(dset_prediction)
             dset_prediction.resize((nr_objects + offset,))
 
-        var_name = 'probability'
-        if not var_name in current_classification_grp:
-            dset_probability = current_classification_grp.create_dataset(var_name, (nr_objects, nr_classes),
-                                       'float',
-                                       chunks=(nr_objects if nr_objects > 0 else 1, nr_classes),
-                                       compression=self._hdf5_compression,
-                                       maxshape=(None, nr_classes)
-                                       )
-        else:
-            dset_probability = current_classification_grp[var_name]
-            dset_probability.resize((offset+nr_objects, nr_classes))
+        if predictor.SAVE_PROBS:
+            var_name = 'probability'
+            if not var_name in current_classification_grp:
+                dset_probability = current_classification_grp.create_dataset(var_name, (nr_objects, nr_classes),
+                                           'float',
+                                           chunks=(nr_objects if nr_objects > 0 else 1, nr_classes),
+                                           compression=self._hdf5_compression,
+                                           maxshape=(None, nr_classes)
+                                           )
+            else:
+                dset_probability = current_classification_grp[var_name]
+                dset_probability.resize((offset+nr_objects, nr_classes))
 
         label2idx = dict([(l, i) for i, l in enumerate(predictor.class_names.keys())])
 
         for i, obj in enumerate(region.itervalues()):
             # replace default for unlabeld object with numerical values
             if obj.iLabel is None:
-                dset_prediction[i+offset] = (self.UNLABELED, )
-                dset_probability[i+offset] = [self.UNLABELED_PROB]*predictor.n_classes
+                dset_prediction[i+offset] = (self.UNPREDICTED_LABEL, )
+                probs = [self.UNPREDICTED_PROB]*predictor.n_classes
             else:
                 dset_prediction[i+offset] = (label2idx[obj.iLabel], )
-                dset_probability[i+offset] = obj.dctProb.values()
+                probs = obj.dctProb.values()
+
+            if predictor.SAVE_PROBS:
+                dset_probability[i+offset] = probs

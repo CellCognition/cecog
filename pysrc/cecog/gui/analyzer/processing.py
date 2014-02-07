@@ -33,8 +33,8 @@ class ExportSettings(object):
 
     def get_export_settings(self, settings, has_timelapse=True):
         settings = BaseProcessorFrame.get_special_settings(settings, has_timelapse)
-
         settings.set('General', 'version', VERSION)
+
         settings.set('General', 'rendering', {})
         settings.set('General', 'rendering_class', {})
 
@@ -42,10 +42,11 @@ class ExportSettings(object):
         show_ids_class = settings.get('Output', 'rendering_class_showids')
 
         # set propertys of merged channel to the same as for Primary
-        d = {}
         for prefix in CH_PRIMARY+CH_OTHER:
             if prefix == CH_PRIMARY[0] \
                     or settings.get('Processing', '%s_processchannel' % prefix):
+
+                d = {} # render settings for contours
                 for x in self.plugin_mgr.region_info.names[prefix]:
                     d = {'%s_contours_%s' % (prefix, x):
                              {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
@@ -53,8 +54,10 @@ class ExportSettings(object):
                                                     }
                               }
                          }
-
                 settings.get('General', 'rendering').update(d)
+
+                # render settings for classifications
+                d = {}
                 if settings.get('Processing', '%s_classification' % prefix):
                     for x in self.plugin_mgr.region_info.names[prefix]:
                         if x == settings.get('Classification', '%s_classification_regionname' % prefix) or \
@@ -66,7 +69,8 @@ class ExportSettings(object):
                                                             }
                                       }
                                  }
-                    settings.get('General', 'rendering_class').update(d)
+                    if settings('EventSelection', 'supervised_event_selection'):
+                        settings.get('General', 'rendering_class').update(d)
 
         # setup rendering properties for merged channel
         # want the same rendering properties as for the primary channel!
@@ -229,7 +233,7 @@ class ProcessingFrame(BaseProcessorFrame, ExportSettings):
 
         # special clase for UES, clustering takes place afterwards
         if settings('EventSelection', 'unsupervised_event_selection'):
-            settings.get('General', 'rendering_class').clear()
+            settings.set('General', 'rendering_class', {})
             settings.set('Processing', 'primary_classification', True)
             settings.set('Processing', 'secondary_featureextraction', False)
             settings.set('Processing', 'secondary_classification', False)
@@ -239,5 +243,6 @@ class ProcessingFrame(BaseProcessorFrame, ExportSettings):
             settings.set('Processing', 'tertiary_processChannel', False)
             settings.set('Processing', 'merged_classification', False)
             settings.set('Processing', 'merged_processChannel', False)
+
 
         return settings
