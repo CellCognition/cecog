@@ -36,7 +36,8 @@ class ECParams(object):
                  'sortby', 'skip_plates', 'timeunit', 'overwrite_timelapse',
                  'timelapse', 'sorting', 'sorting_sequence', 'tmax',
                  'ignore_tracking_branches', 'write_gallery', 'n_galleries',
-                 'eventselection', 'nclusters', 'resampling_factor', 'hmm_algorithm']
+                 'eventselection', 'nclusters', 'resampling_factor', 'hmm_algorithm',
+                 'size_gallery_image']
 
     def __init__(self, settings, tstep, timeunit):
 
@@ -110,6 +111,7 @@ class ECParams(object):
             self.eventselection = self.EVENTSELECTION_UNSUPERVISED
         self.nclusters = settings('EventSelection', 'num_clusters')
         self.resampling_factor = settings('ErrorCorrection', 'resampling_factor')
+        self.size_gallery_image = settings('ErrorCorrection', 'size_gallery_image')
 
 
     def _hmm_constrain(self, cfile):

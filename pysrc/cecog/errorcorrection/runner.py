@@ -223,7 +223,8 @@ class PositionRunner(QtCore.QObject):
 
                     with cellh5.ch5open(self.ch5file, 'r') as ch5:
                         report.image_gallery_png(ch5, fn, self.ecopts.n_galleries,
-                                                 self.ecopts.resampling_factor)
+                                                 self.ecopts.resampling_factor,
+                                                 self.ecopts.size_gallery_image)
                         report.close_figures()
                 except Exception as e: # don't stop error corection
                     with open(join(self._gallery_dir, '%s-%s_error_readme.txt'

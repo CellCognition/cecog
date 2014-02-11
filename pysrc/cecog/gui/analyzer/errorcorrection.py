@@ -78,9 +78,11 @@ class ErrorCorrectionFrame(BaseProcessorFrame):
         self.add_input('ignore_tracking_branches')
         self.add_input('show_html')
         self.add_line()
-        self.add_input('compose_galleries')
-        self.add_input('compose_galleries_sample')
-        self.add_input('resampling_factor')
+        self.add_group('compose_galleries',
+                       [('compose_galleries_sample', ),
+                        ('resampling_factor', ),
+                        ('size_gallery_image', )],
+                       layout='flow', label="Gallery images", link='compose_galleries')
         self.add_expanding_spacer()
         self._init_control(has_images=False)
 

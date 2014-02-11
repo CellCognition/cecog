@@ -316,7 +316,7 @@ class HmmReport(object):
             pdf.close()
 
 
-    def image_gallery_png(self, ch5, ofile, n_galleries=50, rsfactor=0.4):
+    def image_gallery_png(self, ch5, ofile, n_galleries=50, rsfactor=0.4, gsize=100):
         """Resolution of png gallerie can be adjusted by the resampling factor
         (default=0.4). File size is large"""
 
@@ -328,7 +328,7 @@ class HmmReport(object):
             for objidx, track, coords in data.itertracks(n_galleries):
                 pos = ch5.get_position(coords.well, coords.position)
                 # want a color image
-                img = grey2rgb(pos.get_gallery_image(objidx, coords.region))
+                img = grey2rgb(pos.get_gallery_image(objidx, coords.region, gsize))
                 img = self._draw_labels(img, track)
                 try:
                     image = np.vstack((image, img))

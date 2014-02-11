@@ -98,6 +98,8 @@ class SectionErrorcorrection(SectionCore):
         ('compose_galleries_sample',
          IntTrait(-1, -1, 10000, label='Max. number of random samples')),
         ('resampling_factor',
-         FloatTrait(0.4, 0.01, 1.0, label="Resampling factor"))
+         FloatTrait(0.4, 0.01, 1.0, label="Resampling factor")),
+        ('size_gallery_image',
+         IntTrait(60, 1, 1000, label='Size of gallery images (px)'))
         ])
       ]

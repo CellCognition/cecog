@@ -124,7 +124,7 @@ class HmmTde(HmmCore):
                                self.dtable.groups(self.ecopts.sortby, name),
                                tracks.shape[0],
                                objids,
-                               coord,
+                               coords,
                                self.ecopts.timelapse)
             hmmdata[name] = bucket
         return hmmdata
