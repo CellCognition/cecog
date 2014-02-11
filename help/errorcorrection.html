@@ -20,22 +20,27 @@
       state.<br><br>
       It is important to note that the error correction depends <b>not</b> on
       the type of the event selection. Those types are supervised and
-      unsupervised methods. The HMM estimates in both cases its model
-      parameters using the
-      <img class="extlink"src=":extlink"/>
+      unsupervised methods.
+      The only difference is lies in the HMM learning
+      algorithm. Supervised event selection (support vector machine) works with both <i>Simple
+        Estimate</i> and
+      <i><img class="extlink"src=":extlink"/>
       <a href="http://en.wikipedia.org/wiki/Baum%E2%80%93Welch_algorithm">
-        Baum-Welch algorithm</a>.
-      The only difference lies in the estimation of the initial-/ or
-      start parameters of the Baum-Welch algorithm. The supervised method (support vector machine) provides prediction probabilities that are used to estimate the initial parameters. In the unsupervised case (TC3 and Gaussian Mixture Models), the initial parameters are simply estimated by counting the transitions.
+        Baum-Welch algorithm</a></i>. Unsupervised Event
+      Selection (TC3) works only with <i>Baum-Welch</i>, since it does
+      not provide any prediction probabilities.
       <br><br>
-      The error correction creates a sub folder called in the <tt>analysis</tt> folder, where the output is saved.
+      The error correction saves the output in a subfolder <tt>analysis/hmm</tt>
     </p>
+    The association between individual movies i.e. <i>positions</i>
+    and experimental information such as <i>Oligo-Id</i> or the name
+    of the targeted <i>Gene Symbol</i> can be defined in a
+    simple <a href="#position_labels">text file</a>.</p>
 
-      The association between individual movies i.e. <i>positions</i>
-      and experimental information such as <i>Oligo-Id</i> or the name
-      of the targeted <i>Gene Symbol</i> can be defined in a
-      simple <a href="#position_labels">text file</a>.
-         </p>
+    <h3>Note</h3>
+    To apply the error correction on timelapse movies one has to
+    enable hdf5 output, events included and also raw images, if one
+    wants to make image galleries.
 
     <h3>Parameters</h3>
     <a name="channels">
@@ -50,17 +55,18 @@
       <h4>HMM learning algorithm</h4>
       <p class="text"><i>Simple estimate</i> learns the HMM parameters by
         counting the conditional prediction probabilities.
-        No Baum-Welch estimation (the standard way to estimate hmm
-        parameters) is performed afterwards.
+        No Baum-Welch estimation is performed afterwards.
         This method is a 1:1 replacement of the R-implementation
         (CecogAnalyzer &le; 1.4.x).<br>
+        <i>Baum-Welch</i> is the standard method to estimate HMM model
+        parameters.
         <br><br>
-        The first option results in a robust smoothing model by
+        <i>Simple Estimate</i> results in a robust smoothing model by
         suppressing off-diagonal emissions (adhoc assumption).
         Further it relies on confident prediction probabilies
-        provided by the support vector machine.
-        It is recommended to use Baum-Welch option for TC3
-        (unsupervised event selection).
+        provided by the support vector machine. <i>Baum-Welch</i> is
+        mandatory for unsupervised event selection but works
+        well in both cases.
       </p>
     </a>
 
@@ -169,17 +175,7 @@
               </center>
             </p>
         </a>
-        <a name="multichannel_galleries">
-          <h4 class="sub">Multichannel Galleries</h4>
-            <p class="subtext">
-              Multichannel Galleries show the color bars of all
-              classifiers at the bottom. The images are taken from the
-              primary channel.
-              <center>
-                <img class="figure" src=":/multichannel_gallery"/>
-              </center>
-            </p>
-        </a>
+
         <a name="compose_galleries_sample">
           <h4 class="sub">Max. number of random samples</h4>
             <p class="subtext">
