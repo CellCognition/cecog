@@ -14,12 +14,11 @@ __url__ = 'www.cellcognition.org'
 __all__ = ['ECParams']
 
 
-from collections import OrderedDict
-
 from cecog import CHANNEL_PREFIX, CH_VIRTUAL
 from cecog.errorcorrection import PlateMapping
 from cecog.errorcorrection.hmm import estimator
 from cecog.util.ctuple import CTuple
+from cecog.util.ctuple import COrderedDict
 
 
 # XXX belongs to the settings module/class
@@ -37,8 +36,7 @@ class ECParams(object):
                  'sortby', 'skip_plates', 'timeunit', 'overwrite_timelapse',
                  'timelapse', 'sorting', 'sorting_sequence', 'tmax',
                  'ignore_tracking_branches', 'write_gallery', 'n_galleries',
-                 'eventselection', 'nclusters',
-                 'multichannel_galleries', 'resampling_factor', 'hmm_algorithm']
+                 'eventselection', 'nclusters', 'resampling_factor', 'hmm_algorithm']
 
     def __init__(self, settings, tstep, timeunit):
 
@@ -50,7 +48,7 @@ class ECParams(object):
         self.constrain_graph = settings('ErrorCorrection', 'constrain_graph')
         self.hmm_constrain = dict()
         self.classifier_dirs = dict()
-        self.regionnames = OrderedDict()
+        self.regionnames = COrderedDict()
 
         # settings that depend whether if the channel is checked for
         # error correction or not
@@ -105,8 +103,6 @@ class ECParams(object):
         self.write_gallery = settings('ErrorCorrection', 'compose_galleries')
         self.n_galleries = \
             settings('ErrorCorrection', 'compose_galleries_sample')
-        self.multichannel_galleries = \
-            settings('ErrorCorrection', 'multichannel_galleries')
 
         if settings('EventSelection', 'supervised_event_selection'):
             self.eventselection = self.EVENTSELECTION_SUPERVISED

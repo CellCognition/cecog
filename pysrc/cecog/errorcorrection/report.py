@@ -17,9 +17,10 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
+import vigra
 from cecog import plots
 from cecog.colors import hex2rgb
-import vigra
+from cecog.gallery.images import grey2rgb
 
 
 class HmmBucket(object):
@@ -27,10 +28,10 @@ class HmmBucket(object):
 
     __slots__ = ['labels', 'hmm_labels', 'startprob', 'emismat', 'transmat',
                  'groups', 'ntracks', 'stepwidth', '_dwell_times', 'startids',
-                 'nframes', '_states']
+                 'coordinates', 'nframes', '_states']
 
     def __init__(self, labels, hmm_labels, startprob, emismat, transmat, groups,
-                 ntracks, startids, stepwidth=None):
+                 ntracks, startids, coordinates, stepwidth=None):
         super(HmmBucket, self).__init__()
         self._dwell_times = None
         self.labels = labels
@@ -43,6 +44,7 @@ class HmmBucket(object):
         self.nframes = labels.shape[1]
         self.stepwidth = stepwidth
         self.startids = startids
+        self.coordinates = coordinates
         self._states = None
 
     @property
@@ -59,14 +61,15 @@ class HmmBucket(object):
                                 'arguments are exclusive'))
 
         if idx is None:
-            idx = np.arange(0, self.startids.size, 1)
-            if n is not None:
+            idx = np.arange(0, self.ntracks, 1)
+            if n not in (None, -1):
                 np.random.shuffle(idx)
                 idx = idx[:n]
 
-        for track, startid in zip(self.hmm_labels[idx],
-                                       self.startids[idx]):
-            yield startid, track
+        for track, startid, coords in zip(self.hmm_labels[idx],
+                                          self.startids[idx],
+                                          self.coordinates[idx]):
+            yield startid, track, coords
 
     @property
     def dwell_times(self):
@@ -251,49 +254,6 @@ class HmmReport(object):
         finally:
             pdf.close()
 
-    def _read_image(self, file_):
-        """try different file extensio to read."""
-        try:
-            image = vigra.readImage(file_)
-        except RuntimeError:
-            file_ = file_.replace('png', 'jpg')
-            image = vigra.readImage(file_)
-        return np.squeeze(image.swapaxes(0, 1).view(np.ndarray))
-
-    def image_gallery_pdf(self, filename, n_galleries=50):
-        """Pdf gallery has smaller file size, less resolution of cource but
-        is easier to print."""
-        pdf = PdfPages(filename)
-        try:
-            for name in sorted(self.data.keys()):
-                data = self.data[name]
-                if data is None:
-                    continue
-                image = np.array([])
-                tracks = list()
-                for startid, track in data.itertracks(n_galleries):
-                    tracks.append(track)
-                    try:
-                        img = self._read_image(file_)
-                        image = np.vstack((image, np.mean(img, axis=2)))
-                    except ValueError:
-                        img = self._read_image(file_)
-                        image = np.mean(img, axis=2)
-
-                    aspect = image.shape[0]/image.shape[1]
-                    if aspect >= 0.99:
-                        fig = self._trj_figure(image, tracks, (6, 6), name)
-                        pdf.savefig(fig, dpi=self.GALLERY_DPI)
-                        image = np.array([])
-                        tracks = list()
-
-                if len(tracks) > 0:
-                    fig = self._trj_figure(image, tracks, (6, 6), name)
-                    pdf.savefig(fig, dpi=self.GALLERY_DPI)
-
-        finally:
-            pdf.close()
-
     def _trj_figure(self, image, tracks, size, name):
         fig = plt.figure(dpi=self.GALLERY_DPI, figsize=size)
         axes = fig.add_subplot(111, frameon=False)
@@ -302,43 +262,6 @@ class HmmReport(object):
                           linewidth=1.5, offset=-5)
         fig.subplots_adjust(top=0.95, bottom=0.01, right=0.99, left=0.01)
         return fig
-
-    def image_gallery_png(self, filename, n_galleries=50, rsfactor=0.4):
-        """Resolution of png gallerie can be adjusted by the resampling factor
-        (default=0.4). File size is large"""
-
-        for name in sorted(self.data.keys()):
-            data = self.data[name]
-            if data is None:
-                continue
-            image = np.array([])
-            for startid, track in data.itertracks(n_galleries):
-                try:
-                    img = self._read_image(startid)
-                    img = self._draw_labels(img, track)
-                    image = np.vstack((image, img))
-                except ValueError:
-                    img = self._read_image(startid)
-                    img = self._draw_labels(img, track)
-                    image = img
-
-            fn = filename.replace('_gallery.png', '-%s_gallery.png' %name)
-            vimage = vigra.RGBImage(image.swapaxes(1, 0))
-            vimage = vigra.sampling.resampleImage(vimage, rsfactor)
-            vimage.writeImage(fn)
-
-    def _draw_labels(self, image, track, markersize=0.20):
-        nframes = len(track)
-        size = int(round(image.shape[1]/nframes, 0)), image.shape[0]
-        msize = int(round(size[0]*markersize, 0))
-        image[size[1]-int(msize/4):size[1], :] = hex2rgb("#FFFFFF")
-
-        for i, label in enumerate(track):
-            name = self.classdef.class_names[label]
-            color = np.array(hex2rgb(self.classdef.hexcolors[name], mpl=False),
-                             dtype=int)
-            image[size[1]-msize:size[1], i*size[0]:i*size[0]+msize] = color
-        return image
 
     def export_hmm(self, filename, grouping="Position"):
         """Export a table of tracks names and hmm_labels"""
@@ -350,7 +273,7 @@ class HmmReport(object):
             for name, bucket in self.data.iteritems():
                 if bucket is None:
                     continue
-                for startid, hmm_labels in bucket.itertracks():
+                for startid, hmm_labels, _  in bucket.itertracks():
                     writer.writerow(list(startid) + [name] + hmm_labels.tolist())
 
     def hmm_model(self, filename, figsize=(20, 12)):
@@ -391,3 +314,41 @@ class HmmReport(object):
             pdf.savefig(fig)
         finally:
             pdf.close()
+
+
+    def image_gallery_png(self, ch5, ofile, n_galleries=50, rsfactor=0.4):
+        """Resolution of png gallerie can be adjusted by the resampling factor
+        (default=0.4). File size is large"""
+
+        for name in sorted(self.data.keys()):
+            data = self.data[name]
+            if data is None:
+                continue
+            image = np.array([])
+            for objidx, track, coords in data.itertracks(n_galleries):
+                pos = ch5.get_position(coords.well, coords.position)
+                # want a color image
+                img = grey2rgb(pos.get_gallery_image(objidx, coords.region))
+                img = self._draw_labels(img, track)
+                try:
+                    image = np.vstack((image, img))
+                except ValueError:
+                    image = img
+
+            fn = ofile.replace('_gallery.png', '-%s_gallery.png' %name)
+            vimage = vigra.RGBImage(image.swapaxes(1, 0))
+            vimage = vigra.sampling.resampleImage(vimage, rsfactor)
+            vimage.writeImage(fn)
+
+    def _draw_labels(self, image, track, markersize=0.20):
+        nframes = len(track)
+        size = int(round(image.shape[1]/nframes, 0)), image.shape[0]
+        msize = int(round(size[0]*markersize, 0))
+        image[size[1]-int(msize/4):size[1], :] = hex2rgb("#FFFFFF")
+
+        for i, label in enumerate(track):
+            name = self.classdef.class_names[label]
+            color = np.array(hex2rgb(self.classdef.hexcolors[name], mpl=False),
+                             dtype=int)
+            image[size[1]-msize:size[1], i*size[0]:i*size[0]+msize] = color
+        return image

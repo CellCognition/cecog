@@ -95,8 +95,6 @@ class SectionErrorcorrection(SectionCore):
             StringTrait('', 100)),
         ('compose_galleries',
          BooleanTrait(False, label='Compose gallery images')),
-        ('multichannel_galleries',
-         BooleanTrait(False, label='Multichannel galleries')),
         ('compose_galleries_sample',
          IntTrait(-1, -1, 10000, label='Max. number of random samples')),
         ('resampling_factor',

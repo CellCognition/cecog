@@ -32,7 +32,6 @@ from cecog.errorcorrection.hmm import HmmTde
 from cecog.errorcorrection import HmmReport
 from cecog.errorcorrection import PlateMapping
 from cecog.errorcorrection.datatable import HmmDataTable
-from cecog.gallery import MultiChannelGallery
 from cecog.learning.learning import ClassDefinition
 
 
@@ -125,13 +124,7 @@ class PositionRunner(QtCore.QObject):
 
     def _load_data(self, mappings, channel):
         dtable = HmmDataTable()
-
-        if isinstance(self.ecopts.regionnames[channel], tuple):
-            chreg = "__".join((channel,
-                               "-".join(self.ecopts.regionnames[channel])))
-        else:
-            chreg = "__".join((channel, self.ecopts.regionnames[channel]))
-
+        chreg = "__".join((channel, self.ecopts.regionnames[channel]))
 
         progress = ProgressMsg(max=len(self.files))
 
@@ -162,11 +155,11 @@ class PositionRunner(QtCore.QObject):
                 except KeyError as e:
                     probs = None
 
-                objids = pos.get_object_table(chreg)[objidx]
-
+                # objids = pos.get_object_table(chreg)[objidx]
+                grp_coord = cellh5.CH5GroupCoordinate(chreg, pos.pos, pos.well, pos.plate)
                 dtable.add_position(position, mappings[position])
-                dtable.add_tracks(tracks, probs, position, mappings[position],
-                                  objids)
+                dtable.add_tracks(tracks, position, mappings[position],
+                                  objidx, grp_coord, probs)
             ch5.close()
 
         if dtable.is_empty():
@@ -189,7 +182,6 @@ class PositionRunner(QtCore.QObject):
             mpfile = join(self.ecopts.mapping_dir, "%s.txt" %self.plate)
             mappings.read(mpfile)
 
-        alldata = dict()
         for channel in self.ecopts.regionnames.keys():
             dtable, cld = self._load_data(mappings, channel)
             msg = 'performing error correction on channel %s' %channel
@@ -202,8 +194,8 @@ class PositionRunner(QtCore.QObject):
                 hmm = HmmTde(dtable, channel, cld, self.ecopts)
 
             data = hmm()
-            alldata[channel] =  data
 
+            # plots and export
             report = HmmReport(data, self.ecopts, cld, self._hmm_dir)
             prefix = "%s_%s" %(channel.title(), self.ecopts.regionnames[channel])
             sby = self.ecopts.sortby.replace(" ", "_")
@@ -221,15 +213,18 @@ class PositionRunner(QtCore.QObject):
             report.hmm_model(join(self._hmm_dir, "%s-%s_model.pdf")
                              %(prefix, sby))
 
+
             if self.ecopts.write_gallery:
                 self.interruption_point("plotting image gallery")
                 try:
                     # replace image_gallery_png with image_gallery_pdf
                     fn = join(self._gallery_dir,
                               '%s-%s_gallery.png' %(prefix, sby))
-                    report.image_gallery_png(fn, self.ecopts.n_galleries,
-                                             self.ecopts.resampling_factor)
-                    report.close_figures()
+
+                    with cellh5.ch5open(self.ch5file, 'r') as ch5:
+                        report.image_gallery_png(ch5, fn, self.ecopts.n_galleries,
+                                                 self.ecopts.resampling_factor)
+                        report.close_figures()
                 except Exception as e: # don't stop error corection
                     with open(join(self._gallery_dir, '%s-%s_error_readme.txt'
                                    %(prefix, sby)), 'w') as fp:
@@ -238,23 +233,6 @@ class PositionRunner(QtCore.QObject):
 
             report.export_hmm(join(self._hmm_dir, "%s-hmm.csv" %channel.title()),
                               self.ecopts.sortby)
-
-        if self.ecopts.multichannel_galleries:
-            fn = join(self._gallery_dir, 'MultiChannelGallery_%s.png'
-                      %sby)
-            self.interruption_point("plotting multichannel gallery")
-
-            try:
-                mcg = MultiChannelGallery(self.ecopts.class_definition, alldata,
-                                          'primary', self.ecopts.n_galleries,
-                                          self.ecopts.resampling_factor)
-                mcg(fn, self.ecopts.regionnames.keys())
-            # don't stop error correction
-            except Exception as e:
-                with open(join(self._gallery_dir, '%s-%s_error_readme.txt'
-                               %(prefix, sby)), 'w') as fp:
-                    traceback.print_exc(file=fp)
-                    fp.write("Check if gallery images exist!")
 
 
 if __name__ == "__main__":

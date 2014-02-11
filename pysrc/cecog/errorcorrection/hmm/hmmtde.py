@@ -94,11 +94,14 @@ class HmmTde(HmmCore):
     def __call__(self):
         hmmdata = dict()
 
-        for (name, tracks, probs, objids) in  \
+        for (name, tracks, probs, objids, coords) in  \
                 self.dtable.iterby(self.ecopts.sortby, True):
-            if tracks is probs is None:
+            if tracks is None:
                 hmmdata[name] = None
                 continue
+            elif probs is None:
+                raise RuntimeError(("No prediction probabilities available. "
+                                    "Try different hmm learing algorithm"))
 
             labelmapper = LabelMapper(np.unique(tracks),
                                       self.classdef.class_names.keys())
@@ -120,7 +123,8 @@ class HmmTde(HmmCore):
                                est.trans,
                                self.dtable.groups(self.ecopts.sortby, name),
                                tracks.shape[0],
-                               objids[:, 0], # startids
+                               objids,
+                               coord,
                                self.ecopts.timelapse)
             hmmdata[name] = bucket
         return hmmdata

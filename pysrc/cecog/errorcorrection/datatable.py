@@ -26,6 +26,7 @@ class HmmDataTable(object):
         self._probs = None
         self._tracks = None
         self._objids = None
+        self._coordinates = np.array([], dtype=object)
         self._gallery_files = None
         self._pos = dict()
         self._all_pos = dict()
@@ -42,7 +43,11 @@ class HmmDataTable(object):
             for cn in (cols for cols in pm.colnames if cols != pm.POSITION):
                 self._pos[cn].extend([None]*ntracks)
 
-    def add_tracks(self, tracks, probs, pos, mapping, objids):
+    def add_tracks(self, tracks, pos, mapping, objids, coords,
+                   probs=None):
+
+        nt = tracks.shape[0]
+        self._coordinates = np.append(self._coordinates, [coords]*nt)
 
         if self._tracks is None and self._objids is None:
             self._tracks = tracks
@@ -56,7 +61,7 @@ class HmmDataTable(object):
             if probs is not None:
                 self._probs = np.vstack((self._probs, probs))
             self._objids = np.vstack((self._objids, objids))
-            self._update_pos(pos, mapping, tracks.shape[0])
+            self._update_pos(pos, mapping, nt)
 
     def add_position(self, pos, mapping):
         self._all_pos[pm.POSITION].append(pos)
@@ -110,7 +115,9 @@ class HmmDataTable(object):
                 yield (k, None, None, None)
             # tracks but no prediction probabilities
             elif self._probs is None:
-                yield k, self._tracks[i], None, self._objids[i]
+                yield k, self._tracks[i], None, self._objids[i], \
+                    self._coordinates[i]
             # tracks with prediction probabilities
             else:
-                yield k, self._tracks[i], self._probs[i], self._objids[i]
+                yield k, self._tracks[i], self._probs[i], self._objids[i], \
+                    self._coordinates[i]
