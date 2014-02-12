@@ -124,7 +124,7 @@ class PositionRunner(QtCore.QObject):
 
     def _load_data(self, mappings, channel):
         dtable = HmmDataTable()
-        chreg = "__".join((channel, self.ecopts.regionnames[channel]))
+        chreg = "%s__%s" %(channel, self.ecopts.regionnames[channel])
 
         progress = ProgressMsg(max=len(self.files))
 
