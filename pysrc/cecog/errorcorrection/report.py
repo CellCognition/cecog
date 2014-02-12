@@ -264,17 +264,31 @@ class HmmReport(object):
         return fig
 
     def export_hmm(self, filename, grouping="Position"):
-        """Export a table of tracks names and hmm_labels"""
+        """Export two files. One contains the labels after hmm. The other
+        contains the object indices of the ch5 files.
+        """
 
-        with open(filename, "w") as fp:
-            writer = csv.writer(fp, delimiter=",")
-            writer.writerow(["# start_frame", "start_id", grouping] +
-                            range(1, self.data.values()[0].nframes+1, 1))
+        try:
+            fp1 = open(filename, "wb")
+            fp2 = open(filename.replace(".csv", "_indices.csv"), "wb")
+
+            writer1 = csv.writer(fp1, delimiter=",")
+            writer2 = csv.writer(fp2, delimiter=",")
+            header = ["# %s" %grouping] + \
+                range(1, self.data.values()[0].nframes+1, 1)
+            writer1.writerow(header)
+            writer2.writerow(header)
+
             for name, bucket in self.data.iteritems():
                 if bucket is None:
                     continue
-                for startid, hmm_labels, _  in bucket.itertracks():
-                    writer.writerow(list(startid) + [name] + hmm_labels.tolist())
+                for objidx, hmm_labels, _  in bucket.itertracks():
+                    writer1.writerow([name]+hmm_labels.tolist())
+                    writer2.writerow([name]+objidx.tolist())
+        finally:
+            fp1.close()
+            fp2.close()
+
 
     def hmm_model(self, filename, figsize=(20, 12)):
         pdf = PdfPages(filename)
