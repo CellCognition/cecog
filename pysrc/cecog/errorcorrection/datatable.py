@@ -112,7 +112,7 @@ class HmmDataTable(object):
 
             # return only the key, no tracks available
             if k not in self._pos[key] and include_empty_positions:
-                yield (k, None, None, None)
+                yield (k, None, None, None, None)
             # tracks but no prediction probabilities
             elif self._probs is None:
                 yield k, self._tracks[i], None, self._objids[i], \

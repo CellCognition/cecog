@@ -141,10 +141,16 @@ class PositionRunner(QtCore.QObject):
 
             ch5 = cellh5.CH5File(file_, "r", cached=True)
             for pos in ch5.iter_positions():
-                if not pos.has_classification(chreg):
+                # make dtable aware of all positions, sometime they contain
+                # no tracks and I don't want to ignore them
+                dtable.add_position(position, mappings[position])
+                if not pos.has_events():
+                    continue
+                elif not pos.has_classification(chreg):
                     raise RuntimeError(("There is not classifier definition"
                                         "\nwell: %s, position %s"
                                         %(pos.well, pos.pos)))
+
 
                 objidx = np.array( \
                     pos.get_events(not self.ecopts.ignore_tracking_branches),
@@ -156,8 +162,8 @@ class PositionRunner(QtCore.QObject):
                     probs = None
 
                 # objids = pos.get_object_table(chreg)[objidx]
-                grp_coord = cellh5.CH5GroupCoordinate(chreg, pos.pos, pos.well, pos.plate)
-                dtable.add_position(position, mappings[position])
+                grp_coord = cellh5.CH5GroupCoordinate( \
+                    chreg, pos.pos, pos.well, pos.plate)
                 dtable.add_tracks(tracks, position, mappings[position],
                                   objidx, grp_coord, probs)
             ch5.close()
