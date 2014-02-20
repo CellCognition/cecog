@@ -13,6 +13,7 @@ __url__ = 'www.cellcognition.org'
 __all__ = ['EventSelectionFrame']
 
 from cecog.gui.analyzer import BaseProcessorFrame
+from cecog.gui.analyzer.classification import ClassificationFrame
 from cecog.threads.analyzer import AnalyzerThread
 from cecog.analyzer.channel import PrimaryChannel
 
@@ -26,6 +27,7 @@ class EventSelectionFrame(BaseProcessorFrame):
         self.register_control_button(self.PROCESS_SYNCING, AnalyzerThread, \
                               ('Test event selection', 'Stop event selection'))
 
+        self.add_input('eventselection_channel')
         self.add_group(None,
                        [('backwardrange', (0,0,1,1)),
                         ('forwardrange', (0,1,1,1)),
@@ -51,6 +53,14 @@ class EventSelectionFrame(BaseProcessorFrame):
 
         self.add_expanding_spacer()
         self._init_control()
+
+    def page_changed(self):
+        self.settings_loaded()
+
+    def settings_loaded(self):
+        trait = self._settings.get_trait('EventSelection', 'eventselection_channel')
+        clfframe = self.parent().widgetByType(ClassificationFrame)
+        trait.set_list_data(clfframe.classifiers.keys())
 
     def _get_modified_settings(self, name, has_timelapse=True):
         settings = BaseProcessorFrame._get_modified_settings( \

@@ -134,6 +134,7 @@ class PositionCore(LoggerObject):
             par = (method, begin, end, step)
         return par
 
+
     def registration_shift(self):
         # compute values for the registration of multiple channels
         # (translation only)
@@ -698,7 +699,7 @@ class PositionAnalyzer(PositionCore):
 
         # setup tracker
         if self.settings('Processing', 'tracking'):
-            region = self.settings('Tracking', 'tracking_regionname')
+            # region = self.settings('Tracking', 'tracking_regionname')
             tropts = (self.settings('Tracking', 'tracking_maxobjectdistance'),
                       self.settings('Tracking', 'tracking_maxsplitobjects'),
                       self.settings('Tracking', 'tracking_maxtrackinggap'))

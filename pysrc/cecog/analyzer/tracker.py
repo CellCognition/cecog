@@ -19,6 +19,7 @@ from cecog.util.logger import LoggerObject
 from cecog.extensions.graphLib import Graph
 from cecog import ccore
 
+
 class Tracker(LoggerObject):
 
     __slots__ = ['graph', '_frame_data','max_object_distance',
