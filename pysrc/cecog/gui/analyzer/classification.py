@@ -517,7 +517,7 @@ class ClassificationFrame(BaseProcessorFrame):
     def classifiers(self):
         classifiers = dict()
         for k, v in self._result_frames.iteritems():
-            classifiers[k] = v.classifier
+            classifiers[k.title()] = v.classifier
         return classifiers
 
     def page_changed(self):

@@ -664,14 +664,14 @@ class PositionAnalyzer(PositionCore):
         t_step = tu.sec2min(t_mean)*increment
 
         nclusters = self.settings.get('EventSelection', 'num_clusters')
-        exporter = TC3Exporter(self._tes.tc3data, self._tc3_dir, nclusters, t_step,
-                               TimeConverter.MINUTES, self.position)
+        exporter = TC3Exporter(self._tes.tc3data, self._tc3_dir, nclusters,
+                               t_step, TimeConverter.MINUTES, self.position)
         exporter()
 
     def export_classlabels(self):
         """Save classlabels of each object to the hdf file."""
         # function works for supervised and unuspervised case
-        for frame, channels in self.timeholder.iteritems():
+        for channels in self.timeholder.itervalues():
             for chname, classifier in self.classifiers.iteritems():
                 holder = channels[chname].get_region(classifier.regions)
                 if classifier.feature_names is None:
@@ -703,7 +703,6 @@ class PositionAnalyzer(PositionCore):
                       self.settings('Tracking', 'tracking_maxsplitobjects'),
                       self.settings('Tracking', 'tracking_maxtrackinggap'))
             self._tracker = Tracker(*tropts)
-            self._tes = self.setup_eventselection(self._tracker.graph)
 
         stopwatch = StopWatch(start=True)
         ca = CellAnalyzer(timeholder=self.timeholder,
@@ -720,6 +719,12 @@ class PositionAnalyzer(PositionCore):
             # invoke event selection
             if self.settings('Processing', 'eventselection') and \
                     self.settings('Processing', 'tracking'):
+
+                esch = self.settings('EventSelection', 'eventselection_channel')
+                region = self.classifiers[esch].regions
+                graph = self._tracker.clone_graph(self.timeholder, esch, region)
+
+                self._tes = self.setup_eventselection(graph)
                 self.logger.debug("--- visitor start")
                 self._tes.find_events()
                 self.logger.debug("--- visitor ok")
