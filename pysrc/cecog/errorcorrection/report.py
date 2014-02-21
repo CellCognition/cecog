@@ -274,8 +274,10 @@ class HmmReport(object):
 
             writer1 = csv.writer(fp1, delimiter=",")
             writer2 = csv.writer(fp2, delimiter=",")
-            header = ["# %s" %grouping] + \
-                range(1, self.data.values()[0].nframes+1, 1)
+            # first bucket that contains an hmm
+            nframes = [v for v in self.data.values()
+                       if v is not None][0].nframes
+            header = ["# %s" %grouping] + range(1, nframes+1, 1)
             writer1.writerow(header)
             writer2.writerow(header)
 
