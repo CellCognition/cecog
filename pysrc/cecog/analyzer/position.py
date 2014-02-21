@@ -673,11 +673,12 @@ class PositionAnalyzer(PositionCore):
         # function works for supervised and unuspervised case
         for frame, channels in self.timeholder.iteritems():
             for chname, classifier in self.classifiers.iteritems():
-                holder = channel[chname].get_region(classifier.regions)
+                holder = channels[chname].get_region(classifier.regions)
                 if classifier.feature_names is None:
                     # special for unsupervised case
                     classifier.feature_names = holder.feature_names
-                self.timeholder.save_classlabels(channel[chname], holder, classifier)
+                self.timeholder.save_classlabels(channels[chname],
+                                                 holder, classifier)
 
     def __call__(self):
         # include hdf5 file name in hdf5_options
