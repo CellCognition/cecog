@@ -108,7 +108,7 @@ class BaseLearner(LoggerObject):
     _subdirs = ('annotations', 'data', 'samples', 'controls')
 
     def __init__(self, clf_dir, name, channels, color_channel=None,
-                 extension=None, has_zero_insert=False):
+                 has_zero_insert=False):
         super(BaseLearner, self).__init__()
         self.add_stream_handler(self._lvl.INFO)
         self._clf_dir = None
@@ -119,8 +119,6 @@ class BaseLearner(LoggerObject):
             self.clf_dir = clf_dir
 
         self.name = name
-        self.extension = extension
-
         self.color_channel = color_channel
         self.channels = channels
 

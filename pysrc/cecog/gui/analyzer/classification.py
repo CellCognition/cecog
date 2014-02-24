@@ -121,6 +121,7 @@ class ClassifierResultFrame(QGroupBox):
     def on_load(self):
         self.load_classifier(check=True)
 
+
     def load_classifier(self, check=True, quiet=False):
         _resolve = lambda x,y: self._settings.get(x, '%s_%s'
                                                   % (self._channel, y))
@@ -137,8 +138,8 @@ class ClassifierResultFrame(QGroupBox):
                     {self._channel.title():
                          _resolve('Classification', 'classification_regionname')},
                 color_channel=_resolve('ObjectDetection', 'channelid'))
-            result = self._learner.check()
 
+            result = self._learner.check()
             if check:
                 b = lambda x: 'Yes' if x else 'No'
                 msg =  'Classifier path: %s\n' % result['path_env']
