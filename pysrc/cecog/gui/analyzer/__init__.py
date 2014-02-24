@@ -110,7 +110,7 @@ class BaseFrame(TraitDisplayMixin):
             self._tab.add_tab(name, frame)
 
         self._tab.set_active_index(0)
-        self._tab.current_changed.connect(self.on_tab_changed)
+        self._tab.currentChanged.connect(self.on_tab_changed)
 
         layout.addWidget(self._tab)
         layout.addWidget(self._control)
@@ -230,7 +230,7 @@ class _ProcessorMixin(object):
         layout.addWidget(help_button)
 
         if not self.TABS is None:
-            self._tab.current_changed.connect(self._on_tab_changed)
+            self._tab.currentChanged.connect(self._on_tab_changed)
             self._on_tab_changed(0)
         else:
             for name in self._control_buttons:

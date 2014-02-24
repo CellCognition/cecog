@@ -46,10 +46,10 @@ TAB_STYLE = \
 class TabControl(QFrame):
     """General tab control: list of buttons at the top and stacked widget below"""
 
-    current_changed = pyqtSignal(int)
+    currentChanged = pyqtSignal(int)
 
     def __init__(self, parent, hide_one=True):
-        QFrame.__init__(self, parent)
+        super(TabControl, self).__init__(parent)
 
         self.setStyleSheet(TAB_STYLE)
 
@@ -82,7 +82,7 @@ class TabControl(QFrame):
         btn.setObjectName('tab')
         btn.setFlat(True)
         btn.setCheckable(True)
-        btn.toggled.connect(functools.partial(self._on_btn_toggled, name))
+        btn.clicked.connect(functools.partial(self._on_clicked, name))
         self._btn_grp.addButton(btn)
         self._tabs[name] = (scroll_area, frame, btn)
         self._stacked_frame.addWidget(scroll_area)
@@ -97,23 +97,29 @@ class TabControl(QFrame):
         btn = self._tabs[name][1]
         self._btn_layout.removeWidget(btn)
         self._stacked_frame.removeWidget(scroll_area)
-        if (self._hide_one and len(self._tabs) <= 1) or (not self._hide_one and len(self._tabs) == 0):
+        if (self._hide_one and len(self._tabs) <= 1) or \
+                (not self._hide_one and len(self._tabs) == 0):
             self._btn_frame.hide()
 
     def set_active(self, name, toggle=True):
+        if name == self._current_name:
+            return
+
         scroll_area = self._tabs[name][0]
         if toggle:
             btn = self._tabs[name][2]
             btn.setChecked(True)
         self._stacked_frame.setCurrentWidget(scroll_area)
+
         self._current_name = name
-        self.current_changed.emit(self._tabs.keys().index(name))
+        self.currentChanged.emit(self._tabs.keys().index(name))
+
 
     def set_active_index(self, index):
         name = self._tabs.keys()[index]
         self.set_active(name)
 
-    def _on_btn_toggled(self, name):
+    def _on_clicked(self, name):
         self.set_active(name, toggle=False)
 
     def enable_non_active(self, state=True):

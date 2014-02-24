@@ -38,6 +38,7 @@ from cecog.colors import hex2rgb
 
 from cecog.environment import CecogEnvironment
 
+
 class ClassifierResultFrame(QGroupBox):
 
     LABEL_FEATURES = '#Features: %d (%d)'
@@ -101,9 +102,8 @@ class ClassifierResultFrame(QGroupBox):
         self.browserBtn = QPushButton('Show Browser', desc)
         layout_desc.addWidget(self.browserBtn)
         layout.addWidget(desc)
-
         self._has_data = False
-        self.load_classifier(quiet=True)
+        self._learner = None
 
     @property
     def classifier(self):
@@ -120,7 +120,7 @@ class ClassifierResultFrame(QGroupBox):
 
     def on_load(self):
         self.load_classifier(check=True)
-
+        self.update_frame()
 
     def load_classifier(self, check=True, quiet=False):
         _resolve = lambda x,y: self._settings.get(x, '%s_%s'
@@ -162,25 +162,38 @@ class ClassifierResultFrame(QGroupBox):
 
             if result['has_arff']:
                 self._learner.importFromArff()
-                nr_features_prev = len(self._learner.feature_names)
-                removed_features = self._learner.filter_nans(apply=True)
-                nr_features = nr_features_prev - len(removed_features)
-                self._label_features.setText(self.LABEL_FEATURES %(nr_features, nr_features_prev))
-                self._label_features.setToolTip("removed %d features containing NA values:\n%s" %
-                                                (len(removed_features), "\n".join(removed_features)))
 
             if result['has_definition']:
                 self._learner.loadDefinition()
 
-            if result['has_conf']:
-                c, g, conf = self._learner.importConfusion()
-                self._set_info(c, g, conf)
-                self._init_conf_table(conf)
-                self._update_conf_table(conf)
-            else:
-                conf = None
-                self._init_conf_table(conf)
-            self._set_info_table(conf)
+    def update_frame(self):
+        """Updates cass & annotation info and confusion matrix in the gui"""
+
+        # if samples were picked/annotated
+        try:
+            nftr_prev = len(self._learner.feature_names)
+        except TypeError:
+            pass
+        else:
+            removed_features = self._learner.filter_nans(apply=True)
+            nftr = nftr_prev - len(removed_features)
+            self._label_features.setText(self.LABEL_FEATURES %(nftr, nftr_prev))
+            self._label_features.setToolTip(
+                "removed %d features containing NA values:\n%s" %
+                (len(removed_features), "\n".join(removed_features)))
+
+        # if classifier was trained
+        try:
+            c, g, conf = self._learner.importConfusion()
+        except IOError as e:
+            conf = None
+            self._init_conf_table(conf)
+        else:
+            self._set_info(c, g, conf)
+            self._init_conf_table(conf)
+            self._update_conf_table(conf)
+        self._set_info_table(conf)
+
 
     def msg_pick_samples(self, parent):
         result = self._learner.check()
@@ -512,7 +525,7 @@ class ClassificationFrame(BaseProcessorFrame):
     def _update_classifier(self):
         channel = CHANNEL_PREFIX[self._tab.current_index]
         result_frame = self._result_frames[channel]
-        result_frame.load_classifier(check=False)
+        result_frame.update_frame()
 
     @property
     def classifiers(self):
@@ -521,14 +534,13 @@ class ClassificationFrame(BaseProcessorFrame):
             classifiers[k.title()] = v.classifier
         return classifiers
 
-    def page_changed(self):
-        self._update_classifier()
-        self.settings_loaded()
-
     def settings_loaded(self):
+        for frame in self._result_frames.values():
+            frame.load_classifier(quiet=True, check=True)
+            frame.update_frame()
+
         # FIXME: set the trait list data to plugin instances of the current channel
         prefix = CHANNEL_PREFIX[self._tab.current_index]
-
         if prefix in CH_VIRTUAL:
             self._merged_channel_and_region(prefix)
         else:
@@ -551,6 +563,3 @@ class ClassificationFrame(BaseProcessorFrame):
                                                    'merge_%s' %ch)
                 cbtrait.set_value(False)
                 trait.set_list_data([])
-
-    def tab_changed(self, index):
-        self.page_changed()
