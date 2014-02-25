@@ -83,7 +83,6 @@ namespace morpho {
     return(label-1);
   } // end of function ImLabel
 
-  ////////////////
   // ImLabel
   template<class Iterator1, class Accessor1,
        class Iterator2, class Accessor2,
@@ -93,11 +92,9 @@ namespace morpho {
         vigra::pair<Iterator2, Accessor2> dest,
         NBTYPE & neighborOffset)
   {
-    clock_t startTime = clock();
     return(ImLabel(src.first, src.second, src.third,
                  dest.first, dest.second,
                 neighborOffset));
-    //StopTime(startTime);
   }
 
   template<class Image1, class Image2, class NB>

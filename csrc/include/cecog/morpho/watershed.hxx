@@ -37,8 +37,6 @@ namespace morpho{
            PriorityFunctor priority
            )
   {
-    clock_t startTime = clock();
-
     // for the work image (negative labels are allowed)
     const int WS_QUEUED = -1;
     const int WS_NOT_PROCESSED = 0;
@@ -79,7 +77,6 @@ namespace morpho{
     for(o0.y = 0; o0.y < height; ++o0.y)
     {
       for(o0.x = 0; o0.x < width; ++o0.x)
-
       {
 
         maxval = std::max(srca(srcUpperLeft, o0), maxval);

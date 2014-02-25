@@ -14,111 +14,55 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
 
-import os, logging
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-import numpy
+import os
+from os.path import join,  isfile
 
 from svm import svm_model
-
-from pdk.options import Option
-from pdk.optionmanagers import OptionManager
-from pdk.attributemanagers import (get_attribute_values,
-                                   set_attribute_values)
-
-#-------------------------------------------------------------------------------
-# cecog module imports:
-#
 from cecog.learning.util import Normalizer
-
-#-------------------------------------------------------------------------------
-# constants:
-#
+from cecog.util.logger import LoggerObject
 
 
-#-------------------------------------------------------------------------------
-# functions:
-#
+class LibSvmClassifier(LoggerObject):
 
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
-
-
-class BaseClassifier(OptionManager):
-
-    __attributes__ = ['bProbability',
-                      '_oLogger']
-
-    def __init__(self, **options):
-        super(BaseClassifier, self).__init__(**options)
-        self.bProbability = False
-        self._oLogger = logging.getLogger(self.__class__.__name__)
-
-    def __getstate__(self):
-        dctState = get_attribute_values(self)
-        del dctState['_oLogger']
-        return dctState
-
-    def __setstate__(self, state):
-        set_attribute_values(self, state)
-        self._oLogger = logging.getLogger(self.__class__.__name__)
-
-
-class LibSvmClassifier(BaseClassifier):
-
-    OPTIONS = {"strSvmPrefix"  : Option("features", doc="Prefix for libSVM .model and .range files."),
-               "hasZeroInsert" : Option(True),
-               #"clsWriter"   : Option(LibSvmWriter, doc="Writer class to write feature data, e.g. in sparse libSVM format."),
-               }
-
-    SVM_MODEL = svm_model
-    NORMALIZER = Normalizer
     NAME = 'libSVM'
     METHOD = 'Support Vector Machine'
 
-    __attributes__ = ['oSvmModel',
-                      'oNormalizer']
+    def __init__(self, data_dir, svm_prefix, has_zero_insert):
+        super(LibSvmClassifier, self).__init__()
+        self.data_dir = data_dir
+        self.svm_prefix = svm_prefix
+        self.has_zero_insert = has_zero_insert
 
-    def __init__(self, strDataPath, oLogger, **options):
-        super(LibSvmClassifier, self).__init__(**options)
 
-        strModelFilePath = os.path.join(strDataPath, self.getOption('strSvmPrefix') + '.model')
-        if os.path.isfile(strModelFilePath):
-            self._oLogger.info("Loading libSVM model file '%s'." % strModelFilePath)
-            self.oSvmModel = self.SVM_MODEL(strModelFilePath)
+        model_path = join(data_dir, svm_prefix+'.model')
+        if os.path.isfile(model_path):
+            self.logger.info("Loading libSVM model file '%s'." %model_path)
+            self.svm_model = svm_model(model_path)
         else:
-            raise IOError("libSVM model file '%s' not found!" % strModelFilePath)
+            raise IOError("libSVM model file '%s' not found!" %model_path)
 
-        strRangeFilePath = os.path.join(strDataPath, self.getOption('strSvmPrefix') + '.range')
-        if os.path.isfile(strRangeFilePath):
-            self._oLogger.info("Loading libSVM range file '%s'." % strRangeFilePath)
-            self.oNormalizer = self.NORMALIZER(strRangeFilePath)
+        range_file = join(data_dir, svm_prefix+'.range')
+        if isfile(range_file):
+            self.logger.info("Loading libSVM range file '%s'." %range_file)
+            self.normalizer = Normalizer(range_file)
         else:
-            raise IOError("libSVM range file '%s' not found!" % strRangeFilePath)
+            raise IOError("libSVM range file '%s' not found!" %range_file)
 
-        self.bProbability = True if self.oSvmModel.probability == 1 else False
+        self.probability = True if self.svm_model.probability == 1 else False
 
-    def normalize(self, lstSampleFeatureData):
-        return self.oNormalizer.scale(lstSampleFeatureData)
+    def normalize(self, sample_feature_data):
+        return self.normalizer.scale(sample_feature_data)
 
-    def __call__(self, lstSampleFeatureData):
-        lstScaledFeatures = self.normalize(lstSampleFeatureData)
-        if self.getOption('hasZeroInsert'):
-            lstScaledFeatures = [0] + lstScaledFeatures
-        if self.bProbability:
-            fLabel, dctProb = self.oSvmModel.predict_probability(lstScaledFeatures)
-            iLabel = int(fLabel)
+    def __call__(self, sample_feature_data):
+        features_scaled = self.normalize(sample_feature_data)
+        if self.has_zero_insert:
+            features_scaled = [0] + features_scaled
+        if self.probability:
+            label, prob = self.svm_model.predict_probability(features_scaled)
+            label = int(label)
         else:
-            fLabel = self.oSvmModel.predict(lstScaledFeatures)
-            iLabel = int(fLabel)
-            dctProb = {iLabel: 1.0}
-        return iLabel, dctProb
+            label = self.svm_model.predict(features_scaled)
+            label = int(label)
+            prob = {label: 1.0}
+        return label, prob

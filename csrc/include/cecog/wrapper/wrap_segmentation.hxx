@@ -198,7 +198,7 @@ namespace cecog
                                                  int gaussSize, int maximaSize,
                                                  int iMinMergeSize)
     {
-	  vigra::PyAllowThreads _pythread;
+      vigra::PyAllowThreads _pythread;
       std::auto_ptr< vigra::BImage > imgPtr(new vigra::BImage(imgIn.size()));
       cecog::segmentationCorrection(imgIn, binIn, *imgPtr,
                                     rSize, gaussSize, maximaSize, iMinMergeSize,

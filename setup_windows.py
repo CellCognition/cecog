@@ -76,14 +76,12 @@ py2exe_opts = {'includes': build_helpers.INCLUDES,
 # or write these paths to setup.cfg
 includes = ['c:/python27/include',
             'c:/Python27/Lib/site-packages/numpy/core/include',
-            'c:/lib/include',
-            'c:/vigra/include',
             './csrc/include']
-libraries = ['boost_python-vc100-mt-1_45', 'libtiff', 'vigraimpex']
-library_dirs = ['c:/lib/lib', 'c:/vigra/lib']
+libraries = ['libtiff', 'vigraimpex']
+library_dirs = []
 
 ccore = Extension('cecog.ccore._cecog',
-                  sources = [join('csrc','src', 'wrapper','cecog.cxx')],
+                  sources = [join('csrc','src', 'cecog.cxx')],
                   include_dirs = includes,
                   libraries = libraries,
                   library_dirs = library_dirs,
@@ -91,26 +89,7 @@ ccore = Extension('cecog.ccore._cecog',
                   language = 'c++')
 
 # python package to distribute
-packages = ['cecog',
-            'cecog.analyzer',
-            'cecog.ccore',
-            'cecog.experiment',
-            'cecog.export',
-            'cecog.extensions',
-            'cecog.gui',
-            'cecog.gui.analyzer',
-            'cecog.gui.modules',
-            'cecog.gui.widgets',
-            'cecog.io',
-            'cecog.learning',
-            'cecog.multiprocess',
-            'cecog.plugin',
-            'cecog.plugin.segmentation',
-            'cecog.threads',
-            'cecog.traits',
-            'cecog.traits.analyzer',
-            'cecog.util',
-            'pdk']
+packages = build_helpers.find_submodules("./pysrc/cecog", "cecog")
 
 # special casing for system installation or py2exe bundle
 if "py2exe" in sys.argv:
@@ -125,8 +104,7 @@ setup(options = {"py2exe": py2exe_opts,
       cmdclass = {'pyrcc': build_helpers.PyRcc,
                   'build': build_helpers.Build},
       packages = packages,
-      package_dir = {'cecog': join('pysrc', 'cecog'),
-                     'pdk': join('pysrc', 'pdk')},
+      package_dir = {'cecog': join('pysrc', 'cecog')},
       data_files = dfiles,
       # zipfile = "data.zip",
       windows = [{'script': join('scripts', 'CecogAnalyzer.py'),

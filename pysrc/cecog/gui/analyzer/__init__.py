@@ -10,6 +10,8 @@
                  See trunk/AUTHORS.txt for author contributions.
 """
 
+from __future__ import division
+
 __author__ = 'Michael Held'
 __date__ = '$Date$'
 __revision__ = '$Rev$'
@@ -18,13 +20,7 @@ __source__ = '$URL$'
 __all__ = []
 
 import types
-import traceback
-import logging
-import logging.handlers
-import sys
 import os
-import time
-import copy
 import numpy
 
 from PyQt4.QtGui import *
@@ -32,35 +28,26 @@ from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
 from collections import OrderedDict
-from pdk.datetimeutils import TimeInterval
-
-# import warnings
-# with warnings.catch_warnings():
-#     warnings.simplefilter("ignore")
-#     import sklearn.hmm as hmm
-
 from multiprocessing import cpu_count
 
 from cecog import CHANNEL_PREFIX
 from cecog.gui.display import TraitDisplayMixin
-from cecog.learning.learning import (CommonObjectLearner,
-                                     CommonClassPredictor,
-                                     ConfusionMatrix,
-                                     )
-from cecog.util.util import hexToRgb, write_table
-from cecog.gui.util import (ImageRatioDisplay,
-                            numpy_to_qimage,
-                            question,
-                            critical,
-                            information,
-                            status,
-                            waitingProgressDialog,
-                            )
-from cecog.analyzer import CONTROL_1, CONTROL_2
+from cecog.learning.learning import CommonClassPredictor
+from cecog.learning.learning import ConfusionMatrix
 
+from cecog.util.util import write_table
+from cecog.units.time import seconds2datetime
+
+from cecog.gui.util import question
+from cecog.gui.util import critical
+from cecog.gui.util import information
+
+
+from cecog.analyzer import CONTROL_1, CONTROL_2
 from cecog.analyzer.channel import PrimaryChannel
 from cecog.analyzer.channel import SecondaryChannel
 from cecog.analyzer.channel import TertiaryChannel
+from cecog.plugin.metamanager import MetaPluginManager
 
 from cecog.environment import CecogEnvironment
 from cecog.analyzer.core import AnalyzerCore
@@ -69,7 +56,6 @@ from cecog import ccore
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
 from cecog.traits.analyzer.postprocessing import SECTION_NAME_POST_PROCESSING
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
-from cecog.analyzer.gallery import compose_galleries
 from cecog.plugin.display import PluginBay
 from cecog.gui.widgets.tabcontrol import TabControl
 from cecog.analyzer.ibb import IBBAnalysis, SecurinAnalysis
@@ -77,11 +63,20 @@ from cecog.analyzer.ibb import IBBAnalysis, SecurinAnalysis
 from cecog.threads.picker import PickerThread
 from cecog.threads.analyzer import AnalyzerThread
 from cecog.threads.training import TrainingThread
-from cecog.threads.hmm_scafold import HmmThread_Python_Scafold
 from cecog.threads.hmm import HmmThread
+from cecog.threads.pyhmm import PyHmmThread
 from cecog.threads.post_processing import PostProcessingThread
 from cecog.multiprocess.multianalyzer import MultiAnalyzerThread
 
+from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
+from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACTION
+from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
+from cecog.traits.analyzer.tracking import SECTION_NAME_TRACKING
+from cecog.traits.analyzer.eventselection import SECTION_NAME_EVENT_SELECTION
+from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
+from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
+from cecog.traits.analyzer.cluster import SECTION_NAME_CLUSTER
+from cecog.gui.progressdialog import ProgressDialog
 
 class BaseFrame(TraitDisplayMixin):
 
@@ -90,11 +85,13 @@ class BaseFrame(TraitDisplayMixin):
     CONTROL = CONTROL_1
 
     toggle_tabs = pyqtSignal(str)
+    status_message = pyqtSignal(str)
 
-    def __init__(self, settings, parent):
+    def __init__(self, settings, parent, name):
         super(BaseFrame, self).__init__(settings, parent)
+        self.plugin_mgr = MetaPluginManager()
+        self.name = name
         self._is_active = False
-
         self._intervals = list()
 
         self._tab_name = None
@@ -117,7 +114,6 @@ class BaseFrame(TraitDisplayMixin):
 
         layout.addWidget(self._tab)
         layout.addWidget(self._control)
-
 
     @pyqtSlot('int')
     def on_tab_changed(self, index):
@@ -158,16 +154,13 @@ class BaseFrame(TraitDisplayMixin):
         frame._input_cnt += 1
 
     def page_changed(self):
-        '''
-          Abstract method. Invoked by the AnalyzerMainWindow when this frame
+        """Abstract method. Invoked by the AnalyzerMainWindow when this frame
         is activated for display.
-        '''
+        """
         pass
 
     def settings_loaded(self):
-        '''
-        change notification called after a settings file is loaded
-        '''
+        """change notification called after a settings file is loaded."""
         pass
 
     def tab_changed(self, index):
@@ -182,7 +175,9 @@ class BaseFrame(TraitDisplayMixin):
 
 
 class _ProcessorMixin(object):
-    def __init__(self):
+    def __init__(self, parent):
+        self.idialog = parent.idialog
+
         self._is_running = False
         self._is_abort = False
         self._has_error = True
@@ -206,7 +201,7 @@ class _ProcessorMixin(object):
 
     def _init_control(self, has_images=True):
         layout = QHBoxLayout(self._control)
-        layout.setContentsMargins(0,0,0,0)
+        layout.setContentsMargins(0, 0, 0, 0)
 
         self._progress_label0 = QLabel(self._control)
         self._progress_label0.setText('')
@@ -251,6 +246,7 @@ class _ProcessorMixin(object):
                     ('General', 'pathout'),
                     ('Classification', 'primary_classification_envpath'),
                     ('Classification', 'secondary_classification_envpath'),
+                    ('Classification', 'tertiary_classification_envpath'),
                     ('ErrorCorrection', 'primary_graph'),
                     ('ErrorCorrection', 'secondary_graph'),
                     ('ErrorCorrection', 'mappingfile_path'),
@@ -293,12 +289,7 @@ class _ProcessorMixin(object):
 
     def _clear_image(self):
         """Pop up and clear the image display"""
-        if not qApp._image_dialog is None:
-            pix = qApp._graphics.pixmap()
-            pix2 = QPixmap(pix.size())
-            pix2.fill(Qt.black)
-            qApp._graphics.setPixmap(pix2)
-            qApp._image_dialog.raise_()
+        self.idialog.clearImage()
 
     def _on_process_start(self, name, start_again=False):
         if not self._is_running or start_again:
@@ -329,7 +320,7 @@ class _ProcessorMixin(object):
                 cls = self._process_items[self._current_process_item]
 
 
-            if self.SECTION_NAME == 'Classification':
+            if self.name == SECTION_NAME_CLASSIFICATION:
                 result_frame = self._get_result_frame(self._tab_name)
                 result_frame.load_classifier(check=False)
                 learner = result_frame._learner
@@ -359,17 +350,7 @@ class _ProcessorMixin(object):
                     is_valid = False
                     result_frame.msg_apply_classifier(self)
 
-            elif cls is HmmThread:
-
-                success, cmd = HmmThread.test_executable(self._settings.get('ErrorCorrection', 'filename_to_R'))
-                if not success:
-                    critical(self, 'Error running R',
-                             "The R command line program '%s' could not be executed.\n\n"\
-                             "Make sure that the R-project is installed.\n\n"\
-                             "See README.txt for details." % cmd)
-                    is_valid = False
-
-            elif cls is MultiAnalyzerThread:
+            if cls is MultiAnalyzerThread:
                 ncpu = cpu_count()
                 (ncpu, ok) = QInputDialog.getInt(None, "On your machine are %d processers available." % ncpu, \
                                              "Select the number of processors", \
@@ -399,13 +380,11 @@ class _ProcessorMixin(object):
                 if cls is PickerThread:
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
                     self._analyzer = cls(self, self._current_settings, imagecontainer)
-                    self._set_display_renderer_info()
                     self._clear_image()
 
                 elif cls is AnalyzerThread:
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
                     self._analyzer = cls(self, self._current_settings, imagecontainer)
-                    self._set_display_renderer_info()
                     self._clear_image()
 
                 elif cls is TrainingThread:
@@ -422,7 +401,16 @@ class _ProcessorMixin(object):
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
                     self._analyzer = cls(self, self._current_settings, imagecontainer, ncpu)
 
-                    self._set_display_renderer_info()
+
+                elif cls is PyHmmThread:
+                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
+                    self._analyzer = cls(self, self._current_settings,
+                                         self.parent().main_window._imagecontainer)
+
+                elif cls is PyHmmThread:
+                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
+                    self._analyzer = cls(self, self._current_settings,
+                                         self.parent().main_window._imagecontainer)
 
                 elif cls is HmmThread:
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
@@ -431,15 +419,21 @@ class _ProcessorMixin(object):
                     learner_dict = {}
                     for kind in ['primary', 'secondary']:
                         _resolve = lambda x,y: self._settings.get(x, '%s_%s' % (kind, y))
-                        env_path = CecogEnvironment.convert_package_path(_resolve('Classification', 'classification_envpath'))
+                        classifier_path = _resolve('Classification', 'classification_envpath')
+                        if classifier_path is None:
+                            print 'HMMThread(): No classifier given for %s' % kind
+                            continue
+                        env_path = CecogEnvironment.convert_package_path(classifier_path)
+
                         if (os.path.exists(env_path)
-                              and (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))
-                             ):
+                            and (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))
+                            ):
 
                             learner = CommonClassPredictor( \
                                 env_path,
                                 _resolve('ObjectDetection', 'channelid'),
                                 _resolve('Classification', 'classification_regionname'))
+
                             learner.importFromArff()
                             learner_dict[kind] = learner
 
@@ -448,8 +442,7 @@ class _ProcessorMixin(object):
                                          learner_dict,
                                          self.parent().main_window._imagecontainer)
                     self._analyzer.setTerminationEnabled(True)
-                    lw = self.parent().main_window.log_window
-                    lw.show()
+                    self.parent().main_window.log_window.show()
 
 
                 elif cls is PostProcessingThread:
@@ -473,10 +466,11 @@ class _ProcessorMixin(object):
                 self._analyzer.finished.connect(self._on_process_finished)
                 self._analyzer.stage_info.connect(self._on_update_stage_info, Qt.QueuedConnection)
                 self._analyzer.analyzer_error.connect(self._on_error, Qt.QueuedConnection)
+                self._analyzer.image_ready.connect(self._on_update_image)
 
                 self._analyzer.start(QThread.LowestPriority)
                 if self._current_process_item == 0:
-                    status('Process started...')
+                    self.status_message.emit('Process started...')
 
         else:
             self._abort_processing()
@@ -488,20 +482,16 @@ class _ProcessorMixin(object):
     def _abort_processing(self):
         self.setCursor(Qt.BusyCursor)
         self._is_abort = True
-        self.dlg = waitingProgressDialog('Please wait until the processing has been terminated...', self)
-        self.dlg.setTarget(self._analyzer.abort, wait=True)
-        self.dlg.exec_()
+        self.dlg = ProgressDialog('terminating...', None, 0, 0, self)
+        self.dlg.exec_(lambda: self._analyzer.abort(wait=True))
         self.setCursor(Qt.ArrowCursor)
-
-    def _on_render_changed(self, name):
-        #FIXME: proper sub-classing needed
-        self._analyzer.renderer = name
 
     def _on_error(self, msg):
         self._has_error = True
         critical(self, 'An error occurred during processing.', detail=msg)
 
     def _on_process_finished(self):
+        self._analyzer.image_ready.disconnect(self._on_update_image)
 
         if (not self._process_items is None and
             self._current_process_item+1 < len(self._process_items) and
@@ -511,17 +501,15 @@ class _ProcessorMixin(object):
             self._on_process_start(self._current_process, start_again=True)
         else:
             self._is_running = False
-            #logger = logging.getLogger()
-            #logger.removeHandler(self._handler)
             self._set_control_button_text(idx=0)
             self._toggle_control_buttons()
             self._toggle_tabs(True)
             # enable all section button of the main widget
             self.toggle_tabs.emit(self.get_name())
             if not self._is_abort and not self._has_error:
-                if self.SECTION_NAME == 'ObjectDetection':
+                if self.name == SECTION_NAME_OBJECTDETECTION:
                     msg = 'Object detection successfully finished.'
-                elif self.SECTION_NAME == 'Classification':
+                elif self.name == SECTION_NAME_CLASSIFICATION:
                     if self._current_process == self.PROCESS_PICKING:
                         msg = 'Samples successfully picked.\n\n'\
                               'Please train the classifier now based on the '\
@@ -539,25 +527,24 @@ class _ProcessorMixin(object):
                               'processing workflow.'
                     elif self._current_process == self.PROCESS_TESTING:
                         msg = 'Classifier testing successfully finished.'
-                elif self.SECTION_NAME == 'Tracking':
-                    if self._current_process == self.PROCESS_TRACKING:
-                        msg = 'Tracking successfully finished.'
-                    elif self._current_process == self.PROCESS_SYNCING:
-                        msg = 'Motif selection successfully finished.'
-                elif self.SECTION_NAME == 'ErrorCorrection':
+                elif self.name == SECTION_NAME_TRACKING:
+                    msg = 'Tracking successfully finished.'
+                elif self.name == SECTION_NAME_EVENT_SELECTION:
+                    msg = 'event selection successfully finished.'
+                elif self.name == SECTION_NAME_ERRORCORRECTION:
                     msg = 'HMM error correction successfully finished.'
-                elif self.SECTION_NAME == 'Processing':
+                elif self.name == SECTION_NAME_PROCESSING:
                     msg = 'Processing successfully finished.'
-                elif self.SECTION_NAME == "PostProcessing":
+                elif self.name == SECTION_NAME_POST_PROCESSING:
                     msg = 'Postprocessing successfully finished'
 
                 information(self, 'Process finished', msg)
-                status(msg)
+                self.status_message.emit(msg)
             else:
                 if self._is_abort:
-                    status('Process aborted by user.')
+                    self.status_message.emit('Process aborted by user.')
                 elif self._has_error:
-                    status('Process aborted by error.')
+                    self.status_message.emit('Process aborted by error.')
 
             self._current_process = None
             self._process_items = None
@@ -565,6 +552,7 @@ class _ProcessorMixin(object):
     def _on_esc_pressed(self):
         if self._is_running:
             self._abort_processing()
+            self._analyzer.image_ready.disconnect(self._on_update_image)
 
     def _on_update_stage_info(self, info):
         sep = '   |   '
@@ -587,16 +575,15 @@ class _ProcessorMixin(object):
                         interval = info['interval']
                         self._intervals.append(interval)
                         avg = numpy.average(self._intervals)
-                        estimate = TimeInterval(avg * float(info['max']-info['progress']))
+                        estimate = seconds2datetime(avg*float(info['max']-info['progress']))
                         msg += '%s~ %.1fs / %s%s%s remaining' % (sep,
-                                                               #interval.get_interval(),
-                                                               avg,
-                                                               info['item_name'],
-                                                               sep,
-                                                               estimate.format())
+                                                                 avg,
+                                                                 info['item_name'],
+                                                                 sep,
+                                                                 estimate.strftime("%H:%M:%S"))
                     else:
                         self._intervals = []
-                    status(msg)
+                    self.status_message.emit(msg)
                 else:
                     self._progress_label0.setText('')
             else:
@@ -617,16 +604,16 @@ class _ProcessorMixin(object):
                     if current > 1 and ('interval' in info.keys()):
                         interval = info['interval']
                         self._intervals.append(interval)
-                        estimate = TimeInterval(numpy.average(self._intervals) *
-                                                float(total-current))
+                        estimate = seconds2datetime(
+                            numpy.average(self._intervals)*float(total-current))
                         msg += '%s%.1fs / %s%s%s remaining' % (sep,
                                                                interval,
                                                                self._stage_infos[2]['item_name'],
                                                                sep,
-                                                               estimate.format())
+                                                               estimate.strftime("%H:%M:%S"))
                     else:
                         self._intervals = []
-                    status(msg)
+                    self.status_message.emit(msg)
         elif self.CONTROL == CONTROL_2:
             if info['stage'] == 1:
                 if 'progress' in info:
@@ -648,97 +635,18 @@ class _ProcessorMixin(object):
                 else:
                     self._analyzer_label2.setText(info['text'])
 
-    def _on_update_image(self, image_rgb, info, filename):
+    def _on_update_image(self, images, message):
         if self._show_image.isChecked():
-            # FIXME:
-            if image_rgb.width % 4 != 0:
-                image_rgb = ccore.subImage(
-                    image_rgb, ccore.Diff2D(0,0), ccore.Diff2D(image_rgb.width - \
-                               (image_rgb.width % 4), image_rgb.height))
-            qimage = numpy_to_qimage(image_rgb.toArray(copy=False))
+            self.idialog.updateImages(images, message)
+            if not self.idialog.isVisible():
+                self.idialog.raise_()
 
-            if qApp._image_dialog is None:
-                qApp._image_dialog = QFrame()
-                ratio = qimage.height()/float(qimage.width())
-                qApp._image_dialog.setGeometry(50, 50, 800, 800*ratio)
-
-                shortcut = QShortcut(QKeySequence(Qt.Key_Escape), qApp._image_dialog)
-                shortcut.activated.connect(self._on_esc_pressed)
-
-                layout = QVBoxLayout(qApp._image_dialog)
-                layout.setContentsMargins(0,0,0,0)
-
-                qApp._graphics = ImageRatioDisplay(qApp._image_dialog, ratio)
-                qApp._graphics.setScaledContents(True)
-                qApp._graphics.resize(800, 800*ratio)
-                qApp._graphics.setMinimumSize(QSize(100,100))
-                policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-                policy.setHeightForWidth(True)
-                qApp._graphics.setSizePolicy(policy)
-                layout.addWidget(qApp._graphics)
-
-                dummy = QFrame(qApp._image_dialog)
-                dymmy_layout = QHBoxLayout(dummy)
-                dymmy_layout.setContentsMargins(5,5,5,5)
-
-                qApp._image_combo = QComboBox(dummy)
-                qApp._image_combo.setSizePolicy(QSizePolicy(QSizePolicy.Expanding,
-                                                            QSizePolicy.Fixed))
-                self._set_display_renderer_info()
-
-                dymmy_layout.addStretch()
-                dymmy_layout.addWidget(qApp._image_combo)
-                dymmy_layout.addStretch()
-                layout.addWidget(dummy)
-                layout.addStretch()
-
-                qApp._image_dialog.show()
-                qApp._image_dialog.raise_()
-            #else:
-            #    qApp._graphics_pixmap.setPixmap(QPixmap.fromImage(qimage))
-            qApp._graphics.setPixmap(QPixmap.fromImage(qimage))
-            qApp._image_dialog.setWindowTitle(info)
-            qApp._image_dialog.setToolTip(filename)
-
-            if not qApp._image_dialog.isVisible():
-                qApp._image_dialog.show()
-                qApp._image_dialog.raise_()
-
-
-    def _set_display_renderer_info(self):
-        # WTF - to exclude properties for gallery images
-        rendering = [x for x in self._current_settings.get('General', 'rendering')
-                     if not x in CHANNEL_PREFIX]
-        rendering += self._current_settings.get('General', 'rendering_class').keys()
-        rendering.sort()
-
-        idx = 0
-        if not qApp._image_dialog is None:
-            widget = qApp._image_combo
-            current = widget.currentText()
-            widget.clear()
-            if len(rendering) > 1:
-                widget.addItems(rendering)
-                widget.show()
-                widget.currentIndexChanged[str].connect(self._on_render_changed)
-                if current in rendering:
-                    widget.setCurrentIndex(widget.findText(current, Qt.MatchExactly))
-                    idx = rendering.index(current)
-            else:
-                widget.hide()
-
-        if len(rendering) > 0:
-            self._analyzer.renderer = rendering[idx]
-        else:
-            self._analyzer.renderer = None
-
-        self._analyzer.image_ready.connect(self._on_update_image)
 
 class BaseProcessorFrame(BaseFrame, _ProcessorMixin):
 
-    def __init__(self, settings, parent):
-        BaseFrame.__init__(self, settings, parent)
-        _ProcessorMixin.__init__(self)
+    def __init__(self, settings, parent, name):
+        BaseFrame.__init__(self, settings, parent, name)
+        _ProcessorMixin.__init__(self, parent)
 
     def set_active(self, state):
         # set internl state and enable/disable control buttons

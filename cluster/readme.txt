@@ -1,3 +1,10 @@
+INSTALLATION
+============
+python setup.py install --prefix <directory>
+
+You might adjust the RCFILE variable in cecog-gateway and also write a
+custom cellcognition.xx file.
+
 Cluster setup for CellCognition
 
 *) cecocg-gateway - is the init script which goes into /etc/init.d/

@@ -176,6 +176,7 @@ class SelectionTrait2(traits.SelectionTrait2, GuiTrait):
             widget.setCurrentIndex(index)
 
     def set_list_data(self, list_data=None):
+        index = None
         if not list_data is None:
             traits.SelectionTrait2.set_list_data(self, list_data)
         list_data = self.list_data
@@ -192,14 +193,17 @@ class SelectionTrait2(traits.SelectionTrait2, GuiTrait):
                 self._widget.setCurrentIndex(index)
             else:
                 index = None
-        return index
+            return index
 
     def init(self):
         pass
 
     def notify(self, name, removed):
         if removed:
-            self.list_data.remove(name)
+            try:
+                self.list_data.remove(name)
+            except ValueError:
+                pass
         else:
             self.list_data.append(name)
         self.set_list_data()
@@ -218,10 +222,6 @@ class MultiSelectionTrait(traits.MultiSelectionTrait, GuiTrait):
 
     def set_value(self, widget, value):
         widget.clearSelection()
-#        for item in value:
-#            w_listitem = widget.findItems(str(item), Qt.MatchExactly)
-#            #if len(w_listitem) > 0:
-#            widget.setCurrentItem(w_listitem[0], QItemSelectionModel.Select)
 
 
 class DictTrait(traits.DictTrait, GuiTrait):
@@ -229,8 +229,3 @@ class DictTrait(traits.DictTrait, GuiTrait):
     def __init__(self, default_value, label=None, tooltip=None, doc=None):
         traits.DictTrait.__init__(self, default_value)
         GuiTrait.__init__(self, label, tooltip=tooltip, doc=doc)
-
-
-#-------------------------------------------------------------------------------
-# main:
-#

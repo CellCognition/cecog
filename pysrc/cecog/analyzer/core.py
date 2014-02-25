@@ -27,6 +27,7 @@ from cecog.util.logger import LoggerObject
 from cecog.util.util import makedirs
 
 
+
 # XXX - fix class names
 class AnalyzerBase(LoggerObject):
 
@@ -74,26 +75,23 @@ class AnalyzerBase(LoggerObject):
 
         if self._frames is None:
             frames_total = self.meta_data.times
-            if min(frames_total) == 0:
-                delta = 0
-            else:
-                delta = -1
-
             f_start, f_end, f_incr = 0, len(frames_total), 1
 
             if self.settings.get('General', 'frameRange'):
-                f_start = max( \
-                    self.settings.get('General', 'frameRange_begin')+delta,
-                    f_start)
-                f_end = min( \
-                    self.settings.get('General', 'frameRange_end')+delta,
-                    f_end)
                 f_incr = self.settings.get('General', 'frameincrement')
+                try:
+                    fmin = max(min(frames_total), self.settings.get('General', 'frameRange_begin'))
+                    fmax = min(max(frames_total), self.settings.get('General', 'frameRange_end'))
+                    f_start = frames_total.index(fmin)
+                    f_end = frames_total.index(fmax)
+                except ValueError:
+                    # this can happen if coordinates have already a increment > 1
+                    msg = ("Time constraint: either 'Begin' or 'End' is an invalid value!")
+                    raise ValueError(msg)
 
-                # > for picking >= anything else
                 if f_start > f_end:
                     raise RuntimeError(("Invalid time constraints "
-                                        "(upper_bound <= lower_bound)!"))
+                                        "(Begin < End)!"))
 
                 self._frames = frames_total[f_start:f_end+1:f_incr]
             else:
@@ -207,17 +205,16 @@ class AnalyzerCore(AnalyzerBase):
             analyzer = PositionAnalyzer(*args_, **kw_)
             try:
                 nimages = analyzer()
+                if self.settings.get('Output', 'hdf5_create_file') and \
+                    self.settings.get('Output', 'hdf5_merge_positions'):
+                    hdf5_links.append(analyzer.hdf5_filename)
             except Exception as e:
-                import traceback
                 print e.message
+                import traceback, sys
                 traceback.print_exc()
-                raise(e)
+                raise
             finally:
                 analyzer.clear()
-
-            if self.settings.get('Output', 'hdf5_create_file') and \
-                    self.settings.get('Output', 'hdf5_merge_positions'):
-                hdf5_links.append(analyzer.hdf5_filename)
         return hdf5_links
     
 class AnalyzerBrowser(AnalyzerCore):
@@ -255,11 +252,12 @@ class Picker(AnalyzerBase):
         self.learner = learner
 
         pattern = join(self.learner.annotations_dir, "*%s" %learner.extension)
-        anno_re = re.compile(('((.*?_{3})?PL(?P<plate>.*?)_{3})?P(?P'
+        anno_re = re.compile(('((.*?_{1,3})?PL(?P<plate>.*?)_{1,3})?P(?P'
                               '<position>.+?)_{1,3}T(?P<time>\d+).*?'))
 
         frames_total = self.meta_data.times
         for annofile in glob.glob(pattern):
+
             result = anno_re.match(basename(annofile))
             if result is None:
                 raise RuntimeError("Something is wrong with your annotation files in the classifier folder. " +

@@ -13,6 +13,7 @@ goto:build
 rmdir /Q /S dist
 rmdir /Q /S build
 erase /Q *.exe
+erase pysrc\cecog\ccore\_cecog.pyd
 
 :build
 python setup_windows.py py2exe
@@ -27,7 +28,7 @@ CALL git describe --tags > build.info
 for /F "delims=\" %%a in (build.info) do (
 	set temp=%%a
 )
-SET mver="1.4.0"
+SET mver="1.5.0"
 pause
 
 makensis /Dmver=%mver% win-installer-64.nsi

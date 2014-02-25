@@ -522,13 +522,13 @@ namespace cecog
     typedef SrcValueType result_type;
     typedef std::vector<double> Vector;
 
-    HistogramEqualization(Vector const &probs, argument_type minV, argument_type maxV)
+    HistogramEqualization(Vector const &probs, argument_type minV,
+                          argument_type maxV)
     {
       this->minV = minV;
       this->maxV = maxV;
       this->diffV = maxV - minV;
-      for (int i=0; i < probs.size(); i++)
-      {
+      for (size_t i = 0; i < probs.size(); i++) {
         probsCum.push_back(probs[i]);
         if (i > 0)
           probsCum[i] += probsCum[i-1];
@@ -545,68 +545,59 @@ namespace cecog
     argument_type minV, maxV, diffV;
   };
 
-//
-//  template <class SrcValueType>
-//  HistogramEqualization<SrcValueType>
-//  histogramEqualization(HistogramEqualization<SrcValueType>::Vector const &probs, SrcValueType minV, SrcValueType maxV)
-//  {
-//    return HistogramEqualization<SrcValueType>(probs, minV, maxV);
-//  }
-
-
   template <class SrcValueType1, class SrcValueType2, class DestValueType>
-    class ImageSubstract2
+  class ImageSubstract2
+  {
+  public:
+    typedef SrcValueType1 argument_type1;
+    typedef SrcValueType2 argument_type2;
+    typedef DestValueType result_type;
+
+    ImageSubstract2(result_type minV, result_type maxV)
+      : minV(minV), maxV(maxV)
+    {}
+
+    result_type operator()(argument_type1 s1, argument_type2 s2) const
     {
-    public:
-      typedef SrcValueType1 argument_type1;
-      typedef SrcValueType2 argument_type2;
-      typedef DestValueType result_type;
-
-      ImageSubstract2(result_type minV, result_type maxV)
-        : minV(minV), maxV(maxV)
-      {}
-
-      result_type operator()(argument_type1 s1, argument_type2 s2) const
-      {
-        double res = (double)s1 - (double)s2;
-        if (res > maxV)
-          return maxV;
-        else if (res < minV)
-          return minV;
-        else
-          return vigra::NumericTraits<result_type>::fromRealPromote(res);
-      }
-    private:
-      result_type minV, maxV;
-    };
+      double res = (double)s1 - (double)s2;
+      if (res > maxV)
+        return maxV;
+      else if (res < minV)
+        return minV;
+      else
+        return vigra::NumericTraits<result_type>::fromRealPromote(res);
+    }
+  private:
+    result_type minV, maxV;
+  };
 
   template <class SrcValueType, class DestValueType>
-    class ImageLinearTransform
+  class ImageLinearTransform
+  {
+  public:
+    typedef SrcValueType argument_type;
+    typedef DestValueType result_type;
+
+    ImageLinearTransform(argument_type srcMin, argument_type srcMax, result_type destMin, result_type destMax, result_type minV, result_type maxV)
+      : minV(minV), maxV(maxV)
     {
-    public:
-      typedef SrcValueType argument_type;
-      typedef DestValueType result_type;
+      ratio = double(destMax - destMin) / double(srcMax - srcMin);
+      offset = destMin / ratio - srcMin;
+    }
 
-      ImageLinearTransform(argument_type srcMin, argument_type srcMax, result_type destMin, result_type destMax, result_type minV, result_type maxV)
-        : minV(minV), maxV(maxV)
-      {
-        ratio = double(destMax - destMin) / double(srcMax - srcMin);
-        offset = destMin / ratio - srcMin;
-      }
-
-      result_type operator()(argument_type s) const
-      {
-        double res = ratio * (s + offset);
-        if (res > maxV)
-          return maxV;
-        else if (res < minV)
-          return minV;
-        else
-          return vigra::NumericTraits<result_type>::fromRealPromote(res);
-      }
-    private:
-      result_type minV, maxV;
-      double offset, ratio;
+    result_type operator()(argument_type s) const
+    {
+      double res = ratio * (s + offset);
+      if (res > maxV)
+        return maxV;
+      else if (res < minV)
+        return minV;
+      else
+        return vigra::NumericTraits<result_type>::fromRealPromote(res);
+    }
+  private:
+    result_type minV, maxV;
+    double offset, ratio;
     };
 
   template <class IMAGE>
@@ -615,50 +606,49 @@ namespace cecog
   projectImage(vigra::ArrayVector< IMAGE > &lstImages, IMAGE &imgOut, ProjectionType pType)
   {
     if (lstImages.size() > 0)
-    {
-      typedef typename IMAGE::value_type PixelType;
-      int iWidth = lstImages[0].width();
-      int iHeight = lstImages[0].height();
-      int iSize = lstImages.size();
-      typedef vigra::MultiArray<3, PixelType> ImageArray;
-      ImageArray imgArray(typename ImageArray::difference_type(iWidth, iHeight, iSize));
-      for (int i=0; i < iSize; i++)
       {
-        vigra::MultiArrayView<2, PixelType> arrayView(imgArray.bindOuter(i));
-        vigra::BasicImageView<PixelType> imgView = makeBasicImageView(arrayView);
-        copyImage(srcImageRange(lstImages[i]), destImage(imgView));
-      }
+        typedef typename IMAGE::value_type PixelType;
+        int iWidth = lstImages[0].width();
+        int iHeight = lstImages[0].height();
+        int iSize = lstImages.size();
+        typedef vigra::MultiArray<3, PixelType> ImageArray;
+        ImageArray imgArray(typename ImageArray::difference_type(iWidth, iHeight, iSize));
+        for (int i=0; i < iSize; i++)
+          {
+            vigra::MultiArrayView<2, PixelType> arrayView(imgArray.bindOuter(i));
+            vigra::BasicImageView<PixelType> imgView = makeBasicImageView(arrayView);
+            copyImage(srcImageRange(lstImages[i]), destImage(imgView));
+          }
 
-      ImageArray imgArrayProj(typename ImageArray::difference_type(iWidth, iHeight, 1));
+        ImageArray imgArrayProj(typename ImageArray::difference_type(iWidth, iHeight, 1));
 
-      if (pType == MaxProjection)
-      {
-        vigra::ReduceFunctor<MaxReduceFunctor<PixelType>, PixelType>
-          oMaxReduceFunctor(MaxReduceFunctor<PixelType>(), 0);
-        vigra::transformMultiArray(srcMultiArrayRange(imgArray),
-                                   destMultiArrayRange(imgArrayProj),
-                                   oMaxReduceFunctor);
-      }
-      else if (pType == MinProjection)
-      {
-        vigra::ReduceFunctor<MinReduceFunctor<PixelType>, PixelType>
-          oMaxReduceFunctor(MinReduceFunctor<PixelType>(), 0);
-        vigra::transformMultiArray(srcMultiArrayRange(imgArray),
-                                   destMultiArrayRange(imgArrayProj),
-                                   oMaxReduceFunctor);
-      }
-      else if (pType == MeanProjection)
-      {
-        vigra::transformMultiArray(srcMultiArrayRange(imgArray),
-                                   destMultiArrayRange(imgArrayProj),
-                                   vigra::FindAverage<PixelType>());
-      }
+        if (pType == MaxProjection)
+          {
+            vigra::ReduceFunctor<MaxReduceFunctor<PixelType>, PixelType>
+              oMaxReduceFunctor(MaxReduceFunctor<PixelType>(), 0);
+            vigra::transformMultiArray(srcMultiArrayRange(imgArray),
+                                       destMultiArrayRange(imgArrayProj),
+                                       oMaxReduceFunctor);
+          }
+        else if (pType == MinProjection)
+          {
+            vigra::ReduceFunctor<MinReduceFunctor<PixelType>, PixelType>
+              oMaxReduceFunctor(MinReduceFunctor<PixelType>(), 0);
+            vigra::transformMultiArray(srcMultiArrayRange(imgArray),
+                                       destMultiArrayRange(imgArrayProj),
+                                       oMaxReduceFunctor);
+          }
+        else if (pType == MeanProjection)
+          {
+            vigra::transformMultiArray(srcMultiArrayRange(imgArray),
+                                       destMultiArrayRange(imgArrayProj),
+                                       vigra::FindAverage<PixelType>());
+          }
 
-      vigra::MultiArrayView<2, PixelType> arrayView = imgArrayProj.bindOuter(0);
-      vigra::BasicImageView<PixelType> imgViewProj = makeBasicImageView(arrayView);
-      copyImage(srcImageRange(imgViewProj), destImage(imgOut));
-    }
+        vigra::MultiArrayView<2, PixelType> arrayView = imgArrayProj.bindOuter(0);
+        vigra::BasicImageView<PixelType> imgViewProj = makeBasicImageView(arrayView);
+        copyImage(srcImageRange(imgViewProj), destImage(imgOut));
+      }
   }
-
- }
+}
 #endif // CECOG_TRANSFORMS

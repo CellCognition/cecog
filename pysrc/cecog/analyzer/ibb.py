@@ -7,12 +7,10 @@ import re
 import os
 import cPickle as pickle
 from itertools import cycle
-from cecog.util.color import rgb_to_hex
+from cecog.colors import rgb2hex
+
 from matplotlib.backends.backend_pdf import PdfPages
 from vigra.impex import readImage
-#mpl.rcParams["axes.facecolor"] = 'k'
-#mpl.rcParams["axes.edgecolor"] = 'w'
-#mpl.rcParams["axes.labelcolor"] = 'w'
 mpl.rcParams["figure.facecolor"] = 'w'
 mpl.rcParams["pdf.compression"] = 0
 
@@ -57,7 +55,8 @@ class GalleryDecorationPlotter(EventPlotterPdf):
 
 
 
-    def add_gallery_deco(self, event_id, pos_name, path_in, time, class_labels, class_colors, channel=('primary', 'secondary')):
+    def add_gallery_deco(self, event_id, pos_name, path_in, time, class_labels,
+                         class_colors, channel=('primary', 'secondary')):
         if 'gallery' not in self.add_axes:
             self.add_axes['gallery'] = self.figure.add_axes((0.1, 0.1, 0.8, 0.4))
 
@@ -134,9 +133,10 @@ class PostProcessingAnalysis(object):
         self.mapping_file = mapping_file
         self.class_colors = class_colors
         self.class_names = class_names
+        self.plate = None
 
     def _readScreen(self):
-        self.plate = Plate.load(self.path_in, self.plate_name)
+        #self.plate = Plate.load(self.path_in, self.plate_name)
         if self.plate is None:
             self.plate = Plate(self.plate_name, self.path_in, self.mapping_file)
 
@@ -372,7 +372,7 @@ class IBBAnalysis(PostProcessingAnalysis):
                 print pos.position, ":::",
                 cnt_single_plot = 0
                 for event_idx, (event_id, event_dicts) in enumerate(sorted(pos.items())):
-                    print event_idx,
+                    print event_idx, event_id,
                     h2b = event_dicts['Primary']['primary']
                     ibb_inside = event_dicts['Secondary']['inside']
                     ibb_outside = event_dicts['Secondary']['outside']
@@ -386,7 +386,6 @@ class IBBAnalysis(PostProcessingAnalysis):
 
                     time = h2b['timestamp']
                     time = time - time[0]
-
 
                     if rejection_code == IBBAnalysis.REJECTION.OK:
                         separation_frame, ibb_onset_frame, nebd_onset_frame, prophase_onset, prophase_last_frame = ibb_result
@@ -410,7 +409,6 @@ class IBBAnalysis(PostProcessingAnalysis):
                 print ""
             if group_name in self._plotter:
                 self._plotter[group_name].close()
-
         self.export_class_timing(result)
         self.export_timing(result, "nebd_to_sep_time")
         self.export_timing(result, "sep_to__ibb_time")
@@ -443,7 +441,6 @@ class IBBAnalysis(PostProcessingAnalysis):
                             group_data.append(class_counts[class_index])
 
                 data.append(group_data)
-
             self._export_data_list(filename, data, names)
 
     def _export_data_list(self, filename, data, names):
@@ -458,7 +455,6 @@ class IBBAnalysis(PostProcessingAnalysis):
         dtype = [(n, 'float') for n in names]
         fnan = FormatFloatNaN()
         formatd = dict([(n, fnan) for n in names])
-
         data_t = numpy.array(map(None, *data), dtype=dtype)
         mpl.mlab.rec2csv(data_t, filename, formatd=formatd, delimiter='\t')
 
@@ -659,9 +655,6 @@ class IBBAnalysis(PostProcessingAnalysis):
         axes.set_title("%s - %s" % (group_name, event_id))
         axes.set_ylabel("IBB ratio")
         axes.set_xlabel("Time [min]")
-#        pylab.text(time[separation_frame]+0.5, ratio.max(), "Sep", verticalalignment='top', color='r')
-#        pylab.text(time[ibb_onset_frame]+0.5, ratio.max(), "Ibb", verticalalignment='top', color='g')
-#        pylab.text(time[nebd_onset_frame]+0.5, ratio.max(), "Nebd", verticalalignment='top', color='b')
         axes.legend(loc="lower right", prop={'size': 6})
         axes.grid('on')
 
@@ -706,7 +699,7 @@ class IBBAnalysis(PostProcessingAnalysis):
         data = []
         names = []
         bar_labels = ('valid', 'signal', 'split', 'ibb_onset', 'nebd_onset', 'prophase_onset')
-        bar_colors = map(lambda x:rgb_to_hex(*x), [[int(x*255) for x in pyplot.cm.Greens(2)[0:3]],] +
+        bar_colors = map(lambda x:rgb2hex(x), [[int(x*255) for x in pyplot.cm.Greens(2)[0:3]],] +
                                                   [tuple(x) for x in (pyplot.cm.RdBu(range(0,256,62))*255)[:,:3].astype('uint8')[:,:3]]
                           )
 
@@ -757,11 +750,11 @@ class IBBAnalysis(PostProcessingAnalysis):
         ax1 = fig.add_subplot(111)
         ax1.set_title('IBB Analysis %s' % self.PLOT_LABELS[id_])
         ax1.bar(range(len(data_list)), map(numpy.mean, numpy.array(data_list)),
-               yerr=map(numpy.std, numpy.array(data_list)),
-               color=map(lambda x:rgb_to_hex(*x), colors),
-               ecolor='k',
-               align='center',
-               )
+                yerr=map(numpy.std, numpy.array(data_list)),
+                color=map(lambda x:rgb2hex(x), colors),
+                ecolor='k',
+                align='center',
+                )
         #ax1.set_xticks([x+0.8 for x in range(len(data_list))])
 
         if len(neg_ctrl) > 0:
@@ -797,7 +790,7 @@ class IBBAnalysis(PostProcessingAnalysis):
         for c, d in zip(colors, data_list):
             if len(d) > 0:
                 b = bp['boxes'][i]
-                pyplot.setp(b, facecolor=rgb_to_hex(*c))
+                pyplot.setp(b, facecolor=rgb2hex(c))
                 i += 1
 
         #ax1.set_xticks([x+0.8 for x in range(len(data_list))])
@@ -851,8 +844,8 @@ class Plate(object):
     GROUP_BY = enum('POS', "OLIGO", "GENE", "GROUP")
 
     POSITION_REGEXP = re.compile(r"^[A-Z]\d{1,5}_\d{1,5}$|^\d{1,6}$")
-    EVENT_REGEXP = re.compile(r"features__P(?P<pos>\d+|[A-Z]\d+_\d+)__T(?P<time>\d+)"
-                               "__O(?P<obj>\d+)__B(?P<branch>\d+)__C(?P<channel>.+?)__R(?P<region>.*)\.txt")
+    EVENT_REGEXP = re.compile(r"features_P(?P<pos>\d+|[A-Z]\d+_\d+)_T(?P<time>\d+)"
+                               "_O(?P<obj>\d+)_B(?P<branch>\d+)_C(?P<channel>.+?)_R(?P<region>.*)\.txt")
     def __init__(self, plate_id, path_in, mapping_file, group_by=0):
         self._logger =  self._logger = logging.getLogger(self.__class__.__name__)
         self.class_label_selector = 'class__label'
@@ -876,14 +869,26 @@ class Plate(object):
             res += "%s with %d events\n" % (pos, len(self._positions[pos]))
         return res
 
+    def _get_positions_dirs(self):
+        pos_list = []
+        for pos_candidate in sorted(os.listdir(self.path_in)):
+            if self.POSITION_REGEXP.search(pos_candidate) is not None:
+                pos_list.append(pos_candidate)
+
+        if len(pos_list) == 0:
+            raise RuntimeError("No positions folder found for path %s" % self.path_in)
+
+        return pos_list
+
     def readEvents(self):
         self.mapping = self._readMappingFile()
         self.pos_list = self._get_positions_dirs()
 
+        fmt = "%%0%dd" %(len(self.pos_list[0]))
         for pos_idx, pos_name in enumerate(self.mapping['position']):
             if isinstance(pos_name, int):
-                pos_name = '%04d' % pos_name
-
+                pos_name = fmt %pos_name
+            print pos_name, pos_name in self.pos_list
             if pos_name not in self.pos_list:
 #                raise RuntimeError("Position from Mapping file %s not found in in path %s" % (pos_name, self.path_in))
                 print "Position from Mapping file %s not found in in path %s" % (pos_name, self.path_in)
@@ -986,18 +991,6 @@ class Plate(object):
         self._logger.info('Found mapping file: %s' % self.mapping_file)
 
         return mapping
-
-
-    def _get_positions_dirs(self):
-        pos_list = []
-        for pos_candidate in sorted(os.listdir(self.path_in)):
-            if self.POSITION_REGEXP.search(pos_candidate) is not None:
-                pos_list.append(pos_candidate)
-
-        if len(pos_list) == 0:
-            raise RuntimeError("No positions folder found for path %s" % self.path_in)
-
-        return pos_list
 
     def get_events(self):
         res = {}

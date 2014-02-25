@@ -28,34 +28,14 @@ pyrcc_opts = {'infile': 'cecog.qrc',
               'pyrccbin': 'pyrcc4'}
 
 ccore = Extension('cecog.ccore._cecog',
-                  sources = [join('csrc','src', 'wrapper','cecog.cxx')],
+                  sources = [join('csrc','src', 'cecog.cxx')],
                   include_dirs=build_helpers.CC_INCLUDES,
                   libraries=['boost_python', 'tiff', 'vigraimpex'],
                   extra_compile_args = ['-O3', '-fPIC'],
                   language = 'c++')
 
 # python packages to distribute
-packages = ['cecog',
-            'cecog.analyzer',
-            'cecog.ccore',
-            'cecog.experiment',
-            'cecog.export',
-            'cecog.extensions',
-            'cecog.gui',
-            'cecog.gui.analyzer',
-            'cecog.gui.modules',
-            'cecog.gui.widgets',
-            'cecog.io',
-            'cecog.learning',
-            'cecog.multiprocess',
-            'cecog.plugin',
-            'cecog.plugin.segmentation',
-            'cecog.threads',
-            'cecog.traits',
-            'cecog.traits.analyzer',
-            'cecog.util',
-            'pdk']
-
+packages = build_helpers.find_submodules("./pysrc/cecog", "cecog")
 scripts = [join('scripts', 'CecogAnalyzer.py'), join('scripts', 'cecog_batch.py')]
 
 setup(scripts = scripts,
@@ -64,8 +44,7 @@ setup(scripts = scripts,
       cmdclass = {'pyrcc': build_helpers.PyRcc,
                   'build': build_helpers.Build},
       packages = packages,
-      package_dir = {'cecog': join('pysrc', 'cecog'),
-                     'pdk': join('pysrc', 'pdk')},
+      package_dir = {'cecog': join('pysrc', 'cecog')},
       options = {'pyrcc': pyrcc_opts},
       ext_modules = [ccore],
       **build_helpers.metadata)

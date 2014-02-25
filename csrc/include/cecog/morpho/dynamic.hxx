@@ -343,10 +343,9 @@ namespace morpho {
 
         // Get the absolute minimum:
         minVal = valOfMin[0];
-        for(int i = 1; i != valOfMin.size(); ++i)
-        {
-            if(minVal > valOfMin[i])
-                minVal = valOfMin[i];
+        for(unsigned i = 1; i != valOfMin.size(); ++i) {
+          if(minVal > valOfMin[i])
+            minVal = valOfMin[i];
         }
 
         // Entering the priority queue ...

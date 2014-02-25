@@ -17,8 +17,6 @@ __source__ = '$URL$'
 __all__ = ['ClusterFrame']
 
 import types
-import copy
-import traceback
 import socket
 import urlparse
 
@@ -28,43 +26,24 @@ from PyQt4.Qt import *
 
 from pyamf.remoting.client import RemotingService
 
-from cecog.traits.analyzer.cluster import SECTION_NAME_CLUSTER
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.environment import CecogEnvironment
 
 from cecog.gui.analyzer import BaseFrame
-from cecog.gui.analyzer.processing import ProcessingFrame
-from cecog.util.util import OS_LINUX
-from cecog.gui.util import (exception,
-                            information,
-                            warning,
-                            waitingProgressDialog,
-                            )
-from cecog import (JOB_CONTROL_RESUME,
-                   JOB_CONTROL_SUSPEND,
-                   JOB_CONTROL_TERMINATE,
-                   VERSION
-                   )
+from cecog.gui.analyzer.processing import ExportSettings
+from cecog.gui.util import exception, information, warning
+from cecog.gui.progressdialog import ProgressDialog
 
-#-------------------------------------------------------------------------------
-# constants:
-#
+from cecog import JOB_CONTROL_RESUME, JOB_CONTROL_SUSPEND, \
+    JOB_CONTROL_TERMINATE, VERSION
 
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 class ClusterDisplay(QGroupBox):
 
-    def __init__(self, parent, settings, imagecontainer):
+    def __init__(self, parent, clusterframe,  settings):
         QGroupBox.__init__(self, parent)
         self._settings = settings
-        self._imagecontainer = imagecontainer
+        self._clusterframe = clusterframe
+        self._imagecontainer = None
         self._jobid = None
         self._toggle_state = JOB_CONTROL_SUSPEND
         self._service = None
@@ -166,6 +145,14 @@ class ClusterDisplay(QGroupBox):
             raise RuntimeError("Image container is not loaded yet")
         return self._imagecontainer
 
+    @imagecontainer.deleter
+    def imagecontainer(self):
+        del self._imagecontainer
+
+    @imagecontainer.setter
+    def imagecontainer(self, imagecontainer):
+        self._imagecontainer = imagecontainer
+
     def _on_jobid_entered(self, txt):
         print txt
         self._jobid = str(txt)
@@ -175,6 +162,7 @@ class ClusterDisplay(QGroupBox):
         self._submit_settings.set_section(SECTION_NAME_GENERAL)
         if not self._submit_settings.get2('constrain_positions'):
             positions = []
+
             for plate_id in self.imagecontainer.plates:
                 self.imagecontainer.set_plate(plate_id)
                 meta_data = self.imagecontainer.get_meta_data()
@@ -186,20 +174,21 @@ class ClusterDisplay(QGroupBox):
             nr_items = len(positions.split(','))
 
         # FIXME: we need to get the current value for 'position_granularity'
-        settings_dummy = ProcessingFrame.get_special_settings(self._settings)
-        position_granularity = settings_dummy.get(SECTION_NAME_CLUSTER, 'position_granularity')
+        settings_dummy = self._clusterframe.get_special_settings(self._settings)
+        position_granularity = settings_dummy.get('Cluster', 'position_granularity')
 
         path_out = self._submit_settings.get2('pathout')
         emails = str(self._txt_mail.text()).split(',')
         try:
-            self.dlg = waitingProgressDialog('Please wait until the job has been submitted...', self)
-            self.dlg.setTarget(self._service.submit_job,
-                          'cecog_batch', self._submit_settings.to_string(), path_out, emails, nr_items,
-                          position_granularity, VERSION)
-            self.dlg.exec_()
+            self.dlg = ProgressDialog("submitting jobs...", None, 0, 0, self)
+            settings_str = self._submit_settings.to_string()
+            func = lambda: self._service.submit_job('cecog_batch', settings_str,
+                                                    path_out, emails, nr_items,
+                                                    position_granularity, VERSION)
+            self.dlg.exec_(func)
             jobid = self.dlg.getTargetResult()
-        except:
-            exception(self, 'Error on job submission')
+        except Exception as e:
+            exception(self, 'Error on job submission (%s)' %str(e))
         else:
             # FIXME: no idea how DRMAA 1.0 compatible this is
             if type(jobid) == types.ListType:
@@ -216,11 +205,11 @@ class ClusterDisplay(QGroupBox):
     @pyqtSlot()
     def _on_terminate_job(self):
         try:
-            self.dlg = waitingProgressDialog("Please wait until the job has been terminated...", self)
-            self.dlg.setTarget(self._service.control_job, self._jobid, JOB_CONTROL_TERMINATE)
-            self.dlg.exec_()
-        except:
-            exception(self, 'Error on job termination')
+            self.dlg = ProgressDialog("terminating jobs...", None, 0, 0, self)
+            func = lambda: self._service.control_job(self._jobid, JOB_CONTROL_TERMINATE)
+            self.dlg.exec_(func)
+        except Exception as e:
+            exception(self, 'Error on job termination (%s)' %str(e))
         else:
             self._btn_toogle.setChecked(False)
             self._toggle_state = JOB_CONTROL_SUSPEND
@@ -230,13 +219,13 @@ class ClusterDisplay(QGroupBox):
     @pyqtSlot()
     def _on_toggle_job(self):
         try:
-            self.dlg = waitingProgressDialog("Please wait until the job has been suspended/resumed...", self)
-            self.dlg.setTarget(self._service.control_job, self._jobid, self._toggle_state)
-            self.dlg.exec_()
-        except:
+            self.dlg = ProgressDialog("suspending jobs...", None, 0, 0, self)
+            func = lambda: self._service.control_job(self._jobid, self._toggle_state)
+            self.dlg.exec_(func)
+        except Exception as e:
             self._toggle_state = JOB_CONTROL_SUSPEND
             self._btn_toogle.setChecked(False)
-            exception(self, 'Error on toggle job status')
+            exception(self, 'Error on toggle job status (%s)' %str(e))
         else:
             if self._toggle_state == JOB_CONTROL_SUSPEND:
                 self._toggle_state = JOB_CONTROL_RESUME
@@ -252,12 +241,12 @@ class ClusterDisplay(QGroupBox):
 
     def _update_job_status(self):
         try:
-            self.dlg = waitingProgressDialog('Please wait for the cluster update...', self)
-            self.dlg.setTarget(self._service.get_job_status, self._jobid)
-            self.dlg.exec_()
+            self.dlg = ProgressDialog("updating job status...", None, 0, 0, self)
+            func = lambda: self._service.get_job_status(self._jobid)
+            self.dlg.exec_(func)
             txt = self.dlg.getTargetResult()
-        except:
-            exception(self, 'Error on retrieve job status')
+        except Exception as e:
+            exception(self, 'Error on retrieve job status (%s)' %str(e))
         else:
             self._label_jobstatus.setText(txt)
         return txt
@@ -285,19 +274,18 @@ class ClusterDisplay(QGroupBox):
         msg = 'Error on connecting to cluster control service on %s' % self._host_url
         try:
             client = RemotingService(self._host_url)
-            self.dlg = waitingProgressDialog('Please wait for the cluster...', self)
-            self.dlg.setTarget(client.getService, 'clustercontrol')
-            self.dlg.exec_()
+            self.dlg = ProgressDialog("connecting to cluster...", None, 0, 0, self)
+            func = lambda: client.getService('clustercontrol')
+            self.dlg.exec_(func)
             self._service = self.dlg.getTargetResult()
         except:
             exception(self, msg)
         else:
             try:
-                self.dlg.setTarget(self._service.get_cecog_versions)
-                self.dlg.exec_()
+                self.dlg.exec_(self._service.get_cecog_versions)
                 cluster_versions = self.dlg.getTargetResult()
-            except:
-                exception(self, msg)
+            except Exception as e:
+                exception(self, msg + '(%s)' %str(e))
             else:
                 if not VERSION in set(cluster_versions):
                     warning(self, 'Cecog version %s not supported by the cluster' %
@@ -351,10 +339,10 @@ class ClusterDisplay(QGroupBox):
             self._can_submit = True
 
             try:
-                self._submit_settings = ProcessingFrame.get_special_settings( \
+                self._submit_settings = self._clusterframe.get_special_settings( \
                     self._settings, self.imagecontainer.has_timelapse)
             except:
-                self._submit_settings = ProcessingFrame.get_special_settings(self._settings)
+                self._submit_settings = self._clusterframe.get_special_settings(self._settings)
 
             self._label_hosturl.setText(self._host_url)
             self._label_status.setText(self._service.get_service_info())
@@ -364,7 +352,8 @@ class ClusterDisplay(QGroupBox):
             self._table_info.setRowCount(len(mappable_paths))
             for idx, info in enumerate(mappable_paths):
                 value = self._settings.get(*info)
-                mapped = CecogEnvironment.map_path_to_os(value, target_os=OS_LINUX, force=False)
+                mapped = CecogEnvironment.map_path_to_os(
+                    value, target_os='linux', force=False)
                 self._submit_settings.set(info[0], info[1], mapped)
                 status = not mapped is None
                 item = QTableWidgetItem()
@@ -388,25 +377,25 @@ class ClusterDisplay(QGroupBox):
             self._btn_update.setEnabled(False)
 
 
-class ClusterFrame(BaseFrame):
+class ClusterFrame(BaseFrame, ExportSettings):
 
-    SECTION_NAME = SECTION_NAME_CLUSTER
+    def __init__(self, settings, parent, name):
+        super(ClusterFrame, self).__init__(settings, parent, name)
 
-    def __init__(self, settings, parent, imagecontainer):
-        super(ClusterFrame, self).__init__(settings, parent)
-
-        self._cluster_display = self._add_frame(imagecontainer)
+        self._cluster_display = self._add_frame()
         self.add_group(None,
                        [('position_granularity', (0,0,1,1)),
                         ], label='Cluster Settings')
 
-    def _add_frame(self, imagecontainer):
+    def _add_frame(self):
         frame = self._get_frame()
-        cluster_display = ClusterDisplay(frame, self._settings, imagecontainer)
-        frame.layout().addWidget(cluster_display,
-                                 frame._input_cnt, 0, 1, 2)
+        cluster_display = ClusterDisplay(frame, self, self._settings)
+        frame.layout().addWidget(cluster_display, frame._input_cnt, 0, 1, 2)
         frame._input_cnt += 1
         return cluster_display
 
     def page_changed(self):
         self._cluster_display.update_display(self._is_active)
+
+    def set_imagecontainer(self, imagecontainer):
+        self._cluster_display.imagecontainer = imagecontainer

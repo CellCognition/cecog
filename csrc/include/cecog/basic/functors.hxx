@@ -24,50 +24,51 @@
 
 namespace cecog
 {
-  template<class T, class IN, class OUT>
+  template<class T, class IN_, class OUT_>
   class ThresholdFunctor
   {
     public:
-      ThresholdFunctor(T const &threshold, OUT const &markVal, OUT const &zeroVal) :
+		ThresholdFunctor(T const &threshold, OUT_ const &markVal, OUT_ const &zeroVal) :
                threshold_(threshold), markVal_(markVal), zeroVal_(zeroVal)
                {}
 
-      OUT operator()(IN const &inVal, T const &val)
+		OUT_ operator()(IN_ const &inVal, T const &val)
       {
         return( ( (T)inVal - val >= threshold_) ? markVal_ : zeroVal_);
       }
 
     private:
       T threshold_;
-      OUT markVal_, zeroVal_;
+	  OUT_ markVal_, zeroVal_;
   };
 
-  template<class IN, class OUT>
+  
+  template<class IN_, class OUT_>
   class ThresholdFunctorUpperLower
   {
     public:
-      ThresholdFunctorUpperLower(IN const &lower, IN const &upper, OUT const &markVal, OUT const &zeroVal) :
+		ThresholdFunctorUpperLower(IN_ const &lower, IN_ const &upper, OUT_ const &markVal, OUT_ const &zeroVal) :
         lower_(lower), upper_(upper), markVal_(markVal), zeroVal_(zeroVal)
         {}
 
-      OUT operator()(IN const &inVal)
+		OUT_ operator()(IN_ const &inVal)
       {
         return( ( (inVal >= lower_) && (inVal <=upper_)) ? markVal_ : zeroVal_);
       }
 
     private:
-      IN lower_, upper_;
-      OUT markVal_, zeroVal_;
+      IN_ lower_, upper_;
+	  OUT_ markVal_, zeroVal_;
   };
 
-  template<class T, class IN, class OUT>
+  template<class T, class IN_, class OUT_>
   class TrivialValueFunctor
   {
     public:
       TrivialValueFunctor(){}
-      OUT operator()(IN const &inVal, T const &val)
+      OUT_ operator()(IN_ const &inVal, T const &val)
       {
-        return( (OUT)val );
+        return( (OUT_)val );
       }
   };
 
@@ -233,20 +234,20 @@ namespace cecog
   // the functor SelectListOfValues checks if the pixel value
   // is in a list of values. If it is, the pixel is put to zero (noVal),
   // if not, the pixel is put to yesVal.
-  template<class IN, class OUT>
+  template<class IN_, class OUT_>
   struct DeleteListOfValues
   {
   public:
-    typedef typename std::vector<IN> VALUELIST;
+    typedef typename std::vector<IN_> VALUELIST;
 
     // yesVal: value the pixel gets if its grey level is in the value list
     // noVal: value te pixel gets, if it is not in the value list.
-    DeleteListOfValues(const VALUELIST &values, const OUT &yesVal, const OUT &noVal)
+    DeleteListOfValues(const VALUELIST &values, const OUT_ &yesVal, const OUT_ &noVal)
     : valueList_(values), yesVal_(yesVal), noVal_(noVal)
     {}
 
 
-    OUT operator()(const IN &a) const
+    OUT_ operator()(const IN_ &a) const
     {
 //      for(typename VALUELIST::size_type i = 0; i != valueList_.size(); ++i)
 //      {
@@ -271,8 +272,8 @@ namespace cecog
 
   private:
     VALUELIST valueList_;
-    OUT yesVal_;
-    OUT noVal_;
+    OUT_ yesVal_;
+    OUT_ noVal_;
   };
 
   template <class VALUETYPE>

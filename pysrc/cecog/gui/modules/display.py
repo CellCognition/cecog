@@ -17,10 +17,9 @@ __source__ = '$URL$'
 __all__ = []
 
 import os
+import glob
 import zipfile
 from collections import OrderedDict
-import os
-import zipfile
 
 import numpy
 
@@ -28,17 +27,14 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
-from pdk.fileutils import collect_files
-from pdk.datetimeutils import StopWatch
+from qimage2ndarray import array2qimage
 
 from cecog.colors import Colors
 from cecog.gui.modules.module import Module
 from cecog.gui.widgets.colorbox import ColorBox
 from cecog.environment import CecogEnvironment
-from cecog.util.palette import (NucMedPalette,
-                                ZeissPalette,
-                                SingleColorPalette)
-from cecog.gui.util import numpy_to_qimage
+from cecog.util.palette import ZeissPalette
+from cecog.util.palette import SingleColorPalette
 from cecog.gui.widgets.colorbutton import ColorButton
 
 DEFAULT_COLORS_BY_NAME = Colors.channel_table
@@ -81,8 +77,8 @@ class ChannelItem(QFrame):
         self.name = name
         self._show_image = True
 
-        if name.lower() in DEFAULT_COLORS_BY_NAME:
-            self._current = DEFAULT_COLORS_BY_NAME[name.lower()]
+        if name in DEFAULT_COLORS_BY_NAME:
+            self._current = DEFAULT_COLORS_BY_NAME[name]
         else:
             self._current = DEFAULT_LUT_COLORS[idx]
 
@@ -103,9 +99,8 @@ class ChannelItem(QFrame):
     def render_image(self, image):
         if self._show_image:
             palette = self._palettes[self._current]
-            qimage = numpy_to_qimage(image, palette.qt)
-            # seems to be not necessary although result is Index8
-            #qimage = qimage.convertToFormat(QImage.Format_ARGB32_Premultiplied)
+            qimage = array2qimage(image)
+            qimage = qimage.convertToFormat(qimage.Format_Indexed8, palette.qt)
         else:
             height, width = image.shape
             qimage = QImage(width, height, QImage.Format_ARGB32_Premultiplied)
@@ -549,7 +544,7 @@ class DisplayModule(Module):
         # iterator over palettes
         path_zeiss = os.path.join(CecogEnvironment.RESOURCE_DIR,
                                   'palettes', 'zeiss')
-        for filename in collect_files(path_zeiss, ['.zip'], absolute=True):
+        for filename in glob.glob(os.path.join(path_zeiss+'/*.zip')):
             with zipfile.ZipFile(filename, 'r') as f:
                 name = f.namelist()[0]
                 data = f.read(name)

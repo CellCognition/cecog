@@ -30,15 +30,12 @@ from cecog.io.imagecontainer import MetaImage
 from cecog.analyzer.object import ImageObject, ObjectHolder, Orientation
 
 from cecog.util.logger import LoggerObject
-from cecog.plugin.segmentation import (PRIMARY_SEGMENTATION_MANAGER,
-                                       SECONDARY_SEGMENTATION_MANAGER,
-                                       TERTIARY_SEGMENTATION_MANAGER)
+from cecog.plugin.metamanager import MetaPluginManager
 
 class ChannelCore(LoggerObject):
 
     NAME = None
     _rank = None
-    SEGMENTATION = None
     _is_virtual = False
 
     def __init__(self,
@@ -87,6 +84,11 @@ class ChannelCore(LoggerObject):
         self._regions = {}
         self.meta_image = None
         self._features_calculated = False
+
+        try:
+            self.plugin_mgr = MetaPluginManager()[self.NAME.lower()]
+        except KeyError:
+            self.plugin_mgr = None
 
     def __cmp__(self, channel):
         return cmp(self._rank, channel._rank)
@@ -158,6 +160,8 @@ class Channel(ChannelCore):
         if type(self.oZSliceOrProjection) == types.TupleType:
             method, zbegin, zend, zstep = self.oZSliceOrProjection
             images = [img.image for img in self._zslices][(zbegin-1):zend:zstep]
+            # single images don't carry the dtype
+            dtype = img.format.lower()
 
             if method == "maximum":
                 method_const = ccore.ProjectionType.MaxProjection
@@ -166,13 +170,16 @@ class Channel(ChannelCore):
             elif method == "average":
                 method_const = ccore.ProjectionType.MeanProjection
 
-            self.logger.debug("* applying %s Z-Projection to stack of %d images..." % (method, len(images)))
-            img_proj = ccore.projectImage(images, method_const)
-
+            self.logger.debug("* applying %s Z-Projection to stack of %d images..."
+                              %(method, len(images)))
+            imgprj = numpy.zeros((images[0].height, images[0].width),
+                                 dtype=dtype)
+            imgprj = ccore.numpy_to_image(imgprj, copy=True)
+            ccore.zproject(imgprj, images, method_const)
 
             # overwrite the first MetaImage found with the projected image data
             meta_image = self._zslices[0]
-            meta_image.set_image(img_proj)
+            meta_image.set_image(imgprj)
         else:
             self.oZSliceOrProjection = int(self.oZSliceOrProjection)
             self.logger.debug("* selecting z-slice %d..." % self.oZSliceOrProjection)
@@ -185,7 +192,7 @@ class Channel(ChannelCore):
 
     def apply_registration(self):
         img_in = self.meta_image.image
-        
+
         # ccore.subImage checks dimensions
         image = ccore.subImage(img_in,
                                ccore.Diff2D(*self.registration_start)-
@@ -263,17 +270,27 @@ class Channel(ChannelCore):
             raise IOError("Multiple z-slice flat field corr. images found.\n"
                           "Directory must contain only one file per plate\n"
                           "(%s)" %", ".join(path))
+        elif len(path) == 0:
+            raise IOError("No z-slice flat field corr. images found. in %s\n"
+                          "Directory must contain only one file per plate\n" % self.strBackgroundImagePath)
         try:
             # ccore need str not unicode
             bg_image = ccore.readImageFloat(str(path[0]))
         except Exception, e:
             # catching all errors, even files that are no images
             raise IOError(("Z-slice flat field correction image\n"
-                           " could not be loaded! (file: %s)"
-                           %path[0]))
+                           " could not be loaded! (file: %rS)"
+                           % path))
         return bg_image
 
     def normalize_image(self, plate_id=None):
+        try:
+            import pydevd
+            pydevd.connected = True
+            pydevd.settrace(suspend=False)
+            print 'Thread enabled interactive eclipse debuging...'
+        except:
+            pass
         img_in = self.meta_image.image
         if self.bFlatfieldCorrection:
             self.logger.debug("* using flat field correction with image from %s"
@@ -319,50 +336,39 @@ class Channel(ChannelCore):
         the defined plugin instances (managed via the PluginManger of this
         channel).
         """
-# Check and raise is not needed
-#         if self.SEGMENTATION.number_loaded_plugins() == 0:
-#             raise RuntimeError("%s channel has no loaded segmentation plugins!"
-#                                %self.NAME)
-        self.containers = self.SEGMENTATION.run(self.meta_image,
-                                                requirements=args)
+        self.containers = self.plugin_mgr.run(self.meta_image,
+                                              requirements=args)
 
 # XXX remove prefix in future version just use name
 class PrimaryChannel(Channel):
 
     NAME = 'Primary'
     PREFIX = NAME.lower()
-
     _rank = 1
-    SEGMENTATION = PRIMARY_SEGMENTATION_MANAGER
 
 class SecondaryChannel(Channel):
 
     NAME = 'Secondary'
     PREFIX = NAME.lower()
-
     _rank = 2
-    SEGMENTATION = SECONDARY_SEGMENTATION_MANAGER
 
 class TertiaryChannel(Channel):
 
     NAME = 'Tertiary'
     PREFIX = NAME.lower()
-
     _rank = 3
-    SEGMENTATION = TERTIARY_SEGMENTATION_MANAGER
+
 
 # This channel is 'virtual'
 class MergedChannel(ChannelCore):
-    """
-    Virtal or PseudoChannel which is meant to concatenate features of
-    other channels. It cannot perform an segmentation or ohter operation
+    """Virtual or PseudoChannel which is meant to concatenate features of
+    other channels. It cannot perform an segmentation or other operation
     on images.
     """
 
     NAME = 'Merged'
     PREFIX = NAME.lower()
     _rank = 4
-    SEGMENTATION = None
     _is_virtual = True
 
     def __init__(self, *args, **kw):
@@ -408,7 +414,18 @@ class MergedChannel(ChannelCore):
     def _new_container(self, master):
         # not sure if it makes a difference to have a master
         # perhaps a method to get an rgb image
-        mcnt = self._channels[master].containers['primary']
+
+        # find the region of the primary channel
+        # it does not feel a great piece of code ...
+        available_regions = self._channels[master].containers.keys()
+        if 'primary' in available_regions:
+            default_region = 'primary'
+        elif 'primary' in [x[:len('primary')] for x in available_regions]:
+            default_region = filter(lambda x: x[:len('primary')]=='primary', available_regions)[0]
+        else:
+            default_region = available_regions[0]
+
+        mcnt = self._channels[master].containers[default_region]
         self.containers[self.regkey] = mcnt
 
     @property

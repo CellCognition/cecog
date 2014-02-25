@@ -18,6 +18,12 @@ import logging
 
 def link_hdf5_files(post_hdf5_link_list):
     logger = logging.getLogger()
+    
+    if len(post_hdf5_link_list) == 0:
+        return
+    
+    if post_hdf5_link_list[0] == 0:
+        return
 
     PLATE_PREFIX = '/sample/0/plate/'
     WELL_PREFIX = PLATE_PREFIX + '%s/experiment/'

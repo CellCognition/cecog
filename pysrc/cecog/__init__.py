@@ -14,23 +14,16 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = ['VERSION', 'VERSION_NUM', 'PLUGIN_MANAGERS',
-           'CHANNEL_PREFIX', 'APPNAME']
+__all__ = ['VERSION', 'VERSION_NUM', 'CHANNEL_PREFIX', 'APPNAME']
 
 # move this constants to version.py module
 VERSION_NUM = (1, 5, 0)
 VERSION = '.'.join([str(n) for n in VERSION_NUM])
 APPNAME = 'CecogAnalyzer'
 
-# XXX function in CecogEnvironment class
-HAS_GUI = False
-
 JOB_CONTROL_SUSPEND = 'Suspend'
 JOB_CONTROL_RESUME = 'Resume'
 JOB_CONTROL_TERMINATE = 'Terminate'
-
-SEGMENTATION_MANAGERS = []
-PLUGIN_MANAGERS = []
 
 # XXX move this constants to the channels module
 CH_PRIMARY = ["primary"]

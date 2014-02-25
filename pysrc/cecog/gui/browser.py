@@ -23,7 +23,7 @@ __all__ = ['Browser']
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
-import math
+
 import numpy
 
 import sip
@@ -37,36 +37,28 @@ from PyQt4.Qt import *
 
 
 
-from cecog.gui.util import (exception,
-                            information,
-                            question,
-                            warning,
-                            numpy_to_qimage,
-                            get_qcolor_hicontrast,
-                            qcolor_to_hex,
-                            )
+
+
 from cecog.gui.imageviewer import ImageViewer
 from cecog.gui.modules.module import ModuleManager
 from cecog.gui.analyzer import _ProcessorMixin
-from cecog.analyzer.channel import (PrimaryChannel,
-                                    SecondaryChannel,
-                                    TertiaryChannel,
-                                    )
+
 from cecog.analyzer.core import AnalyzerBrowser
+from cecog.analyzer.channel import PrimaryChannel
+
+
 from cecog.io.imagecontainer import Coordinate
-from cecog.learning.learning import BaseLearner
-from cecog.gui.widgets.groupbox import QxtGroupBox
 
 from cecog.gui.modules.navigation import NavigationModule
 from cecog.gui.modules.display import DisplayModule
 from cecog.gui.modules.annotation import AnnotationModule
 
-from cecog.plugin.segmentation import REGION_INFO
 
 from cecog.io.imagecontainer import ImageContainer
 from cecog.gui.config import GuiConfigSettings
-from cecog.traits.analyzer import SECTION_REGISTRY
-from cecog.traits.config import ConfigSettings
+
+
+from cecog.plugin.metamanager import MetaPluginManager
 
 
 class Browser(QMainWindow):
@@ -255,12 +247,16 @@ class Browser(QMainWindow):
         toolbar.setFloatable(False)
 
         region_names = []
+        reginfo = MetaPluginManager().region_info
         for prefix in ['primary', 'secondary', 'tertiary']:
             region_names.extend(['%s - %s' % (prefix.capitalize(), name) \
-                                 for name in REGION_INFO.names[prefix]])
+                                 for name in reginfo.names[prefix]])
 
-        # FIXME: something went wrong with setting up the current region
-        self._object_region = region_names[0].split(' - ')
+        # Creating fallback if no Segmentation plugins have been specified so far
+        if len(region_names) > 0:
+            self._object_region = region_names[0].split(' - ')
+        else:
+            self._object_region = ('Primary', 'primary')
 
 
         # create a new ModuleManager with a QToolbar and QStackedFrame
@@ -426,7 +422,7 @@ class Browser(QMainWindow):
         # same color
         if nchannels == 2:
             settings.set('Processing', 'secondary_processChannel', True)
-        elif nchannels == 3:
+        elif nchannels >= 3:
             settings.set('Processing', 'secondary_processChannel', True)
             settings.set('Processing', 'tertiary_processChannel', True)
         # need turn of virtual channels

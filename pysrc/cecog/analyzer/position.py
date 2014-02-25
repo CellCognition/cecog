@@ -16,19 +16,19 @@ __source__ = '$URL$'
 
 import os
 import shutil
+import numpy as np
 from collections import OrderedDict
 from os.path import join, basename, isdir
 
 from cecog.io.imagecontainer import Coordinate
-from cecog.plugin.segmentation import REGION_INFO
-from cecog.analyzer import (TRACKING_DURATION_UNIT_FRAMES,
-                            TRACKING_DURATION_UNIT_MINUTES,
-                            TRACKING_DURATION_UNIT_SECONDS)
+from cecog.plugin.metamanager import MetaPluginManager
+from cecog.units.time import TimeConverter
 
 from cecog.analyzer.timeholder import TimeHolder
 from cecog.analyzer.analyzer import CellAnalyzer
 from cecog.analyzer.tracker import Tracker
 from cecog.analyzer.eventselection import EventSelection
+from cecog.analyzer.eventselection import UnsupervisedEventSelection
 
 from cecog.analyzer.channel import (PrimaryChannel,
                                     SecondaryChannel,
@@ -39,11 +39,10 @@ from cecog.learning.learning import CommonClassPredictor
 
 from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACTION
 from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
-from cecog.traits.analyzer.tracking import SECTION_NAME_TRACKING
 
-from cecog.analyzer.gallery import EventGallery
-from cecog.analyzer.channel_gallery import ChannelGallery
-from cecog.export.exporter import TrackExporter, EventExporter
+from cecog.gallery import TrackGallery
+from cecog.gallery import ChannelGallery
+from cecog.export import TrackExporter, EventExporter, TC3Exporter
 from cecog.util.logger import LoggerObject
 from cecog.util.stopwatch import StopWatch
 from cecog.util.util import makedirs
@@ -219,6 +218,8 @@ class PositionCore(LoggerObject):
                          registration_start = reg_shift,
                          fNormalizeMin = self.settings.get2('%s_normalizemin' %proc_channel),
                          fNormalizeMax = self.settings.get2('%s_normalizemax' %proc_channel),
+                         bFlatfieldCorrection = self.settings.get2('%s_flat_field_correction' %proc_channel),
+                         strBackgroundImagePath = self.settings.get2('%s_flat_field_correction_image_dir' %proc_channel),
                          lstFeatureCategories = f_cats,
                          dctFeatureParameters = f_params)
 
@@ -311,10 +312,12 @@ class PositionCore(LoggerObject):
         if not self._qthread is None:
             self._qthread.update_status(self._info, stime=50)
 
-    def set_image(self, image, msg, filename='', region=None, stime=0):
-        """Propagate a rendered image to QThread"""
-        if not (self._qthread is None or image is None):
-            self._qthread.show_image(region, image, msg, filename, stime)
+    def set_image(self, images, message, stime=0):
+        """Propagate a rendered image to QThread."""
+        assert isinstance(images, dict)
+        assert isinstance(message, basestring)
+        if not (self._qthread is None or not images):
+            self._qthread.show_image(images, message, stime)
 
     def _channel_regions(self, p_channel):
         """Return a dict of of channel region pairs according to the classifier"""
@@ -394,8 +397,8 @@ class PositionPicker(PositionCore):
                 n_images += 1
                 msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position,
                                                 frame)
-                self.set_image(image[self._qthread.renderer],
-                               msg, region=self._qthread.renderer)
+                self.set_image(image, msg)
+
 
 
 class PositionAnalyzer(PositionCore):
@@ -425,6 +428,7 @@ class PositionAnalyzer(PositionCore):
                  join(self._out_dir, "hdf5"),
                  join(self._out_dir, "plots"),
                  join(self._position_dir, "statistics"),
+                 join(self._position_dir, "tc3"),
                  join(self._position_dir, "gallery"),
                  join(self._position_dir, "channel_gallery"),
                  join(self._position_dir, "images"),
@@ -456,50 +460,70 @@ class PositionAnalyzer(PositionCore):
                 clf.loadClassifier()
                 self.classifiers[p_channel] = clf
 
+    @property
+    def _transitions(self):
+        if self.settings.get('EventSelection', 'unsupervised_event_selection'):
+            transitions = np.array((0, 1))
+        else:
+            transitions = eval(self.settings.get('EventSelection', 'labeltransitions'))
+            transitions = np.array(transitions)
+        return transitions.reshape((-1, 2))
+
+    def setup_eventselection(self, graph):
+        """Setup the method for event selection."""
+
+        opts = {'transitions': self._transitions,
+                'backward_range': self._convert_tracking_duration('backwardrange'),
+                'forward_range': self._convert_tracking_duration('forwardrange'),
+                'max_in_degree': self.settings.get('EventSelection', 'maxindegree'),
+                'max_out_degree': self.settings.get('EventSelection', 'maxoutdegree')}
+
+        if self.settings.get('EventSelection', 'supervised_event_selection'):
+            opts.update({'backward_labels': [int(i) for i in self.settings.get('EventSelection', 'backwardlabels').split(',')],
+                         'forward_labels': [int(i) for i in self.settings.get('EventSelection', 'forwardlabels').split(',')],
+                         'backward_range_min': self.settings.get('EventSelection', 'backwardrange_min'),
+                         'forward_range_min': self.settings.get('EventSelection', 'forwardrange_min'),
+                         'backward_check': self._convert_tracking_duration('backwardCheck'),
+                         'forward_check': self._convert_tracking_duration('forwardCheck')})
+            es = EventSelection(graph, **opts)
+
+        elif self.settings.get('EventSelection', 'unsupervised_event_selection'):
+            opts.update({'forward_check': self._convert_tracking_duration('min_event_duration'),
+                         'forward_labels': (1, ),
+                         'backward_check': -1, # unsused for unsupervised usecase
+                         'backward_labels': (0, ),
+                         'num_clusters': self.settings.get('EventSelection', 'num_clusters'),
+                         'min_cluster_size': self.settings.get('EventSelection', 'min_cluster_size')})
+            es = UnsupervisedEventSelection(graph, **opts)
+
+        return es
+
     def _convert_tracking_duration(self, option_name):
         """Converts a tracking duration according to the unit and the
         mean time-lapse of the current position.
         Returns number of frames.
         """
-        value = self.settings.get(SECTION_NAME_TRACKING, option_name)
-        unit = self.settings.get(SECTION_NAME_TRACKING,
-                                  'tracking_duration_unit')
+        value = self.settings.get('EventSelection', option_name)
+        unit = self.settings.get('EventSelection', 'duration_unit')
 
         # get mean and stddev for the current position
         info = self.meta_data.get_timestamp_info(self.position)
-        if unit == TRACKING_DURATION_UNIT_FRAMES or info is None:
+        if unit == TimeConverter.FRAMES or info is None:
             result = value
-        elif unit == TRACKING_DURATION_UNIT_MINUTES:
+        elif unit == TimeConverter.MINUTES:
             result = (value * 60.) / info[0]
-        elif unit == TRACKING_DURATION_UNIT_SECONDS:
+        elif unit == TimeConverter.SECONDS:
             result = value / info[0]
         else:
             raise ValueError("Wrong unit '%s' specified." %unit)
         return int(round(result))
 
-    @property
-    def _es_options(self):
-        transitions = eval(self.settings.get2('tracking_labeltransitions'))
-        if not isinstance(transitions[0], tuple):
-            transitions = (transitions, )
-        evopts = {'transitions': transitions,
-                  'backward_labels': map(int, self.settings.get2('tracking_backwardlabels').split(',')),
-                  'forward_labels': map(int, self.settings.get2('tracking_forwardlabels').split(',')),
-                  'backward_check': self._convert_tracking_duration('tracking_backwardCheck'),
-                  'forward_check': self._convert_tracking_duration('tracking_forwardCheck'),
-                  'backward_range': self._convert_tracking_duration('tracking_backwardrange'),
-                  'forward_range': self._convert_tracking_duration('tracking_forwardrange'),
-                  'backward_range_min': self.settings.get2('tracking_backwardrange_min'),
-                  'forward_range_min': self.settings.get2('tracking_forwardrange_min'),
-                  'max_in_degree': self.settings.get2('tracking_maxindegree'),
-                  'max_out_degree': self.settings.get2('tracking_maxoutdegree')}
-        return evopts
-
     def define_exp_features(self):
         features = {}
         for name in self.processing_channels:
             region_features = {}
-            for region in REGION_INFO.names[name.lower()]:
+
+            for region in MetaPluginManager().region_info.names[name.lower()]:
                 # export all features extracted per regions
                 if self.settings.get('Output', 'events_export_all_features') or \
                         self.settings.get('Output', 'export_track_data'):
@@ -511,35 +535,59 @@ class PositionAnalyzer(PositionCore):
                         self.settings.get('General',
                                           '%s_featureextraction_exportfeaturenames'
                                           % name.lower())
+
                 features[name] = region_features
+
+            # special case for merged channel
+            if name is self.MERGED_CHANNEL:
+                mftrs = list()
+                for channel, region in self._channel_regions(name).iteritems():
+                    if features[channel][region] is None:
+                        mftrs = None
+                    else:
+                        for feature in features[channel][region]:
+                            mftrs.append("_".join((channel, region, feature)))
+                region_features[self._all_channel_regions[name]] = mftrs
+                features[name] = region_features
+
         return features
+
 
     def export_object_counts(self):
         fname = join(self._statistics_dir, 'P%s__object_counts.txt' % self.position)
 
         # at least the total count for primary is always exported
-        ch_info = OrderedDict([('Primary', ('primary', [], []))])
+        # OLD: ch_info = OrderedDict([('Primary', ('primary', [], []))])
+        # but this does not work any more if we admit merged channels
+        # (which might be the only ones we are interested in)
+        ch_info = OrderedDict()
         for name, clf in self.classifiers.iteritems():
             names = clf.class_names.values()
             colors = [clf.hexcolors[n] for n in names]
             ch_info[name] = (clf.regions, names, colors)
+
+        # if no classifier has been loaded, no counts can be exported.
+        if len(ch_info) == 0:
+            return
 
         self.timeholder.exportObjectCounts(fname, self.position, self.meta_data, ch_info)
         pplot_ymax = \
             self.settings.get('Output', 'export_object_counts_ylim_max')
 
         # plot only for primary channel so far!
-        self.timeholder.exportPopulationPlots(fname, self._plots_dir, self.position,
-                                              self.meta_data, ch_info['Primary'], pplot_ymax)
+        #if 'Primary' in ch_info:
+        #    self.timeholder.exportPopulationPlots(fname, self._plots_dir, self.position,
+        #                                          self.meta_data, ch_info['Primary'], pplot_ymax)
+        self.timeholder.exportPopulationPlots(ch_info, self._plots_dir,
+                                              self.plate_id, self.position,
+                                              ymax=pplot_ymax)
+
 
 
     def export_object_details(self):
         fname = join(self._statistics_dir,
                         'P%s__object_details.txt' % self.position)
-        self.timeholder.exportObjectDetails(fname, excel_style=False)
-        fname = join(self._statistics_dir,
-                        'P%s__object_details_excel.txt' % self.position)
-        self.timeholder.exportObjectDetails(fname, excel_style=True)
+        self.timeholder.exportObjectDetails(fname)
 
     def export_image_names(self):
         self.timeholder.exportImageFileNames(self._statistics_dir,
@@ -569,15 +617,18 @@ class PositionAnalyzer(PositionCore):
 
     def export_gallery_images(self):
         for ch_name in self.processing_channels:
-            cutter_in = join(self._images_dir, ch_name)
-            if isdir(cutter_in):
-                cutter_out = join(self._gallery_dir, ch_name)
+            cutter_in = join(self._images_dir, ch_name.lower())
+
+            if not isdir(cutter_in):
+                self.logger.warning('directory not found (%s)' %cutter_in)
+                self.logger.warning('can not write the gallery images')
+            else:
+                cutter_out = join(self._gallery_dir, ch_name.lower())
                 self.logger.info("running Cutter for '%s'..." %ch_name)
                 image_size = \
                     self.settings.get('Output', 'events_gallery_image_size')
-                EventGallery(self._tes, cutter_in, self.position, cutter_out,
-                             self.meta_data, oneFilePerTrack=True,
-                             size=(image_size, image_size))
+                TrackGallery(self._tes.centers(),
+                             cutter_in, cutter_out, self.position, size=image_size)
             # FIXME: be careful here. normally only raw images are
             #        used for the cutter and can be deleted
             #        afterwards
@@ -590,21 +641,32 @@ class PositionAnalyzer(PositionCore):
         self.logger.debug("--- serializing tracking ok")
 
     def export_events(self):
-        """Export and save event selceciton data"""
+        """Export and save event selection data"""
         exporter = EventExporter(self.meta_data)
         # writes to the event folder
         odir = join(self._statistics_dir, "events")
         exporter.track_features(self.timeholder, self._tes.visitor_data,
                                 self.export_features, self.position, odir)
-        self.logger.debug("--- visitor analysis ok")
+
         # writes event data to hdf5
         self.timeholder.serialize_events(self._tes)
         self.logger.debug("--- serializing events ok")
 
+    def export_tc3(self):
+        t_mean = self.meta_data.get_timestamp_info(self.position)[0]
+        tu = TimeConverter(t_mean, TimeConverter.SECONDS)
+        increment = self.settings('General', 'frameincrement')
+        t_step = tu.sec2min(t_mean)*increment
+
+        nclusters = self.settings.get('EventSelection', 'num_clusters')
+        exporter = TC3Exporter(self._tes.tc3data, self._tc3_dir, nclusters, t_step,
+                               TimeConverter.MINUTES, self.position)
+        exporter()
+
     def __call__(self):
         # include hdf5 file name in hdf5_options
-        # perhaps timeholder might be a good placke to read out the options
-        # fils must not exist to proceed
+        # perhaps timeholder might be a good place to read out the options
+        # file does not have to exist to proceed
         hdf5_fname = join(self._hdf5_dir, '%s.ch5' % self.position)
 
         self.timeholder = TimeHolder(self.position, self._all_channel_regions,
@@ -616,20 +678,20 @@ class PositionAnalyzer(PositionCore):
 
         self.settings.set_section('Tracking')
         # setup tracker
-        if self.settings.get('Processing', 'tracking'):
-            region = self.settings.get('Tracking', 'tracking_regionname')
-            tropts = (self.settings.get('Tracking', 'tracking_maxobjectdistance'),
-                      self.settings.get('Tracking', 'tracking_maxsplitobjects'),
-                      self.settings.get('Tracking', 'tracking_maxtrackinggap'))
+        if self.settings('Processing', 'tracking'):
+            region = self.settings('Tracking', 'tracking_regionname')
+            tropts = (self.settings('Tracking', 'tracking_maxobjectdistance'),
+                      self.settings('Tracking', 'tracking_maxsplitobjects'),
+                      self.settings('Tracking', 'tracking_maxtrackinggap'))
             self._tracker = Tracker(*tropts)
-            self._tes = EventSelection(self._tracker.graph, **self._es_options)
+            self._tes = self.setup_eventselection(self._tracker.graph)
 
         stopwatch = StopWatch(start=True)
         ca = CellAnalyzer(timeholder=self.timeholder,
                           position = self.position,
                           create_images = True,
                           binning_factor = 1,
-                          detect_objects = self.settings.get('Processing',
+                          detect_objects = self.settings('Processing',
                                                              'objectdetection'))
 
         self.setup_classifiers()
@@ -638,8 +700,8 @@ class PositionAnalyzer(PositionCore):
 
         if n_images > 0:
             # invoke event selection
-            if self.settings.get('Processing', 'tracking_synchronize_trajectories') and \
-                    self.settings.get('Processing', 'tracking'):
+            if self.settings('Processing', 'eventselection') and \
+                    self.settings('Processing', 'tracking'):
                 self.logger.debug("--- visitor start")
                 self._tes.find_events()
                 self.logger.debug("--- visitor ok")
@@ -648,21 +710,25 @@ class PositionAnalyzer(PositionCore):
 
             # save all the data of the position, no aborts from here on
             # want all processed data saved
-            if self.settings.get('Output', 'export_object_counts'):
+            if self.settings('Output', 'export_object_counts') and \
+                    self.settings('EventSelection', 'supervised_event_selection'):
+                # no object counts in case of unsupervised event selection
                 self.export_object_counts()
-            if self.settings.get('Output', 'export_object_details'):
+            if self.settings('Output', 'export_object_details'):
                 self.export_object_details()
-            if self.settings.get('Output', 'export_file_names'):
+            if self.settings('Output', 'export_file_names'):
                 self.export_image_names()
 
-            if self.settings.get('Processing', 'tracking'):
+            if self.settings('Processing', 'tracking'):
                 self.export_tracks_hdf5()
                 self.update_status({'text': 'export events...'})
-                if self.settings.get('Processing', 'tracking_synchronize_trajectories'):
+                if self.settings('Processing', 'eventselection'):
                     self.export_events()
-                if self.settings.get('Output', 'export_track_data'):
+                if self.settings('EventSelection', 'unsupervised_event_selection'):
+                    self.export_tc3()
+                if self.settings('Output', 'export_track_data'):
                     self.export_full_tracks()
-                if self.settings.get('Output', 'export_tracking_as_dot'):
+                if self.settings('Output', 'export_tracking_as_dot'):
                     self.export_graphviz()
 
             self.update_status({'text': 'export events...',
@@ -673,7 +739,7 @@ class PositionAnalyzer(PositionCore):
             # for the generation of gallery images
             self.timeholder.purge_features()
             if self.settings.get('Output', 'events_export_gallery_images') and \
-                    self.settings.get('Processing', 'tracking_synchronize_trajectories'):
+                    self.settings.get('Processing', 'eventselection'):
                 self.export_gallery_images()
 
         try:
@@ -685,7 +751,7 @@ class PositionAnalyzer(PositionCore):
                              (n_images, intval))
 
         self.touch_finished()
-#        self.clear()
+        self.clear()
         return n_images
 
     @property
@@ -700,7 +766,10 @@ class PositionAnalyzer(PositionCore):
 
     def clear(self):
         # closes hdf5
-        self.timeholder.close_all()
+        if self.timeholder is not None:
+            self.timeholder.close_all()
+        # close and remove handlers from logging object
+        self.close()
 
     def _analyze(self, cellanalyzer):
         super(PositionAnalyzer, self)._analyze()
@@ -730,15 +799,15 @@ class PositionAnalyzer(PositionCore):
             n_images += 1
             images = []
 
-            if self.settings.get('Processing', 'tracking'):
-                region = self.settings.get('Tracking', 'tracking_regionname')
+            if self.settings('Processing', 'tracking'):
+                region = self.settings('Tracking', 'tracking_regionname')
                 samples = self.timeholder[frame][PrimaryChannel.NAME].get_region(region)
                 self._tracker.track_next_frame(frame, samples)
 
-                if self.settings.get('Tracking', 'tracking_visualization'):
+                if self.settings('Tracking', 'tracking_visualization'):
                     size = cellanalyzer.getImageSize(PrimaryChannel.NAME)
-                    nframes = self.settings.get('Tracking', 'tracking_visualize_track_length')
-                    radius = self.settings.get('Tracking', 'tracking_centroid_radius')
+                    nframes = self.settings('Tracking', 'tracking_visualize_track_length')
+                    radius = self.settings('Tracking', 'tracking_centroid_radius')
                     img_conn, img_split = self._tracker.render_tracks(
                         frame, size, nframes, radius)
                     images += [(img_conn, '#FFFF00', 1.0),
@@ -754,13 +823,17 @@ class PositionAnalyzer(PositionCore):
             ##############################################################
 
             self.settings.set_section('General')
-            self.render_classification_images(cellanalyzer, images, frame)
-            self.render_contour_images(cellanalyzer, images, frame)
+            # want emit all images at once
+            imgs = {}
+            imgs.update(self.render_classification_images(cellanalyzer, images, frame))
+            imgs.update(self.render_contour_images(cellanalyzer, images, frame))
+            msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position, frame)
+            self.set_image(imgs, msg, 50)
 
-            if self.settings.get('Output', 'rendering_channel_gallery'):
+            if self.settings('Output', 'rendering_channel_gallery'):
                 self.render_channel_gallery(cellanalyzer, frame)
 
-            if self.settings.get('Output', 'rendering_labels_discwrite'):
+            if self.settings('Output', 'rendering_labels_discwrite'):
                 cellanalyzer.exportLabelImages(self._labels_dir)
 
             self.logger.info(" - Frame %d, duration (ms): %3d" \
@@ -775,31 +848,33 @@ class PositionAnalyzer(PositionCore):
             chgal.make_gallery()
 
     def render_contour_images(self, ca, images, frame):
+        images_ = dict()
         for region, render_par in self.settings.get2('rendering').iteritems():
             out_dir = join(self._images_dir, region)
-            write = self.settings.get('Output', 'rendering_contours_discwrite')
+            write = self.settings('Output', 'rendering_contours_discwrite')
 
             if region not in self.CHANNELS.keys():
-                img, fname = ca.render(out_dir, dctRenderInfo=render_par,
+                img, _ = ca.render(out_dir, dctRenderInfo=render_par,
                                        writeToDisc=write, images=images)
-                msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position,
-                                                frame)
-                self.set_image(img, msg, fname, region, 50)
+
+
+                images_[region] = img
             # gallery images are treated differenty
             else:
                 ca.render(out_dir, dctRenderInfo=render_par, writeToDisc=True)
+        return images_
 
     def render_classification_images(self, cellanalyzer, images, frame):
+        images_ = dict()
         for region, render_par in self.settings.get2('rendering_class').iteritems():
             out_images = join(self._images_dir, region)
-            write = self.settings.get('Output', 'rendering_class_discwrite')
-            img_rgb, fname = cellanalyzer.render(out_images,
+            write = self.settings('Output', 'rendering_class_discwrite')
+            image, _ = cellanalyzer.render(out_images,
                                                  dctRenderInfo=render_par,
                                                  writeToDisc=write,
                                                  images=images)
-
-            msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position, frame)
-            self.set_image(img_rgb, msg, fname, region, 50)
+            images_[region] = image
+        return images_
 
     def render_browser(self, cellanalyzer):
         d = {}

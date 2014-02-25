@@ -22,7 +22,8 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
-from cecog.gui.util import numpy_to_qimage
+from qimage2ndarray import array2qimage
+
 
 class ZoomedQGraphicsView(QGraphicsView):  
     def wheelEvent(self, event):
@@ -135,19 +136,13 @@ class ImageViewer(ZoomedQGraphicsView):
 
     def from_numpy(self, data):
 
-        self._qimage = numpy_to_qimage(data)
+        self._qimage = array2qimage(data)
         # safe the data for garbage collection
         self._qimage.ndarray = data
         self._update()
 
     def from_vigra(self, image):
-#        if image.width % 4 != 0:
-#            image = ccore.subImage(image, ccore.Diff2D(0,0),
-#                                   ccore.Diff2D(image.width-(image.width % 4),
-#                                                image.height))
-#        qimage = numpy_to_qimage(image.toArray(copy=True))
-
-        self._qimage = numpy_to_qimage(image.toArray(copy=False))
+        self._qimage = array2qimage(image.toArray(copy=False))
         # safe the data for garbage collection
         self._qimage.vigra_image = image
         self._update()

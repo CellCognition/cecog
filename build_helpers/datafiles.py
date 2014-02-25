@@ -42,18 +42,27 @@ _battery_package = join(RESOURCE_DIR, 'battery_package')
 
 # for py2app and py2exe
 INCLUDES = [ 'sip',
+             'h5py.*',
              'scipy.sparse.csgraph._validation',
              'scipy.spatial.kdtree',
-             'scipy.sparse.csgraph._shortest_path']
+             'scipy.sparse.csgraph._shortest_path',
+             'sklearn.utils.sparsetools._graph_validation',
+             'sklearn.utils.lgamma',
+             'sklearn.neighbors.typedefs',
+             'sklearn.utils.weight_vector' ]
 
 EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
             'PyQt4.QtOpenGL', 'PyQt4.QtScript', 'PyQt4.QtSql',
             'PyQt4.QtTest', 'PyQt4.QtWebKit', 'PyQt4.QtXml', 'PyQt4.phonon'
             '_gtkagg', '_cairo', '_gtkcairo', '_fltkagg',
             '_tkagg',
-            'Tkinter']
+            'Tkinter',
+            'zmq']
 
-CC_INCLUDES = ['csrc/include'] + numpy.distutils.misc_util.get_numpy_include_dirs()
+CC_INCLUDES = ['csrc/include'] + \
+    numpy.distutils.misc_util.get_numpy_include_dirs()
+
+
 
 def get_data_files(target_dir=TARGET_BUNDLE, mpl_data=True):
     """Pack data files into list of (target-dir, list-of-files)-tuples"""
@@ -66,6 +75,10 @@ def get_data_files(target_dir=TARGET_BUNDLE, mpl_data=True):
     dfiles.append((target_dir, _rsc))
     dfiles.append((join(target_dir, 'rsrc', 'hmm'), _rfiles))
     dfiles.append((paltarget, glob.glob(join(abspath(_palettes), '*.zip'))))
+    # schema files
+    dfiles.append((join(target_dir, 'schemas'),
+                   glob.glob(join(RESOURCE_DIR, 'schemas', "*.xsd"))))
+
 
     for root, subdirs, files in os.walk(_battery_package):
         for file_ in files:

@@ -19,6 +19,9 @@ import os
 import sys
 import logging
 
+import matplotlib
+matplotlib.use("Agg")
+
 try:
     import cecog
 except ImportError:
@@ -27,12 +30,12 @@ except ImportError:
 
 from cecog import VERSION
 from cecog.traits.config import ConfigSettings
-from cecog.traits.analyzer import SECTION_REGISTRY
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
 from cecog.analyzer.core import AnalyzerCore
 from cecog.io.imagecontainer import ImageContainer
 from cecog.threads.link_hdf import link_hdf5_files
+from cecog.environment import CecogEnvironment
 
 ENV_INDEX_SGE = 'SGE_TASK_ID'
 
@@ -96,13 +99,17 @@ if __name__ ==  "__main__":
     logger.info("*************************************************" + '*'*len(VERSION))
     logger.info('argv: %s' % sys.argv)
 
+    environ = CecogEnvironment(VERSION)
+
     if options.settings is None:
         parser.error('Settings filename required.')
+
+    environ = CecogEnvironment(cecog.VERSION, redirect=False, debug=False)
 
     filename_settings = os.path.abspath(options.settings)
 
     # read the settings data from file
-    settings = ConfigSettings(SECTION_REGISTRY)
+    settings = ConfigSettings()
     settings.read(filename_settings)
 
     settings.set_section(SECTION_NAME_GENERAL)

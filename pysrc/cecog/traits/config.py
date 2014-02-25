@@ -14,54 +14,42 @@ __date__ = '$Date: $'
 __revision__ = '$Rev:  $'
 __source__ = '$URL: $'
 
-__all__ = ['ConfigSettings', 'SectionRegistry']
+__all__ = ['ConfigSettings']
 
-import os
+
 import copy
 import cStringIO
 from collections import OrderedDict
-
 from ConfigParser import RawConfigParser
 
-from cecog.traits.traits import StringTrait
-from cecog import PLUGIN_MANAGERS, VERSION
-
-
-class _ConfigParser(RawConfigParser):
-
-    def __init__(self, filename, name):
-        RawConfigParser.__init__(self)
-        self.filename = filename
-        self.name = name
-        if not os.path.isfile(filename):
-            raise IOError("File for %s with name '%s' not found." %
-                          (name, filename))
-        self.read(filename)
+from cecog import VERSION
+from cecog.plugin.metamanager import MetaPluginManager
+from cecog.traits.analyzer.section_registry import SectionRegistry
 
 class ConfigSettings(RawConfigParser):
-    """
-    Extension of RawConfigParser which maps sections to parameter sections e.g.
+    """Extension of RawConfigParser which maps sections to parameter sections e.g.
     GUI modules and options to values in these modules.
     Values are stored internally in a representation as defined by value traits.
     Only sections and options as defined by the sections_registry (corresponding
     to modules and traits) are allowed.
     """
 
-    def __init__(self, section_registry):
-        RawConfigParser.__init__(self,
-                                 dict_type=OrderedDict,
-                                 allow_no_value=True)
+    def __init__(self):
+        RawConfigParser.__init__(self, allow_no_value=True)
         self._registry = OrderedDict()
         self._current_section = None
         self._old_file_format = False
 
-        self._section_registry = section_registry
-        for section_name in section_registry.get_section_names():
+        self._section_registry = SectionRegistry()
+        for section_name in self._section_registry.section_names():
             self.add_section(section_name)
-            section = section_registry.get_section(section_name)
+            section = self._section_registry.get_section(section_name)
             for trait_name in section.get_trait_names():
                 trait = section.get_trait(trait_name)
                 self.set(section_name, trait_name, trait.default_value)
+
+    def __call__(self, section, parameter):
+        return self.get(section, parameter)
 
     def was_old_file_format(self):
         return self._old_file_format
@@ -86,7 +74,7 @@ class ConfigSettings(RawConfigParser):
         return self._section_registry.get_section(section_name)
 
     def get_section_names(self):
-        return self._section_registry.get_section_names()
+        return self._section_registry.section_names()
 
     def get_trait(self, section_name, trait_name):
         section = self._section_registry.get_section(section_name)
@@ -122,7 +110,7 @@ class ConfigSettings(RawConfigParser):
         Merge sections and options, that are in the section registry
         but not in the file.
         """
-        section_names = self._section_registry.get_section_names()
+        section_names = self._section_registry.section_names()
         for sec_name in section_names:
             if not self.has_section(sec_name):
                 self.add_section(sec_name)
@@ -133,7 +121,7 @@ class ConfigSettings(RawConfigParser):
                     self.set(sec_name, opt_name, value)
 
     def readfp(self, fp):
-        for plugin_manager in PLUGIN_MANAGERS:
+        for plugin_manager in MetaPluginManager():
             plugin_manager.clear()
         for section in self.sections():
             self.remove_section(section)
@@ -145,7 +133,7 @@ class ConfigSettings(RawConfigParser):
             self._old_file_format = True
 
         for section_name in self.sections():
-            if section_name in self._section_registry.get_section_names():
+            if section_name in self._section_registry.section_names():
                 section = self._section_registry.get_section(section_name)
                 for option_name in self.options(section_name):
                     if option_name in section.get_trait_names():
@@ -159,20 +147,38 @@ class ConfigSettings(RawConfigParser):
                         pass
                     else:
                         self._update_option_to_version(section_name, option_name)
-                        #print("Warning: option '%s' in section '%s' is not "
-                        #      "defined and will be deleted" %\
-                        #      (option_name, section_name))
-                        #print "self.remove_option(section_name, option_name)"
+                        print("Warning: option '%s' in section '%s' is not "
+                              "defined and will be deleted" %\
+                                  (option_name, section_name))
+                        self.remove_option(section_name, option_name)
             else:
                 print("Warning: section '%s' is not defined and will be "
                       "deleted" % section_name)
                 self.remove_section(section_name)
 
         self._merge_registry()
-        for plugin_manager in PLUGIN_MANAGERS:
+        for plugin_manager in MetaPluginManager():
             plugin_manager.init_from_settings(self)
 
         return result
+
+    def to_dict(self):
+        settings = dict()
+        for section in self.sections():
+            settings[section] = dict()
+            for option in self.options(section):
+                settings[section][option] = self.get(section, option)
+        return settings
+
+    def from_dict(self, settings):
+        for section, group in settings.iteritems():
+            for option, value in group.iteritems():
+                RawConfigParser.set(self, section, option, value)
+
+        # # update the plugins
+        for plugin_manager in MetaPluginManager():
+            plugin_manager.clear()
+            plugin_manager.init_from_settings(self)
 
     def to_string(self):
         stringio = cStringIO.StringIO()
@@ -187,6 +193,7 @@ class ConfigSettings(RawConfigParser):
         stringio.seek(0)
         self.readfp(stringio)
         stringio.close()
+
 
     def compare(self, settings, section_name, grp_name):
         section = self.get_section(section_name)
@@ -230,7 +237,6 @@ class ConfigSettings(RawConfigParser):
                 value = self.get(section_name, option_name)
                 new_option_name = VERSION_130_TO_140[section_name][option_name]
                 RawConfigParser.set(self, section_name, new_option_name, value)
-                self.remove_option(section_name, option_name)
                 print 'Converted', option_name, 'into', new_option_name, '=', value
 
         if section_name == 'ObjectDetection':
@@ -239,7 +245,6 @@ class ConfigSettings(RawConfigParser):
                     if self.has_option(section_name, option_name):
                         if self.get(section_name, option_name):
                             print 'Converted', option_name
-                            self.remove_option(section_name, option_name)
                             value = self.get(section_name, '%s_regions_expanded_expansionsize' % prefix)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__expanded__expanded__expansion_size' % prefix , value)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__expanded__expanded__require00' % prefix , 'primary')
@@ -248,7 +253,6 @@ class ConfigSettings(RawConfigParser):
                     if self.has_option(section_name, option_name):
                         if self.get(section_name, option_name):
                             print 'Converted', option_name
-                            self.remove_option(section_name, option_name)
                             value = self.get(section_name, '%s_regions_inside_shrinkingsize' % prefix)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__inside__inside__shrinking_size' % prefix , value)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__inside__inside__require00' % prefix , 'primary')
@@ -257,7 +261,6 @@ class ConfigSettings(RawConfigParser):
                     if self.has_option(section_name, option_name):
                         if self.get(section_name, option_name):
                             print 'Converted', option_name, '%s_regions_outside_expansionsize' % prefix
-                            self.remove_option(section_name, option_name)
                             value = self.get(section_name, '%s_regions_outside_expansionsize' % prefix)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__outside__outside__expansion_size' % prefix , value)
                             value = self.get(section_name, '%s_regions_outside_separationsize' % prefix)
@@ -268,7 +271,6 @@ class ConfigSettings(RawConfigParser):
                     if self.has_option(section_name, option_name):
                         if self.get(section_name, option_name):
                             print 'Converted', option_name
-                            self.remove_option(section_name, option_name)
                             value = self.get(section_name, '%s_regions_rim_expansionsize' % prefix)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__rim__rim__expansion_size' % prefix , value)
                             value = self.get(section_name, '%s_regions_rim_shrinkingsize' % prefix)
@@ -279,7 +281,6 @@ class ConfigSettings(RawConfigParser):
                     if self.has_option(section_name, option_name):
                         if self.get(section_name, option_name):
                             print 'Converted', option_name
-                            self.remove_option(section_name, option_name)
                             value = self.get(section_name, '%s_regions_constrained_watershed_gauss_filter_size' % prefix)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__constrained_watershed__constrained_watershed__gauss_filter_size' % prefix , value)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__constrained_watershed__constrained_watershed__require00' % prefix , 'primary')
@@ -288,7 +289,6 @@ class ConfigSettings(RawConfigParser):
                     if self.has_option(section_name, option_name):
                         if self.get(section_name, option_name):
                             print 'Converted', option_name
-                            self.remove_option(section_name, option_name)
                             value = self.get(section_name, '%s_regions_propagate_deltawidth' % prefix)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__propagate__propagate__delta_width' % prefix , value)
 
@@ -302,32 +302,3 @@ class ConfigSettings(RawConfigParser):
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__propagate__propagate__presegmentation_alpha' % prefix , value)
 
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__constrained_watershed__constrained_watershed__require00' % prefix , 'primary')
-
-
-class SectionRegistry(object):
-
-    def __init__(self):
-        self._registry = OrderedDict()
-
-    def register_section(self, section):
-        self._registry[section.SECTION_NAME] = section
-
-    def unregister_section(self, name):
-        del self._registry[name]
-
-    def get_section(self, name):
-        return self._registry[name]
-
-    def get_section_names(self):
-        return self._registry.keys()
-
-    def get_path_settings(self):
-        result = []
-        for section_name, section in self._registry.iteritems():
-            for trait_name in section.get_trait_names():
-                trait = section.get_trait(trait_name)
-                if (isinstance(trait, StringTrait) and
-                    trait.widget_info in [StringTrait.STRING_FILE,
-                                          StringTrait.STRING_PATH]):
-                    result.append((section_name, trait_name, trait))
-        return result

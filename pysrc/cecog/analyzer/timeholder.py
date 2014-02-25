@@ -21,41 +21,40 @@ import base64
 import csv
 
 from collections import OrderedDict
-from pdk.iterator import flatten
-from pdk.datetimeutils import StopWatch
+
 
 import numpy
 import h5py
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('Agg', warn=False)
 from matplotlib import pyplot
 
 from cecog import ccore
-from cecog.io.imagecontainer import Coordinate, MetaImage
+from cecog.util.stopwatch import StopWatch
+from cecog.io.imagecontainer import Coordinate
+from cecog.io.imagecontainer import MetaImage
 from cecog.analyzer.channel import PrimaryChannel
-from cecog.plugin.segmentation import REGION_INFO
+from cecog.plugin.metamanager import MetaPluginManager
 
 from cecog.analyzer.tracker import Tracker
 
 def chunk_size(shape):
-    """Helper function to compute chunk size for image data cubes.
-    """
+    """Helper function to compute chunk size for image data cubes."""
     c = shape[0]
     t = 1
     z = 1
     y = shape[3] / 4
     x = shape[4] / 4
-    return (c,t,z,y,x)
+    return (c, t, z, y, x)
 
 def max_shape(shape):
-    """Helper function to compute chunk size for image data cubes.
-    """
+    """Helper function to compute chunk size for image data cubes."""
     c = 8 # 8 is kind of arbitrary, but better than None to help h5py to reserve the space
     t = shape[1]
     z = 1
     y = shape[3]
     x = shape[4]
-    return (c,t,z,y,x)
+    return (c, t, z, y, x)
 
 #-------------------------------------------------------------------------------
 # classes:
@@ -119,6 +118,7 @@ class TimeHolder(OrderedDict):
         self._meta_data = meta_data
         self._settings = settings
         self._analysis_frames = analysis_frames
+        self.reginfo = MetaPluginManager().region_info
 
         self._hdf5_create = hdf5_create
         self._hdf5_include_raw_images = hdf5_include_raw_images
@@ -148,11 +148,11 @@ class TimeHolder(OrderedDict):
         channels = sorted(list(meta_data.channels))
         self._region_names = []
 
-        self._region_names = REGION_INFO.names['primary'] + \
-            REGION_INFO.names['secondary'] + \
-            REGION_INFO.names['tertiary']
-        if len(REGION_INFO.names['merged']):
-            self._region_names.append('-'.join(REGION_INFO.names['merged']))
+        self._region_names = self.reginfo.names['primary'] + \
+            self.reginfo.names['secondary'] + \
+            self.reginfo.names['tertiary']
+        if len(self.reginfo.names['merged']):
+            self._region_names.append('-'.join(self.reginfo.names['merged']))
 
         self._channel_info = []
         self._region_infos = []
@@ -160,7 +160,7 @@ class TimeHolder(OrderedDict):
         # XXX hardcoded values
 
         for prefix in self.channel_regions.keys():
-            for name in REGION_INFO.names[prefix.lower()]:
+            for name in self.reginfo.names[prefix.lower()]:
                 if not isinstance(name, basestring):
                     name = '-'.join(name)
                 self._channel_info.append((prefix.lower(),
@@ -243,7 +243,7 @@ class TimeHolder(OrderedDict):
         except:
             self._hdf5_file.close()
             return 1
-            
+
 
 
     def _hdf5_check_file(self):
@@ -412,9 +412,9 @@ class TimeHolder(OrderedDict):
         raw_image_str, raw_image_cpy, raw_image_valid = raw_info
 
         if hasattr(self, "_hdf5_file") and self._hdf5_file is not None:
-            try: 
-                self._hdf5_file.close() 
-            except: 
+            try:
+                self._hdf5_file.close()
+            except:
                 print '_hdf5_create_file_structure(): Closing already opended file for rewrite'
         f = h5py.File(filename, 'w')
         self._hdf5_file = f
@@ -531,7 +531,7 @@ class TimeHolder(OrderedDict):
         self[iT][channel.NAME] = channel
 
     def apply_segmentation(self, channel, *args):
-        stop_watch = StopWatch()
+        stop_watch = StopWatch(start=True)
 
         desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
                                          channel.strChannelId)
@@ -541,7 +541,7 @@ class TimeHolder(OrderedDict):
         if self._hdf5_found and self._hdf5_reuse:
             ### Try to load them
             frame_idx = self._frames_to_idx[self._iCurrentT]
-            for region_name in REGION_INFO.names[channel_name]:
+            for region_name in self.reginfo.names[channel_name]:
                 if 'region' in self._grp_cur_position[self.HDF5_GRP_IMAGE]:
                     dset_label_image = self._grp_cur_position[self.HDF5_GRP_IMAGE]['region']
                     frame_valid = dset_label_image.attrs['valid'][frame_idx]
@@ -571,7 +571,7 @@ class TimeHolder(OrderedDict):
             # compute segmentation without (not loading from file)
             channel.apply_segmentation(*args)
             self._logger.info('Label images %s computed in %s.'
-                              %(desc, stop_watch.current_interval()))
+                              %(desc, stop_watch.interim()))
             # write segmentation back to file
             if self._hdf5_create and self._hdf5_include_label_images:
                 meta = self._meta_data
@@ -584,7 +584,7 @@ class TimeHolder(OrderedDict):
                 # create new group if it does not exist yet!
                 if var_name in grp and grp[var_name].shape[0] == len(self._regions_to_idx2):
                     var_labels = grp[var_name]
-                else:  
+                else:
                     nr_labels = len(self._regions_to_idx2)
                     var_labels = \
                         grp.create_dataset(var_name,
@@ -595,7 +595,7 @@ class TimeHolder(OrderedDict):
                     var_labels.attrs['valid'] = numpy.zeros(t)
 
                 frame_idx = self._frames_to_idx[self._iCurrentT]
-                for region_name in REGION_INFO.names[channel_name]:
+                for region_name in self.reginfo.names[channel_name]:
                     idx = self._regions_to_idx2[(channel.NAME, region_name)]
                     container = channel.containers[region_name]
                     array = container.img_labels.toArray(copy=False)
@@ -606,14 +606,14 @@ class TimeHolder(OrderedDict):
                     var_labels.attrs['valid'] = tmp
         else:
             self._logger.info('Label images %s loaded from hdf5 file in %s.'
-                              % (desc, stop_watch.current_interval()))
+                              % (desc, stop_watch.interim()))
 
     def prepare_raw_image(self, channel):
         if channel.is_virtual():
             # no raw image in a merged channel
             return
-        
-        stop_watch = StopWatch()
+
+        stop_watch = StopWatch(start=True)
         desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
                                          channel.strChannelId)
         frame_valid = False
@@ -644,12 +644,12 @@ class TimeHolder(OrderedDict):
             meta_image.set_raw_image(img)
             channel.meta_image = meta_image
             self._logger.info('Raw image %s loaded from hdf5 file in %s.'
-                              % (desc, stop_watch.current_interval()))
+                              % (desc, stop_watch.interim()))
         else:
             channel.apply_zselection()
             channel.normalize_image(self.plate_id)
             channel.apply_registration()
-            self._logger.info('Raw image %s prepared in %s.' % (desc, stop_watch.current_interval()))
+            self._logger.info('Raw image %s prepared in %s.' % (desc, stop_watch.interim()))
 
             if self._hdf5_create and self._hdf5_include_raw_images:
                 meta = self._meta_data
@@ -861,7 +861,7 @@ class TimeHolder(OrderedDict):
                             dset_object_features[idx + offset] = obj.aFeatures
 
                     if self._hdf5_include_crack:
-                        data = ','.join(map(str, flatten(obj.crack_contour)))
+                        data = ','.join(map(str, numpy.array(obj.crack_contour).flatten()))
                         dset_crack_contour[idx + offset] = base64.b64encode(zlib.compress(data))
 
                     if channel_name != PrimaryChannel.PREFIX:
@@ -1065,12 +1065,19 @@ class TimeHolder(OrderedDict):
 
                 for chname, (region_name, class_names, _) in ch_info.iteritems():
                     channel = channels[chname]
+
+                    # XXX - class ctuple in channel.py
+                    if isinstance(region_name, tuple):
+                        rname = '-'.join(region_name)
+                    else:
+                        rname = region_name
+
                     if not has_header:
                         keys = ['total'] + class_names
                         line4 += keys
                         line3 += ['total'] + ['class']*len(class_names)
                         line1 += [chname.upper()]*len(keys)
-                        line2 += [str(region_name)]*len(keys)
+                        line2 += [str(rname)]*len(keys)
 
                     region = channel.get_region(region_name)
                     total = len(region)
@@ -1090,29 +1097,127 @@ class TimeHolder(OrderedDict):
                     fp.write('%s\n' % sep.join(prefix_names + line4))
                 fp.write('%s\n' % sep.join(map(str, prefix + items)))
 
-    def exportPopulationPlots(self, input_filename, pop_plot_output_dir, pos,
-                               meta_data, cinfo, ylim):
-        if exists(input_filename):
-            channel, classes, colors = cinfo
-            case = "lower"
-            if len(classes) > 1:
-                data = numpy.recfromcsv(input_filename, delimiter='\t', skip_header=3,
-                                        case_sensitive=case)
+    def getObjectCounts(self, ch_info):
 
-                time = data['time'] / 60.0
-                fig = pyplot.figure(figsize=(20,10))
-                ax = pyplot.gca()
+        all_counts = {}
+        for chname, (region_name, class_names, _) in ch_info.iteritems():
+            all_counts[(chname, region_name)] = {}
 
-                # numpy wants nice attribute names
-                validator = numpy.lib._iotools.NameValidator(case_sensitive=case)
-                keys = validator.validate(classes)
+        for frame, channels in self.iteritems():
 
-                for lb, key, color in zip(classes[1:], keys[1:],
-                                          colors[1:]):
-                    ax.plot(time, data[key], color=color, label=lb)
-                fig.savefig(join(pop_plot_output_dir, '%s_%s.png'%(channel, pos)))
+            for chname, (region_name, class_names, _) in ch_info.iteritems():
 
-    def exportObjectDetails(self, filename, sep='\t', excel_style=False):
+                if len(all_counts[(chname, region_name)])==0:
+                    all_counts[(chname, region_name)] = OrderedDict([(x, [])
+                                                                     for x in ['total'] + class_names])
+                channel = channels[chname]
+                region = channel.get_region(region_name)
+                total = len(region)
+                count = dict([(x, 0) for x in class_names])
+                # in case just total counts are needed
+                if len(class_names) > 0:
+                    for obj in region.values():
+                        count[obj.strClassName] += 1
+                for class_name in class_names:
+                    all_counts[(chname, region_name)][class_name].append(count[class_name])
+                all_counts[(chname, region_name)]['total'].append(total)
+
+        return all_counts
+
+    def exportPopulationPlots(self, ch_info, pop_plot_output_dir, plate, pos,
+                              ymax=None,
+                              all_counts=None, grid=True, legend=True,
+                              relative=True):
+        if all_counts is None:
+            all_counts = self.getObjectCounts(ch_info)
+
+        if relative:
+            ylab = 'Class Percentage'
+        else:
+            ylab = 'Class counts (raw)'
+
+        for chname, (region_name, class_names, colors) in ch_info.iteritems():
+            if len(class_names) < 2:
+                continue
+
+            X = numpy.array([all_counts[(chname, region_name)][x] for x in class_names])
+            timevec = range(X.shape[1])
+
+            if len(timevec) > 1:
+                #import pdb; pdb.set_trace()
+                if relative:
+                    total = numpy.array(all_counts[(chname, region_name)]['total'])
+                    X = X.astype('float') / total.astype('float')
+
+                fig = pyplot.figure(1, figsize=(20,10))
+                ax = pyplot.subplot(1,1,1)
+
+                # in this case we have more than one time point and we can visualize the time series
+                for i, lb, color in zip(range(len(class_names)), class_names, colors):
+                    ax.plot(timevec, X[i,:], color=color, label=lb, linewidth=2.0)
+
+                if not ymax is None and ymax > -1:
+                    ax.axis([min(timevec), max(timevec), 0, ymax])
+                pyplot.title('Population time series: %s %s %s %s' % (plate, pos, chname, region_name), size='medium')
+                pyplot.xlabel('Time (in frames)', size='medium')
+                pyplot.ylabel(ylab, size='medium')
+
+                # legend
+                if legend:
+                    handles, labels = ax.get_legend_handles_labels()
+                    ax.legend(handles[::-1], labels[::-1])
+
+                if grid:
+                    ax.grid(b=True, which='major', linewidth=1.5)
+
+                fig.savefig(join(pop_plot_output_dir, '%s__%s__%s__%s.png' % (plate, pos, chname, region_name)))
+                pyplot.close(1)
+
+            else:
+                # in this case we have only one timepoint. We can visualize a barplot instead.
+                # ---
+                bottom = 0.2
+                width = 0.7
+
+                nb_bars = X.shape[0]
+
+                fig = pyplot.figure(1, figsize=(int(0.8*nb_bars + 1),10))
+                ax = pyplot.subplot(1,1,1)
+
+                ind = numpy.array(range(nb_bars))
+                ax.set_position(numpy.array([0.125, bottom, 0.8, 0.9 - bottom]))
+
+                if relative:
+                    X = X.astype('float') / numpy.sum(X.astype('float'))
+
+                rects = pyplot.bar(ind, X[:,0], width=width, color=colors,
+                                   edgecolor='none')
+
+                xmin = min(ind)
+                xmax = max(ind)
+                xlim = (xmin - .5 * width - (xmax-xmin) * 0.05,
+                        xmax - .5 * width + (xmax-xmin) * (0.05 + 1.0 / nb_bars) )
+
+                if ymax is None or ymax < 0 or ymax > 1.0:
+                    ymax = 1.0
+
+                ax.axis([xlim[0], xlim[1], 0, ymax])
+
+                pyplot.xticks(ind+.5* width, class_names, rotation="vertical",
+                             fontsize='small', ha='center')
+
+                pyplot.title('Classification results:\n%s %s\n%s %s' % (plate, pos, chname, region_name), size='medium')
+                pyplot.xlabel('')
+                pyplot.ylabel(ylab, size='medium')
+
+                if grid:
+                    pyplot.grid(b=True, axis='y', which='major', linewidth=1.5)
+
+                fig.savefig(join(pop_plot_output_dir, '%s__%s__%s__%s.png' % (plate, pos, chname, region_name)))
+                pyplot.close(1)
+        return
+
+    def exportObjectDetails(self, filename, sep='\t'):
         f = file(filename, 'w')
 
         feature_lookup = OrderedDict()
@@ -1128,7 +1233,7 @@ class TimeHolder(OrderedDict):
         for frame, channels in self.iteritems():
 
             items = []
-            prim_region = channels.values()[0].get_region(REGION_INFO.names['primary'][0])
+            prim_region = channels.values()[0].get_region(self.reginfo.names['primary'][0])
 
             for obj_id in prim_region:
 
@@ -1153,14 +1258,16 @@ class TimeHolder(OrderedDict):
                                 if channel.NAME == 'Primary':
                                     keys += ['centerX', 'centerY']
                                 keys += feature_lookup2.keys()
-                                if excel_style:
-                                    line1 += [channel.NAME.upper()] * len(keys)
-                                    line2 += [str(region_id)] * len(keys)
-                                    line3 += keys
+
+                                # XXX ctuple class in file channel.py
+                                if isinstance(region_id, tuple):
+                                    rname ="-".join(region_id)
                                 else:
-                                    line1 += ['%s_%s_%s' % (channel.NAME.upper(),
-                                                            region_id, key)
-                                              for key in keys]
+                                    rname = region_id
+
+                                line1 += ['%s_%s_%s' % (channel.NAME.upper(),
+                                                        rname, key)
+                                          for key in keys]
 
                             obj = region[obj_id]
                             features = region.features_by_name(obj_id, feature_lookup2.values())
@@ -1173,24 +1280,16 @@ class TimeHolder(OrderedDict):
                 if not has_header:
                     has_header = True
                     prefix_str = [''] * len(prefix)
-                    if excel_style:
-                        line1 = prefix_str + line1
-                        line2 = prefix_str + line2
-                        line3 = prefix_names + line3
-                        f.write('%s\n' % sep.join(line1))
-                        f.write('%s\n' % sep.join(line2))
-                        f.write('%s\n' % sep.join(line3))
-                    else:
-                        line1 = prefix_names + line1
-                        f.write('%s\n' % sep.join(line1))
 
+                    line1 = prefix_names + line1
+                    f.write('%s\n' % sep.join(line1))
                 f.write('%s\n' % sep.join(map(str, prefix + items)))
         f.close()
 
     def exportImageFileNames(self, outdir, position, importer, ch_mapping):
         fname = join(outdir, 'P%s__image_files.csv' %position)
 
-        with open(fname, 'w') as fp:
+        with open(fname, 'wb') as fp:
             writer = csv.DictWriter(fp, ch_mapping.keys(), lineterminator='\n')
             writer.writeheader()
             for frame in self.keys():

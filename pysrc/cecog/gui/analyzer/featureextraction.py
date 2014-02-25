@@ -16,45 +16,19 @@ __source__ = '$URL$'
 
 __all__ = ['FeatureExtractionFrame']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
-from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACTION
 from cecog.gui.analyzer import BaseFrame
-
-#-------------------------------------------------------------------------------
-# constants:
-#
-
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 
 class FeatureExtractionFrame(BaseFrame):
 
-    SECTION_NAME = SECTION_NAME_FEATURE_EXTRACTION
     DISPLAY_NAME = 'Feature Extraction'
     TABS = ['Primary Channel', 'Secondary Channel', 'Tertiary Channel']
 
-    def __init__(self, settings, parent):
-        super(FeatureExtractionFrame, self).__init__(settings, parent)
+    def __init__(self, settings, parent, name):
+        super(FeatureExtractionFrame, self).__init__(settings, parent, name)
         self._result_frames = {}
 
         for tab_name, prefix in [('Primary Channel', 'primary'),

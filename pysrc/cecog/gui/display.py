@@ -35,11 +35,10 @@ from cecog.gui.guitraits import (StringTrait,
                                  ListTrait
                                  )
 from cecog.environment import CecogEnvironment
-from cecog.gui.util import show_html
+
 
 class TraitDisplayMixin(QFrame):
 
-    SECTION_NAME = None
     DISPLAY_NAME = None
 
     def __init__(self, settings,
@@ -56,7 +55,7 @@ class TraitDisplayMixin(QFrame):
         self._label_click_callback = label_click_callback
 
     def get_name(self):
-        return self.SECTION_NAME if self.DISPLAY_NAME is None \
+        return self.name if self.DISPLAY_NAME is None \
             else self.DISPLAY_NAME
 
     def add_handler(self, name, function):
@@ -120,7 +119,11 @@ class TraitDisplayMixin(QFrame):
                 grid = None
                 alignment = None
                 last = False
-                if type(info[0]) == types.TupleType:
+
+                if isinstance(info[0], QLabel):
+                    w_group.layout().addWidget(info[0], *info[1])
+
+                elif type(info[0]) == types.TupleType:
                     if len(info) >= 2:
                         grid = info[1]
                     if len(info) >= 3:
@@ -161,6 +164,11 @@ class TraitDisplayMixin(QFrame):
                 w_input.toggled.connect(handler)
 
         frame._input_cnt += 1
+
+    def add_label(self, label, link, margin=3):
+        label = self._create_label(self, label, link)
+        label.setMargin(margin)
+        return label
 
     def _create_label(self, parent, label, link=None):
         if link is None:
@@ -370,7 +378,7 @@ class TraitDisplayMixin(QFrame):
 
     def update_input(self):
         #if self._settings.has_section(self.SECTION):
-        for name, value in self._settings.items(self.SECTION_NAME):
+        for name, value in self._settings.items(self.name):
             #print self.SECTION, name, name in self._registry
             if name in self._registry:
                 w_input = self._registry[name]
@@ -385,29 +393,26 @@ class TraitDisplayMixin(QFrame):
     def get_widget(self, trait_name):
         return self._registry[trait_name]
 
-    # convenience methods
-
     def _get_value(self, name):
-        return self._settings.get_value(self.SECTION_NAME, name)
+        return self._settings.get_value(self.name, name)
 
     def _set_value(self, name, value, tooltip=None):
         if not tooltip is None:
             widget = self._registry[name]
             widget.setToolTip(str(tooltip))
-        self._settings.set(self.SECTION_NAME, name, value)
+        self._settings.set(self.name, name, value)
 
     def _get_trait(self, name):
-        return self._settings.get_trait(self.SECTION_NAME, name)
+        return self._settings.get_trait(self.name, name)
 
-    # event methods
     def _on_show_help(self, link):
-        show_html(self.SECTION_NAME, link=link,
-                  header='_header', footer='_footer')
+        self.parent().helpbrowser.show( \
+            self.name, link=link, header='_header', footer='_footer')
 
     def _on_set_radio_button(self, name, value):
         # FIXME: this is somehow hacky. we need to inform all the radio-buttons
         #        if the state of one is changed
-        for option in self._settings.options(self.SECTION_NAME):
+        for option in self._settings.options(self.name):
             trait = self._get_trait(option)
             if (isinstance(trait, BooleanTrait) and
                 trait.widget_info == BooleanTrait.RADIOBUTTON):
@@ -417,7 +422,8 @@ class TraitDisplayMixin(QFrame):
     def _on_browse_name(self, name, mode):
         # FIXME: signals are send during init were registry is not set yet
         if name in self._registry:
-            input = CecogEnvironment.convert_package_path(str(self._registry[name].text()))
+            input = CecogEnvironment.convert_package_path( \
+                str(self._registry[name].text()))
             dir = os.path.abspath(input)
             if mode == StringTrait.STRING_FILE:
                 result = QFileDialog.getOpenFileName(self, 'Select a file', dir)

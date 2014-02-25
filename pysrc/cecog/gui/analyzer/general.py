@@ -16,43 +16,16 @@ __source__ = '$URL$'
 
 __all__ = ['GeneralFrame']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
-from cecog import VERSION
 from cecog.gui.analyzer import BaseFrame
-from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 
-#-------------------------------------------------------------------------------
-# constants:
-#
-
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 class GeneralFrame(BaseFrame):
 
-    SECTION_NAME = SECTION_NAME_GENERAL
-
-    def __init__(self, settings, parent):
-        super(GeneralFrame, self).__init__(settings, parent)
+    def __init__(self, settings, parent, name):
+        super(GeneralFrame, self).__init__(settings, parent, name)
 
         self.add_group('version', [])
         self.add_input('pathin')
@@ -83,8 +56,8 @@ class GeneralFrame(BaseFrame):
                                       ('crop_image_x1',),
                                       ('crop_image_y1',),],
                        layout='flow')
-        
-        
+
+
         self.add_expanding_spacer()
 
         layout = QHBoxLayout(self._control)
@@ -113,5 +86,3 @@ class GeneralFrame(BaseFrame):
 
     def _on_modified(self, changed):
         self._btn_save.setEnabled(changed)
-
-

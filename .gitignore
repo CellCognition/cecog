@@ -1,3 +1,6 @@
+setup.cfg
+setup.cfg.mac
+.Rhistory
 cecog_rc.py
 dist
 build
@@ -20,6 +23,10 @@ resource.py
 .pydevproject
 .settings
 .DS_Store
+.RHistory
+.RData
+.Rhistory
+.Rdata
 *.o
 *.suo
 *.sparseimage

@@ -33,10 +33,9 @@ from cecog.threads.analyzer import AnalyzerThread
 from cecog.threads.training import TrainingThread
 
 from cecog.learning.learning import CommonClassPredictor
-from cecog.util.util import hexToRgb
+from cecog.colors import hex2rgb
 
 from cecog.environment import CecogEnvironment
-from cecog.plugin.segmentation import REGION_INFO
 
 
 class ClassifierResultFrame(QGroupBox):
@@ -99,12 +98,16 @@ class ClassifierResultFrame(QGroupBox):
         layout_desc.addWidget(self._label_c, Qt.AlignLeft)
         self._label_g = QLabel(self.LABEL_G % float('NAN'), desc)
         layout_desc.addWidget(self._label_g, Qt.AlignLeft)
-        btn = QPushButton('Show Browser', desc)
-        btn.clicked.connect(qApp._main_window._on_browser_open)
-        layout_desc.addWidget(btn)
+        self.browserBtn = QPushButton('Show Browser', desc)
+        layout_desc.addWidget(self.browserBtn)
         layout.addWidget(desc)
 
         self._has_data = False
+        self.load_classifier(quiet=True)
+
+    @property
+    def classifier(self):
+        return self._learner
 
     def clear(self):
         self._table_conf.clear()
@@ -118,19 +121,21 @@ class ClassifierResultFrame(QGroupBox):
     def on_load(self):
         self.load_classifier(check=True)
 
-    def load_classifier(self, check=True):
+    def load_classifier(self, check=True, quiet=False):
         _resolve = lambda x,y: self._settings.get(x, '%s_%s'
                                                   % (self._channel, y))
         clfdir = CecogEnvironment.convert_package_path(_resolve('Classification',
                                                'classification_envpath'))
-        # XXX - where does the "." come
+        # XXX - where does the "." come from?
         if not isdir(clfdir) or clfdir == ".":
             return
         else:
             self._learner = CommonClassPredictor( \
                 clf_dir=clfdir,
                 name=self._channel,
-                channels={self._channel.title(): _resolve('Classification', 'classification_regionname')},
+                channels = \
+                    {self._channel.title():
+                         _resolve('Classification', 'classification_regionname')},
                 color_channel=_resolve('ObjectDetection', 'channelid'))
             result = self._learner.check()
 
@@ -144,12 +149,15 @@ class ClassifierResultFrame(QGroupBox):
                 msg += 'Can you train a classifier? %s\n\n' % b(self.is_train_classifier())
                 msg += 'Found SVM model: %s\n' % b(result['has_model'])
                 msg += 'Found SVM range: %s\n' % b(result['has_range'])
-                msg += 'Can you apply the classifier to images? %s\n\n' % b(self.is_apply_classifier())
+                msg += 'Can you apply the classifier to images? %s\n\n' \
+                    %b(self.is_apply_classifier())
                 msg += 'Found samples: %s\n' % b(result['has_path_samples'])
-                msg += 'Sample images are only used for visualization and annotation control at the moment.'
+                msg += ('Sample images are only used for visualization and annotation '
+                        ' control at the moment.')
 
                 txt = '%s classifier inspection results' % self._channel
-                information(self, txt, info=msg)
+                if not quiet:
+                    information(self, txt, info=msg)
 
             if result['has_arff']:
                 self._learner.importFromArff()
@@ -243,7 +251,8 @@ class ClassifierResultFrame(QGroupBox):
             self._table_info.setItem(r, 0, QTableWidgetItem(name))
             self._table_info.setItem(r, 1, QTableWidgetItem(str(samples)))
             item = QTableWidgetItem(' ')
-            item.setBackground(QBrush(QColor(*hexToRgb(self._learner.hexcolors[name]))))
+            item.setBackground(QBrush(\
+                    QColor(*hex2rgb(self._learner.hexcolors[name]))))
             self._table_info.setItem(r, 2, item)
 
             if not conf is None and r < len(conf):
@@ -264,7 +273,7 @@ class ClassifierResultFrame(QGroupBox):
             self._table_info.setItem(r, 0, QTableWidgetItem(name))
             self._table_info.setItem(r, 1, QTableWidgetItem(str(samples)))
             item = QTableWidgetItem(' ')
-            item.setBackground(QBrush(QColor(*hexToRgb('#FFFFFF'))))
+            item.setBackground(QBrush(QColor(*hex2rgb('#FFFFFF'))))
             self._table_info.setItem(r, 2, item)
 
             item = QTableWidgetItem('%.1f' % (conf.wav_ppv * 100.))
@@ -332,15 +341,14 @@ class ClassifierResultFrame(QGroupBox):
 
 class ClassificationFrame(BaseProcessorFrame):
 
-    SECTION_NAME = SECTION_NAME_CLASSIFICATION
     TABS = ['Primary Channel', 'Secondary Channel',
             'Tertiary Channel', 'Merged Channel']
     PROCESS_PICKING = 'PROCESS_PICKING'
     PROCESS_TRAINING = 'PROCESS_TRAINING'
     PROCESS_TESTING = 'PROCESS_TESTING'
 
-    def __init__(self, settings, parent):
-        super(ClassificationFrame, self).__init__(settings, parent)
+    def __init__(self, settings, parent, name):
+        super(ClassificationFrame, self).__init__(settings, parent, name)
         self._result_frames = {}
 
         self.register_control_button(self.PROCESS_PICKING,
@@ -380,6 +388,10 @@ class ClassificationFrame(BaseProcessorFrame):
                              frame_results.on_load)
 
         self._init_control()
+
+    def connect_browser_btn(self, func):
+        for name, frame in self._result_frames.iteritems():
+            frame.browserBtn.clicked.connect(func)
 
     def _get_modified_settings(self, name, has_timelapse=True):
         settings = BaseProcessorFrame._get_modified_settings( \
@@ -503,6 +515,13 @@ class ClassificationFrame(BaseProcessorFrame):
         result_frame = self._result_frames[channel]
         result_frame.load_classifier(check=False)
 
+    @property
+    def classifiers(self):
+        classifiers = dict()
+        for k, v in self._result_frames.iteritems():
+            classifiers[k] = v.classifier
+        return classifiers
+
     def page_changed(self):
         self._update_classifier()
         self.settings_loaded()
@@ -516,14 +535,14 @@ class ClassificationFrame(BaseProcessorFrame):
         else:
             trait = self._settings.get_trait(SECTION_NAME_CLASSIFICATION,
                                              '%s_classification_regionname' % prefix)
-            trait.set_list_data(REGION_INFO.names[prefix])
+            trait.set_list_data(self.plugin_mgr.region_info.names[prefix])
 
     def _merged_channel_and_region(self, prefix):
         for ch in (CH_PRIMARY+CH_OTHER):
             trait = self._settings.get_trait(SECTION_NAME_CLASSIFICATION,
                                              '%s_%s_region' %(prefix, ch))
 
-            regions = REGION_INFO.names[ch]
+            regions = self.plugin_mgr.region_info.names[ch]
 
             # ugly workaround for due to trait concept
             if regions:

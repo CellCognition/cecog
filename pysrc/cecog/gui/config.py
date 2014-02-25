@@ -19,14 +19,15 @@ __all__ = ['GuiConfigSettings']
 import copy
 from cecog.traits.config import ConfigSettings
 
+
 class GuiConfigSettings(ConfigSettings):
     """Extended ConfigSettings to set the window modified flag of the parent
     window upon all setting changes via set.
     """
-    def __init__(self, parent, section_registry):
+    def __init__(self, parent):
         self._parent = parent
         self._notify_change = True
-        ConfigSettings.__init__(self, section_registry)
+        ConfigSettings.__init__(self)
 
     def copy(self):
         new = copy.copy(self)

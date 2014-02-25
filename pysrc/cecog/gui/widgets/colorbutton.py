@@ -71,4 +71,3 @@ class ColorButton(QToolButton):
             col = dlg.currentColor()
             self.set_color(col)
             self.color_changed.emit(col)
-

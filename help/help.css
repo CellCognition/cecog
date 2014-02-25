@@ -1,5 +1,5 @@
 body {
-  font-family: Arial, sans-serif;
+ font-family: sans-serif;
 }
 
 a.header {
@@ -34,9 +34,15 @@ a.footer {
 }
 
 h4 {
-  margin-top: 20;
-  margin-bottom: 6;
-  margin-left: 20;
+    margin-top: 20;
+    margin-bottom: 6;
+    margin-left: 20;
+}
+
+p.introtext {
+    margin-top: 20;
+    margin-bottom: 6;
+    margin-left: 20;
 }
 
 p.mtext {
@@ -44,6 +50,10 @@ p.mtext {
   margin-bottom: 0;
   margin-left: 20;
   text-align: justify;
+}
+
+p {
+    text-align: justify;
 }
 
 p.text {

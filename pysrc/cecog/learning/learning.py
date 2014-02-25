@@ -20,14 +20,100 @@ import csv
 from os.path import join, isdir, splitext, isfile
 from collections import OrderedDict
 
+from matplotlib.colors import ListedColormap, rgb2hex
+from matplotlib import mpl
+
 import numpy as np
 import svm
 
+from cecog.colors import unsupervised_cmap
 from cecog.learning.confusion_matrix import ConfusionMatrix
 from cecog.learning.util import SparseWriter, ArffWriter, ArffReader
 from cecog.learning.classifier import LibSvmClassifier as Classifier
 from cecog.util.logger import LoggerObject
 from cecog.util.util import makedirs
+
+class LearnerFiles(object):
+    # to collect the file names at one place
+    ARFF = 'features.arff'
+    SPARSE ='features.sparse'
+    DEFINITION = 'class_definition.txt'
+
+
+class ClassDefinitionCore(object):
+
+    @property
+    def normalize(self):
+        """Return a matplotlib normalization instance to the class lables
+        corretly mapped to the colors"""
+        return mpl.colors.Normalize(vmin=0,
+                                    vmax=max(self.class_names.keys()))
+
+    def load(self):
+        raise NotImplementedError
+
+    def save(self):
+        raise NotImplementedError
+
+
+class ClassDefinition(ClassDefinitionCore):
+    """Load as save class definitions to csv files."""
+
+    _fieldnames = ('label', 'name', 'color')
+    DELIM = '\t'
+
+    def __init__(self, filename, *args, **kw):
+        self._filename = filename
+        self.hexcolors = dict()
+        self.class_labels = dict()
+        self.class_names = OrderedDict()
+        self.colormap = None
+
+    def load(self):
+        with open(self._filename, "r") as f:
+            reader = csv.reader(f, delimiter=self.DELIM, quoting=csv.QUOTE_NONE)
+            for (label_, name, color) in reader:
+                label = int(label_)
+                self.class_labels[name] = label
+                self.class_names[label] = name
+                self.hexcolors[name] = color
+
+        colors = ["#ffffff"]*(len(self.class_names)+1)
+        for k, v in self.class_names.iteritems():
+            colors[k] = self.hexcolors[v]
+        self.colormap = ListedColormap(colors, 'svm-colors')
+
+    def save(self, writeheader=False):
+        with open(self._filename, "w") as f:
+            writer = csv.DictWriter(f, self._fieldnames, delimiter=self.DELIM)
+            if writeheader:
+                writer.writeheader()
+            for label, name in self.class_names.iteritems():
+                writer.writerow({'label': label,
+                                 'name': name,
+                                 'color': self.hexcolors[name]})
+
+
+class ClassDefinitionUnsup(ClassDefinition):
+    """Unsupervised class definition has hard wired class labels and
+    a destinct colormap to make it easy distinguishable from user defined
+    class definitions.
+    """
+
+    def __init__(self, nclusters, *args, **kw):
+        self.nclusters = nclusters
+        self.hexcolors = dict()
+        self.class_labels = dict()
+        self.class_names = OrderedDict()
+        self.colormap = None
+
+    def load(self):
+        self.colormap = unsupervised_cmap(self.nclusters)
+        for i in xrange(self.nclusters):
+            name = "cluster-%d" %i
+            self.class_labels[name] = i
+            self.class_names[i] = name
+            self.hexcolors[name] = rgb2hex(self.colormap(i))
 
 
 class BaseLearner(LoggerObject):
@@ -53,9 +139,9 @@ class BaseLearner(LoggerObject):
         self.color_channel = color_channel
         self.channels = channels
 
-        self.arff_file = 'features.arff'
-        self.sparse_file ='features.sparse'
-        self.definitions_file = 'class_definition.txt'
+        self.arff_file = LearnerFiles.ARFF
+        self.sparse_file = LearnerFiles.SPARSE
+        self.definitions_file = LearnerFiles.DEFINITION
         self._feature_names = None
 
         self._class_definitions = []
@@ -80,7 +166,7 @@ class BaseLearner(LoggerObject):
     @feature_names.setter
     def feature_names(self, feature_names):
         self._feature_names = feature_names
-        assert self._feature_names == feature_names
+        #assert self._feature_names == feature_names
 
     def delete_feature_names(self, indices):
         """Remove feature names given a list of indices."""
@@ -293,10 +379,10 @@ class CommonClassPredictor(BaseLearner):
         return False
 
     def loadClassifier(self, model_prefix="features"):
-        self.classifier = Classifier(self.data_dir, self.logger,
-                                     strSvmPrefix=model_prefix,
-                                     hasZeroInsert=self.has_zero_insert)
-        self.bProbability = self.classifier.bProbability
+        self.classifier = Classifier(self.data_dir,
+                                     svm_prefix=model_prefix,
+                                     has_zero_insert=self.has_zero_insert)
+        self.bProbability = self.classifier.probability
 
     def predict(self, aFeatureData, feature_names):
         # ensurse to get the right fearues in the right order

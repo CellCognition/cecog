@@ -21,12 +21,15 @@ import sys
 import csv
 import atexit
 import shutil
-from os.path import join, isdir, isfile, dirname, normpath, abspath, realpath, \
-    expanduser, basename
+from os.path import join, isdir, isfile, dirname, normpath, abspath, \
+    realpath, expanduser, basename
 
-from cecog.traits.config import _ConfigParser as ConfigParser
+from ConfigParser import RawConfigParser
+
+from cecog.util.pattern import Singleton
 from cecog.util.mapping import map_path_to_os as _map_path_to_os
 from cecog import ccore
+
 
 def find_resource_dir():
     """Return a normalized absolute path to the resource directory.
@@ -50,17 +53,19 @@ def find_resource_dir():
         raise IOError("Resource path '%s' not found." %rdir)
     return rdir
 
-# XXX - wrong module for design pattern
-class Singleton(type):
 
-    def __init__(cls, name, bases, dict):
-        super(Singleton, cls).__init__(cls, bases, dict)
-        cls._instance = None
+class ConfigParser(RawConfigParser):
+    """Custom config parser with sanity check."""
 
-    def __call__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instance
+    def __init__(self, filename, name):
+        RawConfigParser.__init__(self)
+        self.filename = filename
+        self.name = name
+        if not os.path.isfile(filename):
+            raise IOError("File for %s with name '%s' not found." %
+                          (name, filename))
+        self.read(filename)
+
 
 class BatteryPackage(object):
 
@@ -113,6 +118,7 @@ class PathMapper(object):
             for row in self._path_mappings:
                 pmp.writerow(row)
 
+
 class CecogEnvironment(object):
 
     __metaclass__ = Singleton
@@ -126,6 +132,7 @@ class CecogEnvironment(object):
     PATH_MAPPINGS = join(RESOURCE_DIR, "path_mappings.txt")
     CONFIG = join(RESOURCE_DIR, "config.ini")
 
+    PALETTES = join('palettes', 'zeiss')
     R_SOURCE_DIR = 'rsrc'
 
     # XXX want this away from class level
@@ -143,7 +150,8 @@ class CecogEnvironment(object):
 
     @classmethod
     def convert_package_path(cls, path):
-        return normpath(join(cls.RESOURCE_DIR, basename(cls.BATTERY_PACKAGE_DIR), path)) if path else ""
+        return normpath(join(cls.RESOURCE_DIR,
+                             basename(cls.BATTERY_PACKAGE_DIR), path))
 
     def __init__(self, version, redirect=False, debug=False):
         super(CecogEnvironment, self).__init__()
@@ -184,6 +192,12 @@ class CecogEnvironment(object):
 
             if not isfile(target):
                 shutil.copy2(src, target)
+
+        target = join(self.user_config_dir, cls.PALETTES)
+        src = join(cls.RESOURCE_DIR, cls.PALETTES)
+        if not isdir(target):
+            shutil.copytree(src, target)
+
         # changing resource directory after copying the files
         # copy also the r sources
         cls.RESOURCE_DIR = self.user_config_dir
@@ -199,6 +213,10 @@ class CecogEnvironment(object):
                 raise IOError("R-source directory not found (%s)."
                           % cls.R_SOURCE_DIR)
             cls.R_SOURCE_DIR = abspath(normpath(cls.R_SOURCE_DIR))
+
+    @property
+    def palettes_dir(self):
+        return join(self.user_config_dir, self.PALETTES)
 
     @property
     def user_config_dir(self):

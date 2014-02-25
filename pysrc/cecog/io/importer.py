@@ -21,17 +21,11 @@ __all__ = ['FileTokenImporter',
 import os
 import re
 
-from pdk.fileutils import collect_files
-from pdk.iterator import unique
-from pdk.datetimeutils import StopWatch
-
 from cecog import ccore
-from cecog.util.util import (read_table,
-                             write_table,
-                             )
-from cecog.util.token import (Token,
-                              TokenHandler,
-                              )
+from cecog.util.util import read_table
+from cecog.util.stopwatch import StopWatch
+from cecog.util.token import Token, TokenHandler
+
 from cecog.io.imagecontainer import (MetaData,
                                      DIMENSION_NAME_POSITION,
                                      DIMENSION_NAME_TIME,
@@ -142,7 +136,7 @@ class AbstractImporter(object):
         return image
 
     def _build_dimension_lookup(self):
-        s = StopWatch()
+        s = StopWatch(start=True)
         lookup = {}
         has_xy = False
         positions = []
@@ -151,8 +145,8 @@ class AbstractImporter(object):
         zslices = []
 
         dimension_items = self._get_dimension_items()
-        print("Get dimensions: %s" % s)
-        s.reset()
+        print("Get dimensions: %s" %s.interim())
+        s.reset(start=True)
 
         # if use_frame_indices is set in the ini file,
         # we make a first scan of the items and determine for each position
@@ -263,7 +257,7 @@ class AbstractImporter(object):
             times.append(time)
             channels.append(channel)
 
-        self.meta_data.positions = tuple(sorted(unique(positions)))
+        self.meta_data.positions = tuple(sorted(set(positions)))
 
         # assure that all items of one dimension are of same length
         times = set(times)
@@ -283,7 +277,7 @@ class AbstractImporter(object):
         self.meta_data.zslices = sorted(zslices)
         self.meta_data.image_files = len(dimension_items)
 
-        print('Build time: %s' % s)
+        print('Build time: %s' %s.stop())
         return lookup
 
     def _get_dimension_items(self):
@@ -300,9 +294,14 @@ class FileTokenImporter(AbstractImporter):
         self.token_handler = token_handler
 
     def _get_dimension_items(self):
-        file_list = collect_files(self.path, self.extensions, absolute=True,
-                                  follow=False, recursive=True,
-                                  ignore_case=True, force_python=True)
+        files_list = list()
+        for (path, directories, filenames) in os.walk(path):
+            for filename in filenames:
+                print path, filename
+                if os.path.splitext[1] in self.extensions:
+                    hit = os.path.join(path, filename)
+                    files_list.append(hit)
+
         token_list = []
         for filename in file_list:
             filename_rel = filename[len(self.path)+1:]

@@ -17,12 +17,44 @@ import traceback
 from PyQt4 import QtCore
 from cecog import ccore
 
+class StopProcessing(Exception):
+    pass
+
+class ProgressMsg(dict):
+
+    def __init__(self, min=0, max=1, stage=0, meta="", progress=0, text='',
+                 item_name=''):
+        self['min'] = min
+        self['max'] = max
+        self['stage'] = stage
+        self['meta'] = meta
+        self['progress'] = progress
+        self['text'] = text
+        self['item_name'] = item_name
+
+    def increment_progress(self):
+        self.progress += 1
+
+    def __getattr__(self, attr):
+
+        if self.has_key(attr):
+            return self[attr]
+        else:
+            return super(ProgressMsg, self).__getattr__(attr)
+
+    def __setattr__(self, attr, value):
+        if self.has_key(attr):
+            self[attr] = value
+        else:
+            super(ProgressMsg, self).__setattr__(attr, value)
+
+
 class CoreThread(QtCore.QThread):
 
-    stage_info = QtCore.pyqtSignal(dict)
+    stage_info = QtCore.pyqtSignal('PyQt_PyObject')
     analyzer_error = QtCore.pyqtSignal(str)
-    image_ready = QtCore.pyqtSignal(ccore.RGBImage, str, str)
-
+    image_ready = QtCore.pyqtSignal(dict, str)
+    aborted = QtCore.pyqtSignal()
 
     def __init__(self, parent, settings):
         super(CoreThread, self).__init__(parent)
@@ -44,27 +76,23 @@ class CoreThread(QtCore.QThread):
         except:
             pass
 
-    def run(self, *args, **kw):
-        # turn off tiff warings per thread
+    def run(self):
+        # turn off vigra tiff warnings
         if not __debug__:
             ccore.turn_off()
             self._enable_eclipse_mt_debugging()
-
         try:
             self._run()
+        except StopProcessing:
+            pass
         except Exception, e:
-            # XXX
-            if hasattr(e, 'msg'):
-                # MultiprocessingError
-                msg = e.msg
-            else:
-                msg = traceback.format_exc()
-            traceback.print_exc()
-
+            msg = traceback.format_exc(e)
+            traceback.print_exc(e)
             logger = logging.getLogger()
             logger.error(msg)
             self.analyzer_error.emit(msg)
-            raise
+            # can cause a sefault on macosx
+            # raise
 
     def abort(self, wait=False):
         self._mutex.lock()
@@ -72,8 +100,10 @@ class CoreThread(QtCore.QThread):
             self._abort = True
         finally:
             self._mutex.unlock()
+
         if wait:
             self.wait()
+        self.aborted.emit()
 
     def is_aborted(self):
         return self._abort
@@ -98,7 +128,10 @@ class CoreThread(QtCore.QThread):
     def renderer(self):
         del self._renderer
 
-    def show_image(self, name, image, message, filename='', stime=0):
-        if name == self._renderer:
-            self.image_ready.emit(image, message, filename)
+    def interruption_point(self):
+        if self._abort:
+            raise StopProcessing()
+
+    def show_image(self, images, message, stime=0):
+        self.image_ready.emit(images, message)
         self.msleep(stime)
