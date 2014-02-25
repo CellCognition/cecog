@@ -108,13 +108,14 @@ class BaseLearner(LoggerObject):
     # directory substructure
     _subdirs = ('annotations', 'data', 'samples', 'controls')
 
-    def __init__(self, clf_dir, name, channels, color_channel,
+    def __init__(self, clf_dir, name, channels, color_channel=None,
                  has_zero_insert=False):
         super(BaseLearner, self).__init__()
         self.add_stream_handler(self._lvl.INFO)
         self._state = None
 
-        self.clf_dir = clf_dir
+        if clf_dir is not None:
+            self.clf_dir = clf_dir
         self.name = name
         self.color_channel = color_channel
         self.channels = channels
