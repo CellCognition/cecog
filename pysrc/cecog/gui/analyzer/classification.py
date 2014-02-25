@@ -139,31 +139,31 @@ class ClassifierResultFrame(QGroupBox):
                          _resolve('Classification', 'classification_regionname')},
                 color_channel=_resolve('ObjectDetection', 'channelid'))
 
-            result = self._learner.check()
+            state = self._learner.state
             if check:
                 b = lambda x: 'Yes' if x else 'No'
-                msg =  'Classifier path: %s\n' % result['path_env']
-                msg += 'Found class definition: %s\n' % b(result['has_definition'])
-                msg += 'Found annotations: %s\n' % b(result['has_path_annotations'])
-                msg += 'Can you pick new samples? %s\n\n' % b(self.is_pick_samples())
-                msg += 'Found ARFF file: %s\n' % b(result['has_arff'])
-                msg += 'Can you train a classifier? %s\n\n' % b(self.is_train_classifier())
-                msg += 'Found SVM model: %s\n' % b(result['has_model'])
-                msg += 'Found SVM range: %s\n' % b(result['has_range'])
+                msg =  'Classifier path: %s\n' % state['path_env']
+                msg += 'Found class definition: %s\n' % b(state['has_definition'])
+                msg += 'Found annotations: %s\n' % b(state['has_path_annotations'])
+                msg += 'Can you pick new samples? %s\n\n' % b(self._learner.is_annotated)
+                msg += 'Found ARFF file: %s\n' % b(state['has_arff'])
+                msg += 'Can you train a classifier? %s\n\n' %b(self._learner.is_trained)
+                msg += 'Found SVM model: %s\n' % b(state['has_model'])
+                msg += 'Found SVM range: %s\n' % b(state['has_range'])
                 msg += 'Can you apply the classifier to images? %s\n\n' \
-                    %b(self.is_apply_classifier())
-                msg += 'Found samples: %s\n' % b(result['has_path_samples'])
+                    %b(self._learner.is_valid)
+                msg += 'Found samples: %s\n' % b(state['has_path_samples'])
                 msg += ('Sample images are only used for visualization and annotation '
                         ' control at the moment.')
 
-                txt = '%s classifier inspection results' % self._channel
+                txt = '%s classifier inspection states' % self._channel
                 if not quiet:
                     information(self, txt, info=msg)
 
-            if result['has_arff']:
+            if state['has_arff']:
                 self._learner.importFromArff()
 
-            if result['has_definition']:
+            if state['has_definition']:
                 self._learner.loadDefinition()
 
     def update_frame(self):
@@ -196,48 +196,36 @@ class ClassifierResultFrame(QGroupBox):
 
 
     def msg_pick_samples(self, parent):
-        result = self._learner.check()
+        state = self._learner.state
         text = 'Sample picking is not possible'
         info = 'You need to provide a class definition '\
                'file and annotation files.'
         detail = 'Missing components:\n'
-        if not result['has_path_annotations']:
-            detail += "- Annotation path '%s' not found.\n" % result['path_annotations']
-        if not result['has_definition']:
-            detail += "- Class definition file '%s' not found.\n" % result['definition']
+        if not state['has_path_annotations']:
+            detail += "- Annotation path '%s' not found.\n" % state['path_annotations']
+        if not state['has_definition']:
+            detail += "- Class definition file '%s' not found.\n" % state['definition']
         return information(parent, text, info, detail)
 
-    def is_pick_samples(self):
-        result = self._learner.check()
-        return result['has_path_annotations'] and result['has_definition']
-
     def msg_train_classifier(self, parent):
-        result = self._learner.check()
+        state = self._learner.state
         text = 'Classifier training is not possible'
         info = 'You need to pick samples first.'
         detail = 'Missing components:\n'
-        if not result['has_arff']:
-            detail += "- Feature file '%s' not found.\n" % result['arff']
+        if not state['has_arff']:
+            detail += "- Feature file '%s' not found.\n" % state['arff']
         return information(parent, text, info, detail)
 
-    def is_train_classifier(self):
-        result = self._learner.check()
-        return result['has_arff']
-
     def msg_apply_classifier(self, parent):
-        result = self._learner.check()
+        state = self._learner.state
         text = 'Classifier model not found'
         info = 'You need to train a classifier first.'
         detail = 'Missing components:\n'
-        if not result['has_model']:
-            detail += "- SVM model file '%s' not found.\n" % result['model']
-        if not result['has_range']:
-            detail += "- SVM range file '%s' not found.\n" % result['range']
+        if not state['has_model']:
+            detail += "- SVM model file '%s' not found.\n" % state['model']
+        if not state['has_range']:
+            detail += "- SVM range file '%s' not found.\n" % state['range']
         return information(parent, text, info, detail)
-
-    def is_apply_classifier(self):
-        result = self._learner.check()
-        return result['has_model'] and result['has_range']
 
     def _set_info_table(self, conf):
         rows = len(self._learner.class_labels)

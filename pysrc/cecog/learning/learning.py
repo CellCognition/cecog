@@ -112,8 +112,7 @@ class BaseLearner(LoggerObject):
                  has_zero_insert=False):
         super(BaseLearner, self).__init__()
         self.add_stream_handler(self._lvl.INFO)
-
-        print "BaseLearner init"
+        self._state = None
 
         self.clf_dir = clf_dir
         self.name = name
@@ -255,27 +254,42 @@ class BaseLearner(LoggerObject):
         self.hexcolors = oReader.dctHexColors
         self.has_zero_insert = oReader.hasZeroInsert
 
-    def check(self):
-        filename = splitext(self.arff_file)[0]
-        result = {'path_env': self.clf_dir,
-                  'path_data': self.data_dir,
-                  'path_samples': self.samples_dir,
-                  'path_annotations': self.annotations_dir,
-                  'model': join(self.data_dir, '%s.model' %filename),
-                  'range': join(self.data_dir, '%s.range' %filename),
-                  'conf': join(self.data_dir, '%s.confusion.txt' %filename),
-                  'arff': join(self.data_dir, self.arff_file),
-                  'definition': join(self.clf_dir, self.definitions_file),
-                  # result of validity checks
-                  'has_path_data': isdir(self.data_dir),
-                  'has_path_samples': isdir(self.data_dir),
-                  'has_path_annotations': isdir(self.data_dir),
-                  'has_model': isfile(join(self.data_dir, '%s.model' %filename)),
-                  'has_range': isfile(join(self.data_dir, '%s.range' %filename)),
-                  'has_conf': isfile(join(self.data_dir, '%s.confusion.txt' %filename)),
-                  'has_arff': isfile(join(self.data_dir, self.arff_file)),
-                  'has_definition': isfile(join(self.clf_dir, self.definitions_file))}
-        return result
+    @property
+    def is_valid(self):
+        return self.state["has_model"] and self.state['has_range']
+
+    @property
+    def is_trained(self):
+        return self.state['has_arff']
+
+    @property
+    def is_annotated(self):
+        return self.state['has_definition'] and self.state['has_path_annotations']
+
+    @property
+    def state(self):
+        if self._state is None:
+            filename = splitext(self.arff_file)[0]
+            self._state = {'path_env': self.clf_dir,
+                           'path_data': self.data_dir,
+                           'path_samples': self.samples_dir,
+                           'path_annotations': self.annotations_dir,
+                           'model': join(self.data_dir, '%s.model' %filename),
+                           'range': join(self.data_dir, '%s.range' %filename),
+                           'conf': join(self.data_dir, '%s.confusion.txt' %filename),
+                           'arff': join(self.data_dir, self.arff_file),
+                           'definition': join(self.clf_dir, self.definitions_file),
+                           # result of validity checks
+                           'has_path_data': isdir(self.data_dir),
+                           'has_path_samples': isdir(self.data_dir),
+                           'has_path_annotations': isdir(self.data_dir),
+                           'has_model': isfile(join(self.data_dir, '%s.model' %filename)),
+                           'has_range': isfile(join(self.data_dir, '%s.range' %filename)),
+                           'has_conf': isfile(join(self.data_dir, '%s.confusion.txt' %filename)),
+                           'has_arff': isfile(join(self.data_dir, self.arff_file)),
+                           'has_definition': isfile(join(self.clf_dir, self.definitions_file))}
+
+        return self._state
 
     def exportToArff(self, path=None, filename=None):
         if filename is None:
