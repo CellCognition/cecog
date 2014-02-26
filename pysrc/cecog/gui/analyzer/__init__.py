@@ -303,16 +303,6 @@ class _ProcessorMixin(object):
                     self._process_items = cls
                     self._current_process_item = 0
                     cls = cls[self._current_process_item]
-
-                    # remove HmmThread if process is not first in list and
-                    # not valid error correction was activated
-                    if (ErrorCorrectionThread in self._process_items and
-                        self._process_items.index(ErrorCorrectionThread) > 0 and
-                        not (self._settings.get('Processing', 'primary_errorcorrection') or
-                             (self._settings.get('Processing', 'secondary_errorcorrection') and
-                              self._settings.get('Processing', 'secondary_processchannel')))):
-                        self._process_items.remove(ErrorCorrectionThread)
-
                 else:
                     self._process_items = None
                     self._current_process_item = 0

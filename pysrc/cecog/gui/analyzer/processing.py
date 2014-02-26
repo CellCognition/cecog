@@ -229,6 +229,23 @@ class ProcessingFrame(BaseProcessorFrame, ExportSettings):
         settings = BaseProcessorFrame._get_modified_settings( \
             self, name, has_timelapse)
 
+        # some processing settings overrule error correction settings
+        settings.set('ErrorCorrection', 'primary',
+                     settings('Processing', 'primary_errorcorrection'))
+
+        settings.set('ErrorCorrection', 'secondary',
+                     (settings('Processing', 'secondary_errorcorrection') and \
+                          settings('Processing', 'secondary_processchannel')))
+
+        settings.set('ErrorCorrection', 'tertiary',
+                     (settings('Processing', 'tertiary_errorcorrection') and \
+                          settings('Processing', 'tertiary_processchannel')))
+
+        settings.set('ErrorCorrection', 'merged',
+                     (settings('Processing', 'merged_errorcorrection') and \
+                          settings('Processing', 'merged_processchannel')))
+
+
         # special clase for UES, clustering takes place afterwards
         if settings('EventSelection', 'unsupervised_event_selection'):
             settings.set('General', 'rendering_class', {})
