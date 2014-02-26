@@ -90,7 +90,6 @@ class Tracker(LoggerObject):
 
     def clone_graph(self, timeholder, channel, region):
         """Clone the tracking graph with sample data from a different channel."""
-
         ngraph = Graph()
         # add nodes from other segmentation region
         for nodeid in self.graph.node_list():
@@ -160,7 +159,7 @@ class Tracker(LoggerObject):
         # into the past.
         iPreviousT = self.closest_preceding_frame(iT)
 
-        if not iPreviousT is None:
+        if iPreviousT is not None:
             bReturnSuccess = True
             dctMerges = {}
             dctSplits = {}
