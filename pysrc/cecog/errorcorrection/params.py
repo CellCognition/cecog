@@ -33,11 +33,10 @@ class ECParams(object):
 
     __slots__ = ['regionnames', 'constrain_graph', 'hmm_constrain',
                  'classifier_dirs', 'position_labels', 'mapping_dir',
-                 'sortby', 'skip_plates', 'timeunit', 'overwrite_timelapse',
-                 'timelapse', 'sorting', 'sorting_sequence', 'tmax',
-                 'ignore_tracking_branches', 'write_gallery', 'n_galleries',
-                 'eventselection', 'nclusters', 'resampling_factor', 'hmm_algorithm',
-                 'size_gallery_image']
+                 'sortby', 'timeunit', 'overwrite_timelapse', 'timelapse',
+                 'sorting', 'sorting_sequence', 'tmax', 'ignore_tracking_branches',
+                 'write_gallery', 'n_galleries', 'eventselection', 'nclusters',
+                 'resampling_factor', 'hmm_algorithm', 'size_gallery_image']
 
     def __init__(self, settings, tstep, timeunit):
 
@@ -54,8 +53,9 @@ class ECParams(object):
         # settings that depend whether if the channel is checked for
         # error correction or not
         for channel in CHANNEL_PREFIX:
-            if settings('ErrorCorrection', channel):
-                self.regionnames[channel] = self._regionname(settings, channel)
+            rname = self._regionname(settings, channel)
+            if settings('ErrorCorrection', channel) and bool(rname):
+                self.regionnames[channel] = rname
                 self.hmm_constrain[channel] = self._hmm_constrain( \
                     settings('ErrorCorrection', '%s_graph' %channel))
                 _setting = '%s_classification_envpath' %channel
@@ -75,8 +75,6 @@ class ECParams(object):
         # special case, sort by position if no mappings file is provided
         if not self.position_labels:
             self.sortby = PlateMapping.POSITION
-
-        self.skip_plates = settings('ErrorCorrection', 'skip_processed_plates')
 
         # timelapse in minutes
         self.overwrite_timelapse = \

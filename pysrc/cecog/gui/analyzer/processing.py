@@ -24,7 +24,7 @@ from PyQt4 import QtCore
 from cecog import CHANNEL_PREFIX, VERSION
 from cecog import CH_OTHER, CH_VIRTUAL, CH_PRIMARY
 from cecog.gui.analyzer import BaseProcessorFrame, AnalyzerThread
-from cecog.gui.analyzer import HmmThread, MultiAnalyzerThread
+from cecog.gui.analyzer import ErrorCorrectionThread, MultiAnalyzerThread
 from cecog.util.ctuple import CTuple
 
 
@@ -193,13 +193,11 @@ class ProcessingFrame(BaseProcessorFrame, ExportSettings):
         super(ProcessingFrame, self).__init__(settings, parent, name)
 
         self.register_control_button('process',
-                                     [AnalyzerThread,
-                                      HmmThread],
+                                     [AnalyzerThread, ErrorCorrectionThread],
                                      ('Start processing', 'Stop processing'))
 
         self.register_control_button('multi_process',
-                                     [MultiAnalyzerThread,
-                                      HmmThread],
+                                     [MultiAnalyzerThread, ErrorCorrectionThread],
                                      ('Start multi processing', 'Stop multi processing'))
 
         self.add_group(None,

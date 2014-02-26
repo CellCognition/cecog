@@ -17,9 +17,9 @@ __source__ = '$URL$'
 __all__ = ['ErrorCorrectionFrame']
 
 
-from cecog.threads.hmm import HmmThread
-from cecog.threads.pyhmm import PyHmmThread
+from cecog.threads.errorcorrection import ErrorCorrectionThread
 from cecog.gui.analyzer import BaseProcessorFrame
+
 
 class ErrorCorrectionFrame(BaseProcessorFrame):
 
@@ -28,7 +28,7 @@ class ErrorCorrectionFrame(BaseProcessorFrame):
     def __init__(self, settings, parent, name):
         super(ErrorCorrectionFrame, self).__init__(settings, parent, name)
 
-        self.register_control_button( 'pyhmm', PyHmmThread,
+        self.register_control_button( 'errorcorrection', ErrorCorrectionThread,
             ('start error correction', 'stop error correction'))
 
         self.add_group(None, [('primary', (0, 0, 1, 1)),

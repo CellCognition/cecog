@@ -60,12 +60,11 @@ from cecog.plugin.display import PluginBay
 from cecog.gui.widgets.tabcontrol import TabControl
 from cecog.analyzer.ibb import IBBAnalysis, SecurinAnalysis
 
-from cecog.threads.picker import PickerThread
-from cecog.threads.analyzer import AnalyzerThread
-from cecog.threads.training import TrainingThread
-from cecog.threads.hmm import HmmThread
-from cecog.threads.pyhmm import PyHmmThread
-from cecog.threads.post_processing import PostProcessingThread
+from cecog.threads import PickerThread
+from cecog.threads import AnalyzerThread
+from cecog.threads import TrainingThread
+from cecog.threads import ErrorCorrectionThread
+from cecog.threads import PostProcessingThread
 from cecog.multiprocess.multianalyzer import MultiAnalyzerThread
 
 from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
@@ -77,6 +76,7 @@ from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
 from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
 from cecog.traits.analyzer.cluster import SECTION_NAME_CLUSTER
 from cecog.gui.progressdialog import ProgressDialog
+
 
 class BaseFrame(TraitDisplayMixin):
 
@@ -306,12 +306,12 @@ class _ProcessorMixin(object):
 
                     # remove HmmThread if process is not first in list and
                     # not valid error correction was activated
-                    if (HmmThread in self._process_items and
-                        self._process_items.index(HmmThread) > 0 and
+                    if (ErrorCorrectionThread in self._process_items and
+                        self._process_items.index(ErrorCorrectionThread) > 0 and
                         not (self._settings.get('Processing', 'primary_errorcorrection') or
                              (self._settings.get('Processing', 'secondary_errorcorrection') and
                               self._settings.get('Processing', 'secondary_processchannel')))):
-                        self._process_items.remove(HmmThread)
+                        self._process_items.remove(ErrorCorrectionThread)
 
                 else:
                     self._process_items = None
@@ -402,47 +402,10 @@ class _ProcessorMixin(object):
                     self._analyzer = cls(self, self._current_settings, imagecontainer, ncpu)
 
 
-                elif cls is PyHmmThread:
+                elif cls is ErrorCorrectionThread:
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
                     self._analyzer = cls(self, self._current_settings,
                                          self.parent().main_window._imagecontainer)
-
-                elif cls is PyHmmThread:
-                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
-                    self._analyzer = cls(self, self._current_settings,
-                                         self.parent().main_window._imagecontainer)
-
-                elif cls is HmmThread:
-                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
-
-                    # FIXME: classifier handling needs revision!!!
-                    learner_dict = {}
-                    for kind in ['primary', 'secondary']:
-                        _resolve = lambda x,y: self._settings.get(x, '%s_%s' % (kind, y))
-                        classifier_path = _resolve('Classification', 'classification_envpath')
-                        if classifier_path is None:
-                            print 'HMMThread(): No classifier given for %s' % kind
-                            continue
-                        env_path = CecogEnvironment.convert_package_path(classifier_path)
-
-                        if (os.path.exists(env_path)
-                            and (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))
-                            ):
-
-                            learner = CommonClassPredictor( \
-                                env_path,
-                                _resolve('ObjectDetection', 'channelid'),
-                                _resolve('Classification', 'classification_regionname'))
-
-                            learner.importFromArff()
-                            learner_dict[kind] = learner
-
-                    ### Whee, I like it... "self.parent().main_window._imagecontainer" crazy, crazy, michael... :-)
-                    self._analyzer = cls(self, self._current_settings,
-                                         learner_dict,
-                                         self.parent().main_window._imagecontainer)
-                    self._analyzer.setTerminationEnabled(True)
-                    self.parent().main_window.log_window.show()
 
 
                 elif cls is PostProcessingThread:
