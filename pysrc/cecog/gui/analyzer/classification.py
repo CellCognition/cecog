@@ -18,6 +18,7 @@ __all__ = ['ClassificationFrame']
 
 from os.path import isdir
 import numpy
+from collections import OrderedDict
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
@@ -202,9 +203,9 @@ class ClassifierResultFrame(QGroupBox):
                'file and annotation files.'
         detail = 'Missing components:\n'
         if not state['has_path_annotations']:
-            detail += "- Annotation path '%s' not found.\n" % state['path_annotations']
+            detail += "- Annotation path '%s' not found.\n" %state['path_annotations']
         if not state['has_definition']:
-            detail += "- Class definition file '%s' not found.\n" % state['definition']
+            detail += "- Class definition file '%s' not found.\n" %state['definition']
         return information(parent, text, info, detail)
 
     def msg_train_classifier(self, parent):
@@ -236,7 +237,8 @@ class ClassifierResultFrame(QGroupBox):
                             ('%PR', 'class precision in %'),
                             ('%SE', 'class sensitivity in %')]
 
-        names_vertical = [str(k) for k in self._learner.class_names.keys()] + ['', '#']
+        names_vertical = [str(k) for k in self._learner.class_names.keys()] + \
+            ['', '#']
         self._table_info.setColumnCount(len(names_horizontal))
         self._table_info.setRowCount(len(names_vertical))
         self._table_info.setVerticalHeaderLabels(names_vertical)
@@ -351,7 +353,7 @@ class ClassificationFrame(BaseProcessorFrame):
 
     def __init__(self, settings, parent, name):
         super(ClassificationFrame, self).__init__(settings, parent, name)
-        self._result_frames = {}
+        self._result_frames = OrderedDict()
 
         self.register_control_button(self.PROCESS_PICKING,
                                      PickerThread,
@@ -485,7 +487,8 @@ class ClassificationFrame(BaseProcessorFrame):
             region = []
             for pfx in (CH_PRIMARY+CH_OTHER):
                 if settings.get('Classification', 'merge_%s' %pfx):
-                    region.append(settings.get("Classification", "merged_%s_region" %pfx))
+                    region.append(settings.get("Classification",
+                                               "merged_%s_region" %pfx))
             region = CTuple(region)
         else:
             region = settings.get('Classification',
@@ -517,7 +520,7 @@ class ClassificationFrame(BaseProcessorFrame):
 
     @property
     def classifiers(self):
-        classifiers = dict()
+        classifiers = OrderedDict()
         for k, v in self._result_frames.iteritems():
             classifiers[k.title()] = v.classifier
         return classifiers
@@ -533,7 +536,7 @@ class ClassificationFrame(BaseProcessorFrame):
             self._merged_channel_and_region(prefix)
         else:
             trait = self._settings.get_trait(SECTION_NAME_CLASSIFICATION,
-                                             '%s_classification_regionname' % prefix)
+                                             '%s_classification_regionname' %prefix)
             trait.set_list_data(self.plugin_mgr.region_info.names[prefix])
 
     def _merged_channel_and_region(self, prefix):
