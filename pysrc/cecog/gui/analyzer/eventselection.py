@@ -27,7 +27,7 @@ class EventSelectionFrame(BaseProcessorFrame):
         self.register_control_button(self.PROCESS_SYNCING, AnalyzerThread, \
                               ('Test event selection', 'Stop event selection'))
 
-        self.add_input('eventselection_channel')
+        self.add_input('eventchannel')
         self.add_group(None,
                        [('backwardrange', (0,0,1,1)),
                         ('forwardrange', (0,1,1,1)),
@@ -59,7 +59,7 @@ class EventSelectionFrame(BaseProcessorFrame):
 
     def settings_loaded(self):
         trait = self._settings.get_trait('EventSelection',
-                                         'eventselection_channel')
+                                         'eventchannel')
         clfframe = self.parent().widgetByType(ClassificationFrame)
 
         # list only classifiers that has been trained

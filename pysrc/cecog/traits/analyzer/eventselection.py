@@ -28,7 +28,7 @@ class SectionEventSelection(SectionCore):
 
     OPTIONS = [
         ('event_selection',
-         [('eventselection_channel',
+         [('eventchannel',
            SelectionTrait2(None, [], label='Channel')),
           ('event_selection',
            BooleanTrait(True, label='Event Selection')),
