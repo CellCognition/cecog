@@ -58,19 +58,19 @@ class ExportSettings(object):
 
                 # render settings for classifications
                 d = {}
-                if settings.get('Processing', '%s_classification' % prefix):
-                    for x in self.plugin_mgr.region_info.names[prefix]:
-                        if x == settings.get('Classification', '%s_classification_regionname' % prefix) or \
-                                prefix == CH_VIRTUAL[0]:
-                            d = {'%s_classification_%s' % (prefix, x):
-                                     {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
-                                                            'contours': [(x, 'class_label', 1, False),
-                                                                         (x, '#000000' , 1, show_ids_class)]
-                                                            }
-                                      }
-                                 }
-                    if settings('EventSelection', 'supervised_event_selection'):
-                        settings.get('General', 'rendering_class').update(d)
+            if settings.get('Processing', '%s_classification' % prefix):
+                for x in self.plugin_mgr.region_info.names[prefix]:
+                    if x == settings.get('Classification', '%s_classification_regionname' % prefix) or \
+                            prefix == CH_VIRTUAL[0]:
+                        d = {'%s_classification_%s' % (prefix, x):
+                                 {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
+                                                        'contours': [(x, 'class_label', 1, False),
+                                                                     (x, '#000000' , 1, show_ids_class)]
+                                                        }
+                                  }
+                             }
+                if settings('EventSelection', 'supervised_event_selection'):
+                    settings.get('General', 'rendering_class').update(d)
 
         # setup rendering properties for merged channel
         # want the same rendering properties as for the primary channel!
@@ -258,6 +258,5 @@ class ProcessingFrame(BaseProcessorFrame, ExportSettings):
             settings.set('Processing', 'tertiary_processChannel', False)
             settings.set('Processing', 'merged_classification', False)
             settings.set('Processing', 'merged_processChannel', False)
-
 
         return settings
