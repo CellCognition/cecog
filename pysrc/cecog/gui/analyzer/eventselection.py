@@ -58,9 +58,13 @@ class EventSelectionFrame(BaseProcessorFrame):
         self.settings_loaded()
 
     def settings_loaded(self):
-        trait = self._settings.get_trait('EventSelection', 'eventselection_channel')
+        trait = self._settings.get_trait('EventSelection',
+                                         'eventselection_channel')
         clfframe = self.parent().widgetByType(ClassificationFrame)
-        trait.set_list_data(clfframe.classifiers.keys())
+
+        # list only classifiers that has been trained
+        clfnames = [k for k, c in clfframe.classifiers.items() if c.is_valid]
+        trait.set_list_data(clfnames)
 
     def _get_modified_settings(self, name, has_timelapse=True):
         settings = BaseProcessorFrame._get_modified_settings( \
@@ -96,7 +100,8 @@ class EventSelectionFrame(BaseProcessorFrame):
         render_class = {PrimaryChannel.NAME:
                             {'raw': ('#FFFFFF', 1.0),
                              'contours': [('primary', 'class_label', 1, False),
-                                          ('primary', '#000000', 1, show_ids_class)]}}
+                                          ('primary', '#000000', 1,
+                                           show_ids_class)]}}
 
         # setting up primary channel and live rendering
         if settings.get('EventSelection', 'unsupervised_event_selection'):
