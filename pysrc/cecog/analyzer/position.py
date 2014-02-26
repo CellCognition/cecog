@@ -698,7 +698,6 @@ class PositionAnalyzer(PositionCore):
 
         # setup tracker
         if self.settings('Processing', 'tracking'):
-            # region = self.settings('Tracking', 'tracking_regionname')
             tropts = (self.settings('Tracking', 'tracking_maxobjectdistance'),
                       self.settings('Tracking', 'tracking_maxsplitobjects'),
                       self.settings('Tracking', 'tracking_maxtrackinggap'))
@@ -720,9 +719,15 @@ class PositionAnalyzer(PositionCore):
             if self.settings('Processing', 'eventselection') and \
                     self.settings('Processing', 'tracking'):
 
-                esch = self.settings('EventSelection', 'eventselection_channel')
-                region = self.classifiers[esch].regions
-                graph = self._tracker.clone_graph(self.timeholder, esch, region)
+                evchannel = self.settings('EventSelection', 'eventchannel')
+                region = self.classifiers[evchannel].regions
+                if evchannel != PrimaryChannel.NAME or \
+                     region != self.settings("Tracking", "region"):
+                    graph = self._tracker.clone_graph(self.timeholder,
+                                                      evchannel,
+                                                      region)
+                else:
+                    graph = self._tracker.graph
 
                 self._tes = self.setup_eventselection(graph)
                 self.logger.debug("--- visitor start")
@@ -825,7 +830,7 @@ class PositionAnalyzer(PositionCore):
             images = []
 
             if self.settings('Processing', 'tracking'):
-                region = self.settings('Tracking', 'tracking_regionname')
+                region = self.settings('Tracking', 'region')
                 samples = self.timeholder[frame][PrimaryChannel.NAME].get_region(region)
                 self._tracker.track_next_frame(frame, samples)
 
