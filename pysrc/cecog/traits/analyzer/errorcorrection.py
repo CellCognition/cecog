@@ -27,11 +27,7 @@ class SectionErrorcorrection(SectionCore):
 
     OPTIONS = [
       ('error_correction',
-       [('filename_to_r',
-            StringTrait('', 1000, label='R-project executable',
-                        widget_info=StringTrait.STRING_FILE)),
-        # channels to process
-        ('primary', BooleanTrait(True, label='primary')),
+       [('primary', BooleanTrait(True, label='primary')),
         ('secondary', BooleanTrait(False, label='secondary')),
         ('tertiary', BooleanTrait(False, label='tertiary')),
         ('merged', BooleanTrait(False, label='merged')),
@@ -50,8 +46,7 @@ class SectionErrorcorrection(SectionCore):
         ('merged_graph',
          StringTrait('', 1000, label='Merged ch. file',
                      widget_info=StringTrait.STRING_FILE)),
-        ('skip_processed_plates',
-         BooleanTrait(False, label='Skip processed plates')),
+
         ('position_labels',
          BooleanTrait(False, label='Position labels')),
         ('mappingfile_path',
@@ -82,8 +77,6 @@ class SectionErrorcorrection(SectionCore):
                     label='Max. time in plot [min]')),
         ('ignore_tracking_branches',
          BooleanTrait(False, label='Ignore tracking branches')),
-        ('show_html',
-         BooleanTrait(True, label='Open in browser')),
         ('enable_sorting',
          BooleanTrait(False, label='Sort by phase duration')),
         ('sorting_sequence',
