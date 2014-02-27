@@ -638,7 +638,8 @@ class CecogAnalyzer(QtGui.QMainWindow):
             try:
                 self._read_settings(filename)
                 if self._settings.was_old_file_format():
-                    information(self, ('Config file was updated to version %s' %self.version))
+                    information(self, ('Config file was updated to version %s'
+                                       %self.version))
             except Exception as e:
                 critical(self, "Could not load file!", traceback.format_exc(e))
             finally:
