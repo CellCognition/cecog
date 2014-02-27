@@ -11,6 +11,9 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
+__all__ = ['PickerThread']
+
+
 import copy
 from cecog.threads.corethread import CoreThread
 from cecog.analyzer.core import Picker

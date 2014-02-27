@@ -24,7 +24,7 @@ from PyQt4 import QtCore
 from cecog import CHANNEL_PREFIX, VERSION
 from cecog import CH_OTHER, CH_VIRTUAL, CH_PRIMARY
 from cecog.gui.analyzer import BaseProcessorFrame, AnalyzerThread
-from cecog.gui.analyzer import HmmThread, MultiAnalyzerThread
+from cecog.gui.analyzer import ErrorCorrectionThread, MultiAnalyzerThread
 from cecog.util.ctuple import CTuple
 
 
@@ -58,19 +58,19 @@ class ExportSettings(object):
 
                 # render settings for classifications
                 d = {}
-                if settings.get('Processing', '%s_classification' % prefix):
-                    for x in self.plugin_mgr.region_info.names[prefix]:
-                        if x == settings.get('Classification', '%s_classification_regionname' % prefix) or \
-                                prefix == CH_VIRTUAL[0]:
-                            d = {'%s_classification_%s' % (prefix, x):
-                                     {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
-                                                            'contours': [(x, 'class_label', 1, False),
-                                                                         (x, '#000000' , 1, show_ids_class)]
-                                                            }
-                                      }
-                                 }
-                    if settings('EventSelection', 'supervised_event_selection'):
-                        settings.get('General', 'rendering_class').update(d)
+            if settings.get('Processing', '%s_classification' % prefix):
+                for x in self.plugin_mgr.region_info.names[prefix]:
+                    if x == settings.get('Classification', '%s_classification_regionname' % prefix) or \
+                            prefix == CH_VIRTUAL[0]:
+                        d = {'%s_classification_%s' % (prefix, x):
+                                 {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
+                                                        'contours': [(x, 'class_label', 1, False),
+                                                                     (x, '#000000' , 1, show_ids_class)]
+                                                        }
+                                  }
+                             }
+                if settings('EventSelection', 'supervised_event_selection'):
+                    settings.get('General', 'rendering_class').update(d)
 
         # setup rendering properties for merged channel
         # want the same rendering properties as for the primary channel!
@@ -193,13 +193,11 @@ class ProcessingFrame(BaseProcessorFrame, ExportSettings):
         super(ProcessingFrame, self).__init__(settings, parent, name)
 
         self.register_control_button('process',
-                                     [AnalyzerThread,
-                                      HmmThread],
+                                     [AnalyzerThread, ErrorCorrectionThread],
                                      ('Start processing', 'Stop processing'))
 
         self.register_control_button('multi_process',
-                                     [MultiAnalyzerThread,
-                                      HmmThread],
+                                     [MultiAnalyzerThread, ErrorCorrectionThread],
                                      ('Start multi processing', 'Stop multi processing'))
 
         self.add_group(None,
@@ -231,6 +229,23 @@ class ProcessingFrame(BaseProcessorFrame, ExportSettings):
         settings = BaseProcessorFrame._get_modified_settings( \
             self, name, has_timelapse)
 
+        # some processing settings overrule error correction settings
+        settings.set('ErrorCorrection', 'primary',
+                     settings('Processing', 'primary_errorcorrection'))
+
+        settings.set('ErrorCorrection', 'secondary',
+                     (settings('Processing', 'secondary_errorcorrection') and \
+                          settings('Processing', 'secondary_processchannel')))
+
+        settings.set('ErrorCorrection', 'tertiary',
+                     (settings('Processing', 'tertiary_errorcorrection') and \
+                          settings('Processing', 'tertiary_processchannel')))
+
+        settings.set('ErrorCorrection', 'merged',
+                     (settings('Processing', 'merged_errorcorrection') and \
+                          settings('Processing', 'merged_processchannel')))
+
+
         # special clase for UES, clustering takes place afterwards
         if settings('EventSelection', 'unsupervised_event_selection'):
             settings.set('General', 'rendering_class', {})
@@ -243,6 +258,5 @@ class ProcessingFrame(BaseProcessorFrame, ExportSettings):
             settings.set('Processing', 'tertiary_processChannel', False)
             settings.set('Processing', 'merged_classification', False)
             settings.set('Processing', 'merged_processChannel', False)
-
 
         return settings

@@ -141,36 +141,36 @@ class PositionRunner(QtCore.QObject):
             self.parent().progressUpdate.emit(progress)
             QtCore.QCoreApplication.processEvents()
 
-            ch5 = cellh5.CH5File(file_, "r", cached=True)
-            for pos in ch5.iter_positions():
-                # only segmentation
-                if not pos.has_classification(chreg):
-                    continue
+            with cellh5.ch5open(file_, "r", cached=True) as ch5:
+                for pos in ch5.iter_positions():
+                    # only segmentation
+                    if not pos.has_classification(chreg):
+                        continue
 
-                # make dtable aware of all positions, sometime they contain
-                # no tracks and I don't want to ignore them
-                dtable.add_position(position, mappings[position])
-                if not pos.has_events():
-                    continue
+                    # make dtable aware of all positions, sometime they contain
+                    # no tracks and I don't want to ignore them
+                    dtable.add_position(position, mappings[position])
+                    if not pos.has_events():
+                        continue
 
-                objidx = np.array( \
-                    pos.get_events(not self.ecopts.ignore_tracking_branches),
-                    dtype=int)
-                tracks = pos.get_class_label(objidx, chreg)
-                try:
-                    probs = pos.get_prediction_probabilities(objidx, chreg)
-                except KeyError as e:
-                    probs = None
+                    objidx = np.array( \
+                        pos.get_events(not self.ecopts.ignore_tracking_branches),
+                        dtype=int)
+                    tracks = pos.get_class_label(objidx, chreg)
+                    try:
+                        probs = pos.get_prediction_probabilities(objidx, chreg)
+                    except KeyError as e:
+                        probs = None
 
-                grp_coord = cellh5.CH5GroupCoordinate( \
-                    chreg, pos.pos, pos.well, pos.plate)
-                dtable.add_tracks(tracks, position, mappings[position],
-                                  objidx, grp_coord, probs)
-            ch5.close()
+                    grp_coord = cellh5.CH5GroupCoordinate( \
+                        chreg, pos.pos, pos.well, pos.plate)
+                    dtable.add_tracks(tracks, position, mappings[position],
+                                      objidx, grp_coord, probs)
+
 
         if dtable.is_empty():
             raise RuntimeError(
-                "No data found for position '%s' and channel '%s' "
+                "No data found for plate '%s' and channel '%s' "
                 %(self.plate, channel))
         return dtable, self._load_classdef(chreg)
 
