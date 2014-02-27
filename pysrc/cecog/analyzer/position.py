@@ -222,6 +222,8 @@ class PositionCore(LoggerObject):
                          registration_start = reg_shift,
                          fNormalizeMin = self.settings.get2('%s_normalizemin' %proc_channel),
                          fNormalizeMax = self.settings.get2('%s_normalizemax' %proc_channel),
+                         bFlatfieldCorrection = self.settings.get2('%s_flat_field_correction' %proc_channel),
+                         strBackgroundImagePath = self.settings.get2('%s_flat_field_correction_image_dir' %proc_channel),
                          lstFeatureCategories = f_cats,
                          dctFeatureParameters = f_params)
 
