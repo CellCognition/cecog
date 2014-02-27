@@ -37,7 +37,7 @@ class ErrorCorrectionFrame(BaseProcessorFrame):
                               ('merged', (0, 3, 1, 1))], label='Channels')
 
         self.add_group(None,
-                       [('hmm_simple', ),
+                       [('hmm_smoothing', ),
                         ('hmm_baumwelch', )],
                        layout='flow', link='hmm_learning',
                        label='HMM learning algorithm')

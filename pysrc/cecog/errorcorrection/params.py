@@ -28,7 +28,7 @@ class ECParams(object):
     EVENTSELECTION_UNSUPERVISED = 1
     EVENTSELECTION = (EVENTSELECTION_SUPERVISED, EVENTSELECTION_UNSUPERVISED)
 
-    HMM_SIMPLE = 0
+    HMM_SMOOTHING = 0
     HMM_BAUMWELCH = 1
 
     __slots__ = ['regionnames', 'constrain_graph', 'hmm_constrain',
@@ -43,7 +43,7 @@ class ECParams(object):
         if settings('ErrorCorrection', 'hmm_baumwelch'):
             self.hmm_algorithm = self.HMM_BAUMWELCH
         else:
-            self.hmm_algorithm = self.HMM_SIMPLE
+            self.hmm_algorithm = self.HMM_SMOOTHING
 
         self.constrain_graph = settings('ErrorCorrection', 'constrain_graph')
         self.hmm_constrain = dict()
