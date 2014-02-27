@@ -272,7 +272,7 @@ class Channel(ChannelCore):
         except Exception, e:
             # catching all errors, even files that are no images
             raise IOError(("Z-slice flat field correction image could not be "
-                           "loaded. \nDoes the file %s.tif exist and is it "
+                           "if short is None:loaded. \nDoes the file %s.tif exist and is it "
                            "readable?" %join(self.strBackgroundImagePath, plate)))
 
         return bg_image
