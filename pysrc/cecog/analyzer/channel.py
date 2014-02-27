@@ -248,24 +248,19 @@ class Channel(ChannelCore):
                     features = (dctFeatures[f] for f in self.lstFeatureNames)
                     obj.aFeatures = numpy.fromiter(features, dtype=float)
                     object_holder[obj_id] = obj
-                    # print 'orientation %s (%i, %i): %f (%f deg)' % (obj_id,
-                    #                                                 obj.oRoi.upperLeft[0],
-                    #                                                 obj.oRoi.upperLeft[1],
-                    #                                                 obj.orientation,
-                    #                                                 180.0 * obj.orientation / numpy.pi)
 
             if self.lstFeatureNames is not None:
                 object_holder.feature_names = self.lstFeatureNames
             self._regions[region_name] = object_holder
 
 
-    def _z_slice_image(self, plate_id):
+    def _load_flatfield_correction_image(self, plate):
         if not isdir(str(self.strBackgroundImagePath)):
             raise IOError("No z-slice correction image directory set")
 
-        path = glob.glob(join(self.strBackgroundImagePath, plate_id+".tiff"))
+        path = glob.glob(join(self.strBackgroundImagePath, plate+".tiff"))
         path.extend(glob.glob(
-                join(self.strBackgroundImagePath, plate_id+".tif")))
+                join(self.strBackgroundImagePath, plate+".tif")))
 
         if len(path) > 1:
             raise IOError("Multiple z-slice flat field corr. images found.\n"
@@ -277,8 +272,9 @@ class Channel(ChannelCore):
         except Exception, e:
             # catching all errors, even files that are no images
             raise IOError(("Z-slice flat field correction image\n"
-                           " could not be loaded! (file: %s)"
-                           %path[0]))
+                           " could not be loaded. \nDoes file %s.tif exist and is "
+                           "readable?" %join(self.strBackgroundImagePath, plate)))
+
         return bg_image
 
     def normalize_image(self, plate_id=None):
@@ -286,7 +282,7 @@ class Channel(ChannelCore):
         if self.bFlatfieldCorrection:
             self.logger.debug("* using flat field correction with image from %s"
                               % self.strBackgroundImagePath)
-            imgBackground = self._z_slice_image(plate_id)
+            imgBackground = self._load_flatfield_correction_image(plate_id)
 
             crop_coordinated = MetaImage.get_crop_coordinates()
             if crop_coordinated is not None:
