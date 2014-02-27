@@ -20,6 +20,7 @@ from os.path import join, isfile, abspath
 from cecog.analyzer.ibb import IBBAnalysis, SecurinAnalysis
 from cecog.threads.corethread import CoreThread
 from cecog.traits.analyzer.postprocessing import SECTION_NAME_POST_PROCESSING
+from cecog.util.util import makedirs
 
 class PostProcessingThread(CoreThread):
 
@@ -67,13 +68,13 @@ class PostProcessingThread(CoreThread):
         path_out = self._imagecontainer.get_path_out()
 
         path_analyzed = join(path_out, 'analyzed')
-        os.makedirs(path_analyzed)
+        makedirs(path_analyzed)
 
         mapping_file = self._mapping_files[plate_id]
 
         class_colors = {}
         for i, name in self._learner_dict['primary'].class_names.items():
-            class_colors[i] = self._learner_dict['primary'].hex_colors[name]
+            class_colors[i] = self._learner_dict['primary'].hexcolors[name]
 
         class_names = {}
         for i, name in self._learner_dict['primary'].class_names.items():
@@ -129,7 +130,7 @@ class PostProcessingThread(CoreThread):
                 self._settings.get2('plot_ylim1_high')
 
             path_out_ibb = join(path_out, 'ibb')
-            os.makedirs(path_out_ibb)
+            makedirs(path_out_ibb)
             ibb_analyzer = IBBAnalysis(path_analyzed,
                                        path_out_ibb,
                                        plate_id,
@@ -141,7 +142,7 @@ class PostProcessingThread(CoreThread):
 
         if self._settings.get2('securin_analysis'):
             path_out_securin = join(path_out, 'sec')
-            os.makedirs(path_out_securin)
+            makedirs(path_out_securin)
 
             securin_options = {}
             securin_analyzer = SecurinAnalysis(path_analyzed,
