@@ -271,8 +271,8 @@ class Channel(ChannelCore):
             bg_image = ccore.readImageFloat(str(path[0]))
         except Exception, e:
             # catching all errors, even files that are no images
-            raise IOError(("Z-slice flat field correction image\n"
-                           " could not be loaded. \nDoes file %s.tif exist and is "
+            raise IOError(("Z-slice flat field correction image could not be "
+                           "loaded. \nDoes the file %s.tif exist and is it "
                            "readable?" %join(self.strBackgroundImagePath, plate)))
 
         return bg_image

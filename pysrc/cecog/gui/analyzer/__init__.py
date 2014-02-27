@@ -439,9 +439,9 @@ class _ProcessorMixin(object):
         self.dlg.exec_(lambda: self._analyzer.abort(wait=True))
         self.setCursor(Qt.ArrowCursor)
 
-    def _on_error(self, msg):
+    def _on_error(self, msg, short='An error occurred during processing!'):
         self._has_error = True
-        critical(self, 'An error occurred during processing.', detail=msg)
+        critical(self, short, detail=msg)
 
     def _on_process_finished(self):
         self._analyzer.image_ready.disconnect(self._on_update_image)
