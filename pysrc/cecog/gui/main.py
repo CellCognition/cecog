@@ -341,6 +341,16 @@ class CecogAnalyzer(QtGui.QMainWindow):
             title = self.windowTitle().split(' - ')[0]
             self.setWindowTitle('%s - %s[*]' % (title, filename))
             try:
+                # reset naming scheme to load config file completely
+                nst = self._settings.get_trait("General",  "namingscheme")
+                namingscheme_file = self._settings("General", "namingscheme")
+                if not namingscheme_file in nst.list_data:
+                    self._settings.set("General", "namingscheme", nst.default_value)
+                    warning(self, "Unkown naming scheme",
+                            ("Your current installation can not use the "
+                             "naming scheme '%s'. Resetting to default '%s'"
+                             %(namingscheme_file, nst.default_value)))
+
                 for widget in self._tabs:
                     widget.update_input()
             except Exception as e:

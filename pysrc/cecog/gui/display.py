@@ -377,13 +377,10 @@ class TraitDisplayMixin(QFrame):
         return w_input
 
     def update_input(self):
-        #if self._settings.has_section(self.SECTION):
         for name, value in self._settings.items(self.name):
-            #print self.SECTION, name, name in self._registry
             if name in self._registry:
                 w_input = self._registry[name]
                 trait = self._get_trait(name)
-                #print '    ', name, value
                 if isinstance(trait, BooleanTrait):
                     trait.set_widget(w_input)
                     trait.set_value(value)
