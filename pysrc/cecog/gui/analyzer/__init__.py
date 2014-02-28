@@ -35,7 +35,6 @@ from cecog.gui.display import TraitDisplayMixin
 from cecog.learning.learning import CommonClassPredictor
 from cecog.learning.learning import ConfusionMatrix
 
-from cecog.util.util import write_table
 from cecog.units.time import seconds2datetime
 
 from cecog.gui.util import question
