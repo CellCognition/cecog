@@ -477,7 +477,12 @@ class PositionAnalyzer(PositionCore):
         if self.settings.get('EventSelection', 'unsupervised_event_selection'):
             transitions = np.array((0, 1))
         else:
-            transitions = eval(self.settings.get('EventSelection', 'labeltransitions'))
+            try:
+                transitions = eval(self.settings.get('EventSelection', 'labeltransitions'))
+            except Exception as e:
+                raise RuntimeError(("Make sure that transitions are of the form "
+                                    "'int, int' or '(int, int), (int, int)' i.e "
+                                    "2-int-tuple  or a list of 2-int-tuples"))
             transitions = np.array(transitions)
         return transitions.reshape((-1, 2))
 
