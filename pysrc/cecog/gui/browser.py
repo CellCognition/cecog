@@ -102,17 +102,17 @@ class Browser(QMainWindow):
         self.image_viewer = ImageViewer(frame, auto_resize=True)
         layout.addWidget(self.image_viewer, 0, 0)
 
-        #self.image_viewer.image_mouse_dblclk.connect(self._on_dbl_clk)
         self.image_viewer.zoom_info_updated.connect(self.on_zoom_info_updated)
 
         self._t_slider = QSlider(Qt.Horizontal, frame)
+
         self._t_slider.setMinimum(self.min_time)
         self._t_slider.setMaximum(self.max_time)
-#        self._t_slider.setMaximum(self.max_frame)
 
         self._t_slider.setTickPosition(QSlider.TicksBelow)
-        self._t_slider.valueChanged.connect(self.on_time_changed_by_slider,
+        self._t_slider.sliderReleased.connect(self.on_time_changed_by_slider,
                                             Qt.DirectConnection)
+        self._t_slider.valueChanged.connect(self.timeToolTip)
         if self._imagecontainer.has_timelapse:
             self._t_slider.show()
         else:
@@ -123,7 +123,6 @@ class Browser(QMainWindow):
         self.coordinate.time = self._t_slider.minimum()
 
         # menus
-
         act_next_t = self.create_action('Next Time-point',
                                         shortcut=QKeySequence('Right'),
                                         slot=self.on_act_next_t)
@@ -382,15 +381,14 @@ class Browser(QMainWindow):
 
         # XXX channel mapping unclear
         # processing channel <--> color channel
-        # i.e problems if 2 processing channels have the
-        # same color
+        # i.e problems if 2 processing channels have the same color
         if nchannels == 2:
             settings.set('General', 'process_secondary', True)
         elif nchannels >= 3:
             settings.set('General', 'process_secondary', True)
             settings.set('General', 'process_tertiary', True)
         # need turn of virtual channels
-        settings.set('Processing', 'process_merged', False)
+        settings.set('General', 'process_merged', False)
 
         settings.set('General', 'rendering', {})
         analyzer = AnalyzerCore(self.coordinate.plate, settings,
@@ -416,11 +414,14 @@ class Browser(QMainWindow):
     def on_zoom_info_updated(self, info):
         self.update_statusbar()
 
-    def on_time_changed_by_slider(self, frame):
+    def timeToolTip(self, value):
+        QToolTip.showText(QCursor.pos(), str(value), self._t_slider)
+
+    def on_time_changed_by_slider(self):
+        frame = self._t_slider.value()
         nav = self._module_manager.get_widget(NavigationModule.NAME)
         meta_data = self._imagecontainer.get_meta_data()
-        time = meta_data.times[frame]
-        nav.nav_to_time(time)
+        nav.nav_to_time(frame)
 
     def on_object_region_changed(self, channel, region):
         self._object_region = channel, region
