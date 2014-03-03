@@ -56,8 +56,8 @@ class ExportSettings(object):
                          }
                 settings.get('General', 'rendering').update(d)
 
-                # render settings for classifications
-                d = {}
+            # render settings for classifications
+            d = {}
             if settings.get('Processing', '%s_classification' % prefix):
                 for x in self.plugin_mgr.region_info.names[prefix]:
                     if x == settings.get('Classification', '%s_classification_regionname' % prefix) or \
@@ -225,8 +225,8 @@ class ProcessingFrame(BaseProcessorFrame, ExportSettings):
 
 
     def _get_modified_settings(self, name, has_timelapse=True):
-        settings = BaseProcessorFrame._get_modified_settings( \
-            self, name, has_timelapse)
+        settings = ExportSettings.get_special_settings(
+            self, self._settings, has_timelapse)
 
         # some processing settings overrule error correction settings
         settings.set('ErrorCorrection', 'primary',

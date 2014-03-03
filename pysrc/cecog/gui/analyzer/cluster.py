@@ -37,6 +37,7 @@ from cecog.gui.progressdialog import ProgressDialog
 from cecog import JOB_CONTROL_RESUME, JOB_CONTROL_SUSPEND, \
     JOB_CONTROL_TERMINATE, VERSION
 
+
 class ClusterDisplay(QGroupBox):
 
     def __init__(self, parent, clusterframe,  settings):
@@ -50,11 +51,11 @@ class ClusterDisplay(QGroupBox):
 
         self._host_url = CecogEnvironment.analyzer_config.get('Cluster', 'host_url')
         try:
-            self._host_url_fallback = CecogEnvironment.analyzer_config.get('Cluster', 'host_url_fallback')
+            self._host_url_fallback = CecogEnvironment.analyzer_config.get(\
+                'Cluster', 'host_url_fallback')
         except:
             # old config file
             self._host_url_fallback = self._host_url
-
 
         self.setTitle('ClusterControl')
         label1 = QLabel('Cluster URL:', self)
@@ -113,7 +114,6 @@ class ClusterDisplay(QGroupBox):
 
         regexp = QRegExp('\d+')
         regexp.setPatternSyntax(QRegExp.RegExp2)
-        #self._txt_jobid.setValidator(QRegExpValidator(regexp, self._txt_jobid))
         self._txt_jobid.textEdited.connect(self._on_jobid_entered)
         self._txt_jobid.returnPressed.connect(self._on_update_job_status)
 
@@ -383,9 +383,7 @@ class ClusterFrame(BaseFrame, ExportSettings):
         super(ClusterFrame, self).__init__(settings, parent, name)
 
         self._cluster_display = self._add_frame()
-        self.add_group(None,
-                       [('position_granularity', (0,0,1,1)),
-                        ], label='Cluster Settings')
+        self.add_group(None, [('position_granularity', (0,0,1,1)), ], label='Cluster Settings')
 
     def _add_frame(self):
         frame = self._get_frame()

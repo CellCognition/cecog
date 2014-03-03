@@ -123,6 +123,7 @@ class ChannelCore(LoggerObject):
         self.meta_image = None
         self.containers = {}
 
+
 class Channel(ChannelCore):
 
     def __init__(self, *args, **kw):
