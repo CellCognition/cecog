@@ -73,16 +73,3 @@ class ErrorCorrectionFrame(BaseProcessorFrame):
                        link='compose_galleries')
         self.add_expanding_spacer()
         self._init_control(has_images=False)
-
-    def _get_modified_settings(self, name, has_timelapse=True):
-        settings = BaseProcessorFrame._get_modified_settings( \
-            self, name, has_timelapse)
-        settings.set_section('Processing')
-        if settings.get2('primary_classification'):
-            settings.set2('primary_errorcorrection', True)
-        if not settings.get2('secondary_processchannel'):
-            settings.set2('secondary_classification', False)
-            settings.set2('secondary_errorcorrection', False)
-        elif settings.get2('secondary_classification'):
-            settings.set2('secondary_errorcorrection', True)
-        return settings

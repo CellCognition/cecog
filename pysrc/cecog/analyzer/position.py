@@ -141,7 +141,7 @@ class PositionCore(LoggerObject):
         xs = [0]
         ys = [0]
         for prefix in [SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]:
-            if self.settings.get('Processing','%s_processchannel' %prefix):
+            if self.settings('General','process_%s' %prefix):
                 reg_x = self.settings.get2('%s_channelregistration_x' %prefix)
                 reg_y = self.settings.get2('%s_channelregistration_y' %prefix)
                 xs.append(reg_x)
@@ -289,7 +289,7 @@ class PositionCore(LoggerObject):
     def processing_channels(self):
         channels = (self.PRIMARY_CHANNEL, )
         for name in [self.SECONDARY_CHANNEL, self.TERTIARY_CHANNEL, self.MERGED_CHANNEL]:
-            if self.settings.get('Processing', '%s_processchannel' % name.lower()):
+            if self.settings('General', 'process_%s' % name.lower()):
                 channels = channels + (name,)
         return channels
 

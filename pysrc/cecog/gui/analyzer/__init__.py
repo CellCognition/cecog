@@ -403,7 +403,7 @@ class _ProcessorMixin(object):
                         _resolve = lambda x,y: self._settings.get(x, '%s_%s' % (kind, y))
                         env_path = CecogEnvironment.convert_package_path(_resolve('Classification', 'classification_envpath'))
                         if (_resolve('Processing', 'classification') and
-                            (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))):
+                            (kind == 'primary' or self._settings('General', 'process_secondary'))):
                             learner = CommonClassPredictor( \
                                 env_path,
                                 _resolve('ObjectDetection', 'channelid'),
