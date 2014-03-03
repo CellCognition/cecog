@@ -88,6 +88,10 @@ class ChannelCore(LoggerObject):
 
         try:
             self.plugin_mgr = MetaPluginManager()[self.NAME.lower()]
+            if self.plugin_mgr.number_loaded_plugins() < 1:
+                raise RuntimeError(("You need to load at least one segmentation"
+                                    " plugin for channel '%s'" %self.NAME))
+
         except KeyError:
             self.plugin_mgr = None
 
