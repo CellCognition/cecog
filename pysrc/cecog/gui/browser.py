@@ -16,14 +16,6 @@ __source__ = '$URL$'
 
 __all__ = ['Browser']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-
 import numpy
 
 from PyQt4.QtGui import *
@@ -393,12 +385,12 @@ class Browser(QMainWindow):
         # i.e problems if 2 processing channels have the
         # same color
         if nchannels == 2:
-            settings.set('Processing', 'secondary_processChannel', True)
+            settings.set('General', 'process_secondary', True)
         elif nchannels >= 3:
-            settings.set('Processing', 'secondary_processChannel', True)
-            settings.set('Processing', 'tertiary_processChannel', True)
+            settings.set('General', 'process_secondary', True)
+            settings.set('General', 'process_tertiary', True)
         # need turn of virtual channels
-        settings.set('Processing', 'merged_processChannel', False)
+        settings.set('Processing', 'process_merged', False)
 
         settings.set('General', 'rendering', {})
         analyzer = AnalyzerCore(self.coordinate.plate, settings,
