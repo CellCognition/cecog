@@ -35,7 +35,6 @@ from cecog.gui.display import TraitDisplayMixin
 from cecog.learning.learning import CommonClassPredictor
 from cecog.learning.learning import ConfusionMatrix
 
-from cecog.util.util import write_table
 from cecog.units.time import seconds2datetime
 
 from cecog.gui.util import question
@@ -404,7 +403,7 @@ class _ProcessorMixin(object):
                         _resolve = lambda x,y: self._settings.get(x, '%s_%s' % (kind, y))
                         env_path = CecogEnvironment.convert_package_path(_resolve('Classification', 'classification_envpath'))
                         if (_resolve('Processing', 'classification') and
-                            (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))):
+                            (kind == 'primary' or self._settings('General', 'process_secondary'))):
                             learner = CommonClassPredictor( \
                                 env_path,
                                 _resolve('ObjectDetection', 'channelid'),
@@ -439,9 +438,9 @@ class _ProcessorMixin(object):
         self.dlg.exec_(lambda: self._analyzer.abort(wait=True))
         self.setCursor(Qt.ArrowCursor)
 
-    def _on_error(self, msg):
+    def _on_error(self, msg, short='An error occurred during processing!'):
         self._has_error = True
-        critical(self, 'An error occurred during processing.', detail=msg)
+        critical(self, short, detail=msg)
 
     def _on_process_finished(self):
         self._analyzer.image_ready.disconnect(self._on_update_image)

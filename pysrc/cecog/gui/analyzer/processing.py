@@ -44,7 +44,7 @@ class ExportSettings(object):
         # set propertys of merged channel to the same as for Primary
         for prefix in CH_PRIMARY+CH_OTHER:
             if prefix == CH_PRIMARY[0] \
-                    or settings.get('Processing', '%s_processchannel' % prefix):
+                    or settings.get('General', 'process_%s' % prefix):
 
                 d = {} # render settings for contours
                 for x in self.plugin_mgr.region_info.names[prefix]:
@@ -56,8 +56,8 @@ class ExportSettings(object):
                          }
                 settings.get('General', 'rendering').update(d)
 
-                # render settings for classifications
-                d = {}
+            # render settings for classifications
+            d = {}
             if settings.get('Processing', '%s_classification' % prefix):
                 for x in self.plugin_mgr.region_info.names[prefix]:
                     if x == settings.get('Classification', '%s_classification_regionname' % prefix) or \
@@ -74,7 +74,7 @@ class ExportSettings(object):
 
         # setup rendering properties for merged channel
         # want the same rendering properties as for the primary channel!
-        if settings.get('Processing', 'merged_processchannel'):
+        if settings.get('General', 'process_merged'):
 
             # color are defined for regions (not for channels)
             # therefore, we first retrieve the regions for the primary channel
@@ -102,7 +102,7 @@ class ExportSettings(object):
             # generate raw images of selected channels (later used for gallery images)
             if settings.get('Output', 'events_export_gallery_images'):
                 for prefix in CHANNEL_PREFIX:
-                    if prefix == 'primary' or settings.get('Processing', '%s_processchannel' % prefix):
+                    if prefix == 'primary' or settings.get('General', 'process_%s' % prefix):
                         settings.get('General', 'rendering').update({prefix : {prefix.capitalize() :
                                                                                    {'raw': ('#FFFFFF', 1.0)}}})
         return settings
@@ -124,7 +124,7 @@ class ExportSettings(object):
 
         settings.set_section('Processing')
         for prefix in CHANNEL_PREFIX[1:]:
-            if not settings.get2('%s_processchannel' % prefix):
+            if not settings('General', 'process_%s' % prefix):
                 settings.set2('%s_classification' % prefix, False)
                 settings.set2('%s_errorcorrection' % prefix, False)
 
@@ -209,16 +209,15 @@ class ProcessingFrame(BaseProcessorFrame, ExportSettings):
                         ], link='primary_channel', label='Primary channel')
 
         for prefix in CH_OTHER:
-            self.add_group('%s_processchannel' % prefix,
+            self.add_group(None,
                            [('%s_featureextraction' % prefix, (0,0,1,1)),
                             ('%s_classification' % prefix, (1,0,1,1)),
                             ('%s_errorcorrection' % prefix, (2,0,1,1))
-                            ])
+                            ], label='%s channel' %prefix.title())
 
-
-        self.add_group('merged_processchannel',
+        self.add_group(None,
                        [('merged_classification', (1,0,1,1)),
-                        ('merged_errorcorrection', (2,0,1,1))])
+                        ('merged_errorcorrection', (2,0,1,1))], label='Merged channel')
 
         self.add_expanding_spacer()
         self._init_control()
@@ -226,8 +225,8 @@ class ProcessingFrame(BaseProcessorFrame, ExportSettings):
 
 
     def _get_modified_settings(self, name, has_timelapse=True):
-        settings = BaseProcessorFrame._get_modified_settings( \
-            self, name, has_timelapse)
+        settings = ExportSettings.get_special_settings(
+            self, self._settings, has_timelapse)
 
         # some processing settings overrule error correction settings
         settings.set('ErrorCorrection', 'primary',
@@ -235,15 +234,15 @@ class ProcessingFrame(BaseProcessorFrame, ExportSettings):
 
         settings.set('ErrorCorrection', 'secondary',
                      (settings('Processing', 'secondary_errorcorrection') and \
-                          settings('Processing', 'secondary_processchannel')))
+                          settings('General', 'process_secondary')))
 
         settings.set('ErrorCorrection', 'tertiary',
                      (settings('Processing', 'tertiary_errorcorrection') and \
-                          settings('Processing', 'tertiary_processchannel')))
+                          settings('General', 'process_tertiary')))
 
         settings.set('ErrorCorrection', 'merged',
                      (settings('Processing', 'merged_errorcorrection') and \
-                          settings('Processing', 'merged_processchannel')))
+                          settings('General', 'process_merged')))
 
 
         # special clase for UES, clustering takes place afterwards
@@ -252,11 +251,11 @@ class ProcessingFrame(BaseProcessorFrame, ExportSettings):
             settings.set('Processing', 'primary_classification', True)
             settings.set('Processing', 'secondary_featureextraction', False)
             settings.set('Processing', 'secondary_classification', False)
-            settings.set('Processing', 'secondary_processChannel', False)
+            settings.set('General', 'process_secondary', False)
             settings.set('Processing', 'tertiary_featureextraction', False)
             settings.set('Processing', 'tertiary_classification', False)
-            settings.set('Processing', 'tertiary_processChannel', False)
+            settings.set('General', 'process_tertiary', False)
             settings.set('Processing', 'merged_classification', False)
-            settings.set('Processing', 'merged_processChannel', False)
+            settings.set('General', 'process_merged', False)
 
         return settings

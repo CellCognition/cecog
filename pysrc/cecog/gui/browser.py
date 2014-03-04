@@ -16,14 +16,6 @@ __source__ = '$URL$'
 
 __all__ = ['Browser']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-
 import numpy
 
 from PyQt4.QtGui import *
@@ -82,13 +74,10 @@ class Browser(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
 
         splitter = QSplitter(Qt.Horizontal, frame)
-        #splitter.setSizePolicy(QSizePolicy(QSizePolicy.Minimum,
-        #                                   QSizePolicy.Expanding))
         layout.addWidget(splitter)
 
         frame = QFrame(self)
         frame_side = QStackedWidget(splitter)
-        #splitter.setChildrenCollapsible(False)
         splitter.addWidget(frame)
         splitter.addWidget(frame_side)
         splitter.setStretchFactor(0, 1)
@@ -110,17 +99,17 @@ class Browser(QMainWindow):
         self.image_viewer = ImageViewer(frame, auto_resize=True)
         layout.addWidget(self.image_viewer, 0, 0)
 
-        #self.image_viewer.image_mouse_dblclk.connect(self._on_dbl_clk)
         self.image_viewer.zoom_info_updated.connect(self.on_zoom_info_updated)
 
         self._t_slider = QSlider(Qt.Horizontal, frame)
+
         self._t_slider.setMinimum(self.min_time)
         self._t_slider.setMaximum(self.max_time)
-#        self._t_slider.setMaximum(self.max_frame)
 
         self._t_slider.setTickPosition(QSlider.TicksBelow)
-        self._t_slider.valueChanged.connect(self.on_time_changed_by_slider,
+        self._t_slider.sliderReleased.connect(self.on_time_changed_by_slider,
                                             Qt.DirectConnection)
+        self._t_slider.valueChanged.connect(self.timeToolTip)
         if self._imagecontainer.has_timelapse:
             self._t_slider.show()
         else:
@@ -131,7 +120,6 @@ class Browser(QMainWindow):
         self.coordinate.time = self._t_slider.minimum()
 
         # menus
-
         act_next_t = self.create_action('Next Time-point',
                                         shortcut=QKeySequence('Right'),
                                         slot=self.on_act_next_t)
@@ -232,7 +220,8 @@ class Browser(QMainWindow):
             region_names.extend(['%s - %s' % (prefix.capitalize(), name) \
                                  for name in reginfo.names[prefix]])
 
-        # Creating fallback if no Segmentation plugins have been specified so far
+        # Creating fallback if no Segmentation plugins have been specified
+        # so far
         if len(region_names) > 0:
             self._object_region = region_names[0].split(' - ')
         else:
@@ -244,7 +233,8 @@ class Browser(QMainWindow):
 
         NavigationModule(self._module_manager, self, self._imagecontainer)
 
-        DisplayModule(self._module_manager, self, self._imagecontainer, region_names)
+        DisplayModule(self._module_manager, self, self._imagecontainer,
+                      region_names)
 
         AnnotationModule(self._module_manager, self, self._settings,
                          self._imagecontainer)
@@ -324,10 +314,7 @@ class Browser(QMainWindow):
         # the slider is always working with frames.
         # reason: it is difficult to forbid slider values between allowed values.
 
-        frame = int(round(self.max_frame * (coordinate.time - self.min_time) /
-                          max(float(self.max_time - self.min_time), 1)))
-
-        self._t_slider.setValue(frame)
+        self._t_slider.setValue(coordinate.time)
 
         self._t_slider.blockSignals(False)
         self._process_image()
@@ -390,15 +377,14 @@ class Browser(QMainWindow):
 
         # XXX channel mapping unclear
         # processing channel <--> color channel
-        # i.e problems if 2 processing channels have the
-        # same color
+        # i.e problems if 2 processing channels have the same color
         if nchannels == 2:
-            settings.set('Processing', 'secondary_processChannel', True)
+            settings.set('General', 'process_secondary', True)
         elif nchannels >= 3:
-            settings.set('Processing', 'secondary_processChannel', True)
-            settings.set('Processing', 'tertiary_processChannel', True)
+            settings.set('General', 'process_secondary', True)
+            settings.set('General', 'process_tertiary', True)
         # need turn of virtual channels
-        settings.set('Processing', 'merged_processChannel', False)
+        settings.set('General', 'process_merged', False)
 
         settings.set('General', 'rendering', {})
         analyzer = AnalyzerCore(self.coordinate.plate, settings,
@@ -424,11 +410,14 @@ class Browser(QMainWindow):
     def on_zoom_info_updated(self, info):
         self.update_statusbar()
 
-    def on_time_changed_by_slider(self, frame):
+    def timeToolTip(self, value):
+        QToolTip.showText(QCursor.pos(), str(value), self._t_slider)
+
+    def on_time_changed_by_slider(self):
+        frame = self._t_slider.value()
         nav = self._module_manager.get_widget(NavigationModule.NAME)
         meta_data = self._imagecontainer.get_meta_data()
-        time = meta_data.times[frame]
-        nav.nav_to_time(time)
+        nav.nav_to_time(frame)
 
     def on_object_region_changed(self, channel, region):
         self._object_region = channel, region
@@ -526,7 +515,8 @@ class Browser(QMainWindow):
     # Qt method overwrites
 
     def keyPressEvent(self, ev):
-        super(Browser, self).keyPressEvent(self, ev)
+        super(Browser, self).keyPressEvent(ev)
+
         # allow to return from fullscreen via the Escape key
         if self.isFullScreen() and ev.key() == Qt.Key_Escape:
             self.showNormal()

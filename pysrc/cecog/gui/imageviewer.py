@@ -69,17 +69,14 @@ class ImageScene(QGraphicsScene):
 
 class ImageViewer(QGraphicsView):
 
-    MOVE_KEY = Qt.Key_Space
     MAX_SCALE = 200
 
     image_mouse_pressed = pyqtSignal(QPointF, int, int)
     image_mouse_dblclk = pyqtSignal(QPointF)
     zoom_info_updated = pyqtSignal(float)
-    #object_clicked = pyqtSignal(QGraphicsItem)
 
     def __init__(self, parent, auto_resize=False):
         super(ImageViewer, self).__init__(parent)
-        #self.setMouseTracking(True)
 
         self._scene = QGraphicsScene()
         self.setScene(self._scene)
@@ -99,7 +96,6 @@ class ImageViewer(QGraphicsView):
 
         self._scale = 1.0
         self._auto_resize = auto_resize
-        self._move_on = False
         self._click_on = False
         self._home_pos = None
         self._objects = set()
@@ -112,6 +108,7 @@ class ImageViewer(QGraphicsView):
         self._pixmap.setTransformationMode(Qt.SmoothTransformation)
         self._scene.addItem(self._pixmap)
 
+        self.setToolTip("ctrl+mouse to pan/zoom")
         self.grabGesture(Qt.PinchGesture)
 
     def from_numpy(self, data):
@@ -192,9 +189,6 @@ class ImageViewer(QGraphicsView):
         self._update_zoom_info()
 
     def scale_to_fit(self):
-        #rect = self.sceneRect()
-        #rect.setWidth(rect.width()-3)
-        #rect.setHeight(rect.height()-3)
         self.fitInView(self._pixmap, mode=Qt.KeepAspectRatio)
         self._update_zoom_info()
 
@@ -225,7 +219,6 @@ class ImageViewer(QGraphicsView):
         for obj_id, crack in coords.iteritems():
             poly = QPolygonF([QPointF(*pos) for pos in crack])
             item = HoverPolygonItem(poly)
-            #item.setPen(self.object_pen)
             item.setData(0, obj_id)
             scene.addItem(item)
             self._objects.add(item)
@@ -247,43 +240,39 @@ class ImageViewer(QGraphicsView):
         found_item = None
         scene = self.scene()
         # mouse cursor and mapped scene position seem now to match exactly.
-        # increased the search radius from a point to a 3x3 square around the point to identify the scene item
+        # increased the search radius from a point to a 3x3 square around
+        # the point to identify the scene item
         items = scene.items(point.x()-1, point.y()-1, 3, 3, Qt.IntersectsItemShape)
         items = [i for i in items if isinstance(i, HoverPolygonItem)]
         if len(items) > 0:
             found_item = items[0]
         return found_item
 
-    # protected method overload
-
     def event(self, ev):
         if ev.type() == QEvent.Gesture:
             return self.gestureEvent(ev)
         return super(ImageViewer, self).event(ev)
-
-    def keyPressEvent(self, ev):
-        super(ImageViewer, self).keyPressEvent(ev)
-        if ev.key() == self.MOVE_KEY and not self._move_on:
-            self._move_on = True
-            self.setDragMode(self.ScrollHandDrag)
-
-    def keyReleaseEvent(self, ev):
-        super(ImageViewer, self).keyReleaseEvent(ev)
-        if ev.key() == self.MOVE_KEY and self._move_on:
-            self.setDragMode(self.NoDrag)
-            self._move_on = False
 
     def enterEvent(self, ev):
         super(ImageViewer, self).enterEvent(ev)
         self.setFocus()
         self._scene.setFocus()
 
-    def mousePressEvent(self, ev):
-        super(ImageViewer, self).mousePressEvent(ev)
-        if not self._move_on:
-            # mouse position and mapped scene point do not match exactly, correcting by 1 in x and y
-            point = self.mapToScene(ev.pos()-QPoint(1,1))
-            self.image_mouse_pressed.emit(point, ev.button(), ev.modifiers())
+    def mousePressEvent(self, event):
+        modified = (event.modifiers() == Qt.ControlModifier)
+
+        if event.button() == Qt.LeftButton and modified:
+            self.setDragMode(self.ScrollHandDrag)
+        else:
+            point = self.mapToScene(event.pos()-QPoint(1,1))
+            self.image_mouse_pressed.emit(point, event.button(), event.modifiers())
+
+        super(ImageViewer, self).mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.setDragMode(self.NoDrag)
+        super(ImageViewer, self).mousePressEvent(event)
 
     def resizeEvent(self, ev):
         super(ImageViewer, self).resizeEvent(ev)
@@ -304,3 +293,20 @@ class ImageViewer(QGraphicsView):
             if gesture.state() in [Qt.GestureCanceled, Qt.GestureFinished]:
                 self.setTransformationAnchor(self.AnchorViewCenter)
         return True
+
+    def wheelEvent(self, event):
+
+        mousePos = self.mapToScene(event.pos())
+        grviewCenter  = self.mapToScene(self.viewport().rect().center())
+
+        if event.modifiers() == Qt.ControlModifier:
+            if event.delta() > 0:
+                scaleFactor = 1.1
+            else:
+                scaleFactor = 0.9
+            self.scale(scaleFactor, scaleFactor)
+
+            mousePosAfterScale = self.mapToScene(event.pos())
+            offset = mousePos - mousePosAfterScale
+            newGrviewCenter = grviewCenter + offset
+            self.centerOn(newGrviewCenter)

@@ -31,7 +31,6 @@ class GeneralFrame(BaseFrame):
         self.add_input('pathin')
         self.add_input('has_multiple_plates')
         self.add_input('pathout')
-        # original: self.add_input('namingscheme')
         self.add_group('image_import_namingschema', [('namingscheme',),],
                        layout='flow')
         self.add_group('image_import_structurefile', [('structure_filename',)])
@@ -43,14 +42,18 @@ class GeneralFrame(BaseFrame):
                         ], label='Structure file location')
 
         self.add_line()
+
+        self.add_group(None, [('process_primary', (0, 0, 1, 1)),
+                              ('process_secondary', (0, 1, 1, 1)),
+                              ('process_tertiary', (0, 2, 1, 1)),
+                              ('process_merged', (0, 3, 1, 1))], label='Channels')
+
         self.add_group('constrain_positions', [('positions',)])
         self.add_input('redofailedonly')
-        self.add_line()
         self.add_group('framerange', [('framerange_begin',),
-                                      ('framerange_end',)],
+                                      ('framerange_end',),
+                                      ('frameincrement', )],
                        layout='flow')
-        self.add_input('frameincrement')
-        self.add_line()
         self.add_group('crop_image', [('crop_image_x0',),
                                       ('crop_image_y0',),
                                       ('crop_image_x1',),

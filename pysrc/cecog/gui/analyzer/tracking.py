@@ -59,13 +59,13 @@ class TrackingFrame(BaseProcessorFrame):
         # tracking only invokes the primary channel
         settings.set('Processing', 'primary_classification', False)
         settings.set('Processing', 'primary_featureextraction', True)
-        settings.set('Processing', 'secondary_processChannel', False)
+        settings.set('General', 'process_secondary', False)
         settings.set('Processing', 'secondary_featureextraction', False)
         settings.set('Processing', 'secondary_classification', False)
-        settings.set('Processing', 'tertiary_processChannel', False)
+        settings.set('General', 'process_tertiary', False)
         settings.set('Processing', 'tertiary_featureextraction', False)
         settings.set('Processing', 'tertiary_classification', False)
-        settings.set('Processing', 'merged_processChannel', False)
+        settings.set('General', 'process_merged', False)
         settings.set('Processing', 'merged_classification', False)
         settings.set('Output', 'events_export_gallery_images', False)
 

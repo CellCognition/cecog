@@ -142,7 +142,7 @@ class PositionCore(LoggerObject):
         xs = [0]
         ys = [0]
         for prefix in [SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]:
-            if self.settings.get('Processing','%s_processchannel' %prefix):
+            if self.settings('General','process_%s' %prefix):
                 reg_x = self.settings.get2('%s_channelregistration_x' %prefix)
                 reg_y = self.settings.get2('%s_channelregistration_y' %prefix)
                 xs.append(reg_x)
@@ -223,6 +223,8 @@ class PositionCore(LoggerObject):
                          registration_start = reg_shift,
                          fNormalizeMin = self.settings.get2('%s_normalizemin' %proc_channel),
                          fNormalizeMax = self.settings.get2('%s_normalizemax' %proc_channel),
+                         bFlatfieldCorrection = self.settings.get2('%s_flat_field_correction' %proc_channel),
+                         strBackgroundImagePath = self.settings.get2('%s_flat_field_correction_image_dir' %proc_channel),
                          lstFeatureCategories = f_cats,
                          dctFeatureParameters = f_params)
 
@@ -288,7 +290,7 @@ class PositionCore(LoggerObject):
     def processing_channels(self):
         channels = (self.PRIMARY_CHANNEL, )
         for name in [self.SECONDARY_CHANNEL, self.TERTIARY_CHANNEL, self.MERGED_CHANNEL]:
-            if self.settings.get('Processing', '%s_processchannel' % name.lower()):
+            if self.settings('General', 'process_%s' % name.lower()):
                 channels = channels + (name,)
         return channels
 
@@ -476,7 +478,12 @@ class PositionAnalyzer(PositionCore):
         if self.settings.get('EventSelection', 'unsupervised_event_selection'):
             transitions = np.array((0, 1))
         else:
-            transitions = eval(self.settings.get('EventSelection', 'labeltransitions'))
+            try:
+                transitions = eval(self.settings.get('EventSelection', 'labeltransitions'))
+            except Exception as e:
+                raise RuntimeError(("Make sure that transitions are of the form "
+                                    "'int, int' or '(int, int), (int, int)' i.e "
+                                    "2-int-tuple  or a list of 2-int-tuples"))
             transitions = np.array(transitions)
         return transitions.reshape((-1, 2))
 

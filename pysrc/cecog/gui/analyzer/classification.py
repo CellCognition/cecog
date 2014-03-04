@@ -417,19 +417,19 @@ class ClassificationFrame(BaseProcessorFrame):
             settings.set('Processing', 'primary_featureextraction', True)
             settings.set('Processing', 'secondary_featureextraction', False)
             settings.set('Processing', 'tertiary_featureextraction', False)
-            settings.set('Processing', 'secondary_processchannel', False)
-            settings.set('Processing', 'tertiary_processchannel', False)
-            settings.set('Processing', 'merged_processchannel', False)
+            settings.set('General', 'process_secondary', False)
+            settings.set('General', 'process_tertiary', False)
+            settings.set('General', 'process_merged', False)
             rdn = {"%s_%s" %(prefix, settings.get("Classification",
                                                   "%s_classification_regionname" %prefix)): {}}
         elif current_tab == 1:
             prefix = 'secondary'
             settings.set('Processing', 'primary_featureextraction', False)
             settings.set('Processing', 'secondary_featureextraction', True)
-            settings.set('Processing', 'secondary_processchannel', True)
+            settings.set('General', 'process_secondary', True)
             settings.set('Processing', 'tertiary_featureextraction', False)
-            settings.set('Processing', 'tertiary_processchannel', False)
-            settings.set('Processing', 'merged_processchannel', False)
+            settings.set('General', 'process_tertiary', False)
+            settings.set('General', 'process_merged', False)
 
             # to setup the rending of the image currently processed
             rdn = {"%s_%s" %(prefix, settings.get("Classification",
@@ -440,10 +440,10 @@ class ClassificationFrame(BaseProcessorFrame):
                                       'tertiary_classification_regionname')
             settings.set('Processing', 'primary_featureextraction', False)
             settings.set('Processing', 'secondary_featureextraction', False)
-            settings.set('Processing', 'secondary_processchannel', True)
+            settings.set('General', 'process_secondary', True)
             settings.set('Processing', 'tertiary_featureextraction', True)
-            settings.set('Processing', 'tertiary_processchannel', True)
-            settings.set('Processing', 'merged_processchannel', False)
+            settings.set('General', 'process_tertiary', True)
+            settings.set('General', 'process_merged', False)
 
             rdn = {"%s_%s" %(prefix, settings.get("Classification",
                                                   "%s_classification_regionname" %prefix)): {}}
@@ -455,10 +455,10 @@ class ClassificationFrame(BaseProcessorFrame):
 
             settings.set('Processing', 'primary_featureextraction', pch)
             settings.set('Processing', 'secondary_featureextraction', sch)
-            settings.set('Processing', 'secondary_processchannel', sch)
+            settings.set('General', 'process_secondary', sch)
             settings.set('Processing', 'tertiary_featureextraction', tch)
-            settings.set('Processing', 'tertiary_processchannel', tch)
-            settings.set('Processing', 'merged_processchannel', True)
+            settings.set('General', 'process_tertiary', tch)
+            settings.set('General', 'process_merged', True)
             prefix = 'merged'
 
             rdn = {}

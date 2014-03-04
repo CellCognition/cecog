@@ -354,6 +354,16 @@ class CecogAnalyzer(QtGui.QMainWindow):
             title = self.windowTitle().split(' - ')[0]
             self.setWindowTitle('%s - %s[*]' % (title, filename))
             try:
+                # reset naming scheme to load config file completely
+                nst = self._settings.get_trait("General",  "namingscheme")
+                namingscheme_file = self._settings("General", "namingscheme")
+                if not namingscheme_file in nst.list_data:
+                    self._settings.set("General", "namingscheme", nst.default_value)
+                    warning(self, "Unkown naming scheme",
+                            ("Your current installation can not use the "
+                             "naming scheme '%s'. Resetting to default '%s'"
+                             %(namingscheme_file, nst.default_value)))
+
                 for widget in self._tabs:
                     widget.update_input()
             except Exception as e:
@@ -640,25 +650,25 @@ class CecogAnalyzer(QtGui.QMainWindow):
     @QtCore.pyqtSlot()
     def _on_file_open(self):
         if self._check_settings_saved() != QMessageBox.Cancel:
-            dir = ""
+            home = ""
             if not self._settings_filename is None:
                 settings_filename = self.environ.convert_package_path(
                     self._settings_filename)
                 if os.path.isfile(settings_filename):
-                    dir = settings_filename
-            filename = QtGui.QFileDialog.getOpenFileName(self, 'Open config file',
-                                                          dir, ';;'.join(self.NAME_FILTERS))
-            if filename:
+                    home = settings_filename
+                filename = QtGui.QFileDialog.getOpenFileName( \
+                    self, 'Open config file', home, ';;'.join(self.NAME_FILTERS))
+            try:
                 self._read_settings(filename)
                 if self._settings.was_old_file_format():
-                    information(self, ('Selected config file had an old '
-                                       'version <= 1.3.0. The current version is %s. '
-                                       'The config file was  be updated...' %self.version))
-                else:
-                    information(self, "Config file version %s found"  \
-                                %self._settings.get('General', 'version'))
+                    information(self, ('Config file was updated to version %s'
+                                       %self.version))
+            except Exception as e:
+                critical(self, "Could not load file!", traceback.format_exc(e))
+            finally:
                 self._clear_browser()
                 self.set_modules_active(state=False)
+
 
     @QtCore.pyqtSlot()
     def _on_file_save(self):
