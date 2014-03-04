@@ -315,10 +315,7 @@ class Browser(QMainWindow):
         # the slider is always working with frames.
         # reason: it is difficult to forbid slider values between allowed values.
 
-        frame = int(round(self.max_frame * (coordinate.time - self.min_time) /
-                          max(float(self.max_time - self.min_time), 1)))
-
-        self._t_slider.setValue(frame)
+        self._t_slider.setValue(coordinate.time)
 
         self._t_slider.blockSignals(False)
         self._process_image()

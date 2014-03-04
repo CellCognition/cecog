@@ -31,7 +31,6 @@ class GeneralFrame(BaseFrame):
         self.add_input('pathin')
         self.add_input('has_multiple_plates')
         self.add_input('pathout')
-        # original: self.add_input('namingscheme')
         self.add_group('image_import_namingschema', [('namingscheme',),],
                        layout='flow')
         self.add_group('image_import_structurefile', [('structure_filename',)])
