@@ -88,8 +88,6 @@ class SectionGeneral(SectionCore):
         ('positions',
          StringTrait('', 1000, label='Positions', mask='(\w+,)*\w+')),
 
-        ('channels', BooleanTrait(False, label='Channels'), ),
-
         ('process_primary', BooleanTrait(True, label='primary')),
         ('process_secondary', BooleanTrait(False, label='secondary')),
         ('process_tertiary', BooleanTrait(False, label='tertiary')),
