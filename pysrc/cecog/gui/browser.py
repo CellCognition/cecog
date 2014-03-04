@@ -74,13 +74,10 @@ class Browser(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
 
         splitter = QSplitter(Qt.Horizontal, frame)
-        #splitter.setSizePolicy(QSizePolicy(QSizePolicy.Minimum,
-        #                                   QSizePolicy.Expanding))
         layout.addWidget(splitter)
 
         frame = QFrame(self)
         frame_side = QStackedWidget(splitter)
-        #splitter.setChildrenCollapsible(False)
         splitter.addWidget(frame)
         splitter.addWidget(frame_side)
         splitter.setStretchFactor(0, 1)
@@ -223,7 +220,8 @@ class Browser(QMainWindow):
             region_names.extend(['%s - %s' % (prefix.capitalize(), name) \
                                  for name in reginfo.names[prefix]])
 
-        # Creating fallback if no Segmentation plugins have been specified so far
+        # Creating fallback if no Segmentation plugins have been specified
+        # so far
         if len(region_names) > 0:
             self._object_region = region_names[0].split(' - ')
         else:
@@ -235,7 +233,8 @@ class Browser(QMainWindow):
 
         NavigationModule(self._module_manager, self, self._imagecontainer)
 
-        DisplayModule(self._module_manager, self, self._imagecontainer, region_names)
+        DisplayModule(self._module_manager, self, self._imagecontainer,
+                      region_names)
 
         AnnotationModule(self._module_manager, self, self._settings,
                          self._imagecontainer)
@@ -516,7 +515,8 @@ class Browser(QMainWindow):
     # Qt method overwrites
 
     def keyPressEvent(self, ev):
-        super(Browser, self).keyPressEvent(self, ev)
+        super(Browser, self).keyPressEvent(ev)
+
         # allow to return from fullscreen via the Escape key
         if self.isFullScreen() and ev.key() == Qt.Key_Escape:
             self.showNormal()
