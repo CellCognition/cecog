@@ -37,13 +37,13 @@ class SectionGeneral(SectionCore):
     OPTIONS = [
       ('general',
        [('pathin',
-            StringTrait('', 1000, label='Image folder',
+            StringTrait('', 1000, label='Input directory',
                                    widget_info=StringTrait.STRING_PATH)),
         ('has_multiple_plates',
             BooleanTrait(False, label='Multiple plates')),
 
         ('pathout',
-            StringTrait('', 1000, label='Analysis folder',
+            StringTrait('', 1000, label='Output directory',
                                    widget_info=StringTrait.STRING_PATH)),
         ('image_import_namingschema',
             BooleanTrait(True, label='Import via naming schema',
