@@ -19,7 +19,7 @@ import re
 import glob
 from os.path import join, basename, isdir
 
-from cecog.learning.collector import CellCounterReader, CellCounterReaderXML
+from cecog.learning.annotation import Annotations
 from cecog.analyzer.position import PositionAnalyzer, PositionAnalyzerForBrowser
 from cecog.analyzer.position import PositionPicker
 from cecog.io.imagecontainer import MetaImage
@@ -251,7 +251,7 @@ class Picker(AnalyzerBase):
         self.sample_positions = {}
         self.learner = learner
 
-        pattern = join(self.learner.annotations_dir, "*%s" %learner.extension)
+        pattern = join(self.learner.annotations_dir, "*%s" %learner.XML)
         anno_re = re.compile(('((.*?_{1,3})?PL(?P<plate>.*?)_{1,3})?P(?P'
                               '<position>.+?)_{1,3}T(?P<time>\d+).*?'))
 
@@ -260,23 +260,22 @@ class Picker(AnalyzerBase):
 
             result = anno_re.match(basename(annofile))
             if result is None:
-                raise RuntimeError("Something is wrong with your annotation files in the classifier folder. " +
-                                   "Please make sure that the XML have consistent plate names.")
+                msg = ("Something is wrong with your annotation files in "
+                       "the classifier folder. Please make sure that the "
+                       "XML have consistent plate names.")
+                raise RuntimeError(msg)
 
             # Taking only annotated samples for the specific plate
             if (result.group("plate") != self.plate):
                 continue
             elif self.is_valid_annofile(result):
-                if learner.extension.endswith(learner.XML):
-                    reader = CellCounterReaderXML(result, annofile, frames_total)
-                else:
-                    reader = CellCounterReader(result, annofile, frames_total)
+                reader = Annotations(result, annofile, frames_total)
                 self.sample_reader.append(reader)
 
                 position = result.group('position')
                 if not position in self.sample_positions:
                     self.sample_positions[position] = []
-                self.sample_positions[position].extend(reader.getTimePoints())
+                self.sample_positions[position].extend(reader.timepoints())
             else:
                 raise RuntimeError("Annotation file is invalid!")
 

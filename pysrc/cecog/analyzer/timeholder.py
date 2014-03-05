@@ -245,8 +245,6 @@ class TimeHolder(OrderedDict):
             self._hdf5_file.close()
             return 1
 
-
-
     def _hdf5_check_file(self):
         try:
             f = h5py.File(self.hdf5_filename, 'r')
@@ -511,15 +509,9 @@ class TimeHolder(OrderedDict):
                 channel.purge(features={})
 
     def _convert_region_name(self, channel_name, region_name, prefix='region'):
-
-        # if isinstance(region_name, tuple):
-        #     # import pdb; pdb.set_trace()
-        #     region_name = '-'.join(region_name)
-
         s = '%s__%s' % (channel_name.lower(), region_name)
         if not prefix is None and len(prefix) > 0:
             s = '%s___%s' % (prefix, s)
-
         return s
 
     def _convert_feature_name(self, feature_name, channel_name, region_name):

@@ -31,7 +31,7 @@ class TrackingFrame(BaseProcessorFrame):
                                      AnalyzerThread,
                                      ('Test tracking', 'Stop tracking'))
 
-        self.add_input('tracking_regionname')
+        self.add_input('region')
         self.add_group(None,
                        [('tracking_maxobjectdistance', (0,0,1,1)),
                         ('tracking_maxtrackinggap', (0,1,1,1)),
@@ -69,7 +69,7 @@ class TrackingFrame(BaseProcessorFrame):
         settings.set('Processing', 'merged_classification', False)
         settings.set('Output', 'events_export_gallery_images', False)
 
-        region_name = settings.get('Tracking', 'tracking_regionname')
+        region_name = settings.get('Tracking', 'region')
         show_ids = settings.get('Output', 'rendering_contours_showids')
         pct = {'primary_contours':
                    {CH_PRIMARY[0].title(): {'raw': ('#FFFFFF', 1.0),
@@ -83,5 +83,5 @@ class TrackingFrame(BaseProcessorFrame):
 
     def settings_loaded(self):
         # FIXME: set the trait list data to plugin instances of the current channel
-        trait = self._settings.get_trait('Tracking', 'tracking_regionname')
+        trait = self._settings.get_trait('Tracking', 'region')
         trait.set_list_data(self.plugin_mgr.region_info.names['primary'])
