@@ -23,6 +23,14 @@ from cecog.learning.util import Normalizer
 from cecog.util.logger import LoggerObject
 
 
+class GaussianMixtureModel(object):
+    """Dummy class for hdf5 export."""
+
+    # need only these two class attributes
+    NAME = "sklearn.mixture.GMM"
+    METHOD = "Gaussian Mixture Model"
+
+
 class LibSvmClassifier(LoggerObject):
 
     NAME = 'libSVM'

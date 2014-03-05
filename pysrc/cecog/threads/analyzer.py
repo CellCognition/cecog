@@ -10,13 +10,14 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
+__all__ = ['AnalyzerThread']
+
 
 import copy
-from PyQt4 import QtCore
-
 from cecog.threads.corethread import CoreThread
 from cecog.threads.link_hdf import link_hdf5_files
 from cecog.analyzer.core import AnalyzerCore
+
 
 class AnalyzerThread(CoreThread):
 
@@ -25,6 +26,7 @@ class AnalyzerThread(CoreThread):
         self._imagecontainer = imagecontainer
 
     def _run(self):
+
         for plate_id in self._imagecontainer.plates:
             analyzer = AnalyzerCore(plate_id, self._settings,
                                     copy.deepcopy(self._imagecontainer))

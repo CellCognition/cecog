@@ -1,5 +1,5 @@
 """
-pyhmm.py
+errorcorrection.py
 """
 
 __author__ = 'rudolf.hoefler@gmail.com'
@@ -11,6 +11,9 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
+__all__ = ["ErrorCorrectionThread"]
+
+
 from PyQt4.QtCore import Qt
 
 from cecog.threads.corethread import CoreThread
@@ -18,10 +21,10 @@ from cecog.errorcorrection import PlateRunner
 from cecog.errorcorrection import ECParams
 from cecog.units.time import TimeConverter
 
-class PyHmmThread(CoreThread):
+class ErrorCorrectionThread(CoreThread):
 
     def __init__(self, parent, settings, imagecontainer):
-        super(PyHmmThread, self).__init__(parent, settings)
+        super(ErrorCorrectionThread, self).__init__(parent, settings)
         self._imagecontainer = imagecontainer
 
     def _run(self):

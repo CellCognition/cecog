@@ -84,6 +84,16 @@ class TraitDisplayMixin(QFrame):
         frame.layout().addWidget(line, frame._input_cnt, 0, 1, 2)
         frame._input_cnt += 1
 
+    def add_label(self, label, link, margin=3, isHeading=False):
+        label = self._create_label(self, label, link)
+        label.setMargin(margin)
+        if isHeading:
+            frame = self._get_frame(name=self._tab_name)
+            frame.layout().addWidget(label, frame._input_cnt, 0, 1, 2)
+            frame._input_cnt += 1
+
+        return label
+
     def add_pixmap(self, pixmap, align=Qt.AlignLeft):
         frame = self._get_frame(name=self._tab_name)
         label = QLabel(frame)
@@ -164,11 +174,6 @@ class TraitDisplayMixin(QFrame):
                 w_input.toggled.connect(handler)
 
         frame._input_cnt += 1
-
-    def add_label(self, label, link, margin=3):
-        label = self._create_label(self, label, link)
-        label.setMargin(margin)
-        return label
 
     def _create_label(self, parent, label, link=None):
         if link is None:
@@ -377,13 +382,10 @@ class TraitDisplayMixin(QFrame):
         return w_input
 
     def update_input(self):
-        #if self._settings.has_section(self.SECTION):
         for name, value in self._settings.items(self.name):
-            #print self.SECTION, name, name in self._registry
             if name in self._registry:
                 w_input = self._registry[name]
                 trait = self._get_trait(name)
-                #print '    ', name, value
                 if isinstance(trait, BooleanTrait):
                     trait.set_widget(w_input)
                     trait.set_value(value)

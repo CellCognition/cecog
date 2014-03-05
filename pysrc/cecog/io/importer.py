@@ -385,10 +385,8 @@ class FlatFileImporter(AbstractImporter):
     def _get_dimension_items(self):
         column_names, table = read_table(self.flat_filename, True,
                                          guess_compression=True)
-        test = ['path',
-                'filename',
-                DIMENSION_NAME_POSITION,
-                ]
+
+        test = ['path', 'filename', DIMENSION_NAME_POSITION]
         for name in test:
             if not name in column_names:
                 raise ValueError("Missing column '%s' in coordinate file "\

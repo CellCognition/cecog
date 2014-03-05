@@ -69,10 +69,12 @@ class EventSelectionFrame(BaseProcessorFrame):
         # only primary channel for event selection
         settings.set('Processing', 'secondary_featureextraction', False)
         settings.set('Processing', 'secondary_classification', False)
-        settings.set('Processing', 'secondary_processChannel', False)
+        settings.set('General', 'process_secondary', False)
         settings.set('Processing', 'tertiary_featureextraction', False)
         settings.set('Processing', 'tertiary_classification', False)
-        settings.set('Processing', 'tertiary_processChannel', False)
+        settings.set('General', 'process_tertiary', False)
+        settings.set('Processing', 'merged_classification', False)
+        settings.set('General', 'process_merged', False)
 
         show_ids = settings.get('Output', 'rendering_contours_showids')
         show_ids_class = settings.get('Output', 'rendering_class_showids')
@@ -89,7 +91,10 @@ class EventSelectionFrame(BaseProcessorFrame):
         # setting up primary channel and live rendering
         if settings.get('EventSelection', 'unsupervised_event_selection'):
             settings.set('Processing', 'primary_featureextraction', True)
-            settings.set('Processing', 'primary_classification', False)
+            settings.set('Processing', 'primary_classification', True)
+            settings.set('Processing', 'secondary_classification', False)
+            settings.set('Processing', 'tertiary_classification', False)
+            settings.set('Processing', 'merged_classification', False)
             settings.set('General', 'rendering',
                          {'primary_contours': render_contours})
 

@@ -20,7 +20,7 @@ from scipy import stats
 from matplotlib import mlab
 from sklearn.cluster import KMeans
 
-from cecog.colors import rgb2hex, unsupervised_cmap, BINARY_CMAP
+from cecog.colors import rgb2hex, BINARY_CMAP
 from cecog.util.logger import LoggerObject
 from cecog.analyzer.tracker import Tracker
 from cecog.tc3 import TC3EventFilter
@@ -307,7 +307,8 @@ class EventSelection(EventSelectionCore):
                                        level=level+1, found_splitid=found_splitid)
 
 class UnsupervisedEventSelection(EventSelectionCore):
-    def __init__(self, graph, transitions, forward_range, backward_range,
+
+    def __init__(self, graph, classdef, transitions, forward_range, backward_range,
                  forward_labels, backward_labels, forward_check,
                  backward_check, num_clusters, min_cluster_size,
                  allow_one_daughter_cell=True, varfrac=0.99, max_in_degree=1,
@@ -327,6 +328,8 @@ class UnsupervisedEventSelection(EventSelectionCore):
         self.num_clusters = num_clusters
         self.min_cluster_size = min_cluster_size
         self.tc3data = None
+        self.classdef = classdef
+
 
     def _filter_nans(self, data, nodes):
         """Delete columns from data that contain NAN delete items from
@@ -338,7 +341,6 @@ class UnsupervisedEventSelection(EventSelectionCore):
 
     def _save_class_labels(self, labels, nodes, probabilities,
                            prefix='unsupervised'):
-        cmap = unsupervised_cmap(self.num_clusters)
 
         # clear labels from binary classification
         for node in self.graph.node_list():
@@ -353,7 +355,7 @@ class UnsupervisedEventSelection(EventSelectionCore):
             obj.iLabel = label
             obj.strClassName = "%s-%d" %(prefix, label)
             obj.dctProb = dict((i, v) for i, v in enumerate(probs))
-            rgb = cmap(label)
+            rgb = self.classdef.colormap(label)
             obj.strHexColor = rgb2hex(rgb)
 
     def _delete_tracks(self, trackids):

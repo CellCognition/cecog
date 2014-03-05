@@ -18,18 +18,21 @@ import glob
 import traceback
 import numpy as np
 
-from os.path import join, isfile, isdir, basename
+from os.path import join, isfile, basename, dirname, splitext
 from PyQt4 import QtCore
 from PyQt4.QtCore import QThread
 
+import cellh5
+
 from cecog.util.util import makedirs
-from cecog.export.regexp import re_events
 from cecog.threads.corethread import ProgressMsg
-from cecog.errorcorrection.hmm import HmmSklearn as Hmm
+from cecog.errorcorrection.hmm import HmmSklearn
+from cecog.errorcorrection.hmm import HmmTde
+
 from cecog.errorcorrection import HmmReport
 from cecog.errorcorrection import PlateMapping
 from cecog.errorcorrection.datatable import HmmDataTable
-from cecog.gallery import MultiChannelGallery
+from cecog.learning.learning import ClassDefinition
 
 
 class PlateRunner(QtCore.QObject):
@@ -40,8 +43,9 @@ class PlateRunner(QtCore.QObject):
         super(PlateRunner, self).__init__(*args, **kw)
         self.plates = plates
         self._outdirs = dict([(p, d) for p, d in zip(plates, outdirs)])
-        self.params_ec = params_ec
         self._is_aborted = False
+
+        self.params_ec = params_ec
 
     def abort(self):
         self._is_aborted = True
@@ -64,14 +68,18 @@ class PlateRunner(QtCore.QObject):
             progress.text = ("Plate: '%s' (%d / %d)"
                              %(plate, i+1, len(self.plates)))
             self.progressUpdate.emit(progress)
+
+            ch5file = join(self._outdirs[plate], 'hdf5', "_all_positions.ch5")
             runner = PositionRunner(plate, self._outdirs[plate],
-                                    self.params_ec, parent=self)
+                                    self.params_ec, parent=self,
+                                    ch5file=ch5file)
             runner()
             self.progressUpdate.emit(progress)
 
+
 class PositionRunner(QtCore.QObject):
 
-    def __init__(self, plate, outdir, ecopts, positions=None, parent=None,
+    def __init__(self, plate, outdir, ecopts, ch5file, parent=None,
                  *args, **kw):
         super(PositionRunner, self).__init__(parent, *args, **kw)
         self.ecopts = ecopts # error correction options
@@ -81,13 +89,9 @@ class PositionRunner(QtCore.QObject):
         self._channel_dirs = dict()
         self._makedirs()
 
-        self.positions = positions
-        if positions is None:
-            self.positions = self._listdirs(self._analyzed_dir)
-
-    def _listdirs(self, path):
-        return sorted([x for x in os.listdir(path)
-                       if isdir(join(path, x)) and not x.startswith('_')])
+        self.ch5file = ch5file
+        self.files = glob.glob(dirname(ch5file)+"/*.ch5")
+        self.files = [f for f in self.files if "_all_positions" not in f]
 
     def _makedirs(self):
         """Create/setup output directories.
@@ -109,70 +113,66 @@ class PositionRunner(QtCore.QObject):
             else:
                 setattr(self, "_%s_dir" %basename(odir.lower()).strip("_"), odir)
 
-    def _gallery_image(self, pos, groupdict, channel, ext='png'):
-        fname = ("P%(position)s__T%(time)s__O%(object)s__B%(branch)s."
-                 "%(ext)s" %dict({'ext': ext}.items() + groupdict.items()))
-        fname = join(self._analyzed_dir, pos, 'gallery', channel, fname)
-        if isfile:
-            return fname
+    def _load_classdef(self, region):
+        try:
+            ch5 = cellh5.CH5File(self.ch5file, "r", cached=True)
+            cld = ch5.class_definition(region)
+        finally:
+            ch5.close()
+        classdef = ClassDefinition(cld)
+        return classdef
 
-    def _load_data(self, mappings, channel, classdef):
-        # XXX perhaps the data table should also implement the import
-        # --> having a data table for csv and cellh5...
+    def _load_data(self, mappings, channel):
         dtable = HmmDataTable()
 
-        for pi, pos in enumerate(self.positions):
-            dtable.add_position(pos, mappings[pos])
-            files = glob.glob(join(self._analyzed_dir, pos, 'statistics',
-                                   'events')+os.sep+"*.txt")
-            progress = ProgressMsg(max=len(files),
-                                   meta="loading plate: %s, position:%s, (%d/%d)"
-                                   %(self.plate, pos, pi+1, len(self.positions)))
+        # XXX read region names from hdf not from settings
+        chreg = "%s__%s" %(channel, self.ecopts.regionnames[channel])
 
-            for i, file_ in enumerate(files):
-                QThread.currentThread().interruption_point()
-                matched = re_events.match(basename(file_))
-                try:
-                    ch = matched.group('channel')
-                    branch = matched.group('branch')
-                except AttributeError:
-                    pass
-                else:
-                    progress.increment_progress()
-                    if self.ecopts.ignore_tracking_branches and branch != '01':
+        progress = ProgressMsg(max=len(self.files))
+
+        for file_ in self.files:
+            position = splitext(basename(file_))[0]
+            progress.meta = meta=("loading plate: %s, file: %s"
+                                  %(self.plate, file_))
+            progress.increment_progress()
+
+
+            QThread.currentThread().interruption_point()
+            self.parent().progressUpdate.emit(progress)
+            QtCore.QCoreApplication.processEvents()
+
+            with cellh5.ch5open(file_, "r", cached=True) as ch5:
+                for pos in ch5.iter_positions():
+                    # only segmentation
+                    if not pos.has_classification(chreg):
                         continue
-                    progress.text = basename(file_)
-                    self.parent().progressUpdate.emit(progress)
-                    if ch.lower() == channel:
-                        data = np.recfromcsv(file_, delimiter="\t")
 
-                        labels = data['class__label']
-                        probs = list()
-                        for prob in data['class__probability']:
-                            pstr = prob.strip('"').split(',')
+                    # make dtable aware of all positions, sometime they contain
+                    # no tracks and I don't want to ignore them
+                    dtable.add_position(position, mappings[position])
+                    if not pos.has_events():
+                        continue
 
-                            # sanity check for class labels in the definition and
-                            # the data file
-                            lbs = [int(p.split(':')[0]) for p in pstr]
-                            if set(classdef.class_names.keys()) != set(lbs):
-                                msg = ("The labels in the class definition and "
-                                       " the data files are inconsistent.\n%s, %s"
-                                       %(str(lbs),
-                                         str(classdef.class_names.keys())))
-                                raise RuntimeError(msg)
-                            probs.append(np.array([float(p.split(':')[1]) for p in pstr]))
-                        probs = np.array(probs)
+                    objidx = np.array( \
+                        pos.get_events(not self.ecopts.ignore_tracking_branches),
+                        dtype=int)
+                    tracks = pos.get_class_label(objidx, chreg)
+                    try:
+                        probs = pos.get_prediction_probabilities(objidx, chreg)
+                    except KeyError as e:
+                        probs = None
 
-                        gfile = self._gallery_image(pos, matched.groupdict(),
-                                                    channel)
-                        dtable.add_track(labels, probs, pos, mappings[pos],
-                                         gfile)
+                    grp_coord = cellh5.CH5GroupCoordinate( \
+                        chreg, pos.pos, pos.well, pos.plate)
+                    dtable.add_tracks(tracks, position, mappings[position],
+                                      objidx, grp_coord, probs)
+
 
         if dtable.is_empty():
-            raise RuntimeError("No data found for position '%s' and channel '%s' "
-                               %(self.plate, channel))
-
-        return dtable
+            raise RuntimeError(
+                "No data found for plate '%s' and channel '%s' "
+                %(self.plate, channel))
+        return dtable, self._load_classdef(chreg)
 
     def interruption_point(self, message=None):
         if message is not None:
@@ -182,23 +182,26 @@ class PositionRunner(QtCore.QObject):
 
     def __call__(self):
         self._makedirs()
-        mappings = PlateMapping(self.positions)
+
+        mappings = PlateMapping([splitext(basename(f))[0] for f in self.files])
         if self.ecopts.position_labels:
             mpfile = join(self.ecopts.mapping_dir, "%s.txt" %self.plate)
             mappings.read(mpfile)
 
-        alldata = dict()
-        for channel, cld in self.ecopts.class_definition.iteritems():
-            dtable = self._load_data(mappings, channel, cld)
+        for channel in self.ecopts.regionnames.keys():
+            dtable, cld = self._load_data(mappings, channel)
             msg = 'performing error correction on channel %s' %channel
             self.interruption_point(msg)
 
             # error correction
-            hmm = Hmm(dtable, channel, cld, self.ecopts)
-            data = hmm()
-            alldata[channel] =  data
+            if self.ecopts.hmm_algorithm == self.ecopts.HMM_BAUMWELCH:
+                hmm = HmmSklearn(dtable, channel, cld, self.ecopts)
+            else:
+                hmm = HmmTde(dtable, channel, cld, self.ecopts)
 
-            # plotting and export
+            data = hmm()
+
+            # plots and export
             report = HmmReport(data, self.ecopts, cld, self._hmm_dir)
             prefix = "%s_%s" %(channel.title(), self.ecopts.regionnames[channel])
             sby = self.ecopts.sortby.replace(" ", "_")
@@ -213,8 +216,9 @@ class PositionRunner(QtCore.QObject):
             report.close_figures()
 
             self.interruption_point("plotting hmm model")
-            report.hmm_model(join(self._hmm_dir, "%s_%s_model.pdf")
+            report.hmm_model(join(self._hmm_dir, "%s-%s_model.pdf")
                              %(prefix, sby))
+
 
             if self.ecopts.write_gallery:
                 self.interruption_point("plotting image gallery")
@@ -222,32 +226,20 @@ class PositionRunner(QtCore.QObject):
                     # replace image_gallery_png with image_gallery_pdf
                     fn = join(self._gallery_dir,
                               '%s-%s_gallery.png' %(prefix, sby))
-                    report.image_gallery_png(fn, self.ecopts.n_galleries,
-                                             self.ecopts.resampling_factor)
-                    report.close_figures()
+
+                    with cellh5.ch5open(self.ch5file, 'r') as ch5:
+                        report.image_gallery_png(ch5, fn, self.ecopts.n_galleries,
+                                                 self.ecopts.resampling_factor,
+                                                 self.ecopts.size_gallery_image)
+                        report.close_figures()
                 except Exception as e: # don't stop error corection
                     with open(join(self._gallery_dir, '%s-%s_error_readme.txt'
                                    %(prefix, sby)), 'w') as fp:
                         traceback.print_exc(file=fp)
                         fp.write("Check if gallery images exist!")
-            report.export_hmm(join(self._hmm_dir, "%s-hmm.csv" %channel.title()), True)
 
-        if self.ecopts.multichannel_galleries:
-            fn = join(self._gallery_dir, 'MultiChannelGallery_%s.png'
-                      %sby)
-            self.interruption_point("plotting multichannel gallery")
-
-            try:
-                mcg = MultiChannelGallery(self.ecopts.class_definition, alldata,
-                                          'primary', self.ecopts.n_galleries,
-                                          self.ecopts.resampling_factor)
-                mcg(fn, self.ecopts.regionnames.keys())
-            # don't stop error correction
-            except Exception as e:
-                with open(join(self._gallery_dir, '%s-%s_error_readme.txt'
-                               %(prefix, sby)), 'w') as fp:
-                    traceback.print_exc(file=fp)
-                    fp.write("Check if gallery images exist!")
+            report.export_hmm(join(self._hmm_dir, "%s-hmm.csv" %channel.title()),
+                              self.ecopts.sortby)
 
 
 if __name__ == "__main__":

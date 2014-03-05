@@ -13,15 +13,12 @@ __url__ = 'www.cellcognition.org'
 
 __all__ = ['ECParams']
 
-from os.path import join
-from collections import OrderedDict
 
-from cecog import CHANNEL_PREFIX
+from cecog import CHANNEL_PREFIX, CH_VIRTUAL
 from cecog.errorcorrection import PlateMapping
 from cecog.errorcorrection.hmm import estimator
-from cecog.learning.learning import LearnerFiles
-from cecog.learning.learning import ClassDefinition
-from cecog.learning.learning import ClassDefinitionUnsup
+from cecog.util.ctuple import CTuple
+from cecog.util.ctuple import COrderedDict
 
 
 # XXX belongs to the settings module/class
@@ -31,38 +28,34 @@ class ECParams(object):
     EVENTSELECTION_UNSUPERVISED = 1
     EVENTSELECTION = (EVENTSELECTION_SUPERVISED, EVENTSELECTION_UNSUPERVISED)
 
-    HMM_SIMPLE = 0
+    HMM_SMOOTHING = 0
     HMM_BAUMWELCH = 1
 
     __slots__ = ['regionnames', 'constrain_graph', 'hmm_constrain',
                  'classifier_dirs', 'position_labels', 'mapping_dir',
-                 'sortby', 'skip_plates', 'timeunit', 'overwrite_timelapse',
-                 'timelapse', 'sorting', 'sorting_sequence', 'tmax',
-                 'ignore_tracking_branches', 'write_gallery', 'n_galleries',
-                 'eventselection', 'nclusters', '_classdef',
-                 'multichannel_galleries', 'resampling_factor', 'hmm_algorithm']
+                 'sortby', 'timeunit', 'overwrite_timelapse', 'timelapse',
+                 'sorting', 'sorting_sequence', 'tmax', 'ignore_tracking_branches',
+                 'write_gallery', 'n_galleries', 'eventselection', 'nclusters',
+                 'resampling_factor', 'hmm_algorithm', 'size_gallery_image']
 
     def __init__(self, settings, tstep, timeunit):
-
-        self._classdef = None
 
         if settings('ErrorCorrection', 'hmm_baumwelch'):
             self.hmm_algorithm = self.HMM_BAUMWELCH
         else:
-            self.hmm_algorithm = self.HMM_SIMPLE
+            self.hmm_algorithm = self.HMM_SMOOTHING
 
         self.constrain_graph = settings('ErrorCorrection', 'constrain_graph')
         self.hmm_constrain = dict()
         self.classifier_dirs = dict()
-        self.regionnames = OrderedDict()
+        self.regionnames = COrderedDict()
 
         # settings that depend whether if the channel is checked for
         # error correction or not
         for channel in CHANNEL_PREFIX:
-            if settings('ErrorCorrection', channel):
-                self.regionnames[channel] = \
-                    settings('Classification', '%s_classification_regionname'
-                             %channel)
+            rname = self._regionname(settings, channel)
+            if settings('ErrorCorrection', channel) and bool(rname):
+                self.regionnames[channel] = rname
                 self.hmm_constrain[channel] = self._hmm_constrain( \
                     settings('ErrorCorrection', '%s_graph' %channel))
                 _setting = '%s_classification_envpath' %channel
@@ -82,8 +75,6 @@ class ECParams(object):
         # special case, sort by position if no mappings file is provided
         if not self.position_labels:
             self.sortby = PlateMapping.POSITION
-
-        self.skip_plates = settings('ErrorCorrection', 'skip_processed_plates')
 
         # timelapse in minutes
         self.overwrite_timelapse = \
@@ -111,8 +102,6 @@ class ECParams(object):
         self.write_gallery = settings('ErrorCorrection', 'compose_galleries')
         self.n_galleries = \
             settings('ErrorCorrection', 'compose_galleries_sample')
-        self.multichannel_galleries = \
-            settings('ErrorCorrection', 'multichannel_galleries')
 
         if settings('EventSelection', 'supervised_event_selection'):
             self.eventselection = self.EVENTSELECTION_SUPERVISED
@@ -120,24 +109,8 @@ class ECParams(object):
             self.eventselection = self.EVENTSELECTION_UNSUPERVISED
         self.nclusters = settings('EventSelection', 'num_clusters')
         self.resampling_factor = settings('ErrorCorrection', 'resampling_factor')
+        self.size_gallery_image = settings('ErrorCorrection', 'size_gallery_image')
 
-    @property
-    def class_definition(self):
-        """Distinguish btw. supervised and unsupervised class/cluster-
-        definitinion.
-        """
-        if self._classdef is None:
-            classdef = dict()
-            for channel, clfdir in self.classifier_dirs.iteritems():
-                if self.eventselection == self.EVENTSELECTION_SUPERVISED:
-                    classdef[channel] = ClassDefinition( \
-                        join(clfdir, LearnerFiles.DEFINITION))
-                else:
-                    classdef[channel] = ClassDefinitionUnsup(self.nclusters)
-                classdef[channel].load()
-            self._classdef = classdef
-
-        return self._classdef
 
     def _hmm_constrain(self, cfile):
         """Load and validate (xsd-schema) the 'hmm constraints file'."""
@@ -148,6 +121,22 @@ class ECParams(object):
             # it is essential to do it here, before all the data is loaded
             hmmc = estimator.HMMConstraint(cfile)
         return hmmc
+
+    def _regionname(self, settings, channel):
+
+        if channel in CH_VIRTUAL:
+            region = CTuple()
+            for channel2 in CHANNEL_PREFIX:
+                if channel2 in CH_VIRTUAL or not settings(
+                    "Classification", "merge_%s" %channel2):
+                    continue
+
+                region += (settings.get("Classification", "%s_%s_region"
+                                        %(channel, channel2)), )
+        else:
+            region = settings("Classification",
+                              "%s_classification_regionname" %channel)
+        return region
 
     def __str__(self):
         return '\n'.join(["%s : %s" %(slot, getattr(self, slot))

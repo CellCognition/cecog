@@ -26,6 +26,7 @@ from PyQt4.Qt import *
 from cecog import CHANNEL_PREFIX, CH_VIRTUAL, CH_PRIMARY, CH_OTHER
 from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
 from cecog.gui.util import information
+from cecog.util.ctuple import CTuple
 from cecog.gui.analyzer import BaseProcessorFrame
 
 from cecog.threads.picker import PickerThread
@@ -36,7 +37,6 @@ from cecog.learning.learning import CommonClassPredictor
 from cecog.colors import hex2rgb
 
 from cecog.environment import CecogEnvironment
-
 
 class ClassifierResultFrame(QGroupBox):
 
@@ -413,19 +413,19 @@ class ClassificationFrame(BaseProcessorFrame):
             settings.set('Processing', 'primary_featureextraction', True)
             settings.set('Processing', 'secondary_featureextraction', False)
             settings.set('Processing', 'tertiary_featureextraction', False)
-            settings.set('Processing', 'secondary_processchannel', False)
-            settings.set('Processing', 'tertiary_processchannel', False)
-            settings.set('Processing', 'merged_processchannel', False)
+            settings.set('General', 'process_secondary', False)
+            settings.set('General', 'process_tertiary', False)
+            settings.set('General', 'process_merged', False)
             rdn = {"%s_%s" %(prefix, settings.get("Classification",
                                                   "%s_classification_regionname" %prefix)): {}}
         elif current_tab == 1:
             prefix = 'secondary'
             settings.set('Processing', 'primary_featureextraction', False)
             settings.set('Processing', 'secondary_featureextraction', True)
-            settings.set('Processing', 'secondary_processchannel', True)
+            settings.set('General', 'process_secondary', True)
             settings.set('Processing', 'tertiary_featureextraction', False)
-            settings.set('Processing', 'tertiary_processchannel', False)
-            settings.set('Processing', 'merged_processchannel', False)
+            settings.set('General', 'process_tertiary', False)
+            settings.set('General', 'process_merged', False)
 
             # to setup the rending of the image currently processed
             rdn = {"%s_%s" %(prefix, settings.get("Classification",
@@ -436,10 +436,10 @@ class ClassificationFrame(BaseProcessorFrame):
                                       'tertiary_classification_regionname')
             settings.set('Processing', 'primary_featureextraction', False)
             settings.set('Processing', 'secondary_featureextraction', False)
-            settings.set('Processing', 'secondary_processchannel', True)
+            settings.set('General', 'process_secondary', True)
             settings.set('Processing', 'tertiary_featureextraction', True)
-            settings.set('Processing', 'tertiary_processchannel', True)
-            settings.set('Processing', 'merged_processchannel', False)
+            settings.set('General', 'process_tertiary', True)
+            settings.set('General', 'process_merged', False)
 
             rdn = {"%s_%s" %(prefix, settings.get("Classification",
                                                   "%s_classification_regionname" %prefix)): {}}
@@ -451,10 +451,10 @@ class ClassificationFrame(BaseProcessorFrame):
 
             settings.set('Processing', 'primary_featureextraction', pch)
             settings.set('Processing', 'secondary_featureextraction', sch)
-            settings.set('Processing', 'secondary_processchannel', sch)
+            settings.set('General', 'process_secondary', sch)
             settings.set('Processing', 'tertiary_featureextraction', tch)
-            settings.set('Processing', 'tertiary_processchannel', tch)
-            settings.set('Processing', 'merged_processchannel', True)
+            settings.set('General', 'process_tertiary', tch)
+            settings.set('General', 'process_merged', True)
             prefix = 'merged'
 
             rdn = {}
@@ -484,18 +484,16 @@ class ClassificationFrame(BaseProcessorFrame):
             for pfx in (CH_PRIMARY+CH_OTHER):
                 if settings.get('Classification', 'merge_%s' %pfx):
                     region.append(settings.get("Classification", "merged_%s_region" %pfx))
-            region = tuple(region)
-            region_str = '-'.join(region)
+            region = CTuple(region)
         else:
             region = settings.get('Classification',
                                   '%s_classification_regionname' %prefix)
-            region_str = region
 
         rpar = {prefix.title():
                     {'raw': ('#FFFFFF', 1.0),
                      'contours': [(region, 'class_label', 1, False),
                                   (region, '#000000', 1, showids)]}}
-        cl_rendering = {'%s_classification_%s' %(prefix, region_str): rpar}
+        cl_rendering = {'%s_classification_%s' %(prefix, str(region)): rpar}
         return cl_rendering
 
 
