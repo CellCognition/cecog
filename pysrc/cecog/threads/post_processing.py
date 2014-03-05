@@ -12,6 +12,8 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
+__all__ = ['PostProcessingThread']
+
 import numpy as np
 from os.path import join, isfile, abspath
 
@@ -19,6 +21,7 @@ from cecog.util.util import makedirs
 from cecog.analyzer.ibb import IBBAnalysis, SecurinAnalysis
 from cecog.threads.corethread import CoreThread
 from cecog.traits.analyzer.postprocessing import SECTION_NAME_POST_PROCESSING
+from cecog.util.util import makedirs
 
 
 class PostProcessingThread(CoreThread):

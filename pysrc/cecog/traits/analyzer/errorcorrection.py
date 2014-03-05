@@ -27,11 +27,7 @@ class SectionErrorcorrection(SectionCore):
 
     OPTIONS = [
       ('error_correction',
-       [('filename_to_r',
-            StringTrait('', 1000, label='R-project executable',
-                        widget_info=StringTrait.STRING_FILE)),
-        # channels to process
-        ('primary', BooleanTrait(True, label='primary')),
+       [('primary', BooleanTrait(True, label='primary')),
         ('secondary', BooleanTrait(False, label='secondary')),
         ('tertiary', BooleanTrait(False, label='tertiary')),
         ('merged', BooleanTrait(False, label='merged')),
@@ -50,8 +46,7 @@ class SectionErrorcorrection(SectionCore):
         ('merged_graph',
          StringTrait('', 1000, label='Merged ch. file',
                      widget_info=StringTrait.STRING_FILE)),
-        ('skip_processed_plates',
-         BooleanTrait(False, label='Skip processed plates')),
+
         ('position_labels',
          BooleanTrait(False, label='Position labels')),
         ('mappingfile_path',
@@ -63,8 +58,8 @@ class SectionErrorcorrection(SectionCore):
         ('groupby_oligoid',
          BooleanTrait(False, label='Oligo ID',
                       widget_info=BooleanTrait.RADIOBUTTON)),
-        ('hmm_simple',
-         BooleanTrait(True, label='Simple estimate',
+        ('hmm_smoothing',
+         BooleanTrait(True, label='Smoothing Model',
                       widget_info=BooleanTrait.RADIOBUTTON)),
         ('hmm_baumwelch',
          BooleanTrait(False, label='Baum-Welch',
@@ -82,8 +77,6 @@ class SectionErrorcorrection(SectionCore):
                     label='Max. time in plot [min]')),
         ('ignore_tracking_branches',
          BooleanTrait(False, label='Ignore tracking branches')),
-        ('show_html',
-         BooleanTrait(True, label='Open in browser')),
         ('enable_sorting',
          BooleanTrait(False, label='Sort by phase duration')),
         ('sorting_sequence',
@@ -95,11 +88,11 @@ class SectionErrorcorrection(SectionCore):
             StringTrait('', 100)),
         ('compose_galleries',
          BooleanTrait(False, label='Compose gallery images')),
-        ('multichannel_galleries',
-         BooleanTrait(False, label='Multichannel galleries')),
         ('compose_galleries_sample',
          IntTrait(-1, -1, 10000, label='Max. number of random samples')),
         ('resampling_factor',
-         FloatTrait(0.4, 0.01, 1.0, label="Resampling factor"))
+         FloatTrait(0.4, 0.01, 1.0, label="Resampling factor")),
+        ('size_gallery_image',
+         IntTrait(60, 1, 1000, label='Size of gallery images (px)'))
         ])
       ]

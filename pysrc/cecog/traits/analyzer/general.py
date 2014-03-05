@@ -72,13 +72,30 @@ class SectionGeneral(SectionCore):
             StringTrait('', 1000, label='Path',
                         widget_info=StringTrait.STRING_PATH)),
 
-        ('constrain_positions',
-            BooleanTrait(False, label='Constrain positions')),
+        ('framerange',
+            BooleanTrait(False, label='Timelapse')),
+        ('framerange_begin',
+            IntTrait(1, 0, 10000, label='first:')),
+        ('framerange_end',
+            IntTrait(1, 0, 1000, label='last:')),
+        ('frameincrement',
+            IntTrait(1, 1, 100, label='increment:')),
+
+
+        ('redofailedonly',
+            BooleanTrait(False, label='Skip processed positions')),
+        ('constrain_positions', BooleanTrait(False, label='Positions')),
         ('positions',
-            StringTrait('', 1000, label='Positions',
-                                   mask='(\w+,)*\w+')),
+         StringTrait('', 1000, label='Positions', mask='(\w+,)*\w+')),
+
+        ('process_primary', BooleanTrait(True, label='primary')),
+        ('process_secondary', BooleanTrait(False, label='secondary')),
+        ('process_tertiary', BooleanTrait(False, label='tertiary')),
+        ('process_merged', BooleanTrait(False, label='merged')),
+
+
         ('crop_image',
-            BooleanTrait(False, label='Crop image')),
+            BooleanTrait(False, label='Image cropping')),
         ('crop_image_x0',
             IntTrait(-1, -1, 4000, label='Upper left X')),
         ('crop_image_y0',
@@ -89,22 +106,12 @@ class SectionGeneral(SectionCore):
             IntTrait(-1, -1, 4000, label='Lower right Y')),
 
         ('crop_image',
-            BooleanTrait(False, label='Crop image')),
+            BooleanTrait(False, label='Image cropping')),
 
-
-        ('redofailedonly',
-            BooleanTrait(False, label='Skip processed positions')),
-        ('framerange',
-            BooleanTrait(False, label='Constrain timepoints')),
-        ('framerange_begin',
-            IntTrait(1, 0, 10000, label='Begin')),
-        ('framerange_end',
-            IntTrait(1, 0, 1000, label='End')),
-        ('frameincrement',
-            IntTrait(1, 1, 100, label='Timepoint increment')),
 
         ('rendering', DictTrait({}, label='Rendering')),
-        ('version', StringTrait('', 6, label='Cecog %s, file version:' % VERSION, widget_info=StringTrait.STRING_GRAYED)),
+        ('version', StringTrait('', 6, label='Cecog %s, file version:'
+                                %VERSION, widget_info=StringTrait.STRING_GRAYED)),
         ('rendering_class', DictTrait({}, label='Rendering class')),
         ('primary_featureextraction_exportfeaturenames',
             ListTrait(['n2_avg', 'n2_stddev', 'roisize'], label='Primary channel')),

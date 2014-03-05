@@ -123,18 +123,18 @@ class ObjectDetectionFrame(BaseProcessorFrame):
 
         current_tab = self._tab.current_index
         # turn of merged channel
-        settings.set('Processing', 'merged_processchannel', False)
+        settings.set('General', 'process_merged', False)
         if current_tab == 0:
-            settings.set('Processing', 'secondary_processchannel', False)
-            settings.set('Processing', 'tertiary_processchannel', False)
+            settings.set('General', 'process_secondary', False)
+            settings.set('General', 'process_tertiary', False)
             prefix = 'primary'
         elif current_tab == 1:
-            settings.set('Processing', 'secondary_processchannel', True)
-            settings.set('Processing', 'tertiary_processchannel', False)
+            settings.set('General', 'process_secondary', True)
+            settings.set('General', 'process_tertiary', False)
             prefix = 'secondary'
         else:
-            settings.set('Processing', 'secondary_processChannel', True)
-            settings.set('Processing', 'tertiary_processchannel', True)
+            settings.set('General', 'process_secondary', True)
+            settings.set('General', 'process_tertiary', True)
             prefix = 'tertiary'
 
         region_info = self.plugin_mgr.region_info

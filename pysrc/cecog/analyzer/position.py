@@ -46,6 +46,9 @@ from cecog.export import TrackExporter, EventExporter, TC3Exporter
 from cecog.util.logger import LoggerObject
 from cecog.util.stopwatch import StopWatch
 from cecog.util.util import makedirs
+from cecog.util.ctuple import COrderedDict
+from cecog.learning.learning import ClassDefinitionUnsup
+
 
 FEATURE_MAP = {'featurecategory_intensity': ['normbase', 'normbase2'],
                'featurecategory_haralick': ['haralick', 'haralick2'],
@@ -138,7 +141,7 @@ class PositionCore(LoggerObject):
         xs = [0]
         ys = [0]
         for prefix in [SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]:
-            if self.settings.get('Processing','%s_processchannel' %prefix):
+            if self.settings('General','process_%s' %prefix):
                 reg_x = self.settings.get2('%s_channelregistration_x' %prefix)
                 reg_y = self.settings.get2('%s_channelregistration_y' %prefix)
                 xs.append(reg_x)
@@ -286,7 +289,7 @@ class PositionCore(LoggerObject):
     def processing_channels(self):
         channels = (self.PRIMARY_CHANNEL, )
         for name in [self.SECONDARY_CHANNEL, self.TERTIARY_CHANNEL, self.MERGED_CHANNEL]:
-            if self.settings.get('Processing', '%s_processchannel' % name.lower()):
+            if self.settings('General', 'process_%s' % name.lower()):
                 channels = channels + (name,)
         return channels
 
@@ -300,6 +303,7 @@ class PositionCore(LoggerObject):
         for channel in self.processing_channels:
             chm[channel] = sttg.get('ObjectDetection',
                                     '%s_channelid' %channel.lower())
+
         return chm
 
     def is_aborted(self):
@@ -322,7 +326,7 @@ class PositionCore(LoggerObject):
 
     def _channel_regions(self, p_channel):
         """Return a dict of of channel region pairs according to the classifier"""
-        regions = OrderedDict()
+        regions = COrderedDict()
         if self.CHANNELS[p_channel.lower()].is_virtual():
             for prefix, channel in self.CHANNELS.iteritems():
                 if channel.is_virtual():
@@ -334,6 +338,7 @@ class PositionCore(LoggerObject):
         else:
             regions[p_channel] = self.settings.get("Classification",
                 self._resolve_name(p_channel, 'classification_regionname'))
+
         return regions
 
     @property
@@ -344,7 +349,7 @@ class PositionCore(LoggerObject):
             if isinstance(region, basestring):
                 chreg[chname] = region
             else:
-                chreg[chname] = tuple(region.values())
+                chreg[chname] = region.values()
         return chreg
 
 
@@ -447,27 +452,37 @@ class PositionAnalyzer(PositionCore):
 
     def setup_classifiers(self):
         sttg = self.settings
+
         # processing channel, color channel
         for p_channel, c_channel in self.ch_mapping.iteritems():
             self.settings.set_section('Processing')
             if sttg.get2(self._resolve_name(p_channel, 'classification')):
-                sttg.set_section('Classification')
-                clf = CommonClassPredictor(
-                    clf_dir=sttg.get2(self._resolve_name(p_channel,
-                                                         'classification_envpath')),
-                    name=p_channel,
-                    channels=self._channel_regions(p_channel),
-                    color_channel=c_channel)
-                clf.importFromArff()
-                clf.loadClassifier()
-                self.classifiers[p_channel] = clf
+                if sttg("EventSelection", "unsupervised_event_selection"):
+                        nclusters = sttg("EventSelection", "num_clusters")
+                        self.classifiers[p_channel] = ClassDefinitionUnsup(nclusters)
+                else:
+                        sttg.set_section('Classification')
+                        clf = CommonClassPredictor(
+                            clf_dir=sttg.get2(self._resolve_name(p_channel,
+                                                                 'classification_envpath')),
+                            name=p_channel,
+                            channels=self._channel_regions(p_channel),
+                            color_channel=c_channel)
+                        clf.importFromArff()
+                        clf.loadClassifier()
+                        self.classifiers[p_channel] = clf
 
     @property
     def _transitions(self):
         if self.settings.get('EventSelection', 'unsupervised_event_selection'):
             transitions = np.array((0, 1))
         else:
-            transitions = eval(self.settings.get('EventSelection', 'labeltransitions'))
+            try:
+                transitions = eval(self.settings.get('EventSelection', 'labeltransitions'))
+            except Exception as e:
+                raise RuntimeError(("Make sure that transitions are of the form "
+                                    "'int, int' or '(int, int), (int, int)' i.e "
+                                    "2-int-tuple  or a list of 2-int-tuples"))
             transitions = np.array(transitions)
         return transitions.reshape((-1, 2))
 
@@ -490,12 +505,14 @@ class PositionAnalyzer(PositionCore):
             es = EventSelection(graph, **opts)
 
         elif self.settings.get('EventSelection', 'unsupervised_event_selection'):
+            cld = self.classifiers.values()[0] # only one classdef in case of UES
             opts.update({'forward_check': self._convert_tracking_duration('min_event_duration'),
                          'forward_labels': (1, ),
                          'backward_check': -1, # unsused for unsupervised usecase
                          'backward_labels': (0, ),
                          'num_clusters': self.settings.get('EventSelection', 'num_clusters'),
-                         'min_cluster_size': self.settings.get('EventSelection', 'min_cluster_size')})
+                         'min_cluster_size': self.settings.get('EventSelection', 'min_cluster_size'),
+                         'classdef': cld})
             es = UnsupervisedEventSelection(graph, **opts)
 
         return es
@@ -558,10 +575,6 @@ class PositionAnalyzer(PositionCore):
     def export_object_counts(self):
         fname = join(self._statistics_dir, 'P%s__object_counts.txt' % self.position)
 
-        # at least the total count for primary is always exported
-        # OLD: ch_info = OrderedDict([('Primary', ('primary', [], []))])
-        # but this does not work any more if we admit merged channels
-        # (which might be the only ones we are interested in)
         ch_info = OrderedDict()
         for name, clf in self.classifiers.iteritems():
             names = clf.class_names.values()
@@ -576,10 +589,6 @@ class PositionAnalyzer(PositionCore):
         pplot_ymax = \
             self.settings.get('Output', 'export_object_counts_ylim_max')
 
-        # plot only for primary channel so far!
-        #if 'Primary' in ch_info:
-        #    self.timeholder.exportPopulationPlots(fname, self._plots_dir, self.position,
-        #                                          self.meta_data, ch_info['Primary'], pplot_ymax)
         self.timeholder.exportPopulationPlots(ch_info, self._plots_dir,
                                               self.plate_id, self.position,
                                               ymax=pplot_ymax)
@@ -665,6 +674,18 @@ class PositionAnalyzer(PositionCore):
                                TimeConverter.MINUTES, self.position)
         exporter()
 
+    def export_classlabels(self):
+        """Save classlabels of each object to the hdf file."""
+        # function works for supervised and unuspervised case
+        for frame, channels in self.timeholder.iteritems():
+            for chname, classifier in self.classifiers.iteritems():
+                holder = channels[chname].get_region(classifier.regions)
+                if classifier.feature_names is None:
+                    # special for unsupervised case
+                    classifier.feature_names = holder.feature_names
+                self.timeholder.save_classlabels(channels[chname],
+                                                 holder, classifier)
+
     def __call__(self):
         # include hdf5 file name in hdf5_options
         # perhaps timeholder might be a good place to read out the options
@@ -679,6 +700,8 @@ class PositionAnalyzer(PositionCore):
                                      **self._hdf_options)
 
         self.settings.set_section('Tracking')
+        self.setup_classifiers()
+
         # setup tracker
         if self.settings('Processing', 'tracking'):
             region = self.settings('Tracking', 'tracking_regionname')
@@ -696,7 +719,6 @@ class PositionAnalyzer(PositionCore):
                           detect_objects = self.settings('Processing',
                                                              'objectdetection'))
 
-        self.setup_classifiers()
         self.export_features = self.define_exp_features()
         n_images = self._analyze(ca)
 
@@ -733,6 +755,8 @@ class PositionAnalyzer(PositionCore):
                 if self.settings('Output', 'export_tracking_as_dot'):
                     self.export_graphviz()
 
+            self.export_classlabels()
+
             self.update_status({'text': 'export events...',
                                 'max': 1,
                                 'progress': 1})
@@ -767,7 +791,7 @@ class PositionAnalyzer(PositionCore):
             os.utime(fname, times)
 
     def clear(self):
-        # closes hdf5
+        # closes
         if self.timeholder is not None:
             self.timeholder.close_all()
         # close and remove handlers from logging object
@@ -815,8 +839,10 @@ class PositionAnalyzer(PositionCore):
                     images += [(img_conn, '#FFFF00', 1.0),
                                (img_split, '#00FFFF', 1.0)]
 
-            for clf in self.classifiers.itervalues():
-                cellanalyzer.classify_objects(clf)
+            # can't cluster on a per frame basis
+            if self.settings("EventSelection", "supervised_event_selection"):
+                for clf in self.classifiers.itervalues():
+                    cellanalyzer.classify_objects(clf)
 
             ##############################################################
             # FIXME - part for browser
@@ -867,8 +893,8 @@ class PositionAnalyzer(PositionCore):
         return images_
 
     def render_classification_images(self, cellanalyzer, images, frame):
-        images_ = dict()
-        for region, render_par in self.settings.get2('rendering_class').iteritems():
+         images_ = dict()
+         for region, render_par in self.settings.get2('rendering_class').iteritems():
             out_images = join(self._images_dir, region)
             write = self.settings('Output', 'rendering_class_discwrite')
             image, _ = cellanalyzer.render(out_images,
@@ -876,7 +902,7 @@ class PositionAnalyzer(PositionCore):
                                                  writeToDisc=write,
                                                  images=images)
             images_[region] = image
-        return images_
+         return images_
 
     def render_browser(self, cellanalyzer):
         d = {}

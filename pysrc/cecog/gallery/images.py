@@ -19,6 +19,12 @@ import numpy as np
 
 from cecog.colors import Colors
 
+def grey2rgb(image, color="#FFFFFF"):
+    if is_color_like(color):
+        color = hex2color(color)
+    # be aware that color contains floats ranging from 0 to 1
+    return np.dstack((image, image, image))*np.array(color)
+
 
 class GalleryRGBImage(np.ndarray):
 
@@ -52,13 +58,13 @@ class GalleryRGBImage(np.ndarray):
         if len(image.shape) in (3, 4):
             rgb_img = image
         else:
-            rgb_img = self._grey2rgb(image, color)
+            rgb_img = grey2rgb(image, color)
 
         xmin = position*self.swidth
         xmax = (position+1)*self.swidth
         self[xmin:xmax, :, :] = rgb_img
 
-    def _grey2rgb(self, image, color="#FFFFFF"):
+    def grey2rgb(self, image, color="#FFFFFF"):
         if is_color_like(color):
             color = hex2color(color)
         # be aware that color contains floats ranging from 0 to 1
@@ -105,9 +111,9 @@ class MergedChannelGalleryRGBImage(GalleryRGBImage):
     def set_sub_image(self, position, image, color, grey_subimages=True):
 
         if grey_subimages:
-            rgb_img = self._grey2rgb(image, Colors.white)
+            rgb_img = grey2rgb(image, Colors.white)
         else:
-            rgb_img = self._grey2rgb(image, color)
+            rgb_img = grey2rgb(image, color)
 
         xmin = position*self.swidth
         xmax = (position+1)*self.swidth
@@ -119,5 +125,5 @@ class MergedChannelGalleryRGBImage(GalleryRGBImage):
         if color not in self._colors:
             self._colors.append(color)
             mimg =   self[(self._nsub-1)*self.swidth:, :, :]
-            mimg += self._grey2rgb(image, color)
+            mimg += grey2rgb(image, color)
             self[(self._nsub-1)*self.swidth:, :, :] = mimg

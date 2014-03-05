@@ -17,7 +17,7 @@ __source__ = '$URL$'
 import os
 import bz2
 import gzip
-import types
+
 
 def makedirs(path):
     """Recursively make directory if path doesn't already exist.
@@ -66,29 +66,6 @@ def read_table(filename, has_column_names=True, skip=0, sep='\t',
     f.close()
     return column_names, rows
 
-def write_table(filename, rows, column_names=None, sep='\t',
-                guess_compression=True):
-    '''
-    Write a list of dicts ordered by header_names to file, or a list of lists
-    if no column_names are specified.
-
-    Unfortunately Python's csv is unable of writing headers
-    (changed in Python 2.7)
-    '''
-    f = get_file_handle(filename, 'wb', guess_compression=guess_compression)
-    if not column_names is None:
-        f.write('%s\n' % sep.join(column_names))
-        for row in rows:
-            f.write('%s\n' % sep.join([str(row[n]) for n in column_names]))
-    else:
-        for row in rows:
-            if type(row) == types.DictType:
-                func = lambda x: x.values()
-            else:
-                func = lambda x: x
-            f.write('%s\n' % sep.join(map(str, func(row))))
-    f.close()
-
 def unlist(a):
     b = []
     for x in a:
@@ -97,6 +74,7 @@ def unlist(a):
 
 def yesno(state):
     return 'yes' if state else 'no'
+
 
 def print_memory_increase(func):
     try:

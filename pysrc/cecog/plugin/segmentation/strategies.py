@@ -38,21 +38,21 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
               ('latwindowsize2', IntTrait(20, 1, 1000, label='Window size')),
               ('latlimit2', IntTrait(1, 0, 255, label='Min. contrast')),
               ('shapewatershed', BooleanTrait(False, label='Split & merge by shape')),
-              ('shapewatershed_gausssize', IntTrait(1, 0, 10000, label='Gauss radius')),
-              ('shapewatershed_maximasize', IntTrait(1, 0, 10000, label='Min. seed distance')),
-              ('shapewatershed_minmergesize', IntTrait(1, 0, 10000, label='Object size threshold')),
+              ('shapewatershed_gausssize', IntTrait(1, 0, 1000000, label='Gauss radius')),
+              ('shapewatershed_maximasize', IntTrait(1, 0, 1000000, label='Min. seed distance')),
+              ('shapewatershed_minmergesize', IntTrait(1, 0, 1000000, label='Object size threshold')),
               ('intensitywatershed', BooleanTrait(False, label='Split & merge by intensity')),
-              ('intensitywatershed_gausssize', IntTrait(1, 0, 10000, label='Gauss radius')),
-              ('intensitywatershed_maximasize', IntTrait(1, 0, 10000, label='Min. seed distance')),
-              ('intensitywatershed_minmergesize', IntTrait(1, 0, 10000, label='Object size threshold')),
+              ('intensitywatershed_gausssize', IntTrait(1, 0, 1000000, label='Gauss radius')),
+              ('intensitywatershed_maximasize', IntTrait(1, 0, 1000000, label='Min. seed distance')),
+              ('intensitywatershed_minmergesize', IntTrait(1, 0, 1000000, label='Object size threshold')),
               ('postprocessing', BooleanTrait(False, label='Object filter')),
-              ('postprocessing_roisize_min', IntTrait(-1, -1, 10000, label='Min. object size')),
-              ('postprocessing_roisize_max', IntTrait(-1, -1, 10000, label='Max. object size')),
-              ('postprocessing_intensity_min', IntTrait(-1, -1, 10000, label='Min. average intensity')),
-              ('postprocessing_intensity_max', IntTrait(-1, -1, 10000, label='Max. average intensity')),
+              ('postprocessing_roisize_min', IntTrait(-1, -1, 1000000, label='Min. object size')),
+              ('postprocessing_roisize_max', IntTrait(-1, -1, 1000000, label='Max. object size')),
+              ('postprocessing_intensity_min', IntTrait(-1, -1, 1000000, label='Min. average intensity')),
+              ('postprocessing_intensity_max', IntTrait(-1, -1, 1000000, label='Max. average intensity')),
               ('removeborderobjects', BooleanTrait(True, label='Remove border objects')),
               ('holefilling', BooleanTrait(True, label='Fill holes')),
-              ]
+             ]
 
     # the : at the beginning indicates a QRC link with alias 'plugins/segmentation/local_adaptive_threshold'
     DOC = ':local_adaptive_threshold'

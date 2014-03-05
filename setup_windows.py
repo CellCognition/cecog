@@ -110,6 +110,6 @@ setup(options = {"py2exe": py2exe_opts,
       windows = [{'script': join('scripts', 'CecogAnalyzer.py'),
                   'icon_resources': [(1, 'resources\cecog_analyzer_icon.ico')]
                   }],
-      console = [{'script': join('scripts', 'cecog_batch.py')}],
+      console = [{'script': join('scripts', 'cmdtools', 'cmdtool.py')}],
       ext_modules = [ccore],
       **build_helpers.metadata)

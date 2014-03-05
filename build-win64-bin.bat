@@ -1,7 +1,9 @@
 @SETLOCAL
+
 :: this line is one uses windows sdk build environment
 echo using Windows SDK's environment for x64 build
 set VS90COMNTOOLS=%VS100COMNTOOLS%
+
 @Set /P _clean=Clean directories manually? [Y/n] || Set _clean="n"
 
 @If "%_clean%"=="Y" goto:clean

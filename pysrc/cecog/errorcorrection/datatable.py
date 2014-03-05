@@ -18,12 +18,15 @@ import numpy as np
 
 from cecog.errorcorrection import PlateMapping as pm
 
+
 class HmmDataTable(object):
 
     def __init__(self, *args, **kw):
         super(HmmDataTable, self).__init__(*args, **kw)
         self._probs = None
         self._tracks = None
+        self._objids = None
+        self._coordinates = np.array([], dtype=object)
         self._gallery_files = None
         self._pos = dict()
         self._all_pos = dict()
@@ -31,32 +34,34 @@ class HmmDataTable(object):
             self._all_pos.setdefault(cn, [])
             self._pos.setdefault(cn, [])
 
-    def _update_pos(self, pos, mapping, concatenate=False):
-        self._pos[pm.POSITION].append(pos)
+    def _update_pos(self, pos, mapping, ntracks):
+        self._pos[pm.POSITION].extend([pos]*ntracks)
         try:
             for k, v in mapping.iteritems():
-                self._pos[k].append(v)
+                self._pos[k].extend([v]*ntracks)
         except AttributeError:
             for cn in (cols for cols in pm.colnames if cols != pm.POSITION):
-                self._pos[cn].append(None)
+                self._pos[cn].extend([None]*ntracks)
 
-    def add_track(self, track, prob, pos, mapping, gallery_file):
+    def add_tracks(self, tracks, pos, mapping, objids, coords,
+                   probs=None):
 
-        if self._probs is None and self._tracks is None:
-            self._tracks = np.empty(track.shape, dtype=int)[np.newaxis, :]
-            self._tracks[0, :] = track[:]
-            self._probs = np.empty(prob.shape)[np.newaxis, :, :]
-            self._probs[0, :, :] = prob[:, :]
-            self._gallery_files = np.array([gallery_file])
-            self._update_pos(pos, mapping, concatenate=False)
+        nt = tracks.shape[0]
+        self._coordinates = np.append(self._coordinates, [coords]*nt)
+
+        if self._tracks is None and self._objids is None:
+            self._tracks = tracks
+            if probs is not None:
+                self._probs = probs
+            self._objids = objids
+            self._update_pos(pos, mapping, tracks.shape[0])
         else:
-            assert track.shape == self._tracks.shape[1:]
-            assert prob.shape == self._probs.shape[1:]
-            self._tracks = np.vstack((self._tracks, track[np.newaxis, ::]))
-            self._probs = np.vstack((self._probs, prob[np.newaxis,::]))
-            self._gallery_files = np.concatenate( \
-                (self._gallery_files, [gallery_file]))
-            self._update_pos(pos, mapping, concatenate=True)
+            assert tracks.shape[1:] == self._tracks.shape[1:]
+            self._tracks = np.vstack((self._tracks, tracks))
+            if probs is not None:
+                self._probs = np.vstack((self._probs, probs))
+            self._objids = np.vstack((self._objids, objids))
+            self._update_pos(pos, mapping, nt)
 
     def add_position(self, pos, mapping):
         self._all_pos[pm.POSITION].append(pos)
@@ -105,7 +110,14 @@ class HmmDataTable(object):
             else:
                 i = (k == np.array(self._pos[key]))
 
+            # return only the key, no tracks available
             if k not in self._pos[key] and include_empty_positions:
-                yield (k, None, None, None)
+                yield (k, None, None, None, None)
+            # tracks but no prediction probabilities
+            elif self._probs is None:
+                yield k, self._tracks[i], None, self._objids[i], \
+                    self._coordinates[i]
+            # tracks with prediction probabilities
             else:
-                yield k, self._tracks[i], self._probs[i], self._gallery_files[i]
+                yield k, self._tracks[i], self._probs[i], self._objids[i], \
+                    self._coordinates[i]
