@@ -615,13 +615,16 @@ def load_image_container_from_settings(settings):
     return imagecontainer
 
 def load_settings(settings_file):
-    settings = GuiConfigSettings(None, SECTION_REGISTRY)
+    settings = GuiConfigSettings(None)
     settings.read(settings_file)
     return settings
 
 
 if __name__ == "__main__":
     import sys
+    from cecog.environment import CecogEnvironment
+    from cecog import VERSION
+    environ = CecogEnvironment(VERSION)
     app = QApplication(sys.argv) 
     
     settings = load_settings('C:/Users/sommerc/data/cecog/Settings/exp911_version_140.conf')
