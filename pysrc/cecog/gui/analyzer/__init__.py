@@ -109,7 +109,7 @@ class BaseFrame(TraitDisplayMixin):
             self._tab.add_tab(name, frame)
 
         self._tab.set_active_index(0)
-        self._tab.current_changed.connect(self.on_tab_changed)
+        self._tab.currentChanged.connect(self.on_tab_changed)
 
         layout.addWidget(self._tab)
         layout.addWidget(self._control)
@@ -229,7 +229,7 @@ class _ProcessorMixin(object):
         layout.addWidget(help_button)
 
         if not self.TABS is None:
-            self._tab.current_changed.connect(self._on_tab_changed)
+            self._tab.currentChanged.connect(self._on_tab_changed)
             self._on_tab_changed(0)
         else:
             for name in self._control_buttons:
@@ -315,10 +315,10 @@ class _ProcessorMixin(object):
                 learner = result_frame._learner
 
                 if name == self.PROCESS_PICKING:
-                    if not result_frame.is_pick_samples():
+                    if not result_frame.classifier.is_annotated:
                         is_valid = False
                         result_frame.msg_pick_samples(self)
-                    elif result_frame.is_train_classifier():
+                    elif result_frame.classifier.is_trained:
                         if not question(self, 'Samples already picked',
                                     'Do you want to pick samples again and '
                                     'overwrite previous '
@@ -326,16 +326,16 @@ class _ProcessorMixin(object):
                             is_valid = False
 
                 elif name == self.PROCESS_TRAINING:
-                    if not result_frame.is_train_classifier():
+                    if not result_frame.classifier.is_trained:
                         is_valid = False
                         result_frame.msg_train_classifier(self)
-                    elif result_frame.is_apply_classifier():
+                    elif result_frame.classifier.is_valid:
                         if not question(self, 'Classifier already trained',
                                     'Do you want to train the classifier '
                                     'again?'):
                             is_valid = False
 
-                elif name == self.PROCESS_TESTING and not result_frame.is_apply_classifier():
+                elif name == self.PROCESS_TESTING and not result_frame.classifier.is_valid:
                     is_valid = False
                     result_frame.msg_apply_classifier(self)
 

@@ -51,14 +51,11 @@ class PickerThread(CoreThread):
         chid = self._settings.get("ObjectDetection", "%s_channelid" %(pchannel))
         cpath = self._settings.get("Classification",
                                     "%s_classification_envpath" %pchannel)
-        ext = self._settings.get('Classification',
-                                 '%s_classification_annotationfileext' %pchannel)
 
         learner = CommonObjectLearner(cpath,
                                       pchannel.title(),
                                       self._channel_regions(pchannel, chid),
                                       chid,
-                                      extension=ext,
                                       has_zero_insert=False)
         learner.loadDefinition()
         return learner

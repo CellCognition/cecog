@@ -82,6 +82,19 @@ class FrameStack(QtGui.QStackedWidget):
         self.helpbrowser = HelpBrowser()
         self.helpbrowser.hide()
 
+        self._wmap = dict()
+
+    def addWidget(self, widget):
+        wi = super(FrameStack, self).addWidget(widget)
+        self._wmap[type(widget)] = wi
+
+    def widgetByType(self, type_):
+        return self.widget(self._wmap[type_])
+
+    def removeWidget(self, widget):
+        del self._wmap[type(widget)]
+        super(FrameStack, self).removeWidget(widget)
+
 
 class CecogAnalyzer(QtGui.QMainWindow):
 

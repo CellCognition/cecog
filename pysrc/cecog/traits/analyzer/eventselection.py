@@ -28,7 +28,9 @@ class SectionEventSelection(SectionCore):
 
     OPTIONS = [
         ('event_selection',
-         [('event_selection',
+         [('eventchannel',
+           SelectionTrait2(None, [], label='Channel')),
+          ('event_selection',
            BooleanTrait(True, label='Event Selection')),
           ('backwardrange',
            FloatTrait(0, -1, 4000, label='Duration [pre]')),

@@ -248,7 +248,7 @@ class CellAnalyzer(LoggerObject):
         object_ids = set()
 
         for reader in sample_readers:
-            if (byTime and P == reader.getPosition() and self._iT in reader):
+            if (byTime and P == reader.position() and self._iT in reader):
                 coords = reader[self._iT]
             elif (not byTime and P in reader):
                 coords = reader[P]

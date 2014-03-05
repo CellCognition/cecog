@@ -394,6 +394,7 @@ class MergedChannel(ChannelCore):
             holder0 = channel.get_region(region_name)
             pfx = "%s_%s" %(cname, region_name)
             feature_names = ["_".join((pfx, f)) for f in holder0.feature_names]
+
             holder.cat_samples(holder0, feature_names)
 
         removed = holder.remove_incomplete()

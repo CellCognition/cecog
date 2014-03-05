@@ -134,6 +134,7 @@ class PositionCore(LoggerObject):
             par = (method, begin, end, step)
         return par
 
+
     def registration_shift(self):
         # compute values for the registration of multiple channels
         # (translation only)
@@ -670,14 +671,14 @@ class PositionAnalyzer(PositionCore):
         t_step = tu.sec2min(t_mean)*increment
 
         nclusters = self.settings.get('EventSelection', 'num_clusters')
-        exporter = TC3Exporter(self._tes.tc3data, self._tc3_dir, nclusters, t_step,
-                               TimeConverter.MINUTES, self.position)
+        exporter = TC3Exporter(self._tes.tc3data, self._tc3_dir, nclusters,
+                               t_step, TimeConverter.MINUTES, self.position)
         exporter()
 
     def export_classlabels(self):
         """Save classlabels of each object to the hdf file."""
         # function works for supervised and unuspervised case
-        for frame, channels in self.timeholder.iteritems():
+        for channels in self.timeholder.itervalues():
             for chname, classifier in self.classifiers.iteritems():
                 holder = channels[chname].get_region(classifier.regions)
                 if classifier.feature_names is None:
@@ -704,12 +705,10 @@ class PositionAnalyzer(PositionCore):
 
         # setup tracker
         if self.settings('Processing', 'tracking'):
-            region = self.settings('Tracking', 'tracking_regionname')
             tropts = (self.settings('Tracking', 'tracking_maxobjectdistance'),
                       self.settings('Tracking', 'tracking_maxsplitobjects'),
                       self.settings('Tracking', 'tracking_maxtrackinggap'))
             self._tracker = Tracker(*tropts)
-            self._tes = self.setup_eventselection(self._tracker.graph)
 
         stopwatch = StopWatch(start=True)
         ca = CellAnalyzer(timeholder=self.timeholder,
@@ -726,6 +725,18 @@ class PositionAnalyzer(PositionCore):
             # invoke event selection
             if self.settings('Processing', 'eventselection') and \
                     self.settings('Processing', 'tracking'):
+
+                evchannel = self.settings('EventSelection', 'eventchannel')
+                region = self.classifiers[evchannel].regions
+                if evchannel != PrimaryChannel.NAME or \
+                     region != self.settings("Tracking", "region"):
+                    graph = self._tracker.clone_graph(self.timeholder,
+                                                      evchannel,
+                                                      region)
+                else:
+                    graph = self._tracker.graph
+
+                self._tes = self.setup_eventselection(graph)
                 self.logger.debug("--- visitor start")
                 self._tes.find_events()
                 self.logger.debug("--- visitor ok")
@@ -826,7 +837,7 @@ class PositionAnalyzer(PositionCore):
             images = []
 
             if self.settings('Processing', 'tracking'):
-                region = self.settings('Tracking', 'tracking_regionname')
+                region = self.settings('Tracking', 'region')
                 samples = self.timeholder[frame][PrimaryChannel.NAME].get_region(region)
                 self._tracker.track_next_frame(frame, samples)
 
