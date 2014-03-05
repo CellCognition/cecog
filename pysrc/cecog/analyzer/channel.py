@@ -167,7 +167,7 @@ class Channel(ChannelCore):
             method, zbegin, zend, zstep = self.oZSliceOrProjection
             images = [img.image for img in self._zslices][(zbegin-1):zend:zstep]
             # single images don't carry the dtype
-            dtype = img.format.lower()
+            dtype = img.format
 
             if method == "maximum":
                 method_const = ccore.ProjectionType.MaxProjection
@@ -178,9 +178,8 @@ class Channel(ChannelCore):
 
             self.logger.debug("* applying %s Z-Projection to stack of %d images..."
                               %(method, len(images)))
-            imgprj = numpy.zeros((images[0].height, images[0].width),
-                                 dtype=dtype)
-            imgprj = ccore.numpy_to_image(imgprj, copy=True)
+            imgprj = numpy.zeros((images[0].height, images[0].width), dtype=dtype)
+            imgprj = ccore.numpy_to_image(numpy.zeros((images[0].height, images[0].width), dtype=dtype), copy=True)
             ccore.zproject(imgprj, images, method_const)
 
             # overwrite the first MetaImage found with the projected image data

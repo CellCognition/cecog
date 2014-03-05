@@ -265,15 +265,28 @@ class MetaImage(object):
         return cls._crop_coordinates
 
     def __init__(self, image_container=None, coordinate=None,
-                 height=None, width=None, format=UINT8):
+                 height=None, width=None):
         self.coordinate = coordinate
         self.img_height = height
         self.img_width = width
-        self.format = format
         self.image_container = image_container
         self._img = None
         self._img_c = None
 
+    @property
+    def format(self):
+        try:
+            image = self.image
+        except:
+            print 'MetaImage.format(): No image loaded'
+            raise
+        if isinstance(image, (ccore.UInt16Image,)):
+            return numpy.uint16
+        elif isinstance(image, (ccore.Image,)):
+            return numpy.uint8
+        else:
+            raise RuntimeError('MetaImage.format(): Unknown pixel type')
+            
     @property
     def width(self):
         return self.image.width

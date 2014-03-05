@@ -164,7 +164,7 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
 
             # replacement for not working ccore.projectImage
             img_bin = numpy.zeros((img_bin2.height, img_bin2.width),
-                                 dtype=meta_image.format.lower())
+                                 dtype=meta_image.format)
             img_bin = ccore.numpy_to_image(img_bin, copy=True)
             ccore.zproject(img_bin, [img_bin1, img_bin2], ccore.ProjectionType.MaxProjection)
         else:
