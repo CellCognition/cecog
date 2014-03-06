@@ -252,7 +252,7 @@ class ImageViewer(ZoomedQGraphicsView):
             self._objects.add(item)
         self._update_contours()
         
-    def set_objects_by_crackcoords_with_colors(self, coords, colors):
+    def set_objects_by_crackcoords_with_colors(self, coords):
         scene = self.scene()
         for obj_id, obj in coords.iteritems():
             crack = obj.crack_contour
@@ -263,7 +263,7 @@ class ImageViewer(ZoomedQGraphicsView):
                 item.setToolTip('Object: %d\nSize: %d\nIntensity: %6.2f\nClass: %s (%3.2f)' % (obj_id, obj.roisize, obj.signal, obj.strClassName, obj.dctProb[obj.iLabel]))
             scene.addItem(item)
             self._objects.add(item)
-            item.setPen(QColor(colors[obj_id]))
+            item.setPen(QColor(obj.strHexColor))
         self._update_contours()
 
     def remove_objects(self):

@@ -295,8 +295,8 @@ class Browser(QMainWindow):
         widget = self._module_manager.get_widget(AnnotationModule.NAME)
         widget.set_coords()
         
-    def set_classified_crack_contours(self, coords, colors):
-        self.image_viewer.set_objects_by_crackcoords_with_colors(coords, colors)
+    def set_classified_crack_contours(self, coords):
+        self.image_viewer.set_objects_by_crackcoords_with_colors(coords)
         widget = self._module_manager.get_widget(AnnotationModule.NAME)
         widget.set_coords()
 
@@ -445,13 +445,8 @@ class Browser(QMainWindow):
         channel = cellanalyzer.get_channel(channel_name)
         if channel.has_region(region_name):
             region = channel.get_region(region_name)
-            coords = {}
-            colors = {}
-            for obj_id, obj in region.iteritems():
-                coords[obj_id] = obj.crack_contour
-                colors[obj_id] = obj.strHexColor
             if self._show_objects_by == 'classification':
-                self.set_classified_crack_contours(region, colors)
+                self.set_classified_crack_contours(region)
             else:
                 self.set_coords(region)
             
