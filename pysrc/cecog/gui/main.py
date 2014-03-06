@@ -411,7 +411,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
         if self._imagecontainer is None:
             warning(self, 'Data structure not loaded',
                     'The input data structure was not loaded.\n'
-                    'Please click "Load image data" in General.')
+                    'Please click "Scan input directory" in General.')
         elif self._browser is None:
             try:
                 browser = Browser(self._settings, self._imagecontainer)
