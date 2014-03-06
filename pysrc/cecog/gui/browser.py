@@ -108,8 +108,6 @@ class Browser(QMainWindow):
         self.min_time = meta_data.times[0]
         self.max_frame = meta_data.dim_t-1
         
-        print self.max_time, self.min_time, self.max_frame
-
         layout = QGridLayout(frame)
         layout.setContentsMargins(0, 0, 0, 0)
         self.image_viewer = ImageViewer(frame, auto_resize=True)
@@ -127,7 +125,6 @@ class Browser(QMainWindow):
                                             Qt.DirectConnection)
         self._t_slider.valueChanged.connect(self.timeToolTip)
         self._imagecontainer.check_dimensions()
-        print self._imagecontainer.has_timelapse
         
         if self._imagecontainer.has_timelapse:
             self._t_slider.show()
