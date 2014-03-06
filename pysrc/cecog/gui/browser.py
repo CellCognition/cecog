@@ -451,9 +451,9 @@ class Browser(QMainWindow):
                 coords[obj_id] = obj.crack_contour
                 colors[obj_id] = obj.strHexColor
             if self._show_objects_by == 'classification':
-                self.set_classified_crack_contours(coords, colors)
+                self.set_classified_crack_contours(region, colors)
             else:
-                self.set_coords(coords)
+                self.set_coords(region)
             
 
 

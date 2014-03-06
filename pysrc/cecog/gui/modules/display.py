@@ -405,8 +405,8 @@ class ObjectsFrame(QFrame):
         layout.addWidget(box_classify, 4, 0)
         self._box_classify = box_classify
 
-        box_show_contours = QCheckBox('on Mouse Hover', self)
-        box_show_contours.setChecked(False)
+        box_show_contours = QCheckBox('show all', self)
+        box_show_contours.setChecked(True)
         box_show_contours.toggled.connect(self._on_toggle_show_contours)
         box_show_contours.setEnabled(box_detect.checkState() == Qt.Checked)
         layout.addWidget(box_show_contours, 5, 0)

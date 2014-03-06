@@ -242,7 +242,8 @@ class ImageViewer(ZoomedQGraphicsView):
 
     def set_objects_by_crackcoords(self, coords):
         scene = self.scene()
-        for obj_id, crack in coords.iteritems():
+        for obj_id, obj in coords.iteritems():
+            crack = obj.crack_contour
             poly = QPolygonF([QPointF(*pos) for pos in crack])
             item = HoverPolygonItem(poly)
             item.setData(0, obj_id)
@@ -253,10 +254,13 @@ class ImageViewer(ZoomedQGraphicsView):
         
     def set_objects_by_crackcoords_with_colors(self, coords, colors):
         scene = self.scene()
-        for obj_id, crack in coords.iteritems():
+        for obj_id, obj in coords.iteritems():
+            crack = obj.crack_contour
             poly = QPolygonF([QPointF(*pos) for pos in crack])
             item = HoverPolygonItem(poly)
             item.setData(0, obj_id)
+            if obj.roisize is not None:
+                item.setToolTip('Object: %d\nSize: %d\nIntensity: %6.2f\nClass: %s (%3.2f)' % (obj_id, obj.roisize, obj.signal, obj.strClassName, obj.dctProb[obj.iLabel]))
             scene.addItem(item)
             self._objects.add(item)
             item.setPen(QColor(colors[obj_id]))
