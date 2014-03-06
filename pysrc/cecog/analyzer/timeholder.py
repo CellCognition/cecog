@@ -861,10 +861,11 @@ class TimeHolder(OrderedDict):
                     if channel_name != PrimaryChannel.PREFIX:
                         dset_cross_rel[idx + offset] = (idx, idx)
 
-    def serialize_tracking(self, graph):
-
+    def serialize_tracking(self, tes):
+        
         # export full graph structure to .dot file
         if self._hdf5_create and self._hdf5_include_tracking:
+            graph = tes.graph
             grp = self._grp_cur_position[self.HDF5_GRP_OBJECT]
 
             head_nodes = [node_id for node_id in graph.node_list()
