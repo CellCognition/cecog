@@ -1021,13 +1021,9 @@ class PositionAnalyzerForBrowser(PositionCore):
 
             self.setup_classifiers()
 
-
             for clf in self.classifiers.itervalues():
                 try:
                     cellanalyzer.classify_objects(clf)
-                    print 'classifying'
-                    for label, obj in cellanalyzer.get_channel('Primary').get_region('primary').iteritems():
-                        print label, obj.strHexColor
                 except KeyError:
                     pass
 

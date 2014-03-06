@@ -602,7 +602,7 @@ def load_image_container_from_settings(settings):
     scan_plates = dict((info[0], False) for info in infos)
     import_iter = imagecontainer.iter_import_from_settings(settings, scan_plates)
     for idx, info in enumerate(import_iter):
-        print idx, info
+        pass
 
     if len(imagecontainer.plates) > 0:
         plate = imagecontainer.plates[0]
