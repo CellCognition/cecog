@@ -31,6 +31,7 @@ from matplotlib import pyplot
 from cellh5 import CH5Const
 
 from cecog import ccore
+from cecog.colors import Colors
 from cecog.util.stopwatch import StopWatch
 from cecog.io.imagecontainer import Coordinate
 from cecog.io.imagecontainer import MetaImage
@@ -144,8 +145,6 @@ class TimeHolder(OrderedDict):
         self._object_coord_to_id = {}
         self._object_coord_to_idx = {}
 
-
-        # these are color channels
         channels = sorted(list(meta_data.channels))
         self._region_names = []
 
@@ -158,7 +157,6 @@ class TimeHolder(OrderedDict):
         self._channel_info = OrderedDict()
         self._region_infos = []
         region_names2 = []
-        # XXX hardcoded values
 
         for prefix in self.channel_regions.keys():
             for name in self.reginfo.names[prefix.lower()]:
@@ -293,7 +291,7 @@ class TimeHolder(OrderedDict):
                              ('description', '|S100'),
                              ('is_physical', bool),
                              ('voxel_size', 'float', 3),
-                             ])
+                             ('color', "|S7")])
 
         nr_channels = len(self._channel_info)
         global_channel_desc = self._grp_def[self.HDF5_GRP_IMAGE].create_dataset( \
@@ -301,7 +299,7 @@ class TimeHolder(OrderedDict):
 
         for i, (ch, col) in enumerate(self._channel_info.iteritems()):
             is_physical = bool(col is not None)
-            data = (ch, col, is_physical, (0, 0, 0))
+            data = (ch, col, is_physical, (0, 0, 0), Colors.channel_hexcolor(col))
             global_channel_desc[i] = data
 
         # global region description

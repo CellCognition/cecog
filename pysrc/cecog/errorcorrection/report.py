@@ -18,8 +18,9 @@ from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
 import vigra
+from cellh5 import CH5Const
 from cecog import plots
-from cecog.colors import hex2rgb
+from cecog.colors import Colors, hex2rgb
 from cecog.gallery.images import grey2rgb
 
 
@@ -331,6 +332,26 @@ class HmmReport(object):
         finally:
             pdf.close()
 
+    # XXX perhaps this method should be part of the cellh5 module
+    def _load_gallery(self, pos, objidx, region, size):
+        """Load a gallery image color coded  i.e. grey for
+        single channels, rgb colors for merged channels"""
+
+        path = 'definition/object/%s' %region
+        rtype = [t for t in pos.definitions.get_file_handle()[path].value[0]]
+
+        if rtype[1] == CH5Const.REGION:
+            img = grey2rgb(pos.get_gallery_image(objidx, region, size))
+        else:
+            # for merged channels we merged singe region to rgb
+            for reg in rtype[2:]:
+                color = pos.channel_color_by_region(reg)
+                try:
+                    img += grey2rgb(pos.get_gallery_image(objidx, reg, size), color)
+                except NameError:
+                    img = grey2rgb(pos.get_gallery_image(objidx, reg, size), color)
+        return img
+
 
     def image_gallery_png(self, ch5, ofile, n_galleries=50, rsfactor=0.4, gsize=100):
         """Resolution of png gallerie can be adjusted by the resampling factor
@@ -343,8 +364,7 @@ class HmmReport(object):
             image = np.array([])
             for objidx, track, coords in data.itertracks(n_galleries):
                 pos = ch5.get_position(coords.well, coords.position)
-                # want a color image
-                img = grey2rgb(pos.get_gallery_image(objidx, coords.region, gsize))
+                img = self._load_gallery(pos, objidx, coords.region, gsize)
                 img = self._draw_labels(img, track)
                 try:
                     image = np.vstack((image, img))

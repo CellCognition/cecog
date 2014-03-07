@@ -52,6 +52,7 @@ def hex2rgb(color, mpl=False):
     rgb = [int(i*fac) for i in hex2color(color)]
     return tuple(rgb)
 
+
 class Colors(object):
 
     red = '#FF0000'
