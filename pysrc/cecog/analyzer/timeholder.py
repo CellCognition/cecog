@@ -360,22 +360,21 @@ class TimeHolder(OrderedDict):
                                           prim_obj_name,
                                           obj_name)
 
-        # add basic relation for virtual channels
+        # relations for virtual channels
         for channel_name, combined, region_name in self._virtual_region_infos():
-            # basic virtual channel information
             obj_name = self._convert_region_name(channel_name, region_name, prefix='')
-            global_object_desc = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset(obj_name, (1,),
-                                                                                    global_object_dtype)
-            global_object_desc[0] = (obj_name, self.HDF5_OTYPE_REGION, '', '')
 
-            # relations
-            obj_name = self._convert_region_name(channel_name, region_name, prefix='')
-            obj_name = '%s___to___%s' % (prim_obj_name, obj_name)
-            global_object_desc = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset( \
-                obj_name, (1,), global_object_dtype)
-            global_object_desc[0] =  (obj_name, self.HDF5_OTYPE_RELATION,
-                                      prim_obj_name,
-                                      obj_name)
+            chreg = self.channel_regions[channel_name.title()]
+            dtype = [('name', 'S512'), ('type', 'S512')]
+            dtype += [('region%d' %i, 'S512') for i in range(len(chreg))]
+
+            dset = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset( \
+                obj_name, (1,), numpy.dtype(dtype))
+
+            data = (obj_name, self.HDF5_OTYPE_RELATION)
+            for ch, reg in chreg.iteritems():
+                data += (("%s__%s" %(ch, reg)).lower(), )
+            dset[0] = data
 
         # add special relation objects (events, tracking, etc)
         if self._hdf5_include_tracking:
@@ -394,15 +393,11 @@ class TimeHolder(OrderedDict):
         self._region_info.
         """
         chnames = [rinfo[0] for rinfo in self._region_infos]
+
         for channel_name, regions in self.channel_regions.iteritems():
             if channel_name.lower() not in chnames:
-                if len(regions) == 1 or isinstance(regions, basestring):
-                    regname = regions
-                else:
-                    regname = '-'.join(regions)
-                combined = "region__%s__%s" %(channel_name.lower(),
-                                              regname)
-                yield channel_name.lower(), combined, '-'.join(regions)
+                combined = "region__%s__%s" %(channel_name.lower(), regions.values())
+                yield channel_name.lower(), combined, '-'.join(regions.values())
 
         raise StopIteration
 

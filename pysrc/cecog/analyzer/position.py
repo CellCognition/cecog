@@ -346,10 +346,7 @@ class PositionCore(LoggerObject):
         chreg = OrderedDict()
         for chname in self.processing_channels:
             region = self._channel_regions(chname)
-            if isinstance(region, basestring):
-                chreg[chname] = region
-            else:
-                chreg[chname] = region.values()
+            chreg[chname] = region
         return chreg
 
 
@@ -565,7 +562,7 @@ class PositionAnalyzer(PositionCore):
                     else:
                         for feature in features[channel][region]:
                             mftrs.append("_".join((channel, region, feature)))
-                region_features[self._all_channel_regions[name]] = mftrs
+                region_features[self._all_channel_regions[name].values()] = mftrs
                 features[name] = region_features
 
         return features
