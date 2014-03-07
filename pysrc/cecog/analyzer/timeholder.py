@@ -155,19 +155,20 @@ class TimeHolder(OrderedDict):
         if len(self.reginfo.names['merged']):
             self._region_names.append('-'.join(self.reginfo.names['merged']))
 
-        self._channel_info = []
+        self._channel_info = OrderedDict()
         self._region_infos = []
         region_names2 = []
         # XXX hardcoded values
 
         for prefix in self.channel_regions.keys():
             for name in self.reginfo.names[prefix.lower()]:
-                if not isinstance(name, basestring):
-                    name = '-'.join(name)
-                self._channel_info.append((prefix.lower(),
-                                           settings.get('ObjectDetection', '%s_channelid' % prefix)))
-                self._region_infos.append((prefix.lower(), self._convert_region_name(prefix.lower(), name), name))
+                self._channel_info[prefix.lower()] = \
+                    settings.get('ObjectDetection', '%s_channelid' %prefix)
+                self._region_infos.append((prefix.lower(),
+                                           self._convert_region_name(prefix.lower(), name),
+                                           name))
                 region_names2.append((prefix.capitalize(), name))
+
         self._feature_to_idx = OrderedDict()
 
         self._hdf5_found = False
@@ -175,11 +176,17 @@ class TimeHolder(OrderedDict):
             if self._hdf5_check_file():
                 self._hdf5_found = True
                 if self._hdf5_prepare_reuse() > 0:
-                    # Error
                     self._hdf5_found = False
 
         self._regions_to_idx = dict([(n,i) for i, n in enumerate(self._region_names)])
-        self._channels_to_idx = OrderedDict([(n[0], i) for i, n in enumerate(self._channel_info)])
+
+        _cmap = dict()
+        self._channels_to_idx = OrderedDict()
+        for i, (k, v) in enumerate(self._channel_info.iteritems()):
+            if not _cmap.has_key(v):
+                _cmap[v] = len(_cmap)
+            self._channels_to_idx[k] = _cmap[v]
+
         self._regions_to_idx2 = OrderedDict([(n,i) for i, n in enumerate(region_names2)])
 
         if self._hdf5_create:
@@ -289,18 +296,13 @@ class TimeHolder(OrderedDict):
                              ])
 
         nr_channels = len(self._channel_info)
-
         global_channel_desc = self._grp_def[self.HDF5_GRP_IMAGE].create_dataset( \
             'channel', (nr_channels,), dtype)
 
-        for idx in self._regions_to_idx2.values():
-            # XXX hardcoded values
-            is_physical = bool(self._channel_info[idx][1] is not None)
-            data = (self._channel_info[idx][0],
-                    self._channel_info[idx][1],
-                    is_physical,
-                    (0, 0, 0))
-            global_channel_desc[idx] = data
+        for i, (ch, col) in enumerate(self._channel_info.iteritems()):
+            is_physical = bool(col is not None)
+            data = (ch, col, is_physical, (0, 0, 0))
+            global_channel_desc[i] = data
 
         # global region description
         dtype = numpy.dtype([('region_name', '|S50'), ('channel_idx', 'i')])
@@ -647,7 +649,7 @@ class TimeHolder(OrderedDict):
 
                 z = meta.dim_z
                 t = len(self._frames_to_idx)
-                nr_channels = len(self._channel_info)
+                ncolors = len(set(self._channels_to_idx.values()))
                 var_name = 'channel'
                 grp = self._grp_cur_position[self.HDF5_GRP_IMAGE]
                 if var_name in grp:
@@ -655,9 +657,9 @@ class TimeHolder(OrderedDict):
                 else:
                     var_images = \
                         grp.create_dataset(var_name,
-                                           (nr_channels, t, z, h, w),
+                                           (ncolors, t, z, h, w),
                                            'uint8',
-                                           chunks=chunk_size((nr_channels, t, z, h, w)),
+                                           chunks=chunk_size((ncolors, t, z, h, w)),
                                            compression=self._hdf5_compression)
                     var_images.attrs['valid'] = numpy.zeros(t)
 
