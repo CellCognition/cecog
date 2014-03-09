@@ -347,13 +347,16 @@ class HmmReport(object):
             for reg in rtype[2:]:
                 color = pos.channel_color_by_region(reg)
                 try:
-                    img += grey2rgb(pos.get_gallery_image(objidx, reg, size), color)
+                    img += grey2rgb(pos.get_gallery_image(objidx, reg, size),
+                                    color)
                 except NameError:
-                    img = grey2rgb(pos.get_gallery_image(objidx, reg, size), color)
+                    img = grey2rgb(pos.get_gallery_image(objidx, reg, size),
+                                   color)
         return img
 
 
-    def image_gallery_png(self, ch5, ofile, n_galleries=50, rsfactor=0.4, gsize=100):
+    def image_gallery_png(self, ch5, ofile, n_galleries=50, rsfactor=0.4,
+                          gsize=100):
         """Resolution of png gallerie can be adjusted by the resampling factor
         (default=0.4). File size is large"""
 

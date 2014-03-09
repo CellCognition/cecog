@@ -182,7 +182,7 @@ class PositionCore(LoggerObject):
         f_categories = list()
         f_cat_params = dict()
 
-        # unfortunateley some classes expecte empty list and dict
+        # unfortunateley some classes expect empty list and dict
         if not self.settings.get(SECTION_NAME_PROCESSING,
                              self._resolve_name(ch_name,
                                                 'featureextraction')):
@@ -454,19 +454,20 @@ class PositionAnalyzer(PositionCore):
             self.settings.set_section('Processing')
             if sttg.get2(self._resolve_name(p_channel, 'classification')):
                 if sttg("EventSelection", "unsupervised_event_selection"):
-                        nclusters = sttg("EventSelection", "num_clusters")
-                        self.classifiers[p_channel] = ClassDefinitionUnsup(nclusters)
+                    nclusters = sttg("EventSelection", "num_clusters")
+                    self.classifiers[p_channel] = ClassDefinitionUnsup(nclusters)
                 else:
-                        sttg.set_section('Classification')
-                        clf = CommonClassPredictor(
-                            clf_dir=sttg.get2(self._resolve_name(p_channel,
-                                                                 'classification_envpath')),
-                            name=p_channel,
-                            channels=self._channel_regions(p_channel),
-                            color_channel=c_channel)
-                        clf.importFromArff()
-                        clf.loadClassifier()
-                        self.classifiers[p_channel] = clf
+                    sttg.set_section('Classification')
+                    chreg = self._channel_regions(p_channel)
+                    clf = CommonClassPredictor(
+                        clf_dir=sttg.get2(self._resolve_name(p_channel,
+                                                             'classification_envpath')),
+                        name=p_channel,
+                        channels=chreg,
+                        color_channel=c_channel)
+                    clf.importFromArff()
+                    clf.loadClassifier()
+                    self.classifiers[p_channel] = clf
 
     @property
     def _transitions(self):
@@ -721,15 +722,15 @@ class PositionAnalyzer(PositionCore):
             if self.settings('Processing', 'eventselection') and \
                     self.settings('Processing', 'tracking'):
 
-                evchannel = self.settings('EventSelection', 'eventchannel')
-                region = self.classifiers[evchannel].regions
-                if evchannel != PrimaryChannel.NAME or \
-                     region != self.settings("Tracking", "region"):
-                    graph = self._tracker.clone_graph(self.timeholder,
-                                                      evchannel,
-                                                      region)
-                else:
-                    graph = self._tracker.graph
+                graph = self._tracker.graph
+                if self.settings('EventSelection', 'supervised_event_selection'):
+                    evchannel = self.settings('EventSelection', 'eventchannel')
+                    region = self.classifiers[evchannel].regions
+                    if evchannel != PrimaryChannel.NAME or \
+                            region != self.settings("Tracking", "region"):
+                        graph = self._tracker.clone_graph(self.timeholder,
+                                                          evchannel,
+                                                          region)
 
                 self._tes = self.setup_eventselection(graph)
                 self.logger.debug("--- visitor start")
@@ -925,8 +926,8 @@ class PositionAnalyzer(PositionCore):
             for obj_id, obj in region.iteritems():
                 coords[obj_id] = obj.crack_contour
             self._myhack.set_coords(coords)
-            
-            
+
+
 class PositionAnalyzerForBrowser(PositionCore):
     @property
     def _hdf_options(self):
@@ -943,10 +944,10 @@ class PositionAnalyzerForBrowser(PositionCore):
                   "hdf5_include_classification": False}
 
         return h5opts
-    
+
     def __init__(self, *args, **kw):
         super(PositionAnalyzerForBrowser, self).__init__(*args, **kw)
-        
+
     def setup_classifiers(self):
         sttg = self.settings
         # processing channel, color channel
@@ -965,7 +966,7 @@ class PositionAnalyzerForBrowser(PositionCore):
                 clf.importFromArff()
                 clf.loadClassifier()
                 self.classifiers[p_channel] = clf
-                
+
     def __call__(self):
 
         self.timeholder = TimeHolder(self.position, self._all_channel_regions,
@@ -988,8 +989,8 @@ class PositionAnalyzerForBrowser(PositionCore):
         self._analyze(ca)
         return ca
 
-        
-    
+
+
     def _analyze(self, cellanalyzer):
         n_images = 0
         stopwatch = StopWatch(start=True)
@@ -1028,11 +1029,7 @@ class PositionAnalyzerForBrowser(PositionCore):
                 except KeyError:
                     pass
 
-         
-                
-
-
         return n_images
-    
+
     def clear(self):
         print 'Clean up'

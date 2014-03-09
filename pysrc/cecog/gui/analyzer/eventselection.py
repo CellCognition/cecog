@@ -27,20 +27,21 @@ class EventSelectionFrame(BaseProcessorFrame):
         self.register_control_button(self.PROCESS_SYNCING, AnalyzerThread, \
                               ('Test event selection', 'Stop event selection'))
 
-        self.add_input('eventchannel')
+
         self.add_group(None,
                        [('backwardrange', (0,0,1,1)),
                         ('forwardrange', (0,1,1,1)),
                         ('duration_unit', (0,2,1,1)),
                         ], link='eventselection',
                        label='Event selection')
-
+        self.add_line()
         self.add_group('supervised_event_selection',
                        [('labeltransitions', (0,0,1,1)),
+                        ('eventchannel', (0,1,1,1)),
                         ('backwardlabels', (1,0,1,1)),
                         ('forwardlabels', (1,1,1,1)),
-                        ('backwardcheck', (3,0,1,1)),
-                        ('forwardcheck', (3,1,1,1)),
+                        ('backwardcheck', (2,0,1,1)),
+                        ('forwardcheck', (2,1,1,1)),
                        ], layout='grid')
 
         self.add_group('unsupervised_event_selection',
