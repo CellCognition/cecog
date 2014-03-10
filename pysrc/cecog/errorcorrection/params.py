@@ -117,7 +117,7 @@ class ECParams(object):
 
         hmmc = None
         if self.constrain_graph:
-            # __init of HMMConstraint perform a xsd schema validation
+            # __init__ of HMMConstraint performs a xsd schema validation
             # it is essential to do it here, before all the data is loaded
             try:
                 hmmc = estimator.HMMConstraint(cfile)
