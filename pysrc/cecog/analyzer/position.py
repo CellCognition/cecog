@@ -453,12 +453,13 @@ class PositionAnalyzer(PositionCore):
         for p_channel, c_channel in self.ch_mapping.iteritems():
             self.settings.set_section('Processing')
             if sttg.get2(self._resolve_name(p_channel, 'classification')):
+                chreg = self._channel_regions(p_channel)
                 if sttg("EventSelection", "unsupervised_event_selection"):
                     nclusters = sttg("EventSelection", "num_clusters")
-                    self.classifiers[p_channel] = ClassDefinitionUnsup(nclusters)
+                    self.classifiers[p_channel] = ClassDefinitionUnsup( \
+                        nclusters, chreg)
                 else:
                     sttg.set_section('Classification')
-                    chreg = self._channel_regions(p_channel)
                     clf = CommonClassPredictor(
                         clf_dir=sttg.get2(self._resolve_name(p_channel,
                                                              'classification_envpath')),
@@ -722,15 +723,17 @@ class PositionAnalyzer(PositionCore):
             if self.settings('Processing', 'eventselection') and \
                     self.settings('Processing', 'tracking'):
 
-                graph = self._tracker.graph
-                if self.settings('EventSelection', 'supervised_event_selection'):
-                    evchannel = self.settings('EventSelection', 'eventchannel')
-                    region = self.classifiers[evchannel].regions
-                    if evchannel != PrimaryChannel.NAME or \
-                            region != self.settings("Tracking", "region"):
-                        graph = self._tracker.clone_graph(self.timeholder,
-                                                          evchannel,
-                                                          region)
+                evchannel = self.settings('EventSelection', 'eventchannel')
+                region = self.classifiers[evchannel].regions
+                if self.settings('EventSelection', 'unsupervised_event_selection'):
+                    graph = self._tracker.graph
+                elif  evchannel != PrimaryChannel.NAME or \
+                        region != self.settings("Tracking", "region"):
+                    graph = self._tracker.clone_graph(self.timeholder,
+                                                      evchannel,
+                                                      region)
+                else:
+                    graph = self._tracker.graph
 
                 self._tes = self.setup_eventselection(graph)
                 self.logger.debug("--- visitor start")
@@ -966,6 +969,7 @@ class PositionAnalyzerForBrowser(PositionCore):
                 clf.importFromArff()
                 clf.loadClassifier()
                 self.classifiers[p_channel] = clf
+
 
     def __call__(self):
 

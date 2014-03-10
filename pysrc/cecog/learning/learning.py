@@ -44,8 +44,10 @@ class LearnerFiles(object):
 
 class ClassDefinitionCore(object):
 
-    def __init__(self, *args, **kw):
-        self.feature_names = None
+    def __init__(self, channels=None, feature_names=None):
+        super(ClassDefinitionCore, self).__init__()
+        self.feature_names = feature_names
+        self.channels = channels
         self.hexcolors = dict()
         self.class_labels = dict()
         self.class_names = OrderedDict()
@@ -60,6 +62,13 @@ class ClassDefinitionCore(object):
         corretly mapped to the colors"""
         return mpl.colors.Normalize(vmin=0,
                                     vmax=max(self.class_names.keys()))
+
+    @property
+    def regions(self):
+        if len(self.channels) == 1:
+            return self.channels.values()[0]
+        else:
+            return self.channels.values()
 
 
 class ClassDefinitionUnsup(ClassDefinitionCore):
