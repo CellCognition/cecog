@@ -119,7 +119,11 @@ class ECParams(object):
         if self.constrain_graph:
             # __init of HMMConstraint perform a xsd schema validation
             # it is essential to do it here, before all the data is loaded
-            hmmc = estimator.HMMConstraint(cfile)
+            try:
+                hmmc = estimator.HMMConstraint(cfile)
+            except Exception as e:
+                raise IOError("Could not load file (%s), %s"
+                              %(cfile, str(e)))
         return hmmc
 
     def _regionname(self, settings, channel):
