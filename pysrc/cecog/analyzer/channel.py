@@ -31,7 +31,8 @@ from cecog.analyzer.object import ImageObject, ObjectHolder, Orientation
 
 from cecog.util.logger import LoggerObject
 from cecog.plugin.metamanager import MetaPluginManager
-from cecog.util.ctuple import COrderedDict, CTuple
+from cecog.util.ctuple import COrderedDict
+
 
 class ChannelCore(LoggerObject):
 
@@ -91,7 +92,6 @@ class ChannelCore(LoggerObject):
             if self.plugin_mgr.number_loaded_plugins() < 1:
                 raise RuntimeError(("You need to load at least one segmentation"
                                     " plugin for channel '%s'" %self.NAME))
-
         except KeyError:
             self.plugin_mgr = None
 
@@ -385,6 +385,10 @@ class MergedChannel(ChannelCore):
     @merge_regions.setter
     def merge_regions(self, regions):
         """Set channels and regions to concatenate."""
+
+        reginfo = MetaPluginManager().region_info
+        reginfo.names[self.NAME.lower()] = [regions.values()]
+
         self._merge_regions.update(regions)
 
     @merge_regions.deleter

@@ -151,8 +151,9 @@ class TimeHolder(OrderedDict):
         self._region_names = self.reginfo.names['primary'] + \
             self.reginfo.names['secondary'] + \
             self.reginfo.names['tertiary']
+
         if len(self.reginfo.names['merged']):
-            self._region_names.append('-'.join(self.reginfo.names['merged']))
+            self._region_names.append(str(self.reginfo.names['merged']))
 
         self._channel_info = OrderedDict()
         self._region_infos = []

@@ -414,7 +414,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
                     'Please click "Scan input directory" in General.')
         elif self._browser is None:
             try:
-                browser = Browser(self._settings, self._imagecontainer)
+                browser = Browser(self._settings, self._imagecontainer, self)
                 browser.show()
                 browser.raise_()
                 browser.setFocus()

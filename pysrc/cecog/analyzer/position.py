@@ -713,7 +713,7 @@ class PositionAnalyzer(PositionCore):
                           create_images = True,
                           binning_factor = 1,
                           detect_objects = self.settings('Processing',
-                                                             'objectdetection'))
+                                                         'objectdetection'))
 
         self.export_features = self.define_exp_features()
         n_images = self._analyze(ca)
@@ -932,6 +932,7 @@ class PositionAnalyzer(PositionCore):
 
 
 class PositionAnalyzerForBrowser(PositionCore):
+
     @property
     def _hdf_options(self):
         self.settings.set_section('Output')

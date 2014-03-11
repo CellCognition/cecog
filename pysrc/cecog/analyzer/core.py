@@ -27,7 +27,6 @@ from cecog.util.logger import LoggerObject
 from cecog.util.util import makedirs
 
 
-
 # XXX - fix class names
 class AnalyzerBase(LoggerObject):
 
@@ -216,11 +215,12 @@ class AnalyzerCore(AnalyzerBase):
             finally:
                 analyzer.clear()
         return hdf5_links
-    
+
+
 class AnalyzerBrowser(AnalyzerCore):
     def __init__(self, plate, settings, imagecontainer):
         super(AnalyzerBrowser, self).__init__(plate, settings, imagecontainer)
-        
+
     def processPositions(self):
         job_args = []
         pos = self.positions[0]
