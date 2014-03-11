@@ -25,7 +25,7 @@ from PyQt4.Qt import *
 from qimage2ndarray import array2qimage
 
 
-class ZoomedQGraphicsView(QGraphicsView):  
+class ZoomedQGraphicsView(QGraphicsView):
     def wheelEvent(self, event):
         keys = QApplication.keyboardModifiers()
         k_ctrl = (keys == Qt.ControlModifier)
@@ -39,7 +39,7 @@ class ZoomedQGraphicsView(QGraphicsView):
             else:
                 scaleFactor = 0.9
             self.scale(scaleFactor, scaleFactor)
-            
+
             mousePosAfterScale = self.mapToScene(event.pos())
             offset = self.mousePos - mousePosAfterScale
             newGrviewCenter = grviewCenter + offset
@@ -231,7 +231,7 @@ class ImageViewer(ZoomedQGraphicsView):
     def set_show_mouseover(self, state=True):
         self.show_mouseover = state
         self._update_contours()
-  
+
 
     def _update_contours(self):
         for item in self._objects:
@@ -251,7 +251,7 @@ class ImageViewer(ZoomedQGraphicsView):
             scene.addItem(item)
             self._objects.add(item)
         self._update_contours()
-        
+
     def set_objects_by_crackcoords_with_colors(self, coords):
         scene = self.scene()
         for obj_id, obj in coords.iteritems():
@@ -260,7 +260,10 @@ class ImageViewer(ZoomedQGraphicsView):
             item = HoverPolygonItem(poly)
             item.setData(0, obj_id)
             if obj.roisize is not None:
-                item.setToolTip('Object: %d\nSize: %d\nIntensity: %6.2f\nClass: %s (%3.2f)' % (obj_id, obj.roisize, obj.signal, obj.strClassName, obj.dctProb[obj.iLabel]))
+                item.setToolTip(('Object: %d\nSize: %d\nIntensity: '
+                                 '%6.2f\nClass: %s (%3.2f)')
+                                %(obj_id, obj.roisize, obj.signal,
+                                  obj.strClassName, obj.dctProb[obj.iLabel]))
             scene.addItem(item)
             self._objects.add(item)
             item.setPen(QColor(obj.strHexColor))

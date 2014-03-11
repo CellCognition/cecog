@@ -29,22 +29,14 @@ from PyQt4.Qt import *
 from cecog.gui.imageviewer import ImageViewer
 from cecog.gui.modules.module import ModuleManager
 from cecog.gui.analyzer import _ProcessorMixin
-
 from cecog.analyzer.core import AnalyzerBrowser
 from cecog.analyzer.channel import PrimaryChannel
-
-
 from cecog.io.imagecontainer import Coordinate
-
 from cecog.gui.modules.navigation import NavigationModule
 from cecog.gui.modules.display import DisplayModule
 from cecog.gui.modules.annotation import AnnotationModule
-
-
 from cecog.io.imagecontainer import ImageContainer
 from cecog.gui.config import GuiConfigSettings
-
-
 from cecog.plugin.metamanager import MetaPluginManager
 
 
@@ -395,12 +387,15 @@ class Browser(QMainWindow):
             settings.set('General', 'process_tertiary', True)
 
         settings.set('General', 'rendering', {})
-        analyzer = AnalyzerBrowser(self.coordinate.plate, settings, self._imagecontainer)
+        analyzer = AnalyzerBrowser(self.coordinate.plate,
+                                   settings,
+                                   self._imagecontainer)
 
         res = None
         try:
             QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
             res = analyzer.processPositions()
+            self.render_browser(res)
         except Exception, e:
             import traceback
             from cecog.gui.util import exception
@@ -410,7 +405,6 @@ class Browser(QMainWindow):
         finally:
             QApplication.restoreOverrideCursor()
 
-        self.render_browser(res)
         QApplication.setOverrideCursor(QCursor(Qt.ArrowCursor))
         return res
 
@@ -424,7 +418,11 @@ class Browser(QMainWindow):
                 self.show_image(d)
 
         channel_name, region_name = self._object_region
-        channel = cellanalyzer.get_channel(channel_name)
+        try:
+            channel = cellanalyzer.get_channel(channel_name)
+        except KeyError:
+            raise KeyError(("Channel %s may be turned off. "
+                            "See section General->Channels" %channel_name))
 
         if channel.has_region(region_name):
             region = channel.get_region(region_name)
@@ -455,6 +453,9 @@ class Browser(QMainWindow):
         self.on_refresh()
 
     def on_object_color_changed(self, channel, region):
+        print channel, region
+        print type(channel, region)
+
         self._object_region = channel, region
         self.image_viewer._update_contours()
 
