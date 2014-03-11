@@ -453,9 +453,6 @@ class Browser(QMainWindow):
         self.on_refresh()
 
     def on_object_color_changed(self, channel, region):
-        print channel, region
-        print type(channel, region)
-
         self._object_region = channel, region
         self.image_viewer._update_contours()
 

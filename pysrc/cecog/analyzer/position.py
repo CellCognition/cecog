@@ -1001,7 +1001,7 @@ class PositionAnalyzerForBrowser(PositionCore):
         stopwatch = StopWatch(start=True)
         crd = Coordinate(self.plate_id, self.position,
                          self._frames, list(set(self.ch_mapping.values())))
-        print crd
+  #      print crd
 
         for frame, channels in self._imagecontainer( \
             crd, interrupt_channel=True, interrupt_zslice=True):
@@ -1028,13 +1028,13 @@ class PositionAnalyzerForBrowser(PositionCore):
             for clf in self.classifiers.itervalues():
                 try:
                     cellanalyzer.classify_objects(clf)
-                    print 'classifying'
-                    for label, obj in cellanalyzer.get_channel('Primary').get_region('primary').iteritems():
-                        print label, obj.strHexColor
+                    #print 'classifying'
+                    #for label, obj in cellanalyzer.get_channel('Primary').get_region('primary').iteritems():
+                    #    print label, obj.strHexColor
                 except KeyError:
                     pass
 
         return n_images
 
-    def clear(self):
-        print 'Clean up'
+    # def clear(self):
+    #     print 'Clean up'
