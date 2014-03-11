@@ -154,7 +154,6 @@ class ClusterDisplay(QGroupBox):
         self._imagecontainer = imagecontainer
 
     def _on_jobid_entered(self, txt):
-        print txt
         self._jobid = str(txt)
 
     @pyqtSlot()
