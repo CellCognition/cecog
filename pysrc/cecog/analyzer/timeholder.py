@@ -586,6 +586,8 @@ class TimeHolder(OrderedDict):
 
                 frame_idx = self._frames_to_idx[self._iCurrentT]
                 for region_name in self.reginfo.names[channel_name]:
+                    if channel.is_virtual():
+                        continue
                     idx = self._regions_to_idx2[(channel.NAME, region_name)]
                     container = channel.containers[region_name]
                     array = container.img_labels.toArray(copy=False)
