@@ -72,10 +72,10 @@ class GalleryDecorationPlotter(EventPlotterPdf):
         b_ = int(event_re.groupdict()['branch'])
 
         gallery_path = os.path.join(path_in, pos_name, 'gallery', 'primary')
-        prim_gallery_file = os.path.join(gallery_path, 'P%s__T%05d__O%04d__B%02d.jpg' % (pos_name, t_, o_ , b_))
+        prim_gallery_file = os.path.join(gallery_path, 'P%s__T%05d__O%04d__B%02d.png' % (pos_name, t_, o_ , b_))
 
         gallery_path = os.path.join(path_in, pos_name, 'gallery', 'secondary')
-        sec_gallery_file = os.path.join(gallery_path, 'P%s__T%05d__O%04d__B%02d.jpg' % (pos_name, t_, o_ , b_))
+        sec_gallery_file = os.path.join(gallery_path, 'P%s__T%05d__O%04d__B%02d.png' % (pos_name, t_, o_ , b_))
 
         if os.path.exists(prim_gallery_file):
             prim_img = readImage(prim_gallery_file)[:,:,0].view(numpy.ndarray).astype(numpy.uint8).swapaxes(1,0)
@@ -136,7 +136,6 @@ class PostProcessingAnalysis(object):
         self.plate = None
 
     def _readScreen(self):
-        #self.plate = Plate.load(self.path_in, self.plate_name)
         if self.plate is None:
             self.plate = Plate(self.plate_name, self.path_in, self.mapping_file)
 
@@ -345,6 +344,7 @@ class IBBAnalysis(PostProcessingAnalysis):
         try:
             self._readScreen()
             grouped_positions = self.plate.get_events()
+
             for group_name in grouped_positions:
                 if self.single_plot:
                     self._plotter[group_name] = GalleryDecorationPlotter((15, 5))
@@ -356,6 +356,7 @@ class IBBAnalysis(PostProcessingAnalysis):
 
     def _run(self, plate_id, grouped_positions):
         result = {}
+
         for group_name, pos_list in grouped_positions.items():
             result[group_name] = {}
             result[group_name]['positions'] = []
@@ -455,6 +456,7 @@ class IBBAnalysis(PostProcessingAnalysis):
         dtype = [(n, 'float') for n in names]
         fnan = FormatFloatNaN()
         formatd = dict([(n, fnan) for n in names])
+
         data_t = numpy.array(map(None, *data), dtype=dtype)
         mpl.mlab.rec2csv(data_t, filename, formatd=formatd, delimiter='\t')
 
@@ -699,7 +701,7 @@ class IBBAnalysis(PostProcessingAnalysis):
         data = []
         names = []
         bar_labels = ('valid', 'signal', 'split', 'ibb_onset', 'nebd_onset', 'prophase_onset')
-        bar_colors = map(lambda x:rgb2hex(x), [[int(x*255) for x in pyplot.cm.Greens(2)[0:3]],] +
+        bar_colors = map(lambda x:rgb2hex(x, mpl=False), [[int(x*255) for x in pyplot.cm.Greens(2)[0:3]],] +
                                                   [tuple(x) for x in (pyplot.cm.RdBu(range(0,256,62))*255)[:,:3].astype('uint8')[:,:3]]
                           )
 
@@ -751,7 +753,7 @@ class IBBAnalysis(PostProcessingAnalysis):
         ax1.set_title('IBB Analysis %s' % self.PLOT_LABELS[id_])
         ax1.bar(range(len(data_list)), map(numpy.mean, numpy.array(data_list)),
                 yerr=map(numpy.std, numpy.array(data_list)),
-                color=map(lambda x:rgb2hex(x), colors),
+                color=map(lambda x:rgb2hex(x, mpl=False), colors),
                 ecolor='k',
                 align='center',
                 )
@@ -790,7 +792,7 @@ class IBBAnalysis(PostProcessingAnalysis):
         for c, d in zip(colors, data_list):
             if len(d) > 0:
                 b = bp['boxes'][i]
-                pyplot.setp(b, facecolor=rgb2hex(c))
+                pyplot.setp(b, facecolor=rgb2hex(c, mpl=False))
                 i += 1
 
         #ax1.set_xticks([x+0.8 for x in range(len(data_list))])
@@ -811,19 +813,21 @@ class IBBAnalysis(PostProcessingAnalysis):
         fig.savefig(os.path.join(self.path_out, '_timing_ibb_events_%s_box.pdf' % id_), format='pdf')
 
 class Position(dict):
+
     def __init__(self, plate,
-                        position,
-                        well,
-                        site,
-                        row,
-                        column,
-                        gene_symbol,
-                        oligoid,
-                        group):
+                 position,
+                 well,
+                 site,
+                 row,
+                 column,
+                 gene_symbol,
+                 oligoid,
+                 group):
+
         dict.__init__(self)
         self.plate = plate
         if isinstance(position, int):
-            position = '%04d' % position
+            position = '%03d' % position
         self.position = str(position)
         self.well = str(well)
         self.site = site
@@ -840,12 +844,15 @@ class Position(dict):
     def __repr__(self):
         return "p %s, o %s, g %s, g %s" % ( self.position, self.oligoid, self.gene_symbol, self.group)
 
+
 class Plate(object):
+
     GROUP_BY = enum('POS', "OLIGO", "GENE", "GROUP")
 
     POSITION_REGEXP = re.compile(r"^[A-Z]\d{1,5}_\d{1,5}$|^\d{1,6}$")
-    EVENT_REGEXP = re.compile(r"features_P(?P<pos>\d+|[A-Z]\d+_\d+)_T(?P<time>\d+)"
-                               "_O(?P<obj>\d+)_B(?P<branch>\d+)_C(?P<channel>.+?)_R(?P<region>.*)\.txt")
+    EVENT_REGEXP = re.compile(r"features__P(?P<pos>\d+|[A-Z]\d+_\d+)__T(?P<time>\d+)"
+                               "__O(?P<obj>\d+)__B(?P<branch>\d+)__C(?P<channel>.+?)__R(?P<region>.*)\.txt")
+
     def __init__(self, plate_id, path_in, mapping_file, group_by=0):
         self._logger =  self._logger = logging.getLogger(self.__class__.__name__)
         self.class_label_selector = 'class__label'
@@ -855,7 +862,6 @@ class Plate(object):
         self._positions = {}
         self.group_by = group_by
         self.readEvents()
-
 
     def __str__(self):
         res = ""
@@ -885,6 +891,7 @@ class Plate(object):
         self.pos_list = self._get_positions_dirs()
 
         fmt = "%%0%dd" %(len(self.pos_list[0]))
+
         for pos_idx, pos_name in enumerate(self.mapping['position']):
             if isinstance(pos_name, int):
                 pos_name = fmt %pos_name
@@ -994,6 +1001,7 @@ class Plate(object):
 
     def get_events(self):
         res = {}
+
         for pos in self._positions.values():
             if self.group_by == self.GROUP_BY.POS:
                 group_key = pos.position
