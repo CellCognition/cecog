@@ -114,7 +114,7 @@ class EventExporter(object):
 
         for tracks in visitor_data.itervalues():
             for startid, event_data in tracks.iteritems():
-                if startid.startswith('_'):
+                if startid in ('full_tracks', '_current_branch'):
                     continue
                 for chname, region in channel_regions.iteritems():
                     for region_name, feature_names in region.iteritems():
