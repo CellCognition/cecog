@@ -107,7 +107,7 @@ class EventSelectionCore(LoggerObject):
         """Return the a list of the object centers for each track."""
         centers = dict()
         for startid, eventdata in self.iterevents():
-            if startid in ['_full', '_current']:
+            if startid in ['full_tracks', '_current']:
                 continue
             data = list()
             for nodeids in zip(*eventdata['tracks']):
@@ -131,7 +131,7 @@ class EventSelectionCore(LoggerObject):
                                                           start_ids))
         visited_nodes = defaultdict(lambda: False)
         for start_id in start_ids:
-            self.visitor_data[start_id] = {'_current': 0, '_full' : [[]]}
+            self.visitor_data[start_id] = {'_current': 0, 'full_tracks' : [[]]}
             self.logger.debug("root ID %s" %start_id)
             try:
                 self._linearize(start_id, self.visitor_data[start_id], visited_nodes)
@@ -145,8 +145,8 @@ class EventSelectionCore(LoggerObject):
     def _linearize(self, nodeid, results, visited_nodes, level=0):
         # record the full trajectory in a liniearized way
         base = results['_current']
-        results['_full'][base].append(nodeid)
-        depth = len(results['_full'][base])
+        results['full_tracks'][base].append(nodeid)
+        depth = len(results['full_tracks'][base])
 
         for i, out_edgeid in enumerate(self.graph.out_arcs(nodeid)):
             tailid = self.graph.tail(out_edgeid)
@@ -155,7 +155,7 @@ class EventSelectionCore(LoggerObject):
 
                 # make a copy of the list for the new branch
                 if i > 0:
-                    results['_full'].append(results['_full'][base][:depth])
+                    results['full_tracks'].append(results['_full'][base][:depth])
                     results['_current'] += 1
                 self._linearize(tailid, results, visited_nodes, level=level+1)
 
