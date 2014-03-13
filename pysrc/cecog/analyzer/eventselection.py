@@ -118,6 +118,13 @@ class EventSelectionCore(LoggerObject):
         return centers
 
     def find_events(self):
+        try:
+            import pydevd
+            pydevd.connected = True
+            pydevd.settrace(suspend=False)
+            print 'Thread enabled interactive eclipse debuging...'
+        except:
+            pass
         start_ids = self.start_nodes()
         self.logger.debug("tracking: start nodes %d %s" %(len(start_ids),
                                                           start_ids))
@@ -209,7 +216,7 @@ class EventSelectionCore(LoggerObject):
                 # make a copy of the list for the new branch
                 if i > 0:
                     results['_full'].append(results['_full'][base][:depth])
-                    results['_current'] += i
+                    results['_current'] += 1
                 self._forward_visitor(tailid, results, visited_nodes, level=level+1)
 
     def _forward_check(self, *args, **kw):
