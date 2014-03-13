@@ -649,6 +649,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
 
     @QtCore.pyqtSlot()
     def _on_file_open(self):
+
         if self._check_settings_saved() != QMessageBox.Cancel:
             home = ""
             if not self._settings_filename is None:
@@ -658,6 +659,9 @@ class CecogAnalyzer(QtGui.QMainWindow):
                     home = settings_filename
                 filename = QtGui.QFileDialog.getOpenFileName( \
                     self, 'Open config file', home, ';;'.join(self.NAME_FILTERS))
+            if not bool(filename):
+                return
+
             try:
                 self._read_settings(filename)
                 if self._settings.was_old_file_format():
