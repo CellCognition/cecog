@@ -21,7 +21,7 @@ from os.path import join, isdir, splitext, isfile
 from collections import OrderedDict
 
 from matplotlib.colors import ListedColormap, rgb2hex
-from matplotlib import mpl
+import matplotlib as mpl
 
 import numpy as np
 import svm
