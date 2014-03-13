@@ -14,7 +14,6 @@ __all__ = ['get_data_files', 'INCLUDES', 'EXCLUDES', 'CC_INCLUDES',
            'TARGET_BUNDLE', 'TARGET_SYS']
 
 import os
-import sys
 import glob
 import numpy.distutils
 import matplotlib
@@ -23,15 +22,6 @@ from os.path import basename, join, abspath
 TARGET_BUNDLE = 'resources'
 TARGET_SYS = join('share', 'cellcognition', 'resources')
 RESOURCE_DIR = 'resources'
-
-_rfiles = ['graph_template.txt', 'hmm.R', 'hmm_report.R', 'run_hmm.R']
-
-# XXX special casing
-if 'rsrc' in os.listdir(os.curdir):
-    _rfiles = [join('rsrc', 'hmm', _rf) for _rf in _rfiles]
-else:
-    _rfiles = [join(os.pardir,
-                    'rsrc', 'hmm', _rf) for _rf in _rfiles]
 
 
 _rsc = ('config.ini', 'naming_schemas.ini', 'path_mappings.txt', 'font12.png')
@@ -73,7 +63,6 @@ def get_data_files(target_dir=TARGET_BUNDLE, mpl_data=True):
 
     paltarget = join(target_dir, 'palettes', 'zeiss')
     dfiles.append((target_dir, _rsc))
-    dfiles.append((join(target_dir, 'rsrc', 'hmm'), _rfiles))
     dfiles.append((paltarget, glob.glob(join(abspath(_palettes), '*.zip'))))
     # schema files
     dfiles.append((join(target_dir, 'schemas'),

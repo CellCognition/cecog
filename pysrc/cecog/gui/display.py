@@ -101,7 +101,8 @@ class TraitDisplayMixin(QFrame):
         frame.layout().addWidget(label, frame._input_cnt, 0, 1, 2, align)
         frame._input_cnt += 1
 
-    def add_group(self, trait_name, items, layout="grid", link=None, label=None):
+    def add_group(self, trait_name, items, layout="grid", link=None, label=None,
+                  sublinks=True):
         frame = self._get_frame(self._tab_name)
         frame_layout = frame.layout()
 
@@ -143,9 +144,9 @@ class TraitDisplayMixin(QFrame):
                     #QGridLayout(w_group2)
                     QBoxLayout(QBoxLayout.LeftToRight, w_group2)
                     self.add_input(info[0][0], parent=w_group2, grid=(0,0,1,1),
-                                   alignment=alignment)
+                                   alignment=alignment, link=sublinks)
                     self.add_input(info[0][1], parent=w_group2, grid=(0,1,1,1),
-                                   alignment=alignment)
+                                   alignment=alignment, link=sublinks)
                     w_group.layout().addWidget(w_group2, w_group._input_cnt,
                                                1, 1, 1)
                 else:
@@ -164,7 +165,7 @@ class TraitDisplayMixin(QFrame):
                         if len(info) >= 4:
                             last = info[3]
                         self.add_input(trait_name2, parent=w_group, grid=grid,
-                                       alignment=alignment, last=last)
+                                       alignment=alignment, last=last, link=sublinks)
 
             frame_layout.addWidget(w_group, frame._input_cnt, 1, 1, 1)
 
@@ -180,7 +181,7 @@ class TraitDisplayMixin(QFrame):
             link = label
         w_label = QLabel(parent)
 
-        if self._has_label_link:
+        if self._has_label_link and link is not False:
             w_label.setTextFormat(Qt.AutoText)
             w_label.setStyleSheet(("*:hover { border:none; background: "
                                    "#e8ff66; text-decoration: underline;}"))
@@ -197,7 +198,7 @@ class TraitDisplayMixin(QFrame):
         return w_label
 
     def add_input(self, trait_name, parent=None, grid=None, alignment=None,
-                  last=False):
+                  last=False, link=True):
         if parent is None:
             parent = self._get_frame(self._tab_name)
 
@@ -207,7 +208,10 @@ class TraitDisplayMixin(QFrame):
         trait = self._get_trait(trait_name)
 
         label = trait.label
-        w_label = self._create_label(parent, label, link=trait_name)
+        if link:
+            w_label = self._create_label(parent, label, link=trait_name)
+        else:
+            w_label = self._create_label(parent, label, link=False)
         w_button = None
 
         # read value from settings-instance

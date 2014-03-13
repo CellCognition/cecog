@@ -31,6 +31,7 @@ from matplotlib import pyplot
 from cellh5 import CH5Const
 
 from cecog import ccore
+from cecog.colors import Colors
 from cecog.util.stopwatch import StopWatch
 from cecog.io.imagecontainer import Coordinate
 from cecog.io.imagecontainer import MetaImage
@@ -144,30 +145,29 @@ class TimeHolder(OrderedDict):
         self._object_coord_to_id = {}
         self._object_coord_to_idx = {}
 
-
-        # these are color channels
         channels = sorted(list(meta_data.channels))
         self._region_names = []
 
         self._region_names = self.reginfo.names['primary'] + \
             self.reginfo.names['secondary'] + \
             self.reginfo.names['tertiary']
-        if len(self.reginfo.names['merged']):
-            self._region_names.append('-'.join(self.reginfo.names['merged']))
 
-        self._channel_info = []
+        if len(self.reginfo.names['merged']):
+            self._region_names.append(str(self.reginfo.names['merged']))
+
+        self._channel_info = OrderedDict()
         self._region_infos = []
         region_names2 = []
-        # XXX hardcoded values
 
         for prefix in self.channel_regions.keys():
             for name in self.reginfo.names[prefix.lower()]:
-                if not isinstance(name, basestring):
-                    name = '-'.join(name)
-                self._channel_info.append((prefix.lower(),
-                                           settings.get('ObjectDetection', '%s_channelid' % prefix)))
-                self._region_infos.append((prefix.lower(), self._convert_region_name(prefix.lower(), name), name))
+                self._channel_info[prefix.lower()] = \
+                    settings.get('ObjectDetection', '%s_channelid' %prefix)
+                self._region_infos.append((prefix.lower(),
+                                           self._convert_region_name(prefix.lower(), name),
+                                           name))
                 region_names2.append((prefix.capitalize(), name))
+
         self._feature_to_idx = OrderedDict()
 
         self._hdf5_found = False
@@ -175,11 +175,17 @@ class TimeHolder(OrderedDict):
             if self._hdf5_check_file():
                 self._hdf5_found = True
                 if self._hdf5_prepare_reuse() > 0:
-                    # Error
                     self._hdf5_found = False
 
         self._regions_to_idx = dict([(n,i) for i, n in enumerate(self._region_names)])
-        self._channels_to_idx = OrderedDict([(n[0], i) for i, n in enumerate(self._channel_info)])
+
+        _cmap = dict()
+        self._channels_to_idx = OrderedDict()
+        for i, (k, v) in enumerate(self._channel_info.iteritems()):
+            if not _cmap.has_key(v):
+                _cmap[v] = len(_cmap)
+            self._channels_to_idx[k] = _cmap[v]
+
         self._regions_to_idx2 = OrderedDict([(n,i) for i, n in enumerate(region_names2)])
 
         if self._hdf5_create:
@@ -286,21 +292,16 @@ class TimeHolder(OrderedDict):
                              ('description', '|S100'),
                              ('is_physical', bool),
                              ('voxel_size', 'float', 3),
-                             ])
+                             ('color', "|S7")])
 
         nr_channels = len(self._channel_info)
-
         global_channel_desc = self._grp_def[self.HDF5_GRP_IMAGE].create_dataset( \
             'channel', (nr_channels,), dtype)
 
-        for idx in self._regions_to_idx2.values():
-            # XXX hardcoded values
-            is_physical = bool(self._channel_info[idx][1] is not None)
-            data = (self._channel_info[idx][0],
-                    self._channel_info[idx][1],
-                    is_physical,
-                    (0, 0, 0))
-            global_channel_desc[idx] = data
+        for i, (ch, col) in enumerate(self._channel_info.iteritems()):
+            is_physical = bool(col is not None)
+            data = (ch, col, is_physical, (0, 0, 0), Colors.channel_hexcolor(col))
+            global_channel_desc[i] = data
 
         # global region description
         dtype = numpy.dtype([('region_name', '|S50'), ('channel_idx', 'i')])
@@ -360,22 +361,21 @@ class TimeHolder(OrderedDict):
                                           prim_obj_name,
                                           obj_name)
 
-        # add basic relation for virtual channels
+        # relations for virtual channels
         for channel_name, combined, region_name in self._virtual_region_infos():
-            # basic virtual channel information
             obj_name = self._convert_region_name(channel_name, region_name, prefix='')
-            global_object_desc = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset(obj_name, (1,),
-                                                                                    global_object_dtype)
-            global_object_desc[0] = (obj_name, self.HDF5_OTYPE_REGION, '', '')
 
-            # relations
-            obj_name = self._convert_region_name(channel_name, region_name, prefix='')
-            obj_name = '%s___to___%s' % (prim_obj_name, obj_name)
-            global_object_desc = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset( \
-                obj_name, (1,), global_object_dtype)
-            global_object_desc[0] =  (obj_name, self.HDF5_OTYPE_RELATION,
-                                      prim_obj_name,
-                                      obj_name)
+            chreg = self.channel_regions[channel_name.title()]
+            dtype = [('name', 'S512'), ('type', 'S512')]
+            dtype += [('region%d' %i, 'S512') for i in range(len(chreg))]
+
+            dset = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset( \
+                obj_name, (1,), numpy.dtype(dtype))
+
+            data = (obj_name, self.HDF5_OTYPE_RELATION)
+            for ch, reg in chreg.iteritems():
+                data += (("%s__%s" %(ch, reg)).lower(), )
+            dset[0] = data
 
         # add special relation objects (events, tracking, etc)
         if self._hdf5_include_tracking:
@@ -394,15 +394,11 @@ class TimeHolder(OrderedDict):
         self._region_info.
         """
         chnames = [rinfo[0] for rinfo in self._region_infos]
+
         for channel_name, regions in self.channel_regions.iteritems():
             if channel_name.lower() not in chnames:
-                if len(regions) == 1 or isinstance(regions, basestring):
-                    regname = regions
-                else:
-                    regname = '-'.join(regions)
-                combined = "region__%s__%s" %(channel_name.lower(),
-                                              regname)
-                yield channel_name.lower(), combined, '-'.join(regions)
+                combined = "region__%s__%s" %(channel_name.lower(), regions.values())
+                yield channel_name.lower(), combined, '-'.join(regions.values())
 
         raise StopIteration
 
@@ -590,6 +586,8 @@ class TimeHolder(OrderedDict):
 
                 frame_idx = self._frames_to_idx[self._iCurrentT]
                 for region_name in self.reginfo.names[channel_name]:
+                    if channel.is_virtual():
+                        continue
                     idx = self._regions_to_idx2[(channel.NAME, region_name)]
                     container = channel.containers[region_name]
                     array = container.img_labels.toArray(copy=False)
@@ -652,7 +650,7 @@ class TimeHolder(OrderedDict):
 
                 z = meta.dim_z
                 t = len(self._frames_to_idx)
-                nr_channels = len(self._channel_info)
+                ncolors = len(set(self._channels_to_idx.values()))
                 var_name = 'channel'
                 grp = self._grp_cur_position[self.HDF5_GRP_IMAGE]
                 if var_name in grp:
@@ -660,9 +658,9 @@ class TimeHolder(OrderedDict):
                 else:
                     var_images = \
                         grp.create_dataset(var_name,
-                                           (nr_channels, t, z, h, w),
+                                           (ncolors, t, z, h, w),
                                            'uint8',
-                                           chunks=chunk_size((nr_channels, t, z, h, w)),
+                                           chunks=chunk_size((ncolors, t, z, h, w)),
                                            compression=self._hdf5_compression)
                     var_images.attrs['valid'] = numpy.zeros(t)
 

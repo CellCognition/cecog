@@ -206,18 +206,19 @@ class ProcessingFrame(BaseProcessorFrame, ExportSettings):
                         ('tracking', (2,0,1,1)),
                         ('eventselection', (3,0,1,1)),
                         ('primary_errorcorrection', (4,0,1,1))
-                        ], link='primary_channel', label='Primary channel')
+                        ], sublinks=False, label='Primary channel')
 
         for prefix in CH_OTHER:
             self.add_group(None,
                            [('%s_featureextraction' % prefix, (0,0,1,1)),
                             ('%s_classification' % prefix, (1,0,1,1)),
                             ('%s_errorcorrection' % prefix, (2,0,1,1))
-                            ], label='%s channel' %prefix.title())
+                            ], sublinks=False, label='%s channel' %prefix.title())
 
         self.add_group(None,
                        [('merged_classification', (1,0,1,1)),
-                        ('merged_errorcorrection', (2,0,1,1))], label='Merged channel')
+                        ('merged_errorcorrection', (2,0,1,1))],
+                        sublinks=False, label='Merged channel')
 
         self.add_expanding_spacer()
         self._init_control()

@@ -70,7 +70,7 @@ class SectionOutput(SectionCore):
        ('hdf5_reuse',
         BooleanTrait(False, label='Reuse HDF5')),
        ('hdf5_include_raw_images',
-        BooleanTrait(False, label='Include raw images')),
+        BooleanTrait(False, label='Include 8-bit image data')),
        ('hdf5_include_label_images',
         BooleanTrait(False, label='Include segmentation images')),
        ('hdf5_include_crack',

@@ -133,7 +133,6 @@ class CecogEnvironment(object):
     CONFIG = join(RESOURCE_DIR, "config.ini")
 
     PALETTES = join('palettes', 'zeiss')
-    R_SOURCE_DIR = 'rsrc'
 
     # XXX want this away from class level
     naming_schema = ConfigParser(NAMING_SCHEMA, 'naming_schemas')
@@ -157,7 +156,6 @@ class CecogEnvironment(object):
         super(CecogEnvironment, self).__init__()
         self._user_config_dir = None
         self.version = version
-        self._check_r_sources()
         self._copy_config(self)
 
         if redirect:
@@ -202,18 +200,6 @@ class CecogEnvironment(object):
         # copy also the r sources
         cls.RESOURCE_DIR = self.user_config_dir
 
-    @classmethod
-    def _check_r_sources(cls):
-        cls.R_SOURCE_DIR = join(cls.RESOURCE_DIR, 'rsrc')
-
-        if not isdir(cls.R_SOURCE_DIR):
-            cls.R_SOURCE_DIR = join(dirname(__file__),
-                                      os.pardir, os.pardir, 'rsrc')
-            if not isdir(cls.R_SOURCE_DIR):
-                raise IOError("R-source directory not found (%s)."
-                          % cls.R_SOURCE_DIR)
-            cls.R_SOURCE_DIR = abspath(normpath(cls.R_SOURCE_DIR))
-
     @property
     def palettes_dir(self):
         return join(self.user_config_dir, self.PALETTES)
@@ -253,7 +239,6 @@ class CecogEnvironment(object):
         return self.battery_package.package_path
 
     def pprint(self):
-        print 'r-source-path: ', self.R_SOURCE_DIR
         print 'resource-dir: ', self.RESOURCE_DIR
         print 'config.ini: ', self.CONFIG
         print 'font12-file: ', self.FONT12

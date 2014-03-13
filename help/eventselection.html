@@ -27,24 +27,41 @@
         <p class="subtext">Different duration unit.</p>
       </a>
 
-      <h4 class="sub">Important note: Duration [pre] + Duration [post] should be at least two times longer than the average length of the event of interest.</h4>
+      <h4 class="sub">Important note: Duration [pre] + Duration [post]
+        should be at least two times longer than the average length of
+        the  event of interest.</h4>
 
       <hr/>
 
       <a name="supervised_event_selection">
         <h2>Supervised Event selection</h2>
-        <p class="text">Events like mitosis can be detected by class transition motifs and additional rules.</p>
+        <p class="text">Events like mitosis can be detected by class
+          transition motifs and additional rules.</p>
 
         <a name="labeltransitions">
           <h4 class="sub">Class transition motif(s)</h4>
-          <p class="subtext">One or more pairs of class labels to define class transition.
+          <p class="subtext">One or more pairs of class labels to
+            define class  transition.
             <br/>
             Examples:
             <ul>
-              <li><tt>(2,3)</tt> - detects any track with class label sequence 2 -> 3. As for our H2b classifier this would mean a prophase (2) followed by prometaphase (3).</li>
-              <li><tt>(2,3),(2,4)</tt> - detects any track with class label sequence 2 -> 3 OR 2 -> 4. In a longer time-lapse the sequence 2,3 might not always be observable. Therefore 2,3 or 2,4 are selected.</li>
+              <li><tt>(2,3)</tt> - detects any track with class label
+                sequence 2 -> 3. As for our H2b classifier this would
+                mean a prophase (2) followed by prometaphase (3).</li>
+              <li><tt>(2,3),(2,4)</tt> - detects any track with class
+                label sequence 2 -> 3 OR 2 -> 4. In a longer time-lapse
+                the sequence 2,3 might not always be
+                observable. Therefore 2,3  or 2,4 are selected.</li>
             </ul>
           </p>
+        </a>
+
+        <a name="eventchannel">
+          <h4 class="sub">Channel</h4>
+          <p class="subtext">Class labels from this channel are taken
+            in to account for event selection. The drop-down menu
+            offers only those channels that have an annotated (picked)
+            and sucessfully trained classifier.
         </a>
 
         <a name="backwardlabels">

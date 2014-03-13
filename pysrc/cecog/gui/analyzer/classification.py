@@ -170,11 +170,14 @@ class ClassifierResultFrame(QGroupBox):
     def update_frame(self):
         """Updates cass & annotation info and confusion matrix in the gui"""
 
+        # update only if possible...
         # if samples were picked/annotated
         try:
             nftr_prev = len(self._learner.feature_names)
         except TypeError:
             pass
+        except AttributeError: # ClassDefUnsupervised, nothing to draw
+            return
         else:
             removed_features = self._learner.filter_nans(apply=True)
             nftr = nftr_prev - len(removed_features)

@@ -114,12 +114,11 @@ class PositionRunner(QtCore.QObject):
                 setattr(self, "_%s_dir" %basename(odir.lower()).strip("_"), odir)
 
     def _load_classdef(self, region):
-        try:
-            ch5 = cellh5.CH5File(self.ch5file, "r", cached=True)
+
+        with cellh5.ch5open(self.ch5file, "r", cached=True) as ch5:
             cld = ch5.class_definition(region)
-        finally:
-            ch5.close()
-        classdef = ClassDefinition(cld)
+            classdef = ClassDefinition(cld)
+
         return classdef
 
     def _load_data(self, mappings, channel):

@@ -58,9 +58,7 @@ def blend_images_max(images):
     painter.end()
     return pixmap
 
-#-------------------------------------------------------------------------------
-# classes:
-#
+
 class ImageHelper(object):
 
     def __init__(self, image):
@@ -354,16 +352,14 @@ class EnhancementFrame(QFrame):
 
 
 class ObjectsFrame(QFrame):
-    object_region_changed = pyqtSignal(str, str)
 
-    def __init__(self, browser, region_names, parent):
+    object_region_changed = pyqtSignal("PyQt_PyObject", "PyQt_PyObject")
+
+    def __init__(self, browser, regions, parent):
         QFrame.__init__(self, parent)
         layout = QGridLayout(self)
         layout.setContentsMargins(5, 5, 5, 5)
 
-        #self.detect_objects_toggled.connect(browser.detect_objects_toggled)
-        # object_region_changed is connected in display module
-        
         self.browser = browser
 
         box_detect = QCheckBox('Detect Objects', self)
@@ -372,31 +368,32 @@ class ObjectsFrame(QFrame):
         layout.addWidget(box_detect, 0, 0)
         self._box_detect = box_detect
 
-        box = QComboBox(self)
-        box.setEnabled(box_detect.checkState() == Qt.Checked)
-        box.addItems(region_names)
-        box.currentIndexChanged[str].connect(self._on_current_region_changed)
-        if len(region_names) > 0: box.setCurrentIndex(0)
-        layout.addWidget(box, 1, 0, 1, 2)
+        self._box_region = QComboBox(self)
+        self._box_region.setEnabled(box_detect.checkState() == Qt.Checked)
+        self.update_regionbox(regions)
+        self._box_region.activated[int].connect(self._on_current_region_changed)
+        if len(regions) > 0:
+            self._box_region.setCurrentIndex(0)
+        layout.addWidget(self._box_region, 1, 0, 1, 2)
         layout.addWidget(QLabel('Show Contours:'), 2, 0)
-        self._box_region = box
-        
+
         box = QRadioButton('by color', self)
         box.setEnabled(False)
         box.setChecked(True)
         box.toggled.connect(self._on_show_by_color)
         layout.addWidget(box, 3, 0)
         self._box_contours = box
-        
+
         self._btn_contour_color = ColorButton(None, self)
         self._btn_contour_color.setEnabled(box_detect.checkState() == Qt.Checked)
         color = QColor('white')
         color.setAlphaF(1)
         self._btn_contour_color.set_color(color)
-        self._btn_contour_color.color_changed.connect(self._on_contour_color_changed)
-        
+        self._btn_contour_color.color_changed.connect( \
+            self._on_contour_color_changed)
+
         layout.addWidget(self._btn_contour_color, 3, 1)
-        
+
         box_classify = QRadioButton('by classification', self)
         box.setEnabled(False)
         box.setChecked(False)
@@ -411,22 +408,30 @@ class ObjectsFrame(QFrame):
         box_show_contours.setEnabled(box_detect.checkState() == Qt.Checked)
         layout.addWidget(box_show_contours, 5, 0)
         self._box_show_contours = box_show_contours
-        
 
-        #self.browser.show_contours_toggled.connect(self._on_set_contour_state)
-        
+    def update_regionbox(self, regions):
+        current = self._box_region.currentText()
+        self._box_region.clear()
+        for k, v in regions.iteritems():
+            self._box_region.addItem(k, v)
+        try: # try to keep the current setting
+            self._box_region.setCurrentIndex( \
+                self._box_region.findText(current, flags=Qt.MatchExactly))
+        except Exception:
+            pass
+
     def _on_show_by_color(self, state):
         if state:
             self.browser._show_objects_by = 'color'
             self.browser.on_refresh()
-    
+
     def _on_show_by_classification(self, state):
         if state:
             self.browser._show_objects_by = 'classification'
             self.browser.on_refresh()
 
-    def _on_current_region_changed(self, name):
-        channel, region = name.split(' - ')
+    def _on_current_region_changed(self, index):
+        channel, region = self._box_region.itemData(index)
         self.object_region_changed.emit(channel, region)
 
     def _on_detect_objects(self, state):
@@ -436,9 +441,9 @@ class ObjectsFrame(QFrame):
         self._box_classify.setEnabled(state)
         self._box_show_contours.setEnabled(state)
         self._btn_contour_color.setEnabled(state)
-        
+
         self.browser._detect_objects = state
-        self.browser.detect_objects_toggled(state) 
+        self.browser.detect_objects_toggled(state)
 
     def _on_set_contour_state(self, state):
         self._box_contours.blockSignals(True)
@@ -448,7 +453,7 @@ class ObjectsFrame(QFrame):
     def _on_contour_color_changed(self, color):
         self.browser._contour_color = color
         self.browser.image_viewer.set_contour_color(color)
-        
+
     def _on_toggle_show_contours(self, state):
         self.browser._show_objects = state
         self.browser.image_viewer.show_contours = state
@@ -477,7 +482,7 @@ class DisplayFrame(QFrame):
 class DisplayModule(Module):
 
     NAME = 'Display'
-    object_region_changed = pyqtSignal(str, str)
+    object_region_changed = pyqtSignal("PyQt_PyObject", "PyQt_PyObject")
 
     def __init__(self, parent, browser, image_container, region_names):
         Module.__init__(self, parent, browser)
@@ -529,6 +534,7 @@ class DisplayModule(Module):
         layout_enhance.addWidget(self._enhancement)
 
         display = ObjectsFrame(browser, region_names, frame_objects)
+        self.browser.update_regions.connect(display.update_regionbox)
         display.object_region_changed.connect(self.on_object_region_changed)
         layout_objects.addWidget(display)
 

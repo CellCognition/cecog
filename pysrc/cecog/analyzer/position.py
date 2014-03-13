@@ -183,7 +183,7 @@ class PositionCore(LoggerObject):
         f_categories = list()
         f_cat_params = dict()
 
-        # unfortunateley some classes expecte empty list and dict
+        # unfortunateley some classes expect empty list and dict
         if not self.settings.get(SECTION_NAME_PROCESSING,
                              self._resolve_name(ch_name,
                                                 'featureextraction')):
@@ -347,10 +347,7 @@ class PositionCore(LoggerObject):
         chreg = OrderedDict()
         for chname in self.processing_channels:
             region = self._channel_regions(chname)
-            if isinstance(region, basestring):
-                chreg[chname] = region
-            else:
-                chreg[chname] = region.values()
+            chreg[chname] = region
         return chreg
 
 
@@ -457,20 +454,22 @@ class PositionAnalyzer(PositionCore):
         for p_channel, c_channel in self.ch_mapping.iteritems():
             self.settings.set_section('Processing')
             if sttg.get2(self._resolve_name(p_channel, 'classification')):
+                chreg = self._channel_regions(p_channel)
                 if sttg("EventSelection", "unsupervised_event_selection"):
-                        nclusters = sttg("EventSelection", "num_clusters")
-                        self.classifiers[p_channel] = ClassDefinitionUnsup(nclusters)
+                    nclusters = sttg("EventSelection", "num_clusters")
+                    self.classifiers[p_channel] = ClassDefinitionUnsup( \
+                        nclusters, chreg)
                 else:
-                        sttg.set_section('Classification')
-                        clf = CommonClassPredictor(
-                            clf_dir=sttg.get2(self._resolve_name(p_channel,
-                                                                 'classification_envpath')),
-                            name=p_channel,
-                            channels=self._channel_regions(p_channel),
-                            color_channel=c_channel)
-                        clf.importFromArff()
-                        clf.loadClassifier()
-                        self.classifiers[p_channel] = clf
+                    sttg.set_section('Classification')
+                    clf = CommonClassPredictor(
+                        clf_dir=sttg.get2(self._resolve_name(p_channel,
+                                                             'classification_envpath')),
+                        name=p_channel,
+                        channels=chreg,
+                        color_channel=c_channel)
+                    clf.importFromArff()
+                    clf.loadClassifier()
+                    self.classifiers[p_channel] = clf
 
     @property
     def _transitions(self):
@@ -566,7 +565,7 @@ class PositionAnalyzer(PositionCore):
                     else:
                         for feature in features[channel][region]:
                             mftrs.append("_".join((channel, region, feature)))
-                region_features[self._all_channel_regions[name]] = mftrs
+                region_features[self._all_channel_regions[name].values()] = mftrs
                 features[name] = region_features
 
         return features
@@ -715,7 +714,7 @@ class PositionAnalyzer(PositionCore):
                           create_images = True,
                           binning_factor = 1,
                           detect_objects = self.settings('Processing',
-                                                             'objectdetection'))
+                                                         'objectdetection'))
 
         self.export_features = self.define_exp_features()
         n_images = self._analyze(ca)
@@ -727,8 +726,10 @@ class PositionAnalyzer(PositionCore):
 
                 evchannel = self.settings('EventSelection', 'eventchannel')
                 region = self.classifiers[evchannel].regions
-                if evchannel != PrimaryChannel.NAME or \
-                     region != self.settings("Tracking", "region"):
+                if self.settings('EventSelection', 'unsupervised_event_selection'):
+                    graph = self._tracker.graph
+                elif  evchannel != PrimaryChannel.NAME or \
+                        region != self.settings("Tracking", "region"):
                     graph = self._tracker.clone_graph(self.timeholder,
                                                       evchannel,
                                                       region)
@@ -929,9 +930,10 @@ class PositionAnalyzer(PositionCore):
             for obj_id, obj in region.iteritems():
                 coords[obj_id] = obj.crack_contour
             self._myhack.set_coords(coords)
-            
-            
+
+
 class PositionAnalyzerForBrowser(PositionCore):
+
     @property
     def _hdf_options(self):
         self.settings.set_section('Output')
@@ -947,10 +949,10 @@ class PositionAnalyzerForBrowser(PositionCore):
                   "hdf5_include_classification": False}
 
         return h5opts
-    
+
     def __init__(self, *args, **kw):
         super(PositionAnalyzerForBrowser, self).__init__(*args, **kw)
-        
+
     def setup_classifiers(self):
         sttg = self.settings
         # processing channel, color channel
@@ -969,7 +971,8 @@ class PositionAnalyzerForBrowser(PositionCore):
                 clf.importFromArff()
                 clf.loadClassifier()
                 self.classifiers[p_channel] = clf
-                
+
+
     def __call__(self):
 
         self.timeholder = TimeHolder(self.position, self._all_channel_regions,
@@ -992,14 +995,14 @@ class PositionAnalyzerForBrowser(PositionCore):
         self._analyze(ca)
         return ca
 
-        
-    
+
+
     def _analyze(self, cellanalyzer):
         n_images = 0
         stopwatch = StopWatch(start=True)
         crd = Coordinate(self.plate_id, self.position,
                          self._frames, list(set(self.ch_mapping.values())))
-        print crd
+  #      print crd
 
         for frame, channels in self._imagecontainer( \
             crd, interrupt_channel=True, interrupt_zslice=True):
@@ -1028,11 +1031,7 @@ class PositionAnalyzerForBrowser(PositionCore):
                 except KeyError:
                     pass
 
-         
-                
-
-
         return n_images
-    
-    def clear(self):
-        print 'Clean up'
+
+    # def clear(self):
+    #     print 'Clean up'
