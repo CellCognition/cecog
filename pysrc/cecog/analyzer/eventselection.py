@@ -19,6 +19,7 @@ import numpy as np
 from scipy import stats
 from matplotlib import mlab
 from sklearn.cluster import KMeans
+from collections import defaultdict
 
 from cecog.colors import rgb2hex, BINARY_CMAP
 from cecog.util.logger import LoggerObject
@@ -128,81 +129,20 @@ class EventSelectionCore(LoggerObject):
         start_ids = self.start_nodes()
         self.logger.debug("tracking: start nodes %d %s" %(len(start_ids),
                                                           start_ids))
-        visited_nodes = dict()
+        visited_nodes = defaultdict(lambda: False)
         for start_id in start_ids:
             self.visitor_data[start_id] = {'_current': 0, '_full' : [[]]}
             self.logger.debug("root ID %s" %start_id)
             try:
-                self._forward_visitor(start_id, self.visitor_data[start_id],
-                                      visited_nodes)
+                self._linearize(start_id, self.visitor_data[start_id], visited_nodes)
             except RuntimeError as e:
                 if e.message.startswith('maximum recursion'):
                     raise RuntimeError(('eventselection failed: maximum '
                                         'recursion reached in _forward_visitor()'))
                 else:
                     raise 
-
-
-    def _forward_visitor(self, nodeid, results, visited_nodes, level=0):
-
-        if self.graph.out_degree(nodeid) == 1 and \
-                self.graph.in_degree(nodeid) == 1:
-            sample = self.graph.node_data(nodeid)
-            successor = self.graph.node_data(
-                self.graph.tail(self.graph.out_arcs(nodeid)[0]))
-
-            if self._is_transition(sample, successor):
-                is_candidate = True
-                self.logger.debug("  found %6s" %nodeid)
-
-                if is_candidate:
-                    backward_nodes = []
-                    is_candidate = self._backward_check(nodeid, backward_nodes)
-                    self.logger.debug("    %s - backwards %s    %s"
-                                      %(nodeid, {True: 'ok', False: 'failed'}[is_candidate],
-                                        backward_nodes))
-
-                if is_candidate:
-                    forward_nodes = []
-                    tailid = self.graph.tail(self.graph.out_arcs(nodeid)[0])
-                    is_candidate = self._forward_check(tailid, forward_nodes)
-                    self.logger.debug("    %s - forwards %s    %s"
-                                          %(tailid, {True: 'ok', False: 'failed'}[is_candidate], forward_nodes))
-
-                if is_candidate:
-                    track_length = self.track_length
-                    backward_nodes.reverse()
-                    startid = backward_nodes[0]
-
-                    # searching for split events and linearize split tracks
-                    splits = self._split_nodes(forward_nodes)
-                    if len(splits) > 0:
-                        # take only the first split event
-                        first_split = splits[0]
-                        tracks = []
-                        for split in forward_nodes[first_split]:
-                            track_nodes = backward_nodes + forward_nodes[:first_split] + split
-                            if len(track_nodes) == track_length:
-                                tracks.append(track_nodes)
-
-                        for i, track in enumerate(tracks):
-                            new_start_id = '%s_%d' % (startid, i+1)
-                            results[new_start_id] = {'splitId': forward_nodes[first_split-1],
-                                                     'eventId': nodeid,
-                                                     'maxLength': track_length,
-                                                     'tracks': [track],
-                                                     # keep value at which index the two daugther
-                                                     # tracks differ due to a split event
-                                                     'splitIdx' : first_split + len(backward_nodes)}
-                    else:
-                        track_nodes = backward_nodes + forward_nodes
-                        results[startid] = {'splitId': None,
-                                            'eventId': nodeid,
-                                            'maxLength': track_length,
-                                            'tracks': [track_nodes]}
-                    # print dctResults[strStartId]
-                    self.logger.debug("  %s - valid candidate" %startid)
-
+                
+    def _linearize(self, nodeid, results, visited_nodes, level=0):
         # record the full trajectory in a liniearized way
         base = results['_current']
         results['_full'][base].append(nodeid)
@@ -210,20 +150,31 @@ class EventSelectionCore(LoggerObject):
 
         for i, out_edgeid in enumerate(self.graph.out_arcs(nodeid)):
             tailid = self.graph.tail(out_edgeid)
-            if tailid not in visited_nodes:
+            if  not visited_nodes[tailid]:
                 visited_nodes[tailid] = True
 
                 # make a copy of the list for the new branch
                 if i > 0:
                     results['_full'].append(results['_full'][base][:depth])
                     results['_current'] += 1
-                self._forward_visitor(tailid, results, visited_nodes, level=level+1)
+                self._linearize(tailid, results, visited_nodes, level=level+1)
 
     def _forward_check(self, *args, **kw):
         raise NotImplementedError
 
     def _backward_check(self, *args, **kw):
         raise NotImplementedError
+    
+class LinearizedEventTrack(object):
+    def __init__(self, start_id):
+        self.stard_id = start_id
+        self.branches = None
+        self.full_track = []
+       
+    @property 
+    def number_of_branches(self):
+        return 
+    
 
 
 class EventSelection(EventSelectionCore):
