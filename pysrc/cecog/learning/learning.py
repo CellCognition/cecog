@@ -575,7 +575,7 @@ class CommonClassPredictor(BaseLearner):
                 yield n, l2c, l2g, conf
 
                 l2g += g_step
-            l2c += c_step
+            l2c += c_step 
 
 class CommonObjectLearner(BaseLearner):
 

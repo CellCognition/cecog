@@ -1035,3 +1035,6 @@ class PositionAnalyzerForBrowser(PositionCore):
 
     # def clear(self):
     #     print 'Clean up'
+
+
+
