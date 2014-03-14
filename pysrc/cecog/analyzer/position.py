@@ -647,7 +647,7 @@ class PositionAnalyzer(PositionCore):
     def export_tracks_hdf5(self):
         """Save tracking data to hdf file"""
         self.logger.debug("--- serializing tracking start")
-        self.timeholder.serialize_tracking(self._tes)
+        self.timeholder.serialize_tracking(self._tracker.graph)
         self.logger.debug("--- serializing tracking ok")
 
     def export_events(self):
@@ -1035,6 +1035,3 @@ class PositionAnalyzerForBrowser(PositionCore):
 
     # def clear(self):
     #     print 'Clean up'
-
-
-
