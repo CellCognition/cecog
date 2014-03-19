@@ -4,7 +4,7 @@ import h5py._hl
 from sklearn.svm import SVC
 
 class SVCImpex(SVC):
-    __params_to_save__ = ['_sparse', 'shape_fit_', 'support_vectors_',
+    params_to_save = ['_sparse', 'shape_fit_', 'support_vectors_',
                           'n_support_', 'dual_coef_', '_intercept_',
                           '_label', 'probA_', 'probB_', '_gamma', 
                           'classes_', 'support_', 'gamma', 'kernel']
@@ -12,11 +12,11 @@ class SVCImpex(SVC):
     def save(self, file_name):
         if isinstance(file_name, (str,)):
             with h5py.File(file_name, 'w') as hf:
-                for param in self.__params_to_save__:
+                for param in self.params_to_save:
                     data = getattr(self, param)
                     hf.create_dataset(param, data=data)
         elif isinstance(file_name, (h5py._hl.group.Group, h5py._hl.files.File)):
-            for param in self.__params_to_save__:
+            for param in self.params_to_save:
                 data = getattr(self, param)
                 file_name.create_dataset(param, data=data)
         else:
@@ -27,11 +27,11 @@ class SVCImpex(SVC):
         new_svm = cls()
         if isinstance(file_name, (str,)):
             with h5py.File(file_name, 'r') as hf:
-                for param in cls.__params_to_save__:
+                for param in cls.params_to_save:
                     data = hf[param].value
                     setattr(new_svm, param, data)
         elif isinstance(file_name, (h5py._hl.group.Group, h5py._hl.files.File)):
-            for param in cls.__params_to_save__:
+            for param in cls.params_to_save:
                 data = file_name[param].value
                 setattr(new_svm, param, data)
         else:

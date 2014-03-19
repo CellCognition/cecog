@@ -59,7 +59,7 @@ def max_shape(shape):
 
 
 class TimeHolder(OrderedDict):
-
+    
     # label for unlabled objects
     UNPREDICTED_LABEL = CH5Const.UNPREDICTED_LABEL
     UNPREDICTED_PROB = CH5Const.UNPREDICTED_PROB
@@ -113,6 +113,13 @@ class TimeHolder(OrderedDict):
                  hdf5_include_tracking=True, hdf5_include_events=True,
                  hdf5_include_annotation=True):
         super(TimeHolder, self).__init__()
+        try:
+            import pydevd
+            pydevd.connected = True
+            pydevd.settrace(suspend=False)
+            print 'Thread enabled interactive eclipse debuging...'
+        except:
+            pass
         self.P = P
         self.plate_id = plate_id
         self._iCurrentT = None

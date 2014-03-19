@@ -407,6 +407,13 @@ class PositionPicker(PositionCore):
 
 class PositionAnalyzer(PositionCore):
     def __init__(self, *args, **kw):
+        try:
+            import pydevd
+            pydevd.connected = True
+            pydevd.settrace(suspend=False)
+            print 'Thread enabled interactive eclipse debuging...'
+        except:
+            pass
         super(PositionAnalyzer, self).__init__(*args, **kw)
 
         if not self.has_timelapse:
@@ -941,7 +948,7 @@ class PositionAnalyzerForBrowser(PositionCore):
                   "hdf5_include_events": False,
                   "hdf5_compression": False,
                   "hdf5_create": False,
-                  "hdf5_reuse": False,
+                  "hdf5_reuse": self.settings.get2('hdf5_reuse'),
                   "hdf5_include_raw_images": False,
                   "hdf5_include_label_images": False,
                   "hdf5_include_features": False,
@@ -952,6 +959,10 @@ class PositionAnalyzerForBrowser(PositionCore):
 
     def __init__(self, *args, **kw):
         super(PositionAnalyzerForBrowser, self).__init__(*args, **kw)
+        # Also in the Browser we want to use cellh5
+        # The setting for the other PositionAnalyszer is 
+        # implicitely set in _makedirs()
+        self._hdf5_dir = os.path.join(self._out_dir, 'hdf5')
 
     def setup_classifiers(self):
         sttg = self.settings
@@ -974,9 +985,10 @@ class PositionAnalyzerForBrowser(PositionCore):
 
 
     def __call__(self):
+        hdf5_fname = join(self._hdf5_dir, '%s.ch5' % self.position)
 
         self.timeholder = TimeHolder(self.position, self._all_channel_regions,
-                                     None,
+                                     hdf5_fname,
                                      self.meta_data, self.settings,
                                      self._frames,
                                      self.plate_id,
@@ -1002,7 +1014,7 @@ class PositionAnalyzerForBrowser(PositionCore):
         stopwatch = StopWatch(start=True)
         crd = Coordinate(self.plate_id, self.position,
                          self._frames, list(set(self.ch_mapping.values())))
-  #      print crd
+
 
         for frame, channels in self._imagecontainer( \
             crd, interrupt_channel=True, interrupt_zslice=True):
