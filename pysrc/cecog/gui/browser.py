@@ -301,7 +301,7 @@ class Browser(QMainWindow):
             time_info = ''
         msg = 'Plate: %s | Position: %s%s ||  Zoom: %.1f%%' % \
               (self.coordinate.plate, self.coordinate.position, time_info,
-               self.image_viewer.scale_factor*100)
+               self.image_viewer.scalefactor*100)
         self._statusbar.showMessage(msg)
 
     def get_coordinate(self):

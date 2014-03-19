@@ -14,19 +14,20 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-from os.path import join, exists
+
 import logging
 import zlib
 import base64
 import csv
-
+from os.path import join, exists
 from collections import OrderedDict
+from  matplotlib.figure import Figure
+from matplotlib.font_manager import FontProperties
+from matplotlib.backends.backend_agg import FigureCanvasAgg
 
-import numpy
 import h5py
-import matplotlib
-matplotlib.use('Agg', warn=False)
-from matplotlib import pyplot
+import numpy
+
 
 from cellh5 import CH5Const
 
@@ -38,6 +39,7 @@ from cecog.io.imagecontainer import MetaImage
 from cecog.analyzer.channel import PrimaryChannel
 from cecog.plugin.metamanager import MetaPluginManager
 from cecog.analyzer.tracker import Tracker
+
 
 def chunk_size(shape):
     """Helper function to compute chunk size for image data cubes."""
@@ -866,11 +868,10 @@ class TimeHolder(OrderedDict):
                     if channel_name != PrimaryChannel.PREFIX:
                         dset_cross_rel[idx + offset] = (idx, idx)
 
-    def serialize_tracking(self, tes):
-        
+    def serialize_tracking(self, graph):
+
         # export full graph structure to .dot file
         if self._hdf5_create and self._hdf5_include_tracking:
-            graph = tes.graph
             grp = self._grp_cur_position[self.HDF5_GRP_OBJECT]
 
             head_nodes = [node_id for node_id in graph.node_list()
@@ -1040,9 +1041,9 @@ class TimeHolder(OrderedDict):
             all_counts = self.getObjectCounts(ch_info)
 
         if relative:
-            ylab = 'Class Percentage'
+            ylab = 'class percentage'
         else:
-            ylab = 'Class counts (raw)'
+            ylab = 'class counts (raw)'
 
         for chname, (region_name, class_names, colors) in ch_info.iteritems():
             if len(class_names) < 2:
@@ -1052,13 +1053,12 @@ class TimeHolder(OrderedDict):
             timevec = range(X.shape[1])
 
             if len(timevec) > 1:
-                #import pdb; pdb.set_trace()
                 if relative:
                     total = numpy.array(all_counts[(chname, region_name)]['total'])
                     X = X.astype('float') / total.astype('float')
 
-                fig = pyplot.figure(1, figsize=(20,10))
-                ax = pyplot.subplot(1,1,1)
+                fig = Figure(figsize=(10, 8))
+                ax = fig.add_subplot(1,1,1)
 
                 # in this case we have more than one time point and we can visualize the time series
                 for i, lb, color in zip(range(len(class_names)), class_names, colors):
@@ -1066,63 +1066,57 @@ class TimeHolder(OrderedDict):
 
                 if not ymax is None and ymax > -1:
                     ax.axis([min(timevec), max(timevec), 0, ymax])
-                pyplot.title('Population time series: %s %s %s %s' % (plate, pos, chname, region_name), size='medium')
-                pyplot.xlabel('Time (in frames)', size='medium')
-                pyplot.ylabel(ylab, size='medium')
+                ax.set_title('Population time series: %s %s %s %s' % (plate, pos, chname, region_name), size='medium')
+                ax.set_xlim((min(timevec), max(timevec)))
+                ax.set_xlabel('time (frames)', size='medium')
+                ax.set_ylabel(ylab, size='medium')
 
-                # legend
                 if legend:
+                    fprop = FontProperties()
+                    fprop.set_size('small')
+
                     handles, labels = ax.get_legend_handles_labels()
-                    ax.legend(handles[::-1], labels[::-1])
+                    ax.legend(handles[::-1], labels[::-1], frameon=False, loc=9,
+                              ncol=len(class_names), mode="expand", prop=fprop)
 
                 if grid:
-                    ax.grid(b=True, which='major', linewidth=1.5)
+                    ax.grid(b=True, which='major', alpha=0.5)
 
-                fig.savefig(join(pop_plot_output_dir, '%s__%s__%s__%s.png' % (plate, pos, chname, region_name)))
-                pyplot.close(1)
+                canvas = FigureCanvasAgg(fig)
+                fig.savefig(join(pop_plot_output_dir, '%s__%s__%s__%s.pdf'
+                                 %(plate, pos, chname, region_name)))
 
             else:
-                # in this case we have only one timepoint. We can visualize a barplot instead.
-                # ---
-                bottom = 0.2
+                # in this case we have only one timepoint.
+                # We can visualize a barplot instead.
                 width = 0.7
-
                 nb_bars = X.shape[0]
 
-                fig = pyplot.figure(1, figsize=(int(0.8*nb_bars + 1),10))
-                ax = pyplot.subplot(1,1,1)
+                fig = Figure(figsize=(int(0.8*nb_bars + 1),10))
+                ax = fig.add_subplot(1,1,1)
 
-                ind = numpy.array(range(nb_bars))
-                ax.set_position(numpy.array([0.125, bottom, 0.8, 0.9 - bottom]))
+                ind = numpy.arange(nb_bars)
 
                 if relative:
                     X = X.astype('float') / numpy.sum(X.astype('float'))
 
-                rects = pyplot.bar(ind, X[:,0], width=width, color=colors,
-                                   edgecolor='none')
+                ax.bar(ind-width/2., X[:,0], width=width, color=colors,
+                       edgecolor='none')
+                ax.set_xlim((ind.min()-0.5, ind.max()+0.5))
+                ax.set_xticks(ind)
+                ax.set_xticklabels(class_names, rotation=45, fontsize='small',
+                                   ha='center')
 
-                xmin = min(ind)
-                xmax = max(ind)
-                xlim = (xmin - .5 * width - (xmax-xmin) * 0.05,
-                        xmax - .5 * width + (xmax-xmin) * (0.05 + 1.0 / nb_bars) )
-
-                if ymax is None or ymax < 0 or ymax > 1.0:
-                    ymax = 1.0
-
-                ax.axis([xlim[0], xlim[1], 0, ymax])
-
-                pyplot.xticks(ind+.5* width, class_names, rotation="vertical",
-                             fontsize='small', ha='center')
-
-                pyplot.title('Classification results:\n%s %s\n%s %s' % (plate, pos, chname, region_name), size='medium')
-                pyplot.xlabel('')
-                pyplot.ylabel(ylab, size='medium')
+                ax.set_title('Classification results:\n%s %s\n%s %s'
+                             %(plate, pos, chname, region_name), size='medium')
+                ax.set_xlabel('')
+                ax.set_ylabel(ylab, size='medium')
 
                 if grid:
-                    pyplot.grid(b=True, axis='y', which='major', linewidth=1.5)
+                    ax.grid(b=True, axis='y', which='major', alpha=0.5)
 
-                fig.savefig(join(pop_plot_output_dir, '%s__%s__%s__%s.png' % (plate, pos, chname, region_name)))
-                pyplot.close(1)
+                canvas = FigureCanvasAgg(fig)
+                fig.savefig(join(pop_plot_output_dir, '%s__%s__%s__%s.pdf' % (plate, pos, chname, region_name)))
         return
 
     def exportObjectDetails(self, filename, sep='\t'):
