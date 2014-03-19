@@ -8,6 +8,7 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from cecog.gui.util import information
 
 __author__ = 'Michael Held, Thomas Walter'
 __date__ = '$Date$'
@@ -541,6 +542,8 @@ class Browser(QMainWindow):
 
     def detect_objects_toggled(self, state):
         if state:
+            if self._settings.get('Output', 'hdf5_reuse'):
+                information(self, 'HDF5 reuse is enabled. Change of segmentation settings will have no effect in browser!')
             self.on_refresh()
 
     def on_toggle_show_contours(self, state):
