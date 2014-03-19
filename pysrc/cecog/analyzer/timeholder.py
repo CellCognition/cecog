@@ -550,9 +550,6 @@ class TimeHolder(OrderedDict):
                             label_images_valid = False
                             break
                         image_data = dset_label_image[region_idx, frame_idx, 0, :, :].astype('int16')
-                        if not image_data.any():
-                            label_images_valid = False
-                            break
                         img_label = ccore.numpy_to_image(image_data, copy=True)
                         img_xy = channel.meta_image.image
                         container = ccore.ImageMaskContainer(img_xy, img_label, False, True, True)
@@ -631,8 +628,6 @@ class TimeHolder(OrderedDict):
                     channel_idx = self._channels_to_idx[channel.PREFIX]
                     if not (channel_idx < dset_raw_image.shape[0]):
                         frame_valid = False
-                    else:
-                        frame_valid = dset_raw_image[channel_idx, frame_idx, 0, :, :].any()
 
         if self._hdf5_found and frame_valid:
             coordinate = Coordinate(position=self.P, time=self._iCurrentT,
