@@ -419,6 +419,7 @@ class ObjectsFrame(QFrame):
             self._box_region.setCurrentIndex(0)
         else:
             self._box_region.setCurrentIndex(found_old_idx)
+            self._object_region = regions.values()[found_old_idx]
 
     def _on_show_by_color(self, state):
         if state:
