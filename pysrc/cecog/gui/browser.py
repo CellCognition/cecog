@@ -17,6 +17,7 @@ __source__ = '$URL$'
 
 __all__ = ['Browser']
 
+from collections import OrderedDict
 import numpy
 
 import sip
@@ -137,11 +138,11 @@ class Browser(QMainWindow):
         act_prev_pos = self.create_action('Previous Position',
                                           shortcut=QKeySequence('Shift+Up'),
                                           slot=self.on_act_prev_pos)
-        act_next_plate = self.create_action('Next Plate',
-                                            shortcut=QKeySequence('Shift+Alt+Down'),
+        act_next_plate = self.create_action(
+            'Next Plate', shortcut=QKeySequence('Shift+Alt+Down'),
                                             slot=self.on_act_next_plate)
-        act_prev_plate = self.create_action('Previous Plate',
-                                            shortcut=QKeySequence('Shift+Alt+Up'),
+        act_prev_plate = self.create_action(
+            'Previous Plate', shortcut=QKeySequence('Shift+Alt+Up'),
                                             slot=self.on_act_prev_plate)
         act_resize = self.create_action('Automatically Resize',
                                          shortcut=QKeySequence('SHIFT+CTRL+R'),
@@ -166,20 +167,24 @@ class Browser(QMainWindow):
                                          shortcut=QKeySequence('F5'),
                                          slot=self.on_refresh)
 
-        act_fullscreen = self.create_action('Full Screen',
-                                            shortcut=QKeySequence('CTRL+F'),
-                                            slot=self.on_act_fullscreen,
-                                            signal='triggered(bool)',
-                                            checkable=True,
-                                            checked=False)
+        act_fullscreen = self.create_action(
+            'Full Screen',
+            shortcut=QKeySequence('CTRL+F'),
+            slot=self.on_act_fullscreen,
+            signal='triggered(bool)',
+            checkable=True,
+            checked=False
+            )
         self._act_fullscreen = act_fullscreen
 
-        act_show_contours = self.create_action('Show Object Contours',
-                                               shortcut=QKeySequence('ALT+C'),
-                                               slot=self.on_act_show_contours,
-                                               signal='triggered(bool)',
-                                               checkable=True,
-                                               checked=self.image_viewer.show_contours)
+        act_show_contours = self.create_action(
+            'Show Object Contours',
+            shortcut=QKeySequence('ALT+C'),
+            slot=self.on_act_show_contours,
+            signal='triggered(bool)',
+            checkable=True,
+            checked=self.image_viewer.show_contours
+            )
         self._act_show_contours = act_show_contours
 
         act_anti = self.create_action('Antialiasing',
@@ -240,7 +245,7 @@ class Browser(QMainWindow):
 
     def _region_names(self):
 
-        rdict = dict()
+        rdict = OrderedDict()
         reginfo = MetaPluginManager().region_info
         for channel, regions in reginfo.names.iteritems():
             for region in regions:
