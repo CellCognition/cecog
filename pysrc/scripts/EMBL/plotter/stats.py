@@ -153,7 +153,7 @@ class Histogram(object):
                  xlabel='data', ylabel='frequency', 
                  title='Histogram',
                  axis=None, vertical_lines=None,
-                 bins=30, normed=True,
+                 bins=50, normed=True,
                  side_by_side=True, 
                  dataset_names=None):
 
