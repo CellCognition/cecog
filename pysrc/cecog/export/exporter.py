@@ -114,7 +114,7 @@ class EventExporter(object):
 
         for tracks in visitor_data.itervalues():
             for startid, event_data in tracks.iteritems():
-                if startid in ('full_tracks', '_current_branch'):
+                if startid in ('_full_tracks', '_current_branch'):
                     continue
                 for chname, region in channel_regions.iteritems():
                     for region_name, feature_names in region.iteritems():
@@ -249,7 +249,7 @@ class EventExporter(object):
         makedirs(outdir)
 
         for start_id, data in visitor_data.iteritems():
-            for idx, track in enumerate(data['full_tracks']):
+            for idx, track in enumerate(data['_full_tracks']):
                 has_header = False
                 line1 = []
                 line2 = []

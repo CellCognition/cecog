@@ -79,13 +79,17 @@ class AnalyzerBase(LoggerObject):
             if self.settings.get('General', 'frameRange'):
                 f_incr = self.settings.get('General', 'frameincrement')
                 try:
-                    fmin = max(min(frames_total), self.settings.get('General', 'frameRange_begin'))
-                    fmax = min(max(frames_total), self.settings.get('General', 'frameRange_end'))
+                    fmin = max(min(frames_total),
+                               self.settings('General', 'frameRange_begin'))
+                    fmax = min(max(frames_total),
+                               self.settings('General', 'frameRange_end'))
                     f_start = frames_total.index(fmin)
                     f_end = frames_total.index(fmax)
                 except ValueError:
-                    # this can happen if coordinates have already a increment > 1
-                    msg = ("Time constraint: either 'Begin' or 'End' is an invalid value!")
+                    # this can happen if coordinates have already a
+                    # increment > 1
+                    msg = ("Time constraint: either 'Begin' or 'End' "
+                           "is an invalid value!")
                     raise ValueError(msg)
 
                 if f_start > f_end:
@@ -208,7 +212,6 @@ class AnalyzerCore(AnalyzerBase):
                     self.settings.get('Output', 'hdf5_merge_positions'):
                     hdf5_links.append(analyzer.hdf5_filename)
             except Exception as e:
-                print e.message
                 import traceback, sys
                 traceback.print_exc()
                 raise

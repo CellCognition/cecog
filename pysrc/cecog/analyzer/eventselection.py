@@ -107,7 +107,7 @@ class EventSelectionCore(LoggerObject):
         """Return the a list of the object centers for each track."""
         centers = dict()
         for startid, eventdata in self.iterevents():
-            if startid in ['full_tracks', '_current_branch']:
+            if startid in ['_full_tracks', '_current_branch']:
                 continue
             data = list()
             for nodeids in zip(*eventdata['tracks']):
@@ -126,23 +126,23 @@ class EventSelectionCore(LoggerObject):
             print 'Thread enabled interactive eclipse debuging...'
         except:
             pass
-        
+
         start_ids = self.start_nodes()
         self.logger.debug("tracking: start nodes %d %s" % (len(start_ids), start_ids))
         visited_nodes = defaultdict(lambda: False)
-        
+
         # linearaize full tracks
         for start_id in start_ids:
             self.logger.debug("root ID %s" %start_id)
             try:
-                self.visitor_data[start_id] = {'_current_branch': 0, 'full_tracks' : [[]]}
+                self.visitor_data[start_id] = {'_current_branch': 0, '_full_tracks' : [[]]}
                 self._linearize(start_id, self.visitor_data[start_id], visited_nodes)
             except RuntimeError as e:
                 if e.message.startswith('maximum recursion'):
                     raise RuntimeError(('linearization failed: maximum '
                                         'recursion reached in _linearize()'))
                 else:
-                    raise 
+                    raise
         # find events in these full tracks
         for start_id in start_ids:
             self.logger.debug("root ID %s" % start_id)
@@ -153,17 +153,17 @@ class EventSelectionCore(LoggerObject):
                     raise RuntimeError(('linearization failed: maximum '
                                         'recursion reached in _linearize()'))
                 else:
-                    raise 
-          
+                    raise
+
     def _linearize(self, nodeid, results, visited_nodes, level=0):
         """ Record the full trajectory in a liniearized fashion
         """
         # get current branch index
         base = results['_current_branch']
         # append current node to it
-        results['full_tracks'][base].append(nodeid)
+        results['_full_tracks'][base].append(nodeid)
         # get current track legnth
-        depth = len(results['full_tracks'][base])
+        depth = len(results['_full_tracks'][base])
         # iterate over all successors
         for i, out_edgeid in enumerate(self.graph.out_arcs(nodeid)):
             tailid = self.graph.tail(out_edgeid)
@@ -172,43 +172,43 @@ class EventSelectionCore(LoggerObject):
                 visited_nodes[tailid] = True
                 # make a copy of the list for the new branch(es)
                 if i > 0:
-                    results['full_tracks'].append(results['full_tracks'][base][:depth])
+                    results['_full_tracks'].append(results['_full_tracks'][base][:depth])
                     results['_current_branch'] += 1
                 # recurse
                 self._linearize(tailid, results, visited_nodes, level=level+1)
-                
+
     def _extract_events_from_linearized_tracks(self, tracks):
-        for each_branch in tracks['full_tracks']:
+        for each_branch in tracks['_full_tracks']:
             t_idx = 0
             while t_idx < len(each_branch):
-                nodeid = each_branch[t_idx]   
+                nodeid = each_branch[t_idx]
                 if (self.graph.out_degree(nodeid), self.graph.in_degree(nodeid)) == (1,1):
                     sample = self.graph.node_data(nodeid)
                     successor = self.graph.node_data(self.graph.tail(self.graph.out_arcs(nodeid)[0]))
-        
+
                     if self._is_transition(sample, successor):
                         is_candidate = True
                         self.logger.debug("  found %6s" %nodeid)
-        
+
                         if is_candidate:
                             backward_nodes = []
                             is_candidate = self._backward_check(nodeid, backward_nodes)
                             self.logger.debug("    %s - backwards %s    %s"
                                               %(nodeid, {True: 'ok', False: 'failed'}[is_candidate],
                                                 backward_nodes))
-        
+
                         if is_candidate:
                             forward_nodes = []
                             tailid = self.graph.tail(self.graph.out_arcs(nodeid)[0])
                             is_candidate = self._forward_check(tailid, forward_nodes)
                             self.logger.debug("    %s - forwards %s    %s"
                                                   %(tailid, {True: 'ok', False: 'failed'}[is_candidate], forward_nodes))
-        
+
                         if is_candidate:
                             track_length = self.track_length
                             backward_nodes.reverse()
                             startid = backward_nodes[0]
-        
+
                             # searching for split events and linearize split tracks
                             splits = self._split_nodes(forward_nodes)
                             if len(splits) > 0:
@@ -219,7 +219,7 @@ class EventSelectionCore(LoggerObject):
                                     track_nodes = backward_nodes + forward_nodes[:first_split] + split
                                     if len(track_nodes) == track_length:
                                         tracks_.append(track_nodes)
-        
+
                                 for i, track in enumerate(tracks_):
                                     new_start_id = '%s_%d' % (startid, i+1)
                                     tracks[new_start_id] = {'splitId': forward_nodes[first_split-1],
@@ -230,7 +230,7 @@ class EventSelectionCore(LoggerObject):
                                                              # tracks differ due to a split event
                                                              'splitIdx' : first_split + len(backward_nodes)}
                                     t_idx += track_length-1
-                            
+
                             else:
                                 track_nodes = backward_nodes + forward_nodes
                                 tracks[startid] = {'splitId': None,
@@ -247,17 +247,17 @@ class EventSelectionCore(LoggerObject):
 
     def _backward_check(self, *args, **kw):
         raise NotImplementedError
-    
+
 class LinearizedEventTrack(object):
     def __init__(self, start_id):
         self.stard_id = start_id
         self.branches = None
         self.full_track = []
-       
-    @property 
+
+    @property
     def number_of_branches(self):
-        return 
-    
+        return
+
 
 
 class EventSelection(EventSelectionCore):

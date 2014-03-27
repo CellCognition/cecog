@@ -89,8 +89,10 @@ class Tracker(LoggerObject):
         return pre_frame
 
     def clone_graph(self, timeholder, channel, region):
-        """Clone the tracking graph with sample data from a different channel."""
+        """Clone the tracking graph with data from a different channel."""
+
         ngraph = Graph()
+
         # add nodes from other segmentation region
         for nodeid in self.graph.node_list():
             iframe, objid = Tracker.split_nodeid(nodeid)[:2]
@@ -136,8 +138,8 @@ class Tracker(LoggerObject):
                                            ccore.Diff2D(*objC.oCenterAbs),
                                            img, col,
                                            thick=thick)
-                            ccore.drawFilledCircle(ccore.Diff2D(*objC.oCenterAbs),
-                                                   radius, img_conn, col)
+                            ccore.drawFilledCircle(
+                                ccore.Diff2D(*objC.oCenterAbs), radius, img_conn, col)
             current += 1
 
         if not found and frame in self._frame_data:
