@@ -521,7 +521,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
 
             if len(icontainer.plates) > 0:
                 icontainer.set_plate(icontainer.plates[0])
-            icontainer.check_dimensions()
+                icontainer.check_dimensions()
 
 
         label = ('Please wait until the input structure is scanned\n'
@@ -544,6 +544,9 @@ class CecogAnalyzer(QtGui.QMainWindow):
             else:
                 critical(self, traceback.format_exc())
             return
+        except Exception as e:
+            critical(self, str(e))
+
 
         try: # I hate lookup tables!
             self._tab_lookup['Cluster'][1].set_imagecontainer(imagecontainer)
@@ -598,10 +601,8 @@ class CecogAnalyzer(QtGui.QMainWindow):
                 information(self, "Plate(s) successfully loaded",
                             "%d plates loaded successfully." % len(imagecontainer.plates))
         else:
-            critical(self, "No valid image data found",
-                     "The naming schema provided might not fit your image data"
-                     "or the coordinate file is not correct.\n\nPlease modify "
-                     "the values and scan the structure again.")
+            critical(self, "No images found",
+                     "Verifiy your nameing scheme and rescan the data.")
 
     def set_image_crop_size(self):
         x0, y0, x1, y1 = self._settings.get('General', 'crop_image_x0'), \

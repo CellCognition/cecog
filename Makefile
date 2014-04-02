@@ -7,9 +7,10 @@
 # This software can be distribute under the term of the LGPL
 
 VERSION = 1.5.0
+ARCH=$$(uname -m)
 APPNAME = CecogAnalyzer
 TMPNAME = CecogAnalyzer.dmg
-DMGNAME = CecogAnalyzer_$(VERSION).dmg
+DMGNAME = CecogAnalyzer_$(VERSION)_$(ARCH).dmg
 VOLNAME = $(APPNAME)-$(VERSION)
 
 all: dmg

@@ -286,7 +286,7 @@ class MetaImage(object):
             return numpy.uint8
         else:
             raise RuntimeError('MetaImage.format(): Unknown pixel type')
-            
+
     @property
     def width(self):
         return self.image.width
