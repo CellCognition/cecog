@@ -26,13 +26,9 @@ python setup_windows.py py2exe
 @goto:eof
 
 :nsis
-CALL git describe --tags > build.info
-for /F "delims=\" %%a in (build.info) do (
-	set temp=%%a
-)
-SET mver="1.5.0"
+SET VERSION="1.5.0rc1"
 pause
 
-makensis /Dmver=%mver% win-installer-64.nsi
-rename CecogAnalyzer-setup.exe CecogAnalyzer_%temp%_x86_64.exe
+makensis /Dmver=%VERSION% win-installer-64.nsi
+rename CecogAnalyzer-setup.exe CecogAnalyzer_%VERSION%_x86_64.exe
 @ENDLOCAL
