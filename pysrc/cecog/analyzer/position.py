@@ -406,14 +406,8 @@ class PositionPicker(PositionCore):
 
 
 class PositionAnalyzer(PositionCore):
+
     def __init__(self, *args, **kw):
-        try:
-            import pydevd
-            pydevd.connected = True
-            pydevd.settrace(suspend=False)
-            print 'Thread enabled interactive eclipse debuging...'
-        except:
-            pass
         super(PositionAnalyzer, self).__init__(*args, **kw)
 
         if not self.has_timelapse:
@@ -764,10 +758,13 @@ class PositionAnalyzer(PositionCore):
             if self.settings('Processing', 'tracking'):
                 self.export_tracks_hdf5()
                 self.update_status({'text': 'export events...'})
-                if self.settings('Processing', 'eventselection'):
-                    self.export_events()
-                if self.settings('EventSelection', 'unsupervised_event_selection'):
-                    self.export_tc3()
+
+                if self.settings('Output', "export_events"):
+                    if self.settings('Processing', 'eventselection'):
+                        self.export_events()
+                    if self.settings('EventSelection', 'unsupervised_event_selection'):
+                        self.export_tc3()
+
                 if self.settings('Output', 'export_track_data'):
                     self.export_full_tracks()
                 if self.settings('Output', 'export_tracking_as_dot'):
@@ -960,7 +957,7 @@ class PositionAnalyzerForBrowser(PositionCore):
     def __init__(self, *args, **kw):
         super(PositionAnalyzerForBrowser, self).__init__(*args, **kw)
         # Also in the Browser we want to use cellh5
-        # The setting for the other PositionAnalyszer is 
+        # The setting for the other PositionAnalyszer is
         # implicitely set in _makedirs()
         self._hdf5_dir = os.path.join(self._out_dir, 'hdf5')
 

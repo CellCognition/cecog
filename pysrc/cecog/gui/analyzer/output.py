@@ -58,9 +58,10 @@ class OutputFrame(BaseFrame):
                         ], link='statistics', label='Statistics')
 
         self.add_group(None,
-                       [('events_export_all_features', (0,0,1,1)),
-                        ('events_export_gallery_images', (1,0,1,1)),
-                        ('events_gallery_image_size', (1,1,1,1)),
+                       [('export_events', (0, 0, 1, 1)),
+                        ('events_export_all_features', (1, 0, 1, 1)),
+                        ('events_export_gallery_images', ( 2, 0, 1, 1)),
+                        ('events_gallery_image_size', (2, 1, 1, 1)),
                         ], link='events', label='Events')
 
         self.add_expanding_spacer()
