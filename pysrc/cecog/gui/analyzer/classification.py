@@ -532,15 +532,7 @@ class ClassificationFrame(BaseProcessorFrame):
         for frame in self._result_frames.values():
             frame.load_classifier(quiet=True, check=True)
             frame.update_frame()
-
-        # FIXME: set the trait list data to plugin instances of the current channel
-        prefix = CHANNEL_PREFIX[self._tab.current_index]
-        if prefix in CH_VIRTUAL:
-            self._merged_channel_and_region(prefix)
-        else:
-            trait = self._settings.get_trait(SECTION_NAME_CLASSIFICATION,
-                                             '%s_classification_regionname' %prefix)
-            trait.set_list_data(self.plugin_mgr.region_info.names[prefix])
+        self.update_region_boxes()
 
     def _merged_channel_and_region(self, prefix):
         for ch in (CH_PRIMARY+CH_OTHER):
@@ -557,3 +549,18 @@ class ClassificationFrame(BaseProcessorFrame):
                                                    'merge_%s' %ch)
                 cbtrait.set_value(False)
                 trait.set_list_data([])
+
+    def page_changed(self):
+        super(ClassificationFrame, self).page_changed()
+        self.update_region_boxes()
+
+    def update_region_boxes(self):
+        """Update the 'Region name' or 'Merge Channels' combo boxes resp."""
+
+        for name in self.plugin_mgr.region_info.names.keys():
+            if name in CH_VIRTUAL:
+                self._merged_channel_and_region(name)
+            else:
+                trait = self._settings.get_trait(
+                    SECTION_NAME_CLASSIFICATION, '%s_classification_regionname' %name)
+                trait.set_list_data(self.plugin_mgr.region_info.names[name])
