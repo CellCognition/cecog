@@ -90,7 +90,8 @@ class PositionRunner(QtCore.QObject):
         self._makedirs()
 
         self.ch5file = ch5file
-        self.files = glob.glob(dirname(ch5file)+"/*.ch5")
+        self.files = glob.glob(join(dirname(ch5file), "*.ch5"))
+        print join(dirname(ch5file), "*.ch5")
         self.files = [f for f in self.files if "_all_positions" not in f]
 
     def _makedirs(self):
@@ -148,6 +149,7 @@ class PositionRunner(QtCore.QObject):
 
                     # make dtable aware of all positions, sometime they contain
                     # no tracks and I don't want to ignore them
+
                     dtable.add_position(position, mappings[position])
                     if not pos.has_events():
                         continue
@@ -183,6 +185,7 @@ class PositionRunner(QtCore.QObject):
         self._makedirs()
 
         mappings = PlateMapping([splitext(basename(f))[0] for f in self.files])
+
         if self.ecopts.position_labels:
             mpfile = join(self.ecopts.mapping_dir, "%s.txt" %self.plate)
             mappings.read(mpfile)
