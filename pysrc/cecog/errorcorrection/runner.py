@@ -149,7 +149,6 @@ class PositionRunner(QtCore.QObject):
 
                     # make dtable aware of all positions, sometime they contain
                     # no tracks and I don't want to ignore them
-
                     dtable.add_position(position, mappings[position])
                     if not pos.has_events():
                         continue
