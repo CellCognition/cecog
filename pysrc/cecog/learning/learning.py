@@ -122,8 +122,10 @@ class BaseLearner(LoggerObject):
         super(BaseLearner, self).__init__()
         self.add_stream_handler(self._lvl.INFO)
 
+        self._clf_dir = None
         if clf_dir is not None:
             self.clf_dir = clf_dir
+
         self.name = name
         self.color_channel = color_channel
         self.channels = channels
@@ -575,7 +577,7 @@ class CommonClassPredictor(BaseLearner):
                 yield n, l2c, l2g, conf
 
                 l2g += g_step
-            l2c += c_step 
+            l2c += c_step
 
 class CommonObjectLearner(BaseLearner):
 
