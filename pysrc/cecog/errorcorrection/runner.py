@@ -141,7 +141,8 @@ class PositionRunner(QtCore.QObject):
             self.parent().progressUpdate.emit(progress)
             QtCore.QCoreApplication.processEvents()
 
-            with cellh5.ch5open(file_, "r", cached=True) as ch5:
+            try:
+                ch5 = cellh5.CH5File(file_, "r", cached=True)
                 for pos in ch5.iter_positions():
                     # only segmentation
                     if not pos.has_classification(chreg):
@@ -166,7 +167,8 @@ class PositionRunner(QtCore.QObject):
                         chreg, pos.pos, pos.well, pos.plate)
                     dtable.add_tracks(tracks, position, mappings[position],
                                       objidx, grp_coord, probs)
-
+            finally:
+                ch5.close()
 
         if dtable.is_empty():
             raise RuntimeError(
