@@ -238,21 +238,6 @@ class _ProcessorMixin(object):
     @classmethod
     def get_special_settings(cls, settings, has_timelapse=True):
         settings = settings.copy()
-
-        # try to resolve the paths relative to the package dir
-        # (only in case of an relative path given)
-        converts = [('General', 'pathin'),
-                    ('General', 'pathout'),
-                    ('Classification', 'primary_classification_envpath'),
-                    ('Classification', 'secondary_classification_envpath'),
-                    ('Classification', 'tertiary_classification_envpath'),
-                    ('ErrorCorrection', 'primary_graph'),
-                    ('ErrorCorrection', 'secondary_graph'),
-                    ('ErrorCorrection', 'mappingfile_path'),
-                    ]
-        for section, option in converts:
-            value = settings.get(section, option)
-            settings.set(section, option, CecogEnvironment.convert_package_path(value))
         return settings
 
     def _get_modified_settings(self, name, has_timelapse):
@@ -396,21 +381,19 @@ class _ProcessorMixin(object):
                     self._analyzer = cls(self, self._current_settings,
                                          self.parent().main_window._imagecontainer)
 
-
                 elif cls is PostProcessingThread:
                     learner_dict = {}
-                    for kind in ['primary', 'secondary']:
-                        _resolve = lambda x,y: self._settings.get(x, '%s_%s' % (kind, y))
-                        env_path = CecogEnvironment.convert_package_path(_resolve('Classification', 'classification_envpath'))
-                        if (_resolve('Processing', 'classification') and
-                            (kind == 'primary' or self._settings('General', 'process_secondary'))):
+                    for channel in ['primary', 'secondary']:
+                        path = self._settings('Classification', '%s_classification_envpath' %channel)
+                        if (self._settings('Processing', '%s_classification' %channel) and
+                            (channel == 'primary' or self._settings('General', 'process_secondary'))):
                             learner = CommonClassPredictor( \
                                 env_path,
-                                _resolve('ObjectDetection', 'channelid'),
-                                _resolve('Classification', 'classification_regionname'))
+                                self._settings('ObjectDetection', '%s_channelid' %channel),
+                                self._settings('classification', '%s_classification_regionname' %channel))
 
                             learner.importFromArff()
-                            learner_dict[kind] = learner
+                            learner_dict[channel] = learner
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
                     self._analyzer = cls(self, self._current_settings, learner_dict, imagecontainer)
                     self._analyzer.setTerminationEnabled(True)

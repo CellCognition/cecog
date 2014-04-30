@@ -91,7 +91,6 @@ class PositionRunner(QtCore.QObject):
 
         self.ch5file = ch5file
         self.files = glob.glob(join(dirname(ch5file), "*.ch5"))
-        print join(dirname(ch5file), "*.ch5")
         self.files = [f for f in self.files if "_all_positions" not in f]
 
     def _makedirs(self):

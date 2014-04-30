@@ -6,7 +6,9 @@
     <a name="_top"></a>
     <h1 id="CecogAnalyzerInstallationTips">CecogAnalyzer - Startup Help</h1>
     <p>
-      The <a class="wiki" href="http://www.cellcognition.org/wiki/CecogAnalyzer">CecogAnalyzer</a> package comes with batteries included.
+      The <a class="wiki"
+             href="http://www.cellcognition.org/wiki/CecogAnalyzer">CecogAnalyzer</a>
+      package comes with demo data (battery package) included.
       <br><br>
       It contains
 
@@ -18,23 +20,47 @@
     <p>
       You can
     </p>
-    <ul><li>test <strong>Object Detection</strong> of the <i>primary</i> (H2b) and <i>secondary</i> (aTubulin) channels
-      </li><li>retrain and test the classifier for H2b and aTubulin in <strong>Classification</strong>
+    <ul>
+      <li>test <strong>Object Detection</strong> of the <i>primary</i>
+        (H2b) and <i>secondary</i> (aTubulin) channels
+      </li>
+      <li>retrain and test the classifier for H2b and aTubulin in <strong>Classification</strong>
+      </li>
+      <li>test the tracking and select events
+        in <strong>Tracking</strong> (only few short tracks
+        are found with the current settings within the 10 frames)
+      </li>
+    </ul>
 
-      </li><li>test the tracking and select events in <strong>Tracking</strong> (only few short tracks are found with the current settings within the 10 frames)
-      </li><li>for <strong>Error correction</strong> you need to install the <i>R-project</i> (see below)
-    </li></ul><h2 id="Packagedata">Package data</h2>
+    <h2 id="Packagedata">Package data</h2>
     <p>
-    The package contains a sub-folder <strong>Data</strong> with
-
+      The package contains a sub-folder <strong>Data</strong> with
     </p>
-    <ul><li><tt>Settings</tt>
-        <ul><li><tt>demo_settings.conf</tt>, the settings file which is loaded on startup
-          </li><li><tt>graph_primary.xml</tt>, an example for an hmm constraint file (H2b)
-          </li><li><tt>graph_secondary.xml</tt>, an example for an hmm constraint file (Tubulin)
-          </li><li><tt>position_labels.txt</tt>, position labels such as OligoID or GeneSymbol
-    </li></ul></li></ul><ul><li><tt>Classifier</tt>
-        <ul><li>the class definition and sample annotations to pick samples with the larger data set, feature and SVM models to test (or train) the H2b and aTubulin classifiers
+    <ul>
+      <li><tt>Settings</tt>
+        <ul>
+          <li>
+            <tt>demo_settings.conf</tt>, the settings file which is
+            loaded on startup. All paths to directories and files
+            contain the string <tt><i>$BATTERY_PACKAGE</i></tt>, which is
+            replaced the by your local path where the demo data is installed.
+          </li>
+          <li>
+            <tt>graph_primary.xml</tt>, an example for an hmm constraint file (H2b)
+          </li>
+          <li><tt>graph_secondary.xml</tt>, an example for an hmm constraint file (Tubulin)
+          </li>
+          <li>
+            <tt>position_labels.txt</tt>, position labels such as OligoID or GeneSymbol
+          </li>
+        </ul>
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <tt>Classifier</tt>
+        <ul>
+          <li>the class definition and sample annotations to pick samples with the larger data set, feature and SVM models to test (or train) the H2b and aTubulin classifiers
     </li></ul></li></ul><ul><li><tt>Images</tt>
         <ul><li>the input folder of the raw images
 

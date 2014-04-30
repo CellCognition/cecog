@@ -36,7 +36,6 @@ from collections import OrderedDict
 import vigra
 
 from cecog.environment import CecogEnvironment
-# from cecog.trai import convert_package_path
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog import ccore
 
@@ -531,13 +530,13 @@ class ImageContainer(object):
     @classmethod
     def _get_structure_filename(cls, settings, plate_id,
                                 path_plate_in, path_plate_out, use_old=False):
-        if settings.get2('structure_file_pathin'):
+        if settings('General', 'structure_file_pathin'):
             path_structure = path_plate_in
-        elif settings.get2('structure_file_pathout'):
+        elif settings('General', 'structure_file_pathout'):
             path_structure = path_plate_out
         else:
             path_structure = \
-                settings.get2('structure_file_extra_path_name')
+                settings('General', 'structure_file_extra_path_name')
         if use_old:
             filename_container = IMAGECONTAINER_FILENAME_OLD % plate_id
         else:
@@ -546,12 +545,9 @@ class ImageContainer(object):
 
     @classmethod
     def iter_check_plates(cls, settings):
-        settings.set_section(SECTION_NAME_GENERAL)
-        path_in = CecogEnvironment.convert_package_path(
-            settings.get2('pathin'))
-        path_out = CecogEnvironment.convert_package_path(
-            settings.get2('pathout'))
-        has_multiple_plates = settings.get2('has_multiple_plates')
+        path_in = settings('General', 'pathin')
+        path_out = settings('General', 'pathout')
+        has_multiple_plates = settings('General', 'has_multiple_plates')
 
         if has_multiple_plates:
             plate_folders = [x for x in os.listdir(path_in)

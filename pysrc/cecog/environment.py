@@ -26,10 +26,10 @@ from os.path import join, isdir, isfile, dirname, normpath, abspath, \
 
 from ConfigParser import RawConfigParser
 
+import cecog
 from cecog.util.pattern import Singleton
 from cecog.util.mapping import map_path_to_os as _map_path_to_os
 from cecog import ccore
-
 
 def find_resource_dir():
     """Return a normalized absolute path to the resource directory.
@@ -77,6 +77,10 @@ class BatteryPackage(object):
     @property
     def package_path(self):
         return self._path
+
+    @property
+    def demo_settings(self):
+        return join(self.package_path, "Settings", "demo_settings.conf")
 
     def copy_demodata(self, dest_path):
         self._path = dest_path
@@ -139,20 +143,7 @@ class CecogEnvironment(object):
     analyzer_config = ConfigParser(CONFIG, 'analyzer_config')
     path_mapper = PathMapper(PATH_MAPPINGS)
 
-    @classmethod
-    def map_path_to_os(cls, *args, **kw):
-        return cls.path_mapper.map_path_to_os(*args, **kw)
-
-    @classmethod
-    def is_path_mapable(cls, *args, **kw):
-        return cls.path_mapper.is_path_mappable(*args, **kw)
-
-    @classmethod
-    def convert_package_path(cls, path):
-        return normpath(join(cls.RESOURCE_DIR,
-                             basename(cls.BATTERY_PACKAGE_DIR), path))
-
-    def __init__(self, version, redirect=False, debug=False):
+    def __init__(self, version=cecog.VERSION, redirect=False, debug=False):
         super(CecogEnvironment, self).__init__()
         self._user_config_dir = None
         self.version = version
@@ -169,6 +160,18 @@ class CecogEnvironment(object):
         ccore.Config.strFontFilepath = realpath(fontfile)
         if debug:
             print 'ccore.Config.strFontFilepath(%s) called' %self.FONT12
+
+    @classmethod
+    def map_path_to_os(cls, *args, **kw):
+        return cls.path_mapper.map_path_to_os(*args, **kw)
+
+    @classmethod
+    def is_path_mapable(cls, *args, **kw):
+        return cls.path_mapper.is_path_mappable(*args, **kw)
+
+    @property
+    def demo_settings(self):
+        return normpath(self.battery_package.demo_settings)
 
     @classmethod
     def _copy_config(cls, self):

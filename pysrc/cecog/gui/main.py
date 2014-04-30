@@ -101,7 +101,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
     NAME_FILTERS = ['Settings files (*.conf)', 'All files (*.*)']
     modified = QtCore.pyqtSignal('bool')
 
-    def __init__(self, appname, version, redirect, debug=False, *args, **kw):
+    def __init__(self, appname, version, redirect, settings=None, debug=False, *args, **kw):
         super(CecogAnalyzer, self).__init__(*args, **kw)
         self.setWindowTitle("%s-%s" %(appname, version) + '[*]')
         self.setCentralWidget(QtGui.QFrame(self))
@@ -111,7 +111,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
         self.appname = appname
         self.debug = debug
 
-        self.environ = CecogEnvironment(version, redirect=redirect, debug=debug)
+        self.environ = CecogEnvironment(version=version, redirect=redirect, debug=debug)
         if debug:
             self.environ.pprint()
 
@@ -234,6 +234,14 @@ class CecogAnalyzer(QtGui.QMainWindow):
         self.setMinimumSize(QtCore.QSize(700, 600))
         self._is_initialized = True
 
+        # finally load (demo) - settings
+        if settings is None:
+            self.load_settings(self.environ.demo_settings)
+        elif os.path.isfile(settings):
+            self.load_settings(settings)
+        else:
+            raise RuntimeError("settings file does not exits (%s)" %settings)
+
     def show(self):
         super(CecogAnalyzer, self).show()
         self.center()
@@ -340,7 +348,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
         if not filename is None:
             self._write_settings(filename)
 
-    def _read_settings(self, filename):
+    def load_settings(self, filename):
         try:
             self._settings.read(filename)
         except Exception as e:
@@ -653,9 +661,8 @@ class CecogAnalyzer(QtGui.QMainWindow):
 
         if self._check_settings_saved() != QMessageBox.Cancel:
             home = ""
-            if not self._settings_filename is None:
-                settings_filename = self.environ.convert_package_path(
-                    self._settings_filename)
+            if self._settings_filename is not None:
+                settings_filename = self.environ.demo_settings
                 if os.path.isfile(settings_filename):
                     home = settings_filename
                 filename = QtGui.QFileDialog.getOpenFileName( \
@@ -664,7 +671,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
                 return
 
             try:
-                self._read_settings(filename)
+                self.load_settings(filename)
                 if self._settings.was_old_file_format():
                     information(self, ('Config file was updated to version %s'
                                        %self.version))
@@ -697,9 +704,8 @@ class CecogAnalyzer(QtGui.QMainWindow):
 
     def _get_save_as_filename(self):
         dir = ""
-        if not self._settings_filename is None:
-            settings_filename = self.environ.convert_package_path(
-                self._settings_filename)
+        if self._settings_filename is not None:
+            settings_filename = self.environ.demo_settings
             if os.path.isfile(settings_filename):
                 dir = settings_filename
         filename = QtGui.QFileDialog.getSaveFileName(

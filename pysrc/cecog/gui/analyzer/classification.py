@@ -124,21 +124,21 @@ class ClassifierResultFrame(QGroupBox):
         self.update_frame()
 
     def load_classifier(self, check=True, quiet=False):
-        _resolve = lambda x,y: self._settings.get(x, '%s_%s'
-                                                  % (self._channel, y))
-        clfdir = CecogEnvironment.convert_package_path(_resolve('Classification',
-                                               'classification_envpath'))
-        # XXX - where does the "." come from?
-        if not isdir(clfdir) or clfdir == ".":
+
+        clfdir = self._settings('Classification',
+                                '%s_classification_envpath' %self._channel)
+
+        if not isdir(clfdir):
             return
         else:
+            chid = self._settings('ObjectDetection', '%s_channelid' %self._channel)
+            title = self._settings('Classification',
+                                   '%s_classification_regionname' %self._channel)
             self._learner = CommonClassPredictor( \
                 clf_dir=clfdir,
                 name=self._channel,
-                channels = \
-                    {self._channel.title():
-                         _resolve('Classification', 'classification_regionname')},
-                color_channel=_resolve('ObjectDetection', 'channelid'))
+                channels = {self._channel.title(): title},
+                color_channel=chid)
 
             state = self._learner.state
             if check:

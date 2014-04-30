@@ -71,8 +71,7 @@ if __name__ == "__main__":
     parser.add_argument('-l', '--load', action='store_true', default=False,
                         help='Load structure file if a config was provied.')
     parser.add_argument('-c''--configfile', dest='configfile',
-                        default=os.path.join("battery_package",
-                                             "Settings", "demo_settings.conf"),
+                        default=None,
                         help='Load a config file. (default from battery package)')
     parser.add_argument('-d', '--debug', action='store_true', default=False,
                         help='Run applicaton in debug mode')
@@ -94,15 +93,15 @@ if __name__ == "__main__":
     else:
         redirect = False
 
-    main = CecogAnalyzer(cecog.APPNAME, cecog.VERSION, redirect,  args.debug)
-    main._read_settings(join(main.environ.user_config_dir, args.configfile))
+    main = CecogAnalyzer(cecog.APPNAME, cecog.VERSION, redirect,
+                         args.configfile, args.debug)
 
     try:
         if (args.load and os.path.isfile(args.configfile)) or is_bundled:
             infos = list(ImageContainer.iter_check_plates(main._settings))
             main._load_image_container(infos, show_dlg=False)
     except Exception, e:
-        msg = "Could not load images\n%s" %e.message
+        msg = "Could not load images\n%s" %str(e)
         QtGui.QMessageBox.critical(None, "Error", msg)
 
     main.show()

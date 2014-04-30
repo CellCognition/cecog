@@ -17,18 +17,20 @@ __source__ = '$URL: $'
 __all__ = ['ConfigSettings']
 
 
+from os.path import join
 import copy
 import cStringIO
 from collections import OrderedDict
 from ConfigParser import RawConfigParser, NoOptionError
 
-from cecog import VERSION
+import cecog
 from cecog.plugin.metamanager import MetaPluginManager
 from cecog.traits.analyzer.section_registry import SectionRegistry
+from cecog.environment import CecogEnvironment
 
 class ConfigSettings(RawConfigParser):
-    """Extension of RawConfigParser which maps sections to parameter sections e.g.
-    GUI modules and options to values in these modules.
+    """Extension of RawConfigParser which maps sections to parameter sections
+    e.g. GUI modules and options to values in these modules.
     Values are stored internally in a representation as defined by value traits.
     Only sections and options as defined by the sections_registry (corresponding
     to modules and traits) are allowed.
@@ -36,6 +38,7 @@ class ConfigSettings(RawConfigParser):
 
     def __init__(self):
         RawConfigParser.__init__(self, allow_no_value=True)
+        self.environ = CecogEnvironment(cecog.VERSION)
         self._registry = OrderedDict()
         self._current_section = None
         self._old_file_format = False
@@ -101,7 +104,15 @@ class ConfigSettings(RawConfigParser):
         self.set(self._current_section, trait_name, value)
 
     def read(self, filename):
-        fp = file(filename, 'r')
+        """Read the settings file and replace the battery_package path."""
+        settings  = file(filename, 'r').read()
+        settings = settings.replace("$BATTERY_PACKAGE",
+                                    join(self.environ.user_config_dir,
+                                         "battery_package"))
+        fp = cStringIO.StringIO()
+        fp.write(settings)
+        fp.seek(0)
+
         self.readfp(fp)
         fp.close()
 
@@ -129,7 +140,7 @@ class ConfigSettings(RawConfigParser):
         result = RawConfigParser.readfp(self, fp)
         self._old_file_format = False
         if not self.has_option('General', 'version') or \
-                self.get('General', 'version') < VERSION:
+                self.get('General', 'version') < cecog.VERSION:
             self._old_file_format = True
 
         for section_name in self.sections():
@@ -147,7 +158,8 @@ class ConfigSettings(RawConfigParser):
                         pass
                     else:
                         try:
-                            self._update_option_to_version(section_name, option_name)
+                            self._update_option_to_version(section_name,
+                                                           option_name)
                         except NoOptionError as e:
                             pass
                         print("Warning: option '%s' in section '%s' is not "

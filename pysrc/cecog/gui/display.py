@@ -351,9 +351,6 @@ class TraitDisplayMixin(QFrame):
 
             if grid is None:
                 layout.addWidget(w_label, parent._input_cnt, 0, Qt.AlignRight)
-                #if not w_doc is None:
-                #    layout.addWidget(w_doc, parent._input_cnt, 1)
-
                 layout.addWidget(w_input, parent._input_cnt, 1)
                 if not w_button is None:
                     layout.addWidget(w_button, parent._input_cnt, 2)
@@ -369,7 +366,7 @@ class TraitDisplayMixin(QFrame):
                     layout.addWidget(w_button, grid[0], grid[1]*3+2+grid[3])
                 # do not add a spacer if the element is last in a row
                 if not last:
-                    #layout.setColumnStretch(grid[1]*3+2, 0)
+                    # layout.setColumnStretch(grid[1]*3+2, 0)
                     layout.addItem(QSpacerItem(0, 0,
                                                QSizePolicy.MinimumExpanding,
                                                QSizePolicy.Fixed),
@@ -422,27 +419,8 @@ class TraitDisplayMixin(QFrame):
             trait = self._get_trait(option)
             if (isinstance(trait, BooleanTrait) and
                 trait.widget_info == BooleanTrait.RADIOBUTTON):
-                #print option, name, value
+                # print option, name, value
                 self._set_value(option, option == name)
-
-    def _on_browse_name(self, name, mode):
-        # FIXME: signals are send during init were registry is not set yet
-        if name in self._registry:
-            input = CecogEnvironment.convert_package_path( \
-                str(self._registry[name].text()))
-            dir = os.path.abspath(input)
-            if mode == StringTrait.STRING_FILE:
-                result = QFileDialog.getOpenFileName(self, 'Select a file', dir)
-            else:
-                result = QFileDialog.getExistingDirectory(self, \
-                               'Select a directory', dir)
-
-            if result:
-                self._registry[name].setText(result)
-                self._set_value(name, result)
-                # call final handler
-                if name in self._final_handlers:
-                    self._final_handlers[name]()
 
     def _on_current_index(self, name, index):
         # FIXME: signals are send during init but registry is not set yet
@@ -468,3 +446,21 @@ class TraitDisplayMixin(QFrame):
             value = eval(text)
             assert type(value) == types.DictType
             self._set_value(name, value)
+
+    def _on_browse_name(self, name, mode):
+        # FIXME: signals are send during init were registry is not set yet
+        if name in self._registry:
+            dir_ = os.path.abspath(str(self._registry[name].text()))
+
+            if mode == StringTrait.STRING_FILE:
+                result = QFileDialog.getOpenFileName(self, 'Select a file', dir_)
+            else:
+                result = QFileDialog.getExistingDirectory(self, \
+                           'Select a directory', dir_)
+
+            if result:
+                self._registry[name].setText(result)
+                self._set_value(name, result)
+                # call final handler
+                if name in self._final_handlers:
+                    self._final_handlers[name]()
