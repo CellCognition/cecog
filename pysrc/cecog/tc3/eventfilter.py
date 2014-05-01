@@ -14,6 +14,7 @@ __url__ = 'www.cellcognition.org'
 
 __all__ = ['TC3EventFilter']
 
+import warnings
 import numpy as np
 from cecog.learning import hmm
 
@@ -70,22 +71,23 @@ class TC3EventFilter(object):
             labels = np.where(labels, 0, 1)
         return labels
 
-    def _smooth(self, tracks):
+    def _smooth(self, tracks, maxiter=250):
         """Smooth trajectories using a MultinomialHMM.
 
         Fit the Multinomial hmm using all tracks, but prediction is performed
         on single tracks.
         """
 
-        hmm_ = hmm.MultinomialHMM(n_components=2, n_iter=250)
+        hmm_ = hmm.MultinomialHMM(n_components=2, n_iter=maxiter)
         # in newer version of hmm n_symbols can be set in the init method.
         hmm_.n_symbols = 2
-        converged, iterations = hmm_.fit(tracks)
+        logprob = hmm_.fit(tracks)
 
         if self.verbose:
-            print "# hmm iterations: ", iterations
-        if not converged:
-            print "Warning: HMM is not converged after %d" %iterations
+            print "# hmm iterations: ", len(logprob)
+        if len(logprob) >= maxiter:
+            warnings.warn("Warning: HMM is not converged after %d" %maxiter)
+            warnings.resetwarnings()
 
         tracks2 = []
         for track in tracks:

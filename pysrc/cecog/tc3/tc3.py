@@ -13,7 +13,7 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-__all__ =['normalize', 'TemporalClustering', 'TC3Error']
+__all__ = ['normalize', 'TemporalClustering', 'TC3Error']
 
 import numpy as np
 import scipy
@@ -23,7 +23,6 @@ import sklearn.mixture as mixture
 from cecog.tc3 import TC3Container
 from cecog.tc3 import TC3Params, GmmParams
 
-# np.set_printoptions(precision=2)
 EPS = np.spacing(1)
 
 # recycled from sklearn.hmm be able to control the eps parameter!
@@ -38,8 +37,10 @@ def normalize(A, axis=None, eps=EPS):
         Asum.shape = shape
     return A / Asum
 
+
 class TC3Error(Exception):
     pass
+
 
 class TemporalClustering(object):
 
