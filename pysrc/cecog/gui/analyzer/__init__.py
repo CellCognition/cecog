@@ -388,9 +388,9 @@ class _ProcessorMixin(object):
                         if (self._settings('Processing', '%s_classification' %channel) and
                             (channel == 'primary' or self._settings('General', 'process_secondary'))):
                             learner = CommonClassPredictor( \
-                                env_path,
+                                path,
                                 self._settings('ObjectDetection', '%s_channelid' %channel),
-                                self._settings('classification', '%s_classification_regionname' %channel))
+                                self._settings('Classification', '%s_classification_regionname' %channel))
 
                             learner.importFromArff()
                             learner_dict[channel] = learner
