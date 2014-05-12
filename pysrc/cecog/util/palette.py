@@ -49,7 +49,7 @@ class _Palette(object):
     """
 
     def __init__(self, name):
-        self.lut = numpy.zeros((256,3), dtype=numpy.uint8)
+        self.lut = numpy.zeros((256, 3), dtype=numpy.uint8)
         self.name = name
 
     def apply_to_numpy(self, array):
@@ -136,12 +136,12 @@ class SingleColorPalette(_Palette):
 
 
 if __name__ == "__main__":
-
-    z = ZeissPalette.from_file('/Users/miheld/src/cecog_svn/trunk/apps/CecogAnalyzer/resources/palettes/Zeiss/004_Magenta.lut')
+    import sys
+    z = ZeissPalette.from_file(sys.argv[1])
     print '"%s"' % z.name
     print z.lut
 
-    z = NucMedPalette.from_file('/Users/miheld/src/cecog_svn/trunk/apps/CecogAnalyzer/resources/palettes/NucMed/gray.lut')
+    z = NucMedPalette.from_file(sys.argv[1])
     print '"%s"' % z.name
     print z.lut
 
