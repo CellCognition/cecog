@@ -39,6 +39,18 @@ class PlateMapping(OrderedDict):
         for pos in positions:
             self.setdefault(pos, None)
 
+    def _checkPositions(self):
+        """Performs a sanitiy check plate mappings. Any key (position) has
+        to have a value i.e. a dict. If the value is None (default)
+        a RuntimeError is raised."""
+
+        positions = [k for k in self.keys() if self[k] is None]
+        if len(positions) > 0:
+            msg = ("Invalid plate mapping file\n"
+                   "Missing entries for data files %s" %str(positions))
+            raise RuntimeError(msg)
+
+
     def read(self, filename):
 
         if not isfile(filename):
@@ -51,12 +63,8 @@ class PlateMapping(OrderedDict):
                 if self.has_key(pos):
                     del line['Position']
                     self[pos] = line
-                else:
-                    msg = (("Invalid Plate Mapping\n"
-                            "Positions names and cellh5 file names must be equal."
-                            "\nReview your plate mapping file."
-                            " No wasted lines are allowed."))
-                    raise RuntimeError(msg)
+
+        self._checkPositions()
 
     def save(self, filename, mode="w"):
         with open(filename, mode=mode) as fp:
