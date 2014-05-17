@@ -652,14 +652,14 @@ class CecogAnalyzer(QtGui.QMainWindow):
     def _on_file_open(self):
 
         if self._check_settings_saved() != QMessageBox.Cancel:
-            home = ""
+            home = ""            
             if not self._settings_filename is None:
                 settings_filename = self.environ.convert_package_path(
                     self._settings_filename)
                 if os.path.isfile(settings_filename):
                     home = settings_filename
-                filename = QtGui.QFileDialog.getOpenFileName( \
-                    self, 'Open config file', home, ';;'.join(self.NAME_FILTERS))
+            filename = QtGui.QFileDialog.getOpenFileName( \
+               self, 'Open config file', home, ';;'.join(self.NAME_FILTERS))
             if not bool(filename):
                 return
 
