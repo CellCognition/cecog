@@ -19,13 +19,12 @@ import re
 import glob
 from os.path import join, basename, isdir
 
-from cecog.learning.collector import CellCounterReader, CellCounterReaderXML
-from cecog.analyzer.position import PositionAnalyzer
+from cecog.learning.annotation import Annotations
+from cecog.analyzer.position import PositionAnalyzer, PositionAnalyzerForBrowser
 from cecog.analyzer.position import PositionPicker
 from cecog.io.imagecontainer import MetaImage
 from cecog.util.logger import LoggerObject
 from cecog.util.util import makedirs
-
 
 
 # XXX - fix class names
@@ -80,13 +79,17 @@ class AnalyzerBase(LoggerObject):
             if self.settings.get('General', 'frameRange'):
                 f_incr = self.settings.get('General', 'frameincrement')
                 try:
-                    fmin = max(min(frames_total), self.settings.get('General', 'frameRange_begin'))
-                    fmax = min(max(frames_total), self.settings.get('General', 'frameRange_end'))
+                    fmin = max(min(frames_total),
+                               self.settings('General', 'frameRange_begin'))
+                    fmax = min(max(frames_total),
+                               self.settings('General', 'frameRange_end'))
                     f_start = frames_total.index(fmin)
                     f_end = frames_total.index(fmax)
                 except ValueError:
-                    # this can happen if coordinates have already a increment > 1
-                    msg = ("Time constraint: either 'Begin' or 'End' is an invalid value!")
+                    # this can happen if coordinates have already a
+                    # increment > 1
+                    msg = ("Time constraint: either 'Begin' or 'End' "
+                           "is an invalid value!")
                     raise ValueError(msg)
 
                 if f_start > f_end:
@@ -101,7 +104,6 @@ class AnalyzerBase(LoggerObject):
 
 
 class AnalyzerCore(AnalyzerBase):
-
     def __init__(self, plate, settings, imagecontainer):
         super(AnalyzerCore, self).__init__(plate, settings, imagecontainer)
         self._makedirs()
@@ -175,7 +177,7 @@ class AnalyzerCore(AnalyzerBase):
             MetaImage.disable_cropping()
             self.logger.info("cropping disabled")
 
-    def processPositions(self, qthread=None, myhack=None):
+    def processPositions(self, qthread=None):
         job_args = []
         for pos in self.positions:
             self.logger.info('Process positions: %r' % pos)
@@ -189,7 +191,7 @@ class AnalyzerCore(AnalyzerBase):
                          self.sample_positions,
                          None,
                          self._imagecontainer)
-                kw_ = dict(qthread = qthread, myhack = myhack)
+                kw_ = dict(qthread = qthread)
                 job_args.append((args_, kw_))
 
         stage_info = {'stage': 1, 'min': 1, 'max': len(job_args)}
@@ -210,13 +212,36 @@ class AnalyzerCore(AnalyzerBase):
                     self.settings.get('Output', 'hdf5_merge_positions'):
                     hdf5_links.append(analyzer.hdf5_filename)
             except Exception as e:
-                print e.message
                 import traceback, sys
                 traceback.print_exc()
                 raise
             finally:
                 analyzer.clear()
         return hdf5_links
+
+
+class AnalyzerBrowser(AnalyzerCore):
+    def __init__(self, plate, settings, imagecontainer):
+        super(AnalyzerBrowser, self).__init__(plate, settings, imagecontainer)
+
+    def processPositions(self):
+        job_args = []
+        pos = self.positions[0]
+        self.logger.info('Browser(): Process positions: %r' % pos)
+        job_args = (self.plate,
+                     pos,
+                     self._out_dir,
+                     self.settings,
+                     self.frames,
+                     self.sample_reader,
+                     self.sample_positions,
+                     None,
+                     self._imagecontainer)
+
+        analyzer = PositionAnalyzerForBrowser(*job_args)
+        analyzer.add_stream_handler()
+        res = analyzer()
+        return res
 
 
 class Picker(AnalyzerBase):
@@ -229,7 +254,7 @@ class Picker(AnalyzerBase):
         self.sample_positions = {}
         self.learner = learner
 
-        pattern = join(self.learner.annotations_dir, "*%s" %learner.extension)
+        pattern = join(self.learner.annotations_dir, "*%s" %learner.XML)
         anno_re = re.compile(('((.*?_{1,3})?PL(?P<plate>.*?)_{1,3})?P(?P'
                               '<position>.+?)_{1,3}T(?P<time>\d+).*?'))
 
@@ -238,23 +263,22 @@ class Picker(AnalyzerBase):
 
             result = anno_re.match(basename(annofile))
             if result is None:
-                raise RuntimeError("Something is wrong with your annotation files in the classifier folder. " +
-                                   "Please make sure that the XML have consistent plate names.")
+                msg = ("Something is wrong with your annotation files in "
+                       "the classifier folder. Please make sure that the "
+                       "XML have consistent plate names.")
+                raise RuntimeError(msg)
 
             # Taking only annotated samples for the specific plate
             if (result.group("plate") != self.plate):
                 continue
             elif self.is_valid_annofile(result):
-                if learner.extension.endswith(learner.XML):
-                    reader = CellCounterReaderXML(result, annofile, frames_total)
-                else:
-                    reader = CellCounterReader(result, annofile, frames_total)
+                reader = Annotations(result, annofile, frames_total)
                 self.sample_reader.append(reader)
 
                 position = result.group('position')
                 if not position in self.sample_positions:
                     self.sample_positions[position] = []
-                self.sample_positions[position].extend(reader.getTimePoints())
+                self.sample_positions[position].extend(reader.timepoints())
             else:
                 raise RuntimeError("Annotation file is invalid!")
 
@@ -273,7 +297,7 @@ class Picker(AnalyzerBase):
         return True
 
 
-    def processPositions(self, qthread=None, myhack=None):
+    def processPositions(self, qthread=None):
         imax = len(self.sample_positions)
 
         for i, (posid, frames) in enumerate(self.sample_positions.iteritems()):
@@ -291,5 +315,5 @@ class Picker(AnalyzerBase):
                                     self.settings,
                                     frames, self.sample_reader,
                                     self.sample_positions, self.learner,
-                                    self._imagecontainer, qthread, myhack)
+                                    self._imagecontainer, qthread)
             result = picker()

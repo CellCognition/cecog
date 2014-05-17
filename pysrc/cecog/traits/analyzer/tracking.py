@@ -30,7 +30,7 @@ class SectionTracking(SectionCore):
 
     OPTIONS = [
         ('tracking',
-         [('tracking_regionname',
+         [('region',
            SelectionTrait2(None, [], label='Region name')),
           ('tracking_maxobjectdistance',
            IntTrait(0, 0, 4000, label='Max object x-y distance')),

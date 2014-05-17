@@ -114,7 +114,7 @@ class EventExporter(object):
 
         for tracks in visitor_data.itervalues():
             for startid, event_data in tracks.iteritems():
-                if startid.startswith('_'):
+                if startid in ('_full_tracks', '_current_branch'):
                     continue
                 for chname, region in channel_regions.iteritems():
                     for region_name, feature_names in region.iteritems():
@@ -220,7 +220,7 @@ class EventExporter(object):
             table.append(data)
 
         if len(table) > 0:
-            with open(filename, 'w') as fp:
+            with open(filename, 'wb') as fp:
                 writer = csv.DictWriter(fp, fieldnames=header_names,
                                         delimiter=CSVParams.sep)
                 writer.writeheader()
@@ -249,7 +249,7 @@ class EventExporter(object):
         makedirs(outdir)
 
         for start_id, data in visitor_data.iteritems():
-            for idx, track in enumerate(data['_full']):
+            for idx, track in enumerate(data['_full_tracks']):
                 has_header = False
                 line1 = []
                 line2 = []

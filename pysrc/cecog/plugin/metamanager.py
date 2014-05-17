@@ -30,9 +30,16 @@ from cecog import CHANNEL_PREFIX
 
 class RegionInformation(object):
 
-    names = dict([(p, list()) for p in CHANNEL_PREFIX])
-    colors = {}
+    def __init__(self):
+        self.names = dict([(p, list()) for p in CHANNEL_PREFIX])
+        self.colors = dict()
 
+    def delete_channel(self, channel):
+        try:
+            self.names[channel] = list()
+            del self.colors[channel]
+        except KeyError:
+            pass
 
 class MetaPluginManager(object):
 

@@ -64,12 +64,6 @@ class GalleryRGBImage(np.ndarray):
         xmax = (position+1)*self.swidth
         self[xmin:xmax, :, :] = rgb_img
 
-    def grey2rgb(self, image, color="#FFFFFF"):
-        if is_color_like(color):
-            color = hex2color(color)
-        # be aware that color contains floats ranging from 0 to 1
-        return np.dstack((image, image, image))*np.array(color)
-
     def add_contour(self, position, contour, color):
         if is_color_like(color):
             color = hex2color(color)

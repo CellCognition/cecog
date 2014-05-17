@@ -86,7 +86,6 @@ def exception(parent, text, tb_limit=None, modal=True):
     type, value = sys.exc_info()[:2]
     return message(QMessageBox.Critical,
                    text, parent,
-                   info='%s : %s ' % (str(type.__name__), str(value)),
                    detail=traceback.format_exc(tb_limit), modal=modal,
                    buttons=QMessageBox.Ok, default=QMessageBox.Ok)
 

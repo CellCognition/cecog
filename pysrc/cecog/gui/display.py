@@ -84,6 +84,16 @@ class TraitDisplayMixin(QFrame):
         frame.layout().addWidget(line, frame._input_cnt, 0, 1, 2)
         frame._input_cnt += 1
 
+    def add_label(self, label, link, margin=3, isHeading=False):
+        label = self._create_label(self, label, link)
+        label.setMargin(margin)
+        if isHeading:
+            frame = self._get_frame(name=self._tab_name)
+            frame.layout().addWidget(label, frame._input_cnt, 0, 1, 2)
+            frame._input_cnt += 1
+
+        return label
+
     def add_pixmap(self, pixmap, align=Qt.AlignLeft):
         frame = self._get_frame(name=self._tab_name)
         label = QLabel(frame)
@@ -91,7 +101,8 @@ class TraitDisplayMixin(QFrame):
         frame.layout().addWidget(label, frame._input_cnt, 0, 1, 2, align)
         frame._input_cnt += 1
 
-    def add_group(self, trait_name, items, layout="grid", link=None, label=None):
+    def add_group(self, trait_name, items, layout="grid", link=None, label=None,
+                  sublinks=True):
         frame = self._get_frame(self._tab_name)
         frame_layout = frame.layout()
 
@@ -133,9 +144,9 @@ class TraitDisplayMixin(QFrame):
                     #QGridLayout(w_group2)
                     QBoxLayout(QBoxLayout.LeftToRight, w_group2)
                     self.add_input(info[0][0], parent=w_group2, grid=(0,0,1,1),
-                                   alignment=alignment)
+                                   alignment=alignment, link=sublinks)
                     self.add_input(info[0][1], parent=w_group2, grid=(0,1,1,1),
-                                   alignment=alignment)
+                                   alignment=alignment, link=sublinks)
                     w_group.layout().addWidget(w_group2, w_group._input_cnt,
                                                1, 1, 1)
                 else:
@@ -154,7 +165,7 @@ class TraitDisplayMixin(QFrame):
                         if len(info) >= 4:
                             last = info[3]
                         self.add_input(trait_name2, parent=w_group, grid=grid,
-                                       alignment=alignment, last=last)
+                                       alignment=alignment, last=last, link=sublinks)
 
             frame_layout.addWidget(w_group, frame._input_cnt, 1, 1, 1)
 
@@ -165,17 +176,12 @@ class TraitDisplayMixin(QFrame):
 
         frame._input_cnt += 1
 
-    def add_label(self, label, link, margin=3):
-        label = self._create_label(self, label, link)
-        label.setMargin(margin)
-        return label
-
     def _create_label(self, parent, label, link=None):
         if link is None:
             link = label
         w_label = QLabel(parent)
 
-        if self._has_label_link:
+        if self._has_label_link and link is not False:
             w_label.setTextFormat(Qt.AutoText)
             w_label.setStyleSheet(("*:hover { border:none; background: "
                                    "#e8ff66; text-decoration: underline;}"))
@@ -192,7 +198,7 @@ class TraitDisplayMixin(QFrame):
         return w_label
 
     def add_input(self, trait_name, parent=None, grid=None, alignment=None,
-                  last=False):
+                  last=False, link=True):
         if parent is None:
             parent = self._get_frame(self._tab_name)
 
@@ -202,7 +208,10 @@ class TraitDisplayMixin(QFrame):
         trait = self._get_trait(trait_name)
 
         label = trait.label
-        w_label = self._create_label(parent, label, link=trait_name)
+        if link:
+            w_label = self._create_label(parent, label, link=trait_name)
+        else:
+            w_label = self._create_label(parent, label, link=False)
         w_button = None
 
         # read value from settings-instance
@@ -377,13 +386,10 @@ class TraitDisplayMixin(QFrame):
         return w_input
 
     def update_input(self):
-        #if self._settings.has_section(self.SECTION):
         for name, value in self._settings.items(self.name):
-            #print self.SECTION, name, name in self._registry
             if name in self._registry:
                 w_input = self._registry[name]
                 trait = self._get_trait(name)
-                #print '    ', name, value
                 if isinstance(trait, BooleanTrait):
                     trait.set_widget(w_input)
                     trait.set_value(value)

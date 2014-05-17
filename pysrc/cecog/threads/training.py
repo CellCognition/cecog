@@ -11,6 +11,8 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
+__all__ = ['TrainingThread']
+
 import time
 from PyQt4 import QtCore
 

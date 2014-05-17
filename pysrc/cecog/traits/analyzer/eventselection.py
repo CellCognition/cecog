@@ -28,7 +28,9 @@ class SectionEventSelection(SectionCore):
 
     OPTIONS = [
         ('event_selection',
-         [('event_selection',
+         [('eventchannel',
+           SelectionTrait2(None, [], label='Channel')),
+          ('event_selection',
            BooleanTrait(True, label='Event Selection')),
           ('backwardrange',
            FloatTrait(0, -1, 4000, label='Duration [pre]')),
@@ -50,8 +52,7 @@ class SectionEventSelection(SectionCore):
            BooleanTrait(True, label='Supervised',
                         widget_info=BooleanTrait.RADIOBUTTON)),
           ('labeltransitions',
-           StringTrait('', 200, label='Class transition motif(s)',
-                       mask='(\(\d+,\d+\),)*\(\d+,\d+\)')),
+           StringTrait('', 200, label='Class transition motif(s)')),
           ('backwardlabels',
            StringTrait('', 200, label='Class filter [pre]',
                        mask='(\d+,)*\d+')),

@@ -21,7 +21,7 @@ from os.path import join, isdir, splitext, isfile
 from collections import OrderedDict
 
 from matplotlib.colors import ListedColormap, rgb2hex
-from matplotlib import mpl
+import matplotlib as mpl
 
 import numpy as np
 import svm
@@ -34,8 +34,9 @@ from cecog.util.logger import LoggerObject
 from cecog.util.util import makedirs
 from cecog.learning.classifier import GaussianMixtureModel
 
+
 class LearnerFiles(object):
-    # to collect the file names at one place
+    # collect the file names at one place
     ARFF = 'features.arff'
     SPARSE ='features.sparse'
     DEFINITION = 'class_definition.txt'
@@ -43,8 +44,10 @@ class LearnerFiles(object):
 
 class ClassDefinitionCore(object):
 
-    def __init__(self, *args, **kw):
-        self.feature_names = None
+    def __init__(self, channels=None, feature_names=None):
+        super(ClassDefinitionCore, self).__init__()
+        self.feature_names = feature_names
+        self.channels = channels
         self.hexcolors = dict()
         self.class_labels = dict()
         self.class_names = OrderedDict()
@@ -59,6 +62,13 @@ class ClassDefinitionCore(object):
         corretly mapped to the colors"""
         return mpl.colors.Normalize(vmin=0,
                                     vmax=max(self.class_names.keys()))
+
+    @property
+    def regions(self):
+        if len(self.channels) == 1:
+            return self.channels.values()[0]
+        else:
+            return self.channels.values()
 
 
 class ClassDefinitionUnsup(ClassDefinitionCore):
@@ -108,34 +118,23 @@ class BaseLearner(LoggerObject):
     _subdirs = ('annotations', 'data', 'samples', 'controls')
 
     def __init__(self, clf_dir, name, channels, color_channel=None,
-                 extension=None, has_zero_insert=False):
+                 has_zero_insert=False):
         super(BaseLearner, self).__init__()
         self.add_stream_handler(self._lvl.INFO)
-        self._clf_dir = None
 
+        self._clf_dir = None
         if clf_dir is not None:
-            if not os.path.isdir(clf_dir):
-                raise IOError("Classifier path '%s' does not exist." %clf_dir)
             self.clf_dir = clf_dir
 
         self.name = name
-        self.extension = extension
-
         self.color_channel = color_channel
         self.channels = channels
 
+        self.has_zero_insert = has_zero_insert
         self.arff_file = LearnerFiles.ARFF
         self.sparse_file = LearnerFiles.SPARSE
         self.definitions_file = LearnerFiles.DEFINITION
-        self._feature_names = None
-
-        self._class_definitions = []
-        self.feature_data = OrderedDict()
-        self.class_names = OrderedDict()
-        self.class_labels = {}
-        self.has_zero_insert = has_zero_insert
-        self.hexcolors = {}
-        self.sample_names = {}
+        self.clear()
 
     @property
     def regions(self):
@@ -191,12 +190,13 @@ class BaseLearner(LoggerObject):
         return len(self.class_names)
 
     def clear(self):
-        self.dctFeatureData.clear()
-        self.class_names.clear()
-        self.class_labels.clear()
+        self.feature_names = None
+        self.feature_data = OrderedDict()
+        self.class_names = OrderedDict()
+        self.class_labels = {}
         self.feature_names = []
-        self.hexcolors.clear()
-        self.sample_names.clear()
+        self.hexcolors = {}
+        self.sample_names = {}
 
     @property
     def names2samples(self):
@@ -265,27 +265,42 @@ class BaseLearner(LoggerObject):
         self.hexcolors = oReader.dctHexColors
         self.has_zero_insert = oReader.hasZeroInsert
 
-    def check(self):
+    @property
+    def is_valid(self):
+        return self.state["has_model"] and self.state['has_range']
+
+    @property
+    def is_trained(self):
+        return self.state['has_arff']
+
+    @property
+    def is_annotated(self):
+        return self.state['has_definition'] and self.state['has_path_annotations']
+
+    @property
+    def state(self):
+        # must not be lazy, want state at runtime determined
         filename = splitext(self.arff_file)[0]
-        result = {'path_env': self.clf_dir,
-                  'path_data': self.data_dir,
-                  'path_samples': self.samples_dir,
-                  'path_annotations': self.annotations_dir,
-                  'model': join(self.data_dir, '%s.model' %filename),
-                  'range': join(self.data_dir, '%s.range' %filename),
-                  'conf': join(self.data_dir, '%s.confusion.txt' %filename),
-                  'arff': join(self.data_dir, self.arff_file),
-                  'definition': join(self.clf_dir, self.definitions_file),
-                  # result of validity checks
-                  'has_path_data': isdir(self.data_dir),
-                  'has_path_samples': isdir(self.data_dir),
-                  'has_path_annotations': isdir(self.data_dir),
-                  'has_model': isfile(join(self.data_dir, '%s.model' %filename)),
-                  'has_range': isfile(join(self.data_dir, '%s.range' %filename)),
-                  'has_conf': isfile(join(self.data_dir, '%s.confusion.txt' %filename)),
-                  'has_arff': isfile(join(self.data_dir, self.arff_file)),
-                  'has_definition': isfile(join(self.clf_dir, self.definitions_file))}
-        return result
+        state = {'path_env': self.clf_dir,
+                 'path_data': self.data_dir,
+                 'path_samples': self.samples_dir,
+                 'path_annotations': self.annotations_dir,
+                 'model': join(self.data_dir, '%s.model' %filename),
+                 'range': join(self.data_dir, '%s.range' %filename),
+                 'conf': join(self.data_dir, '%s.confusion.txt' %filename),
+                 'arff': join(self.data_dir, self.arff_file),
+                 'definition': join(self.clf_dir, self.definitions_file),
+                 # result of validity checks
+                 'has_path_data': isdir(self.data_dir),
+                 'has_path_samples': isdir(self.data_dir),
+                 'has_path_annotations': isdir(self.data_dir),
+                 'has_model': isfile(join(self.data_dir, '%s.model' %filename)),
+                 'has_range': isfile(join(self.data_dir, '%s.range' %filename)),
+                 'has_conf': isfile(join(self.data_dir, '%s.confusion.txt' %filename)),
+                 'has_arff': isfile(join(self.data_dir, self.arff_file)),
+                 'has_definition': isfile(join(self.clf_dir, self.definitions_file))}
+
+        return state
 
     def exportToArff(self, path=None, filename=None):
         if filename is None:
@@ -447,41 +462,38 @@ class CommonClassPredictor(BaseLearner):
             model.save(os.path.join(path, filename))
         return problem, model
 
-    def exportConfusion(self, log2c, log2g, conf, path=None, filename=None):
-        if filename is None:
-            filename = splitext(self.arff_file)[0]
-            filename += '.confusion.txt'
-        if path is None:
-            path = self.data_dir
+    def exportConfusion(self, log2c, log2g, conf):
+        fname = join(self.data_dir,
+                     self.arff_file.replace(".arff", ".confusion.txt"))
 
-        with open(join(path, filename), "w") as f:
-            f.write('log2(C) = %f\n' % log2c)
-            f.write('log2(g) = %f\n' % log2g)
-            f.write('accuracy = %f\n' % conf.ac_sample)
-            f.write('\n')
-            f.write('confusion matrix (absolute)\n')
-            f.write('\t%s\n' %'\t'.join([str(k) for k in self.class_names.keys()]))
+        with open(fname, "w") as fp:
+            fp.write('log2(C) = %f\n' % log2c)
+            fp.write('log2(g) = %f\n' % log2g)
+            fp.write('accuracy = %f\n' % conf.ac_sample)
+            fp.write('\n')
+            fp.write('confusion matrix (absolute)\n')
+            fp.write('\t%s\n' %'\t'.join([str(k) for k in self.class_names.keys()]))
 
             for label, row in zip(self.class_names.keys(), conf.conf):
-                f.write( ('%d\t' %label) + '\t'.join(['%d' %i for i in row]))
-                f.write('\n')
+                fp.write( ('%d\t' %label) + '\t'.join(['%d' %i for i in row]))
+                fp.write('\n')
 
-    def importConfusion(self, path=None, filename=None):
-        if filename is None:
-            filename = os.path.splitext(self.arff_file)[0]
-            filename += '.confusion.txt'
-        if path is None:
-            path = self.data_dir
+    def importConfusion(self):
+        fname = join(self.data_dir,
+                     self.arff_file.replace(".arff", ".confusion.txt"))
 
-        with open(join(path, filename), "Ur") as f:
-            log2c = float(f.readline().split('=')[1].strip())
-            log2g = float(f.readline().split('=')[1].strip())
-            f.readline()
-            f.readline()
-            f.readline()
-            f.readline()
+        if not isfile(fname):
+            raise IOError("File (%s) does not exist")
+
+        with open(fname, "Ur") as fp:
+            log2c = float(fp.readline().split('=')[1].strip())
+            log2g = float(fp.readline().split('=')[1].strip())
+            fp.readline()
+            fp.readline()
+            fp.readline()
+            fp.readline()
             conf_array = []
-            for line in f:
+            for line in fp:
                 line = line.strip()
                 if len(line) == 0:
                      break

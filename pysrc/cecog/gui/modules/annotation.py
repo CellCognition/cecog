@@ -995,11 +995,11 @@ class AnnotationModule(Module):
         except:
             exception(self, 'Error on loading classifier')
         else:
-            result = learner.check()
+            state = learner.state
             #if result['has_arff']:
             #    self._learner.importFromArff()
 
-            if result['has_definition']:
+            if state['has_definition']:
                 learner.loadDefinition()
         return learner
 
@@ -1033,3 +1033,5 @@ class AnnotationModule(Module):
         self.browser.image_viewer.image_mouse_pressed.disconnect(self._on_new_point)
         self.browser.image_viewer.purify_objects()
         self._action_grp.setEnabled(False)
+        
+        

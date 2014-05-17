@@ -90,7 +90,8 @@ class PositionRunner(QtCore.QObject):
         self._makedirs()
 
         self.ch5file = ch5file
-        self.files = glob.glob(dirname(ch5file)+"/*.ch5")
+        self.files = glob.glob(join(dirname(ch5file), "*.ch5"))
+        print join(dirname(ch5file), "*.ch5")
         self.files = [f for f in self.files if "_all_positions" not in f]
 
     def _makedirs(self):
@@ -114,16 +115,17 @@ class PositionRunner(QtCore.QObject):
                 setattr(self, "_%s_dir" %basename(odir.lower()).strip("_"), odir)
 
     def _load_classdef(self, region):
-        try:
-            ch5 = cellh5.CH5File(self.ch5file, "r", cached=True)
+
+        with cellh5.ch5open(self.ch5file, "r", cached=True) as ch5:
             cld = ch5.class_definition(region)
-        finally:
-            ch5.close()
-        classdef = ClassDefinition(cld)
+            classdef = ClassDefinition(cld)
+
         return classdef
 
     def _load_data(self, mappings, channel):
         dtable = HmmDataTable()
+
+        # XXX read region names from hdf not from settings
         chreg = "%s__%s" %(channel, self.ecopts.regionnames[channel])
 
         progress = ProgressMsg(max=len(self.files))
@@ -139,38 +141,38 @@ class PositionRunner(QtCore.QObject):
             self.parent().progressUpdate.emit(progress)
             QtCore.QCoreApplication.processEvents()
 
-            ch5 = cellh5.CH5File(file_, "r", cached=True)
-            for pos in ch5.iter_positions():
-                # make dtable aware of all positions, sometime they contain
-                # no tracks and I don't want to ignore them
-                dtable.add_position(position, mappings[position])
-                if not pos.has_events():
-                    continue
-                elif not pos.has_classification(chreg):
-                    raise RuntimeError(("There is not classifier definition"
-                                        "\nwell: %s, position %s"
-                                        %(pos.well, pos.pos)))
+            try:
+                ch5 = cellh5.CH5File(file_, "r", cached=True)
+                for pos in ch5.iter_positions():
+                    # only segmentation
+                    if not pos.has_classification(chreg):
+                        continue
 
+                    # make dtable aware of all positions, sometime they contain
+                    # no tracks and I don't want to ignore them
+                    dtable.add_position(position, mappings[position])
+                    if not pos.has_events():
+                        continue
 
-                objidx = np.array( \
-                    pos.get_events(not self.ecopts.ignore_tracking_branches),
-                    dtype=int)
-                tracks = pos.get_class_label(objidx, chreg)
-                try:
-                    probs = pos.get_prediction_probabilities(objidx, chreg)
-                except KeyError as e:
-                    probs = None
+                    objidx = np.array( \
+                        pos.get_events(not self.ecopts.ignore_tracking_branches),
+                        dtype=int)
+                    tracks = pos.get_class_label(objidx, chreg)
+                    try:
+                        probs = pos.get_prediction_probabilities(objidx, chreg)
+                    except KeyError as e:
+                        probs = None
 
-                # objids = pos.get_object_table(chreg)[objidx]
-                grp_coord = cellh5.CH5GroupCoordinate( \
-                    chreg, pos.pos, pos.well, pos.plate)
-                dtable.add_tracks(tracks, position, mappings[position],
-                                  objidx, grp_coord, probs)
-            ch5.close()
+                    grp_coord = cellh5.CH5GroupCoordinate( \
+                        chreg, pos.pos, pos.well, pos.plate)
+                    dtable.add_tracks(tracks, position, mappings[position],
+                                      objidx, grp_coord, probs)
+            finally:
+                ch5.close()
 
         if dtable.is_empty():
             raise RuntimeError(
-                "No data found for position '%s' and channel '%s' "
+                "No data found for plate '%s' and channel '%s' "
                 %(self.plate, channel))
         return dtable, self._load_classdef(chreg)
 
@@ -184,6 +186,7 @@ class PositionRunner(QtCore.QObject):
         self._makedirs()
 
         mappings = PlateMapping([splitext(basename(f))[0] for f in self.files])
+
         if self.ecopts.position_labels:
             mpfile = join(self.ecopts.mapping_dir, "%s.txt" %self.plate)
             mappings.read(mpfile)

@@ -152,7 +152,8 @@ class PluginBay(QFrame):
         self.settings = settings
         self._plugins = OrderedDict()
 
-        self.setStyleSheet("PluginItem { border: 1px solid black; background: white; }")
+        self.setStyleSheet(("PluginItem { border: 1px solid black; "
+                            "background: white; }"))
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -227,9 +228,10 @@ class PluginBay(QFrame):
         elif n > 0:
             detail = '\n'.join(['%s (%s)' % x[:2] for x in instance.referees])
             result = question(None, 'Removing the plugin "%s"' % plugin_name,
-                             '%d other plugin%s require%s this plugin.\n\nAre you sure to remove this plugin?' %
-                             (n, 's' if n > 1 else '', 's' if n == 1 else ''),
-                             detail=detail, icon=QMessageBox.Warning)
+                              ('%d other plugin%s require%s this plugin.'
+                               '\n\nAre you sure to remove this plugin?') %
+                              (n, 's' if n > 1 else '', 's' if n == 1 else ''),
+                              detail=detail, icon=QMessageBox.Warning)
         if result:
             self.remove_plugin(plugin_name)
             self.plugin_manager.remove_instance(plugin_name, self.settings)

@@ -385,10 +385,8 @@ class FlatFileImporter(AbstractImporter):
     def _get_dimension_items(self):
         column_names, table = read_table(self.flat_filename, True,
                                          guess_compression=True)
-        test = ['path',
-                'filename',
-                DIMENSION_NAME_POSITION,
-                ]
+
+        test = ['path', 'filename', DIMENSION_NAME_POSITION]
         for name in test:
             if not name in column_names:
                 raise ValueError("Missing column '%s' in coordinate file "\
@@ -538,10 +536,9 @@ class IniFileImporter(AbstractImporter):
 
             for filename in filenames:
                 filename_rel = os.path.join(path_rel, filename)
-
                 # search substring to reduce relative filename for
                 # dimension search
-                search = re_substr.search(filename)
+                search = re_substr.search(filename_rel)
                 if not search is None and len(search.groups()) > 0:
                     found_name = search.groups()[0]
                     # check substring according to regex pattern
@@ -549,8 +546,6 @@ class IniFileImporter(AbstractImporter):
                     search2 = re_dim.search(found_name)
                     if not search2 is None:
                         result = search2.groupdict()
-
-
                         # use path data if not defined for the filename
                         for key in [DIMENSION_NAME_POSITION, META_INFO_WELL,
                                     META_INFO_SUBWELL]:
@@ -573,7 +568,9 @@ class IniFileImporter(AbstractImporter):
                                     result[META_INFO_WELL] = "%s%02d" % (well[0].upper(), int(well[1:]))
 
                             # subwell is converted to int (default 1)
-                            if not META_INFO_SUBWELL in result:
+                            if not result.has_key(META_INFO_SUBWELL):
+                                result[META_INFO_SUBWELL] = 1
+                            elif result[META_INFO_SUBWELL] is None:
                                 result[META_INFO_SUBWELL] = 1
                             else:
                                 result[META_INFO_SUBWELL] = \

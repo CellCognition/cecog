@@ -57,6 +57,8 @@ class ImageObject(object):
         self.aFeatures = None
         self.crack_contour = None
         self.file = None
+        self.roisize = None
+        self.signal = None
         # ORIENTATION TEST: orientation of objects (for tracking) #
         self.orientation = Orientation()
 

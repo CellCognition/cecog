@@ -35,7 +35,6 @@ from cecog.gui.display import TraitDisplayMixin
 from cecog.learning.learning import CommonClassPredictor
 from cecog.learning.learning import ConfusionMatrix
 
-from cecog.util.util import write_table
 from cecog.units.time import seconds2datetime
 
 from cecog.gui.util import question
@@ -60,12 +59,11 @@ from cecog.plugin.display import PluginBay
 from cecog.gui.widgets.tabcontrol import TabControl
 from cecog.analyzer.ibb import IBBAnalysis, SecurinAnalysis
 
-from cecog.threads.picker import PickerThread
-from cecog.threads.analyzer import AnalyzerThread
-from cecog.threads.training import TrainingThread
-from cecog.threads.hmm import HmmThread
-from cecog.threads.pyhmm import PyHmmThread
-from cecog.threads.post_processing import PostProcessingThread
+from cecog.threads import PickerThread
+from cecog.threads import AnalyzerThread
+from cecog.threads import TrainingThread
+from cecog.threads import ErrorCorrectionThread
+from cecog.threads import PostProcessingThread
 from cecog.multiprocess.multianalyzer import MultiAnalyzerThread
 
 from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
@@ -77,6 +75,7 @@ from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
 from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
 from cecog.traits.analyzer.cluster import SECTION_NAME_CLUSTER
 from cecog.gui.progressdialog import ProgressDialog
+
 
 class BaseFrame(TraitDisplayMixin):
 
@@ -110,7 +109,7 @@ class BaseFrame(TraitDisplayMixin):
             self._tab.add_tab(name, frame)
 
         self._tab.set_active_index(0)
-        self._tab.current_changed.connect(self.on_tab_changed)
+        self._tab.currentChanged.connect(self.on_tab_changed)
 
         layout.addWidget(self._tab)
         layout.addWidget(self._control)
@@ -230,7 +229,7 @@ class _ProcessorMixin(object):
         layout.addWidget(help_button)
 
         if not self.TABS is None:
-            self._tab.current_changed.connect(self._on_tab_changed)
+            self._tab.currentChanged.connect(self._on_tab_changed)
             self._on_tab_changed(0)
         else:
             for name in self._control_buttons:
@@ -303,16 +302,6 @@ class _ProcessorMixin(object):
                     self._process_items = cls
                     self._current_process_item = 0
                     cls = cls[self._current_process_item]
-
-                    # remove HmmThread if process is not first in list and
-                    # not valid error correction was activated
-                    if (HmmThread in self._process_items and
-                        self._process_items.index(HmmThread) > 0 and
-                        not (self._settings.get('Processing', 'primary_errorcorrection') or
-                             (self._settings.get('Processing', 'secondary_errorcorrection') and
-                              self._settings.get('Processing', 'secondary_processchannel')))):
-                        self._process_items.remove(HmmThread)
-
                 else:
                     self._process_items = None
                     self._current_process_item = 0
@@ -326,10 +315,10 @@ class _ProcessorMixin(object):
                 learner = result_frame._learner
 
                 if name == self.PROCESS_PICKING:
-                    if not result_frame.is_pick_samples():
+                    if not result_frame.classifier.is_annotated:
                         is_valid = False
                         result_frame.msg_pick_samples(self)
-                    elif result_frame.is_train_classifier():
+                    elif result_frame.classifier.is_trained:
                         if not question(self, 'Samples already picked',
                                     'Do you want to pick samples again and '
                                     'overwrite previous '
@@ -337,16 +326,16 @@ class _ProcessorMixin(object):
                             is_valid = False
 
                 elif name == self.PROCESS_TRAINING:
-                    if not result_frame.is_train_classifier():
+                    if not result_frame.classifier.is_trained:
                         is_valid = False
                         result_frame.msg_train_classifier(self)
-                    elif result_frame.is_apply_classifier():
+                    elif result_frame.classifier.is_valid:
                         if not question(self, 'Classifier already trained',
                                     'Do you want to train the classifier '
                                     'again?'):
                             is_valid = False
 
-                elif name == self.PROCESS_TESTING and not result_frame.is_apply_classifier():
+                elif name == self.PROCESS_TESTING and not result_frame.classifier.is_valid:
                     is_valid = False
                     result_frame.msg_apply_classifier(self)
 
@@ -402,47 +391,10 @@ class _ProcessorMixin(object):
                     self._analyzer = cls(self, self._current_settings, imagecontainer, ncpu)
 
 
-                elif cls is PyHmmThread:
+                elif cls is ErrorCorrectionThread:
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
                     self._analyzer = cls(self, self._current_settings,
                                          self.parent().main_window._imagecontainer)
-
-                elif cls is PyHmmThread:
-                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
-                    self._analyzer = cls(self, self._current_settings,
-                                         self.parent().main_window._imagecontainer)
-
-                elif cls is HmmThread:
-                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
-
-                    # FIXME: classifier handling needs revision!!!
-                    learner_dict = {}
-                    for kind in ['primary', 'secondary']:
-                        _resolve = lambda x,y: self._settings.get(x, '%s_%s' % (kind, y))
-                        classifier_path = _resolve('Classification', 'classification_envpath')
-                        if classifier_path is None:
-                            print 'HMMThread(): No classifier given for %s' % kind
-                            continue
-                        env_path = CecogEnvironment.convert_package_path(classifier_path)
-
-                        if (os.path.exists(env_path)
-                            and (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))
-                            ):
-
-                            learner = CommonClassPredictor( \
-                                env_path,
-                                _resolve('ObjectDetection', 'channelid'),
-                                _resolve('Classification', 'classification_regionname'))
-
-                            learner.importFromArff()
-                            learner_dict[kind] = learner
-
-                    ### Whee, I like it... "self.parent().main_window._imagecontainer" crazy, crazy, michael... :-)
-                    self._analyzer = cls(self, self._current_settings,
-                                         learner_dict,
-                                         self.parent().main_window._imagecontainer)
-                    self._analyzer.setTerminationEnabled(True)
-                    self.parent().main_window.log_window.show()
 
 
                 elif cls is PostProcessingThread:
@@ -451,7 +403,7 @@ class _ProcessorMixin(object):
                         _resolve = lambda x,y: self._settings.get(x, '%s_%s' % (kind, y))
                         env_path = CecogEnvironment.convert_package_path(_resolve('Classification', 'classification_envpath'))
                         if (_resolve('Processing', 'classification') and
-                            (kind == 'primary' or self._settings.get('Processing', 'secondary_processchannel'))):
+                            (kind == 'primary' or self._settings('General', 'process_secondary'))):
                             learner = CommonClassPredictor( \
                                 env_path,
                                 _resolve('ObjectDetection', 'channelid'),
@@ -486,9 +438,9 @@ class _ProcessorMixin(object):
         self.dlg.exec_(lambda: self._analyzer.abort(wait=True))
         self.setCursor(Qt.ArrowCursor)
 
-    def _on_error(self, msg):
+    def _on_error(self, msg, short='An error occurred during processing!'):
         self._has_error = True
-        critical(self, 'An error occurred during processing.', detail=msg)
+        critical(self, short, detail=msg)
 
     def _on_process_finished(self):
         self._analyzer.image_ready.disconnect(self._on_update_image)

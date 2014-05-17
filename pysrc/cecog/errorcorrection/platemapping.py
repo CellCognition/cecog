@@ -48,8 +48,15 @@ class PlateMapping(OrderedDict):
             reader = csv.DictReader(fp, delimiter='\t')
             for line in reader:
                 pos = line['Position']
-                del line['Position']
-                self[pos] = line
+                if self.has_key(pos):
+                    del line['Position']
+                    self[pos] = line
+                else:
+                    msg = (("Invalid Plate Mapping\n"
+                            "Positions names and cellh5 file names must be equal."
+                            "\nReview your plate mapping file."
+                            " No wasted lines are allowed."))
+                    raise RuntimeError(msg)
 
     def save(self, filename, mode="w"):
         with open(filename, mode=mode) as fp:

@@ -82,6 +82,19 @@ class FrameStack(QtGui.QStackedWidget):
         self.helpbrowser = HelpBrowser()
         self.helpbrowser.hide()
 
+        self._wmap = dict()
+
+    def addWidget(self, widget):
+        wi = super(FrameStack, self).addWidget(widget)
+        self._wmap[type(widget)] = wi
+
+    def widgetByType(self, type_):
+        return self.widget(self._wmap[type_])
+
+    def removeWidget(self, widget):
+        del self._wmap[type(widget)]
+        super(FrameStack, self).removeWidget(widget)
+
 
 class CecogAnalyzer(QtGui.QMainWindow):
 
@@ -341,6 +354,16 @@ class CecogAnalyzer(QtGui.QMainWindow):
             title = self.windowTitle().split(' - ')[0]
             self.setWindowTitle('%s - %s[*]' % (title, filename))
             try:
+                # reset naming scheme to load config file completely
+                nst = self._settings.get_trait("General",  "namingscheme")
+                namingscheme_file = self._settings("General", "namingscheme")
+                if not namingscheme_file in nst.list_data:
+                    self._settings.set("General", "namingscheme", nst.default_value)
+                    warning(self, "Unkown naming scheme",
+                            ("Your current installation can not use the "
+                             "naming scheme '%s'. Resetting to default '%s'"
+                             %(namingscheme_file, nst.default_value)))
+
                 for widget in self._tabs:
                     widget.update_input()
             except Exception as e:
@@ -388,10 +411,10 @@ class CecogAnalyzer(QtGui.QMainWindow):
         if self._imagecontainer is None:
             warning(self, 'Data structure not loaded',
                     'The input data structure was not loaded.\n'
-                    'Please click "Load image data" in General.')
+                    'Please click "Scan input directory" in General.')
         elif self._browser is None:
             try:
-                browser = Browser(self._settings, self._imagecontainer)
+                browser = Browser(self._settings, self._imagecontainer, self)
                 browser.show()
                 browser.raise_()
                 browser.setFocus()
@@ -498,7 +521,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
 
             if len(icontainer.plates) > 0:
                 icontainer.set_plate(icontainer.plates[0])
-            icontainer.check_dimensions()
+                icontainer.check_dimensions()
 
 
         label = ('Please wait until the input structure is scanned\n'
@@ -521,6 +544,9 @@ class CecogAnalyzer(QtGui.QMainWindow):
             else:
                 critical(self, traceback.format_exc())
             return
+        except Exception as e:
+            critical(self, str(e))
+
 
         try: # I hate lookup tables!
             self._tab_lookup['Cluster'][1].set_imagecontainer(imagecontainer)
@@ -575,10 +601,8 @@ class CecogAnalyzer(QtGui.QMainWindow):
                 information(self, "Plate(s) successfully loaded",
                             "%d plates loaded successfully." % len(imagecontainer.plates))
         else:
-            critical(self, "No valid image data found",
-                     "The naming schema provided might not fit your image data"
-                     "or the coordinate file is not correct.\n\nPlease modify "
-                     "the values and scan the structure again.")
+            critical(self, "No images found",
+                     "Verifiy your nameing scheme and rescan the data.")
 
     def set_image_crop_size(self):
         x0, y0, x1, y1 = self._settings.get('General', 'crop_image_x0'), \
@@ -626,26 +650,30 @@ class CecogAnalyzer(QtGui.QMainWindow):
 
     @QtCore.pyqtSlot()
     def _on_file_open(self):
+
         if self._check_settings_saved() != QMessageBox.Cancel:
-            dir = ""
+            home = ""
             if not self._settings_filename is None:
                 settings_filename = self.environ.convert_package_path(
                     self._settings_filename)
                 if os.path.isfile(settings_filename):
-                    dir = settings_filename
-            filename = QtGui.QFileDialog.getOpenFileName(self, 'Open config file',
-                                                          dir, ';;'.join(self.NAME_FILTERS))
-            if filename:
+                    home = settings_filename
+                filename = QtGui.QFileDialog.getOpenFileName( \
+                    self, 'Open config file', home, ';;'.join(self.NAME_FILTERS))
+            if not bool(filename):
+                return
+
+            try:
                 self._read_settings(filename)
                 if self._settings.was_old_file_format():
-                    information(self, ('Selected config file had an old '
-                                       'version <= 1.3.0. The current version is %s. '
-                                       'The config file was  be updated...' %self.version))
-                else:
-                    information(self, "Config file version %s found"  \
-                                %self._settings.get('General', 'version'))
+                    information(self, ('Config file was updated to version %s'
+                                       %self.version))
+            except Exception as e:
+                critical(self, "Could not load file!", traceback.format_exc(e))
+            finally:
                 self._clear_browser()
                 self.set_modules_active(state=False)
+
 
     @QtCore.pyqtSlot()
     def _on_file_save(self):

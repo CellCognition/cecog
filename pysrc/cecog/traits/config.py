@@ -20,7 +20,7 @@ __all__ = ['ConfigSettings']
 import copy
 import cStringIO
 from collections import OrderedDict
-from ConfigParser import RawConfigParser
+from ConfigParser import RawConfigParser, NoOptionError
 
 from cecog import VERSION
 from cecog.plugin.metamanager import MetaPluginManager
@@ -146,7 +146,10 @@ class ConfigSettings(RawConfigParser):
                         # obey the old trait concept
                         pass
                     else:
-                        self._update_option_to_version(section_name, option_name)
+                        try:
+                            self._update_option_to_version(section_name, option_name)
+                        except NoOptionError as e:
+                            pass
                         print("Warning: option '%s' in section '%s' is not "
                               "defined and will be deleted" %\
                                   (option_name, section_name))

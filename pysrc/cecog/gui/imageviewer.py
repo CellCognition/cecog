@@ -16,7 +16,6 @@ __source__ = '$URL$'
 
 __all__ = ['ImageViewer']
 
-import math
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
@@ -25,11 +24,10 @@ from PyQt4.Qt import *
 from qimage2ndarray import array2qimage
 
 
-class ItemHoverMixin:
+class HoverPolygonItem(QGraphicsPolygonItem):
 
-    SCALE = 1.1
-
-    def __init__(self):
+    def __init__(self, *args, **kw):
+        super(HoverPolygonItem, self).__init__(*args, **kw)
         self._old_pen = self.pen()
 
     def set_pen_color(self, color):
@@ -38,8 +36,6 @@ class ItemHoverMixin:
         pen.setColor(color)
         self.setPen(pen)
 
-    # overwrite QGraphicsItem event methods
-
     def hoverEnterEvent(self, ev):
         pen = self.pen()
         self._old_pen = pen
@@ -47,46 +43,27 @@ class ItemHoverMixin:
         new_pen.setWidth(3)
         new_pen.setStyle(Qt.SolidLine)
         self.setPen(new_pen)
-        QGraphicsItem.hoverEnterEvent(self, ev)
+        super(HoverPolygonItem, self).hoverEnterEvent(ev)
 
     def hoverLeaveEvent(self, ev):
         self.setPen(self._old_pen)
-        QGraphicsItem.hoverLeaveEvent(self, ev)
-
-
-class HoverPolygonItem(QGraphicsPolygonItem, ItemHoverMixin):
-
-    def __init__(self, polygon):
-        QGraphicsPolygonItem.__init__(self, polygon)
-        ItemHoverMixin.__init__(self)
-
-
-class ImageScene(QGraphicsScene):
-
-    def __init__(self, parent):
-        super(ImageScene, self).__init__(parent)
+        super(HoverPolygonItem, self).hoverLeaveEvent(ev)
 
 
 class ImageViewer(QGraphicsView):
 
-    MOVE_KEY = Qt.Key_Space
-    MAX_SCALE = 200
-
     image_mouse_pressed = pyqtSignal(QPointF, int, int)
     image_mouse_dblclk = pyqtSignal(QPointF)
     zoom_info_updated = pyqtSignal(float)
-    #object_clicked = pyqtSignal(QGraphicsItem)
 
     def __init__(self, parent, auto_resize=False):
         super(ImageViewer, self).__init__(parent)
-        #self.setMouseTracking(True)
+        self.setScene(QGraphicsScene())
 
-        self._scene = QGraphicsScene()
-        self.setScene(self._scene)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setDragMode(self.NoDrag)
-        self.setTransformationAnchor(self.AnchorViewCenter)
+        self.setTransformationAnchor(self.AnchorUnderMouse)
         self.setResizeAnchor(self.AnchorViewCenter)
         self.setRenderHints(QPainter.Antialiasing |
                             QPainter.SmoothPixmapTransform)
@@ -94,12 +71,7 @@ class ImageViewer(QGraphicsView):
         self.setBackgroundBrush(QBrush(QColor('#666666')))
 
         self._qimage = None
-        self.connect(self, SIGNAL('MouseMovedOverImage'),
-                     self._on_move)
-
-        self._scale = 1.0
         self._auto_resize = auto_resize
-        self._move_on = False
         self._click_on = False
         self._home_pos = None
         self._objects = set()
@@ -110,14 +82,14 @@ class ImageViewer(QGraphicsView):
         self._pixmap = QGraphicsPixmapItem()
         self._pixmap.setShapeMode(QGraphicsPixmapItem.BoundingRectShape)
         self._pixmap.setTransformationMode(Qt.SmoothTransformation)
-        self._scene.addItem(self._pixmap)
-
-        self.grabGesture(Qt.PinchGesture)
+        self.scene().addItem(self._pixmap)
+        self.setToolTip("ctrl+mouse to pan/zoom")
 
     def from_numpy(self, data):
 
         self._qimage = array2qimage(data)
         # safe the data for garbage collection
+        # do I really need this??
         self._qimage.ndarray = data
         self._update()
 
@@ -143,26 +115,15 @@ class ImageViewer(QGraphicsView):
         self.channel_list = channel_list
         self.update_view()
 
-    def _on_move(self, data):
-        pos, color = data
-        if self._qimage.isGrayscale():
-            print pos, QColor(color).getRgb()[0]
-        else:
-            print pos, QColor(color).getRgb()[:3]
-
     def _update(self):
         self._pixmap.setPixmap(QPixmap.fromImage(self._qimage))
 
     @property
-    def scale_factor(self):
+    def scalefactor(self):
         return self.transform().m11()
 
     def _update_zoom_info(self):
-        self.zoom_info_updated.emit(self.scale_factor)
-
-    def scale(self, sx, sy):
-        if sx*self.scale_factor <= self.MAX_SCALE:
-            super(ImageViewer, self).scale(sx, sy)
+        self.zoom_info_updated.emit(self.scalefactor)
 
     def scale_relative(self, value, ensure_fit=False, small_only=False):
         # prevent scaling beyond the viewport size (either below or above,
@@ -192,9 +153,6 @@ class ImageViewer(QGraphicsView):
         self._update_zoom_info()
 
     def scale_to_fit(self):
-        #rect = self.sceneRect()
-        #rect.setWidth(rect.width()-3)
-        #rect.setHeight(rect.height()-3)
         self.fitInView(self._pixmap, mode=Qt.KeepAspectRatio)
         self._update_zoom_info()
 
@@ -203,6 +161,11 @@ class ImageViewer(QGraphicsView):
 
     def set_contour_color(self, color):
         self.contour_color = color
+        for item in self._objects:
+            pen = item.pen()
+            pen.setColor(QColor(self.contour_color))
+            item.setPen(pen)
+            item.setAcceptHoverEvents(self.show_mouseover)
         self._update_contours()
 
     def set_show_contours(self, state=True):
@@ -213,22 +176,41 @@ class ImageViewer(QGraphicsView):
         self.show_mouseover = state
         self._update_contours()
 
+
     def _update_contours(self):
-        pen = QPen(self.contour_color)
-        pen.setStyle(Qt.SolidLine if self.show_contours else Qt.NoPen)
         for item in self._objects:
+            pen = item.pen()
+            pen.setStyle(Qt.SolidLine if self.show_contours else Qt.NoPen)
             item.setPen(pen)
             item.setAcceptHoverEvents(self.show_mouseover)
 
     def set_objects_by_crackcoords(self, coords):
         scene = self.scene()
-        for obj_id, crack in coords.iteritems():
+        for obj_id, obj in coords.iteritems():
+            crack = obj.crack_contour
             poly = QPolygonF([QPointF(*pos) for pos in crack])
             item = HoverPolygonItem(poly)
-            #item.setPen(self.object_pen)
             item.setData(0, obj_id)
+            item.setPen(QPen(self.contour_color))
             scene.addItem(item)
             self._objects.add(item)
+        self._update_contours()
+
+    def set_objects_by_crackcoords_with_colors(self, coords):
+        scene = self.scene()
+        for obj_id, obj in coords.iteritems():
+            crack = obj.crack_contour
+            poly = QPolygonF([QPointF(*pos) for pos in crack])
+            item = HoverPolygonItem(poly)
+            item.setData(0, obj_id)
+            if obj.roisize is not None:
+                item.setToolTip(('Object: %d\nSize: %d\nIntensity: '
+                                 '%6.2f\nClass: %s (%3.2f)')
+                                %(obj_id, obj.roisize, obj.signal,
+                                  obj.strClassName, obj.dctProb[obj.iLabel]))
+            scene.addItem(item)
+            self._objects.add(item)
+            item.setPen(QColor(obj.strHexColor))
         self._update_contours()
 
     def remove_objects(self):
@@ -247,60 +229,60 @@ class ImageViewer(QGraphicsView):
         found_item = None
         scene = self.scene()
         # mouse cursor and mapped scene position seem now to match exactly.
-        # increased the search radius from a point to a 3x3 square around the point to identify the scene item
-        items = scene.items(point.x()-1, point.y()-1, 3, 3, Qt.IntersectsItemShape)
+        # increased the search radius from a point to a 3x3 square around
+        # the point to identify the scene item
+        items = scene.items(point.x()-1, point.y()-1, 3, 3,
+                            Qt.IntersectsItemShape)
         items = [i for i in items if isinstance(i, HoverPolygonItem)]
         if len(items) > 0:
             found_item = items[0]
         return found_item
 
-    # protected method overload
-
-    def event(self, ev):
-        if ev.type() == QEvent.Gesture:
-            return self.gestureEvent(ev)
-        return super(ImageViewer, self).event(ev)
-
-    def keyPressEvent(self, ev):
-        super(ImageViewer, self).keyPressEvent(ev)
-        if ev.key() == self.MOVE_KEY and not self._move_on:
-            self._move_on = True
-            self.setDragMode(self.ScrollHandDrag)
-
-    def keyReleaseEvent(self, ev):
-        super(ImageViewer, self).keyReleaseEvent(ev)
-        if ev.key() == self.MOVE_KEY and self._move_on:
-            self.setDragMode(self.NoDrag)
-            self._move_on = False
-
     def enterEvent(self, ev):
         super(ImageViewer, self).enterEvent(ev)
         self.setFocus()
-        self._scene.setFocus()
+        self.scene().setFocus()
 
-    def mousePressEvent(self, ev):
-        super(ImageViewer, self).mousePressEvent(ev)
-        if not self._move_on:
-            # mouse position and mapped scene point do not match exactly, correcting by 1 in x and y
-            point = self.mapToScene(ev.pos()-QPoint(1,1))
-            self.image_mouse_pressed.emit(point, ev.button(), ev.modifiers())
+    def mousePressEvent(self, event):
+        modified = (event.modifiers() == Qt.ControlModifier)
+
+        if event.button() == Qt.LeftButton and modified:
+            self.setDragMode(self.ScrollHandDrag)
+            QApplication.setOverrideCursor(QCursor(Qt.ClosedHandCursor))
+        else:
+            point = self.mapToScene(event.pos()-QPoint(1,1))
+            self.image_mouse_pressed.emit(point, event.button(),
+                                          event.modifiers())
+
+        super(ImageViewer, self).mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.setDragMode(self.NoDrag)
+            QApplication.restoreOverrideCursor()
+        super(ImageViewer, self).mousePressEvent(event)
 
     def resizeEvent(self, ev):
         super(ImageViewer, self).resizeEvent(ev)
         if self._auto_resize:
             self.scale_to_fit()
 
-    def gestureEvent(self, ev):
-        # a pinch gesture was detected
-        if not ev.gesture(Qt.PinchGesture) is None:
-            gesture = ev.gesture(Qt.PinchGesture)
-            if gesture.state() == Qt.GestureStarted:
-                self.setTransformationAnchor(self.AnchorUnderMouse)
-            f = gesture.scaleFactor()
-            if f != 1.0:
-                self.scale_relative(math.sqrt(f), ensure_fit=True,
-                                    small_only=True)
-                self.set_auto_resize(False)
-            if gesture.state() in [Qt.GestureCanceled, Qt.GestureFinished]:
-                self.setTransformationAnchor(self.AnchorViewCenter)
-        return True
+    def wheelEvent(self, event):
+
+        if event.modifiers() == Qt.ControlModifier:
+            if event.delta() > 0:
+                factor = 1.1
+            else:
+                factor = 0.9
+            self.scale(factor, factor)
+
+    def keyPressEvent(self, event):
+        if event.modifiers() == Qt.ControlModifier:
+            QApplication.setOverrideCursor(
+                QCursor(Qt.OpenHandCursor))
+        super(ImageViewer, self).keyReleaseEvent(event)
+
+    def keyReleaseEvent(self, event):
+        if event.key() == Qt.Key_Control:
+            QApplication.restoreOverrideCursor()
+        super(ImageViewer, self).keyReleaseEvent(event)

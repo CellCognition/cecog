@@ -13,6 +13,7 @@ __url__ = 'www.cellcognition.org'
 __all__ = ['EventSelectionFrame']
 
 from cecog.gui.analyzer import BaseProcessorFrame
+from cecog.gui.analyzer.classification import ClassificationFrame
 from cecog.threads.analyzer import AnalyzerThread
 from cecog.analyzer.channel import PrimaryChannel
 
@@ -26,19 +27,21 @@ class EventSelectionFrame(BaseProcessorFrame):
         self.register_control_button(self.PROCESS_SYNCING, AnalyzerThread, \
                               ('Test event selection', 'Stop event selection'))
 
+
         self.add_group(None,
                        [('backwardrange', (0,0,1,1)),
                         ('forwardrange', (0,1,1,1)),
                         ('duration_unit', (0,2,1,1)),
                         ], link='eventselection',
                        label='Event selection')
-
+        self.add_line()
         self.add_group('supervised_event_selection',
                        [('labeltransitions', (0,0,1,1)),
+                        ('eventchannel', (0,1,1,1)),
                         ('backwardlabels', (1,0,1,1)),
                         ('forwardlabels', (1,1,1,1)),
-                        ('backwardcheck', (3,0,1,1)),
-                        ('forwardcheck', (3,1,1,1)),
+                        ('backwardcheck', (2,0,1,1)),
+                        ('forwardcheck', (2,1,1,1)),
                        ], layout='grid')
 
         self.add_group('unsupervised_event_selection',
@@ -51,6 +54,22 @@ class EventSelectionFrame(BaseProcessorFrame):
 
         self.add_expanding_spacer()
         self._init_control()
+
+    def page_changed(self):
+        self.settings_loaded()
+
+    def settings_loaded(self):
+        trait = self._settings.get_trait('EventSelection',
+                                         'eventchannel')
+        clfframe = self.parent().widgetByType(ClassificationFrame)
+
+        # list only classifiers that has been trained, do nothing in case of tc3
+        try:
+            clfnames = [k for k, c in clfframe.classifiers.items() if c.is_valid]
+            trait.set_list_data(clfnames)
+        except AttributeError:
+            pass
+
 
     def _get_modified_settings(self, name, has_timelapse=True):
         settings = BaseProcessorFrame._get_modified_settings( \
@@ -69,12 +88,12 @@ class EventSelectionFrame(BaseProcessorFrame):
         # only primary channel for event selection
         settings.set('Processing', 'secondary_featureextraction', False)
         settings.set('Processing', 'secondary_classification', False)
-        settings.set('Processing', 'secondary_processChannel', False)
+        settings.set('General', 'process_secondary', False)
         settings.set('Processing', 'tertiary_featureextraction', False)
         settings.set('Processing', 'tertiary_classification', False)
-        settings.set('Processing', 'tertiary_processChannel', False)
+        settings.set('General', 'process_tertiary', False)
         settings.set('Processing', 'merged_classification', False)
-        settings.set('Processing', 'merged_processChannel', False)
+        settings.set('General', 'process_merged', False)
 
         show_ids = settings.get('Output', 'rendering_contours_showids')
         show_ids_class = settings.get('Output', 'rendering_class_showids')
@@ -86,7 +105,8 @@ class EventSelectionFrame(BaseProcessorFrame):
         render_class = {PrimaryChannel.NAME:
                             {'raw': ('#FFFFFF', 1.0),
                              'contours': [('primary', 'class_label', 1, False),
-                                          ('primary', '#000000', 1, show_ids_class)]}}
+                                          ('primary', '#000000', 1,
+                                           show_ids_class)]}}
 
         # setting up primary channel and live rendering
         if settings.get('EventSelection', 'unsupervised_event_selection'):

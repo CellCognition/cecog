@@ -11,8 +11,10 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
+__all__ = ['PickerThread']
+
+
 import copy
-from collections import OrderedDict
 from cecog.threads.corethread import CoreThread
 from cecog.analyzer.core import Picker
 
@@ -49,14 +51,11 @@ class PickerThread(CoreThread):
         chid = self._settings.get("ObjectDetection", "%s_channelid" %(pchannel))
         cpath = self._settings.get("Classification",
                                     "%s_classification_envpath" %pchannel)
-        ext = self._settings.get('Classification',
-                                 '%s_classification_annotationfileext' %pchannel)
 
         learner = CommonObjectLearner(cpath,
                                       pchannel.title(),
                                       self._channel_regions(pchannel, chid),
                                       chid,
-                                      extension=ext,
                                       has_zero_insert=False)
         learner.loadDefinition()
         return learner

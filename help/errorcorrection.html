@@ -22,8 +22,8 @@
       the type of the event selection. Those types are supervised and
       unsupervised methods.
       The only difference is lies in the HMM learning
-      algorithm. Supervised event selection (support vector machine) works with both <i>Simple
-        Estimate</i> and
+      algorithm. Supervised event selection (support vector machine)
+      works with both <i>Smoothing Model</i> and
       <i><img class="extlink"src=":extlink"/>
       <a href="http://en.wikipedia.org/wiki/Baum%E2%80%93Welch_algorithm">
         Baum-Welch algorithm</a></i>. Unsupervised Event
@@ -53,7 +53,7 @@
     <h3>HMM learing algorithm</h3>
     <a name="hmm_learning">
       <h4>HMM learning algorithm</h4>
-      <p class="text"><i>Simple estimate</i> learns the HMM parameters by
+      <p class="text"><i>Smoothing model</i> learns the HMM parameters by
         counting the conditional prediction probabilities.
         No Baum-Welch estimation is performed afterwards.
         This method is a 1:1 replacement of the R-implementation
@@ -61,7 +61,7 @@
         <i>Baum-Welch</i> is the standard method to estimate HMM model
         parameters.
         <br><br>
-        <i>Simple Estimate</i> results in a robust smoothing model by
+        <i>Smoothing model</i> results in a robust smoothing model by
         suppressing off-diagonal emissions (adhoc assumption).
         Further it relies on confident prediction probabilies
         provided by the support vector machine. <i>Baum-Welch</i> is

@@ -8,6 +8,7 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from cecog.gui.util import information
 
 __author__ = 'Michael Held, Thomas Walter'
 __date__ = '$Date$'
@@ -16,39 +17,28 @@ __source__ = '$URL$'
 
 __all__ = ['Browser']
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
-
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
-
+from collections import OrderedDict
 import numpy
+
+import sip
+sip.setapi('QString', 2)
+sip.setapi('QVariant', 2)
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
-from cecog.gui.util import (exception,
-                            information,
-                            question,
-                            warning,
-                            get_qcolor_hicontrast,
-                            qcolor_to_hex,
-                            )
-
 from cecog.gui.imageviewer import ImageViewer
 from cecog.gui.modules.module import ModuleManager
 from cecog.gui.analyzer import _ProcessorMixin
+from cecog.analyzer.core import AnalyzerBrowser
 from cecog.analyzer.channel import PrimaryChannel
-from cecog.analyzer.core import AnalyzerCore
 from cecog.io.imagecontainer import Coordinate
-
 from cecog.gui.modules.navigation import NavigationModule
 from cecog.gui.modules.display import DisplayModule
 from cecog.gui.modules.annotation import AnnotationModule
-
+from cecog.io.imagecontainer import ImageContainer
+from cecog.gui.config import GuiConfigSettings
 from cecog.plugin.metamanager import MetaPluginManager
 
 
@@ -59,17 +49,23 @@ class Browser(QMainWindow):
     show_objects_toggled = pyqtSignal('bool')
     show_contours_toggled = pyqtSignal('bool')
     coordinates_changed = pyqtSignal(Coordinate)
+    update_regions = pyqtSignal(dict)
 
-    def __init__(self, settings, imagecontainer):
-        super(Browser, self).__init__()
+    def __init__(self, settings, imagecontainer, parent=None):
+        super(Browser, self).__init__(parent)
 
         frame = QFrame(self)
         self.setCentralWidget(frame)
 
         self._settings = settings
         self._imagecontainer = imagecontainer
-        self._show_objects = False
+
+        # These params are used by process_image and contour visualization
+        self._detect_objects = False
+        self._show_objects_by = 'color'
         self._object_region = None
+        self._contour_color = '#000000'
+        self._show_objects = True
 
         self.coordinate = Coordinate()
 
@@ -82,13 +78,10 @@ class Browser(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
 
         splitter = QSplitter(Qt.Horizontal, frame)
-        #splitter.setSizePolicy(QSizePolicy(QSizePolicy.Minimum,
-        #                                   QSizePolicy.Expanding))
         layout.addWidget(splitter)
 
         frame = QFrame(self)
         frame_side = QStackedWidget(splitter)
-        #splitter.setChildrenCollapsible(False)
         splitter.addWidget(frame)
         splitter.addWidget(frame_side)
         splitter.setStretchFactor(0, 1)
@@ -110,17 +103,19 @@ class Browser(QMainWindow):
         self.image_viewer = ImageViewer(frame, auto_resize=True)
         layout.addWidget(self.image_viewer, 0, 0)
 
-        #self.image_viewer.image_mouse_dblclk.connect(self._on_dbl_clk)
         self.image_viewer.zoom_info_updated.connect(self.on_zoom_info_updated)
 
         self._t_slider = QSlider(Qt.Horizontal, frame)
+
         self._t_slider.setMinimum(self.min_time)
         self._t_slider.setMaximum(self.max_time)
-#        self._t_slider.setMaximum(self.max_frame)
 
         self._t_slider.setTickPosition(QSlider.TicksBelow)
-        self._t_slider.valueChanged.connect(self.on_time_changed_by_slider,
+        self._t_slider.sliderReleased.connect(self.on_time_changed_by_slider,
                                             Qt.DirectConnection)
+        self._t_slider.valueChanged.connect(self.timeToolTip)
+        self._imagecontainer.check_dimensions()
+
         if self._imagecontainer.has_timelapse:
             self._t_slider.show()
         else:
@@ -131,7 +126,6 @@ class Browser(QMainWindow):
         self.coordinate.time = self._t_slider.minimum()
 
         # menus
-
         act_next_t = self.create_action('Next Time-point',
                                         shortcut=QKeySequence('Right'),
                                         slot=self.on_act_next_t)
@@ -144,11 +138,11 @@ class Browser(QMainWindow):
         act_prev_pos = self.create_action('Previous Position',
                                           shortcut=QKeySequence('Shift+Up'),
                                           slot=self.on_act_prev_pos)
-        act_next_plate = self.create_action('Next Plate',
-                                            shortcut=QKeySequence('Shift+Alt+Down'),
+        act_next_plate = self.create_action(
+            'Next Plate', shortcut=QKeySequence('Shift+Alt+Down'),
                                             slot=self.on_act_next_plate)
-        act_prev_plate = self.create_action('Previous Plate',
-                                            shortcut=QKeySequence('Shift+Alt+Up'),
+        act_prev_plate = self.create_action(
+            'Previous Plate', shortcut=QKeySequence('Shift+Alt+Up'),
                                             slot=self.on_act_prev_plate)
         act_resize = self.create_action('Automatically Resize',
                                          shortcut=QKeySequence('SHIFT+CTRL+R'),
@@ -173,20 +167,24 @@ class Browser(QMainWindow):
                                          shortcut=QKeySequence('F5'),
                                          slot=self.on_refresh)
 
-        act_fullscreen = self.create_action('Full Screen',
-                                            shortcut=QKeySequence('CTRL+F'),
-                                            slot=self.on_act_fullscreen,
-                                            signal='triggered(bool)',
-                                            checkable=True,
-                                            checked=False)
+        act_fullscreen = self.create_action(
+            'Full Screen',
+            shortcut=QKeySequence('CTRL+F'),
+            slot=self.on_act_fullscreen,
+            signal='triggered(bool)',
+            checkable=True,
+            checked=False
+            )
         self._act_fullscreen = act_fullscreen
 
-        act_show_contours = self.create_action('Show Object Contours',
-                                               shortcut=QKeySequence('ALT+C'),
-                                               slot=self.on_act_show_contours,
-                                               signal='triggered(bool)',
-                                               checkable=True,
-                                               checked=self.image_viewer.show_contours)
+        act_show_contours = self.create_action(
+            'Show Object Contours',
+            shortcut=QKeySequence('ALT+C'),
+            slot=self.on_act_show_contours,
+            signal='triggered(bool)',
+            checkable=True,
+            checked=self.image_viewer.show_contours
+            )
         self._act_show_contours = act_show_contours
 
         act_anti = self.create_action('Antialiasing',
@@ -220,32 +218,22 @@ class Browser(QMainWindow):
         self._statusbar = QStatusBar(self)
         self.setStatusBar(self._statusbar)
 
-
-        # tool bar
         toolbar = self.addToolBar('Toolbar')
         toolbar.setMovable(False)
         toolbar.setFloatable(False)
 
-        region_names = []
-        reginfo = MetaPluginManager().region_info
-        for prefix in ['primary', 'secondary', 'tertiary']:
-            region_names.extend(['%s - %s' % (prefix.capitalize(), name) \
-                                 for name in reginfo.names[prefix]])
-
-        # Creating fallback if no Segmentation plugins have been specified so far
-        if len(region_names) > 0:
-            self._object_region = region_names[0].split(' - ')
+        # fallback if no Segmentation plugins have been specified
+        rdict = self._region_names()
+        if len(rdict) > 0:
+            self._object_region = rdict.keys()[0].split(' - ')
         else:
             self._object_region = ('Primary', 'primary')
-
 
         # create a new ModuleManager with a QToolbar and QStackedFrame
         self._module_manager = ModuleManager(toolbar, frame_side)
 
         NavigationModule(self._module_manager, self, self._imagecontainer)
-
-        DisplayModule(self._module_manager, self, self._imagecontainer, region_names)
-
+        DisplayModule(self._module_manager, self, self._imagecontainer, rdict)
         AnnotationModule(self._module_manager, self, self._settings,
                          self._imagecontainer)
 
@@ -254,6 +242,16 @@ class Browser(QMainWindow):
 
         # process and display the first image
         self._process_image()
+
+    def _region_names(self):
+
+        rdict = OrderedDict()
+        reginfo = MetaPluginManager().region_info
+        for channel, regions in reginfo.names.iteritems():
+            for region in regions:
+                rdict['%s - %s' % (channel.capitalize(), region)] = \
+                    (channel.capitalize(), region)
+        return rdict
 
 
     def create_action(self, text, slot=None, shortcut=None, icon=None,
@@ -282,8 +280,12 @@ class Browser(QMainWindow):
                 target.addAction(action)
 
     def set_coords(self, coords):
-        self.image_viewer.remove_objects()
         self.image_viewer.set_objects_by_crackcoords(coords)
+        widget = self._module_manager.get_widget(AnnotationModule.NAME)
+        widget.set_coords()
+
+    def set_classified_crack_contours(self, coords):
+        self.image_viewer.set_objects_by_crackcoords_with_colors(coords)
         widget = self._module_manager.get_widget(AnnotationModule.NAME)
         widget.set_coords()
 
@@ -304,7 +306,7 @@ class Browser(QMainWindow):
             time_info = ''
         msg = 'Plate: %s | Position: %s%s ||  Zoom: %.1f%%' % \
               (self.coordinate.plate, self.coordinate.position, time_info,
-               self.image_viewer.scale_factor*100)
+               self.image_viewer.scalefactor*100)
         self._statusbar.showMessage(msg)
 
     def get_coordinate(self):
@@ -320,14 +322,7 @@ class Browser(QMainWindow):
         self.coordinate = coordinate.copy()
         self._t_slider.blockSignals(True)
         self._imagecontainer.set_plate(coordinate.plate)
-
-        # the slider is always working with frames.
-        # reason: it is difficult to forbid slider values between allowed values.
-
-        frame = int(round(self.max_frame * (coordinate.time - self.min_time) /
-                          max(float(self.max_time - self.min_time), 1)))
-
-        self._t_slider.setValue(frame)
+        self._t_slider.setValue(coordinate.time)
 
         self._t_slider.blockSignals(False)
         self._process_image()
@@ -341,7 +336,8 @@ class Browser(QMainWindow):
         nav = self._module_manager.get_widget(NavigationModule.NAME)
         nav.nav_to_coordinate(coordinate)
 
-    def _process_image(self):
+    def _process_image(self, ):
+        self.image_viewer.remove_objects()
         settings = _ProcessorMixin.get_special_settings(self._settings)
         settings.set_section('General')
         settings.set2('constrain_positions', True)
@@ -351,19 +347,18 @@ class Browser(QMainWindow):
         settings.set2('framerange_begin', self.coordinate.time)
         settings.set2('framerange_end', self.coordinate.time)
 
-        settings.set_section('ObjectDetection')
         prim_id = PrimaryChannel.NAME
-        #sec_id = SecondaryChannel.NAME
-        #sec_regions = settings.get2('secondary_regions')
         settings.set_section('Processing')
-        settings.set2('primary_classification', False)
-        settings.set2('secondary_classification', False)
-        settings.set2('tertiary_classification', False)
-        settings.set2('merged_classification', False)
-        settings.set2('primary_featureextraction', False)
-        settings.set2('secondary_featureextraction', False)
+        _classify_objects = self._show_objects_by == 'classification'
 
-        settings.set2('objectdetection', self._show_objects)
+        settings.set2('primary_classification', _classify_objects )
+        settings.set2('secondary_classification', _classify_objects)
+        settings.set2('tertiary_classification', _classify_objects)
+        settings.set2('merged_classification', _classify_objects)
+        settings.set2('primary_featureextraction', True)
+        settings.set2('secondary_featureextraction', True)
+
+        settings.set2('objectdetection', self._detect_objects)
         settings.set2('tracking', False)
         settings.set_section('Output')
         settings.set2('rendering_contours_discwrite', False)
@@ -390,49 +385,82 @@ class Browser(QMainWindow):
 
         # XXX channel mapping unclear
         # processing channel <--> color channel
-        # i.e problems if 2 processing channels have the
-        # same color
+        # i.e problems if 2 processing channels have the same color
         if nchannels == 2:
-            settings.set('Processing', 'secondary_processChannel', True)
+            settings.set('General', 'process_secondary', True)
         elif nchannels >= 3:
-            settings.set('Processing', 'secondary_processChannel', True)
-            settings.set('Processing', 'tertiary_processChannel', True)
-        # need turn of virtual channels
-        settings.set('Processing', 'merged_processChannel', False)
+            settings.set('General', 'process_secondary', True)
+            settings.set('General', 'process_tertiary', True)
 
         settings.set('General', 'rendering', {})
-        analyzer = AnalyzerCore(self.coordinate.plate, settings,
-                                self._imagecontainer)
+        analyzer = AnalyzerBrowser(self.coordinate.plate,
+                                   settings,
+                                   self._imagecontainer)
 
-        # as long the GIL is not released, if GIL is released
-        # just use self.setCursor
-
+        res = None
         try:
             QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
-            analyzer.processPositions(myhack=self)
+            res = analyzer.processPositions()
+            self.render_browser(res)
         except Exception, e:
             import traceback
+            from cecog.gui.util import exception
             traceback.print_exc()
-            raise(e)
+            exception(self, str(e))
+            raise
         finally:
             QApplication.restoreOverrideCursor()
 
+        QApplication.setOverrideCursor(QCursor(Qt.ArrowCursor))
+        return res
+
+    def render_browser(self, cellanalyzer):
+        d = {}
+
+        for name in cellanalyzer.get_channel_names():
+            channel = cellanalyzer.get_channel(name)
+            if channel.strChannelId is not None:
+                d[channel.strChannelId] = channel.meta_image.image
+                self.show_image(d)
+
+        channel_name, region_name = self._object_region
+        try:
+            channel = cellanalyzer.get_channel(channel_name)
+        except KeyError:
+            raise KeyError(("Channel %s may be turned off. "
+                            "See section General->Channels" %channel_name))
+
+        if channel.has_region(region_name):
+            region = channel.get_region(region_name)
+            if self._show_objects_by == 'classification':
+                self.set_classified_crack_contours(region)
+            else:
+                self.set_coords(region)
 
     def on_refresh(self):
+        regnames = self._region_names()
+        self.update_regions.emit(regnames)
         self._process_image()
 
     def on_zoom_info_updated(self, info):
         self.update_statusbar()
 
-    def on_time_changed_by_slider(self, frame):
+    def timeToolTip(self, value):
+        QToolTip.showText(QCursor.pos(), str(value), self._t_slider)
+
+    def on_time_changed_by_slider(self):
+        frame = self._t_slider.value()
         nav = self._module_manager.get_widget(NavigationModule.NAME)
         meta_data = self._imagecontainer.get_meta_data()
-        time = meta_data.times[frame]
-        nav.nav_to_time(time)
+        nav.nav_to_time(frame)
 
     def on_object_region_changed(self, channel, region):
         self._object_region = channel, region
-        self._process_image()
+        self.on_refresh()
+
+    def on_object_color_changed(self, channel, region):
+        self._object_region = channel, region
+        self.image_viewer._update_contours()
 
     def on_act_prev_t(self):
         self._t_slider.setValue(self._t_slider.value()-1)
@@ -517,16 +545,19 @@ class Browser(QMainWindow):
         if len(items) == 1:
             self._class_table.setCurrentItem(items[0])
 
-    def on_show_objects(self, state):
-        self._show_objects = state
-        self.image_viewer.remove_objects()
-        self._process_image()
-        self.show_objects_toggled.emit(state)
+    def detect_objects_toggled(self, state):
+        if state:
+            if self._settings.get('Output', 'hdf5_reuse'):
+                information(self, 'HDF5 reuse is enabled. Raw data and segmentation will be loaded from HDF5 files. Changes of normalization and segmentation parameters will have no effect in browser!')
+            self.on_refresh()
 
-    # Qt method overwrites
+    def on_toggle_show_contours(self, state):
+        self._show_objects = state
+        self.image_viewer._update()
 
     def keyPressEvent(self, ev):
-        super(Browser, self).keyPressEvent(self, ev)
+        super(Browser, self).keyPressEvent(ev)
+
         # allow to return from fullscreen via the Escape key
         if self.isFullScreen() and ev.key() == Qt.Key_Escape:
             self.showNormal()
@@ -552,3 +583,36 @@ class Browser(QMainWindow):
         if ev.type() == QEvent.Gesture:
             return self.gestureEvent(ev)
         return QWidget.event(self, ev)
+
+def load_image_container_from_settings(settings):
+    imagecontainer = ImageContainer()
+    infos = imagecontainer.iter_check_plates(settings)
+    scan_plates = dict((info[0], False) for info in infos)
+    import_iter = imagecontainer.iter_import_from_settings(settings, scan_plates)
+    for idx, info in enumerate(import_iter):
+        pass
+
+    if len(imagecontainer.plates) > 0:
+        plate = imagecontainer.plates[0]
+        imagecontainer.set_plate(plate)
+    return imagecontainer
+
+def load_settings(settings_file):
+    settings = GuiConfigSettings(None)
+    settings.read(settings_file)
+    return settings
+
+
+if __name__ == "__main__":
+    import sys
+    from cecog.environment import CecogEnvironment
+    from cecog import VERSION
+    environ = CecogEnvironment(VERSION)
+    app = QApplication(sys.argv)
+
+    settings = load_settings('C:/Users/sommerc/data/cecog/Settings/exp911_version_140.conf')
+    imagecontainer = load_image_container_from_settings(settings)
+
+    browser = Browser(settings, imagecontainer)
+    browser.show()
+    app.exec_()

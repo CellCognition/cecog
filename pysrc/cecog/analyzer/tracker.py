@@ -19,6 +19,7 @@ from cecog.util.logger import LoggerObject
 from cecog.extensions.graphLib import Graph
 from cecog import ccore
 
+
 class Tracker(LoggerObject):
 
     __slots__ = ['graph', '_frame_data','max_object_distance',
@@ -87,6 +88,22 @@ class Tracker(LoggerObject):
             pre_frame = None
         return pre_frame
 
+    def clone_graph(self, timeholder, channel, region):
+        """Clone the tracking graph with data from a different channel."""
+
+        ngraph = Graph()
+
+        # add nodes from other segmentation region
+        for nodeid in self.graph.node_list():
+            iframe, objid = Tracker.split_nodeid(nodeid)[:2]
+            sample = timeholder[iframe][channel].get_region(region)[objid]
+            ngraph.add_node(nodeid, sample)
+
+        for edge in self.graph.edges.values():
+            ngraph.add_edge(*edge)
+
+        return ngraph
+
     def render_tracks(self, frame, size, n=5, thick=True, radius=3):
         img_conn = ccore.Image(*size)
         img_split = ccore.Image(*size)
@@ -121,8 +138,8 @@ class Tracker(LoggerObject):
                                            ccore.Diff2D(*objC.oCenterAbs),
                                            img, col,
                                            thick=thick)
-                            ccore.drawFilledCircle(ccore.Diff2D(*objC.oCenterAbs),
-                                                   radius, img_conn, col)
+                            ccore.drawFilledCircle(
+                                ccore.Diff2D(*objC.oCenterAbs), radius, img_conn, col)
             current += 1
 
         if not found and frame in self._frame_data:
@@ -136,9 +153,7 @@ class Tracker(LoggerObject):
 
     def connect_nodes(self, iT):
         max_dist2 = math.pow(self.max_object_distance, 2)
-
         bReturnSuccess = False
-        oGraph = self.graph
 
         # search all nodes in the previous frame
         # if there is an empty frame, look for the closest frame
@@ -146,7 +161,7 @@ class Tracker(LoggerObject):
         # into the past.
         iPreviousT = self.closest_preceding_frame(iT)
 
-        if not iPreviousT is None:
+        if iPreviousT is not None:
             bReturnSuccess = True
             dctMerges = {}
             dctSplits = {}
@@ -155,13 +170,13 @@ class Tracker(LoggerObject):
             for iObjIdP in self._frame_data[iPreviousT]:
 
                 strNodeIdP = self.node_id(iPreviousT, iObjIdP)
-                oImageObjectP = oGraph.node_data(strNodeIdP)
+                oImageObjectP = self.graph.node_data(strNodeIdP)
 
                 lstNearest = []
 
                 for iObjIdC in self._frame_data[iT]:
                     strNodeIdC = self.node_id(iT, iObjIdC)
-                    oImageObjectC = oGraph.node_data(strNodeIdC)
+                    oImageObjectC = self.graph.node_data(strNodeIdC)
                     dist = oImageObjectC.squaredMagnitude(oImageObjectP)
 
                     # take all candidates within a certain distance
@@ -201,7 +216,7 @@ class Tracker(LoggerObject):
                 # for all objects that have only one predecessor within the defined radius,
                 # take this predecessor.
                 if len(nodes) == 1:
-                    oGraph.add_edge(nodes[0][1], id_c)
+                    self.graph.add_edge(nodes[0][1], id_c)
                     found_connection = True
                 else:
                     # If there are several candidates (previous objects fulfilling the condition)
@@ -209,13 +224,13 @@ class Tracker(LoggerObject):
                     # predecessor.
                     for dist, id_p in nodes:
                         if len(dctSplits[id_p]) == 1:
-                            oGraph.add_edge(id_p, id_c)
+                            self.graph.add_edge(id_p, id_c)
                             found_connection = True
 
                 # if there was no connection found, take the closest predecessor,
                 # unless there is none.
                 if not found_connection:
                     if len(nodes) > 0:
-                        oGraph.add_edge(nodes[0][1], id_c)
+                        self.graph.add_edge(nodes[0][1], id_c)
 
         return iPreviousT, bReturnSuccess

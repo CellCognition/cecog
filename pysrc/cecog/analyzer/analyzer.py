@@ -55,7 +55,7 @@ class CellAnalyzer(LoggerObject):
         return self._channel_registry.keys()
 
     def get_channel(self, name):
-        return self._channel_registry[name]
+        return self._channel_registry[str(name)]
 
     @property
     def proc_channels(self):
@@ -248,7 +248,7 @@ class CellAnalyzer(LoggerObject):
         object_ids = set()
 
         for reader in sample_readers:
-            if (byTime and P == reader.getPosition() and self._iT in reader):
+            if (byTime and P == reader.position() and self._iT in reader):
                 coords = reader[self._iT]
             elif (not byTime and P in reader):
                 coords = reader[P]
@@ -375,6 +375,14 @@ class CellAnalyzer(LoggerObject):
     def classify_objects(self, predictor):
         channel = self._channel_registry[predictor.name]
         holder = channel.get_region(predictor.regions)
+        
+        try:
+            signal_idx = holder.feature_names.index('n2_avg')
+            roisize_idx = holder.feature_names.index('roisize')
+            has_basic_features = True
+        except ValueError:
+            has_basic_features = False
+            
         for label, obj in holder.iteritems():
             if obj.aFeatures.size != len(holder.feature_names):
                 msg = ('Incomplete feature set found (%d/%d): skipping sample '
@@ -387,3 +395,6 @@ class CellAnalyzer(LoggerObject):
                 obj.dctProb = probs
                 obj.strClassName = predictor.class_names[label]
                 obj.strHexColor = predictor.hexcolors[obj.strClassName]
+                if has_basic_features:
+                    obj.roisize = obj.aFeatures[roisize_idx]
+                    obj.signal = obj.aFeatures[signal_idx]

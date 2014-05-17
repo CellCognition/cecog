@@ -14,29 +14,32 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-from os.path import join, exists
+
 import logging
 import zlib
 import base64
 import csv
-
+from os.path import join, exists
 from collections import OrderedDict
+from  matplotlib.figure import Figure
+from matplotlib.font_manager import FontProperties
+from matplotlib.backends.backend_agg import FigureCanvasAgg
 
-import numpy
 import h5py
-import matplotlib
-matplotlib.use('Agg', warn=False)
-from matplotlib import pyplot
+import numpy
+
 
 from cellh5 import CH5Const
 
 from cecog import ccore
+from cecog.colors import Colors
 from cecog.util.stopwatch import StopWatch
 from cecog.io.imagecontainer import Coordinate
 from cecog.io.imagecontainer import MetaImage
 from cecog.analyzer.channel import PrimaryChannel
 from cecog.plugin.metamanager import MetaPluginManager
 from cecog.analyzer.tracker import Tracker
+
 
 def chunk_size(shape):
     """Helper function to compute chunk size for image data cubes."""
@@ -58,7 +61,7 @@ def max_shape(shape):
 
 
 class TimeHolder(OrderedDict):
-
+    
     # label for unlabled objects
     UNPREDICTED_LABEL = CH5Const.UNPREDICTED_LABEL
     UNPREDICTED_PROB = CH5Const.UNPREDICTED_PROB
@@ -112,6 +115,13 @@ class TimeHolder(OrderedDict):
                  hdf5_include_tracking=True, hdf5_include_events=True,
                  hdf5_include_annotation=True):
         super(TimeHolder, self).__init__()
+        try:
+            import pydevd
+            pydevd.connected = True
+            pydevd.settrace(suspend=False)
+            print 'Thread enabled interactive eclipse debuging...'
+        except:
+            pass
         self.P = P
         self.plate_id = plate_id
         self._iCurrentT = None
@@ -144,30 +154,29 @@ class TimeHolder(OrderedDict):
         self._object_coord_to_id = {}
         self._object_coord_to_idx = {}
 
-
-        # these are color channels
         channels = sorted(list(meta_data.channels))
         self._region_names = []
 
         self._region_names = self.reginfo.names['primary'] + \
             self.reginfo.names['secondary'] + \
             self.reginfo.names['tertiary']
-        if len(self.reginfo.names['merged']):
-            self._region_names.append('-'.join(self.reginfo.names['merged']))
 
-        self._channel_info = []
+        if len(self.reginfo.names['merged']):
+            self._region_names.append(str(self.reginfo.names['merged']))
+
+        self._channel_info = OrderedDict()
         self._region_infos = []
         region_names2 = []
-        # XXX hardcoded values
 
         for prefix in self.channel_regions.keys():
             for name in self.reginfo.names[prefix.lower()]:
-                if not isinstance(name, basestring):
-                    name = '-'.join(name)
-                self._channel_info.append((prefix.lower(),
-                                           settings.get('ObjectDetection', '%s_channelid' % prefix)))
-                self._region_infos.append((prefix.lower(), self._convert_region_name(prefix.lower(), name), name))
+                self._channel_info[prefix.lower()] = \
+                    settings.get('ObjectDetection', '%s_channelid' %prefix)
+                self._region_infos.append((prefix.lower(),
+                                           self._convert_region_name(prefix.lower(), name),
+                                           name))
                 region_names2.append((prefix.capitalize(), name))
+
         self._feature_to_idx = OrderedDict()
 
         self._hdf5_found = False
@@ -175,11 +184,17 @@ class TimeHolder(OrderedDict):
             if self._hdf5_check_file():
                 self._hdf5_found = True
                 if self._hdf5_prepare_reuse() > 0:
-                    # Error
                     self._hdf5_found = False
 
         self._regions_to_idx = dict([(n,i) for i, n in enumerate(self._region_names)])
-        self._channels_to_idx = OrderedDict([(n[0], i) for i, n in enumerate(self._channel_info)])
+
+        _cmap = dict()
+        self._channels_to_idx = OrderedDict()
+        for i, (k, v) in enumerate(self._channel_info.iteritems()):
+            if not _cmap.has_key(v):
+                _cmap[v] = len(_cmap)
+            self._channels_to_idx[k] = _cmap[v]
+
         self._regions_to_idx2 = OrderedDict([(n,i) for i, n in enumerate(region_names2)])
 
         if self._hdf5_create:
@@ -245,8 +260,6 @@ class TimeHolder(OrderedDict):
             self._hdf5_file.close()
             return 1
 
-
-
     def _hdf5_check_file(self):
         try:
             f = h5py.File(self.hdf5_filename, 'r')
@@ -288,21 +301,16 @@ class TimeHolder(OrderedDict):
                              ('description', '|S100'),
                              ('is_physical', bool),
                              ('voxel_size', 'float', 3),
-                             ])
+                             ('color', "|S7")])
 
         nr_channels = len(self._channel_info)
-
         global_channel_desc = self._grp_def[self.HDF5_GRP_IMAGE].create_dataset( \
             'channel', (nr_channels,), dtype)
 
-        for idx in self._regions_to_idx2.values():
-            # XXX hardcoded values
-            is_physical = bool(self._channel_info[idx][1] is not None)
-            data = (self._channel_info[idx][0],
-                    self._channel_info[idx][1],
-                    is_physical,
-                    (0, 0, 0))
-            global_channel_desc[idx] = data
+        for i, (ch, col) in enumerate(self._channel_info.iteritems()):
+            is_physical = bool(col is not None)
+            data = (ch, col, is_physical, (0, 0, 0), Colors.channel_hexcolor(col))
+            global_channel_desc[i] = data
 
         # global region description
         dtype = numpy.dtype([('region_name', '|S50'), ('channel_idx', 'i')])
@@ -362,22 +370,21 @@ class TimeHolder(OrderedDict):
                                           prim_obj_name,
                                           obj_name)
 
-        # add basic relation for virtual channels
+        # relations for virtual channels
         for channel_name, combined, region_name in self._virtual_region_infos():
-            # basic virtual channel information
             obj_name = self._convert_region_name(channel_name, region_name, prefix='')
-            global_object_desc = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset(obj_name, (1,),
-                                                                                    global_object_dtype)
-            global_object_desc[0] = (obj_name, self.HDF5_OTYPE_REGION, '', '')
 
-            # relations
-            obj_name = self._convert_region_name(channel_name, region_name, prefix='')
-            obj_name = '%s___to___%s' % (prim_obj_name, obj_name)
-            global_object_desc = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset( \
-                obj_name, (1,), global_object_dtype)
-            global_object_desc[0] =  (obj_name, self.HDF5_OTYPE_RELATION,
-                                      prim_obj_name,
-                                      obj_name)
+            chreg = self.channel_regions[channel_name.title()]
+            dtype = [('name', 'S512'), ('type', 'S512')]
+            dtype += [('region%d' %i, 'S512') for i in range(len(chreg))]
+
+            dset = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset( \
+                obj_name, (1,), numpy.dtype(dtype))
+
+            data = (obj_name, self.HDF5_OTYPE_RELATION)
+            for ch, reg in chreg.iteritems():
+                data += (("%s__%s" %(ch, reg)).lower(), )
+            dset[0] = data
 
         # add special relation objects (events, tracking, etc)
         if self._hdf5_include_tracking:
@@ -396,15 +403,11 @@ class TimeHolder(OrderedDict):
         self._region_info.
         """
         chnames = [rinfo[0] for rinfo in self._region_infos]
+
         for channel_name, regions in self.channel_regions.iteritems():
             if channel_name.lower() not in chnames:
-                if len(regions) == 1 or isinstance(regions, basestring):
-                    regname = regions
-                else:
-                    regname = '-'.join(regions)
-                combined = "region__%s__%s" %(channel_name.lower(),
-                                              regname)
-                yield channel_name.lower(), combined, '-'.join(regions)
+                combined = "region__%s__%s" %(channel_name.lower(), regions.values())
+                yield channel_name.lower(), combined, '-'.join(regions.values())
 
         raise StopIteration
 
@@ -511,15 +514,9 @@ class TimeHolder(OrderedDict):
                 channel.purge(features={})
 
     def _convert_region_name(self, channel_name, region_name, prefix='region'):
-
-        # if isinstance(region_name, tuple):
-        #     # import pdb; pdb.set_trace()
-        #     region_name = '-'.join(region_name)
-
         s = '%s__%s' % (channel_name.lower(), region_name)
         if not prefix is None and len(prefix) > 0:
             s = '%s___%s' % (prefix, s)
-
         return s
 
     def _convert_feature_name(self, feature_name, channel_name, region_name):
@@ -553,9 +550,6 @@ class TimeHolder(OrderedDict):
                             label_images_valid = False
                             break
                         image_data = dset_label_image[region_idx, frame_idx, 0, :, :].astype('int16')
-                        if not image_data.any():
-                            label_images_valid = False
-                            break
                         img_label = ccore.numpy_to_image(image_data, copy=True)
                         img_xy = channel.meta_image.image
                         container = ccore.ImageMaskContainer(img_xy, img_label, False, True, True)
@@ -598,6 +592,8 @@ class TimeHolder(OrderedDict):
 
                 frame_idx = self._frames_to_idx[self._iCurrentT]
                 for region_name in self.reginfo.names[channel_name]:
+                    if channel.is_virtual():
+                        continue
                     idx = self._regions_to_idx2[(channel.NAME, region_name)]
                     container = channel.containers[region_name]
                     array = container.img_labels.toArray(copy=False)
@@ -632,8 +628,6 @@ class TimeHolder(OrderedDict):
                     channel_idx = self._channels_to_idx[channel.PREFIX]
                     if not (channel_idx < dset_raw_image.shape[0]):
                         frame_valid = False
-                    else:
-                        frame_valid = dset_raw_image[channel_idx, frame_idx, 0, :, :].any()
 
         if self._hdf5_found and frame_valid:
             coordinate = Coordinate(position=self.P, time=self._iCurrentT,
@@ -660,7 +654,7 @@ class TimeHolder(OrderedDict):
 
                 z = meta.dim_z
                 t = len(self._frames_to_idx)
-                nr_channels = len(self._channel_info)
+                ncolors = len(set(self._channels_to_idx.values()))
                 var_name = 'channel'
                 grp = self._grp_cur_position[self.HDF5_GRP_IMAGE]
                 if var_name in grp:
@@ -668,9 +662,9 @@ class TimeHolder(OrderedDict):
                 else:
                     var_images = \
                         grp.create_dataset(var_name,
-                                           (nr_channels, t, z, h, w),
+                                           (ncolors, t, z, h, w),
                                            'uint8',
-                                           chunks=chunk_size((nr_channels, t, z, h, w)),
+                                           chunks=chunk_size((ncolors, t, z, h, w)),
                                            compression=self._hdf5_compression)
                     var_images.attrs['valid'] = numpy.zeros(t)
 
@@ -1042,9 +1036,9 @@ class TimeHolder(OrderedDict):
             all_counts = self.getObjectCounts(ch_info)
 
         if relative:
-            ylab = 'Class Percentage'
+            ylab = 'class percentage'
         else:
-            ylab = 'Class counts (raw)'
+            ylab = 'class counts (raw)'
 
         for chname, (region_name, class_names, colors) in ch_info.iteritems():
             if len(class_names) < 2:
@@ -1054,13 +1048,12 @@ class TimeHolder(OrderedDict):
             timevec = range(X.shape[1])
 
             if len(timevec) > 1:
-                #import pdb; pdb.set_trace()
                 if relative:
                     total = numpy.array(all_counts[(chname, region_name)]['total'])
                     X = X.astype('float') / total.astype('float')
 
-                fig = pyplot.figure(1, figsize=(20,10))
-                ax = pyplot.subplot(1,1,1)
+                fig = Figure(figsize=(10, 8))
+                ax = fig.add_subplot(1,1,1)
 
                 # in this case we have more than one time point and we can visualize the time series
                 for i, lb, color in zip(range(len(class_names)), class_names, colors):
@@ -1068,63 +1061,57 @@ class TimeHolder(OrderedDict):
 
                 if not ymax is None and ymax > -1:
                     ax.axis([min(timevec), max(timevec), 0, ymax])
-                pyplot.title('Population time series: %s %s %s %s' % (plate, pos, chname, region_name), size='medium')
-                pyplot.xlabel('Time (in frames)', size='medium')
-                pyplot.ylabel(ylab, size='medium')
+                ax.set_title('Population time series: %s %s %s %s' % (plate, pos, chname, region_name), size='medium')
+                ax.set_xlim((min(timevec), max(timevec)))
+                ax.set_xlabel('time (frames)', size='medium')
+                ax.set_ylabel(ylab, size='medium')
 
-                # legend
                 if legend:
+                    fprop = FontProperties()
+                    fprop.set_size('small')
+
                     handles, labels = ax.get_legend_handles_labels()
-                    ax.legend(handles[::-1], labels[::-1])
+                    ax.legend(handles[::-1], labels[::-1], frameon=False, loc=9,
+                              ncol=len(class_names), mode="expand", prop=fprop)
 
                 if grid:
-                    ax.grid(b=True, which='major', linewidth=1.5)
+                    ax.grid(b=True, which='major', alpha=0.5)
 
-                fig.savefig(join(pop_plot_output_dir, '%s__%s__%s__%s.png' % (plate, pos, chname, region_name)))
-                pyplot.close(1)
+                canvas = FigureCanvasAgg(fig)
+                fig.savefig(join(pop_plot_output_dir, '%s__%s__%s__%s.pdf'
+                                 %(plate, pos, chname, region_name)))
 
             else:
-                # in this case we have only one timepoint. We can visualize a barplot instead.
-                # ---
-                bottom = 0.2
+                # in this case we have only one timepoint.
+                # We can visualize a barplot instead.
                 width = 0.7
-
                 nb_bars = X.shape[0]
 
-                fig = pyplot.figure(1, figsize=(int(0.8*nb_bars + 1),10))
-                ax = pyplot.subplot(1,1,1)
+                fig = Figure(figsize=(int(0.8*nb_bars + 1),10))
+                ax = fig.add_subplot(1,1,1)
 
-                ind = numpy.array(range(nb_bars))
-                ax.set_position(numpy.array([0.125, bottom, 0.8, 0.9 - bottom]))
+                ind = numpy.arange(nb_bars)
 
                 if relative:
                     X = X.astype('float') / numpy.sum(X.astype('float'))
 
-                rects = pyplot.bar(ind, X[:,0], width=width, color=colors,
-                                   edgecolor='none')
+                ax.bar(ind-width/2., X[:,0], width=width, color=colors,
+                       edgecolor='none')
+                ax.set_xlim((ind.min()-0.5, ind.max()+0.5))
+                ax.set_xticks(ind)
+                ax.set_xticklabels(class_names, rotation=45, fontsize='small',
+                                   ha='center')
 
-                xmin = min(ind)
-                xmax = max(ind)
-                xlim = (xmin - .5 * width - (xmax-xmin) * 0.05,
-                        xmax - .5 * width + (xmax-xmin) * (0.05 + 1.0 / nb_bars) )
-
-                if ymax is None or ymax < 0 or ymax > 1.0:
-                    ymax = 1.0
-
-                ax.axis([xlim[0], xlim[1], 0, ymax])
-
-                pyplot.xticks(ind+.5* width, class_names, rotation="vertical",
-                             fontsize='small', ha='center')
-
-                pyplot.title('Classification results:\n%s %s\n%s %s' % (plate, pos, chname, region_name), size='medium')
-                pyplot.xlabel('')
-                pyplot.ylabel(ylab, size='medium')
+                ax.set_title('Classification results:\n%s %s\n%s %s'
+                             %(plate, pos, chname, region_name), size='medium')
+                ax.set_xlabel('')
+                ax.set_ylabel(ylab, size='medium')
 
                 if grid:
-                    pyplot.grid(b=True, axis='y', which='major', linewidth=1.5)
+                    ax.grid(b=True, axis='y', which='major', alpha=0.5)
 
-                fig.savefig(join(pop_plot_output_dir, '%s__%s__%s__%s.png' % (plate, pos, chname, region_name)))
-                pyplot.close(1)
+                canvas = FigureCanvasAgg(fig)
+                fig.savefig(join(pop_plot_output_dir, '%s__%s__%s__%s.pdf' % (plate, pos, chname, region_name)))
         return
 
     def exportObjectDetails(self, filename, sep='\t'):

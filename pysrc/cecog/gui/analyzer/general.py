@@ -31,7 +31,6 @@ class GeneralFrame(BaseFrame):
         self.add_input('pathin')
         self.add_input('has_multiple_plates')
         self.add_input('pathout')
-        # original: self.add_input('namingscheme')
         self.add_group('image_import_namingschema', [('namingscheme',),],
                        layout='flow')
         self.add_group('image_import_structurefile', [('structure_filename',)])
@@ -40,17 +39,23 @@ class GeneralFrame(BaseFrame):
                         ('structure_file_pathout', (0,1,1,1)),
                         ('structure_file_extra_path', (0,2,1,1)),
                         ('structure_file_extra_path_name', (1,0,1,8)),
-                        ], label='Structure file location')
+                        ], label='Structure file location',
+                       link='structure_file')
 
         self.add_line()
+
+        self.add_group(None, [('process_primary', (0, 0, 1, 1)),
+                              ('process_secondary', (0, 1, 1, 1)),
+                              ('process_tertiary', (0, 2, 1, 1)),
+                              ('process_merged', (0, 3, 1, 1))],
+                       link="channels", label='Channels')
+
         self.add_group('constrain_positions', [('positions',)])
         self.add_input('redofailedonly')
-        self.add_line()
         self.add_group('framerange', [('framerange_begin',),
-                                      ('framerange_end',)],
+                                      ('framerange_end',),
+                                      ('frameincrement', )],
                        layout='flow')
-        self.add_input('frameincrement')
-        self.add_line()
         self.add_group('crop_image', [('crop_image_x0',),
                                       ('crop_image_y0',),
                                       ('crop_image_x1',),
@@ -62,7 +67,7 @@ class GeneralFrame(BaseFrame):
 
         layout = QHBoxLayout(self._control)
         layout.addStretch()
-        btn = QPushButton('Load image data', self._control)
+        btn = QPushButton('Scan input directory', self._control)
         layout.addWidget(btn)
         btn.clicked.connect(self.parent().main_window._on_load_input)
         btn = QPushButton('Load settings...', self._control)

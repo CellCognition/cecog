@@ -110,14 +110,7 @@ class Graph(object):
                (not node_id in self.hidden_nodes):
             self.nodes[node_id]=([],[],node_data)
         else:
-            #print "WARNING: Duplicate node id's. Latest node id was ignored."
             raise Graph_duplicate_node, node_id
-
-    # def is_split_node(self, node_id):
-    #     return self.out_degree(node_id) == 0
-
-    # def is_merge_node(self, node_id):
-    #     return self.in_degree == 0
 
     def update_node_data(self, node_id, node_data):
         t = self.nodes[node_id]
@@ -155,12 +148,12 @@ class Graph(object):
         Adds an edge (head_id, tail_id).
         Arbitrary data can be attached to the edge via edge_data
         """
-        edge_id=self.next_edge_id
-        self.next_edge_id=self.next_edge_id+1
-        self.edges[edge_id]=(head_id, tail_id, edge_data)
-        mapped_head_data=map(None, self.nodes[head_id])
+        edge_id = self.next_edge_id
+        self.next_edge_id = self.next_edge_id+1
+        self.edges[edge_id] = (head_id, tail_id, edge_data)
+        mapped_head_data = map(None, self.nodes[head_id])
         mapped_head_data[1].append(edge_id)
-        mapped_tail_data=map(None, self.nodes[tail_id])
+        mapped_tail_data = map(None, self.nodes[tail_id])
         mapped_tail_data[0].append(edge_id)
         return edge_id
 
@@ -260,15 +253,10 @@ class Graph(object):
         """
         Return a list of the node id's of all visible nodes in the graph.
         """
-        nl=self.nodes.keys()
-        return nl
+        return self.nodes.keys()
 
-    #-- Similar to above.
     def edge_list(self):
-        """
-        """
-        el=self.edges.keys()
-        return el
+        return self.edges.keys()
 
     def number_of_hidden_edges(self):
         return len(self.hidden_edges)
@@ -315,7 +303,7 @@ class Graph(object):
         """
         Returns a copy of the list of edges of the node's out arcs.
         """
-        mapped_data=map(None, self.nodes[node_id])
+        mapped_data = map(None, self.nodes[node_id])
         return mapped_data[1][:]
 
     #--Similar to above.

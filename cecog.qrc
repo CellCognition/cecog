@@ -18,6 +18,7 @@
         <file>help/general.html</file>
         <file>help/hmm_constraints.html</file>
         <file>help/help.css</file>
+        <file>help/featureextraction.html</file>
         <file>help/_header.html</file>
         <file>help/_footer.html</file>
         <file alias="cecog_secondary_regions">resources/secondary_regions-01.png</file>

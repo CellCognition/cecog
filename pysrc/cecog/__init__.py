@@ -17,7 +17,7 @@ __source__ = '$URL$'
 __all__ = ['VERSION', 'VERSION_NUM', 'CHANNEL_PREFIX', 'APPNAME']
 
 # move this constants to version.py module
-VERSION_NUM = (1, 5, 0)
+VERSION_NUM = (1, 6, 0)
 VERSION = '.'.join([str(n) for n in VERSION_NUM])
 APPNAME = 'CecogAnalyzer'
 

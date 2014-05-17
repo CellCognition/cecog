@@ -87,7 +87,7 @@ class PositionCore(LoggerObject):
 
     def __init__(self, plate_id, position, out_dir, settings, frames,
                  sample_readers, sample_positions, learner,
-                 image_container, qthread=None, myhack=None):
+                 image_container, qthread=None):
         super(PositionCore, self).__init__()
 
         self._out_dir = out_dir
@@ -106,7 +106,7 @@ class PositionCore(LoggerObject):
         self.classifiers = OrderedDict()
 
         self._qthread = qthread
-        self._myhack = myhack
+        self._tes = None
 
     def _analyze(self):
         self._info.update({'stage': 2,
@@ -134,6 +134,7 @@ class PositionCore(LoggerObject):
             par = (method, begin, end, step)
         return par
 
+
     def registration_shift(self):
         # compute values for the registration of multiple channels
         # (translation only)
@@ -141,7 +142,7 @@ class PositionCore(LoggerObject):
         xs = [0]
         ys = [0]
         for prefix in [SecondaryChannel.PREFIX, TertiaryChannel.PREFIX]:
-            if self.settings.get('Processing','%s_processchannel' %prefix):
+            if self.settings('General','process_%s' %prefix):
                 reg_x = self.settings.get2('%s_channelregistration_x' %prefix)
                 reg_y = self.settings.get2('%s_channelregistration_y' %prefix)
                 xs.append(reg_x)
@@ -182,7 +183,7 @@ class PositionCore(LoggerObject):
         f_categories = list()
         f_cat_params = dict()
 
-        # unfortunateley some classes expecte empty list and dict
+        # unfortunateley some classes expect empty list and dict
         if not self.settings.get(SECTION_NAME_PROCESSING,
                              self._resolve_name(ch_name,
                                                 'featureextraction')):
@@ -222,6 +223,8 @@ class PositionCore(LoggerObject):
                          registration_start = reg_shift,
                          fNormalizeMin = self.settings.get2('%s_normalizemin' %proc_channel),
                          fNormalizeMax = self.settings.get2('%s_normalizemax' %proc_channel),
+                         bFlatfieldCorrection = self.settings.get2('%s_flat_field_correction' %proc_channel),
+                         strBackgroundImagePath = self.settings.get2('%s_flat_field_correction_image_dir' %proc_channel),
                          lstFeatureCategories = f_cats,
                          dctFeatureParameters = f_params)
 
@@ -287,7 +290,7 @@ class PositionCore(LoggerObject):
     def processing_channels(self):
         channels = (self.PRIMARY_CHANNEL, )
         for name in [self.SECONDARY_CHANNEL, self.TERTIARY_CHANNEL, self.MERGED_CHANNEL]:
-            if self.settings.get('Processing', '%s_processchannel' % name.lower()):
+            if self.settings('General', 'process_%s' % name.lower()):
                 channels = channels + (name,)
         return channels
 
@@ -344,10 +347,7 @@ class PositionCore(LoggerObject):
         chreg = OrderedDict()
         for chname in self.processing_channels:
             region = self._channel_regions(chname)
-            if isinstance(region, basestring):
-                chreg[chname] = region
-            else:
-                chreg[chname] = region.values()
+            chreg[chname] = region
         return chreg
 
 
@@ -455,27 +455,34 @@ class PositionAnalyzer(PositionCore):
         for p_channel, c_channel in self.ch_mapping.iteritems():
             self.settings.set_section('Processing')
             if sttg.get2(self._resolve_name(p_channel, 'classification')):
+                chreg = self._channel_regions(p_channel)
                 if sttg("EventSelection", "unsupervised_event_selection"):
-                        nclusters = sttg("EventSelection", "num_clusters")
-                        self.classifiers[p_channel] = ClassDefinitionUnsup(nclusters)
+                    nclusters = sttg("EventSelection", "num_clusters")
+                    self.classifiers[p_channel] = ClassDefinitionUnsup( \
+                        nclusters, chreg)
                 else:
-                        sttg.set_section('Classification')
-                        clf = CommonClassPredictor(
-                            clf_dir=sttg.get2(self._resolve_name(p_channel,
-                                                                 'classification_envpath')),
-                            name=p_channel,
-                            channels=self._channel_regions(p_channel),
-                            color_channel=c_channel)
-                        clf.importFromArff()
-                        clf.loadClassifier()
-                        self.classifiers[p_channel] = clf
+                    sttg.set_section('Classification')
+                    clf = CommonClassPredictor(
+                        clf_dir=sttg.get2(self._resolve_name(p_channel,
+                                                             'classification_envpath')),
+                        name=p_channel,
+                        channels=chreg,
+                        color_channel=c_channel)
+                    clf.importFromArff()
+                    clf.loadClassifier()
+                    self.classifiers[p_channel] = clf
 
     @property
     def _transitions(self):
         if self.settings.get('EventSelection', 'unsupervised_event_selection'):
             transitions = np.array((0, 1))
         else:
-            transitions = eval(self.settings.get('EventSelection', 'labeltransitions'))
+            try:
+                transitions = eval(self.settings.get('EventSelection', 'labeltransitions'))
+            except Exception as e:
+                raise RuntimeError(("Make sure that transitions are of the form "
+                                    "'int, int' or '(int, int), (int, int)' i.e "
+                                    "2-int-tuple  or a list of 2-int-tuples"))
             transitions = np.array(transitions)
         return transitions.reshape((-1, 2))
 
@@ -559,7 +566,7 @@ class PositionAnalyzer(PositionCore):
                     else:
                         for feature in features[channel][region]:
                             mftrs.append("_".join((channel, region, feature)))
-                region_features[self._all_channel_regions[name]] = mftrs
+                region_features[self._all_channel_regions[name].values()] = mftrs
                 features[name] = region_features
 
         return features
@@ -641,7 +648,7 @@ class PositionAnalyzer(PositionCore):
     def export_tracks_hdf5(self):
         """Save tracking data to hdf file"""
         self.logger.debug("--- serializing tracking start")
-        self.timeholder.serialize_tracking(self._tes.graph)
+        self.timeholder.serialize_tracking(self._tracker.graph)
         self.logger.debug("--- serializing tracking ok")
 
     def export_events(self):
@@ -663,22 +670,21 @@ class PositionAnalyzer(PositionCore):
         t_step = tu.sec2min(t_mean)*increment
 
         nclusters = self.settings.get('EventSelection', 'num_clusters')
-        exporter = TC3Exporter(self._tes.tc3data, self._tc3_dir, nclusters, t_step,
-                               TimeConverter.MINUTES, self.position)
+        exporter = TC3Exporter(self._tes.tc3data, self._tc3_dir, nclusters,
+                               t_step, TimeConverter.MINUTES, self.position)
         exporter()
 
     def export_classlabels(self):
         """Save classlabels of each object to the hdf file."""
         # function works for supervised and unuspervised case
-
-        for frame, channels in self.timeholder.iteritems():
+        for channels in self.timeholder.itervalues():
             for chname, classifier in self.classifiers.iteritems():
-                channel = channels[chname]
-                holder = channel.get_region(channel.region_names()[0])
+                holder = channels[chname].get_region(classifier.regions)
                 if classifier.feature_names is None:
                     # special for unsupervised case
                     classifier.feature_names = holder.feature_names
-                self.timeholder.save_classlabels(channel, holder, classifier)
+                self.timeholder.save_classlabels(channels[chname],
+                                                 holder, classifier)
 
     def __call__(self):
         # include hdf5 file name in hdf5_options
@@ -698,12 +704,10 @@ class PositionAnalyzer(PositionCore):
 
         # setup tracker
         if self.settings('Processing', 'tracking'):
-            region = self.settings('Tracking', 'tracking_regionname')
             tropts = (self.settings('Tracking', 'tracking_maxobjectdistance'),
                       self.settings('Tracking', 'tracking_maxsplitobjects'),
                       self.settings('Tracking', 'tracking_maxtrackinggap'))
             self._tracker = Tracker(*tropts)
-            self._tes = self.setup_eventselection(self._tracker.graph)
 
         stopwatch = StopWatch(start=True)
         ca = CellAnalyzer(timeholder=self.timeholder,
@@ -711,7 +715,7 @@ class PositionAnalyzer(PositionCore):
                           create_images = True,
                           binning_factor = 1,
                           detect_objects = self.settings('Processing',
-                                                             'objectdetection'))
+                                                         'objectdetection'))
 
         self.export_features = self.define_exp_features()
         n_images = self._analyze(ca)
@@ -720,6 +724,20 @@ class PositionAnalyzer(PositionCore):
             # invoke event selection
             if self.settings('Processing', 'eventselection') and \
                     self.settings('Processing', 'tracking'):
+
+                evchannel = self.settings('EventSelection', 'eventchannel')
+                region = self.classifiers[evchannel].regions
+                if self.settings('EventSelection', 'unsupervised_event_selection'):
+                    graph = self._tracker.graph
+                elif  evchannel != PrimaryChannel.NAME or \
+                        region != self.settings("Tracking", "region"):
+                    graph = self._tracker.clone_graph(self.timeholder,
+                                                      evchannel,
+                                                      region)
+                else:
+                    graph = self._tracker.graph
+
+                self._tes = self.setup_eventselection(graph)
                 self.logger.debug("--- visitor start")
                 self._tes.find_events()
                 self.logger.debug("--- visitor ok")
@@ -740,10 +758,13 @@ class PositionAnalyzer(PositionCore):
             if self.settings('Processing', 'tracking'):
                 self.export_tracks_hdf5()
                 self.update_status({'text': 'export events...'})
-                if self.settings('Processing', 'eventselection'):
-                    self.export_events()
-                if self.settings('EventSelection', 'unsupervised_event_selection'):
-                    self.export_tc3()
+
+                if self.settings('Output', "export_events"):
+                    if self.settings('Processing', 'eventselection'):
+                        self.export_events()
+                    if self.settings('EventSelection', 'unsupervised_event_selection'):
+                        self.export_tc3()
+
                 if self.settings('Output', 'export_track_data'):
                     self.export_full_tracks()
                 if self.settings('Output', 'export_tracking_as_dot'):
@@ -820,7 +841,7 @@ class PositionAnalyzer(PositionCore):
             images = []
 
             if self.settings('Processing', 'tracking'):
-                region = self.settings('Tracking', 'tracking_regionname')
+                region = self.settings('Tracking', 'region')
                 samples = self.timeholder[frame][PrimaryChannel.NAME].get_region(region)
                 self._tracker.track_next_frame(frame, samples)
 
@@ -840,7 +861,7 @@ class PositionAnalyzer(PositionCore):
 
             ##############################################################
             # FIXME - part for browser
-            if not self._myhack is None:
+            if 0:
                 self.render_browser(cellanalyzer)
             ##############################################################
 
@@ -913,3 +934,113 @@ class PositionAnalyzer(PositionCore):
             for obj_id, obj in region.iteritems():
                 coords[obj_id] = obj.crack_contour
             self._myhack.set_coords(coords)
+
+
+class PositionAnalyzerForBrowser(PositionCore):
+
+    @property
+    def _hdf_options(self):
+        self.settings.set_section('Output')
+        h5opts = {"hdf5_include_tracking": False,
+                  "hdf5_include_events": False,
+                  "hdf5_compression": False,
+                  "hdf5_create": False,
+                  "hdf5_reuse": self.settings.get2('hdf5_reuse'),
+                  "hdf5_include_raw_images": False,
+                  "hdf5_include_label_images": False,
+                  "hdf5_include_features": False,
+                  "hdf5_include_crack": False,
+                  "hdf5_include_classification": False}
+
+        return h5opts
+
+    def __init__(self, *args, **kw):
+        super(PositionAnalyzerForBrowser, self).__init__(*args, **kw)
+        # Also in the Browser we want to use cellh5
+        # The setting for the other PositionAnalyszer is
+        # implicitely set in _makedirs()
+        self._hdf5_dir = os.path.join(self._out_dir, 'hdf5')
+
+    def setup_classifiers(self):
+        sttg = self.settings
+        # processing channel, color channel
+        for p_channel, c_channel in self.ch_mapping.iteritems():
+            self.settings.set_section('Processing')
+            if sttg.get2(self._resolve_name(p_channel, 'classification')):
+                sttg.set_section('Classification')
+                clf_dir = sttg.get2(self._resolve_name(p_channel, 'classification_envpath'))
+                if not os.path.exists(clf_dir):
+                    continue
+                clf = CommonClassPredictor(
+                    clf_dir=clf_dir,
+                    name=p_channel,
+                    channels=self._channel_regions(p_channel),
+                    color_channel=c_channel)
+                clf.importFromArff()
+                clf.loadClassifier()
+                self.classifiers[p_channel] = clf
+
+
+    def __call__(self):
+        hdf5_fname = join(self._hdf5_dir, '%s.ch5' % self.position)
+
+        self.timeholder = TimeHolder(self.position, self._all_channel_regions,
+                                     hdf5_fname,
+                                     self.meta_data, self.settings,
+                                     self._frames,
+                                     self.plate_id,
+                                     **self._hdf_options)
+
+
+        stopwatch = StopWatch(start=True)
+        ca = CellAnalyzer(timeholder=self.timeholder,
+                          position = self.position,
+                          create_images = True,
+                          binning_factor = 1,
+                          detect_objects = self.settings.get('Processing', 'objectdetection'))
+
+        #self.setup_classifiers()
+        #self.export_features = self.define_exp_features()
+        self._analyze(ca)
+        return ca
+
+
+
+    def _analyze(self, cellanalyzer):
+        n_images = 0
+        stopwatch = StopWatch(start=True)
+        crd = Coordinate(self.plate_id, self.position,
+                         self._frames, list(set(self.ch_mapping.values())))
+
+
+        for frame, channels in self._imagecontainer( \
+            crd, interrupt_channel=True, interrupt_zslice=True):
+
+            if self.is_aborted():
+                self.clear()
+                return 0
+            else:
+                txt = 'T %d (%d/%d)' %(frame, self._frames.index(frame)+1,
+                                       len(self._frames))
+                self.update_status({'progress': self._frames.index(frame)+1,
+                                    'text': txt,
+                                    'interval': stopwatch.interim()})
+
+            stopwatch.reset(start=True)
+            cellanalyzer.initTimepoint(frame)
+            self.register_channels(cellanalyzer, channels)
+
+            cellanalyzer.process()
+
+            self.setup_classifiers()
+
+            for clf in self.classifiers.itervalues():
+                try:
+                    cellanalyzer.classify_objects(clf)
+                except KeyError:
+                    pass
+
+        return n_images
+
+    # def clear(self):
+    #     print 'Clean up'

@@ -52,7 +52,7 @@ class ProgressMsg(dict):
 class CoreThread(QtCore.QThread):
 
     stage_info = QtCore.pyqtSignal('PyQt_PyObject')
-    analyzer_error = QtCore.pyqtSignal(str)
+    analyzer_error = QtCore.pyqtSignal(str, str)
     image_ready = QtCore.pyqtSignal(dict, str)
     aborted = QtCore.pyqtSignal()
 
@@ -90,7 +90,7 @@ class CoreThread(QtCore.QThread):
             traceback.print_exc(e)
             logger = logging.getLogger()
             logger.error(msg)
-            self.analyzer_error.emit(msg)
+            self.analyzer_error.emit(msg, str(e))
             # can cause a sefault on macosx
             # raise
 
