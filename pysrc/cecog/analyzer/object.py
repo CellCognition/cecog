@@ -41,7 +41,7 @@ class Orientation(object):
 
 class ImageObject(object):
 
-    def __init__(self, oObject=None):
+    def __init__(self, oObject=None, iId=None):
         if oObject is not None:
             self.oCenterAbs = (oObject.oCenterAbs.x, oObject.oCenterAbs.y)
             self.oRoi = Region(oRoi=oObject.oRoi)
@@ -53,7 +53,7 @@ class ImageObject(object):
         self.dctProb = {}
         self.strClassName = None
         self.strHexColor = None
-        self.iId = None
+        self.iId = iId
         self.aFeatures = None
         self.crack_contour = None
         self.file = None
