@@ -230,7 +230,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
         logger = logging.getLogger()
         logger.setLevel(logging.INFO)
 
-        self.setGeometry(0, 0, 1250, 750)
+        self.setGeometry(0, 0, 1250, 800)
         self.setMinimumSize(QtCore.QSize(700, 600))
         self._is_initialized = True
 
