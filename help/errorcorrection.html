@@ -6,66 +6,66 @@
     <h1>Error Correction</h1>
     <h3>Introduction</h3>
     <p>
-      Sequences of class labels (tracks) contain a number of
-      miss-classified observations. The miss-classifications appear as
+      Trajectories of class labels may contain a number of
+      misclassified observations. The misclassifications appear as
       noise which can be smoothed with help of <img class="extlink"
       src=":extlink"/><a href="http://en.wikipedia.org/wiki/Hidden_Markov_model">hidden
       Markov models</a> (HMM). The HMM learns its parameters from the
       tracks of one experimental condition
       i.e <i>position</i>, <i>Oligo-Id</i> or <i>Gene Symbol</i>
-      separately. Besides the noise one
+      separately. Besides the smoothing model, one
       can <a href="#constrain_graph">apply</a> additional biological
-      constraints to the HMM to model e.g. mitotic progression or
-      prohibit a transition from an apoptotic cell to any other
-      state.<br><br>
+      constraints to the HMM to model (e.g. mitotic progression) or
+      prohibit a transition from one state (e.g. apoptotic) to any other
+      state.<br/><br/>
       It is important to note that the error correction depends <b>not</b> on
-      the type of the event selection. Those types are supervised and
-      unsupervised methods.
-      The only difference is lies in the HMM learning
-      algorithm. Supervised event selection (support vector machine)
+      the method of the event selection (supervised and
+      unsupervised).
+      The difference lies in the HMM learning
+      algorithm. Supervised event selection (from support vector machine)
       works with both <i>Smoothing Model</i> and
       <i><img class="extlink"src=":extlink"/>
       <a href="http://en.wikipedia.org/wiki/Baum%E2%80%93Welch_algorithm">
-        Baum-Welch algorithm</a></i>. Unsupervised Event
-      Selection (TC3) works only with <i>Baum-Welch</i>, since it does
-      not provide any prediction probabilities.
+        Baum-Welch algorithm</a></i>. Unsupervised event
+      selection (TC3) works only with <i>Baum-Welch</i>, since it does
+      not provide accurate prediction probabilities.
       <br><br>
-      The error correction saves the output in a subfolder <tt>analysis/hmm</tt>
+      The error correction saves the output in a sub-folder <tt>analysis/hmm</tt>.
     </p>
     The association between individual movies i.e. <i>positions</i>
     and experimental information such as <i>Oligo-Id</i> or the name
     of the targeted <i>Gene Symbol</i> can be defined in a
-    simple <a href="#position_labels">text file</a>.</p>
+    simple <a href="#position_labels">text file</a>.
 
     <h3>Note</h3>
-    To apply the error correction on timelapse movies one has to
-    enable hdf5 output, events included and also raw images, if one
-    wants to make image galleries.
-
+    To apply the error correction on time-lapse movies one has to
+    enable hdf5 output in section <a href="qrc:/output">Output</a>. Events output has 
+    to be enables. Also, if the generation of gallery images is required, the raw
+    data has to be included in the hdf5 output.
+    
     <h3>Parameters</h3>
     <a name="channels">
       <h4>Channels</h4>
-      <p class="text">Select the channels where the error correction
-      is to be applied.</p>
+      <p class="text">Select the channels where the error correction has to be applied.</p>
 
     </a>
 
-    <h3>HMM learing algorithm</h3>
+    <h3>HMM learning algorithm</h3>
     <a name="hmm_learning">
       <h4>HMM learning algorithm</h4>
       <p class="text"><i>Smoothing model</i> learns the HMM parameters by
         counting the conditional prediction probabilities.
         No Baum-Welch estimation is performed afterwards.
         This method is a 1:1 replacement of the R-implementation
-        (CecogAnalyzer &le; 1.4.x).<br>
+        (CecogAnalyzer &le; 1.4.x).<br/>
         <i>Baum-Welch</i> is the standard method to estimate HMM model
         parameters.
         <br><br>
-        <i>Smoothing model</i> results in a robust smoothing model by
-        suppressing off-diagonal emissions (adhoc assumption).
-        Further it relies on confident prediction probabilies
+        <i>Smoothing model</i> results in a robust smoothing by
+        suppressing off-diagonal emissions (ad hoc assumption).
+        Further it relies on confident prediction probabilities
         provided by the support vector machine. <i>Baum-Welch</i> is
-        mandatory for unsupervised event selection but works
+        mandatory for unsupervised event selection, but works
         well in both cases.
       </p>
     </a>
@@ -83,14 +83,14 @@
         found <a href="qrc:/hmm_constraints">here</a>.
         <br><br>
         The transition, emission and start probabilities of the HMM
-        are learned from the raw data obtained from the motif
-        selection. A constraint file defines only a mask that is
-        applied to the model parameters accordingly to allow or
-        disallow a specific transitions or emissions. If this option
+        are learned from the raw data obtained from the event
+        selection. A constraint file defines a mask that is
+        applied to the model parameters to allow or
+        disallow a specific transitions or emissions (0 or 1). If this option
         is omitted, all transitions, emissions and start values are
         allowed. This is equivalent to set all values in the
         constraint files to one. Each channel needs a separate
-        constraint file, since the number of classes are not
+        constraint file, since the number of classes is not
         necessarily the same.
       </p>
     </a>
@@ -99,7 +99,7 @@
       <a name="mappingfile">
         <h4>Position labels</h4>
         <p class="text">Provide a table that associates the
-        experimental condition to a position (AKA <i>plate mapping</i>
+        experimental conditions to a position (<i>plate mapping</i>
         or <i>plate layout</i>). For now only <i>Oligo Id</i>
         and <i>Gene Symbol</i> are supported. To use this option one
         needs to provide a simple tab-separated text file with three
@@ -108,22 +108,21 @@
         Symbol</tt> (any string).<br><br>
         Be aware of the fact that different positions can have the
         same <i>Oligo-Id</i> or <i>Gene Symbol</i>. That means
-        tracks from more than one position can fall into the same
-        plot. Positions that are not listed in the plate mapping table
-        fall also into one plot (better than ignoring them in the
-        output). Best practice is to use a mapping table that is
-        complete i.e. the table should list all positions and should
-        not contain empty cells.</p>
+        tracks from more than one position can be grouped into the same
+        plot. The table must list all positions and should
+        not contain empty fields. It will produce an error, if positions 
+        exist that are not listed in the plate mapping table.  
+        </p>
       </a>
     </a>
 
     <a name="groupby">
       <h4>Group by</h4>
       <p class="text">Define on what groups <i>(Position, Oligo-Id,
-      Gene Symbol)</i> the HMM's are applied.
+      Gene Symbol)</i> the HMM is applied.
         <a name="groupby_position">
           <h4 class="sub">Position</h4>
-          <p class="subtext">Group by Position (no position labels
+          <p class="subtext">Group by position (no position labels
           necessary).</p>
         </a>
         <a name="groupby_oligoid">
@@ -145,8 +144,8 @@
         <a name="overwrite_time_lapse">
           <h4 class="sub">Overwrite time-lapse</h4>
           <p class="subtext">In certain cases it is not possible to
-          determine the time lapse automatically. Therefore it is
-          possible to enter the time lapse manually.</p>
+          determine the time-lapse automatically. Therefore it is
+          possible to enter the time-lapse manually.</p>
         </a>
         <a name="max_time">
           <h4 class="sub">Max. time in plot [min]</h4>
@@ -160,7 +159,7 @@
           <p class="subtext">
             If a cell splits the event selection finds two tracks. If
             this option is on, only one track is used for analysis. Be
-            careful because this option reduces the number of analyzed
+            careful, because this option reduces the number of analyzed
             events.
           </p>
         </a>
@@ -169,7 +168,7 @@
             <p class="subtext">
               It is possible to generate track images with color-coded
               bars at the bottom of each track according to the class
-              color after error correction.
+              color after error correction.<br/>
               <center>
                 <img class="figure" src=":/gallery"/>
               </center>
@@ -191,7 +190,7 @@
           <h4 class="sub">Resampling Factor</h4>
             <p class="subtext">
               Shrink the size of the gallery image by the resampling
-              factor (value btw. 0 an 1) to reduce the image size.
+              factor (value between 0 and 1).
             </p>
         </a>
         <a name="resampling_factor">

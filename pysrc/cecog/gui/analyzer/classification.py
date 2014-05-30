@@ -100,7 +100,7 @@ class ClassifierResultFrame(QGroupBox):
         layout_desc.addWidget(self._label_c, Qt.AlignLeft)
         self._label_g = QLabel(self.LABEL_G % float('NAN'), desc)
         layout_desc.addWidget(self._label_g, Qt.AlignLeft)
-        self.browserBtn = QPushButton('Show Browser', desc)
+        self.browserBtn = QPushButton('Open browser for annotation', desc)
         layout_desc.addWidget(self.browserBtn)
         layout.addWidget(desc)
         self._has_data = False
