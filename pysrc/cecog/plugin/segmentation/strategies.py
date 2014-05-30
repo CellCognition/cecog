@@ -400,10 +400,7 @@ class SegmentationPluginExpanded(_SegmentationPlugin):
     LABEL = 'Expanded region from primary'
     NAME = 'expanded'
     COLOR = '#00FFFF'
-    DOC = \
-'''
-Non-overlapping expansion of the primary segmentation by a certain number of steps given as 'Expansion size'.
-'''
+    DOC = ":additional_segmentation_plugins"
 
     REQUIRES = ['primary_segmentation']
 
@@ -433,6 +430,7 @@ class SegmentationPluginInside(_SegmentationPlugin):
     LABEL = 'Shrinked region from primary'
     NAME = 'inside'
     COLOR = '#FFFF00'
+    DOC = ":additional_segmentation_plugins"
 
     REQUIRES = ['primary_segmentation']
 
@@ -459,6 +457,7 @@ class SegmentationPluginOutside(_SegmentationPlugin):
     LABEL = 'Ring around primary region'
     NAME = 'outside'
     COLOR = '#00FF00'
+    DOC = ":additional_segmentation_plugins"
 
     REQUIRES = ['primary_segmentation']
 
@@ -490,6 +489,7 @@ class SegmentationPluginRim(_SegmentationPlugin):
     LABEL = 'Rim at primary region'
     NAME = 'rim'
     COLOR = '#FF00FF'
+    DOC = ":additional_segmentation_plugins"
 
     REQUIRES = ['primary_segmentation']
 
@@ -533,6 +533,7 @@ class SegmentationPluginModification(_SegmentationPlugin):
     LABEL = 'Expansion/shrinking of primary region'
     NAME = 'modification'
     COLOR = '#FF00FF'
+    DOC = ":additional_segmentation_plugins"
 
     REQUIRES = ['primary_segmentation']
 
@@ -576,6 +577,7 @@ class SegmentationPluginPropagate(_SegmentationPlugin):
     LABEL = 'Propagate region from primary'
     NAME = 'propagate'
     COLOR = '#FFFF99'
+    DOC = ":additional_segmentation_plugins"
 
     REQUIRES = ['primary_segmentation']
 
@@ -604,6 +606,7 @@ class SegmentationPluginConstrainedWatershed(_SegmentationPlugin):
     LABEL = 'Constrained watershed from primary'
     NAME = 'constrained_watershed'
     COLOR = '#FF99FF'
+    DOC = ":additional_segmentation_plugins"
 
     REQUIRES = ['primary_segmentation']
 
@@ -656,6 +659,7 @@ class SegmentationPluginDifference(_SegmentationPlugin):
     LABEL = 'Difference of primary and secondary'
     NAME = 'difference'
     COLOR = '#FF00FF'
+    DOC = ":additional_segmentation_plugins"
 
     REQUIRES = ['primary_segmentation', 'secondary_segmentation']
 
