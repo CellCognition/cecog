@@ -42,7 +42,7 @@ def find_resource_dir():
                   'cellcognition', 'resources'),
 	     join(sys.exec_prefix, 'share', 'cellcognition', 'resources'),
              'resources',
-             join(dirname(__file__), os.pardir, os.pardir, 'resources')]
+             join(dirname(__file__), os.pardir, 'resources')]
 
     for rdir in rdirs:
         if isdir(rdir):
