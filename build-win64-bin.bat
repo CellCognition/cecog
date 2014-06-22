@@ -15,7 +15,7 @@ goto:build
 rmdir /Q /S dist
 rmdir /Q /S build
 erase /Q *.exe
-erase pysrc\cecog\ccore\_cecog.pyd
+erase cecog\ccore\_cecog.pyd
 
 :build
 python setup_windows.py py2exe

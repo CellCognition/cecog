@@ -21,7 +21,7 @@ from os.path import basename, splitext, join
 try:
     import cecog
 except ImportError:
-    sys.path.append("../../pysrc")
+    sys.path.append(os.pardir)
     import cecog
 
 from cecog import ccore

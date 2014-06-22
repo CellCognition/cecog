@@ -18,13 +18,12 @@ __url__ = 'www.cellcognition.org'
 
 import sys
 from os.path import join, abspath
-sys.path.append(abspath("pysrc"))
 
 from distutils.core import setup, Extension
 import build_helpers
 
 pyrcc_opts = {'infile': 'cecog.qrc',
-              'outfile': join('pysrc', 'cecog', 'cecog_rc.py'),
+              'outfile': join('cecog', 'cecog_rc.py'),
               'pyrccbin': 'pyrcc4'}
 
 ccore = Extension('cecog.ccore._cecog',
@@ -35,8 +34,9 @@ ccore = Extension('cecog.ccore._cecog',
                   language = 'c++')
 
 # python packages to distribute
-packages = build_helpers.find_submodules("./pysrc/cecog", "cecog")
-scripts = [join('scripts', 'CecogAnalyzer.py'), join('scripts', 'cecog_batch.py')]
+packages = build_helpers.find_submodules("./cecog", "cecog")
+scripts = [join('scripts', 'CecogAnalyzer.py'),
+           join('scripts', 'cecog_batch.py')]
 
 setup(scripts = scripts,
       data_files = build_helpers.get_data_files(build_helpers.TARGET_SYS,
@@ -44,7 +44,6 @@ setup(scripts = scripts,
       cmdclass = {'pyrcc': build_helpers.PyRcc,
                   'build': build_helpers.Build},
       packages = packages,
-      package_dir = {'cecog': join('pysrc', 'cecog')},
       options = {'pyrcc': pyrcc_opts},
       ext_modules = [ccore],
       **build_helpers.metadata)

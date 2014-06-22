@@ -18,7 +18,6 @@ __url__ = 'www.cellcognition.org'
 
 import sys
 from os.path import join, abspath
-sys.path.append(abspath("pysrc"))
 import py2app
 
 from distutils.core import setup, Extension
@@ -27,7 +26,7 @@ import build_helpers
 py2app_opts = {'excludes': build_helpers.EXCLUDES}
 
 pyrcc_opts = {'infile': 'cecog.qrc',
-              'outfile': join('pysrc', 'cecog', 'cecog_rc.py'),
+              'outfile': join('cecog', 'cecog_rc.py'),
               'pyrccbin': 'pyrcc4'}
 
 ccore = Extension('cecog.ccore._cecog',
@@ -40,7 +39,7 @@ ccore = Extension('cecog.ccore._cecog',
 
 
 # python package to distribute
-packages = build_helpers.find_submodules("./pysrc/cecog", "cecog")
+packages = build_helpers.find_submodules("./cecog", "cecog")
 scripts = [join('scripts', 'CecogAnalyzer.py')]
 
 
@@ -51,7 +50,6 @@ setup(app = scripts,
       cmdclass = {'pyrcc': build_helpers.PyRcc,
                   'build': build_helpers.Build},
       packages = packages,
-      package_dir = {'cecog': join('pysrc', 'cecog')},
       setup_requires=['py2app'],
       ext_modules = [ccore],
       **build_helpers.metadata)

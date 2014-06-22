@@ -41,7 +41,7 @@ try:
     try:
         import cecog
     except ImportError:
-        sys.path.append(os.path.join(os.pardir, "pysrc"))
+        sys.path.append(os.pardir)
         import cecog
 
     from cecog.gui.main import CecogAnalyzer
