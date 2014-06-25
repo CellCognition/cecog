@@ -147,6 +147,7 @@ class SelectionTrait2(traits.SelectionTrait2, GuiTrait):
         if not value is None:
             index = self.index(value)
             if index is None:
+                widget.clear()
                 widget.addItem(str(value))
                 # FIXME: the Qt interface is not returning an index
                 index = widget.count() - 1
