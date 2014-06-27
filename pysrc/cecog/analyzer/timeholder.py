@@ -825,7 +825,6 @@ class TimeHolder(OrderedDict):
                         dset_crack_contour = grp_region_features.create_dataset('crack_contour',
                                                 (nr_objects, ), dt,
                                                 chunks=(nr_objects if nr_objects > 0 else 1, ),
-                                                compression=self._hdf5_compression,
                                                 maxshape=(None,))
                     else:
                         dset_crack_contour = grp_region_features['crack_contour']
