@@ -63,7 +63,6 @@ from cecog.gui.modules.module import Module
 from cecog.gui.util import numpy_to_qimage
 from cecog.gui.modules.display import blend_images_max
 
-from profilehooks import timecall, profile
 
 class Annotations(object):
 
@@ -1159,20 +1158,20 @@ class CellH5AnnotationModule(Module):
     
         self.annotations = {}
         
-        for i, (w, p, pos) in enumerate(self.ch5file.iter_positions()):
+        for i, pos in enumerate(self.ch5file.iter_positions()):
             # Annotations
-            self.annotations[w, p] = {}
+            self.annotations[pos.well, pos.pos] = {}
             
             # Navigation Table
             self.pos_table.insertRow(i)
-            w_item = QTableWidgetItem(str(w))
-            p_item = QTableWidgetItem(str(p))
+            w_item = QTableWidgetItem(str(pos.well))
+            p_item = QTableWidgetItem(str(pos.pos))
             self.pos_table.setItem(i, 0, w_item)
             self.pos_table.setItem(i, 1, p_item)
             if i == 0:
                 self.cur_pos = pos
-                self.cur_w = w
-                self.cur_p = p
+                self.cur_w = pos.well
+                self.cur_p = pos.pos
                 self.update_track_table(pos)
                 
             
@@ -1194,7 +1193,6 @@ class CellH5AnnotationModule(Module):
         if len(items) == 1:
             self.class_table.setCurrentItem(items[0])
             
-    @timecall
     def update_track_table(self, pos):
         self.event_table.setRowCount(0)
         events = pos.get_event_items()
@@ -1315,7 +1313,7 @@ class CellH5AnnotationModule(Module):
         self.save_annotations(filename)
         information(self, 'Annotations successfully saved!', filename)
         
-    @timecall
+    
     def _init_pos_table(self):
         self.pos_table = QTableWidget(self)
         self.pos_table.setEditTriggers(QTableWidget.NoEditTriggers)
@@ -1328,7 +1326,7 @@ class CellH5AnnotationModule(Module):
         self.pos_table.setStyleSheet('font-size: 10px;')
         self.layout.addWidget(self.pos_table)
         
-    @timecall
+    
     def _init_event_table(self):
         self.event_table = QTableWidget(self)
         self.event_table.setEditTriggers(QTableWidget.NoEditTriggers)
@@ -1341,7 +1339,7 @@ class CellH5AnnotationModule(Module):
         self.event_table.setStyleSheet('font-size: 10px;')
         self.layout.addWidget(self.event_table)
         
-    @timecall
+    
     def _init_class_table(self):
         grp_box = QGroupBox('Classes', self)
         layout = QBoxLayout(QBoxLayout.TopToBottom, grp_box)
@@ -1415,7 +1413,7 @@ class CellH5AnnotationModule(Module):
 
         self.layout.addWidget(grp_box)
         
-    @timecall
+    
     def _init_options_box(self):
         grp_box = QGroupBox('Options', self)
         grp_layout = QVBoxLayout(grp_box)
@@ -1793,7 +1791,7 @@ class CellH5AnnotationModule(Module):
             g.setPen(QPen())
         
         
-    @timecall
+    
     def show_tracks(self, idx, track_id):
         print 'show_tracks for track_id',  track_id
         self.browser.image_viewer.clear()
