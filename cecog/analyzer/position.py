@@ -658,10 +658,11 @@ class PositionAnalyzer(PositionCore):
         odir = join(self._statistics_dir, "events")
         exporter.track_features(self.timeholder, self._tes.visitor_data,
                                 self.export_features, self.position, odir)
+        self.logger.debug("--- serializing events ok")
 
+    def export_events_hdf5(self):
         # writes event data to hdf5
         self.timeholder.serialize_events(self._tes)
-        self.logger.debug("--- serializing events ok")
 
     def export_tc3(self):
         t_mean = self.meta_data.get_timestamp_info(self.position)[0]
@@ -758,6 +759,9 @@ class PositionAnalyzer(PositionCore):
             if self.settings('Processing', 'tracking'):
                 self.export_tracks_hdf5()
                 self.update_status({'text': 'export events...'})
+
+                if self.settings('Output', 'hdf5_include_events'):
+                    self.export_events_hdf5()
 
                 if self.settings('Output', "export_events"):
                     if self.settings('Processing', 'eventselection'):
