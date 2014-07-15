@@ -49,6 +49,8 @@ class PickerThread(CoreThread):
 
         pchannel = self._settings.get("Classification", "collectsamples_prefix")
         chid = self._settings.get("ObjectDetection", "%s_channelid" %(pchannel))
+        if not chid:
+            chid = None
         cpath = self._settings.get("Classification",
                                     "%s_classification_envpath" %pchannel)
 
