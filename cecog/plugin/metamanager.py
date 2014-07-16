@@ -15,16 +15,18 @@ from cecog.util.pattern import Singleton
 from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
 from cecog.plugin.segmentation.manager import SegmentationPluginManager
 
-from cecog.plugin.segmentation.strategies import SegmentationPluginPrimary
-from cecog.plugin.segmentation.strategies import SegmentationPluginExpanded
-from cecog.plugin.segmentation.strategies import SegmentationPluginInside
-from cecog.plugin.segmentation.strategies import SegmentationPluginOutside
-from cecog.plugin.segmentation.strategies import SegmentationPluginRim
-from cecog.plugin.segmentation.strategies import SegmentationPluginPropagate
-from cecog.plugin.segmentation.strategies import SegmentationPluginConstrainedWatershed
-from cecog.plugin.segmentation.strategies import SegmentationPluginDifference
-from cecog.plugin.segmentation.strategies import SegmentationPluginIlastik
-from cecog.plugin.segmentation.strategies import SegmentationPluginPrimaryLoadFromFile
+from cecog.plugin.segmentation.primary_plugins import LocalAdaptiveThreshold
+from cecog.plugin.segmentation.primary_plugins import GlobalThreshold
+from cecog.plugin.segmentation.primary_plugins import Ilastik
+from cecog.plugin.segmentation.primary_plugins import LoadFromFile
+
+from cecog.plugin.segmentation.secondary_plugins import Expanded
+from cecog.plugin.segmentation.secondary_plugins import Inside
+from cecog.plugin.segmentation.secondary_plugins import Outside
+from cecog.plugin.segmentation.secondary_plugins import Rim
+from cecog.plugin.segmentation.secondary_plugins import Propagate
+from cecog.plugin.segmentation.secondary_plugins import ConstrainedWatershed
+from cecog.plugin.segmentation.secondary_plugins import Difference
 from cecog import CHANNEL_PREFIX
 
 
@@ -71,24 +73,25 @@ class MetaPluginManager(object):
 
     def _register_plugins(self):
 
-        self.managers['primary'].register_plugin(SegmentationPluginPrimary)
-        self.managers['primary'].register_plugin(SegmentationPluginIlastik)
-        self.managers['primary'].register_plugin(SegmentationPluginPrimaryLoadFromFile)
+        self.managers['primary'].register_plugin(LocalAdaptiveThreshold)
+        self.managers['primary'].register_plugin(GlobalThreshold)
+        self.managers['primary'].register_plugin(Ilastik)
+        self.managers['primary'].register_plugin(LoadFromFile)
 
-        self.managers['secondary'].register_plugin(SegmentationPluginExpanded)
-        self.managers['secondary'].register_plugin(SegmentationPluginInside)
-        self.managers['secondary'].register_plugin(SegmentationPluginOutside)
-        self.managers['secondary'].register_plugin(SegmentationPluginRim)
-        self.managers['secondary'].register_plugin(SegmentationPluginPropagate)
-        self.managers['secondary'].register_plugin(SegmentationPluginConstrainedWatershed)
+        self.managers['secondary'].register_plugin(Expanded)
+        self.managers['secondary'].register_plugin(Inside)
+        self.managers['secondary'].register_plugin(Outside)
+        self.managers['secondary'].register_plugin(Rim)
+        self.managers['secondary'].register_plugin(Propagate)
+        self.managers['secondary'].register_plugin(ConstrainedWatershed)
 
-        self.managers['tertiary'].register_plugin(SegmentationPluginExpanded)
-        self.managers['tertiary'].register_plugin(SegmentationPluginInside)
-        self.managers['tertiary'].register_plugin(SegmentationPluginOutside)
-        self.managers['tertiary'].register_plugin(SegmentationPluginRim)
-        self.managers['tertiary'].register_plugin(SegmentationPluginPropagate)
-        self.managers['tertiary'].register_plugin(SegmentationPluginConstrainedWatershed)
-        self.managers['tertiary'].register_plugin(SegmentationPluginDifference)
+        self.managers['tertiary'].register_plugin(Expanded)
+        self.managers['tertiary'].register_plugin(Inside)
+        self.managers['tertiary'].register_plugin(Outside)
+        self.managers['tertiary'].register_plugin(Rim)
+        self.managers['tertiary'].register_plugin(Propagate)
+        self.managers['tertiary'].register_plugin(ConstrainedWatershed)
+        self.managers['tertiary'].register_plugin(Difference)
 
     def __getitem__(self, key):
         return self.managers[key]

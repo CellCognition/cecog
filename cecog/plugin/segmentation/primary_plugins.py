@@ -1,29 +1,32 @@
 """
-                           The CellCognition Project
-                     Copyright (c) 2006 - 2010 Michael Held
-                      Gerlich Lab, ETH Zurich, Switzerland
-                              www.cellcognition.org
+primary_plugins.py
 
-              CellCognition is distributed under the LGPL License.
-                        See trunk/LICENSE.txt for details.
-                 See trunk/AUTHORS.txt for author contributions.
+Segmentation plugins for the primary channel.
 """
+
+__author__ = 'rudolf.hoefler@gmail.com'
+__copyright__ = ('The CellCognition Project'
+                 'Copyright (c) 2006 - 2012'
+                 'Gerlich Lab, IMBA Vienna, Austria'
+                 'see AUTHORS.txt for contributions')
+__licence__ = 'LGPL'
+__url__ = 'www.cellcognition.org'
+
+__all__ = ("LocalAdaptiveThreshold", "GlobalThreshold",
+           "Ilastik", "LoadFromFile")
+
 
 import os
 import re
 import numpy
 from cecog import ccore
-from cecog.gui.guitraits import (BooleanTrait,
-                                 IntTrait,
-                                 FloatTrait,
-                                 StringTrait)
-
+from cecog.gui.guitraits import BooleanTrait, IntTrait, StringTrait
 
 from cecog.plugin import stopwatch
 from cecog.plugin.segmentation.manager import _SegmentationPlugin
 
 
-class SegmentationPluginPrimary(_SegmentationPlugin):
+class LocalAdaptiveThreshold(_SegmentationPlugin):
 
     LABEL = 'Local adaptive threshold w/ split&merge'
     NAME = 'primary'
@@ -52,7 +55,7 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
               ('postprocessing_intensity_max', IntTrait(-1, -1, 1000000, label='Max. average intensity')),
               ('removeborderobjects', BooleanTrait(True, label='Remove border objects')),
               ('holefilling', BooleanTrait(True, label='Fill holes')),
-             ]
+              ]
 
     # the : at the beginning indicates a QRC link with alias 'plugins/segmentation/local_adaptive_threshold'
     DOC = ':local_adaptive_threshold'
@@ -195,7 +198,116 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
         return container
 
 
-class SegmentationPluginPrimaryLoadFromFile(SegmentationPluginPrimary):
+class GlobalThreshold(LocalAdaptiveThreshold):
+
+    DOC = ':global_threshold'
+
+    LABEL = 'Gobal threshold w/ split&merge'
+    NAME = 'primary_global_threshold'
+    COLOR = '#FF0000'
+    REQUIRES = None
+
+    PARAMS = [('medianradius', IntTrait(2, 0, 1000, label='Median radius')),
+              ('static_threshold', BooleanTrait(True, label='Static threshold')),
+              ('threshold', IntTrait(25, 0, 255, label='Threshold')),
+              ('shapewatershed', BooleanTrait(False, label='Split & merge by shape')),
+              ('shapewatershed_gausssize', IntTrait(1, 0, 1000000, label='Gauss radius')),
+              ('shapewatershed_maximasize', IntTrait(1, 0, 1000000, label='Min. seed distance')),
+              ('shapewatershed_minmergesize', IntTrait(1, 0, 1000000, label='Object size threshold')),
+              ('shapewatershed_rmax', IntTrait(40, 0, 1000000, label='Max. radius')),
+              ('postprocessing', BooleanTrait(False, label='Object filter')),
+              ('postprocessing_roisize_min', IntTrait(-1, -1, 1000000, label='Min. object size')),
+              ('postprocessing_roisize_max', IntTrait(-1, -1, 1000000, label='Max. object size')),
+              ('postprocessing_intensity_min', IntTrait(-1, -1, 1000000, label='Min. average intensity')),
+              ('postprocessing_intensity_max', IntTrait(-1, -1, 1000000, label='Max. average intensity')),
+              ('removeborderobjects', BooleanTrait(True, label='Remove border objects')),
+              ('holefilling', BooleanTrait(True, label='Fill holes'))]
+
+    def render_to_gui(self, panel):
+
+        panel.add_group(None,
+                        [('medianradius', (0, 0, 1, 1)),
+                         ('threshold', (0, 1, 1, 1)),
+                         ('static_threshold', (0, 2, 1, 1)),
+                         ], link='global_threshold', label='global threshold')
+
+        panel.add_input('holefilling')
+        panel.add_input('removeborderobjects')
+        panel.add_group('shapewatershed',
+                        [('shapewatershed_gausssize', (0, 0, 1, 1)),
+                         ('shapewatershed_maximasize', (0, 1, 1, 1)),
+                         ('shapewatershed_minmergesize', (1, 0, 1, 1)),
+                         ('shapewatershed_rmax', (1, 1, 1, 1))])
+
+        panel.add_group('postprocessing',
+                        [('postprocessing_roisize_min', (0, 0, 1, 1)),
+                         ('postprocessing_roisize_max', (0, 1, 1, 1)),
+                         ('postprocessing_intensity_min', (1, 0, 1, 1)),
+                         ('postprocessing_intensity_max', (1, 1, 1, 1))])
+
+
+    @stopwatch()
+    def correct_segmetation(self, img_in, img_bin, border, gauss_size,
+                            max_dist, min_merge_size):
+
+        return ccore.segmentation_correction_shape(
+            img_in, img_bin, border, gauss_size, max_dist, min_merge_size)
+
+    @stopwatch()
+    def threshold(self, image, threshold, static_threshold):
+
+        if static_threshold:
+            return ccore.threshold_image(image, threshold)
+
+        ndimage = image.toArray()
+
+        for i in xrange(255): # max unit8 interations
+            limage = ccore.threshold_image(image, threshold)
+            mask = limage.toArray()
+            mu0 = ndimage[mask==0].mean()
+            mu1 = ndimage[mask==255].mean()
+            thrnew = int(numpy.floor((mu0 + mu1)/2.0))
+            if thrnew == threshold:
+                break
+            else:
+                threshold = thrnew
+
+        return limage
+
+
+    @stopwatch()
+    def _run(self, meta_image):
+        image = meta_image.image
+
+        img_prefiltered = self.prefilter(image)
+        img_bin = self.threshold(img_prefiltered,
+                                 self.params['threshold'],
+                                 self.params["static_threshold"])
+
+        if self.params['holefilling']:
+            ccore.fill_holes(img_bin, False)
+
+        # split and merge
+        if self.params['shapewatershed']:
+            img_bin = self.correct_segmetation(img_prefiltered, img_bin,
+                                               self.params['shapewatershed_rmax'],
+                                               self.params['shapewatershed_gausssize'],
+                                               self.params['shapewatershed_maximasize'],
+                                               self.params['shapewatershed_minmergesize'])
+
+        container = ccore.ImageMaskContainer(image, img_bin, self.params['removeborderobjects'])
+
+        # filtering object by size and intesity
+        self.postprocessing(container, self.params['postprocessing'],
+                            (self.params['postprocessing_roisize_min'], self.params['postprocessing_roisize_max']),
+                            (self.params['postprocessing_intensity_min'], self.params['postprocessing_intensity_max']))
+
+        return container
+
+
+
+
+class LoadFromFile(LocalAdaptiveThreshold):
 
     LABEL = 'Load from file'
     NAME = 'primary_from_file'
@@ -205,7 +317,9 @@ class SegmentationPluginPrimaryLoadFromFile(SegmentationPluginPrimary):
 
     PARAMS = [('segmentation_folder', StringTrait('', 1000, label='Segmentation folder',
                                                  widget_info=StringTrait.STRING_FILE)),
-              ('loader_regex', StringTrait('^%(plate)s$/^%(pos)s$/.*P%(pos)s_T%(time)05d_C%(channel)s_Z%(zslice)d_S1.tif', 1000, label='Regex for loading')),
+              ('loader_regex',
+               StringTrait('^%(plate)s$/^%(pos)s$/.*P%(pos)s_T%(time)05d_C%(channel)s_Z%(zslice)d_S1.tif',
+                           1000, label='Regex for loading')),
               ]
 
     # the : at the beginning indicates a QRC link with alias 'plugins/segmentation/local_adaptive_threshold'
@@ -254,13 +368,12 @@ class SegmentationPluginPrimaryLoadFromFile(SegmentationPluginPrimary):
         match_result = match_results[0]
 
         img = ccore.readImage(main_folder + locator_match + match_result)
-#        img_pre = SegmentationPluginPrimary.prefilter(self, img, 2)
-#        img_bin = SegmentationPluginPrimary.threshold(self, img_pre, 20, 3)
 
         container = ccore.ImageMaskContainer(image, img, False)
         return container
 
-class SegmentationPluginIlastik(SegmentationPluginPrimary):
+
+class Ilastik(LocalAdaptiveThreshold):
 
     LABEL = 'Local adaptive threshold w/ split&merge using trained ilastik classifier'
     NAME = 'primary_ilastik'
@@ -368,12 +481,10 @@ class SegmentationPluginIlastik(SegmentationPluginPrimary):
         fm = FeatureMgr(dataMgr, featureItems)
 
 
-
         # Create FeatureMgr
 
 
         # Compute features
-
         fm.prepareCompute(dataMgr)
         fm.triggerCompute()
         fm.joinCompute(dataMgr)
@@ -391,290 +502,3 @@ class SegmentationPluginIlastik(SegmentationPluginPrimary):
         probMap = (classificationPredict._prediction[0][0,0,:,:, ilastik_class] * 255).astype(numpy.uint8)
         img_out = ccore.numpy_to_image(probMap, True)
         return img_out
-
-
-
-
-class SegmentationPluginExpanded(_SegmentationPlugin):
-
-    LABEL = 'Expanded region from primary'
-    NAME = 'expanded'
-    COLOR = '#00FFFF'
-    DOC = ":additional_segmentation_plugins"
-
-    REQUIRES = ['primary_segmentation']
-
-    PARAMS = [('expansion_size', IntTrait(10, 0, 4000, label='Expansion size')),
-              ]
-
-    @stopwatch()
-    def _run(self, meta_image, container):
-        image = meta_image.image
-        if self.params['expansion_size'] > 0:
-            nr_objects = container.img_labels.getMinmax()[1] + 1
-            img_labels = ccore.seeded_region_expansion(image,
-                                                       container.img_labels,
-                                                       ccore.SrgType.KeepContours,
-                                                       nr_objects,
-                                                       0,
-                                                       self.params['expansion_size'],
-                                                       0)
-        else:
-            img_labels = container.img_labels
-
-        return ccore.ImageMaskContainer(image, img_labels, False, True, True)
-
-
-class SegmentationPluginInside(_SegmentationPlugin):
-
-    LABEL = 'Shrinked region from primary'
-    NAME = 'inside'
-    COLOR = '#FFFF00'
-    DOC = ":additional_segmentation_plugins"
-
-    REQUIRES = ['primary_segmentation']
-
-    PARAMS = [('shrinking_size', IntTrait(5, 0, 4000, label='Shrinking size')),
-              ]
-
-    @stopwatch()
-    def _run(self, meta_image, container):
-        image = meta_image.image
-        if self.params['shrinking_size'] > 0:
-            nr_objects = container.img_labels.getMinmax()[1] + 1
-            img_labels = ccore.seeded_region_shrinking(image,
-                                                       container.img_labels,
-                                                       nr_objects,
-                                                       self.params['shrinking_size'])
-        else:
-            img_labels = container.img_labels
-
-        return ccore.ImageMaskContainer(image, img_labels, False, True, True)
-
-
-class SegmentationPluginOutside(_SegmentationPlugin):
-
-    LABEL = 'Ring around primary region'
-    NAME = 'outside'
-    COLOR = '#00FF00'
-    DOC = ":additional_segmentation_plugins"
-
-    REQUIRES = ['primary_segmentation']
-
-    PARAMS = [('expansion_size', IntTrait(10, 0, 4000, label='Expansion size')),
-              ('separation_size', IntTrait(5, 0, 4000, label='Separation size')),
-              ]
-
-    @stopwatch()
-    def _run(self, meta_image, container):
-        image = meta_image.image
-        if self.params['expansion_size'] > 0 and self.params['expansion_size'] > self.params['separation_size']:
-            nr_objects = container.img_labels.getMinmax()[1] + 1
-            img_labels = ccore.seeded_region_expansion(image,
-                                                       container.img_labels,
-                                                       ccore.SrgType.KeepContours,
-                                                       nr_objects,
-                                                       0,
-                                                       self.params['expansion_size'],
-                                                       self.params['separation_size'])
-            img_labels = ccore.substractImages(img_labels, container.img_labels)
-            return ccore.ImageMaskContainer(image, img_labels, False, True, True)
-        else:
-            raise ValueError("Parameters are not valid. Requirements: 'expansion_size' > 0 and "
-                             "'expansion_size' > 'separation_size'")
-
-
-class SegmentationPluginRim(_SegmentationPlugin):
-
-    LABEL = 'Rim at primary region'
-    NAME = 'rim'
-    COLOR = '#FF00FF'
-    DOC = ":additional_segmentation_plugins"
-
-    REQUIRES = ['primary_segmentation']
-
-    PARAMS = [('expansion_size', IntTrait(5, 0, 4000, label='Expansion size')),
-              ('shrinking_size', IntTrait(5, 0, 4000, label='Shrinking size')),
-              ]
-
-    @stopwatch()
-    def _run(self, meta_image, container):
-        image = meta_image.image
-        if self.params['expansion_size'] > 0 or self.params['shrinking_size'] > 0:
-
-            nr_objects = container.img_labels.getMinmax()[1] + 1
-            if self.params['shrinking_size'] > 0:
-                img_labelsA = ccore.seeded_region_shrinking(image,
-                                                            container.img_labels,
-                                                            nr_objects,
-                                                            self.params['shrinking_size'])
-            else:
-                img_labelsA = container.img_labels
-
-            if self.params['expansion_size'] > 0:
-                img_labelsB = ccore.seeded_region_expansion(image,
-                                                            container.img_labels,
-                                                            ccore.SrgType.KeepContours,
-                                                            nr_objects,
-                                                            0,
-                                                            self.params['expansion_size'],
-                                                            0)
-            else:
-                img_labelsB = container.img_labels
-            img_labels = ccore.substractImages(img_labelsB, img_labelsA)
-            return ccore.ImageMaskContainer(image, img_labels, False, True, True)
-        else:
-            raise ValueError("Parameters are not valid. Requirements: 'expansion_size' > 0 and/or "
-                             "'shrinking_size' > 0")
-
-
-class SegmentationPluginModification(_SegmentationPlugin):
-
-    LABEL = 'Expansion/shrinking of primary region'
-    NAME = 'modification'
-    COLOR = '#FF00FF'
-    DOC = ":additional_segmentation_plugins"
-
-    REQUIRES = ['primary_segmentation']
-
-    PARAMS = [('expansion_size', IntTrait(5, 0, 4000, label='Expansion size')),
-              ('shrinking_size', IntTrait(5, 0, 4000, label='Shrinking size')),
-              ]
-
-    @stopwatch()
-    def _run(self, meta_image, container):
-        image = meta_image.image
-        if self.params['expansion_size'] > 0 or self.params['shrinking_size'] > 0:
-
-            nr_objects = container.img_labels.getMinmax()[1] + 1
-            if self.params['shrinking_size'] > 0:
-                img_labelsA = ccore.seeded_region_shrinking(image,
-                                                            container.img_labels,
-                                                            nr_objects,
-                                                            self.params['shrinking_size'])
-            else:
-                img_labelsA = container.img_labels
-
-            if self.params['expansion_size'] > 0:
-                img_labelsB = ccore.seeded_region_expansion(image,
-                                                            container.img_labels,
-                                                            ccore.SrgType.KeepContours,
-                                                            nr_objects,
-                                                            0,
-                                                            self.params['expansion_size'],
-                                                            0)
-            else:
-                img_labelsB = container.img_labels
-            img_labels = ccore.substractImages(img_labelsB, img_labelsA)
-            return ccore.ImageMaskContainer(image, img_labels, False, True, True)
-        else:
-            raise ValueError("Parameters are not valid. Requirements: 'expansion_size' > 0 and/or "
-                             "'shrinking_size' > 0")
-
-
-class SegmentationPluginPropagate(_SegmentationPlugin):
-
-    LABEL = 'Propagate region from primary'
-    NAME = 'propagate'
-    COLOR = '#FFFF99'
-    DOC = ":additional_segmentation_plugins"
-
-    REQUIRES = ['primary_segmentation']
-
-    PARAMS = [('presegmentation_median_radius', IntTrait(1, 0, 100, label='Median radius')),
-              ('presegmentation_alpha', FloatTrait(1.0, 0, 4000, label='Otsu factor', digits=2)),
-              ('lambda', FloatTrait(0.05, 0, 4000, label='Lambda', digits=2)),
-              ('delta_width', IntTrait(1, 1, 4, label='Delta width')),
-              ]
-
-    @stopwatch()
-    def _run(self, meta_image, container):
-        image = meta_image.image
-
-        img_prefiltered = ccore.disc_median(image, self.params['presegmentation_median_radius'])
-        t = int(ccore.get_otsu_threshold(img_prefiltered) * self.params['presegmentation_alpha'])
-        img_bin = ccore.threshold_image(img_prefiltered, t)
-        img_labels = ccore.segmentation_propagate(img_prefiltered, img_bin,
-                                                  container.img_labels,
-                                                  self.params['lambda'],
-                                                  self.params['delta_width'])
-        return ccore.ImageMaskContainer(image, img_labels, False, True, True)
-
-
-class SegmentationPluginConstrainedWatershed(_SegmentationPlugin):
-
-    LABEL = 'Constrained watershed from primary'
-    NAME = 'constrained_watershed'
-    COLOR = '#FF99FF'
-    DOC = ":additional_segmentation_plugins"
-
-    REQUIRES = ['primary_segmentation']
-
-    PARAMS = [('gauss_filter_size', IntTrait(2, 1, 4, label='Gauss filter size')),
-              ]
-
-    @stopwatch()
-    def _run(self, meta_image, container):
-        image = meta_image.image
-        img_labels = self._constrained_watershed(image, container.img_labels,
-                                                 filter_size=self.params['gauss_filter_size'])
-        return ccore.ImageMaskContainer(image, img_labels, False, True, True)
-
-    def _constrained_watershed(self, img_in, img_labels, filter_size=2):
-
-        maxlabel = img_labels.getMinmax()[1]
-        img_bin = ccore.threshold(img_labels, 1, maxlabel, 0, 255)
-
-        # internal marker
-        img_ero = ccore.erode(img_bin, 3, 8)
-        img_internal_marker = ccore.anchoredSkeleton(img_bin, img_ero)
-
-        # external marker
-        img_inv = ccore.linearRangeMapping(img_bin, 255, 0, 0, 255)
-        img_voronoi = ccore.watershed(img_inv)
-        img_external_marker = ccore.threshold(img_voronoi, 0, 0, 0, 255)
-
-        # full marker image
-        img_marker = ccore.supremum(img_internal_marker, img_external_marker)
-
-        # gradient image
-        img_filtered = ccore.gaussianFilter(img_in, filter_size)
-        img_grad = ccore.morphoGradient(img_filtered, 1, 8)
-
-        # Watershed result: 0 is WSL, 1 is Background, all other values correspond to labels.
-        img_grad_watershed = ccore.constrainedWatershed(img_grad, img_marker)
-
-        # we first get the regions
-        maxreslab = img_grad_watershed.getMinmax()[1]
-        img_bin2 = ccore.threshold(img_grad_watershed, 2, maxreslab, 0, 255)
-
-        img_temp = ccore.copyImageIf(img_labels, img_bin2)
-        img_out = ccore.relabelImage(img_bin2, img_temp)
-
-        return img_out
-
-
-class SegmentationPluginDifference(_SegmentationPlugin):
-
-    LABEL = 'Difference of primary and secondary'
-    NAME = 'difference'
-    COLOR = '#FF00FF'
-    DOC = ":additional_segmentation_plugins"
-
-    REQUIRES = ['primary_segmentation', 'secondary_segmentation']
-
-    PARAMS = [('reverse', BooleanTrait(False, label='Reverse subtraction')),
-              ]
-
-    @stopwatch()
-    def _run(self, meta_image, container_prim, container_sec):
-        image = meta_image.image
-        if not self.params['reverse']:
-            img_labels = ccore.substractImages(container_prim.img_labels, container_sec.img_labels)
-        else:
-            img_labels = ccore.substractImages(container_sec.img_labels, container_prim.img_labels)
-
-        #array = img_labels.toArray()
-        #array = numpy.abs(array)
-        #img_labels = ccore.numpy_to_image(array, copy=True)
-        return ccore.ImageMaskContainer(image, img_labels, False, True, True)

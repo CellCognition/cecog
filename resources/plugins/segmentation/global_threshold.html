@@ -1,0 +1,107 @@
+<html>
+  <a name="global_threshold">
+    <h4 >Global Threshold</h4>
+    <p class="text">
+      Segmentation using simple global thresholding. The threshold can
+      be set statically or adapted iteratively.</p>
+  </a>
+
+  <a name="medianradius">
+    <h4 class="sub">Median radius</h4>
+    <p class="subtext">Smooting the image before segementation using a
+      median filter (radius in pixels).<br>
+      Note: Filtered image is used for segmentation, not for feature
+      calculation. This means there is no influence on feature values,
+      except the shape features. The parameter scales with lens
+      magnification</p>
+  </a>
+
+  <a name="threshold">
+    <h4 class="sub">Threshold</h4>
+    <p class="subtext">
+      This parmenter is the static threshold. Intensitiy
+      values greater than this value are labeled as foreground.
+    </p>
+  </a>
+
+  <a name="static_threshold">
+    <h4 class="sub">Static threshold</h4>
+    <p class="subtext">If this flag is set, the thresholding is performed
+      only once i.e. segmentation is a simple <b>static global threshold</b>. If
+      the flag is off the threshold is updated iterativeley
+      according to the formula <i>threshold_<sub>new</sub> = (mu_<sub>bg</sub> +
+        mu_<sub>fg</sub>)/2</i>, where <i>mu</i> are the mean
+      intesities of foreground and background respectively. The iteration stops
+      if the threshold does not change between two iteration (255
+      iterations max.). The parameter <i>Threshold</i> is used as start
+      parameter.
+      <br></p>
+  </a>
+
+
+  <a name="shapewatershed">
+    <h4>Split & merge by shape</h4>
+    <p class="text">Optional correction of under-segmentation by a
+      split and merge approach. Objects in close spatial proximity
+      might not be separated (under-segmentation). Based on the shape
+      information (distance transform) objects are split by
+      a <i>watershed</i> algorithm, which often yields
+      over-segmentation. Object candidates are probed for merging
+      by their size and circularity (rounder objects above a
+      certain size threshold are preferred).
+      See <img class="extlink" src=":extlink"/>
+      <a href="http://www3.interscience.wiley.com/journal/118757015/abstract">W&auml;hlby et al. 2004</a>.</p>
+  </a>
+
+  <a name="shapewatershed_gausssize">
+    <h4 class="sub">Gauss radius</h4>
+    <p class="subtext">Size of the Gauss filter for smoothing
+      the distance transformed image. This Parameter scales with
+      lens magnification</p>
+  </a>
+  <a name="shapewatershed_maximasize">
+    <h4 class="sub">Min. seed distance</h4>
+    <p class="subtext">Minimal allowed distance in pixel between
+      objects (seed distance for watershed). This Parameter
+      scales with lens magnification</p>
+  </a>
+  <a name="shapewatershed_minmergesize">
+    <h4 class="sub">Object size threshold</h4>
+    <p class="subtext">Minimal size in pixels of a split object.
+      This parameter scales square with lens magnification.</p>
+  </a>
+
+  <a name="shapewater_windowsize">
+    <h4 class="sub">Window size</h4>
+    <p class="subtext">Width of the moving average window in pixel (window is squared).
+      <br>(parameter scales directly with lens magnification)</p>
+  </a>
+
+
+  <a name="postprocessing">
+    <h4>Object filter</h4>
+    <p class="text">Object filtering based on size (in pixel) and
+      mean. intensity (8bit grey level values). A value set to <tt>-1</tt>
+      means that the specific bound will be ignored.</p>
+
+    <a name="primary_postprocessing_roisize_min">
+      <h4 class="sub">Min. object size</h4>
+      <p class="subtext">Remove all objects smaller than this parameter.
+    </a>
+
+    <a name="postprocessing_roisize_max">
+      <h4 class="sub">Max. object size</h4>
+      <p class="subtext">Remove all objects larger than this parameter.
+    </a>
+
+    <a name="postprocessing_intensity_min">
+      <h4 class="sub">Min. average intensity</h4>
+      <p class="subtext">Remove all ojects dimmer than this parameter.</p>
+    </a>
+
+    <a name="postprocessing_intensity_max">
+      <h4 class="sub">Max. average intensity</h4>
+      <p class="subtext">Remove all objects brighter that this parameter</p>
+    </a>
+  </a>
+</html>
