@@ -1,8 +1,8 @@
 @SETLOCAL
 
 :: this line is one uses windows sdk build environment
-echo using Windows SDK's environment for x64 build
-set VS90COMNTOOLS=%VS100COMNTOOLS%
+echo using Windows VC2012 environment for x64 build
+set VS90COMNTOOLS=%VS110COMNTOOLS%
 
 @Set /P _clean=Clean directories manually? [Y/n] || Set _clean="n"
 
