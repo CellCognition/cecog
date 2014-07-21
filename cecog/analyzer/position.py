@@ -304,6 +304,8 @@ class PositionCore(LoggerObject):
         for channel in self.processing_channels:
             chm[channel] = sttg.get('ObjectDetection',
                                     '%s_channelid' %channel.lower())
+            if not chm[channel]:
+                chm[channel] = None
 
         return chm
 

@@ -419,7 +419,7 @@ class Browser(QMainWindow):
 
         for name in cellanalyzer.get_channel_names():
             channel = cellanalyzer.get_channel(name)
-            if channel.strChannelId is not None:
+            if bool(channel.strChannelId):
                 d[channel.strChannelId] = channel.meta_image.image
                 self.show_image(d)
 
