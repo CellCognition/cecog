@@ -2,7 +2,7 @@
 
 :: this line is one uses windows sdk build environment
 echo using Windows SDK's environment for x64 build
-set VS90COMNTOOLS=%VS100COMNTOOLS%
+set VS90COMNTOOLS=%VS110COMNTOOLS%
 
 @Set /P _clean=Clean directories manually? [Y/n] || Set _clean="n"
 
@@ -26,7 +26,7 @@ python setup_windows.py py2exe
 @goto:eof
 
 :nsis
-SET VERSION="1.5.0"
+SET VERSION="1.6.0"
 pause
 
 makensis /Dmver=%VERSION% win-installer-64.nsi
