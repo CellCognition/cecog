@@ -82,6 +82,7 @@ class CellAnalyzer(LoggerObject):
         channels = sorted(self._channel_registry.values())
         primary_channel = None
 
+        cnames = [c.NAME for c in channels]
         for channel in channels:
             self.timeholder.prepare_raw_image(channel)
             if self.detect_objects:
@@ -92,7 +93,12 @@ class CellAnalyzer(LoggerObject):
                     self.timeholder.apply_segmentation(channel, primary_channel)
                     secondary_channel = channel
                 elif channel.NAME == TertiaryChannel.NAME:
-                    self.timeholder.apply_segmentation(channel, primary_channel, secondary_channel)
+                    if SecondaryChannel.NAME not in cnames:
+                        raise RuntimeError(("Tertiary channel requiers a "
+                                            "secondary channel"))
+                    self.timeholder.apply_segmentation(channel,
+                                                       primary_channel,
+                                                       secondary_channel)
                 elif channel.NAME == MergedChannel.NAME:
                     channel.meta_image = primary_channel.meta_image
                     self.timeholder.apply_segmentation(channel, self._channel_registry)
@@ -375,14 +381,14 @@ class CellAnalyzer(LoggerObject):
     def classify_objects(self, predictor):
         channel = self._channel_registry[predictor.name]
         holder = channel.get_region(predictor.regions)
-        
+
         try:
             signal_idx = holder.feature_names.index('n2_avg')
             roisize_idx = holder.feature_names.index('roisize')
             has_basic_features = True
         except ValueError:
             has_basic_features = False
-            
+
         for label, obj in holder.iteritems():
             if obj.aFeatures.size != len(holder.feature_names):
                 msg = ('Incomplete feature set found (%d/%d): skipping sample '
