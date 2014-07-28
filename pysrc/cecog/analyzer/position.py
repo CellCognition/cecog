@@ -545,6 +545,8 @@ class PositionAnalyzer(PositionCore):
             region_features = {}
 
             for region in MetaPluginManager().region_info.names[name.lower()]:
+                if name is self.MERGED_CHANNEL:
+                    continue
                 # export all features extracted per regions
                 if self.settings.get('Output', 'events_export_all_features') or \
                         self.settings.get('Output', 'export_track_data'):
