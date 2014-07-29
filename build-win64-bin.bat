@@ -26,7 +26,7 @@ python setup_windows.py py2exe
 @goto:eof
 
 :nsis
-SET VERSION="1.5.0"
+SET VERSION="1.5.1"
 pause
 
 makensis /Dmver=%VERSION% win-installer-64.nsi
