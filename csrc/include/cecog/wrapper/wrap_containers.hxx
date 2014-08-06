@@ -29,7 +29,15 @@
 
 #include "cecog/containers.hxx"
 
+// NEW
+//#include <Python.h>
+//#include <boost/python/suite/indexing/vector_indexing_suite.hpp>
+//#include <vigra/numpy_array.hxx>
+//#include <vigra/numpy_array_converters.hxx>
+
+
 using namespace boost::python;
+using namespace vigra;
 
 namespace cecog
 {
@@ -86,6 +94,10 @@ void wrap_containers()
     .def("markObjects", fx2, mark_objects_overloads2(args("color", "quad", "showIds", "fill", "force")))
     .def("makeRGB", &_ObjectContainerBase::makeRGB)
     .def("eraseRGB", &_ObjectContainerBase::eraseRGB)
+    .def("resetGranulometryVector", &_ObjectContainerBase::resetGranulometryVector)
+    .def("addValueToGranulometry", &_ObjectContainerBase::addValueToGranulometry,
+         (arg("value")),
+         "adds a value for the granulometries")
     .def("addExtraImage", &_ObjectContainerBase::addExtraImage)
     .def("combineExtraRGB", &_ObjectContainerBase::combineExtraRGB)
     .def("connectObjects", &_ObjectContainerBase::connectObjects,
@@ -170,10 +182,16 @@ void wrap_containers()
 
   typedef cecog::ImageMaskContainer<8> _ImageMaskContainer;
 
+  //NumpyArray<2, Singleband<UInt8> > marker,
+  //NumpyArray<2, Singleband<PixelType> > mask,
+
   class_< _ImageMaskContainer, bases<_ObjectContainerBase> >
     ("ImageMaskContainer", init< std::string, std::string >())
     .def(init<vigra::BImage, vigra::BImage, bool>())
     .def(init<vigra::BImage, vigra::Int16Image, bool, bool, bool>())
+    //.def(init<vigra::NumpyArray<2, vigra::Singleband<vigra::UInt8> >, vigra::NumpyArray<2, vigra::Singleband<vigra::UInt8> >, bool>())
+    //.def(init<vigra::NumpyArray<2, vigra::Singleband<vigra::UInt8> >, vigra::NumpyArray<2, vigra::Singleband<vigra::UInt16> >, bool, bool, bool>())
+    //.def(init<NumpyArray<2, Singleband<UInt8> >, NumpyArray<2, Singleband<UInt8> >, bool>())
   ;
   register_ptr_to_python< std::auto_ptr<_ImageMaskContainer> >();
 

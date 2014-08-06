@@ -726,8 +726,8 @@ void ImFastToggleMapping(Iterator1 srcUpperLeft, Iterator1 srcLowerRight, Access
 
 //		const value_type neutralElementMax = extOp.neutralValue;
 //		const value_type neutralElementMin = antiExtOp.neutralValue;
-  value_type localMax;
-  value_type localMin;
+  //value_type localMax;
+  //value_type localMin;
 
   // border treatment
   // offsets correspond to the maximal extension of the SE.

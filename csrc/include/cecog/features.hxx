@@ -1529,6 +1529,31 @@ namespace cecog
             }
         }
 
+        void CalculateFeatures(ROIObject & o, unsigned area_or_volume)
+        {
+            if(operatorFlag_ == 0)
+                morpho::ImOpenGranulometry(imSrcRoi_, seSizeVec_, areaVec_, volVec_, objId_);
+            else
+                morpho::ImCloseGranulometry(imSrcRoi_, seSizeVec_, areaVec_, volVec_, objId_);
+
+            if(area_or_volume) {
+              o.features[prefix_ + "_area_" + itos(seSizeVec_[0], 0)] = areaVec_[0];
+            }
+            else {
+              o.features[prefix_ + "_volume_" + itos(seSizeVec_[0], 0)] = volVec_[0];
+            }
+
+            for(se_size_vec::size_type i = 1; i != seSizeVec_.size(); ++i)
+            {
+              if(area_or_volume) {
+                o.features[prefix_ + "_area_" + itos(seSizeVec_[i], 0)] = areaVec_[i] - areaVec_[i-1] ;
+              }
+              else {
+                o.features[prefix_ + "_volume_" + itos(seSizeVec_[i], 0)] = volVec_[i] - volVec_[i-1] ;
+              }
+            }
+        }
+
 
     protected:
       unsigned borderSize_;

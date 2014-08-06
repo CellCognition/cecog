@@ -254,6 +254,12 @@ void wrap_segmentation()
       (arg("image"), arg("label_image"), arg("srg_type"), arg("label_number"),
        arg("cost_threshold"), arg("expansion_rounds"), arg("sep_expand_rounds")=0),
       "Expand an image of seeds (labels) several rounds without overlapping different seeds.");
+  def("seeded_region_expansion", pySeededRegionExpansion< vigra::BImage, vigra::UInt16Image, vigra::UInt16Image,
+                                                          vigra::ArrayOfRegionStatistics<cecog::SrgConstValueFunctor<double> > >,
+      (arg("image"), arg("label_image"), arg("srg_type"), arg("label_number"),
+       arg("cost_threshold"), arg("expansion_rounds"), arg("sep_expand_rounds")=0),
+      "Expand an image of seeds (labels) several rounds without overlapping different seeds.");
+
 
 //  def("seeded_region_expansion_mean", pySeededRegionExpansion< vigra::BImage, vigra::Int16Image, vigra::Int16Image,
 //                                                            vigra::ArrayOfRegionStatistics<cecog::SrgMeanValueFunctor<double> > >,

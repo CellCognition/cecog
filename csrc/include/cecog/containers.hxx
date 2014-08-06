@@ -131,6 +131,16 @@ namespace cecog
 
     };
 
+    void resetGranulometryVector() {
+      // erase all elements
+      granuSizeVec.erase (granuSizeVec.begin(),granuSizeVec.end());
+
+    }
+
+    void addValueToGranulometry(unsigned value){
+      granuSizeVec.push_back(value);
+    }
+
     /**
      * Apply a feature by name to all objects of this container
      */
@@ -343,6 +353,38 @@ namespace cecog
                                                                    granuSizeVec, "granu_close", 1);
                     granuClose.CalculateFeatures(o);
 
+                }
+            }
+          else if(name == "granulometry_texture")
+            {
+                ObjectMap::iterator it = objects.begin();
+                for(; it != objects.end(); ++it)
+                {
+                    ROIObject &o = (*it).second;
+
+                    Granulometry<image_type, label_type> granuOpen(img, img_labels, o, (*it).first,
+                                                                   granuSizeVec, "granu_open", 0);
+                    granuOpen.CalculateFeatures(o, 0);
+
+                    Granulometry<image_type, label_type> granuClose(img, img_labels, o, (*it).first,
+                                                                   granuSizeVec, "granu_close", 1);
+                    granuClose.CalculateFeatures(o, 0);
+                }
+            }
+          else if(name == "granulometry_shape")
+            {
+                ObjectMap::iterator it = objects.begin();
+                for(; it != objects.end(); ++it)
+                {
+                    ROIObject &o = (*it).second;
+
+                    Granulometry<image_type, label_type> granuOpen(img, img_labels, o, (*it).first,
+                                                                   granuSizeVec, "granu_open", 0);
+                    granuOpen.CalculateFeatures(o, 1);
+
+                    Granulometry<image_type, label_type> granuClose(img, img_labels, o, (*it).first,
+                                                                   granuSizeVec, "granu_close", 1);
+                    granuClose.CalculateFeatures(o, 1);
                 }
             }
         // haralick
@@ -1469,6 +1511,7 @@ namespace cecog
 
       __doLabeling();
     }
+
 
     ImageMaskContainer(vigra::BImage const & imgIn,
                        label_type const & imgLabel,

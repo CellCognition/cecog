@@ -38,13 +38,26 @@ namespace cecog
     Font(std::string const & filename, int correct=3, int tiles=16)
       : tiles(tiles), correct(correct)
     {
-      vigra::ImageImportInfo info(filename.c_str());
-      width = info.width();
-      height = info.height();
-      charw = width / tiles;
-      charh = height / tiles;
-      img = vigra::BImage(width, height);
-      importImage(info, destImage(img));
+      struct stat buffer;
+      if(stat (filename.c_str(), &buffer) > 0 ) {
+        vigra::ImageImportInfo info(filename.c_str());
+        width = info.width();
+        height = info.height();
+        charw = width / tiles;
+        charh = height / tiles;
+        img = vigra::BImage(width, height);
+        importImage(info, destImage(img));
+      }
+      else {
+        // This is a dummy image (empty)
+        // This modification makes it possible to call the cellcognition
+        // from any directory (without the pipeline, and on a single image)
+        width = 256;
+        height = 256;
+        charw = width / tiles;
+        charh = height / tiles;
+        img = vigra::BImage(width, height);
+      }
     }
 
     template <class VALUETYPE>
