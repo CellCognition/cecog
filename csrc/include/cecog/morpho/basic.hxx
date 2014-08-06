@@ -720,15 +720,6 @@ void ImFastToggleMapping(Iterator1 srcUpperLeft, Iterator1 srcLowerRight, Access
 {
   typedef typename Accessor1::value_type value_type;
 
-//		does not work in this way ... dunno why!
-//		MaxFunctor<value_type> extOp();
-//		MinFunctor<value_type> antiExtOp();
-
-//		const value_type neutralElementMax = extOp.neutralValue;
-//		const value_type neutralElementMin = antiExtOp.neutralValue;
-  value_type localMax;
-  value_type localMin;
-
   // border treatment
   // offsets correspond to the maximal extension of the SE.
   Diff2D minOffset = se.minOffset();

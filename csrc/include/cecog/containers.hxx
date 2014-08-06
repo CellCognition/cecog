@@ -132,6 +132,24 @@ namespace cecog
     };
 
     /**
+     * Erase a feature for all objects
+     * This has been added to allow different features for object filters
+     * than for classification.
+     */
+    void deleteFeature(std::string feature_name)
+    {
+      if (calculated_features[feature_name]) {
+        ObjectMap::iterator it = objects.begin();
+        for (; it != objects.end(); ++it) {
+          ROIObject& o = (*it).second;
+          o.features.erase(feature_name);
+        }
+        calculated_features[feature_name] = false;
+      }
+      return;
+    }
+
+    /**
      * Apply a feature by name to all objects of this container
      */
     int applyFeature(std::string name, bool force=false)
