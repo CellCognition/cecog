@@ -16,6 +16,7 @@ from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
 from cecog.plugin.segmentation.manager import SegmentationPluginManager
 
 from cecog.plugin.segmentation.strategies import SegmentationPluginPrimary
+from cecog.plugin.segmentation.strategies import SegmentationPluginPrimary2
 from cecog.plugin.segmentation.strategies import SegmentationPluginExpanded
 from cecog.plugin.segmentation.strategies import SegmentationPluginInside
 from cecog.plugin.segmentation.strategies import SegmentationPluginOutside
@@ -71,10 +72,11 @@ class MetaPluginManager(object):
 
     def _register_plugins(self):
 
-        self.managers['primary'].register_plugin(SegmentationPluginPrimary)
+        self.managers['primary'].register_plugin(SegmentationPluginPrimary)        
         self.managers['primary'].register_plugin(SegmentationPluginIlastik)
         self.managers['primary'].register_plugin(SegmentationPluginPrimaryLoadFromFile)
-
+        self.managers['primary'].register_plugin(SegmentationPluginPrimary2)
+        
         self.managers['secondary'].register_plugin(SegmentationPluginExpanded)
         self.managers['secondary'].register_plugin(SegmentationPluginInside)
         self.managers['secondary'].register_plugin(SegmentationPluginOutside)

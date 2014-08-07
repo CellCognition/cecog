@@ -80,8 +80,9 @@ class BatteryPackage(object):
 
     @property
     def demo_settings(self):
-        return join(self.package_path, "Settings", "demo_settings.conf")
-
+        #return join(self.package_path, "Settings", "demo_settings.conf")
+        return '/Users/twalter/data/Alice/segmentation_test/cecog_settings/settings_2012-10-15_TW.conf'
+    
     def copy_demodata(self, dest_path):
         self._path = dest_path
 
