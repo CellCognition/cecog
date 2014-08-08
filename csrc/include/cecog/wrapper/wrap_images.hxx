@@ -358,6 +358,21 @@ PyObject * pyImWatershed(IMAGE1 const &imgIn)
   return incref(object(imgPtr).ptr());
 }
 
+template <class IMAGE1, class IMAGE2>
+PyObject * pySelectiveWatershed(IMAGE1 const &imgIn, typename IMAGE1::value_type dyn_thresh)
+{
+
+  std::auto_ptr< IMAGE2 > imgPtr(new IMAGE2(imgIn.size()));
+  using namespace cecog::morpho;
+
+  neighborhood2D nb(WITHOUTCENTER8, imgIn.size());
+
+  morphoSelectiveWatershed(srcImageRange(imgIn),
+                           destImage(*imgPtr), dyn_thresh, nb);
+
+  return incref(object(imgPtr).ptr());
+}
+
 template <class IMAGE1, class IMAGE2, class IMAGE3>
 PyObject * pyImConstrainedWatershed(IMAGE1 const &imgIn,
                     IMAGE2 &imgSeed)
@@ -1501,12 +1516,17 @@ static void wrap_images()
   def("watershed", pyImWatershed<vigra::UInt16Image, vigra::UInt16Image>);
   def("watershed", pyImWatershed<vigra::Int16Image, vigra::UInt16Image>);
 
+  def("selective_watershed", pySelectiveWatershed<vigra::UInt8Image, vigra::UInt16Image>);
+  def("selective_watershed", pySelectiveWatershed<vigra::UInt16Image, vigra::UInt16Image>);
+  def("selective_watershed", pySelectiveWatershed<vigra::Int16Image, vigra::UInt16Image>);
+
   def("constrainedWatershed", pyImConstrainedWatershed<vigra::UInt8Image, vigra::UInt8Image, vigra::UInt16Image>);
   def("constrainedWatershed", pyImConstrainedWatershed<vigra::UInt16Image, vigra::UInt8Image, vigra::UInt16Image>);
   def("constrainedWatershed", pyImConstrainedWatershed<vigra::Int16Image, vigra::UInt8Image, vigra::UInt16Image>);
   def("constrainedWatershed", pyImConstrainedWatershed<vigra::UInt8Image, vigra::UInt16Image, vigra::UInt16Image>);
   def("constrainedWatershed", pyImConstrainedWatershed<vigra::UInt16Image, vigra::UInt16Image, vigra::UInt16Image>);
   def("constrainedWatershed", pyImConstrainedWatershed<vigra::Int16Image, vigra::UInt16Image, vigra::UInt16Image>);
+
 
   def("erode", pyImErode<vigra::UInt8Image>);
   def("erode", pyImErode<vigra::UInt16Image>);
