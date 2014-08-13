@@ -22,22 +22,22 @@ __all__ = ['DIMENSION_NAME_POSITION',
            'AxisIterator',
            'ImageContainer',
            'MetaData',
-           'MetaImage',
-           ]
+           'MetaImage']
 
 import os
 import copy
 import types
 import numpy
-import cPickle as pickle
+from collections import OrderedDict
+
 from PyQt4.QtCore import *
 
-from collections import OrderedDict
 import vigra
-
+from cecog.io.xmlserializer import XmlSerializer
 from cecog.environment import CecogEnvironment
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog import ccore
+
 
 # XXX derive all this from numpy
 UINT8 = 'UINT8'
@@ -61,22 +61,19 @@ META_INFO_TIMESTAMP = 'timestamp'
 META_INFO_WELL = 'well'
 META_INFO_SUBWELL = 'subwell'
 
-IMAGECONTAINER_FILENAME = 'cecog_imagecontainer___PL%s.pkl'
-IMAGECONTAINER_FILENAME_OLD = '.cecog_imagecontainer___PL%s.pkl'
+
 
 def importer_pickle(obj, filename):
-    f = open(filename, 'wb')
-    pickle.dump(obj, f, protocol=pickle.HIGHEST_PROTOCOL)
-    f.close()
+    with open(filename, 'wb') as fp:
+        fp.write(obj.serialize())
 
 def importer_unpickle(filename):
-    f = open(filename, 'rb')
-    obj = pickle.load(f)
-    f.close()
+    with open(filename, 'rb') as fp:
+        obj = XmlSerializer.deserialize(fp.read())
     return obj
 
 
-class MetaData(object):
+class MetaData(XmlSerializer):
 
     def __init__(self):
         self.dim_x = None
@@ -353,10 +350,6 @@ class MetaImage(object):
     def disable_cropping(cls):
         MetaImage._crop_coordinates = None
 
-    # @property
-    # def dtype(self):
-    #     return self.image.toArray().dtype
-
     @property
     def vigra_image(self):
         ar = self.image.toArray()
@@ -454,6 +447,8 @@ class Coordinate(object):
 
 class ImageContainer(object):
 
+    _structure_filename_template = 'structure_PL%s.xml'
+
     def __init__(self):
         self._plates = OrderedDict()
         self._path_in = OrderedDict()
@@ -529,7 +524,7 @@ class ImageContainer(object):
 
     @classmethod
     def _get_structure_filename(cls, settings, plate_id,
-                                path_plate_in, path_plate_out, use_old=False):
+                                path_plate_in, path_plate_out):
         if settings('General', 'structure_file_pathin'):
             path_structure = path_plate_in
         elif settings('General', 'structure_file_pathout'):
@@ -537,11 +532,9 @@ class ImageContainer(object):
         else:
             path_structure = \
                 settings('General', 'structure_file_extra_path_name')
-        if use_old:
-            filename_container = IMAGECONTAINER_FILENAME_OLD % plate_id
-        else:
-            filename_container = IMAGECONTAINER_FILENAME % plate_id
-        return os.path.join(path_structure, filename_container)
+
+        filename = cls._structure_filename_template %plate_id
+        return os.path.join(path_structure, filename)
 
     @classmethod
     def iter_check_plates(cls, settings):
@@ -565,12 +558,10 @@ class ImageContainer(object):
                 path_plate_out = path_out
 
             # check if structure file exists
-            filename = cls._get_structure_filename(settings, plate_id, path_plate_in, path_plate_out)
+            filename = cls._get_structure_filename(
+                settings, plate_id, path_plate_in, path_plate_out)
             if not os.path.isfile(filename):
-                # check old (hidden) filename for compatibility reasons
-                filename = cls._get_structure_filename(settings, plate_id, path_plate_in, path_plate_out, use_old=True)
-                if not os.path.isfile(filename):
-                    filename = None
+                filename = None
             yield plate_id, path_plate_in, path_plate_out, filename
 
     def iter_import_from_settings(self, settings, scan_plates=None):
@@ -595,12 +586,12 @@ class ImageContainer(object):
                 if settings.get2('image_import_namingschema'):
                     config_parser = CecogEnvironment.naming_schema
                     section_name = settings.get2('namingscheme')
-                    importer = IniFileImporter(path_plate_in,
-                                               config_parser, section_name)
+                    importer = IniFileImporter()
+                    importer.setup(path_plate_in, config_parser, section_name)
                 # read file structure according to dimension/structure file
-                elif settings.get2('image_import_structurefile'):
-                    filename = settings.get2('structure_filename')
-                    importer = FlatFileImporter(path_plate_in, filename)
+                # elif settings.get2('image_import_structurefile'):
+                #     filename = settings.get2('structure_filename')
+                #     importer = FlatFileImporter(path_plate_in, filename)
 
                 # scan the file structure
                 importer.scan()

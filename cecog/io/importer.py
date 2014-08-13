@@ -25,6 +25,7 @@ from cecog import ccore
 from cecog.util.util import read_table
 from cecog.util.stopwatch import StopWatch
 from cecog.util.token import Token, TokenHandler
+from cecog.io.xmlserializer import XmlSerializer
 
 from cecog.io.imagecontainer import (MetaData,
                                      DIMENSION_NAME_POSITION,
@@ -74,7 +75,7 @@ class DefaultCoordinates(object):
         return image_info[key]
 
 
-class AbstractImporter(object):
+class AbstractImporter(XmlSerializer):
 
     EXTENSIONS = ['.tif', '.png', '.png']
     IGNORE_PREFIXES = ['.']
@@ -82,7 +83,10 @@ class AbstractImporter(object):
     MULTIIMAGE_IGNORE = 'ignore'
     MULTIIMAGE_USE_ZSLICE = 'zslice'
 
-    def __init__(self, path,
+    def __init__(self):
+        super(AbstractImporter, self).__init__()
+
+    def setup(self, path,
                  extensions=None, ignore_prefixes=None, multi_image=None):
         self.path = os.path.normpath(path)
         self.extensions = self.EXTENSIONS if extensions is None \
@@ -283,99 +287,6 @@ class AbstractImporter(object):
     def _get_dimension_items(self):
         raise NotImplementedError()
 
-
-class FileTokenImporter(AbstractImporter):
-
-    def __init__(self, path, token_handler,
-                 extensions=None, ignore_prefixes=None, multi_image=None):
-        super(FileTokenImporter, self).__init__(path, extensions=extensions,
-                                                ignore_prefixes=ignore_prefixes,
-                                                multi_image=multi_image)
-        self.token_handler = token_handler
-
-    def _get_dimension_items(self):
-        files_list = list()
-        for (path, directories, filenames) in os.walk(path):
-            for filename in filenames:
-                print path, filename
-                if os.path.splitext[1] in self.extensions:
-                    hit = os.path.join(path, filename)
-                    files_list.append(hit)
-
-        token_list = []
-        for filename in file_list:
-            filename_rel = filename[len(self.path)+1:]
-            filename_short = os.path.split(filename_rel)[1]
-            if filename_short[0] not in self.ignore_prefixes:
-                result = self.token_handler.search_all(filename_short)
-                result['filename'] = filename_rel
-                token_list.append(result)
-        return token_list
-
-
-class SimpleTokenImporter(FileTokenImporter):
-
-    TOKEN_P = None
-    TOKEN_T = None
-    TOKEN_C = None
-    TOKEN_Z = None
-
-    def __init__(self, path, separator='_',
-                 extensions=None, ignore_prefixes=None, multi_image=None):
-        simple_token = TokenHandler(separator=separator)
-        simple_token.register_token(self.TOKEN_P)
-        simple_token.register_token(self.TOKEN_T)
-        simple_token.register_token(self.TOKEN_C)
-        simple_token.register_token(self.TOKEN_Z)
-
-        super(SimpleTokenImporter,
-              self).__init__(path, simple_token,
-                             extensions=extensions,
-                             ignore_prefixes=ignore_prefixes,
-                             multi_image=multi_image)
-
-
-class MetaMorphTokenImporter(SimpleTokenImporter):
-
-    TOKEN_P = Token('P', type_code='c', length='+', prefix='',
-                    name=DIMENSION_NAME_POSITION)
-    TOKEN_T = Token('T', type_code='i', length='+', prefix='',
-                    name=DIMENSION_NAME_TIME)
-    TOKEN_C = Token('C', type_code='c', length='+', prefix='',
-                    name=DIMENSION_NAME_CHANNEL)
-    TOKEN_Z = Token('Z', type_code='i', length='+', prefix='',
-                    name=DIMENSION_NAME_ZSLICE)
-
-    def __init__(self, path, separator='_',
-                 extensions=None, ignore_prefixes=None, multi_image=None):
-        super(MetaMorphTokenImporter,
-              self).__init__(path, separator=separator,
-                             extensions=extensions,
-                             ignore_prefixes=ignore_prefixes,
-                             multi_image=multi_image)
-
-
-class ZeissLifeTokenImporter(SimpleTokenImporter):
-
-    TOKEN_P = Token('s', type_code='i', length='+', prefix='',
-                    name=DIMENSION_NAME_POSITION)
-    TOKEN_T = Token('t', type_code='i', length='+', prefix='',
-                    name=DIMENSION_NAME_TIME)
-    TOKEN_C = Token('w', type_code='c', length='+', prefix='',
-                    name=DIMENSION_NAME_CHANNEL)
-    TOKEN_Z = Token('Z', type_code='i', length='+', prefix='',
-                    name=DIMENSION_NAME_ZSLICE)
-
-    def __init__(self, path, separator='_',
-                 extensions=None, ignore_prefixes=None,
-                 multi_image=None):
-        super(ZeissLifeTokenImporter,
-              self).__init__(path, separator=separator,
-                             extensions=extensions,
-                             ignore_prefixes=ignore_prefixes,
-                             multi_image=multi_image)
-
-
 class FlatFileImporter(AbstractImporter):
 
     def __init__(self, path, filename):
@@ -454,8 +365,11 @@ class IniFileImporter(AbstractImporter):
                 P5 -> P05
     '''
 
-    def __init__(self, path, config_parser, section_name):
-        super(IniFileImporter, self).__init__(path)
+    def __init__(self):
+        super(IniFileImporter, self).__init__()
+
+    def setup(self, path, config_parser, section_name):
+        super(IniFileImporter, self).setup(path)
         config_parser = config_parser
         section_name = section_name
 
@@ -492,7 +406,6 @@ class IniFileImporter(AbstractImporter):
         else:
             self.use_frame_indices = False
 
-        #print 'use_frame_indices: ', self.use_frame_indices
 
     def __setstate__(self, state):
         super(IniFileImporter, self).__setstate__(state)
@@ -602,9 +515,3 @@ class IniFileImporter(AbstractImporter):
             if os.path.isdir(path):
                 token_list = self.__get_token_list(path, self.allow_subfolder)
         return token_list
-
-
-class LsmImporter(object):
-
-    def __init__(self):
-        pass

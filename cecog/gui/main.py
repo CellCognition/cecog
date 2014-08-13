@@ -541,7 +541,8 @@ class CecogAnalyzer(QtGui.QMainWindow):
         emitter.setLabelText.connect(self._dlg.setLabelText)
 
         try:
-            func = lambda: load(emitter, imagecontainer, self._settings, scan_plates)
+            func = lambda: load(emitter, imagecontainer,
+                                self._settings, scan_plates)
             self._dlg.exec_(func, (emitter, ))
         except ImportError as e:
             # structure file from versions older than 1.3 contain pdk which is
@@ -660,7 +661,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
     def _on_file_open(self):
 
         if self._check_settings_saved() != QMessageBox.Cancel:
-            home = ""            
+            home = ""
             if self._settings_filename is not None:
                 settings_filename = self.environ.demo_settings
                 if os.path.isfile(settings_filename):
