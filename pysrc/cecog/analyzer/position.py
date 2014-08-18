@@ -304,6 +304,8 @@ class PositionCore(LoggerObject):
         for channel in self.processing_channels:
             chm[channel] = sttg.get('ObjectDetection',
                                     '%s_channelid' %channel.lower())
+            if not chm[channel]:
+                chm[channel] = None
 
         return chm
 
@@ -543,6 +545,8 @@ class PositionAnalyzer(PositionCore):
             region_features = {}
 
             for region in MetaPluginManager().region_info.names[name.lower()]:
+                if name is self.MERGED_CHANNEL:
+                    continue
                 # export all features extracted per regions
                 if self.settings.get('Output', 'events_export_all_features') or \
                         self.settings.get('Output', 'export_track_data'):
