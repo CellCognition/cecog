@@ -319,7 +319,9 @@ class CellAnalyzer(LoggerObject):
             self.draw_annotation_images(plate_id, training_set, oContainer, oLearner)
             images = self.write_annotation_images(oChannel, region, oLearner)
 
-        oLearner.set_training_data(training_set)
+        if training_set:
+            oLearner.set_training_data(training_set)
+
         return images
 
     def write_annotation_images(self, channel, region, learner):
@@ -375,14 +377,14 @@ class CellAnalyzer(LoggerObject):
     def classify_objects(self, predictor):
         channel = self._channel_registry[predictor.name]
         holder = channel.get_region(predictor.regions)
-        
+
         try:
             signal_idx = holder.feature_names.index('n2_avg')
             roisize_idx = holder.feature_names.index('roisize')
             has_basic_features = True
         except ValueError:
             has_basic_features = False
-            
+
         for label, obj in holder.iteritems():
             if obj.aFeatures.size != len(holder.feature_names):
                 msg = ('Incomplete feature set found (%d/%d): skipping sample '
