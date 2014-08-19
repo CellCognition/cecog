@@ -579,12 +579,16 @@ class CommonClassPredictor(BaseLearner):
                 l2g += g_step
             l2c += c_step
 
+
 class CommonObjectLearner(BaseLearner):
 
     def __init__(self, *args, **kw):
         super(CommonObjectLearner, self).__init__(*args, **kw)
 
     def set_training_data(self, training_set):
+
+        if not training_set:
+            raise RuntimeError("can not append emty training set")
         self.feature_names = training_set.feature_names
         nfeatures = training_set.n_features
 
