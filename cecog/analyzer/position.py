@@ -872,7 +872,6 @@ class PositionAnalyzer(PositionCore):
             self.settings.set_section('General')
             # want emit all images at once
             imgs = {}
-
             imgs.update(self.render_classification_images(cellanalyzer, images, frame))
             imgs.update(self.render_contour_images(cellanalyzer, images, frame))
             msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position, frame)
@@ -914,14 +913,13 @@ class PositionAnalyzer(PositionCore):
 
     def render_classification_images(self, cellanalyzer, images, frame):
          images_ = dict()
-
          for region, render_par in self.settings.get2('rendering_class').iteritems():
             out_images = join(self._images_dir, region)
             write = self.settings('Output', 'rendering_class_discwrite')
             image, _ = cellanalyzer.render(out_images,
-                                           dctRenderInfo=render_par,
-                                           writeToDisc=write,
-                                           images=images)
+                                                 dctRenderInfo=render_par,
+                                                 writeToDisc=write,
+                                                 images=images)
             images_[region] = image
          return images_
 
