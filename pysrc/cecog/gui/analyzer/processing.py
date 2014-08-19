@@ -41,10 +41,10 @@ class ExportSettings(object):
         show_ids = settings.get('Output', 'rendering_contours_showids')
         show_ids_class = settings.get('Output', 'rendering_class_showids')
 
-        # set propertys of merged channel to the same as for Primary
+        # set properties of merged channel to the same as for Primary
         for prefix in CH_PRIMARY+CH_OTHER:
             if prefix == CH_PRIMARY[0] \
-                    or settings.get('General', 'process_%s' % prefix):
+                    or settings.get('General', 'process_%s' %prefix):
 
                 d = {} # render settings for contours
                 for x in self.plugin_mgr.region_info.names[prefix]:
@@ -58,7 +58,8 @@ class ExportSettings(object):
 
             # render settings for classifications
             d = {}
-            if settings.get('Processing', '%s_classification' % prefix):
+            if  (settings.get('General', 'process_%s' %prefix) and \
+                 settings.get('Processing', '%s_classification' % prefix)):
                 for x in self.plugin_mgr.region_info.names[prefix]:
                     if x == settings.get('Classification', '%s_classification_regionname' % prefix) or \
                             prefix == CH_VIRTUAL[0]:
