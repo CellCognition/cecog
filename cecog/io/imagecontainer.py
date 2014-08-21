@@ -62,7 +62,6 @@ META_INFO_WELL = 'well'
 META_INFO_SUBWELL = 'subwell'
 
 
-
 def importer_pickle(obj, filename):
     with open(filename, 'wb') as fp:
         fp.write(obj.serialize())
@@ -447,7 +446,7 @@ class Coordinate(object):
 
 class ImageContainer(object):
 
-    _structure_filename_template = 'structure_PL%s.xml'
+    _structfile_tmpl = 'FileStructure_PL%s.xml'
 
     def __init__(self):
         self._plates = OrderedDict()
@@ -533,7 +532,7 @@ class ImageContainer(object):
             path_structure = \
                 settings('General', 'structure_file_extra_path_name')
 
-        filename = cls._structure_filename_template %plate_id
+        filename = cls._structfile_tmpl %plate_id
         return os.path.join(path_structure, filename)
 
     @classmethod
