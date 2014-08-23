@@ -50,6 +50,7 @@ TOKEN_Z = Token('Z', type_code='i', length='+', prefix='',
 class MetaDataError(ValueError):
     pass
 
+
 class DefaultCoordinates(object):
     def __init__(self):
         self.default_values = {
@@ -124,6 +125,7 @@ class AbstractImporter(XmlSerializer):
             self.multi_image == self.MULTIIMAGE_USE_ZSLICE):
             index = zslice - 1
             zslice = None
+
         filename_rel = self.dimension_lookup[coordinate.position] \
                                             [coordinate.time] \
                                             [coordinate.channel] \
