@@ -42,6 +42,15 @@ from cecog.gui.config import GuiConfigSettings
 from cecog.plugin.metamanager import MetaPluginManager
 
 
+class TSlider(QSlider):
+
+    newValue = pyqtSignal()
+
+    def mouseReleaseEvent(self, event):
+        self.newValue.emit()
+        super(TSlider, self).mouseReleaseEvent(event)
+
+
 class Browser(QMainWindow):
 
     ZOOM_STEP = 1.05
@@ -105,14 +114,14 @@ class Browser(QMainWindow):
 
         self.image_viewer.zoom_info_updated.connect(self.on_zoom_info_updated)
 
-        self._t_slider = QSlider(Qt.Horizontal, frame)
+        self._t_slider = TSlider(Qt.Horizontal, frame)
 
         self._t_slider.setMinimum(self.min_time)
         self._t_slider.setMaximum(self.max_time)
 
-        self._t_slider.setTickPosition(QSlider.TicksBelow)
-        self._t_slider.sliderReleased.connect(self.on_time_changed_by_slider,
-                                            Qt.DirectConnection)
+        self._t_slider.setTickPosition(QSlider.NoTicks)
+        self._t_slider.newValue.connect(self.on_time_changed_by_slider,
+                                        Qt.DirectConnection)
         self._t_slider.valueChanged.connect(self.timeToolTip)
         self._imagecontainer.check_dimensions()
 
@@ -464,9 +473,11 @@ class Browser(QMainWindow):
 
     def on_act_prev_t(self):
         self._t_slider.setValue(self._t_slider.value()-1)
+        self.on_time_changed_by_slider()
 
     def on_act_next_t(self):
         self._t_slider.setValue(self._t_slider.value()+1)
+        self.on_time_changed_by_slider()
 
     def on_act_prev_pos(self):
         nav = self._module_manager.get_widget(NavigationModule.NAME)
