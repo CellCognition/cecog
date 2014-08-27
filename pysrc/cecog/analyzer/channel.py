@@ -188,7 +188,11 @@ class Channel(ChannelCore):
         else:
             self.oZSliceOrProjection = int(self.oZSliceOrProjection)
             self.logger.debug("* selecting z-slice %d..." % self.oZSliceOrProjection)
-            meta_image = self._zslices[self.oZSliceOrProjection-1]
+            try:
+                meta_image = self._zslices[self.oZSliceOrProjection-1]
+            except IndexError:
+                raise IndexError("Invalid z-slice selection for channel %s"
+                                 %self.NAME)
 
         self.meta_image = copy.copy(meta_image)
 
