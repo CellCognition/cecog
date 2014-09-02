@@ -325,7 +325,9 @@ class CellAnalyzer(LoggerObject):
             self.draw_annotation_images(plate_id, training_set, oContainer, oLearner)
             images = self.write_annotation_images(oChannel, region, oLearner)
 
-        oLearner.set_training_data(training_set)
+        if training_set:
+            oLearner.set_training_data(training_set)
+
         return images
 
     def write_annotation_images(self, channel, region, learner):
