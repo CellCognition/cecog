@@ -253,20 +253,12 @@ class ImageContainer(object):
 
             # (re)scan the file structure
             if scan_plate:
-                if settings.get2('image_import_namingschema'):
-                    config_parser = CecogEnvironment.naming_schema
-                    section_name = settings.get2('namingscheme')
-                    importer = IniFileImporter()
-                    importer.setup(path_plate_in, config_parser, section_name)
-                # read file structure according to dimension/structure file
-                # elif settings.get2('image_import_structurefile'):
-                #     filename = settings.get2('structure_filename')
-                #     importer = FlatFileImporter(path_plate_in, filename)
-
-                # scan the file structure
+                config_parser = CecogEnvironment.naming_schema
+                section_name = settings.get2('namingscheme')
+                importer = IniFileImporter()
+                importer.setup(path_plate_in, config_parser, section_name)
                 importer.scan()
 
-                # serialize importer and register plate only upon successful scan
                 if importer.is_valid:
                     filename = self._get_structure_filename(settings, plate_id,
                                                             path_plate_in,
