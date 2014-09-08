@@ -356,7 +356,6 @@ class Browser(QMainWindow):
         settings.set2('framerange_begin', self.coordinate.time)
         settings.set2('framerange_end', self.coordinate.time)
 
-        prim_id = PrimaryChannel.NAME
         settings.set_section('Processing')
         _classify_objects = self._show_objects_by == 'classification'
 
@@ -364,8 +363,8 @@ class Browser(QMainWindow):
         settings.set2('secondary_classification', _classify_objects)
         settings.set2('tertiary_classification', _classify_objects)
         settings.set2('merged_classification', _classify_objects)
-        settings.set2('primary_featureextraction', True)
-        settings.set2('secondary_featureextraction', True)
+        settings.set2('primary_featureextraction', _classify_objects)
+        settings.set2('secondary_featureextraction', _classify_objects)
 
         settings.set2('objectdetection', self._detect_objects)
         settings.set2('tracking', False)
