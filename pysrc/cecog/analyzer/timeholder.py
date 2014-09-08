@@ -683,8 +683,13 @@ class TimeHolder(OrderedDict):
         return grp_object_features
 
     def apply_features(self, channel):
+        stop_watch = StopWatch(start=True)
         channel_name = channel.NAME.lower()
         channel.apply_features()
+        desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
+                                         channel.strChannelId)
+        self._logger.info('object features %s computed in %s.'
+                              %(desc, stop_watch.interim()))
 
         if self._hdf5_create:
             grp_cur_pos = self._grp_cur_position
