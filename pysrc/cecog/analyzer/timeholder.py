@@ -719,6 +719,12 @@ class TimeHolder(OrderedDict):
                     dset_tmp = global_def_group.create_dataset('object_features', (nr_features,), [('name', '|S512')])
                     if nr_features > 0:
                         dset_tmp[:] = feature_names
+                elif ('object_features' in global_def_group) and (len(global_def_group['object_features']) == 0):
+                    if nr_features > 0:
+                        del global_def_group['object_features']
+                        dset_tmp = global_def_group.create_dataset('object_features', (nr_features,), [('name', '|S512')])
+                        dset_tmp[:] = feature_names
+                    
                 if 'crack_contour' not in global_def_group:
                     dset_tmp = global_def_group.create_dataset('crack_contour', (1,), [('name', '|S512')])
                     dset_tmp[:] = ('contour_polygon',)
@@ -820,7 +826,7 @@ class TimeHolder(OrderedDict):
                                                           dtype='float',
                                                           compression=self._hdf5_compression,
                                                           maxshape=(None, nr_features))
-                    else:
+                    elif nr_features > 0:
                         dset_object_features = grp_region_features['object_features']
                         dset_object_features.resize((nr_objects + offset, nr_features))
 
