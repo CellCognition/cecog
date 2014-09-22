@@ -826,9 +826,9 @@ class TimeHolder(OrderedDict):
                                                           dtype='float',
                                                           compression=self._hdf5_compression,
                                                           maxshape=(None, nr_features))
-                    elif nr_features > 0:
+                    elif nr_objects > 0:
                         dset_object_features = grp_region_features['object_features']
-                        dset_object_features.resize((nr_objects + offset, nr_features))
+                        dset_object_features.resize(nr_objects + offset, axis=0)
 
                 if self._hdf5_include_crack:
                     if 'crack_contour' not in grp_region_features:
