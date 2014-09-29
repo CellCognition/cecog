@@ -489,11 +489,7 @@ class TimeHolder(OrderedDict):
             if self._hdf5_file[raw_image_str].shape[0] != len(self._regions_to_idx):
                 self._hdf5_file[raw_image_str].resize(len(self._regions_to_idx), axis=0)
                 
-        # Creation finished
-        # close and reopen for use
-        self._hdf5_file.close()
-        self.cellh5_file = CH5File(filename)
-        self._hdf5_file = self.cellh5_file.get_file_handle()
+        self.cellh5_file = CH5File(self._hdf5_file)
 
     @staticmethod
     def nc_valid_set(var, idx, value):
@@ -736,17 +732,12 @@ class TimeHolder(OrderedDict):
                                  container.getCrackCoordinates(obj_id)]
                         obj.crack_contour = crack
 
-
-                    # ORIENTATION TEST: orientation of objects (for tracking) #
-                    # at the moment a bit of a hack #
-                    # The problem is that orientation cannot be a feature #
-                    # but moments need to be chosen to calculate the orientation. #
                     if 'moments' in channel.lstFeatureCategories and eccentricity_idx is not None:
                         obj.orientation = Orientation(angle = c_obj.orientation,
                                                       eccentricity = object_features[j, eccentricity_idx])
 
                     # assign feature values in sorted order as NumPy array
-                    obj.aFeatures = object_features[j,:]
+                    obj.aFeatures = object_features[j, :]
                     object_holder[obj_id] = obj
 
                 channel.lstFeatureNames = object_feature_names
