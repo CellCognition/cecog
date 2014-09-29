@@ -330,6 +330,8 @@ class AnnotationModule(Module):
     COLUMN_ANN_POSITION = 1
     COLUMN_ANN_TIME = 2
     COLUMN_ANN_SAMPLES = 3
+    
+    DEFAULT_CLASS_COLS = ["#4daf4a", "#ffff33", "#ff7f00", "#f781bf", "#984ea3", "#377eb8", "#e41a1c", "#a65628", "#999999"]
 
     def __init__(self, parent, browser, settings, imagecontainer):
         Module.__init__(self, parent, browser)
@@ -610,8 +612,10 @@ class AnnotationModule(Module):
             self._class_table.setCurrentItem(item)
 
             ncl = len(learner.class_names)+1
-            self._class_text.setText('class%d' %ncl)
+            self._class_text.setText('class%d' % ncl)
             self._class_sbox.setValue(ncl)
+            
+            self._class_color_btn.set_color(QColor(AnnotationModule.DEFAULT_CLASS_COLS[(ncl -1)  % len(AnnotationModule.DEFAULT_CLASS_COLS)]))
         else:
             warning(self, "Class names and labels must be unique!",
                     info="Class name '%s' or label '%s' already used." %\
@@ -655,7 +659,7 @@ class AnnotationModule(Module):
         self._current_class = None
         self._class_sbox.setValue(1)
         self._class_text.setText('class1')
-        self._class_color_btn.set_color(QColor('red'))
+        self._class_color_btn.set_color(QColor(self.DEFAULT_CLASS_COLS[0]))
         class_table = self._class_table
         class_table.clearContents()
         class_table.setRowCount(0)
