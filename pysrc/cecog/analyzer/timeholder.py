@@ -481,15 +481,6 @@ class TimeHolder(OrderedDict):
             if self._hdf5_file[raw_image_str].shape[0] != len(self._regions_to_idx):
                 self._hdf5_file[raw_image_str].resize(len(self._regions_to_idx), axis=0)
 
-    @staticmethod
-    def nc_valid_set(var, idx, value):
-        helper = var.valid
-        if len(helper.shape) == 0:
-            helper = value
-        else:
-            helper[idx] = value
-        var.valid = helper
-
     def close_all(self):
         try:
             self._hdf5_file.close()
@@ -573,7 +564,11 @@ class TimeHolder(OrderedDict):
                 meta = self._meta_data
                 w = meta.real_image_width
                 h = meta.real_image_height
-                z = meta.dim_z
+                
+                # CellCognition is always working on one z-slice for know and thus saves only one
+                #z = meta.dim_z
+                z = 1
+                
                 t = len(self._frames_to_idx)
                 var_name = 'region'
                 grp = self._grp_cur_position[self.HDF5_GRP_IMAGE]
@@ -652,7 +647,10 @@ class TimeHolder(OrderedDict):
                 w = meta.real_image_width
                 h = meta.real_image_height
 
-                z = meta.dim_z
+                # CellCognition is always working on one z-slice for know and thus saves only one
+                # z = meta.dim_z 
+                z = 1
+                
                 t = len(self._frames_to_idx)
                 ncolors = len(set(self._channels_to_idx.values()))
                 var_name = 'channel'
