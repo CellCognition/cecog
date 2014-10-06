@@ -206,7 +206,8 @@ class PositionCore(LoggerObject):
 
         return f_categories, f_cat_params
 
-    def setup_channel(self, proc_channel, col_channel, zslice_images):
+    def setup_channel(self, proc_channel, col_channel, zslice_images,
+                      check_for_plugins=True):
 
         # determine the list of features to be calculated from each object
         f_cats, f_params = self.feature_params(proc_channel)
@@ -226,7 +227,8 @@ class PositionCore(LoggerObject):
                          bFlatfieldCorrection = self.settings.get2('%s_flat_field_correction' %proc_channel),
                          strBackgroundImagePath = self.settings.get2('%s_flat_field_correction_image_dir' %proc_channel),
                          lstFeatureCategories = f_cats,
-                         dctFeatureParameters = f_params)
+                         dctFeatureParameters = f_params,
+                         check_for_plugins = check_for_plugins)
 
         if channel.is_virtual():
             channel.merge_regions = self._channel_regions(proc_channel)
@@ -574,7 +576,6 @@ class PositionAnalyzer(PositionCore):
                 features[name] = region_features
 
         return features
-
 
     def export_object_counts(self):
         fname = join(self._statistics_dir, 'P%s__object_counts.txt' % self.position)
@@ -988,7 +989,6 @@ class PositionAnalyzerForBrowser(PositionCore):
                 clf.loadClassifier()
                 self.classifiers[p_channel] = clf
 
-
     def __call__(self):
         hdf5_fname = join(self._hdf5_dir, '%s.ch5' % self.position)
 
@@ -1012,7 +1012,10 @@ class PositionAnalyzerForBrowser(PositionCore):
         self._analyze(ca)
         return ca
 
-
+    def setup_channel(self, proc_channel, col_channel, zslice_images,
+                      check_for_plugins=False):
+        return super(PositionAnalyzerForBrowser, self).setup_channel(
+            proc_channel, col_channel, zslice_images, False)
 
     def _analyze(self, cellanalyzer):
         n_images = 0
@@ -1036,6 +1039,7 @@ class PositionAnalyzerForBrowser(PositionCore):
 
             stopwatch.reset(start=True)
             cellanalyzer.initTimepoint(frame)
+
             self.register_channels(cellanalyzer, channels)
 
             cellanalyzer.process()
