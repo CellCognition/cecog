@@ -390,7 +390,6 @@ class Browser(QMainWindow):
         settings.set('Output', 'export_tracking_as_dot', False)
 
         nchannels = len(self._imagecontainer.channels)
-
         # XXX channel mapping unclear
         # processing channel <--> color channel
         # i.e problems if 2 processing channels have the same color
