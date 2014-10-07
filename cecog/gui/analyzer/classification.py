@@ -350,21 +350,22 @@ class ClassificationFrame(BaseProcessorFrame):
 
     TABS = ['Primary Channel', 'Secondary Channel',
             'Tertiary Channel', 'Merged Channel']
-    PROCESS_PICKING = 'PROCESS_PICKING'
-    PROCESS_TRAINING = 'PROCESS_TRAINING'
-    PROCESS_TESTING = 'PROCESS_TESTING'
+
+    PICKING = 'PICKING'
+    TRAINING = 'TRAINING'
+    TESTING = 'TESTING'
 
     def __init__(self, settings, parent, name):
         super(ClassificationFrame, self).__init__(settings, parent, name)
         self._result_frames = OrderedDict()
 
-        self.register_control_button(self.PROCESS_PICKING,
+        self.register_control_button(self.PICKING,
                                      PickerThread,
                                      ('Pick %s samples', 'Stop %s picking'))
-        self.register_control_button(self.PROCESS_TRAINING,
+        self.register_control_button(self.TRAINING,
                                      TrainingThread,
                                      ('Train classifier', 'Stop training'))
-        self.register_control_button(self.PROCESS_TESTING,
+        self.register_control_button(self.TESTING,
                                      AnalyzerThread,
                                      ('Test classifier', 'Stop testing'))
 
@@ -471,7 +472,7 @@ class ClassificationFrame(BaseProcessorFrame):
 
 
         settings.set('Classification', 'collectsamples_prefix', prefix)
-        if name == self.PROCESS_TESTING:
+        if name == self.TESTING:
             rdn = dict()
             settings.set('Processing', '%s_classification' % prefix, True)
             settings.set('General', 'rendering_class',

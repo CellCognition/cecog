@@ -17,7 +17,6 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = []
 
 import types
 import os
@@ -75,6 +74,7 @@ from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
 from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
 from cecog.traits.analyzer.cluster import SECTION_NAME_CLUSTER
 from cecog.gui.progressdialog import ProgressDialog
+from cecog.gui.processcontrol import ProcessControl
 
 
 class BaseFrame(TraitDisplayMixin):
@@ -94,7 +94,7 @@ class BaseFrame(TraitDisplayMixin):
         self._intervals = list()
 
         self._tab_name = None
-        self._control = QFrame(self)
+        self.process_control = ProcessControl(self)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
@@ -112,7 +112,7 @@ class BaseFrame(TraitDisplayMixin):
         self._tab.currentChanged.connect(self.on_tab_changed)
 
         layout.addWidget(self._tab)
-        layout.addWidget(self._control)
+        layout.addWidget(self.process_control)
 
     @pyqtSlot('int')
     def on_tab_changed(self, index):
@@ -174,6 +174,7 @@ class BaseFrame(TraitDisplayMixin):
 
 
 class _ProcessorMixin(object):
+
     def __init__(self, parent):
         self.idialog = parent.idialog
 
@@ -194,39 +195,18 @@ class _ProcessorMixin(object):
         pass
 
     def register_control_button(self, name, cls, labels):
-        self._control_buttons[name] = {'labels' : labels,
-                                       'widget' : None,
-                                       'cls'    : cls}
+
+        self._control_buttons[name] = {'labels': labels,
+                                       'cls' : cls}
 
     def _init_control(self, has_images=True):
-        layout = QHBoxLayout(self._control)
-        layout.setContentsMargins(0, 0, 0, 0)
 
-        self._progress_label0 = QLabel(self._control)
-        self._progress_label0.setText('')
-        layout.addWidget(self._progress_label0)
-
-        self._progress0 = QProgressBar(self._control)
-        self._progress0.setTextVisible(False)
-        layout.addWidget(self._progress0)
-
-        if has_images:
-            self._show_image = QCheckBox('Show images', self._control)
-            self._show_image.setChecked(True)
-            layout.addWidget(self._show_image)
+        if not has_images:
+            self.process_control.hideImageCheckBox()
 
         for name in self._control_buttons:
-            w_button = QPushButton('', self._control)
-            layout.addWidget(w_button)
-            handler = lambda x: lambda : self._on_process_start(x)
-            self.connect(w_button, SIGNAL('clicked()'), handler(name))
-            self._control_buttons[name]['widget'] = w_button
-
-        help_button = QToolButton(self._control)
-        help_button.setIcon(QIcon(':question_mark'))
-        handler = lambda x: lambda : self._on_show_help(x)
-        self.connect(help_button, SIGNAL('clicked()'), handler('controlpanel'))
-        layout.addWidget(help_button)
+            slot = lambda x: lambda : self._on_process_start(x)
+            self.process_control.addControlButton(name, slot(name))
 
         if not self.TABS is None:
             self._tab.currentChanged.connect(self._on_tab_changed)
@@ -234,6 +214,28 @@ class _ProcessorMixin(object):
         else:
             for name in self._control_buttons:
                 self._set_control_button_text(name=name)
+
+
+    def _set_control_button_text(self, name=None, idx=0):
+
+        if name is None:
+            name = self._current_process
+        try:
+            text = self._control_buttons[name]['labels'][idx] % self._tab_name
+        except:
+            text = self._control_buttons[name]['labels'][idx]
+
+        self.process_control.buttonByName(name).setText(text)
+
+
+    def _toggle_control_buttons(self, name=None):
+        if name is None:
+            name = self._current_process
+
+        for name2 in self._control_buttons:
+            if name != name2:
+                btn = self.process_control.buttonByName(name)
+                btn.setEnabled(not btn.isEnabled())
 
     @classmethod
     def get_special_settings(cls, settings, has_timelapse=True):
@@ -247,29 +249,6 @@ class _ProcessorMixin(object):
         self._tab_name = CHANNEL_PREFIX[idx]
         for name in self._control_buttons:
             self._set_control_button_text(name=name)
-
-    def _set_control_button_text(self, name=None, idx=0):
-        if name is None:
-            name = self._current_process
-        w_button = self._control_buttons[name]['widget']
-        try:
-            text = self._control_buttons[name]['labels'][idx] % self._tab_name
-        except:
-            text = self._control_buttons[name]['labels'][idx]
-        w_button.setText(text)
-
-    def enable_control_buttons(self, state=True):
-        for name in self._control_buttons:
-            w_button = self._control_buttons[name]['widget']
-            w_button.setEnabled(state)
-
-    def _toggle_control_buttons(self, name=None):
-        if name is None:
-            name = self._current_process
-        for name2 in self._control_buttons:
-            if name != name2:
-                w_button = self._control_buttons[name2]['widget']
-                w_button.setEnabled(not w_button.isEnabled())
 
     def _clear_image(self):
         """Pop up and clear the image display"""
@@ -295,11 +274,12 @@ class _ProcessorMixin(object):
 
 
             if self.name == SECTION_NAME_CLASSIFICATION:
+
                 result_frame = self._get_result_frame(self._tab_name)
                 result_frame.load_classifier(check=False)
                 learner = result_frame._learner
 
-                if name == self.PROCESS_PICKING:
+                if name == self.PICKING:
                     if not result_frame.classifier.is_annotated:
                         is_valid = False
                         result_frame.msg_pick_samples(self)
@@ -310,7 +290,7 @@ class _ProcessorMixin(object):
                                     'results?'):
                             is_valid = False
 
-                elif name == self.PROCESS_TRAINING:
+                elif name == self.TRAINING:
                     if not result_frame.classifier.is_trained:
                         is_valid = False
                         result_frame.msg_train_classifier(self)
@@ -320,7 +300,7 @@ class _ProcessorMixin(object):
                                     'again?'):
                             is_valid = False
 
-                elif name == self.PROCESS_TESTING and not result_frame.classifier.is_valid:
+                elif name == self.TESTING and not result_frame.classifier.is_valid:
                     is_valid = False
                     result_frame.msg_apply_classifier(self)
 
@@ -347,7 +327,7 @@ class _ProcessorMixin(object):
                     self.toggle_tabs.emit(self.get_name())
 
                     self._set_control_button_text(idx=1)
-                    self._toggle_control_buttons()
+                    self.process_control.toggleButtons(self._current_process)
 
                 imagecontainer = self.parent().main_window._imagecontainer
 
@@ -363,7 +343,6 @@ class _ProcessorMixin(object):
 
                 elif cls is TrainingThread:
                     self._current_settings = self._settings.copy()
-
                     self._analyzer = cls(self, self._current_settings, result_frame._learner)
                     self._analyzer.setTerminationEnabled(True)
 
@@ -437,7 +416,7 @@ class _ProcessorMixin(object):
         else:
             self._is_running = False
             self._set_control_button_text(idx=0)
-            self._toggle_control_buttons()
+            self.process_control.toggleButtons(self._current_process)
             self._toggle_tabs(True)
             # enable all section button of the main widget
             self.toggle_tabs.emit(self.get_name())
@@ -445,7 +424,7 @@ class _ProcessorMixin(object):
                 if self.name == SECTION_NAME_OBJECTDETECTION:
                     msg = 'Object detection successfully finished.'
                 elif self.name == SECTION_NAME_CLASSIFICATION:
-                    if self._current_process == self.PROCESS_PICKING:
+                    if self._current_process == self.PICKING:
                         msg = 'Samples successfully picked.\n\n'\
                               'Please train the classifier now based on the '\
                               'newly picked samples.'
@@ -455,12 +434,12 @@ class _ProcessorMixin(object):
                         nr_removed = len(result_frame._learner.nan_features)
                         if nr_removed > 0:
                             msg += '\n\n%d features contained NA values and will be removed from training.' % nr_removed
-                    elif self._current_process == self.PROCESS_TRAINING:
+                    elif self._current_process == self.TRAINING:
                         msg = 'Classifier successfully trained.\n\n'\
                               'You can test the classifier performance here'\
                               'visually or apply the classifier in the '\
                               'processing workflow.'
-                    elif self._current_process == self.PROCESS_TESTING:
+                    elif self._current_process == self.TESTING:
                         msg = 'Classifier testing successfully finished.'
                 elif self.name == SECTION_NAME_TRACKING:
                     msg = 'Tracking successfully finished.'
@@ -495,12 +474,10 @@ class _ProcessorMixin(object):
         #print info
         if self.CONTROL == CONTROL_1:
             if info['stage'] == 0:
-                self._progress0.setRange(info['min'], info['max'])
+                self.process_control.setRange(info['min'], info['max'])
                 if not info['progress'] is None:
-                    self._progress0.setValue(info['progress'])
-                    if info['max'] != 0:
-                        self._progress_label0.setText('%3.1f%%' %\
-                                                      (info['progress']*100.0/info['max']))
+                    self.process_control.setProgress(info['progress'])
+
                     msg = ''
                     if 'meta' in info:
                         msg += '%s' % info['meta']
@@ -520,17 +497,14 @@ class _ProcessorMixin(object):
                         self._intervals = []
                     self.status_message.emit(msg)
                 else:
-                    self._progress_label0.setText('')
+                    self.process_control.clearText()
             else:
                 self._stage_infos[info['stage']] = info
                 if len(self._stage_infos) > 1:
                     total = self._stage_infos[1]['max']*self._stage_infos[2]['max']
                     current = (self._stage_infos[1]['progress']-1)*self._stage_infos[2]['max']+self._stage_infos[2]['progress']
-                    #print current, total
-                    self._progress0.setRange(0, total)
-                    self._progress0.setValue(current)
-                    #info = self._stage_infos[2]
-                    self._progress_label0.setText('%.1f%%' % (current*100.0/total))
+                    self.process_control.setRange(0, total)
+                    self.process_control.setProgress(current)
                     sep = '   |   '
                     msg = '%s   %s%s%s' % (self._stage_infos[2]['meta'],
                                            self._stage_infos[1]['text'],
@@ -549,7 +523,9 @@ class _ProcessorMixin(object):
                     else:
                         self._intervals = []
                     self.status_message.emit(msg)
+
         elif self.CONTROL == CONTROL_2:
+
             if info['stage'] == 1:
                 if 'progress' in info:
                     self._analyzer_progress1.setRange(info['min'], info['max'])
@@ -571,7 +547,7 @@ class _ProcessorMixin(object):
                     self._analyzer_label2.setText(info['text'])
 
     def _on_update_image(self, images, message):
-        if self._show_image.isChecked():
+        if self.process_control.showImages():
             self.idialog.updateImages(images, message)
             if not self.idialog.isVisible():
                 self.idialog.raise_()
@@ -584,6 +560,7 @@ class BaseProcessorFrame(BaseFrame, _ProcessorMixin):
         _ProcessorMixin.__init__(self, parent)
 
     def set_active(self, state):
-        # set internl state and enable/disable control buttons
+        # set intern state and enable/disable control buttons
         super(BaseProcessorFrame, self).set_active(state)
-        self.enable_control_buttons(state)
+        self.process_control.setButtonsEnabled(state)
+
