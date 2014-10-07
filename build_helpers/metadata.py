@@ -15,10 +15,12 @@ __url__ = 'www.cellcognition.org'
 
 __all__ = ['metadata']
 
-from cecog import VERSION_NUM, VERSION
+
+from cecog.version import version
+
 
 metadata = { 'name': 'CecogAnalyzer',
-             'version': VERSION,
+             'version': version,
              'author': 'Michael Held',
              'author_email': 'held(at)cellcognition.org',
              'maintainer': 'Christoph Sommer, Rudolf Hoefler',

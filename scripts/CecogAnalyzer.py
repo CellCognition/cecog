@@ -40,10 +40,12 @@ try:
     # especially sklearn
     try:
         import cecog
+
     except ImportError:
         sys.path.append(os.pardir)
         import cecog
 
+    from cecog import version
     from cecog.gui.main import CecogAnalyzer
     from cecog.io.imagecontainer import ImageContainer
     # compiled from qrc file
@@ -82,7 +84,7 @@ if __name__ == "__main__":
 
     app = QtGui.QApplication(sys.argv)
     app.setWindowIcon(QtGui.QIcon(':cecog_analyzer_icon'))
-    app.setApplicationName(cecog.APPNAME)
+    app.setApplicationName(version.appname)
 
     splash = QtGui.QSplashScreen(QtGui.QPixmap(':cecog_splash'))
     splash.show()
@@ -93,7 +95,7 @@ if __name__ == "__main__":
     else:
         redirect = False
 
-    main = CecogAnalyzer(cecog.APPNAME, cecog.VERSION, redirect,
+    main = CecogAnalyzer(version.appname, version.version, redirect,
                          args.configfile, args.debug)
 
     try:

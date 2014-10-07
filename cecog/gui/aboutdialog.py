@@ -13,7 +13,8 @@ __url__ = 'www.cellcognition.org'
 from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
 
-import cecog
+from cecog import version
+
 
 class CecogAboutDialog(QtGui.QDialog):
 
@@ -31,7 +32,7 @@ class CecogAboutDialog(QtGui.QDialog):
         label1.setStyleSheet('background: transparent;')
         label1.setAlignment(Qt.AlignCenter)
         label1.setText('CecogAnalyzer\nVersion %s\n\n'
-                       'Copyright (c) 2006 - 2011\n' %cecog.VERSION)
+                       'Copyright (c) 2006 - 2011\n' %version.version)
 
         label2 = QtGui.QLabel(self)
         label2.setStyleSheet('background: transparent;')

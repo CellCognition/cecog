@@ -25,12 +25,12 @@ from PyQt4 import QtCore
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QMessageBox
 
+from cecog import version
 from cecog.units.time import TimeConverter
 from cecog.environment import CecogEnvironment
 from cecog.io.imagecontainer import ImageContainer
 
 from cecog.gui.config import GuiConfigSettings
-
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
 from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACTION
@@ -241,13 +241,30 @@ class CecogAnalyzer(QtGui.QMainWindow):
             self.load_settings(settings)
         else:
             raise RuntimeError("settings file does not exits (%s)" %settings)
+        self._restoreSettings()
 
-    def show(self):
-        super(CecogAnalyzer, self).show()
-        self.center()
+    def _saveSettings(self):
+        settings = QtCore.QSettings(version.organisation, version.appname)
+        settings.beginGroup('Gui')
+        settings.setValue('state', self.saveState())
+        settings.setValue('geometry', self.saveGeometry())
+        settings.endGroup()
+
+    def _restoreSettings(self):
+        settings = QtCore.QSettings(version.organisation, version.appname)
+        settings.beginGroup('Gui')
+
+        geometry = settings.value('geometry')
+        if geometry is not None:
+            self.restoreGeometry(geometry)
+        state = settings.value('state')
+        if state is not None:
+            self.restoreState(state)
+        settings.endGroup()
 
     def closeEvent(self, event):
         # Quit dialog only if not debuging flag is not set
+        self._saveSettings()
         if self.debug:
             QtGui.QApplication.exit()
         ret = QMessageBox.question(self, "Quit %s" %self.appname,
@@ -309,12 +326,6 @@ class CecogAnalyzer(QtGui.QMainWindow):
         else:
             result = QMessageBox.No
         return result
-
-    def center(self):
-        screen = QtGui.QDesktopWidget().screenGeometry()
-        size = self.geometry()
-        self.move((screen.width() - size.width()) / 2,
-        (screen.height() - size.height()) / 2)
 
     def add_actions(self, target, actions):
         for action in actions:
@@ -660,7 +671,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
     def _on_file_open(self):
 
         if self._check_settings_saved() != QMessageBox.Cancel:
-            home = ""            
+            home = ""
             if self._settings_filename is not None:
                 settings_filename = self.environ.demo_settings
                 if os.path.isfile(settings_filename):

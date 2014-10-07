@@ -28,7 +28,7 @@ except ImportError:
     sys.path.append(os.pardir)
     import cecog
 
-from cecog import VERSION
+from cecog.version import version
 from cecog.traits.config import ConfigSettings
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
@@ -48,7 +48,7 @@ if __name__ ==  "__main__":
 
     parser = OptionParser(usage="usage: %prog [options]",
                           description=description,
-                          version='CellCognition %s' % VERSION)
+                          version='CellCognition %s' %version)
     parser.add_option("-s", "--settings",
                       help="", metavar="SETTINGS_FILE")
 
@@ -94,17 +94,17 @@ if __name__ ==  "__main__":
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
 
-    logger.info("*************************************************" + '*'*len(VERSION))
-    logger.info("*** CellCognition - Batch Analyzer - Version %s ***" % VERSION)
-    logger.info("*************************************************" + '*'*len(VERSION))
+    logger.info("*************************************************" + '*'*len(version))
+    logger.info("*** CellCognition - Batch Analyzer - Version %s ***" %version)
+    logger.info("*************************************************" + '*'*len(version))
     logger.info('argv: %s' % sys.argv)
 
-    environ = CecogEnvironment(VERSION)
+    environ = CecogEnvironment(version)
 
     if options.settings is None:
         parser.error('Settings filename required.')
 
-    environ = CecogEnvironment(cecog.VERSION, redirect=False, debug=False)
+    environ = CecogEnvironment(version, redirect=False, debug=False)
 
     filename_settings = os.path.abspath(options.settings)
 

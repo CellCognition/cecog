@@ -26,7 +26,8 @@ from os.path import join, isdir, isfile, dirname, normpath, abspath, \
 
 from ConfigParser import RawConfigParser
 
-import cecog
+
+from cecog import version
 from cecog.util.pattern import Singleton
 from cecog.util.mapping import map_path_to_os as _map_path_to_os
 from cecog import ccore
@@ -81,8 +82,8 @@ class BatteryPackage(object):
     @property
     def demo_settings(self):
         return join(self.package_path, "Settings", "demo_settings.conf")
-        
-    
+
+
     def copy_demodata(self, dest_path):
         self._path = dest_path
 
@@ -144,7 +145,7 @@ class CecogEnvironment(object):
     analyzer_config = ConfigParser(CONFIG, 'analyzer_config')
     path_mapper = PathMapper(PATH_MAPPINGS)
 
-    def __init__(self, version=cecog.VERSION, redirect=False, debug=False):
+    def __init__(self, version=version.version, redirect=False, debug=False):
         super(CecogEnvironment, self).__init__()
         self._user_config_dir = None
         self.version = version

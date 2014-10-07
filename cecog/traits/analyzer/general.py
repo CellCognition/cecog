@@ -16,7 +16,7 @@ __source__ = '$URL$'
 
 __all__ = ["SectionGeneral"]
 
-from cecog import VERSION
+from cecog.version import version
 from cecog.traits.analyzer.section_core import SectionCore
 
 from cecog.gui.guitraits import (StringTrait,
@@ -110,8 +110,8 @@ class SectionGeneral(SectionCore):
 
 
         ('rendering', DictTrait({}, label='Rendering')),
-        ('version', StringTrait('', 6, label='Cecog %s, file version:'
-                                %VERSION, widget_info=StringTrait.STRING_GRAYED)),
+        ('version', StringTrait('', 6, label='Cecog %s, file version:' %version,
+                                widget_info=StringTrait.STRING_GRAYED)),
         ('rendering_class', DictTrait({}, label='Rendering class')),
         ('primary_featureextraction_exportfeaturenames',
             ListTrait(['n2_avg', 'n2_stddev', 'roisize'], label='Primary channel')),

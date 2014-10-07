@@ -35,8 +35,9 @@ from cecog.gui.util import exception, information, warning
 from cecog.gui.progressdialog import ProgressDialog
 
 from cecog import JOB_CONTROL_RESUME, JOB_CONTROL_SUSPEND, \
-    JOB_CONTROL_TERMINATE, VERSION
+    JOB_CONTROL_TERMINATE
 
+from cecog.version import version
 
 class ClusterDisplay(QGroupBox):
 
@@ -183,7 +184,7 @@ class ClusterDisplay(QGroupBox):
             settings_str = self._submit_settings.to_string()
             func = lambda: self._service.submit_job('cecog_batch', settings_str,
                                                     path_out, emails, nr_items,
-                                                    position_granularity, VERSION)
+                                                    position_granularity, version)
             self.dlg.exec_(func)
             jobid = self.dlg.getTargetResult()
         except Exception as e:
@@ -286,9 +287,9 @@ class ClusterDisplay(QGroupBox):
             except Exception as e:
                 exception(self, msg + '(%s)' %str(e))
             else:
-                if not VERSION in set(cluster_versions):
+                if not version in set(cluster_versions):
                     warning(self, 'Cecog version %s not supported by the cluster' %
-                            VERSION, 'Valid versions are: %s' \
+                            version, 'Valid versions are: %s' \
                                 % ', '.join(cluster_versions))
                 else:
                     success = True

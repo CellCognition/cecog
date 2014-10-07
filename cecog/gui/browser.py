@@ -32,7 +32,6 @@ from cecog.gui.imageviewer import ImageViewer
 from cecog.gui.modules.module import ModuleManager
 from cecog.gui.analyzer import _ProcessorMixin
 from cecog.analyzer.core import AnalyzerBrowser
-from cecog.analyzer.channel import PrimaryChannel
 from cecog.io.imagecontainer import Coordinate
 from cecog.gui.modules.navigation import NavigationModule
 from cecog.gui.modules.display import DisplayModule
@@ -615,8 +614,8 @@ def load_settings(settings_file):
 if __name__ == "__main__":
     import sys
     from cecog.environment import CecogEnvironment
-    from cecog import VERSION
-    environ = CecogEnvironment(VERSION)
+    from cecog.version import version
+    environ = CecogEnvironment(version)
     app = QApplication(sys.argv)
 
     settings = load_settings('C:/Users/sommerc/data/cecog/Settings/exp911_version_140.conf')

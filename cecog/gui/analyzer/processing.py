@@ -21,7 +21,8 @@ import logging
 from PyQt4 import QtGui
 from PyQt4 import QtCore
 
-from cecog import CHANNEL_PREFIX, VERSION
+from cecog import CHANNEL_PREFIX
+from cecog.version import version
 from cecog import CH_OTHER, CH_VIRTUAL, CH_PRIMARY
 from cecog.gui.analyzer import BaseProcessorFrame, AnalyzerThread
 from cecog.gui.analyzer import ErrorCorrectionThread, MultiAnalyzerThread
@@ -33,7 +34,7 @@ class ExportSettings(object):
 
     def get_export_settings(self, settings, has_timelapse=True):
         settings = BaseProcessorFrame.get_special_settings(settings, has_timelapse)
-        settings.set('General', 'version', VERSION)
+        settings.set('General', 'version', version)
 
         settings.set('General', 'rendering', {})
         settings.set('General', 'rendering_class', {})
