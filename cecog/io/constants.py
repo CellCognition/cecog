@@ -26,7 +26,7 @@ class PixelType(object):
     Uint16 = np.uint16
     Int8 = np.int8
     Int16 = np.int16
-    Types = (Uint8, Int16, Int8, Int16)
+    Types = (Uint8, Uint16, Int8, Int16)
 
     _names = [t.__name__ for t in Types]
 

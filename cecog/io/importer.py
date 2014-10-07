@@ -179,6 +179,7 @@ class AbstractImporter(XmlSerializer):
                 has_xy = True
                 info = ccore.ImageImportInfo(os.path.join(self.path,
                                                           item['filename']))
+
                 self.meta_data.set_image_info(info)
                 self.has_multi_images = False #info.images > 1
 
