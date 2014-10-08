@@ -706,7 +706,6 @@ class CecogAnalyzer(QtGui.QMainWindow):
         self.save_settings(True)
 
     def _clear_browser(self):
-        # close and delete the current browser instance
         if not self._browser is None:
             self._browser.close()
             self._browser = None
@@ -715,7 +714,6 @@ class CecogAnalyzer(QtGui.QMainWindow):
         logger = logging.getLogger()
         logger.addHandler(self.log_window.handler)
         self.log_window.show()
-        #self.log_window.raise_()
 
     def _get_save_as_filename(self):
         dir = ""
