@@ -19,7 +19,7 @@ __all__ = ['message','information', 'question',
 
 import sys
 import traceback
-import numpy
+
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
