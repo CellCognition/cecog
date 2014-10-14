@@ -16,6 +16,9 @@ __url__ = 'www.cellcognition.org'
 
 __all__ = ["hmm_network"]
 
+import os
+import textwrap
+
 from matplotlib import patches
 from matplotlib import pyplot as plt
 from matplotlib.colors import hex2color
@@ -58,6 +61,8 @@ def hmm_network(transmat, classes, rad=0.15, title='hmm network', axes=None):
 
     axes.set_aspect('equal')
     axes.set_frame_on(False)
+
+    title = os.linesep.join(textwrap.wrap(title, 35))
     axes.set_title(title)
 
     # add arrows
