@@ -16,6 +16,10 @@ __url__ = 'www.cellcognition.org'
 
 __all__ = ["dwell_boxplot", "dwell_boxplot2", "barplot", "barplot2"]
 
+
+import os
+import textwrap
+
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.patches import Polygon
@@ -51,7 +55,9 @@ def dwell_boxplot(data, title=None, xlabel='class label',
     if ymax not in (-1, None):
         yr[1] = ymax
     axes.set_ylim(yr)
-    axes.set_xticklabels([str(k) for k in data.keys()], rotation=45)
+    xlabels = [str(k) for k in data.keys()]
+    xlabels = [os.linesep.join(textwrap.wrap(str(l), 12)) for l in xlabels]
+    axes.set_xticklabels(xlabels, rotation=45, fontsize='small')
 
     pos = dict((k, v) for k, v in zip(data.keys(), axes.get_xticks()))
     # fill boxes with class color
@@ -70,8 +76,7 @@ def dwell_boxplot(data, title=None, xlabel='class label',
         median = "%.2f" %np.median(data[label])
         top = axes.get_ylim()[1]
         axes.text(pos[label], top-(top*0.05), median,
-                  horizontalalignment='center', size='small',
-                  color=color)
+                  horizontalalignment='center', size='x-small')
     return axes.get_figure()
 
 
@@ -97,7 +102,11 @@ def dwell_boxplot2(data, title=None, xlabel='', ylabel='dwell time (frames)',
     yr = np.array(axes.get_ylim())
     yr = yr+np.array((-1, 1))*0.05*yr.ptp()
     axes.set_ylim(yr)
-    axes.set_xticklabels([str(k) for k in data.keys()], rotation=45)
+
+    xlabels = [str(k) for k in data.keys()]
+    xlabels = [os.linesep.join(textwrap.wrap(str(l), 12)) for l in xlabels]
+    axes.set_xticklabels(xlabels, rotation=90, fontsize='small')
+
 
     pos = dict((k, v) for k, v in zip(data.keys(), axes.get_xticks()))
     # fill boxes with class color
@@ -115,8 +124,7 @@ def dwell_boxplot2(data, title=None, xlabel='', ylabel='dwell time (frames)',
         median = "%.2f" %np.median(data[label])
         top = axes.get_ylim()[1]
         axes.text(pos[label], top-(top*0.05), median,
-                  horizontalalignment='center', size='small',
-                  color=color)
+                  horizontalalignment='center', size='small')
     return axes.get_figure()
 
 
@@ -153,7 +161,10 @@ def barplot(data,
         yr[1] = ymax
     axes.set_ylim(yr)
     axes.set_xticks(ind)
-    axes.set_xticklabels([str(k) for k in data.keys()], rotation=45)
+
+    xlabels = [str(k) for k in data.keys()]
+    xlabels = [os.linesep.join(textwrap.wrap(str(l), 12)) for l in xlabels]
+    axes.set_xticklabels(xlabels, rotation=45, fontsize='small')
 
     top = axes.get_ylim()[1]
     pos = dict((k, v) for k, v in zip(data.keys(), ind))
@@ -162,8 +173,7 @@ def barplot(data,
         average = "%.2f" %np.average(v)
         top = axes.get_ylim()[1]
         axes.text(pos[k], top-(top*0.05), average,
-                  horizontalalignment='center', size='small',
-                  color=cmap(k))
+                  horizontalalignment='center', size='x-small')
     return axes.get_figure()
 
 
@@ -191,7 +201,10 @@ def barplot2(data,
     yr = yr+np.array((-1, 1))*0.05*yr.ptp()
     axes.set_ylim(yr)
     axes.set_xticks(ind)
-    axes.set_xticklabels([str(k) for k in data.keys()], rotation=45)
+
+    xlabels = [str(k) for k in data.keys()]
+    xlabels = [os.linesep.join(textwrap.wrap(str(l), 12)) for l in xlabels]
+    axes.set_xticklabels(xlabels, rotation=90, fontsize='small')
 
     top = axes.get_ylim()[1]
     pos = dict((k, v) for k, v in zip(data.keys(), ind))
@@ -200,6 +213,5 @@ def barplot2(data,
         average = "%.2f" %np.average(v)
         top = axes.get_ylim()[1]
         axes.text(pos[k], top-(top*0.05), average,
-                  horizontalalignment='center', size='small',
-                  color=color)
+                  horizontalalignment='center', size='small')
     return axes.get_figure()

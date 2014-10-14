@@ -11,7 +11,9 @@ __licence__ = 'LGPL'
 
 __all__ = ['HmmBucket', 'HmmReport']
 
+import os
 import csv
+import textwrap
 from collections import OrderedDict
 import numpy as np
 from matplotlib import pyplot as plt
@@ -20,7 +22,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import vigra
 from cellh5 import CH5Const
 from cecog import plots
-from cecog.colors import Colors, hex2rgb
+from cecog.colors import hex2rgb
 from cecog.gallery.images import grey2rgb
 
 
@@ -85,17 +87,9 @@ class HmmBucket(object):
             for class_ in classes:
                 counts.setdefault(class_, [])
 
-            labels = self.hmm_labels.flatten()
-            counter = 0
-            for i, label in enumerate(labels):
-                try:
-                    if labels[i] == labels[i+1]:
-                        counter += 1
-                    else:
-                        counts[label].append(counter)
-                        counter = 1 # at least one frame
-                except IndexError:
-                    pass # no index i+1
+            for track in self.hmm_labels:
+                for class_ in classes:
+                    counts[class_].append(len(track[track == class_]))
 
             for key, value in counts.iteritems():
                 counts[key]  = np.array(value)*self.stepwidth
@@ -169,13 +163,15 @@ class HmmReport(object):
                                    labels=self.ecopts.sorting_sequence,
                                    cmap=self.classdef.colormap,
                                    norm=self.classdef.normalize,
-                                   axes = axarr[1][i])
+                                   axes = axarr[1][i],
+                                   stepwidth=data.stepwidth)
 
                 plots.trajectories(data.hmm_labels,
                                    labels=self.ecopts.sorting_sequence,
                                    cmap=self.classdef.colormap,
                                    norm=self.classdef.normalize,
-                                   axes = axarr[2][i])
+                                   axes = axarr[2][i],
+                                   stepwidth=data.stepwidth)
 
                 # dwell box/barplots
                 ylabel = "dwell time (%s)" %self.ecopts.timeunit
@@ -315,6 +311,7 @@ class HmmReport(object):
                     continue
 
                 title = '%s, (%d tracks)' %(name, data.ntracks)
+                title = os.linesep.join(textwrap.wrap(title, 35))
                 classnames = [self.classdef.class_names[k]
                               for k in sorted(self.classdef.class_names.keys())]
                 plots.hmm_matrix(data.startprob.reshape(-1, 1).T,
