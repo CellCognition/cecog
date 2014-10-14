@@ -87,17 +87,9 @@ class HmmBucket(object):
             for class_ in classes:
                 counts.setdefault(class_, [])
 
-            labels = self.hmm_labels.flatten()
-            counter = 0
-            for i, label in enumerate(labels):
-                try:
-                    if labels[i] == labels[i+1]:
-                        counter += 1
-                    else:
-                        counts[label].append(counter)
-                        counter = 1 # at least one frame
-                except IndexError:
-                    pass # no index i+1
+            for track in self.hmm_labels:
+                for class_ in classes:
+                    counts[class_].append(len(track[track == class_]))
 
             for key, value in counts.iteritems():
                 counts[key]  = np.array(value)*self.stepwidth
@@ -171,13 +163,15 @@ class HmmReport(object):
                                    labels=self.ecopts.sorting_sequence,
                                    cmap=self.classdef.colormap,
                                    norm=self.classdef.normalize,
-                                   axes = axarr[1][i])
+                                   axes = axarr[1][i],
+                                   stepwidth=data.stepwidth)
 
                 plots.trajectories(data.hmm_labels,
                                    labels=self.ecopts.sorting_sequence,
                                    cmap=self.classdef.colormap,
                                    norm=self.classdef.normalize,
-                                   axes = axarr[2][i])
+                                   axes = axarr[2][i],
+                                   stepwidth=data.stepwidth)
 
                 # dwell box/barplots
                 ylabel = "dwell time (%s)" %self.ecopts.timeunit
