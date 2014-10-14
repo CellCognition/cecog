@@ -11,7 +11,9 @@ __licence__ = 'LGPL'
 
 __all__ = ['HmmBucket', 'HmmReport']
 
+import os
 import csv
+import textwrap
 from collections import OrderedDict
 import numpy as np
 from matplotlib import pyplot as plt
@@ -20,7 +22,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import vigra
 from cellh5 import CH5Const
 from cecog import plots
-from cecog.colors import Colors, hex2rgb
+from cecog.colors import hex2rgb
 from cecog.gallery.images import grey2rgb
 
 
@@ -315,6 +317,7 @@ class HmmReport(object):
                     continue
 
                 title = '%s, (%d tracks)' %(name, data.ntracks)
+                title = os.linesep.join(textwrap.wrap(title, 35))
                 classnames = [self.classdef.class_names[k]
                               for k in sorted(self.classdef.class_names.keys())]
                 plots.hmm_matrix(data.startprob.reshape(-1, 1).T,

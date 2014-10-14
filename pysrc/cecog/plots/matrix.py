@@ -35,7 +35,7 @@ def hmm_matrix(matrix, xticks=None, yticks=None, text=None, axes=None,
 
     if text is not None:
         axes.text(matrix.shape[1]/2.0,
-                  -3, text, fontsize=14, horizontalalignment='center')
+                  -3, text, fontsize=12, horizontalalignment='center')
 
     axes.matshow(matrix, cmap=cm.Greens)
 
