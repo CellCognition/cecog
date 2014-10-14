@@ -246,6 +246,8 @@ class CecogAnalyzer(QtGui.QMainWindow):
         settings.beginGroup('Gui')
         settings.setValue('state', self.saveState())
         settings.setValue('geometry', self.saveGeometry())
+        settings.setValue('clusterjobs',
+                          self._pages.widgetByType(ClusterFrame).get_jobids())
         settings.endGroup()
 
     def _restore_geometry(self):
@@ -258,6 +260,10 @@ class CecogAnalyzer(QtGui.QMainWindow):
         state = settings.value('state')
         if state is not None:
             self.restoreState(state)
+
+        jobids = settings.value('clusterjobs')
+        if jobids is not None:
+            self._pages.widgetByType(ClusterFrame).restore_jobids(jobids)
         settings.endGroup()
 
     def closeEvent(self, event):
