@@ -148,6 +148,7 @@ class ClusterDisplay(QGroupBox):
     @jobIds.setter
     def jobIds(self, jobids):
         self._txt_jobid.setText(jobids)
+        self._jobid = str(jobids)
 
     @property
     def imagecontainer(self):
@@ -252,6 +253,7 @@ class ClusterDisplay(QGroupBox):
 
         try:
             self.dlg = ProgressDialog("updating job status...", None, 0, 0, self)
+
             func = lambda: self._service.get_job_status(self._jobid)
             self.dlg.exec_(func)
             txt = self.dlg.getTargetResult()
