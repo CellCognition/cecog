@@ -262,7 +262,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
             self.restoreState(state)
 
         jobids = settings.value('clusterjobs')
-        if jobids is not None:
+        if jobids:
             self._pages.widgetByType(ClusterFrame).restore_jobids(jobids)
         settings.endGroup()
 
