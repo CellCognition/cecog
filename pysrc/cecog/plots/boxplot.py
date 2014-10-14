@@ -57,7 +57,7 @@ def dwell_boxplot(data, title=None, xlabel='class label',
     axes.set_ylim(yr)
     xlabels = [str(k) for k in data.keys()]
     xlabels = [os.linesep.join(textwrap.wrap(str(l), 12)) for l in xlabels]
-    axes.set_xticklabels(xlabels, rotation=90, fontsize='small')
+    axes.set_xticklabels(xlabels, rotation=45, fontsize='small')
 
     pos = dict((k, v) for k, v in zip(data.keys(), axes.get_xticks()))
     # fill boxes with class color
@@ -164,7 +164,7 @@ def barplot(data,
 
     xlabels = [str(k) for k in data.keys()]
     xlabels = [os.linesep.join(textwrap.wrap(str(l), 12)) for l in xlabels]
-    axes.set_xticklabels(xlabels, rotation=90, fontsize='small')
+    axes.set_xticklabels(xlabels, rotation=45, fontsize='small')
 
     top = axes.get_ylim()[1]
     pos = dict((k, v) for k, v in zip(data.keys(), ind))
