@@ -72,6 +72,8 @@ class Colors(object):
                      'yfp': 'yellow',
                      'cfp': 'cyan',
                      'cy5': 'cyan',
+                     'Cherry': 'red',
+                     'eGFP': 'green',
                      'FRET': 'magenta'}
 
     @classmethod

@@ -529,6 +529,15 @@ class TimeHolder(OrderedDict):
         if not iT in self:
             self[iT] = OrderedDict()
         self[iT][channel.NAME] = channel
+    
+    def hdf_channel_frame_valid(self):
+        try:
+            frame_idx = self._frames_to_idx[self._iCurrentT]
+            if self._grp_cur_position[self.HDF5_GRP_IMAGE]['channel'].attrs['valid'][frame_idx]:
+                return True
+        except:
+            pass
+        return False
 
     def apply_segmentation(self, channel, *args):
         stop_watch = StopWatch(start=True)
@@ -745,7 +754,7 @@ class TimeHolder(OrderedDict):
     def apply_features(self, channel):
         stop_watch = StopWatch(start=True)
         channel_name = channel.NAME.lower()
-        if self._hdf5_found and self._hdf5_reuse:
+        if self._hdf5_found and self._hdf5_reuse and not self._hdf5_create and self.hdf_channel_frame_valid():
             self._apply_features_from_hdf5(channel)
         else:
             channel.apply_features()
