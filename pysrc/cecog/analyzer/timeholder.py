@@ -29,7 +29,7 @@ import h5py
 import numpy
 
 
-from cellh5 import CH5Const
+from cellh5 import CH5Const, CH5File, CH5Position
 
 from cecog import ccore
 from cecog.colors import Colors
@@ -40,6 +40,7 @@ from cecog.analyzer.channel import PrimaryChannel
 from cecog.plugin.metamanager import MetaPluginManager
 from cecog.analyzer.tracker import Tracker
 
+from cecog.analyzer.object import ImageObject, ObjectHolder, Orientation
 
 def chunk_size(shape):
     """Helper function to compute chunk size for image data cubes."""
@@ -236,19 +237,24 @@ class TimeHolder(OrderedDict):
                                                                  (raw_image_str, raw_image_cpy, raw_image_valid))
 
             self._hdf5_write_global_definition()
+            
+    def get_well_position(self):
+        meta_data = self._meta_data
+
+        # Check for being wellbased or old style (B01_03 vs. 0037)
+        if meta_data.has_well_info:
+            well, subwell = meta_data.get_well_and_subwell(self.P)
+            position = str(subwell)
+        else:
+            well = "0"
+            position = self.P
+        return well, position
 
     def _hdf5_prepare_reuse(self):
-        self._hdf5_file = h5py.File(self.hdf5_filename, 'r')
+        self.cellh5_file = CH5File(self.hdf5_filename, 'r')
+        self._hdf5_file = self.cellh5_file.get_file_handle()
         try:
-            meta_data = self._meta_data
-
-            # Check for being wellbased or old style (B01_03 vs. 0037)
-            if meta_data.has_well_info:
-                well, subwell = meta_data.get_well_and_subwell(self.P)
-                position = str(subwell)
-            else:
-                well = "0"
-                position = self.P
+            well, position = self.get_well_position()
 
 
             self._grp_cur_position = self._hdf5_file['/sample/0/plate/%s/experiment/%s/position/%s' % (self.plate_id,
@@ -257,7 +263,7 @@ class TimeHolder(OrderedDict):
             self._grp_def = self._hdf5_file[self.HDF5_GRP_DEFINITION]
             return 0
         except:
-            self._hdf5_file.close()
+            self.cellh5_file.close()
             return 1
 
     def _hdf5_check_file(self):
@@ -415,11 +421,13 @@ class TimeHolder(OrderedDict):
         label_image_str, label_image_cpy, label_image_valid = label_info
         raw_image_str, raw_image_cpy, raw_image_valid = raw_info
 
-        if hasattr(self, "_hdf5_file") and self._hdf5_file is not None:
+        if hasattr(self, "cellh5_file") and self.cellh5_file is not None:
             try:
-                self._hdf5_file.close()
+                self.cellh5_file.close()
             except:
                 print '_hdf5_create_file_structure(): Closing already opended file for rewrite'
+                
+        # TODO: This should be replaced with cellh5 API functions
         f = h5py.File(filename, 'w')
         self._hdf5_file = f
 
@@ -480,10 +488,12 @@ class TimeHolder(OrderedDict):
 
             if self._hdf5_file[raw_image_str].shape[0] != len(self._regions_to_idx):
                 self._hdf5_file[raw_image_str].resize(len(self._regions_to_idx), axis=0)
+                
+        self.cellh5_file = CH5File(self._hdf5_file)
 
     def close_all(self):
         try:
-            self._hdf5_file.close()
+            self.cellh5_file.close()
         except:
             pass
 
@@ -519,6 +529,15 @@ class TimeHolder(OrderedDict):
         if not iT in self:
             self[iT] = OrderedDict()
         self[iT][channel.NAME] = channel
+    
+    def hdf_channel_frame_valid(self):
+        try:
+            frame_idx = self._frames_to_idx[self._iCurrentT]
+            if self._grp_cur_position[self.HDF5_GRP_IMAGE]['channel'].attrs['valid'][frame_idx]:
+                return True
+        except:
+            pass
+        return False
 
     def apply_segmentation(self, channel, *args):
         stop_watch = StopWatch(start=True)
@@ -679,11 +698,66 @@ class TimeHolder(OrderedDict):
     def _get_feature_group(self):
         grp_object_features = self._grp_cur_position.require_group(self.HDF5_GRP_FEATURE)
         return grp_object_features
+    
+    def _apply_features_from_hdf5(self, channel):
+        channel._features_calculated = True
+        channel_name = channel.NAME.lower()
+        for region_name, container in channel.containers.iteritems():
+            if not container is None:
+                well, position = self.get_well_position()
+                frame_idx = self._frames_to_idx[self._iCurrentT]
+                
+                combined_region_name = self._convert_region_name(channel_name, region_name, '')
+                
+                cur_pos = self.cellh5_file.get_position(well, position)
+                
+                # cast to tuple to enable cashing
+                current_object_idx = tuple(cur_pos.get_object_idx(combined_region_name, frame_idx))
+                
+                object_holder = ObjectHolder(region_name)
+                
+                object_features = cur_pos.get_object_features(combined_region_name, current_object_idx)
+                object_feature_names = list(self.cellh5_file.object_feature_def(combined_region_name))
+                try:
+                    eccentricity_idx = self.cellh5_file.get_object_feature_idx_by_name(combined_region_name, 'eccentricity')
+                except ValueError:
+                    eccentricity_idx = None
+                
+                crack_contours = cur_pos.get_crack_contour(current_object_idx, combined_region_name, bb_corrected=False)
+                
+                for j, (obj_id, c_obj) in enumerate(container.getObjects().iteritems()):
+                    # build a new ImageObject
+                    obj = ImageObject(c_obj)
+                    obj.iId = obj_id
+                    if len(crack_contours) > 0:
+                        obj.crack_contour = crack_contours[j]
+                    else:
+                        # Fallback if cracks are not safed in cellh5
+                        ul = obj.oRoi.upperLeft
+                        crack = [(pos[0] + ul[0], pos[1] + ul[1])
+                                 for pos in
+                                 container.getCrackCoordinates(obj_id)]
+                        obj.crack_contour = crack
+
+                    if 'moments' in channel.lstFeatureCategories and eccentricity_idx is not None:
+                        obj.orientation = Orientation(angle = c_obj.orientation,
+                                                      eccentricity = object_features[j, eccentricity_idx])
+
+                    # assign feature values in sorted order as NumPy array
+                    obj.aFeatures = object_features[j, :]
+                    object_holder[obj_id] = obj
+
+                channel.lstFeatureNames = object_feature_names
+                object_holder.feature_names = channel.lstFeatureNames
+            channel._regions[region_name] = object_holder
 
     def apply_features(self, channel):
         stop_watch = StopWatch(start=True)
         channel_name = channel.NAME.lower()
-        channel.apply_features()
+        if self._hdf5_found and self._hdf5_reuse and not self._hdf5_create and self.hdf_channel_frame_valid():
+            self._apply_features_from_hdf5(channel)
+        else:
+            channel.apply_features()
         desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
                                          channel.strChannelId)
         self._logger.info('object features %s computed in %s.'
