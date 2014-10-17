@@ -37,6 +37,7 @@ INCLUDES = [ 'sip',
              'scipy.spatial.kdtree',
              'scipy.sparse.csgraph._shortest_path',
              'sklearn.utils.sparsetools._graph_validation',
+             'cellh5',
              'sklearn.utils.lgamma',
              'sklearn.neighbors.typedefs',
              'sklearn.utils.weight_vector' ]
