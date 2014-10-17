@@ -666,8 +666,8 @@ class CecogAnalyzer(QtGui.QMainWindow):
                 settings_filename = self.environ.demo_settings
                 if os.path.isfile(settings_filename):
                     home = settings_filename
-                filename = QtGui.QFileDialog.getOpenFileName( \
-                    self, 'Open config file', home, ';;'.join(self.NAME_FILTERS))
+            filename = QtGui.QFileDialog.getOpenFileName( \
+                self, 'Open config file', home, ';;'.join(self.NAME_FILTERS))
             if not bool(filename):
                 return
 
