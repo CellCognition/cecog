@@ -68,7 +68,7 @@ from cecog.gui.util import (critical,
                             question,
                             exception,
                             information,
-                            warning)
+                            warning, message)
 
 
 class FrameStack(QtGui.QStackedWidget):
@@ -236,7 +236,8 @@ class CecogAnalyzer(QtGui.QMainWindow):
 
         # finally load (demo) - settings
         if settings is None:
-            self.load_settings(self.environ.demo_settings)
+            if os.path.isfile(self.environ.demo_settings):
+                self.load_settings(self.environ.demo_settings)
         elif os.path.isfile(settings):
             self.load_settings(settings)
         else:
