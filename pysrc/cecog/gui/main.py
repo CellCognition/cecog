@@ -611,7 +611,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
                             "%d plates loaded successfully." % len(imagecontainer.plates))
         else:
             critical(self, "No images found",
-                     "Verifiy your nameing scheme and rescan the data.")
+                     "Verify your naming scheme and rescan the data.")
 
     def set_image_crop_size(self):
         x0, y0, x1, y1 = self._settings.get('General', 'crop_image_x0'), \
