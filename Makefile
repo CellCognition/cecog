@@ -29,6 +29,11 @@ dmg: osx
 	hdiutil convert $(TMPNAME) -format UDZO -imagekey zlib-level=6 -o $(DMGNAME)
 	rm $(TMPNAME)
 clean:
+	rm cecog/ccore/*.so
 	rm -rfv build dist
 	rm -fv *.dmg
 	rm -fv *.*~
+
+inplace:
+	python setup.py pyrcc
+	python setup.py build_ext --inplace
