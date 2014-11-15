@@ -222,8 +222,8 @@ class NavigationModule(Module):
         table.resizeRowsToContents()
         table.blockSignals(False)
 
-    def _update_info_frame(self, meta_data):
-        meta = meta_data
+    def _update_info_frame(self, meta):
+
         txt  = '<table>' \
                '<tr><td align="right">Positions: </td><td>%s</td></tr>' \
                '<tr><td align="right">Frames: </td><td>%d</td></tr>' % \
@@ -233,7 +233,7 @@ class NavigationModule(Module):
                '<tr><td align="right">Width / Height: </td><td>%d x %d</td></tr>' \
                '<tr><td colspan="2"></td></tr>' \
                '<tr><td align="right">Image Files: </td><td>%d</td></tr>' % \
-               (meta.dim_c, meta.pixel_info, meta.dim_z, meta.dim_x,
+               (meta.dim_c, meta.pixel_type, meta.dim_z, meta.dim_x,
                 meta.dim_y, meta.image_files)
         txt += '<tr><td></td></tr>'
         if meta.has_timestamp_info and meta.has_timelapse:

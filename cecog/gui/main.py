@@ -558,7 +558,8 @@ class CecogAnalyzer(QtGui.QMainWindow):
         emitter.setLabelText.connect(self._dlg.setLabelText)
 
         try:
-            func = lambda: load(emitter, imagecontainer, self._settings, scan_plates)
+            func = lambda: load(emitter, imagecontainer,
+                                self._settings, scan_plates)
             self._dlg.exec_(func, (emitter, ))
         except ImportError as e:
             # structure file from versions older than 1.3 contain pdk which is
