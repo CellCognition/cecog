@@ -101,7 +101,8 @@ class CecogAnalyzer(QtGui.QMainWindow):
     NAME_FILTERS = ['Settings files (*.conf)', 'All files (*.*)']
     modified = QtCore.pyqtSignal('bool')
 
-    def __init__(self, appname, version, redirect, settings=None, debug=False, *args, **kw):
+    def __init__(self, appname, version, redirect, settings=None,
+                 debug=False, *args, **kw):
         super(CecogAnalyzer, self).__init__(*args, **kw)
         self.setWindowTitle("%s-%s" %(appname, version) + '[*]')
         self.setCentralWidget(QtGui.QFrame(self))
@@ -111,7 +112,8 @@ class CecogAnalyzer(QtGui.QMainWindow):
         self.appname = appname
         self.debug = debug
 
-        self.environ = CecogEnvironment(version=version, redirect=redirect, debug=debug)
+        self.environ = CecogEnvironment(version=version, redirect=redirect,
+                                        debug=debug)
         if debug:
             self.environ.pprint()
 
@@ -660,7 +662,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
     def _on_file_open(self):
 
         if self._check_settings_saved() != QMessageBox.Cancel:
-            home = ""            
+            home = ""
             if self._settings_filename is not None:
                 settings_filename = self.environ.demo_settings
                 if os.path.isfile(settings_filename):
