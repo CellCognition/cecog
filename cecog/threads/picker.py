@@ -71,7 +71,7 @@ class PickerThread(CoreThread):
                             learner=learner)
             picker.processPositions(self)
             learner = picker.learner
-            frame_count =+ len(picker.positions)
+            frame_count += len(picker.positions)
 
         if frame_count == 0:
             raise RuntimeError("Didn't pick any samples from 0 frames. Check plate names")
