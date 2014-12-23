@@ -490,12 +490,12 @@ class SegmentationPluginPrimary3(_SegmentationPlugin):
 
         if distance==2:
             # Euclidean distance
-            res = ccore.watershed_dynamic_split(img_bin, dyn, 4, 2) 
+            res = ccore.watershed_dynamic_split(img_bin, dyn, 8, 2) 
         elif distance==1:
             # we use connectivity 4 (for the watershed) and distance mode 1 (which 
             # corresponds to the L1 norm which corresponds to the graph distance
             # of a 4-neighborhood graph
-            res = ccore.watershed_dynamic_split(img_bin, dyn, 4, 1)
+            res = ccore.watershed_dynamic_split(img_bin, dyn, 8, 1)
         elif distance==0:            
             # the chessboard distance and 8 connectivity for the watershed algorithm.
             # However, the distances are "deeper" for 4-connectivity. 
