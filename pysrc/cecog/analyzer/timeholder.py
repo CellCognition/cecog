@@ -817,7 +817,7 @@ class TimeHolder(OrderedDict):
             how = "computed"
         desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
                                          channel.strChannelId)
-        self._logger.info('object %s %s computed in %s.'
+        self._logger.info('object %s %s in %s.'
                               %(desc, how, stop_watch.interim()))
 
         if self._hdf5_create:
