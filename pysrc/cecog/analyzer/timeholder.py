@@ -963,7 +963,9 @@ class TimeHolder(OrderedDict):
                         if not "reused" in grp_region_features['object_features'].attrs.keys():
                             dset_object_features = grp_region_features['object_features']
                             dset_object_features.resize(nr_objects + offset, axis=0)
-                            self._hdf5_include_features = False
+                            # This I do not understand: if you set this to false, 
+                            # features are not written for the following frames ! 
+                            # self._hdf5_include_features = False
 
                 if self._hdf5_include_crack:
                     if 'crack_contour' not in grp_region_features:
