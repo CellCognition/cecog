@@ -828,6 +828,8 @@ class PositionAnalyzer(PositionCore):
         crd = Coordinate(self.plate_id, self.position,
                          self._frames, list(set(self.ch_mapping.values())))
 
+        minimal_effort = self.settings.get('Output', 'minimal_effort') and self.settings.get('Output', 'hdf5_reuse')
+        
         for frame, channels in self._imagecontainer( \
             crd, interrupt_channel=True, interrupt_zslice=True):
 
@@ -846,6 +848,10 @@ class PositionAnalyzer(PositionCore):
             self.register_channels(cellanalyzer, channels)
 
             cellanalyzer.process()
+
+            self.logger.info(" - Frame %d, cellanalyzer.process (ms): %3d" \
+                             %(frame, stopwatch.interval()*1000))
+
             n_images += 1
             images = []
 
@@ -863,10 +869,16 @@ class PositionAnalyzer(PositionCore):
                     images += [(img_conn, '#FFFF00', 1.0),
                                (img_split, '#00FFFF', 1.0)]
 
+            self.logger.info(" - Frame %d, Tracking (ms): %3d" \
+                             %(frame, stopwatch.interval()*1000))
+
             # can't cluster on a per frame basis
             if self.settings("EventSelection", "supervised_event_selection"):
                 for clf in self.classifiers.itervalues():
                     cellanalyzer.classify_objects(clf)
+
+            self.logger.info(" - Frame %d, Classification (ms): %3d" \
+                             % (frame, stopwatch.interval()*1000))
 
             ##############################################################
             # FIXME - part for browser
@@ -876,21 +888,25 @@ class PositionAnalyzer(PositionCore):
 
             self.settings.set_section('General')
             # want emit all images at once
-            imgs = {}
-            imgs.update(self.render_classification_images(cellanalyzer, images, frame))
-            imgs.update(self.render_contour_images(cellanalyzer, images, frame))
-            msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position, frame)
-            self.set_image(imgs, msg, 50)
+            if not minimal_effort:
+                imgs = {}
+                imgs.update(self.render_classification_images(cellanalyzer, images, frame))
+                imgs.update(self.render_contour_images(cellanalyzer, images, frame))
+                msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position, frame)
+                self.set_image(imgs, msg, 50)
+    
+                if self.settings('Output', 'rendering_channel_gallery'):
+                    self.render_channel_gallery(cellanalyzer, frame)
+    
+                if self.settings('Output', 'rendering_labels_discwrite'):
+                    cellanalyzer.exportLabelImages(self._labels_dir)
 
-            if self.settings('Output', 'rendering_channel_gallery'):
-                self.render_channel_gallery(cellanalyzer, frame)
-
-            if self.settings('Output', 'rendering_labels_discwrite'):
-                cellanalyzer.exportLabelImages(self._labels_dir)
-
-            self.logger.info(" - Frame %d, duration (ms): %3d" \
-                                 %(frame, stopwatch.interim()*1000))
             cellanalyzer.purge(features=self.export_features)
+            self.logger.info(" - Frame %d, rest (ms): %3d" \
+                                 %(frame, stopwatch.interval()*1000))
+            self.logger.info(" - Frame %d, duration (ms): %3d\n" \
+                                 %(frame, stopwatch.interim()*1000))
+ 
 
         return n_images
 
