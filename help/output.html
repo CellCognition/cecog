@@ -68,6 +68,19 @@ Generated CellH5 hdf5 files as described in <a href="http://www.ncbi.nlm.nih.gov
 <h4 class="sub">Enable this feature if you want use precomputed raw and segmentation images (as stored in the CellH5 files) Note that, changes in the object detection and gray value normalization will have no effect if enabled!</h4>
 </a>
 
+<a name="minimal_effort">
+  <h4>Only necessary steps</h4>
+  <p class="text">If this option is selected in addition to Reuse
+  HDF5, CellCognition analyzer will only execute the analysis steps
+  defined in the Processing tab and try to read the necessary
+  information from the HDF5 file. In particular, it is possible to
+  avoid segmentation, if the features are already calculated. This
+  option is not recommended for interactive use (as segmentation is
+  required for visualization). If Reuse HDF5 is not selected, this
+  option has no effect. 
+  </p>
+</a>
+
 
 <h3>Text file output</h3>
 <b>Text output is deprecated and will be removed in future releases!</b>

@@ -65,6 +65,8 @@ class SectionOutput(SectionCore):
         BooleanTrait(False, label='Create HDF5')),
        ('hdf5_reuse',
         BooleanTrait(False, label='Reuse HDF5')),
+       ('minimal_effort',
+        BooleanTrait(False, label='Only necessary steps')),
        ('hdf5_include_raw_images',
         BooleanTrait(False, label='Include 8-bit image data')),
        ('hdf5_include_label_images',

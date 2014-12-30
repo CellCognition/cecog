@@ -36,6 +36,7 @@ class OutputFrame(BaseFrame):
                         ('hdf5_merge_positions', (10,0,1,1)),
                         ])
         self.add_group('hdf5_reuse', [])
+        self.add_group('minimal_effort', [])
 
         self.add_line()
         self.add_group(None,

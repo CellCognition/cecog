@@ -49,7 +49,7 @@ class GeneralFrame(BaseFrame):
                        link="channels", label='Channels')
 
         self.add_group('constrain_positions', [('positions',)])
-        self.add_input('redofailedonly')
+        self.add_input('redofailedonly')        
         self.add_group('framerange', [('framerange_begin',),
                                       ('framerange_end',),
                                       ('frameincrement', )],

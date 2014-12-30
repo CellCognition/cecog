@@ -234,7 +234,8 @@ class CecogAnalyzer(QtGui.QMainWindow):
 
         # finally load (demo) - settings
         if settings is None:
-            self.load_settings(self.environ.demo_settings)
+            #self.load_settings(self.environ.demo_settings)
+            self.load_settings('/Users/twalter/data/mitocheck_clustering/cecog_settings/settings_cellh5_test2.conf')
         elif os.path.isfile(settings):
             self.load_settings(settings)
         else:
