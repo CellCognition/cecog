@@ -31,5 +31,6 @@
         <file alias="plugins/segmentation/expanded">resources/plugins/segmentation/segmentation_expanded.png</file>
         <file alias="plugins/segmentation/local_adaptive_threshold">resources/plugins/segmentation/local_adaptive_threshold.html</file>
         <file alias="plugins/segmentation/additional_segmentation_plugins">resources/plugins/segmentation/additional_segmentation_plugins.html</file>
+        <file>resources/ontologies/cmpo.owl</file>
     </qresource>
 </RCC>
