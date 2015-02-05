@@ -40,6 +40,8 @@ class FilterableQTreeWidget(QtGui.QWidget):
         
         self.tw = QtGui.QTreeWidget()
         self.tw.header().close()
+        self.tw.setMinimumHeight(500)
+        self.tw.setMinimumWidth(300)
 
         self.line_label = QtGui.QLabel("Filter:")
         self.line_edit = QtGui.QLineEdit()
@@ -55,7 +57,7 @@ class FilterableQTreeWidget(QtGui.QWidget):
         bot_layout = QtGui.QHBoxLayout()
         bot_widget.setLayout(bot_layout)
         
-        self.add_button = QtGui.QPushButton("Add")
+        self.add_button = QtGui.QPushButton("Choose")
         self.close_button = QtGui.QPushButton("Close")
         bot_layout.addWidget(self.add_button)
         bot_layout.addWidget(self.close_button)

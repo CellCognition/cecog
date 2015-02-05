@@ -369,13 +369,14 @@ class AnnotationModule(Module):
         self._class_table = class_table
 
         frame2 = QFrame(grp_box)
-        layout2 = QBoxLayout(QBoxLayout.LeftToRight, frame2)
+        layout2 = QBoxLayout(QBoxLayout.TopToBottom, frame2)
         layout2.setContentsMargins(0,0,0,0)
         self._import_class_definitions_btn = QPushButton('Import class definitions')
         layout2.addWidget(self._import_class_definitions_btn)
         self._import_class_definitions_btn.clicked.connect(self._on_import_class_definitions)
         
-        self._import_ontology_name_btn = QPushButton('Class name ontology browser')
+        self._import_ontology_name_btn = QPushButton('Choose class name from ontology')
+        self._import_ontology_name_btn.setToolTip("Choose class name from ontology. E.g., CMPO\nNote: It might take some time starting the dialog the first time.")
         layout2.addWidget(self._import_ontology_name_btn)
         self._import_ontology_name_btn.clicked.connect(self._on_import_ontology_name)
         
