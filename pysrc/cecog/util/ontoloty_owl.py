@@ -1,10 +1,13 @@
 import rdflib
 from ontospy.ontospy import Ontology
 from PyQt4 import QtGui, QtCore
+from PyQt4.QtCore import pyqtSignal
 from cecog.environment import CecogEnvironment
 import os
 import sys
 from functools import partial
+
+
 
 def getPrefLabel(onto, uriref):
     props = onto.classProperties(uriref)
@@ -31,6 +34,7 @@ def map_traverse_QTreeWidget(func, tw_root):
     
     
 class FilterableQTreeWidget(QtGui.QWidget): 
+    trigger_add = pyqtSignal(str)
     def __init__(self, *args, **kwargs):
         super(FilterableQTreeWidget, self).__init__(*args, **kwargs)
         
@@ -80,6 +84,10 @@ class FilterableQTreeWidget(QtGui.QWidget):
     
     
 class CecogOntologyBrowserWidget(FilterableQTreeWidget):
+    def __init__(self, *args, **kwargs):
+        super(CecogOntologyBrowserWidget, self).__init__(*args, **kwargs)
+        
+    
     def init_connects(self):
         FilterableQTreeWidget.init_connects(self)
         
@@ -129,8 +137,10 @@ class CecogOntologyBrowserWidget(FilterableQTreeWidget):
                 rec_parents(item_.parent())
                 
         if tw_item.parent() is not None:
-            if tw_item.text(0).contains(txt):
-                rec_parents(tw_item)       
+            if txt in tw_item.text(0):
+                rec_parents(tw_item)  
+#             if tw_item.text(0).contains(txt):
+#                 rec_parents(tw_item)       
 
     def cb_editingFinished(self, cur_text):
         if len(cur_text) > 1:
@@ -143,18 +153,34 @@ class CecogOntologyBrowserWidget(FilterableQTreeWidget):
             [map_traverse_QTreeWidget(lambda xxx: xxx.setHidden(False), onto_root_item) for onto_root_item in self.root_items]
             
     def cb_item_clicked(self, item, col):
-       info = str(item.ref[0]) + "\n\n"
-       info += getDescription(item.ref[1], item.ref[0])
-       self.info_field.setText(info)
-       if item.childCount() == 0:
-           self.add_button.setEnabled(True)
-       else:
-           self.add_button.setEnabled(False)
+        info = str(item.ref[0]) + "\n\n"
+        info += getDescription(item.ref[1], item.ref[0])
+        self.info_field.setText(info)
+        if item.childCount() == 0:
+            self.add_button.setEnabled(True)
+        else:
+            self.add_button.setEnabled(False)
            
     def cb_add_button(self):
-        print "add button"
+        item = self.tw.currentItem()
+        
+        self.trigger_add.emit(str(item.text(0)))
+        
+class CecogOntologyBrowserDialog(QtGui.QDialog):
+    def __init__(self, *args, **kwargs):
+        super(CecogOntologyBrowserDialog, self).__init__(*args, **kwargs)
+        diag_layout = QtGui.QHBoxLayout(self)
+        self.tw = CecogOntologyBrowserWidget(parent=self)
+        self.tw.fillTree()
+        diag_layout.addWidget(self.tw)
+        self.setWindowTitle("CellCognition Ontology Browser")
+        self.setLayout(diag_layout)
     
 if __name__ == "__main__":
+    import sip
+    sip.setapi('QString', 2)
+    sip.setapi('QVariant', 2)
+    
     app = QtGui.QApplication(sys.argv)
     
     diag = QtGui.QDialog()
@@ -164,6 +190,11 @@ if __name__ == "__main__":
     tw.fillTree()
     
     diag_layout.addWidget(tw)
+    
+    def slot_(t):
+        print "Add clicked with", t
+    
+    tw.trigger_add.connect(slot_)
 
     print diag.exec_()
     

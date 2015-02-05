@@ -8,7 +8,6 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
-from cecog.gui.util import information
 
 __author__ = 'Michael Held, Thomas Walter'
 __date__ = '$Date$'
@@ -27,6 +26,8 @@ sip.setapi('QVariant', 2)
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
+from cecog.gui.util import information
+
 
 from cecog.gui.imageviewer import ImageViewer
 from cecog.gui.modules.module import ModuleManager
