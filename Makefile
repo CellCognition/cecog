@@ -6,7 +6,7 @@
 # 14/02/2013
 # This software can be distribute under the term of the LGPL
 
-VERSION = 1.5.2
+VERSION = 1.5.3
 ARCH=$$(uname -m)
 APPNAME = CecogAnalyzer
 TMPNAME = CecogAnalyzer.dmg
