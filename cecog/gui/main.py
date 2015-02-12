@@ -96,7 +96,8 @@ class CecogAnalyzer(QtGui.QMainWindow):
     NAME_FILTERS = ['Settings files (*.conf)', 'All files (*.*)']
     modified = QtCore.pyqtSignal('bool')
 
-    def __init__(self, appname, version, redirect, settings=None, debug=False, *args, **kw):
+    def __init__(self, appname, version, redirect, settings=None, debug=False,
+                 *args, **kw):
         super(CecogAnalyzer, self).__init__(*args, **kw)
         self.setWindowTitle("%s-%s" %(appname, version) + '[*]')
         self.setCentralWidget(QtGui.QFrame(self))
@@ -106,7 +107,8 @@ class CecogAnalyzer(QtGui.QMainWindow):
         self.appname = appname
         self.debug = debug
 
-        self.environ = CecogEnvironment(version=version, redirect=redirect, debug=debug)
+        self.environ = CecogEnvironment(version=version,
+                                        redirect=redirect, debug=debug)
         if debug:
             self.environ.pprint()
 
@@ -234,7 +236,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
 
         # finally load (demo) - settings
         if settings is None:
-            self.load_settings(self.environ.demo_settings)          
+            self.load_settings(self.environ.demo_settings)
         elif os.path.isfile(settings):
             self.load_settings(settings)
         else:
@@ -526,8 +528,12 @@ class CecogAnalyzer(QtGui.QMainWindow):
                 if not cancel:
                     self._load_image_container(infos, scan_plates)
 
-    def _load_image_container(self, plate_infos, scan_plates=None, show_dlg=True):
+    def _load_image_container(self, plate_infos=None, scan_plates=None,
+                              show_dialog=True):
         self._clear_browser()
+
+        if plate_infos is None:
+            plate_infos = list(ImageContainer.iter_check_plates(self._settings))
 
         imagecontainer = ImageContainer()
         self._imagecontainer = imagecontainer
@@ -624,7 +630,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
 
 
             self.set_modules_active(state=True)
-            if show_dlg:
+            if show_dialog:
                 QMessageBox.information(
                     self, "Info",
                     "%d plate(s) successfully loaded." % len(imagecontainer.plates))
