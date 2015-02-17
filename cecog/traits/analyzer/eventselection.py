@@ -33,9 +33,9 @@ class SectionEventSelection(SectionCore):
           ('event_selection',
            BooleanTrait(True, label='Event Selection')),
           ('backwardrange',
-           FloatTrait(0, -1, 4000, label='Duration [pre]')),
+           FloatTrait(0, 1, 4000, label='Duration [pre]')),
           ('forwardrange',
-           FloatTrait(0, -1, 4000, label='Duration [post]')),
+           FloatTrait(0, 1, 4000, label='Duration [post]')),
 
           ('duration_unit',
            SelectionTrait2(TimeConverter.FRAMES,

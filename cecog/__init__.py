@@ -14,12 +14,9 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = ['VERSION', 'VERSION_NUM', 'CHANNEL_PREFIX', 'APPNAME']
+__all__ = ('CHANNEL_PREFIX', )
 
 # move this constants to version.py module
-VERSION_NUM = (1, 6, 0)
-VERSION = '.'.join([str(n) for n in VERSION_NUM])
-APPNAME = 'CecogAnalyzer'
 
 JOB_CONTROL_SUSPEND = 'Suspend'
 JOB_CONTROL_RESUME = 'Resume'

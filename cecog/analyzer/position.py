@@ -206,7 +206,8 @@ class PositionCore(LoggerObject):
 
         return f_categories, f_cat_params
 
-    def setup_channel(self, proc_channel, col_channel, zslice_images):
+    def setup_channel(self, proc_channel, col_channel, zslice_images,
+                      check_for_plugins=True):
 
         # determine the list of features to be calculated from each object
         f_cats, f_params = self.feature_params(proc_channel)
@@ -226,7 +227,8 @@ class PositionCore(LoggerObject):
                          bFlatfieldCorrection = self.settings.get2('%s_flat_field_correction' %proc_channel),
                          strBackgroundImagePath = self.settings.get2('%s_flat_field_correction_image_dir' %proc_channel),
                          lstFeatureCategories = f_cats,
-                         dctFeatureParameters = f_params)
+                         dctFeatureParameters = f_params,
+                         check_for_plugins = check_for_plugins)
 
         if channel.is_virtual():
             channel.merge_regions = self._channel_regions(proc_channel)
@@ -545,6 +547,8 @@ class PositionAnalyzer(PositionCore):
             region_features = {}
 
             for region in MetaPluginManager().region_info.names[name.lower()]:
+                if name is self.MERGED_CHANNEL:
+                    continue
                 # export all features extracted per regions
                 if self.settings.get('Output', 'events_export_all_features') or \
                         self.settings.get('Output', 'export_track_data'):
@@ -572,7 +576,6 @@ class PositionAnalyzer(PositionCore):
                 features[name] = region_features
 
         return features
-
 
     def export_object_counts(self):
         fname = join(self._statistics_dir, 'P%s__object_counts.txt' % self.position)
@@ -825,6 +828,8 @@ class PositionAnalyzer(PositionCore):
         crd = Coordinate(self.plate_id, self.position,
                          self._frames, list(set(self.ch_mapping.values())))
 
+        minimal_effort = self.settings.get('Output', 'minimal_effort') and self.settings.get('Output', 'hdf5_reuse')
+        
         for frame, channels in self._imagecontainer( \
             crd, interrupt_channel=True, interrupt_zslice=True):
 
@@ -843,6 +848,10 @@ class PositionAnalyzer(PositionCore):
             self.register_channels(cellanalyzer, channels)
 
             cellanalyzer.process()
+
+            self.logger.info(" - Frame %d, cellanalyzer.process (ms): %3d" \
+                             %(frame, stopwatch.interval()*1000))
+
             n_images += 1
             images = []
 
@@ -860,10 +869,16 @@ class PositionAnalyzer(PositionCore):
                     images += [(img_conn, '#FFFF00', 1.0),
                                (img_split, '#00FFFF', 1.0)]
 
+            self.logger.info(" - Frame %d, Tracking (ms): %3d" \
+                             %(frame, stopwatch.interval()*1000))
+
             # can't cluster on a per frame basis
             if self.settings("EventSelection", "supervised_event_selection"):
                 for clf in self.classifiers.itervalues():
                     cellanalyzer.classify_objects(clf)
+
+            self.logger.info(" - Frame %d, Classification (ms): %3d" \
+                             % (frame, stopwatch.interval()*1000))
 
             ##############################################################
             # FIXME - part for browser
@@ -873,21 +888,25 @@ class PositionAnalyzer(PositionCore):
 
             self.settings.set_section('General')
             # want emit all images at once
-            imgs = {}
-            imgs.update(self.render_classification_images(cellanalyzer, images, frame))
-            imgs.update(self.render_contour_images(cellanalyzer, images, frame))
-            msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position, frame)
-            self.set_image(imgs, msg, 50)
+            if not minimal_effort:
+                imgs = {}
+                imgs.update(self.render_classification_images(cellanalyzer, images, frame))
+                imgs.update(self.render_contour_images(cellanalyzer, images, frame))
+                msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position, frame)
+                self.set_image(imgs, msg, 50)
+    
+                if self.settings('Output', 'rendering_channel_gallery'):
+                    self.render_channel_gallery(cellanalyzer, frame)
+    
+                if self.settings('Output', 'rendering_labels_discwrite'):
+                    cellanalyzer.exportLabelImages(self._labels_dir)
 
-            if self.settings('Output', 'rendering_channel_gallery'):
-                self.render_channel_gallery(cellanalyzer, frame)
-
-            if self.settings('Output', 'rendering_labels_discwrite'):
-                cellanalyzer.exportLabelImages(self._labels_dir)
-
-            self.logger.info(" - Frame %d, duration (ms): %3d" \
-                                 %(frame, stopwatch.interim()*1000))
             cellanalyzer.purge(features=self.export_features)
+            self.logger.info(" - Frame %d, rest (ms): %3d" \
+                                 %(frame, stopwatch.interval()*1000))
+            self.logger.info(" - Frame %d, duration (ms): %3d\n" \
+                                 %(frame, stopwatch.interim()*1000))
+ 
 
         return n_images
 
@@ -986,7 +1005,6 @@ class PositionAnalyzerForBrowser(PositionCore):
                 clf.loadClassifier()
                 self.classifiers[p_channel] = clf
 
-
     def __call__(self):
         hdf5_fname = join(self._hdf5_dir, '%s.ch5' % self.position)
 
@@ -1010,7 +1028,10 @@ class PositionAnalyzerForBrowser(PositionCore):
         self._analyze(ca)
         return ca
 
-
+    def setup_channel(self, proc_channel, col_channel, zslice_images,
+                      check_for_plugins=False):
+        return super(PositionAnalyzerForBrowser, self).setup_channel(
+            proc_channel, col_channel, zslice_images, False)
 
     def _analyze(self, cellanalyzer):
         n_images = 0
@@ -1034,6 +1055,7 @@ class PositionAnalyzerForBrowser(PositionCore):
 
             stopwatch.reset(start=True)
             cellanalyzer.initTimepoint(frame)
+
             self.register_channels(cellanalyzer, channels)
 
             cellanalyzer.process()

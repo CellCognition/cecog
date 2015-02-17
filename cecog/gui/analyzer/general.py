@@ -31,9 +31,7 @@ class GeneralFrame(BaseFrame):
         self.add_input('pathin')
         self.add_input('has_multiple_plates')
         self.add_input('pathout')
-        self.add_group('image_import_namingschema', [('namingscheme',),],
-                       layout='flow')
-        self.add_group('image_import_structurefile', [('structure_filename',)])
+        self.add_input('namingscheme')
         self.add_group(None,
                        [('structure_file_pathin', (0,0,1,1)),
                         ('structure_file_pathout', (0,1,1,1)),
@@ -51,7 +49,7 @@ class GeneralFrame(BaseFrame):
                        link="channels", label='Channels')
 
         self.add_group('constrain_positions', [('positions',)])
-        self.add_input('redofailedonly')
+        self.add_input('redofailedonly')        
         self.add_group('framerange', [('framerange_begin',),
                                       ('framerange_end',),
                                       ('frameincrement', )],

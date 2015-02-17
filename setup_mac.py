@@ -17,13 +17,19 @@ __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
 import sys
+import os
 from os.path import join, abspath
 import py2app
 
 from distutils.core import setup, Extension
 import build_helpers
 
-py2app_opts = {'excludes': build_helpers.EXCLUDES}
+# override other -arch options
+if not os.environ.has_key("ARCHFLAGS"):
+    os.environ["ARCHFLAGS"] = "-arch x86_64"
+
+py2app_opts = {'excludes': build_helpers.EXCLUDES,
+               'includes': ['sip', 'PyQt4', 'PyQt4.QtCore', 'PyQt4.QtGui']}
 
 pyrcc_opts = {'infile': 'cecog.qrc',
               'outfile': join('cecog', 'cecog_rc.py'),

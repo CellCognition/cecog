@@ -58,7 +58,8 @@ class ChannelCore(LoggerObject):
                  fNormalizeMin="",
                  fNormalizeMax="",
                  fNormalizeRatio="",
-                 fNormalizeOffset=""):
+                 fNormalizeOffset="",
+                 check_for_plugins=True):
         super(ChannelCore, self).__init__()
 
         # remove all the hungarian bullshit as soon as possible!
@@ -90,8 +91,10 @@ class ChannelCore(LoggerObject):
         try:
             self.plugin_mgr = MetaPluginManager()[self.NAME.lower()]
             if self.plugin_mgr.number_loaded_plugins() < 1:
-                raise RuntimeError(("You need to load at least one segmentation"
-                                    " plugin for channel '%s'" %self.NAME))
+                if check_for_plugins:
+                    raise RuntimeError(
+                        ("You need to load at least one segmentation"
+                         " plugin for channel '%s'" %self.NAME))
         except KeyError:
             self.plugin_mgr = None
 

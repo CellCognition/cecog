@@ -23,7 +23,7 @@ import cStringIO
 from collections import OrderedDict
 from ConfigParser import RawConfigParser, NoOptionError
 
-import cecog
+from cecog.version import version
 from cecog.plugin.metamanager import MetaPluginManager
 from cecog.traits.analyzer.section_registry import SectionRegistry
 from cecog.environment import CecogEnvironment
@@ -38,7 +38,7 @@ class ConfigSettings(RawConfigParser):
 
     def __init__(self):
         RawConfigParser.__init__(self, allow_no_value=True)
-        self.environ = CecogEnvironment(cecog.VERSION)
+        self.environ = CecogEnvironment(version)
         self._registry = OrderedDict()
         self._current_section = None
         self._old_file_format = False
@@ -140,7 +140,7 @@ class ConfigSettings(RawConfigParser):
         result = RawConfigParser.readfp(self, fp)
         self._old_file_format = False
         if not self.has_option('General', 'version') or \
-                self.get('General', 'version') < cecog.VERSION:
+                self.get('General', 'version') < version:
             self._old_file_format = True
 
         for section_name in self.sections():

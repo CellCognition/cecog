@@ -29,6 +29,7 @@ from PyQt4.Qt import *
 from collections import OrderedDict
 from multiprocessing import cpu_count
 
+from cecog import ccore
 from cecog import CHANNEL_PREFIX
 from cecog.gui.display import TraitDisplayMixin
 from cecog.learning.learning import CommonClassPredictor
@@ -40,17 +41,15 @@ from cecog.gui.util import question
 from cecog.gui.util import critical
 from cecog.gui.util import information
 
-
 from cecog.analyzer import CONTROL_1, CONTROL_2
 from cecog.analyzer.channel import PrimaryChannel
 from cecog.analyzer.channel import SecondaryChannel
 from cecog.analyzer.channel import TertiaryChannel
 from cecog.plugin.metamanager import MetaPluginManager
 
-from cecog.environment import CecogEnvironment
 from cecog.analyzer.core import AnalyzerCore
-from cecog.io.imagecontainer import PIXEL_TYPES
-from cecog import ccore
+from cecog.environment import CecogEnvironment
+
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
 from cecog.traits.analyzer.postprocessing import SECTION_NAME_POST_PROCESSING
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL

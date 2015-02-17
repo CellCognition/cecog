@@ -25,12 +25,12 @@ from PyQt4 import QtCore
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QMessageBox
 
+from cecog import version
 from cecog.units.time import TimeConverter
 from cecog.environment import CecogEnvironment
 from cecog.io.imagecontainer import ImageContainer
 
 from cecog.gui.config import GuiConfigSettings
-
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
 from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACTION
@@ -64,11 +64,6 @@ from cecog.gui.log import GuiLogHandler, LogWindow
 
 from cecog.gui.progressdialog import ProgressDialog
 from cecog.gui.progressdialog import ProgressObject
-from cecog.gui.util import (critical,
-                            question,
-                            exception,
-                            information,
-                            warning)
 
 
 class FrameStack(QtGui.QStackedWidget):
@@ -236,28 +231,56 @@ class CecogAnalyzer(QtGui.QMainWindow):
         self.setMinimumSize(QtCore.QSize(700, 600))
         self._is_initialized = True
 
+        self._restore_geometry()
+        self.show()
+
         # finally load (demo) - settings
         if settings is None:
             self.load_settings(self.environ.demo_settings)
         elif os.path.isfile(settings):
             self.load_settings(settings)
         else:
-            raise RuntimeError("settings file does not exits (%s)" %settings)
+            QMessageBox.warning(self, "Warning", "File (%s) does not exist" %settings)
 
-    def show(self):
-        super(CecogAnalyzer, self).show()
-        self.center()
+
+    def _save_geometry(self):
+        settings = QtCore.QSettings(version.organisation, version.appname)
+        settings.beginGroup('Gui')
+        settings.setValue('state', self.saveState())
+        settings.setValue('geometry', self.saveGeometry())
+        settings.setValue('clusterjobs',
+                          self._pages.widgetByType(ClusterFrame).get_jobids())
+        settings.endGroup()
+
+    def _restore_geometry(self):
+        settings = QtCore.QSettings(version.organisation, version.appname)
+        settings.beginGroup('Gui')
+
+        geometry = settings.value('geometry')
+        if geometry is not None:
+            self.restoreGeometry(geometry)
+        state = settings.value('state')
+        if state is not None:
+            self.restoreState(state)
+
+        jobids = settings.value('clusterjobs')
+        if jobids:
+            self._pages.widgetByType(ClusterFrame).restore_jobids(jobids)
+        settings.endGroup()
 
     def closeEvent(self, event):
         # Quit dialog only if not debuging flag is not set
+        self._save_geometry()
         if self.debug:
             QtGui.QApplication.exit()
         ret = QMessageBox.question(self, "Quit %s" %self.appname,
                                    "Do you really want to quit?",
                                    QMessageBox.Yes|QMessageBox.No)
-        if self._check_settings_saved() and ret == QMessageBox.No:
+
+        if ret == QMessageBox.No:
             event.ignore()
         else:
+            self._check_settings_saved(QMessageBox.Yes|QMessageBox.No)
             QtGui.QApplication.exit()
 
     def settings_changed(self, changed):
@@ -299,24 +322,19 @@ class CecogAnalyzer(QtGui.QMainWindow):
         widget = self._pages.widget(index)
         widget.page_changed()
 
-    def _check_settings_saved(self):
+    def _check_settings_saved(
+            self, buttons=QMessageBox.Yes|QMessageBox.No|QMessageBox.Cancel):
         if self.isWindowModified():
-            result = question(self, 'Settings have been modified.',
-                              info='Do you want to save settings?',
-                              modal=True, show_cancel=True,
-                              default=QMessageBox.Yes,
-                              escape=QMessageBox.Cancel)
+            result = QMessageBox.question(
+                self, "Settings have been modified",
+                "Do you want to save the settings?",
+                buttons)
+
             if result == QMessageBox.Yes:
                 self.save_settings()
         else:
             result = QMessageBox.No
         return result
-
-    def center(self):
-        screen = QtGui.QDesktopWidget().screenGeometry()
-        size = self.geometry()
-        self.move((screen.width() - size.width()) / 2,
-        (screen.height() - size.height()) / 2)
 
     def add_actions(self, target, actions):
         for action in actions:
@@ -354,11 +372,11 @@ class CecogAnalyzer(QtGui.QMainWindow):
         try:
             self._settings.read(filename)
         except Exception as e:
-            critical(self,
-                     "Error loading settings file",
-                     info="Could not load settings file '%s'." % filename,
-                     detail_tb=True)
-            self.statusBar().showMessage('Settings not successfully loaded.')
+            QMessageBox.critical(self, "Error",
+                                 ("Error loading settings file\n"
+                                  "Could not load settings file '%s'.\n%s"
+                                  %(filename, str(e))))
+            self.statusBar().showMessage('Error loading settings files.')
         else:
             self._settings_filename = filename
             title = self.windowTitle().split(' - ')[0]
@@ -369,18 +387,19 @@ class CecogAnalyzer(QtGui.QMainWindow):
                 namingscheme_file = self._settings("General", "namingscheme")
                 if not namingscheme_file in nst.list_data:
                     self._settings.set("General", "namingscheme", nst.default_value)
-                    warning(self, "Unkown naming scheme",
-                            ("Your current installation can not use the "
-                             "naming scheme '%s'. Resetting to default '%s'"
-                             %(namingscheme_file, nst.default_value)))
+                    QMessageBox.warning(self, "Unkown naming scheme",
+                                        ("%s-%s can not use the naming scheme '%s'."
+                                         " Resetting to default '%s'"
+                                         %(version.appname, version.version,
+                                           namingscheme_file, nst.default_value)))
 
                 for widget in self._tabs:
                     widget.update_input()
             except Exception as e:
-                critical(self, "Problem loading settings file.",
-                         info="Fix the problem in file '%s' and load the "\
-                                "settings file again." % filename,
-                         detail_tb=True)
+                msg = "Could not load settings file (%s)\n.%s" \
+                      %(filename, traceback.format_exc())
+                QMessageBox.critical(self, "Error", msg)
+
             else:
                 # set settings to not-changed (assume no changed since loaded from file)
                 self.settings_changed(False)
@@ -399,10 +418,8 @@ class CecogAnalyzer(QtGui.QMainWindow):
             settings_dummy.write(f)
             f.close()
         except Exception as e:
-            critical(self,
-                     "Error saving settings file",
-                     info="Could not save settings file as '%s'." % filename,
-                     detail_tb=True)
+            msg = "Could not save settings\n%s" %str(e)
+            QMessageBox.critical(self, "Error", msg)
             self.statusBar().showMessage('Settings not successfully saved.')
         else:
             self._settings_filename = filename
@@ -419,9 +436,9 @@ class CecogAnalyzer(QtGui.QMainWindow):
 
     def _on_browser_open(self):
         if self._imagecontainer is None:
-            warning(self, 'Data structure not loaded',
-                    'The input data structure was not loaded.\n'
-                    'Please click "Scan input directory" in General.')
+            QMessageBox.warning(self, 'Data structure not loaded',
+                                'The input directory structure file was not loaded.\n'
+                                'Click "Scan input directory" in section "General" to proceed.')
         elif self._browser is None:
             try:
                 browser = Browser(self._settings, self._imagecontainer, self)
@@ -430,7 +447,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
                 browser.setFocus()
                 self._browser = browser
             except Exception as e:
-                exception(self, 'Problem opening the browser')
+                QMessageBox.critical(self, "Error", str(e))
         else:
             self._browser.show()
             self._browser.raise_()
@@ -439,15 +456,16 @@ class CecogAnalyzer(QtGui.QMainWindow):
         txt = "Error scanning image structure"
         path_in = self._settings.get(SECTION_NAME_GENERAL, 'pathin')
         if path_in == '':
-            critical(self, txt, "Image path must be defined.")
+            QMessageBox.critical(self, "Error", "%s\nImage path must be defined." %txt)
         elif not os.path.isdir(path_in) and \
              not os.path.isdir(os.path.join(self.environ.package_dir, path_in)):
-            critical(self, txt, "Image path '%s' not found." % path_in)
+            QMessageBox.critical(self, "Error", "%s\nImage path '%s' not found."
+                                 %(txt, path_in))
         else:
             try:
                 infos = list(ImageContainer.iter_check_plates(self._settings))
             except Exception as e:
-                exception(self, txt)
+                QMessageBox.critical(self, "Error", "%s\n%s" %(txt, str(e)))
             else:
                 found_any = numpy.any([not info[3] is None for info in infos])
                 cancel = False
@@ -500,19 +518,22 @@ class CecogAnalyzer(QtGui.QMainWindow):
                 else:
                     has_multiple = self._settings.get(SECTION_NAME_GENERAL,
                                                       "has_multiple_plates")
-                    if not question(self, "No structure data found",
-                                    "Are you sure to scan %s?\n\nThis can take "
-                                    "several minutes depending on the number of"
-                                    " images." %
-                                    ("%d plates" % len(infos) if has_multiple
-                                     else "one plate")):
+                    ret = QMessageBox.question(self, "No structure data found",
+                                               ("Scanning the input directory can be time "
+                                                "consuming.\n\nDo you want to proceed?"),
+                                               QMessageBox.Yes|QMessageBox.No)
+                    if ret == QMessageBox.No:
                         cancel = True
                     scan_plates = dict((info[0], True) for info in infos)
                 if not cancel:
                     self._load_image_container(infos, scan_plates)
 
-    def _load_image_container(self, plate_infos, scan_plates=None, show_dlg=True):
+    def _load_image_container(self, plate_infos=None, scan_plates=None,
+                              show_dialog=True):
         self._clear_browser()
+
+        if plate_infos is None:
+            plate_infos = list(ImageContainer.iter_check_plates(self._settings))
 
         imagecontainer = ImageContainer()
         self._imagecontainer = imagecontainer
@@ -543,19 +564,21 @@ class CecogAnalyzer(QtGui.QMainWindow):
         emitter.setLabelText.connect(self._dlg.setLabelText)
 
         try:
-            func = lambda: load(emitter, imagecontainer, self._settings, scan_plates)
+            func = lambda: load(emitter, imagecontainer,
+                                self._settings, scan_plates)
             self._dlg.exec_(func, (emitter, ))
         except ImportError as e:
             # structure file from versions older than 1.3 contain pdk which is
             # removed
             if 'pdk' in str(e):
-                critical(self, ("Your structure file format is outdated.\n"
-                                "You have to rescan the plate(s)"))
+                QMessageBox.critical(self, "Error",
+                                     ("Your structure file format is outdated.\n"
+                                      "You have to rescan the plate(s)"))
             else:
-                critical(self, traceback.format_exc())
+                QMessageBox.critical(self, "Error", traceback.format_exc())
             return
         except Exception as e:
-            critical(self, str(e))
+            QMessageBox.critical(self, "Error", str(e))
 
 
         try: # I hate lookup tables!
@@ -596,9 +619,9 @@ class CecogAnalyzer(QtGui.QMainWindow):
             else:
                 result = trait.set_list_data([TimeConverter.FRAMES])
             if result is None:
-                critical(self, "Could not set tracking duration units",
-                         ("The tracking duration units selected to match the "
-                          "load data. Please check your settings."))
+                QMessageBox.critical(self, "Could not set tracking duration units",
+                                     ("The tracking duration units selected to match the "
+                                      "load data. Please check your settings."))
                 # a mismatch between settings and data will cause changed settings
                 self.settings_changed(True)
 
@@ -607,12 +630,14 @@ class CecogAnalyzer(QtGui.QMainWindow):
 
 
             self.set_modules_active(state=True)
-            if show_dlg:
-                information(self, "Plate(s) successfully loaded",
-                            "%d plates loaded successfully." % len(imagecontainer.plates))
+            if show_dialog:
+                QMessageBox.information(
+                    self, "Info",
+                    "%d plate(s) successfully loaded." % len(imagecontainer.plates))
         else:
-            critical(self, "No images found",
-                     "Verifiy your nameing scheme and rescan the data.")
+            QMessageBox.critical(self, "Error",
+                                 ("No images found\n"
+                                  "Verifiy your nameing scheme and rescan the data."))
 
     def set_image_crop_size(self):
         x0, y0, x1, y1 = self._settings.get('General', 'crop_image_x0'), \
@@ -675,10 +700,11 @@ class CecogAnalyzer(QtGui.QMainWindow):
             try:
                 self.load_settings(filename)
                 if self._settings.was_old_file_format():
-                    information(self, ('Config file was updated to version %s'
-                                       %self.version))
+                    QMessageBox.information(
+                        self, 'Config file was updated to version %s' %self.version)
             except Exception as e:
-                critical(self, "Could not load file!", traceback.format_exc(e))
+                msg = "%s/n%s" %("File could not be loaded\n%s" %str(e))
+                QMessageBox.critical(self, "Error", msg)
             finally:
                 self._clear_browser()
                 self.set_modules_active(state=False)
@@ -693,7 +719,6 @@ class CecogAnalyzer(QtGui.QMainWindow):
         self.save_settings(True)
 
     def _clear_browser(self):
-        # close and delete the current browser instance
         if not self._browser is None:
             self._browser.close()
             self._browser = None
@@ -702,7 +727,6 @@ class CecogAnalyzer(QtGui.QMainWindow):
         logger = logging.getLogger()
         logger.addHandler(self.log_window.handler)
         self.log_window.show()
-        #self.log_window.raise_()
 
     def _get_save_as_filename(self):
         dir = ""

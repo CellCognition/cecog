@@ -28,8 +28,10 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 import h5py
 import numpy
 
+# only temporary
+import pdb
 
-from cellh5 import CH5Const
+from cellh5 import CH5Const, CH5File, CH5Position
 
 from cecog import ccore
 from cecog.colors import Colors
@@ -40,6 +42,7 @@ from cecog.analyzer.channel import PrimaryChannel
 from cecog.plugin.metamanager import MetaPluginManager
 from cecog.analyzer.tracker import Tracker
 
+from cecog.analyzer.object import ImageObject, ObjectHolder, Orientation, Region
 
 def chunk_size(shape):
     """Helper function to compute chunk size for image data cubes."""
@@ -146,6 +149,14 @@ class TimeHolder(OrderedDict):
         self._hdf5_features_complete = False
         self.hdf5_filename = filename_hdf5
 
+        self.minimal_effort = False
+        try:
+            # minimal_effort is read from the settings
+            self.minimal_effort = self._settings.get('Output', 'minimal_effort') and self._hdf5_reuse
+        except:
+            # for backwards compatibility 
+            self.minimal_effort = False        
+        
         self._logger = logging.getLogger(self.__class__.__name__)
         frames = sorted(analysis_frames)
         all_frames = meta_data.get_frames_of_position(self.P)
@@ -205,10 +216,15 @@ class TimeHolder(OrderedDict):
             raw_image_cpy = None
             raw_image_str = None
             raw_image_valid = None
+            
+            feature_dict=None
+            object_dict=None
 
             if self._hdf5_found and self._hdf5_reuse:
                 # file already there AND opened
                 try:
+                    feature_dict = {}
+                    object_dict = {}
                     self._grp_cur_position[self.HDF5_GRP_IMAGE]
                     # check if label images are there and if reuse is enabled
                     if 'region' in self._grp_cur_position[self.HDF5_GRP_IMAGE]:
@@ -220,7 +236,34 @@ class TimeHolder(OrderedDict):
                         raw_image_cpy = self._grp_cur_position[self.HDF5_GRP_IMAGE]['channel'].value
                         raw_image_valid = self._grp_cur_position[self.HDF5_GRP_IMAGE]['channel'].attrs['valid']
                         raw_image_str = self._grp_cur_position[self.HDF5_GRP_IMAGE].name + '/channel'
-                except:
+                        
+                    for region in self._grp_cur_position[self.HDF5_GRP_FEATURE]:
+                        region_grp = self._grp_cur_position[self.HDF5_GRP_FEATURE][region]
+                        object_grp = self._grp_cur_position[self.HDF5_OTYPE_OBJECT][region]
+                        for obj_feat in ["object_features", "crack_contour", 
+                                         "center", "bounding_box", "orientation"]:
+                            if obj_feat in region_grp:
+                                key_data = region_grp.name + "/" + obj_feat
+                                value_data = region_grp[obj_feat].value
+                                
+                                
+                                key_desc = self._grp_def[self.HDF5_GRP_FEATURE][region][obj_feat].name
+                                value_desc = self._grp_def[self.HDF5_GRP_FEATURE][region][obj_feat].value
+                                
+                                feature_dict[(key_desc, key_data)] = (value_desc, value_data)
+                            
+                        key_data = object_grp.name
+                        value_data = object_grp.value
+                        
+                        
+                        key_desc = self._grp_def[self.HDF5_OTYPE_OBJECT][region].name
+                        value_desc = self._grp_def[self.HDF5_OTYPE_OBJECT][region].value
+                            
+                        object_dict[(key_desc, key_data)] = (value_desc, value_data)
+                        
+                        
+                    
+                except Exception as e:
                     print 'Loading of Hdf5 failed... '
                     self._logger.info('Loading of Hdf5 failed... ')
                     self._hdf5_reuse = False
@@ -231,24 +274,32 @@ class TimeHolder(OrderedDict):
                     raw_image_cpy = None
                     raw_image_str = None
                     raw_image_valid = None
+                    
+                    feature_dict=None
+                    object_dict=None
 
             self._hdf5_create_file_structure(self.hdf5_filename, (label_image_str, label_image_cpy, label_image_valid),
-                                                                 (raw_image_str, raw_image_cpy, raw_image_valid))
+                                                                 (raw_image_str, raw_image_cpy, raw_image_valid), feature_dict, object_dict)
 
             self._hdf5_write_global_definition()
+            
+    def get_well_position(self):
+        meta_data = self._meta_data
+
+        # Check for being wellbased or old style (B01_03 vs. 0037)
+        if meta_data.has_well_info:
+            well, subwell = meta_data.get_well_and_subwell(self.P)
+            position = str(subwell)
+        else:
+            well = "0"
+            position = self.P
+        return well, position
 
     def _hdf5_prepare_reuse(self):
-        self._hdf5_file = h5py.File(self.hdf5_filename, 'r')
+        self.cellh5_file = CH5File(self.hdf5_filename, 'r')
+        self._hdf5_file = self.cellh5_file.get_file_handle()
         try:
-            meta_data = self._meta_data
-
-            # Check for being wellbased or old style (B01_03 vs. 0037)
-            if meta_data.has_well_info:
-                well, subwell = meta_data.get_well_and_subwell(self.P)
-                position = str(subwell)
-            else:
-                well = "0"
-                position = self.P
+            well, position = self.get_well_position()
 
 
             self._grp_cur_position = self._hdf5_file['/sample/0/plate/%s/experiment/%s/position/%s' % (self.plate_id,
@@ -257,7 +308,7 @@ class TimeHolder(OrderedDict):
             self._grp_def = self._hdf5_file[self.HDF5_GRP_DEFINITION]
             return 0
         except:
-            self._hdf5_file.close()
+            self.cellh5_file.close()
             return 1
 
     def _hdf5_check_file(self):
@@ -285,10 +336,14 @@ class TimeHolder(OrderedDict):
                                                                                       well,
                                                                                       position,
                                                                                       self.HDF5_GRP_IMAGE)
+            # we check if the label image and raw image are in the cellh5 file
             if label_image_str in f and raw_image_str in f:
                 return True
             else:
-                return False
+                # if this is not the case, we would return False unless
+                # minimal_effort is set to True (in which case we might not need the segmentation)
+                return self.minimal_effort
+                #return False
         except:
             return False
         finally:
@@ -354,8 +409,9 @@ class TimeHolder(OrderedDict):
 
         for channel_name, combined, region_name in self._region_infos:
             obj_name = self._convert_region_name(channel_name, region_name, prefix='')
-            global_object_desc = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset(obj_name, (1,), global_object_dtype)
-            global_object_desc[0] = (obj_name, self.HDF5_OTYPE_REGION, '', '')
+            if obj_name not in self._grp_def[self.HDF5_GRP_OBJECT]:
+                global_object_desc = self._grp_def[self.HDF5_GRP_OBJECT].create_dataset(obj_name, (1,), global_object_dtype)
+                global_object_desc[0] = (obj_name, self.HDF5_OTYPE_REGION, '', '')
 
         # add basic relation objects (primary -> secondary etc)
         prim_obj_name = self._convert_region_name(self._region_infos[0][0], self._region_infos[0][2], prefix='')
@@ -411,15 +467,17 @@ class TimeHolder(OrderedDict):
 
         raise StopIteration
 
-    def _hdf5_create_file_structure(self, filename, label_info=(None, None, None), raw_info=(None, None, None)):
+    def _hdf5_create_file_structure(self, filename, label_info=(None, None, None), raw_info=(None, None, None), feature_dict=None, object_dict=None):
         label_image_str, label_image_cpy, label_image_valid = label_info
         raw_image_str, raw_image_cpy, raw_image_valid = raw_info
 
-        if hasattr(self, "_hdf5_file") and self._hdf5_file is not None:
+        if hasattr(self, "cellh5_file") and self.cellh5_file is not None:
             try:
-                self._hdf5_file.close()
+                self.cellh5_file.close()
             except:
                 print '_hdf5_create_file_structure(): Closing already opended file for rewrite'
+                
+        # TODO: This should be replaced with cellh5 API functions
         f = h5py.File(filename, 'w')
         self._hdf5_file = f
 
@@ -480,19 +538,32 @@ class TimeHolder(OrderedDict):
 
             if self._hdf5_file[raw_image_str].shape[0] != len(self._regions_to_idx):
                 self._hdf5_file[raw_image_str].resize(len(self._regions_to_idx), axis=0)
-
-    @staticmethod
-    def nc_valid_set(var, idx, value):
-        helper = var.valid
-        if len(helper.shape) == 0:
-            helper = value
-        else:
-            helper[idx] = value
-        var.valid = helper
+                
+        if feature_dict is not None:
+            if object_dict is not None:            
+                for (key_desc, key_data), (value_desc, value_data) in feature_dict.items():
+                    self._hdf5_file.create_dataset(key_desc, data=value_desc, compression=self._hdf5_compression)
+                    if not value_data.dtype == numpy.dtype('O'):
+                        d = self._hdf5_file.create_dataset(key_data, data=value_data, compression=self._hdf5_compression)
+                        d.attrs["reused"] = True
+                    else:
+                        d = self._hdf5_file.create_dataset(key_data, data=value_data, compression=self._hdf5_compression, dtype=h5py.new_vlen(str))
+                        d.attrs["reused"] = True
+                    
+                for (key_desc, key_data), (value_desc, value_data) in object_dict.items():
+                    d = self._hdf5_file.create_dataset(key_desc, data=value_desc, compression=self._hdf5_compression)
+                    d.attrs["reused"] = True
+                    d = self._hdf5_file.create_dataset(key_data, data=value_data, compression=self._hdf5_compression)
+                    d.attrs["reused"] = True
+                
+                
+                
+                
+        self.cellh5_file = CH5File(self._hdf5_file)
 
     def close_all(self):
         try:
-            self._hdf5_file.close()
+            self.cellh5_file.close()
         except:
             pass
 
@@ -528,6 +599,15 @@ class TimeHolder(OrderedDict):
         if not iT in self:
             self[iT] = OrderedDict()
         self[iT][channel.NAME] = channel
+    
+    def hdf_channel_frame_valid(self):
+        try:
+            frame_idx = self._frames_to_idx[self._iCurrentT]
+            if self._grp_cur_position[self.HDF5_GRP_IMAGE]['channel'].attrs['valid'][frame_idx]:
+                return True
+        except:
+            pass
+        return False
 
     def apply_segmentation(self, channel, *args):
         stop_watch = StopWatch(start=True)
@@ -561,50 +641,66 @@ class TimeHolder(OrderedDict):
                 else:
                     label_images_valid = False
                     break
+                
+        if label_images_valid:
+            self._logger.info('Label images %s loaded from hdf5 file in %s.'
+                              % (desc, stop_watch.interim()))   
 
         # only True if hdf_create and reuse and label_images are valid!
         if not label_images_valid:
-            # compute segmentation without (not loading from file)
-            channel.apply_segmentation(*args)
-            self._logger.info('Label images %s computed in %s.'
-                              %(desc, stop_watch.interim()))
-            # write segmentation back to file
-            if self._hdf5_create and self._hdf5_include_label_images:
-                meta = self._meta_data
-                w = meta.real_image_width
-                h = meta.real_image_height
-                z = meta.dim_z
-                t = len(self._frames_to_idx)
-                var_name = 'region'
-                grp = self._grp_cur_position[self.HDF5_GRP_IMAGE]
-                # create new group if it does not exist yet!
-                if var_name in grp and grp[var_name].shape[0] == len(self._regions_to_idx2):
-                    var_labels = grp[var_name]
-                else:
-                    nr_labels = len(self._regions_to_idx2)
-                    var_labels = \
-                        grp.create_dataset(var_name,
-                                           (nr_labels, t, z, h, w),
-                                           'uint16',
-                                           chunks=chunk_size((nr_labels, t, z, h, w)),
-                                           compression=self._hdf5_compression)
-                    var_labels.attrs['valid'] = numpy.zeros(t)
-
-                frame_idx = self._frames_to_idx[self._iCurrentT]
+                        
+            # in this case, we do not necessarily calculate a segmentation
+            # this is not ideal if the data is to be browsed.            
+            if self.minimal_effort: 
+                self._logger.info('No segmentation calculated or loaded for %s (overhead: %s)'
+                                  % (desc, stop_watch.interim()))
                 for region_name in self.reginfo.names[channel_name]:
-                    if channel.is_virtual():
-                        continue
-                    idx = self._regions_to_idx2[(channel.NAME, region_name)]
-                    container = channel.containers[region_name]
-                    array = container.img_labels.toArray(copy=False)
-                    var_labels[idx, frame_idx, 0] = numpy.require(array, 'uint16')
-                    ### Workaround... h5py attributes do not support transparent list types...
-                    tmp = var_labels.attrs['valid']
-                    tmp[frame_idx] = 1
-                    var_labels.attrs['valid'] = tmp
-        else:
-            self._logger.info('Label images %s loaded from hdf5 file in %s.'
-                              % (desc, stop_watch.interim()))
+                    channel.containers[region_name] = None
+            else:                
+                # compute segmentation (not loading from file)
+                channel.apply_segmentation(*args)
+            
+                self._logger.info('Label images %s computed in %s.'
+                              %(desc, stop_watch.interim()))
+                # write segmentation back to file
+                if self._hdf5_create and self._hdf5_include_label_images:
+                    meta = self._meta_data
+                    w = meta.real_image_width
+                    h = meta.real_image_height
+                    
+                    # CellCognition is always working on one z-slice for know and thus saves only one
+                    #z = meta.dim_z
+                    z = 1
+                    
+                    t = len(self._frames_to_idx)
+                    var_name = 'region'
+                    grp = self._grp_cur_position[self.HDF5_GRP_IMAGE]
+                    # create new group if it does not exist yet!
+                    if var_name in grp and grp[var_name].shape[0] == len(self._regions_to_idx2):
+                        var_labels = grp[var_name]
+                    else:
+                        nr_labels = len(self._regions_to_idx2)
+                        var_labels = \
+                            grp.create_dataset(var_name,
+                                               (nr_labels, t, z, h, w),
+                                               'uint16',
+                                               chunks=chunk_size((nr_labels, t, z, h, w)),
+                                               compression=self._hdf5_compression)
+                        var_labels.attrs['valid'] = numpy.zeros(t)
+    
+                    frame_idx = self._frames_to_idx[self._iCurrentT]
+                    for region_name in self.reginfo.names[channel_name]:
+                        if channel.is_virtual():
+                            continue
+                        idx = self._regions_to_idx2[(channel.NAME, region_name)]
+                        container = channel.containers[region_name]
+                        array = container.img_labels.toArray(copy=False)
+                        var_labels[idx, frame_idx, 0] = numpy.require(array, 'uint16')
+                        ### Workaround... h5py attributes do not support transparent list types...
+                        tmp = var_labels.attrs['valid']
+                        tmp[frame_idx] = 1
+                        var_labels.attrs['valid'] = tmp
+        return
 
     def prepare_raw_image(self, channel):
         if channel.is_virtual():
@@ -652,7 +748,10 @@ class TimeHolder(OrderedDict):
                 w = meta.real_image_width
                 h = meta.real_image_height
 
-                z = meta.dim_z
+                # CellCognition is always working on one z-slice for know and thus saves only one
+                # z = meta.dim_z 
+                z = 1
+                
                 t = len(self._frames_to_idx)
                 ncolors = len(set(self._channels_to_idx.values()))
                 var_name = 'channel'
@@ -681,11 +780,133 @@ class TimeHolder(OrderedDict):
     def _get_feature_group(self):
         grp_object_features = self._grp_cur_position.require_group(self.HDF5_GRP_FEATURE)
         return grp_object_features
+    
+    def _apply_features_from_hdf5(self, channel):
+        channel._features_calculated = True
+        channel_name = channel.NAME.lower()
+        for region_name, container in channel.containers.iteritems():
+
+            well, position = self.get_well_position()
+            frame_idx = self._frames_to_idx[self._iCurrentT]
+            
+            combined_region_name = self._convert_region_name(channel_name, region_name, '')
+            
+            cur_pos = self.cellh5_file.get_position(well, position)
+            
+            # cast to tuple to enable cashing
+            current_object_idx = tuple(cur_pos.get_object_idx(combined_region_name, frame_idx))
+            
+            object_holder = ObjectHolder(region_name)
+                        
+            object_features = cur_pos.get_object_features(combined_region_name, current_object_idx)
+                
+            object_feature_names = list(self.cellh5_file.object_feature_def(combined_region_name))
+            try:
+                eccentricity_idx = self.cellh5_file.get_object_feature_idx_by_name(combined_region_name, 'eccentricity')
+            except ValueError:
+                eccentricity_idx = None
+
+            try: 
+                crack_contours = cur_pos.get_crack_contour(current_object_idx, combined_region_name, bb_corrected=False)
+            except:
+                crack_contours = None            
+
+            if not container is None:
+                # in this case a container is present (segmentation and images have been found/computed)
+                for j, (obj_id, c_obj) in enumerate(container.getObjects().iteritems()):
+                    # build a new ImageObject
+                    obj = ImageObject(c_obj)
+                    obj.iId = obj_id
+                    if len(crack_contours) > 0:
+                        obj.crack_contour = crack_contours[j]
+                    else:
+                        # Fallback if cracks are not safed in cellh5
+                        ul = obj.oRoi.upperLeft
+                        crack = [(pos[0] + ul[0], pos[1] + ul[1])
+                                 for pos in
+                                 container.getCrackCoordinates(obj_id)]
+                        obj.crack_contour = crack
+
+                    if 'moments' in channel.lstFeatureCategories and eccentricity_idx is not None:
+                        obj.orientation = Orientation(angle = c_obj.orientation,
+                                                      eccentricity = object_features[j, eccentricity_idx])
+
+                    # assign feature values in sorted order as NumPy array
+                    obj.aFeatures = object_features[j, :]
+                    object_holder[obj_id] = obj
+
+                channel.lstFeatureNames = object_feature_names
+                object_holder.feature_names = channel.lstFeatureNames
+
+            elif len(object_feature_names) > 0 and object_features.shape[1] == len(object_feature_names):
+                # TODO: additional check whether features are in the cellh5 file
+                
+                # in this case, we would take the values from the cellh5 file                
+                orientation = cur_pos.get_orientation(current_object_idx, combined_region_name)                                
+                bounding_box = cur_pos.get_bounding_box(current_object_idx, combined_region_name)
+                center = cur_pos.get_center(current_object_idx, combined_region_name)
+                
+                # get_object_feature_by_name gives back all feature values for the specified feature (for all timepoints)
+                #bounding_box = cur_pos.get_object_feature_by_name("bounding_box")
+                #center = cur_pos.get_object_feature_by_name("center")
+
+                # loop over detected objects
+                for j, index in enumerate(current_object_idx):
+                    
+                    # label of the object (corresponding to the label value in the label image)
+                    obj_id = cur_pos.get_obj_label_id(index)
+                    
+                    bb = bounding_box[j]
+                    #ul = (bb[0], bb[1])
+                    #lr = (bb[0] + bb[2], bb[1] + bb[3])
+                    c = center[j]
+                    
+                    # region 
+                    reg = Region(tplCoords=(bb[0], bb[2], bb[1], bb[3]))
+                                        
+                    # build object 
+                    obj = ImageObject(iId = obj_id)
+                    obj.oRoi = reg
+                    obj.oCenterAbs = c
+
+                    # if crack contours are saved in the cellh5, we read them. 
+                    # otherwise, we would just leave this None.                    
+                    if not crack_contours is None and len(crack_contours) > 0:
+                        obj.crack_contour = crack_contours[j]
+
+                    # set orientation
+                    if eccentricity_idx is not None:
+                        obj.orientation = Orientation(angle = orientation[j],
+                                                      eccentricity = object_features[j, eccentricity_idx])
+                    
+                    # assign feature values in sorted order as NumPy array
+                    obj.aFeatures = object_features[j, :]
+                    object_holder[obj_id] = obj
+
+                channel.lstFeatureNames = object_feature_names
+                object_holder.feature_names = channel.lstFeatureNames
+                
+            else:
+                print 'no features found in cellh5 file'
+            channel._regions[region_name] = object_holder
 
     def apply_features(self, channel):
+        stop_watch = StopWatch(start=True)
         channel_name = channel.NAME.lower()
-        channel.apply_features()
+                
+        if self._hdf5_found and self._hdf5_reuse and (self.hdf_channel_frame_valid() or self.minimal_effort):
+        #if self._hdf5_found and self._hdf5_reuse and self.hdf_channel_frame_valid():
+            self._apply_features_from_hdf5(channel)
+            how = "loaded"
+        else:
+            channel.apply_features()
+            how = "computed"
+        desc = '[P %s, T %05d, C %s]' % (self.P, self._iCurrentT,
+                                         channel.strChannelId)
+        self._logger.info('object %s %s in %s.'
+                              %(desc, how, stop_watch.interim()))
 
+        
         if self._hdf5_create:
             grp_cur_pos = self._grp_cur_position
             grp_feature = self._get_feature_group()
@@ -714,6 +935,12 @@ class TimeHolder(OrderedDict):
                     dset_tmp = global_def_group.create_dataset('object_features', (nr_features,), [('name', '|S512')])
                     if nr_features > 0:
                         dset_tmp[:] = feature_names
+                elif ('object_features' in global_def_group) and (len(global_def_group['object_features']) == 0):
+                    if nr_features > 0:
+                        del global_def_group['object_features']
+                        dset_tmp = global_def_group.create_dataset('object_features', (nr_features,), [('name', '|S512')])
+                        dset_tmp[:] = feature_names
+                    
                 if 'crack_contour' not in global_def_group:
                     dset_tmp = global_def_group.create_dataset('crack_contour', (1,), [('name', '|S512')])
                     dset_tmp[:] = ('contour_polygon',)
@@ -737,9 +964,13 @@ class TimeHolder(OrderedDict):
                                                           maxshape=(None,))
                     offset = 0
                 else:
-                    dset_idx_relation = grp_cur_pos[self.HDF5_GRP_OBJECT][combined_region_name]
-                    offset = len(dset_idx_relation)
-                    dset_idx_relation.resize((nr_objects + offset,))
+                    if not "reused" in grp_cur_pos[self.HDF5_GRP_OBJECT][combined_region_name].attrs.keys():
+                        dset_idx_relation = grp_cur_pos[self.HDF5_GRP_OBJECT][combined_region_name]
+                        offset = len(dset_idx_relation)
+                        dset_idx_relation.resize((nr_objects + offset,))
+                    else:
+                        offset = 0
+                        
 
                 # create mapping from primary to secondary, tertiary, etc
                 if channel_name != PrimaryChannel.PREFIX:
@@ -774,8 +1005,9 @@ class TimeHolder(OrderedDict):
                                                           compression=self._hdf5_compression,
                                                           maxshape=(None,))
                 else:
-                    dset_bounding_box = grp_region_features['bounding_box']
-                    dset_bounding_box.resize((nr_objects + offset,))
+                    if not "reused" in grp_region_features['bounding_box'].attrs.keys():
+                        dset_bounding_box = grp_region_features['bounding_box']
+                        dset_bounding_box.resize((nr_objects + offset,))
 
                 # Create dataset for orientation
                 if 'orientation' not in grp_region_features:
@@ -789,10 +1021,11 @@ class TimeHolder(OrderedDict):
                                                       compression=self._hdf5_compression,
                                                       maxshape=(None,))
                 else:
-                    dset_orientation = grp_region_features['orientation']
-                    dset_orientation.resize((nr_objects + offset,))
+                    if not "reused" in grp_region_features['orientation'].attrs.keys():
+                        dset_orientation = grp_region_features['orientation']
+                        dset_orientation.resize((nr_objects + offset,))
 
-                # Create dataset for center
+                # Create dataset for center                
                 if 'center' not in grp_region_features:
                     dtype = numpy.dtype([('x', 'int32'),
                                          ('y', 'int32'),])
@@ -804,8 +1037,9 @@ class TimeHolder(OrderedDict):
                                                           compression=self._hdf5_compression,
                                                           maxshape=(None,))
                 else:
-                    dset_center = grp_region_features['center']
-                    dset_center.resize((nr_objects + offset,))
+                    if not "reused" in grp_region_features['center'].attrs.keys():
+                        dset_center = grp_region_features['center']
+                        dset_center.resize((nr_objects + offset,))
 
                 if (self._hdf5_include_features or self._hdf5_include_classification):
                     # Create dataset for center
@@ -815,9 +1049,13 @@ class TimeHolder(OrderedDict):
                                                           dtype='float',
                                                           compression=self._hdf5_compression,
                                                           maxshape=(None, nr_features))
-                    else:
-                        dset_object_features = grp_region_features['object_features']
-                        dset_object_features.resize((nr_objects + offset, nr_features))
+                    elif nr_objects > 0:
+                        if not "reused" in grp_region_features['object_features'].attrs.keys():
+                            dset_object_features = grp_region_features['object_features']
+                            dset_object_features.resize(nr_objects + offset, axis=0)
+                            # This I do not understand: if you set this to false, 
+                            # features are not written for the following frames ! 
+                            # self._hdf5_include_features = False
 
                 if self._hdf5_include_crack:
                     if 'crack_contour' not in grp_region_features:
@@ -825,11 +1063,11 @@ class TimeHolder(OrderedDict):
                         dset_crack_contour = grp_region_features.create_dataset('crack_contour',
                                                 (nr_objects, ), dt,
                                                 chunks=(nr_objects if nr_objects > 0 else 1, ),
-                                                compression=self._hdf5_compression,
                                                 maxshape=(None,))
                     else:
-                        dset_crack_contour = grp_region_features['crack_contour']
-                        dset_crack_contour.resize((nr_objects + offset, ))
+                        if not "reused" in grp_region_features['crack_contour'].attrs.keys():
+                            dset_crack_contour = grp_region_features['crack_contour']
+                            dset_crack_contour.resize((nr_objects + offset, ))
 
 
                 frame_idx = self._frames_to_idx[self._iCurrentT]
@@ -844,21 +1082,27 @@ class TimeHolder(OrderedDict):
                     self._object_coord_to_id[(channel.PREFIX, coord)] = new_obj_id
                     self._object_coord_to_idx[(channel.PREFIX, coord)] = idx_new
 
-                    dset_bounding_box[idx + offset] = obj.oRoi.upperLeft[0], obj.oRoi.lowerRight[0], obj.oRoi.upperLeft[1], obj.oRoi.lowerRight[1]
-                    dset_center[idx + offset] = obj.oCenterAbs
+                    if not "reused" in grp_region_features['bounding_box'].attrs.keys():
+                        dset_bounding_box[idx + offset] = obj.oRoi.upperLeft[0], obj.oRoi.lowerRight[0], obj.oRoi.upperLeft[1], obj.oRoi.lowerRight[1]
+                    if not "reused" in grp_region_features['center'].attrs.keys():
+                        dset_center[idx + offset] = obj.oCenterAbs
 
                     # is case one don't wants nan's written to the hdf5 file
                     # if np.isnan(obj.orientation.angle)
-                    dset_orientation[idx + offset] = obj.orientation.angle, obj.orientation.eccentricity
-                    dset_idx_relation[idx + offset] = frame_idx, obj_id
+                    if not "reused" in grp_region_features['orientation'].attrs.keys():
+                        dset_orientation[idx + offset] = obj.orientation.angle, obj.orientation.eccentricity
+                    if not "reused" in grp_cur_pos[self.HDF5_GRP_OBJECT][combined_region_name].attrs.keys():
+                        dset_idx_relation[idx + offset] = frame_idx, obj_id
 
                     if self._hdf5_include_features:
                         if len(obj.aFeatures) > 0:
-                            dset_object_features[idx + offset] = obj.aFeatures
+                            if not "reused" in grp_region_features['object_features'].attrs.keys():
+                                dset_object_features[idx + offset] = obj.aFeatures
 
                     if self._hdf5_include_crack:
-                        data = ','.join(map(str, numpy.array(obj.crack_contour).flatten()))
-                        dset_crack_contour[idx + offset] = base64.b64encode(zlib.compress(data))
+                        if not "reused" in grp_region_features['crack_contour'].attrs.keys():
+                            data = ','.join(map(str, numpy.array(obj.crack_contour).flatten()))
+                            dset_crack_contour[idx + offset] = base64.b64encode(zlib.compress(data))
 
                     if channel_name != PrimaryChannel.PREFIX:
                         dset_cross_rel[idx + offset] = (idx, idx)

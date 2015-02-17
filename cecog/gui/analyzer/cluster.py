@@ -35,8 +35,9 @@ from cecog.gui.util import exception, information, warning
 from cecog.gui.progressdialog import ProgressDialog
 
 from cecog import JOB_CONTROL_RESUME, JOB_CONTROL_SUSPEND, \
-    JOB_CONTROL_TERMINATE, VERSION
+    JOB_CONTROL_TERMINATE
 
+from cecog.version import version
 
 class ClusterDisplay(QGroupBox):
 
@@ -49,7 +50,8 @@ class ClusterDisplay(QGroupBox):
         self._toggle_state = JOB_CONTROL_SUSPEND
         self._service = None
 
-        self._host_url = CecogEnvironment.analyzer_config.get('Cluster', 'host_url')
+        self._host_url = CecogEnvironment.analyzer_config.get(
+            'Cluster', 'host_url')
         try:
             self._host_url_fallback = CecogEnvironment.analyzer_config.get(\
                 'Cluster', 'host_url_fallback')
@@ -140,6 +142,15 @@ class ClusterDisplay(QGroupBox):
                        10, 0, 1, 5)
 
     @property
+    def jobIds(self):
+        return self._txt_jobid.text()
+
+    @jobIds.setter
+    def jobIds(self, jobids):
+        self._txt_jobid.setText(jobids)
+        self._jobid = str(jobids)
+
+    @property
     def imagecontainer(self):
         if self._imagecontainer is None:
             raise RuntimeError("Image container is not loaded yet")
@@ -183,7 +194,7 @@ class ClusterDisplay(QGroupBox):
             settings_str = self._submit_settings.to_string()
             func = lambda: self._service.submit_job('cecog_batch', settings_str,
                                                     path_out, emails, nr_items,
-                                                    position_granularity, VERSION)
+                                                    position_granularity, version)
             self.dlg.exec_(func)
             jobid = self.dlg.getTargetResult()
         except Exception as e:
@@ -239,8 +250,10 @@ class ClusterDisplay(QGroupBox):
         information(self, 'Cluster update', "Message: '%s'" % txt)
 
     def _update_job_status(self):
+
         try:
             self.dlg = ProgressDialog("updating job status...", None, 0, 0, self)
+
             func = lambda: self._service.get_job_status(self._jobid)
             self.dlg.exec_(func)
             txt = self.dlg.getTargetResult()
@@ -286,9 +299,9 @@ class ClusterDisplay(QGroupBox):
             except Exception as e:
                 exception(self, msg + '(%s)' %str(e))
             else:
-                if not VERSION in set(cluster_versions):
+                if not version in set(cluster_versions):
                     warning(self, 'Cecog version %s not supported by the cluster' %
-                            VERSION, 'Valid versions are: %s' \
+                            version, 'Valid versions are: %s' \
                                 % ', '.join(cluster_versions))
                 else:
                     success = True
@@ -382,7 +395,8 @@ class ClusterFrame(BaseFrame, ExportSettings):
         super(ClusterFrame, self).__init__(settings, parent, name)
 
         self._cluster_display = self._add_frame()
-        self.add_group(None, [('position_granularity', (0,0,1,1)), ], label='Cluster Settings')
+        self.add_group(None, [('position_granularity', (0,0,1,1)), ],
+                       label='Cluster Settings')
 
     def _add_frame(self):
         frame = self._get_frame()
@@ -396,3 +410,9 @@ class ClusterFrame(BaseFrame, ExportSettings):
 
     def set_imagecontainer(self, imagecontainer):
         self._cluster_display.imagecontainer = imagecontainer
+
+    def get_jobids(self):
+        return self._cluster_display.jobIds
+
+    def restore_jobids(self, jobids):
+        self._cluster_display.jobIds = jobids

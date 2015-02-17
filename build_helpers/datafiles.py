@@ -48,8 +48,8 @@ EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
             '_tkagg',
             'Tkinter',
             'zmq',
-			'wx']
-			
+            'wx']
+
 CC_INCLUDES = ['csrc/include'] + \
     numpy.distutils.misc_util.get_numpy_include_dirs()
 

@@ -8,7 +8,6 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
-from cecog.gui.util import information
 
 __author__ = 'Michael Held, Thomas Walter'
 __date__ = '$Date$'
@@ -27,12 +26,13 @@ sip.setapi('QVariant', 2)
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
+from cecog.gui.util import information
+
 
 from cecog.gui.imageviewer import ImageViewer
 from cecog.gui.modules.module import ModuleManager
 from cecog.gui.analyzer import _ProcessorMixin
 from cecog.analyzer.core import AnalyzerBrowser
-from cecog.analyzer.channel import PrimaryChannel
 from cecog.io.imagecontainer import Coordinate
 from cecog.gui.modules.navigation import NavigationModule
 from cecog.gui.modules.display import DisplayModule
@@ -356,7 +356,6 @@ class Browser(QMainWindow):
         settings.set2('framerange_begin', self.coordinate.time)
         settings.set2('framerange_end', self.coordinate.time)
 
-        prim_id = PrimaryChannel.NAME
         settings.set_section('Processing')
         _classify_objects = self._show_objects_by == 'classification'
 
@@ -364,8 +363,8 @@ class Browser(QMainWindow):
         settings.set2('secondary_classification', _classify_objects)
         settings.set2('tertiary_classification', _classify_objects)
         settings.set2('merged_classification', _classify_objects)
-        settings.set2('primary_featureextraction', True)
-        settings.set2('secondary_featureextraction', True)
+        settings.set2('primary_featureextraction', _classify_objects)
+        settings.set2('secondary_featureextraction', _classify_objects)
 
         settings.set2('objectdetection', self._detect_objects)
         settings.set2('tracking', False)
@@ -391,7 +390,6 @@ class Browser(QMainWindow):
         settings.set('Output', 'export_tracking_as_dot', False)
 
         nchannels = len(self._imagecontainer.channels)
-
         # XXX channel mapping unclear
         # processing channel <--> color channel
         # i.e problems if 2 processing channels have the same color
@@ -617,8 +615,8 @@ def load_settings(settings_file):
 if __name__ == "__main__":
     import sys
     from cecog.environment import CecogEnvironment
-    from cecog import VERSION
-    environ = CecogEnvironment(VERSION)
+    from cecog.version import version
+    environ = CecogEnvironment(version)
     app = QApplication(sys.argv)
 
     settings = load_settings('C:/Users/sommerc/data/cecog/Settings/exp911_version_140.conf')

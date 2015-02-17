@@ -21,7 +21,8 @@ import logging
 from PyQt4 import QtGui
 from PyQt4 import QtCore
 
-from cecog import CHANNEL_PREFIX, VERSION
+from cecog import CHANNEL_PREFIX
+from cecog.version import version
 from cecog import CH_OTHER, CH_VIRTUAL, CH_PRIMARY
 from cecog.gui.analyzer import BaseProcessorFrame, AnalyzerThread
 from cecog.gui.analyzer import ErrorCorrectionThread, MultiAnalyzerThread
@@ -33,7 +34,7 @@ class ExportSettings(object):
 
     def get_export_settings(self, settings, has_timelapse=True):
         settings = BaseProcessorFrame.get_special_settings(settings, has_timelapse)
-        settings.set('General', 'version', VERSION)
+        settings.set('General', 'version', version)
 
         settings.set('General', 'rendering', {})
         settings.set('General', 'rendering_class', {})
@@ -41,10 +42,10 @@ class ExportSettings(object):
         show_ids = settings.get('Output', 'rendering_contours_showids')
         show_ids_class = settings.get('Output', 'rendering_class_showids')
 
-        # set propertys of merged channel to the same as for Primary
+        # set properties of merged channel to the same as for Primary
         for prefix in CH_PRIMARY+CH_OTHER:
             if prefix == CH_PRIMARY[0] \
-                    or settings.get('General', 'process_%s' % prefix):
+                    or settings.get('General', 'process_%s' %prefix):
 
                 d = {} # render settings for contours
                 for x in self.plugin_mgr.region_info.names[prefix]:
@@ -58,7 +59,8 @@ class ExportSettings(object):
 
             # render settings for classifications
             d = {}
-            if settings.get('Processing', '%s_classification' % prefix):
+            if  (settings.get('General', 'process_%s' %prefix) and \
+                 settings.get('Processing', '%s_classification' % prefix)):
                 for x in self.plugin_mgr.region_info.names[prefix]:
                     if x == settings.get('Classification', '%s_classification_regionname' % prefix) or \
                             prefix == CH_VIRTUAL[0]:

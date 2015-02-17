@@ -22,7 +22,7 @@ from multiprocessing import Pool
 
 from PyQt4 import QtCore
 
-from cecog import VERSION
+from cecog.version import version
 from cecog.util.stopwatch import StopWatch
 from cecog.threads.link_hdf import link_hdf5_files
 from cecog.analyzer.core import AnalyzerCore
@@ -191,7 +191,7 @@ class MultiAnalyzerThread(AnalyzerThread):
 
             for pos in _positions:
                 jobs.append((plate, self._settings.to_dict() , self._imagecontainer, pos,
-                             VERSION))
+                             version))
 
         # submit the jobs
         callback = ProgressCallback(self, len(jobs), self.ncpu)
