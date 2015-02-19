@@ -20,6 +20,7 @@ __all__ = ['ProcessingFrame']
 import logging
 from PyQt5 import QtGui
 from PyQt5 import QtCore
+from PyQt5 import QtWidgets
 
 from cecog import CHANNEL_PREFIX
 from cecog.version import version
@@ -141,7 +142,7 @@ class ExportSettings(object):
         return settings
 
 
-class SubProcessLogWindow(QtGui.QWidget):
+class SubProcessLogWindow(QtWidgets.QWidget):
 
     on_msg_received = QtCore.pyqtSignal(str, str, int)
 
@@ -153,10 +154,11 @@ class SubProcessLogWindow(QtGui.QWidget):
 
         self.resize(800, 600)
 
-        self._layout = QtGui.QVBoxLayout(self)
+        self._layout = QtWidgets.QVBoxLayout(self)
         self._layout.setContentsMargins(4, 4, 4, 4)
-        self._layout.addWidget(QtGui.QLabel('Process logs for each child process'))
-        self.tab_widget = QtGui.QTabWidget()
+        self._layout.addWidget(
+            QtWidgets.QLabel('Process logs for each child process'))
+        self.tab_widget = QtWidgets.QTabWidget()
         self.tab_widget.setUsesScrollButtons(True)
         self._layout.addWidget(self.tab_widget)
         self.on_msg_received.connect(self.on_show_msg)
@@ -165,7 +167,7 @@ class SubProcessLogWindow(QtGui.QWidget):
         self.tab_widget.clear()
         self.items = {}
         for p in sub_process_names:
-            lw = QtGui.QPlainTextEdit(self.tab_widget)
+            lw = QtWidgets.QPlainTextEdit(self.tab_widget)
             lw.setReadOnly(True)
             self.items[p] = lw
             self.tab_widget.addTab(lw, p)
@@ -183,7 +185,7 @@ class SubProcessLogWindow(QtGui.QWidget):
         else:
             msg = "<font color='black'>" + msg + '</font>'
         self.items[name].appendHtml(msg.replace('\n', '<br>'))
-        self.items[name].moveCursor(QtGui.QTextCursor.End)
+        self.items[name].moveCursor(QtWidgets.QTextCursor.End)
 
     def on_msg_received_emit(self, record, formated_msg):
         self.on_msg_received.emit(record.name, formated_msg, record.levelno)

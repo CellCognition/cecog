@@ -56,8 +56,7 @@ class LogWindow(QDialog):
         layout.addWidget(QLabel('Log level', self), 1, 0, Qt.AlignRight)
         combo = QComboBox(self)
         layout.addWidget(combo, 1, 1, Qt.AlignLeft)
-        self.connect(combo, SIGNAL('currentIndexChanged(const QString &)'),
-                     self._on_level_changed)
+        combo.currentIndexChanged[str].connect(self._on_level_changed)
         for name in sorted(self.LEVELS, key=lambda x: self.LEVELS[x]):
             combo.addItem(name)
         self._msg_buffer = []

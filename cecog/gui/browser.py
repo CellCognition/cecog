@@ -26,12 +26,12 @@ sip.setapi('QVariant', 2)
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from PyQt5.Qt import *
+
 from cecog.gui.util import information
 
 
 from cecog.gui.imageviewer import ImageViewer
 from cecog.gui.modules.module import ModuleManager
-from cecog.gui.analyzer import _ProcessorMixin
 from cecog.analyzer.core import AnalyzerBrowser
 from cecog.io.imagecontainer import Coordinate
 from cecog.gui.modules.navigation import NavigationModule

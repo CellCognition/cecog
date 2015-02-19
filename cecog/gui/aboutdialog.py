@@ -11,12 +11,13 @@ __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
 from PyQt5 import QtGui
+from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 
 from cecog import version
 
 
-class CecogAboutDialog(QtGui.QDialog):
+class CecogAboutDialog(QtWidgets.QDialog):
 
     def __init__(self, *args, **kw):
         super(CecogAboutDialog, self).__init__(*args, **kw)
