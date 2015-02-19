@@ -41,9 +41,9 @@ class TraitDisplayMixin(QtWidgets.QFrame):
 
     DISPLAY_NAME = None
 
-    def __init__(self, settings, parent=None, name=None, *args, **kw):
-                 # parent=None, has_label_link=True, label_click_callback=None,
-                 # *args, **kw):
+    def __init__(self, settings,
+                 parent=None, has_label_link=True, label_click_callback=None,
+                 *args, **kw):
 
         super(TraitDisplayMixin, self).__init__(parent, *args, **kw)
         self._registry = {}
@@ -52,8 +52,8 @@ class TraitDisplayMixin(QtWidgets.QFrame):
         self._final_handlers = {}
         self._tab_name = None
         self._input_cnt = 0
-        self._has_label_link = True #has_label_link
-        self._label_click_callback = None # abel_click_callback
+        self._has_label_link = has_label_link
+        self._label_click_callback = label_click_callback
 
     def get_name(self):
         return self.name if self.DISPLAY_NAME is None \
