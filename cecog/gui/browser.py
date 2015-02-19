@@ -27,8 +27,11 @@ from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from PyQt5.Qt import *
 
+from PyQt5 import QtWidgets
+
 from cecog.gui.util import information
 
+from cecog.gui.analyzer import BaseProcessorFrame
 
 from cecog.gui.imageviewer import ImageViewer
 from cecog.gui.modules.module import ModuleManager
@@ -275,7 +278,10 @@ class Browser(QMainWindow):
             action.setToolTip(tooltip)
             action.setStatusTip(tooltip)
         if slot is not None:
-            self.connect(action, SIGNAL(signal), slot, Qt.DirectConnection)
+            if signal == "triggered()":
+                action.triggered.connect(slot, Qt.DirectConnection)
+            else:
+                action.triggered[bool].connect(slot, Qt.DirectConnection)
         if checkable is not None:
             action.setCheckable(True)
         action.setChecked(checked)
@@ -347,7 +353,7 @@ class Browser(QMainWindow):
 
     def _process_image(self, ):
         self.image_viewer.remove_objects()
-        settings = _ProcessorMixin.get_special_settings(self._settings)
+        settings = BaseProcessorFrame.get_special_settings(self._settings)
         settings.set_section('General')
         settings.set2('constrain_positions', True)
         settings.set2('positions', self.coordinate.position)

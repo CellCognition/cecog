@@ -45,7 +45,9 @@ class ProgressThread(QtCore.QThread):
             self.msleep(150)
             if self._qobjects is not None:
                 for qobject in self._qobjects:
-                    qobject.moveToThread(QtGui.QApplication.instance().thread())
+                    qobject.moveToThread(
+                        QtWidgets.QApplication.instance().thread())
+        self.result.emit(result)
 
 
 class ProgressObject(QtCore.QObject):
@@ -118,7 +120,7 @@ class ProgressDialog(QtWidgets.QProgressDialog):
 
 
 if __name__ == '__main__':
-    app = QtGui.QApplication([''])
+    app = QtWidgets.QApplication([''])
 
     import time
     dlg = ProgressDialog('labeltext', "buttontext", 0, 0, None)

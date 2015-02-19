@@ -231,8 +231,9 @@ class ImageViewer(QGraphicsView):
         # mouse cursor and mapped scene position seem now to match exactly.
         # increased the search radius from a point to a 3x3 square around
         # the point to identify the scene item
+
         items = scene.items(point.x()-1, point.y()-1, 3, 3,
-                            Qt.IntersectsItemShape)
+                            Qt.IntersectsItemShape, Qt.AscendingOrder)
         items = [i for i in items if isinstance(i, HoverPolygonItem)]
         if len(items) > 0:
             found_item = items[0]
@@ -268,9 +269,8 @@ class ImageViewer(QGraphicsView):
             self.scale_to_fit()
 
     def wheelEvent(self, event):
-
         if event.modifiers() == Qt.ControlModifier:
-            if event.delta() > 0:
+            if event.angleDelta().y() > 0:
                 factor = 1.1
             else:
                 factor = 0.9
