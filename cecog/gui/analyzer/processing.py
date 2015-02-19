@@ -185,7 +185,7 @@ class SubProcessLogWindow(QtWidgets.QWidget):
         else:
             msg = "<font color='black'>" + msg + '</font>'
         self.items[name].appendHtml(msg.replace('\n', '<br>'))
-        self.items[name].moveCursor(QtWidgets.QTextCursor.End)
+        self.items[name].moveCursor(QtGui.QTextCursor.End)
 
     def on_msg_received_emit(self, record, formated_msg):
         self.on_msg_received.emit(record.name, formated_msg, record.levelno)

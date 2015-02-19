@@ -448,6 +448,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
                 browser.setFocus()
                 self._browser = browser
             except Exception as e:
+                traceback.print_exc()
                 QMessageBox.critical(self, "Error", str(e))
         else:
             self._browser.show()
@@ -694,7 +695,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
                 if os.path.isfile(settings_filename):
                     home = settings_filename
             filename = QtWidgets.QFileDialog.getOpenFileName( \
-               self, 'Open config file', home, ';;'.join(self.NAME_FILTERS))
+               self, 'Open config file', home, ';;'.join(self.NAME_FILTERS))[0]
             if not bool(filename):
                 return
 
