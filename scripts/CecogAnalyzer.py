@@ -33,7 +33,7 @@ sip.setapi('QString', 2)
 sip.setapi('QVariant', 2)
 sip.setapi('QUrl', 2)
 
-from PyQt4 import QtGui
+from PyQt5 import QtGui
 
 try:
     # if some packages were not included in the bundle

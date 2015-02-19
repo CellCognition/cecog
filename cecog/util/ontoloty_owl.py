@@ -1,7 +1,7 @@
 import rdflib
 from ontospy.ontospy import Ontology
-from PyQt4 import QtGui, QtCore
-from PyQt4.QtCore import pyqtSignal
+from PyQt5 import QtGui, QtCore
+from PyQt5.QtCore import pyqtSignal
 from cecog.environment import CecogEnvironment
 import os
 import sys

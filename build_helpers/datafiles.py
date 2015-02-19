@@ -46,9 +46,9 @@ INCLUDES = [ 'sip',
              'sklearn.neighbors.typedefs',
              'sklearn.utils.weight_vector' ]
 
-EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
-            'PyQt4.QtOpenGL', 'PyQt4.QtScript', 'PyQt4.QtSql',
-            'PyQt4.QtTest', 'PyQt4.QtWebKit', 'PyQt4.QtXml', 'PyQt4.phonon'
+EXCLUDES = ['PyQt5.QtDesigner', 'PyQt5.QtNetwork',
+            'PyQt5.QtOpenGL', 'PyQt5.QtScript', 'PyQt5.QtSql',
+            'PyQt5.QtTest', 'PyQt5.QtWebKit', 'PyQt5.QtXml', 'PyQt5.phonon'
             '_gtkagg', '_cairo', '_gtkcairo', '_fltkagg',
             '_tkagg',
             'Tkinter',

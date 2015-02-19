@@ -29,7 +29,7 @@ if not os.environ.has_key("ARCHFLAGS"):
     os.environ["ARCHFLAGS"] = "-arch x86_64"
 
 py2app_opts = {'excludes': build_helpers.EXCLUDES,
-               'includes': ['sip', 'PyQt4', 'PyQt4.QtCore', 'PyQt4.QtGui']}
+               'includes': ['sip', 'PyQt5', 'PyQt5.QtCore', 'PyQt5.QtGui']}
 
 pyrcc_opts = {'infile': 'cecog.qrc',
               'outfile': join('cecog', 'cecog_rc.py'),

@@ -18,11 +18,11 @@ __all__ = ['LogWindow', 'GuiLogHandler']
 
 import logging
 
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
-from PyQt4.Qt import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.Qt import *
 
-from PyQt4.QtCore import Qt
+from PyQt5.QtCore import Qt
 
 class LogWindow(QDialog):
 
