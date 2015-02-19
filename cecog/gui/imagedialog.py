@@ -18,11 +18,12 @@ __all__ = ["ImageDialog"]
 
 from PyQt5 import QtGui
 from PyQt5 import QtCore
+from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 
 from qimage2ndarray import array2qimage
 
-class ImageDialog(QtGui.QWidget):
+class ImageDialog(QtWidgets.QWidget):
     """Popup dialog to show classification and contour images."""
 
     def __init__(self, *args, **kw):
@@ -30,27 +31,27 @@ class ImageDialog(QtGui.QWidget):
         self._images = None
         self.setWindowFlags(Qt.Window)
 
-        layout = QtGui.QVBoxLayout(self)
+        layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        self.graphics = QtGui.QLabel(self)
+        self.graphics = QtWidgets.QLabel(self)
         self.graphics.setSizePolicy(
-            QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
-                              QtGui.QSizePolicy.Expanding))
+            QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
+                                  QtWidgets.QSizePolicy.Expanding))
         self.graphics.setScaledContents(True)
         self.graphics.setMinimumSize(QtCore.QSize(100, 100))
         layout.addWidget(self.graphics)
 
-        self.bottombar = QtGui.QFrame(self)
+        self.bottombar = QtWidgets.QFrame(self)
         self.bottombar.setLineWidth(0)
-        bbar_layout = QtGui.QHBoxLayout(self.bottombar)
+        bbar_layout = QtWidgets.QHBoxLayout(self.bottombar)
         bbar_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.combobox = QtGui.QComboBox(self.bottombar)
+        self.combobox = QtWidgets.QComboBox(self.bottombar)
         self.combobox.setSizePolicy(
-            QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
-                              QtGui.QSizePolicy.Fixed))
+            QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
+                                  QtWidgets.QSizePolicy.Fixed))
 
         bbar_layout.addStretch()
         bbar_layout.addWidget(self.combobox)

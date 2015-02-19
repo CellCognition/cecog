@@ -18,10 +18,9 @@ __all__ = ['Browser']
 
 import os
 import re
-import numpy
+
 import time
 import shutil
-import math
 
 from xml.dom import minidom
 
@@ -32,24 +31,17 @@ from PyQt5.Qt import *
 from collections import OrderedDict
 from cecog.util.util import makedirs
 
-from cecog import ccore
 from cecog.gui.util import (exception,
                             information,
                             question,
                             warning,
                             get_qcolor_hicontrast,
                             qcolor_to_hex)
-from cecog.gui.imageviewer import ImageViewer
-from cecog.gui.analyzer import _ProcessorMixin
-from cecog.analyzer.channel import (PrimaryChannel,
-                                    SecondaryChannel,
-                                    TertiaryChannel,
-                                    )
-from cecog.analyzer.core import AnalyzerCore
+
 from cecog.colors import hex2rgb
 from cecog.io.imagecontainer import Coordinate
 from cecog.learning.learning import BaseLearner
-from cecog.gui.widgets.groupbox import QxtGroupBox
+
 from cecog.gui.widgets.colorbutton import ColorButton
 from cecog.gui.modules.module import Module
 from cecog.util.ontoloty_owl import CecogOntologyBrowserDialog
@@ -331,7 +323,7 @@ class AnnotationModule(Module):
     COLUMN_ANN_POSITION = 1
     COLUMN_ANN_TIME = 2
     COLUMN_ANN_SAMPLES = 3
-    
+
     DEFAULT_CLASS_COLS = ["#4daf4a", "#ffff33", "#ff7f00", "#f781bf", "#984ea3", "#377eb8", "#e41a1c", "#a65628", "#999999"]
 
     def __init__(self, parent, browser, settings, imagecontainer):
@@ -374,13 +366,13 @@ class AnnotationModule(Module):
         self._import_class_definitions_btn = QPushButton('Import class definitions')
         layout2.addWidget(self._import_class_definitions_btn)
         self._import_class_definitions_btn.clicked.connect(self._on_import_class_definitions)
-        
+
         self._import_ontology_name_btn = QPushButton('Choose class name from ontology')
         self._import_ontology_name_btn.setToolTip("Choose class name from ontology. E.g., CMPO\nNote: It might take some time starting the dialog the first time.")
         layout2.addWidget(self._import_ontology_name_btn)
         self._import_ontology_name_btn.clicked.connect(self._on_import_ontology_name)
-        
-        
+
+
         layout.addWidget(frame2)
 
         frame2 = QFrame(grp_box)
@@ -477,15 +469,15 @@ class AnnotationModule(Module):
     def _find_items_in_class_table(self, value, column, match=Qt.MatchExactly):
         items = self._class_table.findItems(value, match)
         return [item for item in items if item.column() == column]
-    
+
     def _on_import_ontology_name(self):
         if not hasattr(self, "ontology_browser_diag"):
             self.ontology_browser_diag = CecogOntologyBrowserDialog(parent=self.browser)
             self.ontology_browser_diag.tw.trigger_add.connect(self._class_text.setText)
-            
+
         self.ontology_browser_diag.show()
-            
-        
+
+
 
     def _on_import_class_definitions(self):
         if self._on_new_classifier():
@@ -631,7 +623,7 @@ class AnnotationModule(Module):
             ncl = len(learner.class_names)+1
             self._class_text.setText('class%d' % ncl)
             self._class_sbox.setValue(ncl)
-            
+
             self._class_color_btn.set_color(QColor(AnnotationModule.DEFAULT_CLASS_COLS[(ncl -1)  % len(AnnotationModule.DEFAULT_CLASS_COLS)]))
         else:
             warning(self, "Class names and labels must be unique!",
@@ -1054,5 +1046,3 @@ class AnnotationModule(Module):
         self.browser.image_viewer.image_mouse_pressed.disconnect(self._on_new_point)
         self.browser.image_viewer.purify_objects()
         self._action_grp.setEnabled(False)
-        
-        

@@ -15,6 +15,7 @@ __url__ = 'www.cellcognition.org'
 import traceback
 from PyQt5 import QtGui
 from PyQt5 import QtCore
+from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 
 
@@ -56,7 +57,7 @@ class ProgressObject(QtCore.QObject):
     setLabelText = QtCore.pyqtSignal("PyQt_PyObject")
 
 
-class ProgressDialog(QtGui.QProgressDialog):
+class ProgressDialog(QtWidgets.QProgressDialog):
     """Subclass of QProgressDialog to:
          -) ignore the ESC key during dialog exec_()
          -) to provide mechanism to show the dialog only
