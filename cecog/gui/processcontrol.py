@@ -13,7 +13,7 @@ __url__ = 'www.cellcognition.org'
 __all__ = ('ProcessControl', )
 
 
-from PyQt4 import QtGui
+from PyQt5 import QtGui
 
 
 class ProcessControl(QtGui.QFrame):

@@ -16,9 +16,9 @@ __url__ = 'www.cellcognition.org'
 __all__ = ["ImageDialog"]
 
 
-from PyQt4 import QtGui
-from PyQt4 import QtCore
-from PyQt4.QtCore import Qt
+from PyQt5 import QtGui
+from PyQt5 import QtCore
+from PyQt5.QtCore import Qt
 
 from qimage2ndarray import array2qimage
 

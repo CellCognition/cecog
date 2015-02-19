@@ -20,7 +20,7 @@ import threading
 import SocketServer
 from multiprocessing import Pool
 
-from PyQt4 import QtCore
+from PyQt5 import QtCore
 
 from cecog.version import version
 from cecog.util.stopwatch import StopWatch

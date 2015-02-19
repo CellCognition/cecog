@@ -19,8 +19,8 @@ import traceback
 import numpy as np
 
 from os.path import join, isfile, basename, dirname, splitext
-from PyQt4 import QtCore
-from PyQt4.QtCore import QThread
+from PyQt5 import QtCore
+from PyQt5.QtCore import QThread
 
 import cellh5
 

@@ -13,9 +13,9 @@ __all__ = ['PluginBay', 'PluginParamFrame', 'PluginItem']
 
 import functools
 
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
-from PyQt4.Qt import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.Qt import *
 
 from collections import OrderedDict
 from cecog.gui.display import TraitDisplayMixin

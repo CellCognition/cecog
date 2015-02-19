@@ -20,10 +20,10 @@ import logging
 import traceback
 from collections import OrderedDict
 
-from PyQt4 import QtGui
-from PyQt4 import QtCore
-from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QMessageBox
+from PyQt5 import QtGui
+from PyQt5 import QtCore
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QMessageBox
 
 from cecog import version
 from cecog.units.time import TimeConverter
