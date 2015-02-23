@@ -103,7 +103,7 @@ if __name__ == "__main__":
 
     try:
         if args.configfile is None and args.load:
-            raise RuntimeError("use -c option to define a configfile")
+            raise RuntimeError("use -c option to define a config file")
 
         if (args.load and os.path.isfile(args.configfile)) or is_bundled:
             main._load_image_container(show_dialog=False)

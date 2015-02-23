@@ -1,7 +1,7 @@
 """
 main.py
 
-CecogAnalyzer main window
+..CecogAnalyzer main window
 
 """
 
