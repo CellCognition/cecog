@@ -24,7 +24,7 @@ import build_helpers
 
 pyrcc_opts = {'infile': 'cecog.qrc',
               'outfile': join('cecog', 'cecog_rc.py'),
-              'pyrccbin': 'pyrcc4'}
+              'pyrccbin': 'pyrcc5'}
 
 ccore = Extension('cecog.ccore._cecog',
                   sources = [join('csrc','src', 'cecog.cxx')],
