@@ -817,7 +817,7 @@ class TimeHolder(OrderedDict):
                     # build a new ImageObject
                     obj = ImageObject(c_obj)
                     obj.iId = obj_id
-                    if len(crack_contours) > 0:
+                    if crack_contours is not None and len(crack_contours) > 0:
                         obj.crack_contour = crack_contours[j]
                     else:
                         # Fallback if cracks are not safed in cellh5
@@ -852,9 +852,9 @@ class TimeHolder(OrderedDict):
 
                 # loop over detected objects
                 for j, index in enumerate(current_object_idx):
-                    
+                    #import pdb; pdb.set_trace()
                     # label of the object (corresponding to the label value in the label image)
-                    obj_id = cur_pos.get_obj_label_id(index)
+                    obj_id = cur_pos.get_obj_label_id(index,object_=combined_region_name)
                     
                     bb = bounding_box[j]
                     #ul = (bb[0], bb[1])
