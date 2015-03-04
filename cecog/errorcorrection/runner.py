@@ -147,11 +147,12 @@ class PositionRunner(QtCore.QObject):
                 ch5 = cellh5.CH5File(file_, "r", cached=True)
                 for pos in ch5.iter_positions():
                     # only segmentation
-                    if not pos.has_classification(chreg):
+                    if (not pos.has_classification(chreg)) or (not pos.has_events() and not pos.has_tracking()):
                         continue
 
                     # make dtable aware of all positions, sometime they contain
-                    # no tracks and I don't want to ignore them
+                    # no tracks and I don't want to ignore them // Alice : well I want to ignore them because otherwise they appear as NaN
+                    #on summary plots and it's not nice
                     dtable.add_position(position, mappings[position])
                     
                     #This checks whether the user has indicated event sequences she/he's interested in.
@@ -160,8 +161,6 @@ class PositionRunner(QtCore.QObject):
                     
                     #Best solution: modify CH5Position to include a method for getting all events in this case
                     if not pos.has_events():
-                        if not pos.has_tracking():
-                            continue
                         objidx = pos.get_all_events(not self.ecopts.ignore_tracking_branches)
                     else:
                         objidx = np.array(pos.get_events(not self.ecopts.ignore_tracking_branches),

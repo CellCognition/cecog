@@ -264,11 +264,13 @@ class HmmReport(object):
         """Export two files. One contains the labels after hmm. The other
         contains the object indices of the ch5 files.
         """
-
+#What I want to do
+#- write one file per group rather than one file for everybody
+#- give me a table ["obj_idx", "class_label"] and not two tables, in a pickle file
         try:
             fp1 = open(filename, "wb")
             fp2 = open(filename.replace(".csv", "_indices.csv"), "wb")
-
+            import pdb; pdb.set_trace()
             writer1 = csv.writer(fp1, delimiter=",")
             writer2 = csv.writer(fp2, delimiter=",")
             # first bucket that contains an hmm
