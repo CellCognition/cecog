@@ -275,7 +275,7 @@ class EventSelection(EventSelectionCore):
         self.backward_range_min = backward_range_min
         self.forward_range_min = forward_range_min
         self.export_features = export_features
-
+        
     def _backward_check(self, nodeid, nodeids, level=1):
         nodeids.append(nodeid)
         if ((self.backward_range == -1 and self.graph.in_degree(nodeid) == 0) or
@@ -289,9 +289,9 @@ class EventSelection(EventSelectionCore):
             return False
         if self.graph.in_degree(nodeid) != 1:
             return False
-
+        
         sample = self.graph.node_data(nodeid)
-        if level > 1 and level-1 <= self.backward_check and not \
+        if self.backward_labels!=[] and level > 1 and level-1 <= self.backward_check and not \
                 sample.iLabel in self.backward_labels:
             return False
 
@@ -315,7 +315,8 @@ class EventSelection(EventSelectionCore):
             return False
 
         sample = self.graph.node_data(nodeid)
-        if level <= self.forward_check and not sample.iLabel in self.forward_labels:
+    #Modifying test so that it is not necessary to filter
+        if self.forward_labels!=[] and level <= self.forward_check and not sample.iLabel in self.forward_labels:
             return False
 
         if (found_splitid is None and

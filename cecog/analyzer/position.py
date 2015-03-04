@@ -500,8 +500,17 @@ class PositionAnalyzer(PositionCore):
                 'max_out_degree': self.settings.get('EventSelection', 'maxoutdegree')}
 
         if self.settings.get('EventSelection', 'supervised_event_selection'):
-            opts.update({'backward_labels': [int(i) for i in self.settings.get('EventSelection', 'backwardlabels').split(',')],
-                         'forward_labels': [int(i) for i in self.settings.get('EventSelection', 'forwardlabels').split(',')],
+            try:
+                backward_filter=[int(i) for i in self.settings.get('EventSelection', 'backwardlabels').split(',')]
+            except ValueError:
+                backward_filter=[]
+            try:
+                forward_filter = [int(i) for i in self.settings.get('EventSelection', 'forwardlabels').split(',')]
+            except ValueError:
+                forward_filter=[]
+                
+            opts.update({'backward_labels': backward_filter,
+                         'forward_labels': forward_filter,
                          'backward_range_min': self.settings.get('EventSelection', 'backwardrange_min'),
                          'forward_range_min': self.settings.get('EventSelection', 'forwardrange_min'),
                          'backward_check': self._convert_tracking_duration('backwardCheck'),

@@ -68,7 +68,7 @@ class PlateRunner(QtCore.QObject):
             progress.text = ("Plate: '%s' (%d / %d)"
                              %(plate, i+1, len(self.plates)))
             self.progressUpdate.emit(progress)
-
+#Meaning that currently it is only possible to do it if there is an _all_positions file ?!
             ch5file = join(self._outdirs[plate], 'hdf5', "_all_positions.ch5")
             runner = PositionRunner(plate, self._outdirs[plate],
                                     self.params_ec, parent=self,
@@ -114,12 +114,15 @@ class PositionRunner(QtCore.QObject):
                 setattr(self, "_%s_dir" %basename(odir.lower()).strip("_"), odir)
 
     def _load_classdef(self, region):
-
-        with cellh5.ch5open(self.ch5file, "r", cached=True) as ch5:
+        try:
+            ch5=cellh5.CH5File(filename=self.files[0], mode='a', cached=True)
+        except Exception as e:
+            return None
+        else:
             cld = ch5.class_definition(region)
             classdef = ClassDefinition(cld)
 
-        return classdef
+            return classdef
 
     def _load_data(self, mappings, channel):
         dtable = HmmDataTable()
@@ -150,12 +153,19 @@ class PositionRunner(QtCore.QObject):
                     # make dtable aware of all positions, sometime they contain
                     # no tracks and I don't want to ignore them
                     dtable.add_position(position, mappings[position])
+                    
+                    #This checks whether the user has indicated event sequences she/he's interested in.
+#MODIF Alice In the case when she/he hasn't, one should nevertheless be able to use HMMs to correct
+                    #all events.
+                    
+                    #Best solution: modify CH5Position to include a method for getting all events in this case
                     if not pos.has_events():
-                        continue
-
-                    objidx = np.array( \
-                        pos.get_events(not self.ecopts.ignore_tracking_branches),
-                        dtype=int)
+                        if not pos.has_tracking():
+                            continue
+                        objidx = pos.get_all_events(not self.ecopts.ignore_tracking_branches)
+                    else:
+                        objidx = np.array(pos.get_events(not self.ecopts.ignore_tracking_branches),
+                                           dtype=int)
                     tracks = pos.get_class_label(objidx, chreg)
                     try:
                         probs = pos.get_prediction_probabilities(objidx, chreg)
