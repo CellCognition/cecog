@@ -241,7 +241,8 @@ class CecogAnalyzer(QtGui.QMainWindow):
         elif os.path.isfile(settings):
             self.load_settings(settings)
         else:
-            QMessageBox.warning(self, "Warning", "File (%s) does not exist" %settings)
+            QMessageBox.warning(
+                self, "Warning", "File (%s) does not exist" %settings)
 
 
     def _save_geometry(self):
