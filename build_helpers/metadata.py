@@ -48,5 +48,5 @@ metadata = { 'name': 'CecogAnalyzer',
                                   '      any luster environment.'),
              'url': 'http://www.cellcognition.org',
              'download_url': 'http://www.cellcognition.org./download',
-             'platforms': ['Win32', 'Linux', 'Mac OS-X'],
+             'platforms': ['Win64', 'Linux', 'Mac OS-X'],
              'provides': ['cecog'] }
