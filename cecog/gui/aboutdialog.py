@@ -26,16 +26,16 @@ class CecogAboutDialog(QtWidgets.QDialog):
                            'background-image: url(:cecog_about)')
         self.setWindowTitle('About CecogAnalyzer')
         self.setFixedSize(400, 300)
-        layout = QtGui.QGridLayout()
+        layout = QtWidgets.QGridLayout()
         layout.setContentsMargins(0, 0, 0, 0)
 
-        label1 = QtGui.QLabel(self)
+        label1 = QtWidgets.QLabel(self)
         label1.setStyleSheet('background: transparent;')
         label1.setAlignment(Qt.AlignCenter)
         label1.setText('CecogAnalyzer\nVersion %s\n\n'
                        'Copyright (c) 2006 - 2011\n' %version.version)
 
-        label2 = QtGui.QLabel(self)
+        label2 = QtWidgets.QLabel(self)
         label2.setStyleSheet('background: transparent;')
         label2.setTextFormat(Qt.AutoText)
         label2.setOpenExternalLinks(True)
