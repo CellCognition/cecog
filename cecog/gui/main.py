@@ -1,7 +1,7 @@
 """
 main.py
 
-CecogAnalyzer main window
+..CecogAnalyzer main window
 
 """
 
@@ -132,23 +132,24 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         action_save_as = self.create_action('&Save Settings As...',
                                             shortcut=QtGui.QKeySequence.SaveAs,
                                             slot=self._on_file_save_as)
+
         menu_file = self.menuBar().addMenu('&File')
         self.add_actions(menu_file, (action_pref,
                                      None, action_open,
                                      None, action_save, action_save_as,
                                      None, action_quit))
 
-        action_open = self.create_action('&Open Browser...',
-                                         shortcut=QtGui.QKeySequence('CTRL+B'),
-                                         slot=self._on_browser_open)
-        menu_browser = self.menuBar().addMenu('&Browser')
-        self.add_actions(menu_browser, (action_open, ))
-
-        action_log = self.create_action('&Show Log Window...',
+        action_log = self.create_action('&Log window',
                                         shortcut=QtGui.QKeySequence(Qt.CTRL+Qt.Key_L),
                                         slot=self._on_show_log_window)
-        menu_window = self.menuBar().addMenu('&Window')
-        self.add_actions(menu_window, (action_log,))
+
+        action_open = self.create_action('&Browser',
+                                         shortcut=QtGui.QKeySequence('CTRL+B'),
+                                         slot=self._on_browser_open)
+
+        menu_view = self.menuBar().addMenu('&View')
+        self.add_actions(menu_view, (action_log,))
+        self.add_actions(menu_view, (action_open,))
 
         action_help_startup = self.create_action('&Startup Help...',
                                                  shortcut=QtGui.QKeySequence.HelpContents,

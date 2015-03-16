@@ -829,7 +829,7 @@ class PositionAnalyzer(PositionCore):
                          self._frames, list(set(self.ch_mapping.values())))
 
         minimal_effort = self.settings.get('Output', 'minimal_effort') and self.settings.get('Output', 'hdf5_reuse')
-        
+
         for frame, channels in self._imagecontainer( \
             crd, interrupt_channel=True, interrupt_zslice=True):
 
@@ -880,12 +880,6 @@ class PositionAnalyzer(PositionCore):
             self.logger.info(" - Frame %d, Classification (ms): %3d" \
                              % (frame, stopwatch.interval()*1000))
 
-            ##############################################################
-            # FIXME - part for browser
-            if 0:
-                self.render_browser(cellanalyzer)
-            ##############################################################
-
             self.settings.set_section('General')
             # want emit all images at once
             if not minimal_effort:
@@ -894,19 +888,19 @@ class PositionAnalyzer(PositionCore):
                 imgs.update(self.render_contour_images(cellanalyzer, images, frame))
                 msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position, frame)
                 self.set_image(imgs, msg, 50)
-    
+
                 if self.settings('Output', 'rendering_channel_gallery'):
                     self.render_channel_gallery(cellanalyzer, frame)
-    
+
                 if self.settings('Output', 'rendering_labels_discwrite'):
                     cellanalyzer.exportLabelImages(self._labels_dir)
 
             cellanalyzer.purge(features=self.export_features)
             self.logger.info(" - Frame %d, rest (ms): %3d" \
                                  %(frame, stopwatch.interval()*1000))
-            self.logger.info(" - Frame %d, duration (ms): %3d\n" \
+            self.logger.info(" - Frame %d, duration (ms): %3d" \
                                  %(frame, stopwatch.interim()*1000))
- 
+
 
         return n_images
 
@@ -944,21 +938,6 @@ class PositionAnalyzer(PositionCore):
             images_[region] = image
          return images_
 
-    def render_browser(self, cellanalyzer):
-        d = {}
-        for name in cellanalyzer.get_channel_names():
-            channel = cellanalyzer.get_channel(name)
-            d[channel.strChannelId] = channel.meta_image.image
-            self._myhack.show_image(d)
-
-        channel_name, region_name = self._myhack._object_region
-        channel = cellanalyzer.get_channel(channel_name)
-        if channel.has_region(region_name):
-            region = channel.get_region(region_name)
-            coords = {}
-            for obj_id, obj in region.iteritems():
-                coords[obj_id] = obj.crack_contour
-            self._myhack.set_coords(coords)
 
 
 class PositionAnalyzerForBrowser(PositionCore):
@@ -1069,6 +1048,3 @@ class PositionAnalyzerForBrowser(PositionCore):
                     pass
 
         return n_images
-
-    # def clear(self):
-    #     print 'Clean up'

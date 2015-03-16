@@ -36,10 +36,13 @@ class ProgressThread(QtCore.QThread):
     def run(self):
         try:
             result = self._target()
+            self.result.emit(result)
         except Exception as e:
             stackstr = traceback.print_exc()
             self.error.emit(e)
         finally:
+            # perhaps processEvents()???
+            self.msleep(150)
             if self._qobjects is not None:
                 for qobject in self._qobjects:
                     qobject.moveToThread(
