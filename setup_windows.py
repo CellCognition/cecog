@@ -31,7 +31,7 @@ import build_helpers
 pyrcc_opts = {'infile': 'cecog.qrc',
               'outfile': join('cecog', 'cecog_rc.py'),
               'pyrccbin': join('C:\\', 'Python27', 'Lib', 'site-packages',
-                               'PyQt5', 'pyrcc4.exe')}
+                               'PyQt5', 'pyrcc5.exe')}
 
 
 DLL_EXCLUDES = [ 'libgdk-win32-2.0-0.dll',
