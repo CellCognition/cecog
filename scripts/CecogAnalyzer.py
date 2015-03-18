@@ -27,7 +27,12 @@ from multiprocessing import freeze_support
 import matplotlib as mpl
 mpl.use('Agg')
 
-import sip
+# special case on windoze
+try:
+    import PyQt5.sip as sip
+except ImportError:
+    import sip
+
 # set PyQt API version to 2.0
 sip.setapi('QString', 2)
 sip.setapi('QVariant', 2)

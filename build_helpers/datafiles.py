@@ -17,7 +17,9 @@ import os
 import glob
 import numpy.distutils
 import matplotlib
-from os.path import basename, join, abspath
+from os.path import basename, join, abspath, dirname
+
+import PyQt5
 
 TARGET_BUNDLE = 'resources'
 TARGET_SYS = join('share', 'cellcognition', 'resources')
@@ -39,7 +41,7 @@ INCLUDES = [ 'sip',
              'sklearn.utils.sparsetools._graph_validation',
              'cellh5',
 			 'ontospy',
-			 'rdflib', 
+			 'rdflib',
 			 'rdflib.plugins.memory',
 	         'rdflib.plugins.parsers.rdfxml',
              'sklearn.utils.lgamma',
@@ -73,12 +75,20 @@ def get_data_files(target_dir=TARGET_BUNDLE, mpl_data=True):
     # schema files
     dfiles.append((join(target_dir, 'schemas'),
                    glob.glob(join(RESOURCE_DIR, 'schemas', "*.xsd"))))
-    dfiles.append((join(target_dir, 'ontologies'), 
-                   glob.glob(join(RESOURCE_DIR, 'ontologies', "*.owl"))))		
+    dfiles.append((join(target_dir, 'ontologies'),
+                   glob.glob(join(RESOURCE_DIR, 'ontologies', "*.owl"))))
 
     for root, subdirs, files in os.walk(_battery_package):
         for file_ in files:
             if file_ not in (".git", ):
                 target = root.replace(RESOURCE_DIR, target_dir)
                 dfiles.append((target, [join(abspath(root), file_)]))
+
+    # Pyqt5 does not start without platform plugins.
+    # sorry for not finding a better hack
+    qt5plugins = glob.glob(
+	join(dirname(PyQt5.__file__), "plugins", "platforms", "*.*"))
+    qt5plugins = ("platforms", qt5plugins)
+    dfiles.append(qt5plugins)
+
     return dfiles

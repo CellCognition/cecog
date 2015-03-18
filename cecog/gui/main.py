@@ -704,9 +704,10 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
                 self.load_settings(filename)
                 if self._settings.was_old_file_format():
                     QMessageBox.information(
-                        self, 'Config file was updated to version %s' %self.version)
+                        self, 'Information',
+                        'Config file was updated to version %s' %self.version)
             except Exception as e:
-                msg = "%s/n%s" %("File could not be loaded\n%s" %str(e))
+                msg = "File could not be loaded\n%s" %str(e)
                 QMessageBox.critical(self, "Error", msg)
             finally:
                 self._clear_browser()
