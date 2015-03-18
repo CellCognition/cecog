@@ -16,9 +16,9 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-import sys
+
 import os
-from os.path import join, abspath
+from os.path import join
 import py2app
 
 from distutils.core import setup, Extension
@@ -29,11 +29,24 @@ if not os.environ.has_key("ARCHFLAGS"):
     os.environ["ARCHFLAGS"] = "-arch x86_64"
 
 py2app_opts = {'excludes': build_helpers.EXCLUDES,
-               'includes': ['sip', 'PyQt5', 'PyQt5.QtCore', 'PyQt5.QtGui']}
+               'includes': ['sip',
+                            'PyQt5'
+                            'PyQt5.Qt'
+                            'PyQt5.QtCore',
+                            'PyQt5.QtGui',
+                            'PyQt5.QtWidgets'],
+               "qt_plugins": ['platforms',],
+               "argv_emulation":False,
+               "strip": True,
+               "optimize": 1,
+               "iconfile": "resources/cecog_analyzer_icon.icns",
+               "packages": ["h5py","vigra","sklearn"],
+               "arch": "x86_64",
+               "matplotlib_backends": ["agg","qt5agg", "macosx"]}
 
 pyrcc_opts = {'infile': 'cecog.qrc',
               'outfile': join('cecog', 'cecog_rc.py'),
-              'pyrccbin': 'pyrcc4'}
+              'pyrccbin': 'pyrcc5'}
 
 ccore = Extension('cecog.ccore._cecog',
                   sources = [join('csrc','src', 'cecog.cxx')],
