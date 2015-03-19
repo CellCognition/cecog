@@ -17,4 +17,4 @@ class SectionNames(object):
     FEATUREEXTRACTION = "featureextration"
     CLASSIFICATION = "classification"
     TRACKING = "tracking"
-    EVENTSELECTION =
+    EVENTSELECTION = "eventselection"
