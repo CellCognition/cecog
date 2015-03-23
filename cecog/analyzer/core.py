@@ -23,7 +23,7 @@ from cecog.learning.annotation import Annotations
 from cecog.analyzer.position import PositionAnalyzer, PositionAnalyzerForBrowser
 from cecog.analyzer.position import PositionPicker
 from cecog.io.imagecontainer import MetaImage
-from cecog.util.logger import LoggerObject
+from cecog.logging import LoggerObject
 from cecog.util.util import makedirs
 
 
@@ -39,7 +39,7 @@ class AnalyzerBase(LoggerObject):
         self.sample_reader = list()
         self.sample_positions = dict()
 
-        self.add_stream_handler(self._lvl.WARNING)
+        self.add_stream_handler(self.Levels.WARNING)
         self._imagecontainer = imagecontainer
         self.settings = settings
         self.plate = plate

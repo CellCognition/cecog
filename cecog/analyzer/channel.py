@@ -29,7 +29,7 @@ from cecog.colors import Colors
 from cecog.io.imagecontainer import MetaImage
 from cecog.analyzer.object import ImageObject, ObjectHolder, Orientation
 
-from cecog.util.logger import LoggerObject
+from cecog.logging import LoggerObject
 from cecog.plugin.metamanager import MetaPluginManager
 from cecog.util.ctuple import COrderedDict
 

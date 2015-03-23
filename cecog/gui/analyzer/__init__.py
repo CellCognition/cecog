@@ -113,6 +113,10 @@ class BaseFrame(TraitDisplayMixin):
         layout.addWidget(self._tab)
         layout.addWidget(self.process_control)
 
+    @property
+    def log_window(self):
+        return self.parent().log_window
+
     @pyqtSlot('int')
     def on_tab_changed(self, index):
         self.tab_changed(index)
@@ -316,7 +320,7 @@ class _ProcessorMixin(object):
                 self._current_process = name
 
                 if not start_again:
-                    self.parent().main_window.log_window.clear()
+                    self.parent().log_window.clear()
 
                     self._is_running = True
                     self._stage_infos = {}

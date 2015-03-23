@@ -27,6 +27,7 @@ from cecog import CH_OTHER, CH_VIRTUAL, CH_PRIMARY
 from cecog.gui.analyzer import BaseProcessorFrame, AnalyzerThread
 from cecog.gui.analyzer import ErrorCorrectionThread, MultiAnalyzerThread
 from cecog.util.ctuple import CTuple
+from cecog.logging import LogWindow
 
 
 class ExportSettings(object):
@@ -141,53 +142,6 @@ class ExportSettings(object):
         return settings
 
 
-class SubProcessLogWindow(QtGui.QWidget):
-
-    on_msg_received = QtCore.pyqtSignal(str, str, int)
-
-    def __init__(self, *args, **kw):
-        super(SubProcessLogWindow, self).__init__(*args, **kw)
-        self.setWindowTitle('Multiprocessing logger')
-        self.setWindowModality(QtCore.Qt.NonModal)
-        self.setWindowFlags(QtCore.Qt.Window)
-
-        self.resize(800, 600)
-
-        self._layout = QtGui.QVBoxLayout(self)
-        self._layout.setContentsMargins(4, 4, 4, 4)
-        self._layout.addWidget(QtGui.QLabel('Process logs for each child process'))
-        self.tab_widget = QtGui.QTabWidget()
-        self.tab_widget.setUsesScrollButtons(True)
-        self._layout.addWidget(self.tab_widget)
-        self.on_msg_received.connect(self.on_show_msg)
-
-    def init_process_list(self, sub_process_names):
-        self.tab_widget.clear()
-        self.items = {}
-        for p in sub_process_names:
-            lw = QtGui.QPlainTextEdit(self.tab_widget)
-            lw.setReadOnly(True)
-            self.items[p] = lw
-            self.tab_widget.addTab(lw, p)
-
-    def on_show_msg(self, name, msg, level):
-
-        if level == logging.DEBUG:
-            msg = "<font color='green'>" + msg + '</font>'
-        elif level == logging.WARNING:
-            msg = "<font color='orange'><b>" + msg + '</b></font>'
-            self.tab_widget.setCurrentWidget(self.items[name])
-        elif level == logging.ERROR:
-            msg = "<font color='red'><b>" + msg + '</b></font>'
-            self.tab_widget.setCurrentWidget(self.items[name])
-        else:
-            msg = "<font color='black'>" + msg + '</font>'
-        self.items[name].appendHtml(msg.replace('\n', '<br>'))
-        self.items[name].moveCursor(QtGui.QTextCursor.End)
-
-    def on_msg_received_emit(self, record, formated_msg):
-        self.on_msg_received.emit(record.name, formated_msg, record.levelno)
-
 
 class ProcessingFrame(BaseProcessorFrame, ExportSettings):
 
@@ -224,8 +178,6 @@ class ProcessingFrame(BaseProcessorFrame, ExportSettings):
 
         self.add_expanding_spacer()
         self._init_control()
-        self.log_window = SubProcessLogWindow()
-
 
     def _get_modified_settings(self, name, has_timelapse=True):
         settings = ExportSettings.get_special_settings(

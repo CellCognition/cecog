@@ -12,26 +12,33 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-__all__ = ["LoggerObject"]
+__all__ = ("LoggerObject", )
 
 import os
 import sys
 import logging
+
 
 class LoggerObject(object):
     """Parent for classes with logging capability"""
 
     _fmt = '%(asctime)s %(name)-24s %(levelname)-6s %(message)s'
 
-    class _lvl(object):
-        """Log levels"""
-        WARN = logging.WARN
+    class Levels(object):
+        """Standard log levels wrapped into a class"""
         WARNING = logging.WARNING
         ERROR = logging.ERROR
         CRITICAL = logging.CRITICAL
         INFO = logging.INFO
         DEBUG = logging.DEBUG
         NOTSET = logging.NOTSET
+
+        @classmethod
+        def names(cls):
+            lvl = [v for v in dir(cls) if not v.startswith('__')]
+            lvl.remove('names')
+            lvl = sorted(lvl, key=lambda x: getattr(cls, x))
+            return lvl
 
     def __init__(self, *args, **kw):
         super(LoggerObject, self).__init__(*args, **kw)
@@ -45,7 +52,6 @@ class LoggerObject(object):
 
         self.logger = logging.getLogger(name)
         self.logger.setLevel(logging.NOTSET)
-#        self.add_stream_handler()
 
     def add_stream_handler(self, level=logging.DEBUG):
         self._stream_handler = logging.StreamHandler(sys.stdout)
@@ -65,5 +71,5 @@ class LoggerObject(object):
 
     def close(self):
         self._file_handler.close()
-        self.logger.removeHandler(self._file_handler)        
-        
+        self.logger.removeHandler(self._file_handler)
+
