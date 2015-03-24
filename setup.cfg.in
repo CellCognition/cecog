@@ -5,10 +5,3 @@
 # vigra 1.10, boost 1.57
 include_dirs=/cecoglibs/boost/include:/cecoglibs/vigra/include:/usr/local/include
 library_dirs=/cecoglibs/boost/lib/:/cecoglibs/vigra/lib:/usr/local/lib
-
-[py2exe]
-optimize=1
-compressed=True
-skip_archive=False
-bundle_files=3
-packages=h5py,vigra,sklearn
