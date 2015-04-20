@@ -1,0 +1,204 @@
+<?xml version="1.0"?>
+
+
+<!DOCTYPE rdf:RDF [
+    <!ENTITY owl "http://www.w3.org/2002/07/owl#" >
+    <!ENTITY xsd "http://www.w3.org/2001/XMLSchema#" >
+    <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#" >
+    <!ENTITY rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns#" >
+    <!ENTITY untitled-ontology-3 "http://www.semanticweb.org/sommerc/ontologies/2015/1/untitled-ontology-3#" >
+]>
+
+
+<rdf:RDF xmlns="http://www.semanticweb.org/sommerc/ontologies/2015/1/untitled-ontology-3#"
+     xml:base="http://www.semanticweb.org/sommerc/ontologies/2015/1/untitled-ontology-3"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:untitled-ontology-3="http://www.semanticweb.org/sommerc/ontologies/2015/1/untitled-ontology-3#"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#">
+    <owl:Ontology rdf:about="http://www.semanticweb.org/sommerc/ontologies/2015/1/untitled-ontology-3"/>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Annotation properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://www.semanticweb.org/sommerc/ontologies/2015/1/untitled-ontology-3#prefLabel -->
+
+    <owl:AnnotationProperty rdf:about="&untitled-ontology-3;prefLabel"/>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Classes
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://www.semanticweb.org/sommerc/ontologies/2015/1/untitled-ontology-3#Abnormal_Phenotypes -->
+
+    <owl:Class rdf:about="&untitled-ontology-3;Abnormal_Phenotypes">
+        <prefLabel>Abnormal Phenotypes</prefLabel>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/sommerc/ontologies/2015/1/untitled-ontology-3#Apoptosis -->
+
+    <owl:Class rdf:about="&untitled-ontology-3;Apoptosis">
+        <rdfs:subClassOf rdf:resource="&untitled-ontology-3;Cell_Death"/>
+        <prefLabel>Apoptosis</prefLabel>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/sommerc/ontologies/2015/1/untitled-ontology-3#Cell_Death -->
+
+    <owl:Class rdf:about="&untitled-ontology-3;Cell_Death">
+        <prefLabel>Cell Death</prefLabel>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/sommerc/ontologies/2015/1/untitled-ontology-3#Early_Anaphase -->
+
+    <owl:Class rdf:about="&untitled-ontology-3;Early_Anaphase">
+        <rdfs:subClassOf rdf:resource="&untitled-ontology-3;Mitosis"/>
+        <prefLabel>Early Anaphase</prefLabel>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/sommerc/ontologies/2015/1/untitled-ontology-3#Grape -->
+
+    <owl:Class rdf:about="&untitled-ontology-3;Grape">
+        <rdfs:subClassOf rdf:resource="&untitled-ontology-3;Abnormal_Phenotypes"/>
+        <prefLabel>Multi-nucleation (Grape)</prefLabel>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/sommerc/ontologies/2015/1/untitled-ontology-3#Interphase -->
+
+    <owl:Class rdf:about="&untitled-ontology-3;Interphase">
+        <rdfs:subClassOf rdf:resource="&untitled-ontology-3;Mitosis"/>
+        <prefLabel>Interphase</prefLabel>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/sommerc/ontologies/2015/1/untitled-ontology-3#Large -->
+
+    <owl:Class rdf:about="&untitled-ontology-3;Large">
+        <rdfs:subClassOf rdf:resource="&untitled-ontology-3;Abnormal_Phenotypes"/>
+        <prefLabel>Large nucleus</prefLabel>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/sommerc/ontologies/2015/1/untitled-ontology-3#Late_Anaphase -->
+
+    <owl:Class rdf:about="&untitled-ontology-3;Late_Anaphase">
+        <rdfs:subClassOf rdf:resource="&untitled-ontology-3;Mitosis"/>
+        <prefLabel>Late Anaphase</prefLabel>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/sommerc/ontologies/2015/1/untitled-ontology-3#Metaphase -->
+
+    <owl:Class rdf:about="&untitled-ontology-3;Metaphase">
+        <rdfs:subClassOf rdf:resource="&untitled-ontology-3;Mitosis"/>
+        <prefLabel>Metaphase</prefLabel>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/sommerc/ontologies/2015/1/untitled-ontology-3#Metaphase_Allignment_Problem -->
+
+    <owl:Class rdf:about="&untitled-ontology-3;Metaphase_Allignment_Problem">
+        <rdfs:subClassOf rdf:resource="&untitled-ontology-3;Abnormal_Phenotypes"/>
+        <prefLabel>Metaphase Allignment Problem</prefLabel>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/sommerc/ontologies/2015/1/untitled-ontology-3#Mitosis -->
+
+    <owl:Class rdf:about="&untitled-ontology-3;Mitosis">
+        <prefLabel>Mitotic Stages</prefLabel>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/sommerc/ontologies/2015/1/untitled-ontology-3#Multi-nucleated -->
+
+    <owl:Class rdf:about="&untitled-ontology-3;Multi-nucleated">
+        <rdfs:subClassOf rdf:resource="&untitled-ontology-3;Abnormal_Phenotypes"/>
+        <prefLabel>Multi-nucleated</prefLabel>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/sommerc/ontologies/2015/1/untitled-ontology-3#Necrosis -->
+
+    <owl:Class rdf:about="&untitled-ontology-3;Necrosis">
+        <rdfs:subClassOf rdf:resource="&untitled-ontology-3;Cell_Death"/>
+        <prefLabel>Necorsis</prefLabel>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/sommerc/ontologies/2015/1/untitled-ontology-3#Polylobed -->
+
+    <owl:Class rdf:about="&untitled-ontology-3;Polylobed">
+        <rdfs:subClassOf rdf:resource="&untitled-ontology-3;Abnormal_Phenotypes"/>
+        <prefLabel>Polylobed</prefLabel>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/sommerc/ontologies/2015/1/untitled-ontology-3#Prometaphase -->
+
+    <owl:Class rdf:about="&untitled-ontology-3;Prometaphase">
+        <rdfs:subClassOf rdf:resource="&untitled-ontology-3;Mitosis"/>
+        <prefLabel>Prometaphase</prefLabel>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/sommerc/ontologies/2015/1/untitled-ontology-3#Prophase -->
+
+    <owl:Class rdf:about="&untitled-ontology-3;Prophase">
+        <rdfs:subClassOf rdf:resource="&untitled-ontology-3;Mitosis"/>
+        <prefLabel>Prophase</prefLabel>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/sommerc/ontologies/2015/1/untitled-ontology-3#Telophase -->
+
+    <owl:Class rdf:about="&untitled-ontology-3;Telophase">
+        <rdfs:subClassOf rdf:resource="&untitled-ontology-3;Mitosis"/>
+        <prefLabel>Telophase</prefLabel>
+    </owl:Class>
+</rdf:RDF>
+
+
+
+<!-- Generated by the OWL API (version 3.5.0) http://owlapi.sourceforge.net -->
+
