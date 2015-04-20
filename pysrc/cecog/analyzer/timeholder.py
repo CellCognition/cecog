@@ -8,6 +8,7 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from cecog.analyzer import feature_groups
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
@@ -41,6 +42,8 @@ from cecog.plugin.metamanager import MetaPluginManager
 from cecog.analyzer.tracker import Tracker
 
 from cecog.analyzer.object import ImageObject, ObjectHolder, Orientation
+
+from cecog.analyzer.feature_groups import FeatureGroups
 
 def chunk_size(shape):
     """Helper function to compute chunk size for image data cubes."""
@@ -805,6 +808,28 @@ class TimeHolder(OrderedDict):
                 channel.lstFeatureNames = object_feature_names
                 object_holder.feature_names = channel.lstFeatureNames
             channel._regions[region_name] = object_holder
+            
+    def _write_object_feature_table(self, feature_names, global_def_group):
+        n_feature_groups = len(FeatureGroups)
+        n_features = len(feature_names)
+        feature_dtype = [('name', '|S256')] + [('group_%02d' % i, '|S256') for i in range(n_feature_groups)]
+        dset_tmp = global_def_group.create_dataset('object_features', (n_features, ), feature_dtype)
+        
+        assign_table = numpy.zeros((n_features, ), feature_dtype)
+        
+        for i, f in enumerate(feature_names):
+            assign_table[i][0] = f
+            for j in range(n_feature_groups):
+                assign_table[i][j+1] = CH5Const.NOT_DEFINED
+        
+        for j, feat_name in enumerate(feature_names):
+            for i, feat_group_name in enumerate(FeatureGroups):
+                for feat_group_assignment in FeatureGroups[feat_group_name]:
+                    if feat_name in FeatureGroups[feat_group_name][feat_group_assignment]:
+                        assign_table[j][i+1] = feat_group_assignment
+
+        dset_tmp[:] = assign_table
+        dset_tmp.attrs["feature_groups"] = numpy.array([("group_%02d" % i, FeatureGroups.values()[i].group_name) for i in range(n_feature_groups)], dtype='|S64')
 
     def apply_features(self, channel):
         stop_watch = StopWatch(start=True)
@@ -845,14 +870,12 @@ class TimeHolder(OrderedDict):
                     dset_tmp = global_def_group.create_dataset('orientation', (2,), [('name', '|S16')])
                     dset_tmp[:] = ['angle', 'eccentricity']
                 if 'object_features' not in global_def_group:
-                    dset_tmp = global_def_group.create_dataset('object_features', (nr_features,), [('name', '|S512')])
                     if nr_features > 0:
-                        dset_tmp[:] = feature_names
+                        self._write_object_feature_table(feature_names, global_def_group)
                 elif ('object_features' in global_def_group) and (len(global_def_group['object_features']) == 0):
                     if nr_features > 0:
                         del global_def_group['object_features']
-                        dset_tmp = global_def_group.create_dataset('object_features', (nr_features,), [('name', '|S512')])
-                        dset_tmp[:] = feature_names
+                        self._write_object_feature_table(feature_names, global_def_group)
                     
                 if 'crack_contour' not in global_def_group:
                     dset_tmp = global_def_group.create_dataset('crack_contour', (1,), [('name', '|S512')])
