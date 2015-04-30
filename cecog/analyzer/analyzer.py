@@ -22,7 +22,7 @@ from cecog.analyzer.channel import TertiaryChannel
 from cecog.analyzer.channel import MergedChannel
 from cecog.analyzer.object import ObjectHolder
 
-from cecog.util.logger import LoggerObject
+from cecog.logging import LoggerObject
 from cecog.util.util import makedirs
 from cecog.colors import hex2rgb
 

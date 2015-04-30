@@ -1,5 +1,6 @@
 """
-sectionnames.py
+__init__.py
+
 """
 
 __author__ = 'rudolf.hoefler@gmail.com'
@@ -11,10 +12,6 @@ __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
 
-class SectionNames(object):
-    GENERAL = "general"
-    OBJECTDETECTION = "objectdetection"
-    FEATUREEXTRACTION = "featureextration"
-    CLASSIFICATION = "classification"
-    TRACKING = "tracking"
-    EVENTSELECTION =
+from .logger import *
+from .handlers import *
+from .logwindow import *

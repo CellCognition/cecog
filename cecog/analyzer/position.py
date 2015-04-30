@@ -43,7 +43,7 @@ from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
 from cecog.gallery import TrackGallery
 from cecog.gallery import ChannelGallery
 from cecog.export import TrackExporter, EventExporter, TC3Exporter
-from cecog.util.logger import LoggerObject
+from cecog.logging import LoggerObject
 from cecog.util.stopwatch import StopWatch
 from cecog.util.util import makedirs
 from cecog.util.ctuple import COrderedDict
@@ -419,7 +419,7 @@ class PositionAnalyzer(PositionCore):
 
         self._makedirs()
         self.add_file_handler(join(self._log_dir, "%s.log" %self.position),
-                              self._lvl.DEBUG)
+                              self.Levels.DEBUG)
 
     def _makedirs(self):
         assert isinstance(self.position, basestring)
@@ -482,13 +482,14 @@ class PositionAnalyzer(PositionCore):
             transitions = np.array((0, 1))
         else:
             try:
-                transitions = eval(self.settings.get('EventSelection', 'labeltransitions'))
+                transitions = np.array(eval(self.settings.get('EventSelection', 'labeltransitions')))
+                transitions.reshape((-1, 2))
             except Exception as e:
                 raise RuntimeError(("Make sure that transitions are of the form "
                                     "'int, int' or '(int, int), (int, int)' i.e "
                                     "2-int-tuple  or a list of 2-int-tuples"))
-            transitions = np.array(transitions)
-        return transitions.reshape((-1, 2))
+
+        return transitions
 
     def setup_eventselection(self, graph):
         """Setup the method for event selection."""
@@ -777,7 +778,8 @@ class PositionAnalyzer(PositionCore):
                 if self.settings('Output', 'export_track_data'):
                     self.export_full_tracks()
                 if self.settings('Output', 'export_tracking_as_dot'):
-                    self.export_graphviz()
+                    self.export_graphviz(channel_name =PrimaryChannel.NAME,\
+                                          region_name =self._all_channel_regions[PrimaryChannel.NAME][PrimaryChannel.NAME])
 
             self.export_classlabels()
 

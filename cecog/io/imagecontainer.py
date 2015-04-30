@@ -208,7 +208,7 @@ class ImageContainer(object):
         return os.path.join(path_structure, filename)
 
     @classmethod
-    def iter_check_plates(cls, settings):
+    def iter_check_plates(cls, settings, plates_restriction=None):
         path_in = settings('General', 'pathin')
         path_out = settings('General', 'pathout')
         has_multiple_plates = settings('General', 'has_multiple_plates')
@@ -216,6 +216,8 @@ class ImageContainer(object):
         if has_multiple_plates:
             plate_folders = [x for x in os.listdir(path_in)
                              if os.path.isdir(os.path.join(path_in, x))]
+            if plates_restriction is not None:
+                plate_folders = filter(lambda x: x in plates_restriction, plate_folders)
         else:
             plate_folders = [os.path.split(path_in)[1]]
 
@@ -235,10 +237,10 @@ class ImageContainer(object):
                 filename = None
             yield plate_id, path_plate_in, path_plate_out, filename
 
-    def iter_import_from_settings(self, settings, scan_plates=None):
+    def iter_import_from_settings(self, settings, plates_restriction=None, scan_plates=None):
         settings.set_section(SECTION_NAME_GENERAL)
 
-        for info in self.iter_check_plates(settings):
+        for info in self.iter_check_plates(settings, plates_restriction):
             plate_id, path_plate_in, path_plate_out, filename = info
 
             # check whether this plate has to be rescanned
@@ -273,5 +275,5 @@ class ImageContainer(object):
 
             yield info
 
-    def import_from_settings(self, settings, scan_plates=None):
-        list(self.iter_import_from_settings(settings, scan_plates))
+    def import_from_settings(self, settings, plates_restriction=None, scan_plates=None):
+        list(self.iter_import_from_settings(settings,plates_restriction, scan_plates))

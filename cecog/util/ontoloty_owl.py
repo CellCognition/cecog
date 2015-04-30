@@ -1,4 +1,3 @@
-
 import rdflib
 from ontospy.ontospy import Ontology
 from PyQt5 import QtGui, QtCore
@@ -40,35 +39,35 @@ class FilterableQTreeWidget(QtWidgets.QWidget):
     def __init__(self, *args, **kwargs):
         super(FilterableQTreeWidget, self).__init__(*args, **kwargs)
 
-        self.tw = QtGui.QTreeWidget()
+        self.tw = QtWidgets.QTreeWidget()
         self.tw.header().close()
         self.tw.setMinimumHeight(500)
         self.tw.setMinimumWidth(300)
 
-        self.line_label = QtGui.QLabel("Filter:")
-        self.line_edit = QtGui.QLineEdit()
+        self.line_label = QtWidgets.QLabel("Filter:")
+        self.line_edit = QtWidgets.QLineEdit()
 
-        top_widget = QtGui.QWidget()
-        top_layout = QtGui.QHBoxLayout()
+        top_widget = QtWidgets.QWidget()
+        top_layout = QtWidgets.QHBoxLayout()
         top_widget.setLayout(top_layout)
 
         top_layout.addWidget(self.line_label)
         top_layout.addWidget(self.line_edit)
 
-        bot_widget = QtGui.QWidget()
-        bot_layout = QtGui.QHBoxLayout()
+        bot_widget = QtWidgets.QWidget()
+        bot_layout = QtWidgets.QHBoxLayout()
         bot_widget.setLayout(bot_layout)
 
-        self.add_button = QtGui.QPushButton("Choose")
-        self.close_button = QtGui.QPushButton("Close")
+        self.add_button = QtWidgets.QPushButton("Choose")
+        self.close_button = QtWidgets.QPushButton("Close")
         bot_layout.addWidget(self.add_button)
         bot_layout.addWidget(self.close_button)
 
-        self.info_field = QtGui.QTextEdit()
+        self.info_field = QtWidgets.QTextEdit()
         self.info_field.setTextInteractionFlags(QtCore.Qt.NoTextInteraction)
         self.info_field.setMaximumHeight(80)
 
-        main_layout = QtGui.QVBoxLayout()
+        main_layout = QtWidgets.QVBoxLayout()
         main_layout.addWidget(top_widget)
         main_layout.addWidget(self.tw)
         main_layout.addWidget(self.info_field)
@@ -107,11 +106,11 @@ class CecogOntologyBrowserWidget(FilterableQTreeWidget):
         for i, ontology_file in enumerate(filter(lambda xxx: xxx.endswith(".owl"), os.listdir(CecogEnvironment.ONTOLOGY_DIR))):
             ontology_path = os.path.join(CecogEnvironment.ONTOLOGY_DIR, ontology_file)
             o = Ontology(ontology_path)
-            onto_root_item = QtGui.QTreeWidgetItem([ontology_file])
+            onto_root_item = QtWidgets.QTreeWidgetItem([ontology_file])
             onto_root_item.ref = ("Ontology" + str(onto_root_item), o)
             self.tw.insertTopLevelItem(i, onto_root_item)
             for top_level_class in o.toplayer:
-                top_level_item = QtGui.QTreeWidgetItem(onto_root_item, [getPrefLabel(o, top_level_class)])
+                top_level_item = QtWidgets.QTreeWidgetItem(onto_root_item, [getPrefLabel(o, top_level_class)])
                 top_level_item.ref = (top_level_class, o)
                 onto_root_item.addChild(top_level_item)
                 self._fillQTreeWidget(o, top_level_class, top_level_item)
@@ -127,7 +126,7 @@ class CecogOntologyBrowserWidget(FilterableQTreeWidget):
         else:
             for c in children:
                 label = getPrefLabel(onto, c)
-                c_item = QtGui.QTreeWidgetItem(parent_item, [str(label)])
+                c_item = QtWidgets.QTreeWidgetItem(parent_item, [str(label)])
                 c_item.ref = (c, onto)
                 parent_item.addChild(c_item)
                 self._fillQTreeWidget(onto, c, c_item)
@@ -173,7 +172,7 @@ class CecogOntologyBrowserWidget(FilterableQTreeWidget):
 class CecogOntologyBrowserDialog(QtWidgets.QDialog):
     def __init__(self, *args, **kwargs):
         super(CecogOntologyBrowserDialog, self).__init__(*args, **kwargs)
-        diag_layout = QtGui.QHBoxLayout(self)
+        diag_layout = QtWidgets.QHBoxLayout(self)
         self.tw = CecogOntologyBrowserWidget(parent=self)
         self.tw.fillTree()
         diag_layout.addWidget(self.tw)
@@ -188,7 +187,7 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
 
     diag = QtWidgets.QDialog()
-    diag_layout = QtGui.QHBoxLayout()
+    diag_layout = QtWidgets.QHBoxLayout()
     diag.setLayout(diag_layout)
     tw = CecogOntologyBrowserWidget(parent=diag)
     tw.fillTree()

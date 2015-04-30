@@ -18,7 +18,7 @@ __source__ = '$URL$'
 import os
 import sys
 import logging
-
+import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 
@@ -146,7 +146,13 @@ if __name__ ==  "__main__":
 
 
     imagecontainer = ImageContainer()
-    imagecontainer.import_from_settings(settings)
+    if position_list is not None:
+        positions = position_list.split(',')
+        plates = set(np.array([el.split('___') for el in positions])[:,0])
+    else:
+        plates=None
+    
+    imagecontainer.import_from_settings(settings, plates_restriction=plates)
 
     # FIXME: Could be more generally specified. SGE is setting the job item index via an environment variable
     if index is None:
@@ -179,8 +185,8 @@ if __name__ ==  "__main__":
             imagecontainer.set_plate(plate_id)
             meta_data = imagecontainer.get_meta_data()
             positions += ['%s___%s' % (plate_id, pos) for pos in meta_data.positions]
-    else:
-        positions = position_list.split(',')
+#     else:
+#         positions = position_list.split(',')
 
 
     if index is not None and (index < 0 or index >= len(positions)):

@@ -20,7 +20,7 @@ from os.path import join,  isfile
 
 from svm import svm_model
 from cecog.learning.util import Normalizer
-from cecog.util.logger import LoggerObject
+from cecog.logging import LoggerObject
 
 
 class GaussianMixtureModel(object):
