@@ -37,6 +37,11 @@ INCLUDES = [ 'sip',
              'scipy.spatial.kdtree',
              'scipy.sparse.csgraph._shortest_path',
              'sklearn.utils.sparsetools._graph_validation',
+             'cellh5',
+			 'ontospy',
+			 'rdflib', 
+			 'rdflib.plugins.memory',
+	         'rdflib.plugins.parsers.rdfxml',
              'sklearn.utils.lgamma',
              'sklearn.neighbors.typedefs',
              'sklearn.utils.weight_vector' ]
@@ -47,7 +52,8 @@ EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
             '_gtkagg', '_cairo', '_gtkcairo', '_fltkagg',
             '_tkagg',
             'Tkinter',
-            'zmq']
+            'zmq',
+            'wx']
 
 CC_INCLUDES = ['csrc/include'] + \
     numpy.distutils.misc_util.get_numpy_include_dirs()
@@ -67,7 +73,8 @@ def get_data_files(target_dir=TARGET_BUNDLE, mpl_data=True):
     # schema files
     dfiles.append((join(target_dir, 'schemas'),
                    glob.glob(join(RESOURCE_DIR, 'schemas', "*.xsd"))))
-
+    dfiles.append((join(target_dir, 'ontologies'), 
+                   glob.glob(join(RESOURCE_DIR, 'ontologies', "*.owl"))))		
 
     for root, subdirs, files in os.walk(_battery_package):
         for file_ in files:

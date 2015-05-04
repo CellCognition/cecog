@@ -132,6 +132,109 @@ namespace cecog
     };
 
     /**
+     * Erase a feature for all objects
+     * This has been added to allow different features for object filters
+     * than for classification.
+     */
+    void deleteFeature(std::string feature_name)
+    {
+      ObjectMap::iterator it = objects.begin();
+      for (; it != objects.end(); ++it) {
+        ROIObject& o = (*it).second;
+        o.features.erase(feature_name);
+      }
+      return;
+    }
+
+    void deleteFeatureCategory(std::string feature_name)
+    {
+//      if (calculated_features[feature_name])
+//        std::cout << "already calculated: " << feature_name << std::endl;
+//      else
+//        std::cout << "not calculated: " << feature_name << std::endl;
+
+      if (calculated_features[feature_name]) {
+        //std::cout << "remove: " << feature_name << std::endl;
+        if ((feature_name=="roisize") || (feature_name=="perimeter") ||
+            (feature_name=="circularity") || (feature_name=="irregularity") ||
+            (feature_name=="irregularity2"))
+        {
+          deleteFeature(feature_name);
+        }
+        else if (feature_name == "minmax")
+        {
+          deleteFeature("min");
+          deleteFeature("max");
+        }
+        else if (feature_name == "axes")
+        {
+          deleteFeature("dist_max");
+          deleteFeature("dist_min");
+          deleteFeature("dist_ratio");
+        }
+        else if (feature_name == "moments")
+        {
+          deleteFeature("eccentricity");
+          deleteFeature("gyration_radius");
+          deleteFeature("gyration_ratio");
+          deleteFeature("moment_I1");
+          deleteFeature("moment_I2");
+          deleteFeature("moment_I3");
+          deleteFeature("moment_I4");
+          deleteFeature("moment_I5");
+          deleteFeature("moment_I6");
+          deleteFeature("moment_I7");
+          deleteFeature("ellip_major_axis");
+          deleteFeature("ellip_minor_axis");
+          deleteFeature("ellip_axis_ratio");
+          deleteFeature("princ_gyration_x");
+          deleteFeature("princ_gyration_y");
+          deleteFeature("princ_gyration_ratio");
+          deleteFeature("skewness_x");
+          deleteFeature("skewness_y");
+        }
+        else if (feature_name == "normbase")
+        {
+          deleteFeature("n_avg");
+          deleteFeature("n_stddev");
+          deleteFeature("n_wavg");
+          deleteFeature("n_wiavg");
+          deleteFeature("n_wdist");
+        }
+        else if (feature_name == "normbase2")
+        {
+          deleteFeature("n2_avg");
+          deleteFeature("n2_stddev");
+          deleteFeature("n2_wavg");
+          deleteFeature("n2_wiavg");
+          deleteFeature("n2_wdist");
+        }
+//        else if (feature_name == "convexhull")
+//        {
+//        }
+//        else if (feature_name == "dynamics")
+//        {
+//        }
+//        else if (feature_name == "distance")
+//        {
+//        }
+//        else if (feature_name == "granulometry")
+//        {
+//        }
+//        else if (feature_name == "haralick")
+//        {
+//        }
+//        else if (feature_name == "haralick2")
+//        {
+//        }
+
+        calculated_features[feature_name] = false;
+      }
+      return;
+
+    }
+
+    /**
      * Apply a feature by name to all objects of this container
      */
     int applyFeature(std::string name, bool force=false)
@@ -142,7 +245,6 @@ namespace cecog
       if (!calculated_features[name] || force)
       {
         // simple features
-
         if (name == "minmax") {
           vigra::ArrayOfRegionStatistics<vigra::FindMinMax
                                          <value_type> > functor(total_labels);
@@ -157,6 +259,8 @@ namespace cecog
           }
         }
         else if (name == "roisize") {
+          //std::cout << calculated_features[name] << " calculating roisize" << std::endl;
+
           ObjectMap::iterator it = objects.begin();
           for (; it != objects.end(); ++it) {
             ROIObject& o = (*it).second;
@@ -206,7 +310,7 @@ namespace cecog
             o.features["dist_ratio"] = tuple.third / tuple.first;
           }
         }
-        if(name == "moments")
+        else if(name == "moments")
         {
           applyFeature("axes");
 
@@ -477,6 +581,8 @@ namespace cecog
       // remember already calculated features
       if (feature_exist)
       {
+        //std::cout << name << " exists ? " << calculated_features[name] << std::endl;
+
         if (name != "haralick" && name != "haralick2")
           //    name += unsigned_to_string(haralick_distance);
           calculated_features[name] = true;

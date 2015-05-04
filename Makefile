@@ -6,10 +6,11 @@
 # 14/02/2013
 # This software can be distribute under the term of the LGPL
 
-VERSION = 1.5.0
+VERSION = 1.6.0
+ARCH=$$(uname -m)
 APPNAME = CecogAnalyzer
 TMPNAME = CecogAnalyzer.dmg
-DMGNAME = CecogAnalyzer_$(VERSION).dmg
+DMGNAME = CecogAnalyzer_$(VERSION)_$(ARCH).dmg
 VOLNAME = $(APPNAME)-$(VERSION)
 
 all: dmg
@@ -30,3 +31,8 @@ clean:
 	rm -rfv build dist
 	rm -fv *.dmg
 	rm -fv *.*~
+	rm -fv cecog/ccore/*.so
+
+inplace:
+	python setup.py pyrcc
+	python setup.py build_ext --inplace

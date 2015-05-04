@@ -18,17 +18,17 @@ __source__ = '$URL$'
 import os
 import sys
 import logging
-
+import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 
 try:
     import cecog
 except ImportError:
-    sys.path.append(os.path.join(os.pardir, "pysrc"))
+    sys.path.append(os.pardir)
     import cecog
 
-from cecog import VERSION
+from cecog.version import version
 from cecog.traits.config import ConfigSettings
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
@@ -48,7 +48,7 @@ if __name__ ==  "__main__":
 
     parser = OptionParser(usage="usage: %prog [options]",
                           description=description,
-                          version='CellCognition %s' % VERSION)
+                          version='CellCognition %s' %version)
     parser.add_option("-s", "--settings",
                       help="", metavar="SETTINGS_FILE")
 
@@ -72,7 +72,11 @@ if __name__ ==  "__main__":
                       help="Turn image creation on.")
     group1.add_option("--create_no_images", action="store_false", dest="create_images",
                       help="Turn image creation off.")
-
+    group1.add_option("--minimal_effort", action="store_true", dest="minimal_effort",
+                      help="Minimal effort allows to process positions even if images are absent."
+                      "This is useful if features are written to an hdf5-file, but neither images"
+                      "nor segmentation results.")
+    
     group2 = OptionGroup(parser, "Cluster options",
                          "These options are used in combination with a cluster.")
     group2.add_option("--cluster_index",
@@ -94,17 +98,17 @@ if __name__ ==  "__main__":
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
 
-    logger.info("*************************************************" + '*'*len(VERSION))
-    logger.info("*** CellCognition - Batch Analyzer - Version %s ***" % VERSION)
-    logger.info("*************************************************" + '*'*len(VERSION))
+    logger.info("*************************************************" + '*'*len(version))
+    logger.info("*** CellCognition - Batch Analyzer - Version %s ***" %version)
+    logger.info("*************************************************" + '*'*len(version))
     logger.info('argv: %s' % sys.argv)
 
-    environ = CecogEnvironment(VERSION)
+    environ = CecogEnvironment(version)
 
     if options.settings is None:
         parser.error('Settings filename required.')
 
-    environ = CecogEnvironment(cecog.VERSION, redirect=False, debug=False)
+    environ = CecogEnvironment(version, redirect=False, debug=False)
 
     filename_settings = os.path.abspath(options.settings)
 
@@ -118,6 +122,7 @@ if __name__ ==  "__main__":
     batch_size = options.batch_size
     position_list = options.position_list
     create_images = options.create_images
+    minimal_effort = options.minimal_effort
     multiple_plates = options.multiple_plates
     path_input = options.input
     path_output = options.output
@@ -141,7 +146,13 @@ if __name__ ==  "__main__":
 
 
     imagecontainer = ImageContainer()
-    imagecontainer.import_from_settings(settings)
+    if position_list is not None:
+        positions = position_list.split(',')
+        plates = set(np.array([el.split('___') for el in positions])[:,0])
+    else:
+        plates=None
+    
+    imagecontainer.import_from_settings(settings, plates_restriction=plates)
 
     # FIXME: Could be more generally specified. SGE is setting the job item index via an environment variable
     if index is None:
@@ -174,8 +185,8 @@ if __name__ ==  "__main__":
             imagecontainer.set_plate(plate_id)
             meta_data = imagecontainer.get_meta_data()
             positions += ['%s___%s' % (plate_id, pos) for pos in meta_data.positions]
-    else:
-        positions = position_list.split(',')
+#     else:
+#         positions = position_list.split(',')
 
 
     if index is not None and (index < 0 or index >= len(positions)):
@@ -200,6 +211,18 @@ if __name__ ==  "__main__":
                           'rendering_class_discwrite',
                           'rendering_contours_discwrite']:
             settings.set(SECTION_NAME_OUTPUT, rendering, create_images)
+
+    if minimal_effort is None:
+        minimal_effort = False
+    try:
+        settings.set('Output', 'minimal_effort', minimal_effort)
+        print 'settings minimal_effort to ', settings.get('Output', 'minimal_effort')
+    except:
+        print ' *** WARNING: the option minimal_effort has no effect.'
+        print 'Maybe opening the settings file and saving it with the current version of CellCognition'
+        print 'may fix the problem.'
+        pass
+    
 
     # group positions by plate
     plates = {}

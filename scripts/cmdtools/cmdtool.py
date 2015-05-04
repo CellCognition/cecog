@@ -21,11 +21,12 @@ from os.path import basename, splitext, join
 try:
     import cecog
 except ImportError:
-    sys.path.append("../../pysrc")
+    sys.path.append(os.pardir)
     import cecog
 
 from cecog import ccore
 from cecog import CH_VIRTUAL
+from cecog.version import version
 from cecog.learning.learning import CommonClassPredictor
 from cecog.environment import CecogEnvironment
 from cecog.io.imagecontainer import MetaImage
@@ -300,8 +301,7 @@ class CmdTool(object):
                  image2 = None, image3 = None):
 
         super(CmdTool, self).__init__()
-        self.environ = CecogEnvironment(cecog.VERSION,
-                                        redirect=False, debug=False)
+        self.environ = CecogEnvironment(version, redirect=False, debug=False)
         self.mapper = SettingsMapper(configfile)
 
         self.images = dict()

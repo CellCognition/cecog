@@ -39,4 +39,4 @@ def find_submodules(path, modname=None):
 
 
 if __name__ == "__main__":
-    print find_submodules("../pysrc/cecog", "cecog")
+    print find_submodules("../cecog", "cecog")

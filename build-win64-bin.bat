@@ -1,8 +1,8 @@
 @SETLOCAL
 
 :: this line is one uses windows sdk build environment
-echo using Windows SDK's environment for x64 build
-set VS90COMNTOOLS=%VS100COMNTOOLS%
+@IF NOT "%VS110COMNTOOLS%"=="" set VS90COMNTOOLS=%VS110COMNTOOLS%
+@IF NOT "%VS120COMNTOOLS%"=="" set VS90COMNTOOLS=%VS120COMNTOOLS%
 
 @Set /P _clean=Clean directories manually? [Y/n] || Set _clean="n"
 
@@ -15,7 +15,7 @@ goto:build
 rmdir /Q /S dist
 rmdir /Q /S build
 erase /Q *.exe
-erase pysrc\cecog\ccore\_cecog.pyd
+erase cecog\ccore\_cecog.pyd
 
 :build
 python setup_windows.py py2exe
@@ -26,13 +26,9 @@ python setup_windows.py py2exe
 @goto:eof
 
 :nsis
-CALL git describe --tags > build.info
-for /F "delims=\" %%a in (build.info) do (
-	set temp=%%a
-)
-SET mver="1.5.0"
+SET VERSION="1.6.0"
 pause
 
-makensis /Dmver=%mver% win-installer-64.nsi
-rename CecogAnalyzer-setup.exe CecogAnalyzer_%temp%_x86_64.exe
+makensis /Dmver=%VERSION% win-installer-64.nsi
+rename CecogAnalyzer-setup.exe CecogAnalyzer_%VERSION%_x86_64.exe
 @ENDLOCAL

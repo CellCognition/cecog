@@ -17,11 +17,11 @@ __url__ = 'www.cellcognition.org'
 
 
 import os
-from os.path import join, abspath
+from os.path import join, abspath, dirname
 import sys
 import glob
+from ctypes.util import find_library
 
-sys.path.append(abspath("pysrc"))
 sys.path.append(abspath('scripts'))
 
 from distutils.core import setup, Extension
@@ -29,9 +29,10 @@ import py2exe
 import build_helpers
 
 pyrcc_opts = {'infile': 'cecog.qrc',
-              'outfile': join('pysrc', 'cecog', 'cecog_rc.py'),
+              'outfile': join('cecog', 'cecog_rc.py'),
               'pyrccbin': join('C:\\', 'Python27', 'Lib', 'site-packages',
                                'PyQt4', 'pyrcc4.exe')}
+
 
 DLL_EXCLUDES = [ 'libgdk-win32-2.0-0.dll',
                  'libgobject-2.0-0.dll',
@@ -89,7 +90,7 @@ ccore = Extension('cecog.ccore._cecog',
                   language = 'c++')
 
 # python package to distribute
-packages = build_helpers.find_submodules("./pysrc/cecog", "cecog")
+packages = build_helpers.find_submodules("./cecog", "cecog")
 
 # special casing for system installation or py2exe bundle
 if "py2exe" in sys.argv:
@@ -99,14 +100,21 @@ else:
     dfiles = build_helpers.get_data_files(build_helpers.TARGET_SYS,
                                           mpl_data=False)
 
+if "bdist_wininst" in sys.argv:
+    from distutils.sysconfig import get_python_lib
+    dllpath = find_library("vigraimpex")
+    # assuming all dlls in the same directory,
+    # lib/site-packages is also windows specific
+    dlls = (join("lib", "site-packages", "cecog", "ccore"),
+            glob.glob(dllpath.replace("vigraimpex", "*")))
+    dfiles.append(dlls)
+
 setup(options = {"py2exe": py2exe_opts,
                  'pyrcc': pyrcc_opts},
       cmdclass = {'pyrcc': build_helpers.PyRcc,
                   'build': build_helpers.Build},
       packages = packages,
-      package_dir = {'cecog': join('pysrc', 'cecog')},
       data_files = dfiles,
-      # zipfile = "data.zip",
       windows = [{'script': join('scripts', 'CecogAnalyzer.py'),
                   'icon_resources': [(1, 'resources\cecog_analyzer_icon.ico')]
                   }],

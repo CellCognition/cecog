@@ -33,6 +33,29 @@ namespace cecog
 {
   namespace python
   {
+
+
+    template <class IMAGE>
+    PyObject * pyWatershedDynamicSplit(IMAGE const &imgIn,
+                                       typename IMAGE::value_type dyn_thresh,
+                                       int neighborhood,
+                                       int dist_mode)
+    {
+      std::auto_ptr< IMAGE > imgPtr(new IMAGE(imgIn.size()));
+      using namespace cecog::morpho;
+
+      if (neighborhood==4) {
+        neighborhood2D nb(WITHOUTCENTER4, imgIn.size());
+        cecog::watershedDynamicSplit(imgIn, *imgPtr, dyn_thresh, nb, dist_mode);
+      }
+      else {
+        neighborhood2D nb(WITHOUTCENTER8, imgIn.size());
+        cecog::watershedDynamicSplit(imgIn, *imgPtr, dyn_thresh, nb, dist_mode);
+      }
+
+      return incref(object(imgPtr).ptr());
+    }
+
     template <class IMAGE>
     void pyHoleFilling(IMAGE & img_bin, bool eightneigborhood=false)
     {
@@ -283,6 +306,10 @@ void wrap_segmentation()
       (arg("image"), arg("binary"), arg("labels_in"), arg("lambda")=0.05, arg("delta_width")=1, arg("srg_type")=cecog::CompleteGrow),
       "Propagate segmentation from Jones et al. (2005). Lambda is the weight of the spatial pixel distance and delta_width the local area to compute the pixel difference.");
 
+
+  def("watershed_dynamic_split", pyWatershedDynamicSplit<vigra::UInt8Image>,
+      (arg("binary"), arg("dyn_thresh"), arg("neighborhood")=4, arg("dist_mode")=0),
+      "Split of binary image by applying the Watershed with imposed markers with morphological dynamic >= dyn_thresh. Output: binary image");
 
 }
 #endif /* CECOG_PYTHON_WRAP_SEGMENTATION_HXX_ */

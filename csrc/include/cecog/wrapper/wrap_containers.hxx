@@ -82,6 +82,8 @@ void wrap_containers()
   class_< _ObjectContainerBase >("ObjectContainerBase")
     .def("applyFeature", &_ObjectContainerBase::applyFeature,
          apply_feature_overloads())
+    .def("deleteFeature", &_ObjectContainerBase::deleteFeature)
+    .def("deleteFeatureCategory", &_ObjectContainerBase::deleteFeatureCategory)
     .def("markObjects", fx1, mark_objects_overloads1(args("color", "quad", "showIds", "fill", "force")))
     .def("markObjects", fx2, mark_objects_overloads2(args("color", "quad", "showIds", "fill", "force")))
     .def("makeRGB", &_ObjectContainerBase::makeRGB)
