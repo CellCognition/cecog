@@ -13,6 +13,7 @@ __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
 from os.path import join, split, exists
+import os
 import h5py
 import logging
 
@@ -46,7 +47,7 @@ def link_hdf5_files(post_hdf5_link_list):
 
         if 'definition' in f:
             del f['definition']
-            f['definition'] = h5py.ExternalLink(post_hdf5_link_list[0],
+            f['definition'] = h5py.ExternalLink(os.path.basename(post_hdf5_link_list[0]),
                                                 '/definition')
 
         for fname in post_hdf5_link_list:
@@ -60,7 +61,7 @@ def link_hdf5_files(post_hdf5_link_list):
             if (POSITION_PREFIX + '%s') % (fplate, fwell, fpos) in f:
                 del f[(POSITION_PREFIX + '%s') % (fplate, fwell, fpos)]
             f[(POSITION_PREFIX + '%s') % (fplate, fwell, fpos)] = \
-                h5py.ExternalLink(fname, (POSITION_PREFIX + '%s')
+                h5py.ExternalLink(os.path.basename(fname), (POSITION_PREFIX + '%s')
                                   % (fplate, fwell, fpos))
         f.close()
 
@@ -68,7 +69,7 @@ def link_hdf5_files(post_hdf5_link_list):
         f = h5py.File(all_pos_hdf5_filename, 'w')
         logger.info("_all_positons.hdf file created...")
 
-        f['definition'] = h5py.ExternalLink(post_hdf5_link_list[0],'/definition')
+        f['definition'] = h5py.ExternalLink(os.path.basename(post_hdf5_link_list[0]),'/definition')
 
         for fname in post_hdf5_link_list:
             fh = h5py.File(fname, 'r')
@@ -78,6 +79,6 @@ def link_hdf5_files(post_hdf5_link_list):
                 ((POSITION_PREFIX + '%s') % (fplate, fwell, fpos))
             logger.info(msg)
             f[(POSITION_PREFIX + '%s') % (fplate, fwell, fpos)] = \
-                h5py.ExternalLink(fname, (POSITION_PREFIX + '%s')
+                h5py.ExternalLink(os.path.basename(fname), (POSITION_PREFIX + '%s')
                                   % (fplate, fwell, fpos))
         f.close()
