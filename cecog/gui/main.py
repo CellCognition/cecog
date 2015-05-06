@@ -60,6 +60,9 @@ from cecog.gui.analyzer.processing import ProcessingFrame
 from cecog.gui.analyzer.cluster import ClusterFrame
 from cecog.gui.imagedialog import ImageDialog
 from cecog.gui.aboutdialog import CecogAboutDialog
+from cecog.gui.preferences import PreferencesDialog
+from cecog.gui.preferences import AppPreferences
+
 
 from cecog.gui.browser import Browser
 from cecog.gui.helpbrowser import HelpBrowser
@@ -272,6 +275,9 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
             self._pages.widgetByType(ClusterFrame).restore_jobids(jobids)
         settings.endGroup()
 
+        AppPreferences().restoreSettings()
+
+
     def closeEvent(self, event):
         # Quit dialog only if not debuging flag is not set
         self._save_geometry()
@@ -436,7 +442,8 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         dialog.show()
 
     def open_preferences(self):
-        print "pref"
+        pref = PreferencesDialog()
+        pref.exec_()
 
     def _on_browser_open(self):
         if self._imagecontainer is None:

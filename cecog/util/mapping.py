@@ -28,6 +28,7 @@ def resolve_os_name():
         return 'linux'
 
 def map_path_to_os(path, path_mappings, target_os=None):
+
     path = os.path.normpath(path)
     path_mapped = None
     if target_os is None:
