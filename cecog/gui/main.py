@@ -31,8 +31,6 @@ from cecog.units.time import TimeConverter
 from cecog.environment import CecogEnvironment
 from cecog.io.imagecontainer import ImageContainer
 
-
-
 from cecog.gui.config import GuiConfigSettings
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
@@ -61,8 +59,6 @@ from cecog.gui.analyzer.cluster import ClusterFrame
 from cecog.gui.imagedialog import ImageDialog
 from cecog.gui.aboutdialog import CecogAboutDialog
 from cecog.gui.preferences import PreferencesDialog
-from cecog.gui.preferences import AppPreferences
-
 
 from cecog.gui.browser import Browser
 from cecog.gui.helpbrowser import HelpBrowser
@@ -274,9 +270,6 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         if jobids:
             self._pages.widgetByType(ClusterFrame).restore_jobids(jobids)
         settings.endGroup()
-
-        AppPreferences().restoreSettings()
-
 
     def closeEvent(self, event):
         # Quit dialog only if not debuging flag is not set

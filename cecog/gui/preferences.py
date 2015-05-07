@@ -16,11 +16,14 @@ __url__ = 'www.cellcognition.org'
 __all__ = ("PreferencesDialog", "AppPreferences")
 
 
+import sys
+import ntpath
+import posixpath
+
 from collections import defaultdict
 from StringIO import StringIO
 from os.path import splitext
 import numpy as np
-
 
 from PyQt5 import uic
 from PyQt5 import QtWidgets
@@ -58,18 +61,21 @@ class AppPreferences(object):
     """Singleton class to access applicaton preferences."""
 
     __metaclass__ = Singleton
-    __slots__ = ("host", "port", "mapping_str")
+    __slots__ = ("host", "port", "mapping_str", "target_platform")
 
     def __init__(self):
 
         # default values
-        self.host = 'http://login-debian7.bioinfo.imp.ac.at:9999'
+        self.host = 'http://login-debian7.bioinfo.imp.ac.at'
         self.port = 9999
 
-        self.mapping_str = ("#mac, windows, linux\n"
+        self.mapping_str = ("#darwin, win32, linux\n"
                             "/Volumes/groups/gerlich, M:, /groups/gerlich\n"
                             "/Volumes/clustertmp, N:, /clustertmp\n"
                             "/Volumes/resources, O:, /resources")
+        self.target_platform = "linux"
+
+        self.restoreSettings()
 
     def saveSettings(self):
         settings = QSettings(version.organisation, version.appname)
@@ -78,6 +84,7 @@ class AppPreferences(object):
         settings.setValue('host', self.host)
 
         settings.setValue('path_mapping', self.mapping_str)
+        settings.setValue('target_platform', self.target_platform)
         settings.endGroup()
 
     def restoreSettings(self):
@@ -94,15 +101,63 @@ class AppPreferences(object):
         if settings.contains('path_mapping'):
             self.mapping_str = settings.value('path_mapping')
 
+        if settings.contains('target_platform'):
+            self.target_platform = settings.value('target_platform')
+
     @property
     def url(self):
-        return "%s:%s" %(self.host.text(), self.port.value())
+        return "%s:%s" %(self.host, self.port)
 
     @property
     def mapping(self):
         return txt2dict(self.mapping_str)
 
+    def map2platform(self, path, target_platform=None):
+        """Map paths of from the source i.e. current platform to the
+        target platform. Supported plaforms are linux, win32 and darwin.
+
+        The method does not perform any sanity checks wether the path exists
+        on the current or target platform. It simply replaces the substrings of
+        the current path, defined in mapping table.
+
+        The new path is normalized using the xx.normcase method (x is replaced
+        either by ntpath or posixpath).
+        """
+
+        if target_platform is None:
+            target_platform = self.target_platform
+
+
+        if target_platform not in ("linux", "linux2", "darwin", "win32"):
+            raise RuntimeError("Target platform not supported!")
+
+        platform = sys.platform
+        mapping = AppPreferences().mapping
+
+        path_mapped = None
+        for k, v in mapping[platform].iteritems():
+            if path.find(k) == 0:
+                path_mapped = path.replace(k, v[target_platform])
+                break
+
+        if path_mapped is None:
+            pass
+        elif target_platform.startswith("win"):
+            path_mapped = ntpath.normcase(path_mapped)
+        # OSX 10.X and linux
+        else:
+            path_mapped = posixpath.normcase(path_mapped)
+
+        return path_mapped
+
+
+
 class PreferencesDialog(QtWidgets.QDialog):
+
+    _osnames = {"darwin": "Mapple",
+                "linux": "Linux",
+                "win32": "DOS"}
+    _iosnames = dict([(v, k) for k, v in _osnames.iteritems()])
 
     def __init__(self, *args, **kw):
         super(PreferencesDialog, self).__init__(*args, **kw)
@@ -116,12 +171,19 @@ class PreferencesDialog(QtWidgets.QDialog):
         self.addBtn.clicked.connect(self.addMapping)
         self.deleteBtn.clicked.connect(self.deleteMapping)
 
+        for i in xrange(self.mappings.columnCount()):
+            self.mappings.resizeColumnToContents(i)
+
+        self.target_platform.clear()
+        self.target_platform.addItems(self._iosnames.keys())
+        self.target_platform.setCurrentIndex(
+            self.target_platform.findText(self._osnames[apc.target_platform]))
 
     def populateTable(self, mappings):
 
         table = np.recfromcsv(StringIO(mappings), autostrip=True)
-        self.mappings.setHeaderLabels(table.dtype.names)
-
+        self.mappings.setHeaderLabels(
+            [self._osnames[n] for n in table.dtype.names])
 
         for i, line in enumerate(table):
             item = QtWidgets.QTreeWidgetItem(line)
@@ -136,6 +198,7 @@ class PreferencesDialog(QtWidgets.QDialog):
 
         names = [self.mappings.headerItem().data(i, Qt.DisplayRole)
                  for i in xrange(self.mappings.columnCount())]
+        names = [self._iosnames[n] for n in names]
 
         txt = "#" + ",".join(names)
         for i in xrange(self.mappings.topLevelItemCount()):
@@ -161,6 +224,8 @@ class PreferencesDialog(QtWidgets.QDialog):
         appcfg.host =  self.host.text()
         appcfg.port = self.port.value()
         appcfg.mapping_str = self.mapping2txt()
+        appcfg.target_platform = \
+            self._iosnames[self.target_platform.currentText()]
         appcfg.saveSettings()
 
         super(PreferencesDialog, self).accept()

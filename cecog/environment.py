@@ -29,7 +29,7 @@ from ConfigParser import RawConfigParser
 
 from cecog import version
 from cecog.util.pattern import Singleton
-from cecog.util.mapping import map_path_to_os as _map_path_to_os
+#from cecog.util.mapping import map_path_to_os as _map_path_to_os
 from cecog import ccore
 
 def find_resource_dir():
@@ -95,34 +95,34 @@ class BatteryPackage(object):
         del self._path
 
 
-class PathMapper(object):
+# class PathMapper(object):
 
-    def __init__(self, filename):
-        self._column_names, self._path_mappings = None, None
-        self.read(filename)
+#     def __init__(self, filename):
+#         self._column_names, self._path_mappings = None, None
+#         self.read(filename)
 
-    def map_path_to_os(self, path, target_os=None, force=True):
-        path2 = _map_path_to_os(path, self._path_mappings, target_os=target_os)
-        if path2 is None and force:
-            path2 = path
-        return path2
+#     def map_path_to_os(self, path, target_os=None, force=True):
+#         path2 = _map_path_to_os(path, self._path_mappings, target_os=target_os)
+#         if path2 is None and force:
+#             path2 = path
+#         return path2
 
-    def is_path_mappable(self, path, target_os=None):
-        path2 = _map_path_to_os(path, self._path_mappings, target_os=target_os)
-        return not path2 is None
+#     def is_path_mappable(self, path, target_os=None):
+#         path2 = _map_path_to_os(path, self._path_mappings, target_os=target_os)
+#         return not path2 is None
 
-    def read(self, filename):
-        with open(filename, "r") as fp:
-            pmp = csv.DictReader(fp, delimiter="\t")
-            self._path_mappings = [row for row in pmp]
-            self._column_names = pmp.fieldnames
+#     def read(self, filename):
+#         with open(filename, "r") as fp:
+#             pmp = csv.DictReader(fp, delimiter="\t")
+#             self._path_mappings = [row for row in pmp]
+#             self._column_names = pmp.fieldnames
 
-    def write(self, filename):
-        with open(filename, "w") as fp:
-            pmp = csv.DictWriter(fp, fieldnames=self._column_names,
-                                 delimiter="\t")
-            for row in self._path_mappings:
-                pmp.writerow(row)
+#     def write(self, filename):
+#         with open(filename, "w") as fp:
+#             pmp = csv.DictWriter(fp, fieldnames=self._column_names,
+#                                  delimiter="\t")
+#             for row in self._path_mappings:
+#                 pmp.writerow(row)
 
 
 class CecogEnvironment(object):
@@ -136,7 +136,7 @@ class CecogEnvironment(object):
 
     FONT12 = join(RESOURCE_DIR, "font12.png")
     NAMING_SCHEMA = join(RESOURCE_DIR, "naming_schemas.ini")
-    PATH_MAPPINGS = join(RESOURCE_DIR, "path_mappings.txt")
+    # PATH_MAPPINGS = join(RESOURCE_DIR, "path_mappings.txt")
     CONFIG = join(RESOURCE_DIR, "config.ini")
 
     PALETTES = join('palettes', 'zeiss')
@@ -144,7 +144,7 @@ class CecogEnvironment(object):
     # XXX want this away from class level
     naming_schema = ConfigParser(NAMING_SCHEMA, 'naming_schemas')
     analyzer_config = ConfigParser(CONFIG, 'analyzer_config')
-    path_mapper = PathMapper(PATH_MAPPINGS)
+    # path_mapper = PathMapper(PATH_MAPPINGS)
 
     def __init__(self, version=version.version, redirect=False, debug=False):
         super(CecogEnvironment, self).__init__()
@@ -186,7 +186,7 @@ class CecogEnvironment(object):
         if not isdir(self.user_config_dir):
             os.mkdir(self.user_config_dir)
 
-        cfiles = ('FONT12', 'CONFIG', 'PATH_MAPPINGS', 'NAMING_SCHEMA')
+        cfiles = ('FONT12', 'NAMING_SCHEMA')
         # copy the config config and update class attributes
         for key in cfiles:
             file_ = getattr(cls, key)

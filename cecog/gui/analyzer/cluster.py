@@ -23,41 +23,33 @@ import urlparse
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from PyQt5.Qt import *
+from PyQt5.QtWidgets import QMessageBox
 
 from pyamf.remoting.client import RemotingService
 
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
-from cecog.environment import CecogEnvironment
-
 from cecog.gui.analyzer import BaseFrame
 from cecog.gui.analyzer.processing import ExportSettings
-from cecog.gui.util import exception, information, warning
 from cecog.gui.progressdialog import ProgressDialog
+from cecog.gui.preferences import AppPreferences
 
 from cecog import JOB_CONTROL_RESUME, JOB_CONTROL_SUSPEND, \
     JOB_CONTROL_TERMINATE
 
-from cecog.version import version
+from cecog.version import version, appname
+
 
 class ClusterDisplay(QGroupBox):
 
     def __init__(self, parent, clusterframe,  settings):
-        QGroupBox.__init__(self, parent)
+        super(ClusterDisplay, self).__init__(parent)
         self._settings = settings
         self._clusterframe = clusterframe
         self._imagecontainer = None
         self._jobid = None
         self._toggle_state = JOB_CONTROL_SUSPEND
         self._service = None
-
-        self._host_url = CecogEnvironment.analyzer_config.get(
-            'Cluster', 'host_url')
-        try:
-            self._host_url_fallback = CecogEnvironment.analyzer_config.get(\
-                'Cluster', 'host_url_fallback')
-        except:
-            # old config file
-            self._host_url_fallback = self._host_url
+        self._host_url = None
 
         self.setTitle('ClusterControl')
         label1 = QLabel('Cluster URL:', self)
@@ -80,12 +72,12 @@ class ClusterDisplay(QGroupBox):
 
         self._table_info = QTableWidget(self)
         self._table_info.setSelectionMode(QTableWidget.NoSelection)
-        labels = ['status', 'your machine', 'on the cluster']
+        labels = ['Status', 'Local Machine', 'Cluster']
         self._table_info.setColumnCount(len(labels))
         self._table_info.setHorizontalHeaderLabels(labels)
-        self._table_info.setSizePolicy(QSizePolicy(QSizePolicy.Expanding|QSizePolicy.Maximum,
-                                                   QSizePolicy.MinimumExpanding))
-
+        self._table_info.setSizePolicy(
+            QSizePolicy(QSizePolicy.Expanding|QSizePolicy.Maximum,
+                        QSizePolicy.MinimumExpanding))
 
         layout = QGridLayout(self)
         layout.addWidget(label1, 0, 0, Qt.AlignRight)
@@ -94,12 +86,6 @@ class ClusterDisplay(QGroupBox):
         layout.addWidget(self._label_status, 1, 1, 1, 4)
         layout.addWidget(label4, 2, 0, Qt.AlignRight)
         layout.addWidget(self._table_info, 3, 0, 1, 5)
-
-        label = QLabel('Mail addresses:', self)
-        layout.addWidget(label, 4, 0, Qt.AlignRight)
-        mails = CecogEnvironment.analyzer_config.get('Cluster', 'mail_adresses')
-        self._txt_mail = QLineEdit(mails, self)
-        layout.addWidget(self._txt_mail, 4, 1, 1, 4)
 
         self._btn_submit = QPushButton('Submit job', self)
         self._btn_submit.setEnabled(False)
@@ -198,7 +184,8 @@ class ClusterDisplay(QGroupBox):
             self.dlg.exec_(func)
             jobid = self.dlg.getTargetResult()
         except Exception as e:
-            exception(self, 'Error on job submission (%s)' %str(e))
+            QMessageBox.critical(
+                self, "Error", 'Job submission failed (%s)' %str(e))
         else:
             # FIXME: no idea how DRMAA 1.0 compatible this is
             if type(jobid) == types.ListType:
@@ -209,8 +196,9 @@ class ClusterDisplay(QGroupBox):
                 main_jobid = jobid
             self._txt_jobid.setText(self._jobid)
             self._update_job_status()
-            information(self, 'Job submitted successfully',
-                        "Job successfully submitted to the cluster.\nJob ID: %s, items: %d" % (main_jobid, nr_items))
+            QMessageBox.information(
+                self, "Information", ("Job(s) successfully submitted\n"
+                                      "Job ID: %s, #jobs: %d" % (main_jobid, nr_items)))
 
     @pyqtSlot()
     def _on_terminate_job(self):
@@ -219,7 +207,8 @@ class ClusterDisplay(QGroupBox):
             func = lambda: self._service.control_job(self._jobid, JOB_CONTROL_TERMINATE)
             self.dlg.exec_(func)
         except Exception as e:
-            exception(self, 'Error on job termination (%s)' %str(e))
+            QMessageBox.critical(
+                self, "Error", "Job termination failed (%s)" %str(e))
         else:
             self._btn_toogle.setChecked(False)
             self._toggle_state = JOB_CONTROL_SUSPEND
@@ -235,7 +224,8 @@ class ClusterDisplay(QGroupBox):
         except Exception as e:
             self._toggle_state = JOB_CONTROL_SUSPEND
             self._btn_toogle.setChecked(False)
-            exception(self, 'Error on toggle job status (%s)' %str(e))
+            QMessageBox.critical(
+                self, "Error", "Could not toggle job status (%s)" %str(e))
         else:
             if self._toggle_state == JOB_CONTROL_SUSPEND:
                 self._toggle_state = JOB_CONTROL_RESUME
@@ -247,7 +237,7 @@ class ClusterDisplay(QGroupBox):
     @pyqtSlot()
     def _on_update_job_status(self):
         txt = self._update_job_status()
-        information(self, 'Cluster update', "Message: '%s'" % txt)
+        QMessageBox.information(self, "Cluster update", "Message: '%s'" % txt)
 
     def _update_job_status(self):
 
@@ -258,7 +248,8 @@ class ClusterDisplay(QGroupBox):
             self.dlg.exec_(func)
             txt = self.dlg.getTargetResult()
         except Exception as e:
-            exception(self, 'Error on retrieve job status (%s)' %str(e))
+            QMessageBox.critical(
+                self, "Error", 'Could not retrieve job status (%s)' %str(e))
         else:
             self._label_jobstatus.setText(txt)
         return txt
@@ -270,14 +261,9 @@ class ClusterDisplay(QGroupBox):
             test_sock.shutdown(2)
             test_sock.close()
         except:
-            try:
-                url = urlparse.urlparse(self._host_url_fallback)
-                test_sock = socket.create_connection((url.hostname, url.port), timeout=1)
-                test_sock.shutdown(2)
-                test_sock.close()
-                self._host_url = self._host_url_fallback
-            except:
-                exception(self, 'Error on connecting to cluster control service. Please check your config.ini')
+            msg = "Could not connect to cluster\n(%s)" %self._host_url
+            QMessageBox.critical(self, "Error", msg)
+
 
     def _connect(self):
         self._check_host_url()
@@ -291,18 +277,20 @@ class ClusterDisplay(QGroupBox):
             self.dlg.exec_(func)
             self._service = self.dlg.getTargetResult()
         except:
-            exception(self, msg)
+            QMessageBox.critical(self, "Error", msg)
         else:
             try:
                 self.dlg.exec_(self._service.get_cecog_versions)
                 cluster_versions = self.dlg.getTargetResult()
             except Exception as e:
-                exception(self, msg + '(%s)' %str(e))
+                QMessageBox.critical(self, "Error", self, msg + '(%s)' %str(e))
             else:
                 if not version in set(cluster_versions):
-                    warning(self, 'Cecog version %s not supported by the cluster' %
-                            version, 'Valid versions are: %s' \
-                                % ', '.join(cluster_versions))
+                    QMessageBox.warning(
+                        self, "Warning",
+                        ("Cluster does not support %s %s"
+                         "Available versions: %s"
+                         %(appname, version, ', '.join(cluster_versions))))
                 else:
                     success = True
         return success
@@ -347,6 +335,8 @@ class ClusterDisplay(QGroupBox):
         return results
 
     def update_display(self, is_active):
+        apc = AppPreferences()
+        self._host_url = apc.url
         if self._connect():
             self._can_submit = True
 
@@ -364,10 +354,11 @@ class ClusterDisplay(QGroupBox):
             self._table_info.setRowCount(len(mappable_paths))
             for idx, info in enumerate(mappable_paths):
                 value = self._settings.get(*info)
-                mapped = CecogEnvironment.map_path_to_os(
-                    value, target_os='linux', force=False)
+
+                mapped = apc.map2platform(value, target_platform="linux")
+
                 self._submit_settings.set(info[0], info[1], mapped)
-                status = not mapped is None
+                status = mapped is not None
                 item = QTableWidgetItem()
                 item.setBackground(QBrush(QColor('green' if status else 'red')))
                 txt_mapped = str(mapped) if status else \
