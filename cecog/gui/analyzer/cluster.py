@@ -19,6 +19,7 @@ __all__ = ['ClusterFrame']
 import types
 import socket
 import urlparse
+from os.path import isdir
 
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
@@ -72,7 +73,7 @@ class ClusterDisplay(QGroupBox):
 
         self._table_info = QTableWidget(self)
         self._table_info.setSelectionMode(QTableWidget.NoSelection)
-        labels = ['Status', 'Local Machine', 'Cluster']
+        labels = ['Local', 'Remote']
         self._table_info.setColumnCount(len(labels))
         self._table_info.setHorizontalHeaderLabels(labels)
         self._table_info.setSizePolicy(
@@ -334,11 +335,32 @@ class ClusterDisplay(QGroupBox):
                 results.append(info)
         return results
 
+    def check_directories(self):
+        """Check local and remote directories defined in the path mapping table
+        for existence and setup the table view accordingly.
+        """
+
+        ndirs = self._table_info.rowCount()
+        remote_dirs = [self._table_info.item(i, 1).text() for i in xrange(ndirs)]
+        remote_state = self._service.check_directory(remote_dirs)
+        local_dirs = [self._table_info.item(i, 0).text() for i in xrange(ndirs)]
+        local_state = [isdir(d) for d in local_dirs]
+        states = [local_state, remote_state]
+
+        for i in xrange(ndirs):
+            for j in xrange(2):
+                item = self._table_info.item(i, j)
+                if states[j][i]:
+                    item.setBackground(QBrush(QColor("green")))
+                else:
+                    item.setText("Not available")
+                    item.setBackground(QBrush(QColor("red")))
+
     def update_display(self, is_active):
         apc = AppPreferences()
         self._host_url = apc.url
         if self._connect():
-            self._can_submit = True
+            can_submit = True
 
             try:
                 self._submit_settings = self._clusterframe.get_special_settings( \
@@ -352,24 +374,20 @@ class ClusterDisplay(QGroupBox):
             mappable_paths = self._get_mappable_paths()
             self._table_info.clearContents()
             self._table_info.setRowCount(len(mappable_paths))
-            for idx, info in enumerate(mappable_paths):
+
+            for i, info in enumerate(mappable_paths):
                 value = self._settings.get(*info)
-
-                mapped = apc.map2platform(value, target_platform="linux")
-
+                mapped = apc.map2platform(value)
                 self._submit_settings.set(info[0], info[1], mapped)
-                status = mapped is not None
-                item = QTableWidgetItem()
-                item.setBackground(QBrush(QColor('green' if status else 'red')))
-                txt_mapped = str(mapped) if status else \
-                            'Warning: path can not be mapped on the cluster'
-                self._table_info.setItem(idx, 0, item)
-                self._table_info.setItem(idx, 1, QTableWidgetItem(value))
-                self._table_info.setItem(idx, 2, QTableWidgetItem(txt_mapped))
-                self._can_submit &= status
+                if mapped is None:
+                    can_submit = False
+                self._table_info.setItem(i, 0, QTableWidgetItem(value))
+                self._table_info.setItem(i, 1, QTableWidgetItem(mapped))
+
+            self.check_directories()
             self._table_info.resizeColumnsToContents()
             self._table_info.resizeRowsToContents()
-            self._btn_submit.setEnabled(self._can_submit and is_active)
+            self._btn_submit.setEnabled(can_submit and is_active)
             self._btn_terminate.setEnabled(is_active)
             self._btn_toogle.setEnabled(is_active)
             self._btn_update.setEnabled(is_active)
