@@ -170,18 +170,18 @@ class ClusterDisplay(QGroupBox):
             positions = self._submit_settings.get2('positions')
             nr_items = len(positions.split(','))
 
-        # FIXME: we need to get the current value for 'position_granularity'
         settings_dummy = self._clusterframe.get_special_settings(self._settings)
-        position_granularity = settings_dummy.get('Cluster', 'position_granularity')
 
-        path_out = self._submit_settings.get2('pathout')
-        emails = str(self._txt_mail.text()).split(',')
+        apc = AppPreferences()
+        batch_size = apc.batch_size
+        path_out = apc.map2platform(self._submit_settings.get2('pathout'))
+
         try:
-            self.dlg = ProgressDialog("submitting jobs...", None, 0, 0, self)
+            self.dlg = ProgressDialog("Submitting Jobs...", None, 0, 0, self)
             settings_str = self._submit_settings.to_string()
             func = lambda: self._service.submit_job('cecog_batch', settings_str,
                                                     path_out, emails, nr_items,
-                                                    position_granularity, version)
+                                                    batch_size, version)
             self.dlg.exec_(func)
             jobid = self.dlg.getTargetResult()
         except Exception as e:
@@ -204,7 +204,7 @@ class ClusterDisplay(QGroupBox):
     @pyqtSlot()
     def _on_terminate_job(self):
         try:
-            self.dlg = ProgressDialog("terminating jobs...", None, 0, 0, self)
+            self.dlg = ProgressDialog("Terminating Jobs...", None, 0, 0, self)
             func = lambda: self._service.control_job(self._jobid, JOB_CONTROL_TERMINATE)
             self.dlg.exec_(func)
         except Exception as e:
@@ -219,7 +219,7 @@ class ClusterDisplay(QGroupBox):
     @pyqtSlot()
     def _on_toggle_job(self):
         try:
-            self.dlg = ProgressDialog("suspending jobs...", None, 0, 0, self)
+            self.dlg = ProgressDialog("Suspending Jobs...", None, 0, 0, self)
             func = lambda: self._service.control_job(self._jobid, self._toggle_state)
             self.dlg.exec_(func)
         except Exception as e:
@@ -243,7 +243,7 @@ class ClusterDisplay(QGroupBox):
     def _update_job_status(self):
 
         try:
-            self.dlg = ProgressDialog("updating job status...", None, 0, 0, self)
+            self.dlg = ProgressDialog("Updating Job Status...", None, 0, 0, self)
 
             func = lambda: self._service.get_job_status(self._jobid)
             self.dlg.exec_(func)
@@ -273,7 +273,7 @@ class ClusterDisplay(QGroupBox):
         msg = 'Error on connecting to cluster control service on %s' % self._host_url
         try:
             client = RemotingService(self._host_url)
-            self.dlg = ProgressDialog("connecting to cluster...", None, 0, 0, self)
+            self.dlg = ProgressDialog("Connecting to Cluster...", None, 0, 0, self)
             func = lambda: client.getService('clustercontrol')
             self.dlg.exec_(func)
             self._service = self.dlg.getTargetResult()
@@ -297,12 +297,11 @@ class ClusterDisplay(QGroupBox):
         return success
 
     def _get_mappable_paths(self):
-        '''
-        Get the paths/filenames which have to be mapped to run on a remote
+        """Get the paths/filenames which have to be mapped to run on a remote
         cluster. Whether an option is considered or not might depend on other
         values/switches, e.g. if classification is not needed there is no need
         to map the paths.
-        '''
+        """
         #FIXME: should be done in a better way.
         results = []
         targets = [(('General', 'pathin'), []),
@@ -403,16 +402,10 @@ class ClusterFrame(BaseFrame, ExportSettings):
     def __init__(self, settings, parent, name):
         super(ClusterFrame, self).__init__(settings, parent, name)
 
-        self._cluster_display = self._add_frame()
-        self.add_group(None, [('position_granularity', (0,0,1,1)), ],
-                       label='Cluster Settings')
-
-    def _add_frame(self):
         frame = self._get_frame()
-        cluster_display = ClusterDisplay(frame, self, self._settings)
-        frame.layout().addWidget(cluster_display, frame._input_cnt, 0, 1, 2)
+        self._cluster_display = ClusterDisplay(frame, self, self._settings)
+        frame.layout().addWidget(self._cluster_display, frame._input_cnt, 0, 1, 2)
         frame._input_cnt += 1
-        return cluster_display
 
     def page_changed(self):
         self._cluster_display.update_display(self._is_active)

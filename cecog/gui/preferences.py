@@ -61,7 +61,8 @@ class AppPreferences(object):
     """Singleton class to access applicaton preferences."""
 
     __metaclass__ = Singleton
-    __slots__ = ("host", "port", "mapping_str", "target_platform")
+    __slots__ = ("host", "port", "mapping_str", "target_platform",
+                 "batch_size")
 
     def __init__(self):
 
@@ -74,6 +75,7 @@ class AppPreferences(object):
                             "/Volumes/clustertmp, N:, /clustertmp\n"
                             "/Volumes/resources, O:, /resources")
         self.target_platform = "linux"
+        self.batch_size = 1
 
         self.restoreSettings()
 
@@ -85,6 +87,7 @@ class AppPreferences(object):
 
         settings.setValue('path_mapping', self.mapping_str)
         settings.setValue('target_platform', self.target_platform)
+        settings.setValue('batch_size', self.batch_size)
         settings.endGroup()
 
     def restoreSettings(self):
@@ -103,6 +106,11 @@ class AppPreferences(object):
 
         if settings.contains('target_platform'):
             self.target_platform = settings.value('target_platform')
+
+        if settings.contains('batch_size'):
+            self.batch_size = settings.value('batch_size', type=int)
+
+        settings.endGroup()
 
     @property
     def url(self):
@@ -179,6 +187,9 @@ class PreferencesDialog(QtWidgets.QDialog):
         self.target_platform.setCurrentIndex(
             self.target_platform.findText(self._osnames[apc.target_platform]))
 
+        self.batch_size.setValue(apc.batch_size)
+
+
     def populateTable(self, mappings):
 
         table = np.recfromcsv(StringIO(mappings), autostrip=True)
@@ -226,6 +237,8 @@ class PreferencesDialog(QtWidgets.QDialog):
         appcfg.mapping_str = self.mapping2txt()
         appcfg.target_platform = \
             self._iosnames[self.target_platform.currentText()]
+        appcfg.batch_size = self.batch_size.value()
+
         appcfg.saveSettings()
 
         super(PreferencesDialog, self).accept()
