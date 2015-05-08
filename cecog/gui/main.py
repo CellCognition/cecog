@@ -59,6 +59,7 @@ from cecog.gui.analyzer.cluster import ClusterFrame
 from cecog.gui.imagedialog import ImageDialog
 from cecog.gui.aboutdialog import CecogAboutDialog
 from cecog.gui.preferences import PreferencesDialog
+from cecog.gui.preferences import AppPreferences
 
 from cecog.gui.browser import Browser
 from cecog.gui.helpbrowser import HelpBrowser
@@ -200,7 +201,8 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         for frame in self._tabs:
             frame.status_message.connect(self.statusBar().showMessage)
 
-        if self.environ.analyzer_config.get('Analyzer', 'cluster_support'):
+        print AppPreferences().cluster_support
+        if AppPreferences().cluster_support:
             clusterframe = ClusterFrame(self._settings, self._pages, SECTION_NAME_CLUSTER)
             clusterframe.set_imagecontainer(self._imagecontainer)
             self._tabs.append(clusterframe)
@@ -224,11 +226,6 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         layout.addWidget(self._pages, 0, 1, 2, 1)
         layout.setContentsMargins(1, 1, 1, 1)
 
-        # handler = GuiLogHandler(self)
-        # handler.setLevel(logging.INFO)
-        # formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
-        # handler.setFormatter(formatter)
-
         self.setGeometry(0, 0, 1250, 800)
         self.setMinimumSize(QtCore.QSize(700, 600))
         self._is_initialized = True
@@ -251,8 +248,13 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         settings.beginGroup('Gui')
         settings.setValue('state', self.saveState())
         settings.setValue('geometry', self.saveGeometry())
-        settings.setValue('clusterjobs',
-                          self._pages.widgetByType(ClusterFrame).get_jobids())
+
+        try:
+            settings.setValue('clusterjobs',
+                              self._pages.widgetByType(ClusterFrame).get_jobids())
+        except KeyError:
+            pass
+
         settings.endGroup()
 
     def _restore_geometry(self):
@@ -267,7 +269,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
             self.restoreState(state)
 
         jobids = settings.value('clusterjobs')
-        if jobids:
+        if AppPreferences().cluster_support and jobids:
             self._pages.widgetByType(ClusterFrame).restore_jobids(jobids)
         settings.endGroup()
 

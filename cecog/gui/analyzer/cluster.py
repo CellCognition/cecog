@@ -174,13 +174,14 @@ class ClusterDisplay(QGroupBox):
 
         apc = AppPreferences()
         batch_size = apc.batch_size
-        path_out = apc.map2platform(self._submit_settings.get2('pathout'))
+        pathout = self._submit_settings.get2('pathout')
 
         try:
             self.dlg = ProgressDialog("Submitting Jobs...", None, 0, 0, self)
             settings_str = self._submit_settings.to_string()
+
             func = lambda: self._service.submit_job('cecog_batch', settings_str,
-                                                    path_out, emails, nr_items,
+                                                    pathout, nr_items,
                                                     batch_size, version)
             self.dlg.exec_(func)
             jobid = self.dlg.getTargetResult()
@@ -284,7 +285,7 @@ class ClusterDisplay(QGroupBox):
                 self.dlg.exec_(self._service.get_cecog_versions)
                 cluster_versions = self.dlg.getTargetResult()
             except Exception as e:
-                QMessageBox.critical(self, "Error", self, msg + '(%s)' %str(e))
+                QMessageBox.critical(self, "Error", '%s (%s)' %(msg, str(e)))
             else:
                 if not version in set(cluster_versions):
                     QMessageBox.warning(

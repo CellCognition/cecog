@@ -62,7 +62,7 @@ class AppPreferences(object):
 
     __metaclass__ = Singleton
     __slots__ = ("host", "port", "mapping_str", "target_platform",
-                 "batch_size")
+                 "batch_size", "cluster_support")
 
     def __init__(self):
 
@@ -76,6 +76,7 @@ class AppPreferences(object):
                             "/Volumes/resources, O:, /resources")
         self.target_platform = "linux"
         self.batch_size = 1
+        self.cluster_support = True
 
         self.restoreSettings()
 
@@ -88,6 +89,7 @@ class AppPreferences(object):
         settings.setValue('path_mapping', self.mapping_str)
         settings.setValue('target_platform', self.target_platform)
         settings.setValue('batch_size', self.batch_size)
+        settings.setValue('cluster_support', self.cluster_support)
         settings.endGroup()
 
     def restoreSettings(self):
@@ -109,6 +111,9 @@ class AppPreferences(object):
 
         if settings.contains('batch_size'):
             self.batch_size = settings.value('batch_size', type=int)
+
+        if settings.contains('cluster_support'):
+            self.cluster_support = settings.value('cluster_support', type=bool)
 
         settings.endGroup()
 
@@ -238,6 +243,7 @@ class PreferencesDialog(QtWidgets.QDialog):
         appcfg.target_platform = \
             self._iosnames[self.target_platform.currentText()]
         appcfg.batch_size = self.batch_size.value()
+        appcfg.cluster_support = self.cluster_support.isChecked()
 
         appcfg.saveSettings()
 
