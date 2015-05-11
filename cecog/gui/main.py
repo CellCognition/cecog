@@ -129,7 +129,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         action_pref = self.create_action('&Preferences',
                                          slot=self.open_preferences)
 
-        action_open = self.create_action('&Open Settings...',
+        action_load = self.create_action('&Load Settings...',
                                          shortcut=QtGui.QKeySequence.Open,
                                          slot=self._on_file_open)
         action_save = self.create_action('&Save Settings',
@@ -142,7 +142,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
 
         menu_file = self.menuBar().addMenu('&File')
         self.add_actions(menu_file, (action_pref,
-                                     None, action_open,
+                                     None, action_load,
                                      None, action_save, action_save_as,
                                      None, action_quit))
 

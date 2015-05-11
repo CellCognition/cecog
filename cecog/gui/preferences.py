@@ -72,8 +72,8 @@ class AppPreferences(object):
 
         self.mapping_str = ("#darwin, win32, linux\n"
                             "/Volumes/groups/gerlich, M:, /groups/gerlich\n"
-                            "/Volumes/clustertmp, N:, /clustertmp\n"
-                            "/Volumes/resources, O:, /resources")
+                            "/Volumes/clustertmp, O:, /clustertmp\n"
+                            "/Volumes/resources, N:, /resources")
         self.target_platform = "linux"
         self.batch_size = 1
         self.cluster_support = True
@@ -160,7 +160,7 @@ class AppPreferences(object):
         # OSX 10.X and linux
         else:
             path_mapped = posixpath.normcase(path_mapped)
-
+            path_mapped = path_mapped.replace(ntpath.sep, posixpath.sep)
         return path_mapped
 
 
@@ -193,7 +193,7 @@ class PreferencesDialog(QtWidgets.QDialog):
             self.target_platform.findText(self._osnames[apc.target_platform]))
 
         self.batch_size.setValue(apc.batch_size)
-
+        self.cluster_support.setChecked(apc.cluster_support)
 
     def populateTable(self, mappings):
 

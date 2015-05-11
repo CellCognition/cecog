@@ -353,7 +353,8 @@ class ClusterDisplay(QGroupBox):
                 if states[j][i]:
                     item.setBackground(QBrush(QColor("green")))
                 else:
-                    item.setText("Not available")
+                    if not item.text():
+                        item.setText("Not available")
                     item.setBackground(QBrush(QColor("red")))
 
     def update_display(self, is_active):
@@ -409,6 +410,9 @@ class ClusterFrame(BaseFrame, ExportSettings):
         frame._input_cnt += 1
 
     def page_changed(self):
+        self._cluster_display.update_display(self._is_active)
+
+    def settings_loaded(self):
         self._cluster_display.update_display(self._is_active)
 
     def set_imagecontainer(self, imagecontainer):
