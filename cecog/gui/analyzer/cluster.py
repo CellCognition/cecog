@@ -31,7 +31,7 @@ from cecog.environment import CecogEnvironment
 
 from cecog.gui.analyzer import BaseFrame
 from cecog.gui.analyzer.processing import ExportSettings
-from cecog.gui.util import exception, information, warning
+from cecog.gui.util import exception, information, warning, question
 from cecog.gui.progressdialog import ProgressDialog
 
 from cecog import JOB_CONTROL_RESUME, JOB_CONTROL_SUSPEND, \
@@ -169,6 +169,9 @@ class ClusterDisplay(QGroupBox):
 
     @pyqtSlot()
     def _on_submit_job(self):
+        if not question(self, "Are you sure to submit to cluster?"):
+            return
+        
         self._submit_settings.set_section(SECTION_NAME_GENERAL)
         if not self._submit_settings.get2('constrain_positions'):
             positions = []

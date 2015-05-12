@@ -1,5 +1,6 @@
 """
-sectionnames.py
+__init__.py
+
 """
 
 __author__ = 'rudolf.hoefler@gmail.com'
@@ -18,3 +19,7 @@ class SectionNames(object):
     CLASSIFICATION = "classification"
     TRACKING = "tracking"
     EVENTSELECTION = "eventselection"
+
+from .logger import *
+from .handlers import *
+from .logwindow import *

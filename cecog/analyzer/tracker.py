@@ -15,7 +15,7 @@ __all__ = ['Tracker']
 import math
 from collections import OrderedDict
 
-from cecog.util.logger import LoggerObject
+from cecog.logging import LoggerObject
 from cecog.extensions.graphLib import Graph
 from cecog import ccore
 

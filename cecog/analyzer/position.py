@@ -43,7 +43,7 @@ from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
 from cecog.gallery import TrackGallery
 from cecog.gallery import ChannelGallery
 from cecog.export import TrackExporter, EventExporter, TC3Exporter
-from cecog.util.logger import LoggerObject
+from cecog.logging import LoggerObject
 from cecog.util.stopwatch import StopWatch
 from cecog.util.util import makedirs
 from cecog.util.ctuple import COrderedDict
@@ -419,7 +419,7 @@ class PositionAnalyzer(PositionCore):
 
         self._makedirs()
         self.add_file_handler(join(self._log_dir, "%s.log" %self.position),
-                              self._lvl.DEBUG)
+                              self.Levels.DEBUG)
 
     def _makedirs(self):
         assert isinstance(self.position, basestring)

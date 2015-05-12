@@ -30,7 +30,7 @@ from cecog.colors import unsupervised_cmap
 from cecog.learning.confusion_matrix import ConfusionMatrix
 from cecog.learning.util import SparseWriter, ArffWriter, ArffReader
 from cecog.learning.classifier import LibSvmClassifier as Classifier
-from cecog.util.logger import LoggerObject
+from cecog.logging import LoggerObject
 from cecog.util.util import makedirs
 from cecog.learning.classifier import GaussianMixtureModel
 
@@ -120,7 +120,6 @@ class BaseLearner(LoggerObject):
     def __init__(self, clf_dir, name, channels, color_channel=None,
                  has_zero_insert=False):
         super(BaseLearner, self).__init__()
-        self.add_stream_handler(self._lvl.INFO)
 
         self._clf_dir = None
         if clf_dir is not None:
