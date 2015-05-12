@@ -30,30 +30,34 @@ _rsc = [join(abspath(RESOURCE_DIR), basename(rf)) for rf in _rsc]
 _palettes = join(RESOURCE_DIR, 'palettes', 'zeiss')
 _battery_package = join(RESOURCE_DIR, 'battery_package')
 
-# for py2app and py2exe
+# for py2app and  py2exe
 INCLUDES = [ 'sip',
              'h5py.*',
              'scipy.sparse.csgraph._validation',
              'scipy.spatial.kdtree',
              'scipy.sparse.csgraph._shortest_path',
+             'scipy.special._ufuncs',
+             'scipy.special._ufuncs_cxx',
              'sklearn.utils.sparsetools._graph_validation',
              'cellh5',
-			 'ontospy',
-			 'rdflib', 
-			 'rdflib.plugins.memory',
-	         'rdflib.plugins.parsers.rdfxml',
+             'ontospy',
+             'rdflib',
+             'rdflib.plugins.memory',
+             'rdflib.plugins.parsers.rdfxml',
              'sklearn.utils.lgamma',
              'sklearn.neighbors.typedefs',
              'sklearn.utils.weight_vector' ]
 
 EXCLUDES = ['PyQt4.QtDesigner', 'PyQt4.QtNetwork',
             'PyQt4.QtOpenGL', 'PyQt4.QtScript', 'PyQt4.QtSql',
-            'PyQt4.QtTest', 'PyQt4.QtWebKit', 'PyQt4.QtXml', 'PyQt4.phonon'
+            'PyQt4.QtTest', 'PyQt4.QtWebKit', 'PyQt4.QtXml', 'PyQt4.phonon',
+            'PyQt5', 'PyQt5.QtCore','PyQt5.QtWidgets','PyQt5.QtSvg',
+            'PyQt5.QtGui',
             '_gtkagg', '_cairo', '_gtkcairo', '_fltkagg',
             '_tkagg',
             'Tkinter',
             'zmq']
-			
+
 CC_INCLUDES = ['csrc/include'] + \
     numpy.distutils.misc_util.get_numpy_include_dirs()
 
@@ -72,8 +76,8 @@ def get_data_files(target_dir=TARGET_BUNDLE, mpl_data=True):
     # schema files
     dfiles.append((join(target_dir, 'schemas'),
                    glob.glob(join(RESOURCE_DIR, 'schemas', "*.xsd"))))
-    dfiles.append((join(target_dir, 'ontologies'), 
-                   glob.glob(join(RESOURCE_DIR, 'ontologies', "*.owl"))))		
+    dfiles.append((join(target_dir, 'ontologies'),
+                   glob.glob(join(RESOURCE_DIR, 'ontologies', "*.owl"))))
 
     for root, subdirs, files in os.walk(_battery_package):
         for file_ in files:
