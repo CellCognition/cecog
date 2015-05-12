@@ -170,6 +170,11 @@ class CH5BasedModule(Module):
         else:
         
             self.ch5file = cellh5.CH5File(self.hdf_file)
+            
+    @property
+    def coordinates(self):
+        return self.ch5file.get_coordinates()
+        
     
     def close(self):
         if self.ch5file is not None:

@@ -1143,44 +1143,18 @@ class ClassDefinitions(object):
 
 class CellH5EventModule(CH5BasedModule):
     NAME = 'Event Viewer'
-    COLUMN_CLASS_NAME = 0
-    COLUMN_CLASS_LABEL = 1
-    COLUMN_CLASS_COLOR = 2
-    COLUMN_CLASS_COUNT = 3
-    
+
     def __init__(self, parent, browser, settings, imagecontainer):
         super(CellH5EventModule, self).__init__(parent, browser, settings, imagecontainer)
-
-        self.class_def = ClassDefinitions()
-        
-        self.cmap = [qRgb(i,i,i) for i in range(256)]
         self.layout = QVBoxLayout(self)
         
         self._init_pos_table()
         self._init_event_table()
-        #self._init_class_table()
         self._init_options_box()
-    
-        self.annotations = {}
         
-        for i, pos in enumerate(self.ch5file.iter_positions()):
-            # Annotations
-            self.annotations[pos.well, pos.pos] = {}
-            
-            # Navigation Table
-            self.pos_table.insertRow(i)
-            w_item = QTableWidgetItem(str(pos.well))
-            p_item = QTableWidgetItem(str(pos.pos))
-            self.pos_table.setItem(i, 0, w_item)
-            self.pos_table.setItem(i, 1, p_item)
-            if i == 0:
-                self.cur_pos = pos
-                self.cur_w = pos.well
-                self.cur_p = pos.pos
-                self.update_track_table(pos)
-                
-            
-            
+        self._fill_coordinate_table()
+        
+    
         class_fct = lambda id_: lambda : self._on_shortcut_class_selected(id_)
         for action, x in zip(self.browser._action_grp.actions(), range(1,11)):
             #action = browser.findChild(QAction, u'Select Class Label %d' % x)
@@ -1194,42 +1168,36 @@ class CellH5EventModule(CH5BasedModule):
         
         self.x_max = 600
         
-        def f_t(e):
-            s = e.size()
-            w = s.width()
-            h = s.height()
-            self.x_max = w
-            self.show_tracks(self.cur_track_idx, self.cur_track_id)
-        self.browser.image_viewers['gallery'].resizeEvent = f_t
         
-    def _on_shortcut_class_selected(self, class_label):
-        items = self._find_items_in_class_table(str(class_label),
-                                                self.COLUMN_CLASS_LABEL)
-        if len(items) == 1:
-            self.class_table.setCurrentItem(items[0])
+    def _fill_coordinate_table(self):    
+        for i, coord in enumerate(self.coordinates):
+            self.pos_table.insertRow(i)
+            w_item = QTableWidgetItem(coord.well)
+            p_item = QTableWidgetItem(coord.site)
+            self.pos_table.setItem(i, 0, w_item)
+            self.pos_table.setItem(i, 1, p_item)
             
-    def update_track_table(self, pos):
-        self.event_table.setRowCount(0)
+    def update_event_table(self, coord):
+        
+        pos = self.ch5file.get_position_from_coord(coord)
         events = pos.get_event_items()
+        
+        self.event_table.setRowCount(0)
         
         events_from = self._sb_events_from.value()
         events_to = self._sb_events_until.value()
     
         selected_track = []
-        cnt = 0
-        
         start_ids = map(lambda x: x[1][0], events)
         time_idxs = pos.get_time_indecies(start_ids) 
         
         self.tracks = []
-        
+        cnt = 0
         for (e_id, e), time_idx in zip(events, time_idxs):
             if events_from <= time_idx <= events_to:
                 if self._cb_track.checkState():
-                    print 'do tracking'
                     track = e[:-1] + pos.track_first(e[-1])
                 else:
-                    print 'no tracking'
                     track = e
                 
                 
@@ -1237,10 +1205,6 @@ class CellH5EventModule(CH5BasedModule):
                 self.event_table.insertRow(cnt)
                 
                 event_id_item = QTableWidgetItem(str(e_id))
-                if e_id in self.annotations[(self.cur_w, self.cur_p)] and len(self.annotations[(self.cur_w, self.cur_p)][e_id]) > 0:
-                    font = QFont()
-                    font.setBold(True)
-                    event_id_item.setFont(font)
                 
                 self.event_table.setItem(cnt, 0, event_id_item)
                 self.event_table.setItem(cnt, 1, QTableWidgetItem(str(len(track))))
@@ -1250,85 +1214,7 @@ class CellH5EventModule(CH5BasedModule):
                 
         self.event_table.resizeColumnsToContents()
         self.event_table.resizeRowsToContents()                  
-        
-#     def load_annotations(self, filename):
-#         plate_id = self._imagecontainer.plates[0]
-#         object_name = 'event_annotation'
-#         
-#         definitions_template = '/definition/feature/%s'
-#         sample_template = 'sample/0/plate/%s/experiment/%s/position/%s/feature/'
-#         
-#         with h5py.File(filename, 'r') as ann_hdf5_handle:     
-#             # save definition
-#             class_def = ClassDefinitions()
-#             def_group = ann_hdf5_handle[definitions_template % object_name]
-#             table = def_group['class_definition']
-#             for class_label, class_name, class_color in table:
-#                 class_def.add(class_label, class_name, QColor(str(class_color)))
-#                    
-#             # loop over all annotations 
-#             for w, p in self.annotations:
-#                 ann_prefix = sample_template % (plate_id, w, str(p))
-#                 annotation_group = ann_hdf5_handle[ann_prefix]
-#                 ann_dset = annotation_group[object_name]
-#                 for k, (track_id, anno_string) in enumerate(sorted(ann_dset)):
-#                     anno = AnnotationsContainer(w, p, track_id)
-#                     anno.decode(anno_string)
-#                     self.annotations[(w, p)][track_id] = anno
-#                     
-#         self.class_def = class_def
-#         self._update_class_definition_table()
-    
-#     def save_annotations(self, filename):
-#         annotations = self.annotations
-#         plate_id = self._imagecontainer.plates[0]
-#         object_name = 'event_annotation'
-#         
-#         definitions_template = '/definition/feature/%s'
-#         sample_template = 'sample/0/plate/%s/experiment/%s/position/%s/feature/'
-#         
-#         with h5py.File(filename, 'a') as ann_hdf5_handle:
-#             # Backup of old annotations
-#             now_string = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-#             if 'sample' in ann_hdf5_handle:
-#                 ann_hdf5_handle[now_string + '/sample'] = ann_hdf5_handle['sample']
-#                 del ann_hdf5_handle['sample']
-#             if 'definition' in ann_hdf5_handle:
-#                 ann_hdf5_handle[now_string + '/definition'] = ann_hdf5_handle['definition']
-#                 del ann_hdf5_handle['definition']
-#                 
-#             # save definition
-#             def_group = ann_hdf5_handle.create_group(definitions_template % object_name)
-#             table = self.class_def.get_definition_table()
-#             def_group.create_dataset('class_definition', shape=table.shape, dtype=table.dtype, data=table)
-#             
-#             
-#                 
-#             # loop over all annotations 
-#             for (w, p), annotation_dict in annotations.items():
-#                 ann_prefix = sample_template % (plate_id, w, str(p))
-#                 annotation_group = ann_hdf5_handle.create_group(ann_prefix)
-#                 ann_dset = annotation_group.create_dataset(object_name, (len(annotation_dict),), [('event_id', 'int32'), ('annotation', h5py.new_vlen(str))])
-#                 for k, track_id in enumerate(sorted(annotation_dict)):
-#                     a = annotation_dict[track_id]
-#                     assert track_id == a.track_id
-#                     ann_dset[k] = (track_id, a.encode())
-                
-     
-#     def _on_load_annotations(self):
-#         filename = os.path.join(self._settings.get('General', 'pathout'), 'hdf5', 'annotations_all_positions.ch5')
-#         if os.path.exists(filename):
-#             self.load_annotations(filename)
-#             information(self, 'Track annotations successfully loaded', filename)
-#         else:
-#             warning(self, 'No annotations found...', filename)
-#         
-#     def _on_save_annotations(self):
-#         filename = os.path.join(self._settings.get('General', 'pathout'), 'hdf5', 'annotations_all_positions.ch5')
-#         self.save_annotations(filename)
-#         information(self, 'Annotations successfully saved!', filename)
-        
-    
+  
     def _init_pos_table(self):
         self.pos_table = QTableWidget(self)
         self.pos_table.setEditTriggers(QTableWidget.NoEditTriggers)
@@ -1353,82 +1239,7 @@ class CellH5EventModule(CH5BasedModule):
         self.event_table.currentItemChanged.connect(self._on_track_changed)
         self.event_table.setStyleSheet('font-size: 10px;')
         self.layout.addWidget(self.event_table)
-        
-    
-#     def _init_class_table(self):
-#         grp_box = QGroupBox('Classes', self)
-#         layout = QBoxLayout(QBoxLayout.TopToBottom, grp_box)
-# 
-#         self.class_table = QTableWidget(grp_box)
-#         self.class_table.setEditTriggers(QTableWidget.NoEditTriggers)
-#         self.class_table.setSelectionMode(QTableWidget.SingleSelection)
-#         self.class_table.setSelectionBehavior(QTableWidget.SelectRows)
-#         #self.class_table.setSortingEnabled(True)
-#         self.class_table.setColumnCount(4)
-#         self.class_table.setHorizontalHeaderLabels(['Name', 'Label', 'Color',
-#                                                'Samples',
-#                                                ])
-#         self.class_table.resizeColumnsToContents()
-#         self.class_table.currentItemChanged.connect(self._on_class_changed)
-#         self.class_table.setStyleSheet('font-size: 10px;')
-#         layout.addWidget(self.class_table)
-# 
-#         frame2 = QFrame(grp_box)
-#         layout2 = QBoxLayout(QBoxLayout.LeftToRight, frame2)
-#         layout2.setContentsMargins(0,0,0,0)
-#         self._import_class_definitions_btn = QPushButton('Import class definitions')
-#         layout2.addWidget(self._import_class_definitions_btn)
-#         self._import_class_definitions_btn.clicked.connect(self._on_import_class_definitions)
-#         layout.addWidget(frame2)
-# 
-#         frame2 = QFrame(grp_box)
-#         layout2 = QBoxLayout(QBoxLayout.LeftToRight, frame2)
-#         layout2.setContentsMargins(0,0,0,0)
-#         self._class_sbox = QSpinBox(frame2)
-#         self._class_color_btn = ColorButton(None, frame2)
-#         self._class_sbox.setRange(0, 1000)
-#         self._class_text = QLineEdit(frame2)
-#         layout2.addWidget(self._class_color_btn)
-#         layout2.addWidget(self._class_sbox)
-#         layout2.addWidget(self._class_text)
-#         layout.addWidget(frame2)
-# 
-#         frame2 = QFrame(grp_box)
-#         layout2 = QBoxLayout(QBoxLayout.LeftToRight, frame2)
-#         layout2.setContentsMargins(0,0,0,0)
-#         btn = QPushButton('Apply', frame2)
-#         btn.clicked.connect(self._on_class_apply)
-#         layout2.addWidget(btn)
-#         btn = QPushButton('Add', frame2)
-#         btn.clicked.connect(self._on_class_add)
-#         layout2.addWidget(btn)
-#         btn = QPushButton('Remove', frame2)
-#         btn.clicked.connect(self._on_class_remove)
-#         layout2.addWidget(btn)
-#         layout.addWidget(frame2)
-#         
-#         frame2 = QFrame(grp_box)
-#         layout2 = QBoxLayout(QBoxLayout.LeftToRight, frame2)
-#         layout2.setContentsMargins(0,0,0,0)
-#         btn = QPushButton('Save', frame2)
-#         btn.clicked.connect(self._on_save_annotations)
-#         layout2.addWidget(btn)
-#         btn = QPushButton('Load', frame2)
-#         btn.clicked.connect(self._on_load_annotations)
-#         layout2.addWidget(btn)
-#         layout.addWidget(frame2)
-#         
-#         
-#         
-#         
-#         
-#         self._class_sbox.setValue(1)
-#         self._class_text.setText('class 1')
-#         self._class_color_btn.set_color(QColor('red'))
-# 
-#         self.layout.addWidget(grp_box)
-        
-    
+                
     def _init_options_box(self):
         grp_box = QGroupBox('Options', self)
         grp_layout = QVBoxLayout(grp_box)
@@ -1581,174 +1392,6 @@ class CellH5EventModule(CH5BasedModule):
         self.show_tracks(self.cur_track_idx, self.cur_track_id)
         
     
-#     def _on_class_changed(self, current, previous):
-#         if not current is None:
-#             item = self.class_table.item(current.row(),
-#                                           self.COLUMN_CLASS_LABEL)
-#             class_label = int(item.text())
-#             self._current_class = class_label
-# 
-#             class_color = self.class_def.get_color(class_label)
-#             class_name = self.class_def.get_name(class_label)
-#             css = "selection-background-color: %s; selection-color: %s;" % \
-#                   (qcolor_to_hex(class_color), qcolor_to_hex(get_qcolor_hicontrast(class_color)))
-#             self.class_table.setStyleSheet(css)
-#             
-#             self.class_table.scrollToItem(item)
-#             self._class_color_btn.set_color(class_color)
-#             
-#             self._class_text.setText(class_name)
-#             self._class_sbox.setValue(class_label)
-#             self._class_color_btn.set_color(class_color)
-#             
-#         else:
-#             self._current_class = None
-    
-#     def _on_import_class_definitions(self):
-#         ok = False
-#         if question(self, 'New classifier',
-#                     'Are you sure to setup a new classifer?\nAll annotations '
-#                     'will be lost.'):
-#             ok = True
-# 
-#         if not ok:
-#             return
-# 
-#         path = os.path.expanduser('~')
-#         result = QFileDialog.getExistingDirectory(
-#             self, 'Open classifier directory', os.path.abspath(path))
-# 
-#         if result:
-#             self.class_def = self._import_class_def(result)
-#             self._update_class_definition_table()
-#             
-#     def _import_class_def(self, path):
-#         try:
-#             learner = BaseLearner(path, None, None)
-#         except:
-#             exception(self, 'Error on loading classifier')
-#         else:
-#             result = learner.check()
-#             if result['has_definition']:
-#                 learner.loadDefinition()
-#                 class_def = ClassDefinitions()
-#                 for class_label in sorted(learner.class_labels.values()):
-#                     class_name = learner.class_names[class_label]
-#                     class_color = QColor(learner.hexcolors[class_name])
-#                     class_def.add(class_label, class_name, class_color)                    
-#                 return class_def
-                
-#     def _update_class_definition_table(self):
-#         return
-#         class_table = self.class_table
-#         class_table.clearContents()
-#         class_table.setRowCount(len(self.class_def.classes))
-#         select_item = None
-#         for idx, class_label in enumerate(sorted(self.class_def.classes)):
-#             samples = 0
-#             class_name = self.class_def.get_name(class_label)
-#             item = QTableWidgetItem(class_name)
-#             class_table.setItem(idx, self.COLUMN_CLASS_NAME, item)
-#             if select_item is None:
-#                 select_item = item
-#             class_table.setItem(idx, self.COLUMN_CLASS_LABEL,
-#                                 QTableWidgetItem(str(class_label)))
-#             class_table.setItem(idx, self.COLUMN_CLASS_COUNT,
-#                                 QTableWidgetItem(str(samples)))
-#             item = QTableWidgetItem(' ')
-#             item.setBackground(
-#                 QBrush(QColor(self.class_def.get_color(class_label))))
-#             class_table.setItem(idx, self.COLUMN_CLASS_COLOR, item)
-#         class_table.resizeColumnsToContents()
-#         class_table.resizeRowsToContents()
-                
-#     def _on_class_add(self):
-#         class_def = self.class_def
-#         class_name_new = str(self._class_text.text())
-#         class_label_new = self._class_sbox.value()
-# 
-# 
-#         if len(class_name_new) == 0:
-#             warning(self, "Invalid class name",
-#                     info="The class name must not be empty!")
-#         elif (not class_label_new in class_def.classes) and (not class_name_new in class_def.get_names()):
-#             self._current_class = class_label_new
-# 
-#             class_color = self._class_color_btn.current_color
-# 
-#             row = self.class_table.rowCount()
-#             self.class_table.insertRow(row)
-#             self.class_table.setItem(row, self.COLUMN_CLASS_NAME,
-#                                       QTableWidgetItem(class_name_new))
-#             self.class_table.setItem(row, self.COLUMN_CLASS_LABEL,
-#                                       QTableWidgetItem(str(class_label_new)))
-#             self.class_table.setItem(row, self.COLUMN_CLASS_COUNT,
-#                                       QTableWidgetItem('0'))
-#             item = QTableWidgetItem()
-#             item.setBackground(QBrush(class_color))
-#             self.class_table.setItem(row, self.COLUMN_CLASS_COLOR, item)
-#             self.class_table.resizeRowsToContents()
-#             self.class_table.resizeColumnsToContents()
-# 
-#             self._class_text.setText('class %d' % (self.class_table.rowCount()+1))
-#             self._class_sbox.setValue(self.class_table.rowCount()+1)
-#             self.class_def.add(class_label_new, class_name_new, class_color)
-#             self._class_color_btn.set_color(QColor(numpy.random.randint(255),numpy.random.randint(255),numpy.random.randint(255)))
-#             self.class_table.setCurrentItem(item)
-#             
-#         else:
-#             warning(self, "Class names and labels must be unique!",
-#                     info="Class name '%s' or label '%s' already used." %\
-#                          (class_name_new, class_label_new))
-#     
-#     def _on_class_remove(self):
-#         pass
-#     
-#     def _find_items_in_class_table(self, value, column, match=Qt.MatchExactly):
-#         items = self.class_table.findItems(value, match)
-#         return [item for item in items if item.column() == column]
-#     
-#     def _on_class_apply(self):
-#         class_name_new = str(self._class_text.text())
-#         class_label_new = self._class_sbox.value()
-#         class_color_new = self._class_color_btn.current_color
-#         class_label = self._current_class
-#         
-#         del self.class_def.classes[class_label]
-# 
-#         if not class_label is None:
-#             if len(class_name_new) == 0:
-#                 warning(self, "Invalid class name",
-#                         info="The class name must not be empty!")
-#                 
-#             elif (not class_name_new in self.class_def.get_names() and
-#                   not class_label_new in self.class_def.classes):
-# 
-#                 item = self._find_items_in_class_table(class_name_new,
-#                                                        self.COLUMN_CLASS_NAME)[0]
-# 
-#                 self.class_def.add(class_label_new, class_name_new, class_color_new)
-# 
-#                 item.setText(class_name_new)
-#                 item2 = self.class_table.item(item.row(),
-#                                                self.COLUMN_CLASS_LABEL)
-#                 item2.setText(str(class_label_new))
-#                 item2 = self.class_table.item(item.row(),
-#                                                self.COLUMN_CLASS_COLOR)
-#                 item2.setBackground(QBrush(class_color_new))
-# 
-#                 col = get_qcolor_hicontrast(class_color_new)
-#                 self.class_table.resizeRowsToContents()
-#                 self.class_table.resizeColumnsToContents()
-#                 self.class_table.scrollToItem(item)
-#                 css = "selection-background-color: %s; selection-color: %s;" %\
-#                        (qcolor_to_hex(class_color_new), qcolor_to_hex(col))
-#                 self.class_table.setStyleSheet(css)
-# 
-#             else:
-#                 warning(self, "Class names and labels must be unique!",
-#                         info="Class name '%s' or label '%s' already used." %\
-#                              (class_name_new, class_label_new))
     
     def activate(self):
         print 'CellH5Annotator.activate()'
@@ -1764,15 +1407,16 @@ class CellH5EventModule(CH5BasedModule):
         self.browser._action_grp.setEnabled(False)
             
     def _on_pos_changed(self, current, previous):
-        print '_on_pos_changed'
         w = str(self.pos_table.item(current.row(), 0).text())         
         p = str(self.pos_table.item(current.row(), 1).text())   
-        print 'CellH5Annotator._on_pos_changed()', w, p
-        pos = self.ch5file.get_position(w, str(p))    
+        
+        coord = cellh5.CH5PositionCoordinate(self.ch5file.plate, w, p)
+        
+        pos = self.ch5file.get_position_from_coord(coord)    
         self.cur_pos = pos
         self.cur_w = w
         self.cur_p = p
-        self.update_track_table(pos)
+        self.update_event_table(coord)
              
     def _on_track_changed(self, current, previous):
         print '_on_track_changed'
@@ -1792,18 +1436,9 @@ class CellH5EventModule(CH5BasedModule):
                 print 'added item', k, 'with', point
                 self.cur_annotation.add(k, self._current_class)
                 break
-        self.reset_annotation_items()
-        self.update_annotations()
-                
-         
-    def update_annotations(self):
-        self.cur_annotation.show(self.class_def)
-        
-    def reset_annotation_items(self):
-        for g in self.cur_annotation.graphics_items:
-            g.setBrush(Qt.white)
-            g.setZValue(5)
-            g.setPen(QPen())
+    
+            
+            
     
     def show_tracks(self, idx, track_id):
         self.browser.image_viewer.clear()
@@ -1811,18 +1446,6 @@ class CellH5EventModule(CH5BasedModule):
         w = pos.well
         p = pos.pos
         
-        if track_id not in self.annotations[(w, p)]:
-            annotations = AnnotationsContainer(w, p, track_id)
-            self.annotations[(w, p)][track_id] = annotations
-        else:
-            annotations = self.annotations[(w, p)][track_id]
-            annotations.clear_graphics_items()
-            
-        self.cur_annotation = annotations
-            
-        #self.clear_annotation_items()
-        
-
         cellh5.GALLERY_SIZE = self._sb_gallery_size.value()
         step = cellh5.GALLERY_SIZE
         
@@ -1852,7 +1475,6 @@ class CellH5EventModule(CH5BasedModule):
             annotation_item.setBrush(Qt.white)
             annotation_item.setZValue(5)
             self.browser.image_viewer._scene.addItem(annotation_item)
-            annotations.add_graphics_item(annotation_item)
             
             
             if self._cb_segmentation.checkState():
@@ -1871,9 +1493,7 @@ class CellH5EventModule(CH5BasedModule):
                 x = 0
                 y += step
             print gallery_numpy.shape
-            
-        self.update_annotations()
-        
+               
             
     def transform_image(self, image):
         image = image.astype(numpy.float32)
@@ -1885,10 +1505,5 @@ class CellH5EventModule(CH5BasedModule):
         image2 = numpy.require(image, numpy.uint8)
         print image2.min(), image2.max()
         return image2
-    
-    def set_image_dict(self, image_dict):
-        print 'CellH5Annotator.set_image_dict()'  
-    
-    def do(self):
-        self.show_tracks('0', '0038')
+
         
