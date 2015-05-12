@@ -55,7 +55,7 @@ from cecog.io.imagecontainer import Coordinate
 from cecog.learning.learning import BaseLearner
 from cecog.gui.widgets.groupbox import QxtGroupBox
 from cecog.gui.widgets.colorbutton import ColorButton
-from cecog.gui.modules.module import Module
+from cecog.gui.modules.module import Module, CH5BasedModule
 from cecog.util.ontoloty_owl import CecogOntologyBrowserDialog
 
 from qimage2ndarray import array2qimage
@@ -1140,32 +1140,17 @@ class ClassDefinitions(object):
             table[k] = (c, self.get_name(c),qcolor_to_hex(self.get_color(c)))
         return table
             
-        
-        
-class CellH5AnnotationModule(Module):
-    NAME = 'Track Annotation'
+
+class CellH5EventModule(CH5BasedModule):
+    NAME = 'Event Viewer'
     COLUMN_CLASS_NAME = 0
     COLUMN_CLASS_LABEL = 1
     COLUMN_CLASS_COLOR = 2
     COLUMN_CLASS_COUNT = 3
+    
     def __init__(self, parent, browser, settings, imagecontainer):
-        Module.__init__(self, parent, browser)
-        self._imagecontainer = imagecontainer
-        
-        self._settings = settings
-        self.hdf_file = os.path.join(self._settings.get('General', 'pathout'), 'hdf5', 'all_positions.ch5')
-        
-        if not os.path.exists(self.hdf_file):
-            self.hdf_file = os.path.join(self._settings.get('General', 'pathout'), 'hdf5', '_all_positions.ch5')
-          
-        if not os.path.exists(self.hdf_file):  
-            
-            warning(self, "Invalid hdf5 files",
-                        info="%s does not exist!" % self.hdf_file)
-        
-        
-        self.ch5file = cellh5.CH5File(self.hdf_file)
-        
+        super(CellH5EventModule, self).__init__(parent, browser, settings, imagecontainer)
+
         self.class_def = ClassDefinitions()
         
         self.cmap = [qRgb(i,i,i) for i in range(256)]
@@ -1809,8 +1794,6 @@ class CellH5AnnotationModule(Module):
             g.setBrush(Qt.white)
             g.setZValue(5)
             g.setPen(QPen())
-        
-        
     
     def show_tracks(self, idx, track_id):
         print 'show_tracks for track_id',  track_id

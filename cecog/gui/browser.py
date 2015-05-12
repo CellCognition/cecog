@@ -38,7 +38,7 @@ from cecog.analyzer.core import AnalyzerBrowser
 from cecog.io.imagecontainer import Coordinate
 from cecog.gui.modules.navigation import NavigationModule
 from cecog.gui.modules.display import DisplayModule
-from cecog.gui.modules.annotation import AnnotationModule, CellH5AnnotationModule
+from cecog.gui.modules.annotation import AnnotationModule, CellH5EventModule
 from cecog.io.imagecontainer import ImageContainer
 from cecog.gui.config import GuiConfigSettings
 from cecog.plugin.metamanager import MetaPluginManager
@@ -256,7 +256,7 @@ class Browser(QMainWindow):
                          self._imagecontainer)
 
         
-        CellH5AnnotationModule(self._module_manager, self, self._settings, self._imagecontainer)
+        CellH5EventModule(self._module_manager, self, self._settings, self._imagecontainer)
         # set the Navigation module activated
         self._module_manager.activate_tab(NavigationModule.NAME)
 

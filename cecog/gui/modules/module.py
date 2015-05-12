@@ -19,6 +19,7 @@ __all__ = []
 #-------------------------------------------------------------------------------
 # standard library imports:
 #
+import os
 
 #-------------------------------------------------------------------------------
 # extension module imports:
@@ -27,9 +28,12 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
+import cellh5
+
 #-------------------------------------------------------------------------------
 # cecog imports:
 #
+from cecog.gui.util import warning
 
 #-------------------------------------------------------------------------------
 # constants:
@@ -145,3 +149,29 @@ class Module(QFrame, object):
 
     def deactivate(self):
         pass
+    
+    
+class CH5BasedModule(Module):
+    def __init__(self, module_manager, browser, settings, imagecontainer):
+        super(CH5BasedModule, self).__init__(module_manager, browser)
+        self._imagecontainer = imagecontainer
+        
+        self._settings = settings
+        self._init_ch5()
+    
+    def _init_ch5(self):
+        self.hdf_file = os.path.join(self._settings.get('General', 'pathout'), 'hdf5', '_all_positions.ch5')
+        
+        if not os.path.exists(self.hdf_file):
+            warning(self, "Invalid CellH5 files",
+                        info="%s does not exist!" % self.hdf_file)
+            
+            self.ch5file = None
+        else:
+        
+            self.ch5file = cellh5.CH5File(self.hdf_file)
+    
+    def close(self):
+        if self.ch5file is not None:
+            self.ch5file.close()
+    
