@@ -22,6 +22,7 @@ import traceback
 
 from os.path import join
 from multiprocessing import freeze_support
+import h5py
 
 # use agg as long no Figure canvas will draw any qwidget
 import matplotlib as mpl
