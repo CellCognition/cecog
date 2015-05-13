@@ -733,7 +733,6 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
     def _on_show_log_window(self):
         self._pages.showLogWindow()
 
-
     def _get_save_as_filename(self):
         dir = ""
         if self._settings_filename is not None:
@@ -741,7 +740,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
             if os.path.isfile(settings_filename):
                 dir = settings_filename
         filename = QtWidgets.QFileDialog.getSaveFileName(
-            self, 'Save config file as', dir, ';;'.join(self.NAME_FILTERS))
+            self, 'Save config file as', dir, ';;'.join(self.NAME_FILTERS))[0]
         return filename or None
 
     def _on_help_startup(self):
