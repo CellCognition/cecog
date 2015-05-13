@@ -350,6 +350,7 @@ class ClusterDisplay(QGroupBox):
         for i in xrange(ndirs):
             for j in xrange(2):
                 item = self._table_info.item(i, j)
+                item.setFlags(Qt.ItemIsSelectable|Qt.ItemIsEnabled)
                 if states[j][i]:
                     item.setBackground(QBrush(QColor("green")))
                 else:
