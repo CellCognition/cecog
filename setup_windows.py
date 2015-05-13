@@ -72,7 +72,7 @@ DLL_EXCLUDES = [ 'libgdk-win32-2.0-0.dll',
 py2exe_opts = {'includes': build_helpers.INCLUDES,
                'excludes': build_helpers.EXCLUDES,
                'dll_excludes': DLL_EXCLUDES,
-               'optimize': 1,
+               'optimize': 2,
                'compressed': True,
                'skip_archive': False,
                'bundle_files': 3,
@@ -100,6 +100,8 @@ packages = build_helpers.find_submodules("./cecog", "cecog")
 # special casing for system installation or py2exe bundle
 if "py2exe" in sys.argv:
     dfiles = build_helpers.get_data_files(build_helpers.TARGET_BUNDLE)
+    uifiles = build_helpers.find_uifiles('./cecog', build_helpers.TARGET_BUNDLE)
+    dfiles.append(uifiles)
 else:
     build_helpers.metadata['name'] = 'cellcognition'
     dfiles = build_helpers.get_data_files(build_helpers.TARGET_SYS,
@@ -114,11 +116,13 @@ if "bdist_wininst" in sys.argv:
             glob.glob(dllpath.replace("vigraimpex", "*")))
     dfiles.append(dlls)
 
+
 setup(options = {"py2exe": py2exe_opts,
                  'pyrcc': pyrcc_opts},
       cmdclass = {'pyrcc': build_helpers.PyRcc,
                   'build': build_helpers.Build},
       packages = packages,
+      package_data = {'cecog': [join('gui', '*.ui'), ],},
       data_files = dfiles,
       windows = [{'script': join('scripts', 'CecogAnalyzer.py'),
                   'icon_resources': [(1, 'resources\cecog_analyzer_icon.ico')]

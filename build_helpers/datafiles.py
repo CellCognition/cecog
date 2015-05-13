@@ -10,7 +10,8 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-__all__ = ['get_data_files', 'INCLUDES', 'EXCLUDES', 'CC_INCLUDES',
+__all__ = ['get_data_files', 'find_uifiles',
+           'INCLUDES', 'EXCLUDES', 'CC_INCLUDES',
            'TARGET_BUNDLE', 'TARGET_SYS']
 
 import os
@@ -38,6 +39,8 @@ INCLUDES = [ 'sip',
              'scipy.sparse.csgraph._validation',
              'scipy.spatial.kdtree',
              'scipy.sparse.csgraph._shortest_path',
+             'scipy.special._ufuncs',
+             'scipy.special._ufuncs_cxx',
              'sklearn.utils.sparsetools._graph_validation',
              'cellh5',
              'ontospy',
@@ -50,7 +53,8 @@ INCLUDES = [ 'sip',
 
 EXCLUDES = ['PyQt5.QtDesigner', 'PyQt5.QtNetwork',
             'PyQt5.QtOpenGL', 'PyQt5.QtScript', 'PyQt5.QtSql',
-            'PyQt5.QtTest', 'PyQt5.QtWebKit', 'PyQt5.QtXml', 'PyQt5.phonon'
+            'PyQt5.QtTest', 'PyQt5.QtWebKit', 'PyQt5.QtXml', 'PyQt5.phonon',
+            'PyQt4.QtCore', 'PyQt4.QtGui',  'PyQt4.QtSvg', 'PyQt4',
             '_gtkagg', '_cairo', '_gtkcairo', '_fltkagg',
             '_tkagg',
             'Tkinter',
@@ -60,7 +64,16 @@ EXCLUDES = ['PyQt5.QtDesigner', 'PyQt5.QtNetwork',
 CC_INCLUDES = ['csrc/include'] + \
     numpy.distutils.misc_util.get_numpy_include_dirs()
 
+def find_uifiles(package_dir, target_dir=TARGET_BUNDLE):
+    uifiles = list()
+    uidir = join(RESOURCE_DIR, 'ui')
+    for root, dirs, files in os.walk(package_dir):
+        for file_ in files:
+            print file_
+            if file_.endswith('.ui'):
+                uifiles.append(join(root, file_))
 
+    return (uidir, uifiles)
 
 def get_data_files(target_dir=TARGET_BUNDLE, mpl_data=True):
     """Pack data files into list of (target-dir, list-of-files)-tuples"""

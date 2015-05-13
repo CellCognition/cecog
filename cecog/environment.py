@@ -99,6 +99,7 @@ class CecogEnvironment(object):
     RESOURCE_DIR = find_resource_dir()
     BATTERY_PACKAGE_DIR = join(RESOURCE_DIR, "battery_package")
     ONTOLOGY_DIR = join(RESOURCE_DIR, "ontologies")
+    UI_DIR = join(RESOURCE_DIR, "ui")
 
     FONT12 = join(RESOURCE_DIR, "font12.png")
     NAMING_SCHEMA = join(RESOURCE_DIR, "naming_schemas.ini")

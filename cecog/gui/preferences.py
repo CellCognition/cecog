@@ -25,11 +25,11 @@ from StringIO import StringIO
 from os.path import splitext
 import numpy as np
 
-from PyQt5 import uic
 from PyQt5 import QtWidgets
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QSettings
 
+from .util import loadUI
 from cecog.util.pattern import Singleton
 from cecog import version
 
@@ -174,7 +174,7 @@ class PreferencesDialog(QtWidgets.QDialog):
 
     def __init__(self, *args, **kw):
         super(PreferencesDialog, self).__init__(*args, **kw)
-        uic.loadUi(splitext(__file__)[0]+'.ui', self)
+        loadUI(splitext(__file__)[0]+'.ui', self)
         apc = AppPreferences()
 
         self.populateTable(apc.mapping_str)

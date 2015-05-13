@@ -61,7 +61,6 @@ ccore = Extension('cecog.ccore._cecog',
 packages = build_helpers.find_submodules("./cecog", "cecog")
 scripts = [join('scripts', 'CecogAnalyzer.py')]
 
-
 setup(app = scripts,
       data_files = build_helpers.get_data_files(),
       options = {"py2app": py2app_opts,
@@ -69,6 +68,7 @@ setup(app = scripts,
       cmdclass = {'pyrcc': build_helpers.PyRcc,
                   'build': build_helpers.Build},
       packages = packages,
+      package_data = {'cecog': ['gui/*.ui', ],},
       setup_requires=['py2app'],
       ext_modules = [ccore],
       **build_helpers.metadata)

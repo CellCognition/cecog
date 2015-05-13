@@ -44,6 +44,7 @@ setup(scripts = scripts,
       cmdclass = {'pyrcc': build_helpers.PyRcc,
                   'build': build_helpers.Build},
       packages = packages,
+      package_data = {'cecog': ['gui/*.ui', ],},
       options = {'pyrcc': pyrcc_opts},
       ext_modules = [ccore],
       **build_helpers.metadata)
