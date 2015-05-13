@@ -162,9 +162,12 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
                                                  shortcut=QtGui.QKeySequence.HelpContents,
                                                  slot=self._on_help_startup)
         action_about = self.create_action('&About', slot=self.on_about)
+        action_aboutQt = self.create_action('&About Qt', slot=self.about_qt)
+
 
         menu_help = self.menuBar().addMenu('&Help')
-        self.add_actions(menu_help, (action_help_startup, action_about))
+        self.add_actions(menu_help, (action_help_startup, action_about,
+                                     action_aboutQt))
 
         self.setStatusBar(QtWidgets.QStatusBar(self))
 
@@ -435,6 +438,9 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
     def on_about(self):
         dialog = CecogAboutDialog(self)
         dialog.show()
+
+    def about_qt(self):
+        QMessageBox.aboutQt(self, "about Qt")
 
     def open_preferences(self):
         pref = PreferencesDialog()
