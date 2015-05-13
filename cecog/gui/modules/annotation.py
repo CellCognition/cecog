@@ -1291,13 +1291,11 @@ class CellH5EventModule(CH5BasedModule):
         self.show_tracks(self.cur_tracks)
         
     def activate(self):
-        print 'CellH5Annotator.activate()'
         self.browser.set_display_module(self)
         self.browser.set_image_viewer('gallery')
         self.browser._action_grp.setEnabled(True)
         
     def deactivate(self):
-        print 'CellH5Annotator.deactivate()'
         self.browser.set_display_module(self.browser._module_manager.get_widget('Display'))
         self.browser.set_image_viewer('image')
         self.browser._action_grp.setEnabled(False)
@@ -1334,29 +1332,23 @@ class CellH5EventModule(CH5BasedModule):
     def show_tracks(self, res):
         self.browser.image_viewer.clear()
         pos = self.cur_pos
-        w = pos.well
-        p = pos.pos
-
         cellh5.GALLERY_SIZE = self._sb_gallery_size.value()
         step = cellh5.GALLERY_SIZE
         
         x, y = 0, 0
-        
-        
+        init_y_offset = 30
         
         object_ = str(self._cbb_object.currentText())
-        
-        
         
         for idx, track_id in res:
             track = self.tracks[idx]
             event_text_item = QGraphicsTextItem()
             event_text_item.setHtml("<span style='color:white; font:bold 12px'>Well: %s Position: %s Track Id: %s</span>" % (self.cur_w, self.cur_p, track_id))
-            event_text_item.setPos(0, y-30)
+            event_text_item.setPos(0, y-init_y_offset)
             self.browser.image_viewer._scene.addItem(event_text_item)
             
             for i, gallery_numpy in enumerate(pos.get_gallery_image_generator(track, object_)):
-                gallery_item = QGraphicsPixmapHoverItem(QPixmap(array2qimage(self.transform_image(gallery_numpy), True )))
+                gallery_item = QGraphicsPixmapHoverItem(QPixmap(array2qimage(self.transform_image(gallery_numpy), False )))
                 gallery_item.setPos(x, y)
                 self.browser.image_viewer._scene.addItem(gallery_item)
         
@@ -1372,7 +1364,7 @@ class CellH5EventModule(CH5BasedModule):
                     self.browser.image_viewer._scene.addItem(contour_item)
     
                 x += step
-                if (x / step) > self.x_max:
+                if (x / step) >= self.x_max:
                     x = 0
                     y += step
             x = 0
