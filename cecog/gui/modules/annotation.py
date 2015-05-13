@@ -1064,82 +1064,6 @@ class AnnotationModule(Module):
         self.browser.image_viewer.purify_objects()
         self.browser._action_grp.setEnabled(False)
         
-class AnnotationsContainer(object):
-    def __init__(self, w, p, track_id):
-        self.track_id = track_id
-        self.well = w
-        self.pos = p
-        self.graphics_items = []
-        self._annotations = {}
-        
-    def add_graphics_item(self, graphics_item):
-        self.graphics_items.append(graphics_item)
-        
-    def clear_graphics_items(self):
-        self.graphics_items = []
-        
-    def add(self, ann_index, ann_label):
-        old_class = -1
-        if ann_index in self._annotations:
-            old_class = self._annotations[ann_index] 
-            del self._annotations[ann_index] 
-        if not old_class == ann_label:
-            self._annotations[ann_index] = ann_label
-    
-            
-    def show(self, class_def):
-        begin_idx = 0
-        for k, g in enumerate(self.graphics_items):
-            if k in self._annotations:
-                pen = QPen(class_def.get_color(self._annotations[k]))
-                pen.setWidth(3)
-                g.setPen(pen)
-                g.setBrush(class_def.get_color(self._annotations[k]))
-                for g_ in self.graphics_items[begin_idx:k]:
-                    g_.setBrush(class_def.get_color(self._annotations[k]))
-                begin_idx = k+1
-                
-    def encode(self):
-        return ",".join(["%d,%d"%(t[0],t[1]) for t in tuple(sorted(self._annotations.items()))])
-    
-    def decode(self, code_string):
-        code = code_string.split(',')
-        self._annotations = {}
-        for a,b in zip(code[::2], code[1::2]):
-            self._annotations[int(a)] = int(b)
-        
-        
-        
-    def __len__(self):
-        return len(self._annotations)
-                    
-        
-class ClassDefinitions(object):
-    def __init__(self):
-        self.classes = {}
-        
-    def add(self, class_label, class_name, class_color):
-        self.classes[class_label] = (class_name, class_color)
-        
-    def remove(self, class_label):
-        del self.classes[class_label]
-        
-    def get_color(self, class_label):
-        return self.classes[class_label][1]
-    
-    def get_name(self, class_label):
-        return self.classes[class_label][0]
-    
-    def get_names(self):
-        return [self.get_name(x) for x in self.classes]
-    
-    def get_definition_table(self):
-        n = len(self.classes)
-        table = numpy.ndarray((n,), dtype=[('class_label', 'uint8'), ('class_name', '|S64'), ('class_color', '|S8'),])
-        for k, c in enumerate(sorted(self.classes)):
-            table[k] = (c, self.get_name(c),qcolor_to_hex(self.get_color(c)))
-        return table
-            
 
 class CellH5EventModule(CH5BasedModule):
     NAME = 'Event Viewer'
@@ -1151,22 +1075,14 @@ class CellH5EventModule(CH5BasedModule):
         self._init_pos_table()
         self._init_event_table()
         self._init_options_box()
-        
         self._fill_coordinate_table()
         
-    
-        class_fct = lambda id_: lambda : self._on_shortcut_class_selected(id_)
-        for action, x in zip(self.browser._action_grp.actions(), range(1,11)):
-            #action = browser.findChild(QAction, u'Select Class Label %d' % x)
-            action.setShortcut(QKeySequence(str(x) if x < 10 else '0'))
-            action.triggered.connect(class_fct(x))
-            
         self.pos_table.resizeColumnsToContents()
         self.pos_table.resizeRowsToContents()
         
         self.browser.image_viewers['gallery'].image_mouse_pressed.connect(self._on_new_point)
         
-        self.x_max = 600
+        self.x_max = 10
         
         
     def _fill_coordinate_table(self):    
@@ -1174,8 +1090,10 @@ class CellH5EventModule(CH5BasedModule):
             self.pos_table.insertRow(i)
             w_item = QTableWidgetItem(coord.well)
             p_item = QTableWidgetItem(coord.site)
-            self.pos_table.setItem(i, 0, w_item)
-            self.pos_table.setItem(i, 1, p_item)
+            pl_item = QTableWidgetItem(self.ch5file.plate)
+            self.pos_table.setItem(i, 0, pl_item)
+            self.pos_table.setItem(i, 1, w_item)
+            self.pos_table.setItem(i, 2, p_item)
             
     def update_event_table(self, coord):
         
@@ -1183,9 +1101,6 @@ class CellH5EventModule(CH5BasedModule):
         events = pos.get_event_items()
         
         self.event_table.setRowCount(0)
-        
-        events_from = self._sb_events_from.value()
-        events_to = self._sb_events_until.value()
     
         selected_track = []
         start_ids = map(lambda x: x[1][0], events)
@@ -1194,23 +1109,22 @@ class CellH5EventModule(CH5BasedModule):
         self.tracks = []
         cnt = 0
         for (e_id, e), time_idx in zip(events, time_idxs):
-            if events_from <= time_idx <= events_to:
-                if self._cb_track.checkState():
-                    track = e[:-1] + pos.track_first(e[-1])
-                else:
-                    track = e
+            if self._cb_track.checkState():
+                track = e[:-1] + pos.track_first(e[-1])
+            else:
+                track = e
                 
                 
-                selected_track.append(e)
-                self.event_table.insertRow(cnt)
-                
-                event_id_item = QTableWidgetItem(str(e_id))
-                
-                self.event_table.setItem(cnt, 0, event_id_item)
-                self.event_table.setItem(cnt, 1, QTableWidgetItem(str(len(track))))
-                self.event_table.setItem(cnt, 2, QTableWidgetItem(str(time_idx)))    
-                cnt+=1
-                self.tracks.append(track)
+            selected_track.append(e)
+            self.event_table.insertRow(cnt)
+            
+            event_id_item = QTableWidgetItem(str(e_id))
+            
+            self.event_table.setItem(cnt, 0, event_id_item)
+            self.event_table.setItem(cnt, 1, QTableWidgetItem(str(len(track))))
+            self.event_table.setItem(cnt, 2, QTableWidgetItem(str(time_idx)))    
+            cnt+=1
+            self.tracks.append(track)
                 
         self.event_table.resizeColumnsToContents()
         self.event_table.resizeRowsToContents()                  
@@ -1220,23 +1134,22 @@ class CellH5EventModule(CH5BasedModule):
         self.pos_table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.pos_table.setSelectionMode(QTableWidget.SingleSelection)
         self.pos_table.setSelectionBehavior(QTableWidget.SelectRows)
-        self.pos_table.setColumnCount(2)
-        self.pos_table.setHorizontalHeaderLabels(['Well', 'Site'])
+        self.pos_table.setColumnCount(3)
+        self.pos_table.setHorizontalHeaderLabels(['Plate', 'Well', 'Site'])
         self.pos_table.resizeColumnsToContents()
         self.pos_table.currentItemChanged.connect(self._on_pos_changed)
         self.pos_table.setStyleSheet('font-size: 10px;')
         self.layout.addWidget(self.pos_table)
         
-    
     def _init_event_table(self):
         self.event_table = QTableWidget(self)
         self.event_table.setEditTriggers(QTableWidget.NoEditTriggers)
-        self.event_table.setSelectionMode(QTableWidget.SingleSelection)
+        #self.event_table.setSelectionMode(QTableWidget.SingleSelection)
         self.event_table.setSelectionBehavior(QTableWidget.SelectRows)
         self.event_table.setColumnCount(3)
         self.event_table.setHorizontalHeaderLabels(['Event Id', 'Event Length', 'Start Frame',])
         self.event_table.resizeColumnsToContents()
-        self.event_table.currentItemChanged.connect(self._on_track_changed)
+        self.event_table.itemSelectionChanged.connect(self._on_track_changed)
         self.event_table.setStyleSheet('font-size: 10px;')
         self.layout.addWidget(self.event_table)
                 
@@ -1274,29 +1187,19 @@ class CellH5EventModule(CH5BasedModule):
         frame.setLayout(layout)
         grp_layout.addWidget(frame)
         
-        # event selection
+        # Cells per row
         frame = QWidget(grp_box)
         layout = QHBoxLayout(frame)
         layout.setContentsMargins(*padding)
-        layout.addWidget(QLabel('Event Onset From'))
-        self._sb_events_from = QSpinBox(self)
-        self._sb_events_from.setMaximum(9999)
-        self._sb_events_from.setValue(0)
-        layout.addWidget(self._sb_events_from)
-        self._sb_events_from.valueChanged.connect(self._sb_events_from_changed)
+        layout.addWidget(QLabel('Cells per row'))
+        self._sb_gallery_perrow = QSpinBox(self)
+        self._sb_gallery_perrow.setValue(10)
+        self._sb_gallery_perrow.setMinimum(-1)
+        self._sb_gallery_perrow.setMaximum(100)
+        self._sb_gallery_perrow.setSingleStep(1)
+        layout.addWidget(self._sb_gallery_perrow)
+        self._sb_gallery_perrow.valueChanged.connect(self._sb_gallery_perrow_changed)
         
-        frame.setLayout(layout)
-        grp_layout.addWidget(frame)
-        
-        frame = QWidget(grp_box)
-        layout = QHBoxLayout(frame)
-        layout.setContentsMargins(*padding)
-        layout.addWidget(QLabel('Event Onset Until'))
-        self._sb_events_until = QSpinBox(self)
-        self._sb_events_until.setMaximum(9999)
-        self._sb_events_until.setValue(9999)
-        layout.addWidget(self._sb_events_until)
-        self._sb_events_until.valueChanged.connect(self._sb_events_until_changed)
         frame.setLayout(layout)
         grp_layout.addWidget(frame)
         
@@ -1306,9 +1209,9 @@ class CellH5EventModule(CH5BasedModule):
         layout.setContentsMargins(*padding)
         layout.addWidget(QLabel('Gallery Size'))
         self._sb_gallery_size = QSpinBox(self)
-        self._sb_gallery_size.setValue(52)
-        self._sb_gallery_size.setMinimum(52)
-        self._sb_gallery_size.setSingleStep(4)
+        self._sb_gallery_size.setValue(60)
+        self._sb_gallery_size.setMinimum(60)
+        self._sb_gallery_size.setSingleStep(10)
         layout.addWidget(self._sb_gallery_size)
         self._sb_gallery_size.valueChanged.connect(self._sb_gallery_size_changed)
         
@@ -1320,13 +1223,13 @@ class CellH5EventModule(CH5BasedModule):
         layout = QHBoxLayout(frame)
         layout.setContentsMargins(*padding)
         layout.addWidget(QLabel('Min:'))
-        self._sb_image_min = QSpinBox(self)
+        self._sb_image_min = QSlider(Qt.Horizontal, self)
         self._sb_image_min.setValue(0)
         self._sb_image_min.setSingleStep(10)
-        self._sb_gallery_size.setMinimum(0)
         layout.addWidget(self._sb_image_min)
         layout.addWidget(QLabel('Max:'))
-        self._sb_image_max = QSpinBox(self)
+        self._sb_image_max = QSlider(Qt.Horizontal, self)
+        self._sb_image_max.setMinimum(0)
         self._sb_image_max.setMaximum(255)
         self._sb_image_max.setValue(255)
         self._sb_image_max.setSingleStep(10)
@@ -1363,42 +1266,35 @@ class CellH5EventModule(CH5BasedModule):
         frame.setLayout(layout)
         grp_layout.addWidget(frame)
         
-        self.layout.addWidget(grp_box)
-        
+        self.layout.addWidget(grp_box)        
         
     def _cb_track_changed(self, check_state):
-        self.update_track_table(self.cur_pos)
-        self.show_tracks(self.cur_track_idx, self.cur_track_id)
+        self.show_tracks(self.cur_tracks)
     
     def _cb_segmentation_changed(self, check_state):
-        self.show_tracks(self.cur_track_idx, self.cur_track_id)
+        self.show_tracks(self.cur_tracks)
     
     def _cb_classification_changed(self, check_state):
         if check_state > 0:
             self._cb_segmentation.setCheckState(2)
             return
-        self.show_tracks(self.cur_track_idx, self.cur_track_id)
+        self.show_tracks(self.cur_tracks)
     
-    def _sb_events_from_changed(self, value):
-        self.update_track_table(self.cur_pos)
-        
-    def _sb_events_until_changed(self, value):
-        self.update_track_table(self.cur_pos)
-        
+    def _sb_gallery_perrow_changed(self, value):
+        self.x_max = value
+        self.show_tracks(self.cur_tracks)
+    
     def _sb_gallery_size_changed(self, value):
-        self.show_tracks(self.cur_track_idx, self.cur_track_id)
+        self.show_tracks(self.cur_tracks)
     
     def _cbb_object_changed(self, value):
-        self.show_tracks(self.cur_track_idx, self.cur_track_id)
+        self.show_tracks(self.cur_tracks)
         
-    
-    
     def activate(self):
         print 'CellH5Annotator.activate()'
         self.browser.set_display_module(self)
         self.browser.set_image_viewer('gallery')
         self.browser._action_grp.setEnabled(True)
-        
         
     def deactivate(self):
         print 'CellH5Annotator.deactivate()'
@@ -1407,8 +1303,9 @@ class CellH5EventModule(CH5BasedModule):
         self.browser._action_grp.setEnabled(False)
             
     def _on_pos_changed(self, current, previous):
-        w = str(self.pos_table.item(current.row(), 0).text())         
-        p = str(self.pos_table.item(current.row(), 1).text())   
+
+        w = str(self.pos_table.item(current.row(), 1).text())         
+        p = str(self.pos_table.item(current.row(), 2).text())   
         
         coord = cellh5.CH5PositionCoordinate(self.ch5file.plate, w, p)
         
@@ -1418,83 +1315,69 @@ class CellH5EventModule(CH5BasedModule):
         self.cur_p = p
         self.update_event_table(coord)
              
-    def _on_track_changed(self, current, previous):
-        print '_on_track_changed'
-        track_idx = current.row()         
-        track_id = int(self.event_table.item(current.row(), 0).text())     
-        self.cur_track_id = track_id
-        self.cur_track_idx = track_idx     
-        self.show_tracks(track_idx, track_id)
+    def _on_track_changed(self):
+        indexes = self.event_table.selectionModel().selectedRows()
+
+        res = []    
+        for index in sorted(indexes):
+            track_idx = index.row()
+            track_id = int(self.event_table.item(track_idx, 0).text())     
+            res.append((track_idx, track_id))
+            
+        self.cur_tracks = res
+             
+        self.show_tracks(res)
         
     def _on_new_point(self, point, button, modifier):
-        self.insert_annotation(point)
-        self.update_annotations()
-         
-    def insert_annotation(self, point):
-        for k, g in enumerate(self.cur_annotation.graphics_items):
-            if g.contains(point):
-                print 'added item', k, 'with', point
-                self.cur_annotation.add(k, self._current_class)
-                break
-    
+        print 'click'
             
-            
-    
-    def show_tracks(self, idx, track_id):
+    def show_tracks(self, res):
         self.browser.image_viewer.clear()
         pos = self.cur_pos
         w = pos.well
         p = pos.pos
-        
+
         cellh5.GALLERY_SIZE = self._sb_gallery_size.value()
         step = cellh5.GALLERY_SIZE
         
         x, y = 0, 0
         
-        if idx > len(self.tracks) - 1:
-            warning(self, 'Track does not exist', 'after updating...')
-            return
         
-        track = self.tracks[idx]
         
         object_ = str(self._cbb_object.currentText())
         
         
-        event_text_item = QGraphicsTextItem()
-        event_text_item.setHtml("<span style='color:white; font:bold 12px'>Well: %s Position: %s Track Id: %s</span>" % (self.cur_w, self.cur_p, track_id))
-        event_text_item.setPos(0, -30)
-        self.browser.image_viewer._scene.addItem(event_text_item)
         
+        for idx, track_id in res:
+            track = self.tracks[idx]
+            event_text_item = QGraphicsTextItem()
+            event_text_item.setHtml("<span style='color:white; font:bold 12px'>Well: %s Position: %s Track Id: %s</span>" % (self.cur_w, self.cur_p, track_id))
+            event_text_item.setPos(0, y-30)
+            self.browser.image_viewer._scene.addItem(event_text_item)
+            
+            for i, gallery_numpy in enumerate(pos.get_gallery_image_generator(track, object_)):
+                gallery_item = QGraphicsPixmapHoverItem(QPixmap(array2qimage(self.transform_image(gallery_numpy), True )))
+                gallery_item.setPos(x, y)
+                self.browser.image_viewer._scene.addItem(gallery_item)
         
-        for i, gallery_numpy in enumerate(pos.get_gallery_image_generator(track, object_)):
-            gallery_item = QGraphicsPixmapHoverItem(QPixmap(array2qimage(self.transform_image(gallery_numpy), True )))
-            gallery_item.setPos(x, y)
-            self.browser.image_viewer._scene.addItem(gallery_item)
-            
-            annotation_item = QGraphicsRectItem(x, y, 10, 10)
-            annotation_item.setBrush(Qt.white)
-            annotation_item.setZValue(5)
-            self.browser.image_viewer._scene.addItem(annotation_item)
-            
-            
-            if self._cb_segmentation.checkState():
-                contour_item = QGraphicsPolygonItem(QPolygonF(map(lambda x: QPointF(x[0],x[1]), self.cur_pos.get_crack_contour(track[i],object_)[0])))
-                contour_item.setPos(x-52,y-52)
-                color = Qt.red
-                if self._cb_classification.checkState():
-                    color = QColor(self.cur_pos.get_class_color(track[i]))
-                contour_item.setPen(QPen(color))
-                contour_item.setZValue(4)
-                
-                self.browser.image_viewer._scene.addItem(contour_item)
-
-            x += step
-            if x > self.x_max:
-                x = 0
-                y += step
-            print gallery_numpy.shape
-               
-            
+                if self._cb_segmentation.checkState():
+                    contour_item = QGraphicsPolygonItem(QPolygonF(map(lambda x: QPointF(x[0],x[1]), self.cur_pos.get_crack_contour(track[i],object_)[0])))
+                    contour_item.setPos(x,y)
+                    color = Qt.red
+                    if self._cb_classification.checkState():
+                        color = QColor(self.cur_pos.get_class_color(track[i]))
+                    contour_item.setPen(QPen(color))
+                    contour_item.setZValue(4)
+                    
+                    self.browser.image_viewer._scene.addItem(contour_item)
+    
+                x += step
+                if (x / step) > self.x_max:
+                    x = 0
+                    y += step
+            x = 0
+            y += 2*step
+                 
     def transform_image(self, image):
         image = image.astype(numpy.float32)
         image *= 255.0 / (self._sb_image_max.value() - self._sb_image_min.value() )
@@ -1505,5 +1388,4 @@ class CellH5EventModule(CH5BasedModule):
         image2 = numpy.require(image, numpy.uint8)
         print image2.min(), image2.max()
         return image2
-
-        
+   
