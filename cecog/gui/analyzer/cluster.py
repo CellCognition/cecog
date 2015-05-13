@@ -409,11 +409,17 @@ class ClusterFrame(BaseFrame, ExportSettings):
         frame.layout().addWidget(self._cluster_display, frame._input_cnt, 0, 1, 2)
         frame._input_cnt += 1
 
+        # update display first time when tab is enable
+        self._display_update = False
+
+
     def page_changed(self):
         self._cluster_display.update_display(self._is_active)
+        self._display_update = True
 
     def settings_loaded(self):
-        self._cluster_display.update_display(self._is_active)
+        if self._display_update:
+            self._cluster_display.update_display(self._is_active)
 
     def set_imagecontainer(self, imagecontainer):
         self._cluster_display.imagecontainer = imagecontainer
