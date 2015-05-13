@@ -17,9 +17,9 @@ __source__ = '$URL$'
 __all__ = ['ImageViewer']
 
 
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
-from PyQt4.Qt import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.Qt import *
 
 from qimage2ndarray import array2qimage
 
@@ -32,7 +32,7 @@ class ZoomedQGraphicsView(QGraphicsView):
         grviewCenter  = self.mapToScene(self.viewport().rect().center())
 
         if k_ctrl is True:
-            if event.delta() > 0:
+            if event.angleDelta().y() > 0:
                 scaleFactor = 1.1
             else:
                 scaleFactor = 0.9
@@ -309,8 +309,9 @@ class ImageViewer(QGraphicsView):
         # mouse cursor and mapped scene position seem now to match exactly.
         # increased the search radius from a point to a 3x3 square around
         # the point to identify the scene item
+
         items = scene.items(point.x()-1, point.y()-1, 3, 3,
-                            Qt.IntersectsItemShape)
+                            Qt.IntersectsItemShape, Qt.AscendingOrder)
         items = [i for i in items if isinstance(i, HoverPolygonItem)]
         if len(items) > 0:
             found_item = items[0]
@@ -346,9 +347,8 @@ class ImageViewer(QGraphicsView):
             self.scale_to_fit()
 
     def wheelEvent(self, event):
-
         if event.modifiers() == Qt.ControlModifier:
-            if event.delta() > 0:
+            if event.angleDelta().y() > 0:
                 factor = 1.1
             else:
                 factor = 0.9

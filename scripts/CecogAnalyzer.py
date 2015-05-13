@@ -28,13 +28,20 @@ import h5py
 import matplotlib as mpl
 mpl.use('Agg')
 
-import sip
+# special case on windoze
+try:
+    import PyQt5.sip as sip
+except ImportError:
+    import sip
+
 # set PyQt API version to 2.0
 sip.setapi('QString', 2)
 sip.setapi('QVariant', 2)
 sip.setapi('QUrl', 2)
 
-from PyQt4 import QtGui
+from PyQt5 import QtGui
+from PyQt5 import QtWidgets
+
 
 try:
     # if some packages were not included in the bundle
@@ -53,8 +60,8 @@ try:
     import cecog.cecog_rc
 
 except Exception as e:
-    app = QtGui.QApplication(sys.argv)
-    QtGui.QMessageBox.critical(None, "Error", traceback.format_exc())
+    app = QtWidgets.QApplication(sys.argv)
+    QtWidgets.QMessageBox.critical(None, "Error", traceback.format_exc())
     raise
 
 
@@ -84,11 +91,11 @@ if __name__ == "__main__":
     freeze_support()
 
 
-    app = QtGui.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     app.setWindowIcon(QtGui.QIcon(':cecog_analyzer_icon'))
     app.setApplicationName(version.appname)
 
-    splash = QtGui.QSplashScreen(QtGui.QPixmap(':cecog_splash'))
+    splash = QtWidgets.QSplashScreen(QtGui.QPixmap(':cecog_splash'))
     splash.show()
 
     is_bundled = hasattr(sys, 'frozen')
@@ -110,7 +117,7 @@ if __name__ == "__main__":
             main._load_image_container(show_dialog=False)
     except Exception, e:
         traceback.print_exc()
-        QtGui.QMessageBox.critical(
+        QtWidgets.QMessageBox.critical(
             None, "Error", "Could not load images\n%s" %str(e))
 
     sys.exit(app.exec_())

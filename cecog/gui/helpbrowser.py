@@ -10,14 +10,15 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-from PyQt4 import QtGui
-from PyQt4 import QtCore
+from PyQt5 import QtGui
+from PyQt5 import QtCore
+from PyQt5 import QtWidgets
 from cecog.util.pattern import QSingleton
 
 __all__ = ['HelpBrowser']
 
 
-class HelpBrowser(QtGui.QDialog):
+class HelpBrowser(QtWidgets.QDialog):
     """Help browser for the CecogAnalyzer. This class is a singleton."""
 
     __metaclass__ = QSingleton
@@ -29,13 +30,13 @@ class HelpBrowser(QtGui.QDialog):
 
         self.setWindowTitle("CecogAnalyzer Help Browser")
         self.setMinimumSize(QtCore.QSize(900,600))
-        self.text_widget = QtGui.QTextBrowser(self)
+        self.text_widget = QtWidgets.QTextBrowser(self)
 
         self.text_widget.setOpenLinks(False)
         self.text_widget.setOpenExternalLinks(False)
         self.text_widget.anchorClicked.connect(self.on_anchor_clicked)
 
-        layout = QtGui.QVBoxLayout(self)
+        layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(2, 2, 2, 2)
         layout.addWidget(self.text_widget)
 

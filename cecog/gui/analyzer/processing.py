@@ -18,8 +18,9 @@ __all__ = ['ProcessingFrame']
 
 
 import logging
-from PyQt4 import QtGui
-from PyQt4 import QtCore
+from PyQt5 import QtGui
+from PyQt5 import QtCore
+from PyQt5 import QtWidgets
 
 from cecog import CHANNEL_PREFIX
 from cecog.version import version
@@ -140,7 +141,6 @@ class ExportSettings(object):
             settings.set('Output', 'export_track_data', False)
 
         return settings
-
 
 
 class ProcessingFrame(BaseProcessorFrame, ExportSettings):

@@ -31,7 +31,7 @@ import build_helpers
 pyrcc_opts = {'infile': 'cecog.qrc',
               'outfile': join('cecog', 'cecog_rc.py'),
               'pyrccbin': join('C:\\', 'Python27', 'Lib', 'site-packages',
-                               'PyQt4', 'pyrcc4.exe')}
+                               'PyQt5', 'pyrcc5.exe')}
 
 
 DLL_EXCLUDES = [ 'libgdk-win32-2.0-0.dll',
@@ -71,7 +71,12 @@ DLL_EXCLUDES = [ 'libgdk-win32-2.0-0.dll',
 
 py2exe_opts = {'includes': build_helpers.INCLUDES,
                'excludes': build_helpers.EXCLUDES,
-               'dll_excludes': DLL_EXCLUDES}
+               'dll_excludes': DLL_EXCLUDES,
+               'optimize': 1,
+               'compressed': True,
+               'skip_archive': False,
+               'bundle_files': 3,
+               'packages' : ['h5py','vigra','sklearn']}
 
 # ccore build paths
 # or write these paths to setup.cfg

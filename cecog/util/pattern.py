@@ -14,7 +14,7 @@ __url__ = 'www.cellcognition.org'
 
 __all__ = ["Singleton", "QSingleton"]
 
-from PyQt4.QtCore import pyqtWrapperType
+from PyQt5.QtCore import pyqtWrapperType
 import os
 
 

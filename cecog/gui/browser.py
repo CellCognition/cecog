@@ -20,19 +20,22 @@ from collections import OrderedDict
 import h5py
 import numpy
 
-import sip
+from PyQt5 import sip 
 sip.setapi('QString', 2)
 sip.setapi('QVariant', 2)
 
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
-from PyQt4.Qt import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.Qt import *
+
+from PyQt5 import QtWidgets
+
 from cecog.gui.util import information
 
+from cecog.gui.analyzer import BaseProcessorFrame
 
 from cecog.gui.imageviewer import ImageViewer, GalleryViewer
 from cecog.gui.modules.module import ModuleManager
-from cecog.gui.analyzer import _ProcessorMixin
 from cecog.analyzer.core import AnalyzerBrowser
 
 from cecog.io.imagecontainer import Coordinate
@@ -293,7 +296,10 @@ class Browser(QMainWindow):
             action.setToolTip(tooltip)
             action.setStatusTip(tooltip)
         if slot is not None:
-            self.connect(action, SIGNAL(signal), slot, Qt.DirectConnection)
+            if signal == "triggered()":
+                action.triggered.connect(slot, Qt.DirectConnection)
+            else:
+                action.triggered[bool].connect(slot, Qt.DirectConnection)
         if checkable is not None:
             action.setCheckable(True)
         action.setChecked(checked)
@@ -371,7 +377,7 @@ class Browser(QMainWindow):
 
     def _process_image(self, ):
         self.image_viewer.remove_objects()
-        settings = _ProcessorMixin.get_special_settings(self._settings)
+        settings = BaseProcessorFrame.get_special_settings(self._settings)
         settings.set_section('General')
         settings.set2('constrain_positions', True)
         settings.set2('positions', self.coordinate.position)
