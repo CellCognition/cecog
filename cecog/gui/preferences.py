@@ -72,7 +72,7 @@ class AppPreferences(object):
 
         self.mapping_str = ("#darwin, win32, linux\n"
                             "/Volumes/groups/gerlich, M:, /groups/gerlich\n"
-                            "/Volumes/clustertmp, O:, /clustertmp\n"
+                            "/Volumes/clustertmp/gerlich, O:, /clustertmp/gerlich\n"
                             "/Volumes/resources, N:, /resources")
         self.target_platform = "linux"
         self.batch_size = 1

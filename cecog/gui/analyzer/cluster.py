@@ -130,7 +130,11 @@ class ClusterDisplay(QGroupBox):
 
     @property
     def jobIds(self):
-        return self._txt_jobid.text()
+        jids = self._txt_jobid.text()
+        if not jids:
+            return None
+        else:
+            return jids
 
     @jobIds.setter
     def jobIds(self, jobids):
@@ -204,6 +208,9 @@ class ClusterDisplay(QGroupBox):
 
     @pyqtSlot()
     def _on_terminate_job(self):
+        if self.jobIds is None:
+            return
+
         try:
             self.dlg = ProgressDialog("Terminating Jobs...", None, 0, 0, self)
             func = lambda: self._service.control_job(self._jobid, JOB_CONTROL_TERMINATE)
@@ -219,6 +226,8 @@ class ClusterDisplay(QGroupBox):
 
     @pyqtSlot()
     def _on_toggle_job(self):
+        if self.jobIds is None:
+            return
         try:
             self.dlg = ProgressDialog("Suspending Jobs...", None, 0, 0, self)
             func = lambda: self._service.control_job(self._jobid, self._toggle_state)
@@ -239,9 +248,12 @@ class ClusterDisplay(QGroupBox):
     @pyqtSlot()
     def _on_update_job_status(self):
         txt = self._update_job_status()
-        QMessageBox.information(self, "Cluster update", "Message: '%s'" % txt)
+        if txt is not None:
+            QMessageBox.information(self, "Cluster update", "Message: '%s'" % txt)
 
     def _update_job_status(self):
+        if self.jobIds is None:
+            return
 
         try:
             self.dlg = ProgressDialog("Updating Job Status...", None, 0, 0, self)
@@ -254,7 +266,7 @@ class ClusterDisplay(QGroupBox):
                 self, "Error", 'Could not retrieve job status (%s)' %str(e))
         else:
             self._label_jobstatus.setText(txt)
-        return txt
+            return txt
 
     def _check_host_url(self):
         url = urlparse.urlparse(self._host_url)
@@ -390,15 +402,8 @@ class ClusterDisplay(QGroupBox):
             self._table_info.resizeColumnsToContents()
             self._table_info.resizeRowsToContents()
             self._btn_submit.setEnabled(can_submit and is_active)
-            self._btn_terminate.setEnabled(is_active)
-            self._btn_toogle.setEnabled(is_active)
-            self._btn_update.setEnabled(is_active)
         else:
             self._btn_submit.setEnabled(False)
-            self._btn_terminate.setEnabled(False)
-            self._btn_toogle.setEnabled(False)
-            self._btn_update.setEnabled(False)
-
 
 class ClusterFrame(BaseFrame, ExportSettings):
 
