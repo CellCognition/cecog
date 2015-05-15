@@ -29,8 +29,8 @@ from PyQt5.Qt import *
 
 from PyQt5 import QtWidgets
 
+from cecog import version
 from cecog.gui.util import information
-
 from cecog.gui.analyzer import BaseProcessorFrame
 
 from cecog.gui.imageviewer import ImageViewer
@@ -65,6 +65,7 @@ class Browser(QMainWindow):
 
     def __init__(self, settings, imagecontainer, parent=None):
         super(Browser, self).__init__(parent)
+        self.setWindowTitle('Annotation Browser')
 
         frame = QFrame(self)
         self.setCentralWidget(frame)
@@ -253,7 +254,29 @@ class Browser(QMainWindow):
         self._module_manager.activate_tab(NavigationModule.NAME)
 
         # process and display the first image
+        self._restore_geometry()
         self._process_image()
+
+    def closeEvent(self, event):
+        self._save_geometry()
+
+    def _save_geometry(self):
+        settings = QSettings(version.organisation, version.appname)
+        settings.beginGroup('AnnotationBrowser')
+        settings.setValue('state', self.saveState())
+        settings.setValue('geometry', self.saveGeometry())
+        settings.endGroup()
+
+    def _restore_geometry(self):
+        settings = QSettings(version.organisation, version.appname)
+        settings.beginGroup('AnnotationBrowser')
+
+        if settings.contains('geometry'):
+            self.restoreGeometry(settings.value('geometry'))
+
+        if settings.contains('state'):
+            self.restoreState(settings.value('state'))
+        settings.endGroup()
 
     def _region_names(self):
 

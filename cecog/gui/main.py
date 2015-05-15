@@ -253,8 +253,9 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         settings.setValue('geometry', self.saveGeometry())
 
         try:
-            settings.setValue('clusterjobs',
-                              self._pages.widgetByType(ClusterFrame).get_jobids())
+            settings.setValue(
+                'clusterjobs', self._pages.widgetByType(
+                    ClusterFrame).get_jobids())
         except KeyError:
             pass
 
@@ -264,16 +265,17 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         settings = QtCore.QSettings(version.organisation, version.appname)
         settings.beginGroup('Gui')
 
-        geometry = settings.value('geometry')
-        if geometry is not None:
-            self.restoreGeometry(geometry)
-        state = settings.value('state')
-        if state is not None:
-            self.restoreState(state)
+        if settings.contains('geometry'):
+            self.restoreGeometry(settings.value('geometry'))
 
-        jobids = settings.value('clusterjobs')
-        if AppPreferences().cluster_support and jobids:
-            self._pages.widgetByType(ClusterFrame).restore_jobids(jobids)
+        if settings.contains('state'):
+            self.restoreState(settings.value('state'))
+
+        if settings.contains('clusterjobs'):
+            jobids = settings.value('clusterjobs')
+            if AppPreferences().cluster_support and jobids:
+                self._pages.widgetByType(ClusterFrame).restore_jobids(jobids)
+
         settings.endGroup()
 
     def closeEvent(self, event):
