@@ -125,7 +125,10 @@ class AbstractImporter(XmlSerializer):
         filename_abs = os.path.join(self.path, filename_rel)
         # make sure no back-slashes are left in the path
         filename_abs = filename_abs.replace('\\', '/')
-        if self.meta_data.pixel_type == PixelType.name(PixelType.Uint8):
+        if self.meta_data.is_color == True:
+            print "FIND Color image!!!"
+            image = ccore.readImageRGB(filename_abs, index)
+        elif self.meta_data.pixel_type == PixelType.name(PixelType.Uint8):
             image = ccore.readImage(filename_abs, index)
         elif self.meta_data.pixel_type == PixelType.name(PixelType.Uint16):
             image = ccore.readImageUInt16(filename_abs, index)

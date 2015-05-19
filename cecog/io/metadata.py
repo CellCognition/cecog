@@ -63,6 +63,8 @@ class MetaData(XmlSerializer):
         self._position_well_map = {}
 
         self.pixel_type = None
+        
+        self.is_color = None
 
     @property
     def pixel_range(self):
@@ -79,6 +81,8 @@ class MetaData(XmlSerializer):
         if not PixelType.is_valid(ptype):
             raise TypeError('Pixel type is not understood')
         self.pixel_type = ptype
+        
+        self.is_color = info.is_color
 
     def get_timestamp_info(self, position):
         try:

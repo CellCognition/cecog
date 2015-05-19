@@ -27,6 +27,7 @@ from cecog.plugin.segmentation.strategies import SegmentationPluginConstrainedWa
 from cecog.plugin.segmentation.strategies import SegmentationPluginDifference
 from cecog.plugin.segmentation.strategies import SegmentationPluginIlastik
 from cecog.plugin.segmentation.strategies import SegmentationPluginPrimaryLoadFromFile
+from cecog.plugin.segmentation.strategies import SegmentationPluginFRST
 from cecog import CHANNEL_PREFIX
 
 
@@ -78,6 +79,7 @@ class MetaPluginManager(object):
         self.managers['primary'].register_plugin(SegmentationPluginPrimaryLoadFromFile)
         self.managers['primary'].register_plugin(SegmentationPluginPrimary2)
         self.managers['primary'].register_plugin(SegmentationPluginPrimary3)
+        self.managers['primary'].register_plugin(SegmentationPluginFRST)
         
         self.managers['secondary'].register_plugin(SegmentationPluginExpanded)
         self.managers['secondary'].register_plugin(SegmentationPluginInside)

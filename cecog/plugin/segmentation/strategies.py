@@ -12,6 +12,8 @@
 import os
 import re
 import numpy
+from numpy import linalg
+
 from cecog import ccore
 from cecog.gui.guitraits import (BooleanTrait,
                                  IntTrait,
@@ -22,7 +24,14 @@ from cecog.gui.guitraits import (BooleanTrait,
 from cecog.plugin import stopwatch
 from cecog.plugin.segmentation.manager import _SegmentationPlugin
 
-import pdb
+from sklearn import cluster
+
+### only for debug, delete them before distribute ###
+import ipdb
+import scipy
+
+def imwrite(imout, imname):
+    scipy.misc.imsave(os.path.join("/home/zhang/work/image/temp",imname), imout)
 
 class SegmentationPluginPrimary(_SegmentationPlugin):
 
@@ -1103,3 +1112,112 @@ class SegmentationPluginDifference(_SegmentationPlugin):
         #array = numpy.abs(array)
         #img_labels = ccore.numpy_to_image(array, copy=True)
         return ccore.ImageMaskContainer(image, img_labels, False, True, True)
+        
+        
+        
+class SegmentationPluginFRST(_SegmentationPlugin):
+    LABEL = 'FRST and watershed (beta)'
+    NAME = 'frst_ws'
+    COLOR = '#7CEDFF'
+
+    REQUIRES = None
+
+    PARAMS = [('nuclear_diam', IntTrait(20, 1, 100, label='nuclear diameter in pixel')),
+              ]
+
+    def render_to_gui(self, panel):
+        panel.add_group(None,
+                        [('nuclear_diam', (0, 0, 1, 1)),
+                         ])
+ 
+
+    @stopwatch()
+    def colorDeconv(self,imin,M=0):
+        M_h_e_dab_meas = numpy.array([[0.650, 0.072, 0.268],\
+                               [0.704, 0.990, 0.570],\
+                               [0.286, 0.105, 0.776]])
+    
+        M_h_e_meas = numpy.array([[0.644211, 0.092789],\
+                           [0.716556, 0.954111],\
+                           [0.266844, 0.283111]])
+        M = M_h_e_meas
+        M_inv =  numpy.dot(linalg.inv(numpy.dot(M.T, M)), M.T)
+        imout = numpy.dot(imin, M_inv.T)
+        return imout
+
+    @stopwatch()
+    def clustering(self, imColor, imDeconv):
+        ######### prepare for clustering ###########        
+        size = [imColor.width, imColor.height]
+        feats = numpy.zeros((size[0]*size[1],2))
+        for i in range(2):
+            feats[:,i] = imDeconv[:,:,i].reshape((size[0]*size[1]))        
+        vmax = numpy.max(feats, axis=0)
+        vmin = numpy.min(feats, axis=0)
+        X = (feats - vmin) / (vmax-vmin)
+        X = X[:feats.shape[0]]
+        
+        initCenter = numpy.array([\
+                [0., 0.5],\
+                [0.8, 0.],\
+                [1., 1.],\
+                ])
+                
+        ######### clustering ############
+        n_class = 4
+        n_iter = 100
+        
+        km = cluster.MiniBatchKMeans( n_clusters=n_class, init = initCenter) # 4 class max_iter = 1,
+        km.fit(X)
+
+        while km.cluster_centers_[0,0] > km.cluster_centers_[1,0]:
+            initCenter = numpy.array([\
+                [0., 0.5],\
+                [0.8, 0.],\
+                [1., 1.],\
+                ])
+            n_iter /= 2
+            km = cluster.MiniBatchKMeans( n_clusters=n_class, init = initCenter, max_iter = n_iter) # 4 class max_iter = 1,
+            km.fit(X)                
+                
+        ######### output ############
+        imout = km.labels_.astype(numpy.uint8) + 1
+        imout = imout.reshape((size[1], size[0])).astype(numpy.uint8)
+        imwrite(imout, "clusterOut.png")
+        imout = imout.reshape(imDeconv.shape[0], imDeconv.shape[1], 1)
+        im_return = numpy.concatenate((imDeconv, imout), axis=2)
+        
+        return im_return        
+                
+                
+                
+                
+                
+    @stopwatch()
+    def threshold(self, img_in, size, limit):
+        img_out = ccore.window_average_threshold(img_in, size, limit)
+        return img_out
+
+    @stopwatch()
+    def _run(self, meta_image):
+        imColor = meta_image.image
+        ######### image deconvolution ##############
+        imRGB = imColor.toArray()        
+        imDeconv = self.colorDeconv(imRGB)
+        imwrite(imDeconv[:,:,0], "imdeconv1.png")
+        imwrite(imDeconv[:,:,1], "imdeconv2.png")        
+        
+        imtemp = self.clustering(imColor, imDeconv)
+        ar1 = imtemp[:,:,0].astype(numpy.uint8)
+        im1 = ccore.numpy_to_image(ar1, copy=True)
+        
+        imout = ccore.threshold(im1, 0, 125, 0, 255)
+        
+        ar1 = imDeconv[:,:,0].astype(numpy.uint8)
+        image = ccore.numpy_to_image(ar1, copy=True)
+        
+        # ipdb.set_trace()
+        container = ccore.ImageMaskContainer(image, imout, False)
+        
+        return container
+

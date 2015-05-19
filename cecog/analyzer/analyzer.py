@@ -26,6 +26,7 @@ from cecog.logging import LoggerObject
 from cecog.util.util import makedirs
 from cecog.colors import hex2rgb
 
+import ipdb
 
 class CellAnalyzer(LoggerObject):
 
@@ -225,6 +226,7 @@ class CellAnalyzer(LoggerObject):
                                         lstImages.append((imgCon2, '#FFFFFF', 1.0))
 
         if len(lstImages) > 0:
+            ipdb.set_trace()
             imgRgb = ccore.makeRGBImage([x[0].getView() for x in lstImages],
                                         [ccore.RGBValue(*hex2rgb(x[1])) for x in lstImages],
                                         [x[2] for x in lstImages])
