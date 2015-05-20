@@ -65,6 +65,7 @@ class ProgressDialog(QtGui.QProgressDialog):
 
     def __init__(self, *args, **kw):
         super(ProgressDialog, self).__init__(*args, **kw)
+        self.setWindowTitle('Be patient...')
         self.setWindowModality(Qt.WindowModal)
         self.setCancelButton(None)
         self.setAutoClose(False)
