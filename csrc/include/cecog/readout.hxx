@@ -96,6 +96,56 @@ namespace cecog
     return makeRGBImage(oImageVector, oChannelVector, oAlphaVector);
   }
 
+  template <class T>
+  vigra::BasicImage<vigra::RGBValue<T> > makeRGBImageC(vigra::BasicImageView< vigra::RGBValue <T> > const & oImageColor,
+														vigra::BasicImageView<T> const & oImageGrey,
+                                                      vigra::ArrayVector< vigra::RGBValue<T> > const & oChannelVector,
+                                                      vigra::ArrayVector< float > const & oAlphaVector)
+  {
+    vigra_precondition(oAlphaVector.size() > 0,
+                       "makeRGBImage: List of images must contain at least one item!");
+    vigra_precondition(oAlphaVector.size() == 2,
+                       "makeRGBImage: List of images must have same size as list of RGBValues");
+
+    int iDimX = oImageColor.width();
+    int iDimY = oImageColor.height();
+    //int iDimC = oAlphaVector.size();
+
+    vigra::BasicImage< vigra::RGBValue<T> > imgRGB(iDimX, iDimY);
+
+	
+	vigra::RGBValue<T> rgbC = oChannelVector[0];
+	vigra::RGBValue<T> rgbG = oChannelVector[1];
+	float fAlphaC = oAlphaVector[0];
+	float fAlphaG = oAlphaVector[1];
+	
+	vigra::BasicImageView< vigra::RGBValue <T> > iview2DC = oImageColor;
+	vigra::BasicImageView<T> iview2DG = oImageGrey;
+	
+	// we could probably also do a combineTwoImages here
+	typename vigra::BasicImageView< vigra::RGBValue <T> >::const_iterator itImgBeginC = iview2DC.begin();
+	typename vigra::BasicImageView<T>::const_iterator itImgBeginG = iview2DG.begin();
+	typename vigra::BasicImage<vigra::RGBValue<T> >::ScanOrderIterator itImgRGBBegin = imgRGB.begin();
+	for (; itImgBeginC != iview2DC.end() && itImgRGBBegin != imgRGB.end(); itImgBeginC++, itImgBeginG++, itImgRGBBegin++)
+	// loop over r,g,b: do the RGB-blending
+	for (int m=0; m < 3; m++)
+	{
+	  // scale the current pixel by means of its channel component
+	  // FIXME: scaling is limited to uint8, so template generalization is broken here
+	  uint8 newvC = uint16(fAlphaC * ((*itImgBeginC)[m]) / 255.0 * rgbC[m]) % 256;
+	  uint8 newvG = uint16(fAlphaG * (*itImgBeginG) / 255.0 * rgbG[m]) % 256;
+	  // do a max-blending with any value already assigned to this pixel
+	  
+	  (*itImgRGBBegin)[m] = std::max(newvC, newvG);
+	}
+
+	
+    return imgRGB;
+  }
+
+
+
+
 
   class ArrayStitcher
   {

@@ -227,9 +227,17 @@ class CellAnalyzer(LoggerObject):
 
         if len(lstImages) > 0:
             ipdb.set_trace()
-            imgRgb = ccore.makeRGBImage([x[0].getView() for x in lstImages],
-                                        [ccore.RGBValue(*hex2rgb(x[1])) for x in lstImages],
-                                        [x[2] for x in lstImages])
+            arr = lstImages[0][0].toArray()
+            #Uint8 gray image
+            if arr.ndim == 2: 
+                imgRgb = ccore.makeRGBImage([x[0].getView() for x in lstImages],
+                                            [ccore.RGBValue(*hex2rgb(x[1])) for x in lstImages],
+                                            [x[2] for x in lstImages])
+            ## RGB Uint8 color image            
+            else:  
+                imgRgb = ccore.makeRGBImageC(lstImages[0][0].getView(),lstImages[1][0].getView(),
+                                            [ccore.RGBValue(*hex2rgb(x[1])) for x in lstImages],
+                                            [x[2] for x in lstImages])                                        
 
             if writeToDisc:
                 strFilePath = join(strPathOut, "P%s_T%05d%s"

@@ -1115,6 +1115,27 @@ template <class T>
     return cecog::makeRGBImage(oImageVector, oRGBValueVector, oAlphas);
   }
 
+template <class T>
+  vigra::BasicImage< vigra::RGBValue<T> > pyMakeRGBImage3(PyObject * imageC, PyObject * imageG, PyObject * lstRGBValues,
+                                                          PyObject * lstAlphas)
+  {
+    // typedef vigra::ArrayVector< vigra::BasicImageView< vigra::RGBValue< T > > > ImageVector;
+    typedef vigra::BasicImageView< vigra::RGBValue<T> > ImageTypeC;
+    typedef vigra::BasicImageView<T> ImageTypeG;
+    ImageTypeC oImageC = extract<ImageTypeC>(imageC)();
+    ImageTypeG oImageG = extract<ImageTypeG>(imageG)();
+
+    //vigra_precondition(olistAlphas.size() > 0,
+                       //"pyMakeRGBImage: List of images must contain at least one item!");
+
+    typedef vigra::ArrayVector< vigra::RGBValue<T> > RGBValueVector;
+    RGBValueVector oRGBValueVector = extract<RGBValueVector>(lstRGBValues)();
+
+    typedef vigra::ArrayVector< float > AlphaVector;
+    AlphaVector oAlphas = extract<AlphaVector>(lstAlphas)();
+
+    return cecog::makeRGBImageC(oImageC, oImageG, oRGBValueVector, oAlphas);
+  }
 
 void pyMaxIntensityRGB(vigra::BRGBImage const &imgIn, vigra::BRGBImage &imgOut, float fAlpha)
 {
@@ -1486,6 +1507,7 @@ static void wrap_images()
 
   def("makeRGBImage", pyMakeRGBImage1<vigra::UInt8>);
   def("makeRGBImage", pyMakeRGBImage2<vigra::UInt8>);
+  def("makeRGBImageC", pyMakeRGBImage3<vigra::UInt8>);
 
   def("numpy_to_image", pyNumpyToImage, (arg("array"), arg("copy")=false), "Converts a numpy.ndarray to a VIGRA image.");
 

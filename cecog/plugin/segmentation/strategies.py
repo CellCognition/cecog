@@ -1211,7 +1211,7 @@ class SegmentationPluginFRST(_SegmentationPlugin):
         ar1 = imtemp[:,:,0].astype(numpy.uint8)
         im1 = ccore.numpy_to_image(ar1, copy=True)
         
-        imout = ccore.threshold(im1, 0, 125, 0, 255)
+        imout = ccore.threshold(im1, 0, 60, 0, 255)
         
         ar1 = imDeconv[:,:,0].astype(numpy.uint8)
         image = ccore.numpy_to_image(ar1, copy=True)
