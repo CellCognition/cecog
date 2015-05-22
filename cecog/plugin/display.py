@@ -20,7 +20,7 @@ from PyQt5.Qt import *
 from collections import OrderedDict
 from cecog.gui.display import TraitDisplayMixin
 from cecog.gui.util import question
-from cecog.gui.helpbrowser import HelpBrowser
+from .helpbrowser import HelpBrowser
 
 class PluginParamFrame(TraitDisplayMixin):
 
@@ -64,6 +64,7 @@ class PluginDocumentation(QFrame):
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
+
 
         help_button = QToolButton(self)
         help_button.setIcon(QIcon(':question_mark'))

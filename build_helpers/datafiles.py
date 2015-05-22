@@ -104,4 +104,10 @@ def get_data_files(target_dir=TARGET_BUNDLE, mpl_data=True):
     qt5plugins = ("platforms", qt5plugins)
     dfiles.append(qt5plugins)
 
+    # qt help files
+    dfiles.append((join(target_dir, 'doc'),
+                   glob.glob(join('doc', "*.qhc"))))
+    dfiles.append((join(target_dir, 'doc'),
+                   glob.glob(join('doc', "*.qhcp"))))
+
     return dfiles

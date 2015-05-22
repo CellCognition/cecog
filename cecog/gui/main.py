@@ -62,11 +62,11 @@ from cecog.gui.preferences import PreferencesDialog
 from cecog.gui.preferences import AppPreferences
 
 from cecog.gui.browser import Browser
-from cecog.gui.helpbrowser import HelpBrowser
 from cecog.logging import LogWindow
 
 from cecog.gui.progressdialog import ProgressDialog
 from cecog.gui.progressdialog import ProgressObject
+from cecog.gui.helpbrowser import AtAssistant
 
 
 class FrameStack(QtWidgets.QStackedWidget):
@@ -77,8 +77,9 @@ class FrameStack(QtWidgets.QStackedWidget):
         self.idialog = ImageDialog()
         self.idialog.hide()
 
-        self.helpbrowser = HelpBrowser()
-        self.helpbrowser.hide()
+        manual = os.path.join(parent.environ.DOC_DIR, AtAssistant.Manual)
+        self.assistant = AtAssistant(manual, self)
+        self.assistant.hide()
 
         self.log_window = LogWindow(self)
         self._wmap = dict()
@@ -158,15 +159,15 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         self.add_actions(menu_view, (action_log,))
         self.add_actions(menu_view, (action_open,))
 
-        action_help_startup = self.create_action('&Startup Help...',
-                                                 shortcut=QtGui.QKeySequence.HelpContents,
-                                                 slot=self._on_help_startup)
+        action_assistant = self.create_action('&Help',
+                                              shortcut=QtGui.QKeySequence.HelpContents,
+                                              slot=self.show_assistant)
         action_about = self.create_action('&About', slot=self.on_about)
         action_aboutQt = self.create_action('&About Qt', slot=self.about_qt)
 
 
         menu_help = self.menuBar().addMenu('&Help')
-        self.add_actions(menu_help, (action_help_startup, action_about,
+        self.add_actions(menu_help, (action_assistant, action_about,
                                      action_aboutQt))
 
         self.setStatusBar(QtWidgets.QStatusBar(self))
@@ -204,7 +205,6 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         for frame in self._tabs:
             frame.status_message.connect(self.statusBar().showMessage)
 
-        print AppPreferences().cluster_support
         if AppPreferences().cluster_support:
             clusterframe = ClusterFrame(self._settings, self._pages, SECTION_NAME_CLUSTER)
             clusterframe.set_imagecontainer(self._imagecontainer)
@@ -752,5 +752,6 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
             self, 'Save config file as', dir, ';;'.join(self.NAME_FILTERS))[0]
         return filename or None
 
-    def _on_help_startup(self):
-        self._pages.helpbrowser.show('_startup')
+    def show_assistant(self):
+        self._pages.assistant.show()
+        # self._pages.assistant.openKeyword('index')
