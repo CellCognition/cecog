@@ -30,7 +30,7 @@ class LogWindow(QtWidgets.QDialog):
     def __init__(self, parent, max_count=500, flags=Qt.Window):
         super(QtWidgets.QDialog, self).__init__(parent, flags)
 
-        self.setWindowTitle("Log")
+        self.setWindowTitle("Application Log")
         self.setWindowModality(Qt.NonModal)
         self.resize(800, 600)
 
@@ -53,6 +53,7 @@ class LogWindow(QtWidgets.QDialog):
         layout.setSpacing(1)
 
         toolbar = QtWidgets.QToolBar(self)
+        toolbar.setObjectName('LoggerToolbar')
         toolbar.addWidget(QtWidgets.QLabel('Log level: ', self))
         combo = QtWidgets.QComboBox(self)
         combo.currentIndexChanged[str].connect(self.onLevelChanged)
