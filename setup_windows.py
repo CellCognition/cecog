@@ -33,6 +33,9 @@ pyrcc_opts = {'infile': 'cecog.qrc',
               'pyrccbin': join('C:\\', 'Python27', 'Lib', 'site-packages',
                                'PyQt5', 'pyrcc5.exe')}
 
+help_opts = {'infile': join('doc', 'manual.qhcp'),
+             'outfile': join('resources', 'doc', 'manual.qhc'),
+             'qcollectiongeneator': 'qcollectiongenerator'}
 
 DLL_EXCLUDES = [ 'libgdk-win32-2.0-0.dll',
                  'libgobject-2.0-0.dll',
@@ -117,12 +120,15 @@ if "bdist_wininst" in sys.argv:
     dfiles.append(dlls)
 
 
-setup(options = {"py2exe": py2exe_opts,
-                 'pyrcc': pyrcc_opts},
-      cmdclass = {'pyrcc': build_helpers.PyRcc,
+setup(options = {'py2exe': py2exe_opts,
+                 'build_rcc': pyrcc_opts,
+                 'build_help': help_opts},
+      cmdclass = {'build_rcc': build_helpers.BuildRcc,
+                  'build_help': build_helpers.BuildHelp,
                   'build': build_helpers.Build},
       packages = packages,
-      package_data = {'cecog': [join('gui', '*.ui'), ],},
+      package_data = {'cecog': [join('gui', '*.ui'),
+                                join('gui', 'helpbrowser', '*.ui')]},
       data_files = dfiles,
       windows = [{'script': join('scripts', 'CecogAnalyzer.py'),
                   'icon_resources': [(1, 'resources\cecog_analyzer_icon.ico')]
