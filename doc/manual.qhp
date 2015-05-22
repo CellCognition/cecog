@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<QtHelpProject version="1.0">
+  <namespace>cecog</namespace>
+  <virtualFolder>html</virtualFolder>
+  <filterSection>
+    <toc>
+      <section title="Index" ref="html/index.html"></section>
+    </toc>
+    <keywords>
+      <keyword name="Overview" ref="html/index.html"/>
+    </keywords>
+    <files>
+      <file>html/css/help.css</file>
+      <file>html/index.html</file>
+      <file>html/images/logo.png</file>
+      <file>html/images/extlink.png</file>
+    </files>
+  </filterSection>
+</QtHelpProject>
