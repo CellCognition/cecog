@@ -403,8 +403,7 @@ class TraitDisplayMixin(QtWidgets.QFrame):
         return self._settings.get_trait(self.name, name)
 
     def _on_show_help(self, link):
-        self.parent().helpbrowser.show( \
-            self.name, link=link, header='_header', footer='_footer')
+        self.parent().assistant.show(link)
 
     def _on_set_radio_button(self, name, value):
         # FIXME: this is somehow hacky. we need to inform all the radio-buttons

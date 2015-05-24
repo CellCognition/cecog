@@ -168,10 +168,20 @@ class AtAssistant(QtWidgets.QMainWindow):
             if not self.hengine.indexModel().isCreatingIndex():
                 break
 
+    def show(self, keyword=None):
+        super(AtAssistant, self).show()
+        if keyword is not None:
+            self.openKeyword(keyword)
+
     def openKeyword(self, keyword):
         self.waitForIndex()
         links = self.hengine.indexModel().linksForKeyword(keyword)
-        self.hbrowser.setSource(links.values()[0])
+
+        if links:
+            self.hbrowser.setSource(links.values()[0])
+        else:
+            QtWidgets.QMessageBox.warning(
+                self, 'Warning', 'No help for keyword "%s"' %keyword)
 
     def closeEvent(self, event):
         self._saveSettings()
