@@ -75,7 +75,9 @@ def find_uifiles(package_dir, target_dir=TARGET_BUNDLE):
 
     return (uidir, uifiles)
 
-def get_data_files(target_dir=TARGET_BUNDLE, mpl_data=True):
+
+def get_data_files(target_dir=TARGET_BUNDLE,
+                   mpl_data=True, platform_plugins=True):
     """Pack data files into list of (target-dir, list-of-files)-tuples"""
 
     dfiles = []
@@ -97,17 +99,18 @@ def get_data_files(target_dir=TARGET_BUNDLE, mpl_data=True):
                 target = root.replace(RESOURCE_DIR, target_dir)
                 dfiles.append((target, [join(abspath(root), file_)]))
 
-    # Pyqt5 does not start without platform plugins.
-    # sorry for not finding a better hack
-    qt5plugins = glob.glob(
-	join(dirname(PyQt5.__file__), "plugins", "platforms", "*.*"))
-    qt5plugins = ("platforms", qt5plugins)
-    dfiles.append(qt5plugins)
+    if platform_plugins:
+        # Pyqt5 does not start without platform plugins.
+        # sorry for not finding a better hack
+        qt5plugins = glob.glob(
+            join(dirname(PyQt5.__file__), "plugins", "platforms", "*.*"))
+        qt5plugins = (join(target_dir, "platforms"), qt5plugins)
+        dfiles.append(qt5plugins)
 
     # qt help files
     dfiles.append((join(target_dir, 'doc'),
-                   glob.glob(join('doc', "*.qhc"))))
+                   glob.glob(join(RESOURCE_DIR, 'doc', "*.qhc"))))
     dfiles.append((join(target_dir, 'doc'),
-                   glob.glob(join('doc', "*.qhcp"))))
+                   glob.glob(join(RESOURCE_DIR, 'doc', "*.qch"))))
 
     return dfiles
