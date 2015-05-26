@@ -889,7 +889,6 @@ class AnnotationModule(Module):
 
     def _on_new_point(self, point, button, modifier):
         item = self.browser.image_viewer.get_object_item(point)
-        #print(item,point,item in self._object_items)
         if button == Qt.LeftButton and not item is None:
 
             coordinate = self.browser.get_coordinate()
@@ -1073,7 +1072,7 @@ class CellH5EventModule(CH5BasedModule):
         
         self.browser.image_viewers['gallery'].image_mouse_pressed.connect(self._on_new_point)
         
-        self.x_max = 10
+        self.x_max = 100000
         
         
     def _fill_coordinate_table(self):    
@@ -1184,9 +1183,9 @@ class CellH5EventModule(CH5BasedModule):
         layout.setContentsMargins(*padding)
         layout.addWidget(QLabel('Cells per row'))
         self._sb_gallery_perrow = QSpinBox(self)
-        self._sb_gallery_perrow.setValue(10)
         self._sb_gallery_perrow.setMinimum(-1)
-        self._sb_gallery_perrow.setMaximum(100)
+        self._sb_gallery_perrow.setValue(-1)
+        self._sb_gallery_perrow.setMaximum(1000)
         self._sb_gallery_perrow.setSingleStep(1)
         layout.addWidget(self._sb_gallery_perrow)
         self._sb_gallery_perrow.valueChanged.connect(self._sb_gallery_perrow_changed)
@@ -1232,6 +1231,20 @@ class CellH5EventModule(CH5BasedModule):
         frame.setLayout(layout)
         grp_layout.addWidget(frame)
         
+        # show id
+        frame = QWidget(grp_box)
+        layout = QHBoxLayout(frame)
+        layout.setContentsMargins(*padding)
+        self._cb_show_id = QCheckBox('Show Event ID', self)
+        self._cb_show_id.setTristate(False)
+        self._cb_show_id.setCheckState(2)
+        layout.addWidget(self._cb_show_id)
+        
+        self._cb_show_id.stateChanged.connect(self._cb_show_id_changed)
+        
+        frame.setLayout(layout)
+        grp_layout.addWidget(frame)
+        
         # show seg
         frame = QWidget(grp_box)
         layout = QHBoxLayout(frame)
@@ -1261,7 +1274,10 @@ class CellH5EventModule(CH5BasedModule):
         
     def _cb_track_changed(self, check_state):
         self.show_tracks(self.cur_tracks)
-    
+        
+    def _cb_show_id_changed(self, check_state):
+        self.show_tracks(self.cur_tracks)
+        
     def _cb_segmentation_changed(self, check_state):
         self.show_tracks(self.cur_tracks)
     
@@ -1272,7 +1288,10 @@ class CellH5EventModule(CH5BasedModule):
         self.show_tracks(self.cur_tracks)
     
     def _sb_gallery_perrow_changed(self, value):
-        self.x_max = value
+        if value < 0:
+            self.x_max = 100000
+        else:
+            self.x_max = value
         self.show_tracks(self.cur_tracks)
     
     def _sb_gallery_size_changed(self, value):
@@ -1333,10 +1352,11 @@ class CellH5EventModule(CH5BasedModule):
         
         for idx, track_id in res:
             track = self.tracks[idx]
-            event_text_item = QGraphicsTextItem()
-            event_text_item.setHtml("<span style='color:white; font:bold 12px'>Well: %s Position: %s Track Id: %s</span>" % (self.cur_w, self.cur_p, track_id))
-            event_text_item.setPos(0, y-init_y_offset)
-            self.browser.image_viewer._scene.addItem(event_text_item)
+            if self._cb_show_id.checkState():
+                event_text_item = QGraphicsTextItem()
+                event_text_item.setHtml("<span style='color:white; font:bold 12px'>Well: %s Position: %s Track Id: %s</span>" % (self.cur_w, self.cur_p, track_id))
+                event_text_item.setPos(0, y-init_y_offset)
+                self.browser.image_viewer._scene.addItem(event_text_item)
             
             for i, gallery_numpy in enumerate(pos.get_gallery_image_generator(track, object_)):
                 gallery_item = QGraphicsPixmapHoverItem(QPixmap(array2qimage(self.transform_image(gallery_numpy), False )))
@@ -1357,9 +1377,13 @@ class CellH5EventModule(CH5BasedModule):
                 x += step
                 if (x / step) >= self.x_max:
                     x = 0
-                    y += step
+                    y += step 
             x = 0
-            y += 2*step
+            y += step
+            if self._cb_show_id.checkState():
+                y += step
+            
+                
                  
     def transform_image(self, image):
         image = image.astype(numpy.float32)
@@ -1369,6 +1393,6 @@ class CellH5EventModule(CH5BasedModule):
         image = image.clip(0, 255)
 
         image2 = numpy.require(image, numpy.uint8)
-        print image2.min(), image2.max()
+        
         return image2
    
