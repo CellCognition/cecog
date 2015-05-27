@@ -1108,16 +1108,25 @@ class CellH5EventModule(CH5BasedModule):
             selected_track.append(e)
             self.event_table.insertRow(cnt)
             
-            event_id_item = QTableWidgetItem(str(e_id))
+            event_id_item = QTableWidgetItem()
+            event_id_item.setData(Qt.DisplayRole, e_id)
             
             self.event_table.setItem(cnt, 0, event_id_item)
-            self.event_table.setItem(cnt, 1, QTableWidgetItem(str(len(track))))
-            self.event_table.setItem(cnt, 2, QTableWidgetItem(str(time_idx)))    
+            tmp_i = QTableWidgetItem()
+            tmp_j = QTableWidgetItem()
+            
+            # to make sorting according to numbers
+            tmp_i.setData(Qt.DisplayRole, len(track))
+            tmp_j.setData(Qt.DisplayRole, time_idx)
+            
+            self.event_table.setItem(cnt, 1, tmp_i)
+            self.event_table.setItem(cnt, 2, tmp_j)    
             cnt+=1
             self.tracks.append(track)
                 
         self.event_table.resizeColumnsToContents()
-        self.event_table.resizeRowsToContents()                  
+        self.event_table.resizeRowsToContents()    
+        self.event_table.setSortingEnabled(True)              
   
     def _init_pos_table(self):
         self.pos_table = QTableWidget(self)
@@ -1273,6 +1282,7 @@ class CellH5EventModule(CH5BasedModule):
         self.layout.addWidget(grp_box)        
         
     def _cb_track_changed(self, check_state):
+        self.update_event_table(self.cur_coord)
         self.show_tracks(self.cur_tracks)
         
     def _cb_show_id_changed(self, check_state):
@@ -1321,6 +1331,7 @@ class CellH5EventModule(CH5BasedModule):
         self.cur_pos = pos
         self.cur_w = w
         self.cur_p = p
+        self.cur_coord = coord
         self.update_event_table(coord)
              
     def _on_track_changed(self):
@@ -1345,8 +1356,11 @@ class CellH5EventModule(CH5BasedModule):
         cellh5.GALLERY_SIZE = self._sb_gallery_size.value()
         step = cellh5.GALLERY_SIZE
         
-        x, y = 0, 0
+        
         init_y_offset = 30
+        init_x_offset = 30
+        
+        x, y = init_x_offset, 0
         
         object_ = str(self._cbb_object.currentText())
         
@@ -1376,9 +1390,9 @@ class CellH5EventModule(CH5BasedModule):
     
                 x += step
                 if (x / step) >= self.x_max:
-                    x = 0
+                    x = init_x_offset
                     y += step 
-            x = 0
+            x = init_x_offset
             y += step
             if self._cb_show_id.checkState():
                 y += step
