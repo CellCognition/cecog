@@ -168,8 +168,11 @@ class CH5BasedModule(Module):
             
             self.ch5file = None
         else:
-        
-            self.ch5file = cellh5.CH5File(self.hdf_file)
+            try: 
+                self.ch5file = cellh5.CH5File(self.hdf_file)
+            except Exception, e:
+                warning(self, "Invalid CellH5 files",
+                        info="%s is corrupt!\n%s" % (self.hdf_file, str(e)))
             
     @property
     def coordinates(self):

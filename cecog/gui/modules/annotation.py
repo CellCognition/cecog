@@ -1358,7 +1358,6 @@ class CellH5EventModule(CH5BasedModule):
         cellh5.GALLERY_SIZE = self._sb_gallery_size.value()
         step = cellh5.GALLERY_SIZE
         
-        
         init_y_offset = 30
         init_x_offset = 30
         
@@ -1398,9 +1397,7 @@ class CellH5EventModule(CH5BasedModule):
             y += step
             if self._cb_show_id.checkState():
                 y += step
-            
-                
-                 
+                     
     def transform_image(self, image):
         image = image.astype(numpy.float32)
         image *= 255.0 / (self._sb_image_max.value() - self._sb_image_min.value() )
