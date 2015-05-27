@@ -218,8 +218,19 @@ class Channel(ChannelCore):
             object_holder = ObjectHolder(region_name)
             if not container is None:
                 for strFeatureCategory in self.lstFeatureCategories:
-                    container.applyFeature(strFeatureCategory)
+                    # TODO
+                    if strFeatureCategory in self.dctFeatureParameters:
+                        dctParams = self.dctFeatureParameters[strFeatureCategory]
+                        
+                        # pass parameters to container
+                        
+                        # apply features
+                    
+                    else:
+                        container.applyFeature(strFeatureCategory)
 
+                # ---                
+                # to replace
                 # calculate set of haralick features
                 # (with differnt distances)
                 if 'haralick_categories' in self.dctFeatureParameters:
@@ -227,6 +238,7 @@ class Channel(ChannelCore):
                         for iHaralickDistance in self.dctFeatureParameters['haralick_distances']:
                             container.haralick_distance = iHaralickDistance
                             container.applyFeature(strHaralickCategory)
+                # ---                
 
                 for obj_id, c_obj in container.getObjects().iteritems():
 

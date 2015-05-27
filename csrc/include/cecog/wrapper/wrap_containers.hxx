@@ -71,6 +71,8 @@ namespace cecog
   }
 }
 
+//void setUnsignedParameterVector(std::vector<unsigned> const &params, std::string feature)
+
 void wrap_containers()
 {
   using namespace cecog::python;

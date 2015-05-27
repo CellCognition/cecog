@@ -17,7 +17,7 @@ __source__ = '$URL$'
 __all__ = ['SectionFeatureExtraction']
 
 from cecog.traits.analyzer.section_core import SectionCore
-from cecog.gui.guitraits import BooleanTrait
+from cecog.gui.guitraits import BooleanTrait, StringTrait
 
 SECTION_NAME_FEATURE_EXTRACTION = 'FeatureExtraction'
 
@@ -40,21 +40,33 @@ class SectionFeatureExtraction(SectionCore):
     OPTIONS = [
 
     ('primary_features',
-     [('primary_featurecategory_%s' % name,
-       BooleanTrait(True, label=desc))
-       for name, desc in zip(FEATURE_CATEGORIES, FEATURE_CATEGORY_DESC)
-      ]),
-
+     [('primary_featurecategory_%s' % name, BooleanTrait(True, label=desc))
+       for name, desc in zip(FEATURE_CATEGORIES, FEATURE_CATEGORY_DESC)]
+   + [('primary_dist_haralick', 
+       StringTrait('1,2,4,8', 200, label='Haralick: Distances for cooccurence')),
+      ('primary_se_granugrey', 
+       StringTrait('1,2,3,5,7', 200, label='Granulometry Sizes (Structuring Element)'))
+      ]
+     ),
+     
     ('secondary_features',
-     [('secondary_featurecategory_%s' % name,
-       BooleanTrait(True, label=desc))
-       for name, desc in zip(FEATURE_CATEGORIES, FEATURE_CATEGORY_DESC)
-      ]),
+     [('secondary_featurecategory_%s' % name, BooleanTrait(True, label=desc))
+       for name, desc in zip(FEATURE_CATEGORIES, FEATURE_CATEGORY_DESC)] +
+     [('secondary_dist_haralick', 
+       StringTrait('1,2,4,8', 200, label='Haralick: Distances for cooccurence')),
+       ('secondary_se_granugrey', 
+        StringTrait('1,2,3,5,7', 200, label='Granulometry Sizes (Structuring Element)'))
+      ]
+     ),
 
     ('tertiary_features',
-     [('tertiary_featurecategory_%s' % name,
-       BooleanTrait(True, label=desc))
-       for name, desc in zip(FEATURE_CATEGORIES, FEATURE_CATEGORY_DESC)
-      ]),
+     [('tertiary_featurecategory_%s' % name, BooleanTrait(True, label=desc))
+       for name, desc in zip(FEATURE_CATEGORIES, FEATURE_CATEGORY_DESC)] + 
+     [('tertiary_dist_haralick', 
+       StringTrait('1,2,4,8', 200, label='Haralick: Distances for cooccurence')),
+      ('tertiary_se_granugrey', 
+       StringTrait('1,2,3,5,7', 200, label='Granulometry Sizes (Structuring Element)'))
+      ]
+     ),
 
     ]
