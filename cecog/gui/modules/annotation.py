@@ -1314,11 +1314,13 @@ class CellH5EventModule(CH5BasedModule):
         self.browser.set_display_module(self)
         self.browser.set_image_viewer('gallery')
         self.browser._action_grp.setEnabled(True)
+        self.browser._t_slider.setVisible(False)
         
     def deactivate(self):
         self.browser.set_display_module(self.browser._module_manager.get_widget('Display'))
         self.browser.set_image_viewer('image')
         self.browser._action_grp.setEnabled(False)
+        self.browser._t_slider.setVisible(True)
             
     def _on_pos_changed(self, current, previous):
 
