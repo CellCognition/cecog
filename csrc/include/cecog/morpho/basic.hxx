@@ -816,6 +816,47 @@ void ImFastToggleMapping(const Image1 &imin, Image2 &imout, SElement &se)
   ImFastToggleMapping(srcImageRange(imin), destImage(imout), se);
 }
 
+// Subtraction between image and a constant
+template<class IMAGE>
+void ImSubtractConst(IMAGE const & src, IMAGE & dest, int v){
+    typename IMAGE::const_traverser it1C = src.upperLeft();
+    typename IMAGE::traverser it2C = dest.upperLeft();
+    typename IMAGE::const_traverser it1End = src.lowerRight();
+
+    if (v > 255) v = 255;
+    if (v < 0) v = 0;
+    int w = it1End.x - it1C.x;
+    int h = it1End.y - it1C.y;
+
+    for (int x=0; x<w; ++x){
+        for (int y=0; y<h; ++y){
+            *(it2C + Diff2D(x,y)) = *(it1C + Diff2D(x,y)) > v ?
+                        (*(it1C + Diff2D(x,y)) - v) : 0 ;
+        }
+    }
+}
+
+// Add between image and a constant
+template<class IMAGE>
+void ImAddConst(IMAGE const & src, IMAGE & dest, int v){
+    typename IMAGE::const_traverser it1C = src.upperLeft();
+    typename IMAGE::traverser it2C = dest.upperLeft();
+    typename IMAGE::const_traverser it1End = src.lowerRight();
+
+    if (v > 255) v = 255;
+    if (v < 0) v = 0;
+    int w = it1End.x - it1C.x;
+    int h = it1End.y - it1C.y;
+
+    for (int x=0; x<w; ++x){
+        for (int y=0; y<h; ++y){
+            *(it2C + Diff2D(x,y)) = (*(it1C + Diff2D(x,y)) + v) > 255 ?
+                               255 : (*(it1C + Diff2D(x,y)) + v) ;
+        }
+    }
+}
+
+
 };
 };
 

@@ -98,7 +98,9 @@ class ChannelItem(QFrame):
         if self._show_image:
             palette = self._palettes[self._current]
             qimage = array2qimage(image)
-            qimage = qimage.convertToFormat(qimage.Format_Indexed8, palette.qt)
+            # qimage = qimage.convertToFormat(qimage.Format_Indexed8, palette.qt)
+            qimage = qimage.convertToFormat(qimage.Format_RGB32, palette.qt)
+            
         else:
             height, width = image.shape
             qimage = QImage(width, height, QImage.Format_ARGB32_Premultiplied)

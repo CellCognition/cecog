@@ -493,6 +493,35 @@ PyObject * pyImDilate(IMAGE1 const &imgIn, int size, int connectivity=8)
   return incref(object(imgPtr).ptr());
 }
 
+
+template <class IMAGE1>
+PyObject * pyImDiscDilate(IMAGE1 const &imgIn, int size)
+{
+  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
+
+  using namespace cecog::morpho;
+
+  vigra::discDilation(srcImageRange(imgIn), destImage(*imgPtr), size);
+
+  return incref(object(imgPtr).ptr());
+}
+
+
+template <class IMAGE1>
+PyObject * pyImDiscErosion(IMAGE1 const &imgIn, int size)
+{
+  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
+
+  using namespace cecog::morpho;
+
+  vigra::discErosion(srcImageRange(imgIn), destImage(*imgPtr), size);
+
+  return incref(object(imgPtr).ptr());
+}
+
+
+
+
 template <class IMAGE1>
 PyObject * pyImClose(IMAGE1 const &imgIn, int size, int connectivity=8)
 {
@@ -534,6 +563,21 @@ PyObject * pyImOpen(IMAGE1 const &imgIn, int size, int connectivity=8)
 
   return incref(object(imgPtr).ptr());
 }
+
+
+template <class IMAGE1>
+PyObject * pyImAreaOpen(IMAGE1 const &imgIn, int areaMax)
+{
+  using namespace cecog::morpho;
+
+  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
+  cecog::morpho::neighborhood2D nb(cecog::morpho::WITHOUTCENTER8, imgIn.size());
+
+  cecog::morpho::ImAreaOpen(imgIn, *imgPtr, areaMax, nb);
+
+  return incref(object(imgPtr).ptr());
+}
+
 
 template <class IMAGE1>
 PyObject * pyImInfimum(IMAGE1 const &a, IMAGE1 const &b)
@@ -581,6 +625,107 @@ PyObject * pyToggleMapping(IMAGE1 const &imgIn, int size)
   ImFastToggleMapping(srcImageRange(imgIn), destImage(*imgPtr), se);
   return incref(object(imgPtr).ptr());
 }
+
+
+template <class IMAGE1>
+PyObject * pyOverBuild(IMAGE1 const &imgMark, IMAGE1 const &imgMask)
+{
+  using namespace cecog::morpho;
+
+  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgMark.size()));
+
+  vigra::copyImage(srcImageRange(imgMark), destImage(*imgPtr));
+
+  cecog::morpho::neighborhood2D nb(cecog::morpho::WITHOUTCENTER8, imgMark.size());
+  cecog::morpho::ImOverBuild(destImageRange(*imgPtr), srcImage(imgMask), nb);
+  /***
+   * Note for ImOverBuild:
+   *    destImageRange is the one who should be "larger" in some parts than srcImage
+   *    destImageRange is the one who changes values
+   ****/
+
+  return incref(object(imgPtr).ptr());
+}
+
+
+template <class IMAGE1>
+PyObject * pyUnderBuild(IMAGE1 const &imgMark, IMAGE1 const &imgMask)
+{
+  using namespace cecog::morpho;
+
+  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgMark.size()));
+
+  vigra::copyImage(srcImageRange(imgMark), destImage(*imgPtr));
+
+  cecog::morpho::neighborhood2D nb(cecog::morpho::WITHOUTCENTER8, imgMark.size());
+  cecog::morpho::ImUnderBuild(destImageRange(*imgPtr), srcImage(imgMask), nb);
+  return incref(object(imgPtr).ptr());
+}
+
+template <class IMAGE1>
+PyObject * pyImSubtractConst(IMAGE1 const &imgIn, int v)
+{
+  using namespace cecog::morpho;
+  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
+  imgPtr->init(0);
+  cecog::morpho::ImSubtractConst(imgIn, *imgPtr, v);
+  return incref(object(imgPtr).ptr());
+}
+
+template <class IMAGE1>
+PyObject * pyImAddConst(IMAGE1 const &imgIn, int v)
+{
+  using namespace cecog::morpho;
+  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
+  imgPtr->init(0);
+  cecog::morpho::ImAddConst(imgIn, *imgPtr, v);
+  return incref(object(imgPtr).ptr());
+}
+
+
+template <class IMAGE1>
+PyObject * pyFillHoles(IMAGE1 const &imgIn)
+{
+  using namespace cecog::morpho;
+
+  IMAGE1 imgTemp(imgIn.size());
+  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
+  imgPtr->init(0);
+  imgTemp.init(255);
+  cecog::drawRectangle(imgTemp.upperLeft(), imgTemp.lowerRight(), imgTemp.accessor(), 0);
+  cecog::morpho::ImSupremum(imgTemp, imgIn, *imgPtr);
+
+  cecog::morpho::neighborhood2D nb(cecog::morpho::WITHOUTCENTER8, imgIn.size());
+  cecog::morpho::ImOverBuild(destImageRange(*imgPtr), srcImage(imgIn), nb);
+  /***
+   * Note for ImOverBuild:
+   *    destImageRange is the one who should be "larger" in some parts than srcImage
+   *    destImageRange is the one who changes values
+   ****/
+
+  return incref(object(imgPtr).ptr());
+}
+
+
+template <class IMAGE>
+PyObject * pyMultiRadialSymmetryTransform(IMAGE & imgSrc,
+                                         IMAGE  & imgMask,
+                                         double scale)
+{
+  std::auto_ptr< IMAGE > imgPtr(new IMAGE(imgSrc.size()));
+  //cecog::multiRadialSymmetryTransform(destImageRange(*imgPtr), srcImage(imgIn), nb);
+  cecog::multiRadialSymmetryTransform( imgSrc, imgMask, *imgPtr, scale);
+  /***
+   * Note for ImOverBuild:
+   *    destImageRange is the one who should be "larger" in some parts than srcImage
+   *    destImageRange is the one who changes values
+   ****/
+
+  return incref(object(imgPtr).ptr());
+}
+
+
+
 
 // usage:  cc = ccore.overlayBinaryImage(imin, imbin, ccore.RGBValue(255, 0, 0))
 // (full overlay)
@@ -1241,6 +1386,29 @@ void pyDrawLine(vigra::Diff2D const &p1, vigra::Diff2D const &p2,
   cecog::drawLine(p1, p2, imgIn.upperLeft(), imgIn.accessor(), color, thick);
 }
 
+
+template <class Image1>
+void pyDrawRectangle(Image1 &imgIn, typename Image1::value_type const &color,
+                bool thick)
+{
+    cecog::drawRectangle(imgIn.upperLeft(), imgIn.lowerRight(), imgIn.accessor(), color, thick);
+    // vigra::Diff2D pstart, pend;
+    // int xStartList[] = {0, 0, imgIn.width()-1, 0};
+    // int yStartList[] = {0, 0, 0, imgIn.height()-1};
+    // int xEndList[] = {imgIn.width()-1, 0, imgIn.width()-1, imgIn.width()-1};
+    // int yEndList[] = {0, imgIn.height()-1, imgIn.height()-1, imgIn.height()-1};
+    // for (int i=0; i<4; ++i){
+    //     pstart.x = xStartList[i];
+    //     pstart.y = yStartList[i];
+    //     pend.x = xEndList[i];
+    //     pend.y = yEndList[i];
+    //     cout<<i<<" "<<pstart.x<<" "<<pstart.y<<" "<<pend.x<<" "<<pend.y<<endl;
+    //     cecog::drawLine(pstart, pend, imgIn.upperLeft(), imgIn.accessor(), color, thick);
+    // }
+}
+
+
+
 template <class Image1>
 void pyDrawFilledCircle(vigra::Diff2D const &p, int radius,
                         Image1 &imgIn, typename Image1::value_type const &color)
@@ -1526,6 +1694,24 @@ static void wrap_images()
   def("toggleMapping", pyToggleMapping<vigra::UInt16Image, vigra::UInt16Image>);
   def("toggleMapping", pyToggleMapping<vigra::Int16Image, vigra::Int16Image>);
 
+  def("fillHoles", pyFillHoles<vigra::UInt8Image>);
+  def("fillHoles", pyFillHoles<vigra::UInt16Image>);
+  def("fillHoles", pyFillHoles<vigra::Int16Image>);
+
+  def("imSubtractConst", pyImSubtractConst<vigra::UInt8Image>);
+
+  def("imAddConst", pyImAddConst<vigra::UInt8Image>);
+
+  def("overBuild", pyOverBuild<vigra::UInt8Image>);
+  def("overBuild", pyOverBuild<vigra::UInt16Image>);
+  def("overBuild", pyOverBuild<vigra::Int16Image>);
+
+  def("underBuild", pyUnderBuild<vigra::UInt8Image>);
+  def("underBuild", pyUnderBuild<vigra::UInt16Image>);
+  def("underBuild", pyUnderBuild<vigra::Int16Image>);
+
+  def("multiRadialSymmetryTransform", pyMultiRadialSymmetryTransform<vigra::UInt8Image>);
+
   def("relabelImage", pyRelabelImage<vigra::UInt8Image, vigra::UInt16Image>);
   def("relabelImage", pyRelabelImage<vigra::UInt16Image, vigra::UInt16Image>);
   def("relabelImage", pyRelabelImage<vigra::Int16Image, vigra::UInt16Image>);
@@ -1558,6 +1744,14 @@ static void wrap_images()
   def("dilate", pyImDilate<vigra::UInt16Image>);
   def("dilate", pyImDilate<vigra::Int16Image>);
 
+  def("discDilate", pyImDiscDilate<vigra::UInt8Image>);
+  def("discDilate", pyImDiscDilate<vigra::UInt16Image>);
+  def("discDilate", pyImDiscDilate<vigra::Int16Image>);
+
+  def("discErode", pyImDiscErosion<vigra::UInt8Image>);
+  def("discErode", pyImDiscErosion<vigra::UInt16Image>);
+  def("discErode", pyImDiscErosion<vigra::Int16Image>);
+
   def("open", pyImOpen<vigra::UInt8Image>);
   def("open", pyImOpen<vigra::UInt16Image>);
   def("open", pyImOpen<vigra::Int16Image>);
@@ -1565,6 +1759,10 @@ static void wrap_images()
   def("close", pyImClose<vigra::UInt8Image>);
   def("close", pyImClose<vigra::UInt16Image>);
   def("close", pyImClose<vigra::Int16Image>);
+
+  def("areaOpen", pyImAreaOpen<vigra::UInt8Image>);
+  def("areaOpen", pyImAreaOpen<vigra::UInt16Image>);
+  def("areaOpen", pyImAreaOpen<vigra::Int16Image>);
 
   def("morphoGradient", pyImMorphoGradient<vigra::UInt8Image>);
   def("morphoGradient", pyImMorphoGradient<vigra::UInt16Image>);
@@ -1720,6 +1918,11 @@ static void wrap_images()
   def("drawLine", pyDrawLine< vigra::Int16Image >, (arg("p1"), arg("p2"), arg("image"), arg("color"), arg("thick")=false), "Draws a line from p1 to p2.");
   def("drawLine", pyDrawLine< vigra::UInt16Image >, (arg("p1"), arg("p2"), arg("image"), arg("color"), arg("thick")=false), "Draws a line from p1 to p2.");
   def("drawLine", pyDrawLine< vigra::BRGBImage >, (arg("p1"), arg("p2"), arg("image"), arg("color"), arg("thick")=false), "Draws a line from p1 to p2.");
+
+  def("drawRectangle", pyDrawRectangle< vigra::BImage >, (arg("image"), arg("color"), arg("thick")=false), "Draw image border.");
+  def("drawRectangle", pyDrawRectangle< vigra::Int16Image >, (arg("image"), arg("color"), arg("thick")=false), "Draw image border.");
+  def("drawRectangle", pyDrawRectangle< vigra::UInt16Image >, (arg("image"), arg("color"), arg("thick")=false), "Draw image border.");
+  def("drawRectangle", pyDrawRectangle< vigra::BRGBImage >, (arg("image"), arg("color"), arg("thick")=false), "Draw image border.");
 
   def("drawFilledCircle", pyDrawFilledCircle< vigra::BImage >, (arg("p"), arg("r"), arg("image"), arg("color")), "Draws a filled circle at point p with radius r.");
   def("drawFilledCircle", pyDrawFilledCircle< vigra::Int16Image >, (arg("p"), arg("r"), arg("image"), arg("color")), "Draws a filled circle at point p with radius r.");

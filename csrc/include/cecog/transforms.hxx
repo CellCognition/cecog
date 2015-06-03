@@ -27,6 +27,8 @@
 #include "vigra/functorexpression.hxx"
 #include "vigra/transformimage.hxx"
 
+#include "vigra/multi_math.hxx"
+
 #include "cecog/shared_objects.hxx"
 #include "cecog/inspectors.hxx"
 
@@ -650,5 +652,215 @@ namespace cecog
         copyImage(srcImageRange(imgViewProj), destImage(imgOut));
       }
   }
+  
+  
+  
+	
+	using namespace vigra;
+	template <class T1, class S1,
+          class T2, class S2,
+          class T3, class S3>
+	void
+	multiRadialSymmetryTransformMain(MultiArrayView<2, T1, S1> const & src,
+							MultiArrayView<2, T2, S2> const & mask,
+							MultiArrayView<2, T3, S3> dest,
+							double scale)
+	{
+
+		vigra_precondition(scale > 0.0,
+					 "radialSymmetryTransform(): Scale must be > 0");
+
+		int w = src.shape()[0];
+		int h = src.shape()[1];
+		
+		if(w <= 0 || h <= 0) return;
+
+		MultiArray<2, double> gx(src.shape()), gy(src.shape()), mag(src.shape());
+		MultiArray<2, double> magnitudeAccumulator(src.shape());
+		MultiArray<2, int> orientationCounter(src.shape());
+		MultiArray<2, int> sgn(src.shape());
+		
+		orientationCounter.init(0);
+		magnitudeAccumulator.init(0);
+		
+		// Gradient
+		gaussianGradient(src, gx, gy, 2.0); // scale
+
+		// Compute parameter
+		double beta = 0.001;
+		double S;
+		{
+	        using namespace vigra::multi_math;
+			mag = sqrt(gx * gx + gy * gy);
+
+			// S = sum<double>(mag) / mag.size();
+			// beta = S/2;
+			//S = 5;
+			beta = 2;
+		}
+		// cout<<"Beta "<<beta<<" "<<S<<endl;
+
+		int y;
+		for(y=0; y<h; ++y)
+		{
+			for(int x = 0; x<w; ++x)
+			{
+				if ( mask(x,y)==0) continue;
+				double vx = gx(x,y), vy = gy(x,y);
+				double angle = VIGRA_CSTD::atan2(-vy, vx);
+				// double magnitude = VIGRA_CSTD::sqrt( vx * vx + vy * vy);
+				double magnitude = mag(x,y);
+
+				if(magnitude < beta)
+					continue;
+
+				double cosA = VIGRA_CSTD::cos(angle);
+				double sinA = VIGRA_CSTD::sin(angle);
+				int dx_(0),dy_(0);
+				for (int ss=5; ss<=20; ++ss){
+					double coef_dist = ss / 20.0;
+
+					int dx = roundl(ss * cosA);
+					int dy = roundl(ss * sinA);
+
+					if (dx_ == dx && dy_ == dy) continue;
+					else { dx_ = dx; dy_ = dy; }
+					   
+					// int xx = x + dx;
+					// int yy = y - dy;
+
+					//if(xx >= 0 && xx < w && yy >= 0 && yy < h)
+					//{
+					//    orientationCounter(xx, yy) += 1;
+					//    magnitudeAccumulator(xx, yy) += magnitude;
+					//}
+
+					int xx = x - dx;
+					int yy = y + dy;
+					
+					if (mask(xx,yy)==0) continue;
+
+					if(xx >= 0 && xx < w && yy >= 0 && yy < h)
+					{
+						orientationCounter(xx, yy) -= 0.5 + 0.25 * magnitude/beta + 0.25 * coef_dist;
+						// orientationCounter(xx, yy) -= 0.5 + 0.25 * min(magnitude/S, 1.0) + 0.25 * coef_dist;
+						magnitudeAccumulator(xx, yy) -= magnitude;
+					}
+				}
+			}
+		}
+
+		int maxOrientation = 0;
+		// double maxMagnitude = 0;
+
+		for(y=0; y<h; ++y)
+		{
+			for(int x = 0; x<w; ++x)
+			{
+				int o = VIGRA_CSTD::abs(orientationCounter(x,y));
+			int ma = magnitudeAccumulator(x,y);
+
+				if(o > maxOrientation)
+					maxOrientation = o;
+
+				// double m = VIGRA_CSTD::abs(magnitudeAccumulator(x,y));
+
+				// if(m > maxMagnitude)
+				//     maxMagnitude = m;
+
+			if (ma==0)
+			sgn(x,y) = 0;
+			else
+				sgn(x,y) = abs(ma) / ma ;
+			}
+		}
+
+		// cout<<"Max orientation: "<<maxOrientation<<endl;
+		double TH = 20;
+		for(y=0; y<h; ++y)
+		{
+			for(int x = 0; x<w; ++x)
+			{
+				double o = (double)orientationCounter(x, y) / maxOrientation;
+				if (abs(orientationCounter(x, y)) <= TH) o = 0;
+				// magnitudeAccumulator(x, y) = o * o * magnitudeAccumulator(x, y) / maxMagnitude;
+				magnitudeAccumulator(x, y) = o * o * sgn(x,y);
+			}
+		}
+
+		// exportImage(magnitudeAccumulator, "imFRST_raw.png");
+		// gaussianSmoothing(srcImageRange(magnitudeAccumulator), destIter(dul, ad), 0.25*scale);
+		gaussianSmoothing(magnitudeAccumulator, dest, 0.25*scale);
+		// cout<<"max FRST "<<maxOrientation<<endl;
+		// exportImage(dest, "/home/zhang/work/image/temp/imFRST3.png");
+
+	}  // end of function
+
+
+    template <class BIMAGE>
+    void
+    multiRadialSymmetryTransform(BIMAGE & src, 
+                                 BIMAGE & mask,
+                                 BIMAGE & dest,
+                                 double scale)
+    {
+        int width = src.width();
+        int height = src.height();
+
+		MultiArray<2, double> maSrc(width, height);
+		MultiArray<2, double> maMask(width, height);
+		MultiArray<2, double> maDest(width, height);
+		MultiArray<2, UInt8> maOut(width, height);
+
+  	    typename BIMAGE::Iterator it1Current = src.upperLeft();
+  	    typename BIMAGE::Iterator it2Current = mask.upperLeft();
+  	    typename BIMAGE::Iterator it1End = src.lowerRight();
+
+        // exportImage(src.upperLeft(), src.lowerRight(), src.accessor(), "/home/zhang/work/image/temp/imFRSTz1.png");
+
+        double t1(0),t2(0);
+  	    for (int y=0; it1Current.y < it1End.y; ++y, ++it1Current.y, ++it2Current.y){
+  	    	typename BIMAGE::Iterator itx1C = it1Current;
+  	    	typename BIMAGE::Iterator itx2C = it2Current;
+  	    	for (int x=0; itx1C.x < it1End.x; ++x, ++itx1C.x, ++itx2C.x){
+                maSrc(x, y) = *itx1C;
+                maMask(x, y) = *itx2C;
+                if (*itx1C > t1) t1 = *itx1C;
+                if (*itx2C > t2) t2 = *itx2C;
+  	    	}
+  	    }
+
+        multiRadialSymmetryTransformMain(maSrc, maMask, maDest, scale);
+		// exportImage(maDest, "/home/zhang/work/image/temp/imFRST00.png");
+        
+  	    typename BIMAGE::Iterator it3Current = dest.upperLeft();
+  	    typename BIMAGE::Iterator it3End = dest.lowerRight();
+
+        // normalize
+        double vmax(maDest[0]), vmin(vmax);
+        for (int k=0; k<maDest.size(); ++k){
+            if (maDest[k] > vmax) vmax = maDest[k];
+            if (maDest[k] < vmin) vmin = maDest[k];
+        }
+
+        if (vmax == vmin)
+            maOut.init(0);
+        else{
+            for (int k=0; k<maDest.size(); ++k){
+                maOut[k] = roundf((maDest[k] - vmin) / (vmax - vmin) * 255);
+            }
+        }
+
+  	    for (int y=0; it3Current.y < it3End.y; ++y, ++it3Current.y){
+  	    	typename BIMAGE::Iterator itx3C = it3Current;
+  	    	for (int x=0; itx3C.x < it3End.x; ++x, ++itx3C.x){
+                *itx3C = maOut(x, y);
+  	    	}
+  	    }
+
+        // exportImage(dest.upperLeft(), dest.lowerRight(), dest.accessor(), "/home/zhang/work/image/temp/imFRST01.png");
+
+    } // end of function multiRadialSymmetryTransform
+
 }
 #endif // CECOG_TRANSFORMS

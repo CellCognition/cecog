@@ -691,7 +691,12 @@ class SegmentationPluginPrimaryLoadFromFile(SegmentationPluginPrimary):
 #        img_pre = SegmentationPluginPrimary.prefilter(self, img, 2)
 #        img_bin = SegmentationPluginPrimary.threshold(self, img_pre, 20, 3)
 
-        container = ccore.ImageMaskContainer(image, img, False)
+        # older
+        # container = ccore.ImageMaskContainer(image, img, False)
+        
+        image2 = ccore.Image(image.width, image.height)
+        image2.init(0)
+        container = ccore.ImageMaskContainer(image2, img, False)        
         return container
 
 class SegmentationPluginIlastik(SegmentationPluginPrimary):
@@ -1142,11 +1147,31 @@ class SegmentationPluginFRST(_SegmentationPlugin):
                            [0.266844, 0.283111]])
         M = M_h_e_meas
         M_inv =  numpy.dot(linalg.inv(numpy.dot(M.T, M)), M.T)
-        imout = numpy.dot(imin, M_inv.T)
+        imDecv = numpy.dot(imin, M_inv.T)
+        imout = numpy.zeros(imDecv.shape, dtype = numpy.uint8)
+        
+        ## Normalization
+        for i in range(2):
+            toto = imDecv[:,:,i]
+            vmax = toto.max()
+            vmin = toto.min()
+            if (vmax - vmin) < 0.0001:
+                continue
+            titi = (toto - vmin) / (vmax - vmin) * 255
+            titi = titi.astype(numpy.uint8)
+            imout[:,:,i] = titi
         return imout
+
 
     @stopwatch()
     def clustering(self, imColor, imDeconv):
+        """
+        clustering using H & E channels 
+        return an image with 3 values:
+        pixel value = 1: cell nuclei (H)
+        pixel value = 2: other stucture (E)
+        pixel value = 3: white background
+        """
         ######### prepare for clustering ###########        
         size = [imColor.width, imColor.height]
         feats = numpy.zeros((size[0]*size[1],2))
@@ -1184,14 +1209,60 @@ class SegmentationPluginFRST(_SegmentationPlugin):
         imout = km.labels_.astype(numpy.uint8) + 1
         imout = imout.reshape((size[1], size[0])).astype(numpy.uint8)
         imwrite(imout, "clusterOut.png")
-        imout = imout.reshape(imDeconv.shape[0], imDeconv.shape[1], 1)
-        im_return = numpy.concatenate((imDeconv, imout), axis=2)
+        im_return = imout
         
         return im_return        
                 
+    @stopwatch()
+    def filter_1(self, imCluster, se_size):
+        """
+        take the result of clustering, remove irrelevent structures
+        """
+        imCluster = imCluster.astype(numpy.uint8)
+        imCluster[imCluster!=1] = 0
+        imCluster[imCluster==1] = 255
+        im1 = ccore.numpy_to_image(imCluster, copy=True)
+        
+        #im2 = ccore.dilate(im1, 2, 8)
+        im2 = ccore.fillHoles(im1)
+        
+        im3 = ccore.areaOpen(im2, se_size*se_size)
+        
+        im4 = ccore.discDilate(im3, se_size/2)
+    
+        ccore.writeImage(im4, "/home/zhang/work/image/temp/temp1.png")
+        
+        
+        return im4
+        
+ 
+
+    @stopwatch()
+    def preprocessing(self, imOrig, se_size):
+        """
+        take the result of clustering, remove irrelevent structures
+        """
+        im1 = ccore.discErode(imOrig, se_size)
+        im2 = ccore.underBuild(im1, imOrig)
+
+        im3 = ccore.discDilate(im2, se_size)
+        im4 = ccore.overBuild(im3, im2)
+
+        im1 = ccore.discDilate(im4, se_size / 2)        
+        im2 = ccore.discErode(im1, se_size / 2)        
+        ccore.writeImage(im2, "/home/zhang/work/image/temp/temp2.png")
+        
+        return im2
                 
-                
-                
+    @stopwatch()
+    def HMinima(self, img_in, h):
+        im1 = ccore.imAddConst(img_in, h)
+        im2 = ccore.overBuild(im1, img_in)
+        im3 = ccore.imAddConst(im2, 1)
+        im4 = ccore.overBuild(im3, im2)
+        
+        im1 = ccore.substractImages(im4, im2)
+        return im1  
                 
     @stopwatch()
     def threshold(self, img_in, size, limit):
@@ -1200,21 +1271,54 @@ class SegmentationPluginFRST(_SegmentationPlugin):
 
     @stopwatch()
     def _run(self, meta_image):
+        max_size = 30
+        se_size = max_size/5        
+        
         imColor = meta_image.image
         ######### image deconvolution ##############
         imRGB = imColor.toArray()        
         imDeconv = self.colorDeconv(imRGB)
+        arTmp = numpy.zeros(imDeconv[:,:,0].shape, dtype = numpy.uint8)
+        arTmp[:,:] = imDeconv[:,:,0]
+        imH_org = ccore.numpy_to_image(arTmp, copy=True)
         imwrite(imDeconv[:,:,0], "imdeconv1.png")
         imwrite(imDeconv[:,:,1], "imdeconv2.png")        
         
-        imtemp = self.clustering(imColor, imDeconv)
-        ar1 = imtemp[:,:,0].astype(numpy.uint8)
-        im1 = ccore.numpy_to_image(ar1, copy=True)
         
-        imout = ccore.threshold(im1, 0, 60, 0, 255)
+        impyCluster = self.clustering(imColor, imDeconv)
         
-        ar1 = imDeconv[:,:,0].astype(numpy.uint8)
+        imCluster = self.filter_1(impyCluster, se_size)
+  
+        imPreproc = self.preprocessing(imH_org, se_size)      
+
+        imFRST = ccore.multiRadialSymmetryTransform(imPreproc, imCluster, 10)
+        ccore.writeImage(imFRST, "/home/zhang/work/image/temp/imFRST.png")
+
+        ######### Get markers of cell nuclei ############
+        im1 = self.HMinima(imFRST, 1)
+        im2 = ccore.threshold(im1, 1, 255, 0, 255)
+        im1 = self.HMinima(imFRST, 2)
+        im3 = ccore.threshold(im1, 1, 255, 0, 255) 
+        #im1 = ccore.underBuild(im2, im3)
+        im1 = ccore.infimum(im2, im3)
+        ccore.writeImage(im1, "/home/zhang/work/image/temp/imMarkers1.png")
+        ccore.writeImage(im2, "/home/zhang/work/image/temp/imtemp4.png")
+        ccore.writeImage(im3, "/home/zhang/work/image/temp/imtemp5.png")
+
+
+        
+        ipdb.set_trace()  
+      
+        imout = ccore.threshold(im1, 1, 255, 0, 255)
+        
+        ar1 = numpy.zeros(imDeconv[:,:,0].shape, dtype = numpy.uint8)
+        ar1[:,:] = imDeconv[:,:,0]
         image = ccore.numpy_to_image(ar1, copy=True)
+        im2 = ccore.fillHoles(image)        
+        imwrite(ar1, "temp3_.png")
+        ccore.writeImage(image, "/home/zhang/work/image/temp/temp3.png")
+        ccore.writeImage(im2, "/home/zhang/work/image/temp/temp4.png")
+        ipdb.set_trace()
         
         # ipdb.set_trace()
         container = ccore.ImageMaskContainer(image, imout, False)
