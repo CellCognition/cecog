@@ -59,6 +59,8 @@
 #include "cecog/seededregion.hxx"
 #include "cecog/basic/focus.hxx"
 
+#include "cecog/nuclearSegmentation.hxx"
+
 #include "cecog/morpho/basic.hxx"
 #include "cecog/morpho/label.hxx"
 #include "cecog/morpho/watershed.hxx"
@@ -713,18 +715,21 @@ PyObject * pyMultiRadialSymmetryTransform(IMAGE & imgSrc,
                                          double scale)
 {
   std::auto_ptr< IMAGE > imgPtr(new IMAGE(imgSrc.size()));
-  //cecog::multiRadialSymmetryTransform(destImageRange(*imgPtr), srcImage(imgIn), nb);
   cecog::multiRadialSymmetryTransform( imgSrc, imgMask, *imgPtr, scale);
-  /***
-   * Note for ImOverBuild:
-   *    destImageRange is the one who should be "larger" in some parts than srcImage
-   *    destImageRange is the one who changes values
-   ****/
-
   return incref(object(imgPtr).ptr());
 }
 
 
+template <class IMAGE1>
+PyObject * pyObjectSelection(IMAGE1 const &imgIn, IMAGE1 const &imgMask, IMAGE1 const &imgRef)
+{
+  using namespace cecog::morpho;
+  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
+  imgPtr->init(0);
+  cecog::objectSelection(imgIn, imgMask, imgRef, *imgPtr);
+
+  return incref(object(imgPtr).ptr());
+}
 
 
 // usage:  cc = ccore.overlayBinaryImage(imin, imbin, ccore.RGBValue(255, 0, 0))
@@ -1701,6 +1706,8 @@ static void wrap_images()
   def("imSubtractConst", pyImSubtractConst<vigra::UInt8Image>);
 
   def("imAddConst", pyImAddConst<vigra::UInt8Image>);
+
+  def("objectSelection", pyObjectSelection<vigra::UInt8Image>);
 
   def("overBuild", pyOverBuild<vigra::UInt8Image>);
   def("overBuild", pyOverBuild<vigra::UInt16Image>);

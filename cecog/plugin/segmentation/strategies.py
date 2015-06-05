@@ -1260,7 +1260,6 @@ class SegmentationPluginFRST(_SegmentationPlugin):
         im2 = ccore.overBuild(im1, img_in)
         im3 = ccore.imAddConst(im2, 1)
         im4 = ccore.overBuild(im3, im2)
-        
         im1 = ccore.substractImages(im4, im2)
         return im1  
                 
@@ -1299,12 +1298,13 @@ class SegmentationPluginFRST(_SegmentationPlugin):
         im2 = ccore.threshold(im1, 1, 255, 0, 255)
         im1 = self.HMinima(imFRST, 2)
         im3 = ccore.threshold(im1, 1, 255, 0, 255) 
-        #im1 = ccore.underBuild(im2, im3)
-        im1 = ccore.infimum(im2, im3)
-        ccore.writeImage(im1, "/home/zhang/work/image/temp/imMarkers1.png")
+        # im1 = ccore.infimum(im2, im3)
+        # ccore.writeImage(im1, "/home/zhang/work/image/temp/imMarkers1.png")
         ccore.writeImage(im2, "/home/zhang/work/image/temp/imtemp4.png")
         ccore.writeImage(im3, "/home/zhang/work/image/temp/imtemp5.png")
-
+        
+        imMarkers1 = ccore.objectSelection(im2, im3, imFRST);
+        ccore.writeImage(imMarkers1, "/home/zhang/work/image/temp/imMarkers1.png")
 
         
         ipdb.set_trace()  
