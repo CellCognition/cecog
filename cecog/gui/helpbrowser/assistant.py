@@ -18,7 +18,7 @@ __url__ = 'www.cellcognition.org'
 __all__ = ("AtAssistant", )
 
 
-from os.path import join, dirname, isfile
+from os.path import join, dirname, isfile, basename
 
 from PyQt5 import uic
 from PyQt5 import QtGui
@@ -107,6 +107,7 @@ class AtAssistant(QtWidgets.QMainWindow):
     Manual = "manual.qhc"
 
     def __init__(self, qhcfile, *args, **kw):
+        self._kwmap = dict()
 
         if not isfile(qhcfile):
             raise IOError("%s file not found" %(qhcfile))
@@ -117,6 +118,7 @@ class AtAssistant(QtWidgets.QMainWindow):
         self.hengine = QtHelp.QHelpEngine(qhcfile)
         self.hengine.setupData()
         self.hengine.registerDocumentation(qhcfile.replace('.qhc', '.qch'))
+
 
         self.hengine.searchEngine().reindexDocumentation()
         self.hbrowser = AtHelpBrowser()
@@ -161,6 +163,7 @@ class AtAssistant(QtWidgets.QMainWindow):
         self._restoreSettings()
         self.indexDock.show()
         self.contentDock.show()
+        self._genKeywordMap()
 
     def waitForIndex(self):
         for i in xrange(50):
@@ -173,10 +176,33 @@ class AtAssistant(QtWidgets.QMainWindow):
         if keyword is not None:
             self.openKeyword(keyword)
 
+    def _genKeywordMap(self):
+        """Map html anchors to human readable keywords for index search"""
+
+        model = self.hengine.indexModel()
+
+        for i in xrange(model.rowCount()):
+            keyword = model.data(model.index(i), 0)
+            link = model.linksForKeyword(keyword).values()[0]
+            self._kwmap[self._keywordFromUrl(link)] = keyword
+
+    def _keywordFromUrl(self, url):
+        url = url.toString()
+        if '#' in url:
+            return url.split('#')[1]
+        else:
+            return basename(url)
+
     def openKeyword(self, keyword):
         self.waitForIndex()
-        links = self.hengine.indexModel().linksForKeyword(keyword)
 
+        if not self._kwmap:
+            self._genKeywordMap()
+
+        if self._kwmap.has_key(keyword):
+            keyword = self._kwmap[keyword]
+
+        links = self.hengine.indexModel().linksForKeyword(keyword)
         if links:
             self.hbrowser.setSource(links.values()[0])
         else:

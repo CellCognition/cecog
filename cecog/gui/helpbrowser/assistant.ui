@@ -14,7 +14,7 @@
    <string>Help Browser</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../../../qrc/at_rc.qrc">
+   <iconset>
     <normaloff>:/oxygen/system-help.png</normaloff>:/oxygen/system-help.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
@@ -136,9 +136,21 @@
     </layout>
    </widget>
   </widget>
+  <widget class="QToolBar" name="toolBar">
+   <property name="windowTitle">
+    <string>toolBar</string>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="separator"/>
+  </widget>
  </widget>
  <resources>
-  <include location="../../../qrc/at_rc.qrc"/>
+  <include location="../../../cecog.qrc"/>
  </resources>
  <connections/>
 </ui>

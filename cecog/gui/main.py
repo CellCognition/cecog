@@ -78,7 +78,7 @@ class FrameStack(QtWidgets.QStackedWidget):
         self.idialog.hide()
 
         manual = os.path.join(parent.environ.DOC_DIR, AtAssistant.Manual)
-        self.assistant = AtAssistant(manual, self)
+        self.assistant = AtAssistant(manual, None)
         self.assistant.hide()
 
         self.log_window = LogWindow(self)

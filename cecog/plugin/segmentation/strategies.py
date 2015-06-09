@@ -446,11 +446,6 @@ class SegmentationPluginPrimary3(_SegmentationPlugin):
                          ('watershed_used_distance', (0, 1, 1, 1)),
                          ])
 
-#        panel.add_group('shapewatershed',
-#                        [('shapewatershed_gausssize', (0, 0, 1, 1)),
-#                         ('shapewatershed_maximasize', (0, 1, 1, 1)),
-#                         ('shapewatershed_minmergesize', (1, 0, 1, 1)),
-#                         ])
         panel.add_group('postprocessing',
                         [('postprocessing_roisize_min', (0, 0, 1, 1)),
                          ('postprocessing_roisize_max', (0, 1, 1, 1)),
@@ -947,7 +942,7 @@ class SegmentationPluginModification(_SegmentationPlugin):
 
     PARAMS = [('expansion_size', IntTrait(5, 0, 4000, label='Expansion size')),
               ('shrinking_size', IntTrait(5, 0, 4000, label='Shrinking size')),
-              ]
+               ]
 
     @stopwatch()
     def _run(self, meta_image, container):

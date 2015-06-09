@@ -104,7 +104,7 @@ def get_data_files(target_dir=TARGET_BUNDLE,
         # sorry for not finding a better hack
         qt5plugins = glob.glob(
             join(dirname(PyQt5.__file__), "plugins", "platforms", "*.*"))
-        qt5plugins = (join(target_dir, "platforms"), qt5plugins)
+        qt5plugins = ("platforms", qt5plugins)
         dfiles.append(qt5plugins)
 
     # qt help files
