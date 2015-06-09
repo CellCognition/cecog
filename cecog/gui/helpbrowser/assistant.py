@@ -119,10 +119,10 @@ class AtAssistant(QtWidgets.QMainWindow):
         self.hengine.setupData()
         self.hengine.registerDocumentation(qhcfile.replace('.qhc', '.qch'))
 
-
         self.hengine.searchEngine().reindexDocumentation()
         self.hbrowser = AtHelpBrowser()
         self.hbrowser.setHelpEngine(self.hengine)
+        self.setupToolBar()
         self.setCentralWidget(self.hbrowser)
         self.hengine.contentWidget().linkActivated.connect(
            self.hbrowser.setSource)
@@ -164,6 +164,32 @@ class AtAssistant(QtWidgets.QMainWindow):
         self.indexDock.show()
         self.contentDock.show()
         self._genKeywordMap()
+
+    def setupToolBar(self):
+
+        btn = QtWidgets.QToolButton(self.toolBar)
+        btn.setIcon(QtGui.QIcon(":backward.png"))
+        btn.setToolTip("backward")
+        self.toolBar.addWidget(btn)
+        btn.clicked.connect(self.hbrowser.backward)
+
+        btn = QtWidgets.QToolButton(self.toolBar)
+        btn.setIcon(QtGui.QIcon(":forward.png"))
+        btn.setToolTip("forward")
+        self.toolBar.addWidget(btn)
+        btn.clicked.connect(self.hbrowser.forward)
+
+        btn = QtWidgets.QToolButton(self.toolBar)
+        btn.setIcon(QtGui.QIcon(":reload.png"))
+        btn.setToolTip("reload")
+        self.toolBar.addWidget(btn)
+        btn.clicked.connect(self.hbrowser.reload)
+
+        btn = QtWidgets.QToolButton(self.toolBar)
+        btn.setIcon(QtGui.QIcon(":home.png"))
+        btn.setToolTip("home")
+        self.toolBar.addWidget(btn)
+        btn.clicked.connect(self.hbrowser.home)
 
     def waitForIndex(self):
         for i in xrange(50):

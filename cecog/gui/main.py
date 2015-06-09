@@ -754,4 +754,4 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
 
     def show_assistant(self):
         self._pages.assistant.show()
-        # self._pages.assistant.openKeyword('index')
+        self._pages.assistant.openKeyword('index')
