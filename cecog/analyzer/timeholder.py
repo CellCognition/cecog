@@ -8,7 +8,7 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
-from cecog.analyzer import feature_groups
+
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
@@ -42,10 +42,10 @@ from cecog.io.imagecontainer import MetaImage
 from cecog.analyzer.channel import PrimaryChannel
 from cecog.plugin.metamanager import MetaPluginManager
 from cecog.analyzer.tracker import Tracker
-
 from cecog.analyzer.object import ImageObject, ObjectHolder, Orientation, Region
 
 from cecog.analyzer.feature_groups import FeatureGroups
+
 
 def chunk_size(shape):
     """Helper function to compute chunk size for image data cubes."""
