@@ -160,6 +160,9 @@ class ClusterDisplay(QGroupBox):
 
     @pyqtSlot()
     def _on_submit_job(self):
+        if not question(self, "Are you sure to submit to cluster?"):
+            return
+
         self._submit_settings.set_section(SECTION_NAME_GENERAL)
         if not self._submit_settings.get2('constrain_positions'):
             positions = []

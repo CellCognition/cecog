@@ -481,7 +481,11 @@ class AnnotationModule(Module):
 
     def _on_import_class_definitions(self):
         if self._on_new_classifier():
-            path = self._learner.clf_dir
+            path = None
+            try:
+                path = self._learner.clf_dir
+            except:
+                pass
             if path is None:
                 path = os.path.expanduser('~')
             result = QFileDialog.getExistingDirectory(

@@ -540,6 +540,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
                     if ret == QMessageBox.No:
                         cancel = True
                     scan_plates = dict((info[0], True) for info in infos)
+
                 if not cancel:
                     self._load_image_container(infos, scan_plates)
 
@@ -557,7 +558,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
             scan_plates = dict((info[0], False) for info in plate_infos)
 
         def load(emitter, icontainer, settings, splates):
-            iter_ = icontainer.iter_import_from_settings(settings, splates)
+            iter_ = icontainer.iter_import_from_settings(settings, scan_plates=splates)
             for idx, info in enumerate(iter_):
                 emitter.setValue.emit(idx)
 
@@ -647,7 +648,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
             self.set_modules_active(state=True)
             if show_dialog:
                 QMessageBox.information(
-                    self, "Info",
+                    self, "Information",
                     "%d plate(s) successfully loaded." % len(imagecontainer.plates))
         else:
             QMessageBox.critical(self, "Error",
