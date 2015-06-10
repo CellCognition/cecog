@@ -1,7 +1,7 @@
 """
 main.py
 
-..CecogAnalyzer main window
+CecogAnalyzer main window
 
 """
 
@@ -77,7 +77,7 @@ class FrameStack(QtWidgets.QStackedWidget):
         self.idialog = ImageDialog()
         self.idialog.hide()
 
-        manual = os.path.join(parent.environ.DOC_DIR, AtAssistant.Manual)
+        manual = os.path.join(parent.environ.doc_dir, AtAssistant.Manual)
         self.assistant = AtAssistant(manual, None)
         self.assistant.hide()
 

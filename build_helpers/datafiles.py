@@ -52,7 +52,7 @@ INCLUDES = [ 'sip',
              'sklearn.utils.weight_vector' ]
 
 EXCLUDES = ['PyQt5.QtDesigner', 'PyQt5.QtNetwork',
-            'PyQt5.QtOpenGL', 'PyQt5.QtScript', 'PyQt5.QtSql',
+            'PyQt5.QtOpenGL', 'PyQt5.QtScript',
             'PyQt5.QtTest', 'PyQt5.QtWebKit', 'PyQt5.QtXml', 'PyQt5.phonon',
             'PyQt4.QtCore', 'PyQt4.QtGui',  'PyQt4.QtSvg', 'PyQt4',
             '_gtkagg', '_cairo', '_gtkcairo', '_fltkagg',
@@ -77,7 +77,7 @@ def find_uifiles(package_dir, target_dir=TARGET_BUNDLE):
 
 
 def get_data_files(target_dir=TARGET_BUNDLE,
-                   mpl_data=True, platform_plugins=True):
+                   mpl_data=True, qt_plugins=True):
     """Pack data files into list of (target-dir, list-of-files)-tuples"""
 
     dfiles = []
@@ -99,13 +99,14 @@ def get_data_files(target_dir=TARGET_BUNDLE,
                 target = root.replace(RESOURCE_DIR, target_dir)
                 dfiles.append((target, [join(abspath(root), file_)]))
 
-    if platform_plugins:
-        # Pyqt5 does not start without platform plugins.
-        # sorry for not finding a better hack
-        qt5plugins = glob.glob(
-            join(dirname(PyQt5.__file__), "plugins", "platforms", "*.*"))
-        qt5plugins = ("platforms", qt5plugins)
-        dfiles.append(qt5plugins)
+    if qt_plugins:
+        for dir_ in ['sqldrivers', 'platforms']:
+            # Pyqt5 does not start without platform plugins.
+            # sorry for not finding a better hack
+            qt5plugins = glob.glob(
+                join(dirname(PyQt5.__file__), "plugins", dir_, "*.*"))
+            qt5plugins = (dir_, qt5plugins)
+            dfiles.append(qt5plugins)
 
     # qt help files
     dfiles.append((join(target_dir, 'doc'),

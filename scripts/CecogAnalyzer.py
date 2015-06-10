@@ -103,12 +103,13 @@ if __name__ == "__main__":
     else:
         redirect = False
 
-    main = CecogAnalyzer(version.appname, version.version, redirect,
-                         args.configfile, args.debug)
-    main.show()
-    splash.finish(main)
-
     try:
+        main = CecogAnalyzer(version.appname, version.version, redirect,
+                         args.configfile, args.debug)
+        main.show()
+        splash.finish(main)
+
+
         if args.configfile is None and args.load:
             raise RuntimeError("use -c option to define a config file")
 

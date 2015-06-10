@@ -30,6 +30,14 @@ from cecog.util.pattern import Singleton
 
 from cecog import ccore
 
+class LogFile(file):
+    """Custom file class that flushes always after write method is called"""
+
+    def write(self, *args, **kw):
+        super(LogFile, self).write(*args, **kw)
+        self.flush()
+
+
 def find_resource_dir():
     """Return a normalized absolute path to the resource directory.
 
@@ -100,7 +108,7 @@ class CecogEnvironment(object):
     BATTERY_PACKAGE_DIR = join(RESOURCE_DIR, "battery_package")
     ONTOLOGY_DIR = join(RESOURCE_DIR, "ontologies")
     UI_DIR = join(RESOURCE_DIR, "ui")
-    DOC_DIR = join(RESOURCE_DIR, "doc")
+    DOC_DIR = "doc"
 
     FONT12 = join(RESOURCE_DIR, "font12.png")
     NAMING_SCHEMA = join(RESOURCE_DIR, "naming_schemas.ini")
@@ -157,9 +165,18 @@ class CecogEnvironment(object):
         if not isdir(target):
             shutil.copytree(src, target)
 
+        target = join(self.user_config_dir, cls.DOC_DIR)
+        src = join(cls.RESOURCE_DIR, cls.DOC_DIR)
+        if not isdir(target):
+            shutil.copytree(src, target)
+
         # changing resource directory after copying the files
         # copy also the r sources
         cls.RESOURCE_DIR = self.user_config_dir
+
+    @property
+    def doc_dir(self):
+        return join(self.user_config_dir, self.DOC_DIR)
 
     @property
     def palettes_dir(self):
@@ -188,8 +205,8 @@ class CecogEnvironment(object):
         if not isdir(logpath):
             os.mkdir(logpath)
 
-        sys.stdout = file(join(logpath, 'stdout.log'), 'w')
-        sys.stderr = file(join(logpath, 'stderr.log'), 'w')
+        sys.stdout = LogFile(join(logpath, 'stdout.log'), 'w')
+        sys.stderr = LogFile(join(logpath, 'stderr.log'), 'w')
 
         # may cause troubles on windows
         atexit.register(sys.stderr.close)
