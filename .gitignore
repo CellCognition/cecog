@@ -8,7 +8,7 @@ Analysis
 *.pkl
 Release/
 Debug/
-resources/doc
+resources/doc/*.*
 build.info
 resource.py
 *.dmg
