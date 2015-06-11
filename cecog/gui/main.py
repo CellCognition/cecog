@@ -99,6 +99,8 @@ class FrameStack(QtWidgets.QStackedWidget):
         del self._wmap[type(widget)]
         super(FrameStack, self).removeWidget(widget)
 
+    def close(self):
+        self.assistant.close()
 
 class CecogAnalyzer(QtWidgets.QMainWindow):
 
@@ -279,6 +281,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         settings.endGroup()
 
     def closeEvent(self, event):
+        self._pages.close()
         # Quit dialog only if not debuging flag is not set
         self._save_geometry()
         if self.debug:
