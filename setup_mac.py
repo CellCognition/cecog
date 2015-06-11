@@ -48,6 +48,10 @@ pyrcc_opts = {'infile': 'cecog.qrc',
               'outfile': join('cecog', 'cecog_rc.py'),
               'pyrccbin': 'pyrcc5'}
 
+help_opts = {'infile': join('doc', 'manual.qhcp'),
+             'outfile': join('resources', 'doc', 'manual.qhc'),
+             'qcollectiongeneator': 'qcollectiongenerator'}
+
 ccore = Extension('cecog.ccore._cecog',
                   sources = [join('csrc','src', 'cecog.cxx')],
                   libraries = ['vigraimpex', 'boost_python'],
@@ -64,11 +68,14 @@ scripts = [join('scripts', 'CecogAnalyzer.py')]
 setup(app = scripts,
       data_files = build_helpers.get_data_files(),
       options = {"py2app": py2app_opts,
-                 "pyrcc": pyrcc_opts},
-      cmdclass = {'pyrcc': build_helpers.PyRcc,
+                 "build_help": help_opts,
+                 "build_rcc": pyrcc_opts},
+      cmdclass = {'build_rcc': build_helpers.BuildRcc,
+                  'build_help': build_helpers.BuildHelp,
                   'build': build_helpers.Build},
       packages = packages,
-      package_data = {'cecog': ['gui/*.ui', ],},
+      package_data = {'cecog': [join('gui', '*.ui'),
+                                join('gui', 'helpbrowser', '*.ui')]},
       setup_requires=['py2app'],
       ext_modules = [ccore],
       **build_helpers.metadata)
