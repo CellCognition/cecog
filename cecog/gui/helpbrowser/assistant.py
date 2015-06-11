@@ -114,6 +114,7 @@ class AtAssistant(QtWidgets.QMainWindow):
 
         super(AtAssistant, self).__init__(*args, **kw)
         loadUI(join(dirname(__file__), "assistant.ui"), self)
+        self.toolBar.setObjectName('Navigation Toolbar')
 
         self.hengine = QtHelp.QHelpEngine(qhcfile)
         self.hengine.setupData()
