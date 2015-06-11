@@ -15,7 +15,7 @@ __url__ = 'www.cellcognition.org'
 __all__ = ['Build', 'BuildRcc', 'BuildHelp']
 
 import os
-from os.path import isfile
+from os.path import isfile, isdir, dirname
 import subprocess
 from  distutils.core import Command
 from  distutils.command.build import build as _build
@@ -56,6 +56,10 @@ class BuildHelp(Command):
     def run(self):
         print "Compiling colleciton file"
         print self.outfile
+
+        if not isdir(dirname(self.outfile)):
+            os.mkdir(dirname(self.outfile))
+
         try:
             subprocess.check_call([self.qcollectiongeneator, '-o', self.outfile,
                                    self.infile])
