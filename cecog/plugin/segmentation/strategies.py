@@ -1264,9 +1264,117 @@ class SegmentationPluginFRST(_SegmentationPlugin):
         return im1  
                 
     @stopwatch()
-    def threshold(self, img_in, size, limit):
-        img_out = ccore.window_average_threshold(img_in, size, limit)
-        return img_out
+    def getMarkersByFRST(self, imPreproc, imCluster, size):
+        
+        imFRST = ccore.multiRadialSymmetryTransform(imPreproc, imCluster, 10)
+        ccore.writeImage(imFRST, "/home/zhang/work/image/temp/imFRST.png")
+
+        ######### Get markers of cell nuclei ############
+        im1 = self.HMinima(imFRST, 1)
+        im2 = ccore.threshold(im1, 1, 255, 0, 255)
+        im1 = self.HMinima(imFRST, 2)
+        im3 = ccore.threshold(im1, 1, 255, 0, 255) 
+        
+        im4 = ccore.objectSelection(im2, im3, imFRST);
+
+        ######### Remove the markers attached to border #############
+        im1.init(0)
+        ccore.drawRectangle(im1, 255)
+        im2 = ccore.infimum(im1, im4)
+        im3 = ccore.underBuild(im2, im4)
+        imMarkers = ccore.substractImages(im4, im3)
+        ccore.writeImage(imMarkers, "/home/zhang/work/image/temp/imMarkers1.png")
+
+        return imMarkers  
+
+
+    @stopwatch()
+    def getBackgroundMarkers(self, imMarkers, t_dist):
+        
+        ######## Distance transform from markers, and transform to UInt8 ######
+        imDist = ccore.distanceTransform(imMarkers, 2)
+        minmax = imDist.getMinmax()
+        if minmax[1] > 255:
+            imDistNumpy = imDist.toArray()
+            imDistNumpy[ imDistNumpy > 255.0 ] = 255.0
+            imDist = ccore.numpy_to_image(imDistNumpy, copy=True)
+        offset = 0 # minmax[0]
+        ratio = 1  # 255.0 / (minmax[1] - minmax[0])
+        imDistU = ccore.linearTransform(imDist, ratio, offset)
+        ccore.writeImage(imDistU, "/home/zhang/work/image/temp/temp2.png")
+
+        ######## Watershed to get background markers #############
+        imWS = ccore.constrainedWatershed(imDistU, imMarkers)
+        imWSLine = ccore.threshold(imWS, 0, 0, 0, 255) 
+
+
+        imDistNumpy = imDist.toArray()
+        imWSLineNumpy = imWSLine.toArray()
+        
+        imWSLineNumpy[ imDistNumpy < t_dist ] = 0
+        imWSLine = ccore.numpy_to_image(imWSLineNumpy, copy=True)
+        ccore.drawRectangle(imWSLine, 255)
+
+        ######## Add border into background marker ###############
+        ccore.writeImage(imWSLine, "/home/zhang/work/image/temp/temp3.png")
+
+        return imWSLine
+
+
+    @stopwatch()
+    def nucleiSegmentation(self, imOrig, imPreproc, imMarkersNu, imMarkersBg, t_grad, max_size):
+        se_size = max_size / 5;
+        
+        ######## Get gradient magnitude image from preproccessed image #######
+        imGrad = ccore.gaussianGradientMagnitude(imPreproc, 1.0)
+        imGradNumpy = imGrad.toArray()
+        imGradNumpy[ imGradNumpy < t_grad ] = 0.0
+        imGrad = ccore.numpy_to_image(imGradNumpy, copy=True)
+                
+        minmax = imGrad.getMinmax()
+        offset = 0 # minmax[0]
+        ratio =  255.0 / minmax[1]
+        imGradU = ccore.linearTransform(imGrad, ratio, offset)
+
+        ######### Combine nuclear markers and background markers #############
+        imMarker = ccore.supremum(imMarkersNu, imMarkersBg)
+
+        ######## Watershed to get Nuclei #############
+        imWS = ccore.constrainedWatershed(imGradU, imMarker)
+        
+        ######## select those marked by nuclei markers #############
+        imWSNumpy = imWS.toArray()
+        imWSNumpy[ imWSNumpy > 0 ] = 255
+        imWSNumpy = imWSNumpy.astype(numpy.uint8)
+        imWS = ccore.numpy_to_image(imWSNumpy, copy=True)    
+        imCand1 = ccore.underBuild(imMarkersNu, imWS)
+
+        imCand2 = ccore.areaOpen(imCand1, int(numpy.round(max_size * max_size * numpy.pi)))
+        imCand3 = ccore.substractImages(imCand1, imCand2)
+
+        # imCand2 = ccore.diameterOpen(imCand3, int(max_size * 3))
+        imCand1 = ccore.lengthOpening(imCand3, int(max_size * 2), int(max_size * max_size * numpy.pi), 20)
+
+        # imCand1 = ccore.substractImages(imCand3, imCand2)
+
+        ccore.writeImage(imCand1, "/home/zhang/work/image/temp/temp4.png")
+
+        ######## using previous segmented candidates to do an adaptive thresholding ###
+        im1 = ccore.adaptiveThreshold(imOrig, imCand1, 0.04, 0.5)
+        im2 = ccore.areaOpen(im1, int(numpy.round(se_size * se_size * 2)))
+        im1 = ccore.lengthOpening(im2, int(max_size * 2), int(max_size * max_size), 5)
+        # im1 = ccore.substractImages(im2, im3)
+
+        im2 = ccore.discDilate(im1, 1)
+        im1 = ccore.discErode(im2, 1)
+
+        ccore.writeImage(im1, "/home/zhang/work/image/temp/temp5.png")
+        
+        imCand2 = ccore.supremum(imCand1, im1)
+        ccore.writeImage(imCand2, "/home/zhang/work/image/temp/temp6.png")
+
+        return imCand2
+        
 
     @stopwatch()
     def _run(self, meta_image):
@@ -1290,24 +1398,18 @@ class SegmentationPluginFRST(_SegmentationPlugin):
   
         imPreproc = self.preprocessing(imH_org, se_size)      
 
-        imFRST = ccore.multiRadialSymmetryTransform(imPreproc, imCluster, 10)
-        ccore.writeImage(imFRST, "/home/zhang/work/image/temp/imFRST.png")
-
-        ######### Get markers of cell nuclei ############
-        im1 = self.HMinima(imFRST, 1)
-        im2 = ccore.threshold(im1, 1, 255, 0, 255)
-        im1 = self.HMinima(imFRST, 2)
-        im3 = ccore.threshold(im1, 1, 255, 0, 255) 
-        # im1 = ccore.infimum(im2, im3)
-        # ccore.writeImage(im1, "/home/zhang/work/image/temp/imMarkers1.png")
-        ccore.writeImage(im2, "/home/zhang/work/image/temp/imtemp4.png")
-        ccore.writeImage(im3, "/home/zhang/work/image/temp/imtemp5.png")
+        ## Nuclei markers
+        imMarkers1 = self.getMarkersByFRST(imPreproc, imCluster, 10)
         
-        imMarkers1 = ccore.objectSelection(im2, im3, imFRST);
-        ccore.writeImage(imMarkers1, "/home/zhang/work/image/temp/imMarkers1.png")
+        ## Background markers
+        imMarkers2 = self.getBackgroundMarkers(imMarkers1, 40)
+        
+        imCandidates = self.nucleiSegmentation(imH_org, imPreproc, imMarkers1, imMarkers2, 3, max_size)
 
         
         ipdb.set_trace()  
+        
+     
       
         imout = ccore.threshold(im1, 1, 255, 0, 255)
         

@@ -25,11 +25,150 @@
 #include "cecog/morpho/basic.hxx"
 #include "cecog/morpho/structuring_elements.hxx"
 #include "cecog/morpho/label.hxx"
-#include "vigra/pixelneighborhood.hxx"
 
+#include "vigra/pixelneighborhood.hxx"
+#include "vigra/polygon.hxx"
+
+#include <queue>
+#include <list>
+#include <fstream>
+
+using namespace vigra;
+
+void Label(const MultiArrayView<2, UInt8> imin, MultiArrayView<2, int> imout, int se){
+	const int nl6[2][6][2] = { { {0,-1},{1,0},{0,1},{-1,1},{-1,0},{-1,-1}},
+                            {{1,-1},{1,0},{1,1},{0,1},{-1,0},{0,-1}} };
+	const int nl8[2][8][2] = { { {1,0},{1,1},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-1} },
+                           { {1,0},{1,1},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-1} } };
+	
+	/* Vincent's queue algo. scan once */
+	// initialization
+	// threshold(imin,imout,0,0,0);
+	imout.init(0);
+	MultiArray<2, UInt8> imflag(imin.shape());
+	int size[2] = {imin.shape()[0], imin.shape()[1] };
+
+	std::queue<int> Qx,Qy;
+	int label(0),x,y,s,t;
+	int *** nl = new int ** [2];
+	if (se == 6){
+		for (int k=0; k<2; ++k){
+			nl[k] = new int * [6];
+			for (int l=0; l<6; ++l){
+				nl[k][l] = new int [2];
+				nl[k][l][0] = nl6[k][l][0];
+				nl[k][l][1] = nl6[k][l][1];
+			}
+		}
+	}
+	else if (se == 8){
+		for (int k=0; k<2; ++k){
+			nl[k] = new int * [8];
+			for (int l=0; l<8; ++l){
+				nl[k][l] = new int [2];
+				nl[k][l][0] = nl8[k][l][0];
+				nl[k][l][1] = nl8[k][l][1];
+			}
+		}
+	}
+
+
+	for(int j=0;j<size[1];++j){
+		for(int i=0;i<size[0];++i){
+			if (imflag(i,j)==1)
+				continue;
+			if (imin(i,j)==0 && imflag(i,j)==0){
+				imflag(i,j) = 1;
+				imout(i,j)= 0;
+			}
+			else {
+				imout(i,j) = ++label;
+				imflag(i,j)=1;
+				Qx.push(i);
+				Qy.push(j);
+			}
+
+			while (!Qx.empty()){
+				s = Qx.front();
+				t = Qy.front();
+				Qx.pop();
+				Qy.pop();
+
+				for (int k=0; k<se; ++k){
+					x = s + nl[t%2][k][0];
+					y = t + nl[t%2][k][1];
+					if (x<0 || x>=size[0] || y<0 || y>=size[1]) continue;
+					if (imflag(x,y)==0){
+						imflag(x,y)=1;
+						if (imin(x,y)!=0){
+							imout(x,y) = label;
+							Qx.push(x);
+							Qy.push(y);
+						}
+					}
+				}
+			}
+		}
+	}
+	
+
+	for (int k=0; k<2; ++k){
+		for (int l=0; l<se; ++l){
+			delete[] nl[k][l];
+		}
+	}
+	delete[] nl;
+
+}
+
+int labelCount(const MultiArrayView<2, int> imlabel){
+	int n(0);
+	for(int j=0;j<imlabel.shape()[1];++j){
+		for(int i=0;i<imlabel.shape()[0];++i){
+			if (imlabel(i,j)>n)
+				n = imlabel(i,j);
+		}
+	}
+	return n;
+}
+
+
+
+template<class Point, class T, class S>
+int areaPolygon(vigra::Polygon<Point> const &p, MultiArrayView<2, T, S> &output_image){
+    int N(0);
+    if (!p.closed()) cout<<"areaPolygon: polygon must be closed"<<endl;
+
+    std::vector<Point> scan_intervals;
+    vigra::detail::createScanIntervals(p, scan_intervals);
+
+    for(unsigned int k=0; k < scan_intervals.size(); k+=2)
+    {
+
+        MultiArrayIndex x    = (MultiArrayIndex)ceil(scan_intervals[k][0]),
+                        y    = (MultiArrayIndex)scan_intervals[k][1],
+                        xend = (MultiArrayIndex)floor(scan_intervals[k+1][0]) + 1;
+        vigra_invariant(y == scan_intervals[k+1][1],
+            "fillPolygon(): internal error - scan interval should have same y value.");
+        // clipping
+        if(y < 0)
+            continue;
+        if(y >= output_image.shape(1))
+            break;
+        if(x < 0)
+            x = 0;
+        if(xend > output_image.shape(0))
+            xend = output_image.shape(0);
+        // drawing
+        for(; x < xend; ++x)
+            N++;
+            // output_image(x,y) = value;
+    }
+    return N;
+} // end of function
 
 namespace cecog {
-
+	
 
   // Keep one (randomly) object (connected component) in the binary input image (imin) under a binary mask image (immask),
   // by comparing the grey level in reference image (imref).
@@ -64,9 +203,6 @@ namespace cecog {
       typename IMAGE1::traverser itr_imout = imout.upperLeft();
       typename IMAGE2::traverser itr_label1 = imLabel1.upperLeft();
       typename IMAGE2::traverser itr_label2 = imLabel2.upperLeft();
-
-      int xx = 638, yy = 17;
-      int pxy = *(itr_label1 + Diff2D(xx,yy)) - 1;
 
       for (int y=0; y<h; ++y){
         for (int x=0; x<w; ++x){
@@ -103,5 +239,504 @@ namespace cecog {
   }
 
 
+  template<class IMAGE1>
+  void adaptiveThreshold(IMAGE1 const & imin, IMAGE1 const & imCandi, IMAGE1 & imout, double c_low, double c_high){
+      /***
+       * Objective: Using previous segmented candidates to calculate thresholds, then applied on the original image to get more cell nuclei.
+       * imin - original H-channel
+       * imCandi - previously segmented nuclei mask
+       * imout - output
+       * c_low and c_higt - ratios of the histogram, used to compute 2 thresholds
+       * ***/
+      using namespace cecog::morpho;
+      using namespace std;
+      // double c_hist = 0.04;
+      // double c_hist2 = 0.5;
+      double S(0), cS(0), c_intensity1(255), c_intensity2(255);
+      bool f1(true), f2(true);
+
+      IMAGE1 imtemp(imin.size());
+      IMAGE1 imtemp1(imin.size());
+      IMAGE1 imtemp2(imin.size());
+      IMAGE1 imtemp3(imin.size());
+
+      int w = imin.lowerRight().x - imin.upperLeft().x;
+      int h = imin.lowerRight().y - imin.upperLeft().y;
+
+      imtemp.init(0);
+      typename IMAGE1::const_traverser itr_imin = imin.upperLeft();
+      typename IMAGE1::const_traverser itr_imCandi = imCandi.upperLeft();
+      typename IMAGE1::traverser itr_imtemp = imtemp.upperLeft();
+
+      for (int y=0; y<h; ++y){
+        for (int x=0; x<w; ++x){
+            if (*(itr_imCandi + Diff2D(x,y)) > 0)
+                *(itr_imtemp + Diff2D(x,y)) = *(itr_imin + Diff2D(x,y));
+        }
+      }
+          
+      cecog::FindHistogram<typename IMAGE1::value_type> histogram(256);
+      vigra::inspectImage(srcImageRange(imtemp), histogram);
+
+      for (int k=1; k<histogram.size(); ++k){
+          S += double(histogram[k]);
+      }
+
+      if (S==0) {
+          imout.init(0);
+      }
+      else{
+          for (int k=1; k<histogram.size(); ++k){
+              cS += double(histogram[k]);
+              if (cS / S > c_low && f1){
+                  c_intensity1 = k;
+                  f1 = false;
+          }
+              if (cS / S > c_high && f2){
+                  c_intensity2 = k;
+                  f2 = false;
+              }
+          }
+
+          vigra::transformImage(srcImageRange(imin), destImage(imtemp1),
+                  vigra::Threshold<typename IMAGE1::PixelType,
+                                    typename IMAGE1::PixelType>
+                  (0, c_intensity1, 0, 255));
+    
+          vigra::transformImage(srcImageRange(imin), destImage(imtemp2),
+                  vigra::Threshold<typename IMAGE1::PixelType,
+                                    typename IMAGE1::PixelType>
+                  (0, c_intensity2, 0, 255));
+    
+          neighborhood2D nb (WITHOUTCENTER8, imin.size());
+          ImInfimum(srcImageRange(imtemp1), srcImage(imtemp2), destImage(imtemp3));
+          ImUnderBuild(destImageRange(imtemp3), srcImage(imtemp2), nb);
+          // exportImage(imtemp3.upperLeft(), imtemp3.lowerRight(), imtemp3.accessor(), "/home/zhang/work/image/temp/imtempp3.png");
+
+          ImInfimum(srcImageRange(imCandi), srcImage(imtemp3), destImage(imtemp1));
+          ImUnderBuild(destImageRange(imtemp1), srcImage(imtemp3), nb);
+
+          combineTwoImages(srcImageRange(imtemp3), srcImage(imtemp1), 
+                            destImage(imtemp2), Arg1()-Arg2());
+
+          copyImage(srcImageRange(imtemp2), destImage(imout) );
+
+      } // end of else
+  } // end of function
+ 
+
+template <class T1, class S1>
+void CandidateAnalysis(const MultiArrayView<2, T1, S1> imCandi, const MultiArrayView<2, T1, S1> imOrig, MultiArrayView<2, T1, S1> imOut){
+
+const int nl6[2][6][2] = { { {0,-1},{1,0},{0,1},{-1,1},{-1,0},{-1,-1}},
+                            {{1,-1},{1,0},{1,1},{0,1},{-1,0},{0,-1}} };
+const int nl8[2][8][2] = { { {1,0},{1,1},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-1} },
+                           { {1,0},{1,1},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-1} } };
+	
+	class candidate{
+		public:
+			int p[2];
+			double mean;
+			double area;
+			double areaConvex;
+			ArrayVector<TinyVector<double,2> > pix;
+			
+			candidate(){
+				p[0] = -1;
+				p[1] = -1;
+				mean = 0;
+				area = 0;
+				areaConvex = 0;
+			}
+	};
+	
+	class frontier{
+		public:
+			int p[2];
+			int cat;
+			double mean;
+			double area;
+			double areaRatioNb;
+			double diffmean1;
+			double diffmean2;
+			double diffmean3;
+			std::vector<int> neighbor;
+			double areaConvex;
+			double convex;
+			double convexN1;
+			double convexN2;
+			ArrayVector<TinyVector<double,2> > pix;
+			
+			frontier(){
+				p[0] = -1;
+				p[1] = -1;
+				cat = -1;
+				mean = 0;
+				area = 0;
+				diffmean1 = -1;
+				diffmean2 = -1;
+				diffmean3 = -1;
+				areaConvex = -1;
+				convex = -1;
+				convexN1 = -1;
+				convexN2 = -1;
+			}
+	};	
+	 
+	int width = imCandi.width();
+    int height = imCandi.height();
+    int imsize[2] = {width, height};
+    
+    MultiArray<2, UInt8> imtemp1(width, height);
+    MultiArray<2, UInt8> imtemp2(width, height);
+    MultiArray<2, UInt8> imContour(width, height);
+    
+	MultiArray<2, int> imLabel1(width, height); 
+	MultiArray<2, int> imLabel2(width, height); 
+	
+	MultiArray<2, vigra::RGBValue<UInt8> > imoutC(width, height); 
+	
+	 
+    Label(imCandi, imLabel1, 8);
+    // imtemp1 = imLabel1 % 256;
+	// exportImage(imtemp1, ImageExportInfo("z4_label.png"));
+    int N_candi = labelCount(imLabel1);
+    candidate *candis = new candidate[N_candi];
+
+    TinyVector<double, 2> pix;
+    for (int i=0; i<imsize[0]; ++i){
+        for (int j=0; j<imsize[1]; ++j){
+            if (imLabel1(i,j) == 0) continue;
+            candis[imLabel1(i,j) - 1].mean += imOrig(i,j);
+            candis[imLabel1(i,j) - 1].area ++;
+            pix[0] = i;
+            pix[1] = j;
+            candis[imLabel1(i,j) - 1].pix.push_back(pix);
+        }
+    }
+
+    for (int k=0; k<N_candi; ++k){
+        candis[k].mean /= candis[k].area;
+
+        ArrayVector<TinyVector<double,2> > bb;
+        vigra::Polygon< TinyVector<double, 2> > poly;
+        if (candis[k].pix.size()<10)
+            candis[k].areaConvex = candis[k].pix.size();
+        else {
+            convexHull(candis[k].pix, bb);
+            for (int l=0; l<bb.size(); ++l){
+                poly.push_back(bb[l]);
+            }
+            candis[k].areaConvex = areaPolygon(poly, imtemp1);
+        }
+    }
+
+
+
+    // 5. frontier analysis
+    int **neighborList = new int*[N_candi];
+    for (int k=0; k<N_candi; ++k){
+        neighborList[k] = new int[N_candi];
+    }
+
+    imtemp1 = imCandi;
+    std::queue<int> Qx, Qy;
+    int x,y,x0,y0;
+	MultiArray<2, int> imstate(imOrig.shape());
+    for (int j=0; j<imsize[1]; ++j){
+        for (int i=0; i<imsize[0]; ++i){
+            if (imLabel1(i,j)==0) continue;
+            for (int k=0; k<8; ++k){
+                x = i+nl8[0][k][0];
+                y = j+nl8[0][k][1];
+                if (x<0 || x>=imsize[0]) continue;
+                if (y<0 || y>=imsize[1]) continue;
+                if (imstate(x,y) != 0) continue;
+                if (imLabel1(x,y) == 0){
+                    Qx.push(x);
+                    Qy.push(y);
+                    imstate(x,y) = 1;
+                    imtemp1(x,y) = 100;
+                }
+            }
+        }
+    }
+
+    std::list<int> temp;
+    std::list<int>::iterator it;
+    while (!Qx.empty()){
+        x0 = Qx.front();
+        y0 = Qy.front();
+        Qx.pop();
+        Qy.pop();
+        temp.clear();
+        for (int k=0; k<8; ++k){
+            x = x0+nl8[0][k][0];
+            y = y0+nl8[0][k][1];
+            if (x<0 || x>=imsize[0]) continue;
+            if (y<0 || y>=imsize[1]) continue;
+            if (imLabel1(x,y) == 0) continue;
+            bool f=true;
+            for (it = temp.begin(); it != temp.end(); ++it){
+                if (*it == imLabel1(x,y)) {f=false; break;}
+            }
+            if (f) {
+                temp.push_back(imLabel1(x,y));
+            }
+        }
+        if (temp.size() == 2)
+            imtemp1(x0,y0) = 50;
+        else if (temp.size() > 2)
+            imtemp1(x0,y0) = 51;
+    }
+    imContour = imtemp1;
+	// exportImage(imContour, ImageExportInfo("z5_temp.png"));
+
+        //#####################################
+        for (int k=0; k<imOrig.size(); ++k){
+            if (imtemp1[k] == 50){
+                imoutC[k].red() = 255;
+                imoutC[k].green() = 0;
+                imoutC[k].blue() = 0;
+            }
+            else if (imtemp1[k] == 51){
+                imoutC[k].red() = 0;
+                imoutC[k].green() = 0;
+                imoutC[k].blue() = 255;
+            }
+            else if (imtemp1[k] == 100){
+                imoutC[k].red() = 0;
+                imoutC[k].green() = 255;
+                imoutC[k].blue() = 0;
+            }
+            else {
+                imoutC[k].red() = imOrig[k];
+                imoutC[k].green() = imOrig[k];
+                imoutC[k].blue() = imOrig[k];
+            }
+        }
+	    
+	    // exportImage(imoutC, ImageExportInfo("z5_result.png"));
+        //#####################################
+
+
+    imtemp1.init(0);
+    for (int k=0; k<imOrig.size(); ++k){
+        if (imContour[k] == 50 || imContour[k]==51)
+            imtemp1[k] = 255;
+    }
+    Label(imtemp1,imLabel2,8);
+    int N_lines = labelCount(imLabel2);
+    // imtemp2 = imLabel2 % 256; 
+	// exportImage(imtemp2, ImageExportInfo("z5_frontier_label.png"));
+
+    frontier *lines = new frontier[N_lines];
+
+
+    for (int j=0; j<imsize[1]; ++j){
+        for (int i=0; i<imsize[0]; ++i){
+            if (imLabel2(i,j)==0) continue;
+            lines[imLabel2(i,j) - 1].mean += imOrig(i,j);
+            lines[imLabel2(i,j) - 1].area += 1;
+            pix[0] = i;
+            pix[1] = j;
+            lines[imLabel2(i,j) - 1].pix.push_back(pix);
+
+            for (int k=0; k<8; ++k){
+                x = i+nl8[0][k][0];
+                y = j+nl8[0][k][1];
+                if (x<0 || x>=imsize[0]) continue;
+                if (y<0 || y>=imsize[1]) continue;
+                if (imLabel1(x,y) == 0) continue;
+                
+                bool f=true;
+                for (int k=0; k<lines[imLabel2(i,j) - 1].neighbor.size(); ++k){
+                    if (lines[imLabel2(i,j) - 1].neighbor[k] == imLabel1(x,y)){
+                        f = false;
+                        break;
+                    }
+                }
+                if (f) lines[imLabel2(i,j) - 1].neighbor.push_back(imLabel1(x,y));
+            }
+        }
+    }
+
+    // std::ofstream myfile;
+    // myfile.open("features.txt");
+
+    for (int k=0; k<N_lines; ++k){
+        lines[k].mean /= lines[k].area;
+
+        if (lines[k].neighbor.size() == 2){
+            int candi1 = lines[k].neighbor[0] - 1;
+            int candi2 = lines[k].neighbor[1] - 1;
+            double maxCandi = max(candis[candi1].mean, 
+                    candis[candi2].mean);
+            double minCandi = min(candis[candi1].mean, 
+                    candis[candi2].mean);
+
+            double maxArea = max(candis[candi1].area, 
+                    candis[candi2].area);
+            double minArea = min(candis[candi1].area, 
+                    candis[candi2].area);
+
+            lines[k].diffmean1 = lines[k].mean - minCandi;
+            lines[k].diffmean2 = lines[k].mean - maxCandi;
+            lines[k].diffmean3 = maxCandi- minCandi;
+
+            lines[k].areaRatioNb = minArea / maxArea;
+
+            double convx1 = candis[candi1].area / candis[candi1].areaConvex;
+            double convx2 = candis[candi2].area / candis[candi2].areaConvex;
+
+            ArrayVector<TinyVector<double,2> > mergePix;
+            for (int l=0; l<candis[candi1].pix.size(); ++l){
+                mergePix.push_back(candis[candi1].pix[l]);
+            }
+            for (int l=0; l<candis[candi2].pix.size(); ++l){
+                mergePix.push_back(candis[candi2].pix[l]);
+            }
+            for (int l=0; l<lines[k].pix.size(); ++l){
+                mergePix.push_back(lines[k].pix[l]);
+            }
+
+            ArrayVector<TinyVector<double,2> > bb;
+            vigra::Polygon< TinyVector<double, 2> > poly;
+            if (mergePix.size()<10)
+                lines[k].areaConvex = mergePix.size();
+            else {
+                convexHull(mergePix, bb);
+                for (int l=0; l<bb.size(); ++l){
+                    poly.push_back(bb[l]);
+                }
+                
+//			    ArrayVector<Point> scan_intervals;
+//			    // std::vector<Point> scan_intervals;
+//				vigra::detail::createScanIntervals(poly, scan_intervals);
+//				int N(0);
+//				for(unsigned int k=0; k < scan_intervals.size(); k+=2)
+//				{
+//
+//					MultiArrayIndex x    = (MultiArrayIndex)ceil(scan_intervals[k][0]),
+//									y    = (MultiArrayIndex)scan_intervals[k][1],
+//									xend = (MultiArrayIndex)floor(scan_intervals[k+1][0]) + 1;
+//					vigra_invariant(y == scan_intervals[k+1][1],
+//						"fillPolygon(): internal error - scan interval should have same y value.");
+//					// clipping
+//					if(y < 0)
+//						continue;
+//					if(y >= imtemp1.shape(1))
+//						break;
+//					if(x < 0)
+//						x = 0;
+//					if(xend > imtemp1.shape(0))
+//						xend = imtemp1.shape(0);
+//					// drawing
+//					for(; x < xend; ++x)
+//						N++;
+//						// output_image(x,y) = value;
+//				}
+//                lines[k].areaConvex = N;
+                
+                lines[k].areaConvex = areaPolygon(poly,imtemp1);
+            }
+            lines[k].convex = mergePix.size() / lines[k].areaConvex;
+            if (convx1 > convx2) {
+                lines[k].convexN1 = convx1;
+                lines[k].convexN2 = convx2;
+            }
+            else{
+                lines[k].convexN1 = convx1;
+                lines[k].convexN2 = convx2;
+            }
+
+            //myfile << lines[k].diffmean1<<" "<<lines[k].diffmean2<<" "<<lines[k].diffmean3
+                //<<" "<<lines[k].convex<<" "<<lines[k].convexN1<<" "<<lines[k].convexN2
+                //<<" "<<lines[k].convex - lines[k].convexN1<<" "
+                //<<lines[k].convex - lines[k].convexN2<<" "<<lines[k].areaRatioNb<<" C1\n";
+
+            //// Classification Logistic regression
+            double features[9] = { lines[k].diffmean1, lines[k].diffmean2, lines[k].diffmean3
+                , lines[k].convex, lines[k].convexN1, lines[k].convexN2
+                , lines[k].convex - lines[k].convexN1, lines[k].convex - lines[k].convexN2
+                , lines[k].areaRatioNb };
+            double mean_norm[9] = {19.9194, -2.9981, 22.9174, 0.8164, 0.8712, 0.8579, -0.0548,
+                -0.0415, 0.4792};
+            double std_norm[9] = {16.3533, 14.1942, 17.3133, 0.1094, 0.0958, 0.1008, 0.1175, 
+                0.1205, 0.2820};
+            double coefs[10] = {0.0274, -0.011, 0.0201, -11.463, -10.9103, -1.7443
+                ,-4.9981, -7.456, 6.6496, 19.6842};
+            double coefs_norm[10] = {0.506, -0.1509, 0.6016, -1.3171, -0.2314, -0.017, 
+                -1.0371, -1.1807, 0.5046, 2.675};
+
+            double f(0);
+            for (int kk=0; kk<9; ++kk){
+                f += coefs_norm[kk] * ((features[kk] - mean_norm[kk]) / std_norm[kk]);
+            }
+            f += coefs_norm[9];
+
+            double p = 1 / (1 + exp(-f));
+            
+            if (p<0.5) lines[k].cat = 1;
+            else lines[k].cat = 0;
+        }
+        else{
+            //myfile <<"Delete this line\n";
+        }
+    }
+    //myfile.close();
+
+
+    // AreaOpening(imCandi, imtemp1, 8, 9);
+    // imCandi = imtemp1;
+        
+    copyImage(imCandi, imOut);
+	for (int k=0; k<imOrig.size(); ++k){
+		if (imLabel2[k] == 0) continue;
+		if (lines[imLabel2[k] - 1].cat != 1) continue;
+		else {
+			imoutC[k].red() = 0;
+			imoutC[k].green() = 0;
+			imoutC[k].blue() = 255;
+			imOut[k] = 255;
+		}
+	}
+    exportImage(imoutC, ImageExportInfo("/home/zhang/work/image/temp/z6_result_LR.png"));
+    exportImage(imCandi, ImageExportInfo("/home/zhang/work/image/temp/z6_final_candi.png"));
+ } // end of function
+ 
+ 
+template <class BIMAGE>
+void candidateAnalysis(BIMAGE const & imCandi, BIMAGE const & imOrig, BIMAGE & dest){
+    int width = imCandi.width();
+    int height = imCandi.height();
+
+	MultiArray<2, UInt8> maCandi(width, height);
+	MultiArray<2, UInt8> maOrig(width, height);
+	MultiArray<2, UInt8> maDest(width, height);
+
+    typename BIMAGE::const_traverser it1 = imCandi.upperLeft();
+    typename BIMAGE::const_traverser it2 = imOrig.upperLeft();
+    typename BIMAGE::traverser it3 = dest.upperLeft();
+
+
+    // exportImage(src.upperLeft(), src.lowerRight(), src.accessor(), "/home/zhang/work/image/temp/imFRSTz1.png");
+
+    for (int y=0; y<height; ++y){
+        for (int x=0; x<width; ++x){
+            maCandi(x, y) = *(it1 + Diff2D(x,y));
+            maOrig(x, y) = *(it2 + Diff2D(x,y));            
+        }
+    }
+
+    CandidateAnalysis(maCandi, maOrig, maDest);
+    
+    for (int y=0; y<height; ++y){
+        for (int x=0; x<width; ++x){
+            *(it3 + Diff2D(x,y)) = maDest(x, y);
+        }
+    }
+}
+ 
 }; // end of namespace cecog
 #endif /*nuclearsegmentation_hxx*/

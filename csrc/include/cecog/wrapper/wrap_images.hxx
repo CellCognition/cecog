@@ -49,6 +49,7 @@
 #include "vigra/resampling_convolution.hxx"
 #include "vigra/rational.hxx"
 #include "vigra/functorexpression.hxx"
+#include "vigra/distancetransform.hxx"
 
 #include "cecog/shared_objects.hxx"
 #include "cecog/thresholds.hxx"
@@ -67,6 +68,7 @@
 #include "cecog/morpho/geodesy.hxx"
 #include "cecog/morpho/structuring_elements.hxx"
 #include "cecog/morpho/skeleton.hxx"
+#include "cecog/morpho/maxTree.hxx"
 
 
 namespace vigra
@@ -582,6 +584,20 @@ PyObject * pyImAreaOpen(IMAGE1 const &imgIn, int areaMax)
 
 
 template <class IMAGE1>
+PyObject * pyImDiameterOpen(IMAGE1 const &imgIn, int areaMax)
+{
+  using namespace cecog::morpho;
+
+  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
+  cecog::morpho::neighborhood2D nb(cecog::morpho::WITHOUTCENTER8, imgIn.size());
+
+  cecog::morpho::ImDiameterOpen(imgIn, *imgPtr, areaMax, nb);
+
+  return incref(object(imgPtr).ptr());
+}
+
+
+template <class IMAGE1>
 PyObject * pyImInfimum(IMAGE1 const &a, IMAGE1 const &b)
 {
   std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(a.size()));
@@ -686,6 +702,40 @@ PyObject * pyImAddConst(IMAGE1 const &imgIn, int v)
 
 
 template <class IMAGE1>
+PyObject * pyLengthOpening(IMAGE1 const &imgIn, int length, int T_area, int circ)
+{
+  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
+
+  cecog::morpho::lengthOpening(imgIn, *imgPtr, 6, T_area, length, circ);
+
+  return incref(object(imgPtr).ptr());
+}
+
+
+template <class IMAGE1>
+PyObject * pyAdaptiveThreshold(IMAGE1 const &imgIn, IMAGE1 const &imgCandi, double c_low, double c_high)
+{
+  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
+
+  cecog::adaptiveThreshold(imgIn, imgCandi, *imgPtr, c_low, c_high);
+
+  return incref(object(imgPtr).ptr());
+}
+
+
+template <class IMAGE1>
+PyObject * pyCandidateAnalysis(IMAGE1 const &imgCandi, IMAGE1 const &imgOrig)
+{
+  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgCandi.size()));
+
+  cecog::candidateAnalysis(imgCandi, imgOrig, *imgPtr);
+
+  return incref(object(imgPtr).ptr());
+}
+
+
+
+template <class IMAGE1>
 PyObject * pyFillHoles(IMAGE1 const &imgIn)
 {
   using namespace cecog::morpho;
@@ -704,6 +754,38 @@ PyObject * pyFillHoles(IMAGE1 const &imgIn)
    *    destImageRange is the one who should be "larger" in some parts than srcImage
    *    destImageRange is the one who changes values
    ****/
+
+  return incref(object(imgPtr).ptr());
+}
+
+
+template <class IMAGE1, class IMAGE2>
+PyObject * pyGaussianGradientMagnitude(IMAGE1 const &imgIn, double sigma)
+{
+
+  std::auto_ptr< IMAGE2 > imgPtr (new IMAGE2(imgIn.size()));
+  vigra::gaussianGradientMagnitude(srcImageRange(imgIn), destImage(*imgPtr), sigma);
+
+  return incref(object(imgPtr).ptr());
+}
+
+
+
+
+template <class IMAGE1>
+PyObject * pyDistanceTransform(IMAGE1 const &imgIn, int norm)
+{
+  /***
+   * Vigra function
+   * norm == 0: chessboard
+   * norm == 1: L1 norm, Manhattan distance
+   * norm == 2: L2 norm, Euclidean distance
+   ***/
+  typedef vigra::FImage IMAGE2;
+
+  std::auto_ptr< IMAGE2 > imgPtr(new IMAGE2(imgIn.size()));
+  
+  vigra::distanceTransform(srcImageRange(imgIn), destImage(*imgPtr), 0, norm);
 
   return incref(object(imgPtr).ptr());
 }
@@ -1703,6 +1785,28 @@ static void wrap_images()
   def("fillHoles", pyFillHoles<vigra::UInt16Image>);
   def("fillHoles", pyFillHoles<vigra::Int16Image>);
 
+  def("candidateAnalysis", pyCandidateAnalysis<vigra::UInt8Image>);
+  def("candidateAnalysis", pyCandidateAnalysis<vigra::UInt16Image>);
+  def("candidateAnalysis", pyCandidateAnalysis<vigra::Int16Image>);
+
+  def("lengthOpening", pyLengthOpening<vigra::UInt8Image>);
+  def("lengthOpening", pyLengthOpening<vigra::UInt16Image>);
+  def("lengthOpening", pyLengthOpening<vigra::Int16Image>);
+
+  def("adaptiveThreshold", pyAdaptiveThreshold<vigra::UInt8Image>);
+  def("adaptiveThreshold", pyAdaptiveThreshold<vigra::UInt16Image>);
+  def("adaptiveThreshold", pyAdaptiveThreshold<vigra::Int16Image>);
+
+
+  def("gaussianGradientMagnitude", pyGaussianGradientMagnitude<vigra::UInt8Image, vigra::FImage>);
+  def("gaussianGradientMagnitude", pyGaussianGradientMagnitude<vigra::UInt16Image, vigra::FImage>);
+  def("gaussianGradientMagnitude", pyGaussianGradientMagnitude<vigra::Int16Image, vigra::FImage>);
+
+
+  def("distanceTransform", pyDistanceTransform<vigra::UInt8Image>);
+  def("distanceTransform", pyDistanceTransform<vigra::UInt16Image>);
+  def("distanceTransform", pyDistanceTransform<vigra::Int16Image>);
+
   def("imSubtractConst", pyImSubtractConst<vigra::UInt8Image>);
 
   def("imAddConst", pyImAddConst<vigra::UInt8Image>);
@@ -1770,6 +1874,11 @@ static void wrap_images()
   def("areaOpen", pyImAreaOpen<vigra::UInt8Image>);
   def("areaOpen", pyImAreaOpen<vigra::UInt16Image>);
   def("areaOpen", pyImAreaOpen<vigra::Int16Image>);
+
+  def("diameterOpen", pyImDiameterOpen<vigra::UInt8Image>);
+  def("diameterOpen", pyImDiameterOpen<vigra::UInt16Image>);
+  def("diameterOpen", pyImDiameterOpen<vigra::Int16Image>);
+
 
   def("morphoGradient", pyImMorphoGradient<vigra::UInt8Image>);
   def("morphoGradient", pyImMorphoGradient<vigra::UInt16Image>);

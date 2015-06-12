@@ -666,6 +666,7 @@ namespace cecog
 							MultiArrayView<2, T3, S3> dest,
 							double scale)
 	{
+        using namespace std;
 
 		vigra_precondition(scale > 0.0,
 					 "radialSymmetryTransform(): Scale must be > 0");
@@ -726,22 +727,14 @@ namespace cecog
 					if (dx_ == dx && dy_ == dy) continue;
 					else { dx_ = dx; dy_ = dy; }
 					   
-					// int xx = x + dx;
-					// int yy = y - dy;
-
-					//if(xx >= 0 && xx < w && yy >= 0 && yy < h)
-					//{
-					//    orientationCounter(xx, yy) += 1;
-					//    magnitudeAccumulator(xx, yy) += magnitude;
-					//}
-
 					int xx = x - dx;
 					int yy = y + dy;
 					
-					if (mask(xx,yy)==0) continue;
 
 					if(xx >= 0 && xx < w && yy >= 0 && yy < h)
 					{
+					    if (mask(xx,yy)==0) continue;
+
 						orientationCounter(xx, yy) -= 0.5 + 0.25 * magnitude/beta + 0.25 * coef_dist;
 						// orientationCounter(xx, yy) -= 0.5 + 0.25 * min(magnitude/S, 1.0) + 0.25 * coef_dist;
 						magnitudeAccumulator(xx, yy) -= magnitude;
@@ -749,6 +742,7 @@ namespace cecog
 				}
 			}
 		}
+
 
 		int maxOrientation = 0;
 		// double maxMagnitude = 0;
@@ -799,8 +793,8 @@ namespace cecog
 
     template <class BIMAGE>
     void
-    multiRadialSymmetryTransform(BIMAGE & src, 
-                                 BIMAGE & mask,
+    multiRadialSymmetryTransform(BIMAGE const & src, 
+                                 BIMAGE const & mask,
                                  BIMAGE & dest,
                                  double scale)
     {
@@ -812,29 +806,24 @@ namespace cecog
 		MultiArray<2, double> maDest(width, height);
 		MultiArray<2, UInt8> maOut(width, height);
 
-  	    typename BIMAGE::Iterator it1Current = src.upperLeft();
-  	    typename BIMAGE::Iterator it2Current = mask.upperLeft();
-  	    typename BIMAGE::Iterator it1End = src.lowerRight();
+  	    typename BIMAGE::const_traverser it1Current = src.upperLeft();
+  	    typename BIMAGE::const_traverser it2Current = mask.upperLeft();
 
         // exportImage(src.upperLeft(), src.lowerRight(), src.accessor(), "/home/zhang/work/image/temp/imFRSTz1.png");
 
-        double t1(0),t2(0);
-  	    for (int y=0; it1Current.y < it1End.y; ++y, ++it1Current.y, ++it2Current.y){
-  	    	typename BIMAGE::Iterator itx1C = it1Current;
-  	    	typename BIMAGE::Iterator itx2C = it2Current;
-  	    	for (int x=0; itx1C.x < it1End.x; ++x, ++itx1C.x, ++itx2C.x){
-                maSrc(x, y) = *itx1C;
-                maMask(x, y) = *itx2C;
-                if (*itx1C > t1) t1 = *itx1C;
-                if (*itx2C > t2) t2 = *itx2C;
-  	    	}
-  	    }
+        //double t1(0),t2(0);
+        for (int y=0; y<height; ++y){
+            for (int x=0; x<width; ++x){
+                maSrc(x, y) = *(it1Current + Diff2D(x,y));
+                maMask(x, y) = *(it2Current + Diff2D(x,y));
+            }
+        }
 
         multiRadialSymmetryTransformMain(maSrc, maMask, maDest, scale);
 		// exportImage(maDest, "/home/zhang/work/image/temp/imFRST00.png");
         
-  	    typename BIMAGE::Iterator it3Current = dest.upperLeft();
-  	    typename BIMAGE::Iterator it3End = dest.lowerRight();
+  	    typename BIMAGE::traverser it3Current = dest.upperLeft();
+  	    // typename BIMAGE::Iterator it3End = dest.lowerRight();
 
         // normalize
         double vmax(maDest[0]), vmin(vmax);
@@ -851,14 +840,11 @@ namespace cecog
             }
         }
 
-  	    for (int y=0; it3Current.y < it3End.y; ++y, ++it3Current.y){
-  	    	typename BIMAGE::Iterator itx3C = it3Current;
-  	    	for (int x=0; itx3C.x < it3End.x; ++x, ++itx3C.x){
-                *itx3C = maOut(x, y);
-  	    	}
-  	    }
-
-        // exportImage(dest.upperLeft(), dest.lowerRight(), dest.accessor(), "/home/zhang/work/image/temp/imFRST01.png");
+        for (int y=0; y<height; ++y){
+            for (int x=0; x<width; ++x){
+                *(it3Current + Diff2D(x,y)) = maOut(x, y);
+            }
+        }
 
     } // end of function multiRadialSymmetryTransform
 
