@@ -65,8 +65,8 @@ FEATURE_MAP = {'featurecategory_intensity': ['normbase', 'normbase2'],
                'featurecategory_moments': ['moments']}
 
 DEFAULT_FEATURE_PARAMS = {
-                          'featurecategory_granugrey': {'dist': (1, 2, 3, 5, 7)},
-                          'featurecategory_haralick': {'se': (1, 2, 4, 8)},
+                          'featurecategory_granugrey': {'se': (1, 2, 3, 5, 7)},
+                          'featurecategory_haralick': {'dist': (1, 2, 4, 8)},
                           }
 
 class PositionCore(LoggerObject):
@@ -207,6 +207,24 @@ class PositionCore(LoggerObject):
 #                else:
                 f_categories += feature
 
+#FEATURE_MAP = {'featurecategory_intensity': ['normbase', 'normbase2'],
+#               'featurecategory_haralick': ['haralick', 'haralick2'],
+#               'featurecategory_stat_geom': ['levelset'],
+#               'featurecategory_granugrey': ['granulometry'],
+#               'featurecategory_basicshape': ['roisize',
+#                                              'circularity',
+#                                              'irregularity',
+#                                              'irregularity2',
+#                                              'axes'],
+#               'featurecategory_convhull': ['convexhull'],
+#               'featurecategory_distance': ['distance'],
+#               'featurecategory_moments': ['moments']}
+#
+#DEFAULT_FEATURE_PARAMS = {
+#                          'featurecategory_granugrey': {'se': (1, 2, 3, 5, 7)},
+#                          'featurecategory_haralick': {'dist': (1, 2, 4, 8)},
+#                          }
+
                 if category in DEFATULT_FEATURE_SETTINGS:
                     f_cat_params[category] = {}
                     for option in DEFAULT_FEATURE_SETTINGS[category]:        
@@ -218,6 +236,7 @@ class PositionCore(LoggerObject):
                                 f_cat_params[category][option] = DEFAULT_FEATURE_SETTINGS[category][option]
                             else:
                                 f_cat_params[category][option] = tuple([int(x) for x in str_opt.split(',')])
+                            # HERE I AM
                             f_cat_params[category][option] = 
                         else:
                             f_cat_params[category][option] = DEFAULT_FEATURE_SETTINGS[category][option]

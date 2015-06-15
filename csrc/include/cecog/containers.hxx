@@ -642,7 +642,7 @@ namespace cecog
 
     void setUnsignedParameterVector(std::vector<unsigned> const &params, std::string feature)
     {
-      if(feature=="haralick")){
+      if(feature=="haralick"){
 
         // erase the vectors
         haralickDistVec.erase (haralickDistVec.begin(),haralickDistVec.end());
