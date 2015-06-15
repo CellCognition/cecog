@@ -49,8 +49,7 @@ class ChannelCore(LoggerObject):
                  new_image_size=None,
                  strImageOutCompression="80",
                  strPathOutDebug=None,
-                 lstFeatureCategories=None,
-                 dctFeatureParameters=None,
+                 feature_groups=None,
                  lstFeatureNames=None,
                  bFlatfieldCorrection=False,
                  strBackgroundImagePath="",
@@ -62,6 +61,8 @@ class ChannelCore(LoggerObject):
                  check_for_plugins=True):
         super(ChannelCore, self).__init__()
 
+        assert isinstance(feature_groups, dict)
+
         # remove all the hungarian bullshit as soon as possible!
         self.strChannelId = strChannelId
         # either number of zsclice or projection type
@@ -71,8 +72,7 @@ class ChannelCore(LoggerObject):
         self.new_image_size = new_image_size
         self.strImageOutCompression = strImageOutCompression
         self.strPathOutDebug = strPathOutDebug
-        self.lstFeatureCategories = lstFeatureCategories
-        self.dctFeatureParameters = dctFeatureParameters
+        self.feature_groups = feature_groups
         self.lstFeatureNames = lstFeatureNames
         self.bFlatfieldCorrection = bFlatfieldCorrection
         self.strBackgroundImagePath = strBackgroundImagePath
@@ -216,17 +216,14 @@ class Channel(ChannelCore):
         self._features_calculated = True
         for region_name, container in self.containers.iteritems():
             object_holder = ObjectHolder(region_name)
-            if not container is None:
-                for strFeatureCategory in self.lstFeatureCategories:
-                    container.applyFeature(strFeatureCategory)
-
-                # calculate set of haralick features
-                # (with differnt distances)
-                if 'haralick_categories' in self.dctFeatureParameters:
-                    for strHaralickCategory in self.dctFeatureParameters['haralick_categories']:
-                        for iHaralickDistance in self.dctFeatureParameters['haralick_distances']:
-                            container.haralick_distance = iHaralickDistance
-                            container.applyFeature(strHaralickCategory)
+            if container is not None:
+                for group, params in self.feature_groups.iteritems():
+                    if params is None:
+                        container.applyFeature(group)
+                    else: # special case for haralick features
+                        for param in params:
+                            container.haralick_distance = param
+                            container.applyFeature(group)
 
                 for obj_id, c_obj in container.getObjects().iteritems():
 
@@ -246,9 +243,11 @@ class Channel(ChannelCore):
                     # at the moment a bit of a hack #
                     # The problem is that orientation cannot be a feature #
                     # but moments need to be chosen to calculate the orientation. #
-                    if 'moments' in self.lstFeatureCategories:
-                        obj.orientation = Orientation(angle = c_obj.orientation,
-                                                      eccentricity = dctFeatures['eccentricity'])
+                    if self.feature_groups.has_key('moments'):
+                        obj.orientation = Orientation(
+                            angle = c_obj.orientation,
+                            eccentricity = dctFeatures['eccentricity']
+                            )
 
                     # why do wo sort the features according to their names??
                     # does it matter?
@@ -292,13 +291,7 @@ class Channel(ChannelCore):
         return bg_image
 
     def normalize_image(self, plate_id=None):
-        try:
-            import pydevd
-            pydevd.connected = True
-            pydevd.settrace(suspend=False)
-            print 'Thread enabled interactive eclipse debuging...'
-        except:
-            pass
+
         img_in = self.meta_image.image
         if self.bFlatfieldCorrection:
             self.logger.debug("* using flat field correction with image from %s"
