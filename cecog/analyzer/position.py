@@ -204,6 +204,7 @@ class PositionCore(LoggerObject):
         if f_cat_params.has_key("haralick_categories"):
             f_cat_params['haralick_distances'] = (1, 2, 4, 8)
 
+        
         return f_categories, f_cat_params
 
     def setup_channel(self, proc_channel, col_channel, zslice_images,
