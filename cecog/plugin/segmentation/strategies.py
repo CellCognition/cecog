@@ -1373,7 +1373,10 @@ class SegmentationPluginFRST(_SegmentationPlugin):
         imCand2 = ccore.supremum(imCand1, im1)
         ccore.writeImage(imCand2, "/home/zhang/work/image/temp/temp6.png")
 
-        return imCand2
+        ######## Merge over-segmented candidates #############################        
+        imNuclei = ccore.candidateAnalysis(imCand2, imOrig)
+        
+        return imNuclei
         
 
     @stopwatch()
@@ -1389,7 +1392,7 @@ class SegmentationPluginFRST(_SegmentationPlugin):
         arTmp[:,:] = imDeconv[:,:,0]
         imH_org = ccore.numpy_to_image(arTmp, copy=True)
         imwrite(imDeconv[:,:,0], "imdeconv1.png")
-        imwrite(imDeconv[:,:,1], "imdeconv2.png")        
+        imwrite(imDeconv[:,:,1], "imdeconv2.png")
         
         
         impyCluster = self.clustering(imColor, imDeconv)
@@ -1404,26 +1407,24 @@ class SegmentationPluginFRST(_SegmentationPlugin):
         ## Background markers
         imMarkers2 = self.getBackgroundMarkers(imMarkers1, 40)
         
-        imCandidates = self.nucleiSegmentation(imH_org, imPreproc, imMarkers1, imMarkers2, 3, max_size)
-
+        imNuclei = self.nucleiSegmentation(imH_org, imPreproc, imMarkers1, imMarkers2, 3, max_size)
         
-        ipdb.set_trace()  
-        
+        ccore.writeImage(imNuclei, "/home/zhang/work/image/temp/final_candidates.png")
      
       
-        imout = ccore.threshold(im1, 1, 255, 0, 255)
-        
-        ar1 = numpy.zeros(imDeconv[:,:,0].shape, dtype = numpy.uint8)
-        ar1[:,:] = imDeconv[:,:,0]
-        image = ccore.numpy_to_image(ar1, copy=True)
-        im2 = ccore.fillHoles(image)        
-        imwrite(ar1, "temp3_.png")
-        ccore.writeImage(image, "/home/zhang/work/image/temp/temp3.png")
-        ccore.writeImage(im2, "/home/zhang/work/image/temp/temp4.png")
-        ipdb.set_trace()
+#        imout = ccore.threshold(im1, 1, 255, 0, 255)
+#        
+#        ar1 = numpy.zeros(imDeconv[:,:,0].shape, dtype = numpy.uint8)
+#        ar1[:,:] = imDeconv[:,:,0]
+#        image = ccore.numpy_to_image(ar1, copy=True)
+#        im2 = ccore.fillHoles(image)        
+#        imwrite(ar1, "temp3_.png")
+#        ccore.writeImage(image, "/home/zhang/work/image/temp/temp3.png")
+#        ccore.writeImage(im2, "/home/zhang/work/image/temp/temp4.png")
+#        ipdb.set_trace()
         
         # ipdb.set_trace()
-        container = ccore.ImageMaskContainer(image, imout, False)
+        container = ccore.ImageMaskContainer(imH_org, imNuclei, False)
         
         return container
 
