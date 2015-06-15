@@ -27,6 +27,7 @@ from PyQt5.Qt import *
 from PyQt5.QtWidgets import QMessageBox
 
 from pyamf.remoting.client import RemotingService
+from pyamf.remoting import RemotingError
 
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.gui.analyzer import BaseFrame
@@ -41,6 +42,8 @@ from cecog.version import version, appname
 
 
 class ClusterDisplay(QGroupBox):
+
+    MIN_API_VERSION = 2
 
     def __init__(self, parent, clusterframe,  settings):
         super(ClusterDisplay, self).__init__(parent)
@@ -281,20 +284,33 @@ class ClusterDisplay(QGroupBox):
             msg = "Could not connect to cluster\n(%s)" %self._host_url
             QMessageBox.critical(self, "Error", msg)
 
+    def _check_api_version(self):
+        try:
+            api_version = self._service.api_version()
+        except RemotingError:
+            # this call is not supported by older version of the
+            # cluster service
+            api_version = 1
+
+        if api_version < self.MIN_API_VERSION:
+            msg = ("Api version of the cluster services is %d "
+                   "but version %d is required.") \
+                   %(self.MIN_API_VERSION, api_version)
+            raise RuntimeError(msg)
 
     def _connect(self):
         self._check_host_url()
 
         success = False
-        msg = 'Error on connecting to cluster control service on %s' % self._host_url
         try:
             client = RemotingService(self._host_url)
             self.dlg = ProgressDialog("Connecting to Cluster...", None, 0, 0, self)
             func = lambda: client.getService('clustercontrol')
             self.dlg.exec_(func)
             self._service = self.dlg.getTargetResult()
-        except:
-            QMessageBox.critical(self, "Error", msg)
+            self._check_api_version()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e))
         else:
             try:
                 self.dlg.exec_(self._service.get_cecog_versions)
