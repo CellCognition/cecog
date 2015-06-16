@@ -217,6 +217,7 @@
       <keyword name="Y-axis ration range (high)" ref="html/manual.html#plot_ylim1_high"/>
 
       <keyword name="Output" ref="html/manual.html#output"/>
+      <keyword name="Create Hdf5" ref="html/manual.html#hdf5_create_file"/>
       <keyword name="Include 8-bit image data" ref="html/manual.html#hdf5_include_raw_images"/>
       <keyword name="Include segmentation images" ref="html/manual.html#hdf5_include_label_images"/>
       <keyword name="Include crack contours" ref="html/manual.html#hdf5_include_crack"/>
