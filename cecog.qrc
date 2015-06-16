@@ -5,7 +5,7 @@
     <file alias="backward.png">resources/icons/backward.png</file>
     <file alias="classification.png">resources/icons/classification.png</file>
     <file alias="feature-extraction.png">resources/icons/feature_extraction.png</file>
-    <file alias="foward.png">resources/icons/forward.png</file>
+    <file alias="forward.png">resources/icons/forward.png</file>
     <file alias="home.png">resources/icons/home.png</file>
     <file alias="network-server.png">resources/icons/network-server.png</file>
     <file alias="output.png">resources/icons/output.png</file>
