@@ -40,7 +40,6 @@ from cecog.gui.util import information
 
 from cecog.analyzer import CONTROL_1, CONTROL_2
 from cecog.plugin.metamanager import MetaPluginManager
-
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
 from cecog.traits.analyzer.postprocessing import SECTION_NAME_POST_PROCESSING
 from cecog.plugin.display import PluginBay
@@ -157,8 +156,9 @@ class BaseFrame(TraitDisplayMixin):
     def add_plugin_bay(self, plugin_manager, settings):
         frame = self._get_frame(self._tab_name)
         frame_layout = frame.layout()
-        frame_layout.addWidget(PluginBay(self, plugin_manager, settings),
-                               frame._input_cnt, 0, 1, 2)
+        frame_layout.addWidget(
+            PluginBay(self, plugin_manager, settings, self.parent().assistant),
+            frame._input_cnt, 0, 1, 2)
         frame._input_cnt += 1
 
 

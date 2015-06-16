@@ -1,6 +1,4 @@
 mac	windows	linux
-/Volumes/dgedata	V:	/projects/gerlich
-/Volumes/dgedata2	S:	/projects/gerlich2
 /Volumes/groups/gerlich	M:	/groups/gerlich
 /Volumes/clustertmp	N:	/clustertmp
 /Volumes/resources	O:	/resources

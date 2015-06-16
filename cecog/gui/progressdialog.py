@@ -40,6 +40,7 @@ class ProgressThread(QtCore.QThread):
         except Exception as e:
             stackstr = traceback.print_exc()
             self.error.emit(e)
+            raise
         finally:
             # perhaps processEvents()???
             self.msleep(150)
@@ -68,6 +69,7 @@ class ProgressDialog(QtWidgets.QProgressDialog):
 
     def __init__(self, *args, **kw):
         super(ProgressDialog, self).__init__(*args, **kw)
+        self.setWindowTitle('Be patient...')
         self.setWindowModality(Qt.WindowModal)
         self.setCancelButton(None)
         self.setAutoClose(False)

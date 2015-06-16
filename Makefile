@@ -34,5 +34,6 @@ clean:
 	rm -fv cecog/ccore/*.so
 
 inplace:
-	python setup.py pyrcc
+	python setup.py build_rcc
+	python setup.py build_help
 	python setup.py build_ext --inplace

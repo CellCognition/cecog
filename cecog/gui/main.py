@@ -1,7 +1,7 @@
 """
 main.py
 
-..CecogAnalyzer main window
+CecogAnalyzer main window
 
 """
 
@@ -31,8 +31,6 @@ from cecog.units.time import TimeConverter
 from cecog.environment import CecogEnvironment
 from cecog.io.imagecontainer import ImageContainer
 
-
-
 from cecog.gui.config import GuiConfigSettings
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
@@ -60,13 +58,15 @@ from cecog.gui.analyzer.processing import ProcessingFrame
 from cecog.gui.analyzer.cluster import ClusterFrame
 from cecog.gui.imagedialog import ImageDialog
 from cecog.gui.aboutdialog import CecogAboutDialog
+from cecog.gui.preferences import PreferencesDialog
+from cecog.gui.preferences import AppPreferences
 
 from cecog.gui.browser import Browser
-from cecog.gui.helpbrowser import HelpBrowser
 from cecog.logging import LogWindow
 
 from cecog.gui.progressdialog import ProgressDialog
 from cecog.gui.progressdialog import ProgressObject
+from cecog.gui.helpbrowser import AtAssistant
 
 
 class FrameStack(QtWidgets.QStackedWidget):
@@ -77,8 +77,9 @@ class FrameStack(QtWidgets.QStackedWidget):
         self.idialog = ImageDialog()
         self.idialog.hide()
 
-        self.helpbrowser = HelpBrowser()
-        self.helpbrowser.hide()
+        manual = os.path.join(parent.environ.doc_dir, AtAssistant.Manual)
+        self.assistant = AtAssistant(manual, None)
+        self.assistant.hide()
 
         self.log_window = LogWindow(self)
         self._wmap = dict()
@@ -98,6 +99,8 @@ class FrameStack(QtWidgets.QStackedWidget):
         del self._wmap[type(widget)]
         super(FrameStack, self).removeWidget(widget)
 
+    def close(self):
+        self.assistant.close()
 
 class CecogAnalyzer(QtWidgets.QMainWindow):
 
@@ -129,7 +132,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         action_pref = self.create_action('&Preferences',
                                          slot=self.open_preferences)
 
-        action_open = self.create_action('&Open Settings...',
+        action_load = self.create_action('&Load Settings...',
                                          shortcut=QtGui.QKeySequence.Open,
                                          slot=self._on_file_open)
         action_save = self.create_action('&Save Settings',
@@ -142,7 +145,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
 
         menu_file = self.menuBar().addMenu('&File')
         self.add_actions(menu_file, (action_pref,
-                                     None, action_open,
+                                     None, action_load,
                                      None, action_save, action_save_as,
                                      None, action_quit))
 
@@ -158,15 +161,15 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         self.add_actions(menu_view, (action_log,))
         self.add_actions(menu_view, (action_open,))
 
-        action_help_startup = self.create_action('&Startup Help...',
-                                                 shortcut=QtGui.QKeySequence.HelpContents,
-                                                 slot=self._on_help_startup)
+        action_assistant = self.create_action('&Help',
+                                              shortcut=QtGui.QKeySequence.HelpContents,
+                                              slot=self.show_assistant)
         action_about = self.create_action('&About', slot=self.on_about)
         action_aboutQt = self.create_action('&About Qt', slot=self.about_qt)
 
 
         menu_help = self.menuBar().addMenu('&Help')
-        self.add_actions(menu_help, (action_help_startup, action_about,
+        self.add_actions(menu_help, (action_assistant, action_about,
                                      action_aboutQt))
 
         self.setStatusBar(QtWidgets.QStatusBar(self))
@@ -204,7 +207,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         for frame in self._tabs:
             frame.status_message.connect(self.statusBar().showMessage)
 
-        if self.environ.analyzer_config.get('Analyzer', 'cluster_support'):
+        if AppPreferences().cluster_support:
             clusterframe = ClusterFrame(self._settings, self._pages, SECTION_NAME_CLUSTER)
             clusterframe.set_imagecontainer(self._imagecontainer)
             self._tabs.append(clusterframe)
@@ -250,27 +253,35 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         settings.beginGroup('Gui')
         settings.setValue('state', self.saveState())
         settings.setValue('geometry', self.saveGeometry())
-        settings.setValue('clusterjobs',
-                          self._pages.widgetByType(ClusterFrame).get_jobids())
+
+        try:
+            settings.setValue(
+                'clusterjobs', self._pages.widgetByType(
+                    ClusterFrame).get_jobids())
+        except KeyError:
+            pass
+
         settings.endGroup()
 
     def _restore_geometry(self):
         settings = QtCore.QSettings(version.organisation, version.appname)
         settings.beginGroup('Gui')
 
-        geometry = settings.value('geometry')
-        if geometry is not None:
-            self.restoreGeometry(geometry)
-        state = settings.value('state')
-        if state is not None:
-            self.restoreState(state)
+        if settings.contains('geometry'):
+            self.restoreGeometry(settings.value('geometry'))
 
-        jobids = settings.value('clusterjobs')
-        if jobids:
-            self._pages.widgetByType(ClusterFrame).restore_jobids(jobids)
+        if settings.contains('state'):
+            self.restoreState(settings.value('state'))
+
+        if settings.contains('clusterjobs'):
+            jobids = settings.value('clusterjobs')
+            if AppPreferences().cluster_support and jobids:
+                self._pages.widgetByType(ClusterFrame).restore_jobids(jobids)
+
         settings.endGroup()
 
     def closeEvent(self, event):
+        self._pages.close()
         # Quit dialog only if not debuging flag is not set
         self._save_geometry()
         if self.debug:
@@ -437,7 +448,8 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         QMessageBox.aboutQt(self, "about Qt")
 
     def open_preferences(self):
-        print "pref"
+        pref = PreferencesDialog()
+        pref.exec_()
 
     def _on_browser_open(self):
         if self._imagecontainer is None:
@@ -531,6 +543,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
                     if ret == QMessageBox.No:
                         cancel = True
                     scan_plates = dict((info[0], True) for info in infos)
+
                 if not cancel:
                     self._load_image_container(infos, scan_plates)
 
@@ -548,7 +561,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
             scan_plates = dict((info[0], False) for info in plate_infos)
 
         def load(emitter, icontainer, settings, splates):
-            iter_ = icontainer.iter_import_from_settings(settings, splates)
+            iter_ = icontainer.iter_import_from_settings(settings, scan_plates=splates)
             for idx, info in enumerate(iter_):
                 emitter.setValue.emit(idx)
 
@@ -638,7 +651,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
             self.set_modules_active(state=True)
             if show_dialog:
                 QMessageBox.information(
-                    self, "Info",
+                    self, "Information",
                     "%d plate(s) successfully loaded." % len(imagecontainer.plates))
         else:
             QMessageBox.critical(self, "Error",
@@ -743,5 +756,6 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
             self, 'Save config file as', dir, ';;'.join(self.NAME_FILTERS))[0]
         return filename or None
 
-    def _on_help_startup(self):
-        self._pages.helpbrowser.show('_startup')
+    def show_assistant(self):
+        self._pages.assistant.show()
+        self._pages.assistant.openKeyword('index')

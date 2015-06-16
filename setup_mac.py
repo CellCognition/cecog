@@ -35,7 +35,7 @@ py2app_opts = {'excludes': build_helpers.EXCLUDES,
                             'PyQt5.QtCore',
                             'PyQt5.QtGui',
                             'PyQt5.QtWidgets'],
-               "qt_plugins": ['platforms',],
+               "qt_plugins": ['platforms', 'sqldrivers'],
                "argv_emulation":False,
                "strip": True,
                "optimize": 1,
@@ -47,6 +47,10 @@ py2app_opts = {'excludes': build_helpers.EXCLUDES,
 pyrcc_opts = {'infile': 'cecog.qrc',
               'outfile': join('cecog', 'cecog_rc.py'),
               'pyrccbin': 'pyrcc5'}
+
+help_opts = {'infile': join('doc', 'manual.qhcp'),
+             'outfile': join('resources', 'doc', 'manual.qhc'),
+             'qcollectiongeneator': 'qcollectiongenerator'}
 
 ccore = Extension('cecog.ccore._cecog',
                   sources = [join('csrc','src', 'cecog.cxx')],
@@ -61,12 +65,18 @@ ccore = Extension('cecog.ccore._cecog',
 packages = build_helpers.find_submodules("./cecog", "cecog")
 scripts = [join('scripts', 'CecogAnalyzer.py')]
 
+dfiles = build_helpers.get_data_files(build_helpers.TARGET_BUNDLE)
+# no ui files in package data for py2app
+uifiles = build_helpers.find_uifiles('./cecog', build_helpers.TARGET_BUNDLE)
+dfiles.append(uifiles)
 
 setup(app = scripts,
-      data_files = build_helpers.get_data_files(),
+      data_files = dfiles,
       options = {"py2app": py2app_opts,
-                 "pyrcc": pyrcc_opts},
-      cmdclass = {'pyrcc': build_helpers.PyRcc,
+                 "build_help": help_opts,
+                 "build_rcc": pyrcc_opts},
+      cmdclass = {'build_rcc': build_helpers.BuildRcc,
+                  'build_help': build_helpers.BuildHelp,
                   'build': build_helpers.Build},
       packages = packages,
       setup_requires=['py2app'],

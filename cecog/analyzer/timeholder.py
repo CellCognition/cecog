@@ -29,9 +29,6 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 import h5py
 import numpy
 
-# only temporary
-import pdb
-
 from cellh5 import CH5Const, CH5File, CH5Position
 
 from cecog import ccore
@@ -44,7 +41,7 @@ from cecog.plugin.metamanager import MetaPluginManager
 from cecog.analyzer.tracker import Tracker
 from cecog.analyzer.object import ImageObject, ObjectHolder, Orientation, Region
 
-from cecog.analyzer.feature_groups import FeatureGroups
+from cecog.features import FeatureGroups
 
 
 def chunk_size(shape):
@@ -121,13 +118,7 @@ class TimeHolder(OrderedDict):
                  hdf5_include_tracking=True, hdf5_include_events=True,
                  hdf5_include_annotation=True):
         super(TimeHolder, self).__init__()
-        try:
-            import pydevd
-            pydevd.connected = True
-            pydevd.settrace(suspend=False)
-            print 'Thread enabled interactive eclipse debuging...'
-        except:
-            pass
+
         self.P = P
         self.plate_id = plate_id
         self._iCurrentT = None
@@ -829,9 +820,9 @@ class TimeHolder(OrderedDict):
                                  container.getCrackCoordinates(obj_id)]
                         obj.crack_contour = crack
 
-                    if 'moments' in channel.lstFeatureCategories and eccentricity_idx is not None:
-                        obj.orientation = Orientation(angle = c_obj.orientation,
-                                                      eccentricity = object_features[j, eccentricity_idx])
+                        if channel.feature_groups.has_key('moments') and eccentricity_idx is not None:
+                            obj.orientation = Orientation(angle = c_obj.orientation,
+                                                          eccentricity = object_features[j, eccentricity_idx])
 
                     # assign feature values in sorted order as NumPy array
                     obj.aFeatures = object_features[j, :]
