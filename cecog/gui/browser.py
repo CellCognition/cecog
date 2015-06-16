@@ -31,7 +31,7 @@ from PyQt5.Qt import *
 from PyQt5 import QtWidgets
 
 from cecog import version
-from cecog.gui.util import information
+from cecog.gui.util import information, warning
 from cecog.gui.analyzer import BaseProcessorFrame
 
 from cecog.gui.imageviewer import ImageViewer, GalleryViewer
@@ -259,8 +259,11 @@ class Browser(QMainWindow):
         AnnotationModule(self._module_manager, self, self._settings,
                          self._imagecontainer)
 
-        
-        CellH5EventModule(self._module_manager, self, self._settings, self._imagecontainer)
+        try:
+            CellH5EventModule(self._module_manager, self, self._settings, self._imagecontainer)
+        except Exception as e:
+            warning(self, str(e))
+            
         # set the Navigation module activated
         self._module_manager.activate_tab(NavigationModule.NAME)
 

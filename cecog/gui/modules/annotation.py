@@ -1088,7 +1088,14 @@ class CellH5EventModule(CH5BasedModule):
     def update_event_table(self, coord):
         
         pos = self.ch5file.get_position_from_coord(coord)
-        events = pos.get_event_items()
+        try:
+            events = pos.get_event_items()
+        except KeyError as ke:
+            exception(self, "No event data found in CellH5. Make sure tracking and event selection has been enabled! ('%s)'"% str(ke))
+            return
+        except Exception as e:
+            exception(self, "An error has occured ('%s)'"% str(e))
+            return
         
         self.event_table.setRowCount(0)
     
