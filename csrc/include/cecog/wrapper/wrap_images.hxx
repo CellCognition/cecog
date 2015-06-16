@@ -792,12 +792,11 @@ PyObject * pyDistanceTransform(IMAGE1 const &imgIn, int norm)
 
 
 template <class IMAGE>
-PyObject * pyMultiRadialSymmetryTransform(IMAGE & imgSrc,
-                                         IMAGE  & imgMask,
-                                         double scale)
+PyObject * pyMultiRadialSymmetryTransform(IMAGE & imgSrc, IMAGE  & imgMask,
+                                         int min_scale, int max_scale)
 {
   std::auto_ptr< IMAGE > imgPtr(new IMAGE(imgSrc.size()));
-  cecog::multiRadialSymmetryTransform( imgSrc, imgMask, *imgPtr, scale);
+  cecog::multiRadialSymmetryTransform( imgSrc, imgMask, *imgPtr, min_scale, max_scale);
   return incref(object(imgPtr).ptr());
 }
 

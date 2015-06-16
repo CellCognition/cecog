@@ -664,9 +664,11 @@ namespace cecog
 	multiRadialSymmetryTransformMain(MultiArrayView<2, T1, S1> const & src,
 							MultiArrayView<2, T2, S2> const & mask,
 							MultiArrayView<2, T3, S3> dest,
-							double scale)
+                            int min_scale, int max_scale)
 	{
         using namespace std;
+
+        double scale = double(max_scale / 2);
 
 		vigra_precondition(scale > 0.0,
 					 "radialSymmetryTransform(): Scale must be > 0");
@@ -718,7 +720,7 @@ namespace cecog
 				double cosA = VIGRA_CSTD::cos(angle);
 				double sinA = VIGRA_CSTD::sin(angle);
 				int dx_(0),dy_(0);
-				for (int ss=5; ss<=20; ++ss){
+				for (int ss= min_scale; ss<=max_scale; ++ss){
 					double coef_dist = ss / 20.0;
 
 					int dx = roundl(ss * cosA);
@@ -796,7 +798,7 @@ namespace cecog
     multiRadialSymmetryTransform(BIMAGE const & src, 
                                  BIMAGE const & mask,
                                  BIMAGE & dest,
-                                 double scale)
+                                 int min_scale, int max_scale)
     {
         int width = src.width();
         int height = src.height();
@@ -819,7 +821,7 @@ namespace cecog
             }
         }
 
-        multiRadialSymmetryTransformMain(maSrc, maMask, maDest, scale);
+        multiRadialSymmetryTransformMain(maSrc, maMask, maDest, min_scale, max_scale);
 		// exportImage(maDest, "/home/zhang/work/image/temp/imFRST00.png");
         
   	    typename BIMAGE::traverser it3Current = dest.upperLeft();

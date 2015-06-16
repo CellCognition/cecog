@@ -18,7 +18,8 @@ from cecog import ccore
 from cecog.gui.guitraits import (BooleanTrait,
                                  IntTrait,
                                  FloatTrait,
-                                 StringTrait)
+                                 StringTrait,
+                                 SelectionTrait)
 
 
 from cecog.plugin import stopwatch
@@ -30,8 +31,8 @@ from sklearn import cluster
 import ipdb
 import scipy
 
-def imwrite(imout, imname):
-    scipy.misc.imsave(os.path.join("/home/zhang/work/image/temp",imname), imout)
+def imwrite(imout, out_dir, imname):
+    scipy.misc.imsave(os.path.join(out_dir,imname), imout)
 
 class SegmentationPluginPrimary(_SegmentationPlugin):
 
@@ -1121,37 +1122,82 @@ class SegmentationPluginDifference(_SegmentationPlugin):
         
         
 class SegmentationPluginFRST(_SegmentationPlugin):
-    LABEL = 'FRST and watershed (beta)'
+    LABEL = 'FRST and watershed'
     NAME = 'frst_ws'
     COLOR = '#7CEDFF'
 
     REQUIRES = None
+    
+    image_types = ["HE", "HEDab"]
 
-    PARAMS = [('nuclear_diam', IntTrait(20, 1, 100, label='nuclear diameter in pixel')),
+    PARAMS = [('if_test', BooleanTrait(False, label='Test mode')),
+              ('size_para', BooleanTrait(True, label='Size parameters')),
+              ('frst_para', BooleanTrait(True, label='FRST parameters')),
+              ('grad_para', BooleanTrait(True, label='Gradient parameters')),
+              ('test_folder', StringTrait('', 1000, label='Intermediate images saving folder',
+                                                 widget_info=StringTrait.STRING_PATH)),
+              ('nuclear_diam', IntTrait(30, 1, 200, label='largest nuclear diameter in pixel')),
+              ('se_size', IntTrait(6, 1, 200, label='size of structuring element (remove noise)')),
+              ('image_type', SelectionTrait(image_types[0], image_types, label='Image type')),
+              ('min_scale', IntTrait(5, 1, 200, label='FRST min search scale')),
+              ('max_scale', IntTrait(20, 1, 200, label='FRST max search scale')),
+              ('frst_h1', IntTrait(1, 1, 255, label='FRST h-minimum height 1')),
+              ('frst_h2', IntTrait(2, 1, 255, label='FRST h-minimum height 2')),
+              ('bg_dist', IntTrait(40, 1, 200, label='Minimum distance from BG-markers to NU-markers')),
+              ('sigma', FloatTrait(1.0, 0.0, 100.0, label='Gradient sigma')),
+              ('t_grad', FloatTrait(3.0, 0.0, 255.0, label='Gradient threshold')),          
               ]
 
     def render_to_gui(self, panel):
-        panel.add_group(None,
-                        [('nuclear_diam', (0, 0, 1, 1)),
+        panel.add_group('if_test',
+                        [('test_folder', (0, 0, 1, 1)),
                          ])
- 
+        panel.add_input('image_type')       
+        panel.add_group('size_para',
+                        [('nuclear_diam', (0, 0, 1, 1)),
+                         ('se_size', (0, 1, 1, 1)),
+                         ('bg_dist', (1, 0, 1, 1)),
+                         ])
+        panel.add_group('frst_para',
+                        [('min_scale', (0, 0, 1, 1)),
+                         ('max_scale', (0, 1, 1, 1)),
+                         ('frst_h1', (1, 0, 1, 1)),
+                         ('frst_h2', (1, 1, 1, 1)),
+                         ])
+        panel.add_group('grad_para',
+                        [('sigma', (0, 0, 1, 1)),
+                         ('t_grad', (0, 1, 1, 1)),
+                         ])                  
 
     @stopwatch()
-    def colorDeconv(self,imin,M=0):
-        M_h_e_dab_meas = numpy.array([[0.650, 0.072, 0.268],\
-                               [0.704, 0.990, 0.570],\
-                               [0.286, 0.105, 0.776]])
+    def colorDeconv(self,imin):
+#        M_h_e_dab_meas = numpy.array([[0.650, 0.072, 0.268],\
+#                               [0.704, 0.990, 0.570],\
+#                               [0.286, 0.105, 0.776]])
+        # [Dab, E, H]
+        M_h_e_dab_meas = numpy.array([[0.268, 0.072, 0.650],\
+                               [0.570, 0.990, 0.704],\
+                               [0.776, 0.105, 0.286]])
     
+        # [H,E]
         M_h_e_meas = numpy.array([[0.644211, 0.092789],\
                            [0.716556, 0.954111],\
                            [0.266844, 0.283111]])
-        M = M_h_e_meas
+        if self.params['image_type'] == "HE":
+            print "HE stain"
+            M = M_h_e_meas
+        elif self.params['image_type'] == "HEDab":
+            print "HEDab stain"
+            M = M_h_e_dab_meas
+        else:
+            print "Unrecognized image type !! image type set to \"HE\" "
+            M = M_h_e_meas
         M_inv =  numpy.dot(linalg.inv(numpy.dot(M.T, M)), M.T)
         imDecv = numpy.dot(imin, M_inv.T)
         imout = numpy.zeros(imDecv.shape, dtype = numpy.uint8)
         
         ## Normalization
-        for i in range(2):
+        for i in range(imout.shape[-1]):
             toto = imDecv[:,:,i]
             vmax = toto.max()
             vmin = toto.min()
@@ -1167,10 +1213,15 @@ class SegmentationPluginFRST(_SegmentationPlugin):
     def clustering(self, imColor, imDeconv):
         """
         clustering using H & E channels 
-        return an image with 3 values:
-        pixel value = 1: cell nuclei (H)
-        pixel value = 2: other stucture (E)
-        pixel value = 3: white background
+        For image HE stainned:
+            return an image with 3 values:
+            pixel value = 1: cell nuclei (H)
+            pixel value = 2: other stucture (E)
+            pixel value = 3: white background
+        For image HEDab stainned:
+            return an image with 2 values:
+            pixel value = 1: cell nuclei (Dab)
+            pixel value = 2: the rest   
         """
         ######### prepare for clustering ###########        
         size = [imColor.width, imColor.height]
@@ -1182,11 +1233,17 @@ class SegmentationPluginFRST(_SegmentationPlugin):
         X = (feats - vmin) / (vmax-vmin)
         X = X[:feats.shape[0]]
         
-        initCenter = numpy.array([\
-                [0., 0.5],\
-                [0.8, 0.],\
-                [1., 1.],\
-                ])
+        if self.params['image_type'] == "HE":
+            initCenter = numpy.array([\
+                    [0., 0.5],\
+                    [0.8, 0.],\
+                    [1., 1.],\
+                    ])
+        elif self.params['image_type'] == "HEDab":
+            initCenter = numpy.array([\
+                    [0., 1.],\
+                    [1., 0.],\
+                    ])            
                 
         ######### clustering ############
         n_class = 4
@@ -1196,11 +1253,6 @@ class SegmentationPluginFRST(_SegmentationPlugin):
         km.fit(X)
 
         while km.cluster_centers_[0,0] > km.cluster_centers_[1,0]:
-            initCenter = numpy.array([\
-                [0., 0.5],\
-                [0.8, 0.],\
-                [1., 1.],\
-                ])
             n_iter /= 2
             km = cluster.MiniBatchKMeans( n_clusters=n_class, init = initCenter, max_iter = n_iter) # 4 class max_iter = 1,
             km.fit(X)                
@@ -1208,13 +1260,12 @@ class SegmentationPluginFRST(_SegmentationPlugin):
         ######### output ############
         imout = km.labels_.astype(numpy.uint8) + 1
         imout = imout.reshape((size[1], size[0])).astype(numpy.uint8)
-        imwrite(imout, "clusterOut.png")
         im_return = imout
         
         return im_return        
                 
     @stopwatch()
-    def filter_1(self, imCluster, se_size):
+    def filter_1(self, imCluster):
         """
         take the result of clustering, remove irrelevent structures
         """
@@ -1223,34 +1274,25 @@ class SegmentationPluginFRST(_SegmentationPlugin):
         imCluster[imCluster==1] = 255
         im1 = ccore.numpy_to_image(imCluster, copy=True)
         
-        #im2 = ccore.dilate(im1, 2, 8)
         im2 = ccore.fillHoles(im1)
-        
-        im3 = ccore.areaOpen(im2, se_size*se_size)
-        
-        im4 = ccore.discDilate(im3, se_size/2)
-    
-        ccore.writeImage(im4, "/home/zhang/work/image/temp/temp1.png")
-        
-        
+        im3 = ccore.areaOpen(im2, self.params['se_size'] *self.params['se_size'])
+        im4 = ccore.discDilate(im3, self.params['se_size']/2)
+   
         return im4
-        
- 
 
     @stopwatch()
-    def preprocessing(self, imOrig, se_size):
+    def preprocessing(self, imOrig):
         """
         take the result of clustering, remove irrelevent structures
         """
-        im1 = ccore.discErode(imOrig, se_size)
+        im1 = ccore.discErode(imOrig, self.params['se_size'])
         im2 = ccore.underBuild(im1, imOrig)
 
-        im3 = ccore.discDilate(im2, se_size)
+        im3 = ccore.discDilate(im2, self.params['se_size'])
         im4 = ccore.overBuild(im3, im2)
 
-        im1 = ccore.discDilate(im4, se_size / 2)        
-        im2 = ccore.discErode(im1, se_size / 2)        
-        ccore.writeImage(im2, "/home/zhang/work/image/temp/temp2.png")
+        im1 = ccore.discDilate(im4, self.params['se_size'] / 2)        
+        im2 = ccore.discErode(im1, self.params['se_size'] / 2)
         
         return im2
                 
@@ -1264,15 +1306,25 @@ class SegmentationPluginFRST(_SegmentationPlugin):
         return im1  
                 
     @stopwatch()
-    def getMarkersByFRST(self, imPreproc, imCluster, size):
-        
-        imFRST = ccore.multiRadialSymmetryTransform(imPreproc, imCluster, 10)
-        ccore.writeImage(imFRST, "/home/zhang/work/image/temp/imFRST.png")
+    def getMarkersByFRST(self, imPreproc, imCluster,):
+        # imFRST = ccore.multiRadialSymmetryTransform(imPreproc, imCluster, min_scale, max_scale)
+        imFRST = ccore.multiRadialSymmetryTransform(imPreproc, imCluster, \
+                            self.params['min_scale'], self.params['max_scale']) 
+        if self.params["if_test"]:
+            ccore.writeImage(imFRST, os.path.join(self.params["test_folder"], \
+                           "im_3a_FRST_" + str(self.params['min_scale']) + \
+                           "_" + str(self.params['max_scale']) + ".png"))
 
         ######### Get markers of cell nuclei ############
-        im1 = self.HMinima(imFRST, 1)
+        """
+        the first hminima provide all potential candidates of nuclei markers
+        the second provide maskers to select the markers from the first
+        the funcion ccore.objectSelection is to ensure one local minima from the
+            first under the masks from the second
+        """        
+        im1 = self.HMinima(imFRST, self.params['frst_h1'])
         im2 = ccore.threshold(im1, 1, 255, 0, 255)
-        im1 = self.HMinima(imFRST, 2)
+        im1 = self.HMinima(imFRST, self.params['frst_h2'])
         im3 = ccore.threshold(im1, 1, 255, 0, 255) 
         
         im4 = ccore.objectSelection(im2, im3, imFRST);
@@ -1283,13 +1335,11 @@ class SegmentationPluginFRST(_SegmentationPlugin):
         im2 = ccore.infimum(im1, im4)
         im3 = ccore.underBuild(im2, im4)
         imMarkers = ccore.substractImages(im4, im3)
-        ccore.writeImage(imMarkers, "/home/zhang/work/image/temp/imMarkers1.png")
-
         return imMarkers  
 
 
     @stopwatch()
-    def getBackgroundMarkers(self, imMarkers, t_dist):
+    def getBackgroundMarkers(self, imMarkers):
         
         ######## Distance transform from markers, and transform to UInt8 ######
         imDist = ccore.distanceTransform(imMarkers, 2)
@@ -1301,7 +1351,8 @@ class SegmentationPluginFRST(_SegmentationPlugin):
         offset = 0 # minmax[0]
         ratio = 1  # 255.0 / (minmax[1] - minmax[0])
         imDistU = ccore.linearTransform(imDist, ratio, offset)
-        ccore.writeImage(imDistU, "/home/zhang/work/image/temp/temp2.png")
+        if self.params["if_test"]:
+            ccore.writeImage(imDistU, os.path.join(self.params["test_folder"], "im_3c_distanceMap.png"))
 
         ######## Watershed to get background markers #############
         imWS = ccore.constrainedWatershed(imDistU, imMarkers)
@@ -1311,24 +1362,20 @@ class SegmentationPluginFRST(_SegmentationPlugin):
         imDistNumpy = imDist.toArray()
         imWSLineNumpy = imWSLine.toArray()
         
-        imWSLineNumpy[ imDistNumpy < t_dist ] = 0
+        imWSLineNumpy[ imDistNumpy < self.params['bg_dist'] ] = 0
         imWSLine = ccore.numpy_to_image(imWSLineNumpy, copy=True)
-        ccore.drawRectangle(imWSLine, 255)
 
         ######## Add border into background marker ###############
-        ccore.writeImage(imWSLine, "/home/zhang/work/image/temp/temp3.png")
-
+        ccore.drawRectangle(imWSLine, 255)
         return imWSLine
 
 
     @stopwatch()
-    def nucleiSegmentation(self, imOrig, imPreproc, imMarkersNu, imMarkersBg, t_grad, max_size):
-        se_size = max_size / 5;
-        
+    def nucleiSegmentation(self, imOrig, imPreproc, imMarkersNu, imMarkersBg):
         ######## Get gradient magnitude image from preproccessed image #######
-        imGrad = ccore.gaussianGradientMagnitude(imPreproc, 1.0)
+        imGrad = ccore.gaussianGradientMagnitude(imPreproc, self.params['sigma'])
         imGradNumpy = imGrad.toArray()
-        imGradNumpy[ imGradNumpy < t_grad ] = 0.0
+        imGradNumpy[ imGradNumpy < self.params['t_grad'] ] = 0.0
         imGrad = ccore.numpy_to_image(imGradNumpy, copy=True)
                 
         minmax = imGrad.getMinmax()
@@ -1349,29 +1396,33 @@ class SegmentationPluginFRST(_SegmentationPlugin):
         imWS = ccore.numpy_to_image(imWSNumpy, copy=True)    
         imCand1 = ccore.underBuild(imMarkersNu, imWS)
 
-        imCand2 = ccore.areaOpen(imCand1, int(numpy.round(max_size * max_size * numpy.pi)))
+        imCand2 = ccore.areaOpen(imCand1, int(numpy.round(self.params['nuclear_diam'] \
+            * self.params['nuclear_diam'] * numpy.pi)))
         imCand3 = ccore.substractImages(imCand1, imCand2)
 
         # imCand2 = ccore.diameterOpen(imCand3, int(max_size * 3))
-        imCand1 = ccore.lengthOpening(imCand3, int(max_size * 2), int(max_size * max_size * numpy.pi), 20)
-
-        # imCand1 = ccore.substractImages(imCand3, imCand2)
-
-        ccore.writeImage(imCand1, "/home/zhang/work/image/temp/temp4.png")
+        imCand1 = ccore.lengthOpening(imCand3, int(self.params['nuclear_diam'] * 2), \
+            int(self.params['nuclear_diam'] * self.params['nuclear_diam'] * numpy.pi), 20)
+        if self.params["if_test"]:
+            ccore.writeImage(imCand1, os.path.join(self.params["test_folder"], "im_4a_candi_WS.png"))
 
         ######## using previous segmented candidates to do an adaptive thresholding ###
         im1 = ccore.adaptiveThreshold(imOrig, imCand1, 0.04, 0.5)
-        im2 = ccore.areaOpen(im1, int(numpy.round(se_size * se_size * 2)))
-        im1 = ccore.lengthOpening(im2, int(max_size * 2), int(max_size * max_size), 5)
+        im2 = ccore.areaOpen(im1, int(numpy.round(self.params['se_size']  * \
+            self.params['se_size']  * 2)))
+        im1 = ccore.lengthOpening(im2, int(self.params['nuclear_diam'] * 2), \
+            int(self.params['nuclear_diam'] * self.params['nuclear_diam']), 5)
         # im1 = ccore.substractImages(im2, im3)
 
         im2 = ccore.discDilate(im1, 1)
         im1 = ccore.discErode(im2, 1)
 
-        ccore.writeImage(im1, "/home/zhang/work/image/temp/temp5.png")
+        if self.params["if_test"]:
+            ccore.writeImage(im1, os.path.join(self.params["test_folder"], "im_4b_candi_adaptive_TH.png"))
         
         imCand2 = ccore.supremum(imCand1, im1)
-        ccore.writeImage(imCand2, "/home/zhang/work/image/temp/temp6.png")
+        if self.params["if_test"]:
+            ccore.writeImage(imCand2, os.path.join(self.params["test_folder"], "im_4c_candi_all.png"))
 
         ######## Merge over-segmented candidates #############################        
         imNuclei = ccore.candidateAnalysis(imCand2, imOrig)
@@ -1381,8 +1432,6 @@ class SegmentationPluginFRST(_SegmentationPlugin):
 
     @stopwatch()
     def _run(self, meta_image):
-        max_size = 30
-        se_size = max_size/5        
         
         imColor = meta_image.image
         ######### image deconvolution ##############
@@ -1391,25 +1440,38 @@ class SegmentationPluginFRST(_SegmentationPlugin):
         arTmp = numpy.zeros(imDeconv[:,:,0].shape, dtype = numpy.uint8)
         arTmp[:,:] = imDeconv[:,:,0]
         imH_org = ccore.numpy_to_image(arTmp, copy=True)
-        imwrite(imDeconv[:,:,0], "imdeconv1.png")
-        imwrite(imDeconv[:,:,1], "imdeconv2.png")
-        
+        if self.params["if_test"]:
+            imwrite(imDeconv[:,:,0], self.params["test_folder"], "im_0_deconv1.png")
+            imwrite(imDeconv[:,:,1], self.params["test_folder"], "im_0_deconv2.png")
+            if imDeconv.shape[-1] > 2:
+                imwrite(imDeconv[:,:,2], self.params["test_folder"], "im_0_deconv3.png")
         
         impyCluster = self.clustering(imColor, imDeconv)
+        if self.params["if_test"]:
+            imwrite(impyCluster, self.params["test_folder"], "im_1a_clustering.png")        
         
-        imCluster = self.filter_1(impyCluster, se_size)
-  
-        imPreproc = self.preprocessing(imH_org, se_size)      
+        imCluster = self.filter_1(impyCluster)
+        if self.params["if_test"]:
+            ccore.writeImage(imCluster, os.path.join(self.params["test_folder"], "im_1b_clusteringMask.png"))
 
+        imPreproc = self.preprocessing(imH_org)      
+        if self.params["if_test"]:
+            ccore.writeImage(imPreproc, os.path.join(self.params["test_folder"], "im_2_preprocessing.png"))
+        
         ## Nuclei markers
-        imMarkers1 = self.getMarkersByFRST(imPreproc, imCluster, 10)
+        imMarkers1 = self.getMarkersByFRST(imPreproc, imCluster)
+        if self.params["if_test"]:
+            ccore.writeImage(imMarkers1, os.path.join(self.params["test_folder"], "im_3b_markersByFRST.png"))
         
         ## Background markers
-        imMarkers2 = self.getBackgroundMarkers(imMarkers1, 40)
+        imMarkers2 = self.getBackgroundMarkers(imMarkers1)
+        if self.params["if_test"]:
+            ccore.writeImage(imMarkers2, os.path.join(self.params["test_folder"], "im_3d_BGMarkers.png"))
         
-        imNuclei = self.nucleiSegmentation(imH_org, imPreproc, imMarkers1, imMarkers2, 3, max_size)
-        
-        ccore.writeImage(imNuclei, "/home/zhang/work/image/temp/final_candidates.png")
+        imNuclei = self.nucleiSegmentation(imH_org, imPreproc, imMarkers1, imMarkers2)
+        if self.params["if_test"]:
+            ccore.writeImage(imNuclei, os.path.join(self.params["test_folder"], "im_4c_candi_merge_oversegment.png"))
+    
      
       
 #        imout = ccore.threshold(im1, 1, 255, 0, 255)

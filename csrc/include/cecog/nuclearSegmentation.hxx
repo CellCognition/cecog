@@ -701,8 +701,8 @@ const int nl8[2][8][2] = { { {1,0},{1,1},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-
 			imOut[k] = 255;
 		}
 	}
-    exportImage(imoutC, ImageExportInfo("/home/zhang/work/image/temp/z6_result_LR.png"));
-    exportImage(imCandi, ImageExportInfo("/home/zhang/work/image/temp/z6_final_candi.png"));
+    // exportImage(imoutC, ImageExportInfo("/home/zhang/work/image/temp/z6_result_LR.png"));
+    // exportImage(imCandi, ImageExportInfo("/home/zhang/work/image/temp/z6_final_candi.png"));
  } // end of function
  
  
