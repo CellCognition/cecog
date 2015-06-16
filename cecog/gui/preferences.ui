@@ -14,7 +14,7 @@
    <string>Preferences</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../../cecog.qrc">
+   <iconset>
     <normaloff>:/resources/icons/applications-system.png</normaloff>:/resources/icons/applications-system.png</iconset>
   </property>
   <layout class="QGridLayout" name="gridLayout_2">
@@ -74,7 +74,7 @@
       </property>
       <property name="icon">
        <iconset resource="../../cecog.qrc">
-        <normaloff>:/resources/icons/network-server.png</normaloff>:/resources/icons/network-server.png</iconset>
+        <normaloff>:/network-server.png</normaloff>:/network-server.png</iconset>
       </property>
      </item>
      <item>
@@ -83,7 +83,7 @@
       </property>
       <property name="icon">
        <iconset resource="../../cecog.qrc">
-        <normaloff>:/resources/icons/picmi.png</normaloff>:/resources/icons/picmi.png</iconset>
+        <normaloff>:/picmi.png</normaloff>:/picmi.png</iconset>
       </property>
      </item>
     </widget>

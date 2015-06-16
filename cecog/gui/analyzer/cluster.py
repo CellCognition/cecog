@@ -282,7 +282,8 @@ class ClusterDisplay(QGroupBox):
             test_sock.close()
         except:
             msg = "Could not connect to cluster\n(%s)" %self._host_url
-            QMessageBox.critical(self, "Error", msg)
+            raise RuntimeError(msg)
+
 
     def _check_api_version(self):
         try:
@@ -299,10 +300,10 @@ class ClusterDisplay(QGroupBox):
             raise RuntimeError(msg)
 
     def _connect(self):
-        self._check_host_url()
 
         success = False
         try:
+            self._check_host_url()
             client = RemotingService(self._host_url)
             self.dlg = ProgressDialog("Connecting to Cluster...", None, 0, 0, self)
             func = lambda: client.getService('clustercontrol')
