@@ -23,6 +23,7 @@ from cecog.gui.analyzer import BaseProcessorFrame, AnalyzerThread
 class TrackingFrame(BaseProcessorFrame):
 
     PROCESS_TRACKING = 'PROCESS_TRACKING'
+    ICON = ":tracking.png"
 
     def __init__(self, settings, parent, name):
         super(TrackingFrame, self).__init__(settings, parent, name)

@@ -350,10 +350,12 @@ class ClassificationFrame(BaseProcessorFrame):
 
     TABS = ['Primary Channel', 'Secondary Channel',
             'Tertiary Channel', 'Merged Channel']
+    ICON = ":classification.png"
 
     PICKING = 'PICKING'
     TRAINING = 'TRAINING'
     TESTING = 'TESTING'
+
 
     def __init__(self, settings, parent, name):
         super(ClassificationFrame, self).__init__(settings, parent, name)

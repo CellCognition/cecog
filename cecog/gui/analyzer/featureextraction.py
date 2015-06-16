@@ -26,6 +26,7 @@ class FeatureExtractionFrame(BaseFrame):
 
     DISPLAY_NAME = 'Feature Extraction'
     TABS = ['Primary Channel', 'Secondary Channel', 'Tertiary Channel']
+    ICON = ":feature-extraction.png"
 
     def __init__(self, settings, parent, name):
         super(FeatureExtractionFrame, self).__init__(settings, parent, name)

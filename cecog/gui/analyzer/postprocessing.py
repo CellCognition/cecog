@@ -21,6 +21,7 @@ from cecog.gui.analyzer import BaseProcessorFrame,  PostProcessingThread
 class PostProcessingFrame(BaseProcessorFrame):
 
     DISPLAY_NAME = 'Plots and Postprocessing'
+    ICON = ":postprocessing.png"
 
     def __init__(self, settings, parent, name):
         super(PostProcessingFrame, self).__init__(settings, parent, name)

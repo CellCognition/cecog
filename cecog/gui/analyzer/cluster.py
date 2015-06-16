@@ -426,6 +426,8 @@ class ClusterDisplay(QGroupBox):
 
 class ClusterFrame(BaseFrame, ExportSettings):
 
+    ICON = ":network-server.png"
+
     def __init__(self, settings, parent, name):
         super(ClusterFrame, self).__init__(settings, parent, name)
 

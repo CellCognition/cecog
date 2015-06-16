@@ -21,6 +21,7 @@ class EventSelectionFrame(BaseProcessorFrame):
 
     DISPLAY_NAME = 'Event Selection'
     PROCESS_SYNCING = 'PROCESS_SYNCING'
+    ICON = ":event-selection.png"
 
     def __init__(self, settings, parent, name):
         super(EventSelectionFrame, self).__init__(settings, parent, name)
@@ -69,8 +70,8 @@ class EventSelectionFrame(BaseProcessorFrame):
             trait.set_list_data(clfnames)
         except AttributeError:
             pass
-        
-        
+
+
 
 
     def _get_modified_settings(self, name, has_timelapse=True):

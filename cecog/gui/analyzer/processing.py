@@ -145,6 +145,8 @@ class ExportSettings(object):
 
 class ProcessingFrame(BaseProcessorFrame, ExportSettings):
 
+    ICON = ":processing.png"
+
     def __init__(self, settings, parent, name):
         super(ProcessingFrame, self).__init__(settings, parent, name)
 

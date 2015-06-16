@@ -20,6 +20,8 @@ from cecog.gui.analyzer import BaseFrame
 
 class OutputFrame(BaseFrame):
 
+    ICON = ":output.png"
+
     def __init__(self, settings, parent, name):
         super(OutputFrame, self).__init__(settings, parent, name)
 
