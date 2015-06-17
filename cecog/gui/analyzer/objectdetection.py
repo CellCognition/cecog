@@ -27,6 +27,7 @@ class ObjectDetectionFrame(BaseProcessorFrame):
 
     DISPLAY_NAME = 'Object Detection'
     TABS = ['Primary Channel', 'Secondary Channel', 'Tertiary Channel']
+    ICON = ":segmentation.png"
 
     def __init__(self, settings, parent, name):
         super(ObjectDetectionFrame, self).__init__(settings, parent, name)

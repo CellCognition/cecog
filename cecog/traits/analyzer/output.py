@@ -27,7 +27,10 @@ class SectionOutput(SectionCore):
 
     OPTIONS = [
      ('output',
-       [('rendering_labels_discwrite',
+       [('text_output',
+         BooleanTrait(False, label='Text Output',
+                      widget_info=BooleanTrait.RADIOBUTTON)),
+        ('rendering_labels_discwrite',
          BooleanTrait(False, label='Label images')),
         ('rendering_contours_discwrite',
          BooleanTrait(False, label='Contour images')),
@@ -62,7 +65,8 @@ class SectionOutput(SectionCore):
         ]),
      ('hdf5',
       [('hdf5_create_file',
-        BooleanTrait(False, label='Create HDF5')),
+        BooleanTrait(True, label='Create HDF5',
+                     widget_info=BooleanTrait.RADIOBUTTON)),
        ('hdf5_reuse',
         BooleanTrait(False, label='Reuse HDF5')),
        ('minimal_effort',
