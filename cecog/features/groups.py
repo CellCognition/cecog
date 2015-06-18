@@ -12,6 +12,17 @@ class FGroup(OrderedDict):
     def __init__(self, name, *args, **kw):
         super(FGroup, self).__init__(*args, **kw)
         self.group_name = name
+        self._inv = None
+
+    @property
+    def inverse(self):
+        if self._inv is None:
+            inverse = dict()
+            for group, features in self.iteritems():
+                for feature in features:
+                    inverse[feature] = group
+            self._inv = inverse
+        return self._inv
 
 
 _Cecog = FGroup('CellCognition')
