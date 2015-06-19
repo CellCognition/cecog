@@ -1129,11 +1129,14 @@ class SegmentationPluginFRST(_SegmentationPlugin):
     REQUIRES = None
     
     image_types = ["HE", "HEDab"]
+    classifiers = ["Logistic regression (AUTO)", "Perceptron"]
 
     PARAMS = [('if_test', BooleanTrait(False, label='Test mode')),
               ('size_para', BooleanTrait(True, label='Size parameters')),
               ('frst_para', BooleanTrait(True, label='FRST parameters')),
               ('grad_para', BooleanTrait(True, label='Gradient parameters')),
+              ('if_merge', BooleanTrait(True, label='Merge candidates')),
+
               ('test_folder', StringTrait('', 1000, label='Intermediate images saving folder',
                                                  widget_info=StringTrait.STRING_PATH)),
               ('nuclear_diam', IntTrait(30, 1, 200, label='largest nuclear diameter in pixel')),
@@ -1145,7 +1148,19 @@ class SegmentationPluginFRST(_SegmentationPlugin):
               ('frst_h2', IntTrait(2, 1, 255, label='FRST h-minimum height 2')),
               ('bg_dist', IntTrait(40, 1, 200, label='Minimum distance from BG-markers to NU-markers')),
               ('sigma', FloatTrait(1.0, 0.0, 100.0, label='Gradient sigma')),
-              ('t_grad', FloatTrait(3.0, 0.0, 255.0, label='Gradient threshold')),          
+              ('t_grad', FloatTrait(3.0, 0.0, 255.0, label='Gradient threshold')),  
+              
+              ('classifier', SelectionTrait(classifiers[0], classifiers, label='Classifier')),
+              ('coef1', FloatTrait(-3.8721, -50.0, 50.0, label='line-min')),   
+              ('coef2', FloatTrait(-1.5319, -50.0, 50.0, label='line-max')),  
+              ('coef3', FloatTrait(-2.4014, -50.0, 50.0, label='max-min')), 
+              ('coef4', FloatTrait(5.1876, -50.0, 50.0, label='area/convex(merged)')), 
+              ('coef5', FloatTrait(-1.9299, -50.0, 50.0, label='area/convex(larger)')), 
+              ('coef6', FloatTrait(-0.3491, -50.0, 50.0, label='area/convex(smaller)')), 
+              ('coef7', FloatTrait(4.7345, -50.0, 50.0, label='coef4-coef5')), 
+              ('coef8', FloatTrait(6.0479, -50.0, 50.0, label='coef4-coef6')), 
+              ('coef9', FloatTrait(0.5598, -50.0, 50.0, label='areaS/areaL')), 
+              ('coef10', FloatTrait(-7, -50.0, 50.0, label='intercept')),       
               ]
 
     def render_to_gui(self, panel):
@@ -1167,8 +1182,21 @@ class SegmentationPluginFRST(_SegmentationPlugin):
         panel.add_group('grad_para',
                         [('sigma', (0, 0, 1, 1)),
                          ('t_grad', (0, 1, 1, 1)),
-                         ])                  
-
+                         ])             
+        panel.add_group('if_merge',
+                        [('classifier', (0, 0, 1, 1)),
+                         ('coef1', (1, 0, 1, 1)),
+                         ('coef2', (1, 1, 1, 1)),
+                         ('coef3', (1, 2, 1, 1)),
+                         ('coef4', (2, 0, 1, 1)),
+                         ('coef5', (2, 1, 1, 1)),
+                         ('coef6', (2, 2, 1, 1)),
+                         ('coef7', (3, 0, 1, 1)),
+                         ('coef8', (3, 1, 1, 1)),
+                         ('coef9', (4, 0, 1, 1)),
+                         ('coef10', (4, 1, 1, 1)),
+                         
+                         ])  
     @stopwatch()
     def colorDeconv(self,imin):
 #        M_h_e_dab_meas = numpy.array([[0.650, 0.072, 0.268],\
@@ -1424,9 +1452,18 @@ class SegmentationPluginFRST(_SegmentationPlugin):
         if self.params["if_test"]:
             ccore.writeImage(imCand2, os.path.join(self.params["test_folder"], "im_4c_candi_all.png"))
 
-        ######## Merge over-segmented candidates #############################        
-        imNuclei = ccore.candidateAnalysis(imCand2, imOrig)
-        
+        ######## Merge over-segmented candidates #############################
+        if (self.params["if_merge"]):
+            if self.params["classifier"] == self.classifiers[0]:
+                cls = 0  ## logistic regression
+            else:
+                cls = 1  ## perceptron
+            imNuclei = ccore.candidateAnalysis(imCand2, imOrig, cls, self.params["coef1"], \
+                self.params["coef2"], self.params["coef3"], self.params["coef4"], \
+                self.params["coef5"], self.params["coef6"], self.params["coef7"], \
+                self.params["coef8"], self.params["coef9"], self.params["coef10"])
+        else:
+            imNuclei = imCand2
         return imNuclei
         
 
@@ -1472,20 +1509,6 @@ class SegmentationPluginFRST(_SegmentationPlugin):
         if self.params["if_test"]:
             ccore.writeImage(imNuclei, os.path.join(self.params["test_folder"], "im_4c_candi_merge_oversegment.png"))
     
-     
-      
-#        imout = ccore.threshold(im1, 1, 255, 0, 255)
-#        
-#        ar1 = numpy.zeros(imDeconv[:,:,0].shape, dtype = numpy.uint8)
-#        ar1[:,:] = imDeconv[:,:,0]
-#        image = ccore.numpy_to_image(ar1, copy=True)
-#        im2 = ccore.fillHoles(image)        
-#        imwrite(ar1, "temp3_.png")
-#        ccore.writeImage(image, "/home/zhang/work/image/temp/temp3.png")
-#        ccore.writeImage(im2, "/home/zhang/work/image/temp/temp4.png")
-#        ipdb.set_trace()
-        
-        # ipdb.set_trace()
         container = ccore.ImageMaskContainer(imH_org, imNuclei, False)
         
         return container

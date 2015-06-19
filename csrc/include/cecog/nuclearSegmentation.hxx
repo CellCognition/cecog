@@ -326,7 +326,7 @@ namespace cecog {
  
 
 template <class T1, class S1>
-void CandidateAnalysis(const MultiArrayView<2, T1, S1> imCandi, const MultiArrayView<2, T1, S1> imOrig, MultiArrayView<2, T1, S1> imOut){
+void CandidateAnalysis(const MultiArrayView<2, T1, S1> imCandi, const MultiArrayView<2, T1, S1> imOrig, MultiArrayView<2, T1, S1> imOut, const int cls, const double (&coef)[10]){
 
 const int nl6[2][6][2] = { { {0,-1},{1,0},{0,1},{-1,1},{-1,0},{-1,-1}},
                             {{1,-1},{1,0},{1,1},{0,1},{-1,0},{0,-1}} };
@@ -430,8 +430,6 @@ const int nl8[2][8][2] = { { {1,0},{1,1},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-
             candis[k].areaConvex = areaPolygon(poly, imtemp1);
         }
     }
-
-
 
     // 5. frontier analysis
     int **neighborList = new int*[N_candi];
@@ -562,7 +560,7 @@ const int nl8[2][8][2] = { { {1,0},{1,1},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-
     }
 
     // std::ofstream myfile;
-    // myfile.open("features.txt");
+    // myfile.open("/home/zhang/work/image/temp/features.txt");
 
     for (int k=0; k<N_lines; ++k){
         lines[k].mean /= lines[k].area;
@@ -610,34 +608,6 @@ const int nl8[2][8][2] = { { {1,0},{1,1},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-
                     poly.push_back(bb[l]);
                 }
                 
-//			    ArrayVector<Point> scan_intervals;
-//			    // std::vector<Point> scan_intervals;
-//				vigra::detail::createScanIntervals(poly, scan_intervals);
-//				int N(0);
-//				for(unsigned int k=0; k < scan_intervals.size(); k+=2)
-//				{
-//
-//					MultiArrayIndex x    = (MultiArrayIndex)ceil(scan_intervals[k][0]),
-//									y    = (MultiArrayIndex)scan_intervals[k][1],
-//									xend = (MultiArrayIndex)floor(scan_intervals[k+1][0]) + 1;
-//					vigra_invariant(y == scan_intervals[k+1][1],
-//						"fillPolygon(): internal error - scan interval should have same y value.");
-//					// clipping
-//					if(y < 0)
-//						continue;
-//					if(y >= imtemp1.shape(1))
-//						break;
-//					if(x < 0)
-//						x = 0;
-//					if(xend > imtemp1.shape(0))
-//						xend = imtemp1.shape(0);
-//					// drawing
-//					for(; x < xend; ++x)
-//						N++;
-//						// output_image(x,y) = value;
-//				}
-//                lines[k].areaConvex = N;
-                
                 lines[k].areaConvex = areaPolygon(poly,imtemp1);
             }
             lines[k].convex = mergePix.size() / lines[k].areaConvex;
@@ -646,45 +616,64 @@ const int nl8[2][8][2] = { { {1,0},{1,1},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-
                 lines[k].convexN2 = convx2;
             }
             else{
-                lines[k].convexN1 = convx1;
-                lines[k].convexN2 = convx2;
+                lines[k].convexN1 = convx2;
+                lines[k].convexN2 = convx1;
             }
 
-            //myfile << lines[k].diffmean1<<" "<<lines[k].diffmean2<<" "<<lines[k].diffmean3
-                //<<" "<<lines[k].convex<<" "<<lines[k].convexN1<<" "<<lines[k].convexN2
-                //<<" "<<lines[k].convex - lines[k].convexN1<<" "
-                //<<lines[k].convex - lines[k].convexN2<<" "<<lines[k].areaRatioNb<<" C1\n";
+            // myfile << lines[k].diffmean1<<" "<<lines[k].diffmean2<<" "<<lines[k].diffmean3
+            //     <<" "<<lines[k].convex<<" "<<lines[k].convexN1<<" "<<lines[k].convexN2
+            //     <<" "<<lines[k].convex - lines[k].convexN1<<" "
+            //     <<lines[k].convex - lines[k].convexN2<<" "<<lines[k].areaRatioNb<<" C1\n";
 
             //// Classification Logistic regression
             double features[9] = { lines[k].diffmean1, lines[k].diffmean2, lines[k].diffmean3
                 , lines[k].convex, lines[k].convexN1, lines[k].convexN2
                 , lines[k].convex - lines[k].convexN1, lines[k].convex - lines[k].convexN2
                 , lines[k].areaRatioNb };
-            double mean_norm[9] = {19.9194, -2.9981, 22.9174, 0.8164, 0.8712, 0.8579, -0.0548,
+            double mean_norm[9] = {19.9194, -2.9981, 22.9174, 0.8164, 0.9226, 0.8065, -0.0548,
                 -0.0415, 0.4792};
-            double std_norm[9] = {16.3533, 14.1942, 17.3133, 0.1094, 0.0958, 0.1008, 0.1175, 
+            double std_norm[9] = {16.3533, 14.1942, 17.3133, 0.1094, 0.0609, 0.0948, 0.1175, 
                 0.1205, 0.2820};
-            double coefs[10] = {0.0274, -0.011, 0.0201, -11.463, -10.9103, -1.7443
-                ,-4.9981, -7.456, 6.6496, 19.6842};
-            double coefs_norm[10] = {0.506, -0.1509, 0.6016, -1.3171, -0.2314, -0.017, 
-                -1.0371, -1.1807, 0.5046, 2.675};
 
-            double f(0);
-            for (int kk=0; kk<9; ++kk){
-                f += coefs_norm[kk] * ((features[kk] - mean_norm[kk]) / std_norm[kk]);
+            if (cls==0){
+                // double coefs_norm[10] = {0.506, -0.1509, 0.6016, -1.3171, -0.2314, -0.017, 
+                //     -1.0371, -1.1807, 0.5046, 2.675};
+                double coefs_norm[10] = {0.5034, -0.1516, 0.5997, -1.3089, -0.1904, -0.0265, 
+                    -0.9521, -1.3303, 0.5, 2.6748};
+
+                double f(0);
+                for (int kk=0; kk<9; ++kk){
+                    f += coefs_norm[kk] * ((features[kk] - mean_norm[kk]) / std_norm[kk]);
+                }
+                f += coefs_norm[9];
+
+                double p = 1 / (1 + exp(-f));
+                
+                if (p<0.5) lines[k].cat = 1;
+                else lines[k].cat = 0;
             }
-            f += coefs_norm[9];
 
-            double p = 1 / (1 + exp(-f));
-            
-            if (p<0.5) lines[k].cat = 1;
-            else lines[k].cat = 0;
+            else if (cls==1){
+                double coefs_norm[10] = {-3.8721, -1.5319, -2.4014, 5.1876, -1.9299, -0.3491, 4.7345, 
+                    6.0479, 0.5598, -7};
+                double f(0);
+                for (int kk=0; kk<9; ++kk){
+                    f += coef[kk] * ((features[kk] - mean_norm[kk]) / std_norm[kk]);
+                }
+                f += coefs_norm[9];
+
+                if (f>0.0) lines[k].cat = 1;
+                else lines[k].cat = 0;
+            }
+            else {
+                std::cout<<"WRONG CLASSIFIER TYPE!!!"<<std::endl;
+            }
         }
         else{
-            //myfile <<"Delete this line\n";
+            // myfile <<"Delete this line\n";
         }
     }
-    //myfile.close();
+    // myfile.close();
 
 
     // AreaOpening(imCandi, imtemp1, 8, 9);
@@ -701,13 +690,21 @@ const int nl8[2][8][2] = { { {1,0},{1,1},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-
 			imOut[k] = 255;
 		}
 	}
+
+
+    for (int k=0; k<N_candi; ++k){
+        delete[] neighborList[k];
+    }
+    delete[] neighborList;
+    delete[] candis;
+    delete[] lines;
     // exportImage(imoutC, ImageExportInfo("/home/zhang/work/image/temp/z6_result_LR.png"));
     // exportImage(imCandi, ImageExportInfo("/home/zhang/work/image/temp/z6_final_candi.png"));
  } // end of function
  
  
 template <class BIMAGE>
-void candidateAnalysis(BIMAGE const & imCandi, BIMAGE const & imOrig, BIMAGE & dest){
+void candidateAnalysis(BIMAGE const & imCandi, BIMAGE const & imOrig, BIMAGE & dest, const int cls, const double (&coef)[10]){
     int width = imCandi.width();
     int height = imCandi.height();
 
@@ -719,7 +716,6 @@ void candidateAnalysis(BIMAGE const & imCandi, BIMAGE const & imOrig, BIMAGE & d
     typename BIMAGE::const_traverser it2 = imOrig.upperLeft();
     typename BIMAGE::traverser it3 = dest.upperLeft();
 
-
     // exportImage(src.upperLeft(), src.lowerRight(), src.accessor(), "/home/zhang/work/image/temp/imFRSTz1.png");
 
     for (int y=0; y<height; ++y){
@@ -729,7 +725,7 @@ void candidateAnalysis(BIMAGE const & imCandi, BIMAGE const & imOrig, BIMAGE & d
         }
     }
 
-    CandidateAnalysis(maCandi, maOrig, maDest);
+    CandidateAnalysis(maCandi, maOrig, maDest, cls, coef);
     
     for (int y=0; y<height; ++y){
         for (int x=0; x<width; ++x){

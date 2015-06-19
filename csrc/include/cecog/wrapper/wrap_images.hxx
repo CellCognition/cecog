@@ -724,11 +724,15 @@ PyObject * pyAdaptiveThreshold(IMAGE1 const &imgIn, IMAGE1 const &imgCandi, doub
 
 
 template <class IMAGE1>
-PyObject * pyCandidateAnalysis(IMAGE1 const &imgCandi, IMAGE1 const &imgOrig)
+PyObject * pyCandidateAnalysis(IMAGE1 const &imgCandi, IMAGE1 const &imgOrig, const int cls, const double coef1, 
+    const double coef2, const double coef3, const double coef4, const double coef5, const double coef6,
+ const double coef7, const double coef8, const double coef9, const double coef10)
 {
   std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgCandi.size()));
 
-  cecog::candidateAnalysis(imgCandi, imgOrig, *imgPtr);
+  const double coef[10] = {coef1, coef2, coef3, coef4, coef5, coef6, coef7, coef8, coef9, coef10};
+
+  cecog::candidateAnalysis(imgCandi, imgOrig, *imgPtr, cls, coef);
 
   return incref(object(imgPtr).ptr());
 }
