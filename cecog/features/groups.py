@@ -2,7 +2,7 @@
 Mappings from feature groups to lists of feature names
 """
 
-__all__ = ("FeatureGroups", )
+__all__ = ("FeatureGroups", "FGroup")
 
 from collections import OrderedDict
 
@@ -269,11 +269,11 @@ _Cecog["Stat. geom"] =  ('ls0_CAREA_avg_value',
                          'ls1_TAREA_sample_sd')
 
 _Simple1 = FGroup('Simple 1')
-_Simple1["Area size"] = ("roisize",)
+_Simple1["Size"] = ("roisize",)
 _Simple1["Mean intesity"] = ('n2_avg',)
 
 _Simple1["Eccentricity"] = ("eccentricity", )
-_Simple1["Contour roughness"] = ('circularity',
+_Simple1["Shape features"] = ('circularity',
                                  'irregularity',
                                  'irregularity2',
                                  'perimeter')

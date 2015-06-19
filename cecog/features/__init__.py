@@ -10,5 +10,5 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-from groups import FeatureGroups
+from groups import *
 from feature_map import FEATURE_MAP
