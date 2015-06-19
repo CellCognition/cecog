@@ -266,7 +266,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         if mimeData.hasUrls():
             if len(mimeData.urls()) == 1:
                 self.load_settings(fix_path(mimeData.urls()[0].path()))
-                self._on_load_input()
+                # self._on_load_input()
         event.acceptProposedAction()
 
     def dragLeaveEvent(self, event):
