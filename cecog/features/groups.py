@@ -268,7 +268,7 @@ _Cecog["Stat. geom"] =  ('ls0_CAREA_avg_value',
                          'ls1_TAREA_sample_mean',
                          'ls1_TAREA_sample_sd')
 
-_Simple1 = FGroup('Simple 1')
+_Simple1 = FGroup('Simple1')
 _Simple1["Size"] = ("roisize",)
 _Simple1["Mean intesity"] = ('n2_avg',)
 
@@ -512,5 +512,5 @@ _Simple1["Texture and others"] = ('h1_2ASM',
                                  'ls1_TAREA_sample_sd')
 
 FeatureGroups = OrderedDict()
-FeatureGroups["Simple1"] = _Simple1
-FeatureGroups["Cecog"] = _Cecog
+FeatureGroups[_Simple1.group_name] = _Simple1
+FeatureGroups[_Cecog.group_name] = _Cecog
