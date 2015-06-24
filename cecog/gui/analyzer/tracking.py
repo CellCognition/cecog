@@ -33,16 +33,16 @@ class TrackingFrame(BaseProcessorFrame):
                                      ('Test tracking', 'Stop tracking'))
 
         self.add_input('region')
-        self.add_group(None,
-                       [('tracking_maxobjectdistance', (0,0,1,1)),
-                        ('tracking_maxtrackinggap', (0,1,1,1)),
-                        ('tracking_maxsplitobjects', (1,0,1,1)),
-                        ], link='tracking', label='Tracking')
         self.add_line()
+        
         self.add_group('tracking_visualization',
                        [('tracking_visualize_track_length',),
                         ('tracking_centroid_radius',),
                        ], layout='flow')
+        
+        self.add_line()
+        self.add_plugin_bay(self.plugin_mgr['tracking'], settings)
+        
         self.add_expanding_spacer()
 
         self._init_control()
@@ -86,3 +86,4 @@ class TrackingFrame(BaseProcessorFrame):
         # FIXME: set the trait list data to plugin instances of the current channel
         trait = self._settings.get_trait('Tracking', 'region')
         trait.set_list_data(self.plugin_mgr.region_info.names['primary'])
+        print self.plugin_mgr.region_info.names

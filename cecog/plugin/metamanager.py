@@ -13,7 +13,9 @@ from collections import OrderedDict
 
 from cecog.util.pattern import Singleton
 from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
+from cecog.traits.analyzer.tracking import SECTION_NAME_TRACKING
 from cecog.plugin.segmentation.manager import SegmentationPluginManager
+from cecog.plugin.tracking.manager import TrackingPluginManager
 
 from cecog.plugin.segmentation.strategies import SegmentationPluginPrimary
 from cecog.plugin.segmentation.strategies import SegmentationPluginPrimary2
@@ -27,6 +29,7 @@ from cecog.plugin.segmentation.strategies import SegmentationPluginConstrainedWa
 from cecog.plugin.segmentation.strategies import SegmentationPluginDifference
 from cecog.plugin.segmentation.strategies import SegmentationPluginIlastik
 from cecog.plugin.segmentation.strategies import SegmentationPluginPrimaryLoadFromFile
+from cecog.plugin.tracking.strategies import TrackingNearestNeighbor, TrackingStructuredLearning
 from cecog import CHANNEL_PREFIX
 
 
@@ -57,7 +60,7 @@ class MetaPluginManager(object):
                                                               'Primary segmentation',
                                                               'primary_segmentation',
                                                               SECTION_NAME_OBJECTDETECTION)
-
+        
         self.managers['secondary'] = SegmentationPluginManager(self.region_info,
                                                                self,
                                                                'Secondary segmentation',
@@ -69,6 +72,13 @@ class MetaPluginManager(object):
                                                               'Tertiary segmentation',
                                                               'tertiary_segmentation',
                                                               SECTION_NAME_OBJECTDETECTION)
+        
+        self.managers['tracking'] =  TrackingPluginManager(self.region_info,
+                                                              self,
+                                                              'Primary tracking',
+                                                              'primary_tracking',
+                                                              SECTION_NAME_TRACKING)
+        
         self._register_plugins()
 
     def _register_plugins(self):
@@ -93,6 +103,9 @@ class MetaPluginManager(object):
         self.managers['tertiary'].register_plugin(SegmentationPluginPropagate)
         self.managers['tertiary'].register_plugin(SegmentationPluginConstrainedWatershed)
         self.managers['tertiary'].register_plugin(SegmentationPluginDifference)
+        
+        self.managers['tracking'].register_plugin(TrackingNearestNeighbor)
+        self.managers['tracking'].register_plugin(TrackingStructuredLearning)
 
     def __getitem__(self, key):
         return self.managers[key]

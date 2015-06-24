@@ -22,8 +22,6 @@ from cecog.gui.guitraits import (BooleanTrait,
 from cecog.plugin import stopwatch
 from cecog.plugin.segmentation.manager import _SegmentationPlugin
 
-import pdb
-
 class SegmentationPluginPrimary(_SegmentationPlugin):
 
     LABEL = 'Local adaptive threshold w/ split&merge'
@@ -1081,3 +1079,5 @@ class SegmentationPluginDifference(_SegmentationPlugin):
         #array = numpy.abs(array)
         #img_labels = ccore.numpy_to_image(array, copy=True)
         return ccore.ImageMaskContainer(image, img_labels, False, True, True)
+    
+

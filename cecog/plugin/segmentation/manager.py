@@ -18,6 +18,11 @@ class _SegmentationPlugin(_Plugin):
 
     COLOR = '#FFFFFF'
     QRC_PREFIX = 'segmentation'
+    
+class _TrackingPlugin(_Plugin):
+
+    COLOR = '#FFFFFF'
+    QRC_PREFIX = 'tracking'
 
 
 class SegmentationPluginManager(PluginManager):
@@ -42,4 +47,6 @@ class SegmentationPluginManager(PluginManager):
         self.region_info.colors.update( \
             dict([(name, self.get_plugin_instance(name).COLOR)
                   for name in self.get_plugin_names()]))
+        
+        
 
