@@ -17,12 +17,12 @@ __source__ = '$URL$'
 __all__ = ['SectionFeatureExtraction']
 
 from cecog.traits.analyzer.section_core import SectionCore
-from cecog.gui.guitraits import BooleanTrait, StringTrait
+from cecog.gui.guitraits import BooleanTrait, StringTrait, IntTrait
 
 SECTION_NAME_FEATURE_EXTRACTION = 'FeatureExtraction'
 
 FEATURE_CATEGORIES = ['basicshape', 'intensity', 'haralick', 'stat_geom',
-                      'convhull', 'distance', 'granugrey', 'moments']
+                      'convhull', 'distance', 'granugrey', 'moments', 'spotfeatures']
 
 FEATURE_CATEGORY_DESC = ['Basic shape features',
                          'Basic intensity features',
@@ -31,7 +31,8 @@ FEATURE_CATEGORY_DESC = ['Basic shape features',
                          'Convex hull features',
                          'Distance map features',
                          'Granulometry features',
-                         'Moments']
+                         'Moments', 
+                         'Spot Features']
 
 class SectionFeatureExtraction(SectionCore):
 
@@ -45,7 +46,11 @@ class SectionFeatureExtraction(SectionCore):
    + [('primary_dist_haralick', 
        StringTrait('1,2,4,8', 200, label='Haralick: Distances for cooccurence')),
       ('primary_se_granugrey', 
-       StringTrait('1,2,3,5,7', 200, label='Granulometry Sizes (Structuring Element)'))
+       StringTrait('1,2,3,5,7', 200, label='Granulometry Sizes (Structuring Element)')),
+      ('primary_spotfeature_diameter', 
+       IntTrait(5, 1, 30, label="Diameter")),
+      ('primary_spotfeature_thresh', 
+       IntTrait(8, 1, 255, label="Threshold")),
       ]
      ),
      
@@ -55,7 +60,11 @@ class SectionFeatureExtraction(SectionCore):
      [('secondary_dist_haralick', 
        StringTrait('1,2,4,8', 200, label='Haralick: Distances for cooccurence')),
        ('secondary_se_granugrey', 
-        StringTrait('1,2,3,5,7', 200, label='Granulometry Sizes (Structuring Element)'))
+        StringTrait('1,2,3,5,7', 200, label='Granulometry Sizes (Structuring Element)')),
+      ('secondary_spotfeature_diameter', 
+       IntTrait(5, 1, 30, label="Diameter")),
+      ('secondary_spotfeature_thresh', 
+       IntTrait(8, 1, 255, label="Threshold")),
       ]
      ),
 
@@ -65,7 +74,11 @@ class SectionFeatureExtraction(SectionCore):
      [('tertiary_dist_haralick', 
        StringTrait('1,2,4,8', 200, label='Haralick: Distances for cooccurence')),
       ('tertiary_se_granugrey', 
-       StringTrait('1,2,3,5,7', 200, label='Granulometry Sizes (Structuring Element)'))
+       StringTrait('1,2,3,5,7', 200, label='Granulometry Sizes (Structuring Element)')),
+      ('tertiary_spotfeature_diameter', 
+       IntTrait(5, 1, 30, label="Diameter")),
+      ('tertiary_spotfeature_thresh', 
+       IntTrait(8, 1, 255, label="Threshold")),
       ]
      ),
 

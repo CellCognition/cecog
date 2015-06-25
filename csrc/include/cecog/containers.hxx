@@ -138,6 +138,13 @@ namespace cecog
             haralickDistVec.push_back(4);
             haralickDistVec.push_back(8);
 
+           // settings for spot features
+            spot_threshold = 10;
+            spot_diameter = 5;
+
+            debug_folder = "";
+            image_name = "";
+
     };
 
     /**
@@ -241,6 +248,36 @@ namespace cecog
       }
       return;
 
+    }
+
+    void printHaralickDist() {
+      for(har_dist_vec::size_type i = 0; i != haralickDistVec.size(); ++i)
+      {
+        std::cout << "Haralick Size: " << (unsigned)haralickDistVec[i] << std::endl;
+      }
+    }
+
+    void printGranulometrySizes() {
+      for(se_size_vec::size_type i = 0; i != granuSizeVec.size(); ++i)
+      {
+        std::cout << "Granulometry Size: " << (unsigned)granuSizeVec[i] << std::endl;
+      }
+    }
+
+    void resetHaralick(){
+      haralickDistVec.clear();
+    }
+
+    void resetGranulometry(){
+      granuSizeVec.clear();
+    }
+
+    void addHaralickValue(unsigned value){
+      haralickDistVec.push_back(value);
+    }
+
+    void addGranulometryValue(unsigned value){
+      granuSizeVec.push_back(value);
     }
 
     /**
@@ -458,7 +495,19 @@ namespace cecog
 
                 }
             }
-        // TODO : calculate haralick for a series of values
+          else if(name == "spotfeatures")
+          {
+            ObjectMap::iterator it = objects.begin();
+            for(; it != objects.end(); ++it)
+            {
+                ROIObject &o = (*it).second;
+
+                SpotFeatures<image_type, label_type> sf(img, img_labels, o, (*it).first,
+                                                        spot_diameter, spot_threshold,
+                                                        debug, debug_folder, debug_prefix, name);
+                sf.CalculateFeatures(o);
+            }
+          }
         // haralick
         else if (name == "haralick")
         {
@@ -1096,8 +1145,15 @@ namespace cecog
 
     // feature settings
     unsigned haralick_levels, haralick_distance, levelset_levels;
+    unsigned spot_threshold, spot_diameter;
 
     bool rgb_made;
+    bool debug;
+
+    // only for debugging
+    std::string debug_folder;
+    std::string debug_prefix;
+
     // region properties
     unsigned region_size, width, height, required_ext;
 

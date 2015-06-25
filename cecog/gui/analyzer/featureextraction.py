@@ -32,7 +32,8 @@ class FeatureExtractionFrame(BaseFrame):
         self._result_frames = {}
 
         feature_families = ['intensity', 'haralick', 'stat_geom', 'granugrey',
-                            'basicshape', 'convhull', 'distance', 'moments']
+                            'basicshape', 'convhull', 'distance', 'moments',
+                            'spotfeatures']
 
         for tab_name, prefix in [('Primary Channel', 'primary'),
                                  ('Secondary Channel', 'secondary'),
@@ -68,6 +69,12 @@ class FeatureExtractionFrame(BaseFrame):
                              (6, 0, 1, 1)),
                             ('%s_featurecategory_moments' % prefix,
                              (7, 0, 1, 1) ),
+                            ('%s_featurecategory_spotfeatures' % prefix,
+                             (8, 0, 1, 1) ),
+                            ('%s_spotfeature_diameter' % prefix,
+                             (8, 1, 1, 1) ),
+                            ('%s_spotfeature_thresh' % prefix,
+                             (8, 2, 1, 1) ),
                             ],
                            layout='grid',
                            link='%s_featureextraction' % prefix,

@@ -62,11 +62,14 @@ FEATURE_MAP = {'featurecategory_intensity': ['normbase', 'normbase2'],
                                               'axes'],
                'featurecategory_convhull': ['convexhull'],
                'featurecategory_distance': ['distance'],
-               'featurecategory_moments': ['moments']}
+               'featurecategory_moments': ['moments'],
+               'featurecategory_spotfeatures': ['spotfeatures'],
+               }
 
 DEFAULT_FEATURE_PARAMS = {
                           'featurecategory_granugrey': {'se': (1, 2, 3, 5, 7)},
                           'featurecategory_haralick': {'dist': (1, 2, 4, 8)},
+                          'featurecategory_spotfeatures': {'diameter': 5, 'thresh': 8},
                           }
 
 class PositionCore(LoggerObject):
@@ -198,52 +201,27 @@ class PositionCore(LoggerObject):
             if self.settings.get(SECTION_NAME_FEATURE_EXTRACTION,
                                  self._resolve_name(ch_name, category)):
                 
-#                if "haralick" in category:
-#                    try:
-#                        f_cat_params['haralick_categories'].extend(feature)
-#                    except KeyError:
-#                        assert isinstance(feature, list)
-#                        f_cat_params['haralick_categories'] = feature
-#                else:
                 f_categories += feature
 
-#FEATURE_MAP = {'featurecategory_intensity': ['normbase', 'normbase2'],
-#               'featurecategory_haralick': ['haralick', 'haralick2'],
-#               'featurecategory_stat_geom': ['levelset'],
-#               'featurecategory_granugrey': ['granulometry'],
-#               'featurecategory_basicshape': ['roisize',
-#                                              'circularity',
-#                                              'irregularity',
-#                                              'irregularity2',
-#                                              'axes'],
-#               'featurecategory_convhull': ['convexhull'],
-#               'featurecategory_distance': ['distance'],
-#               'featurecategory_moments': ['moments']}
-#
-#DEFAULT_FEATURE_PARAMS = {
-#                          'featurecategory_granugrey': {'se': (1, 2, 3, 5, 7)},
-#                          'featurecategory_haralick': {'dist': (1, 2, 4, 8)},
-#                          }
-
-                if category in DEFATULT_FEATURE_SETTINGS:
+                if category in DEFAULT_FEATURE_PARAMS:
                     f_cat_params[category] = {}
-                    for option in DEFAULT_FEATURE_SETTINGS[category]:        
+                    for option in DEFAULT_FEATURE_PARAMS[category]:        
                         option_key = self._resolve_name(ch_name, '%s_%s' % (option, category.split('_')[-1]))
                         
                         if self.settings.has_option(SECTION_NAME_FEATURE_EXTRACTION, option_key):
                             str_opt = self.settings.get(SECTION_NAME_FEATURE_EXTRACTION, option_key)
                             if len(str_opt) == 0:
-                                f_cat_params[category][option] = DEFAULT_FEATURE_SETTINGS[category][option]
+                                f_cat_params[category][option] = DEFAULT_FEATURE_PARAMS[category][option]
                             else:
                                 f_cat_params[category][option] = tuple([int(x) for x in str_opt.split(',')])
-                            # HERE I AM
-                            f_cat_params[category][option] = 
                         else:
-                            f_cat_params[category][option] = DEFAULT_FEATURE_SETTINGS[category][option]
-        #if f_cat_params.has_key("haralick_categories"):
-        #    f_cat_params['haralick_distances'] = (1, 2, 4, 8)
+                            f_cat_params[category][option] = DEFAULT_FEATURE_PARAMS[category][option]
+
+        print 'f_categories'
+        print f_categories
+        print 'f_cat_params'
+        print f_cat_params
         
-        #pdb.set_trace()
         return f_categories, f_cat_params
 
     def setup_channel(self, proc_channel, col_channel, zslice_images,

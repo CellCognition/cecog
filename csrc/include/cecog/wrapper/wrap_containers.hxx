@@ -124,6 +124,22 @@ void wrap_containers()
     .def("getLabels", &_ObjectContainerBase::getLabels)
     .def("delObject", &_ObjectContainerBase::delObject)
     .def("getObjects", &object_wrapper<_ObjectContainerBase>)
+    .def("resetHaralick", &_ObjectContainerBase::resetHaralick)
+    .def("resetGranulometry", &_ObjectContainerBase::resetGranulometry)
+    .def("addHaralickValue", &_ObjectContainerBase::addHaralickValue)
+    .def("addGranulometryValue", &_ObjectContainerBase::addGranulometryValue)
+    .def("printHaralickDist", &_ObjectContainerBase::printHaralickDist)
+    .def("printGranulometrySizes", &_ObjectContainerBase::printGranulometrySizes)
+    .def_readwrite("debug_folder",
+                   &_ObjectContainerBase::debug_folder)
+    .def_readwrite("image_name",
+                   &_ObjectContainerBase::image_name)
+    .def_readwrite("debug",
+                   &_ObjectContainerBase::debug)
+    .def_readwrite("spot_diameter",
+                   &_ObjectContainerBase::spot_threshold)
+    .def_readwrite("spot_threshold",
+                   &_ObjectContainerBase::spot_diameter)
     .def_readwrite("haralick_levels",
                    &_ObjectContainerBase::haralick_levels)
     .def_readwrite("haralick_distance",

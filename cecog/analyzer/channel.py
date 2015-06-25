@@ -22,7 +22,7 @@ import glob
 import copy
 import types
 import numpy
-
+import pdb
 
 from cecog import ccore
 from cecog.colors import Colors
@@ -217,27 +217,38 @@ class Channel(ChannelCore):
         for region_name, container in self.containers.iteritems():
             object_holder = ObjectHolder(region_name)
             if not container is None:
-                for strFeatureCategory in self.lstFeatureCategories:
-                    # TODO
-                    if strFeatureCategory in self.dctFeatureParameters:
-                        dctParams = self.dctFeatureParameters[strFeatureCategory]
+                container.debug = True
+                container.debug_folder = "/Users/twalter/temp/spotfeatures"
+                pdb.set_trace()
+                
+                # pass parameters to container
+                for feature in self.dctFeatureParameters:
+                    if feature in ['haralick', 'haralick2']:
+                        container.resetHaralick()
+                        for haralick_size in self.dctFeatureParameters[feature]['dist']:
+                            container.addHaralickValue(haralick_size)
+                    elif feature == 'granulometry':
+                        container.resetGranulometry()
+                        for val in self.dctFeatureParameters[feature]['se']:
+                            container.addGranulometryValue(val)
+                    elif feature == 'spotfeatures':
+                        container.spot_diameter = self.dctFeatureParameters[feature]['diameter']
+                        container.spot_threshold = self.dctFeatureParameters[feature]['thresh']
+                
                         
-                        # pass parameters to container
-                        
-                        # apply features
-                    
-                    else:
-                        container.applyFeature(strFeatureCategory)
+                # apply feature                        
+                for strFeatureCategory in self.lstFeatureCategories:                    
+                    container.applyFeature(strFeatureCategory)
 
                 # ---                
                 # to replace
                 # calculate set of haralick features
                 # (with differnt distances)
-                if 'haralick_categories' in self.dctFeatureParameters:
-                    for strHaralickCategory in self.dctFeatureParameters['haralick_categories']:
-                        for iHaralickDistance in self.dctFeatureParameters['haralick_distances']:
-                            container.haralick_distance = iHaralickDistance
-                            container.applyFeature(strHaralickCategory)
+#                if 'haralick_categories' in self.dctFeatureParameters:
+#                    for strHaralickCategory in self.dctFeatureParameters['haralick_categories']:
+#                        for iHaralickDistance in self.dctFeatureParameters['haralick_distances']:
+#                            container.haralick_distance = iHaralickDistance
+#                            container.applyFeature(strHaralickCategory)
                 # ---                
 
                 for obj_id, c_obj in container.getObjects().iteritems():

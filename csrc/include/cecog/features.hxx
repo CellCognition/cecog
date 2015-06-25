@@ -1543,6 +1543,158 @@ namespace cecog
 
     };
 
+    template <class SIMAGE, class LIMAGE>
+    class SpotFeatures
+    {
+
+    public:
+
+        typedef typename LIMAGE::Iterator LabIterator;
+        typedef typename LIMAGE::Accessor LabAccessor;
+        typedef typename LabAccessor::value_type lab_type;
+
+        typedef typename SIMAGE::Iterator SrcIterator;
+        typedef typename SIMAGE::Accessor SrcAccessor;
+        typedef typename SIMAGE::value_type value_type;
+
+        typedef typename std::vector<double> result_vec;
+
+        SpotFeatures(SIMAGE &imin, LIMAGE &labin,
+                     ROIObject const & o, lab_type label,
+                     unsigned diameter,
+                     value_type threshold,
+                     bool debug = false,
+                     std::string debug_folder = "",
+                     std::string debug_prefix = "",
+                     std::string prefix = "spotfeature")
+            : diam_(diameter),
+              thresh_(threshold),
+              borderSize_(1),
+              imgSize_(o.roi.width + 2, o.roi.height + 2),
+              imSrcRoi_(imgSize_),
+              imDiamOpen_(imgSize_),
+              imTemp_(imgSize_),
+              imThresh_(imgSize_),
+              imLabSpots_(imgSize_),
+              objId_(label),
+              prefix_(prefix),
+              debug_(debug),
+              debug_folder_(debug_folder),
+              debug_prefix_(debug_prefix),
+              nb_(morpho::WITHOUTCENTER8, vigra::Diff2D(imgSize_))
+        {
+
+            vigra::Diff2D borderOffset(borderSize_, borderSize_);
+
+            copyImageIfLabel(imin.upperLeft() + o.roi.upperLeft,
+                             imin.upperLeft() + o.roi.lowerRight,
+                             imin.accessor(),
+                             labin.upperLeft() + o.roi.upperLeft,
+                             labin.accessor(),
+                             imSrcRoi_.upperLeft() + borderOffset,
+                             imSrcRoi_.accessor(),
+                             objId_);
+        }
+
+        void CalculateFeatures(ROIObject & o)
+        {
+          // diameter opening
+          morpho::ImDiameterOpen(imSrcRoi_, imDiamOpen_, diam_, nb_);
+
+          // difference
+          vigra::combineTwoImages(srcImageRange(imSrcRoi_),
+                                  srcImage(imDiamOpen_),
+                                  destImage(imTemp_),
+                                  std::minus<value_type>());
+
+          // threshold image
+          vigra::transformImage(srcImageRange(imTemp_),
+                                destImage(imThresh_),
+                                ifThenElse(Arg1() >= Param(thresh_), Param(0), Param(255)));
+
+          // label --> gives also the number of spots
+          // 3rd argument: eight-neighborhood, 4th argument: value to be ignored (no label)
+          unsigned count = labelImageWithBackground(srcImageRange(imThresh_),
+                                                    destImage(imLabSpots_),
+                                                    false, 0);
+
+          // average intensities of the spots.
+          //vigra::ArrayOfRegionStatistics<vigra::FindAverageAndVariance<vigra::BImage::PixelType> > average(count);
+          vigra::FindAverageAndVariance<value_type> average;
+          vigra::inspectTwoImages(srcImageRange(imTemp_), srcImage(imLabSpots_), average);
+
+          // average intensity
+//          double average_intensity = 0.0;
+//          for(int i=0; i<count; i++) {
+//            average_intensity += (double)average[i];
+//          }
+//          average_intensity = average_intensity / (double)count;
+
+          // Assignments of features
+          o.features[prefix_ + "count"] = count;
+          o.features[prefix_ + "avgintensity"] = average.average();
+          o.features[prefix_ + "varintensity"] = average.variance();
+
+          // for debug
+          if(debug_) {
+            //std::string DEBUG_PREFIX="/Users/twalter/temp/spotfeatures/image";
+            std::string filepath_base = debug_folder_ + "/" + debug_prefix_ + "__" + std::to_string(o.center.x) + "__" + std::to_string(o.center.y) + "__";
+
+            std::string filepath_export_original = filepath_base + "__00original.tiff";
+            std::cout << "writing " << filepath_export_original << std::endl;
+            exportImage(filepath_export_original, imSrcRoi_);
+
+            std::string filepath_export_diamopen = filepath_base + "__01diam_open.tiff";
+            std::cout << "writing " << filepath_export_diamopen << std::endl;
+            exportImage(filepath_export_diamopen, imDiamOpen_);
+
+            std::string filepath_export_residue = filepath_base + "__02residue.tiff";
+            std::cout << "writing " << filepath_export_residue << std::endl;
+            exportImage(filepath_export_residue, imTemp_);
+
+            std::string filepath_export_thresh = filepath_base + "__03thresh.tiff";
+            std::cout << "writing " << filepath_export_thresh << std::endl;
+            exportImage(filepath_export_thresh, imThresh_);
+
+            std::string filepath_export_overlay = filepath_base + "__04overlay.tiff";
+            std::cout << "writing " << filepath_export_overlay << std::endl;
+            cecog::drawContour(srcImageRange(imThresh_), destImage(imSrcRoi_), 255);
+            exportImage(filepath_export_overlay, imSrcRoi_);
+
+            // transforms.hxx --> draw contour
+
+          }
+        }
+
+    void exportImage(std::string filepath,
+                     vigra::BImage img,
+                     std::string compression = "100")
+        {
+
+          vigra::ImageExportInfo exp_info(filepath.c_str());
+          exp_info.setCompression(compression.c_str());
+          vigra::exportImage(srcImageRange(img), exp_info);
+        }
+
+    protected:
+      bool debug_;
+      std::string debug_folder_;
+      std::string debug_prefix_;
+      unsigned diam_;
+      value_type thresh_;
+      unsigned borderSize_;
+      vigra::Diff2D imgSize_;
+      SIMAGE imSrcRoi_;
+      SIMAGE imDiamOpen_;
+      SIMAGE imTemp_;
+      SIMAGE imThresh_;
+      SIMAGE imBinSpots_;
+      LIMAGE imLabSpots_;
+      unsigned objId_;
+      std::string prefix_;
+      morpho::neighborhood2D nb_;
+    };
+
     // Distance Features
     template <class LIMAGE>
     class DynamicDistanceFeatures
