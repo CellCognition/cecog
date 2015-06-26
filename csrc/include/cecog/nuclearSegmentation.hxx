@@ -28,6 +28,8 @@
 
 #include "vigra/pixelneighborhood.hxx"
 #include "vigra/polygon.hxx"
+#include "vigra/distancetransform.hxx"
+#include "vigra/functorexpression.hxx"
 
 #include <queue>
 #include <list>
@@ -167,13 +169,27 @@ int areaPolygon(vigra::Polygon<Point> const &p, MultiArrayView<2, T, S> &output_
     return N;
 } // end of function
 
+
+template<class IMAGE1>
+void maxima(IMAGE1 const & imin, IMAGE1 & imout){
+    using namespace cecog::morpho;
+    using namespace vigra::functor;
+    IMAGE1 imtemp1 (imin.size());
+    neighborhood2D nb(WITHOUTCENTER8, imin.size());
+    ImSubtractConst(imin , imtemp1, 1);
+    ImUnderBuild(destImageRange(imtemp1), srcImage(imin), nb);
+    vigra::combineTwoImages(srcImageRange(imin), srcImage(imtemp1),
+                           destImage(imout), Arg1()-Arg2());
+} // end of function
+
+
 namespace cecog {
 	
 
   // Keep one (randomly) object (connected component) in the binary input image (imin) under a binary mask image (immask),
   // by comparing the grey level in reference image (imref).
   template<class IMAGE1>
-  void objectSelection(IMAGE1 const & imin, IMAGE1 const & immask, IMAGE1 const & imref, IMAGE1 & imout){
+  void objectSelection(IMAGE1 const & imin, IMAGE1 const & immask, IMAGE1 const & imref, IMAGE1 & imout, const int dist=-1){
       using namespace cecog::morpho;
       using namespace vigra;
       typedef vigra::UInt16Image IMAGE2;
@@ -189,6 +205,7 @@ namespace cecog {
 
       int nObj1 = ImLabel(imin, imLabel1, nb);
       int nObj2 = ImLabel(immask, imLabel2, nb);
+      cout<<"LJLF "<<nObj1<<" "<<nObj2<<endl;
 
       int *cc = new int[nObj2]; // min value
       int *pp = new int[nObj2]; // min value position
@@ -231,12 +248,139 @@ namespace cecog {
       }
 
 
+      // selection based on distance
+      if (dist > 0){
+        vigra::FImage imtempf(imin.size()); IMAGE1 imtemp1(imin.size());
+        IMAGE1 imtemp2(imin.size());
+        imtemp1.init(0);
+        imLabel1.init(0);
+        itr_label1 = imLabel1.upperLeft();
+        nObj1 = ImLabel(imout, imLabel1, nb);
+        if (nObj1>0){
+            vigra::distanceTransform(srcImageRange(imout), destImage(imtempf), 255, 2);
+            exportImage(imout.upperLeft(), imout.lowerRight(), imout.accessor(), "/home/zhang/work/image/temp/imtempout.png");
+
+            typename vigra::FImage::traverser itr_imtempf = imtempf.upperLeft();
+            typename IMAGE1::traverser itr_imtemp = imtemp1.upperLeft();
+            for (int y=0; y<h; ++y){
+              for (int x=0; x<w; ++x){
+                  if ( *(itr_imout + Diff2D(x,y)) == 0) continue;
+                  if ( *(itr_imtempf + Diff2D(x,y)) > 255 ) *(itr_imtemp + Diff2D(x,y)) = 255;
+                  else *(itr_imtemp + Diff2D(x,y)) = int( *(itr_imtempf + Diff2D(x,y)) );
+              }
+            }
+            maxima(imtemp1, imtemp2);
+            exportImage(imtemp2.upperLeft(), imtemp2.lowerRight(), imtemp2.accessor(), "/home/zhang/work/image/temp/imtempp1.png");
+
+            // start scan
+            int **nbMatrix = new int * [nObj1]; 
+            bool *visited = new bool [nObj1];
+            int *refValue = new int [nObj1];
+            std::fill_n(visited, nObj1, false);
+            std::fill_n(refValue, nObj1, 255);
+            for (int i=0; i<nObj1; ++i){
+                nbMatrix[i] = new int [nObj1];
+                std::fill_n(nbMatrix[i], nObj1, 0);
+            }
+
+            typename IMAGE1::traverser itr_imtemp2 = imtemp2.upperLeft();
+            for (int y=0; y<h; ++y){
+              for (int x=0; x<w; ++x){
+                  if ( *(itr_imtemp2 + Diff2D(x,y)) == 0) continue;
+                  if ( visited[ (*(itr_label1 + Diff2D(x,y)) - 1) ]) continue;
+                  else{
+                    visited[ (*(itr_label1 + Diff2D(x,y)) - 1) ]  = true;
+                    refValue[ (*(itr_label1 + Diff2D(x,y)) - 1) ]  = *(itr_imref + Diff2D(x,y));
+                    int currentCandi = *(itr_label1 + Diff2D(x,y)) - 1;
+                    for ( int xx = -dist; xx <= dist; ++xx){
+                        for ( int yy = -dist; yy <= dist; ++yy){
+                            int x_ = x + xx;
+                            int y_ = y + yy;
+                            if (x_<0 || x_>=w || y_<0 || y_>=h) continue; // outof range
+                            if (*(itr_imtemp2 + Diff2D(x_,y_)) == 0) continue; // no candidates
+                            if ( (*(itr_label1 + Diff2D(x_,y_)) - 1) == currentCandi) continue; // inside same candidate
+                            nbMatrix[currentCandi][*(itr_label1 + Diff2D(x_,y_)) - 1] = 1;
+                        }
+                    }
+                  }
+              }
+            }
+            cout<<"AAAA2"<<endl;
+            for (int i=0; i<nObj1; ++i){
+                for (int j=0; j<nObj1; ++j){
+                    cout<<nbMatrix[i][j]<<" ";
+                }
+                cout<<endl;
+            }
+            for (int i=0; i<nObj1; ++i){
+                cout<<refValue[i]<<" ";
+            }
+            cout<<endl;
+
+            
+            // eliminate
+            bool *iskeep = new bool [nObj1];
+            std::fill_n(iskeep, nObj1, true);
+            for (int i=0; i<nObj1; ++i){
+                if (iskeep[i] == false) continue;
+                int maxP(i), maxV(refValue[i]);
+	            std::queue<int> Qc;
+                Qc.push(i);
+
+                std::fill_n(visited, nObj1, false);
+                visited[i] = true;
+                while (!Qc.empty()){
+                    int ci = Qc.front();
+                    Qc.pop();
+                    for (int j=0; j<nObj1; ++j){
+                        if (nbMatrix[ci][j] != 0 && !visited[j]){
+                            Qc.push(j);
+                            visited[j] = true;
+                            if (maxV > refValue[j]){
+                                maxV = refValue[j];
+                                iskeep[maxP] = false;
+                                maxP = j;
+                            }
+                            else{
+                                iskeep[j] = false;
+                            }
+                        }
+                    }
+                }
+            }
+
+
+            for (int i=0; i<nObj1; ++i){
+                cout<<int(iskeep[i])<<" ";
+            }
+            cout<<endl;
+
+            // output
+            for (int y=0; y<h; ++y){
+              for (int x=0; x<w; ++x){
+                  if ( *(itr_label1 + Diff2D(x,y)) == 0 ) continue;
+                  *(itr_imout + Diff2D(x,y)) = int (iskeep[*(itr_label1 + Diff2D(x,y)) - 1]) * 255;
+              }
+            }
+
+
+
+            // free ram
+            for (int i=0; i<nObj1; ++i)
+                delete[] nbMatrix[i];
+            delete[] nbMatrix;
+            delete[] visited;
+            delete[] refValue;
+            delete[] iskeep;
+        }
+      }
+
       delete[] cc;
       delete[] pp;
       delete[] pp2;
 
       
-  }
+  }// end of function
 
 
   template<class IMAGE1>
@@ -308,10 +452,14 @@ namespace cecog {
                                     typename IMAGE1::PixelType>
                   (0, c_intensity2, 0, 255));
     
+
+          // exportImage(imtemp1.upperLeft(), imtemp1.lowerRight(), imtemp1.accessor(), "/home/zhang/work/image/temp/imtempp1.png");
+          // exportImage(imtemp2.upperLeft(), imtemp2.lowerRight(), imtemp2.accessor(), "/home/zhang/work/image/temp/imtempp2.png");
+
           neighborhood2D nb (WITHOUTCENTER8, imin.size());
           ImInfimum(srcImageRange(imtemp1), srcImage(imtemp2), destImage(imtemp3));
           ImUnderBuild(destImageRange(imtemp3), srcImage(imtemp2), nb);
-          // exportImage(imtemp3.upperLeft(), imtemp3.lowerRight(), imtemp3.accessor(), "/home/zhang/work/image/temp/imtempp3.png");
+          
 
           ImInfimum(srcImageRange(imCandi), srcImage(imtemp3), destImage(imtemp1));
           ImUnderBuild(destImageRange(imtemp1), srcImage(imtemp3), nb);
@@ -733,6 +881,7 @@ void candidateAnalysis(BIMAGE const & imCandi, BIMAGE const & imOrig, BIMAGE & d
         }
     }
 }
- 
+
+
 }; // end of namespace cecog
 #endif /*nuclearsegmentation_hxx*/

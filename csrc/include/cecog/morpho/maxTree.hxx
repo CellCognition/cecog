@@ -162,16 +162,17 @@ int mxt::flood_h(int h, const MultiArrayView<2, UInt8> imin, MultiArrayView<2, i
 		vp = h;
 
 		for (int k=0; k<se; ++k){
-            x = px + nl[py%2][k][0];
-            y = py + nl[py%2][k][1];
-			// if (py%2==0){
-			// 	x = px + se_even[k][0];
-			// 	y = py + se_even[k][1];
-			// }
-			// else{
-			// 	x = px + se_odd[k][0];
-			// 	y = py + se_odd[k][1];
-			// }
+            // x = px + nl[py%2][k][0];
+            // y = py + nl[py%2][k][1];
+
+            if (se==6){
+                x = px + nl6[py%2][k][0];
+                y = py + nl6[py%2][k][1];
+            }
+            else if (se==8){
+                x = px + nl8[py%2][k][0];
+                y = py + nl8[py%2][k][1];
+            }
 			 
 			if(x<0 || x>=size[0]|| y<0||y>=size[1]) continue;
 
@@ -1072,7 +1073,7 @@ void lengthSelection_cell_max( mxt maxTree, layer **node, const MultiArrayView<2
 				while (node[hh][ii].area <= max_area && node[hh][ii].mark != 1){ // mark==1 means visited
 					node[hh][ii].mark = 1;
 					if (node[hh][ii].length == 0 && node[hh][ii].area<=max_area){
-						node[hh][ii].geoLength(imin,imtemp,node,6,node[hh][ii].p,999,999,imout,false);
+						node[hh][ii].geoLength(imin,imtemp,node,se,node[hh][ii].p,999,999,imout,false);
 					}
 					if (node[hh][ii].circ1 == 0 && node[hh][ii].area<=max_area &&  C_circ>0)
 						node[hh][ii].circ1 = 3.1415*node[hh][ii].length*node[hh][ii].length/(4*node[hh][ii].area);
@@ -1163,7 +1164,7 @@ void lengthSelection_cell_direct( mxt maxTree, layer **node, const MultiArrayVie
 				while (node[hh][ii].area <= max_area && node[hh][ii].mark != 1){ // mark==1 means visited
 					node[hh][ii].mark = 1;
 					if (node[hh][ii].length == 0 && node[hh][ii].area<=max_area){
-						node[hh][ii].geoLength(imin,imtemp,node,6,node[hh][ii].p,999,999,imout,false);
+						node[hh][ii].geoLength(imin,imtemp,node,se,node[hh][ii].p,999,999,imout,false);
 					}
 					if (node[hh][ii].circ1 == 0 && node[hh][ii].area<=max_area &&  C_circ>0){
 						node[hh][ii].circ1 = 3.1415*node[hh][ii].length*node[hh][ii].length/(4*node[hh][ii].area);
@@ -1217,87 +1218,6 @@ void lengthSelection_cell_direct( mxt maxTree, layer **node, const MultiArrayVie
 }
 
 
-/***
-void lengthSelection_cell_direct(mxt maxTree, layer **node, Mat imin, Mat imstate, Mat imout, int C_len, int max_area, int C_circ, int op){
-
-	areaSelection(node, imin, imstate, imout, max_area);
-
-	// clean maxtree mark
-	int lenH = maxTree.hist[257] + 1;
-	for (int i=0; i<lenH; ++i){
-		for (int j=0; j<maxTree.Nnodes[i]; ++j){
-			node[i][j].mark = 0;
-		}
-	}
-
-	// op: 1-keep elongated structure ; 2-keep round things
-	int size[2] = {imin.cols,imin.rows};
-	// imin.copyTo(imout);
-	Mat imtemp = Mat::zeros(imin.rows, imin.cols, CV_8U);
-	Mat imvisited = Mat::zeros(imin.rows, imin.cols, CV_8U);
-
-	int fh,fi,hh,ii,hh_,ii_,ch,ci,count(0);
-	int h_min, h_minhh, h_minhi;
-
-	// cout<<imstate.at<int>(823, 1054)<<endl;
-	// int th= 91; // 111;
-	// int ti= 195; // 87;
-
-	for (int j=0; j<imin.rows; j++){
-		for (int i=0; i<imin.cols; i++){
-			if (imvisited.at<uchar>(j,i)!=0 || imin.at<uchar>(j,i)==0) continue;
-			hh = imin.at<uchar>(j,i);
-			ii = imstate.at<int>(j,i);
-			ch = hh;
-			ci = ii;
-			h_min = hh;
-			h_minhh = hh;
-			h_minhi = ii;
-			hh_ = hh;
-			ii_ = ii;
-			// if (ch==th && ci == ti) cout<<"DD: "<<(int)imout.at<uchar>(823, 1054)<<endl;
-			if (node[hh][ii].children[0].empty()){
-				// cout<<" L: "<<hh<<" "<<ii<<" "<<node[64][609].mark<< endl;
-				// if (ch==th && ci == ti) cout<<h_min<<" "<<h_minhh<<" "<<h_minhi<<endl;
-				node[hh][ii].setValue(imvisited,1);
-				while (node[hh][ii].area <= max_area && node[hh][ii].mark != 1){ // mark==1 means visited
-					node[hh][ii].mark = 1;
-					if (node[hh][ii].length == 0 && node[hh][ii].area<=max_area){
-						node[hh][ii].geoLength(imin,imtemp,node,6,node[hh][ii].p,999,999,imout,false);
-					}
-					if (node[hh][ii].circ1 == 0 && node[hh][ii].area<=max_area &&  C_circ>0)
-						node[hh][ii].circ1 = 3.1415*node[hh][ii].length*node[hh][ii].length/(4*node[hh][ii].area);
-					// if (ch==th && ci == ti) cout<<" "<<hh<<" "<<ii<<" "<<h_min<<" "<<h_minhh<<" "<<h_minhi<<" "<<node[hh][ii].circ1<<" "<<node[hh][ii].mark<<" "<<endl;
-					
-					// if (node[hh][ii].circ1<C_circ && node[hh][ii].length>C_len) 
-
-					if (1){ // direct criteria
-						if (node[hh][ii].circ1<C_circ ) {
-							node[hh][ii].setValue(imout,hh,-2);
-						}
-					}
-
-
-					hh_ = hh; ii_=ii;
-					fh = node[hh][ii].parent[0];
-					fi = node[hh][ii].parent[1];
-					hh = fh;
-					ii = fi;
-					if (hh==-1 || hh==0){
-						hh=0;
-						break;
-					}
-				}
-			}
-
-		}
-	}
-}
-
-***/
-
-
-
 void AreaOpening(const MultiArrayView<2, UInt8> imin,  MultiArrayView<2, UInt8> imout, int se, int T_area){
     MultiArray<2, int> imstate(imin.shape());
 	int *hist = histogram(imin);
@@ -1339,7 +1259,7 @@ void LengthOpening(const MultiArrayView<2, UInt8> imin,  MultiArrayView<2, UInt8
     imstate.init(-2); // NEED RETEST
     // imstate = imstate -2; 
     mxt maxTree (imin, imstate);
-    maxTree.flood_h(h, imin, imstate, 8);
+    maxTree.flood_h(h, imin, imstate, se);
 
     layer **node = new layer* [lenH];
     for (int k=0; k<lenH; ++k){

@@ -72,7 +72,7 @@ class IntTrait(traits.IntTrait, GuiNumberTrait):
 
 class FloatTrait(traits.FloatTrait, GuiNumberTrait):
 
-    def __init__(self, default_value, min_value, max_value, digits=1, step=None,
+    def __init__(self, default_value, min_value, max_value, digits=2, step=None,
                  label=None, tooltip=None, doc=None):
         traits.FloatTrait.__init__(self, default_value, min_value, max_value,
                                    digits=digits)

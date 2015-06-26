@@ -1134,8 +1134,10 @@ class SegmentationPluginFRST(_SegmentationPlugin):
     PARAMS = [('if_test', BooleanTrait(False, label='Test mode')),
               ('size_para', BooleanTrait(True, label='Size parameters')),
               ('frst_para', BooleanTrait(True, label='FRST parameters')),
-              ('grad_para', BooleanTrait(True, label='Gradient parameters')),
+              ('if_dist', BooleanTrait(True, label='Merge close cell markers')),
+              ('grad_para', BooleanTrait(True, label='Gradient parameters (mask of watershed)')),
               ('if_merge', BooleanTrait(True, label='Merge candidates')),
+              ('if_seg2', BooleanTrait(True, label='Segmentation using adaptive thresholding')),
 
               ('test_folder', StringTrait('', 1000, label='Intermediate images saving folder',
                                                  widget_info=StringTrait.STRING_PATH)),
@@ -1146,9 +1148,14 @@ class SegmentationPluginFRST(_SegmentationPlugin):
               ('max_scale', IntTrait(20, 1, 200, label='FRST max search scale')),
               ('frst_h1', IntTrait(1, 1, 255, label='FRST h-minimum height 1')),
               ('frst_h2', IntTrait(2, 1, 255, label='FRST h-minimum height 2')),
+              ('c_dist', IntTrait(15, 1, 200, label='Max distance between cell markers to be merged')),
               ('bg_dist', IntTrait(40, 1, 200, label='Minimum distance from BG-markers to NU-markers')),
               ('sigma', FloatTrait(1.0, 0.0, 100.0, label='Gradient sigma')),
-              ('t_grad', FloatTrait(3.0, 0.0, 255.0, label='Gradient threshold')),  
+              ('t_grad', FloatTrait(3.0, 0.0, 255.0, label='Gradient threshold')), 
+              
+              ('hist_l', FloatTrait(0.04, 0.0, 1.0, label='Histogram lower rate')),   
+              ('hist_h', FloatTrait(0.5, 0.0, 1.0, label='Histogram higher rate')),
+              ('circ', IntTrait(5 , 1, 50, label='Circularity ((pi*L)/(4*area))')),  
               
               ('classifier', SelectionTrait(classifiers[0], classifiers, label='Classifier')),
               ('coef1', FloatTrait(-3.8721, -50.0, 50.0, label='line-min')),   
@@ -1179,10 +1186,18 @@ class SegmentationPluginFRST(_SegmentationPlugin):
                          ('frst_h1', (1, 0, 1, 1)),
                          ('frst_h2', (1, 1, 1, 1)),
                          ])
+        panel.add_group('if_dist',
+                        [('c_dist', (0, 0, 1, 1)),
+                         ])                 
         panel.add_group('grad_para',
                         [('sigma', (0, 0, 1, 1)),
                          ('t_grad', (0, 1, 1, 1)),
                          ])             
+        panel.add_group('if_seg2',
+                        [('hist_l', (0, 0, 1, 1)),
+                         ('hist_h', (0, 1, 1, 1)),
+                         ('circ', (1, 0, 1, 1)),
+                         ])        
         panel.add_group('if_merge',
                         [('classifier', (0, 0, 1, 1)),
                          ('coef1', (1, 0, 1, 1)),
@@ -1355,7 +1370,7 @@ class SegmentationPluginFRST(_SegmentationPlugin):
         im1 = self.HMinima(imFRST, self.params['frst_h2'])
         im3 = ccore.threshold(im1, 1, 255, 0, 255) 
         
-        im4 = ccore.objectSelection(im2, im3, imFRST);
+        im4 = ccore.objectSelection(im2, im3, imFRST, self.params['c_dist']);
 
         ######### Remove the markers attached to border #############
         im1.init(0)
@@ -1384,7 +1399,7 @@ class SegmentationPluginFRST(_SegmentationPlugin):
 
         ######## Watershed to get background markers #############
         imWS = ccore.constrainedWatershed(imDistU, imMarkers)
-        imWSLine = ccore.threshold(imWS, 0, 0, 0, 255) 
+        imWSLine = ccore.threshold(imWS, 0, 0, 0, 255)
 
 
         imDistNumpy = imDist.toArray()
@@ -1427,20 +1442,27 @@ class SegmentationPluginFRST(_SegmentationPlugin):
         imCand2 = ccore.areaOpen(imCand1, int(numpy.round(self.params['nuclear_diam'] \
             * self.params['nuclear_diam'] * numpy.pi)))
         imCand3 = ccore.substractImages(imCand1, imCand2)
+        imCand2 = ccore.areaOpen(imCand3, int(numpy.round(self.params['se_size'] \
+            * self.params['se_size'] )))
 
         # imCand2 = ccore.diameterOpen(imCand3, int(max_size * 3))
-        imCand1 = ccore.lengthOpening(imCand3, int(self.params['nuclear_diam'] * 2), \
+        imCand1 = ccore.lengthOpening(imCand2, int(self.params['nuclear_diam'] * 2), \
             int(self.params['nuclear_diam'] * self.params['nuclear_diam'] * numpy.pi), 20)
         if self.params["if_test"]:
             ccore.writeImage(imCand1, os.path.join(self.params["test_folder"], "im_4a_candi_WS.png"))
 
         ######## using previous segmented candidates to do an adaptive thresholding ###
-        im1 = ccore.adaptiveThreshold(imOrig, imCand1, 0.04, 0.5)
+        im1 = ccore.adaptiveThreshold(imOrig, imCand1, self.params['hist_l'], self.params['hist_h'])
+        ccore.writeImage(im1, os.path.join(self.params["test_folder"], "ztemp1.png"))
         im2 = ccore.areaOpen(im1, int(numpy.round(self.params['se_size']  * \
             self.params['se_size']  * 2)))
         im1 = ccore.lengthOpening(im2, int(self.params['nuclear_diam'] * 2), \
-            int(self.params['nuclear_diam'] * self.params['nuclear_diam']), 5)
+            int(self.params['nuclear_diam'] * self.params['nuclear_diam'] * 2), self.params["circ"])
         # im1 = ccore.substractImages(im2, im3)
+
+        ccore.writeImage(im2, os.path.join(self.params["test_folder"], "ztemp2.png"))
+        ccore.writeImage(im1, os.path.join(self.params["test_folder"], "ztemp3.png"))
+
 
         im2 = ccore.discDilate(im1, 1)
         im1 = ccore.discErode(im2, 1)

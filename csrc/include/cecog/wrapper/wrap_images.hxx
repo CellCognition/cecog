@@ -706,7 +706,7 @@ PyObject * pyLengthOpening(IMAGE1 const &imgIn, int length, int T_area, int circ
 {
   std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
 
-  cecog::morpho::lengthOpening(imgIn, *imgPtr, 6, T_area, length, circ);
+  cecog::morpho::lengthOpening(imgIn, *imgPtr, 8, T_area, length, circ);
 
   return incref(object(imgPtr).ptr());
 }
@@ -806,12 +806,12 @@ PyObject * pyMultiRadialSymmetryTransform(IMAGE & imgSrc, IMAGE  & imgMask,
 
 
 template <class IMAGE1>
-PyObject * pyObjectSelection(IMAGE1 const &imgIn, IMAGE1 const &imgMask, IMAGE1 const &imgRef)
+PyObject * pyObjectSelection(IMAGE1 const &imgIn, IMAGE1 const &imgMask, IMAGE1 const &imgRef, const int dist = -1)
 {
   using namespace cecog::morpho;
   std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
   imgPtr->init(0);
-  cecog::objectSelection(imgIn, imgMask, imgRef, *imgPtr);
+  cecog::objectSelection(imgIn, imgMask, imgRef, *imgPtr, dist);
 
   return incref(object(imgPtr).ptr());
 }
