@@ -1088,6 +1088,7 @@ class CellH5EventModule(CH5BasedModule):
     def update_event_table(self, coord):
         
         pos = self.ch5file.get_position_from_coord(coord)
+        
         try:
             events = pos.get_event_items()
         except KeyError as ke:
@@ -1096,6 +1097,7 @@ class CellH5EventModule(CH5BasedModule):
         except Exception as e:
             exception(self, "An error has occured ('%s)'"% str(e))
             return
+        
         
         self.event_table.setRowCount(0)
     
@@ -1106,6 +1108,7 @@ class CellH5EventModule(CH5BasedModule):
         self.tracks = []
         cnt = 0
         for (e_id, e), time_idx in zip(events, time_idxs):
+            QApplication.processEvents()
             if self._cb_track.checkState():
                 track = e[:-1] + pos.track_first(e[-1])
             else:
@@ -1124,16 +1127,22 @@ class CellH5EventModule(CH5BasedModule):
             
             # to make sorting according to numbers
             tmp_i.setData(Qt.DisplayRole, len(track))
-            tmp_j.setData(Qt.DisplayRole, time_idx)
+            tmp_j.setData(Qt.DisplayRole, int(time_idx))
             
             self.event_table.setItem(cnt, 1, tmp_i)
-            self.event_table.setItem(cnt, 2, tmp_j)    
+            self.event_table.setItem(cnt, 2, tmp_j)
+
+            if cnt == 0:
+                self.event_table.resizeRowsToContents()
+                self.event_table.resizeColumnsToContents()
+                 
             cnt+=1
             self.tracks.append(track)
-                
-        self.event_table.resizeColumnsToContents()
-        self.event_table.resizeRowsToContents()    
-        self.event_table.setSortingEnabled(True)              
+            
+            
+        self.event_table.resizeRowsToContents()                 
+        self.event_table.resizeColumnsToContents()           
+        self.event_table.setSortingEnabled(True)          
   
     def _init_pos_table(self):
         self.pos_table = QTableWidget(self)
@@ -1149,6 +1158,7 @@ class CellH5EventModule(CH5BasedModule):
         
     def _init_event_table(self):
         self.event_table = QTableWidget(self)
+        self.event_table.setToolTip("Use CTRL button to select multiple events")
         self.event_table.setEditTriggers(QTableWidget.NoEditTriggers)
         #self.event_table.setSelectionMode(QTableWidget.SingleSelection)
         self.event_table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -1357,7 +1367,7 @@ class CellH5EventModule(CH5BasedModule):
         self.show_tracks(res)
         
     def _on_new_point(self, point, button, modifier):
-        print 'click'
+        pass
             
     def show_tracks(self, res):
         self.browser.image_viewer.clear()
