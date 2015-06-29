@@ -163,14 +163,13 @@ class CH5BasedModule(Module):
         self.hdf_file = os.path.join(self._settings.get('General', 'pathout'), 'hdf5', '_all_positions.ch5')
         
         if not os.path.exists(self.hdf_file):
-            raise IOError("Invalid CellH5 files. %s does not exist!" % self.hdf_file)
-            
+            raise IOError("CellH5 files not yet created. Interactive viewing of selected events will not be possible.")
             self.ch5file = None
         else:
             try: 
                 self.ch5file = cellh5.CH5File(self.hdf_file)
             except Exception, e:
-                raise RuntimeError("Invalid CellH5 files. %s is corrupt!\n%s" % (self.hdf_file, str(e)))
+                raise RuntimeError("Invalid CellH5 files. Interactive viewing of selected events will not be possible.\n %s is corrupt!\n\n%s" % (self.hdf_file, str(e)))
             
     @property
     def coordinates(self):
