@@ -39,14 +39,14 @@ class AtLineEdit(QtWidgets.QLineEdit):
 
         self._button = QtWidgets.QToolButton(self)
         self._button.setIcon(QtGui.QIcon(":/oxygen/clear.png"))
-        self._button.setStyleSheet('border: 0px; padding: 0px;')
+#         self._button.setStyleSheet('border: 0px; padding: 0px;')
         self._button.setCursor(QtCore.Qt.ArrowCursor)
 
         width = self.style().pixelMetric(QtWidgets.QStyle.PM_DefaultFrameWidth)
         size = self._button.sizeHint()
 
-        self.setStyleSheet('QLineEdit {padding-right: %dpx; }'
-                           %(size.width() + width + 1))
+#         self.setStyleSheet('QLineEdit {padding-right: %dpx; }'
+#                            %(size.width() + width + 1))
         self.setMinimumSize(max(self.minimumSizeHint().width(),
                                 size.width() + width*2 + 2),
                             max(self.minimumSizeHint().height(),

@@ -84,7 +84,7 @@ class Browser(QMainWindow):
 
         self.grabGesture(Qt.SwipeGesture)
 
-        self.setStyleSheet("QStatusBar { border-top: 1px solid gray; }")
+#         self.setStyleSheet("QStatusBar { border-top: 1px solid gray; }")
 
 
         layout = QVBoxLayout(frame)

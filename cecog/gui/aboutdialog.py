@@ -30,13 +30,13 @@ class CecogAboutDialog(QtWidgets.QDialog):
         layout.setContentsMargins(0, 0, 0, 0)
 
         label1 = QtWidgets.QLabel(self)
-        label1.setStyleSheet('background: transparent;')
+#         label1.setStyleSheet('background: transparent;')
         label1.setAlignment(Qt.AlignCenter)
         label1.setText('CecogAnalyzer\nVersion %s\n\n'
                        'Copyright (c) 2006 - 2011\n' %version.version)
 
         label2 = QtWidgets.QLabel(self)
-        label2.setStyleSheet('background: transparent;')
+#         label2.setStyleSheet('background: transparent;')
         label2.setTextFormat(Qt.AutoText)
         label2.setOpenExternalLinks(True)
         label2.setAlignment(Qt.AlignCenter)

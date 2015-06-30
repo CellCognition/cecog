@@ -4,6 +4,7 @@ main.py
 CecogAnalyzer main window
 
 """
+from imp import load_module
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -119,7 +120,8 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         self.debug = debug
 
         self.environ = CecogEnvironment(version=version, redirect=redirect,
-                                        debug=debug)
+                                        debug=debug)              
+        
         if debug:
             self.environ.pprint()
 
@@ -198,7 +200,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
                       TrackingFrame(self._settings, self._pages, SECTION_NAME_TRACKING),
                       EventSelectionFrame(self._settings, self._pages, SECTION_NAME_EVENT_SELECTION),
                       ErrorCorrectionFrame(self._settings, self._pages, SECTION_NAME_ERRORCORRECTION),
-                      PostProcessingFrame(self._settings, self._pages, SECTION_NAME_POST_PROCESSING),
+                      #PostProcessingFrame(self._settings, self._pages, SECTION_NAME_POST_PROCESSING),
                       OutputFrame(self._settings, self._pages, SECTION_NAME_OUTPUT),
                       ProcessingFrame(self._settings, self._pages, SECTION_NAME_PROCESSING)]
 
@@ -448,7 +450,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         QMessageBox.aboutQt(self, "about Qt")
 
     def open_preferences(self):
-        pref = PreferencesDialog()
+        pref = PreferencesDialog(self)
         pref.exec_()
 
     def _on_browser_open(self):

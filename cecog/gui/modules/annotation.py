@@ -356,7 +356,7 @@ class AnnotationModule(Module):
                                                ])
         class_table.resizeColumnsToContents()
         class_table.currentItemChanged.connect(self._on_class_changed)
-        class_table.setStyleSheet('font-size: 10px;')
+#         class_table.setStyleSheet('font-size: 10px;')
         layout.addWidget(class_table)
         self._class_table = class_table
 
@@ -420,7 +420,7 @@ class AnnotationModule(Module):
         ann_table.setHorizontalHeaderLabels(column_names)
         ann_table.resizeColumnsToContents()
         ann_table.currentItemChanged.connect(self._on_anntable_changed)
-        ann_table.setStyleSheet('font-size: 10px;')
+#         ann_table.setStyleSheet('font-size: 10px;')
         layout.addWidget(ann_table)
         self._ann_table = ann_table
         splitter.addWidget(grp_box)
@@ -572,10 +572,10 @@ class AnnotationModule(Module):
                 self._class_table.resizeRowsToContents()
                 self._class_table.resizeColumnsToContents()
                 self._class_table.scrollToItem(item)
-                css = "selection-background-color: %s; selection-color: %s;" %\
-                       (qcolor_to_hex(class_color), qcolor_to_hex(col))
-                self._class_table.setStyleSheet(css)
-                self._ann_table.setStyleSheet(css)
+#                 css = "selection-background-color: %s; selection-color: %s;" %\
+#                        (qcolor_to_hex(class_color), qcolor_to_hex(col))
+#                 self._class_table.setStyleSheet(css)
+#                 self._ann_table.setStyleSheet(css)
 
                 self._annotations.rename_class(class_name, class_name_new)
                 self._current_class = class_name_new
@@ -983,10 +983,10 @@ class AnnotationModule(Module):
             class_label = self._learner.class_labels[class_name]
             self._class_sbox.setValue(class_label)
             self._class_color_btn.set_color(QColor(hex_col))
-            class_table.setStyleSheet(css)
+#             class_table.setStyleSheet(css)
 
             self._update_annotation_table()
-            self._ann_table.setStyleSheet(css)
+#             self._ann_table.setStyleSheet(css)
         else:
             self._current_class = None
 
