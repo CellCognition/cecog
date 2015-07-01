@@ -12,7 +12,7 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-__all__ = ['Build', 'BuildRcc', 'BuildHelp']
+__all__ = ['Build', 'BuildRcc', 'BuildHelp', 'BuildCSSRcc']
 
 import os
 from os.path import isfile, isdir, dirname
@@ -98,5 +98,35 @@ class BuildRcc(Command):
                                    self.infile])
         except Exception, e:
             cmd = "%s -o %s %s" %(self.pyrccbin, self.outfile, self.infile)
+            print "running command '%s' failed" %cmd
+            raise
+        
+        
+class BuildCSSRcc(Command):
+    """Custom command to compile Qt4-qrc files"""
+
+    description = "Compile css source and pngs from qrc files"
+    user_options = [('pyrccbin=', 'b', 'Path to pyrcc4 executable'),]
+
+    def initialize_options(self):
+        self.pyrccbin = 'pyrcc5'
+        self.css_src_folder = 'resources/css/src'
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        print "Compiling style sheets qrc files in %s" % self.css_src_folder
+        print "***"*20
+        try:
+            for f in os.listdir(self.css_src_folder):
+                if (os.path.isdir(os.path.join(self.css_src_folder,f)) and 
+                    os.path.exists(os.path.join(os.path.join(self.css_src_folder, f), "style.qrc"))):
+                    cmd = [self.pyrccbin, os.path.join(self.css_src_folder, "%s/style.qrc" % f), 
+                                           "-o", os.path.join(self.css_src_folder, "..","%s.py " % f)]
+                    print "running", " ".join(cmd)
+                    subprocess.check_call(cmd)
+            
+        except Exception, e:
             print "running command '%s' failed" %cmd
             raise

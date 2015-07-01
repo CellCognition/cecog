@@ -162,8 +162,6 @@ QGroupBox
 {
     border: 1px solid darkgray;
     margin-top: 10px;
-    background-color: darkgray;
-    color: silver;
 }
 
 QGroupBox:focus
