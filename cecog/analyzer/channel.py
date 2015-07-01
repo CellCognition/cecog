@@ -22,7 +22,7 @@ import glob
 import copy
 import types
 import numpy
-import pdb
+import pdb, os
 
 from cecog import ccore
 from cecog.colors import Colors
@@ -216,26 +216,30 @@ class Channel(ChannelCore):
         self._features_calculated = True
         for region_name, container in self.containers.iteritems():
             object_holder = ObjectHolder(region_name)
-            if not container is None:
-                container.debug = True
-                container.debug_folder = "/Users/twalter/temp/spotfeatures"
-                pdb.set_trace()
+            if not container is None:                
+                container.debug = False
+                if container.debug:
+                    container.debug_folder = os.path.join("/Users/twalter/temp/spotfeatures", 
+                                                          self.meta_image.coordinate.position)
+                    if not os.path.exists(container.debug_folder):
+                        os.makedirs(container.debug_folder)
+                        print 'generated ', container.debug_folder
+                    container.debug_prefix = 'img'
                 
                 # pass parameters to container
                 for feature in self.dctFeatureParameters:
-                    if feature in ['haralick', 'haralick2']:
+                    if feature in ['featurecategory_haralick', 'featurecategory_haralick2']:
                         container.resetHaralick()
                         for haralick_size in self.dctFeatureParameters[feature]['dist']:
                             container.addHaralickValue(haralick_size)
-                    elif feature == 'granulometry':
+                    elif feature == 'featurecategory_granulometry':
                         container.resetGranulometry()
                         for val in self.dctFeatureParameters[feature]['se']:
                             container.addGranulometryValue(val)
-                    elif feature == 'spotfeatures':
+                    elif feature == 'featurecategory_spotfeatures':
                         container.spot_diameter = self.dctFeatureParameters[feature]['diameter']
                         container.spot_threshold = self.dctFeatureParameters[feature]['thresh']
                 
-                        
                 # apply feature                        
                 for strFeatureCategory in self.lstFeatureCategories:                    
                     container.applyFeature(strFeatureCategory)

@@ -24,6 +24,7 @@ from cecog.plugin.segmentation.manager import _SegmentationPlugin
 
 import pdb
 
+
 class SegmentationPluginPrimary(_SegmentationPlugin):
 
     LABEL = 'Local adaptive threshold w/ split&merge'
@@ -622,20 +623,22 @@ class SegmentationPluginPrimary3(_SegmentationPlugin):
     
 class SegmentationPluginPrimary4(_SegmentationPlugin):
 
-    LABEL = 'Local adaptive threshold, togglemappings, split by minima depth, background corrected object filter'
+    LABEL = 'global + local threshold, togglemappings, split by minima depth, background corrected object filter'
     NAME = 'primary4'
     COLOR = '#FF0000'
 
     REQUIRES = None
 
-    PARAMS = [('medianradius', IntTrait(2, 0, 1000, label='Median radius')),
+    PARAMS = [('median', BooleanTrait(True, label='Median filter')),
+              ('medianradius', IntTrait(2, 0, 1000, label='Median radius')),
               ('togglemappings', BooleanTrait(False, label='Toggle Mappings')),
               ('tm_size', IntTrait(1, 0, 20, label='Toggle Mappings Size')),
+              ('local', BooleanTrait(False, label='Local Threshold')),
               ('latwindowsize', IntTrait(20, 1, 1000, label='Window size')),
               ('latlimit', IntTrait(1, 0, 255, label='Min. contrast')),
-              ('lat2', BooleanTrait(False, label='Local adaptive threshold 2')),
-              ('latwindowsize2', IntTrait(20, 1, 1000, label='Window size')),
-              ('latlimit2', IntTrait(1, 0, 255, label='Min. contrast')),
+              ('global', BooleanTrait(False, label='Global Threshold')),
+              ('otsu_factor', FloatTrait(0.95, 0, 255, label='Otsu Factor', digits=2)),
+              ('offset', IntTrait(0, 0, 255, label='Threshold Offset')),              
               ('watershed_distance', BooleanTrait(False, label='Watershed (Distance)')),
               ('watershed_dynamic', IntTrait(2, 0, 1000, label='Minimal depth')),
               ('watershed_used_distance', IntTrait(2, 0, 2, label='Distance Metric (0: chessboard, 1: L1, 2: L2)')),
@@ -646,6 +649,7 @@ class SegmentationPluginPrimary4(_SegmentationPlugin):
               ('postprocessing_intensity_max', IntTrait(-1, -1, 1000000, label='Max. average intensity above background')),
               ('removeborderobjects', BooleanTrait(True, label='Remove border objects')),
               ('holefilling', BooleanTrait(True, label='Fill holes')),
+              ('holearea', IntTrait(1, 0, 100000, label='Minimal Hole Size')),
              ]
 
     # the : at the beginning indicates a QRC link with alias 'plugins/segmentation/local_adaptive_threshold'
@@ -655,16 +659,20 @@ class SegmentationPluginPrimary4(_SegmentationPlugin):
         panel.add_group('togglemappings',
                         [('tm_size', (0, 0, 1, 1)),
                          ])
-        panel.add_group(None,
+        panel.add_group('median',
                         [('medianradius', (0, 0, 1, 1)),
-                         ('latwindowsize', (0, 1, 1, 1)),
+                         ])
+        panel.add_group('local',
+                        [('latwindowsize', (0, 1, 1, 1)),
                          ('latlimit', (0, 2, 1, 1)),
                          ], link='lat', label='Local adaptive threshold')
-        panel.add_group('lat2',
-                        [('latwindowsize2', (0, 0, 1, 1)),
-                         ('latlimit2', (0, 1, 1, 1)),
+        panel.add_group('global',
+                        [('otsu_factor', (0, 0, 1, 1)),
+                         ('offset', (0, 1, 1, 1)),
                          ])
-        panel.add_input('holefilling')
+        panel.add_group('holefilling',
+                        [('holearea', (0, 0, 1, 1)),
+                         ])
         panel.add_input('removeborderobjects')
         panel.add_group('watershed_distance',
                         [('watershed_dynamic', (0, 0, 1, 1)),
@@ -693,7 +701,11 @@ class SegmentationPluginPrimary4(_SegmentationPlugin):
         if radius is None:
             radius = self.params['medianradius']
 
-        img_out = ccore.disc_median(img_temp, radius)
+        if self.params['median']:
+            img_out = ccore.disc_median(img_temp, radius)
+        else:
+            img_out = img_temp
+            
         return img_out
 
     @stopwatch()
@@ -702,14 +714,43 @@ class SegmentationPluginPrimary4(_SegmentationPlugin):
         return img_out
 
     @stopwatch()
-    def OLD_correct_segmetation(self, img_in, img_bin, border, gauss_size,
-                            max_dist, min_merge_size, kind='shape'):
-        if kind == 'shape':
-            f = ccore.segmentation_correction_shape
-        else:
-            f = ccore.segmentation_correction_intensity
-        return f(img_in, img_bin, border, gauss_size, max_dist, min_merge_size)
+    def _global_threshold(self, img, otsu_factor=1.0, offset=0):
+        #histo = img.getHistogram(256)        
+        otsu_thresh = ccore.get_otsu_threshold(img)
+        threshold = otsu_factor * otsu_thresh + offset
+        img_thresh = ccore.threshold_image(img, int(threshold))
+        #ccore.writeImage(img_thresh, os.path.join(self.debug_dir, 'thresh.png'))
+        return img_thresh
 
+    def get_first_mode(self, img):
+        histo = img.getHistogram(256)        
+        
+        mode = None
+        
+        if len(histo) > 3:
+            for i in range(len(histo) - 2):
+                if .5*(histo[i+1] + histo[i]) > .5*(histo[i+2] + histo[i+1]):
+                    mode = i 
+                    break
+                
+        if mode is None: 
+            mode = 0
+        return mode
+
+    def get_perc_decrease(self, img, perc = 0.5):
+        histo = img.getHistogram(256)        
+        max_histo = numpy.max(histo)
+
+        ind = numpy.where(histo==max_histo)        
+        mode = ind[0][0] 
+        
+        for i in range(mode, len(histo) -2):
+            if .5*(histo[i+1] + histo[i]) < perc * max_histo:
+                mode = i
+                break
+
+        return mode
+    
     @stopwatch()
     def correct_segmetation(self, img_in, img_bin, dyn, distance=2):
 
@@ -750,7 +791,7 @@ class SegmentationPluginPrimary4(_SegmentationPlugin):
                     conditions.append('roisize %s %d' % (cmprt, roisize))
                 if intensity > -1:
                     feature_categories.add('normbase2')
-                    conditions.append('n2_avg %s %d' % (cmprt, intensity+offset))
+                    conditions.append('n2_avg %s %f' % (cmprt, intensity+offset))
 
             if len(conditions) > 0:
                 conditions_str = ' and '.join(conditions)
@@ -791,25 +832,48 @@ class SegmentationPluginPrimary4(_SegmentationPlugin):
     def _run(self, meta_image):
         image = meta_image.image
 
-        img_prefiltered = self.prefilter(image)
+        temp = self.prefilter(image)
+        img_bin1 = None
+        img_bin2 = None
+         
+        grey_level_shift = self.get_perc_decrease(temp, perc=0.5)
+        im_min, im_max = temp.getMinmax()
         
-        img_bin1 = self.threshold(img_prefiltered, self.params['latwindowsize'], self.params['latlimit'])
+        # we subtract grey_level_shift with lower clipping.
+        # i.e. f(x) = 0 if x(x) <= grey_level_shift
+        # otherwise: f(x) = f(x) - grey_level_shift
+        if grey_level_shift >= im_max - 1:
+            grey_level_shift = im_max - 1
+        img_prefiltered = ccore.linearRangeMapping(temp, grey_level_shift, im_max, 0, im_max-grey_level_shift )        
+        
+        if not (self.params['local'] or self.params['global']):
+            raise RuntimeError('At least one thresholding scheme must be selected.')
+        
+        if self.params['local']:
+            img_bin1 = self.threshold(img_prefiltered, self.params['latwindowsize'], self.params['latlimit'])
+            
+        if self.params['global']:
+            #img_bin2 = self.threshold(img_prefiltered, self.params['latwindowsize2'],
+            #                          self.params['latlimit2'])
+            img_bin2 = self._global_threshold(img_prefiltered, otsu_factor=self.params['otsu_factor'], 
+                                              offset=self.params['offset'])
 
-        if self.params['holefilling']:
-            ccore.fill_holes(img_bin1, False)
-
-        if self.params['lat2']:
-            img_bin2 = self.threshold(img_prefiltered, self.params['latwindowsize2'],
-                                      self.params['latlimit2'])
-
-            # replacement for not working ccore.projectImage
-            img_bin = numpy.zeros((img_bin2.height, img_bin2.width),
-                                 dtype=meta_image.format)
-            img_bin = ccore.numpy_to_image(img_bin, copy=True)
-            ccore.zproject(img_bin, [img_bin1, img_bin2], ccore.ProjectionType.MaxProjection)
+            if img_bin1 is None:
+                img_bin = img_bin2
+            else:
+                # replacement for not working ccore.projectImage
+                img_bin = numpy.zeros((img_bin2.height, img_bin2.width),
+                                      dtype=meta_image.format)
+     
+                img_bin = ccore.numpy_to_image(img_bin, copy=True)
+                ccore.zproject(img_bin, [img_bin1, img_bin2], ccore.ProjectionType.MaxProjection)
         else:
             img_bin = img_bin1
 
+        if self.params['holefilling']:
+            #ccore.fill_holes(img_bin, False)
+            img_bin = ccore.area_close(img_bin, self.params['holearea'], 8)
+            
         if self.params['watershed_distance']:
             img_bin = self.correct_segmetation(img_prefiltered, img_bin, 
                                                self.params['watershed_dynamic'],
@@ -1221,6 +1285,343 @@ class SegmentationPluginModification(_SegmentationPlugin):
         else:
             raise ValueError("Parameters are not valid. Requirements: 'expansion_size' > 0 and/or "
                              "'shrinking_size' > 0")
+
+class SegmentationPluginWatershedAndMultiThreshold(_SegmentationPlugin):
+
+    LABEL = 'Global 3-level Threshold and Watershed from Primary Channel'
+    NAME = 'ws_and_multi_threshold'
+    COLOR = '#0099FF'
+    DOC = ":additional_segmentation_plugins"
+
+    REQUIRES = ['primary_segmentation']
+
+    PARAMS = [('gauss_filter_size', IntTrait(2, 1, 4, label='Gauss filter size')),
+              ('otsu_factor', FloatTrait(0.95, 0, 255, label='Otsu Factor', digits=2)),
+              ('offset', IntTrait(0, 0, 255, label='Threshold Offset')),              
+              ('gradient', BooleanTrait(False, label='Use Gradient (instead of the original image)')), 
+              ('to_background', BooleanTrait(False, label='Intermediate Level to background')), 
+              ]         
+            
+    # histo : a histogram
+    # M: the number of free thresholds (M >= 1)
+    def _find_multi_otsu(self, histo, M):
+
+        # number of pixels
+        N = numpy.sum(histo)
+    
+        # number of grey levels
+        L = len(histo)
+    
+        # relative histogram
+        hrel = histo / numpy.float(N)
+        
+        A = numpy.tile(numpy.array(hrel), (L, 1))
+        B = numpy.triu(A)
+        P = numpy.cumsum(B, axis=1)
+    
+        C = numpy.tile(numpy.arange(L), (L, 1))
+        D = C * B
+        S = numpy.cumsum(D, axis=1)
+    
+        P[P==0.0] = 1.0
+        scores = S * S / P
+    
+        #pdb.set_trace()
+        
+        grey_values = numpy.arange(1, L-1)
+        best_score = 0 
+        best_combination = ()
+        for thresholds in itertools.combinations(grey_values, M):
+            all_thresholds = list(thresholds) + [L-1]
+            #pdb.set_trace()
+            #current_score = np.sum([scores[i, i+1] for i in all_thresholds[:-1]])
+    
+            current_score = scores[0,all_thresholds[0]]
+            current_score += numpy.sum([scores[all_thresholds[i] + 1, all_thresholds[i+1]] for i in range(len(all_thresholds)-1)])
+            #print all_thresholds, current_score
+            if current_score > best_score:
+                best_combination = thresholds
+                best_score = current_score
+                #print ' *** updated best_score: ', best_combination, best_score
+        return best_score, best_combination
+
+    @stopwatch()
+    def _run(self, meta_image, container):
+
+        image = meta_image.image
+        img_filtered = self._prefilter(image, self.params['gauss_filter_size'])
+        
+        img_thresh = self._global_threshold(img_filtered, 
+                                            self.params['otsu_factor'], 
+                                            self.params['offset'])
+        
+        method = 1
+        if self.params['gradient']:
+            method=2
+            
+        img_labels = self._constrained_watershed(img_filtered, 
+                                                 container.img_labels,
+                                                 img_thresh,
+                                                 method=method)
+
+        return ccore.ImageMaskContainer(image, img_labels, False, True, True)
+
+    
+    def _prefilter(self, img, filter_size):
+        img_filtered = ccore.gaussianFilter(img, filter_size)
+        return img_filtered
+        
+    def _global_threshold(self, img, otsu_factor=1.0, offset=0, to_background=False):
+        histo = img.getHistogram(256)        
+        #otsu_thresh = ccore.get_otsu_threshold(img)
+        bs, bc = self._find_multi_otsu(numpy.array(histo), 2)
+        
+        if to_background:
+            # in this case, we take the higher of the two thresholds
+            threshold = otsu_factor * bc[1] + offset
+        else:
+            # in this case, we take the lower of the two thresholds
+            threshold = otsu_factor * bc[0] + offset
+            
+        img_thresh = ccore.threshold_image(img, int(threshold))
+        return img_thresh
+    
+    def _constrained_watershed(self, 
+                               img_in, img_labels, img_thresh,                               
+                               method=1):
+
+        # binary image: nuclei
+        maxlabel = img_labels.getMinmax()[1]
+        img_bin = ccore.threshold(img_labels, 1, maxlabel, 0, 255)
+        #ccore.writeImage(img_bin, os.path.join(self.debug_dir, 'nuclei_bin.png'))
+
+        if method==1:
+            # use of the inverted image
+            img_inv = ccore.linearRangeMapping(img_in, 255, 0, 0, 255)
+            #ccore.writeImage(img_inv, os.path.join(self.debug_dir, 'img_inv.png'))
+        
+            ws = ccore.constrainedWatershed(img_inv, img_bin)
+        
+        elif method==2:
+            # use of the gradient
+            img_grad = ccore.morphoGradient(img_in, 1, 8)
+            #ccore.writeImage(img_grad, os.path.join(self.debug_dir, 'grad.png'))
+
+            ws = ccore.constrainedWatershed(img_grad, img_bin)
+
+        #ccore.writeImage(ws, os.path.join(self.debug_dir, 'ws.png'))
+        
+        # we first get the regions
+        maxreslab = ws.getMinmax()[1]
+        img_bin_ws = ccore.threshold(ws, 1, maxreslab, 0, 255)
+        #ccore.writeImage(img_bin_ws, os.path.join(self.debug_dir, 'ws_bin.png'))
+
+        img_bin_out = ccore.copyImageIf(img_thresh, img_bin_ws)
+        #ccore.writeImage(img_bin_ws, os.path.join(self.debug_dir, 'bin_out.png'))
+        
+        img_temp = ccore.copyImageIf(img_labels, img_bin_out)
+        img_out = ccore.relabelImage(img_bin_out, img_temp)
+        #ccore.writeImage(img_out, os.path.join(self.debug_dir, 'relabel.png'))
+        
+        return img_out
+
+class SegmentationPluginWatershedAndThreshold(_SegmentationPlugin):
+
+    LABEL = 'Global Threshold and Watershed from Primary Channel'
+    NAME = 'ws_and_threshold'
+    COLOR = '#0099FF'
+    DOC = ":additional_segmentation_plugins"
+
+    REQUIRES = ['primary_segmentation']
+
+    PARAMS = [('gauss_filter_size', IntTrait(2, 1, 4, label='Gauss filter size')),
+              ('otsu_factor', FloatTrait(0.95, 0, 255, label='Otsu Factor', digits=2)),
+              ('offset', IntTrait(0, 0, 255, label='Threshold Offset')),              
+              ('gradient', BooleanTrait(False, label='Use Gradient (instead of the original image)')), 
+              ]            
+            
+    @stopwatch()
+    def _run(self, meta_image, container):
+
+        image = meta_image.image
+        img_filtered = self._prefilter(image, self.params['gauss_filter_size'])
+        
+        img_thresh = self._global_threshold(img_filtered, 
+                                            self.params['otsu_factor'], 
+                                            self.params['offset'])
+        
+        method = 1
+        if self.params['gradient']:
+            method=2
+            
+        img_labels = self._constrained_watershed(img_filtered, 
+                                                 container.img_labels,
+                                                 img_thresh,
+                                                 method=method)
+
+        return ccore.ImageMaskContainer(image, img_labels, False, True, True)
+
+    
+    def _prefilter(self, img, filter_size):
+        img_filtered = ccore.gaussianFilter(img, filter_size)
+        return img_filtered
+        
+    def _global_threshold(self, img, otsu_factor=1.0, offset=0):
+        #histo = img.getHistogram(256)        
+        otsu_thresh = ccore.get_otsu_threshold(img)
+        threshold = otsu_factor * otsu_thresh + offset
+        img_thresh = ccore.threshold_image(img, int(threshold))
+        #ccore.writeImage(img_thresh, os.path.join(self.debug_dir, 'thresh.png'))
+        return img_thresh
+    
+    def _constrained_watershed(self, 
+                               img_in, img_labels, img_thresh,                               
+                               method=1):
+
+        # binary image: nuclei
+        maxlabel = img_labels.getMinmax()[1]
+        img_bin = ccore.threshold(img_labels, 1, maxlabel, 0, 255)
+        #ccore.writeImage(img_bin, os.path.join(self.debug_dir, 'nuclei_bin.png'))
+
+        if method==1:
+            # use of the inverted image
+            img_inv = ccore.linearRangeMapping(img_in, 255, 0, 0, 255)
+            #ccore.writeImage(img_inv, os.path.join(self.debug_dir, 'img_inv.png'))
+        
+            ws = ccore.constrainedWatershed(img_inv, img_bin)
+        
+        elif method==2:
+            # use of the gradient
+            img_grad = ccore.morphoGradient(img_in, 1, 8)
+            #ccore.writeImage(img_grad, os.path.join(self.debug_dir, 'grad.png'))
+
+            ws = ccore.constrainedWatershed(img_grad, img_bin)
+
+        #ccore.writeImage(ws, os.path.join(self.debug_dir, 'ws.png'))
+        
+        # we first get the regions
+        maxreslab = ws.getMinmax()[1]
+        img_bin_ws = ccore.threshold(ws, 1, maxreslab, 0, 255)
+        #ccore.writeImage(img_bin_ws, os.path.join(self.debug_dir, 'ws_bin.png'))
+
+        img_bin_out = ccore.copyImageIf(img_thresh, img_bin_ws)
+        #ccore.writeImage(img_bin_ws, os.path.join(self.debug_dir, 'bin_out.png'))
+        
+        img_temp = ccore.copyImageIf(img_labels, img_bin_out)
+        img_out = ccore.relabelImage(img_bin_out, img_temp)
+        #ccore.writeImage(img_out, os.path.join(self.debug_dir, 'relabel.png'))
+        
+        return img_out
+
+class SegmentationPluginWatershedAndThresholdLocalThreshold(_SegmentationPlugin):
+
+    LABEL = 'Global & Local Threshold + Watershed from Primary Channel'
+    NAME = 'ws_and_global_and_local_threshold'
+    COLOR = '#0099FF'
+    DOC = ":additional_segmentation_plugins"
+
+    REQUIRES = ['primary_segmentation']
+
+    PARAMS = [('gauss_filter_size', IntTrait(2, 1, 4, label='Gauss filter size')),
+              ('otsu_factor', FloatTrait(0.95, 0, 255, label='Otsu Factor', digits=2)),
+              ('offset', IntTrait(0, 0, 255, label='Threshold Offset')),              
+              ('gradient', BooleanTrait(False, label='Use Gradient (instead of the original image)')), 
+              ('medianradius', IntTrait(0, 0, 255, label='Median Radius (for local thresholding)')),
+              ('window_size', IntTrait(0, 0, 255, label='Window size')),
+              ('local_threshold', IntTrait(0, 0, 255, label='Local Threshold')),
+              ]
+            
+    @stopwatch()
+    def _local_prefilter(self, img_in, radius=None):
+        if radius is None:
+            radius = self.params['medianradius']
+        img_out = ccore.disc_median(img_in, radius)
+        return img_out
+
+    @stopwatch()
+    def _local_threshold(self, img_in):
+        img_out = ccore.window_average_threshold(img_in, 
+                                                 self.params['window_size'], 
+                                                 self.params['local_threshold'])
+        return img_out
+
+
+    @stopwatch()
+    def _run(self, meta_image, container):
+
+        image = meta_image.image
+        img_filtered = self._prefilter(image, self.params['gauss_filter_size'])
+        
+        img_thresh = self._global_threshold(img_filtered, 
+                                            self.params['otsu_factor'], 
+                                            self.params['offset'])
+
+        img_local_filtered = self._local_prefilter(image)
+        img_local_thresh = self._local_threshold(img_local_filtered)
+        img_thresh = ccore.supremum(img_thresh, img_local_thresh)
+        
+        method = 1
+        if self.params['gradient']:
+            method=2
+            
+        img_labels = self._constrained_watershed(img_filtered, 
+                                                 container.img_labels,
+                                                 img_thresh,
+                                                 method=method)
+
+        return ccore.ImageMaskContainer(image, img_labels, False, True, True)
+
+    
+    def _prefilter(self, img, filter_size):
+        img_filtered = ccore.gaussianFilter(img, filter_size)
+        return img_filtered
+        
+    def _global_threshold(self, img, otsu_factor=1.0, offset=0):
+        #histo = img.getHistogram(256)        
+        otsu_thresh = ccore.get_otsu_threshold(img)
+        threshold = otsu_factor * otsu_thresh + offset
+        img_thresh = ccore.threshold_image(img, int(threshold))
+        #ccore.writeImage(img_thresh, os.path.join(self.debug_dir, 'thresh.png'))
+        return img_thresh
+    
+    def _constrained_watershed(self, 
+                               img_in, img_labels, img_thresh,                               
+                               method=1):
+
+        # binary image: nuclei
+        maxlabel = img_labels.getMinmax()[1]
+        img_bin = ccore.threshold(img_labels, 1, maxlabel, 0, 255)
+        #ccore.writeImage(img_bin, os.path.join(self.debug_dir, 'nuclei_bin.png'))
+
+        if method==1:
+            # use of the inverted image
+            img_inv = ccore.linearRangeMapping(img_in, 255, 0, 0, 255)
+            #ccore.writeImage(img_inv, os.path.join(self.debug_dir, 'img_inv.png'))
+        
+            ws = ccore.constrainedWatershed(img_inv, img_bin)
+        
+        elif method==2:
+            # use of the gradient
+            img_grad = ccore.morphoGradient(img_in, 1, 8)
+            #ccore.writeImage(img_grad, os.path.join(self.debug_dir, 'grad.png'))
+
+            ws = ccore.constrainedWatershed(img_grad, img_bin)
+
+        #ccore.writeImage(ws, os.path.join(self.debug_dir, 'ws.png'))
+        
+        # we first get the regions
+        maxreslab = ws.getMinmax()[1]
+        img_bin_ws = ccore.threshold(ws, 1, maxreslab, 0, 255)
+        #ccore.writeImage(img_bin_ws, os.path.join(self.debug_dir, 'ws_bin.png'))
+
+        img_bin_out = ccore.copyImageIf(img_thresh, img_bin_ws)
+        #ccore.writeImage(img_bin_ws, os.path.join(self.debug_dir, 'bin_out.png'))
+        
+        img_temp = ccore.copyImageIf(img_labels, img_bin_out)
+        img_out = ccore.relabelImage(img_bin_out, img_temp)
+        #ccore.writeImage(img_out, os.path.join(self.debug_dir, 'relabel.png'))
+        
+        return img_out
 
 
 class SegmentationPluginPropagate(_SegmentationPlugin):

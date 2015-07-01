@@ -143,7 +143,7 @@ namespace cecog
             spot_diameter = 5;
 
             debug_folder = "";
-            image_name = "";
+            debug_prefix = "";
 
     };
 

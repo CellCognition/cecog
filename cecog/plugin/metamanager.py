@@ -18,6 +18,7 @@ from cecog.plugin.segmentation.manager import SegmentationPluginManager
 from cecog.plugin.segmentation.strategies import SegmentationPluginPrimary
 from cecog.plugin.segmentation.strategies import SegmentationPluginPrimary2
 from cecog.plugin.segmentation.strategies import SegmentationPluginPrimary3
+from cecog.plugin.segmentation.strategies import SegmentationPluginPrimary4
 from cecog.plugin.segmentation.strategies import SegmentationPluginExpanded
 from cecog.plugin.segmentation.strategies import SegmentationPluginInside
 from cecog.plugin.segmentation.strategies import SegmentationPluginOutside
@@ -78,6 +79,7 @@ class MetaPluginManager(object):
         self.managers['primary'].register_plugin(SegmentationPluginPrimaryLoadFromFile)
         self.managers['primary'].register_plugin(SegmentationPluginPrimary2)
         self.managers['primary'].register_plugin(SegmentationPluginPrimary3)
+        self.managers['primary'].register_plugin(SegmentationPluginPrimary4)
         
         self.managers['secondary'].register_plugin(SegmentationPluginExpanded)
         self.managers['secondary'].register_plugin(SegmentationPluginInside)

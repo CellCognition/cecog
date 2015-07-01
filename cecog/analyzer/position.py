@@ -17,6 +17,8 @@ __source__ = '$URL$'
 import os
 import shutil
 import numpy as np
+import types
+
 from collections import OrderedDict
 from os.path import join, basename, isdir
 
@@ -205,17 +207,17 @@ class PositionCore(LoggerObject):
 
                 if category in DEFAULT_FEATURE_PARAMS:
                     f_cat_params[category] = {}
-                    for option in DEFAULT_FEATURE_PARAMS[category]:        
+                    for option in DEFAULT_FEATURE_PARAMS[category]:
                         option_key = self._resolve_name(ch_name, '%s_%s' % (option, category.split('_')[-1]))
-                        
+                        f_cat_params[category][option] = DEFAULT_FEATURE_PARAMS[category][option]
+
                         if self.settings.has_option(SECTION_NAME_FEATURE_EXTRACTION, option_key):
                             str_opt = self.settings.get(SECTION_NAME_FEATURE_EXTRACTION, option_key)
-                            if len(str_opt) == 0:
-                                f_cat_params[category][option] = DEFAULT_FEATURE_PARAMS[category][option]
-                            else:
-                                f_cat_params[category][option] = tuple([int(x) for x in str_opt.split(',')])
-                        else:
-                            f_cat_params[category][option] = DEFAULT_FEATURE_PARAMS[category][option]
+                            
+                            if type(str_opt) != types.StringType:
+                                f_cat_params[category][option] = str_opt
+                            elif len(str_opt) > 0:
+                                f_cat_params[category][option] = eval(str_opt) #tuple([int(x) for x in str_opt.split(',')])
 
         print 'f_categories'
         print f_categories

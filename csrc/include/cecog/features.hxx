@@ -1610,7 +1610,7 @@ namespace cecog
           // threshold image
           vigra::transformImage(srcImageRange(imTemp_),
                                 destImage(imThresh_),
-                                ifThenElse(Arg1() >= Param(thresh_), Param(0), Param(255)));
+                                ifThenElse(Arg1() >= Param(thresh_), Param(255), Param(0)));
 
           // label --> gives also the number of spots
           // 3rd argument: eight-neighborhood, 4th argument: value to be ignored (no label)
@@ -1619,26 +1619,44 @@ namespace cecog
                                                     false, 0);
 
           // average intensities of the spots.
-          //vigra::ArrayOfRegionStatistics<vigra::FindAverageAndVariance<vigra::BImage::PixelType> > average(count);
-          vigra::FindAverageAndVariance<value_type> average;
+          vigra::ArrayOfRegionStatistics<vigra::FindAverageAndVariance<value_type> > average(count);
+          //vigra::FindAverageAndVariance<value_type> average;
           vigra::inspectTwoImages(srcImageRange(imTemp_), srcImage(imLabSpots_), average);
 
           // average intensity
-//          double average_intensity = 0.0;
-//          for(int i=0; i<count; i++) {
-//            average_intensity += (double)average[i];
-//          }
-//          average_intensity = average_intensity / (double)count;
+          double average_intensity = 0.0;
+          for(int i=1; i<count; i++) {
+            average_intensity += (double)average[i].average();
+          }
+          if(count > 0) {
+            average_intensity = average_intensity / (double)count;
+          }
+
+          // variance
+          double var_intensity = 0.0;
+          for(int i=1; i<count; i++) {
+            var_intensity += ((double)average[i].average() - average_intensity)*((double)average[i].average() - average_intensity);
+          }
+          if(count>0) {
+            var_intensity = var_intensity / (double)count;
+          }
 
           // Assignments of features
-          o.features[prefix_ + "count"] = count;
-          o.features[prefix_ + "avgintensity"] = average.average();
-          o.features[prefix_ + "varintensity"] = average.variance();
+          o.features[prefix_ + "count"] = (float)count;
+          o.features[prefix_ + "avgintensity"] = average_intensity;
+          o.features[prefix_ + "varintensity"] = var_intensity;
 
           // for debug
           if(debug_) {
+            std::cout << "count = " << count << std::endl;
+            std::cout << "average intensity = " << average_intensity << std::endl;
+            std::cout << "variance intensity = " << var_intensity << std::endl;
+            for(int i=0; i<count; i++) {
+              std::cout << "average[" << i << "] = " << average[i].average() << std::endl;
+            }
+
             //std::string DEBUG_PREFIX="/Users/twalter/temp/spotfeatures/image";
-            std::string filepath_base = debug_folder_ + "/" + debug_prefix_ + "__" + std::to_string(o.center.x) + "__" + std::to_string(o.center.y) + "__";
+            std::string filepath_base = debug_folder_ + "/" + debug_prefix_ + "__" + std::to_string(objId_);
 
             std::string filepath_export_original = filepath_base + "__00original.tiff";
             std::cout << "writing " << filepath_export_original << std::endl;

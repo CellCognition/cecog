@@ -132,8 +132,8 @@ void wrap_containers()
     .def("printGranulometrySizes", &_ObjectContainerBase::printGranulometrySizes)
     .def_readwrite("debug_folder",
                    &_ObjectContainerBase::debug_folder)
-    .def_readwrite("image_name",
-                   &_ObjectContainerBase::image_name)
+    .def_readwrite("debug_prefix",
+                   &_ObjectContainerBase::debug_prefix)
     .def_readwrite("debug",
                    &_ObjectContainerBase::debug)
     .def_readwrite("spot_diameter",
