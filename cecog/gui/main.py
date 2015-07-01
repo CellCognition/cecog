@@ -26,6 +26,7 @@ from PyQt5 import QtCore
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtCore import QFile, QTextStream
 
 from cecog import version
 from cecog.units.time import TimeConverter
@@ -213,6 +214,21 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
             clusterframe = ClusterFrame(self._settings, self._pages, SECTION_NAME_CLUSTER)
             clusterframe.set_imagecontainer(self._imagecontainer)
             self._tabs.append(clusterframe)
+            
+        if AppPreferences().style_sheet:
+            import importlib
+            style_sheet = AppPreferences().style_sheet
+            
+            try:
+                importlib.import_module(style_sheet)
+                f = QFile(":/%s/style.qss" % style_sheet)                                
+                f.open(QFile.ReadOnly | QFile.Text)
+                ts = QTextStream(f)
+                stylesheet = ts.readAll()    
+                self.setStyleSheet(stylesheet)
+            except Exception as e:
+                traceback.print_exc()
+                QMessageBox.warning(self, "Unable to set style sheet", str(e))
 
         widths = []
         for tab in self._tabs:

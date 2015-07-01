@@ -100,9 +100,8 @@ class AppPreferences(object):
                     css_mod = imp.find_module(compiled_css_mod)
                     if css_mod is not None:
                         self.available_style_sheets.append(compiled_css_mod)
-                        print "Found css", css_mod
                 except:
-                    print 'fuck'   
+                    print 'fuck' 
 
     def saveSettings(self):
         settings = QSettings(version.organisation, version.appname)
@@ -115,7 +114,7 @@ class AppPreferences(object):
         settings.setValue('batch_size', self.batch_size)
         settings.setValue('cluster_support', self.cluster_support)
         
-        settings.setValue('sytle_sheet', self.style_sheet)
+        settings.setValue('style_sheet', self.style_sheet)
         settings.endGroup()
 
     def restoreSettings(self):
@@ -141,8 +140,8 @@ class AppPreferences(object):
         if settings.contains('cluster_support'):
             self.cluster_support = settings.value('cluster_support', type=bool)
             
-        if settings.contains('sytle_sheet_name'):
-            self.cluster_support = settings.value('sytle_sheet_name', type=bool)
+        if settings.contains('style_sheet'):
+            self.style_sheet = settings.value('style_sheet', type=str)
 
         settings.endGroup()
 
@@ -225,21 +224,28 @@ class PreferencesDialog(QtWidgets.QDialog):
         self.cluster_support.setChecked(apc.cluster_support)
         
         for it in apc.available_style_sheets: self.style_select.addItem(it)
-        self.style_select.currentIndexChanged[str].connect(self.set_style_sheet)
-        self.set_style_sheet(apc.style_sheet)
         
-    def set_style_sheet(self, style_sheet_name):
+        self.style_select.setCurrentIndex(apc.available_style_sheets.index(apc.style_sheet))
+        
+        
+        self.style_select.currentIndexChanged[str].connect(self.test_style_sheet)
+        
+    def test_style_sheet(self, style_sheet_name):
         from PyQt5.QtCore import QFile, QTextStream
         import importlib
         importlib.import_module(style_sheet_name)
 
-        f = QFile(":%s/style.qss" % style_sheet_name)                                
+        f = QFile(":/%s/style.qss" % style_sheet_name)                                
         f.open(QFile.ReadOnly | QFile.Text)
         ts = QTextStream(f)
         stylesheet = ts.readAll()    
+        self.setStyleSheet("")
         self.setStyleSheet(stylesheet)
         
-        self.parent().setStyleSheet(stylesheet) 
+        self.parent().setStyleSheet("")
+        self.parent().setStyleSheet(stylesheet)
+        
+        return stylesheet 
 
     def populateTable(self, mappings):
 
@@ -290,6 +296,7 @@ class PreferencesDialog(QtWidgets.QDialog):
             self._iosnames[self.target_platform.currentText()]
         appcfg.batch_size = self.batch_size.value()
         appcfg.cluster_support = self.cluster_support.isChecked()
+        appcfg.style_sheet = self.style_select.currentText()
 
         appcfg.saveSettings()
 

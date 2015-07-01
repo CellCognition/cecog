@@ -44,7 +44,7 @@
         <enum>QFrame::StyledPanel</enum>
        </property>
        <property name="currentIndex">
-        <number>2</number>
+        <number>0</number>
        </property>
        <widget class="QWidget" name="cluster">
         <layout class="QVBoxLayout" name="verticalLayout">
@@ -331,28 +331,41 @@
         </layout>
        </widget>
        <widget class="QWidget" name="stylesheet">
-        <widget class="QComboBox" name="style_select">
+        <widget class="QGroupBox" name="groupBox">
          <property name="geometry">
           <rect>
-           <x>100</x>
-           <y>20</y>
-           <width>291</width>
-           <height>22</height>
+           <x>9</x>
+           <y>9</y>
+           <width>391</width>
+           <height>81</height>
           </rect>
          </property>
-        </widget>
-        <widget class="QLabel" name="label_2">
-         <property name="geometry">
-          <rect>
-           <x>10</x>
-           <y>20</y>
-           <width>71</width>
-           <height>16</height>
-          </rect>
+         <property name="title">
+          <string>Color scheme</string>
          </property>
-         <property name="text">
-          <string>Style Sheet</string>
-         </property>
+         <widget class="QComboBox" name="style_select">
+          <property name="geometry">
+           <rect>
+            <x>90</x>
+            <y>30</y>
+            <width>281</width>
+            <height>22</height>
+           </rect>
+          </property>
+         </widget>
+         <widget class="QLabel" name="label_2">
+          <property name="geometry">
+           <rect>
+            <x>10</x>
+            <y>30</y>
+            <width>71</width>
+            <height>16</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Style Sheet</string>
+          </property>
+         </widget>
         </widget>
        </widget>
       </widget>
