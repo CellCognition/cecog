@@ -244,6 +244,7 @@ class PreferencesDialog(QtWidgets.QDialog):
         
         self.parent().setStyleSheet("")
         self.parent().setStyleSheet(stylesheet)
+        self.parent()._pages.assistant.setStyleSheet(stylesheet)
         
         return stylesheet 
 

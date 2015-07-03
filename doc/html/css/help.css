@@ -93,5 +93,6 @@ h3.param {
 }
 
 img.figure {
-  border: 1px solid black;
+  margin-left, margin-right: auto;
+  background-color: white;
 }

@@ -226,6 +226,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
                 ts = QTextStream(f)
                 stylesheet = ts.readAll()    
                 self.setStyleSheet(stylesheet)
+                self._pages.assistant.setStyleSheet(stylesheet)
             except Exception as e:
                 traceback.print_exc()
                 QMessageBox.warning(self, "Unable to set style sheet", str(e))

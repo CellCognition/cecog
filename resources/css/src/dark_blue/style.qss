@@ -540,7 +540,7 @@ QSizeGrip {
 
 QMainWindow
 {
-    background-color: #FF0000;
+    background-color: #302F2F;
 
 }
 
@@ -589,7 +589,7 @@ QFrame[frameShape="0"]
 
 QStackedWidget
 {
-    background-color: #FF0000;
+    background-color: #302F2F;
     border: 1px transparent black;
 }
 
