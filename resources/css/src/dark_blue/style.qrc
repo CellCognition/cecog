@@ -39,6 +39,11 @@
     <file>img/radio_unchecked_disabled.png</file>
     <file>img/radio_unchecked_focus.png</file>
     <file>img/radio_unchecked.png</file>
+    
+    <file>img/question.png</file>
+    <file>img/warning.png</file>
+    <file>img/error.png</file>
+    <file>img/critical.png</file>
   </qresource>
   <qresource prefix="/dark_blue">
       <file>style.qss</file>
