@@ -683,6 +683,7 @@ QComboBox QAbstractItemView
     border-radius: 2px;
     border: 1px solid #444;
     selection-background-color: #3d8ec9;
+    color: silver;
 }
 
 QComboBox::drop-down
@@ -945,7 +946,10 @@ QDockWidget::close-button:pressed, QDockWidget::float-button:pressed {
 QTreeView, QListView
 {
     border: 1px solid #444;
-    background-color: #201F1F;
+    background-color: silver;
+    border-radius: 5px;
+    margin-left: 5px;
+    color: black;
 }
 
 QTreeView:branch:selected, QTreeView:branch:hover

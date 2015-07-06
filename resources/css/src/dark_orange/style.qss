@@ -13,6 +13,12 @@ QWidget
     background-color: #323232;
 }
 
+QTreeView, QListView
+{
+    background-color: silver;
+    margin-left: 5px;
+}
+
 QWidget:item:hover
 {
     background-color: QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #ffa02f, stop: 1 #ca0619);

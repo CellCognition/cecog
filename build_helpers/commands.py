@@ -123,7 +123,7 @@ class BuildCSSRcc(Command):
                 if (os.path.isdir(os.path.join(self.css_src_folder,f)) and 
                     os.path.exists(os.path.join(os.path.join(self.css_src_folder, f), "style.qrc"))):
                     cmd = [self.pyrccbin, os.path.join(self.css_src_folder, "%s/style.qrc" % f), 
-                                           "-o", os.path.join(self.css_src_folder, "..","%s.py " % f)]
+                                           "-o", os.path.join(self.css_src_folder, "..","%s.py" % f)]
                     print "running", " ".join(cmd)
                     subprocess.check_call(cmd)
             

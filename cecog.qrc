@@ -15,6 +15,7 @@
     <file alias="print.png">resources/icons/print.png</file>
     <file alias="processing.png">resources/icons/processing.png</file>
     <file alias="reload.png">resources/icons/reload.png</file>
+    <file alias="erase.png">resources/icons/erase.png</file>
     <file alias="segmentation.png">resources/icons/segmentation.png</file>
     <file alias="tracking.png">resources/icons/tracking.png</file>
     <file alias="error-correction.png">resources/icons/error-correction.png</file>
@@ -24,5 +25,6 @@
     <file alias="cecog_about">resources/cellcognition7_about.png</file>
     <file alias="question_mark">resources/question_mark.png</file>
     <file alias="multichannel_gallery">resources/multichannel_gallery.png</file>
+    
   </qresource>
 </RCC>
