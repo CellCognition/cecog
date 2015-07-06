@@ -667,6 +667,15 @@ class PositionAnalyzer(PositionCore):
         # include hdf5 file name in hdf5_options
         # perhaps timeholder might be a good place to read out the options
         # file does not have to exist to proceed
+        
+        try:
+            import pydevd
+            pydevd.connected = True
+            pydevd.settrace(suspend=False)
+            print 'Thread enabled interactive eclipse debuging...'
+        except:
+            pass
+        
         hdf5_fname = join(self._hdf5_dir, '%s.ch5' % self.position)
 
         self.timeholder = TimeHolder(self.position, self._all_channel_regions,
@@ -679,12 +688,16 @@ class PositionAnalyzer(PositionCore):
         self.settings.set_section('Tracking')
         self.setup_classifiers()
 
-        # setup tracker
+        # setup tracker from plugin
         if self.settings('Processing', 'tracking'):
-            tropts = (self.settings('Tracking', 'tracking_maxobjectdistance'),
-                      self.settings('Tracking', 'tracking_maxsplitobjects'),
-                      self.settings('Tracking', 'tracking_maxtrackinggap'))
-            self._tracker = Tracker(*tropts)
+            tracking_plugins = MetaPluginManager()['tracking']
+            if tracking_plugins.number_loaded_plugins() == 0:
+                raise RuntimeError("No tracking plugin selected")
+            elif tracking_plugins.number_loaded_plugins() > 1:
+                raise RuntimeError("Only one tracking plugin is allowed")
+            
+            tracker = tracking_plugins.get_plugin_instance(tracking_plugins.get_plugin_names()[0])
+            self._tracker = tracker
 
         stopwatch = StopWatch(start=True)
         ca = CellAnalyzer(timeholder=self.timeholder,
