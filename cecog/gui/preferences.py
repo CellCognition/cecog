@@ -242,11 +242,7 @@ class PreferencesDialog(QtWidgets.QDialog):
         self.setStyleSheet("")
         self.setStyleSheet(stylesheet)
         
-        self.parent().setStyleSheet("")
-        self.parent().setStyleSheet(stylesheet)
-        self.parent()._pages.assistant.setStyleSheet(stylesheet)
-        
-        return stylesheet 
+        self.parent().updateStyleSheet(stylesheet)
 
     def populateTable(self, mappings):
 

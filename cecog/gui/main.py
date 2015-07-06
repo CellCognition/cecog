@@ -225,8 +225,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
                 f.open(QFile.ReadOnly | QFile.Text)
                 ts = QTextStream(f)
                 stylesheet = ts.readAll()    
-                self.setStyleSheet(stylesheet)
-                self._pages.assistant.setStyleSheet(stylesheet)
+                self.updateStyleSheet(stylesheet)
             except Exception as e:
                 traceback.print_exc()
                 QMessageBox.warning(self, "Unable to set style sheet", str(e))
@@ -469,6 +468,15 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
     def open_preferences(self):
         pref = PreferencesDialog(self)
         pref.exec_()
+        
+    def updateStyleSheet(self, stylesheet):
+        # Main Window
+        self.setStyleSheet("")
+        self.setStyleSheet(stylesheet)
+        
+        # Help pages
+        self._pages.assistant.setStyleSheet("")
+        self._pages.assistant.setStyleSheet(stylesheet)
 
     def _on_browser_open(self):
         if self._imagecontainer is None:
