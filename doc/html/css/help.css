@@ -6,7 +6,7 @@ a.header {
 }
 
 a.extlink {
-  background: url(:extlink) center center no-repeat;
+  background: url(../images/extlink.png) center center no-repeat;
   padding-left: 12px;
 }
 
