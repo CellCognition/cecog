@@ -698,6 +698,7 @@ class PositionAnalyzer(PositionCore):
             
             tracker = tracking_plugins.get_plugin_instance(tracking_plugins.get_plugin_names()[0])
             self._tracker = tracker
+            self._tracker._init()
 
         stopwatch = StopWatch(start=True)
         ca = CellAnalyzer(timeholder=self.timeholder,

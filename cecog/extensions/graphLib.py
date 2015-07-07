@@ -104,7 +104,7 @@ class Graph(object):
     def add_node(self, node_id, node_data=None):
         """
         Creates a new node with id node_id.  Arbitrary data can be attached
-        to the node viea the node_data parameter.
+        to the node via the node_data parameter.
         """
         if (not node_id in self.nodes) and \
                (not node_id in self.hidden_nodes):

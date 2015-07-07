@@ -20,7 +20,6 @@ from cecog.traits.analyzer.section_core import SectionCore
 from cecog.gui.guitraits import IntTrait, BooleanTrait, SelectionTrait, \
     SelectionTrait2
 
-from cecog.analyzer import COMPRESSION_FORMATS
 
 SECTION_NAME_TRACKING = 'Tracking'
 
