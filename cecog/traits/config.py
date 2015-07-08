@@ -248,6 +248,22 @@ class ConfigSettings(RawConfigParser):
             'primary_shapewatershed_maximasize' : 'plugin__primary_segmentation__primary__primary__shapewatershed_maximasize',
             'primary_shapewatershed_minmergesize' : 'plugin__primary_segmentation__primary__primary__shapewatershed_minmergesize',
         }
+        
+        
+        VERSION_150_TO_160 = {}
+        VERSION_150_TO_160['Tracking'] = {
+              "tracking_maxobjectdistance" : "plugin__primary_tracking__nearest_neighbor_tracker__nearest_neighbor_tracker__max_object_distance",
+              "tracking_maxtrackinggap"    : "plugin__primary_tracking__nearest_neighbor_tracker__nearest_neighbor_tracker__max_frame_gap",
+              "tracking_maxsplitobjects"   : "plugin__primary_tracking__nearest_neighbor_tracker__nearest_neighbor_tracker__max_split_objects",
+                                          }
+        
+        if section_name in VERSION_150_TO_160:
+            if option_name in VERSION_150_TO_160[section_name]:
+                value = self.get(section_name, option_name)
+                new_option_name = VERSION_150_TO_160[section_name][option_name]
+                RawConfigParser.set(self, section_name, new_option_name, value)
+                print 'Converted', option_name, 'into', new_option_name, '=', value
+        
 
         if section_name in VERSION_130_TO_140:
             if option_name in VERSION_130_TO_140[section_name]:

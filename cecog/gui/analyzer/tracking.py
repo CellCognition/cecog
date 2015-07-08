@@ -86,4 +86,3 @@ class TrackingFrame(BaseProcessorFrame):
         # FIXME: set the trait list data to plugin instances of the current channel
         trait = self._settings.get_trait('Tracking', 'region')
         trait.set_list_data(self.plugin_mgr.region_info.names['primary'])
-        print self.plugin_mgr.region_info.names
