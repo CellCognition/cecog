@@ -53,6 +53,9 @@ class PluginParamFrame(TraitDisplayMixin):
         else:
             trait_name = param_name
         super(PluginParamFrame, self).add_group(trait_name, items, **options)
+        
+    def add_button(self, name, callback):
+        super(PluginParamFrame, self).add_button(name, callback)
 
 
 class PluginItem(QFrame):
@@ -91,7 +94,7 @@ class PluginItem(QFrame):
         layout.addWidget(btn)
 
         requirements = plugin.requirements
-        try:
+        try: 
             plugin.render_to_gui(frame2)
         except NotImplementedError:
             for info in plugin.param_manager.get_params():

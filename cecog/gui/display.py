@@ -197,6 +197,41 @@ class TraitDisplayMixin(QtWidgets.QFrame):
         else:
             w_label.setText(label)
         return w_label
+    
+    def add_button(self, name, callback, parent=None, grid=None, alignment=None,
+                  last=False):
+        
+        if parent is None:
+            parent = self._get_frame(self._tab_name)
+        w_input = QPushButton(name)
+        w_input.clicked.connect(callback)
+        
+        layout = parent.layout()
+        if isinstance(layout, QGridLayout):
+
+            if grid is None:
+                layout.addWidget(w_input, parent._input_cnt, 1)
+
+            else:
+                if alignment is None:
+                    layout.addWidget(w_input, grid[0], grid[1]*3+1,
+                                     grid[2], grid[3])
+                else:
+                    layout.addWidget(w_input, grid[0], grid[1]*3+1,
+                                     grid[2], grid[3], alignment)
+                # do not add a spacer if the element is last in a row
+                if not last:
+                    # layout.setColumnStretch(grid[1]*3+2, 0)
+                    layout.addItem(QSpacerItem(0, 0,
+                                               QSizePolicy.MinimumExpanding,
+                                               QSizePolicy.Fixed),
+                                   grid[0], grid[1]*3+2)
+        else:
+            layout.addWidget(w_input)
+            if not last:
+                layout.addStretch()
+
+        
 
     def add_input(self, trait_name, parent=None, grid=None, alignment=None,
                   last=False, link=True):
