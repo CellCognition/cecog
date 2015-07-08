@@ -55,6 +55,12 @@ class MetaPluginManager(object):
         super(MetaPluginManager, self).__init__()
         self.region_info = RegionInformation()
         self.managers = OrderedDict()
+        self.managers['tracking'] =  TrackingPluginManager(self.region_info,
+                                                              self,
+                                                              'Primary tracking',
+                                                              'primary_tracking',
+                                                              SECTION_NAME_TRACKING)
+        
         self.managers['primary'] =  SegmentationPluginManager(self.region_info,
                                                               self,
                                                               'Primary segmentation',
@@ -72,12 +78,6 @@ class MetaPluginManager(object):
                                                               'Tertiary segmentation',
                                                               'tertiary_segmentation',
                                                               SECTION_NAME_OBJECTDETECTION)
-        
-        self.managers['tracking'] =  TrackingPluginManager(self.region_info,
-                                                              self,
-                                                              'Primary tracking',
-                                                              'primary_tracking',
-                                                              SECTION_NAME_TRACKING)
         
         self._register_plugins()
 

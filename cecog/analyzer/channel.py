@@ -261,6 +261,7 @@ class Channel(ChannelCore):
 
             if self.lstFeatureNames is not None:
                 object_holder.feature_names = self.lstFeatureNames
+                
             self._regions[region_name] = object_holder
 
 
