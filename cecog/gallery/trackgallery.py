@@ -18,7 +18,7 @@ from os.path import join
 import vigra
 import numpy as np
 from cecog.gallery import GalleryRGBImage
-from cecog.analyzer.tracker import Tracker
+from cecog.plugin.tracking.strategies import BaseTracker as Tracker
 from cecog.util.util import makedirs
 
 class TrackGallery(object):

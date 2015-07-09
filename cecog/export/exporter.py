@@ -22,7 +22,7 @@ from os.path import join
 from collections import OrderedDict
 
 from cecog.io.imagecontainer import Coordinate
-from cecog.analyzer.tracker import Tracker
+from cecog.plugin.tracking.strategies import BaseTracker as Tracker
 from cecog.io.dotwriter import DotWriter
 from cecog.util.util import makedirs
 

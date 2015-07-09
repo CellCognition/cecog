@@ -23,7 +23,7 @@ from collections import defaultdict
 
 from cecog.colors import rgb2hex, BINARY_CMAP
 from cecog.logging import LoggerObject
-from cecog.analyzer.tracker import Tracker
+from cecog.plugin.tracking.strategies import BaseTracker as Tracker
 from cecog.tc3 import TC3EventFilter
 from cecog.tc3 import TemporalClustering
 

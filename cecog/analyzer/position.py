@@ -26,7 +26,6 @@ from cecog.units.time import TimeConverter
 
 from cecog.analyzer.timeholder import TimeHolder
 from cecog.analyzer.analyzer import CellAnalyzer
-from cecog.analyzer.tracker import Tracker
 from cecog.analyzer.eventselection import EventSelection
 from cecog.analyzer.eventselection import UnsupervisedEventSelection
 

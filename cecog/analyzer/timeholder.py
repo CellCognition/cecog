@@ -38,7 +38,7 @@ from cecog.io.imagecontainer import Coordinate
 from cecog.io.imagecontainer import MetaImage
 from cecog.analyzer.channel import PrimaryChannel
 from cecog.plugin.metamanager import MetaPluginManager
-from cecog.analyzer.tracker import Tracker
+from cecog.plugin.tracking.strategies import BaseTracker as Tracker
 from cecog.analyzer.object import ImageObject, ObjectHolder, Orientation, Region
 
 from cecog.features import FeatureGroups
