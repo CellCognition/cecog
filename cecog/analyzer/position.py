@@ -749,7 +749,7 @@ class PositionAnalyzer(PositionCore):
                 self.export_tracks_hdf5()
                 self.update_status({'text': 'export events...'})
 
-                if self.settings('Output', 'hdf5_include_events'):
+                if self.settings('Output', 'hdf5_include_events') and self.settings('Processing', 'eventselection'):
                     self.export_events_hdf5()
 
                 if self.settings('Output', "export_events"):
