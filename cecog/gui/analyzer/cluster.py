@@ -320,8 +320,7 @@ class ClusterDisplay(QGroupBox):
             self._service = self.dlg.getTargetResult()
             self._check_api_version()
         except ConnectionError as e:
-            msg = ("%s\nDo you want to turn off the cluster "
-                   "support?") %str(e)
+            msg = ("%s\nDo you want to turn off the cluster support?") %str(e)
             ret = QMessageBox.question(
                 self, "Error", msg)
             if ret == QMessageBox.Yes:
