@@ -85,6 +85,7 @@ py2exe_opts = {'includes': build_helpers.INCLUDES,
 # or write these paths to setup.cfg
 includes = ['c:/python27/include',
             'c:/Python27/Lib/site-packages/numpy/core/include',
+            r'C:\Users\sommerc\src\vigra-git\include',
             './csrc/include']
 libraries = ['libtiff', 'vigraimpex']
 library_dirs = []

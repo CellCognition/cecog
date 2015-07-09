@@ -17,9 +17,10 @@ __source__ = '$URL$'
 __all__ = ['Browser']
 
 from collections import OrderedDict
+import h5py
 import numpy
 
-import sip
+from PyQt5 import sip 
 sip.setapi('QString', 2)
 sip.setapi('QVariant', 2)
 
@@ -30,20 +31,20 @@ from PyQt5.Qt import *
 from PyQt5 import QtWidgets
 
 from cecog import version
-from cecog.gui.util import information
+from cecog.gui.util import information, warning
 from cecog.gui.analyzer import BaseProcessorFrame
 
-from cecog.gui.imageviewer import ImageViewer
+from cecog.gui.imageviewer import ImageViewer, GalleryViewer
 from cecog.gui.modules.module import ModuleManager
 from cecog.analyzer.core import AnalyzerBrowser
+
 from cecog.io.imagecontainer import Coordinate
 from cecog.gui.modules.navigation import NavigationModule
 from cecog.gui.modules.display import DisplayModule
-from cecog.gui.modules.annotation import AnnotationModule
+from cecog.gui.modules.annotation import AnnotationModule, CellH5EventModule
 from cecog.io.imagecontainer import ImageContainer
 from cecog.gui.config import GuiConfigSettings
 from cecog.plugin.metamanager import MetaPluginManager
-
 
 class TSlider(QSlider):
 
@@ -60,7 +61,7 @@ class Browser(QMainWindow):
 
     show_objects_toggled = pyqtSignal('bool')
     show_contours_toggled = pyqtSignal('bool')
-    coordinates_changed = pyqtSignal(Coordinate)
+    #coordinates_changed = pyqtSignal(Coordinate)
     update_regions = pyqtSignal(dict)
 
     def __init__(self, settings, imagecontainer, parent=None):
@@ -113,8 +114,13 @@ class Browser(QMainWindow):
 
         layout = QGridLayout(frame)
         layout.setContentsMargins(0, 0, 0, 0)
-        self.image_viewer = ImageViewer(frame, auto_resize=True)
-        layout.addWidget(self.image_viewer, 0, 0)
+        self.image_viewers = {
+                             'image'   : ImageViewer(frame, auto_resize=True),
+                             'gallery' : GalleryViewer(frame)
+                             }
+        
+        self.image_viewer = self.image_viewers['image']
+        layout.addWidget(self.image_viewer , 0, 0)
 
         self.image_viewer.zoom_info_updated.connect(self.on_zoom_info_updated)
 
@@ -246,13 +252,22 @@ class Browser(QMainWindow):
         self._module_manager = ModuleManager(toolbar, frame_side)
 
         NavigationModule(self._module_manager, self, self._imagecontainer)
-        DisplayModule(self._module_manager, self, self._imagecontainer, rdict)
+        defautl_display_module = DisplayModule(self._module_manager, self, self._imagecontainer, rdict)
+        #defautl_display_module = DisplayModule(self._module_manager, self, self._imagecontainer, region_names)
+        
+        self.set_display_module(defautl_display_module)
         AnnotationModule(self._module_manager, self, self._settings,
                          self._imagecontainer)
 
+        try:
+            CellH5EventModule(self._module_manager, self, self._settings, self._imagecontainer)
+        except Exception as e:
+            warning(self, str(e))
+            
         # set the Navigation module activated
         self._module_manager.activate_tab(NavigationModule.NAME)
 
+        self.layout = layout
         # process and display the first image
         self._restore_geometry()
         self._process_image()
@@ -277,7 +292,7 @@ class Browser(QMainWindow):
         if settings.contains('state'):
             self.restoreState(settings.value('state'))
         settings.endGroup()
-
+        
     def _region_names(self):
 
         rdict = OrderedDict()
@@ -288,6 +303,12 @@ class Browser(QMainWindow):
                     (channel.capitalize(), region)
         return rdict
 
+    def set_image_viewer(self, viewer_type):
+        self.image_viewer.hide()
+        self.layout.removeWidget(self.image_viewer)
+        self.image_viewer = self.image_viewers[viewer_type]
+        self.layout.addWidget(self.image_viewer, 0, 0)
+        self.image_viewer.show()
 
     def create_action(self, text, slot=None, shortcut=None, icon=None,
                       tooltip=None, checkable=None, signal='triggered()',
@@ -328,9 +349,15 @@ class Browser(QMainWindow):
         widget.set_coords()
 
     def show_image(self, image_dict):
-        widget = self._module_manager.get_widget(DisplayModule.NAME)
+        widget = self.get_display_module()
         widget.set_image_dict(image_dict)
         self.update_statusbar()
+        
+    def set_display_module(self, display_module ):
+        self.display_module = display_module
+        
+    def get_display_module(self):
+        return self.display_module
 
     def update_statusbar(self):
         meta_data = self._imagecontainer.get_meta_data()
@@ -365,7 +392,7 @@ class Browser(QMainWindow):
         self._t_slider.blockSignals(False)
         self._process_image()
         # propagate the signal further to other modules
-        self.coordinates_changed.emit(coordinate)
+        #self.coordinates_changed.emit(coordinate)
 
     def set_coordinate(self, coordinate):
         """
@@ -593,14 +620,13 @@ class Browser(QMainWindow):
         self._show_objects = state
         self.image_viewer._update()
 
-    def keyPressEvent(self, ev):
-        super(Browser, self).keyPressEvent(ev)
-
-        # allow to return from fullscreen via the Escape key
-        if self.isFullScreen() and ev.key() == Qt.Key_Escape:
-            self.showNormal()
-            self._act_fullscreen.setChecked(False)
-            self.raise_()
+#     def keyPressEvent(self, ev):
+#         super(Browser, self).keyPressEvent(self, ev)
+#         # allow to return from fullscreen via the Escape key
+#         if self.isFullScreen() and ev.key() == Qt.Key_Escape:
+#             self.showNormal()
+#             self._act_fullscreen.setChecked(False)
+#             self.raise_()
 
     def gestureEvent(self, ev):
         # determine whether a swipe gesture was detected
@@ -640,7 +666,6 @@ def load_settings(settings_file):
     settings.read(settings_file)
     return settings
 
-
 if __name__ == "__main__":
     import sys
     from cecog.environment import CecogEnvironment
@@ -648,9 +673,12 @@ if __name__ == "__main__":
     environ = CecogEnvironment(version)
     app = QApplication(sys.argv)
 
-    settings = load_settings('C:/Users/sommerc/data/cecog/Settings/exp911_version_140.conf')
+#     settings = load_settings(r'M:\members\Claudia Blaukopf\Experiments\130710_Mitotic_slippage_and_cell_death\_meta\Cecog\130710_mitotic_slippage_and_cell_death_v04_with_split_TESTTESTTEST.conf')
+    settings = load_settings(r'C:\Users\sommerc\data\cecog\Settings\exp911_version_150.conf')
     imagecontainer = load_image_container_from_settings(settings)
 
     browser = Browser(settings, imagecontainer)
+    
+    
     browser.show()
     app.exec_()

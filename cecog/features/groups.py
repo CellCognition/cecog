@@ -2,7 +2,7 @@
 Mappings from feature groups to lists of feature names
 """
 
-__all__ = ("FeatureGroups", )
+__all__ = ("FeatureGroups", "FGroup")
 
 from collections import OrderedDict
 
@@ -12,6 +12,17 @@ class FGroup(OrderedDict):
     def __init__(self, name, *args, **kw):
         super(FGroup, self).__init__(*args, **kw)
         self.group_name = name
+        self._inv = None
+
+    @property
+    def inverse(self):
+        if self._inv is None:
+            inverse = dict()
+            for group, features in self.iteritems():
+                for feature in features:
+                    inverse[feature] = group
+            self._inv = inverse
+        return self._inv
 
 
 _Cecog = FGroup('CellCognition')
@@ -257,12 +268,12 @@ _Cecog["Stat. geom"] =  ('ls0_CAREA_avg_value',
                          'ls1_TAREA_sample_mean',
                          'ls1_TAREA_sample_sd')
 
-_Simple1 = FGroup('Simple 1')
-_Simple1["Area size"] = ("roisize",)
+_Simple1 = FGroup('Simple1')
+_Simple1["Size"] = ("roisize",)
 _Simple1["Mean intesity"] = ('n2_avg',)
 
 _Simple1["Eccentricity"] = ("eccentricity", )
-_Simple1["Contour roughness"] = ('circularity',
+_Simple1["Shape features"] = ('circularity',
                                  'irregularity',
                                  'irregularity2',
                                  'perimeter')
@@ -501,5 +512,5 @@ _Simple1["Texture and others"] = ('h1_2ASM',
                                  'ls1_TAREA_sample_sd')
 
 FeatureGroups = OrderedDict()
-FeatureGroups["Simple1"] = _Simple1
-FeatureGroups["Cecog"] = _Cecog
+FeatureGroups[_Simple1.group_name] = _Simple1
+FeatureGroups[_Cecog.group_name] = _Cecog

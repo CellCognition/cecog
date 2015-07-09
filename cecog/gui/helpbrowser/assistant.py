@@ -269,4 +269,5 @@ class AtAssistant(QtWidgets.QMainWindow):
 
     def close(self):
         self.hbrowser.close()
-        del self.hengine
+        # don't use del to prevent AttributeError
+        self.hengine = None
