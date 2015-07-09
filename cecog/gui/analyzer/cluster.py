@@ -41,6 +41,10 @@ from cecog import JOB_CONTROL_RESUME, JOB_CONTROL_SUSPEND, \
 from cecog.version import version, appname
 
 
+class ConnectionError(Exception):
+    pass
+
+
 class ClusterDisplay(QGroupBox):
 
     MIN_API_VERSION = 2
@@ -281,8 +285,8 @@ class ClusterDisplay(QGroupBox):
             test_sock.shutdown(2)
             test_sock.close()
         except:
-            msg = "Could not connect to cluster\n(%s)" %self._host_url
-            raise RuntimeError(msg)
+            msg = "Connection failed (%s)" %self._host_url
+            raise ConnectionError(msg)
 
 
     def _check_api_version(self):
@@ -299,6 +303,11 @@ class ClusterDisplay(QGroupBox):
                    %(self.MIN_API_VERSION, api_version)
             raise RuntimeError(msg)
 
+    def _turn_off_cluster_support(self):
+        pref = AppPreferences()
+        pref.cluster_support = False
+        pref.saveSettings()
+
     def _connect(self):
 
         success = False
@@ -310,6 +319,13 @@ class ClusterDisplay(QGroupBox):
             self.dlg.exec_(func)
             self._service = self.dlg.getTargetResult()
             self._check_api_version()
+        except ConnectionError as e:
+            msg = ("%s\nDo you want to turn off the cluster "
+                   "support?") %str(e)
+            ret = QMessageBox.question(
+                self, "Error", msg)
+            if ret == QMessageBox.Yes:
+                self._turn_off_cluster_support()
         except Exception as e:
             QMessageBox.critical(self, "Error", str(e))
         else:
@@ -317,7 +333,7 @@ class ClusterDisplay(QGroupBox):
                 self.dlg.exec_(self._service.get_cecog_versions)
                 cluster_versions = self.dlg.getTargetResult()
             except Exception as e:
-                QMessageBox.critical(self, "Error", '%s (%s)' %(msg, str(e)))
+                QMessageBox.critical(self, "Error", str(e))
             else:
                 if not version in set(cluster_versions):
                     QMessageBox.warning(
