@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 logger.py - logging at class level
 """
@@ -72,4 +71,3 @@ class LoggerObject(object):
     def close(self):
         self._file_handler.close()
         self.logger.removeHandler(self._file_handler)
-

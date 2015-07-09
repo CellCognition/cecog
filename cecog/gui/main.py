@@ -1,7 +1,7 @@
 """
 main.py
 
-..CecogAnalyzer main window
+CecogAnalyzer main window
 
 """
 
@@ -15,22 +15,22 @@ __url__ = 'www.cellcognition.org'
 
 
 import os
+import sys
 import numpy
 import logging
 import traceback
 from collections import OrderedDict
 
-from PyQt4 import QtGui
-from PyQt4 import QtCore
-from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QMessageBox
+from PyQt5 import QtGui
+from PyQt5 import QtCore
+from PyQt5 import QtWidgets
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QMessageBox
 
 from cecog import version
 from cecog.units.time import TimeConverter
 from cecog.environment import CecogEnvironment
 from cecog.io.imagecontainer import ImageContainer
-
-
 
 from cecog.gui.config import GuiConfigSettings
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
@@ -59,16 +59,24 @@ from cecog.gui.analyzer.processing import ProcessingFrame
 from cecog.gui.analyzer.cluster import ClusterFrame
 from cecog.gui.imagedialog import ImageDialog
 from cecog.gui.aboutdialog import CecogAboutDialog
+from cecog.gui.preferences import PreferencesDialog
+from cecog.gui.preferences import AppPreferences
 
 from cecog.gui.browser import Browser
-from cecog.gui.helpbrowser import HelpBrowser
 from cecog.logging import LogWindow
 
 from cecog.gui.progressdialog import ProgressDialog
 from cecog.gui.progressdialog import ProgressObject
+from cecog.gui.helpbrowser import AtAssistant
 
+def fix_path(path):
+    "Windows sucks!"
+    if sys.platform.startswith("win"):
+        return path.strip("/")
+    else:
+        return path
 
-class FrameStack(QtGui.QStackedWidget):
+class FrameStack(QtWidgets.QStackedWidget):
 
     def __init__(self, parent):
         super(FrameStack, self).__init__(parent)
@@ -76,8 +84,9 @@ class FrameStack(QtGui.QStackedWidget):
         self.idialog = ImageDialog()
         self.idialog.hide()
 
-        self.helpbrowser = HelpBrowser()
-        self.helpbrowser.hide()
+        manual = os.path.join(parent.environ.doc_dir, AtAssistant.Manual)
+        self.assistant = AtAssistant(manual, None)
+        self.assistant.hide()
 
         self.log_window = LogWindow(self)
         self._wmap = dict()
@@ -97,8 +106,10 @@ class FrameStack(QtGui.QStackedWidget):
         del self._wmap[type(widget)]
         super(FrameStack, self).removeWidget(widget)
 
+    def close(self):
+        self.assistant.close()
 
-class CecogAnalyzer(QtGui.QMainWindow):
+class CecogAnalyzer(QtWidgets.QMainWindow):
 
     NAME_FILTERS = ['Settings files (*.conf)', 'All files (*.*)']
     modified = QtCore.pyqtSignal('bool')
@@ -107,7 +118,8 @@ class CecogAnalyzer(QtGui.QMainWindow):
                  debug=False, *args, **kw):
         super(CecogAnalyzer, self).__init__(*args, **kw)
         self.setWindowTitle("%s-%s" %(appname, version) + '[*]')
-        self.setCentralWidget(QtGui.QFrame(self))
+        self.setAcceptDrops(True)
+        self.setCentralWidget(QtWidgets.QFrame(self))
         self.setObjectName(appname)
 
         self.version = version
@@ -128,7 +140,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
         action_pref = self.create_action('&Preferences',
                                          slot=self.open_preferences)
 
-        action_open = self.create_action('&Open Settings...',
+        action_load = self.create_action('&Load Settings...',
                                          shortcut=QtGui.QKeySequence.Open,
                                          slot=self._on_file_open)
         action_save = self.create_action('&Save Settings',
@@ -141,7 +153,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
 
         menu_file = self.menuBar().addMenu('&File')
         self.add_actions(menu_file, (action_pref,
-                                     None, action_open,
+                                     None, action_load,
                                      None, action_save, action_save_as,
                                      None, action_quit))
 
@@ -157,26 +169,29 @@ class CecogAnalyzer(QtGui.QMainWindow):
         self.add_actions(menu_view, (action_log,))
         self.add_actions(menu_view, (action_open,))
 
-        action_help_startup = self.create_action('&Startup Help...',
-                                                 shortcut=QtGui.QKeySequence.HelpContents,
-                                                 slot=self._on_help_startup)
+        action_assistant = self.create_action('&Help',
+                                              shortcut=QtGui.QKeySequence.HelpContents,
+                                              slot=self.show_assistant)
         action_about = self.create_action('&About', slot=self.on_about)
+        action_aboutQt = self.create_action('&About Qt', slot=self.about_qt)
+
 
         menu_help = self.menuBar().addMenu('&Help')
-        self.add_actions(menu_help, (action_help_startup, action_about))
+        self.add_actions(menu_help, (action_assistant, action_about,
+                                     action_aboutQt))
 
-        self.setStatusBar(QtGui.QStatusBar(self))
+        self.setStatusBar(QtWidgets.QStatusBar(self))
 
-        self._selection = QtGui.QListWidget(self.centralWidget())
-        self._selection.setViewMode(QtGui.QListView.IconMode)
+        self._selection = QtWidgets.QListWidget(self.centralWidget())
+        self._selection.setViewMode(QtWidgets.QListView.IconMode)
         self._selection.setIconSize(QtCore.QSize(35, 35))
         self._selection.setGridSize(QtCore.QSize(140, 60))
-        self._selection.setMovement(QtGui.QListView.Static)
+        self._selection.setMovement(QtWidgets.QListView.Static)
         self._selection.setMaximumWidth(self._selection.gridSize().width() + 5)
         self._selection.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._selection.setSizePolicy(
-            QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed,
-                              QtGui.QSizePolicy.Expanding))
+            QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed,
+                                  QtWidgets.QSizePolicy.Expanding))
 
         self._pages = FrameStack(self)
 
@@ -200,7 +215,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
         for frame in self._tabs:
             frame.status_message.connect(self.statusBar().showMessage)
 
-        if self.environ.analyzer_config.get('Analyzer', 'cluster_support'):
+        if AppPreferences().cluster_support:
             clusterframe = ClusterFrame(self._settings, self._pages, SECTION_NAME_CLUSTER)
             clusterframe.set_imagecontainer(self._imagecontainer)
             self._tabs.append(clusterframe)
@@ -215,19 +230,14 @@ class CecogAnalyzer(QtGui.QMainWindow):
         self._selection.currentItemChanged.connect(self._on_change_page)
         self._selection.setCurrentRow(0)
 
-        w_logo = QtGui.QLabel(self.centralWidget())
+        w_logo = QtWidgets.QLabel(self.centralWidget())
         w_logo.setPixmap(QtGui.QPixmap(':cecog_logo_w145'))
 
-        layout = QtGui.QGridLayout(self.centralWidget())
+        layout = QtWidgets.QGridLayout(self.centralWidget())
         layout.addWidget(self._selection, 0, 0)
         layout.addWidget(w_logo, 1, 0, Qt.AlignBottom | Qt.AlignHCenter)
         layout.addWidget(self._pages, 0, 1, 2, 1)
         layout.setContentsMargins(1, 1, 1, 1)
-
-        # handler = GuiLogHandler(self)
-        # handler.setLevel(logging.INFO)
-        # formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
-        # handler.setFormatter(formatter)
 
         self.setGeometry(0, 0, 1250, 800)
         self.setMinimumSize(QtCore.QSize(700, 600))
@@ -245,37 +255,61 @@ class CecogAnalyzer(QtGui.QMainWindow):
             QMessageBox.warning(
                 self, "Warning", "File (%s) does not exist" %settings)
 
+    def dragEnterEvent(self, event):
+        event.acceptProposedAction()
+
+    def dragMoveEvent(self, event):
+        event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        mimeData = event.mimeData()
+        if mimeData.hasUrls():
+            if len(mimeData.urls()) == 1:
+                self.load_settings(fix_path(mimeData.urls()[0].path()))
+                # self._on_load_input()
+        event.acceptProposedAction()
+
+    def dragLeaveEvent(self, event):
+        event.accept()
 
     def _save_geometry(self):
         settings = QtCore.QSettings(version.organisation, version.appname)
         settings.beginGroup('Gui')
         settings.setValue('state', self.saveState())
         settings.setValue('geometry', self.saveGeometry())
-        settings.setValue('clusterjobs',
-                          self._pages.widgetByType(ClusterFrame).get_jobids())
+
+        try:
+            settings.setValue(
+                'clusterjobs', self._pages.widgetByType(
+                    ClusterFrame).get_jobids())
+        except KeyError:
+            pass
+
         settings.endGroup()
 
     def _restore_geometry(self):
         settings = QtCore.QSettings(version.organisation, version.appname)
         settings.beginGroup('Gui')
 
-        geometry = settings.value('geometry')
-        if geometry is not None:
-            self.restoreGeometry(geometry)
-        state = settings.value('state')
-        if state is not None:
-            self.restoreState(state)
+        if settings.contains('geometry'):
+            self.restoreGeometry(settings.value('geometry'))
 
-        jobids = settings.value('clusterjobs')
-        if jobids:
-            self._pages.widgetByType(ClusterFrame).restore_jobids(jobids)
+        if settings.contains('state'):
+            self.restoreState(settings.value('state'))
+
+        if settings.contains('clusterjobs'):
+            jobids = settings.value('clusterjobs')
+            if AppPreferences().cluster_support and jobids:
+                self._pages.widgetByType(ClusterFrame).restore_jobids(jobids)
+
         settings.endGroup()
 
     def closeEvent(self, event):
+        self._pages.close()
         # Quit dialog only if not debuging flag is not set
         self._save_geometry()
         if self.debug:
-            QtGui.QApplication.exit()
+            QtWidgets.QApplication.exit()
         ret = QMessageBox.question(self, "Quit %s" %self.appname,
                                    "Do you really want to quit?",
                                    QMessageBox.Yes|QMessageBox.No)
@@ -284,7 +318,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
             event.ignore()
         else:
             self._check_settings_saved(QMessageBox.Yes|QMessageBox.No)
-            QtGui.QApplication.exit()
+            QtWidgets.QApplication.exit()
 
     def settings_changed(self, changed):
         if self._is_initialized:
@@ -293,7 +327,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
             self.modified.emit(changed)
 
     def _add_page(self, widget):
-        button = QtGui.QListWidgetItem(self._selection)
+        button = QtWidgets.QListWidgetItem(self._selection)
         button.setIcon(QtGui.QIcon(widget.ICON))
         button.setText(widget.get_name())
         button.setTextAlignment(Qt.AlignHCenter)
@@ -347,9 +381,9 @@ class CecogAnalyzer(QtGui.QMainWindow):
                 target.addAction(action)
 
     def create_action(self, text, slot=None, shortcut=None, icon=None,
-                      tooltip=None, checkable=None, signal='triggered()',
+                      tooltip=None, checkable=None, signal='triggered',
                       checked=False):
-        action = QtGui.QAction(text, self)
+        action = QtWidgets.QAction(text, self)
         if icon is not None:
             action.setIcon(QtGui.QIcon(':/%s.png' % icon))
         if shortcut is not None:
@@ -358,7 +392,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
             action.setToolTip(tooltip)
             action.setStatusTip(tooltip)
         if slot is not None:
-            self.connect(action, QtCore.SIGNAL(signal), slot)
+            getattr(action, signal).connect(slot)
         if checkable is not None:
             action.setCheckable(True)
         action.setChecked(checked)
@@ -434,8 +468,12 @@ class CecogAnalyzer(QtGui.QMainWindow):
         dialog = CecogAboutDialog(self)
         dialog.show()
 
+    def about_qt(self):
+        QMessageBox.aboutQt(self, "about Qt")
+
     def open_preferences(self):
-        print "pref"
+        pref = PreferencesDialog()
+        pref.exec_()
 
     def _on_browser_open(self):
         if self._imagecontainer is None:
@@ -450,6 +488,7 @@ class CecogAnalyzer(QtGui.QMainWindow):
                 browser.setFocus()
                 self._browser = browser
             except Exception as e:
+                traceback.print_exc()
                 QMessageBox.critical(self, "Error", str(e))
         else:
             self._browser.show()
@@ -494,17 +533,17 @@ class CecogAnalyzer(QtGui.QMainWindow):
                                         ('\n'.join(found_plates),
                                          '\n'.join(missing_plates)))
                     if not has_missing:
-                        btn1 = QtGui.QPushButton('No', box)
+                        btn1 = QtWidgets.QPushButton('No', box)
                         box.addButton(btn1, QMessageBox.NoRole)
                         box.setDefaultButton(btn1)
                     elif len(found_plates) > 0:
-                        btn1 = QtGui.QPushButton('Rescan missing', box)
+                        btn1 = QtWidgets.QPushButton('Rescan missing', box)
                         box.addButton(btn1, QMessageBox.YesRole)
                         box.setDefaultButton(btn1)
                     else:
                         btn1 = None
 
-                    btn2 = QtGui.QPushButton('Rescan all', box)
+                    btn2 = QtWidgets.QPushButton('Rescan all', box)
                     box.addButton(btn2, QMessageBox.YesRole)
 
                     if box.exec_() == QMessageBox.Cancel:
@@ -696,8 +735,8 @@ class CecogAnalyzer(QtGui.QMainWindow):
                 settings_filename = self.environ.demo_settings
                 if os.path.isfile(settings_filename):
                     home = settings_filename
-            filename = QtGui.QFileDialog.getOpenFileName( \
-               self, 'Open config file', home, ';;'.join(self.NAME_FILTERS))
+            filename = QtWidgets.QFileDialog.getOpenFileName( \
+               self, 'Open config file', home, ';;'.join(self.NAME_FILTERS))[0]
             if not bool(filename):
                 return
 
@@ -705,7 +744,8 @@ class CecogAnalyzer(QtGui.QMainWindow):
                 self.load_settings(filename)
                 if self._settings.was_old_file_format():
                     QMessageBox.information(
-                        self, 'Information', 'Config file was updated to version %s' %self.version)
+                        self, 'Information',
+                        'Config file was updated to version %s' %self.version)
             except Exception as e:
                 msg = "File could not be loaded\n%s" %str(e)
                 QMessageBox.critical(self, "Error", msg)
@@ -730,16 +770,16 @@ class CecogAnalyzer(QtGui.QMainWindow):
     def _on_show_log_window(self):
         self._pages.showLogWindow()
 
-
     def _get_save_as_filename(self):
         dir = ""
         if self._settings_filename is not None:
             settings_filename = self.environ.demo_settings
             if os.path.isfile(settings_filename):
                 dir = settings_filename
-        filename = QtGui.QFileDialog.getSaveFileName(
-            self, 'Save config file as', dir, ';;'.join(self.NAME_FILTERS))
+        filename = QtWidgets.QFileDialog.getSaveFileName(
+            self, 'Save config file as', dir, ';;'.join(self.NAME_FILTERS))[0]
         return filename or None
 
-    def _on_help_startup(self):
-        self._pages.helpbrowser.show('_startup')
+    def show_assistant(self):
+        self._pages.assistant.show()
+        self._pages.assistant.openKeyword('index')

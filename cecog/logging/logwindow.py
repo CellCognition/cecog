@@ -18,18 +18,19 @@ import logging
 
 from .logger import LoggerObject
 from .handlers import QHandler
-from PyQt4 import QtGui
-from PyQt4 import QtCore
-from PyQt4.QtCore import Qt
+from PyQt5 import QtGui
+from PyQt5 import QtCore
+from PyQt5 import QtWidgets
+from PyQt5.QtCore import Qt
 
 from cecog import version
 
-class LogWindow(QtGui.QDialog):
+class LogWindow(QtWidgets.QDialog):
 
     def __init__(self, parent, max_count=500, flags=Qt.Window):
-        super(QtGui.QDialog, self).__init__(parent, flags)
+        super(QtWidgets.QDialog, self).__init__(parent, flags)
 
-        self.setWindowTitle("Log")
+        self.setWindowTitle("Application Log")
         self.setWindowModality(Qt.NonModal)
         self.resize(800, 600)
 
@@ -47,18 +48,19 @@ class LogWindow(QtGui.QDialog):
         logger = logging.getLogger()
         logger.addHandler(self.handler)
 
-        layout = QtGui.QVBoxLayout(self)
+        layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(2, 2, 2, 2)
         layout.setSpacing(1)
 
-        toolbar = QtGui.QToolBar(self)
-        toolbar.addWidget(QtGui.QLabel('Log level: ', self))
-        combo = QtGui.QComboBox(self)
+        toolbar = QtWidgets.QToolBar(self)
+        toolbar.setObjectName('LoggerToolbar')
+        toolbar.addWidget(QtWidgets.QLabel('Log level: ', self))
+        combo = QtWidgets.QComboBox(self)
         combo.currentIndexChanged[str].connect(self.onLevelChanged)
         toolbar.addWidget(combo)
         layout.addWidget(toolbar)
 
-        self.tabs = QtGui.QTabWidget(self)
+        self.tabs = QtWidgets.QTabWidget(self)
         self.tabs.setUsesScrollButtons(True)
         self._setupTextEdit(max_count)
 
@@ -69,7 +71,7 @@ class LogWindow(QtGui.QDialog):
         self.hide()
 
     def _setupTextEdit(self, max_count):
-        textedit = QtGui.QPlainTextEdit(self)
+        textedit = QtWidgets.QPlainTextEdit(self)
         textedit.setReadOnly(True)
         textedit.setMaximumBlockCount(max_count)
         format_ = QtGui.QTextCharFormat()
@@ -83,7 +85,7 @@ class LogWindow(QtGui.QDialog):
     def initProcessLogs(self, sub_process_names):
         self.clear()
         for p in sub_process_names:
-            lw = QtGui.QPlainTextEdit(self.tabs)
+            lw = QtWidgets.QPlainTextEdit(self.tabs)
             lw.setReadOnly(True)
             self.items[p] = lw
             self.tabs.addTab(lw, str(p))

@@ -16,9 +16,9 @@ __source__ = '$URL$'
 
 __all__ = ['ObjectDetectionFrame']
 
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
-from PyQt4.Qt import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.Qt import *
 
 from cecog.gui.analyzer import BaseProcessorFrame
 from cecog.threads.analyzer import AnalyzerThread
@@ -27,6 +27,7 @@ class ObjectDetectionFrame(BaseProcessorFrame):
 
     DISPLAY_NAME = 'Object Detection'
     TABS = ['Primary Channel', 'Secondary Channel', 'Tertiary Channel']
+    ICON = ":segmentation.png"
 
     def __init__(self, settings, parent, name):
         super(ObjectDetectionFrame, self).__init__(settings, parent, name)

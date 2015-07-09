@@ -1,5 +1,5 @@
 setup.cfg
-setup.cfg.mac
+setup.cfg.*
 .Rhistory
 cecog_rc.py
 dist
@@ -8,6 +8,7 @@ Analysis
 *.pkl
 Release/
 Debug/
+resources/doc/*.*
 build.info
 resource.py
 *.dmg

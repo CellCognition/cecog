@@ -10,13 +10,14 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-from PyQt4 import QtGui
-from PyQt4.QtCore import Qt
+from PyQt5 import QtGui
+from PyQt5 import QtWidgets
+from PyQt5.QtCore import Qt
 
 from cecog import version
 
 
-class CecogAboutDialog(QtGui.QDialog):
+class CecogAboutDialog(QtWidgets.QDialog):
 
     def __init__(self, *args, **kw):
         super(CecogAboutDialog, self).__init__(*args, **kw)
@@ -25,16 +26,16 @@ class CecogAboutDialog(QtGui.QDialog):
                            'background-image: url(:cecog_about)')
         self.setWindowTitle('About CecogAnalyzer')
         self.setFixedSize(400, 300)
-        layout = QtGui.QGridLayout()
+        layout = QtWidgets.QGridLayout()
         layout.setContentsMargins(0, 0, 0, 0)
 
-        label1 = QtGui.QLabel(self)
+        label1 = QtWidgets.QLabel(self)
         label1.setStyleSheet('background: transparent;')
         label1.setAlignment(Qt.AlignCenter)
         label1.setText('CecogAnalyzer\nVersion %s\n\n'
                        'Copyright (c) 2006 - 2011\n' %version.version)
 
-        label2 = QtGui.QLabel(self)
+        label2 = QtWidgets.QLabel(self)
         label2.setStyleSheet('background: transparent;')
         label2.setTextFormat(Qt.AutoText)
         label2.setOpenExternalLinks(True)

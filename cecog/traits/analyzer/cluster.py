@@ -17,17 +17,10 @@ __source__ = '$URL$'
 __all__ = ['SectionCluster']
 
 from cecog.traits.analyzer.section_core import SectionCore
-from cecog.gui.guitraits import IntTrait
 
 SECTION_NAME_CLUSTER = 'Cluster'
 
 class SectionCluster(SectionCore):
 
     SECTION_NAME = SECTION_NAME_CLUSTER
-
-    OPTIONS = [
-      ('cluster',
-       [('position_granularity',
-            IntTrait(1, 1, 1000, label='Batch size (non-timelapse)')),
-        ])
-      ]
+    OPTIONS = []

@@ -9,18 +9,18 @@
                  See trunk/AUTHORS.txt for author contributions.
 """
 
-__all__ = ['PluginBay', 'PluginParamFrame', 'PluginItem']
+__all__ = ('PluginBay', 'PluginParamFrame', 'PluginItem')
 
 import functools
 
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
-from PyQt4.Qt import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.Qt import *
+from PyQt5.QtWidgets import QMessageBox
 
 from collections import OrderedDict
 from cecog.gui.display import TraitDisplayMixin
-from cecog.gui.util import question
-from cecog.gui.helpbrowser import HelpBrowser
+
 
 class PluginParamFrame(TraitDisplayMixin):
 
@@ -55,46 +55,16 @@ class PluginParamFrame(TraitDisplayMixin):
         super(PluginParamFrame, self).add_group(trait_name, items, **options)
 
 
-class PluginDocumentation(QFrame):
-
-    def __init__(self, parent, plugin):
-        super(PluginDocumentation, self).__init__(parent)
-        self.helpbrowser = HelpBrowser(parent=None)
-        self._plugin = plugin
-
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-
-        help_button = QToolButton(self)
-        help_button.setIcon(QIcon(':question_mark'))
-        help_button.clicked.connect(self.on_label_clicked)
-        layout.addWidget(help_button)
-
-        self._content = plugin.DOC
-        if len(self._content) > 0 and self._content[0] == ':':
-            self._content = self.helpbrowser.load_qrc_text( \
-                'plugins/%s/%s' %(plugin.QRC_PREFIX or '', self._content[1:]))
-
-    def on_label_clicked(self, trait_name=None):
-        param_name = self._plugin.param_manager.get_param_name(str(trait_name))
-        self.helpbrowser.show( \
-            self._plugin.name, html_text=self._content, link=param_name)
-
-    @classmethod
-    def has_content(cls, plugin):
-        return not plugin.DOC is None and len(plugin.DOC) > 0
-
-
 class PluginItem(QFrame):
 
     remove_item = pyqtSignal()
 
-    def __init__(self, parent, plugin, settings):
+    def __init__(self, parent, plugin, settings, assistant=None):
         super(QFrame, self).__init__(parent)
+        self.assistant = assistant
+        self._plugin = plugin
 
         layout = QVBoxLayout(self)
-        # layout.setContentsMargins(5, 5, 5, 5)
-
         frame1 = QFrame(self)
         frame1.setStyleSheet("QFrame { background: #CCCCCC; }")
 
@@ -103,7 +73,6 @@ class PluginItem(QFrame):
         layout.addWidget(frame2)
 
         layout = QHBoxLayout(frame1)
-        #layout.setContentsMargins(5, 5, 5, 5)
         label = QLabel(plugin.LABEL, self)
         label.setStyleSheet("font-weight: bold;")
         txt = QLineEdit(plugin.name, self)
@@ -113,12 +82,11 @@ class PluginItem(QFrame):
         layout.addWidget(label)
         layout.addWidget(txt, 1)
 
-        # add a collapsible documentation to the plugin
-        # (image and/or html-compatible text)
-        if PluginDocumentation.has_content(plugin):
-            doc = PluginDocumentation(self, plugin)
-            frame2.label_clicked.connect(doc.on_label_clicked)
-            layout.addWidget(doc)
+        help_button = QToolButton(self)
+        help_button.setIcon(QIcon(':question_mark'))
+        help_button.clicked.connect(self.on_label_clicked)
+        frame2.label_clicked.connect(self.on_label_clicked)
+        layout.addWidget(help_button)
 
         layout.addWidget(btn)
 
@@ -141,13 +109,22 @@ class PluginItem(QFrame):
     def _on_remove(self):
         self.remove_item.emit()
 
+    def on_label_clicked(self, trait_name=None):
+        print trait_name
+        if isinstance(trait_name, basestring):
+            keyword = self._plugin.param_manager.get_param_name(str(trait_name))
+        else:
+            keyword = self._plugin.name
+        self.assistant.show(keyword)
+
 
 class PluginBay(QFrame):
 
-    def __init__(self, parent, plugin_manager, settings):
+    def __init__(self, parent, plugin_manager, settings, assistant=None):
         super(QFrame, self).__init__(parent)
         self.plugin_manager = plugin_manager
         self.plugin_manager.register_observer(self)
+        self.assistant = assistant
 
         self.settings = settings
         self._plugins = OrderedDict()
@@ -199,7 +176,7 @@ class PluginBay(QFrame):
 
     def add_plugin(self, plugin_name):
         plugin = self.plugin_manager.get_plugin_instance(plugin_name)
-        item = PluginItem(self._frame2, plugin, self.settings)
+        item = PluginItem(self._frame2, plugin, self.settings, self.assistant)
         item.remove_item.connect(functools.partial(\
                 self._on_remove_plugin, plugin_name))
         layout = self._frame2.layout()
@@ -220,18 +197,16 @@ class PluginBay(QFrame):
 
     def _on_remove_plugin(self, plugin_name):
         instance = self.plugin_manager.get_plugin_instance(plugin_name)
-        result = False
+
+        result = QMessageBox.No
         n = len(instance.referees)
         if n == 0:
-            result = question(None, 'Removing the plugin "%s"' %plugin_name,
-                              "Are you sure to remove this plugin?")
+            result = QMessageBox.question(self, "Question", "Remove plugin '%s'?" %plugin_name)
         elif n > 0:
-            detail = '\n'.join(['%s (%s)' % x[:2] for x in instance.referees])
-            result = question(None, 'Removing the plugin "%s"' % plugin_name,
-                              ('%d other plugin%s require%s this plugin.'
-                               '\n\nAre you sure to remove this plugin?') %
-                              (n, 's' if n > 1 else '', 's' if n == 1 else ''),
-                              detail=detail, icon=QMessageBox.Warning)
-        if result:
+            msg = 'Remove plugin "%s"?\n\nOther plugin(s) depend on it:\n' %plugin_name
+            msg += '\n'.join(['%s (%s)' % x[:2] for x in instance.referees])
+            result = QMessageBox.question(self, "Question", msg)
+
+        if result == QMessageBox.Yes:
             self.remove_plugin(plugin_name)
             self.plugin_manager.remove_instance(plugin_name, self.settings)

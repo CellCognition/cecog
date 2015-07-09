@@ -18,8 +18,9 @@ __all__ = ['ProcessingFrame']
 
 
 import logging
-from PyQt4 import QtGui
-from PyQt4 import QtCore
+from PyQt5 import QtGui
+from PyQt5 import QtCore
+from PyQt5 import QtWidgets
 
 from cecog import CHANNEL_PREFIX
 from cecog.version import version
@@ -142,8 +143,9 @@ class ExportSettings(object):
         return settings
 
 
-
 class ProcessingFrame(BaseProcessorFrame, ExportSettings):
+
+    ICON = ":processing.png"
 
     def __init__(self, settings, parent, name):
         super(ProcessingFrame, self).__init__(settings, parent, name)

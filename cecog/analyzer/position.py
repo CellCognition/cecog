@@ -48,20 +48,7 @@ from cecog.util.stopwatch import StopWatch
 from cecog.util.util import makedirs
 from cecog.util.ctuple import COrderedDict
 from cecog.learning.learning import ClassDefinitionUnsup
-
-
-FEATURE_MAP = {'featurecategory_intensity': ['normbase', 'normbase2'],
-               'featurecategory_haralick': ['haralick', 'haralick2'],
-               'featurecategory_stat_geom': ['levelset'],
-               'featurecategory_granugrey': ['granulometry'],
-               'featurecategory_basicshape': ['roisize',
-                                              'circularity',
-                                              'irregularity',
-                                              'irregularity2',
-                                              'axes'],
-               'featurecategory_convhull': ['convexhull'],
-               'featurecategory_distance': ['distance'],
-               'featurecategory_moments': ['moments']}
+from cecog.features import FEATURE_MAP
 
 
 class PositionCore(LoggerObject):
@@ -178,40 +165,22 @@ class PositionCore(LoggerObject):
         return (max(xs), max(ys)), image_size
 
     def feature_params(self, ch_name):
+        fgroups = dict()
 
-        # XXX unify list and dict
-        f_categories = list()
-        f_cat_params = dict()
-
-        # unfortunateley some classes expect empty list and dict
-        if not self.settings.get(SECTION_NAME_PROCESSING,
-                             self._resolve_name(ch_name,
-                                                'featureextraction')):
-            return f_categories, f_cat_params
-
-        for category, feature in FEATURE_MAP.iteritems():
+        for group, features in FEATURE_MAP.iteritems():
             if self.settings.get(SECTION_NAME_FEATURE_EXTRACTION,
-                                 self._resolve_name(ch_name, category)):
-                if "haralick" in category:
-                    try:
-                        f_cat_params['haralick_categories'].extend(feature)
-                    except KeyError:
-                        assert isinstance(feature, list)
-                        f_cat_params['haralick_categories'] = feature
-                else:
-                    f_categories += feature
+                                 self._resolve_name(ch_name, group)):
 
-        if f_cat_params.has_key("haralick_categories"):
-            f_cat_params['haralick_distances'] = (1, 2, 4, 8)
+                for feature, params in features.iteritems():
+                    fgroups[feature] = params
 
-        
-        return f_categories, f_cat_params
+        return fgroups
 
     def setup_channel(self, proc_channel, col_channel, zslice_images,
                       check_for_plugins=True):
 
         # determine the list of features to be calculated from each object
-        f_cats, f_params = self.feature_params(proc_channel)
+        f_params = self.feature_params(proc_channel)
         reg_shift, im_size = self.registration_shift()
         ch_cls = self.CHANNELS[proc_channel.lower()]
 
@@ -227,8 +196,7 @@ class PositionCore(LoggerObject):
                          fNormalizeMax = self.settings.get2('%s_normalizemax' %proc_channel),
                          bFlatfieldCorrection = self.settings.get2('%s_flat_field_correction' %proc_channel),
                          strBackgroundImagePath = self.settings.get2('%s_flat_field_correction_image_dir' %proc_channel),
-                         lstFeatureCategories = f_cats,
-                         dctFeatureParameters = f_params,
+                         feature_groups = f_params,
                          check_for_plugins = check_for_plugins)
 
         if channel.is_virtual():
