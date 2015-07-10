@@ -86,8 +86,8 @@
       <keyword name="Object Filter" ref="html/local_adaptive_threshold.html#postprocessing"/>
       <keyword name="Min. object size" ref="html/local_adaptive_threshold.html#postprocessing_roisize_min"/>
       <keyword name="Max. object size" ref="html/local_adaptive_threshold.html#postprocessing_roisize_max"/>
-      <keyword name="Min. average intesity" ref="html/local_adaptive_threshold.html#postprocessing_intensity_min"/>
-      <keyword name="Max. average intesity" ref="html/local_adaptive_threshold.html#postprocessing_intensity_max"/>
+      <keyword name="Min. average intensity" ref="html/local_adaptive_threshold.html#postprocessing_intensity_min"/>
+      <keyword name="Max. average intensity" ref="html/local_adaptive_threshold.html#postprocessing_intensity_max"/>
 
       <keyword name="ChannelId (secondary)" ref="html/manual.html#secondary_channelid"/>
       <keyword name="Gray level normalization (secondary)" ref="html/manual.html#secondary_channel_conversion"/>
@@ -135,7 +135,7 @@
       <keyword name="Classifier folder (secondary)" ref="html/manual.html#secondary_classification_envpath"/>
       <keyword name="Classifier folder (tertiary)" ref="html/manual.html#tertiary_classification_envpath"/>
       <keyword name="Region name (tertiary)" ref="html/manual.html#tertiary_classification_regionname"/>
-      <keyword name="Reguin name (secondary)" ref="html/manual.html#secondary_classification_regionname"/>
+      <keyword name="Region name (secondary)" ref="html/manual.html#secondary_classification_regionname"/>
 
       <keyword name="Merge Channels" ref="html/manual.html#merged_channel"/>
       <keyword name="Classifier folder (merged)" ref="html/manual.html#merged_classification_envpath"/>
