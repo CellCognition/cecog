@@ -33,6 +33,8 @@ from .util import loadUI
 from cecog.util.pattern import Singleton
 from cecog import version
 
+from cecog.environment import CecogEnvironment
+
 
 def txt2dict(txt):
     """Convert a csv string into a dict.
@@ -62,7 +64,7 @@ class AppPreferences(object):
 
     __metaclass__ = Singleton
     __slots__ = ("host", "port", "mapping_str", "target_platform",
-                 "batch_size", "cluster_support")
+                 "batch_size", "cluster_support", "style_sheet", 'available_style_sheets')
 
     def __init__(self):
 
@@ -77,8 +79,29 @@ class AppPreferences(object):
         self.target_platform = "linux"
         self.batch_size = 1
         self.cluster_support = True
-
+        
+        self.style_sheet = "dark_blue"
+        self.available_style_sheets = []
+        self.init_style_sheets()
+        
         self.restoreSettings()
+        
+    def init_style_sheets(self):
+        environ = CecogEnvironment()
+        
+        import imp
+        import os
+        sys.path.append(environ.CSS_DIR)
+        
+        for compiled_css_file in os.listdir(environ.CSS_DIR):
+            if compiled_css_file.endswith('.py'):
+                try:
+                    compiled_css_mod = os.path.splitext(compiled_css_file)[0]
+                    css_mod = imp.find_module(compiled_css_mod)
+                    if css_mod is not None:
+                        self.available_style_sheets.append(compiled_css_mod)
+                except:
+                    print 'fuck' 
 
     def saveSettings(self):
         settings = QSettings(version.organisation, version.appname)
@@ -90,6 +113,8 @@ class AppPreferences(object):
         settings.setValue('target_platform', self.target_platform)
         settings.setValue('batch_size', self.batch_size)
         settings.setValue('cluster_support', self.cluster_support)
+        
+        settings.setValue('style_sheet', self.style_sheet)
         settings.endGroup()
 
     def restoreSettings(self):
@@ -114,6 +139,9 @@ class AppPreferences(object):
 
         if settings.contains('cluster_support'):
             self.cluster_support = settings.value('cluster_support', type=bool)
+            
+        if settings.contains('style_sheet'):
+            self.style_sheet = settings.value('style_sheet', type=str)
 
         settings.endGroup()
 
@@ -194,6 +222,27 @@ class PreferencesDialog(QtWidgets.QDialog):
 
         self.batch_size.setValue(apc.batch_size)
         self.cluster_support.setChecked(apc.cluster_support)
+        
+        for it in apc.available_style_sheets: self.style_select.addItem(it)
+        
+        self.style_select.setCurrentIndex(apc.available_style_sheets.index(apc.style_sheet))
+        
+        
+        self.style_select.currentIndexChanged[str].connect(self.test_style_sheet)
+        
+    def test_style_sheet(self, style_sheet_name):
+        from PyQt5.QtCore import QFile, QTextStream
+        import importlib
+        importlib.import_module(style_sheet_name)
+
+        f = QFile(":/%s/style.qss" % style_sheet_name)                                
+        f.open(QFile.ReadOnly | QFile.Text)
+        ts = QTextStream(f)
+        stylesheet = ts.readAll()    
+        self.setStyleSheet("")
+        self.setStyleSheet(stylesheet)
+        
+        self.parent().updateStyleSheet(stylesheet)
 
     def populateTable(self, mappings):
 
@@ -244,6 +293,7 @@ class PreferencesDialog(QtWidgets.QDialog):
             self._iosnames[self.target_platform.currentText()]
         appcfg.batch_size = self.batch_size.value()
         appcfg.cluster_support = self.cluster_support.isChecked()
+        appcfg.style_sheet = self.style_select.currentText()
 
         appcfg.saveSettings()
 
