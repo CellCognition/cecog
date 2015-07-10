@@ -214,7 +214,6 @@ class AtAssistant(QtWidgets.QMainWindow):
             self._kwmap[self._keywordFromUrl(link)] = keyword
 
     def _keywordFromUrl(self, url):
-        print url
         url = url.toString()
         if '#' in url:
             return url.split('#')[1]
