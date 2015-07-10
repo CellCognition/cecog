@@ -180,21 +180,19 @@ class TraitDisplayMixin(QtWidgets.QFrame):
     def _create_label(self, parent, label, link=None):
         if link is None:
             link = label
-        w_label = ClickableQLabel(parent)
+        w_label = QLabel(parent)
 
         if self._has_label_link and link is not False:
             w_label.setTextFormat(Qt.AutoText)
-#             w_label.setStyleSheet(("*:hover { border:none; background: "
-#                                    "#e8ff66; text-decoration: underline;}"))
-            w_label.setText(label)
-            w_label.setLink(link)
-            
+            w_label.setStyleSheet(("*:hover { border:none; background: "
+                                   "#e8ff66; text-decoration: underline;}"))
+            w_label.setText(('<style>a { color: black; text-decoration: none;'
+                             '}</style> <a href="%s">%s</a>') % (link, label))
             w_label.setToolTip('Click on the label for help.')
             if self._label_click_callback is None:
-                w_label.clicked.connect(self._on_show_help)
-#                 w_label.linkActivated.connect(self._on_show_help)
+                w_label.linkActivated.connect(self._on_show_help)
             else:
-                w_label.clicked.connect(
+                w_label.linkActivated.connect(
                     functools.partial(self._label_click_callback, link))
         else:
             w_label.setText(label)
@@ -495,14 +493,3 @@ class TraitDisplayMixin(QtWidgets.QFrame):
                 # call final handler
                 if name in self._final_handlers:
                     self._final_handlers[name]()
-
-
-class ClickableQLabel(QLabel):
-    clicked = pyqtSignal(str)
-    
-    def setLink(self, link):
-        self.link = link
-    
-    def mouseReleaseEvent(self, *args, **kwargs):
-        self.clicked.emit(self.link)
-        return QLabel.mouseReleaseEvent(self, *args, **kwargs)

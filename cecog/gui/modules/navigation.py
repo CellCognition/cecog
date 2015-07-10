@@ -63,7 +63,7 @@ class NavigationModule(Module):
 
         frame_info = QGroupBox('Plate Information', self)
         layout = QGridLayout(frame_info)
-#         frame_info.setStyleSheet('QLabel { font-size: 10px }')
+        frame_info.setStyleSheet('QLabel { font-size: 10px }')
         self._label_info = QLabel(frame_info)
         layout.addWidget(self._label_info, 0, 0, 0, 0,
                          Qt.AlignCenter | Qt.AlignHCenter)
@@ -88,7 +88,7 @@ class NavigationModule(Module):
         table.setSelectionMode(QTableWidget.SingleSelection)
         table.setSelectionBehavior(QTableWidget.SelectRows)
         table.setAlternatingRowColors(True)
-#         table.setStyleSheet('font-size: 10px;')
+        table.setStyleSheet('font-size: 10px;')
         table.currentItemChanged.connect(self._on_plate_changed)
         self._table_plate = table
         layout.addWidget(table, 0, 0)
@@ -103,7 +103,7 @@ class NavigationModule(Module):
         table.setSelectionMode(QTableWidget.SingleSelection)
         table.setSelectionBehavior(QTableWidget.SelectRows)
         table.setAlternatingRowColors(True)
-#         table.setStyleSheet('font-size: 10px;')
+        table.setStyleSheet('font-size: 10px;')
         table.currentItemChanged.connect(self._on_position_changed)
         self._table_position = table
         layout.addWidget(table, 0, 0)
@@ -120,7 +120,7 @@ class NavigationModule(Module):
             table.setSelectionMode(QTableWidget.SingleSelection)
             table.setSelectionBehavior(QTableWidget.SelectRows)
             table.setAlternatingRowColors(True)
-#             table.setStyleSheet('font-size: 10px;')
+            table.setStyleSheet('font-size: 10px;')
             table.currentItemChanged.connect(self._on_time_changed)
             self._table_time = table
             layout.addWidget(table, 0, 0)

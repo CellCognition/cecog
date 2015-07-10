@@ -26,8 +26,6 @@ pyrcc_opts = {'infile': 'cecog.qrc',
               'outfile': join('cecog', 'cecog_rc.py'),
               'pyrccbin': 'pyrcc5'}
 
-pycssrcc_opt = {'pyrccbin': 'pyrcc5'}
-
 help_opts = {'infile': join('doc', 'manual.qhcp'),
              'outfile': join('resources', 'doc', 'manual.qhc'),
              'qcollectiongeneator': 'qcollectiongenerator'}
@@ -49,14 +47,12 @@ setup(scripts = scripts,
                                                 mpl_data=False,
                                                 qt_plugins=False),
       cmdclass = {'build_rcc': build_helpers.BuildRcc,
-                  'build_css': build_helpers.BuildCSSRcc,
                   'build_help': build_helpers.BuildHelp,
                   'build': build_helpers.Build},
       packages = packages,
       package_data = {'cecog': [join('gui', '*.ui'),
                                 join('gui', 'helpbrowser', '*.ui')]},
       options = {'build_rcc': pyrcc_opts,
-                 'build_css': pycssrcc_opt,
                  'build_help': help_opts},
       ext_modules = [ccore],
       **build_helpers.metadata)

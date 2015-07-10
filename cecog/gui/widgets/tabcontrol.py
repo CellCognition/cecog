@@ -51,7 +51,7 @@ class TabControl(QFrame):
     def __init__(self, parent, hide_one=True):
         super(TabControl, self).__init__(parent)
 
-#         self.setStyleSheet(TAB_STYLE)
+        self.setStyleSheet(TAB_STYLE)
 
         self._hide_one = hide_one
         self._tabs = OrderedDict()

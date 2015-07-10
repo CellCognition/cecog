@@ -4,7 +4,6 @@ main.py
 CecogAnalyzer main window
 
 """
-from imp import load_module
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -27,7 +26,6 @@ from PyQt5 import QtCore
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QMessageBox
-from PyQt5.QtCore import QFile, QTextStream
 
 from cecog import version
 from cecog.units.time import TimeConverter
@@ -129,8 +127,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         self.debug = debug
 
         self.environ = CecogEnvironment(version=version, redirect=redirect,
-                                        debug=debug)              
-        
+                                        debug=debug)
         if debug:
             self.environ.pprint()
 
@@ -209,7 +206,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
                       TrackingFrame(self._settings, self._pages, SECTION_NAME_TRACKING),
                       EventSelectionFrame(self._settings, self._pages, SECTION_NAME_EVENT_SELECTION),
                       ErrorCorrectionFrame(self._settings, self._pages, SECTION_NAME_ERRORCORRECTION),
-                      #PostProcessingFrame(self._settings, self._pages, SECTION_NAME_POST_PROCESSING),
+                      PostProcessingFrame(self._settings, self._pages, SECTION_NAME_POST_PROCESSING),
                       OutputFrame(self._settings, self._pages, SECTION_NAME_OUTPUT),
                       ProcessingFrame(self._settings, self._pages, SECTION_NAME_PROCESSING)]
 
@@ -222,21 +219,6 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
             clusterframe = ClusterFrame(self._settings, self._pages, SECTION_NAME_CLUSTER)
             clusterframe.set_imagecontainer(self._imagecontainer)
             self._tabs.append(clusterframe)
-            
-        if AppPreferences().style_sheet:
-            import importlib
-            style_sheet = AppPreferences().style_sheet
-            
-            try:
-                importlib.import_module(style_sheet)
-                f = QFile(":/%s/style.qss" % style_sheet)                                
-                f.open(QFile.ReadOnly | QFile.Text)
-                ts = QTextStream(f)
-                stylesheet = ts.readAll()    
-                self.updateStyleSheet(stylesheet)
-            except Exception as e:
-                traceback.print_exc()
-                QMessageBox.warning(self, "Unable to set style sheet", str(e))
 
         widths = []
         for tab in self._tabs:
@@ -490,17 +472,8 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         QMessageBox.aboutQt(self, "about Qt")
 
     def open_preferences(self):
-        pref = PreferencesDialog(self)
+        pref = PreferencesDialog()
         pref.exec_()
-        
-    def updateStyleSheet(self, stylesheet):
-        # Main Window
-        self.setStyleSheet("")
-        self.setStyleSheet(stylesheet)
-        
-        # Help pages
-        self._pages.assistant.setStyleSheet("")
-        self._pages.assistant.setStyleSheet(stylesheet)
 
     def _on_browser_open(self):
         if self._imagecontainer is None:

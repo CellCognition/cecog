@@ -27,7 +27,7 @@
 
     <keywords>
       <keyword name="Getting Started" ref="html/getting_started.html"/>
-      <keyword name="index" ref="html/index.html"/>
+      <keyword name="index" ref="html/getting_started.html"/>
       <keyword name="User Manual" ref="html/manual.html"/>
       <keyword name="General" ref="html/manual.html#general"></keyword>
       <keyword name="Version" ref="html/manual.html#version"/>
