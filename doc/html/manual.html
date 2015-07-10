@@ -630,7 +630,7 @@
         </p>
       </a>
 
-    <h1><a name="tracking"></a>Tracking</h1>
+    <h1><a name="nearest_neighbor_tracker"></a>Tracking</h1>
     <p>
       To study temporal progression of cellular stages on the level of
       individual cells objects must be followed over time
@@ -665,10 +665,11 @@
       </p>
     </a>
 
-    <a name="tracking"></a>
-    <h4>Tracking</h4>
+    <a name="nearest_neighbor_tracker">
+       <h4>Tracking</h4>
+    </a>
     <p class="text">Parameters for object tracking by nearest-neighborhood.
-      <a name="tracking_maxobjectdistance">
+      <a name="max_object_distance">
         <h4 class="sub">Max. object x-y distance</h4>
         <p class="subtext">Maximal distance (pixels) between objects in
           two consecutive frames to be connected. This value scales
@@ -676,7 +677,7 @@
         </p>
       </a>
 
-      <a name="tracking_maxtrackinggap">
+      <a name="max_frame_gap">
         <h4 class="sub">Max. time-point gap</h4>
         <p class="subtext">Maximal number of time-points (frames) to
           gap. Only relevant for out-of-focus or missing images in a
@@ -684,7 +685,7 @@
         </p>
       </a>
 
-      <a name="tracking_maxsplitobjects">
+      <a name="max_split_objects">
         <h4 class="sub">Max split events</h4>
         <p class="subtext">Maximal number of allowed trajectory
           splits. Only relevant if more than object is found in the

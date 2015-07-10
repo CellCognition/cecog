@@ -113,7 +113,6 @@ class PluginItem(QFrame):
         self.remove_item.emit()
 
     def on_label_clicked(self, trait_name=None):
-        print trait_name
         if isinstance(trait_name, basestring):
             keyword = self._plugin.param_manager.get_param_name(str(trait_name))
         else:

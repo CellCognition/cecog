@@ -144,11 +144,11 @@
       <keyword name="Merge region (tertiary)" ref="html/manual.html#merge_tertiary"/>
       <keyword name="Controlpanel (Classification)" ref="html/manual.html#controlpanel_classification"/>
 
-      <keyword name="Tracking" ref="html/manual.html#tracking"/>
+      <keyword name="Tracking" ref="html/manual.html#nearest_neighbor_tracker"/>
       <keyword name="Tracking region" ref="html/manual.html#region"/>
-      <keyword name="Max. object distance" ref="html/manual.html#tracking_maxobjectdistance"/>
-      <keyword name="Max. timepoint gap" ref="html/manual.html#tracking_maxtrackinggap"/>
-      <keyword name="Max. split events" ref="html/manual.html#tracking_maxsplitobjects"/>
+      <keyword name="Max object distance" ref="html/manual.html#max_object_distance"/>
+      <keyword name="Max. timepoint gap" ref="html/manual.html#max_frame_gap"/>
+      <keyword name="Max. split events" ref="html/manual.html#max_split_objects"/>
       <keyword name="Visualization" ref="html/manual.html#tracking_visualization"/>
       <keyword name="Max. time points" ref="html/manual.html#tracking_visualize_track_length"/>
       <keyword name="Centroid radius" ref="html/manual.html#tracking_centroid_radius"/>
@@ -245,6 +245,7 @@
       <keyword name="Processing" ref="html/manual.html#processing"/>
       <keyword name="Controlpanel (Processing)" ref="html/manual.html#controlpanel_processing"/>
       <keyword name="Cluster" ref="html/manual.html#cluster"/>
+      
 
     </keywords>
     <files>
