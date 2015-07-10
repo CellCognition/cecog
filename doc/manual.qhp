@@ -13,7 +13,7 @@
         </section>
         <section title="Feature Extraction" ref="html/manual.html#feature_extraction"></section>
         <section title="Classification" ref="html/manual.html#classification"></section>
-        <section title="Tracking" ref="html/manual.html#tracking"></section>
+        <section title="Tracking plug-in" ref="html/manual.html#tracking"></section>
         <section title="Event selection" ref="html/manual.html#event_detection"></section>
         <section title="Error correction" ref="html/manual.html#error_correction">
           <section title="HMM Constraints" ref="html/hmm_constraints.html"></section>
@@ -46,7 +46,6 @@
 
       <keyword name="Feature Extraction" ref="html/manual.html#feature_extraction"></keyword>
       <keyword name="Classification" ref="html/manual.html#classification"></keyword>
-      <keyword name="Tracking" ref="html/manual.html#tracking"></keyword>
       <keyword name="Event selection" ref="html/manual.html#event_detection"></keyword>
       <keyword name="Error correction" ref="html/manual.html#error_correction"></keyword>
       <keyword name="Plots and Postprocessing" ref="html/manual.html#post_processing"></keyword>
