@@ -410,6 +410,9 @@ class IniFileImporter(AbstractImporter):
         re_well_str2 = r"\d{1,5}"
         re_well2 = re.compile(re_well_str2)
 
+        re_well_str3 = r"(?P<letter>[a-zA-Z])\D*(?P<number>\d{1,5})"
+        re_well3 = re.compile(re_well_str3)
+        
         for dirpath, dirnames, filenames in os.walk(path):
             # prune filenames by file extension
             if len(self.extensions) > 0:
@@ -457,9 +460,16 @@ class IniFileImporter(AbstractImporter):
                                 well = result[MetaInfo.Well]
                                 if re_well.match(well) is None:
                                     if re_well2.match(well) is None:
-                                        raise MetaDataError("Well data '%s' not "
-                                                            "valid.\nValid are '%s' or '%s'"
-                                                            % (well, re_well_str, re_well_str2))
+                                        res3 = re_well3.match(well)
+                                        if res3 is None:
+                                            raise MetaDataError("Well data '%s' not "
+                                                                "valid.\nValid are '%s' or '%s' or '%s'"
+                                                                % (well, re_well_str, re_well_str2, re_well_str3))
+                                        else:                                            
+                                            letter = res3.groupdict()['letter']
+                                            number = res3.groupdict()['number']
+                                            result[MetaInfo.Well] = "%s%02d" % (letter.upper(), int(number))                                            
+                                            #result[MetaInfo.Well] = "%s%02d" % (well[0].upper(), int(well[1:]))
                                     else:
                                         result[MetaInfo.Well] = "%05d" % int(well)
                                 else:

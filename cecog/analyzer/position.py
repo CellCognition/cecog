@@ -175,7 +175,6 @@ class PositionCore(LoggerObject):
 
         return fgroups
 
-
     def setup_channel(self, proc_channel, col_channel, zslice_images,
                       check_for_plugins=True):
 
