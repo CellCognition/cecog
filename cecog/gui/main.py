@@ -15,6 +15,7 @@ __url__ = 'www.cellcognition.org'
 
 
 import os
+import sys
 import numpy
 import logging
 import traceback
@@ -70,6 +71,12 @@ from cecog.gui.progressdialog import ProgressDialog
 from cecog.gui.progressdialog import ProgressObject
 from cecog.gui.helpbrowser import AtAssistant
 
+def fix_path(path):
+    "Windows sucks!"
+    if sys.platform.startswith("win"):
+        return path.strip("/")
+    else:
+        return path
 
 class FrameStack(QtWidgets.QStackedWidget):
 
@@ -113,6 +120,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
                  debug=False, *args, **kw):
         super(CecogAnalyzer, self).__init__(*args, **kw)
         self.setWindowTitle("%s-%s" %(appname, version) + '[*]')
+        self.setAcceptDrops(True)
         self.setCentralWidget(QtWidgets.QFrame(self))
         self.setObjectName(appname)
 
@@ -262,6 +270,22 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
             QMessageBox.warning(
                 self, "Warning", "File (%s) does not exist" %settings)
 
+    def dragEnterEvent(self, event):
+        event.acceptProposedAction()
+
+    def dragMoveEvent(self, event):
+        event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        mimeData = event.mimeData()
+        if mimeData.hasUrls():
+            if len(mimeData.urls()) == 1:
+                self.load_settings(fix_path(mimeData.urls()[0].path()))
+                # self._on_load_input()
+        event.acceptProposedAction()
+
+    def dragLeaveEvent(self, event):
+        event.accept()
 
     def _save_geometry(self):
         settings = QtCore.QSettings(version.organisation, version.appname)
