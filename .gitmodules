@@ -7,3 +7,4 @@
 [submodule "cecog/gui/css"]
 	path = cecog/gui/css
 	url = https://github.com/sommerc/pyqt-stylesheets.git
+    ignore = dirty
