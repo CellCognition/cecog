@@ -4,7 +4,6 @@ main.py
 CecogAnalyzer main window
 
 """
-from imp import load_module
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -62,6 +61,7 @@ from cecog.gui.imagedialog import ImageDialog
 from cecog.gui.aboutdialog import CecogAboutDialog
 from cecog.gui.preferences import PreferencesDialog
 from cecog.gui.preferences import AppPreferences
+from cecog.gui import css
 
 from cecog.gui.browser import Browser
 from cecog.logging import LogWindow
@@ -216,19 +216,16 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
             self._tabs.append(clusterframe)
             
         if AppPreferences().style_sheet:
-            import importlib
             style_sheet = AppPreferences().style_sheet
+            available_styles = css.available_styles()
+            if style_sheet in available_styles:
+                stylesheet = css.get_style(style_sheet) 
             
-            try:
-                importlib.import_module(style_sheet)
-                f = QFile(":/%s/style.qss" % style_sheet)                                
-                f.open(QFile.ReadOnly | QFile.Text)
-                ts = QTextStream(f)
-                stylesheet = ts.readAll()    
-                self.updateStyleSheet(stylesheet)
-            except Exception as e:
-                traceback.print_exc()
-                QMessageBox.warning(self, "Unable to set style sheet", str(e))
+                try:  
+                    self.updateStyleSheet(stylesheet)
+                except Exception as e:
+                    traceback.print_exc()
+                    QMessageBox.warning(self, "Unable to set style sheet", str(e))
 
         widths = []
         for tab in self._tabs:

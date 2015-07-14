@@ -32,6 +32,7 @@ from PyQt5.QtCore import Qt, QSettings
 from .util import loadUI
 from cecog.util.pattern import Singleton
 from cecog import version
+from cecog.gui import css
 
 from cecog.environment import CecogEnvironment
 
@@ -81,27 +82,10 @@ class AppPreferences(object):
         self.cluster_support = True
         
         self.style_sheet = "dark_blue"
-        self.available_style_sheets = []
-        self.init_style_sheets()
+        self.available_style_sheets = css.available_styles()
         
         self.restoreSettings()
         
-    def init_style_sheets(self):
-        environ = CecogEnvironment()
-        
-        import imp
-        import os
-        sys.path.append(environ.CSS_DIR)
-        
-        for compiled_css_file in os.listdir(environ.CSS_DIR):
-            if compiled_css_file.endswith('.py'):
-                try:
-                    compiled_css_mod = os.path.splitext(compiled_css_file)[0]
-                    css_mod = imp.find_module(compiled_css_mod)
-                    if css_mod is not None:
-                        self.available_style_sheets.append(compiled_css_mod)
-                except:
-                    print 'fuck' 
 
     def saveSettings(self):
         settings = QSettings(version.organisation, version.appname)
@@ -231,14 +215,7 @@ class PreferencesDialog(QtWidgets.QDialog):
         self.style_select.currentIndexChanged[str].connect(self.test_style_sheet)
         
     def test_style_sheet(self, style_sheet_name):
-        from PyQt5.QtCore import QFile, QTextStream
-        import importlib
-        importlib.import_module(style_sheet_name)
-
-        f = QFile(":/%s/style.qss" % style_sheet_name)                                
-        f.open(QFile.ReadOnly | QFile.Text)
-        ts = QTextStream(f)
-        stylesheet = ts.readAll()    
+        stylesheet = css.get_style(style_sheet_name)
         self.setStyleSheet("")
         self.setStyleSheet(stylesheet)
         
