@@ -12,7 +12,7 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-__all__ = ['Build', 'BuildRcc', 'BuildHelp', 'BuildCSSRcc']
+__all__ = ['Build', 'BuildRcc', 'BuildHelp']
 
 import os
 from os.path import isfile, isdir, dirname
