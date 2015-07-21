@@ -1043,6 +1043,7 @@ void lengthSelection_cell_max( mxt maxTree, layer **node, const MultiArrayView<2
 	int size[2] = {imin.shape()[0],imin.shape()[1]};
 	// imin.copyTo(imout);
     MultiArray<2, UInt8> imtemp(imin.shape());
+    MultiArray<2, UInt8> imtemp2(imin.shape());
     MultiArray<2, UInt8> imvisited(imin.shape());
 
 	int fh,fi,hh,ii,hh_,ii_,ch,ci,count(0);
@@ -1073,7 +1074,7 @@ void lengthSelection_cell_max( mxt maxTree, layer **node, const MultiArrayView<2
 				while (node[hh][ii].area <= max_area && node[hh][ii].mark != 1){ // mark==1 means visited
 					node[hh][ii].mark = 1;
 					if (node[hh][ii].length == 0 && node[hh][ii].area<=max_area){
-						node[hh][ii].geoLength(imin,imtemp,node,se,node[hh][ii].p,999,999,imout,false);
+						node[hh][ii].geoLength(imin,imtemp,node,se,node[hh][ii].p,999,999,imtemp2,false);
 					}
 					if (node[hh][ii].circ1 == 0 && node[hh][ii].area<=max_area &&  C_circ>0)
 						node[hh][ii].circ1 = 3.1415*node[hh][ii].length*node[hh][ii].length/(4*node[hh][ii].area);
@@ -1133,6 +1134,7 @@ void lengthSelection_cell_direct( mxt maxTree, layer **node, const MultiArrayVie
 	int size[2] = {imin.shape()[0],imin.shape()[1]};
 	// imin.copyTo(imout);
     MultiArray<2, UInt8> imtemp(imin.shape());
+    MultiArray<2, UInt8> imtemp2(imin.shape());
     MultiArray<2, UInt8> imvisited(imin.shape());
 
 	int fh,fi,hh,ii,hh_,ii_,ch,ci,count(0),diff,diff_,diff_h,diff_i, max_h, max_i;
@@ -1164,7 +1166,7 @@ void lengthSelection_cell_direct( mxt maxTree, layer **node, const MultiArrayVie
 				while (node[hh][ii].area <= max_area && node[hh][ii].mark != 1){ // mark==1 means visited
 					node[hh][ii].mark = 1;
 					if (node[hh][ii].length == 0 && node[hh][ii].area<=max_area){
-						node[hh][ii].geoLength(imin,imtemp,node,se,node[hh][ii].p,999,999,imout,false);
+						node[hh][ii].geoLength(imin,imtemp,node,se,node[hh][ii].p,999,999,imtemp2,false);
 					}
 					if (node[hh][ii].circ1 == 0 && node[hh][ii].area<=max_area &&  C_circ>0){
 						node[hh][ii].circ1 = 3.1415*node[hh][ii].length*node[hh][ii].length/(4*node[hh][ii].area);
@@ -1172,7 +1174,7 @@ void lengthSelection_cell_direct( mxt maxTree, layer **node, const MultiArrayVie
 					
 
 					if (1){ // direct criteria
-						if (node[hh][ii].circ1<C_circ ) {
+						if (node[hh][ii].circ1<C_circ && node[hh][ii].length<C_len) {
                             if (UO == 0)
 							    node[hh][ii].setValue(imout,hh,-2);
                             else{
@@ -1267,7 +1269,8 @@ void LengthOpening(const MultiArrayView<2, UInt8> imin,  MultiArrayView<2, UInt8
     }
 
     getRelations(maxTree, node, imin, imstate, lenH, T_area );
-    lengthSelection_cell_max( maxTree, node, imin, imstate, imout, se,  length, T_area, circ);
+   // lengthSelection_cell_max( maxTree, node, imin, imstate, imout, se,  length, T_area, circ);
+    lengthSelection_cell_direct( maxTree, node, imin, imstate,imout, se, length, T_area, circ, 0);
 
 	maxTree.DeMT();
     delete[] hist;

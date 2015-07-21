@@ -34,6 +34,43 @@ import scipy
 def imwrite(imout, out_dir, imname):
     scipy.misc.imsave(os.path.join(out_dir,imname), imout)
 
+
+def colorDeconv(imin, imtype):
+    # [Dab, E, H]
+    M_h_e_dab_meas = numpy.array([[0.268, 0.072, 0.650],\
+                           [0.570, 0.990, 0.704],\
+                           [0.776, 0.105, 0.286]])
+
+    # [H,E]
+    M_h_e_meas = numpy.array([[0.644211, 0.092789],\
+                       [0.716556, 0.954111],\
+                       [0.266844, 0.283111]])
+    if imtype == "HE":
+        print "HE stain"
+        M = M_h_e_meas
+    elif imtype == "HEDab":
+        print "HEDab stain"
+        M = M_h_e_dab_meas
+    else:
+        print "Unrecognized image type !! image type set to \"HE\" "
+        M = M_h_e_meas
+    M_inv =  numpy.dot(linalg.inv(numpy.dot(M.T, M)), M.T)
+    imDecv = numpy.dot(imin, M_inv.T)
+    imout = numpy.zeros(imDecv.shape, dtype = numpy.uint8)
+    
+    ## Normalization
+    for i in range(imout.shape[-1]):
+        toto = imDecv[:,:,i]
+        vmax = toto.max()
+        vmin = toto.min()
+        if (vmax - vmin) < 0.0001:
+            continue
+        titi = (toto - vmin) / (vmax - vmin) * 255
+        titi = titi.astype(numpy.uint8)
+        imout[:,:,i] = titi
+    return imout
+
+
 class SegmentationPluginPrimary(_SegmentationPlugin):
 
     LABEL = 'Local adaptive threshold w/ split&merge'
@@ -637,10 +674,12 @@ class SegmentationPluginPrimaryLoadFromFile(SegmentationPluginPrimary):
     COLOR = '#FF00FF'
 
     REQUIRES = None
-
+    
+    image_types = ["HE", "HEDab"]
     PARAMS = [('segmentation_folder', StringTrait('', 1000, label='Segmentation folder',
                                                  widget_info=StringTrait.STRING_FILE)),
               ('loader_regex', StringTrait('^%(plate)s$/^%(pos)s$/.*P%(pos)s_T%(time)05d_C%(channel)s_Z%(zslice)d_S1.tif', 1000, label='Regex for loading')),
+              ('image_type', SelectionTrait(image_types[0], image_types, label='Image type')),
               ]
 
     # the : at the beginning indicates a QRC link with alias 'plugins/segmentation/local_adaptive_threshold'
@@ -649,6 +688,47 @@ class SegmentationPluginPrimaryLoadFromFile(SegmentationPluginPrimary):
     def render_to_gui(self, panel):
         panel.add_group(None, [('segmentation_folder', (0, 0, 1, 1))])
         panel.add_group(None, [('loader_regex', (0, 0, 1, 1))])
+        panel.add_input('image_type')     
+
+
+    @stopwatch()
+    def colorDeconv(self,imin):
+#        M_h_e_dab_meas = numpy.array([[0.650, 0.072, 0.268],\
+#                               [0.704, 0.990, 0.570],\
+#                               [0.286, 0.105, 0.776]])
+        # [Dab, E, H]
+        M_h_e_dab_meas = numpy.array([[0.268, 0.072, 0.650],\
+                               [0.570, 0.990, 0.704],\
+                               [0.776, 0.105, 0.286]])
+    
+        # [H,E]
+        M_h_e_meas = numpy.array([[0.644211, 0.092789],\
+                           [0.716556, 0.954111],\
+                           [0.266844, 0.283111]])
+        if self.params['image_type'] == "HE":
+            print "HE stain"
+            M = M_h_e_meas
+        elif self.params['image_type'] == "HEDab":
+            print "HEDab stain"
+            M = M_h_e_dab_meas
+        else:
+            print "Unrecognized image type !! image type set to \"HE\" "
+            M = M_h_e_meas
+        M_inv =  numpy.dot(linalg.inv(numpy.dot(M.T, M)), M.T)
+        imDecv = numpy.dot(imin, M_inv.T)
+        imout = numpy.zeros(imDecv.shape, dtype = numpy.uint8)
+        
+        ## Normalization
+        for i in range(imout.shape[-1]):
+            toto = imDecv[:,:,i]
+            vmax = toto.max()
+            vmin = toto.min()
+            if (vmax - vmin) < 0.0001:
+                continue
+            titi = (toto - vmin) / (vmax - vmin) * 255
+            titi = titi.astype(numpy.uint8)
+            imout[:,:,i] = titi
+        return imout
 
 
     @stopwatch()
@@ -693,11 +773,26 @@ class SegmentationPluginPrimaryLoadFromFile(SegmentationPluginPrimary):
 #        img_bin = SegmentationPluginPrimary.threshold(self, img_pre, 20, 3)
 
         # older
-        # container = ccore.ImageMaskContainer(image, img, False)
+        imNp = image.toArray()
+        if (len(imNp.shape) == 2):
+            depth = 1
+        elif (imNp.shape[2] == 1):
+            depth = 1
+        elif (imNp.shape[2] == 3):
+            depth = 3
         
-        image2 = ccore.Image(image.width, image.height)
-        image2.init(0)
-        container = ccore.ImageMaskContainer(image2, img, False)        
+        if (depth == 1):
+            container = ccore.ImageMaskContainer(image, img, False)
+        elif (depth == 3):
+            imDeconv = self.colorDeconv(imNp)
+            arTmp = numpy.zeros(imDeconv[:,:,0].shape, dtype = numpy.uint8)
+            arTmp[:,:] = imDeconv[:,:,0]
+            imH_org = ccore.numpy_to_image(arTmp, copy=True)
+            image = imH_org.copy()
+        
+#        image2 = ccore.Image(image.width, image.height)
+#        image2.init(0)
+        container = ccore.ImageMaskContainer(image, img, False)        
         return container
 
 class SegmentationPluginIlastik(SegmentationPluginPrimary):
@@ -900,14 +995,32 @@ class SegmentationPluginOutside(_SegmentationPlugin):
     DOC = ":additional_segmentation_plugins"
 
     REQUIRES = ['primary_segmentation']
+    image_types = ["HE", "HEDab"]
 
     PARAMS = [('expansion_size', IntTrait(10, 0, 4000, label='Expansion size')),
               ('separation_size', IntTrait(5, 0, 4000, label='Separation size')),
+              ('image_type', SelectionTrait(image_types[0], image_types, label='Image type')),
               ]
 
     @stopwatch()
     def _run(self, meta_image, container):
         image = meta_image.image
+        
+        imNp = image.toArray()
+        if (len(imNp.shape) == 2):
+            depth = 1
+        elif (imNp.shape[2] == 1):
+            depth = 1
+        elif (imNp.shape[2] == 3):
+            depth = 3
+        
+        if (depth == 3):
+            imDeconv = colorDeconv(imNp, self.params['image_type'])
+            arTmp = numpy.zeros(imDeconv[:,:,0].shape, dtype = numpy.uint8)
+            arTmp[:,:] = imDeconv[:,:,0]
+            imH_org = ccore.numpy_to_image(arTmp, copy=True)
+            image = imH_org.copy()
+            
         if self.params['expansion_size'] > 0 and self.params['expansion_size'] > self.params['separation_size']:
             nr_objects = container.img_labels.getMinmax()[1] + 1
             img_labels = ccore.seeded_region_expansion(image,
@@ -932,14 +1045,33 @@ class SegmentationPluginRim(_SegmentationPlugin):
     DOC = ":additional_segmentation_plugins"
 
     REQUIRES = ['primary_segmentation']
-
+    image_types = ["HE", "HEDab"]
+    
     PARAMS = [('expansion_size', IntTrait(5, 0, 4000, label='Expansion size')),
               ('shrinking_size', IntTrait(5, 0, 4000, label='Shrinking size')),
+              ('image_type', SelectionTrait(image_types[0], image_types, label='Image type')),
               ]
 
     @stopwatch()
     def _run(self, meta_image, container):
         image = meta_image.image
+
+        imNp = image.toArray()
+        if (len(imNp.shape) == 2):
+            depth = 1
+        elif (imNp.shape[2] == 1):
+            depth = 1
+        elif (imNp.shape[2] == 3):
+            depth = 3
+        
+        if (depth == 3):
+            imDeconv = colorDeconv(imNp, self.params['image_type'])
+            arTmp = numpy.zeros(imDeconv[:,:,0].shape, dtype = numpy.uint8)
+            arTmp[:,:] = imDeconv[:,:,0]
+            imH_org = ccore.numpy_to_image(arTmp, copy=True)
+            image = imH_org.copy()
+        
+        
         if self.params['expansion_size'] > 0 or self.params['shrinking_size'] > 0:
 
             nr_objects = container.img_labels.getMinmax()[1] + 1
@@ -1121,7 +1253,7 @@ class SegmentationPluginDifference(_SegmentationPlugin):
         
         
         
-class SegmentationPluginFRST(_SegmentationPlugin):
+class SegmentationPluginFRST(SegmentationPluginPrimaryLoadFromFile, _SegmentationPlugin):
     LABEL = 'FRST and watershed'
     NAME = 'frst_ws'
     COLOR = '#7CEDFF'
@@ -1138,6 +1270,7 @@ class SegmentationPluginFRST(_SegmentationPlugin):
               ('grad_para', BooleanTrait(True, label='Gradient parameters (mask of watershed)')),
               ('if_merge', BooleanTrait(True, label='Merge candidates')),
               ('if_seg2', BooleanTrait(True, label='Segmentation using adaptive thresholding')),
+              ('if_seg3', BooleanTrait(True, label='Segmentation using length and circularity')),
 
               ('test_folder', StringTrait('', 1000, label='Intermediate images saving folder',
                                                  widget_info=StringTrait.STRING_PATH)),
@@ -1155,8 +1288,14 @@ class SegmentationPluginFRST(_SegmentationPlugin):
               
               ('hist_l', FloatTrait(0.04, 0.0, 1.0, label='Histogram lower rate')),   
               ('hist_h', FloatTrait(0.5, 0.0, 1.0, label='Histogram higher rate')),
-              ('circ', IntTrait(5 , 1, 50, label='Circularity ((pi*L)/(4*area))')),  
-              
+              ('circ', IntTrait(5 , 1, 50, label='Circularity ((pi*L)/(4*area))')),
+              ('c_dist2', IntTrait(50 , 1, 200, label='Distance to major candidates')),
+
+              ('c_diam', IntTrait(40 , 1, 100, label='Maximum diameter of the \
+                      objects (activate recommanded for mitosis detection)')),
+              ('c_thd', IntTrait(50 , 1, 255, label='Contrast thresholding value')),
+              ('circ2', IntTrait(2 , 1, 50, label='Circularity')),
+
               ('classifier', SelectionTrait(classifiers[0], classifiers, label='Classifier')),
               ('coef1', FloatTrait(-3.8721, -50.0, 50.0, label='line-min')),   
               ('coef2', FloatTrait(-1.5319, -50.0, 50.0, label='line-max')),  
@@ -1197,7 +1336,14 @@ class SegmentationPluginFRST(_SegmentationPlugin):
                         [('hist_l', (0, 0, 1, 1)),
                          ('hist_h', (0, 1, 1, 1)),
                          ('circ', (1, 0, 1, 1)),
-                         ])        
+                         ('c_dist2', (1, 1, 1, 1)),
+                         ])
+        panel.add_group('if_seg3',
+                        [('c_diam', (0, 0, 1, 1)),
+                         ('c_thd', (1, 0, 1, 1)),
+                         ('circ2', (1, 1, 1, 1)),
+                         ])                               
+                         
         panel.add_group('if_merge',
                         [('classifier', (0, 0, 1, 1)),
                          ('coef1', (1, 0, 1, 1)),
@@ -1212,44 +1358,7 @@ class SegmentationPluginFRST(_SegmentationPlugin):
                          ('coef10', (4, 1, 1, 1)),
                          
                          ])  
-    @stopwatch()
-    def colorDeconv(self,imin):
-#        M_h_e_dab_meas = numpy.array([[0.650, 0.072, 0.268],\
-#                               [0.704, 0.990, 0.570],\
-#                               [0.286, 0.105, 0.776]])
-        # [Dab, E, H]
-        M_h_e_dab_meas = numpy.array([[0.268, 0.072, 0.650],\
-                               [0.570, 0.990, 0.704],\
-                               [0.776, 0.105, 0.286]])
-    
-        # [H,E]
-        M_h_e_meas = numpy.array([[0.644211, 0.092789],\
-                           [0.716556, 0.954111],\
-                           [0.266844, 0.283111]])
-        if self.params['image_type'] == "HE":
-            print "HE stain"
-            M = M_h_e_meas
-        elif self.params['image_type'] == "HEDab":
-            print "HEDab stain"
-            M = M_h_e_dab_meas
-        else:
-            print "Unrecognized image type !! image type set to \"HE\" "
-            M = M_h_e_meas
-        M_inv =  numpy.dot(linalg.inv(numpy.dot(M.T, M)), M.T)
-        imDecv = numpy.dot(imin, M_inv.T)
-        imout = numpy.zeros(imDecv.shape, dtype = numpy.uint8)
-        
-        ## Normalization
-        for i in range(imout.shape[-1]):
-            toto = imDecv[:,:,i]
-            vmax = toto.max()
-            vmin = toto.min()
-            if (vmax - vmin) < 0.0001:
-                continue
-            titi = (toto - vmin) / (vmax - vmin) * 255
-            titi = titi.astype(numpy.uint8)
-            imout[:,:,i] = titi
-        return imout
+
 
 
     @stopwatch()
@@ -1294,8 +1403,10 @@ class SegmentationPluginFRST(_SegmentationPlugin):
         
         km = cluster.MiniBatchKMeans( n_clusters=n_class, init = initCenter) # 4 class max_iter = 1,
         km.fit(X)
-
+        
         while km.cluster_centers_[0,0] > km.cluster_centers_[1,0]:
+            if n_iter == 0:
+                break
             n_iter /= 2
             km = cluster.MiniBatchKMeans( n_clusters=n_class, init = initCenter, max_iter = n_iter) # 4 class max_iter = 1,
             km.fit(X)                
@@ -1304,7 +1415,8 @@ class SegmentationPluginFRST(_SegmentationPlugin):
         imout = km.labels_.astype(numpy.uint8) + 1
         imout = imout.reshape((size[1], size[0])).astype(numpy.uint8)
         im_return = imout
-        
+        if km.cluster_centers_[0,0] > km.cluster_centers_[1,0]:
+            im_return[:,:] = 0
         return im_return        
                 
     @stopwatch()
@@ -1423,8 +1535,12 @@ class SegmentationPluginFRST(_SegmentationPlugin):
                 
         minmax = imGrad.getMinmax()
         offset = 0 # minmax[0]
-        ratio =  255.0 / minmax[1]
-        imGradU = ccore.linearTransform(imGrad, ratio, offset)
+        if minmax[1] == 0:
+            imGradU = imOrig.copy()
+            imGradU.init(0)
+        else:
+            ratio =  255.0 / minmax[1]
+            imGradU = ccore.linearTransform(imGrad, ratio, offset)
 
         ######### Combine nuclear markers and background markers #############
         imMarker = ccore.supremum(imMarkersNu, imMarkersBg)
@@ -1454,13 +1570,79 @@ class SegmentationPluginFRST(_SegmentationPlugin):
         ######## using previous segmented candidates to do an adaptive thresholding ###
         im1 = ccore.adaptiveThreshold(imOrig, imCand1, self.params['hist_l'], self.params['hist_h'])
         ccore.writeImage(im1, os.path.join(self.params["test_folder"], "ztemp1.png"))
+       
+        if self.params["if_seg3"]:
+            imtmp1 = im1.copy()
+            imtmp1.init(255)
+            imtmp2 = ccore.substractImages(imtmp1, imOrig)
+            
+            im2 = ccore.areaOpen(imtmp2, int(self.params['c_diam']) ** 2)
+            imtmp1 = ccore.substractImages(imtmp2, im2)  
+            ccore.writeImage(imtmp1, os.path.join(self.params["test_folder"], "ztemp4a.png"))
+            
+#            im3 = ccore.lengthOpening(imtmp1, int(self.params['c_diam']), \
+#                int(self.params['c_diam'] * self.params['c_diam']),  self.params['circ2'])
+            
+            
+            im3 = ccore.threshold(imtmp1, self.params["c_thd"], 255, 0, 255)            
+            im4 = ccore.lengthOpening(im3, int(self.params['c_diam']), \
+                int(self.params['c_diam'] * self.params['c_diam']), self.params['circ2'])
+            ccore.writeImage(im4, os.path.join(self.params["test_folder"], "ztemp4b.png"))
+
+#            im3 = ccore.areaOpen(im4, int(numpy.round(self.params['se_size']  * \
+#            self.params['se_size']  * 2)))
+#            im4 = ccore.lengthOpening(im3, int(self.params['c_diam']), \
+#                int(self.params['c_diam'] * self.params['c_diam']),  self.params['circ2'])
+#            ccore.writeImage(im3, os.path.join(self.params["test_folder"], "ztemp6.png"))
+#            ccore.writeImage(im4, os.path.join(self.params["test_folder"], "ztemp7.png"))
+           
+            im2 = ccore.supremum(im3, im1)
+            im3 = ccore.discDilate(im2, 1)
+            im1 = ccore.fillHoles(im3)
+            im2 = ccore.discErode(im1, 1)
+
+            im1.init(0)
+#            im2 = im1.copy()
+#            im2.init(0)
+            ccore.drawRectangle(im1, 255)
+            im3 = ccore.supremum(imCand1, im1)
+#            im2 = ccore.supremum(im3, im1)
+
+            im4 = ccore.infimum(im2, im3)
+            im1 = ccore.underBuild(im4, im2)
+            imCandiLengh = ccore.substractImages(im2, im1)            
+            ccore.writeImage(imCandiLengh, os.path.join(self.params["test_folder"], "ztemp8.png"))
+
+#            im3 = ccore.supremum(imCandiLengh, im1)
+            im1 = imCandiLengh.copy()
+
+
         im2 = ccore.areaOpen(im1, int(numpy.round(self.params['se_size']  * \
-            self.params['se_size']  * 2)))
+            self.params['se_size']  * 3)))
+        ccore.writeImage(im2, os.path.join(self.params["test_folder"], "ztemp4.png"))
+           
         im1 = ccore.lengthOpening(im2, int(self.params['nuclear_diam'] * 2), \
             int(self.params['nuclear_diam'] * self.params['nuclear_diam'] * 2), self.params["circ"])
         # im1 = ccore.substractImages(im2, im3)
+        ccore.writeImage(im1, os.path.join(self.params["test_folder"], "ztemp5.png"))
+            
+        im3 = ccore.areaOpen(im1, int(numpy.round(self.params['se_size']  * \
+            self.params['se_size']  * 8)))
+        ccore.writeImage(im3, os.path.join(self.params["test_folder"], "ztemp6.png"))
+            
+        im4 = ccore.substractImages(im1, im3)
+        ccore.writeImage(im4, os.path.join(self.params["test_folder"], "ztemp7.png"))
+        
+        im5 = ccore.discDilate(imCand1, self.params['c_dist2'])
 
-        ccore.writeImage(im2, os.path.join(self.params["test_folder"], "ztemp2.png"))
+        im2 = ccore.infimum(im5, im4)
+        im1 = ccore.underBuild(im2, im4)
+        im2 = ccore.substractImages(im4, im1)
+
+        im1 = ccore.supremum(im2, im3)
+
+
+        ccore.writeImage(im3, os.path.join(self.params["test_folder"], "ztemp2.png"))
         ccore.writeImage(im1, os.path.join(self.params["test_folder"], "ztemp3.png"))
 
 

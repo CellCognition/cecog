@@ -22,6 +22,7 @@ import glob
 import copy
 import types
 import numpy
+import ipdb
 
 
 from cecog import ccore
