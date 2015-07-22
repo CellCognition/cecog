@@ -94,7 +94,6 @@ class AppPreferences(object):
         settings.setValue('target_platform', self.target_platform)
         settings.setValue('batch_size', self.batch_size)
         settings.setValue('cluster_support', self.cluster_support)
-
         settings.setValue('stylesheet', self.stylesheet)
         settings.endGroup()
 

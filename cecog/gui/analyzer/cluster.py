@@ -167,7 +167,9 @@ class ClusterDisplay(QGroupBox):
 
     @pyqtSlot()
     def _on_submit_job(self):
-        if not question(self, "Are you sure to submit to cluster?"):
+        ret = QMessageBox.question(
+            self, "?", "Are you sure to submit to cluster?")
+        if ret ==  QMessageBox.No:
             return
 
         self._submit_settings.set_section(SECTION_NAME_GENERAL)
