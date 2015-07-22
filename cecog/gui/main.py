@@ -62,14 +62,13 @@ from cecog.gui.imagedialog import ImageDialog
 from cecog.gui.aboutdialog import CecogAboutDialog
 from cecog.gui.preferences import PreferencesDialog
 from cecog.gui.preferences import AppPreferences
-from cecog.gui import css
-
 from cecog.gui.browser import Browser
 from cecog.logging import LogWindow
 
 from cecog.gui.progressdialog import ProgressDialog
 from cecog.gui.progressdialog import ProgressObject
 from cecog.gui.helpbrowser import AtAssistant
+from cecog.css import loadStyle
 
 def fix_path(path):
     "Windows sucks!"
@@ -129,8 +128,8 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         self.debug = debug
 
         self.environ = CecogEnvironment(version=version, redirect=redirect,
-                                        debug=debug)              
-        
+                                        debug=debug)
+
         if debug:
             self.environ.pprint()
 
@@ -218,22 +217,18 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         for frame in self._tabs:
             frame.status_message.connect(self.statusBar().showMessage)
 
-        if AppPreferences().cluster_support:
+        app = AppPreferences()
+        if app.cluster_support:
             clusterframe = ClusterFrame(self._settings, self._pages, SECTION_NAME_CLUSTER)
             clusterframe.set_imagecontainer(self._imagecontainer)
             self._tabs.append(clusterframe)
-            
-        if AppPreferences().style_sheet:
-            style_sheet = AppPreferences().style_sheet
-            available_styles = css.available_styles()
-            if style_sheet in available_styles:
-                stylesheet = css.get_style(style_sheet) 
-            
-                try:  
-                    self.updateStyleSheet(stylesheet)
-                except Exception as e:
-                    traceback.print_exc()
-                    QMessageBox.warning(self, "Unable to set style sheet", str(e))
+
+        try:
+            self.updateStyleSheet(loadStyle(app.stylesheet))
+        except Exception as e:
+            # proceed with no stylesheet
+            traceback.print_exc()
+
 
         widths = []
         for tab in self._tabs:
@@ -489,12 +484,12 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
     def open_preferences(self):
         pref = PreferencesDialog(self)
         pref.exec_()
-        
+
     def updateStyleSheet(self, stylesheet):
         # Main Window
         self.setStyleSheet("")
         self.setStyleSheet(stylesheet)
-        
+
         # Help pages
         self._pages.assistant.setStyleSheet("")
         self._pages.assistant.setStyleSheet(stylesheet)

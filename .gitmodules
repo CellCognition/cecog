@@ -1,10 +1,6 @@
-[submodule "apps/CecogAnalyzer/resources/battery_package"]
-	path = apps/CecogAnalyzer/resources/battery_package
-	url = git@github.com:CellCognition/battery_package.git
 [submodule "resources/battery_package"]
 	path = resources/battery_package
 	url = git@github.com:CellCognition/battery_package.git
-[submodule "cecog/gui/css"]
-	path = cecog/gui/css
+[submodule "submodules/css"]
+	path = submodules/css
 	url = https://github.com/sommerc/pyqt-stylesheets.git
-    ignore = dirty

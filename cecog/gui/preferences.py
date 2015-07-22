@@ -32,9 +32,7 @@ from PyQt5.QtCore import Qt, QSettings
 from .util import loadUI
 from cecog.util.pattern import Singleton
 from cecog import version
-from cecog.gui import css
-
-from cecog.environment import CecogEnvironment
+from cecog import css
 
 
 def txt2dict(txt):
@@ -65,7 +63,8 @@ class AppPreferences(object):
 
     __metaclass__ = Singleton
     __slots__ = ("host", "port", "mapping_str", "target_platform",
-                 "batch_size", "cluster_support", "style_sheet", 'available_style_sheets')
+                 "batch_size", "cluster_support", "stylesheet",
+                 'available_stylesheets')
 
     def __init__(self):
 
@@ -80,12 +79,10 @@ class AppPreferences(object):
         self.target_platform = "linux"
         self.batch_size = 1
         self.cluster_support = True
-        
-        self.style_sheet = "dark_blue"
-        self.available_style_sheets = css.available_styles()
-        
+        self.stylesheet = 'dark blue'
+
         self.restoreSettings()
-        
+
 
     def saveSettings(self):
         settings = QSettings(version.organisation, version.appname)
@@ -97,8 +94,8 @@ class AppPreferences(object):
         settings.setValue('target_platform', self.target_platform)
         settings.setValue('batch_size', self.batch_size)
         settings.setValue('cluster_support', self.cluster_support)
-        
-        settings.setValue('style_sheet', self.style_sheet)
+
+        settings.setValue('stylesheet', self.stylesheet)
         settings.endGroup()
 
     def restoreSettings(self):
@@ -123,9 +120,9 @@ class AppPreferences(object):
 
         if settings.contains('cluster_support'):
             self.cluster_support = settings.value('cluster_support', type=bool)
-            
-        if settings.contains('style_sheet'):
-            self.style_sheet = settings.value('style_sheet', type=str)
+
+        if settings.contains('stylesheet'):
+            self.stylesheet = settings.value('stylesheet', type=str)
 
         settings.endGroup()
 
@@ -206,19 +203,16 @@ class PreferencesDialog(QtWidgets.QDialog):
 
         self.batch_size.setValue(apc.batch_size)
         self.cluster_support.setChecked(apc.cluster_support)
-        
-        for it in apc.available_style_sheets: self.style_select.addItem(it)
-        
-        self.style_select.setCurrentIndex(apc.available_style_sheets.index(apc.style_sheet))
-        
-        
-        self.style_select.currentIndexChanged[str].connect(self.test_style_sheet)
-        
-    def test_style_sheet(self, style_sheet_name):
-        stylesheet = css.get_style(style_sheet_name)
-        self.setStyleSheet("")
-        self.setStyleSheet(stylesheet)
-        
+
+        self.style_select.addItems(css.StyleSheets.keys())
+        self.style_select.setCurrentIndex(
+            self.style_select.findText(apc.stylesheet))
+
+        self.style_select.currentIndexChanged[str].connect(
+            self.setGlobalStylesheet)
+
+    def setGlobalStylesheet(self, stylesheet):
+        stylesheet = css.loadStyle(stylesheet)
         self.parent().updateStyleSheet(stylesheet)
 
     def populateTable(self, mappings):
@@ -270,8 +264,7 @@ class PreferencesDialog(QtWidgets.QDialog):
             self._iosnames[self.target_platform.currentText()]
         appcfg.batch_size = self.batch_size.value()
         appcfg.cluster_support = self.cluster_support.isChecked()
-        appcfg.style_sheet = self.style_select.currentText()
-
+        appcfg.stylesheet = self.style_select.currentText()
         appcfg.saveSettings()
 
         super(PreferencesDialog, self).accept()
