@@ -35,7 +35,7 @@ class ColorBox(QComboBox):
         super(ColorBox, self).__init__(parent)
         self.setIconSize(QSize(*self.COLOR_SIZE))
 
-        self.setStyleSheet('font-size: 10px;')
+#         self.setStyleSheet('font-size: 10px;')
 
         self._popup_shown = False
         self._base_count = len(palettes) + 1

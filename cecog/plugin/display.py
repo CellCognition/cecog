@@ -66,7 +66,7 @@ class PluginItem(QFrame):
 
         layout = QVBoxLayout(self)
         frame1 = QFrame(self)
-        frame1.setStyleSheet("QFrame { background: #CCCCCC; }")
+#         frame1.setStyleSheet("QFrame { background: #CCCCCC; }")
 
         frame2 = PluginParamFrame(self, plugin.param_manager)
         layout.addWidget(frame1)
@@ -74,7 +74,7 @@ class PluginItem(QFrame):
 
         layout = QHBoxLayout(frame1)
         label = QLabel(plugin.LABEL, self)
-        label.setStyleSheet("font-weight: bold;")
+#         label.setStyleSheet("font-weight: bold;")
         txt = QLineEdit(plugin.name, self)
         txt.setReadOnly(True)
         btn = QPushButton('Remove', self)
@@ -129,8 +129,8 @@ class PluginBay(QFrame):
         self.settings = settings
         self._plugins = OrderedDict()
 
-        self.setStyleSheet(("PluginItem { border: 1px solid black; "
-                            "background: white; }"))
+#         self.setStyleSheet(("PluginItem { border: 1px solid black; "
+#                             "background: white; }"))
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -141,7 +141,7 @@ class PluginBay(QFrame):
         layout.addWidget(self._frame2)
 
         label = QLabel('%s plugins' % plugin_manager.display_name, frame1)
-        label.setStyleSheet("font-weight: bold;")
+#         label.setStyleSheet("font-weight: bold;")
         btn = QPushButton('Add', frame1)
         btn.clicked.connect(self._on_add_plugin)
         self._cb = QComboBox(frame1)

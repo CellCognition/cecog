@@ -6,7 +6,7 @@ a.header {
 }
 
 a.extlink {
-  background: url(:extlink) center center no-repeat;
+  background: url(../images/extlink.png) center center no-repeat;
   padding-left: 12px;
 }
 
@@ -93,5 +93,6 @@ h3.param {
 }
 
 img.figure {
-  border: 1px solid black;
+  margin-left, margin-right: auto;
+  background-color: white;
 }

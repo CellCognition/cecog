@@ -28,8 +28,14 @@ from distutils.core import setup, Extension
 import py2exe
 import build_helpers
 
-pyrcc_opts = {'infile': 'cecog.qrc',
-              'outfile': join('cecog', 'cecog_rc.py'),
+pyrcc_opts = {'qrc': {'cecog.qrc' : join('cecog', 'cecog_rc.py'),
+                      'submodules\css\pyqtcss\src\classic\style.qrc':
+                          join('cecog', 'css',  'classic_rc.py'),
+                      'submodules\css\pyqtcss\src\dark_blue\style.qrc':
+                          join('cecog', 'css',  'dark_blue_rc.py'),
+                      'submodules\css\pyqtcss\src\dark_orange\style.qrc':
+                          join('cecog', 'css',  'dark_orange_rc.py'),
+                      },
               'pyrccbin': join('C:\\', 'Python27', 'Lib', 'site-packages',
                                'PyQt5', 'pyrcc5.exe')}
 

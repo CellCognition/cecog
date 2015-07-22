@@ -32,6 +32,7 @@ from PyQt5.QtCore import Qt, QSettings
 from .util import loadUI
 from cecog.util.pattern import Singleton
 from cecog import version
+from cecog import css
 
 
 def txt2dict(txt):
@@ -62,7 +63,8 @@ class AppPreferences(object):
 
     __metaclass__ = Singleton
     __slots__ = ("host", "port", "mapping_str", "target_platform",
-                 "batch_size", "cluster_support")
+                 "batch_size", "cluster_support", "stylesheet",
+                 'available_stylesheets')
 
     def __init__(self):
 
@@ -77,8 +79,10 @@ class AppPreferences(object):
         self.target_platform = "linux"
         self.batch_size = 1
         self.cluster_support = True
+        self.stylesheet = 'dark blue'
 
         self.restoreSettings()
+
 
     def saveSettings(self):
         settings = QSettings(version.organisation, version.appname)
@@ -90,6 +94,8 @@ class AppPreferences(object):
         settings.setValue('target_platform', self.target_platform)
         settings.setValue('batch_size', self.batch_size)
         settings.setValue('cluster_support', self.cluster_support)
+
+        settings.setValue('stylesheet', self.stylesheet)
         settings.endGroup()
 
     def restoreSettings(self):
@@ -114,6 +120,9 @@ class AppPreferences(object):
 
         if settings.contains('cluster_support'):
             self.cluster_support = settings.value('cluster_support', type=bool)
+
+        if settings.contains('stylesheet'):
+            self.stylesheet = settings.value('stylesheet', type=str)
 
         settings.endGroup()
 
@@ -195,6 +204,17 @@ class PreferencesDialog(QtWidgets.QDialog):
         self.batch_size.setValue(apc.batch_size)
         self.cluster_support.setChecked(apc.cluster_support)
 
+        self.style_select.addItems(css.StyleSheets.keys())
+        self.style_select.setCurrentIndex(
+            self.style_select.findText(apc.stylesheet))
+
+        self.style_select.currentIndexChanged[str].connect(
+            self.setGlobalStylesheet)
+
+    def setGlobalStylesheet(self, stylesheet):
+        stylesheet = css.loadStyle(stylesheet)
+        self.parent().updateStyleSheet(stylesheet)
+
     def populateTable(self, mappings):
 
         table = np.recfromcsv(StringIO(mappings), autostrip=True)
@@ -244,7 +264,7 @@ class PreferencesDialog(QtWidgets.QDialog):
             self._iosnames[self.target_platform.currentText()]
         appcfg.batch_size = self.batch_size.value()
         appcfg.cluster_support = self.cluster_support.isChecked()
-
+        appcfg.stylesheet = self.style_select.currentText()
         appcfg.saveSettings()
 
         super(PreferencesDialog, self).accept()

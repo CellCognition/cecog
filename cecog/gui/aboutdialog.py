@@ -25,26 +25,28 @@ class CecogAboutDialog(QtWidgets.QDialog):
         self.setStyleSheet('background: #000000; '
                            'background-image: url(:cecog_about)')
         self.setWindowTitle('About CecogAnalyzer')
-        self.setFixedSize(400, 300)
+        self.setFixedSize(500, 300)
         layout = QtWidgets.QGridLayout()
         layout.setContentsMargins(0, 0, 0, 0)
-
-        label1 = QtWidgets.QLabel(self)
-        label1.setStyleSheet('background: transparent;')
-        label1.setAlignment(Qt.AlignCenter)
-        label1.setText('CecogAnalyzer\nVersion %s\n\n'
-                       'Copyright (c) 2006 - 2011\n' %version.version)
 
         label2 = QtWidgets.QLabel(self)
         label2.setStyleSheet('background: transparent;')
         label2.setTextFormat(Qt.AutoText)
         label2.setOpenExternalLinks(True)
         label2.setAlignment(Qt.AlignCenter)
+        
+        style = """
+                background: transparent;
+                color: white;
+                a { color: white; } 
+                a:visited { color: white;}
+                """
 
-        label2.setText(('<style>a { color: green; } a:visited { color: green;'
-                        ' }</style><a href="http://cellcognition.org">'
-                        'cellcognition.org</a><br>'))
-        layout.addWidget(label1, 1, 0)
+        label2.setText('<span style="%s">CellCognition Analyzer GUI %s | Copyright (c) 2006 - 2015 | '
+                       '<a style="color:white" href="http://cellcognition.org">cellcognition.org</a> | </span>' 
+                       '<a style="color:white" href="https://github.com/CellCognition/cecog/issues">Bug tracker</a></span>' % (style, version.version)) 
+        
+
         layout.addWidget(label2, 2, 0)
         layout.setAlignment(Qt.AlignCenter|Qt.AlignBottom)
         self.setLayout(layout)

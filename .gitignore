@@ -2,6 +2,7 @@ setup.cfg
 setup.cfg.*
 .Rhistory
 cecog_rc.py
+*_rc.py
 dist
 build
 Analysis

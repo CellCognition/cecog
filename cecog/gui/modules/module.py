@@ -96,48 +96,48 @@ class Module(QFrame, object):
         super(Module, self).__init__(self.module_manager.stacked_frame)
         self.is_initialized = False
         self.module_manager.register_tab(self)
-        self.setStyleSheet(
-"""
- QWidget {
-     font-size: 11px;
- }
-
- QGroupBox {
-     background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                       stop: 0 #E0E0E0, stop: 1 #FFFFFF);
-     border: 2px solid #999999;
-     border-radius: 5px;
-     margin-top: 1ex; /* leave space at the top for the title */
-     font-size: 13px;
-     color: black;
- }
-
- QGroupBox::title {
-     subcontrol-origin: margin;
-     subcontrol-position: top center; /* position at the top center */
-     padding: 0 3px;
-     font-size: 13px;
-     color: black;
- }
-
- QTableView {
-     font-size: 10px;
-     alternate-background-color: #EEEEFF;
- }
-
- QPushButton {
-     font-size: 11px; min-width: 10px;
- }
-
- ColorButton::enabled {
-     border: 1px solid #444444;
- }
-
- ColorButton::disabled {
-     border: 1px solid #AAAAAA;
- }
-
-""")
+#         self.setStyleSheet(
+# """
+#  QWidget {
+#      font-size: 11px;
+#  }
+# 
+#  QGroupBox {
+#      background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+#                                        stop: 0 #E0E0E0, stop: 1 #FFFFFF);
+#      border: 2px solid #999999;
+#      border-radius: 5px;
+#      margin-top: 1ex; /* leave space at the top for the title */
+#      font-size: 13px;
+#      color: black;
+#  }
+# 
+#  QGroupBox::title {
+#      subcontrol-origin: margin;
+#      subcontrol-position: top center; /* position at the top center */
+#      padding: 0 3px;
+#      font-size: 13px;
+#      color: black;
+#  }
+# 
+#  QTableView {
+#      font-size: 10px;
+#      alternate-background-color: #EEEEFF;
+#  }
+# 
+#  QPushButton {
+#      font-size: 11px; min-width: 10px;
+#  }
+# 
+#  ColorButton::enabled {
+#      border: 1px solid #444444;
+#  }
+# 
+#  ColorButton::disabled {
+#      border: 1px solid #AAAAAA;
+#  }
+# 
+# """)
 
     def initialize(self):
         pass

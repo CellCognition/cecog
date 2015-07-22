@@ -18,76 +18,21 @@
     <normaloff>:/resources/icons/applications-system.png</normaloff>:/resources/icons/applications-system.png</iconset>
   </property>
   <layout class="QGridLayout" name="gridLayout_2">
-   <property name="margin">
+   <property name="leftMargin">
+    <number>3</number>
+   </property>
+   <property name="topMargin">
+    <number>3</number>
+   </property>
+   <property name="rightMargin">
+    <number>3</number>
+   </property>
+   <property name="bottomMargin">
     <number>3</number>
    </property>
    <property name="spacing">
     <number>3</number>
    </property>
-   <item row="0" column="0">
-    <widget class="QListWidget" name="listWidget">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>110</width>
-       <height>0</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>100</width>
-       <height>16777215</height>
-      </size>
-     </property>
-     <property name="horizontalScrollBarPolicy">
-      <enum>Qt::ScrollBarAlwaysOff</enum>
-     </property>
-     <property name="iconSize">
-      <size>
-       <width>32</width>
-       <height>32</height>
-      </size>
-     </property>
-     <property name="movement">
-      <enum>QListView::Static</enum>
-     </property>
-     <property name="flow">
-      <enum>QListView::LeftToRight</enum>
-     </property>
-     <property name="gridSize">
-      <size>
-       <width>106</width>
-       <height>60</height>
-      </size>
-     </property>
-     <property name="viewMode">
-      <enum>QListView::IconMode</enum>
-     </property>
-     <item>
-      <property name="text">
-       <string>Cluster</string>
-      </property>
-      <property name="icon">
-       <iconset resource="../../cecog.qrc">
-        <normaloff>:/network-server.png</normaloff>:/network-server.png</iconset>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Path Mapping</string>
-      </property>
-      <property name="icon">
-       <iconset resource="../../cecog.qrc">
-        <normaloff>:/picmi.png</normaloff>:/picmi.png</iconset>
-      </property>
-     </item>
-    </widget>
-   </item>
    <item row="0" column="1">
     <layout class="QVBoxLayout" name="vbox">
      <property name="spacing">
@@ -259,7 +204,16 @@
          <property name="spacing">
           <number>3</number>
          </property>
-         <property name="margin">
+         <property name="leftMargin">
+          <number>3</number>
+         </property>
+         <property name="topMargin">
+          <number>3</number>
+         </property>
+         <property name="rightMargin">
+          <number>3</number>
+         </property>
+         <property name="bottomMargin">
           <number>3</number>
          </property>
          <item>
@@ -376,6 +330,44 @@
          </item>
         </layout>
        </widget>
+       <widget class="QWidget" name="stylesheet">
+        <widget class="QGroupBox" name="groupBox">
+         <property name="geometry">
+          <rect>
+           <x>9</x>
+           <y>9</y>
+           <width>391</width>
+           <height>81</height>
+          </rect>
+         </property>
+         <property name="title">
+          <string>Color scheme</string>
+         </property>
+         <widget class="QComboBox" name="style_select">
+          <property name="geometry">
+           <rect>
+            <x>90</x>
+            <y>30</y>
+            <width>281</width>
+            <height>22</height>
+           </rect>
+          </property>
+         </widget>
+         <widget class="QLabel" name="label_2">
+          <property name="geometry">
+           <rect>
+            <x>10</x>
+            <y>30</y>
+            <width>71</width>
+            <height>16</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Style Sheet</string>
+          </property>
+         </widget>
+        </widget>
+       </widget>
       </widget>
      </item>
      <item>
@@ -389,6 +381,79 @@
       </widget>
      </item>
     </layout>
+   </item>
+   <item row="0" column="0">
+    <widget class="QListWidget" name="listWidget">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>110</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>100</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="horizontalScrollBarPolicy">
+      <enum>Qt::ScrollBarAlwaysOff</enum>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>32</width>
+       <height>32</height>
+      </size>
+     </property>
+     <property name="movement">
+      <enum>QListView::Static</enum>
+     </property>
+     <property name="flow">
+      <enum>QListView::LeftToRight</enum>
+     </property>
+     <property name="gridSize">
+      <size>
+       <width>106</width>
+       <height>60</height>
+      </size>
+     </property>
+     <property name="viewMode">
+      <enum>QListView::IconMode</enum>
+     </property>
+     <item>
+      <property name="text">
+       <string>Cluster</string>
+      </property>
+      <property name="icon">
+       <iconset resource="../../cecog.qrc">
+        <normaloff>:/network-server.png</normaloff>:/network-server.png</iconset>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Path Mapping</string>
+      </property>
+      <property name="icon">
+       <iconset resource="../../cecog.qrc">
+        <normaloff>:/picmi.png</normaloff>:/picmi.png</iconset>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Appearance</string>
+      </property>
+      <property name="icon">
+       <iconset resource="../../cecog.qrc">
+        <normaloff>:/general.png</normaloff>:/general.png</iconset>
+      </property>
+     </item>
+    </widget>
    </item>
   </layout>
  </widget>

@@ -23,6 +23,7 @@ from PyQt5.Qt import *
 from cecog.gui.analyzer import BaseFrame
 
 class GeneralFrame(BaseFrame):
+    ICON = ":general.png"
 
     def __init__(self, settings, parent, name):
         super(GeneralFrame, self).__init__(settings, parent, name)
