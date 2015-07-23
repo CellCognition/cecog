@@ -24,7 +24,7 @@ try:
     from PyQt5 import sip
 except ImportError:
     import sip
-     
+
 sip.setapi('QString', 2)
 sip.setapi('QVariant', 2)
 
@@ -122,7 +122,7 @@ class Browser(QMainWindow):
                              'image'   : ImageViewer(frame, auto_resize=True),
                              'gallery' : GalleryViewer(frame)
                              }
-        
+
         self.image_viewer = self.image_viewers['image']
         layout.addWidget(self.image_viewer , 0, 0)
 
@@ -242,6 +242,7 @@ class Browser(QMainWindow):
         self.setStatusBar(self._statusbar)
 
         toolbar = self.addToolBar('Toolbar')
+        toolbar.setObjectName('Toolbar')
         toolbar.setMovable(False)
         toolbar.setFloatable(False)
 
@@ -258,7 +259,7 @@ class Browser(QMainWindow):
         NavigationModule(self._module_manager, self, self._imagecontainer)
         defautl_display_module = DisplayModule(self._module_manager, self, self._imagecontainer, rdict)
         #defautl_display_module = DisplayModule(self._module_manager, self, self._imagecontainer, region_names)
-        
+
         self.set_display_module(defautl_display_module)
         AnnotationModule(self._module_manager, self, self._settings,
                          self._imagecontainer)
@@ -267,7 +268,7 @@ class Browser(QMainWindow):
             CellH5EventModule(self._module_manager, self, self._settings, self._imagecontainer)
         except Exception as e:
             warning(self, str(e))
-            
+
         # set the Navigation module activated
         self._module_manager.activate_tab(NavigationModule.NAME)
 
@@ -296,7 +297,7 @@ class Browser(QMainWindow):
         if settings.contains('state'):
             self.restoreState(settings.value('state'))
         settings.endGroup()
-        
+
     def _region_names(self):
 
         rdict = OrderedDict()
@@ -356,10 +357,10 @@ class Browser(QMainWindow):
         widget = self.get_display_module()
         widget.set_image_dict(image_dict)
         self.update_statusbar()
-        
+
     def set_display_module(self, display_module ):
         self.display_module = display_module
-        
+
     def get_display_module(self):
         return self.display_module
 
@@ -682,7 +683,7 @@ if __name__ == "__main__":
     imagecontainer = load_image_container_from_settings(settings)
 
     browser = Browser(settings, imagecontainer)
-    
-    
+
+
     browser.show()
     app.exec_()
