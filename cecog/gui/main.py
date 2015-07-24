@@ -37,7 +37,6 @@ from cecog.gui.config import GuiConfigSettings
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
 from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACTION
-from cecog.traits.analyzer.postprocessing import SECTION_NAME_POST_PROCESSING
 from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
 from cecog.traits.analyzer.tracking import SECTION_NAME_TRACKING
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
@@ -50,7 +49,6 @@ from cecog.traits.analyzer.cluster import SECTION_NAME_CLUSTER
 from cecog.gui.analyzer.general import GeneralFrame
 from cecog.gui.analyzer.objectdetection import ObjectDetectionFrame
 from cecog.gui.analyzer.featureextraction import FeatureExtractionFrame
-from cecog.gui.analyzer.postprocessing import PostProcessingFrame
 from cecog.gui.analyzer.classification import ClassificationFrame
 from cecog.gui.analyzer.tracking import TrackingFrame
 from cecog.gui.analyzer.errorcorrection import ErrorCorrectionFrame

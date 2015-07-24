@@ -41,7 +41,6 @@ from cecog.gui.util import information
 from cecog.analyzer import CONTROL_1, CONTROL_2
 from cecog.plugin.metamanager import MetaPluginManager
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
-from cecog.traits.analyzer.postprocessing import SECTION_NAME_POST_PROCESSING
 from cecog.plugin.display import PluginBay
 from cecog.gui.widgets.tabcontrol import TabControl
 
@@ -49,7 +48,6 @@ from cecog.threads import PickerThread
 from cecog.threads import AnalyzerThread
 from cecog.threads import TrainingThread
 from cecog.threads import ErrorCorrectionThread
-from cecog.threads import PostProcessingThread
 from cecog.multiprocess.multianalyzer import MultiAnalyzerThread
 
 from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
@@ -364,23 +362,6 @@ class BaseProcessorFrame(BaseFrame):
                     self._analyzer = cls(self, self._current_settings,
                                          self.parent().main_window._imagecontainer)
 
-                elif cls is PostProcessingThread:
-                    learner_dict = {}
-                    for channel in ['primary', 'secondary']:
-                        path = self._settings('Classification', '%s_classification_envpath' %channel)
-                        if (self._settings('Processing', '%s_classification' %channel) and
-                            (channel == 'primary' or self._settings('General', 'process_secondary'))):
-                            learner = CommonClassPredictor( \
-                                path,
-                                self._settings('ObjectDetection', '%s_channelid' %channel),
-                                self._settings('Classification', '%s_classification_regionname' %channel))
-
-                            learner.importFromArff()
-                            learner_dict[channel] = learner
-                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
-                    self._analyzer = cls(self, self._current_settings, learner_dict, imagecontainer)
-                    self._analyzer.setTerminationEnabled(True)
-
                 self._analyzer.finished.connect(self._on_process_finished)
                 self._analyzer.stage_info.connect(self._on_update_stage_info, Qt.QueuedConnection)
                 self._analyzer.analyzer_error.connect(self._on_error, Qt.QueuedConnection)
@@ -434,7 +415,6 @@ class BaseProcessorFrame(BaseFrame):
                               'newly picked samples.'
                         result_frame = self._get_result_frame(self._tab_name)
                         result_frame.load_classifier(check=False)
-#                        nr_removed = len(result_frame._learner.filter_nans(apply=False))
                         nr_removed = len(result_frame._learner.nan_features)
                         if nr_removed > 0:
                             msg += '\n\n%d features contained NA values and will be removed from training.' % nr_removed
@@ -448,15 +428,11 @@ class BaseProcessorFrame(BaseFrame):
                 elif self.name == SECTION_NAME_TRACKING:
                     msg = 'Tracking successfully finished.'
                 elif self.name == SECTION_NAME_EVENT_SELECTION:
-                    msg = 'event selection successfully finished.'
+                    msg = 'Event selection successfully finished.'
                 elif self.name == SECTION_NAME_ERRORCORRECTION:
-                    msg = 'HMM error correction successfully finished.'
+                    msg = 'Error correction successfully finished.'
                 elif self.name == SECTION_NAME_PROCESSING:
                     msg = 'Processing successfully finished.'
-                elif self.name == SECTION_NAME_POST_PROCESSING:
-                    msg = 'Postprocessing successfully finished'
-
-                information(self, 'Process finished', msg)
                 self.status_message.emit(msg)
             else:
                 if self._is_abort:
