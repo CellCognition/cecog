@@ -13,7 +13,10 @@
    id="svg2"
    version="1.1"
    inkscape:version="0.48.4 r9939"
-   sodipodi:docname="ic_assessment_48px.svg">
+   sodipodi:docname="hmm.svg"
+   inkscape:export-filename="Z:\workbench\cecog\resources\icons\error-correction.png"
+   inkscape:export-xdpi="360"
+   inkscape:export-ydpi="360">
   <metadata
      id="metadata10">
     <rdf:RDF>
@@ -22,14 +25,14 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
   <defs
      id="defs8" />
   <sodipodi:namedview
-     pagecolor="#ffffff"
+     pagecolor="#ff30ff"
      bordercolor="#666666"
      borderopacity="1"
      objecttolerance="10"
@@ -37,98 +40,35 @@
      guidetolerance="10"
      inkscape:pageopacity="0"
      inkscape:pageshadow="2"
-     inkscape:window-width="1332"
-     inkscape:window-height="789"
+     inkscape:window-width="1162"
+     inkscape:window-height="868"
      id="namedview6"
      showgrid="false"
      showguides="true"
      inkscape:guide-bbox="true"
-     inkscape:zoom="7.7354534"
-     inkscape:cx="22.465617"
-     inkscape:cy="21.507514"
-     inkscape:window-x="495"
-     inkscape:window-y="225"
+     inkscape:zoom="13.5625"
+     inkscape:cx="12.497696"
+     inkscape:cy="24"
+     inkscape:window-x="358"
+     inkscape:window-y="150"
      inkscape:window-maximized="0"
-     inkscape:current-layer="svg2">
-    <sodipodi:guide
-       orientation="1,0"
-       position="10.372881,9.559322"
-       id="guide3832" />
-  </sodipodi:namedview>
+     inkscape:current-layer="svg2"
+     inkscape:snap-page="false" />
   <path
-     d="M 42,38 42,10 C 42,7.79 40.21,6 38,6 L 10,6 C 7.79,6 6,7.79 6,10 l 0,28 c 0,2.21 1.79,4 4,4 l 28,0 c 2.21,0 4,-1.79 4,-4 z M 14,26 c -9.3333333,14.666667 -4.6666667,7.333333 0,0 z m 0,8 c -9.3333333,9.333333 -4.6666667,4.666667 0,0 z"
+     d="M 10,6 C 7.79,6 6,7.79 6,10 l 0,28 c 0,2.21 1.79,4 4,4 l 28,0 c 2.21,0 4,-1.79 4,-4 L 42,10 C 42,7.79 40.21,6 38,6 L 10,6 z m 0,2.1875 10.15625,0 0,3 -10.15625,0 0,-3 z m 0,4.90625 12.625,0 0,3 -12.625,0 0,-3 z m 0,5 15.34375,0 0,3 -15.34375,0 0,-3 z m 0,5 21.09375,0 0,3 -21.09375,0 0,-3 z M 10,28 l 27.96875,0 0,3 L 10,31 10,28 z"
      id="path4"
-     inkscape:connector-curvature="0"
-     sodipodi:nodetypes="ssssssssscccc" />
+     inkscape:connector-curvature="0" />
   <text
      xml:space="preserve"
-     style="font-size:11.58406448px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans Bold"
-     x="8.4683342"
-     y="40.604717"
-     id="text2987"
+     style="font-size:11.36395645000000000px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#cccccc;fill-opacity:1;stroke:#7bacff;stroke-width:0.29999999999999999;stroke-linecap:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:1.79999999000000010, 0.59999999999999998;stroke-dashoffset:0;font-family:Sans;-inkscape-font-specification:Sans Bold"
+     x="8.4398623"
+     y="43.517342"
+     id="text2987-0"
      sodipodi:linespacing="125%"
-     transform="scale(1.0733326,0.93167765)"><tspan
+     transform="scale(1.0896361,0.91773759)"><tspan
        sodipodi:role="line"
-       id="tspan2989"
-       x="8.4683342"
-       y="40.604717"
-       style="font-size:11.58406448px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;text-align:start;line-height:125%;writing-mode:lr-tb;text-anchor:start;fill:#ffffff;font-family:Sans;-inkscape-font-specification:Sans Bold">HMM</tspan></text>
-  <rect
-     style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:none"
-     id="rect3002"
-     width="10.126266"
-     height="1.6271186"
-     x="10"
-     y="11.872881" />
-  <rect
-     style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:none"
-     id="rect3002-1"
-     width="13.745963"
-     height="1.6271186"
-     x="10"
-     y="16.872881" />
-  <rect
-     style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:none"
-     id="rect3002-7"
-     width="16.331461"
-     height="1.6271186"
-     x="10"
-     y="19.372881" />
-  <rect
-     style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:none"
-     id="rect3002-4"
-     width="22.00946"
-     height="1.6271186"
-     x="10"
-     y="24.372881" />
-  <rect
-     style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:none"
-     id="rect3002-0"
-     width="28.1"
-     height="1.5"
-     x="10"
-     y="27" />
-  <rect
-     style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:none"
-     id="rect3002-9"
-     width="17.753485"
-     height="1.6271186"
-     x="10"
-     y="21.872881" />
-  <rect
-     style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:none"
-     id="rect3002-8"
-     width="12.194665"
-     height="1.6271186"
-     x="10"
-     y="14.372881" />
-  <rect
-     style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:none"
-     id="rect3002-2"
-     width="7.4114928"
-     height="1.6271186"
-     x="10"
-     y="9.3728809"
-     inkscape:transform-center-x="1.2012431"
-     inkscape:transform-center-y="1.7452112" />
+       id="tspan2989-6"
+       x="8.4398623"
+       y="43.517342"
+       style="font-size:11.36395645000000000px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;text-align:start;line-height:125%;writing-mode:lr-tb;text-anchor:start;fill:#cccccc;stroke:#7bacff;stroke-width:0.29999999999999999;stroke-linecap:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:1.79999999000000010, 0.59999999999999998;stroke-dashoffset:0;font-family:Sans;-inkscape-font-specification:Sans Bold">HMM</tspan></text>
 </svg>
