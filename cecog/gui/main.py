@@ -489,8 +489,9 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         self._pages.assistant.setStyleSheet("")
         self._pages.assistant.setStyleSheet(stylesheet)
 
-        self._browser.setStyleSheet("")
-        self._browser.setStyleSheet(stylesheet)
+        if self._browser is not None:
+            self._browser.setStyleSheet("")
+            self._browser.setStyleSheet(stylesheet)
 
     def _on_browser_open(self):
         if self._imagecontainer is None:

@@ -150,6 +150,10 @@ class Browser(QMainWindow):
         self.coordinate.time = self._t_slider.minimum()
 
         # menus
+        act_close = self.create_action('Close',
+                                        shortcut=QKeySequence('CTRL+C'),
+                                        slot=self.close)
+
         act_next_t = self.create_action('Next Time-point',
                                         shortcut=QKeySequence('Right'),
                                         slot=self.on_act_next_t)
@@ -237,7 +241,7 @@ class Browser(QMainWindow):
                                      act_fullscreen, None,
                                      act_show_contours, None,
                                      act_anti, act_smooth,
-                                     ))
+                                     None, act_close))
 
         self._statusbar = QStatusBar(self)
         self.setStatusBar(self._statusbar)
