@@ -39,7 +39,8 @@ class AtLineEdit(QtWidgets.QLineEdit):
 
         self._button = QtWidgets.QToolButton(self)
         self._button.setIcon(QtGui.QIcon(":/erase.png"))
-        self._button.setStyleSheet('border: 0px; padding: 0px;')
+        self._button.setStyleSheet(('border: 0px; '
+                                    'padding: 0px; '))
         self._button.setCursor(QtCore.Qt.ArrowCursor)
 
         width = self.style().pixelMetric(QtWidgets.QStyle.PM_DefaultFrameWidth)

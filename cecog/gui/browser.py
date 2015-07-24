@@ -45,7 +45,8 @@ from cecog.analyzer.core import AnalyzerBrowser
 from cecog.io.imagecontainer import Coordinate
 from cecog.gui.modules.navigation import NavigationModule
 from cecog.gui.modules.display import DisplayModule
-from cecog.gui.modules.annotation import AnnotationModule, CellH5EventModule
+from cecog.gui.modules.annotation import AnnotationModule
+from cecog.gui.modules.eventviewer import CellH5EventModule
 from cecog.io.imagecontainer import ImageContainer
 from cecog.gui.config import GuiConfigSettings
 from cecog.plugin.metamanager import MetaPluginManager
@@ -89,7 +90,7 @@ class Browser(QMainWindow):
 
         self.grabGesture(Qt.SwipeGesture)
 
-#         self.setStyleSheet("QStatusBar { border-top: 1px solid gray; }")
+        self.setStyleSheet("QStatusBar { border-top: 1px solid gray; }")
 
 
         layout = QVBoxLayout(frame)
@@ -257,15 +258,16 @@ class Browser(QMainWindow):
         self._module_manager = ModuleManager(toolbar, frame_side)
 
         NavigationModule(self._module_manager, self, self._imagecontainer)
-        defautl_display_module = DisplayModule(self._module_manager, self, self._imagecontainer, rdict)
-        #defautl_display_module = DisplayModule(self._module_manager, self, self._imagecontainer, region_names)
+        defautl_display_module = DisplayModule(
+            self._module_manager, self, self._imagecontainer, rdict)
 
         self.set_display_module(defautl_display_module)
         AnnotationModule(self._module_manager, self, self._settings,
                          self._imagecontainer)
 
         try:
-            CellH5EventModule(self._module_manager, self, self._settings, self._imagecontainer)
+            CellH5EventModule(self._module_manager,
+                              self, self._settings, self._imagecontainer)
         except Exception as e:
             warning(self, str(e))
 
@@ -678,8 +680,8 @@ if __name__ == "__main__":
     environ = CecogEnvironment(version)
     app = QApplication(sys.argv)
 
-#     settings = load_settings(r'M:\members\Claudia Blaukopf\Experiments\130710_Mitotic_slippage_and_cell_death\_meta\Cecog\130710_mitotic_slippage_and_cell_death_v04_with_split_TESTTESTTEST.conf')
-    settings = load_settings(r'C:\Users\sommerc\data\cecog\Settings\exp911_version_150.conf')
+    settings = load_settings((r'C:\Users\sommerc\data\cecog'
+                              '\Settings\exp911_version_150.conf'))
     imagecontainer = load_image_container_from_settings(settings)
 
     browser = Browser(settings, imagecontainer)

@@ -14,38 +14,15 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = []
 
-#-------------------------------------------------------------------------------
-# standard library imports:
-#
 import os
 
-#-------------------------------------------------------------------------------
-# extension module imports:
-#
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from PyQt5.Qt import *
 
 import cellh5
 
-#-------------------------------------------------------------------------------
-# cecog imports:
-#
-from cecog.gui.util import warning
-
-#-------------------------------------------------------------------------------
-# constants:
-#
-
-#-------------------------------------------------------------------------------
-# functions:
-#
-
-#-------------------------------------------------------------------------------
-# classes:
-#
 
 class ModuleManager(object):
 
@@ -61,7 +38,7 @@ class ModuleManager(object):
         idx = len(self._tabs)
         name = widget.NAME
         btn = QPushButton(name, self.toolbar)
-        btn.toggled.connect(lambda x: self.on_tab_changed(name))
+        btn.toggled.connect(lambda state: self.on_tab_changed(name, state))
         btn.setFlat(True)
         btn.setCheckable(True)
         self.toolbar.addWidget(btn)
@@ -78,7 +55,9 @@ class ModuleManager(object):
     def get_widget(self, name):
         return self._tabs[name][0]
 
-    def on_tab_changed(self, name):
+    def on_tab_changed(self, name, state=True):
+        if not state:
+            return
         if not self.current_widget is None:
             self.current_widget.deactivate()
         self.current_widget = self.get_widget(name)
@@ -86,7 +65,7 @@ class ModuleManager(object):
         self.stacked_frame.setCurrentWidget(self.current_widget)
 
 
-class Module(QFrame, object):
+class Module(QFrame):
 
     NAME = ''
 
@@ -96,87 +75,53 @@ class Module(QFrame, object):
         super(Module, self).__init__(self.module_manager.stacked_frame)
         self.is_initialized = False
         self.module_manager.register_tab(self)
-#         self.setStyleSheet(
-# """
-#  QWidget {
-#      font-size: 11px;
-#  }
-# 
-#  QGroupBox {
-#      background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-#                                        stop: 0 #E0E0E0, stop: 1 #FFFFFF);
-#      border: 2px solid #999999;
-#      border-radius: 5px;
-#      margin-top: 1ex; /* leave space at the top for the title */
-#      font-size: 13px;
-#      color: black;
-#  }
-# 
-#  QGroupBox::title {
-#      subcontrol-origin: margin;
-#      subcontrol-position: top center; /* position at the top center */
-#      padding: 0 3px;
-#      font-size: 13px;
-#      color: black;
-#  }
-# 
-#  QTableView {
-#      font-size: 10px;
-#      alternate-background-color: #EEEEFF;
-#  }
-# 
-#  QPushButton {
-#      font-size: 11px; min-width: 10px;
-#  }
-# 
-#  ColorButton::enabled {
-#      border: 1px solid #444444;
-#  }
-# 
-#  ColorButton::disabled {
-#      border: 1px solid #AAAAAA;
-#  }
-# 
-# """)
 
     def initialize(self):
         pass
 
     def activate(self):
         if not self.is_initialized:
-            self.initialize()
-            self.is_initialized = True
+            try:
+                self.initialize()
+            except Exception as e:
+                QMessageBox.critical(self, "Error", str(e))
+            else:
+                self.is_initialized = True
 
     def deactivate(self):
         pass
-    
-    
+
+
 class CH5BasedModule(Module):
     def __init__(self, module_manager, browser, settings, imagecontainer):
         super(CH5BasedModule, self).__init__(module_manager, browser)
         self._imagecontainer = imagecontainer
-        
         self._settings = settings
-        self._init_ch5()
-    
-    def _init_ch5(self):
-        self.hdf_file = os.path.join(self._settings.get('General', 'pathout'), 'hdf5', '_all_positions.ch5')
-        
+
+    def initialize(self):
+        super(CH5BasedModule, self).initialize()
+        self.hdf_file = os.path.join(
+            self._settings.get('General', 'pathout'), 'hdf5',
+            '_all_positions.ch5')
+
         if not os.path.exists(self.hdf_file):
-            raise IOError("CellH5 files not yet created. Interactive viewing of selected events will not be possible.")
+            raise IOError(("CellH5 files not yet created. Interactive viewing "
+                           "of selected events will not be possible."))
             self.ch5file = None
         else:
-            try: 
+            try:
                 self.ch5file = cellh5.CH5File(self.hdf_file)
             except Exception, e:
-                raise RuntimeError("Invalid CellH5 files. Interactive viewing of selected events will not be possible.\n %s is corrupt!\n\n%s" % (self.hdf_file, str(e)))
-            
+                raise RuntimeError(("Invalid CellH5 files. Interactive viewing "
+                                    "of selected events will not be possible.\n "
+                                    "%s is corrupt!\n\n%s"
+                                    %(self.hdf_file, str(e))))
+
     @property
     def coordinates(self):
         return self.ch5file.get_coordinates()
-        
-    
+
+
     def close(self):
         if self.ch5file is not None:
             self.ch5file.close()
-    
