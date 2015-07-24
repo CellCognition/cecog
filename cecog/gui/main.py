@@ -208,7 +208,6 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
                       TrackingFrame(self._settings, self._pages, SECTION_NAME_TRACKING),
                       EventSelectionFrame(self._settings, self._pages, SECTION_NAME_EVENT_SELECTION),
                       ErrorCorrectionFrame(self._settings, self._pages, SECTION_NAME_ERRORCORRECTION),
-                      #PostProcessingFrame(self._settings, self._pages, SECTION_NAME_POST_PROCESSING),
                       OutputFrame(self._settings, self._pages, SECTION_NAME_OUTPUT),
                       ProcessingFrame(self._settings, self._pages, SECTION_NAME_PROCESSING)]
 
@@ -486,13 +485,14 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         pref.exec_()
 
     def updateStyleSheet(self, stylesheet):
-        # Main Window
         self.setStyleSheet("")
         self.setStyleSheet(stylesheet)
 
-        # Help pages
         self._pages.assistant.setStyleSheet("")
         self._pages.assistant.setStyleSheet(stylesheet)
+
+        self._browser.setStyleSheet("")
+        self._browser.setStyleSheet(stylesheet)
 
     def _on_browser_open(self):
         if self._imagecontainer is None:
@@ -501,10 +501,12 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
                                 'Click "Scan input directory" in section "General" to proceed.')
         elif self._browser is None:
             try:
-                browser = Browser(self._settings, self._imagecontainer, self)
+                browser = Browser(self._settings, self._imagecontainer, None)
                 browser.show()
                 browser.raise_()
                 browser.setFocus()
+                app = AppPreferences()
+                browser.setStyleSheet(loadStyle(app.stylesheet))
                 self._browser = browser
             except Exception as e:
                 traceback.print_exc()
