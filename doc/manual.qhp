@@ -18,7 +18,6 @@
         <section title="Error correction" ref="html/manual.html#error_correction">
           <section title="HMM Constraints" ref="html/hmm_constraints.html"></section>
         </section>
-        <section title="Plots and Postprocessing" ref="html/manual.html#post_processing"></section>
         <section title="Output" ref="html/manual.html#output"></section>
         <section title="Processing" ref="html/manual.html#processing"></section>
         <section title="Cluster" ref="html/manual.html#cluster"></section>
@@ -189,32 +188,6 @@
       <keyword name="Compose gallery images" ref="html/manual.html#compose_galleries"/>
       <keyword name="Max. number of random samples" ref="html/manual.html#compose_galleries_sample"/>
       <keyword name="Resampling factor" ref="html/manual.html#resampling_factor"/>
-
-
-      <keyword name="Plots and Postprocessing " ref="html/manual.html#postprocessing"/>
-      <keyword name="IBB analysis" ref="html/manual.html#ibb_analysis"/>
-      <keyword name="Plate layout (plate mapping)" ref="html/manual.html#mappingfile_path"/>
-      <keyword name="IBB analysis settings" ref="html/manual.html#ibb_analysis_params"/>
-      <keyword name="IBB minimum ratio signal threshold" ref="html/manual.html#ibb_ratio_signal_threshold"/>
-      <keyword name="IBB minimum range threshold" ref="html/manual.html#ibb_range_signal_threshold"/>
-      <keyword name="IBB onset slope threshold" ref="html/manual.html#ibb_onset_factor_threshold"/>
-      <keyword name="NEBD onset slope threshold" ref="html/manual.html#nebd_onset_factor_threshold"/>
-
-      <keyword name="Group by positon (postprocessing)" ref="html/manual.html#group_by_position"/>
-      <keyword name="Group by OligoID (postprocessing)" ref="html/manual.html#group_by_oligoid"/>
-      <keyword name="Group by Genesymbol (postprocessing)" ref="html/manual.html#group_by_genesymbol"/>
-      <keyword name="Group by group" ref="html/manual.html#group_by_group"/>
-      <keyword name="Color sort" ref="html/manual.html#color_sort"/>
-      <keyword name="Color sort by position" ref="html/manual.html#color_sort_by_position"/>
-      <keyword name="Color sort by OligoID" ref="html/manual.html#color_sort_by_oligoid"/>
-      <keyword name="Color sort by Genesymbol" ref="html/manual.html#color_sort_by_genesymbol"/>
-      <keyword name="Color sort by group" ref="html/manual.html#color_sort_by_group"/>
-      <keyword name="Plotting" ref="html/manual.html#plot_params"/>
-      <keyword name="Export sing event" ref="html/manual.html#single_plot"/>
-      <keyword name="Y-axis limit (low)" ref="html/manual.html#single_plot_ylim_low"/>
-      <keyword name="Y-axis limit(high)" ref="html/manual.html#single_plot_ylim_high"/>
-      <keyword name="Y-axis ratio range (low)" ref="html/manual.html#plot_ylim1_low"/>
-      <keyword name="Y-axis ration range (high)" ref="html/manual.html#plot_ylim1_high"/>
 
       <keyword name="Output" ref="html/manual.html#output"/>
       <keyword name="Create Hdf5" ref="html/manual.html#hdf5_create_file"/>
