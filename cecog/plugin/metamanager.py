@@ -79,6 +79,7 @@ class MetaPluginManager(object):
         self.managers['primary'].register_plugin(SegmentationPluginPrimary2)
         self.managers['primary'].register_plugin(SegmentationPluginPrimary3)
         
+        self.managers['secondary'].register_plugin(SegmentationPluginPrimary3)
         self.managers['secondary'].register_plugin(SegmentationPluginExpanded)
         self.managers['secondary'].register_plugin(SegmentationPluginInside)
         self.managers['secondary'].register_plugin(SegmentationPluginOutside)
