@@ -37,7 +37,6 @@ from cecog.gui.config import GuiConfigSettings
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.traits.analyzer.objectdetection import SECTION_NAME_OBJECTDETECTION
 from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACTION
-from cecog.traits.analyzer.postprocessing import SECTION_NAME_POST_PROCESSING
 from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
 from cecog.traits.analyzer.tracking import SECTION_NAME_TRACKING
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
@@ -50,7 +49,6 @@ from cecog.traits.analyzer.cluster import SECTION_NAME_CLUSTER
 from cecog.gui.analyzer.general import GeneralFrame
 from cecog.gui.analyzer.objectdetection import ObjectDetectionFrame
 from cecog.gui.analyzer.featureextraction import FeatureExtractionFrame
-from cecog.gui.analyzer.postprocessing import PostProcessingFrame
 from cecog.gui.analyzer.classification import ClassificationFrame
 from cecog.gui.analyzer.tracking import TrackingFrame
 from cecog.gui.analyzer.errorcorrection import ErrorCorrectionFrame
@@ -208,7 +206,6 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
                       TrackingFrame(self._settings, self._pages, SECTION_NAME_TRACKING),
                       EventSelectionFrame(self._settings, self._pages, SECTION_NAME_EVENT_SELECTION),
                       ErrorCorrectionFrame(self._settings, self._pages, SECTION_NAME_ERRORCORRECTION),
-                      #PostProcessingFrame(self._settings, self._pages, SECTION_NAME_POST_PROCESSING),
                       OutputFrame(self._settings, self._pages, SECTION_NAME_OUTPUT),
                       ProcessingFrame(self._settings, self._pages, SECTION_NAME_PROCESSING)]
 
@@ -486,13 +483,15 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         pref.exec_()
 
     def updateStyleSheet(self, stylesheet):
-        # Main Window
         self.setStyleSheet("")
         self.setStyleSheet(stylesheet)
 
-        # Help pages
         self._pages.assistant.setStyleSheet("")
         self._pages.assistant.setStyleSheet(stylesheet)
+
+        if self._browser is not None:
+            self._browser.setStyleSheet("")
+            self._browser.setStyleSheet(stylesheet)
 
     def _on_browser_open(self):
         if self._imagecontainer is None:
@@ -501,10 +500,12 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
                                 'Click "Scan input directory" in section "General" to proceed.')
         elif self._browser is None:
             try:
-                browser = Browser(self._settings, self._imagecontainer, self)
+                browser = Browser(self._settings, self._imagecontainer, None)
                 browser.show()
                 browser.raise_()
                 browser.setFocus()
+                app = AppPreferences()
+                browser.setStyleSheet(loadStyle(app.stylesheet))
                 self._browser = browser
             except Exception as e:
                 traceback.print_exc()
