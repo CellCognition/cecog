@@ -1543,10 +1543,13 @@ class SegmentationPluginFRST(SegmentationPluginPrimaryLoadFromFile, _Segmentatio
             imGradU = ccore.linearTransform(imGrad, ratio, offset)
 
         ######### Combine nuclear markers and background markers #############
-        imMarker = ccore.supremum(imMarkersNu, imMarkersBg)
+        im1 = ccore.discDilate(imMarkersNu, 2)
+        imMarker = ccore.supremum(im1, imMarkersBg)
 
         ######## Watershed to get Nuclei #############
         imWS = ccore.constrainedWatershed(imGradU, imMarker)
+        if self.params["if_test"]:
+            ccore.writeImage(imGradU, os.path.join(self.params["test_folder"], "im_gradU.png"))
         
         ######## select those marked by nuclei markers #############
         imWSNumpy = imWS.toArray()
@@ -1554,13 +1557,15 @@ class SegmentationPluginFRST(SegmentationPluginPrimaryLoadFromFile, _Segmentatio
         imWSNumpy = imWSNumpy.astype(numpy.uint8)
         imWS = ccore.numpy_to_image(imWSNumpy, copy=True)    
         imCand1 = ccore.underBuild(imMarkersNu, imWS)
-
+        if self.params["if_test"]:
+            ccore.writeImage(imCand1, os.path.join(self.params["test_folder"], "imcani1.png"))
         imCand2 = ccore.areaOpen(imCand1, int(numpy.round(self.params['nuclear_diam'] \
             * self.params['nuclear_diam'] * numpy.pi)))
         imCand3 = ccore.substractImages(imCand1, imCand2)
         imCand2 = ccore.areaOpen(imCand3, int(numpy.round(self.params['se_size'] \
             * self.params['se_size'] )))
-
+        if self.params["if_test"]:
+            ccore.writeImage(imCand2, os.path.join(self.params["test_folder"], "imcani2.png"))
         # imCand2 = ccore.diameterOpen(imCand3, int(max_size * 3))
         imCand1 = ccore.lengthOpening(imCand2, int(self.params['nuclear_diam'] * 2), \
             int(self.params['nuclear_diam'] * self.params['nuclear_diam'] * numpy.pi), 20)
@@ -1570,7 +1575,9 @@ class SegmentationPluginFRST(SegmentationPluginPrimaryLoadFromFile, _Segmentatio
         ######## using previous segmented candidates to do an adaptive thresholding ###
         im1 = ccore.adaptiveThreshold(imOrig, imCand1, self.params['hist_l'], self.params['hist_h'])
         ccore.writeImage(im1, os.path.join(self.params["test_folder"], "ztemp1.png"))
-       
+        if self.params["if_test"]:
+            ccore.writeImage(im1, os.path.join(self.params["test_folder"], "im_4b_candi_adaptive_TH.png"))      
+            
         if self.params["if_seg3"]:
             imtmp1 = im1.copy()
             imtmp1.init(255)
@@ -1578,16 +1585,20 @@ class SegmentationPluginFRST(SegmentationPluginPrimaryLoadFromFile, _Segmentatio
             
             im2 = ccore.areaOpen(imtmp2, int(self.params['c_diam']) ** 2)
             imtmp1 = ccore.substractImages(imtmp2, im2)  
-            ccore.writeImage(imtmp1, os.path.join(self.params["test_folder"], "ztemp4a.png"))
+            if self.params["if_test"]:
+                ccore.writeImage(imtmp1, os.path.join(self.params["test_folder"], "ztemp4a.png"))
             
 #            im3 = ccore.lengthOpening(imtmp1, int(self.params['c_diam']), \
 #                int(self.params['c_diam'] * self.params['c_diam']),  self.params['circ2'])
             
             
-            im3 = ccore.threshold(imtmp1, self.params["c_thd"], 255, 0, 255)            
+            im3 = ccore.threshold(imtmp1, self.params["c_thd"], 255, 0, 255)
+            if self.params["if_test"]:
+                ccore.writeImage(im3, os.path.join(self.params["test_folder"], "ztemp4a2.png"))
             im4 = ccore.lengthOpening(im3, int(self.params['c_diam']), \
                 int(self.params['c_diam'] * self.params['c_diam']), self.params['circ2'])
-            ccore.writeImage(im4, os.path.join(self.params["test_folder"], "ztemp4b.png"))
+            if self.params["if_test"]:
+                ccore.writeImage(im4, os.path.join(self.params["test_folder"], "ztemp4b.png"))
 
 #            im3 = ccore.areaOpen(im4, int(numpy.round(self.params['se_size']  * \
 #            self.params['se_size']  * 2)))
@@ -1648,9 +1659,6 @@ class SegmentationPluginFRST(SegmentationPluginPrimaryLoadFromFile, _Segmentatio
 
         im2 = ccore.discDilate(im1, 1)
         im1 = ccore.discErode(im2, 1)
-
-        if self.params["if_test"]:
-            ccore.writeImage(im1, os.path.join(self.params["test_folder"], "im_4b_candi_adaptive_TH.png"))
         
         imCand2 = ccore.supremum(imCand1, im1)
         if self.params["if_test"]:

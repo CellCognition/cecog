@@ -205,7 +205,7 @@ namespace cecog {
 
       int nObj1 = ImLabel(imin, imLabel1, nb);
       int nObj2 = ImLabel(immask, imLabel2, nb);
-      cout<<"LJLF "<<nObj1<<" "<<nObj2<<endl;
+      // cout<<"LJLF "<<nObj1<<" "<<nObj2<<endl;
 
       int *cc = new int[nObj2]; // min value
       int *pp = new int[nObj2]; // min value position
@@ -305,17 +305,17 @@ namespace cecog {
                   }
               }
             }
-            cout<<"AAAA2"<<endl;
-            for (int i=0; i<nObj1; ++i){
-                for (int j=0; j<nObj1; ++j){
-                    cout<<nbMatrix[i][j]<<" ";
-                }
-                cout<<endl;
-            }
-            for (int i=0; i<nObj1; ++i){
-                cout<<refValue[i]<<" ";
-            }
-            cout<<endl;
+            // cout<<"AAAA2"<<endl;
+            // for (int i=0; i<nObj1; ++i){
+            //     for (int j=0; j<nObj1; ++j){
+            //         cout<<nbMatrix[i][j]<<" ";
+            //     }
+            //     cout<<endl;
+            // }
+            // for (int i=0; i<nObj1; ++i){
+            //     cout<<refValue[i]<<" ";
+            // }
+            // cout<<endl;
 
             
             // eliminate
@@ -350,10 +350,10 @@ namespace cecog {
             }
 
 
-            for (int i=0; i<nObj1; ++i){
-                cout<<int(iskeep[i])<<" ";
-            }
-            cout<<endl;
+            // for (int i=0; i<nObj1; ++i){
+            //     cout<<int(iskeep[i])<<" ";
+            // }
+            // cout<<endl;
 
             // output
             for (int y=0; y<h; ++y){
@@ -453,8 +453,11 @@ namespace cecog {
                   (0, c_intensity2, 0, 255));
     
 
+          //######
+          // std::cout<<c_low<<" "<<c_intensity1<<" "<<c_high<<" "<<c_intensity2<<endl;
           // exportImage(imtemp1.upperLeft(), imtemp1.lowerRight(), imtemp1.accessor(), "/home/zhang/work/image/temp/imtempp1.png");
           // exportImage(imtemp2.upperLeft(), imtemp2.lowerRight(), imtemp2.accessor(), "/home/zhang/work/image/temp/imtempp2.png");
+          //######
 
           neighborhood2D nb (WITHOUTCENTER8, imin.size());
           ImInfimum(srcImageRange(imtemp1), srcImage(imtemp2), destImage(imtemp3));
