@@ -23,7 +23,7 @@ from PyQt5.Qt import *
 
 from qimage2ndarray import array2qimage
 
-class ZoomedQGraphicsView(QGraphicsView):  
+class ZoomedQGraphicsView(QGraphicsView):
     def wheelEvent(self, event):
         keys = QApplication.keyboardModifiers()
         k_ctrl = (keys == Qt.ControlModifier)
@@ -37,7 +37,7 @@ class ZoomedQGraphicsView(QGraphicsView):
             else:
                 scaleFactor = 0.9
             self.scale(scaleFactor, scaleFactor)
-            
+
             mousePosAfterScale = self.mapToScene(event.pos())
             offset = self.mousePos - mousePosAfterScale
             newGrviewCenter = grviewCenter + offset
@@ -67,13 +67,13 @@ class HoverPolygonItem(QGraphicsPolygonItem):
     def hoverLeaveEvent(self, ev):
         self.setPen(self._old_pen)
         super(HoverPolygonItem, self).hoverLeaveEvent(ev)
-        
+
 class QGraphicsPixmapHoverItem(QGraphicsPixmapItem):
     def __init__(self, parent):
         QGraphicsPixmapItem.__init__(self, parent)
         self.setAcceptHoverEvents(True)
         #self.setTransformOriginPoint(self.boundingRect().width()/2, self.boundingRect().height()/2)
-        
+
 class ItemScaleHover(object):
     SCALE = 3
     def hoverEnterEvent(self, ev):
@@ -105,21 +105,21 @@ class GalleryViewer(ZoomedQGraphicsView):
         gradient.setColorAt(0.2, QColor.fromRgb(72, 72, 72));
         gradient.setColorAt(0.8, QColor.fromRgb(42, 42, 42));
 
-  
+
         brush = QBrush(gradient);
         self.setBackgroundBrush(brush);
-        
-        
-        
+
+
+
         self.setMouseTracking(True)
         self.hide()
-        
+
     def clear(self):
         self._scene.clear()
-        
+
     def mousePressEvent(self, ev):
         super(GalleryViewer, self).mousePressEvent(ev)
-        
+
         # mouse position and mapped scene point do not match exactly, correcting by 1 in x and y
         point = self.mapToScene(ev.pos()-QPoint(1,1))
         self.image_mouse_pressed.emit(point, ev.button(), ev.modifiers())
@@ -152,18 +152,19 @@ class ImageViewer(QGraphicsView):
         self.contour_color = QColor('white')
         self.show_contours = True
         self.show_mouseover = True
-        
-    
+
+
         self.init_pixmap()
-        
+
         self.grabGesture(Qt.PinchGesture)
-        
+
     def init_pixmap(self):
         self._pixmap = QGraphicsPixmapItem()
         self._pixmap.setShapeMode(QGraphicsPixmapItem.BoundingRectShape)
-        self._pixmap.setTransformationMode(Qt.SmoothTransformation)
+       # self._pixmap.setTransformationMode(Qt.SmoothTransformation)
         self.scene().addItem(self._pixmap)
         self.setToolTip("ctrl+mouse to pan/zoom")
+
     def from_numpy(self, data):
 
         self._qimage = array2qimage(data)

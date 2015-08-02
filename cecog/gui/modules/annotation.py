@@ -39,7 +39,7 @@ from cecog.learning.learning import BaseLearner
 from cecog.gui.widgets.colorbutton import ColorButton
 from cecog.gui.modules.module import Module, CH5BasedModule
 from cecog.util.ontoloty_owl import CecogOntologyBrowserDialog
-from cecog.gui.util import exception, information, question, warning, get_qcolor_hicontrast
+from cecog.gui.util import exception, information, question, warning, get_qcolor_hicontrast, qcolor_to_hex
 
 
 class Annotations(object):
