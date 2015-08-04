@@ -68,6 +68,7 @@
       <keyword name="Z-slice projection step" ref="html/manual.html#primary_zslice_projection_step"/>
       <keyword name="Flat field correction" ref="html/manual.html#primary_flat_field_correction"/>
 
+      <keyword name="Primary segmentation - Local Adaptive Threshold" ref="html/local_adaptive_threshold.html#primary"/>
       <keyword name="Median Radius" ref="html/local_adaptive_threshold.html#medianradius"/>
       <keyword name="Local adpative threshold" ref="html/local_adaptive_threshold.html#lat"/>
       <keyword name="Window size" ref="html/local_adaptive_threshold.html#latwindowsize"/>
@@ -104,17 +105,20 @@
       <keyword name="Z-slice projection step (secondary)" ref="html/manual.html#secondary_zslice_projection_step"/>
       <keyword name="Flat field correction (secondary)" ref="html/manual.html#secondary_flat_field_correction"/>
 
+      <keyword name="Secondary segmentation: expanded" ref="html/secondary_regions.html#expanded"/>
+      <keyword name="Secondary segmentation: inside" ref="html/secondary_regions.html#inside"/>
+      <keyword name="Secondary segmentation: outside" ref="html/secondary_regions.html#outside"/>
+      <keyword name="Secondary segmentation: rim" ref="html/secondary_regions.html#rim"/>
       <keyword name="Secondary region definitions" ref="html/secondary_regions.html#region_definitions"/>
-      <keyword name="Region Expanded" ref="html/secondary_regions.html#expanded"/>
       <keyword name="Expansion size" ref="html/secondary_regions.html#expansion_size"/>
-      <keyword name="Region Inside" ref="html/secondary_regions.html#inside"/>
       <keyword name="Shrinking size" ref="html/secondary_regions.html#shrinking_size"/>
-      <keyword name="Region Outside" ref="html/secondary_regions.html#outside"/>
       <keyword name="Outside expansion size" ref="html/secondary_regions.html#expansion_size"/>
       <keyword name="Outside separation size" ref="html/secondary_regions.html#separation_size"/>
-      <keyword name="Region Rim" ref="html/secondary_regions.html#rim"/>
       <keyword name="Rim expansion size" ref="html/secondary_regions.html#expansion_size"/>
       <keyword name="Rim shrinking size" ref="html/secondary_regions.html#shrinking_size"/>
+
+      <keyword name="Secondary segmentation: propagate" ref="html/secondary_regions.html#propagate"/>
+      <keyword name="Secondary segmentation: constrained watershed" ref="html/secondary_regions.html#constrained_watershed"/>
 
       <keyword name="Controlpanel (Object detection)" ref="html/manual.html#controlpanel_segmentation"/>
 
