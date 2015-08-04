@@ -10,6 +10,8 @@
         <section title="Object detection" ref="html/manual.html#segmentation">
           <section title="Local Adaptive Threshold" ref="html/local_adaptive_threshold.html"></section>
           <section title="Secondary Regions" ref="html/secondary_regions.html"></section>
+          <section title="Local Adaptive Threshold based on ilastik classification" ref="html/ilastik_regions.html"></section>
+          <section title="Load segmentation from files" ref="html/from_files_regions.html"></section>
         </section>
         <section title="Feature Extraction" ref="html/manual.html#feature_extraction"></section>
         <section title="Classification" ref="html/manual.html#classification"></section>
@@ -81,6 +83,9 @@
       <keyword name="Gauss Radius" ref="html/local_adaptive_threshold.html#shapewatershed_gausssize"/>
       <keyword name="Min. seed distance" ref="html/local_adaptive_threshold.html#shapewatershed_maximasize"/>
       <keyword name="Object size threshold" ref="html/local_adaptive_threshold.html#shapewatershed_minmergesize"/>
+      
+      <keyword name="ilastik plugin" ref="html/ilastik_regions.html#primary_ilastik"/>
+      <keyword name="Load from file plugin" ref="html/from_files_regions.html#primary_from_file"/>
 
       <keyword name="Object Filter" ref="html/local_adaptive_threshold.html#postprocessing"/>
       <keyword name="Min. object size" ref="html/local_adaptive_threshold.html#postprocessing_roisize_min"/>
@@ -226,6 +231,8 @@
       <file>html/getting_started.html</file>
       <file>html/manual.html</file>
       <file>html/local_adaptive_threshold.html</file>
+      <file>html/ilastik_regions.html</file>
+      <file>html/from_files_regions.html</file>
       <file>html/secondary_regions.html</file>
       <file>html/hmm_constraints.html</file>
       <file>html/images/gallery.png</file>
