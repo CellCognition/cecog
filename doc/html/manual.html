@@ -1265,7 +1265,59 @@ Example: The filename <tt>P0034__T00100__O0333__B03</tt> would therefore refer t
       </p>
     </a>
 
-    <h1><a name="cluster"></a>Cluster</h1>
-    <p>No help available yet!</p>
+    <a name="cluster"></a>
+    <h1>Cluster</h1>
+<p>
+  Cellcognition supports job submittion to a cluster directly from its user interface, if there is a <a href="https://github.com/CellCognition/clusterservice">WSGI-service</a> running on the cluster. <b>Cluster support needs to be enabled</b>. URL and port number can be setup in the <b>Preferences</b> dialog. It is also necessary to map local directory paths to remote paths. The corresponding <b>Path Mapping Table</b> is also located in the preferences dialog (see screenshots below).
+</p>
+<p>
+  <center>
+    <figure align="center">
+      <a name="enable_cluster_support"></a>
+      <img title="preferences - cluster" src="images/preferences_cluster.png"><br>
+      <figcaption>Settings for cluster support: The Section "Cluster" is not visible in the main GUI if cluster support is turned of.</figcaption>
+    </figure>
+
+    <a name="path_mapping"></a>
+    <figure align="center">
+      <img title="preferences - cluster" src="images/preferences_pathmapping.png"><br>
+      <figcaption>Path mapping table: Select the target operating systm i.e. the OS that runs on the cluster.</figcaption>
+    </figure>
+  </center>
+</p>
+
+<p>
+  The "Cluster" section contains a table showing the status of the path mapping. Each path is checked for existence locally and remotely. Red background means that either the path does not exist, is not mounted or does not exist in the path mapping table.
+</p>
+
+<p>
+  <center>
+    <figure align="center">
+      <img title="section cluster" src="images/section_cluster.png"><br>
+      <figcaption></figcaption>
+    </figure>
+  </center>
+</p>
+
+<p>
+  <table border="1" cellpadding="2" cellspacing="0">
+    <tr>
+      <td>Submit job</td>
+      <td>Submit all jobs to the cluster</td>
+    </tr>
+    <tr>
+      <td>Update</td>
+      <td>Ask the cluster for the current status of the submitted jobs.</td>
+        </tr>
+    <tr>
+      <td>Suspend</td>
+      <td>Suspend the current jobs.</td>
+    </tr>
+    <tr>
+      <td>Termiate</td>
+      <td>Cancel the curent jobs.</td>
+    </tr>
+      </table>
+</p>
   </body>
 </html>

@@ -222,6 +222,8 @@
       <keyword name="Processing" ref="html/manual.html#processing"/>
       <keyword name="Controlpanel (Processing)" ref="html/manual.html#controlpanel_processing"/>
       <keyword name="Cluster" ref="html/manual.html#cluster"/>
+      <keyword name="Path Mapping" ref="html/manual.html#path_mapping"/>
+      <keyword name="Enable cluster support" ref="html/manual.html#enable_cluster_support"/>
 
     </keywords>
     <files>
@@ -239,6 +241,9 @@
       <file>html/images/workflow.png</file>
       <file>html/images/workflow_kinetic.png</file>
       <file>html/images/secondary_regions.png</file>
+      <file>html/images/preferences_cluster.png</file>
+      <file>html/images/preferences_pathmapping.png</file>
+      <file>html/images/section_cluster.png</file>
     </files>
   </filterSection>
 </QtHelpProject>
