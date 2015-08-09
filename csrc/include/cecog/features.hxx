@@ -1557,7 +1557,8 @@ namespace cecog
         typedef typename SIMAGE::Accessor SrcAccessor;
         typedef typename SIMAGE::value_type value_type;
 
-        typedef typename std::vector<double> result_vec;
+        typedef typename std::vector<double> result_vec_type;
+        typedef typename result_vec_type::iterator resvec_iterator_type;
 
         SpotFeatures(SIMAGE &imin, LIMAGE &labin,
                      ROIObject const & o, lab_type label,
@@ -1623,28 +1624,139 @@ namespace cecog
           //vigra::FindAverageAndVariance<value_type> average;
           vigra::inspectTwoImages(srcImageRange(imTemp_), srcImage(imLabSpots_), average);
 
-          // average intensity
           double average_intensity = 0.0;
-          for(int i=1; i<count; i++) {
-            average_intensity += (double)average[i].average();
-          }
-          if(count > 0) {
-            average_intensity = average_intensity / (double)count;
-          }
-
-          // variance
           double var_intensity = 0.0;
-          for(int i=1; i<count; i++) {
-            var_intensity += ((double)average[i].average() - average_intensity)*((double)average[i].average() - average_intensity);
-          }
-          if(count>0) {
+          double avg_roi_size=0.0;
+          double var_roi_size = 0.0;
+          double avg_dist_center = 0.0;
+          double avg_dist_inter_spot = 0.0;
+          double var_dist_center = 0.0;
+          double var_dist_inter_spot = 0.0;
+
+          //cout << "DEBUG SPOTFEATURES: vectors allocated" << endl;
+          result_vec_type dist_center(count);
+          result_vec_type dist_inter_spot(count);
+          //cout << "DEBUG SPOTFEATURES: vectors allocated ... finished." << endl;
+
+          if(count>0){
+            // average intensity of detected spots
+            for(int i=1; i<=count; i++) {
+              average_intensity += (double)average[i].average();
+            }
+            average_intensity = average_intensity / (double)count;
+
+            // variance of detected spots
+            for(int i=1; i<=count; i++) {
+              var_intensity += ((double)average[i].average() - average_intensity)*((double)average[i].average() - average_intensity);
+            }
             var_intensity = var_intensity / (double)count;
-          }
+
+            // size of spots
+            //cout << "DEBUG SPOTFEATURES: roisize (inspect)." << endl;
+            vigra::ArrayOfRegionStatistics<vigra::FindROISize<value_type> > roisize(count);
+            inspectTwoImages(srcImageRange(imThresh_), srcImage(imLabSpots_), roisize);
+            //cout << "DEBUG SPOTFEATURES: roisize (inspect) ... finished." << endl;
+
+            for(int i=1; i<=count; i++) {
+              avg_roi_size += (double)roisize[i]();
+              //avg_roi_size += (double)roisize[i].count;
+            }
+            avg_roi_size = avg_roi_size / (double)count;
+
+            for(int i=1; i<=count; i++) {
+              var_roi_size += ((double)roisize[i]() - avg_roi_size) * ((double)roisize[i]() - avg_roi_size) ;
+            }
+            var_roi_size = var_roi_size / (double)count;
+            //cout << "DEBUG SPOTFEATURES: roisize average and variance calculated." << endl;
+
+            // distance features
+            //cout << "DEBUG SPOTFEATURES: centers (inspect)." << endl;
+            vigra::ArrayOfRegionStatistics<FindAVGCenter> centers(count);
+            //inspectTwoImages(srcImageRange(imThresh_), srcImage(imLabSpots_), centers);
+            inspectTwoImages(srcIterRange(vigra::Diff2D(0,0), vigra::Diff2D(0,0) + imLabSpots_.size()),
+                             srcImage(imLabSpots_), centers);
+            //cout << "DEBUG SPOTFEATURES: centers (inspect) ... finished." << endl;
+
+            //cout << "DEBUG SPOTFEATURES: calculating distance features." << endl;
+            for(int i=1; i<=count; i++) {
+              // result type of FindAVGCenter is vigra::Diff2D
+              vigra::Diff2D c(centers[i]());
+
+              // distance to center
+              dist_center[i-1] = sqrt((c.x - o.center.x) * (c.x - o.center.x)
+                                      + (c.y - o.center.y) * (c.y - o.center.y));
+              avg_dist_center += dist_center[i-1];
+
+              // distance between all spots
+              double temp_dist = 0.0;
+              for(int j=1; j<=count; j++) {
+                vigra::Diff2D ctemp(centers[j]());
+                temp_dist += sqrt((c.x - ctemp.x) * (c.x - ctemp.x)
+                                  + (c.y - ctemp.y) * (c.y - ctemp.y));
+              }
+              dist_inter_spot[i-1] = temp_dist / (double)count;
+              avg_dist_inter_spot += dist_inter_spot[i-1];
+            }
+            //cout << "DEBUG SPOTFEATURES: distance features calculated." << endl;
+
+            avg_dist_center = avg_dist_center / (double)count;
+            avg_dist_inter_spot = avg_dist_inter_spot / (double)count;
+            //cout << "DEBUG SPOTFEATURES: average distance features calculated." << endl;
+
+            // variance of the distance features
+            // for center distances
+            for(int i=0; i<count; i++) {
+              var_dist_center += (dist_center[i] - avg_dist_center) * (dist_center[i] - avg_dist_center);
+            }
+//            for(resvec_iterator_type iter = dist_center.begin();
+//              iter != dist_center.end(); ++iter)
+//            {
+//              var_dist_center += (*iter - avg_dist_center) * (*iter - avg_dist_center);
+//            }
+            var_dist_center = var_dist_center / (double)count;
+
+            // for inter spot distances
+            for(int i=0; i<count; i++) {
+              var_dist_inter_spot += (dist_inter_spot[i] - avg_dist_inter_spot) * (dist_inter_spot[i] - avg_dist_inter_spot);
+            }
+//            for(resvec_iterator_type iter = dist_inter_spot.begin();
+//              iter != dist_inter_spot.end(); ++iter)
+//            {
+//              var_dist_inter_spot += (*iter - avg_dist_inter_spot) * (*iter - avg_dist_inter_spot);
+//            }
+            var_dist_inter_spot = var_dist_inter_spot / (double)count;
+            //cout << "DEBUG SPOTFEATURES: variance distance features calculated." << endl;
+
+          } // end of if (count > 0)
+
+          //cout << "DEBUG SPOTFEATURES: end of big if (count > 0)." << endl;
+
+//          dynVec_.erase(dynVec_.begin());
+//          valVec_.erase(valVec_.begin());
+//
+//          for(typename DynamicsVector::iterator iter = valVec_.begin();
+//              iter != valVec_.end(); ++iter)
+//          {
+//              *iter = minmax.max - (*iter);
+//          }
+//
+//          dynLength_ = dynVec_.size();
+
+
+          //cout << "DEBUG SPOTFEATURES: feature assignment." << endl;
 
           // Assignments of features
-          o.features[prefix_ + "count"] = (float)count;
-          o.features[prefix_ + "avgintensity"] = average_intensity;
-          o.features[prefix_ + "varintensity"] = var_intensity;
+          o.features[prefix_ + "_count"] = (float)count;
+          o.features[prefix_ + "_avg_intensity"] = average_intensity;
+          o.features[prefix_ + "_var_intensity"] = var_intensity;
+          o.features[prefix_ + "_avg_dist_center"] = avg_dist_center;
+          o.features[prefix_ + "_var_dist_center"] = var_dist_center;
+          o.features[prefix_ + "_avg_dist_inter_spot"] = avg_dist_inter_spot;
+          o.features[prefix_ + "_var_dist_inter_spot"] = var_dist_inter_spot;
+          o.features[prefix_ + "_avg_roi_size"] = avg_roi_size;
+          o.features[prefix_ + "_var_roi_size"] = var_roi_size;
+
+          //cout << "DEBUG SPOTFEATURES: feature assignment finished." << endl;
 
           // for debug
           if(debug_) {
