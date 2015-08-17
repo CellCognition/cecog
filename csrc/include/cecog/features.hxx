@@ -1768,7 +1768,9 @@ namespace cecog
             }
 
             //std::string DEBUG_PREFIX="/Users/twalter/temp/spotfeatures/image";
-            std::string filepath_base = debug_folder_ + "/" + debug_prefix_ + "__" + std::to_string(objId_);
+            //std::string filepath_base = debug_folder_ + "/" + debug_prefix_ + "__" + std::to_string(objId_);
+
+            std::string filepath_base = debug_folder_ + "/" + debug_prefix_;
 
             std::string filepath_export_original = filepath_base + "__00original.tiff";
             std::cout << "writing " << filepath_export_original << std::endl;
