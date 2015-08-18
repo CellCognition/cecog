@@ -38,19 +38,21 @@ def find_resource_dir():
     Function defines the search order for different locations i.e.
     installations, bundeled binaries and the the source tree.
     """
-    
-    rdirs = [join(dirname(sys.executable), 'resources'),
+
+    environment_paths = filter(lambda x: os.path.basename(os.path.abspath(x)) == 'site-packages',
+                               os.environ['PYTHONPATH'].split(':'))
+    rdirs = []
+    if len(environment_paths) > 0:
+        rdirs.extend([os.path.join(x, os.pardir, os.pardir, os.pardir, 'share', 'cellcognition', 'resources')
+                      for x in environment_paths])
+            
+    rdirs.extend([join(dirname(sys.executable), 'resources'),
              join(dirname(abspath(sys.argv[0])).replace('bin', 'share'),
                   'cellcognition', 'resources'),
 	     join(sys.exec_prefix, 'share', 'cellcognition', 'resources'),
              'resources',
-             join(dirname(__file__), os.pardir, 'share', 'cellcognition', 'resources')]
+             join(dirname(__file__), os.pardir, 'share', 'cellcognition', 'resources')])
 
-    environment_paths = filter(lambda x: os.path.basename(os.path.abspath(x)) == 'site-packages',
-                               os.environ['PYTHONPATH'].split(':'))
-    if len(environment_paths) > 0:
-        rdirs.extend([os.path.join(x, os.pardir, os.pardir, os.pardir, 'share', 'cellcognition', 'resources')
-                      for x in environment_paths])
     
     for rdir in rdirs:
         if isdir(rdir):
