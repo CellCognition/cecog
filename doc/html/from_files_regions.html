@@ -1,34 +1,41 @@
 <html>
-    <head>
-        <link rel="stylesheet"  type="text/css" href="css/help.css">
-        </head>
+  <head>
+    <link rel="stylesheet"  type="text/css" href="css/help.css">
+  </head>
 
-        <body>
-            <a name="primary_from_file"></a>
-            <h3 class="param">Load regions from file</h3>
-            <p>This plug-in implements the loading of the segmentation from previously generated image files with a different software such as Fiji or CellProfiler</p>
-            <h4>Match the corresponding segmentation to the raw images</h4>
-            <p>
-    To match every single raw image in CellCognition with the corresponding pre-computed segmentation, one has to provide a mapping by a regular expresion string. For example, the mapping
-                <pre>
-                    <code>
-    ^%(plate)s$/^%(pos)s$/.*P%(pos)s_T%(time)05d_C%(channel)s_Z%(zslice)d_S1.tif
-                    </code>
-                </pre>
-    matches the each raw image from
-                <ul>
-                    <li>plate <code>%(plate)=MyPlate</code></li>
-                    <li>position <code>%(pos)=A01_01</code></li>
-                    <li> time frame <code>%(time)=00002</code>(which is a digit with five leading zeros)</li>
-                    <li>channel name <code>%(channel)= gfp</code></li>
-                    <li>z-slice <code>%(zslice)=1</code></li>
-                </ul>
-    to the file stored in path in
-                <pre>
-                    <code>MyPlate/A01_01/whatever_PA01_01_T00002_Cgfp_Z1_S1.tif</code>
-                </code>
-            </pre>
-        </p>
+  <body>
+    <a name="primary_from_file"></a>
+    <h2>Segmentation: Load regions from file</h2>
 
-    </body>
+    <p  class="text">This plug-in implements the loading of the segmentation from previously generated image files with a different software such as Fiji or CellProfiler</p>
+    <h4>Match the corresponding segmentation to the raw images</h4>
+
+    <p class="text">
+      To match every single raw image in CellCognition with the corresponding pre-computed segmentation, one has to provide a mapping by a regular expresion string. For example, the mapping
+      <pre>
+        <code>
+          ^%(plate)s$/^%(pos)s$/.*P%(pos)s_T%(time)05d_C%(channel)s_Z%(zslice)d_S1.tif
+        </code>
+      </pre>
+      <p class="text">
+      matches the each raw image from
+      </p>
+      <ul>
+        <li>plate <code>%(plate)=MyPlate</code></li>
+        <li>position <code>%(pos)=A01_01</code></li>
+        <li> time frame <code>%(time)=00002</code>(which is a digit with five leading zeros)</li>
+        <li>channel name <code>%(channel)= gfp</code></li>
+        <li>z-slice <code>%(zslice)=1</code></li>
+      </ul>
+    </p>
+
+    <p class="text">
+      to the file stored in path in
+    </p>
+    <pre>
+      <code>MyPlate/A01_01/whatever_PA01_01_T00002_Cgfp_Z1_S1.tif</code>
+    </pre>
+
+
+</body>
 </html>

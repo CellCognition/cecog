@@ -69,7 +69,7 @@ class AppPreferences(object):
     def __init__(self):
 
         # default values
-        self.host = 'http://login-debian7.bioinfo.imp.ac.at'
+        self.host = 'http://cecog-gerlich.imp.univie.ac.at'
         self.port = 9999
 
         self.mapping_str = ("#darwin, win32, linux\n"
