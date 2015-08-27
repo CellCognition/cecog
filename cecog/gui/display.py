@@ -466,9 +466,14 @@ class ClickableQLabel(QLabel):
 
     clicked = pyqtSignal(str)
 
+    def __init__(self, *args, **kw):
+        super(ClickableQLabel, self).__init__(*args, **kw)
+        self.link = None
+
     def setLink(self, link):
         self.link = link
 
     def mouseReleaseEvent(self, event):
-        self.clicked.emit(self.link)
+        if link is not None:
+            self.clicked.emit(self.link)
         return super(ClickableQLabel, self).mouseReleaseEvent(event)
