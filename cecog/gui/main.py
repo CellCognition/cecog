@@ -749,14 +749,14 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
     @QtCore.pyqtSlot()
     def _on_file_open(self):
 
+        dir_ = os.path.dirname(self._settings_filename)
         if self._check_settings_saved() != QMessageBox.Cancel:
-            home = ""
             if self._settings_filename is not None:
                 settings_filename = self.environ.demo_settings
                 if os.path.isfile(settings_filename):
                     home = settings_filename
             filename = QtWidgets.QFileDialog.getOpenFileName( \
-               self, 'Open config file', home, ';;'.join(self.NAME_FILTERS))[0]
+               self, 'Open config file', dir_, ';;'.join(self.NAME_FILTERS))[0]
             if not bool(filename):
                 return
 
@@ -773,12 +773,9 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
                 self._clear_browser()
                 self.set_modules_active(state=False)
 
-
-    @QtCore.pyqtSlot()
     def _on_file_save(self):
         self.save_settings(False)
 
-    @QtCore.pyqtSlot()
     def _on_file_save_as(self):
         self.save_settings(True)
 
