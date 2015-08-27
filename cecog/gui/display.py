@@ -188,7 +188,7 @@ class TraitDisplayMixin(QtWidgets.QFrame):
 #                                    "#e8ff66; text-decoration: underline;}"))
             w_label.setText(label)
             w_label.setLink(link)
-            
+
             w_label.setToolTip('Click on the label for help.')
             if self._label_click_callback is None:
                 w_label.clicked.connect(self._on_show_help)
@@ -463,11 +463,12 @@ class TraitDisplayMixin(QtWidgets.QFrame):
 
 
 class ClickableQLabel(QLabel):
+
     clicked = pyqtSignal(str)
-    
+
     def setLink(self, link):
         self.link = link
-    
-    def mouseReleaseEvent(self, *args, **kwargs):
+
+    def mouseReleaseEvent(self, event):
         self.clicked.emit(self.link)
-        return QLabel.mouseReleaseEvent(self, *args, **kwargs)
+        return super(ClickableQLabel, self).mouseReleaseEvent(event)
