@@ -31,6 +31,7 @@ class CellAnalyzer(LoggerObject):
 
     def __init__(self, timeholder, position, create_images, binning_factor,
                  detect_objects):
+        
         super(CellAnalyzer, self).__init__()
 
         self.timeholder = timeholder
