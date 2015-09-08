@@ -18,7 +18,6 @@ __url__ = 'www.cellcognition.org'
 
 import os
 import sys
-import csv
 import atexit
 import shutil
 from os.path import join, isdir, isfile, dirname, normpath, abspath, \
@@ -26,11 +25,18 @@ from os.path import join, isdir, isfile, dirname, normpath, abspath, \
 
 from ConfigParser import RawConfigParser
 
-
 from cecog import version
 from cecog.util.pattern import Singleton
-from cecog.util.mapping import map_path_to_os as _map_path_to_os
+
 from cecog import ccore
+
+class LogFile(file):
+    """Custom file class that flushes always after write method is called"""
+
+    def write(self, *args, **kw):
+        super(LogFile, self).write(*args, **kw)
+        self.flush()
+
 
 def find_resource_dir():
     """Return a normalized absolute path to the resource directory.
@@ -92,7 +98,6 @@ class BatteryPackage(object):
     def demo_settings(self):
         return join(self.package_path, "Settings", "demo_settings.conf")
 
-
     def copy_demodata(self, dest_path):
         self._path = dest_path
 
@@ -103,37 +108,6 @@ class BatteryPackage(object):
     def package_path(self):
         del self._path
 
-
-class PathMapper(object):
-
-    def __init__(self, filename):
-        self._column_names, self._path_mappings = None, None
-        self.read(filename)
-
-    def map_path_to_os(self, path, target_os=None, force=True):
-        path2 = _map_path_to_os(path, self._path_mappings, target_os=target_os)
-        if path2 is None and force:
-            path2 = path
-        return path2
-
-    def is_path_mappable(self, path, target_os=None):
-        path2 = _map_path_to_os(path, self._path_mappings, target_os=target_os)
-        return not path2 is None
-
-    def read(self, filename):
-        with open(filename, "r") as fp:
-            pmp = csv.DictReader(fp, delimiter="\t")
-            self._path_mappings = [row for row in pmp]
-            self._column_names = pmp.fieldnames
-
-    def write(self, filename):
-        with open(filename, "w") as fp:
-            pmp = csv.DictWriter(fp, fieldnames=self._column_names,
-                                 delimiter="\t")
-            for row in self._path_mappings:
-                pmp.writerow(row)
-
-
 class CecogEnvironment(object):
 
     __metaclass__ = Singleton
@@ -142,18 +116,15 @@ class CecogEnvironment(object):
     RESOURCE_DIR = find_resource_dir()
     BATTERY_PACKAGE_DIR = join(RESOURCE_DIR, "battery_package")
     ONTOLOGY_DIR = join(RESOURCE_DIR, "ontologies")
+    UI_DIR = join(RESOURCE_DIR, "ui")
+    DOC_DIR = "doc"
 
     FONT12 = join(RESOURCE_DIR, "font12.png")
     NAMING_SCHEMA = join(RESOURCE_DIR, "naming_schemas.ini")
-    PATH_MAPPINGS = join(RESOURCE_DIR, "path_mappings.txt")
-    CONFIG = join(RESOURCE_DIR, "config.ini")
-
     PALETTES = join('palettes', 'zeiss')
 
     # XXX want this away from class level
     naming_schema = ConfigParser(NAMING_SCHEMA, 'naming_schemas')
-    analyzer_config = ConfigParser(CONFIG, 'analyzer_config')
-    path_mapper = PathMapper(PATH_MAPPINGS)
 
     def __init__(self, version=version.version, redirect=False, debug=False):
         super(CecogEnvironment, self).__init__()
@@ -173,14 +144,6 @@ class CecogEnvironment(object):
         if debug:
             print 'ccore.Config.strFontFilepath(%s) called' %self.FONT12
 
-    @classmethod
-    def map_path_to_os(cls, *args, **kw):
-        return cls.path_mapper.map_path_to_os(*args, **kw)
-
-    @classmethod
-    def is_path_mapable(cls, *args, **kw):
-        return cls.path_mapper.is_path_mappable(*args, **kw)
-
     @property
     def demo_settings(self):
         return normpath(self.battery_package.demo_settings)
@@ -195,7 +158,7 @@ class CecogEnvironment(object):
         if not isdir(self.user_config_dir):
             os.mkdir(self.user_config_dir)
 
-        cfiles = ('FONT12', 'CONFIG', 'PATH_MAPPINGS', 'NAMING_SCHEMA')
+        cfiles = ('FONT12', 'NAMING_SCHEMA')
         # copy the config config and update class attributes
         for key in cfiles:
             file_ = getattr(cls, key)
@@ -211,9 +174,18 @@ class CecogEnvironment(object):
         if not isdir(target):
             shutil.copytree(src, target)
 
+        target = join(self.user_config_dir, cls.DOC_DIR)
+        src = join(cls.RESOURCE_DIR, cls.DOC_DIR)
+        if not isdir(target):
+            shutil.copytree(src, target)
+
         # changing resource directory after copying the files
         # copy also the r sources
         cls.RESOURCE_DIR = self.user_config_dir
+
+    @property
+    def doc_dir(self):
+        return join(self.user_config_dir, self.DOC_DIR)
 
     @property
     def palettes_dir(self):
@@ -242,8 +214,8 @@ class CecogEnvironment(object):
         if not isdir(logpath):
             os.mkdir(logpath)
 
-        sys.stdout = file(join(logpath, 'stdout.log'), 'w')
-        sys.stderr = file(join(logpath, 'stderr.log'), 'w')
+        sys.stdout = LogFile(join(logpath, 'stdout.log'), 'w')
+        sys.stderr = LogFile(join(logpath, 'stderr.log'), 'w')
 
         # may cause troubles on windows
         atexit.register(sys.stderr.close)
@@ -255,8 +227,6 @@ class CecogEnvironment(object):
 
     def pprint(self):
         print 'resource-dir: ', self.RESOURCE_DIR
-        print 'config.ini: ', self.CONFIG
         print 'font12-file: ', self.FONT12
-        print 'path-mapping-file:', self.PATH_MAPPINGS
         print 'naming-scheme: ', self.NAMING_SCHEMA
         print 'battery_package: ', self.package_dir

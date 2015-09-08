@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<QHelpCollectionProject version="1.0">
+  <assistant>
+    <title>CecogAnalyzer</title>
+    <startPage>qthelp://cecog/html/html/index.html</startPage>
+    <cacheDirectory>cecog</cacheDirectory>
+    <aboutMenuText>
+      <text>CecogAnalyzer</text>
+      <text language="en">About CecogAnalyzer...</text>
+    </aboutMenuText>
+  </assistant>
+  <docFiles>
+    <generate>
+      <file>
+        <input>manual.qhp</input>
+        <output>../resources/doc/manual.qch</output>
+      </file>
+    </generate>
+  </docFiles>
+</QHelpCollectionProject>

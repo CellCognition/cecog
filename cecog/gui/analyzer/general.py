@@ -16,13 +16,14 @@ __source__ = '$URL$'
 
 __all__ = ['GeneralFrame']
 
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
-from PyQt4.Qt import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.Qt import *
 
 from cecog.gui.analyzer import BaseFrame
 
 class GeneralFrame(BaseFrame):
+    ICON = ":general.png"
 
     def __init__(self, settings, parent, name):
         super(GeneralFrame, self).__init__(settings, parent, name)

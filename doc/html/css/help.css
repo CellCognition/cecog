@@ -1,0 +1,101 @@
+body {
+ font-family: sans-serif;
+}
+
+a.header {
+}
+
+a.extlink {
+  background: url(../images/extlink.png) center center no-repeat;
+  padding-left: 12px;
+}
+
+img.extlink {
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+hr {
+  color: gray;
+  size: 1px;
+  width: 100%;
+}
+
+td {
+  text-align: center;
+}
+
+td.footer {
+  font-size: 9pt;
+  color: gray;
+}
+
+a.footer {
+}
+
+h4 {
+    margin-top: 20;
+    margin-bottom: 6;
+    margin-left: 20;
+}
+
+p.introtext {
+    margin-top: 20;
+    margin-bottom: 6;
+    margin-left: 20;
+}
+
+p.mtext {
+  margin-top: 0;
+  margin-bottom: 0;
+  margin-left: 20;
+  text-align: justify;
+}
+
+p {
+    text-align: justify;
+}
+
+p.text {
+  margin-top: 0;
+  margin-bottom: 0;
+  margin-left: 40;
+  text-align: justify;
+}
+
+h4.sub {
+  margin-top: 14;
+  margin-bottom: 6;
+  margin-left: 40;
+}
+
+h5 {
+  font-size: 20pt;
+  margin-top: 14;
+  margin-bottom: 6;
+  margin-left: 40;
+}
+
+p.subtext {
+  margin-top: 0;
+  margin-bottom: 0;
+  margin-left: 60;
+  text-align: justify;
+}
+
+div.param {
+  margin-left: 20;
+  margin-right: 20;
+}
+
+h3.param {
+  margin-left: 10;
+}
+
+img.figure {
+  background-color: white;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  horizontal-align: middle
+}

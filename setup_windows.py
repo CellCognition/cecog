@@ -28,11 +28,20 @@ from distutils.core import setup, Extension
 import py2exe
 import build_helpers
 
-pyrcc_opts = {'infile': 'cecog.qrc',
-              'outfile': join('cecog', 'cecog_rc.py'),
+pyrcc_opts = {'qrc': {'cecog.qrc' : join('cecog', 'cecog_rc.py'),
+                      'submodules\css\pyqtcss\src\classic\style.qrc':
+                          join('cecog', 'css',  'classic_rc.py'),
+                      'submodules\css\pyqtcss\src\dark_blue\style.qrc':
+                          join('cecog', 'css',  'dark_blue_rc.py'),
+                      'submodules\css\pyqtcss\src\dark_orange\style.qrc':
+                          join('cecog', 'css',  'dark_orange_rc.py'),
+                      },
               'pyrccbin': join('C:\\', 'Python27', 'Lib', 'site-packages',
-                               'PyQt4', 'pyrcc4.exe')}
+                               'PyQt5', 'pyrcc5.exe')}
 
+help_opts = {'infile': join('doc', 'manual.qhcp'),
+             'outfile': join('resources', 'doc', 'manual.qhc'),
+             'qcollectiongeneator': 'qcollectiongenerator'}
 
 DLL_EXCLUDES = [ 'libgdk-win32-2.0-0.dll',
                  'libgobject-2.0-0.dll',
@@ -71,12 +80,18 @@ DLL_EXCLUDES = [ 'libgdk-win32-2.0-0.dll',
 
 py2exe_opts = {'includes': build_helpers.INCLUDES,
                'excludes': build_helpers.EXCLUDES,
-               'dll_excludes': DLL_EXCLUDES}
+               'dll_excludes': DLL_EXCLUDES,
+               'optimize': 2,
+               'compressed': True,
+               'skip_archive': False,
+               'bundle_files': 3,
+               'packages' : ['h5py','vigra','sklearn']}
 
 # ccore build paths
 # or write these paths to setup.cfg
 includes = ['c:/python27/include',
             'c:/Python27/Lib/site-packages/numpy/core/include',
+            r'C:\Users\sommerc\src\vigra-git\include',
             './csrc/include']
 libraries = ['libtiff', 'vigraimpex']
 library_dirs = []
@@ -95,6 +110,8 @@ packages = build_helpers.find_submodules("./cecog", "cecog")
 # special casing for system installation or py2exe bundle
 if "py2exe" in sys.argv:
     dfiles = build_helpers.get_data_files(build_helpers.TARGET_BUNDLE)
+    uifiles = build_helpers.find_uifiles('./cecog', build_helpers.TARGET_BUNDLE)
+    dfiles.append(uifiles)
 else:
     build_helpers.metadata['name'] = 'cellcognition'
     dfiles = build_helpers.get_data_files(build_helpers.TARGET_SYS,
@@ -109,11 +126,16 @@ if "bdist_wininst" in sys.argv:
             glob.glob(dllpath.replace("vigraimpex", "*")))
     dfiles.append(dlls)
 
-setup(options = {"py2exe": py2exe_opts,
-                 'pyrcc': pyrcc_opts},
-      cmdclass = {'pyrcc': build_helpers.PyRcc,
+
+setup(options = {'py2exe': py2exe_opts,
+                 'build_rcc': pyrcc_opts,
+                 'build_help': help_opts},
+      cmdclass = {'build_rcc': build_helpers.BuildRcc,
+                  'build_help': build_helpers.BuildHelp,
                   'build': build_helpers.Build},
       packages = packages,
+      package_data = {'cecog': [join('gui', '*.ui'),
+                                join('gui', 'helpbrowser', '*.ui')]},
       data_files = dfiles,
       windows = [{'script': join('scripts', 'CecogAnalyzer.py'),
                   'icon_resources': [(1, 'resources\cecog_analyzer_icon.ico')]

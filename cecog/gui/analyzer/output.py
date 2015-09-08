@@ -20,6 +20,8 @@ from cecog.gui.analyzer import BaseFrame
 
 class OutputFrame(BaseFrame):
 
+    ICON = ":output.png"
+
     def __init__(self, settings, parent, name):
         super(OutputFrame, self).__init__(settings, parent, name)
 
@@ -39,30 +41,22 @@ class OutputFrame(BaseFrame):
         self.add_group('minimal_effort', [])
 
         self.add_line()
-        self.add_group(None,
+        self.add_group('text_output',
                        [('rendering_labels_discwrite', (0,0,1,1)),
                         ('rendering_contours_discwrite', (1,0,1,1)),
                         ('rendering_contours_showids', (1,1,1,1)),
                         ('rendering_class_discwrite', (2,0,1,1)),
                         ('rendering_class_showids', (2,1,1,1)),
                         ('rendering_channel_gallery', (3,0,1,1)),
-                        ], link='export_result_images',
-                        label='Export result images')
-
-        self.add_group(None,
-                       [('export_object_counts', (0,0,1,1)),
-                        ('export_object_details', (1,0,1,1)),
-                        ('export_object_counts_ylim_max', (1,1,1,1)),
-                        ('export_file_names', (2,0,1,1)),
-                        ('export_tracking_as_dot', (3,0,1,1)),
-                        ('export_track_data', (4,0,1,1)),
-                        ], link='statistics', label='Statistics')
-
-        self.add_group(None,
-                       [('export_events', (0, 0, 1, 1)),
-                        ('events_export_all_features', (1, 0, 1, 1)),
-                        ('events_export_gallery_images', ( 2, 0, 1, 1)),
-                        ('events_gallery_image_size', (2, 1, 1, 1)),
-                        ], link='events', label='Events')
-
+                        ('export_object_counts', (5,0,1,1)),
+                        ('export_object_details', (6,0,1,1)),
+                        ('export_object_counts_ylim_max', (6,1,1,1)),
+                        ('export_file_names', (7,0,1,1)),
+                        ('export_tracking_as_dot', (8,0,1,1)),
+                        ('export_track_data', (9,0,1,1)),
+                        ('export_events', (11, 0, 1, 1)),
+                        ('events_export_all_features', (12, 0, 1, 1)),
+                        ('events_export_gallery_images', (13, 0, 1, 1)),
+                        ('events_gallery_image_size', (14, 1, 1, 1)),
+                        ])
         self.add_expanding_spacer()

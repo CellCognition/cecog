@@ -13,28 +13,29 @@ __url__ = 'www.cellcognition.org'
 __all__ = ('ProcessControl', )
 
 
-from PyQt4 import QtGui
+from PyQt5 import QtGui
+from PyQt5 import QtWidgets
 
 
-class ProcessControl(QtGui.QFrame):
+class ProcessControl(QtWidgets.QFrame):
 
     def __init__(self, *args, **kw):
         super(ProcessControl, self).__init__(*args, **kw)
 
         self._buttons = dict()
 
-        layout = QtGui.QHBoxLayout(self)
+        layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self._label = QtGui.QLabel('', self)
+        self._label = QtWidgets.QLabel('', self)
 
-        self._progressbar = QtGui.QProgressBar(self)
+        self._progressbar = QtWidgets.QProgressBar(self)
         self._progressbar.setTextVisible(False)
 
-        self._show_image = QtGui.QCheckBox('Show images', self)
+        self._show_image = QtWidgets.QCheckBox('Show images', self)
         self._show_image.setChecked(True)
 
-        button = QtGui.QToolButton(self)
+        button = QtWidgets.QToolButton(self)
         button.setIcon(QtGui.QIcon(':question_mark'))
         button.clicked.connect(
             lambda: self.parent()._on_show_help('controlpanel'))
@@ -73,7 +74,7 @@ class ProcessControl(QtGui.QFrame):
 
     def addControlButton(self, name, slot):
         count = self.layout().count() - 1
-        button = QtGui.QPushButton('', self)
+        button = QtWidgets.QPushButton('', self)
         button.clicked.connect(slot)
         self.layout().insertWidget(count, button)
         self._buttons[name] = button

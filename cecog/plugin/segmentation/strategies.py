@@ -24,7 +24,6 @@ from cecog.plugin.segmentation.manager import _SegmentationPlugin
 
 import pdb
 
-
 class SegmentationPluginPrimary(_SegmentationPlugin):
 
     LABEL = 'Local adaptive threshold w/ split&merge'
@@ -285,7 +284,7 @@ class SegmentationPluginPrimary2(_SegmentationPlugin):
         else:
             f = ccore.segmentation_correction_intensity
         return f(img_in, img_bin, border, gauss_size, max_dist, min_merge_size)
-    
+
     @stopwatch()
     def postprocessing(self, container, is_active, roisize_minmax,
                        intensity_minmax, delete_objects=True,
@@ -312,7 +311,7 @@ class SegmentationPluginPrimary2(_SegmentationPlugin):
 
                 # extract features needed for the filter
                 # FIXME: features are currently kept in the ObjectContainer and used for classification automatically
-                # Features can be removed from the container, but it remains much better a choice 
+                # Features can be removed from the container, but it remains much better a choice
                 # to restrict the feature sets used for classification.
                 for feature in feature_categories:
                     container.applyFeature(feature)
@@ -337,7 +336,7 @@ class SegmentationPluginPrimary2(_SegmentationPlugin):
             for feature in ['roisize', 'normbase2']:
                 container.deleteFeatureCategory(feature)
 
-                
+
         # store valid and rejected object IDs to the container
         container.valid_ids = valid_ids
         container.rejected_ids = rejected_ids
@@ -347,7 +346,7 @@ class SegmentationPluginPrimary2(_SegmentationPlugin):
         image = meta_image.image
 
         img_prefiltered = self.prefilter(image)
-        
+
         img_bin1 = self.threshold(img_prefiltered, self.params['latwindowsize'], self.params['latlimit'])
 
         if self.params['holefilling']:
@@ -381,13 +380,13 @@ class SegmentationPluginPrimary2(_SegmentationPlugin):
                                                kind='intensity')
 
         container = ccore.ImageMaskContainer(image, img_bin, self.params['removeborderobjects'])
- 
+
         # calculate offset: mean on the background region, as given by the segmentation result
-        # no locality: simply a global mean on the image. 
+        # no locality: simply a global mean on the image.
         np_image = image.toArray(True)
         np_img_bin = img_bin.toArray(True)
         offset = np_image[np_img_bin==0].mean()
-        
+
         self.postprocessing(container, self.params['postprocessing'],
                             (self.params['postprocessing_roisize_min'], self.params['postprocessing_roisize_max']),
                             (self.params['postprocessing_intensity_min'], self.params['postprocessing_intensity_max']),
@@ -446,12 +445,7 @@ class SegmentationPluginPrimary3(_SegmentationPlugin):
                         [('watershed_dynamic', (0, 0, 1, 1)),
                          ('watershed_used_distance', (0, 1, 1, 1)),
                          ])
-        
-#        panel.add_group('shapewatershed',
-#                        [('shapewatershed_gausssize', (0, 0, 1, 1)),
-#                         ('shapewatershed_maximasize', (0, 1, 1, 1)),
-#                         ('shapewatershed_minmergesize', (1, 0, 1, 1)),
-#                         ])
+
         panel.add_group('postprocessing',
                         [('postprocessing_roisize_min', (0, 0, 1, 1)),
                          ('postprocessing_roisize_max', (0, 1, 1, 1)),
@@ -491,22 +485,22 @@ class SegmentationPluginPrimary3(_SegmentationPlugin):
 
         if distance==2:
             # Euclidean distance
-            res = ccore.watershed_dynamic_split(img_bin, dyn, 8, 2) 
+            res = ccore.watershed_dynamic_split(img_bin, dyn, 8, 2)
         elif distance==1:
-            # we use connectivity 4 (for the watershed) and distance mode 1 (which 
+            # we use connectivity 4 (for the watershed) and distance mode 1 (which
             # corresponds to the L1 norm which corresponds to the graph distance
             # of a 4-neighborhood graph
             res = ccore.watershed_dynamic_split(img_bin, dyn, 8, 1)
-        elif distance==0:            
+        elif distance==0:
             # the chessboard distance and 8 connectivity for the watershed algorithm.
-            # However, the distances are "deeper" for 4-connectivity. 
+            # However, the distances are "deeper" for 4-connectivity.
             res = ccore.watershed_dynamic_split(img_bin, dyn, 8, 0)
         else:
             print 'not implemented'
             res = img_bin
-            
+
         return res
-    
+
     @stopwatch()
     def postprocessing(self, container, is_active, roisize_minmax,
                        intensity_minmax, delete_objects=True,
@@ -533,7 +527,7 @@ class SegmentationPluginPrimary3(_SegmentationPlugin):
 
                 # extract features needed for the filter
                 # FIXME: features are currently kept in the ObjectContainer and used for classification automatically
-                # Features can be removed from the container, but it remains much better a choice 
+                # Features can be removed from the container, but it remains much better a choice
                 # to restrict the feature sets used for classification.
                 for feature in feature_categories:
                     container.applyFeature(feature)
@@ -558,7 +552,7 @@ class SegmentationPluginPrimary3(_SegmentationPlugin):
             for feature in ['roisize', 'normbase2']:
                 container.deleteFeatureCategory(feature)
 
-                
+
         # store valid and rejected object IDs to the container
         container.valid_ids = valid_ids
         container.rejected_ids = rejected_ids
@@ -568,7 +562,7 @@ class SegmentationPluginPrimary3(_SegmentationPlugin):
         image = meta_image.image
 
         img_prefiltered = self.prefilter(image)
-        
+
         img_bin1 = self.threshold(img_prefiltered, self.params['latwindowsize'], self.params['latlimit'])
 
         if self.params['holefilling']:
@@ -587,33 +581,18 @@ class SegmentationPluginPrimary3(_SegmentationPlugin):
             img_bin = img_bin1
 
         if self.params['watershed_distance']:
-            img_bin = self.correct_segmetation(img_prefiltered, img_bin, 
+            img_bin = self.correct_segmetation(img_prefiltered, img_bin,
                                                self.params['watershed_dynamic'],
                                                self.params['watershed_used_distance'])
-            
-#        if self.params['shapewatershed']:
-#            img_bin = self.correct_segmetation(img_prefiltered, img_bin,
-#                                               self.params['latwindowsize'],
-#                                               self.params['shapewatershed_gausssize'],
-#                                               self.params['shapewatershed_maximasize'],
-#                                               self.params['shapewatershed_minmergesize'],
-#                                               kind='shape')
-#        if self.params['intensitywatershed']:
-#            img_bin = self.correct_segmetation(img_prefiltered, img_bin,
-#                                               self.params['latwindowsize'],
-#                                               self.params['intensitywatershed_gausssize'],
-#                                               self.params['intensitywatershed_maximasize'],
-#                                               self.params['intensitywatershed_minmergesize'],
-#                                               kind='intensity')
 
         container = ccore.ImageMaskContainer(image, img_bin, self.params['removeborderobjects'])
- 
+
         # calculate offset: mean on the background region, as given by the segmentation result
-        # no locality: simply a global mean on the image. 
+        # no locality: simply a global mean on the image.
         np_image = image.toArray(True)
         np_img_bin = img_bin.toArray(True)
         offset = np_image[np_img_bin==0].mean()
-        
+
         self.postprocessing(container, self.params['postprocessing'],
                             (self.params['postprocessing_roisize_min'], self.params['postprocessing_roisize_max']),
                             (self.params['postprocessing_intensity_min'], self.params['postprocessing_intensity_max']),
@@ -969,8 +948,6 @@ class SegmentationPluginPrimaryLoadFromFile(SegmentationPluginPrimary):
         match_result = match_results[0]
 
         img = ccore.readImage(main_folder + locator_match + match_result)
-#        img_pre = SegmentationPluginPrimary.prefilter(self, img, 2)
-#        img_bin = SegmentationPluginPrimary.threshold(self, img_pre, 20, 3)
 
         container = ccore.ImageMaskContainer(image, img, False)
         return container
@@ -1254,7 +1231,7 @@ class SegmentationPluginModification(_SegmentationPlugin):
 
     PARAMS = [('expansion_size', IntTrait(5, 0, 4000, label='Expansion size')),
               ('shrinking_size', IntTrait(5, 0, 4000, label='Shrinking size')),
-              ]
+               ]
 
     @stopwatch()
     def _run(self, meta_image, container):

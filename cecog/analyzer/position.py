@@ -50,8 +50,8 @@ from cecog.util.stopwatch import StopWatch
 from cecog.util.util import makedirs
 from cecog.util.ctuple import COrderedDict
 from cecog.learning.learning import ClassDefinitionUnsup
+from cecog.features import FEATURE_MAP
 
-import pdb
 
 FEATURE_MAP = {'featurecategory_intensity': ['normbase', 'normbase2'],
                'featurecategory_haralick': ['haralick', 'haralick2'],

@@ -22,7 +22,7 @@ import glob
 import copy
 import types
 import numpy
-import pdb, os
+
 
 from cecog import ccore
 from cecog.colors import Colors
@@ -319,13 +319,7 @@ class Channel(ChannelCore):
         return bg_image
 
     def normalize_image(self, plate_id=None):
-        try:
-            import pydevd
-            pydevd.connected = True
-            pydevd.settrace(suspend=False)
-            print 'Thread enabled interactive eclipse debuging...'
-        except:
-            pass
+
         img_in = self.meta_image.image
         if self.bFlatfieldCorrection:
             self.logger.debug("* using flat field correction with image from %s"
