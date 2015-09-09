@@ -42,33 +42,37 @@ def find_resource_dir():
     """Return a normalized absolute path to the resource directory.
 
     Function defines the search order for different locations i.e.
-    installations, bundeled binaries and the the source tree.
+    installations, bundeled binaries and the source tree.
     """
+
+    rdirs = []
+            
+    rdirs.extend([join(dirname(sys.executable), 'resources'),
+                  join(dirname(abspath(sys.argv[0])).replace('bin', 'share'),
+                       'cellcognition', 'resources'),
+                  join(sys.exec_prefix, 'share', 'cellcognition', 'resources'),
+                  'resources',
+                  join(dirname(__file__), os.pardir, 'resources')])
 
     environment_paths = filter(lambda x: os.path.basename(os.path.abspath(x)) == 'site-packages',
                                os.environ['PYTHONPATH'].split(':'))
-    rdirs = []
-    if len(environment_paths) > 0:
-        rdirs.extend([os.path.join(x, os.pardir, os.pardir, os.pardir, 'share', 'cellcognition', 'resources')
-                      for x in environment_paths])
-            
-    rdirs.extend([join(dirname(sys.executable), 'resources'),
-             join(dirname(abspath(sys.argv[0])).replace('bin', 'share'),
-                  'cellcognition', 'resources'),
-	     join(sys.exec_prefix, 'share', 'cellcognition', 'resources'),
-             'resources',
-             join(dirname(__file__), os.pardir, 'share', 'cellcognition', 'resources')])
 
-    
+    if len(environment_paths) > 0:
+        env_path_candidates = [join(x, os.pardir, os.pardir, os.pardir, 'share', 'cellcognition', 'resources')
+                               for x in environment_paths]
+        rdirs.extend(filter(lambda x: isdir(normpath(abspath(x))), env_path_candidates))
+
+    for rdir in rdirs:
+        print '%s\t%s\t%s' % (rdir, normpath(abspath(rdir)), isdir(normpath(abspath(rdir))))
+            
     for rdir in rdirs:
         if isdir(rdir):
             break
     rdir = normpath(abspath(rdir))
 
     if not isdir(rdir):
-        raise IOError("Resource path '%s' not found." %rdir)
+        raise IOError("Resource path '%s' not found." % rdir)
     return rdir
-
 
 class ConfigParser(RawConfigParser):
     """Custom config parser with sanity check."""
