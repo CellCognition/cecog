@@ -37,7 +37,6 @@ class LogFile(file):
         super(LogFile, self).write(*args, **kw)
         self.flush()
 
-
 def find_resource_dir():
     """Return a normalized absolute path to the resource directory.
 
@@ -55,15 +54,15 @@ def find_resource_dir():
                   join(dirname(__file__), os.pardir, 'resources')])
 
     environment_paths = filter(lambda x: os.path.basename(os.path.abspath(x)) == 'site-packages',
-                               os.environ['PYTHONPATH'].split(':'))
+                               os.environ['PYTHONPATH'].split(os.pathsep))
 
     if len(environment_paths) > 0:
         env_path_candidates = [join(x, os.pardir, os.pardir, os.pardir, 'share', 'cellcognition', 'resources')
                                for x in environment_paths]
         rdirs.extend(filter(lambda x: isdir(normpath(abspath(x))), env_path_candidates))
 
-    for rdir in rdirs:
-        print '%s\t%s\t%s' % (rdir, normpath(abspath(rdir)), isdir(normpath(abspath(rdir))))
+#    for rdir in rdirs:
+#        print '%s\t%s\t%s' % (rdir, normpath(abspath(rdir)), isdir(normpath(abspath(rdir))))
             
     for rdir in rdirs:
         if isdir(rdir):
