@@ -55,7 +55,7 @@ def find_resource_dir():
                   join(dirname(__file__), os.pardir, 'resources')])
 
     environment_paths = filter(lambda x: os.path.basename(os.path.abspath(x)) == 'site-packages',
-                               os.environ['PYTHONPATH'].split(':'))
+                               os.environ['PYTHONPATH'].split(os.pathsep))
 
     if len(environment_paths) > 0:
         env_path_candidates = [join(x, os.pardir, os.pardir, os.pardir, 'share', 'cellcognition', 'resources')
