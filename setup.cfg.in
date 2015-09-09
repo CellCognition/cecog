@@ -1,25 +1,7 @@
-# make a local copy "setyp.cfg" of this file and adjust it acordingly
-# don't checkin your local directory names
-# [build_ext]
-# include_dirs=/usr/local/include
-# library_dirs=/usr/local/lib
-# libraries = boost_python
+[build_ext]
+# include_dirs=/Users/hoefler/sandbox/lib-static/include/:/cecoglibs/vigra/include
+# library_dirs=/Users/hoefler/sandbox/lib-static/lib/:/cecoglibs/vigra/lib
 
-[py2app]
-# setting argv_emulation causes the app to get stuck in the splash screen
-# don't use optimize=1, sklearn needs doc strings by any means to not cause a
-# crash in the bundle
-argv_emulation=False
-strip=True
-optimize=1
-iconfile=resources/cecog_analyzer_icon.icns
-packages=h5py,vigra,sklearn
-arch=x86_64
-matplotlib_backends=agg,qt4agg,macosx
-
-[py2exe]
-optimize=1
-compressed=True
-skip_archive=False
-bundle_files=3
-packages=h5py,vigra,sklearn
+# vigra 1.10, boost 1.57
+include_dirs=/cecoglibs/boost/include:/cecoglibs/vigra/include:/usr/local/include
+library_dirs=/cecoglibs/boost/lib/:/cecoglibs/vigra/lib:/usr/local/lib

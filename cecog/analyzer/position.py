@@ -17,6 +17,8 @@ __source__ = '$URL$'
 import os
 import shutil
 import numpy as np
+import types
+
 from collections import OrderedDict
 from os.path import join, basename, isdir
 
@@ -48,6 +50,7 @@ from cecog.util.stopwatch import StopWatch
 from cecog.util.util import makedirs
 from cecog.util.ctuple import COrderedDict
 from cecog.learning.learning import ClassDefinitionUnsup
+from cecog.features import FEATURE_MAP
 
 
 FEATURE_MAP = {'featurecategory_intensity': ['normbase', 'normbase2'],
@@ -61,8 +64,15 @@ FEATURE_MAP = {'featurecategory_intensity': ['normbase', 'normbase2'],
                                               'axes'],
                'featurecategory_convhull': ['convexhull'],
                'featurecategory_distance': ['distance'],
-               'featurecategory_moments': ['moments']}
+               'featurecategory_moments': ['moments'],
+               'featurecategory_spotfeatures': ['spotfeatures'],
+               }
 
+DEFAULT_FEATURE_PARAMS = {
+                          'featurecategory_granugrey': {'se': (1, 2, 3, 5, 7)},
+                          'featurecategory_haralick': {'dist': (1, 2, 4, 8)},
+                          'featurecategory_spotfeatures': {'diameter': 5, 'thresh': 8},
+                          }
 
 class PositionCore(LoggerObject):
 
@@ -192,18 +202,28 @@ class PositionCore(LoggerObject):
         for category, feature in FEATURE_MAP.iteritems():
             if self.settings.get(SECTION_NAME_FEATURE_EXTRACTION,
                                  self._resolve_name(ch_name, category)):
-                if "haralick" in category:
-                    try:
-                        f_cat_params['haralick_categories'].extend(feature)
-                    except KeyError:
-                        assert isinstance(feature, list)
-                        f_cat_params['haralick_categories'] = feature
-                else:
-                    f_categories += feature
+                
+                f_categories += feature
 
-        if f_cat_params.has_key("haralick_categories"):
-            f_cat_params['haralick_distances'] = (1, 2, 4, 8)
+                if category in DEFAULT_FEATURE_PARAMS:
+                    f_cat_params[category] = {}
+                    for option in DEFAULT_FEATURE_PARAMS[category]:
+                        option_key = self._resolve_name(ch_name, '%s_%s' % (option, category.split('_')[-1]))
+                        f_cat_params[category][option] = DEFAULT_FEATURE_PARAMS[category][option]
 
+                        if self.settings.has_option(SECTION_NAME_FEATURE_EXTRACTION, option_key):
+                            str_opt = self.settings.get(SECTION_NAME_FEATURE_EXTRACTION, option_key)
+                            
+                            if type(str_opt) != types.StringType:
+                                f_cat_params[category][option] = str_opt
+                            elif len(str_opt) > 0:
+                                f_cat_params[category][option] = eval(str_opt) #tuple([int(x) for x in str_opt.split(',')])
+
+#         print 'f_categories'
+#         print f_categories
+#         print 'f_cat_params'
+#         print f_cat_params
+        
         return f_categories, f_cat_params
 
     def setup_channel(self, proc_channel, col_channel, zslice_images,

@@ -24,6 +24,7 @@ from cecog.gui.analyzer import BaseProcessorFrame
 class ErrorCorrectionFrame(BaseProcessorFrame):
 
     DISPLAY_NAME = 'Error Correction'
+    ICON = ":error-correction.png"
 
     def __init__(self, settings, parent, name):
         super(ErrorCorrectionFrame, self).__init__(settings, parent, name)

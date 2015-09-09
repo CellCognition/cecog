@@ -1,0 +1,92 @@
+<html>
+  <head>
+    <link rel="stylesheet"  type="text/css" href="css/help.css">
+  </head>
+  <body>
+    <h1 id="CecogAnalyzerInstallationTips">CecogAnalyzer - Getting started</h1>
+    <p>
+      The <a class="wiki" href="http://www.cellcognition.org/wiki/CecogAnalyzer">
+        CecogAnalyzer</a>
+      package comes with demo data (battery package) included.
+      <br><br>
+      It contains
+
+      <ul><li>a small set of raw images (10 timepoints of H2b-aTubulin)
+        </li><li>the two classifiers for H2b and aTubulin to test classification
+        </li><li>a pre-configured settings file which is loaded on start-up.
+      </li></ul>
+    </p>
+
+    <p>
+      It allows you to:
+    </p>
+    <ul>
+      <li>test <strong>Object Detection</strong> of the <i>primary</i>
+        (H2b) and <i>secondary</i> (aTubulin) channels
+      </li>
+      <li>retrain and test the classifier for H2b and aTubulin in
+        <strong>Classification</strong>
+      </li>
+      <li>test the tracking and select events
+        in <strong>Tracking</strong> (only few short tracks
+        are found with the current settings within the 10 frames)
+      </li>
+    </ul>
+
+    <h2 id="Packagedata">Package data</h2>
+    <p>
+      The package contains a sub-folder <strong>Data</strong> with
+    </p>
+    <ul>
+      <li><tt>Settings</tt>
+        <ul>
+          <li>
+            <tt>demo_settings.conf</tt>, the settings file which is
+            loaded on startup. All paths to directories and files
+            contain the string <tt><i>$BATTERY_PACKAGE</i></tt>, which is
+            replaced the by your local path where the demo data is installed.
+          </li>
+          <li>
+            <tt>graph_primary.xml</tt>,
+            an example for an hmm constraint file (H2b)
+          </li>
+          <li><tt>graph_secondary.xml</tt>,
+            an example for an hmm constraint file (Tubulin)
+          </li>
+          <li>
+            <tt>position_labels.txt</tt>
+            , position labels such as OligoID or GeneSymbol
+          </li>
+        </ul>
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <tt>Classifier</tt>
+        <ul>
+          <li>the class definition and sample annotations to pick samples with the larger data set, feature and SVM models to test (or train) the H2b and aTubulin classifiers
+    </li></ul></li></ul><ul><li><tt>Images</tt>
+        <ul><li>the input folder of the raw images
+
+    </li></ul></li></ul><ul><li><tt>Analysis</tt>
+        <ul><li>the output folder where results are written to
+    </li></ul></li></ul><p>
+      <strong>Note</strong><br />
+      With the included raw images picking of classifier samples is not
+      possible since not all necessary positions/timepoints are included.<br />
+      Please download the larger H2b-Tubulin data.
+    </p>
+    <h2 id="Motifselectionerrorcorrection">Motif selection &amp; error correction</h2>
+    <p>
+      With the included data and settings only few mitotic events with four frames duration will be selected.
+    </p>
+
+    <p>
+      To perform motif selection and error correction as presented in our paper more timepoints are needed than
+      the package contains. Larger data sets can be found online at <a class="wiki" href="http://www.cellcognition.org/wiki/Download">downloads</a>.
+    </p>
+    <p>
+      You also might want to increase the length of the selected tracks, especially after the pro-prometa onset. Increase therefore the values in <strong>Tracking</strong> -&gt; <strong>Timepoints [post]</strong> and <strong>Timepoints [pre]</strong>.
+    </p>
+  </body>
+</html>

@@ -23,9 +23,9 @@ from collections import OrderedDict
 
 import numpy
 
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
-from PyQt4.Qt import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.Qt import *
 
 from qimage2ndarray import array2qimage
 
@@ -221,13 +221,13 @@ class EnhancementFrame(QFrame):
             btn = QPushButton(name, frame_grp)
             btn.toggled.connect(fct(name))
             btn.setCheckable(True)
-            btn.setStyleSheet('QPushButton {'
-                              'border: 1px solid #888888;'
-                              'border-radius: 3px;'
-                              'padding: 2px; font-size: 12px;'
-                              'min-width: 40px;}'
-                              'QPushButton:checked { background-color: #999999;'
-                              'border: 1px solid #444444;}')
+#             btn.setStyleSheet('QPushButton {'
+#                               'border: 1px solid #888888;'
+#                               'border-radius: 3px;'
+#                               'padding: 2px; font-size: 12px;'
+#                               'min-width: 40px;}'
+#                               'QPushButton:checked { background-color: #999999;'
+#                               'border: 1px solid #444444;}')
             grp.addButton(btn)
             layout_grp.addWidget(btn)
             self._display_settings[name] = DisplaySettings(0, 2**bitdepth)

@@ -20,9 +20,9 @@ from os.path import isdir
 import numpy
 from collections import OrderedDict
 
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
-from PyQt4.Qt import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.Qt import *
 
 from cecog import CHANNEL_PREFIX, CH_VIRTUAL, CH_PRIMARY, CH_OTHER
 from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
@@ -350,10 +350,12 @@ class ClassificationFrame(BaseProcessorFrame):
 
     TABS = ['Primary Channel', 'Secondary Channel',
             'Tertiary Channel', 'Merged Channel']
+    ICON = ":classification.png"
 
     PICKING = 'PICKING'
     TRAINING = 'TRAINING'
     TESTING = 'TESTING'
+
 
     def __init__(self, settings, parent, name):
         super(ClassificationFrame, self).__init__(settings, parent, name)

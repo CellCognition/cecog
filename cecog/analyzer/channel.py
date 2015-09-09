@@ -217,17 +217,44 @@ class Channel(ChannelCore):
         self._features_calculated = True
         for region_name, container in self.containers.iteritems():
             object_holder = ObjectHolder(region_name)
-            if not container is None:
-                for strFeatureCategory in self.lstFeatureCategories:
+            if not container is None:                
+                container.debug = False
+                if container.debug:
+                    container.debug_folder = os.path.join("/Users/twalter/temp/spotfeatures", 
+                                                          self.meta_image.coordinate.position)
+                    if not os.path.exists(container.debug_folder):
+                        os.makedirs(container.debug_folder)
+                        print 'generated ', container.debug_folder
+                    container.debug_prefix = 'img'
+                
+                # pass parameters to container
+                for feature in self.dctFeatureParameters:
+                    if feature in ['featurecategory_haralick', 'featurecategory_haralick2']:
+                        container.resetHaralick()
+                        for haralick_size in self.dctFeatureParameters[feature]['dist']:
+                            container.addHaralickValue(haralick_size)
+                    elif feature == 'featurecategory_granulometry':
+                        container.resetGranulometry()
+                        for val in self.dctFeatureParameters[feature]['se']:
+                            container.addGranulometryValue(val)
+                    elif feature == 'featurecategory_spotfeatures':
+                        container.spot_diameter = self.dctFeatureParameters[feature]['diameter']
+                        container.spot_threshold = self.dctFeatureParameters[feature]['thresh']
+                
+                # apply feature                        
+                for strFeatureCategory in self.lstFeatureCategories:                    
                     container.applyFeature(strFeatureCategory)
 
+                # ---                
+                # to replace
                 # calculate set of haralick features
                 # (with differnt distances)
-                if 'haralick_categories' in self.dctFeatureParameters:
-                    for strHaralickCategory in self.dctFeatureParameters['haralick_categories']:
-                        for iHaralickDistance in self.dctFeatureParameters['haralick_distances']:
-                            container.haralick_distance = iHaralickDistance
-                            container.applyFeature(strHaralickCategory)
+#                if 'haralick_categories' in self.dctFeatureParameters:
+#                    for strHaralickCategory in self.dctFeatureParameters['haralick_categories']:
+#                        for iHaralickDistance in self.dctFeatureParameters['haralick_distances']:
+#                            container.haralick_distance = iHaralickDistance
+#                            container.applyFeature(strHaralickCategory)
+                # ---                
 
                 for obj_id, c_obj in container.getObjects().iteritems():
 
@@ -293,13 +320,7 @@ class Channel(ChannelCore):
         return bg_image
 
     def normalize_image(self, plate_id=None):
-        try:
-            import pydevd
-            pydevd.connected = True
-            pydevd.settrace(suspend=False)
-            print 'Thread enabled interactive eclipse debuging...'
-        except:
-            pass
+
         img_in = self.meta_image.image
         if self.bFlatfieldCorrection:
             self.logger.debug("* using flat field correction with image from %s"

@@ -548,6 +548,86 @@ PyObject * pyImClose(IMAGE1 const &imgIn, int size, int connectivity=8)
 }
 
 template <class IMAGE1>
+PyObject * pyImAreaClose(IMAGE1 const &imgIn, int size, int connectivity=8)
+{
+  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
+
+  using namespace cecog::morpho;
+
+  if (connectivity == 8) {
+    neighborhood2D nb(WITHOUTCENTER8, imgIn.size());
+    ImAreaClose(srcImageRange(imgIn), destImage(*imgPtr), size, nb);
+  }
+
+  if (connectivity == 4) {
+    neighborhood2D nb(WITHOUTCENTER4, imgIn.size());
+    ImAreaClose(srcImageRange(imgIn), destImage(*imgPtr), size, nb);
+  }
+
+  return incref(object(imgPtr).ptr());
+}
+
+template <class IMAGE1>
+PyObject * pyImAreaOpen(IMAGE1 const &imgIn, int size, int connectivity=8)
+{
+  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
+
+  using namespace cecog::morpho;
+
+  if (connectivity == 8) {
+    neighborhood2D nb(WITHOUTCENTER8, imgIn.size());
+    ImAreaOpen(srcImageRange(imgIn), destImage(*imgPtr), size, nb);
+  }
+
+  if (connectivity == 4) {
+    neighborhood2D nb(WITHOUTCENTER4, imgIn.size());
+    ImAreaOpen(srcImageRange(imgIn), destImage(*imgPtr), size, nb);
+  }
+
+  return incref(object(imgPtr).ptr());
+}
+
+template <class IMAGE1>
+PyObject * pyImDiameterOpen(IMAGE1 const &imgIn, int size, int connectivity=8)
+{
+  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
+
+  using namespace cecog::morpho;
+
+  if (connectivity == 8) {
+    neighborhood2D nb(WITHOUTCENTER8, imgIn.size());
+    ImDiameterOpen(srcImageRange(imgIn), destImage(*imgPtr), size, nb);
+  }
+
+  if (connectivity == 4) {
+    neighborhood2D nb(WITHOUTCENTER4, imgIn.size());
+    ImDiameterOpen(srcImageRange(imgIn), destImage(*imgPtr), size, nb);
+  }
+
+  return incref(object(imgPtr).ptr());
+}
+
+template <class IMAGE1>
+PyObject * pyImDiameterClose(IMAGE1 const &imgIn, int size, int connectivity=8)
+{
+  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
+
+  using namespace cecog::morpho;
+
+  if (connectivity == 8) {
+    neighborhood2D nb(WITHOUTCENTER8, imgIn.size());
+    ImDiameterClose(srcImageRange(imgIn), destImage(*imgPtr), size, nb);
+  }
+
+  if (connectivity == 4) {
+    neighborhood2D nb(WITHOUTCENTER4, imgIn.size());
+    ImDiameterClose(srcImageRange(imgIn), destImage(*imgPtr), size, nb);
+  }
+
+  return incref(object(imgPtr).ptr());
+}
+
+template <class IMAGE1>
 PyObject * pyImOpen(IMAGE1 const &imgIn, int size, int connectivity=8)
 {
   std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
@@ -1849,6 +1929,21 @@ static void wrap_images()
   def("constrainedWatershed", pyImConstrainedWatershed<vigra::UInt16Image, vigra::UInt16Image, vigra::UInt16Image>);
   def("constrainedWatershed", pyImConstrainedWatershed<vigra::Int16Image, vigra::UInt16Image, vigra::UInt16Image>);
 
+  def("diameter_open", pyImDiameterOpen<vigra::UInt8Image>);
+  def("diameter_open", pyImDiameterOpen<vigra::UInt16Image>);
+  def("diameter_open", pyImDiameterOpen<vigra::Int16Image>);
+
+  def("diameter_close", pyImDiameterClose<vigra::UInt8Image>);
+  def("diameter_close", pyImDiameterClose<vigra::UInt16Image>);
+  def("diameter_close", pyImDiameterClose<vigra::Int16Image>);
+
+  def("area_open", pyImAreaOpen<vigra::UInt8Image>);
+  def("area_open", pyImAreaOpen<vigra::UInt16Image>);
+  def("area_open", pyImAreaOpen<vigra::Int16Image>);
+
+  def("area_close", pyImAreaClose<vigra::UInt8Image>);
+  def("area_close", pyImAreaClose<vigra::UInt16Image>);
+  def("area_close", pyImAreaClose<vigra::Int16Image>);
 
   def("erode", pyImErode<vigra::UInt8Image>);
   def("erode", pyImErode<vigra::UInt16Image>);

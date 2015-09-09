@@ -20,9 +20,11 @@ import os
 import types
 import functools
 
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
-from PyQt4.Qt import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.Qt import *
+
+from PyQt5 import QtWidgets
 
 from cecog.gui.guitraits import (StringTrait,
                                  IntTrait,
@@ -34,17 +36,16 @@ from cecog.gui.guitraits import (StringTrait,
                                  DictTrait,
                                  ListTrait
                                  )
-from cecog.environment import CecogEnvironment
 
-
-class TraitDisplayMixin(QFrame):
+class TraitDisplayMixin(QtWidgets.QFrame):
 
     DISPLAY_NAME = None
 
     def __init__(self, settings,
                  parent=None, has_label_link=True, label_click_callback=None,
                  *args, **kw):
-        super(TraitDisplayMixin, self).__init__(parent , *args, **kw)
+
+        super(TraitDisplayMixin, self).__init__(parent, *args, **kw)
         self._registry = {}
         self._settings = settings
         self._extra_columns = 0
@@ -179,19 +180,21 @@ class TraitDisplayMixin(QFrame):
     def _create_label(self, parent, label, link=None):
         if link is None:
             link = label
-        w_label = QLabel(parent)
+        w_label = ClickableQLabel(parent)
 
         if self._has_label_link and link is not False:
             w_label.setTextFormat(Qt.AutoText)
-            w_label.setStyleSheet(("*:hover { border:none; background: "
-                                   "#e8ff66; text-decoration: underline;}"))
-            w_label.setText(('<style>a { color: black; text-decoration: none;'
-                             '}</style> <a href="%s">%s</a>') % (link, label))
+#             w_label.setStyleSheet(("*:hover { border:none; background: "
+#                                    "#e8ff66; text-decoration: underline;}"))
+            w_label.setText(label)
+            w_label.setLink(link)
+
             w_label.setToolTip('Click on the label for help.')
             if self._label_click_callback is None:
-                w_label.linkActivated.connect(self._on_show_help)
+                w_label.clicked.connect(self._on_show_help)
+#                 w_label.linkActivated.connect(self._on_show_help)
             else:
-                w_label.linkActivated.connect(
+                w_label.clicked.connect(
                     functools.partial(self._label_click_callback, link))
         else:
             w_label.setText(label)
@@ -233,16 +236,16 @@ class TraitDisplayMixin(QFrame):
             trait.set_value(w_input, value)
             handler = lambda name: lambda value: self._set_value(name, value,
                                                                  tooltip=value)
-            self.connect(w_input, SIGNAL('textEdited(QString)'),
-                         handler(trait_name))
+
+            w_input.textEdited.connect(handler(trait_name))
 
             if trait.widget_info != StringTrait.STRING_NORMAL and \
                     trait.widget_info != StringTrait.STRING_GRAYED:
                 w_button = QPushButton("Browse", parent)
                 handler2 = lambda name, mode: lambda: \
                     self._on_browse_name(name, mode)
-                self.connect(w_button, SIGNAL('clicked()'),
-                             handler2(trait_name, trait.widget_info))
+                w_button.clicked.connect(
+                    handler2(trait_name, trait.widget_info))
 
             if trait.widget_info == StringTrait.STRING_GRAYED:
                 w_input.setReadOnly(True)
@@ -255,8 +258,7 @@ class TraitDisplayMixin(QFrame):
             trait.set_value(w_input, value)
             if not trait.step is None:
                 w_input.setSingleStep(trait.step)
-            self.connect(w_input, SIGNAL('valueChanged(int)'),
-                         handler(trait_name))
+            w_input.valueChanged[int].connect(handler(trait_name))
             trait.set_widget(w_input)
 
         elif isinstance(trait, FloatTrait):
@@ -268,8 +270,7 @@ class TraitDisplayMixin(QFrame):
                 w_input.setSingleStep(trait.step)
             if not trait.digits is None:
                 w_input.setDecimals(trait.digits)
-            self.connect(w_input, SIGNAL('valueChanged(double)'),
-                         handler(trait_name))
+            w_input.valueChanged.connect(handler(trait_name))
 
         elif isinstance(trait, BooleanTrait):
             if trait.widget_info == BooleanTrait.CHECKBOX:
@@ -280,8 +281,7 @@ class TraitDisplayMixin(QFrame):
             trait.set_value(value)
             handler = lambda n: lambda v: self._set_value(n, trait.convert(v))
             w_input.setSizePolicy(policy_fixed)
-            self.connect(w_input, SIGNAL('toggled(bool)'),
-                         handler(trait_name))
+            w_input.toggled.connect(handler(trait_name))
 
         elif isinstance(trait, MultiSelectionTrait):
             w_input = QListWidget(parent)
@@ -293,8 +293,7 @@ class TraitDisplayMixin(QFrame):
                 w_input.addItem(str(item))
             trait.set_value(w_input, value)
             handler = lambda n: lambda: self._on_selection_changed(n)
-            self.connect(w_input, SIGNAL('itemSelectionChanged()'),
-                         handler(trait_name))
+            w_input.itemSelectionChanged.connect(handler(trait_name))
 
         elif isinstance(trait, SelectionTrait):
             w_input = QComboBox(parent)
@@ -303,8 +302,7 @@ class TraitDisplayMixin(QFrame):
             trait.set_value(w_input, value)
             w_input.setSizePolicy(policy_expanding)
             handler = lambda n: lambda v: self._on_current_index(n, v)
-            self.connect(w_input, SIGNAL('currentIndexChanged(int)'),
-                         handler(trait_name))
+            w_input.currentIndexChanged.connect(handler(trait_name))
 
         elif isinstance(trait, SelectionTrait2):
             w_input = QComboBox(parent)
@@ -324,8 +322,7 @@ class TraitDisplayMixin(QFrame):
             w_input.setSizePolicy(policy_expanding)
             trait.set_value(w_input, value)
             handler = lambda n: lambda: self._on_text_to_dict(n)
-            self.connect(w_input, SIGNAL('textChanged()'),
-                         handler(trait_name))
+            w_input.textChanged.connect(handler(trait_name))
 
         elif isinstance(trait, ListTrait):
             w_input = QTextEdit(parent)
@@ -333,8 +330,7 @@ class TraitDisplayMixin(QFrame):
             w_input.setSizePolicy(policy_expanding)
             trait.set_value(w_input, value)
             handler = lambda n: lambda: self._on_text_to_list(n)
-            self.connect(w_input, SIGNAL('textChanged()'),
-                         handler(trait_name))
+            w_input.textChanged.connect(handler(trait_name))
 
         else:
             raise TypeError("Cannot handle name '%s' with trait '%s'." %
@@ -409,8 +405,8 @@ class TraitDisplayMixin(QFrame):
         return self._settings.get_trait(self.name, name)
 
     def _on_show_help(self, link):
-        self.parent().helpbrowser.show( \
-            self.name, link=link, header='_header', footer='_footer')
+        self.parent().assistant.show(link)
+        self.parent().assistant.raise_()
 
     def _on_set_radio_button(self, name, value):
         # FIXME: this is somehow hacky. we need to inform all the radio-buttons
@@ -464,3 +460,15 @@ class TraitDisplayMixin(QFrame):
                 # call final handler
                 if name in self._final_handlers:
                     self._final_handlers[name]()
+
+
+class ClickableQLabel(QLabel):
+
+    clicked = pyqtSignal(str)
+
+    def setLink(self, link):
+        self.link = link
+
+    def mouseReleaseEvent(self, event):
+        self.clicked.emit(self.link)
+        return super(ClickableQLabel, self).mouseReleaseEvent(event)

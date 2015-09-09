@@ -325,7 +325,7 @@ namespace cecog
     }
 
     void operator()(VALUETYPE const & v) {
-      sum_ += (double) abs(v);
+      sum_ += (double) std::abs(v);
       //cout << "Absolute Sum :"<< (double)v << " " << (double)abs(v) << " " << sum_ << std::endl;
     }
 

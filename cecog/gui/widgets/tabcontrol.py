@@ -18,9 +18,9 @@ __all__ = ['TabControl']
 
 import functools
 
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
-from PyQt4.Qt import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.Qt import *
 
 from collections import OrderedDict
 
@@ -51,7 +51,7 @@ class TabControl(QFrame):
     def __init__(self, parent, hide_one=True):
         super(TabControl, self).__init__(parent)
 
-        self.setStyleSheet(TAB_STYLE)
+#         self.setStyleSheet(TAB_STYLE)
 
         self._hide_one = hide_one
         self._tabs = OrderedDict()

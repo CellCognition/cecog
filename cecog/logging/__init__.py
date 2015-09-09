@@ -12,6 +12,14 @@ __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
 
+class SectionNames(object):
+    GENERAL = "general"
+    OBJECTDETECTION = "objectdetection"
+    FEATUREEXTRACTION = "featureextration"
+    CLASSIFICATION = "classification"
+    TRACKING = "tracking"
+    EVENTSELECTION = "eventselection"
+
 from .logger import *
 from .handlers import *
 from .logwindow import *

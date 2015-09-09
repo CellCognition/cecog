@@ -1,0 +1,87 @@
+<html>
+    <head>
+    <link rel="stylesheet"  type="text/css" href="css/help.css">
+  </head>
+  <body>
+
+    <a name="outside"></a>
+    <a name="inside"></a>
+    <a name="rim"></a>
+    <a name="expanded"></a>
+
+    <h2>Segmentation: Secondary and tertiary regions</h2>
+
+    <a name="region_definitions"></a>
+    <h3 class="param">Region definition</h3>
+    <p class="mtext">A <b>seondary</b> or <b>tertiary</b> region is a segementation that depends on a primary segmentation such as <a href="local_adaptive_threshold.html">local adaptive threshold</a>. Its contour (outline) is usually equidistant to the primary contour. Multiple seondary regions can be defined. Features are calculated independently.
+    </p>
+    <p>
+      <img class="figure" style="background-color: white;" src="images/secondary_regions.png"/>
+    </p>
+
+    <a name="expanded"></a>
+    <h4>Expanded</h4>
+    <p class="text">
+      Enlarged version of primary regions.
+    </p>
+    <a name="expansion_size"></a>
+    <h4 class="sub">Expansion size</h4>
+    <p class="subtext">
+      Pixel increase of the primary region (unchanged for the values &equiv; 0).
+    </p>
+
+
+    <a name="inside"></a>
+    <h4>Inside</h4>
+    <p class="text">Shrinked version of primary regions.</p>
+      <a name="shrinking_size"></a>
+      <h4 class="sub">Shrinking size</h4>
+    <p class="subtext">
+      Pixel decrease of the primary region (unchanged for the values &equiv; 0).
+    </p>
+
+    <a name="outside"></a>
+    <h4>Ouside</h4>
+    <p class="text">Area outside of the primary regions.</p>
+    <a name="expansion_size"></a>
+    <h4 class="sub">Expansion size</h4>
+    <p class="subtext">
+      Pixel increase of the primary region (areas are only computed for the values &gt; 0).
+    </p>
+    <a name="separation_size"></a>
+    <h4 class="sub">Separation size</h4>
+    <p class="subtext">
+      Pixel distance between primary and outside region (areas are only computed if separation size &lt; expansion size).
+    </p>
+
+    <a name="rim"></a>
+    <h4>Rim</h4>
+    <p class="text">
+      Area around the contour of the primary regions.
+    </p>
+    <a name="expansion_size"></a>
+    <h4 class="sub">Expansion size</h4>
+    <p class="subtext">
+      Pixel increase of the primary region (areas are only computed if expansion or shrinking size &gt; 0).
+    </p>
+
+    <a name="shrinking_size"></a>
+    <h4 class="sub">Shrinking size</h4>
+    <p class="subtext">
+      Pixel decrease of the primary region (areas are only computed if expansion or shrinking size &gt; 0).</p>
+    </p>
+
+    <a name="propagate"></a>
+    <h3>Propagate region from primary</h3>
+    <p class="text">
+      Propagate region from primary segementation using an Otsu-threshold.
+    </p>
+
+    <a name="constrained_watershed"></a>
+    <h3>Constrained watershed from primary</h3>
+    <p class="text">
+      Find cell outline from primary region using seeded watershed.
+    </p>
+
+    </body>
+</html>

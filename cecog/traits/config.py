@@ -132,6 +132,7 @@ class ConfigSettings(RawConfigParser):
                     self.set(sec_name, opt_name, value)
 
     def readfp(self, fp):
+
         for plugin_manager in MetaPluginManager():
             plugin_manager.clear()
         for section in self.sections():
@@ -172,6 +173,7 @@ class ConfigSettings(RawConfigParser):
                 self.remove_section(section_name)
 
         self._merge_registry()
+
         for plugin_manager in MetaPluginManager():
             plugin_manager.init_from_settings(self)
 
