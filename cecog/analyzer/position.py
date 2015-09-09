@@ -219,10 +219,10 @@ class PositionCore(LoggerObject):
                             elif len(str_opt) > 0:
                                 f_cat_params[category][option] = eval(str_opt) #tuple([int(x) for x in str_opt.split(',')])
 
-        print 'f_categories'
-        print f_categories
-        print 'f_cat_params'
-        print f_cat_params
+#         print 'f_categories'
+#         print f_categories
+#         print 'f_cat_params'
+#         print f_cat_params
         
         return f_categories, f_cat_params
 
