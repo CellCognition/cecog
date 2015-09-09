@@ -650,34 +650,6 @@ PyObject * pyImOpen(IMAGE1 const &imgIn, int size, int connectivity=8)
 
 
 template <class IMAGE1>
-PyObject * pyImAreaOpen(IMAGE1 const &imgIn, int areaMax)
-{
-  using namespace cecog::morpho;
-
-  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
-  cecog::morpho::neighborhood2D nb(cecog::morpho::WITHOUTCENTER8, imgIn.size());
-
-  cecog::morpho::ImAreaOpen(imgIn, *imgPtr, areaMax, nb);
-
-  return incref(object(imgPtr).ptr());
-}
-
-
-template <class IMAGE1>
-PyObject * pyImDiameterOpen(IMAGE1 const &imgIn, int areaMax)
-{
-  using namespace cecog::morpho;
-
-  std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(imgIn.size()));
-  cecog::morpho::neighborhood2D nb(cecog::morpho::WITHOUTCENTER8, imgIn.size());
-
-  cecog::morpho::ImDiameterOpen(imgIn, *imgPtr, areaMax, nb);
-
-  return incref(object(imgPtr).ptr());
-}
-
-
-template <class IMAGE1>
 PyObject * pyImInfimum(IMAGE1 const &a, IMAGE1 const &b)
 {
   std::auto_ptr< IMAGE1 > imgPtr(new IMAGE1(a.size()));
@@ -1968,15 +1940,6 @@ static void wrap_images()
   def("close", pyImClose<vigra::UInt8Image>);
   def("close", pyImClose<vigra::UInt16Image>);
   def("close", pyImClose<vigra::Int16Image>);
-
-  def("areaOpen", pyImAreaOpen<vigra::UInt8Image>);
-  def("areaOpen", pyImAreaOpen<vigra::UInt16Image>);
-  def("areaOpen", pyImAreaOpen<vigra::Int16Image>);
-
-  def("diameterOpen", pyImDiameterOpen<vigra::UInt8Image>);
-  def("diameterOpen", pyImDiameterOpen<vigra::UInt16Image>);
-  def("diameterOpen", pyImDiameterOpen<vigra::Int16Image>);
-
 
   def("morphoGradient", pyImMorphoGradient<vigra::UInt8Image>);
   def("morphoGradient", pyImMorphoGradient<vigra::UInt16Image>);

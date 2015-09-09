@@ -504,8 +504,8 @@ void layer::geoLength(const MultiArrayView<2, UInt8> imin, MultiArrayView<2, UIn
 	// for perimeter
 	perimeter = (int)Q[0].size();
 	// for center
-	center[0] = round(sumX / float(perimeter));
-	center[1] = round(sumY / float(perimeter));
+	center[0] = roundf(sumX / float(perimeter));
+	center[1] = roundf(sumY / float(perimeter));
 
 	// 2. Get the pixel most far 
 	while(!Q[0].empty()){
@@ -661,12 +661,12 @@ void layer::lengthOrtho(std::list<int> *pp, int *startP, int *endP, int critere,
 		if (y_>=maxVy) {maxVy = y_;}
 		if (x_<=minVx) {minVx = x_;}
 		if (x_>=maxVx) {maxVx = x_;}
-		temp[0].push_back(round(x_));
-		temp[1].push_back(round(y_));
+		temp[0].push_back(roundf(x_));
+		temp[1].push_back(roundf(y_));
 		itx++;
 		ity++;
 	}
-	length3 = round(maxVy - minVy);
+	length3 = roundf(maxVy - minVy);
 
 
 	//#########################
@@ -676,7 +676,7 @@ void layer::lengthOrtho(std::list<int> *pp, int *startP, int *endP, int critere,
 	std::list<int> wd; //width
 	temp[0].push_back(99999999);
 	temp[1].push_back(99999999);
-	for (int i=round(minVx); i<=round(maxVx); i++){
+	for (int i=roundf(minVx); i<=roundf(maxVx); i++){
 		while(temp[0].front() != 99999999){
 			x = temp[0].front();
 			y = temp[1].front();
