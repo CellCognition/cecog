@@ -1856,7 +1856,6 @@ class SegmentationPluginDifference(_SegmentationPlugin):
         return ccore.ImageMaskContainer(image, img_labels, False, True, True)
         
         
-        
 class SegmentationPluginFRST(SegmentationPluginPrimaryLoadFromFile, _SegmentationPlugin):
     LABEL = 'FRST and watershed'
     NAME = 'frst_ws'
@@ -1910,7 +1909,7 @@ class SegmentationPluginFRST(SegmentationPluginPrimaryLoadFromFile, _Segmentatio
               ('coef7', FloatTrait(4.7345, -50.0, 50.0, label='coef4-coef5')), 
               ('coef8', FloatTrait(6.0479, -50.0, 50.0, label='coef4-coef6')), 
               ('coef9', FloatTrait(0.5598, -50.0, 50.0, label='areaS/areaL')), 
-              ('coef10', FloatTrait(-7, -50.0, 50.0, label='intercept')),       
+              ('coef10', FloatTrait(-7, -50.0, 50.0, label='intercept')),
               ]
 
     def render_to_gui(self, panel):
@@ -2034,7 +2033,7 @@ class SegmentationPluginFRST(SegmentationPluginPrimaryLoadFromFile, _Segmentatio
         im1 = ccore.numpy_to_image(imCluster, copy=True)
         
         im2 = ccore.fillHoles(im1)
-        im3 = ccore.area_Open(im2, self.params['se_size'] *self.params['se_size'])
+        im3 = ccore.area_open(im2, self.params['se_size'] *self.params['se_size'], 8)
         im4 = ccore.discDilate(im3, self.params['se_size']/2)
    
         return im4
@@ -2163,14 +2162,14 @@ class SegmentationPluginFRST(SegmentationPluginPrimaryLoadFromFile, _Segmentatio
         imCand1 = ccore.underBuild(imMarkersNu, imWS)
         if self.params["if_test"]:
             ccore.writeImage(imCand1, os.path.join(self.params["test_folder"], "imcani1.png"))
-        imCand2 = ccore.area_Open(imCand1, int(numpy.round(self.params['nuclear_diam'] \
-            * self.params['nuclear_diam'] * numpy.pi)))
+        imCand2 = ccore.area_open(imCand1, int(numpy.round(self.params['nuclear_diam'] \
+            * self.params['nuclear_diam'] * numpy.pi / 4)), 8)
         imCand3 = ccore.substractImages(imCand1, imCand2)
-        imCand2 = ccore.area_Open(imCand3, int(numpy.round(self.params['se_size'] \
-            * self.params['se_size'] )))
+        imCand2 = ccore.area_open(imCand3, int(numpy.round(self.params['se_size'] \
+            * self.params['se_size'] )), 8)
         if self.params["if_test"]:
             ccore.writeImage(imCand2, os.path.join(self.params["test_folder"], "imcani2.png"))
-        # imCand2 = ccore.diameterOpen(imCand3, int(max_size * 3))
+        # imCand2 = ccore.diameter_open(imCand3, int(max_size * 3))
         imCand1 = ccore.lengthOpening(imCand2, int(self.params['nuclear_diam'] * 2), \
             int(self.params['nuclear_diam'] * self.params['nuclear_diam'] * numpy.pi), 20)
         if self.params["if_test"]:
@@ -2178,7 +2177,6 @@ class SegmentationPluginFRST(SegmentationPluginPrimaryLoadFromFile, _Segmentatio
 
         ######## using previous segmented candidates to do an adaptive thresholding ###
         im1 = ccore.adaptiveThreshold(imOrig, imCand1, self.params['hist_l'], self.params['hist_h'])
-        ccore.writeImage(im1, os.path.join(self.params["test_folder"], "ztemp1.png"))
         if self.params["if_test"]:
             ccore.writeImage(im1, os.path.join(self.params["test_folder"], "im_4b_candi_adaptive_TH.png"))      
             
@@ -2187,7 +2185,7 @@ class SegmentationPluginFRST(SegmentationPluginPrimaryLoadFromFile, _Segmentatio
             imtmp1.init(255)
             imtmp2 = ccore.substractImages(imtmp1, imOrig)
             
-            im2 = ccore.area_Open(imtmp2, int(self.params['c_diam']) ** 2)
+            im2 = ccore.area_open(imtmp2, int(self.params['c_diam']) ** 2, 8)
             imtmp1 = ccore.substractImages(imtmp2, im2)  
             if self.params["if_test"]:
                 ccore.writeImage(imtmp1, os.path.join(self.params["test_folder"], "ztemp4a.png"))
@@ -2204,7 +2202,7 @@ class SegmentationPluginFRST(SegmentationPluginPrimaryLoadFromFile, _Segmentatio
             if self.params["if_test"]:
                 ccore.writeImage(im4, os.path.join(self.params["test_folder"], "ztemp4b.png"))
 
-#            im3 = ccore.areaOpen(im4, int(numpy.round(self.params['se_size']  * \
+#            im3 = ccore.area_open(im4, int(numpy.round(self.params['se_size']  * \
 #            self.params['se_size']  * 2)))
 #            im4 = ccore.lengthOpening(im3, int(self.params['c_diam']), \
 #                int(self.params['c_diam'] * self.params['c_diam']),  self.params['circ2'])
@@ -2232,8 +2230,8 @@ class SegmentationPluginFRST(SegmentationPluginPrimaryLoadFromFile, _Segmentatio
             im1 = imCandiLengh.copy()
 
 
-        im2 = ccore.area_Open(im1, int(numpy.round(self.params['se_size']  * \
-            self.params['se_size']  * 3)))
+        im2 = ccore.area_open(im1, int(numpy.round(self.params['se_size']  * \
+            self.params['se_size']  * 5)), 8)
         ccore.writeImage(im2, os.path.join(self.params["test_folder"], "ztemp4.png"))
            
         im1 = ccore.lengthOpening(im2, int(self.params['nuclear_diam'] * 2), \
@@ -2241,8 +2239,8 @@ class SegmentationPluginFRST(SegmentationPluginPrimaryLoadFromFile, _Segmentatio
         # im1 = ccore.substractImages(im2, im3)
         ccore.writeImage(im1, os.path.join(self.params["test_folder"], "ztemp5.png"))
             
-        im3 = ccore.area_Open(im1, int(numpy.round(self.params['se_size']  * \
-            self.params['se_size']  * 8)))
+        im3 = ccore.area_open(im1, int(numpy.round(self.params['se_size']  * \
+            self.params['se_size']  * 8)), 8)
         ccore.writeImage(im3, os.path.join(self.params["test_folder"], "ztemp6.png"))
             
         im4 = ccore.substractImages(im1, im3)
@@ -2329,3 +2327,4 @@ class SegmentationPluginFRST(SegmentationPluginPrimaryLoadFromFile, _Segmentatio
         
         return container
 
+    

@@ -258,7 +258,7 @@ namespace cecog {
         nObj1 = ImLabel(imout, imLabel1, nb);
         if (nObj1>0){
             vigra::distanceTransform(srcImageRange(imout), destImage(imtempf), 255, 2);
-            exportImage(imout.upperLeft(), imout.lowerRight(), imout.accessor(), "/home/zhang/work/image/temp/imtempout.png");
+            // exportImage(imout.upperLeft(), imout.lowerRight(), imout.accessor(), "/home/zhang/work/image/temp/imtempout.png");
 
             typename vigra::FImage::traverser itr_imtempf = imtempf.upperLeft();
             typename IMAGE1::traverser itr_imtemp = imtemp1.upperLeft();
@@ -270,7 +270,7 @@ namespace cecog {
               }
             }
             maxima(imtemp1, imtemp2);
-            exportImage(imtemp2.upperLeft(), imtemp2.lowerRight(), imtemp2.accessor(), "/home/zhang/work/image/temp/imtempp1.png");
+            // exportImage(imtemp2.upperLeft(), imtemp2.lowerRight(), imtemp2.accessor(), "/home/zhang/work/image/temp/imtempp1.png");
 
             // start scan
             int **nbMatrix = new int * [nObj1]; 
