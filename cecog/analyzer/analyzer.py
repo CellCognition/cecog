@@ -26,6 +26,8 @@ from cecog.logging import LoggerObject
 from cecog.util.util import makedirs
 from cecog.colors import hex2rgb
 
+import ipdb
+
 class CellAnalyzer(LoggerObject):
 
     def __init__(self, timeholder, position, create_images, binning_factor,
@@ -107,6 +109,7 @@ class CellAnalyzer(LoggerObject):
 
                 if extract_features:
                     self.timeholder.apply_features(channel)
+                ipdb.set_trace()
 
         if apply:
             # want apply also the pseudo channels
