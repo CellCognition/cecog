@@ -268,6 +268,15 @@ _Cecog["Stat. geom"] =  ('ls0_CAREA_avg_value',
                          'ls1_TAREA_sample_mean',
                          'ls1_TAREA_sample_sd')
 
+_Cecog["Spotfeatures"] = ('spotfeatures_avg_dist_center',
+                          'spotfeatures_avg_dist_inter_spot',
+                          'spotfeatures_avg_intensity',
+                          'spotfeatures_avg_roi_size',
+                          'spotfeatures_count',
+                          'spotfeatures_var_dist_center',
+                          'spotfeatures_var_dist_inter_spot',
+                          'spotfeatures_var_intensity')
+
 _Simple1 = FGroup('Simple1')
 _Simple1["Size"] = ("roisize",)
 _Simple1["Mean intesity"] = ('n2_avg',)
@@ -509,7 +518,16 @@ _Simple1["Texture and others"] = ('h1_2ASM',
                                  'ls1_TAREA_avg_value',
                                  'ls1_TAREA_max_value',
                                  'ls1_TAREA_sample_mean',
-                                 'ls1_TAREA_sample_sd')
+                                 'ls1_TAREA_sample_sd', 
+                                 'spotfeatures_avg_dist_center',
+                                 'spotfeatures_avg_dist_inter_spot',
+                                 'spotfeatures_avg_intensity',
+                                 'spotfeatures_avg_roi_size',
+                                 'spotfeatures_count',
+                                 'spotfeatures_var_dist_center',
+                                 'spotfeatures_var_dist_inter_spot',
+                                 'spotfeatures_var_intensity')
+
 
 FeatureGroups = OrderedDict()
 FeatureGroups[_Simple1.group_name] = _Simple1
