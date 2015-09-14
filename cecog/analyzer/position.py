@@ -52,6 +52,7 @@ from cecog.util.ctuple import COrderedDict
 from cecog.learning.learning import ClassDefinitionUnsup
 from cecog.features import FEATURE_MAP
 
+import pdb
 
 FEATURE_MAP = {'featurecategory_intensity': ['normbase', 'normbase2'],
                'featurecategory_haralick': ['haralick', 'haralick2'],
@@ -214,15 +215,26 @@ class PositionCore(LoggerObject):
                         if self.settings.has_option(SECTION_NAME_FEATURE_EXTRACTION, option_key):
                             str_opt = self.settings.get(SECTION_NAME_FEATURE_EXTRACTION, option_key)
                             
+                            default_type = type(DEFAULT_FEATURE_PARAMS[category][option])
+
                             if type(str_opt) != types.StringType:
                                 f_cat_params[category][option] = str_opt
                             elif len(str_opt) > 0:
-                                f_cat_params[category][option] = eval(str_opt) #tuple([int(x) for x in str_opt.split(',')])
+                                if default_type is types.StringType :
+                                    # in this case the default type is a string.
+                                    f_cat_params[category][option] = str_opt
+                                else:
+                                    f_cat_params[category][option] = eval(str_opt) #tuple([int(x) for x in str_opt.split(',')])
 
-#         print 'f_categories'
-#         print f_categories
-#         print 'f_cat_params'
-#         print f_cat_params
+                            found_type = type(f_cat_params[category][option])
+                            if found_type != default_type:
+                                if default_type in [types.ListType, types.TupleType]:
+                                    f_cat_params[category][option] = [f_cat_params[category][option]]                                                                  
+                                    
+        #print 'f_categories'
+        #print f_categories
+        #print 'f_cat_params'
+        #print f_cat_params
         
         return f_categories, f_cat_params
 
