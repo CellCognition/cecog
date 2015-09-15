@@ -22,8 +22,6 @@ import glob
 import copy
 import types
 import numpy
-import ipdb
-
 
 from cecog import ccore
 from cecog.colors import Colors
@@ -33,8 +31,6 @@ from cecog.analyzer.object import ImageObject, ObjectHolder, Orientation
 from cecog.logging import LoggerObject
 from cecog.plugin.metamanager import MetaPluginManager
 from cecog.util.ctuple import COrderedDict
-
-import ipdb
 
 
 class ChannelCore(LoggerObject):
@@ -216,7 +212,6 @@ class Channel(ChannelCore):
         self.meta_image.set_image(image)
 
     def apply_features(self):
-        ipdb.set_trace()
         self._features_calculated = True
         for region_name, container in self.containers.iteritems():
             object_holder = ObjectHolder(region_name)

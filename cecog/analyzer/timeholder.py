@@ -43,7 +43,6 @@ from cecog.analyzer.object import ImageObject, ObjectHolder, Orientation, Region
 
 from cecog.features import FeatureGroups
 
-
 def chunk_size(shape):
     """Helper function to compute chunk size for image data cubes."""
     c = shape[0]
