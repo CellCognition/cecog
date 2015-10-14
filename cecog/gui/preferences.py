@@ -49,6 +49,7 @@ def txt2dict(txt):
     nrows = table.shape[0]
 
     table_ = dict()
+
     for ci in xrange(ncols):
         table2 = defaultdict(dict)
         for ri in xrange(nrows):
@@ -72,14 +73,14 @@ class AppPreferences(object):
         self.host = 'http://cecog-gerlich.imp.univie.ac.at'
         self.port = 9999
 
-        self.mapping_str = ("#darwin, win32, linux\n"
+        self.mapping_str = ("#darwin, win32, linux2\n"
                             "/Volumes/groups/gerlich, M:, /groups/gerlich\n"
                             "/Volumes/clustertmp/gerlich, O:, /clustertmp/gerlich\n"
                             "/Volumes/resources, N:, /resources")
-        self.target_platform = "linux"
+        self.target_platform = "linux2"
         self.batch_size = 1
         self.cluster_support = True
-        self.stylesheet = 'dark blue'
+        self.stylesheet = 'classic'
 
         self.restoreSettings()
 
@@ -176,7 +177,7 @@ class AppPreferences(object):
 class PreferencesDialog(QtWidgets.QDialog):
 
     _osnames = {"darwin": "Mapple",
-                "linux": "Linux",
+                "linux2": "Linux",
                 "win32": "DOS"}
     _iosnames = dict([(v, k) for k, v in _osnames.iteritems()])
 
