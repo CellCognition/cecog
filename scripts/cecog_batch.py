@@ -269,7 +269,7 @@ if __name__ ==  "__main__":
             settings("Processing", "merged_errorcorrection"):
 
         thread = ErrorCorrectionThread(None, settings, imagecontainer)
-        # Dirty workaround for the cluster where I don't need a thread
-        thread.run()
+        thread.start()
+        thread.wait() # must return from run method
 
     print 'BATCHPROCESSING DONE!'
