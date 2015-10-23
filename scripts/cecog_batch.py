@@ -37,6 +37,11 @@ from cecog.io.imagecontainer import ImageContainer
 from cecog.threads.link_hdf import link_hdf5_files
 from cecog.environment import CecogEnvironment
 
+from cecog.errorcorrection import PlateRunner
+from cecog.errorcorrection import ECParams
+from cecog.units.time import TimeConverter
+
+
 ENV_INDEX_SGE = 'SGE_TASK_ID'
 
 if __name__ ==  "__main__":
@@ -76,7 +81,7 @@ if __name__ ==  "__main__":
                       help="Minimal effort allows to process positions even if images are absent."
                       "This is useful if features are written to an hdf5-file, but neither images"
                       "nor segmentation results.")
-    
+
     group2 = OptionGroup(parser, "Cluster options",
                          "These options are used in combination with a cluster.")
     group2.add_option("--cluster_index",
@@ -151,7 +156,7 @@ if __name__ ==  "__main__":
         plates = set(np.array([el.split('___') for el in positions])[:,0])
     else:
         plates=None
-    
+
     imagecontainer.import_from_settings(settings, plates_restriction=plates)
 
     # FIXME: Could be more generally specified. SGE is setting the job item index via an environment variable
@@ -222,7 +227,7 @@ if __name__ ==  "__main__":
         print 'Maybe opening the settings file and saving it with the current version of CellCognition'
         print 'may fix the problem.'
         pass
-    
+
 
     # group positions by plate
     plates = {}
@@ -259,4 +264,30 @@ if __name__ ==  "__main__":
         if len(post_hdf5_link_list) > 0:
             post_hdf5_link_list = reduce(lambda x,y: x + y, post_hdf5_link_list)
             link_hdf5_files(sorted(post_hdf5_link_list))
+
+    # Run the error correciton on the cluster
+    if settings("Processing", "primary_errorcorrection") or \
+            settings("Processing", "secondary_errorcorrection") or \
+            settings("Processing", "tertiary_errorcorrection") or \
+            settings("Processing", "merged_errorcorrection"):
+
+        md = imagecontainer.get_meta_data()
+        t_mean = md.plate_timestamp_info[0]
+        tu = TimeConverter(t_mean, TimeConverter.SECONDS)
+        increment = settings('General', 'frameincrement')
+        t_step = tu.sec2min(t_mean)*increment
+        params_ec = ECParams(settings, t_step, TimeConverter.MINUTES)
+
+        plates = imagecontainer.plates
+        outdirs = []
+        for plate in plates:
+            imagecontainer.set_plate(plate)
+            outdirs.append(imagecontainer.get_path_out())
+        # CAUTION params_ec is plate specific !!
+        platerunner = PlateRunner(plates, outdirs, params_ec)
+        try:
+            platerunner()
+        finally:
+            print "Error Correction successful"
+
     print 'BATCHPROCESSING DONE!'
