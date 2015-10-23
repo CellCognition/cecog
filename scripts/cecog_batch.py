@@ -37,10 +37,7 @@ from cecog.io.imagecontainer import ImageContainer
 from cecog.threads.link_hdf import link_hdf5_files
 from cecog.environment import CecogEnvironment
 
-from cecog.errorcorrection import PlateRunner
-from cecog.errorcorrection import ECParams
-from cecog.units.time import TimeConverter
-
+from cecog.threads import ErrorCorrectionThread
 
 ENV_INDEX_SGE = 'SGE_TASK_ID'
 
@@ -271,23 +268,8 @@ if __name__ ==  "__main__":
             settings("Processing", "tertiary_errorcorrection") or \
             settings("Processing", "merged_errorcorrection"):
 
-        md = imagecontainer.get_meta_data()
-        t_mean = md.plate_timestamp_info[0]
-        tu = TimeConverter(t_mean, TimeConverter.SECONDS)
-        increment = settings('General', 'frameincrement')
-        t_step = tu.sec2min(t_mean)*increment
-        params_ec = ECParams(settings, t_step, TimeConverter.MINUTES)
-
-        plates = imagecontainer.plates
-        outdirs = []
-        for plate in plates:
-            imagecontainer.set_plate(plate)
-            outdirs.append(imagecontainer.get_path_out())
-        # CAUTION params_ec is plate specific !!
-        platerunner = PlateRunner(plates, outdirs, params_ec)
-        try:
-            platerunner()
-        finally:
-            print "Error Correction successful"
+        thread = ErrorCorrectionThread(None, settings, imagecontainer)
+        # Dirty workaround for the cluster where I don't need a thread
+        thread.run()
 
     print 'BATCHPROCESSING DONE!'
