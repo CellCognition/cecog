@@ -47,7 +47,7 @@ def getCellH5NumberOfSites(file_):
     """Determine the number of site within a file."""
 
     try:
-        c5 = cellh5.ch5open(file_)
+        c5 = cellh5.CH5File(file_)
         nsites = 0
         for pos in c5.positions.values():
             nsites += len(pos)
