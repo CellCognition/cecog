@@ -285,7 +285,7 @@ if __name__ ==  "__main__":
             settings("Processing", "merged_errorcorrection"):
 
         nsites = getCellH5NumberOfSites(ch5file)
-        npos = len(settings("General", "positions").split(","))
+        npos = len(os.listdir(os.path.dirname(ch5file))) - 1
         npos2 = len(imagecontainer.get_meta_data().positions)
         posflag = settings("General", "constrain_positions")
         print type(posflag)
