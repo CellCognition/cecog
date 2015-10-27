@@ -46,10 +46,15 @@ ENV_INDEX_SGE = 'SGE_TASK_ID'
 def getCellH5NumberOfSites(file_):
     """Determine the number of site within a file."""
 
-    with cellh5.ch5open(file_) as c5:
+    try:
+        c5 = cellh5.ch5open(file_):
+    else:
         nsites = 0
         for pos in c5.positions.values():
             nsites += len(pos)
+    finally:
+        c5.close()
+
     return nsites
 
 
