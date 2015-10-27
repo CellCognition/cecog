@@ -291,8 +291,7 @@ if __name__ ==  "__main__":
 
         # compare the number of processed positions with the number
         # of positions to be processed
-        if (posflag and npos == nsites) or \
-                (not posflag and npos2 == nsites):
+        if (posflag and npos == nsites) or (npos2 == nsites):
 
             # only one process is supposed to run error correction
             thread = ErrorCorrectionThread(None, settings, imagecontainer)
