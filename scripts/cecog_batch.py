@@ -280,7 +280,7 @@ if __name__ ==  "__main__":
             settings("Processing", "tertiary_errorcorrection") or \
             settings("Processing", "merged_errorcorrection"):
 
-        nsits = getCellH5NumberOfSites(ch5file)
+        nsites = getCellH5NumberOfSites(ch5file)
         npos = len(settings("General", "positions").split(","))
         npos2 = len(imagecontainer.get_meta_data().positions)
         posflag = settings("General", "constrain_positions")
