@@ -292,7 +292,8 @@ if __name__ ==  "__main__":
         # compare the number of processed positions with the number
         # of positions to be processed
         if (posflag and npos == nsites) or (npos2 == nsites):
-
+            print ch5file
+            print nsites, npos, posflag, npos2
             # only one process is supposed to run error correction
             thread = ErrorCorrectionThread(None, settings, imagecontainer)
             thread.start()
