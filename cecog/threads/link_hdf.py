@@ -12,17 +12,19 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
+
 from os.path import join, split, exists
 import os
 import h5py
 import logging
 
+
 def link_hdf5_files(post_hdf5_link_list):
     logger = logging.getLogger()
-    
+
     if len(post_hdf5_link_list) == 0:
         return
-    
+
     if post_hdf5_link_list[0] == 0:
         return
 
@@ -41,7 +43,7 @@ def link_hdf5_files(post_hdf5_link_list):
 
     if exists(all_pos_hdf5_filename):
         f = h5py.File(all_pos_hdf5_filename, 'a')
-        ### This is dangerous, several processes open the file for writing...
+        # This is dangerous, several processes open the file for writing...
         logger.info(("_all_positons.hdf file found, "
                      "trying to reuse it by overwrite old external links..."))
 
@@ -82,3 +84,4 @@ def link_hdf5_files(post_hdf5_link_list):
                 h5py.ExternalLink(os.path.basename(fname), (POSITION_PREFIX + '%s')
                                   % (fplate, fwell, fpos))
         f.close()
+    return all_pos_hdf5_filename

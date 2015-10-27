@@ -36,10 +36,22 @@ from cecog.analyzer.core import AnalyzerCore
 from cecog.io.imagecontainer import ImageContainer
 from cecog.threads.link_hdf import link_hdf5_files
 from cecog.environment import CecogEnvironment
-
 from cecog.threads import ErrorCorrectionThread
 
+import cellh5
+
 ENV_INDEX_SGE = 'SGE_TASK_ID'
+
+
+def getCellH5NumberOfSites(file_):
+    """Determine the number of site within a file."""
+
+    with cellh5.ch5open(file_) as c5:
+        nsites = 0
+        for pos in c5.positions.values():
+            nsites += len(pos)
+    return nsites
+
 
 if __name__ ==  "__main__":
     os.umask(0o000)
@@ -260,7 +272,7 @@ if __name__ ==  "__main__":
     if settings.get('Output', 'hdf5_create_file') and settings.get('Output', 'hdf5_merge_positions'):
         if len(post_hdf5_link_list) > 0:
             post_hdf5_link_list = reduce(lambda x,y: x + y, post_hdf5_link_list)
-            link_hdf5_files(sorted(post_hdf5_link_list))
+            ch5file = link_hdf5_files(sorted(post_hdf5_link_list))
 
     # Run the error correciton on the cluster
     if settings("Processing", "primary_errorcorrection") or \
@@ -268,8 +280,10 @@ if __name__ ==  "__main__":
             settings("Processing", "tertiary_errorcorrection") or \
             settings("Processing", "merged_errorcorrection"):
 
-        thread = ErrorCorrectionThread(None, settings, imagecontainer)
-        thread.start()
-        thread.wait() # must return from run method
+        if len(imagecontainer.get_meta_data().positions) == getCellH5NumberOfSites(ch5file):
+            # only one process is supposed to run error correction
+            thread = ErrorCorrectionThread(None, settings, imagecontainer)
+            thread.start()
+            thread.wait() # must return from run method
 
     print 'BATCHPROCESSING DONE!'

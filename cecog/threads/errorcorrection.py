@@ -21,6 +21,7 @@ from cecog.errorcorrection import PlateRunner
 from cecog.errorcorrection import ECParams
 from cecog.units.time import TimeConverter
 
+
 class ErrorCorrectionThread(CoreThread):
 
     def __init__(self, parent, settings, imagecontainer):
