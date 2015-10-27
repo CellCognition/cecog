@@ -288,6 +288,7 @@ if __name__ ==  "__main__":
         npos = len(settings("General", "positions").split(","))
         npos2 = len(imagecontainer.get_meta_data().positions)
         posflag = settings("General", "constrain_positions")
+        print type(posflag)
 
         # compare the number of processed positions with the number
         # of positions to be processed
