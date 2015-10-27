@@ -285,7 +285,8 @@ if __name__ ==  "__main__":
         npos2 = len(imagecontainer.get_meta_data().positions)
         posflag = settings("General", "constrain_positions")
 
-        # either the full plate is processed or the positions were constrained
+        # compare the number of processed positions with the number
+        # of positions to be processed
         if (posflag and npos == nsites) or \
                 (not posflag and npos2 == nsites):
 
