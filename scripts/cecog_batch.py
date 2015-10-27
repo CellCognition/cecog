@@ -274,13 +274,21 @@ if __name__ ==  "__main__":
             post_hdf5_link_list = reduce(lambda x,y: x + y, post_hdf5_link_list)
             ch5file = link_hdf5_files(sorted(post_hdf5_link_list))
 
-    # Run the error correciton on the cluster
+    # Run the error correction on the cluster
     if settings("Processing", "primary_errorcorrection") or \
             settings("Processing", "secondary_errorcorrection") or \
             settings("Processing", "tertiary_errorcorrection") or \
             settings("Processing", "merged_errorcorrection"):
 
-        if len(imagecontainer.get_meta_data().positions) == getCellH5NumberOfSites(ch5file):
+        nsits = getCellH5NumberOfSites(ch5file)
+        npos = len(settings("General", "positions").split(","))
+        npos2 = len(imagecontainer.get_meta_data().positions)
+        posflag = settings("General", "constrain_positions")
+
+        # either the full plate is processed or the positions were constrained
+        if (posflag and npos == nsites) or \
+                (not posflag and npos2 == nsites):
+
             # only one process is supposed to run error correction
             thread = ErrorCorrectionThread(None, settings, imagecontainer)
             thread.start()
