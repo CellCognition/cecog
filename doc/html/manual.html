@@ -489,6 +489,18 @@
       </p>
     </a>
 
+    <a name="moments"><h3>Spot Features</h3>
+      <p class="text">Spot features first detect spots inside the region and then calculate features describing their distribution as a point cloud. 
+      Spot detection is performed with diameter opening, as defined in [1]. This algorithm extracts all bright details with diameter smaller than the given parameter and
+      a local contrast larger than the given threshold. The features are the number of spots, the average and standard deviation of their
+      intensity distributions, the average and standard deviation of their distance to the center of the region, the average and
+      standard deviation of all inter-spot-distances and the average and standard deviation of their sizes.  
+      
+      [1] Walter T., Klein, J.C.: Automatic Detection of Microaneurysms in Color fundus Images of the Human Retina by Means of the Bounding Box Closing. In: COLOSIMO, A., GIULIANI, A., SIRABELLA, P.: Lecture Notes in Computer Science, LLNCS, Vol. 2526 p. 210-220 ; Springer- Verlag. October 2002.
+      
+      </p>
+    </a>
+
     <h1><a name="classification"></a>Classification</h1>
     Detected image objects can be automatically classified based on user training (supervised learning). For that classes need to be defined, samples manually annotated, features extracted, and a classifier trained. All this can be performed in this section.
     <br/>
