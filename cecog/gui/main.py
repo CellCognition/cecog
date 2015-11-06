@@ -749,7 +749,11 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
     @QtCore.pyqtSlot()
     def _on_file_open(self):
 
-        dir_ = os.path.dirname(self._settings_filename)
+        if not self._settings_filename is None:
+            dir_ = os.path.dirname(self._settings_filename)
+        else:
+            dir_ = os.path.dirname(self.environ.demo_settings)
+             
         if self._check_settings_saved() != QMessageBox.Cancel:
             if self._settings_filename is not None:
                 settings_filename = self.environ.demo_settings
