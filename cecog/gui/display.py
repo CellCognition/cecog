@@ -474,6 +474,6 @@ class ClickableQLabel(QLabel):
         self.link = link
 
     def mouseReleaseEvent(self, event):
-        if link is not None:
+        if self.link is not None:
             self.clicked.emit(self.link)
         return super(ClickableQLabel, self).mouseReleaseEvent(event)
