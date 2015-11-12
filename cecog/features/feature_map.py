@@ -29,5 +29,7 @@ FEATURE_MAP = {
                                    'axes': None},
     'featurecategory_convhull': {'convexhull': None},
     'featurecategory_distance': {'distance': None},
-    'featurecategory_moments': {'moments': None}
+    'featurecategory_moments': {'moments': None},
+    'featurecategory_lbp': {'lbp': (1, 2, 4, 8)}
+
     }

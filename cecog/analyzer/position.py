@@ -66,10 +66,13 @@ FEATURE_MAP = {'featurecategory_intensity': ['normbase', 'normbase2'],
                'featurecategory_distance': ['distance'],
                'featurecategory_moments': ['moments'],
                'featurecategory_spotfeatures': ['spotfeatures'],
+               'featurecategory_lbp': ['lbp'],
+
                }
 
 DEFAULT_FEATURE_PARAMS = {
                           'featurecategory_granugrey': {'se': (1, 2, 3, 5, 7)},
+                          'featurecategory_lbp': {'r': (1, 2, 4, 8)},
                           'featurecategory_haralick': {'dist': (1, 2, 4, 8)},
                           'featurecategory_spotfeatures': {'diameter': 5, 'thresh': 8},
                           }

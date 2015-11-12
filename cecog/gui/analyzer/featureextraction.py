@@ -34,7 +34,7 @@ class FeatureExtractionFrame(BaseFrame):
 
         feature_families = ['intensity', 'haralick', 'stat_geom', 'granugrey',
                             'basicshape', 'convhull', 'distance', 'moments',
-                            'spotfeatures']
+                            'spotfeatures', 'lbp']
 
         for tab_name, prefix in [('Primary Channel', 'primary'),
                                  ('Secondary Channel', 'secondary'),
@@ -76,6 +76,10 @@ class FeatureExtractionFrame(BaseFrame):
                              (8, 1, 1, 1) ),
                             ('%s_thresh_spotfeatures' % prefix,
                              (8, 2, 1, 1) ),
+                            ('%s_featurecategory_lbp' % prefix,
+                             (9, 0, 1, 1) ),
+                            ('%s_r_lbp' % prefix,
+                             (9, 1, 1, 1) ),
                             ],
                            layout='grid',
                            link='%s_featureextraction' % prefix,

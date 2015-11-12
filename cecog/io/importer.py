@@ -126,7 +126,6 @@ class AbstractImporter(XmlSerializer):
         # make sure no back-slashes are left in the path
         filename_abs = filename_abs.replace('\\', '/')
         if self.meta_data.is_color == True:
-            print "FIND Color image!!!"
             image = ccore.readImageRGB(filename_abs, index)
         elif self.meta_data.pixel_type == PixelType.name(PixelType.Uint8):
             image = ccore.readImage(filename_abs, index)
@@ -406,7 +405,6 @@ class IniFileImporter(AbstractImporter):
         re_subdir = re.compile(self._regex_subdirectories)
         re_substr = re.compile(self._regex_filename_substr)
         re_dim = re.compile(self._regex_dimensions)
-
         re_well_str = r"[a-zA-Z]\d{1,5}"
         re_well = re.compile(re_well_str)
 

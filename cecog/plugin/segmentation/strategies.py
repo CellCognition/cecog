@@ -1025,6 +1025,8 @@ class SegmentationPluginPrimaryLoadFromFile(SegmentationPluginPrimary):
             except:
                 raise RuntimeError('No files found in ' + main_folder + locator_match)
             match_results = [m.group() for l in match_candidates for m in [re.search(loc, l)] if m]
+            # ipdb.set_trace()
+
             if len(match_results) != 1:
                 raise RuntimeError('Could not match ' + match_candidates[0] + ' with ' + loc)
             locator_match += match_results[0] + '/'
@@ -2008,9 +2010,9 @@ class SegmentationPluginFRST(SegmentationPluginPrimaryLoadFromFile, _Segmentatio
         km.fit(X)
         
         while km.cluster_centers_[0,0] > km.cluster_centers_[1,0]:
+            n_iter /= 2            
             if n_iter == 0:
                 break
-            n_iter /= 2
             km = cluster.MiniBatchKMeans( n_clusters=n_class, init = initCenter, max_iter = n_iter) # 4 class max_iter = 1,
             km.fit(X)                
                 
@@ -2163,7 +2165,7 @@ class SegmentationPluginFRST(SegmentationPluginPrimaryLoadFromFile, _Segmentatio
         if self.params["if_test"]:
             ccore.writeImage(imCand1, os.path.join(self.params["test_folder"], "imcani1.png"))
         imCand2 = ccore.area_open(imCand1, int(numpy.round(self.params['nuclear_diam'] \
-            * self.params['nuclear_diam'] * numpy.pi / 4)), 8)
+            * self.params['nuclear_diam'] * numpy.pi / 4)), 8)  ### IMP /4
         imCand3 = ccore.substractImages(imCand1, imCand2)
         imCand2 = ccore.area_open(imCand3, int(numpy.round(self.params['se_size'] \
             * self.params['se_size'] )), 8)
@@ -2224,7 +2226,7 @@ class SegmentationPluginFRST(SegmentationPluginPrimaryLoadFromFile, _Segmentatio
             im4 = ccore.infimum(im2, im3)
             im1 = ccore.underBuild(im4, im2)
             imCandiLengh = ccore.substractImages(im2, im1)            
-            ccore.writeImage(imCandiLengh, os.path.join(self.params["test_folder"], "ztemp8.png"))
+            # ccore.writeImage(imCandiLengh, os.path.join(self.params["test_folder"], "ztemp8.png"))
 
 #            im3 = ccore.supremum(imCandiLengh, im1)
             im1 = imCandiLengh.copy()
@@ -2232,19 +2234,15 @@ class SegmentationPluginFRST(SegmentationPluginPrimaryLoadFromFile, _Segmentatio
 
         im2 = ccore.area_open(im1, int(numpy.round(self.params['se_size']  * \
             self.params['se_size']  * 5)), 8)
-        ccore.writeImage(im2, os.path.join(self.params["test_folder"], "ztemp4.png"))
            
         im1 = ccore.lengthOpening(im2, int(self.params['nuclear_diam'] * 2), \
             int(self.params['nuclear_diam'] * self.params['nuclear_diam'] * 2), self.params["circ"])
         # im1 = ccore.substractImages(im2, im3)
-        ccore.writeImage(im1, os.path.join(self.params["test_folder"], "ztemp5.png"))
             
         im3 = ccore.area_open(im1, int(numpy.round(self.params['se_size']  * \
             self.params['se_size']  * 8)), 8)
-        ccore.writeImage(im3, os.path.join(self.params["test_folder"], "ztemp6.png"))
             
         im4 = ccore.substractImages(im1, im3)
-        ccore.writeImage(im4, os.path.join(self.params["test_folder"], "ztemp7.png"))
         
         im5 = ccore.discDilate(imCand1, self.params['c_dist2'])
 
@@ -2253,10 +2251,6 @@ class SegmentationPluginFRST(SegmentationPluginPrimaryLoadFromFile, _Segmentatio
         im2 = ccore.substractImages(im4, im1)
 
         im1 = ccore.supremum(im2, im3)
-
-
-        ccore.writeImage(im3, os.path.join(self.params["test_folder"], "ztemp2.png"))
-        ccore.writeImage(im1, os.path.join(self.params["test_folder"], "ztemp3.png"))
 
 
         im2 = ccore.discDilate(im1, 1)

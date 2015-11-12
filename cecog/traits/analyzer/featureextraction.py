@@ -22,7 +22,7 @@ from cecog.gui.guitraits import BooleanTrait, StringTrait, IntTrait
 SECTION_NAME_FEATURE_EXTRACTION = 'FeatureExtraction'
 
 FEATURE_CATEGORIES = ['basicshape', 'intensity', 'haralick', 'stat_geom',
-                      'convhull', 'distance', 'granugrey', 'moments', 'spotfeatures']
+                      'convhull', 'distance', 'granugrey', 'moments', 'spotfeatures', 'lbp']
 
 FEATURE_CATEGORY_DESC = ['Basic shape features',
                          'Basic intensity features',
@@ -32,7 +32,8 @@ FEATURE_CATEGORY_DESC = ['Basic shape features',
                          'Distance map features',
                          'Granulometry features',
                          'Moments', 
-                         'Spot Features']
+                         'Spot Features',
+                         'LBP features']
 
 class SectionFeatureExtraction(SectionCore):
 
@@ -51,6 +52,8 @@ class SectionFeatureExtraction(SectionCore):
        IntTrait(5, 1, 30, label="Diameter")),
       ('primary_thresh_spotfeatures', 
        IntTrait(8, 1, 255, label="Threshold")),
+      ('primary_r_lbp', 
+       StringTrait('1,2,4,8', 200, label='LBP: Circle range')),
       ]
      ),
      
@@ -65,6 +68,8 @@ class SectionFeatureExtraction(SectionCore):
        IntTrait(5, 1, 30, label="Diameter")),
       ('secondary_thresh_spotfeatures', 
        IntTrait(8, 1, 255, label="Threshold")),
+      ('secondary_r_lbp', 
+       StringTrait('1,2,4,8', 200, label='LBP: Circle range')),
       ]
      ),
 
@@ -79,6 +84,8 @@ class SectionFeatureExtraction(SectionCore):
        IntTrait(5, 1, 30, label="Diameter")),
       ('tertiary_thresh_spotfeatures', 
        IntTrait(8, 1, 255, label="Threshold")),
+      ('tertiary_r_lbp', 
+       StringTrait('1,2,4,8', 200, label='LBP: Circle range')),
       ]
      ),
 

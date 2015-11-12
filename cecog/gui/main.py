@@ -68,6 +68,15 @@ from cecog.gui.progressdialog import ProgressObject
 from cecog.gui.helpbrowser import AtAssistant
 from cecog.css import loadStyle
 
+def debug_trace():
+    import ipdb
+    '''Set a tracepoint in the Python debugger that works with Qt'''
+  # from PyQt4.QtCore import pyqtRemoveInputHook
+  # Or for Qt5
+    from PyQt5.QtCore import pyqtRemoveInputHook
+    pyqtRemoveInputHook()
+    ipdb.set_trace()
+
 def fix_path(path):
     "Windows sucks!"
     if sys.platform.startswith("win"):
@@ -261,6 +270,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         else:
             QMessageBox.warning(
                 self, "Warning", "File (%s) does not exist" %settings)
+        
 
     def dragEnterEvent(self, event):
         event.acceptProposedAction()
@@ -594,10 +604,9 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
     def _load_image_container(self, plate_infos=None, scan_plates=None,
                               show_dialog=True):
         self._clear_browser()
-
+        
         if plate_infos is None:
             plate_infos = list(ImageContainer.iter_check_plates(self._settings))
-
         imagecontainer = ImageContainer()
         self._imagecontainer = imagecontainer
 

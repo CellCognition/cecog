@@ -31,7 +31,8 @@ FEATURE_CATEGORIES = ['roisize',
                       'dynamics',
                       'granulometry',
                       'distance',
-                      'moments']
+                      'moments'
+                      'lbp']
 
 ZSLICE_PROJECTION_METHODS = ['maximum', 'average']
 COMPRESSION_FORMATS = ['raw', 'bz2', 'gz']

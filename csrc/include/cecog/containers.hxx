@@ -22,6 +22,7 @@
 
 #include <map>
 #include <string>
+#include <algorithm>
 #include "vigra/impex.hxx"
 #include "vigra/stdimage.hxx"
 #include "vigra/transformimage.hxx"
@@ -52,11 +53,13 @@
 #include "cecog/images.hxx"
 #include "cecog/utilities.hxx"
 #include "cecog/config.hxx"
+#include "cecog/LBP.hxx"
 
 #include "cecog/basic/integral_images.hxx"
 #include "cecog/morpho/basic.hxx"
 #include "cecog/basic/moments.hxx"
 #include "vigra/python_utility.hxx"
+
 
 namespace cecog
 {
@@ -144,6 +147,13 @@ namespace cecog
 
             debug_folder = "";
             debug_prefix = "";
+
+            // settings for haralick
+            lbpSizeVec.push_back(1);
+            lbpSizeVec.push_back(2);
+            lbpSizeVec.push_back(4);
+            lbpSizeVec.push_back(8);
+
 
     };
 
@@ -264,12 +274,24 @@ namespace cecog
       }
     }
 
+    void printLBPSizes() {
+      for(se_size_vec::size_type i = 0; i != lbpSizeVec.size(); ++i)
+      {
+        std::cout << "LBP Size: " << (unsigned)lbpSizeVec[i] << std::endl;
+      }
+    }
+
+
     void resetHaralick(){
       haralickDistVec.clear();
     }
 
     void resetGranulometry(){
       granuSizeVec.clear();
+    }
+      
+    void resetLBP(){
+      lbpSizeVec.clear();
     }
 
     void addHaralickValue(unsigned value){
@@ -278,6 +300,10 @@ namespace cecog
 
     void addGranulometryValue(unsigned value){
       granuSizeVec.push_back(value);
+    }
+      
+    void addLBPValue(unsigned value){
+      lbpSizeVec.push_back(value);
     }
 
     /**
@@ -641,6 +667,34 @@ namespace cecog
                               levelset.values.end());
           }
         }
+
+        //// added by xiwei, 11/2015
+        else if(name == "lbp")
+          {
+              //// Change BImage to MultiArray
+              int width = img.width();
+              int height = img.height();
+              MultiArray<2, UInt8> img_MA(width, height);
+              MultiArray<2, int> img_label_MA(width, height);
+              vigra::BImage::const_traverser it1Current = img.upperLeft();
+              vigra::SImage::const_traverser it2Current = img_labels.upperLeft();
+              for (int y=0; y<height; ++y){
+                  for (int x=0; x<width; ++x){
+                      img_MA(x, y) = *(it1Current + Diff2D(x,y));
+                      img_label_MA(x, y) = *(it2Current + Diff2D(x,y));
+                  }
+              }
+              ObjectMap::iterator it = objects.begin();
+              
+              //// computing LBP features
+              //// function implemented in LBP.hxx
+              for(; it != objects.end(); ++it)
+              {
+                  ROIObject &o = (*it).second;
+                  CalculateFeaturesLBP(img_MA, img_label_MA, o, (*it).first, lbpSizeVec);
+              }
+          }
+
         else
         {
           // not found!
@@ -1303,6 +1357,9 @@ namespace cecog
     // distances for Haralick
     //std::vector<unsigned> haralickDistVec;
     har_dist_vec haralickDistVec;
+    
+    // size for LBP
+    std::vector<unsigned> lbpSizeVec;
 
   }; // end of ObjectContainerBase
 

@@ -235,6 +235,10 @@ class Channel(ChannelCore):
                         container.resetGranulometry()
                         for val in self.dctFeatureParameters[feature]['se']:
                             container.addGranulometryValue(val)
+                    elif feature == 'featurecategory_lbp':
+                        container.resetLBP()
+                        for val in self.dctFeatureParameters[feature]['r']:
+                            container.addLBPValue(val)        
                     elif feature == 'featurecategory_spotfeatures':
                         container.spot_diameter = self.dctFeatureParameters[feature]['diameter']
                         container.spot_threshold = self.dctFeatureParameters[feature]['thresh']
