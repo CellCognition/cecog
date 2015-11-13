@@ -203,7 +203,7 @@ class PositionCore(LoggerObject):
         for category, feature in FEATURE_MAP.iteritems():
             if self.settings.get(SECTION_NAME_FEATURE_EXTRACTION,
                                  self._resolve_name(ch_name, category)):
-                
+
                 f_categories += feature
 
                 if category in DEFAULT_FEATURE_PARAMS:
@@ -214,7 +214,7 @@ class PositionCore(LoggerObject):
 
                         if self.settings.has_option(SECTION_NAME_FEATURE_EXTRACTION, option_key):
                             str_opt = self.settings.get(SECTION_NAME_FEATURE_EXTRACTION, option_key)
-                            
+
                             default_type = type(DEFAULT_FEATURE_PARAMS[category][option])
 
                             if type(str_opt) != types.StringType:
@@ -229,13 +229,13 @@ class PositionCore(LoggerObject):
                             found_type = type(f_cat_params[category][option])
                             if found_type != default_type:
                                 if default_type in [types.ListType, types.TupleType]:
-                                    f_cat_params[category][option] = [f_cat_params[category][option]]                                                                  
-                                    
+                                    f_cat_params[category][option] = [f_cat_params[category][option]]
+
         #print 'f_categories'
         #print f_categories
         #print 'f_cat_params'
         #print f_cat_params
-        
+
         return f_categories, f_cat_params
 
     def setup_channel(self, proc_channel, col_channel, zslice_images,
@@ -511,7 +511,7 @@ class PositionAnalyzer(PositionCore):
     @property
     def _transitions(self):
         if self.settings.get('EventSelection', 'unsupervised_event_selection'):
-            transitions = np.array((0, 1))
+            transitions = np.array(((0, 1), ))
         else:
             try:
                 transitions = np.array(eval(self.settings.get('EventSelection', 'labeltransitions')))

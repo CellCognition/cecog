@@ -342,7 +342,7 @@ class UnsupervisedEventSelection(EventSelectionCore):
                  max_out_degree=2):
 
         # requierements for the binary classification
-        assert (transitions == np.array((0, 1))).all()
+        assert (transitions == np.array(((0, 1), ))).all()
         assert forward_labels == (1, )
         assert backward_labels == (0, )
 
