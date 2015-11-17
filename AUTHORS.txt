@@ -1,30 +1,34 @@
 
                           The CellCognition Project
-           Copyright (c) 2006 - 2010 Michael Held & Daniel Gerlich
-                   Gerlich Lab, ETH Zurich, Switzerland
+           Copyright (c) 2006 - 2015 Michael Held & Daniel Gerlich
+                   Gerlich Lab, IMBA Vienna Austria
 
            CellCognition is distributed under the LGPL License.
-                     See trunk/LICENSE.txt for details.
-               See trunk/AUTHORS.txt for author contributions.
+                     See LICENSE.txt for details.
 
 
 Authors, contributions and affiliation:
 --------------------------------------------------------------------------------
 
+Daniel Gerlich - group leader, project coordinator
+IMBA Vienna, Austria
+
+Rudolf Höfler - project coordinator, main developer
+IMBA Vienna, Austria
+
+Christoph Sommer - project coordinator, main developer
+IMBA Vienna, Austria
+
+Thomas Walter - developer of morphological operators and related features
+Institut Curie – Centre de Recherche Paris, France
+
+Alice Schoenauer Sebag
+Institut Curie – Centre de Recherche Paris, France
+
+
+former contributers:
 Michael Held - project initiator, main developer
 ETH Zurich, Switzerland
 
-Christoph Sommer - project coordinator, main developer
-ETH Zurich, Switzerland
-
-Daniel Gerlich - group leader, project coordinator
-ETH Zurich, Switzerland
-
-Bernd Fischer - developer of HMM code
+Bernd Fischer - developer of the R-implementation of the HMM
 EMBL Heidelberg, Germany
-
-Thomas Walter - developer of morphological operators and related features
-EMBL Heidelberg, Germany
-
-
-
