@@ -3,7 +3,7 @@
  Gerlich Lab, IMBA Vienna, Austria. CellCognition is distributed under the term of LGPL License. 
 
  www.cellcognition.org  
- www.doc.cellcognition.org
+ http://doc.cellcognition.org
 
 ### Building the C++ Extension
 
