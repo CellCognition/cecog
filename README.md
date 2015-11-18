@@ -1,9 +1,9 @@
 # The CellCognition Project
- Copyright (c) 2006 - 2012 Christoph Sommer, Michael Held & Daniel Gerlich  
- Gerlich Lab, IMBA Vienna, Austria. CellCognition is distributed under the term of LGPL License. 
+ Copyright (c) 2006 - 2015 Gerlich Lab, IMBA Vienna, Austria  
+ CellCognition is distributed under the terms of LGPL. 
 
- www.cellcognition.org  
- http://doc.cellcognition.org
+ [www.cellcognition.org](www.cellcognition.org)  
+ [doc.cellcognition.org](http://doc.cellcognition.org)
 
 ### Building the C++ Extension
 
@@ -76,14 +76,12 @@ The package contains a sub-folder Data with
     - Analysis
         - the output folder where results are written to
 
-##### Note
-With the included raw images picking of classifier samples is not possible since
-not all necessary positions/timepoints are included.
-Please download the larger H2b-Tubulin data.
+##### Note:
+The demo data contains pre-trained classifiers. In order to train classifiers please 
+download the full e.g. [H2B-Tubulin data set](http://cellcognition.org/downloads/data).
 
 
 #### Motif selection
-
 
 With the included data and settings only six mitotic events with four frames
 duration are selected.
