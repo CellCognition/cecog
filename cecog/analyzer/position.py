@@ -19,7 +19,7 @@ import shutil
 import numpy as np
 import types
 
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from os.path import join, basename, isdir
 
 from cecog.io.imagecontainer import Coordinate
@@ -50,30 +50,10 @@ from cecog.util.stopwatch import StopWatch
 from cecog.util.util import makedirs
 from cecog.util.ctuple import COrderedDict
 from cecog.learning.learning import ClassDefinitionUnsup
+
 from cecog.features import FEATURE_MAP
 
-import pdb
 
-FEATURE_MAP = {'featurecategory_intensity': ['normbase', 'normbase2'],
-               'featurecategory_haralick': ['haralick', 'haralick2'],
-               'featurecategory_stat_geom': ['levelset'],
-               'featurecategory_granugrey': ['granulometry'],
-               'featurecategory_basicshape': ['roisize',
-                                              'circularity',
-                                              'irregularity',
-                                              'irregularity2',
-                                              'axes'],
-               'featurecategory_convhull': ['convexhull'],
-               'featurecategory_distance': ['distance'],
-               'featurecategory_moments': ['moments'],
-               'featurecategory_spotfeatures': ['spotfeatures'],
-               }
-
-DEFAULT_FEATURE_PARAMS = {
-                          'featurecategory_granugrey': {'se': (1, 2, 3, 5, 7)},
-                          'featurecategory_haralick': {'dist': (1, 2, 4, 8)},
-                          'featurecategory_spotfeatures': {'diameter': 5, 'thresh': 8},
-                          }
 
 class PositionCore(LoggerObject):
 
@@ -189,60 +169,41 @@ class PositionCore(LoggerObject):
         return (max(xs), max(ys)), image_size
 
     def feature_params(self, ch_name):
+        fgroups = defaultdict(dict)
 
-        # XXX unify list and dict
-        f_categories = list()
-        f_cat_params = dict()
-
-        # unfortunateley some classes expect empty list and dict
-        if not self.settings.get(SECTION_NAME_PROCESSING,
-                             self._resolve_name(ch_name,
-                                                'featureextraction')):
-            return f_categories, f_cat_params
-
-        for category, feature in FEATURE_MAP.iteritems():
+        for group, features in FEATURE_MAP.iteritems():
             if self.settings.get(SECTION_NAME_FEATURE_EXTRACTION,
-                                 self._resolve_name(ch_name, category)):
+                                 self._resolve_name(ch_name, group)):
 
-                f_categories += feature
+                for feature, params in features.iteritems():
 
-                if category in DEFAULT_FEATURE_PARAMS:
-                    f_cat_params[category] = {}
-                    for option in DEFAULT_FEATURE_PARAMS[category]:
-                        option_key = self._resolve_name(ch_name, '%s_%s' % (option, category.split('_')[-1]))
-                        f_cat_params[category][option] = DEFAULT_FEATURE_PARAMS[category][option]
+                    if params is not None:
+                        for pname, value in params.iteritems():
+                            # special case, same parameters for haralick features
+                            if feature.startswith("haralick"):
+                                option = "%s_%s" %(self._resolve_name(ch_name, pname), "haralick")
+                            else:
+                                option = "%s_%s" %(self._resolve_name(ch_name, pname), feature)
 
-                        if self.settings.has_option(SECTION_NAME_FEATURE_EXTRACTION, option_key):
-                            str_opt = self.settings.get(SECTION_NAME_FEATURE_EXTRACTION, option_key)
+                            option = self.settings("FeatureExtraction", option)
 
-                            default_type = type(DEFAULT_FEATURE_PARAMS[category][option])
+                            if isinstance(value, (list, tuple)) and \
+                               isinstance(option, basestring):
+                                fgroups[feature][pname] = eval(option)
+                            else:
+                                fgroups[feature][pname] = option
 
-                            if type(str_opt) != types.StringType:
-                                f_cat_params[category][option] = str_opt
-                            elif len(str_opt) > 0:
-                                if default_type is types.StringType :
-                                    # in this case the default type is a string.
-                                    f_cat_params[category][option] = str_opt
-                                else:
-                                    f_cat_params[category][option] = eval(str_opt) #tuple([int(x) for x in str_opt.split(',')])
+                    else:
+                        fgroups[feature] = params # = None
 
-                            found_type = type(f_cat_params[category][option])
-                            if found_type != default_type:
-                                if default_type in [types.ListType, types.TupleType]:
-                                    f_cat_params[category][option] = [f_cat_params[category][option]]
+        return fgroups
 
-        #print 'f_categories'
-        #print f_categories
-        #print 'f_cat_params'
-        #print f_cat_params
-
-        return f_categories, f_cat_params
 
     def setup_channel(self, proc_channel, col_channel, zslice_images,
                       check_for_plugins=True):
 
         # determine the list of features to be calculated from each object
-        f_cats, f_params = self.feature_params(proc_channel)
+        f_params = self.feature_params(proc_channel)
         reg_shift, im_size = self.registration_shift()
         ch_cls = self.CHANNELS[proc_channel.lower()]
 
@@ -258,8 +219,7 @@ class PositionCore(LoggerObject):
                          fNormalizeMax = self.settings.get2('%s_normalizemax' %proc_channel),
                          bFlatfieldCorrection = self.settings.get2('%s_flat_field_correction' %proc_channel),
                          strBackgroundImagePath = self.settings.get2('%s_flat_field_correction_image_dir' %proc_channel),
-                         lstFeatureCategories = f_cats,
-                         dctFeatureParameters = f_params,
+                         feature_groups = f_params,
                          check_for_plugins = check_for_plugins)
 
         if channel.is_virtual():

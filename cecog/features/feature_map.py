@@ -18,10 +18,10 @@ __url__ = 'www.cellcognition.org'
 FEATURE_MAP = {
     'featurecategory_intensity': {'normbase': None,
                                   'normbase2': None},
-    'featurecategory_haralick': {'haralick': (1, 2, 4, 8),
-                                 'haralick2': (1, 2, 4, 8)},
+    'featurecategory_haralick': {'haralick': {'dist': (1, 2, 4, 8)},
+                                 'haralick2': {'dist': (1, 2, 4, 8)}},
     'featurecategory_stat_geom': {'levelset': None},
-    'featurecategory_granugrey': {'granulometry': None},
+    'featurecategory_granugrey': {'granulometry': {'se': (1, 2, 3, 5, 7)}},
     'featurecategory_basicshape': {'roisize': None,
                                    'circularity': None,
                                    'irregularity': None,
@@ -29,5 +29,6 @@ FEATURE_MAP = {
                                    'axes': None},
     'featurecategory_convhull': {'convexhull': None},
     'featurecategory_distance': {'distance': None},
-    'featurecategory_moments': {'moments': None}
-    }
+    'featurecategory_moments': {'moments': None},
+    'featurecategory_spotfeatures': {'spotfeatures': {'diameter': 5, 'thresh': 8}}
+}

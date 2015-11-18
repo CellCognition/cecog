@@ -49,8 +49,7 @@ class ChannelCore(LoggerObject):
                  new_image_size=None,
                  strImageOutCompression="80",
                  strPathOutDebug=None,
-                 lstFeatureCategories=None,
-                 dctFeatureParameters=None,
+                 feature_groups=None,
                  lstFeatureNames=None,
                  bFlatfieldCorrection=False,
                  strBackgroundImagePath="",
@@ -71,8 +70,7 @@ class ChannelCore(LoggerObject):
         self.new_image_size = new_image_size
         self.strImageOutCompression = strImageOutCompression
         self.strPathOutDebug = strPathOutDebug
-        self.lstFeatureCategories = lstFeatureCategories
-        self.dctFeatureParameters = dctFeatureParameters
+        self.feature_groups = feature_groups
         self.lstFeatureNames = lstFeatureNames
         self.bFlatfieldCorrection = bFlatfieldCorrection
         self.strBackgroundImagePath = strBackgroundImagePath
@@ -216,44 +214,28 @@ class Channel(ChannelCore):
         self._features_calculated = True
         for region_name, container in self.containers.iteritems():
             object_holder = ObjectHolder(region_name)
-            if not container is None:                
-                container.debug = False
-                if container.debug:
-                    container.debug_folder = os.path.join("/Users/twalter/temp/spotfeatures", 
-                                                          self.meta_image.coordinate.position)
-                    if not os.path.exists(container.debug_folder):
-                        os.makedirs(container.debug_folder)
-                        print 'generated ', container.debug_folder
-                    container.debug_prefix = 'img'
-                
-                # pass parameters to container
-                for feature in self.dctFeatureParameters:
-                    if feature in ['featurecategory_haralick', 'featurecategory_haralick2']:
-                        container.resetHaralick()
-                        for haralick_size in self.dctFeatureParameters[feature]['dist']:
-                            container.addHaralickValue(haralick_size)
-                    elif feature == 'featurecategory_granulometry':
-                        container.resetGranulometry()
-                        for val in self.dctFeatureParameters[feature]['se']:
-                            container.addGranulometryValue(val)
-                    elif feature == 'featurecategory_spotfeatures':
-                        container.spot_diameter = self.dctFeatureParameters[feature]['diameter']
-                        container.spot_threshold = self.dctFeatureParameters[feature]['thresh']
-                
-                # apply feature                        
-                for strFeatureCategory in self.lstFeatureCategories:                    
-                    container.applyFeature(strFeatureCategory)
+            if container is not None:
 
-                # ---                
-                # to replace
-                # calculate set of haralick features
-                # (with differnt distances)
-#                if 'haralick_categories' in self.dctFeatureParameters:
-#                    for strHaralickCategory in self.dctFeatureParameters['haralick_categories']:
-#                        for iHaralickDistance in self.dctFeatureParameters['haralick_distances']:
-#                            container.haralick_distance = iHaralickDistance
-#                            container.applyFeature(strHaralickCategory)
-                # ---                
+                for group, params in self.feature_groups.iteritems():
+
+                    # XXX special casing for feature parameters.
+                    # call pattern like this: cnt.applyFeature(name, params)
+                    if group.startswith('haralick'):
+                        container.resetHaralick()
+                        for dist in params['dist']:
+                            container.addHaralickValue(dist)
+
+                    elif group == "spotfeatures":
+                        container.spot_diameter = params['diameter']
+                        container.spot_threshold = params['thresh']
+
+                    elif group == "granulometry":
+                        container.resetGranulometry()
+                        for val in params['se']:
+                            container.addGranulometryValue(val)
+
+                    container.applyFeature(group)
+
 
                 for obj_id, c_obj in container.getObjects().iteritems():
 
@@ -273,9 +255,11 @@ class Channel(ChannelCore):
                     # at the moment a bit of a hack #
                     # The problem is that orientation cannot be a feature #
                     # but moments need to be chosen to calculate the orientation. #
-                    if 'moments' in self.lstFeatureCategories:
-                        obj.orientation = Orientation(angle = c_obj.orientation,
-                                                      eccentricity = dctFeatures['eccentricity'])
+                    if self.feature_groups.has_key('moments'):
+                        obj.orientation = Orientation(
+                            angle = c_obj.orientation,
+                            eccentricity = dctFeatures['eccentricity']
+                        )
 
                     # why do wo sort the features according to their names??
                     # does it matter?

@@ -22,6 +22,8 @@ from PyQt5.Qt import *
 
 from cecog.gui.analyzer import BaseFrame
 
+
+
 class FeatureExtractionFrame(BaseFrame):
 
     DISPLAY_NAME = 'Feature Extraction'
@@ -32,36 +34,27 @@ class FeatureExtractionFrame(BaseFrame):
         super(FeatureExtractionFrame, self).__init__(settings, parent, name)
         self._result_frames = {}
 
-        feature_families = ['intensity', 'haralick', 'stat_geom', 'granugrey',
-                            'basicshape', 'convhull', 'distance', 'moments',
-                            'spotfeatures']
-
         for tab_name, prefix in [('Primary Channel', 'primary'),
                                  ('Secondary Channel', 'secondary'),
                                  ('Tertiary Channel',  'tertiary')
                                  ]:
 
-            self.set_tab_name(tab_name)            
-            #feature_list = [('%s_featurecategory_%s' % (prefix, f), (i, 0, 1, 1)) for i,f in enumerate(feature_families)]
-#            self.add_group(None,
-#                           feature_list,
-#                           layout='grid',
-#                           link='%s_featureextraction' % prefix,
-#                           label='Feature extraction')
-            
+            self.set_tab_name(tab_name)
+
+
             self.add_group(None,
                            [('%s_featurecategory_intensity' % prefix,
                              (0, 0, 1, 1) ),
                             ('%s_featurecategory_haralick' % prefix,
                              (1, 0, 1, 1) ),
                             ('%s_dist_haralick' % prefix,
-                             (1, 1, 1, 1) ),                            
+                             (1, 1, 1, 1) ),
                             ('%s_featurecategory_stat_geom' % prefix,
                              (2, 0, 1, 1) ),
                             ('%s_featurecategory_granugrey' % prefix,
                              (3, 0, 1, 1)),
-                            ('%s_se_granugrey' % prefix,
-                             (3, 1, 1, 1) ),                            
+                            ('%s_se_granulometry' % prefix,
+                             (3, 1, 1, 1) ),
                             ('%s_featurecategory_basicshape' % prefix,
                              (4, 0, 1, 1) ),
                             ('%s_featurecategory_convhull' % prefix,

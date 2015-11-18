@@ -164,13 +164,8 @@ namespace cecog
 
     void deleteFeatureCategory(std::string feature_name)
     {
-//      if (calculated_features[feature_name])
-//        std::cout << "already calculated: " << feature_name << std::endl;
-//      else
-//        std::cout << "not calculated: " << feature_name << std::endl;
-
       if (calculated_features[feature_name]) {
-        //std::cout << "remove: " << feature_name << std::endl;
+
         if ((feature_name=="roisize") || (feature_name=="perimeter") ||
             (feature_name=="circularity") || (feature_name=="irregularity") ||
             (feature_name=="irregularity2"))
@@ -225,24 +220,6 @@ namespace cecog
           deleteFeature("n2_wiavg");
           deleteFeature("n2_wdist");
         }
-//        else if (feature_name == "convexhull")
-//        {
-//        }
-//        else if (feature_name == "dynamics")
-//        {
-//        }
-//        else if (feature_name == "distance")
-//        {
-//        }
-//        else if (feature_name == "granulometry")
-//        {
-//        }
-//        else if (feature_name == "haralick")
-//        {
-//        }
-//        else if (feature_name == "haralick2")
-//        {
-//        }
 
         calculated_features[feature_name] = false;
       }
@@ -305,7 +282,6 @@ namespace cecog
           }
         }
         else if (name == "roisize") {
-          //std::cout << calculated_features[name] << " calculating roisize" << std::endl;
 
           ObjectMap::iterator it = objects.begin();
           for (; it != objects.end(); ++it) {
@@ -394,7 +370,6 @@ namespace cecog
               o.features["skewness_x"] = fabs(moments[id].PrincipalSkewnessX());
               o.features["skewness_y"] = fabs(moments[id].PrincipalSkewnessY());
               o.orientation = moments[id].Theta();
-              //std::cout << o.orientation << std::endl;
           }
         }
         else if (name == "circularity")

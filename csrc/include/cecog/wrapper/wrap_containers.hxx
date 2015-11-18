@@ -156,8 +156,6 @@ void wrap_containers()
                    &_ObjectContainerBase::img)
     .def_readwrite("img_rgb",
                    &_ObjectContainerBase::img_rgb)
-    //.def_readwrite("extra_img",
-    //               &_ObjectContainerBase::img)
   ;
   register_ptr_to_python< std::auto_ptr<_ObjectContainerBase> >();
 
@@ -167,12 +165,9 @@ void wrap_containers()
 
   class_< _ObjectContainer, bases<_ObjectContainerBase> >
     ("ObjectContainer", init< _ObjectContainer::image_type & >())
-    //.def("findOtsuThreshold",
-    //     &_ObjectContainer::findThreshold<cecog::OtsuThreshold>)
     .def("threshold", &_ObjectContainer::threshold,
          threshold_overloads())
     .def("localThresholdCaching", &_ObjectContainer::localThresholdCaching)
-    //.def("localThresholdIntegral", &_ObjectContainer::localThresholdIntegral)
     .def("label", &_ObjectContainer::label)
   ;
   register_ptr_to_python< std::auto_ptr<_ObjectContainer> >();
