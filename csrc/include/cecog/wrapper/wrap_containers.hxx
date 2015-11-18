@@ -71,7 +71,6 @@ namespace cecog
   }
 }
 
-//void setUnsignedParameterVector(std::vector<unsigned> const &params, std::string feature)
 
 void wrap_containers()
 {
@@ -142,8 +141,6 @@ void wrap_containers()
                    &_ObjectContainerBase::spot_diameter)
     .def_readwrite("haralick_levels",
                    &_ObjectContainerBase::haralick_levels)
-    .def_readwrite("haralick_distance",
-                   &_ObjectContainerBase::haralick_distance)
     .def_readwrite("levelset_levels",
                    &_ObjectContainerBase::levelset_levels)
     .def_readonly("width",

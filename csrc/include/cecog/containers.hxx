@@ -1519,8 +1519,7 @@ namespace cecog
       vigra::ImageImportInfo msk_info(msk_name.c_str());
 
       if (img_info.size() != msk_info.size())
-        std::cerr << "size conflict of img and mask!"
-        << std::endl;
+        std::cerr << "size conflict of img and mask!" << std::endl;
 
       this->img = image_type(img_info.size());
       this->img_binary = binary_type(msk_info.size());
