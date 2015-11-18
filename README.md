@@ -13,7 +13,6 @@ paths in the setup.cfg accordingly.
 Dependcies are:
 - libvigraimpex
 - libtiff
-- liblzma (only if libtiff is statically linked)
 
 Remove the build- and dist directories and also the file
 cecog/ccore/_cecog.so(pyd)
@@ -29,11 +28,6 @@ run the make file.
 
 #### Using VCXX Professional
 run build_win64_bin.bat
-
-#### Using Windows SDK's:
-
-Additionally run build_helper\windows_sdk_env.bat before running build_win64_bin.bat.
-
 
 The CecogAnalyzer package comes with batteries included.
 
