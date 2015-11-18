@@ -144,6 +144,7 @@ namespace cecog
 
             debug_folder = "";
             debug_prefix = "";
+            debug = false;
 
     };
 
