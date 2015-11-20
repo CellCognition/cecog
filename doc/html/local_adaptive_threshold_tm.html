@@ -5,15 +5,30 @@
   </head>
 
   <body>
-    <a name="local_adaptive_threshold"></a>
-    <a name="lat"></a>
-    <h2>Segmentation: Local Adaptive Threshold </h2>
+    <a name="local_adaptive_threshold_tm"></a>
+    <a name="lat_tm"></a>
+    <h2>Segmentation: Toggle Mappings and Local Adaptive Threshold </h2>
 
     <p class="text">
       Performs object detection based on local adaptive thresholding. A background map of the input image is computed based on the <i>Window size</i> (moving average window). Image pixels higher above the background map than <i>Min. contrast</i> are considered foreground, all other pixels background.
       This is a standard method to detect isolated cell nuclei with good signal to noise ratio. The background subtraction is important if the nuclei have varying intensities (so it is not only used for background correction). 
       In order to make this also work in more difficult cases (touching nuclei, feable signal), there are a number of techniques that can be applied in addition (see below). 
+      This method is close to the standard Local Adaptive Threshold method, but it sharpens the image prior to thresholding.
     </p>
+
+    <a name="togglemappings"></a>
+    <h4>Toggle Mappings</h4>
+    <p class="text">
+      Toggle mappings allow to sharpen images by mathematical morphology. This sharpening then leads to less cases of joint segmentation of cell nuclei: it helps in separating nuclei without a prior on the shape of the detected objects. However, if there is no decrease in the signal between two nuclei, this method will not help. 
+    </p>
+    
+    <a name="tm_size"></a>
+    <h4 class="sub">Size of the structuring element used by Toggle Mappings</h4>
+
+    <p class="subtext">
+    In this implementation, Toggle Mappings (TM) calculate an erosion and a dilation with a structuring element of user-defined size. The operator then assigns to each pixel the closer response. This parameter defines the size of the erosion and dilation. 
+    </p>
+    
 
     <a name="medianradius"></a>
     <h4>Median radius</h4>
@@ -29,7 +44,7 @@
 
     <a name="latlimit"></a>
     <h4 class="sub">Min. contrast</h4>
-    <p class="subtext">Pixel intensity above the background. Note: Small values might increase artifacts (small objects from high noise levels) and slow down computation; high values might lead to incorrect contours.
+    <p class="subtext">Pixel intensity above the background (threshold, applied on the difference between image and locally averaged image). Note: Small values might increase artifacts (small objects from high noise levels) and slow down computation; high values might lead to incorrect contours and also leads to fewer objects, as dark objects will not be detected.
     </p>
 
     <a name="lat2"></a>
@@ -108,16 +123,20 @@
       All objects above that size (pixel) are removed. This parameter scales with squared lens magnification.
     </p>
 
-    <a name="postprocessing_intensity_min"></a>
-    <h4 class="sub">Min. average intensity</h4>
+    <a name="postprocessing_intensity_min_above_bg"></a>
+    <h4 class="sub">Min. average intensity above background</h4>
     <p class="subtext">
-      All objects below that average intensity (8bit gray values) are removed.
+      From the segmentation result, the average intensity of the background is calculated. 
+      If the difference of the average intensity inside the object and the average background intensity is below the user defined value, the object is removed.    
+      This filter does not work well in case of non-uniform illumination, but it is robust to intensity offsets. 
     </p>
 
-    <a name="postprocessing_intensity_max"></a>
-    <h4 class="sub">Max. average intensity</h4>
+    <a name="postprocessing_intensity_max_above_bg"></a>
+    <h4 class="sub">Max. average intensity above background</h4>
     <p class="subtext">
-      All objects above that average intensity (8bit gray values) are removed.
+      From the segmentation result, the average intensity of the background is calculated. 
+      If the difference of the average intensity inside the object and the average background intensity is above the user defined value, the object is removed.    
+      This filter does not work well in case of non-uniform illumination, but it is robust to intensity offsets. 
     </p>
 
   </body>

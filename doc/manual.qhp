@@ -75,6 +75,10 @@
       <keyword name="Median Radius" ref="html/local_adaptive_threshold.html#medianradius"/>
       <keyword name="Local adpative threshold" ref="html/local_adaptive_threshold.html#lat"/>
       <keyword name="Window size" ref="html/local_adaptive_threshold.html#latwindowsize"/>
+      <keyword name="Toggle Mappings" ref="html/local_adaptive_threshold_tm.html#togglemappings"/>
+      <keyword name="Toggle Mappings Size" ref="html/local_adaptive_threshold_tm.html#tm_size"/>
+      <keyword name="Min. average intensity above background" ref="html/local_adaptive_threshold_tm.html#postprocessing_intensity_min_above_bg"/>
+      <keyword name="Max. average intensity above background" ref="html/local_adaptive_threshold_tm.html#postprocessing_intensity_max_above_bg"/>
       <keyword name="Min. Contrast" ref="html/local_adaptive_threshold.html#latlimit"/>
       <keyword name="Local adpative threshold 2" ref="html/local_adaptive_threshold.html#lat2"/>
       <keyword name="Window size (Lat2)" ref="html/local_adaptive_threshold.html#latwindowsize2"/>
@@ -238,6 +242,7 @@
       <file>html/getting_started.html</file>
       <file>html/manual.html</file>
       <file>html/local_adaptive_threshold.html</file>
+      <file>html/local_adaptive_threshold_tm.html</file>
       <file>html/ilastik_regions.html</file>
       <file>html/from_files_regions.html</file>
       <file>html/secondary_regions.html</file>

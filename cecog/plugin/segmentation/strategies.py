@@ -197,7 +197,7 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
 
 class SegmentationPluginPrimary2(_SegmentationPlugin):
 
-    LABEL = 'Local adaptive threshold, togglemappings, split&merge, background corrected object filter'
+    LABEL = 'Toggle Mappings and Local Adaptive Threshold'
     NAME = 'lat_tm'
     COLOR = '#FF0000'
 
@@ -222,13 +222,13 @@ class SegmentationPluginPrimary2(_SegmentationPlugin):
               ('postprocessing', BooleanTrait(False, label='Object filter')),
               ('postprocessing_roisize_min', IntTrait(-1, -1, 1000000, label='Min. object size')),
               ('postprocessing_roisize_max', IntTrait(-1, -1, 1000000, label='Max. object size')),
-              ('postprocessing_intensity_min', IntTrait(-1, -1, 1000000, label='Min. average intensity above background')),
-              ('postprocessing_intensity_max', IntTrait(-1, -1, 1000000, label='Max. average intensity above background')),
+              ('postprocessing_intensity_min_above_bg', IntTrait(-1, -1, 1000000, label='Min. average intensity above background')),
+              ('postprocessing_intensity_max_above_bg', IntTrait(-1, -1, 1000000, label='Max. average intensity above background')),
               ('removeborderobjects', BooleanTrait(True, label='Remove border objects')),
               ('holefilling', BooleanTrait(True, label='Fill holes')),
              ]
 
-    # the : at the beginning indicates a QRC link with alias 'plugins/segmentation/local_adaptive_threshold'
+    # the : at the beginning indicates a QRC link with alias 'plugins/segmentation/local_adaptive_threshold_tm'
     DOC = ':local_adaptive_threshold_tm'
 
     def render_to_gui(self, panel):
@@ -254,8 +254,8 @@ class SegmentationPluginPrimary2(_SegmentationPlugin):
         panel.add_group('postprocessing',
                         [('postprocessing_roisize_min', (0, 0, 1, 1)),
                          ('postprocessing_roisize_max', (0, 1, 1, 1)),
-                         ('postprocessing_intensity_min', (1, 0, 1, 1)),
-                         ('postprocessing_intensity_max', (1, 1, 1, 1)),
+                         ('postprocessing_intensity_min_above_bg', (1, 0, 1, 1)),
+                         ('postprocessing_intensity_max_above_bg', (1, 1, 1, 1)),
                          ])
 
     @stopwatch()
@@ -389,7 +389,7 @@ class SegmentationPluginPrimary2(_SegmentationPlugin):
 
         self.postprocessing(container, self.params['postprocessing'],
                             (self.params['postprocessing_roisize_min'], self.params['postprocessing_roisize_max']),
-                            (self.params['postprocessing_intensity_min'], self.params['postprocessing_intensity_max']),
+                            (self.params['postprocessing_intensity_min_above_bg'], self.params['postprocessing_intensity_max_above_bg']),
                             offset=offset)
 
         return container
