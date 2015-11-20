@@ -11,12 +11,20 @@
 
     <p class="text">
       Performs object detection based on local adaptive thresholding. A background map of the input image is computed based on the <i>Window size</i> (moving average window). Image pixels higher above the background map than <i>Min. contrast</i> are considered foreground, all other pixels background.
+      This is a standard method to detect isolated cell nuclei with good signal to noise ratio. The background subtraction is important if the nuclei have varying intensities (so it is not only used for background correction). 
+      In order to make this also work in more difficult cases (touching nuclei, feable signal), there are a number of techniques that can be applied in addition (see below). 
+    </p>
+
+    <a name="togglemappings"></a>
+    <h4>Toggle Mappings</h4>
+    <p class="text">
+      Toggle mappings allow to sharpen images by mathematical morphology. This sharpening then leads to less cases of joint segmentation of cell nuclei: it helps in separating nuclei without a prior on the shape of the detected objects. However, if there is no decrease in the signal between two nuclei, this method will not help. 
     </p>
 
     <a name="medianradius"></a>
     <h4>Median radius</h4>
-    <p class="text">
-      Intensity of the image smoothing before object detection by a median filter (radius size in pixel). Note: Filtered image is used for object detection only (no influence on feature extraction, but shape features might be affected). Not that the parameter scale directly with lens magnification.
+    <p class="text">1
+      The median filter removes noise, while keeping the edges intact (no blurring of the image). The degree of filtering is controlled by the radius of the median filter (radius measured in pixels: the higher the value, the stronger the filter). Note: Filtered image is used for object detection only (no influence on feature extraction, but shape features might be affected). Note also that the parameter scales directly with lens magnification.
     </p>
 
     <a name="latwindowsize"></a>
@@ -40,7 +48,7 @@
     <h4 class="sub">Window size</h4>
 
     <p class="subtext">
-      Recommended are 4-11x higher values then above.
+      Recommended are 4-10x higher values then above.
     </p>
 
     <a name="latlimit2"></a>
@@ -85,7 +93,7 @@
     <a name="removeborderobjects"></a>
     <h4 class="sub">Remove border objects</h4>
     <p class="subtext">
-      Filter out all foreground objects that thouch the image border.
+      Filter out all foreground objects that touch the image border.
     </p>
 
     <a name="postprocessing"></a>

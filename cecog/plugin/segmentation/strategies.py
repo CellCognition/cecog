@@ -198,7 +198,7 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
 class SegmentationPluginPrimary2(_SegmentationPlugin):
 
     LABEL = 'Local adaptive threshold, togglemappings, split&merge, background corrected object filter'
-    NAME = 'test'
+    NAME = 'lat_tm'
     COLOR = '#FF0000'
 
     REQUIRES = None
@@ -229,7 +229,7 @@ class SegmentationPluginPrimary2(_SegmentationPlugin):
              ]
 
     # the : at the beginning indicates a QRC link with alias 'plugins/segmentation/local_adaptive_threshold'
-    DOC = ':local_adaptive_threshold'
+    DOC = ':local_adaptive_threshold_tm'
 
     def render_to_gui(self, panel):
         panel.add_group('togglemappings',
