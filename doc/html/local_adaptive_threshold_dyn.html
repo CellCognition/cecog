@@ -5,13 +5,14 @@
   </head>
 
   <body>
-    <a name="local_adaptive_threshold_tm"></a>
-    <h2>Segmentation: Toggle Mappings and Local Adaptive Threshold </h2>
+    <a name="local_adaptive_threshold_dyn"></a>
+    <a name="primary3"></a>
+    <h2>Local Adaptive Threshod, Split by morphological dynamics</h2>
     <p class="text">
       Performs object detection based on local adaptive thresholding. A background map of the input image is computed based on the <i>Window size</i> (moving average window). Image pixels higher above the background map than <i>Min. contrast</i> are considered foreground, all other pixels background.
       This is a standard method to detect isolated cell nuclei with good signal to noise ratio. The background subtraction is important if the nuclei have varying intensities (so it is not only used for background correction). 
       In order to make this also work in more difficult cases (touching nuclei, feable signal), there are a number of techniques that can be applied in addition (see below). 
-      This method is close to the standard Local Adaptive Threshold method, but it sharpens the image prior to thresholding.
+      This method is close to "Toggle Mappings and Local Adaptive Threshold", but it provides a different split technique. 
     </p>
 
     <a name="togglemappings"></a>
@@ -60,7 +61,6 @@
 
     <a name="latwindowsize2"></a>
     <h4 class="sub">Window size</h4>
-
     <p class="subtext">
       Recommended are 4-10x higher values then above.
     </p>
@@ -71,28 +71,26 @@
       Recommended are 3-4x higher values than above.
     </p>
 
-    <a name="shapewatershed"></a>
-    <h4>Split & merge by shape</h4>
+    <a name="watershed_distance"></a>
+    <h4>Watershed (distance)</h4>
     <p class="text">
-      Optional correction of under-segmentation by a split and merge approach. Objects in close spatial proximity might not be separated (under-segmentation). Based on the shape information (distance transform) objects are split by the <i>watershed</i> algorithm, which often yields over-segmentation. Object candidates are probed for merging by their size and circularity (rounder objects above a size threshold are preferred). See <img class="extlink" src=":extlink"/><a href="http://www3.interscience.wiley.com/journal/118757015/abstract">W&auml;hlby et al. 2004.
+      Optional correction of under-segmentation, based on the well-known watershed approach: 
+      An inverse distance map of the initial segmentation is calculated, and the final split is achieved by application of the watershed transform.
+      The minima from which the flooding is initiated are selected by morphological dynamics; losely speaking, this corresponds to the depth of the minimum. 
+      Here, we have developed a method which does the minima selection and the watershed transformation in a single step, which is particularly fast.
     </p>
 
-    <a name="shapewatershed_gausssize"></a>
-    <h4 class="sub">Gauss radius</h4>
+    <a name="watershed_dynamic"></a>
+    <h4 class="sub">Minimal Depth</h4>
     <p class="subtext">
-      Size of the Gauss filter for smoothing the distance transformed image. This parameter scales with lens magnification.
+      The depth of a minimum allowed to generate a single object. Higher values lead to less objects, as more splits are rejected.
     </p>
 
-    <a name="shapewatershed_maximasize"></a>
-    <h4 class="sub">Min. seed distance</h4>
+    <a name="watershed_used_distance"></a>
+    <h4 class="sub">Distance metric</h4>
     <p class="subtext">
-      Minimal allowed distance in pixel between objects (seed distance for watershed). This parameter scales with lens magnification.
-    </p>
-
-    <a name="shapewatershed_minmergesize"></a>
-    <h4 class="sub">Object size threshold</h4>
-    <p class="subtext">
-      Minimal size (pixel) of a split object. This parameter scales with squared lens magnification.
+      This is the distance metric used by the watershed algorithm. 0 corresponds to 4-connectivity, 1 corresonds to 8-connectivity and 2 to usual Euclidean distance.
+      We have observed that 2 is generally the best value. 
     </p>
 
     <a name="holefilling"></a>

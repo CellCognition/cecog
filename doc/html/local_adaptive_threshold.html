@@ -5,19 +5,29 @@
   </head>
 
   <body>
-    <a name="local_adaptive_threshold"></a>
-    <a name="lat"></a>
+    <!-- <a name="local_adaptive_threshold"></a> -->  
     <h2>Segmentation: Local Adaptive Threshold </h2>
-
     <p class="text">
-      Performs object detection based on local adaptive thresholding. A background map of the input image is computed based on the <i>Window size</i> (moving average window). Image pixels higher above the background map than <i>Min. contrast</i> are considered foreground, all other pixels background.
-      This is a standard method to detect isolated cell nuclei with good signal to noise ratio. The background subtraction is important if the nuclei have varying intensities (so it is not only used for background correction). 
-      In order to make this also work in more difficult cases (touching nuclei, feable signal), there are a number of techniques that can be applied in addition (see below). 
+      Performs object detection based on local adaptive thresholding. 
+      This is a standard method to detect isolated cell nuclei with good signal to noise ratio. 
+      The background subtraction is important 
+      if the nuclei have varying intensities (so it is not only used for correction of uneven illumination).
+      In order to make this also work in more difficult cases (touching nuclei, feable signal), 
+      there are a number of techniques that can be applied in addition (see below).
+    </p>
+
+    <a name="loc_adat"></a>
+    <h4>Local adaptive threshold </h4>
+    <p class="text">    
+      Performs object detection based on local adaptive thresholding (not optional). 
+      The settings of this non-optional step can be set by the user. 
+      A background map of the input image is computed based on the <i>Window size</i> (moving average window). 
+      Image pixels higher above the background map than <i>Min. contrast</i> are considered foreground, all other pixels background.
     </p>
 
     <a name="medianradius"></a>
-    <h4>Median radius</h4>
-    <p class="text">
+    <h4 class="sub">Median radius</h4>
+    <p class="subtext">
       The median filter removes noise, while keeping the edges intact (no blurring of the image). The degree of filtering is controlled by the radius of the median filter (radius measured in pixels: the higher the value, the stronger the filter). Note: Filtered image is used for object detection only (no influence on feature extraction, but shape features might be affected). Note also that the parameter scales directly with lens magnification.
     </p>
 
@@ -40,7 +50,6 @@
 
     <a name="latwindowsize2"></a>
     <h4 class="sub">Window size</h4>
-
     <p class="subtext">
       Recommended are 4-10x higher values then above.
     </p>
@@ -53,7 +62,6 @@
 
     <a name="shapewatershed"></a>
     <h4>Split & merge by shape</h4>
-
     <p class="text">
       Optional correction of under-segmentation by a split and merge approach. Objects in close spatial proximity might not be separated (under-segmentation). Based on the shape information (distance transform) objects are split by the <i>watershed</i> algorithm, which often yields over-segmentation. Object candidates are probed for merging by their size and circularity (rounder objects above a size threshold are preferred). See <img class="extlink" src=":extlink"/><a href="http://www3.interscience.wiley.com/journal/118757015/abstract">W&auml;hlby et al. 2004.
     </p>
@@ -66,27 +74,25 @@
 
     <a name="shapewatershed_maximasize"></a>
     <h4 class="sub">Min. seed distance</h4>
-
     <p class="subtext">
       Minimal allowed distance in pixel between objects (seed distance for watershed). This parameter scales with lens magnification.
     </p>
 
     <a name="shapewatershed_minmergesize"></a>
     <h4 class="sub">Object size threshold</h4>
-
     <p class="subtext">
       Minimal size (pixel) of a split object. This parameter scales with squared lens magnification.
     </p>
 
     <a name="holefilling"></a>
-    <h4 class="sub">Fill holes</h4>
-    <p class="subtext">
+    <h4>Fill holes</h4>
+    <p class="text">
       Remove holes from foreground ojbects i.e. allow only topologically closed objects.
     </p>
 
     <a name="removeborderobjects"></a>
-    <h4 class="sub">Remove border objects</h4>
-    <p class="subtext">
+    <h4>Remove border objects</h4>
+    <p class="text">
       Filter out all foreground objects that touch the image border.
     </p>
 

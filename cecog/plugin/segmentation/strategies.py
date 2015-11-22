@@ -200,8 +200,11 @@ class SegmentationPluginPrimary2(_SegmentationPlugin):
     LABEL = 'Toggle Mappings and Local Adaptive Threshold'
     NAME = 'lat_tm'
     COLOR = '#FF0000'
-
+    
     REQUIRES = None
+
+    # the : at the beginning indicates a QRC link with alias 'plugins/segmentation/local_adaptive_threshold_tm'
+    DOC = ':local_adaptive_threshold_tm'
 
     PARAMS = [('medianradius', IntTrait(2, 0, 1000, label='Median radius')),
               ('togglemappings', BooleanTrait(False, label='Toggle Mappings')),
@@ -227,9 +230,6 @@ class SegmentationPluginPrimary2(_SegmentationPlugin):
               ('removeborderobjects', BooleanTrait(True, label='Remove border objects')),
               ('holefilling', BooleanTrait(True, label='Fill holes')),
              ]
-
-    # the : at the beginning indicates a QRC link with alias 'plugins/segmentation/local_adaptive_threshold_tm'
-    DOC = ':local_adaptive_threshold_tm'
 
     def render_to_gui(self, panel):
         panel.add_group('togglemappings',
@@ -397,11 +397,14 @@ class SegmentationPluginPrimary2(_SegmentationPlugin):
 
 class SegmentationPluginPrimary3(_SegmentationPlugin):
 
-    LABEL = 'Local adaptive threshold, togglemappings, split by minima depth, background corrected object filter'
+    LABEL = 'Local Adaptive Threshod, Split by morphological dynamics'
     NAME = 'primary3'
     COLOR = '#FF0000'
 
     REQUIRES = None
+
+    # the : at the beginning indicates a QRC link with alias 'plugins/segmentation/local_adaptive_threshold_tm'
+    DOC = ':local_adaptive_threshold_dyn'
 
     PARAMS = [('medianradius', IntTrait(2, 0, 1000, label='Median radius')),
               ('togglemappings', BooleanTrait(False, label='Toggle Mappings')),
@@ -417,14 +420,12 @@ class SegmentationPluginPrimary3(_SegmentationPlugin):
               ('postprocessing', BooleanTrait(False, label='Object filter')),
               ('postprocessing_roisize_min', IntTrait(-1, -1, 1000000, label='Min. object size')),
               ('postprocessing_roisize_max', IntTrait(-1, -1, 1000000, label='Max. object size')),
-              ('postprocessing_intensity_min', IntTrait(-1, -1, 1000000, label='Min. average intensity above background')),
-              ('postprocessing_intensity_max', IntTrait(-1, -1, 1000000, label='Max. average intensity above background')),
+              ('postprocessing_intensity_min_above_bg', IntTrait(-1, -1, 1000000, label='Min. average intensity above background')),
+              ('postprocessing_intensity_max_above_bg', IntTrait(-1, -1, 1000000, label='Max. average intensity above background')),
               ('removeborderobjects', BooleanTrait(True, label='Remove border objects')),
               ('holefilling', BooleanTrait(True, label='Fill holes')),
              ]
 
-    # the : at the beginning indicates a QRC link with alias 'plugins/segmentation/local_adaptive_threshold'
-    DOC = ':local_adaptive_threshold'
 
     def render_to_gui(self, panel):
         panel.add_group('togglemappings',
@@ -449,8 +450,8 @@ class SegmentationPluginPrimary3(_SegmentationPlugin):
         panel.add_group('postprocessing',
                         [('postprocessing_roisize_min', (0, 0, 1, 1)),
                          ('postprocessing_roisize_max', (0, 1, 1, 1)),
-                         ('postprocessing_intensity_min', (1, 0, 1, 1)),
-                         ('postprocessing_intensity_max', (1, 1, 1, 1)),
+                         ('postprocessing_intensity_min_above_bg', (1, 0, 1, 1)),
+                         ('postprocessing_intensity_max_above_bg', (1, 1, 1, 1)),
                          ])
 
     @stopwatch()
@@ -595,18 +596,21 @@ class SegmentationPluginPrimary3(_SegmentationPlugin):
 
         self.postprocessing(container, self.params['postprocessing'],
                             (self.params['postprocessing_roisize_min'], self.params['postprocessing_roisize_max']),
-                            (self.params['postprocessing_intensity_min'], self.params['postprocessing_intensity_max']),
+                            (self.params['postprocessing_intensity_min_above_bg'], self.params['postprocessing_intensity_max_above_bg']),
                             offset=offset)
 
         return container
     
 class SegmentationPluginPrimary4(_SegmentationPlugin):
 
-    LABEL = 'global + local threshold, togglemappings, split by minima depth, background corrected object filter'
+    LABEL = 'Global and Local Adaptive Threshod, Split by morphological dynamics'
     NAME = 'primary4'
     COLOR = '#FF0000'
-
+    
     REQUIRES = None
+
+    # the : at the beginning indicates a QRC link with alias 'plugins/segmentation/local_adaptive_threshold_tm'
+    DOC = ':local_adaptive_threshold_globloc'
 
     PARAMS = [('median', BooleanTrait(True, label='Median filter')),
               ('medianradius', IntTrait(2, 0, 1000, label='Median radius')),
@@ -624,15 +628,13 @@ class SegmentationPluginPrimary4(_SegmentationPlugin):
               ('postprocessing', BooleanTrait(False, label='Object filter')),
               ('postprocessing_roisize_min', IntTrait(-1, -1, 1000000, label='Min. object size')),
               ('postprocessing_roisize_max', IntTrait(-1, -1, 1000000, label='Max. object size')),
-              ('postprocessing_intensity_min', IntTrait(-1, -1, 1000000, label='Min. average intensity above background')),
-              ('postprocessing_intensity_max', IntTrait(-1, -1, 1000000, label='Max. average intensity above background')),
+              ('postprocessing_intensity_min_above_bg', IntTrait(-1, -1, 1000000, label='Min. average intensity above background')),
+              ('postprocessing_intensity_max_above_bg', IntTrait(-1, -1, 1000000, label='Max. average intensity above background')),
               ('removeborderobjects', BooleanTrait(True, label='Remove border objects')),
               ('holefilling', BooleanTrait(True, label='Fill holes')),
-              ('holearea', IntTrait(1, 0, 100000, label='Minimal Hole Size')),
+              ('holearea', IntTrait(1, 0, 100000, label='Maximal Hole Size')),
              ]
 
-    # the : at the beginning indicates a QRC link with alias 'plugins/segmentation/local_adaptive_threshold'
-    DOC = ':local_adaptive_threshold'
 
     def render_to_gui(self, panel):
         panel.add_group('togglemappings',
@@ -666,8 +668,8 @@ class SegmentationPluginPrimary4(_SegmentationPlugin):
         panel.add_group('postprocessing',
                         [('postprocessing_roisize_min', (0, 0, 1, 1)),
                          ('postprocessing_roisize_max', (0, 1, 1, 1)),
-                         ('postprocessing_intensity_min', (1, 0, 1, 1)),
-                         ('postprocessing_intensity_max', (1, 1, 1, 1)),
+                         ('postprocessing_intensity_min_above_bg', (1, 0, 1, 1)),
+                         ('postprocessing_intensity_max_above_bg', (1, 1, 1, 1)),
                          ])
 
     @stopwatch()
@@ -883,7 +885,7 @@ class SegmentationPluginPrimary4(_SegmentationPlugin):
         
         self.postprocessing(container, self.params['postprocessing'],
                             (self.params['postprocessing_roisize_min'], self.params['postprocessing_roisize_max']),
-                            (self.params['postprocessing_intensity_min'], self.params['postprocessing_intensity_max']),
+                            (self.params['postprocessing_intensity_min_above_bg'], self.params['postprocessing_intensity_max_above_bg']),
                             offset=offset)
 
         return container
