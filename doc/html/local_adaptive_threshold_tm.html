@@ -6,32 +6,33 @@
 
   <body>
     <a name="local_adaptive_threshold_tm"></a>
+    <a name="lat_tm"></a>
     <h2>Segmentation: Toggle Mappings and Local Adaptive Threshold </h2>
     <p class="text">
       Performs object detection based on local adaptive thresholding. A background map of the input image is computed based on the <i>Window size</i> (moving average window). Image pixels higher above the background map than <i>Min. contrast</i> are considered foreground, all other pixels background.
-      This is a standard method to detect isolated cell nuclei with good signal to noise ratio. The background subtraction is important if the nuclei have varying intensities (so it is not only used for background correction). 
-      In order to make this also work in more difficult cases (touching nuclei, feable signal), there are a number of techniques that can be applied in addition (see below). 
+      This is a standard method to detect isolated cell nuclei with good signal to noise ratio. The background subtraction is important if the nuclei have varying intensities (so it is not only used for background correction).
+      In order to make this also work in more difficult cases (touching nuclei, feable signal), there are a number of techniques that can be applied in addition (see below).
       This method is close to the standard Local Adaptive Threshold method, but it sharpens the image prior to thresholding.
     </p>
 
     <a name="togglemappings"></a>
     <h4>Toggle Mappings</h4>
     <p class="text">
-      Toggle mappings allow to sharpen images by mathematical morphology. This sharpening then leads to less cases of joint segmentation of cell nuclei: it helps in separating nuclei without a prior on the shape of the detected objects. However, if there is no decrease in the signal between two nuclei, this method will not help. 
+      Toggle mappings allow to sharpen images by mathematical morphology. This sharpening then leads to less cases of joint segmentation of cell nuclei: it helps in separating nuclei without a prior on the shape of the detected objects. However, if there is no decrease in the signal between two nuclei, this method will not help.
     </p>
-    
+
     <a name="tm_size"></a>
     <h4 class="sub">Size of the structuring element used by Toggle Mappings</h4>
     <p class="subtext">
-    In this implementation, Toggle Mappings (TM) calculate an erosion and a dilation with a structuring element of user-defined size. The operator then assigns to each pixel the value of erosion or dilation depending on which of the two is closer to the initial pixel value. This parameter defines the size of the erosion and dilation.  
+    In this implementation, Toggle Mappings (TM) calculate an erosion and a dilation with a structuring element of user-defined size. The operator then assigns to each pixel the value of erosion or dilation depending on which of the two is closer to the initial pixel value. This parameter defines the size of the erosion and dilation.
     </p>
-    
+
     <a name="lat"></a>
     <h4>Local adaptive threshold </h4>
-    <p class="text">    
-      Performs object detection based on local adaptive thresholding (not optional). 
-      The settings of this non-optional step can be set by the user. 
-      A background map of the input image is computed based on the <i>Window size</i> (moving average window). 
+    <p class="text">
+      Performs object detection based on local adaptive thresholding (not optional).
+      The settings of this non-optional step can be set by the user.
+      A background map of the input image is computed based on the <i>Window size</i> (moving average window).
       Image pixels higher above the background map than <i>Min. contrast</i> are considered foreground, all other pixels background.
     </p>
 
@@ -128,17 +129,17 @@
     <a name="postprocessing_intensity_min_above_bg"></a>
     <h4 class="sub">Min. average intensity above background</h4>
     <p class="subtext">
-      From the segmentation result, the average intensity of the background is calculated. 
-      If the difference of the average intensity inside the object and the average background intensity is below the user defined value, the object is removed.    
-      This filter does not work well in case of non-uniform illumination, but it is robust to intensity offsets. 
+      From the segmentation result, the average intensity of the background is calculated.
+      If the difference of the average intensity inside the object and the average background intensity is below the user defined value, the object is removed.
+      This filter does not work well in case of non-uniform illumination, but it is robust to intensity offsets.
     </p>
 
     <a name="postprocessing_intensity_max_above_bg"></a>
     <h4 class="sub">Max. average intensity above background</h4>
     <p class="subtext">
-      From the segmentation result, the average intensity of the background is calculated. 
-      If the difference of the average intensity inside the object and the average background intensity is above the user defined value, the object is removed.    
-      This filter does not work well in case of non-uniform illumination, but it is robust to intensity offsets. 
+      From the segmentation result, the average intensity of the background is calculated.
+      If the difference of the average intensity inside the object and the average background intensity is above the user defined value, the object is removed.
+      This filter does not work well in case of non-uniform illumination, but it is robust to intensity offsets.
     </p>
 
   </body>

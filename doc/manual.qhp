@@ -7,7 +7,7 @@
       <section title="Getting Started" ref="html/getting_started.html"></section>
       <section title="Sections" ref="html/manual.html#general">
         <section title="General" ref="html/manual.html#general"></section>
-        <section title="Object detection" ref="html/manual.html#segmentation">        
+        <section title="Object detection" ref="html/manual.html#segmentation">
           <section title="Local Adaptive Threshold" ref="html/local_adaptive_threshold.html"></section>
           <section title="Toggle Mappings and Local Adaptive Threshold" ref="html/local_adaptive_threshold_tm.html"></section>
           <section title="Local Adaptive Threshod, Split by morphological dynamics" ref="html/local_adaptive_threshold_dyn.html"></section>
@@ -91,7 +91,7 @@
       <keyword name="Min. Contrast (Lat2)" ref="html/local_adaptive_threshold.html#latlimit2"/>
       <keyword name="Fill holes" ref="html/manual.html#holefilling"/>
       <keyword name="Maximal Hole Size" ref="html/local_adaptive_threshold_globloc.html#holearea"/>
-      
+
       <keyword name="Remove border objects" ref="html/manual.html#removeborderobjects"/>
       <keyword name="Split &amp; Merge by Shape " ref="html/local_adaptive_threshold.html#shapewatershed"/>
       <keyword name="Gauss Radius" ref="html/local_adaptive_threshold.html#shapewatershed_gausssize"/>
@@ -152,6 +152,10 @@
       <keyword name="Use Gradient (instead of the original image)" ref="html/secondary_regions.html#gradient"/>
       <keyword name="Intermediate Level to background" ref="html/secondary_regions.html#to_background"/>
 
+
+      <keyword name="Toggle Mappings and Local Adaptive Threshold" ref="html/local_adaptive_threshold_tm.html#lat_tm"></keyword>
+      <keyword name="Local Adaptive Threshod, Split by morphological dynamics" ref="html/local_adaptive_threshold_dyn.html#primary3"></keyword>
+      <keyword name="Global and Local Adaptive Threshod, Split by morphological dynamics" ref="html/local_adaptive_threshold_globloc.html#primary4"></keyword>
 
       <keyword name="Controlpanel (Object detection)" ref="html/manual.html#controlpanel_segmentation"/>
 
