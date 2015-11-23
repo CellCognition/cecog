@@ -77,6 +77,7 @@ class AtHelpBrowser(QtWidgets.QTextBrowser):
 
     QTHELP = 'qthelp'
     HTTP = 'http'
+    HTTPS = 'https'
 
     def __init__(self, *args, **kw):
         super(AtHelpBrowser, self).__init__(*args, **kw)
@@ -84,7 +85,7 @@ class AtHelpBrowser(QtWidgets.QTextBrowser):
 
     def setSource(self, url):
 
-        if url.scheme() == self.HTTP:
+        if url.scheme() in (self.HTTP, self.HTTPS):
             QtGui.QDesktopServices.openUrl(url)
         else:
             super(AtHelpBrowser, self).setSource(url)
