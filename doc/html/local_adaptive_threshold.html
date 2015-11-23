@@ -5,23 +5,23 @@
   </head>
 
   <body>
-    <!-- <a name="local_adaptive_threshold"></a> -->  
+    <!-- <a name="local_adaptive_threshold"></a> -->
     <h2>Segmentation: Local Adaptive Threshold </h2>
     <p class="text">
-      Performs object detection based on local adaptive thresholding. 
-      This is a standard method to detect isolated cell nuclei with good signal to noise ratio. 
-      The background subtraction is important 
+      Performs object detection based on local adaptive thresholding.
+      This is a standard method to detect isolated cell nuclei with good signal to noise ratio.
+      The background subtraction is important
       if the nuclei have varying intensities (so it is not only used for correction of uneven illumination).
-      In order to make this also work in more difficult cases (touching nuclei, feable signal), 
+      In order to make this also work in more difficult cases (touching nuclei, feable signal),
       there are a number of techniques that can be applied in addition (see below).
     </p>
 
     <a name="lat"></a>
     <h4>Local adaptive threshold </h4>
-    <p class="text">    
-      Performs object detection based on local adaptive thresholding (not optional). 
-      The settings of this non-optional step can be set by the user. 
-      A background map of the input image is computed based on the <i>Window size</i> (moving average window). 
+    <p class="text">
+      Performs object detection based on local adaptive thresholding (not optional).
+      The settings of this non-optional step can be set by the user.
+      A background map of the input image is computed based on the <i>Window size</i> (moving average window).
       Image pixels higher above the background map than <i>Min. contrast</i> are considered foreground, all other pixels background.
     </p>
 
@@ -45,7 +45,7 @@
     <a name="lat2"></a>
     <h4>Local adaptive threshold 2</h4>
     <p class="text">
-      Optional second <a href="lat">local adaptive threshold</a> to overcome the problem of incorrect object contours when very bright and very dark objects are in close spatial proximity. See <img class="extlink" src=":extlink"/><a href="http://linkinghub.elsevier.com/retrieve/pii/S1047-8477(09)00273-1">Walter et al. 2010.
+      Optional second <a href="loc_adat">local adaptive threshold</a> to overcome the problem of incorrect object contours when very bright and very dark objects are in close spatial proximity. See <img class="extlink" src=":extlink"/><a href="http://linkinghub.elsevier.com/retrieve/pii/S1047-8477(09)00273-1">Walter et al. 2010.
     </p>
 
     <a name="latwindowsize2"></a>
