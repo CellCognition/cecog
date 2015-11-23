@@ -28,6 +28,7 @@
     <h4 class="sub">Expansion size</h4>
     <p class="subtext">
       Pixel increase of the primary region (unchanged for the values &equiv; 0).
+      The expansion is stopped, when regions start touching each other. 
     </p>
 
 
@@ -42,11 +43,13 @@
 
     <a name="outside"></a>
     <h4>Ouside</h4>
-    <p class="text">Area outside of the primary regions.</p>
+    <p class="text">Area outside of the primary regions.
+    </p>
     <a name="expansion_size"></a>
     <h4 class="sub">Expansion size</h4>
     <p class="subtext">
       Pixel increase of the primary region (areas are only computed for the values &gt; 0).
+      The expansion is stopped, when regions start touching each other.       
     </p>
     <a name="separation_size"></a>
     <h4 class="sub">Separation size</h4>
@@ -63,6 +66,7 @@
     <h4 class="sub">Expansion size</h4>
     <p class="subtext">
       Pixel increase of the primary region (areas are only computed if expansion or shrinking size &gt; 0).
+      The expansion is stopped, when regions start touching each other. 
     </p>
 
     <a name="shrinking_size"></a>
@@ -74,14 +78,77 @@
     <a name="propagate"></a>
     <h3>Propagate region from primary</h3>
     <p class="text">
-      Propagate region from primary segementation using an Otsu-threshold.
+      Propagate region from primary segementation. 
+      The algorithm propagates the nuclear regions according to a distance metric that takes into account (1) 
+      spatial distance and (2) the grey level information of the secondary channel. 
+      This is an implementation of 
+      <img class="extlink" src=":extlink"/><a href="http://link.springer.com/chapter/10.1007%2F11569541_54">Jones et al. 2005.    
     </p>
 
     <a name="constrained_watershed"></a>
     <h3>Constrained watershed from primary</h3>
     <p class="text">
-      Find cell outline from primary region using seeded watershed.
+      Uses constrained Watershed algorithm on the gradient of the secondary channel. The imposed markers are
+      the nuclei (from the primary segmentation) as internal marker and the voronoi boundaries calculated from the 
+      internal marker, as external marker. 
     </p>
+
+    <a name="ws_and_multi_threshold"></a>
+    <h3>Global 3-level Threshold and Watershed from Primary Channel</h3>
+    <p class="text">
+      The method is based on a 3-level Otsu threshold and the Watershed transformation on the secondary image. 
+    </p>
+
+    <a name="gauss_filter_size"></a>
+    <h4 class="sub">Gauss filter size</h4>
+    <p class="subtext">
+      The image is prefiltered with a Gaussian filter with user-defined bandwidth.</p>
+    </p>
+
+    <a name="to_background"></a>
+    <h4 class="sub">Intermediate Level to background</h4>
+    <p class="subtext">
+      The Otsu method will provide two thresholds in order to classify the pixels into background, intermediate and bright pixels.
+      The user defines which of these classes are merged: if <i>Intermediate Level to background</i> is selected,
+      the intermediate and background class are merged, otherwise the bright and intermediate classes are merged.
+      If the option is selected, there are smaller and fewer objects. 
+      </p>
+    </p>
+
+    <a name="otsu_factor"></a>
+    <h4 class="sub">Otsu Factor</h4>
+    <p class="subtext">
+      User-defined Otsu-factor a. The final threshold is a * o + b, with o the Otsu threshold (either separating background 
+      + intermediate from bright or background from intermediate + bright)
+      and b the offset. Increasing a leads to smaller and fewer objects.</p>
+    </p>
+
+    <a name="offset"></a>
+    <h4 class="sub">Threshold Offset</h4>
+    <p class="subtext">
+      User defined offset b. The final threshold is a * o + b, with o the Otsu threshold (either separating background 
+      + intermediate from bright or background from intermediate + bright)
+      and b the offset. Increasing b leads to smaller and fewer objects.</p>
+    </p>
+
+    <a name="gradient"></a>
+    <h4 class="sub">Use Gradient (instead of the original image)</h4>
+    <p class="subtext">
+      The objects are split with the watershed transformation. Unlike the method used for the primary channel,
+      there is no specific prior knowledge on the shape that can be used for cell segmentation. 
+      Nuclei from the primary channel are used as cell markers. The watershed transformation is calculated
+      either on the gradient image or on the inverted image. The first is more suitable if the boundaries
+      are clearly defined, the latter is preferable if the signal "fades" towards the cell boundaries.</p>
+    </p>
+
+
+    <a name="ws_and_global_and_local_threshold"></a>
+    <h3>Global & Local Threshold + Watershed from Primary Channel</h3>
+    <p class="text">
+    The method is based on a combination of local and global threshold. Each of the two methods can be switched on
+    and off. Cell separation is achieved by the watershed transformation on the secondary image.
+    </p>
+
 
     </body>
 </html>

@@ -24,6 +24,8 @@ from cecog.plugin.segmentation.strategies import SegmentationPluginInside
 from cecog.plugin.segmentation.strategies import SegmentationPluginOutside
 from cecog.plugin.segmentation.strategies import SegmentationPluginRim
 from cecog.plugin.segmentation.strategies import SegmentationPluginPropagate
+from cecog.plugin.segmentation.strategies import SegmentationPluginWatershedAndMultiThreshold
+from cecog.plugin.segmentation.strategies import SegmentationPluginWatershedAndThresholdLocalThreshold
 from cecog.plugin.segmentation.strategies import SegmentationPluginConstrainedWatershed
 from cecog.plugin.segmentation.strategies import SegmentationPluginDifference
 from cecog.plugin.segmentation.strategies import SegmentationPluginIlastik
@@ -88,6 +90,8 @@ class MetaPluginManager(object):
         self.managers['secondary'].register_plugin(SegmentationPluginRim)
         self.managers['secondary'].register_plugin(SegmentationPluginPropagate)
         self.managers['secondary'].register_plugin(SegmentationPluginConstrainedWatershed)
+        self.managers['secondary'].register_plugin(SegmentationPluginWatershedAndMultiThreshold)
+        self.managers['secondary'].register_plugin(SegmentationPluginWatershedAndThresholdLocalThreshold)
 
         self.managers['tertiary'].register_plugin(SegmentationPluginExpanded)
         self.managers['tertiary'].register_plugin(SegmentationPluginInside)
@@ -96,6 +100,8 @@ class MetaPluginManager(object):
         self.managers['tertiary'].register_plugin(SegmentationPluginPropagate)
         self.managers['tertiary'].register_plugin(SegmentationPluginConstrainedWatershed)
         self.managers['tertiary'].register_plugin(SegmentationPluginDifference)
+        self.managers['tertiary'].register_plugin(SegmentationPluginWatershedAndMultiThreshold)
+        self.managers['tertiary'].register_plugin(SegmentationPluginWatershedAndThresholdLocalThreshold)
 
     def __getitem__(self, key):
         return self.managers[key]

@@ -143,6 +143,15 @@
 
       <keyword name="Secondary segmentation: propagate" ref="html/secondary_regions.html#propagate"/>
       <keyword name="Secondary segmentation: constrained watershed" ref="html/secondary_regions.html#constrained_watershed"/>
+      <keyword name="Secondary segmentation: Global 3-level Threshold and Watershed from Primary Channel" ref="html/secondary_regions.html#ws_and_multi_threshold"/>
+      <keyword name="Secondary segmentation: Global and Local Threshold and Watershed" ref="html/secondary_regions.html#ws_and_global_and_local_threshold"/>
+
+      <keyword name="Gauss filter size" ref="html/secondary_regions.html#gauss_filter_size"/>
+      <keyword name="Otsu Factor" ref="html/secondary_regions.html#otsu_factor"/>
+      <keyword name="Threshold Offset" ref="html/secondary_regions.html#offset"/>
+      <keyword name="Use Gradient (instead of the original image)" ref="html/secondary_regions.html#gradient"/>
+      <keyword name="Intermediate Level to background" ref="html/secondary_regions.html#to_background"/>
+
 
       <keyword name="Controlpanel (Object detection)" ref="html/manual.html#controlpanel_segmentation"/>
 
