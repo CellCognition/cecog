@@ -27,7 +27,7 @@ TARGET_SYS = join('share', 'cellcognition', 'resources')
 RESOURCE_DIR = 'resources'
 
 
-_rsc = ('config.ini', 'naming_schemas.ini', 'path_mappings.txt', 'font12.png')
+_rsc = ('naming_schemas.ini', 'path_mappings.txt', 'font12.png')
 _rsc = [join(abspath(RESOURCE_DIR), basename(rf)) for rf in _rsc]
 
 _palettes = join(RESOURCE_DIR, 'palettes', 'zeiss')
