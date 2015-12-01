@@ -52,7 +52,7 @@ The package contains a sub-folder Data with
 
 - Settings
   -demo_settings.conf, the settings file which is loaded on startup
-  - graph_primary.xm., an example for a graph definition file (H2b)
+  - graph_primary.xml, an example for a graph definition file (H2b)
   - graph_secondary.xml, an example for a graph definition file (Tubulin)
 - Classifier
   - H2B -- for the primary channel  
