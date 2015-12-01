@@ -59,8 +59,8 @@ The package contains a sub-folder Data with
           (Tubulin)
 
     - Classifier
-        - *H2B* for the primary channel  
-        - *aTubulin* for the secondary channel
+        - H2B -- for the primary channel  
+        - aTubulin -- for the secondary channel
         
         The classifiers contain trained and cross validated data suitable for demonstration purpose.
         Retraining (annoation of new cells, picking and cross validation) is only possible if one downloads 
