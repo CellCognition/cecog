@@ -29,26 +29,23 @@ Run the make file.
 #### Using VCXX Professional
 Run build_win64_bin.bat
 
-The CecogAnalyzer package comes with batteries included.
 
-It contains
+### Demo data (battery package)
+
+The demo data containes:
 
 - a small set of raw images (10 timepoints of H2b-aTubulin)
 - the two classifiers for H2b and aTubulin to test classification
 - a pre-configured settings file which is loaded on start-up.
 
-You can
+Using the demo data it is possible to:
 
 - test Object Detection of the primary (H2b) and secondary (aTubulin) channels
-- retrain and test the classifier for H2b and aTubulin in Classification
-- test the tracking and select events in Tracking (only six tracks are found within the 10 frames)
-- for Error correction you need to install the R-project (see below)
+- test the classifier for H2b and aTubulin in Classification
+- test the Tracking and Event Selection.
 
 
-#### Package data
-
-
-The package contains a sub-folder Data with
+#####Files:
 
 - Settings
   -demo_settings.conf, the settings file which is loaded on startup
