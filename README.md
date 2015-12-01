@@ -54,26 +54,23 @@ The package contains a sub-folder Data with
 
     - Settings
         - demo_settings.conf, the settings file which is loaded on startup
-        - graph_primary.txt, an example for a graph definition file (H2b)
-        - graph_secondary.txt, an example for a graph definition file
+        - graph_primary.xm., an example for a graph definition file (H2b)
+        - graph_secondary.xml, an example for a graph definition file
           (Tubulin)
-        - position_labels.txt, position labels such as OligoID or GeneSymbol
 
     - Classifier
-        - the class definition and sample annotations to pick samples with the
-          larger data set, feature and SVM models to test (or train) the H2b
-          and aTubulin classifiers
+        - *H2B* for the primary channel  
+        - *aTubulin* for the secondary channel
+        
+        The classifiers contain trained and cross validated data suitable for demonstration purpose.
+        Retraining (annoation of new cells, picking and cross validation) is only possible if one downloads 
+        the [H2B-Tubulin data set](http://cellcognition.org/downloads/data).
 
     - Images
         - the input folder of the raw images
 
     - Analysis
         - the output folder where results are written to
-
-##### Note:
-The demo data contains pre-trained classifiers. In order to train classifiers please 
-download the full e.g. [H2B-Tubulin data set](http://cellcognition.org/downloads/data).
-
 
 #### Motif selection
 
