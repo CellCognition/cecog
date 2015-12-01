@@ -21,7 +21,7 @@ cecog/ccore/_cecog.so(pyd)
   ```python setup.py build_ext --inplace```
 
 #### System installation:
-  ```python setup.py install --prefix=\<path-to-prefix\```
+  ```python setup.py install --prefix=<path-to-prefix>```
 
 #### MacOSX
 Run the make file.
