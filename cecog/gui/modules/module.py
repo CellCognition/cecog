@@ -110,7 +110,7 @@ class CH5BasedModule(Module):
             self.ch5file = None
         else:
             try:
-                self.ch5file = cellh5.CH5File(self.hdf_file)
+                self.ch5file = cellh5.CH5File(self.hdf_file, mode="r")
             except Exception, e:
                 raise RuntimeError(("Invalid CellH5 files. Interactive viewing "
                                     "of selected events will not be possible.\n "
