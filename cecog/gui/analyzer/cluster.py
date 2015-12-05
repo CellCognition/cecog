@@ -47,7 +47,7 @@ class ConnectionError(Exception):
 
 class ClusterDisplay(QGroupBox):
 
-    MIN_API_VERSION = 1
+    MIN_API_VERSION = 2
 
     def __init__(self, parent, clusterframe,  settings):
         super(ClusterDisplay, self).__init__(parent)
