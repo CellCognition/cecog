@@ -700,7 +700,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         else:
             QMessageBox.critical(self, "Error",
                                  ("No images found\n"
-                                  "Verifiy your nameing scheme and rescan the data."))
+                                  "Verifiy your naming scheme and rescan the data."))
 
     def set_image_crop_size(self):
         x0, y0, x1, y1 = self._settings.get('General', 'crop_image_x0'), \
