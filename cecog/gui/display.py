@@ -449,7 +449,8 @@ class TraitDisplayMixin(QtWidgets.QFrame):
             dir_ = os.path.abspath(str(self._registry[name].text()))
 
             if mode == StringTrait.STRING_FILE:
-                result = QFileDialog.getOpenFileName(self, 'Select a file', dir_)
+                result = QFileDialog.getOpenFileName(
+                    self, 'Select a file', dir_)[0]
             else:
                 result = QFileDialog.getExistingDirectory(self, \
                            'Select a directory', dir_)
