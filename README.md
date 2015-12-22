@@ -53,14 +53,14 @@ Using the demo data it is possible to:
   - H2B  
   - aTubulin
 - Images
-  - first 10 timeframes from the [H2B-Tubulin data set](http://cellcognition.org/downloads/data).
+  - first 10 timeframes from the [H2B-Tubulin](http://cellcognition.org/downloads/data) image set.
 
 ####  H2B-Tubulin data set
-The demo data included in the installer contains only a hand full of images i.e. 10 time frames. Please download the bigger [H2B-Tubulin](http://cellcognition.org/downloads/data) data set to perform:
+The demo data included in the installer contains only a hand full of images i.e. 10 time frames. Please download the bigger [H2B-Tubulin](http://cellcognition.org/downloads/data) image set to perform:
 
 - Classifier training and cross validation
 - Event selection
 - Error correction
 
-It contains 206 frames with 4 min. timelapse. Use the same settings except for the parameter *Duration [post]*. It is recommended to increase it to 35 frames.
+It contains 206 frames with ~3.6 min. timelapse. Use the same settings except for the parameter *Duration [post]*. It is recommended to increase it to 35 frames.
 
