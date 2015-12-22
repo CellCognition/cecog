@@ -1,0 +1,143 @@
+<html>
+
+  <head>
+    <link rel="stylesheet"  type="text/css" href="css/help.css">
+  </head>
+
+  <body>
+    <a name="local_adaptive_threshold_dyn"></a>
+    <a name="primary3"></a>
+    <h2>Local Adaptive Threshod, Split by morphological dynamics</h2>
+    <p class="text">
+      Performs object detection based on local adaptive thresholding. A background map of the input image is computed based on the <i>Window size</i> (moving average window). Image pixels higher above the background map than <i>Min. contrast</i> are considered foreground, all other pixels background.
+      This is a standard method to detect isolated cell nuclei with good signal to noise ratio. The background subtraction is important if the nuclei have varying intensities (so it is not only used for background correction). 
+      In order to make this also work in more difficult cases (touching nuclei, feable signal), there are a number of techniques that can be applied in addition (see below). 
+      This method is close to "Toggle Mappings and Local Adaptive Threshold", but it provides a different split technique. 
+    </p>
+
+    <a name="togglemappings"></a>
+    <h4>Toggle Mappings</h4>
+    <p class="text">
+      Toggle mappings allow to sharpen images by mathematical morphology. This sharpening then leads to less cases of joint segmentation of cell nuclei: it helps in separating nuclei without a prior on the shape of the detected objects. However, if there is no decrease in the signal between two nuclei, this method will not help. 
+    </p>
+    
+    <a name="tm_size"></a>
+    <h4 class="sub">Size of the structuring element used by Toggle Mappings</h4>
+    <p class="subtext">
+    In this implementation, Toggle Mappings (TM) calculate an erosion and a dilation with a structuring element of user-defined size. The operator then assigns to each pixel the value of erosion or dilation depending on which of the two is closer to the initial pixel value. This parameter defines the size of the erosion and dilation.  
+    </p>
+    
+    <a name="lat"></a>
+    <h4>Local adaptive threshold </h4>
+    <p class="text">    
+      Performs object detection based on local adaptive thresholding (not optional). 
+      The settings of this non-optional step can be set by the user. 
+      A background map of the input image is computed based on the <i>Window size</i> (moving average window). 
+      Image pixels higher above the background map than <i>Min. contrast</i> are considered foreground, all other pixels background.
+    </p>
+
+    <a name="medianradius"></a>
+    <h4 class="sub">Median radius</h4>
+    <p class="subtext">
+      The median filter removes noise, while keeping the edges intact (no blurring of the image). The degree of filtering is controlled by the radius of the median filter (radius measured in pixels: the higher the value, the stronger the filter). Note: Filtered image is used for object detection only (no influence on feature extraction, but shape features might be affected). Note also that the parameter scales directly with lens magnification.
+    </p>
+
+    <a name="latwindowsize"></a>
+    <h4 class="sub">Window size</h4>
+    <p class="subtext">
+      Window size of squared window for the moving average in pixels. This parameter scales with lens magnification.
+    </p>
+
+    <a name="latlimit"></a>
+    <h4 class="sub">Min. contrast</h4>
+    <p class="subtext">Pixel intensity above the background (threshold, applied on the difference between image and locally averaged image). Note: Small values might increase artifacts (small objects from high noise levels) and slow down computation; high values might lead to incorrect contours and also leads to fewer objects, as dark objects will not be detected.
+    </p>
+
+    <a name="lat2"></a>
+    <h4>Local adaptive threshold 2</h4>
+    <p class="text">
+      Optional second <a href="lat">local adaptive threshold</a> to overcome the problem of incorrect object contours when very bright and very dark objects are in close spatial proximity. See <img class="extlink" src=":extlink"/><a href="http://linkinghub.elsevier.com/retrieve/pii/S1047-8477(09)00273-1">Walter et al. 2010.
+    </p>
+
+    <a name="latwindowsize2"></a>
+    <h4 class="sub">Window size</h4>
+    <p class="subtext">
+      Recommended are 4-10x higher values then above.
+    </p>
+
+    <a name="latlimit2"></a>
+    <h4 class="sub">Min. contrast</h4>
+    <p class="subtext">
+      Recommended are 3-4x higher values than above.
+    </p>
+
+    <a name="watershed_distance"></a>
+    <h4>Watershed (distance)</h4>
+    <p class="text">
+      Optional correction of under-segmentation, based on the well-known watershed approach: 
+      An inverse distance map of the initial segmentation is calculated, and the final split is achieved by application of the watershed transform.
+      The minima from which the flooding is initiated are selected by morphological dynamics; losely speaking, this corresponds to the depth of the minimum. 
+      Here, we have developed a method which does the minima selection and the watershed transformation in a single step, which is particularly fast.
+    </p>
+
+    <a name="watershed_dynamic"></a>
+    <h4 class="sub">Minimal Depth</h4>
+    <p class="subtext">
+      The depth of a minimum allowed to generate a single object. Higher values lead to less objects, as more splits are rejected.
+    </p>
+
+    <a name="watershed_used_distance"></a>
+    <h4 class="sub">Distance metric</h4>
+    <p class="subtext">
+      This is the distance metric used by the watershed algorithm. 0 corresponds to 4-connectivity, 1 corresonds to 8-connectivity and 2 to usual Euclidean distance.
+      We have observed that 2 is generally the best value. 
+    </p>
+
+    <a name="holefilling"></a>
+    <h4>Fill holes</h4>
+    <p class="text">
+      Remove holes from foreground ojbects i.e. allow only topologically closed objects.
+    </p>
+
+    <a name="removeborderobjects"></a>
+    <h4>Remove border objects</h4>
+    <p class="text">
+      Filter out all foreground objects that touch the image border.
+    </p>
+
+    <a name="postprocessing"></a>
+    <h4>Object filter</h4>
+    <p class="text">
+      Optional object filtering based on size and intensity. To specify a lower of upper bound only enter the value <tt>-1</tt>.
+    </p>
+
+    <a name="postprocessing_roisize_min"></a>
+    <h4 class="sub">Min. object size</h4>
+    <p class="subtext">
+      All objects below that size (pixel) are removed. This parameter scales with squared lens magnificaiton.
+    </p>
+
+    <a name="postprocessing_roisize_max"></a>
+    <h4 class="sub">Max. object size</h4>
+    <p class="subtext">
+      All objects above that size (pixel) are removed. This parameter scales with squared lens magnification.
+    </p>
+
+    <a name="postprocessing_intensity_min_above_bg"></a>
+    <h4 class="sub">Min. average intensity above background</h4>
+    <p class="subtext">
+      From the segmentation result, the average intensity of the background is calculated. 
+      If the difference of the average intensity inside the object and the average background intensity is below the user defined value, the object is removed.    
+      This filter does not work well in case of non-uniform illumination, but it is robust to intensity offsets. 
+    </p>
+
+    <a name="postprocessing_intensity_max_above_bg"></a>
+    <h4 class="sub">Max. average intensity above background</h4>
+    <p class="subtext">
+      From the segmentation result, the average intensity of the background is calculated. 
+      If the difference of the average intensity inside the object and the average background intensity is above the user defined value, the object is removed.    
+      This filter does not work well in case of non-uniform illumination, but it is robust to intensity offsets. 
+    </p>
+
+  </body>
+</html>

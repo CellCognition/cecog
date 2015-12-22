@@ -14,7 +14,7 @@ __url__ = 'www.cellcognition.org'
 __all__ = ['TrainingThread']
 
 import time
-from PyQt4 import QtCore
+from PyQt5 import QtCore
 
 from cecog.threads.corethread import CoreThread
 from cecog.learning.learning import ConfusionMatrix

@@ -24,7 +24,6 @@ from cecog.traits.analyzer.errorcorrection import SectionErrorcorrection
 from cecog.traits.analyzer.output import SectionOutput
 from cecog.traits.analyzer.processing import SectionProcessing
 from cecog.traits.analyzer.cluster import SectionCluster
-from cecog.traits.analyzer.postprocessing import SectionPostProcessing
 from cecog.traits.analyzer.eventselection import SectionEventSelection
 
 
@@ -48,7 +47,6 @@ class SectionRegistry(object):
         self.add(SectionTracking())
         self.add(SectionEventSelection())
         self.add(SectionErrorcorrection())
-        self.add(SectionPostProcessing())
         self.add(SectionOutput())
         self.add(SectionProcessing())
         self.add(SectionCluster())

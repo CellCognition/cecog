@@ -16,13 +16,14 @@ __source__ = '$URL$'
 
 __all__ = ['GeneralFrame']
 
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
-from PyQt4.Qt import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.Qt import *
 
 from cecog.gui.analyzer import BaseFrame
 
 class GeneralFrame(BaseFrame):
+    ICON = ":general.png"
 
     def __init__(self, settings, parent, name):
         super(GeneralFrame, self).__init__(settings, parent, name)
@@ -31,9 +32,7 @@ class GeneralFrame(BaseFrame):
         self.add_input('pathin')
         self.add_input('has_multiple_plates')
         self.add_input('pathout')
-        self.add_group('image_import_namingschema', [('namingscheme',),],
-                       layout='flow')
-        self.add_group('image_import_structurefile', [('structure_filename',)])
+        self.add_input('namingscheme')
         self.add_group(None,
                        [('structure_file_pathin', (0,0,1,1)),
                         ('structure_file_pathout', (0,1,1,1)),
@@ -51,7 +50,7 @@ class GeneralFrame(BaseFrame):
                        link="channels", label='Channels')
 
         self.add_group('constrain_positions', [('positions',)])
-        self.add_input('redofailedonly')
+        self.add_input('redofailedonly')        
         self.add_group('framerange', [('framerange_begin',),
                                       ('framerange_end',),
                                       ('frameincrement', )],
@@ -65,25 +64,29 @@ class GeneralFrame(BaseFrame):
 
         self.add_expanding_spacer()
 
-        layout = QHBoxLayout(self._control)
+        buttonbar = QFrame(self)
+        self.process_control.hide()
+        self.layout().addWidget(buttonbar)
+
+        layout = QHBoxLayout(buttonbar)
         layout.addStretch()
-        btn = QPushButton('Scan input directory', self._control)
+        btn = QPushButton('Scan input directory', buttonbar)
         layout.addWidget(btn)
         btn.clicked.connect(self.parent().main_window._on_load_input)
-        btn = QPushButton('Load settings...', self._control)
+        btn = QPushButton('Load settings...', buttonbar)
         layout.addWidget(btn)
         btn.clicked.connect(self.parent().main_window._on_file_open)
-        self._btn_save = QPushButton('Save settings', self._control)
+        self._btn_save = QPushButton('Save settings', buttonbar)
         self._btn_save.setEnabled(False)
         layout.addWidget(self._btn_save)
         self._btn_save.clicked.connect(self.parent().main_window._on_file_save)
-        btn = QPushButton('Save settings as...', self._control)
+        btn = QPushButton('Save settings as...', buttonbar)
         layout.addWidget(btn)
         btn.clicked.connect(self.parent().main_window._on_file_save_as)
         layout.addStretch()
         self.parent().main_window.modified.connect(self._on_modified)
 
-        help_button = QToolButton(self._control)
+        help_button = QToolButton(buttonbar)
         help_button.setIcon(QIcon(':question_mark'))
         handler = lambda x: lambda : self._on_show_help(x)
         layout.addWidget(help_button)

@@ -29,7 +29,7 @@ from cecog.colors import Colors
 from cecog.io.imagecontainer import MetaImage
 from cecog.analyzer.object import ImageObject, ObjectHolder, Orientation
 
-from cecog.util.logger import LoggerObject
+from cecog.logging import LoggerObject
 from cecog.plugin.metamanager import MetaPluginManager
 from cecog.util.ctuple import COrderedDict
 
@@ -49,8 +49,7 @@ class ChannelCore(LoggerObject):
                  new_image_size=None,
                  strImageOutCompression="80",
                  strPathOutDebug=None,
-                 lstFeatureCategories=None,
-                 dctFeatureParameters=None,
+                 feature_groups=None,
                  lstFeatureNames=None,
                  bFlatfieldCorrection=False,
                  strBackgroundImagePath="",
@@ -58,7 +57,8 @@ class ChannelCore(LoggerObject):
                  fNormalizeMin="",
                  fNormalizeMax="",
                  fNormalizeRatio="",
-                 fNormalizeOffset=""):
+                 fNormalizeOffset="",
+                 check_for_plugins=True):
         super(ChannelCore, self).__init__()
 
         # remove all the hungarian bullshit as soon as possible!
@@ -70,8 +70,7 @@ class ChannelCore(LoggerObject):
         self.new_image_size = new_image_size
         self.strImageOutCompression = strImageOutCompression
         self.strPathOutDebug = strPathOutDebug
-        self.lstFeatureCategories = lstFeatureCategories
-        self.dctFeatureParameters = dctFeatureParameters
+        self.feature_groups = feature_groups
         self.lstFeatureNames = lstFeatureNames
         self.bFlatfieldCorrection = bFlatfieldCorrection
         self.strBackgroundImagePath = strBackgroundImagePath
@@ -90,8 +89,10 @@ class ChannelCore(LoggerObject):
         try:
             self.plugin_mgr = MetaPluginManager()[self.NAME.lower()]
             if self.plugin_mgr.number_loaded_plugins() < 1:
-                raise RuntimeError(("You need to load at least one segmentation"
-                                    " plugin for channel '%s'" %self.NAME))
+                if check_for_plugins:
+                    raise RuntimeError(
+                        ("You need to load at least one segmentation"
+                         " plugin for channel '%s'" %self.NAME))
         except KeyError:
             self.plugin_mgr = None
 
@@ -188,7 +189,11 @@ class Channel(ChannelCore):
         else:
             self.oZSliceOrProjection = int(self.oZSliceOrProjection)
             self.logger.debug("* selecting z-slice %d..." % self.oZSliceOrProjection)
-            meta_image = self._zslices[self.oZSliceOrProjection-1]
+            try:
+                meta_image = self._zslices[self.oZSliceOrProjection-1]
+            except IndexError:
+                raise IndexError("Invalid z-slice selection for channel %s"
+                                 %self.NAME)
 
         self.meta_image = copy.copy(meta_image)
 
@@ -209,17 +214,28 @@ class Channel(ChannelCore):
         self._features_calculated = True
         for region_name, container in self.containers.iteritems():
             object_holder = ObjectHolder(region_name)
-            if not container is None:
-                for strFeatureCategory in self.lstFeatureCategories:
-                    container.applyFeature(strFeatureCategory)
+            if container is not None:
 
-                # calculate set of haralick features
-                # (with differnt distances)
-                if 'haralick_categories' in self.dctFeatureParameters:
-                    for strHaralickCategory in self.dctFeatureParameters['haralick_categories']:
-                        for iHaralickDistance in self.dctFeatureParameters['haralick_distances']:
-                            container.haralick_distance = iHaralickDistance
-                            container.applyFeature(strHaralickCategory)
+                for group, params in self.feature_groups.iteritems():
+
+                    # XXX special casing for feature parameters.
+                    # call pattern like this: cnt.applyFeature(name, params)
+                    if group.startswith('haralick'):
+                        container.resetHaralick()
+                        for dist in params['dist']:
+                            container.addHaralickValue(dist)
+
+                    elif group == "spotfeatures":
+                        container.spot_diameter = params['diameter']
+                        container.spot_threshold = params['thresh']
+
+                    elif group == "granulometry":
+                        container.resetGranulometry()
+                        for val in params['se']:
+                            container.addGranulometryValue(val)
+
+                    container.applyFeature(group)
+
 
                 for obj_id, c_obj in container.getObjects().iteritems():
 
@@ -239,9 +255,11 @@ class Channel(ChannelCore):
                     # at the moment a bit of a hack #
                     # The problem is that orientation cannot be a feature #
                     # but moments need to be chosen to calculate the orientation. #
-                    if 'moments' in self.lstFeatureCategories:
-                        obj.orientation = Orientation(angle = c_obj.orientation,
-                                                      eccentricity = dctFeatures['eccentricity'])
+                    if self.feature_groups.has_key('moments'):
+                        obj.orientation = Orientation(
+                            angle = c_obj.orientation,
+                            eccentricity = dctFeatures['eccentricity']
+                        )
 
                     # why do wo sort the features according to their names??
                     # does it matter?
@@ -285,13 +303,7 @@ class Channel(ChannelCore):
         return bg_image
 
     def normalize_image(self, plate_id=None):
-        try:
-            import pydevd
-            pydevd.connected = True
-            pydevd.settrace(suspend=False)
-            print 'Thread enabled interactive eclipse debuging...'
-        except:
-            pass
+
         img_in = self.meta_image.image
         if self.bFlatfieldCorrection:
             self.logger.debug("* using flat field correction with image from %s"

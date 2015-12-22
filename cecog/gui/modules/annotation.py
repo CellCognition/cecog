@@ -18,40 +18,28 @@ __all__ = ['Browser']
 
 import os
 import re
-import numpy
+
 import time
 import shutil
-import math
+import datetime
+
+import numpy
 
 from xml.dom import minidom
 
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
-from PyQt4.Qt import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.Qt import *
 
+from cecog.colors import hex2rgb
 from collections import OrderedDict
 from cecog.util.util import makedirs
-
-from cecog import ccore
-from cecog.gui.util import (exception,
-                            information,
-                            question,
-                            warning,
-                            get_qcolor_hicontrast,
-                            qcolor_to_hex)
-from cecog.gui.imageviewer import ImageViewer
-from cecog.gui.analyzer import _ProcessorMixin
-from cecog.analyzer.channel import (PrimaryChannel,
-                                    SecondaryChannel,
-                                    TertiaryChannel,
-                                    )
-from cecog.analyzer.core import AnalyzerCore
-from cecog.colors import hex2rgb
 from cecog.io.imagecontainer import Coordinate
 from cecog.learning.learning import BaseLearner
-from cecog.gui.widgets.groupbox import QxtGroupBox
 from cecog.gui.widgets.colorbutton import ColorButton
-from cecog.gui.modules.module import Module
+from cecog.gui.modules.module import Module, CH5BasedModule
+from cecog.util.ontoloty_owl import CecogOntologyBrowserDialog
+from cecog.gui.util import exception, information, question, warning, get_qcolor_hicontrast, qcolor_to_hex
 
 
 class Annotations(object):
@@ -331,6 +319,10 @@ class AnnotationModule(Module):
     COLUMN_ANN_TIME = 2
     COLUMN_ANN_SAMPLES = 3
 
+    DEFAULT_CLASS_COLS = ["#4daf4a", "#ffff33", "#ff7f00", "#f781bf",
+                          "#984ea3", "#377eb8", "#e41a1c", "#a65628",
+                          "#999999"]
+
     def __init__(self, parent, browser, settings, imagecontainer):
         Module.__init__(self, parent, browser)
 
@@ -354,23 +346,26 @@ class AnnotationModule(Module):
         class_table.setEditTriggers(QTableWidget.NoEditTriggers)
         class_table.setSelectionMode(QTableWidget.SingleSelection)
         class_table.setSelectionBehavior(QTableWidget.SelectRows)
-        #class_table.setSortingEnabled(True)
         class_table.setColumnCount(4)
-        class_table.setHorizontalHeaderLabels(['Name', 'Label', 'Color',
-                                               'Samples',
-                                               ])
+        class_table.setHorizontalHeaderLabels(['Name', 'Label', 'Color', '#'])
         class_table.resizeColumnsToContents()
         class_table.currentItemChanged.connect(self._on_class_changed)
-        class_table.setStyleSheet('font-size: 10px;')
         layout.addWidget(class_table)
         self._class_table = class_table
 
         frame2 = QFrame(grp_box)
-        layout2 = QBoxLayout(QBoxLayout.LeftToRight, frame2)
+        layout2 = QBoxLayout(QBoxLayout.TopToBottom, frame2)
         layout2.setContentsMargins(0,0,0,0)
         self._import_class_definitions_btn = QPushButton('Import class definitions')
         layout2.addWidget(self._import_class_definitions_btn)
         self._import_class_definitions_btn.clicked.connect(self._on_import_class_definitions)
+
+        self._import_ontology_name_btn = QPushButton('Choose class name from ontology')
+        self._import_ontology_name_btn.setToolTip("Choose class name from ontology. E.g., CMPO\nNote: It might take some time starting the dialog the first time.")
+        layout2.addWidget(self._import_ontology_name_btn)
+        self._import_ontology_name_btn.clicked.connect(self._on_import_ontology_name)
+
+
         layout.addWidget(frame2)
 
         frame2 = QFrame(grp_box)
@@ -410,7 +405,6 @@ class AnnotationModule(Module):
         ann_table.setEditTriggers(QTableWidget.NoEditTriggers)
         ann_table.setSelectionMode(QTableWidget.SingleSelection)
         ann_table.setSelectionBehavior(QTableWidget.SelectRows)
-        #ann_table.setSortingEnabled(True)
         column_names = ['Position', 'Frame', 'Samples']
         if self._imagecontainer.has_multiple_plates:
             column_names = ['Plate'] + column_names
@@ -418,7 +412,6 @@ class AnnotationModule(Module):
         ann_table.setHorizontalHeaderLabels(column_names)
         ann_table.resizeColumnsToContents()
         ann_table.currentItemChanged.connect(self._on_anntable_changed)
-        ann_table.setStyleSheet('font-size: 10px;')
         layout.addWidget(ann_table)
         self._ann_table = ann_table
         splitter.addWidget(grp_box)
@@ -430,14 +423,12 @@ class AnnotationModule(Module):
         btn = QPushButton('New', frame)
         btn.clicked.connect(self._on_new_classifier)
         layout_frame.addWidget(btn)
-        #layout_frame.addSpacing(5)
         btn = QPushButton('Open', frame)
         btn.clicked.connect(self._on_open_classifier)
         layout_frame.addWidget(btn)
         btn = QPushButton('Save', frame)
         btn.clicked.connect(self._on_save_classifier)
         layout_frame.addWidget(btn)
-        #layout_frame.addSpacing(5)
         btn = QPushButton('Save as', frame)
         btn.pressed.connect(self._on_saveas_classifier)
         layout_frame.addWidget(btn)
@@ -450,17 +441,17 @@ class AnnotationModule(Module):
 
         self._learner = self._init_new_classifier()
 
-        self._action_grp = QActionGroup(browser)
+        self.browser._action_grp = QActionGroup(browser)
         class_fct = lambda id: lambda : self._on_shortcut_class_selected(id)
         for x in range(1,11):
             action = browser.create_action(
                 'Select Class Label %d' % x,
                  shortcut=QKeySequence(str(x) if x < 10 else '0'),
                  slot=class_fct(x))
-            self._action_grp.addAction(action)
+            self.browser._action_grp.addAction(action)
+
             browser.addAction(action)
 
-        browser.coordinates_changed.connect(self._on_coordinates_changed)
         browser.show_objects_toggled.connect(self._on_show_objects)
         browser.show_contours_toggled.connect(self._on_show_contours_toggled)
 
@@ -468,9 +459,20 @@ class AnnotationModule(Module):
         items = self._class_table.findItems(value, match)
         return [item for item in items if item.column() == column]
 
+    def _on_import_ontology_name(self):
+        if not hasattr(self, "ontology_browser_diag"):
+            self.ontology_browser_diag = CecogOntologyBrowserDialog(parent=self.browser)
+            self.ontology_browser_diag.tw.trigger_add.connect(self._class_text.setText)
+
+        self.ontology_browser_diag.show()
+
     def _on_import_class_definitions(self):
         if self._on_new_classifier():
-            path = self._learner.clf_dir
+            path = None
+            try:
+                path = self._learner.clf_dir
+            except:
+                pass
             if path is None:
                 path = os.path.expanduser('~')
             result = QFileDialog.getExistingDirectory(
@@ -557,10 +559,6 @@ class AnnotationModule(Module):
                 self._class_table.resizeRowsToContents()
                 self._class_table.resizeColumnsToContents()
                 self._class_table.scrollToItem(item)
-                css = "selection-background-color: %s; selection-color: %s;" %\
-                       (qcolor_to_hex(class_color), qcolor_to_hex(col))
-                self._class_table.setStyleSheet(css)
-                self._ann_table.setStyleSheet(css)
 
                 self._annotations.rename_class(class_name, class_name_new)
                 self._current_class = class_name_new
@@ -610,8 +608,12 @@ class AnnotationModule(Module):
             self._class_table.setCurrentItem(item)
 
             ncl = len(learner.class_names)+1
-            self._class_text.setText('class%d' %ncl)
+            self._class_text.setText('class%d' % ncl)
             self._class_sbox.setValue(ncl)
+
+            self._class_color_btn.set_color(
+                QColor(AnnotationModule.DEFAULT_CLASS_COLS[(ncl -1) \
+                   % len(AnnotationModule.DEFAULT_CLASS_COLS)]))
         else:
             warning(self, "Class names and labels must be unique!",
                     info="Class name '%s' or label '%s' already used." %\
@@ -655,7 +657,7 @@ class AnnotationModule(Module):
         self._current_class = None
         self._class_sbox.setValue(1)
         self._class_text.setText('class1')
-        self._class_color_btn.set_color(QColor('red'))
+        self._class_color_btn.set_color(QColor(self.DEFAULT_CLASS_COLS[0]))
         class_table = self._class_table
         class_table.clearContents()
         class_table.setRowCount(0)
@@ -694,9 +696,8 @@ class AnnotationModule(Module):
                 self._activate_objects_for_image(False, clear=True)
                 path2 = learner.annotations_dir
                 try:
-                    has_invalid = self._annotations.import_from_xml(path2,
-                                                                    learner.class_names,
-                                                                    self._imagecontainer)
+                    has_invalid = self._annotations.import_from_xml(
+                        path2, learner.class_names, self._imagecontainer)
                 except:
                     exception(self, "Problems loading annotation data...")
                     self._learner = self._init_new_classifier()
@@ -704,7 +705,8 @@ class AnnotationModule(Module):
                     self._activate_objects_for_image(True)
                     self._update_class_table()
                     if self._class_table.rowCount() > 0:
-                        self._class_table.setCurrentCell(0, self.COLUMN_CLASS_NAME)
+                        self._class_table.setCurrentCell(
+                            0, self.COLUMN_CLASS_NAME)
                     else:
                         self._current_class = None
 
@@ -772,9 +774,8 @@ class AnnotationModule(Module):
                 self._activate_object(item, point, class_name, state=state)
 
     def _update_class_table(self):
-        '''
-        update the class count for the class table
-        '''
+        """Udate the class count for the class table"""
+
         counts = self._annotations.get_class_counts()
         for class_name in self._learner.class_names.values():
             if class_name in counts:
@@ -785,7 +786,6 @@ class AnnotationModule(Module):
                 item = self._class_table.item(items[0].row(),
                                               self.COLUMN_CLASS_COUNT)
                 item.setText(str(counts[class_name]))
-        #self._class_table.update()
 
     def _update_annotation_table(self):
         '''
@@ -800,15 +800,10 @@ class AnnotationModule(Module):
         ann_table.setRowCount(len(per_class))
         for idx, data in enumerate(per_class):
             plate, position, time, nr_samples = data
-            #m = self._imagecontainer.get_meta_data(plate)
             # plateid in m.plateids
             #if position in m.positions and time in m.times:
             flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
             tooltip = 'Jump to coordinate to see the annotation.'
-            #else:
-            #    flags = Qt.NoItemFlags
-            #    tooltip = 'Coordinate not found in this data set.'
-
             # make plate information dependent whether the data set contains
             # multiple plates
             if self._imagecontainer.has_multiple_plates:
@@ -835,7 +830,6 @@ class AnnotationModule(Module):
 
         ann_table.resizeColumnsToContents()
         ann_table.resizeRowsToContents()
-        #ann_table.setStyleSheet(css)
         coordinate = self.browser.get_coordinate()
         self._find_annotation_row(coordinate)
         ann_table.blockSignals(False)
@@ -866,7 +860,6 @@ class AnnotationModule(Module):
 
     def _on_new_point(self, point, button, modifier):
         item = self.browser.image_viewer.get_object_item(point)
-        #print(item,point,item in self._object_items)
         if button == Qt.LeftButton and not item is None:
 
             coordinate = self.browser.get_coordinate()
@@ -897,19 +890,13 @@ class AnnotationModule(Module):
             self._update_annotation_table()
 
     def _on_dbl_clk(self, point):
-        items = self.image_viewer.items(point)
-        print(items)
+        pass
 
     def _activate_object(self, item, point, class_name, state=True):
         if state:
             color = \
                 QColor(*hex2rgb(self._learner.hexcolors[class_name]))
-            # color.setAlphaF(1.0)
             label = self._learner.class_labels[class_name]
-#            item2 = QGraphicsEllipseItem(point.x(), point.y(), 3, 3,item)
-#            item2.setPen(QPen(color))
-#            item2.setBrush(QBrush(color))
-#            item2.show()
             item2 = QGraphicsSimpleTextItem(str(label), item)
             rect = item2.boundingRect()
             # center the text item at the annotated point
@@ -959,17 +946,13 @@ class AnnotationModule(Module):
             hex_col = self._learner.hexcolors[class_name]
             col = get_qcolor_hicontrast(QColor(hex_col))
             class_table = self._class_table
-            css = "selection-background-color: %s; selection-color: %s;" % \
-                  (hex_col, qcolor_to_hex(col))
             class_table.scrollToItem(item)
             self._class_text.setText(class_name)
             class_label = self._learner.class_labels[class_name]
             self._class_sbox.setValue(class_label)
             self._class_color_btn.set_color(QColor(hex_col))
-            class_table.setStyleSheet(css)
 
             self._update_annotation_table()
-            self._ann_table.setStyleSheet(css)
         else:
             self._current_class = None
 
@@ -986,7 +969,7 @@ class AnnotationModule(Module):
         items = self._find_items_in_class_table(str(class_label),
                                                 self.COLUMN_CLASS_LABEL)
         if len(items) == 1:
-            self._class_table.setCurrentItem(items[0])
+            self.class_table.setCurrentItem(items[0])
 
     def _load_classifier(self, path):
         learner = None
@@ -996,9 +979,6 @@ class AnnotationModule(Module):
             exception(self, 'Error on loading classifier')
         else:
             state = learner.state
-            #if result['has_arff']:
-            #    self._learner.importFromArff()
-
             if state['has_definition']:
                 learner.loadDefinition()
         return learner
@@ -1023,15 +1003,15 @@ class AnnotationModule(Module):
         super(AnnotationModule, self).activate()
         self._activate_objects_for_image(True, clear=True)
         self._update_class_table()
-        self.browser.image_viewer.image_mouse_pressed.connect(self._on_new_point)
-        self._action_grp.setEnabled(True)
+        self.browser.image_viewer.image_mouse_pressed.connect(
+            self._on_new_point)
+        self.browser._action_grp.setEnabled(True)
         self._find_annotation_row(self.browser.get_coordinate())
 
     def deactivate(self):
         super(AnnotationModule, self).deactivate()
         self._activate_objects_for_image(False, clear=True)
-        self.browser.image_viewer.image_mouse_pressed.disconnect(self._on_new_point)
+        self.browser.image_viewer.image_mouse_pressed.disconnect(
+            self._on_new_point)
         self.browser.image_viewer.purify_objects()
-        self._action_grp.setEnabled(False)
-        
-        
+        self.browser._action_grp.setEnabled(False)

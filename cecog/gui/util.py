@@ -19,13 +19,24 @@ __all__ = ['message','information', 'question',
 
 import sys
 import traceback
-import numpy
+from os.path import isfile, basename, join
 
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
-from PyQt4.Qt import *
+from PyQt5 import uic
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.Qt import *
 
 from cecog.colors import rgb2hex
+from cecog.environment import CecogEnvironment
+
+
+def loadUI(filename, widget):
+    if isfile(filename):
+        return uic.loadUi (filename, widget)
+    else:
+        return uic.loadUi(
+            join(CecogEnvironment.UI_DIR, basename(filename)), widget)
+
 
 def message(icon, text, parent, info=None, detail=None, buttons=None,
             title=None, default=None, escape=None, modal=True):

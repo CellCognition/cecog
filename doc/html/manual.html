@@ -1,0 +1,1335 @@
+<html>
+  <head>
+    <link rel="stylesheet"  type="text/css" href="css/help.css">
+  </head>
+  <body>
+    <h1><a name="general"></a>General</h1>
+    <p>
+      Defines directories for raw images <i>(Input directory)</i> and
+      output <i>(Output directory)</i>. Channels, wells (positions) and time
+      frames can be constrained here.<br><br>
+      Settings are saved to a *.conf file (simple text file).
+    </p>
+
+    <h3 class="param">Parameters</h3>
+
+    <a name="version">
+      <h4>Cecog version</h4>
+      <p class="text">CellCognition saves its version number to the settings
+        file. The user gets a notification if the version numbers of
+        CellCognition and the settings file do not match.</p>
+    </a>
+
+    <a name="pathin">
+      <h4>Input directory</h4>
+      <p class="text">Contains raw images as saved by the
+        microscope. Cellcogition supports TIFF stacks (one image per
+        file), structured similar to our demo data, which must have
+        <ul>
+          <li>one subdirectory per movie (referred to as "position"), and</li>
+          <li>similar naming schema - named tokens in the filename).</li>
+        </ul>
+      </p>
+
+      <p class="text">Multipage TIFFs are interpreted as z-stacks,
+        but the corresponding token is then ignored. Images must have a
+        bitdepth of 8 or 16 bit.
+        (see <a href="#primary_channel_conversion">
+          16 to 8 bit conversion in Object Detection</a>). LZW or ZIP
+        compressed TIFFs are supported.
+      </p>
+    </a>
+
+    <a name="has_multiple_plates"></a>
+    <h4>Multiple plates</h4>
+    <p class="text">The input data is organized on a
+      per-plate-basis i.e. a <i>plate</i>-directory that contains
+      subdirectories of the single wells. By default this option is
+      unchecked and the input directory is the path to
+      the <i>plate</i>-directory. If this option is checked, the
+      input directory is a path to directory that contains
+      multiple <i>plate</i>-directories.
+    </p>
+
+    <a name="pathout"></a>
+    <h4>Output directory</h4>
+    <p class="text">All results are saved in the <i>Output
+        directory</i> except
+      classifier annotation and training data.
+      <br><br>
+      Here's an example for the subdirectory structure is:
+      <pre>
+        |-- analyzed
+        |-- |-- 0013
+        |-- |-- 0037
+        |-- |-- 0046
+        |       |-- channel_gallery
+        |       |-- gallery
+        |       |-- images
+        |           |-- _labels
+        |       |-- statistics
+        |           |-- P0046__object_counts.txt
+        |           |-- P0046__object_details.txt
+        |           |-- P0046__image_files.txt
+        |           |-- tracking_graph___P0046_features.csv
+        |           |-- tracking_graph___P0046.dot
+        |           |-- events
+        |           |-- full
+        |       |-- tc3
+        |-- hdf5
+        |-- hmm
+        |-- log
+        |-- plots
+      </pre>
+    </p>
+    <br><br>
+    <p class="text">Short description:</p>
+    <ul>
+      <li><tt>channel_gallery</tt> - single channel gallery
+        images beside each other. Objects (cells) are sourrounded by color
+        coded contours (color from class definition but white as
+        default).</li>
+      <li><tt>gallery</tt> - different kinds of gallery images</li>
+      <li><tt>images</tt> - output directory for label-/,
+        classificaton images etc.</li>
+      <li><tt>statistics</tt> - contains read-outs and statistical data</li>
+      <li><tt>XXX_object_counts.txt</tt> - counts of objects and per
+        class, per frame and channel.</li>
+      <li><tt>XXX_object_details.txt</tt> - detailed information per
+        object (cell) per frame and channel.</li>
+      <li><tt>hdf5</tt> - output directory for cellh5 files</li>
+      <li><tt>gallery</tt> - output directory for error
+        correction</li>
+    </ul>
+    <br><br>
+    Not all directories are described above. We refer to
+    the <a href="http://cellh5.org">cellh5-format</a>. It contains the
+    same information and any post-processing should be based on those files.
+
+    <a name="namingscheme">
+      <h4>Naming scheme</h4>
+      <p class="text">Images must follow a naming scheme in order to be importable.
+        So far, only image sequences with token in the filename are
+        supported (see <a href="#pathin">input directory</a>).
+        Schema definitions can be customized by adding a propper entry to
+        the file <tt>naming_schemas.ini</tt>, located in
+        the <tt>resources</tt> subdirectory of CecogAnalyzer.</p>
+    </a>
+
+    <a name="structure_file">
+      <h4>Structure file location</h4>
+      <p class="text">In order to map the input data to coordinates
+        (channels, position, z and time), the input directory needs to be
+        scanned in the first place. This process is time consuming but needs
+        to be done only once. The scan result is saved in the so called
+        "structure file" which is reused later on.<br></p>
+    </a>
+
+    <a name="constraints">
+      <h3>Coordinate constraints</h3>
+      <p class="text">In order to speed up processing, it is possible to
+        constrain the dataset to certain channels, positions, frames, etc...<br>
+      </p>
+    </a>
+
+    <h4><a name="channels">Channels</h4>
+    <p class="text">Restrict processing to the checked channels. The
+      mapping between e.g. <i>primary</i> and <i>color</i> is setup
+      in <a href="#segmentation">Object Detection</a>.
+    </p>
+
+    <h4><a name="constrain_positions"></a>Positions</h4>
+    <p class="text">Define a coma-separated list of positions to restrict
+      processing.
+    </p>
+
+    <a name="redofailedonly">
+      <h4>Skip finished positions</h4>
+      <p class="text">Already processed positions are skipped
+        automatically. An empty file is created for every finished
+        position in <tt>log/_finished/</tt>.
+      </p>
+    </a>
+
+    <a name="framerange">
+      <h4>Timelapse</h4>
+      <p class="text">Define <tt>first</tt>-frame, <tt>last</tt>-frame and
+        frame <tt>increment</tt>. Note that <tt>increment</tt> means each
+        n<sup>th</sup> frame, independently of the time delta between two frames.
+      </p>
+    </a>
+
+    <a name="crop_image">
+      <h4>Image cropping</h4>
+      <p class="text">Define a sub-rectangle in the image for processing.</p>
+    </a>
+
+    <hr></hr>
+    <a name="controlpanel_general">
+      <h2>Control Panel</h2>
+      <p>
+        Load or save a settings file or trigger the scanning
+        of the input directory.
+      </p>
+    </a>
+
+
+    <h1><a name="segmentation"></a>Object detection - Segmentation</h1>
+    One of the first steps in image processing is <i>object detection</i>, which can be described as a partitioning of an image into regions of interest (ROI) and the background. Every ROI is referred here as <i>object</i> and has a unique number within one image and for one timepoint.<br>
+    Parameters for object detection are divided into <i>primary</i> and <i>secondary</i> channel. For the primary channel conversion from 16 to 8 bit, local adaptive thresholding, watershed and object filtering can be specified.
+    Register shift and regions derived from the primary segmentation can be defined for the secondary channel (see <img class="extlink" src="images/extlink.png"/><a href="http://www.cellcognition.org/wiki/CecogAnalyzer">screenshots</a>). Contour images are shown in separate window during processing.
+
+    <hr/>
+    <h4>Workflow for classification in two channels</h4>
+    <br/>
+    <img class="figure" src="images/workflow.png"/>
+    <hr/>
+    <h4>Workflow for classification in the primary and feature readout in the secondary channel</h4>
+    <br/>
+    <img class="figure" src="images/workflow_kinetic.png"/>
+    <hr/>
+
+    <h2 class="param">Primary Channel</h2>
+
+    Objects are detected in the <i>primary channel</i>. The methods presented here have been developed primarily for images of fluorescently labeled cell nuclei (stained by DAPI or labeled with H2B).
+
+    <hr></hr>
+    <h3 class="param">Parameters</h3>
+
+    <a name="primary_channelid">
+      <h4>Primary channel ID</h4>
+      <p class="text">The identifier of the channel as specified in the meta-data. For now this information is extracted from the filename and depends on how the naming-schema interprets the filename, e.g. a filename with the token <tt>__Crfp__</tt> corresponds to the channel ID <tt>rfp</tt> in our demo data</p>
+    </a>
+
+    <a name="primary_channel_conversion">
+      <h4>Gray-value normalization </h4>
+      <p class="text">Microscope CCD cameras acquire images in 8, 12 or 16 bit corresponding to 256, 4096, or 65536 gray values. 12 bit images are in fact also saved as 16 bit images.
+        Our image processing requires 8 bit (256 gray values) input images, which was sufficient for the methods presented here. 16 bit (and 12 bit) images will be converted to 8 bit by <i>linear range mapping</i> with the values below (in that case values must be specified). 16 bit (values 0-65535) are mapped to 8 bit (values 0-255).<br>8 bit input images are not affected.</p>
+    </a>
+    <a name="primary_normalizemin">
+      <h4 class="sub">Min.</h4>
+      <p class="subtext">Lower range value. (The value in the 16 bit image which corresponds to 0 in the 8 bit image).</p>
+    </a>
+    <a name="primary_normalizemax">
+      <h4 class="sub">Max.</h4>
+      <p class="subtext">Higher range value (The value in the 16 bit image which corresponds to 255 in the 8 bit image).</p>
+    </a>
+
+    <hr></hr>
+
+    <h3 class="param">Z-stacks</h3>
+    <p class="mtext">In case z-stacks have been acquired the 3D data has to be converted to 2D before object detection. Either a z-slice can be selected or a projection is computed on the z-stack.</p>
+    <a name="primary_zslice_selection">
+      <h4>Z-slice selection</h4>
+      <p class="text">One slice of the z-stack will be selected.</p>
+    </a>
+    <a name="primary_zslice_selection_slice">
+      <h4 class="sub">Slice</h4>
+      <p class="subtext">The selected z-stack slice.</p>
+    </a>
+
+    <a name="primary_zslice_projection">
+      <h4>Z-slice projection</h4>
+      <p class="text">Compute a projection of the z-stack.</p>
+    </a>
+    <a name="primary_zslice_projection_method">
+      <h4 class="sub">Method</h4>
+      <p class="subtext">Computation method, either <i>average intensity</i> or <i>maximum intensity</i> projection. The projection can be computed from a subset of the z-stack, which is specified below: </p>
+    </a>
+    <a name="primary_zslice_projection_begin">
+      <h4 class="sub">Begin</h4>
+      <p class="subtext">Lowest slice to be included (smallest number).</p>
+    </a>
+    <a name="primary_zslice_projection_end">
+      <h4 class="sub">End</h4>
+      <p class="subtext">Highest slice to be included (highest number).</p>
+    </a>
+    <a name="primary_zslice_projection_step">
+      <h4 class="sub">Step</h4>
+      <p class="subtext">Step-size.
+        <br>Examples for z-stack with 10 slices:
+        <ul>
+          <li>Begin=3, End=10, Step=1 -> z-slices 3-10 are projected</li>
+          <li>Begin=1, End=10, Step=2 -> z-slices 1,3,5,7,9 are projected</li>
+          <li>Begin=2, End=8, Step=3 -> z-slices 2,5,8 are projected</li>
+        </ul>
+      </p>
+    </a>
+
+    <a name="primary_flat_field_correction">
+      <h4 class="text">Z-slice flat-field correction</h4>
+      <p class="text">Select a directory to search for the correction images. Specify the full path to the correction images as <br/> <i>&lt;directory-path&gt;/&lt;plate-id&gt;.tif</i>. <br/> Note that only tif images are supported.</p>
+    </a>
+
+
+    <hr></hr>
+
+    <a name="primary_medianradius">
+      <h4>Median radius</h4>
+      <p class="text">Intensity of the image smoothing before object detection by a median filter (radius size in pixel). Note: Filtered image is used for object detection only (no influence on feature extraction, but shape features might be affected).
+        <br>(parameter scales directly with lens magnification)</p>
+    </a>
+
+    <a name="lat">
+      <h4>Local adaptive threshold</h4>
+      <p class="text">Performs object detection based on local adaptive thresholding. A background map of the input image is computed based on the <i>Window size</i> (moving average window). Image pixels higher above the background map than <i>Min. contrast</i> are considered foreground, all other pixels background.</p>
+    </a>
+    <a name="latwindowsize">
+      <h4 class="sub">Window size</h4>
+      <p class="subtext">Width of the moving average window in pixel (window is squared).
+        <br>(parameter scales directly with lens magnification)</p>
+    </a>
+    <a name="latlimit">
+      <h4 class="sub">Min. contrast</h4>
+      <p class="subtext">Pixel intensity above the background. Note: Small values might increase artifacts (small objects from high noise levels) and slow down computation; high values might lead to incorrect contours.</p>
+    </a>
+
+    <a name="lat2">
+      <h4>Local adaptive threshold 2</h4>
+      <p class="text">Optional second <a href="#primary_lat">local adaptive threshold</a> to overcome the problem of incorrect object contours when very bright and very dark objects are in close spatial proximity.
+        See <img class="extlink" src="images/extlink.png"/><a href="http://linkinghub.elsevier.com/retrieve/pii/S1047-8477(09)00273-1">Walter et al. 2010</a>.</p>
+    </a>
+    <a name="latwindowsize2">
+      <h4 class="sub">Window size</h4>
+      <p class="subtext">Recommended are 4-11x higher values then above.</p>
+    </a>
+    <a name="latlimit2">
+      <h4 class="sub">Min. contrast</h4>
+      <p class="subtext">Recommended are 3-4x higher values than above.</p>
+    </a>
+
+    <a name="holefilling">
+      <h4 class="sub">Fill holes</h4>
+      <p class="subtext">Remove holes from foreground ojbects i.e. allow only topologically closed objects.</p>
+    </a>
+
+    <a name="removeborderobjects">
+      <h4 class="sub">Remove border objects</h4>
+      <p class="subtext">Filter out all foreground objects that thouch the image border.</p>
+    </a>
+
+    <a name="shapewatershed">
+      <h4>Split & merge by shape</h4>
+      <p class="text">Optional correction of under-segmentation by a split and merge approach. Objects in close spatial proximity might not be separated (under-segmentation). Based on the shape information (distance transform) objects are split by the <i>watershed</i> algorithm, which often yields over-segmentation. Object candidates are probed for merging by their size and circularity (rounder objects above a size threshold are preferred).
+        See <img class="extlink" src="images/extlink.png"/><a href="http://www3.interscience.wiley.com/journal/118757015/abstract">W&auml;hlby et al. 2004</a>.</p>
+    </a>
+    <a name="shapewatershed_gausssize">
+      <h4 class="sub">Gauss radius</h4>
+      <p class="subtext">Size of the Gauss filter for smoothing the distance transformed image.
+        <br>(parameter scales directly with lens magnification)</p>
+    </a>
+    <a name="shapewatershed_maximasize">
+      <h4 class="sub">Min. seed distance</h4>
+      <p class="subtext">Minimal allowed distance in pixel between objects (seed distance for watershed).
+        <br>(parameter scales directly with lens magnification)</p>
+    </a>
+    <a name="shapewatershed_minmergesize">
+      <h4 class="sub">Object size threshold</h4>
+      <p class="subtext">Minimal size (pixel) of a split object.
+        <br>(parameter scales square with lens magnification)</p>
+    </a>
+
+    <a name="postprocessing">
+      <h4>Object filter</h4>
+      <p class="text">Optional object filtering based on size and intensity. To specify a lower of upper bound only enter the value <tt>-1</tt>.</p>
+      <a name="postprocessing_roisize_min">
+        <h4 class="sub">Min. object size</h4>
+        <p class="subtext">All objects below that size (pixel) are removed.
+          <br>(parameter scales square with lens magnification)</p>
+      </a>
+      <a name="postprocessing_roisize_max">
+        <h4 class="sub">Max. object size</h4>
+        <p class="subtext">All objects above that size (pixel) are removed.
+          <br>(parameter scales square with lens magnification)</p>
+      </a>
+      <a name="postprocessing_intensity_min">
+        <h4 class="sub">Min. average intensity</h4>
+        <p class="subtext">All objects below that average intensity (8bit gray values) are removed.</p>
+      </a>
+      <a name="postprocessing_intensity_max">
+        <h4 class="sub">Max. average intensity</h4>
+        <p class="subtext">All objects above that average intensity (8bit gray values) are removed.</p>
+      </a>
+    </a>
+
+    <hr></hr>
+    <h2 class="param">Secondary Channel</h2>
+
+    Parameters for an additional (secondary) channel are defined here. Based on object detection results of the primary channel <i>regions</i> can be defined and modified. Every secondary object can have multiple regions from which features are extracted and classification is performed. Each secondary object is associated to exactly one object in the primary channel.
+
+    <hr></hr>
+    <h3 class="param">Parameters</h3>
+
+    <a name="secondary_channelid">
+      <h4>Secondary channel ID</h4>
+      <p class="text">The secondary channel Id. See <a href="#primary_channelid">primary channel ID</a>.</p>
+    </a>
+
+    <a name="secondary_channel_conversion">
+      <a name="secondary_normalizeMin">
+        <a name="secondary_normalizeMax">
+          <h4>16 to 8 bit conversion</h4>
+          <p class="text">See <a href="#primary_channel_conversion">16 to 8 bit conversion</a> of the primary channel.</p>
+        </a>
+      </a>
+    </a>
+
+    <a name="secondary_channel_registration">
+      <h4>Channel registration</h4>
+      <p class="text">Registration problems can be corrected by shifting the secondary relative to the primary channel. The image size is reduced to the overlapping region (absolute values of <i>Shift X</i> in width and <i>Shift Y</i> in height). The shift might vary dependent of filters and lenses used at the microscope.</p>
+      <a name="secondary_channelregistration_x">
+        <h4 class="sub">Shift X</h4>
+        <p class="subtext">Pixel shift in x-direction.</p>
+      </a>
+      <a name="secondary_channelregistration_y">
+        <h4 class="sub">Shift Y</h4>
+        <p class="subtext">Pixel shift in y-direction.</p>
+      </a>
+    </a>
+
+    <hr></hr>
+
+    <h3 class="param">Z-stacks</h3>
+    <p class="mtext">In case z-stacks have been acquired the 3D data has to be converted to 2D before object detection. Either a z-slice can be selected or a projection is computed on the z-stack.</p>
+    <a name="secondary_zslice_selection">
+      <a name="secondary_zslice_selection_slice">
+        <h4>Z-slice selection</h4>
+        <p class="text">See <a href="#primary_zslice_selection">z-slice selection</a> of the primary channel.</p>
+      </a>
+    </a>
+    <a name="secondary_zslice_projection">
+      <a name="secondary_zslice_projection_method">
+        <a name="secondary_zslice_projection_begin">
+          <a name="secondary_zslice_projection_end">
+            <a name="secondary_zslice_projection_step">
+              <h4>Z-slice projection</h4>
+              <p class="text">See <a href="#primary_zslice_projection">z-slice projection</a> of the primary channel.</p>
+            </a>
+          </a>
+        </a>
+      </a>
+    </a>
+
+    <a name="secondary_flat_field_correction">
+      <h4 class="text">Flat-field correction</h4>
+      <p class="text">See <a href="#primary_flat_field_correction">Flat-field correction</a> of the primary channel.</p>
+    </a>
+
+    <hr></hr>
+
+    <hr></hr>
+    <a name="controlpanel_segmentation">
+      <h2>Control Panel</h2>
+      <p>
+        Object detection can be tested individually based on the positions and time-points defined in <a href="#general">General</a>. Only the object detection of the primary channel is executed for <i>Detect primary objects</i>. The primary channel is processed before the secondary channel for <i>Detect secondary objects</i>.
+      </p>
+    </a>
+
+    <h1><a name="feature_extraction"></a>Feature extraction</h1>
+    Following segmentation, each object needs to be described by quantitative features that form the basis to distinguish them by a classifier
+    algorithm. The performance of a the classification relies substantially on an appropriate collection of relevant features. CellCognition offers
+    the following groups of features. If no prior knowledge is available, it is recommended to use all features groups.
+    <hr></hr>
+    <a name="basicshape"><h3>Basic shape</h3>
+      <p class="text">Basic features are characterizing the shape of an object such as the circularity and the geometry.
+      </p>
+    </a>
+
+    <a name="intensity"><h3>Basic intensity features</h3>
+      <p class="text">Basic intensity features are simple statistics on the original gray value distribution of an object.
+        In contrast to texture features basic intensity features cannot describe substructures and repeated subpatterns of the object.
+      </p>
+    </a>
+
+    <a name="haralick"><h3>Haralick features</h3>
+      <p class="text">Haralick fetaures characterize the texture of objects by means of the joint distribution of pixel value combinations.
+        In histograms, one tries to analyse the frequency of certain gray level values in an image. The inconvenience of this representation
+        is that the spatial distribution of thesevalues is completely lost. One method to address this is to record combinationsof pixel values
+        at a certain distance. This can be done by the co-occurrence matrix depending on a distance d and an angle t. Haralick features consist of
+        several statistic based on the pixel co-occurrences.
+      </p>
+    </a>
+
+    <a name="stat_geom"><h3>Statistical geometric features</h3>
+      <p class="text">Statistical geometric features (or Levelset features) are shape features for different levelsets (i.e. results of
+        different thresholds) and, as such, texture features. For each of the following features, a distribution of values is calculated according
+        to the set of thresholds. For each of these distributions, the maximal feature value, the average feature value, the sample mean and the
+        sample standard deviation are calculated as statistics (max_value, avg_value, sample_mean, sample_sd). Furthermore, all features are
+        calculated on the foreground and on the background after thresholding.
+      </p>
+    </a>
+
+    <a name="convhull"><h3>Convex hull features</h3>
+      <p class="text">The convex hull of an object X is the smallest convex set containing X. Important features can be derived
+        from the convex hull. These feature help to find binuclear cell nuclei for instance. A perfect binuclear cell should have two
+        concavities of more or less the same area. A trinuclear cell will have three concavities of similar size, if the three nuclei
+        are positioned on the corners of a triangle.
+      </p>
+    </a>
+
+    <a name="distance"><h3>Distance map features</h3>
+      <p class="text">Let D be the distance map of set X (binary image), i.e. D(x) is the distance of pixel x to the nearest pixel y in X.
+        If the object corresponds to an ellipse, one can expect one prominent maximum in the distance function. If it could be decomposed
+        into two overlapping ellipses, where each of these ellipses are well recognizable, on would expect two prominent maxima. Actually,
+        if the basic shapes are sufficiently prominent, the number of prominent maxima should be the same as the number of the basic shapes.
+      </p>
+    </a>
+
+    <a name="granugrey"><h3>Granulometry features</h3>
+      <p class="text">Granulometry allows one to study the size distribution of objects in an image. For this, the image is
+        successively simplified by operators which remove all (bright or dark) structures up to a certain size. A record is kept
+        of how much is removed from the image with each filtering step, leading to a distribution of measurements, which can be
+        seen as size dependent texture or shape descriptors.
+      </p>
+    </a>
+
+    <a name="moments"><h3>Moments</h3>
+      <p class="text">Moments and derived features have been initially defined to characterize distributions of values (like histograms),
+        but they can also be used as shape or texture descriptors.
+      </p>
+    </a>
+
+    <a name="moments"><h3>Spot Features</h3>
+      <p class="text">Spot features first detect spots inside the region and then calculate features describing their distribution as a point cloud.
+      Spot detection is performed with diameter opening, as defined in [1]. This algorithm extracts all bright details with diameter smaller than the given parameter and
+      a local contrast larger than the given threshold. The features are the number of spots, the average and standard deviation of their
+      intensity distributions, the average and standard deviation of their distance to the center of the region, the average and
+      standard deviation of all inter-spot-distances and the average and standard deviation of their sizes.
+
+      [1] Walter T., Klein, J.C.: Automatic Detection of Microaneurysms in Color fundus Images of the Human Retina by Means of the Bounding Box Closing. In: COLOSIMO, A., GIULIANI, A., SIRABELLA, P.: Lecture Notes in Computer Science, LLNCS, Vol. 2526 p. 210-220 ; Springer- Verlag. October 2002.
+
+      </p>
+    </a>
+
+    <h1><a name="classification"></a>Classification</h1>
+    Detected image objects can be automatically classified based on user training (supervised learning). For that classes need to be defined, samples manually annotated, features extracted, and a classifier trained. All this can be performed in this section.
+    <br/>
+    Note a classifier can be trained for multiple experiments, but constant imaging and processing conditions are an important requirement to achieve reproducible results.
+    <hr/>
+    <h4>Workflow for classification in two channels</h4>
+    <br/>
+    <img class="figure" src="images/workflow.png"/>
+    <hr></hr>
+    <h4>Workflow for classification in the primary and feature readout in the secondary channel</h4>
+    <br/>
+    <img class="figure" src="images/workflow_kinetic.png"/>
+    <hr/>
+
+    A folder structure stores all data of a classifier, including sample annotations, picked sample images and corresponding features, and trained models for support vector machines. Classifiers can be trained for primary and secondary channel independently.
+    To build a new classifier contour images are annotated by <img class="extlink" src="images/extlink.png"/><a href="http://rsbweb.nih.gov/ij/">ImageJ</a>'s <img class="extlink" src="images/extlink.png"/><a href="http://rsbweb.nih.gov/ij/plugins/cell-counter.html">CellCounter plugin</a> and saved as XML file. CecogAnalyzer requires a definition of classes and can process one or more XML files, for which feature vectors of all annotated objects are picked. A new support vector machine can be trained from that data. <br><br>Using RBF-kernels the two parameters C and gamma are trained by grid search and 5-fold cross-validation. A confusion matrix visualizes the match between human annotation and machine prediction (see screenshots). Contour images color-coded by predicted class labels visualize classification performance on raw image data.
+    <br/>
+    <br/>
+    All data of a classifier is stored in a folder structure. This structure contains:
+    <ul>
+      <li><tt>class_definition.txt</tt> - A tab-separated text file with 3 columns specifying <b>class label</b>, <b>class name</b>, and <b>class color</b>. Labels can be any unique numbers, names any string which is allowed in folders, and color is a RGB hex-string like #00FF00 (for pure green, e.g. can be copied from the color menu of Adobe Photoshop).
+        <br/>This file is needed to pick annotated objects and must be provided by the user.</li>
+      <li><tt>annotations/</tt> - Specifies the annotation needed for <i>sample picking</i>. A folder where the <tt>.xml</tt> files from ImageJ's <img class="extlink" src="images/extlink.png"/><a href="http://rsbweb.nih.gov/ij/plugins/cell-counter.html">CellCounter</a> should be stored specifying which objects and their label to train a classifier.
+        <br/>Best practice is to run <a href="#segmentation">Object Detection</a> first, which generates contour images as output (see <a href="#output">Output</a>). These files can be loaded as stack (one stack per position and channel) in ImageJ and annotated with CellCounter (make sure that <i>increment=1</i>). It is also possible to load sub-stacks in case of memory problems.
+        Position and first time-point of the stack have to be specified in the filename. All files without an underscore at the beginning are considered and all positions and all time-points will be processed for which an annotation exists.
+        <br/>Examples:
+        <ul>
+          <li>Stack of position 13 with frames 1-200. Filename: <tt>P0013__T00001__200.xml</tt> (note that only the P and T are important. P can be a string referring to the data position and T must be the frame number; knowing the number of frames described in the .xml file might be helpful to load data again in CellCounter.)</li>
+          <li>Two stacks of position 15:
+            <ul>
+              <li>with frames 21-200 (180 images). Filename: <tt>P0015__T00021__180.xml</tt></li>
+              <li>and with frames 301-500 (200 images). Filename: <tt>P0015__T00301__200.xml</tt></li>
+            </ul>
+          </li>
+        </ul>
+        <br/>These files are needed to pick samples for classifier training and must be provided by the user.</li>
+      <li><tt>controls/</tt> - A folder with control images generated by sample picking. All annotated objects are visualized by contours in the class color. Can be deleted.</li>
+      <li><tt>data/</tt> - All important data files generated by sample picking and classifier training:
+        <ul>
+          <li><tt>features.arff</tt> - Feature and class information in the <img class="extlink" src="images/extlink.png"/><a href="http://www.cs.waikato.ac.nz/~ml/weka/arff.html">Attribute-Relation File Format (ARFF)</a> extended by additional information as comments. This file is the output of sample picking containing all annotated objects and extracted features.</li>
+          <li><tt>features.sparse</tt> - Same as above but as sparse format (does not contain class names, class colors, or feature names). Redundant file which can be deleted.</li>
+          <li><tt>features.samples.txt</tt> - Text file indicating class names and filenames of gallery images in the same order as in the files above.</li>
+          <li><tt>features.model /.range</tt> - Results of classifier training containing super vector definitions and scale information generated by <img class="extlink" src="images/extlink.png"/><a href="http://www.csie.ntu.edu.tw/~cjlin/libsvm/">libSVM</a>.</li>
+          <li><tt>features.confusion.txt</tt> - Text file containing the confusion matrix of the trained support vector machine (SVM) obtained by 5-fold cross-validation. The SVM is trained with weights (to compensate unbalanced training data) and probability estimates.</li>
+        </ul>
+      </li>
+      <li><tt>samples/</tt> - Folder structure with class names as sub-folders containing gallery images generated from sample picking. Raw and mask images (suffix <tt>__img</tt> and <tt>__msk</tt>) are written. The prefix corresponds to the filenames in <tt>features.samples.txt</tt>. These files are only for display/visualization purposes.</li>
+    </ul>
+    <hr></hr>
+
+    <a name="primary_channel">
+
+      <h2 class="param">Primary Channel</h2>
+      <h3>Parameters</h3>
+
+      <a name="primary_classification_envpath"></a>
+      <h4>Classifier folder</h4>
+      <p class="text">The main folder of a classifier. (Do not select the sub-folders e.g. <tt>data</tt>.)
+      </p>
+
+
+      <a name="primary_classification_regionname"></a>
+      <h4>Region name</h4>
+      <p class="text">Choose a primary region (segmentation strategy)
+      for the primary channel. Choices are made available by adding
+      a <a href="#primary_region_definition">Primary
+      segementation plugin</a> in
+      section <a href="#segmentation">Object Detection</a>.</p>
+      <hr></hr>
+
+      <a name="secondary_channel"></a>
+      <a name="tertiary_channel"></a>
+      <h2 class="param">Secondary-/ Tertiary Channel</h2>
+
+      <h3>Parameters</h3>
+      <a name="secondary_classification_envpath"></a>
+      <a name="tertiary_classification_envpath"></a>
+      <h4>Classifier folder</h4>
+      <p class="text">See <a href="#primary_classification_envpath">classifier folder</a> of the primary channel.
+      </p>
+
+      <a name="tertiary_classification_regionname"></a>
+      <a name="secondary_classification_regionname"></a>
+      <h4>Region name</h4>
+
+      <p class="text">Choose a region defined
+      in <a href="#secondary_region_definition">Object
+      Detection</a>, which is used for classification. A region is
+      made available by adding
+      a <a href="#secondary_region_definition">segementation
+      plugin</a> in section <a href="#segmentation">Object
+      Detection</a>. Only the features of the selected region are used
+      for classification, but features of all available regions are
+      calculated.</p>
+
+      <hr/>
+
+      <a name="merged_channel"></a>
+      <h2 class="param">Merged Channel</h2>
+      The Merged Channel is a so called <it>virtual</it> or <it>pseudo</it>
+      channel. There is no segmentation or object detection taking
+      place. The Merged Channel concatenates the feature vectors
+      extracted from the other channels into a new feature vector of
+      higher dimension. Classification takes place in the higher
+      dimensional feature space. <br/>
+
+      <h3>Parameters</h3>
+      <a name="merged_classification_envpath"></a>
+      <h4>Classifier folder</h4>
+      <p class="text">See <a href="#primary_classification_envpath">classifier
+      folder</a> of the primary channel.
+      </p>
+
+      <a name="merged_primary_region"></a>
+      <a name="merged_secondary_region"></a>
+      <a name="merged_Tertiary_region"></a>
+      <a name="merge_primary"/>
+      <a name="merge_secondary"/>
+      <a name="merge_tertiary"/>
+
+      <h4>Merge Channels</h4>
+      <p class="text">Choose channels whose feature vectors to be
+        concatenated. Regions defined
+        in <a href="#secondary_region_definition">Object
+          Detection</a> can be choosen for each channel, but only one
+        region for each channel.</p>
+
+      <hr></hr>
+      <a name="controlpanel_classification">
+        <h3>Control Panel</h3>
+        <p>
+          These 3 processes are dependent from left to right:
+          <ul>
+            <li><b>Pick samples</b> - Takes class definition and annotation files, performs object detection and feature
+              extraction of the annotated objects, generates .ARFF and .sparse files, and writes gallery images. Necessary step to train a classifier.</li>
+            <li><b>Train classifier</b> - A new support vector machine classifier is trained based on the .ARFF file. The classifier is optimized by grid-search (combinations of parameters C and  &gamma; are tested by 5-fold cross-validation) and confusion matrix is updated. Necessary step to automatically predict object labels.</li>
+            <li><b>Test classifier</b> - The newly trained classifier can be tested in this step. All detected objects are shown with color-coded contours corresponding to the predicted class label.</li>
+          </ul>
+        </p>
+      </a>
+
+    <h1><a name="tracking"></a>Tracking</h1>
+    <p>
+      To study temporal progression of cellular stages on the level of
+      individual cells objects must be followed over time
+      (called <i>tracking</i>). Tracking is achieved here by a
+      relatively simple nearest-neighbor approach requiring a low cell
+      movement or a reasonable short time-lapse.
+      <br/>
+      As demonstrated in our paper the selection of events (e.g. onset
+      of mitosis) is often desired to enrich and <i>in silico</i>
+      align the trajectories. This can be achieved by defining
+      a <i>motif</i> of two consecutive class labels. The trajectories
+      can be specified to be of equal length and furthermore corrected
+      (see <a href="#errorcorrection">Error Correction</a>).
+      <br/>
+      <br/>
+      The distance for nearest-neighborhood tracking, class transition
+      motifs and class filters can be defined. Tracking and motif
+      selection can be tested independently for reasons of
+      performance. Lines between connected objects fading out over
+      time visualize tracking. Tracks containing the defined motif,
+      e.g. transition from pro- to prometaphase, are truncated to the
+      same length and exported into one file per event.
+    </p>
+
+    <h3>Parameters</h3>
+
+    <a name="region">
+      <h4>Region name</h4>
+      <p class="text">Segmentation region that is used for tracking. Currently only
+        the &#34;<i>primary</i>&#34; region (of the primary channel) is
+        supported.
+      </p>
+    </a>
+
+    <a name="tracking"></a>
+    <h4>Tracking</h4>
+    <p class="text">Parameters for object tracking by nearest-neighborhood.
+      <a name="tracking_maxobjectdistance">
+        <h4 class="sub">Max. object x-y distance</h4>
+        <p class="subtext">Maximal distance (pixels) between objects in
+          two consecutive frames to be connected. This value scales
+          directly with lens magnification.
+        </p>
+      </a>
+
+      <a name="tracking_maxtrackinggap">
+        <h4 class="sub">Max. time-point gap</h4>
+        <p class="subtext">Maximal number of time-points (frames) to
+          gap. Only relevant for out-of-focus or missing images in a
+          movie.
+        </p>
+      </a>
+
+      <a name="tracking_maxsplitobjects">
+        <h4 class="sub">Max split events</h4>
+        <p class="subtext">Maximal number of allowed trajectory
+          splits. Only relevant if more than object is found in the
+          neighborhood of the next frame. E.g. values of 2 or 3 take care
+          of chromosome segregation but reduce complexity of the tracking
+          graph.
+        </p>
+      </a>
+    </p>
+</a>
+
+<a name="tracking_visualization">
+  <h4>Visualization</h4>
+  <p class="text">Connections between objects in consecutive frames can be visualized by object centroids and lines between centroids.
+    Normal connections are shown in <span style="background-color:
+    #FFFF00; border: 1px solid black; font-weight:
+    bold;">&nbsp;&nbsp;&nbsp;&nbsp;</span> yellow (1-1 connection) and
+    trajectory splits in <span style="background-color: #00FFFF;
+    border: 1px solid black; font-weight:
+    bold;">&nbsp;&nbsp;&nbsp;&nbsp;</span> turquoise (1-N connection).
+  </p>
+</a>
+
+<a name="tracking_visualize_track_length">
+  <h4 class="sub">Max. time-points</h4>
+  <p class="subtext">Maximal number of time-points for which the
+    connections are shown backwards. The value <tt>-1</tt> shows all
+    connection till the beginning of the movie (increases computation
+    time). The visualization is faded from the current time-point (0%
+    transparency) backwards to the last time-point (100%
+    transparency).
+  </p>
+</a>
+
+<a name="tracking_centroid_radius">
+  <h4 class="sub">Centroid radius</h4>
+  <p class="subtext">Radius of the centroids in pixel.</p>
+</a>
+</a>
+
+<a name="controlpanel_tracking">
+  <h3>Control Panel</h3>
+  <p>
+    The processes here allow quick testing of the above
+    parameters. All positions and time-points as specified
+    in <a href="#general">General</a> will be processed.
+
+    <ul>
+      <b>Test tracking</b> - Object detection of the primary channel
+      and tracking is performed.
+    </ul>
+  </p>
+</a>
+
+    <h1><a name="event_detection"></a>Event detection</h1>
+
+      Select event of interest by transition motifs by supervised or unsupervised methods.
+      <br/>
+
+      <hr/>
+      <center>
+        <img class="figure" src="images/unsupervised_eventselection.png"/>
+      </center>
+      <a name="backwardrange">
+        <h4 class="sub">Duration [pre]</h4>
+        <p class="subtext">The number of time-points before the event. Shorter trajectories are omitted.</p>
+      </a>
+
+      <a name="forwardrange">
+        <h4 class="sub">Duration [post]</h4>
+        <p class="subtext">The number of time-points after the event. Shorter trajectories are omitted.</p>
+      </a>
+
+      <a name="duration_unit">
+        <h4 class="sub">Duration unit</h4>
+        <p class="subtext">Different duration unit.</p>
+      </a>
+
+      <h4 class="sub">Important note: Duration [pre] + Duration [post]
+        should be at least two times longer than the average length of
+        the  event of interest.</h4>
+
+      <hr/>
+
+      <a name="supervised_event_selection">
+        <h2>Supervised Event selection</h2>
+        <p class="text">Events like mitosis can be detected by class
+          transition motifs and additional rules.</p>
+
+        <a name="labeltransitions">
+          <h4 class="sub">Class transition motif(s)</h4>
+          <p class="subtext">One or more pairs of class labels to
+            define class  transition.
+            <br/>
+            Examples:
+            <ul>
+              <li><tt>(2,3)</tt> - detects any track with class label
+                sequence 2 -> 3. As for our H2b classifier this would
+                mean a prophase (2) followed by prometaphase (3).</li>
+              <li><tt>(2,3),(2,4)</tt> - detects any track with class
+                label sequence 2 -> 3 OR 2 -> 4. In a longer time-lapse
+                the sequence 2,3 might not always be
+                observable. Therefore 2,3  or 2,4 are selected.</li>
+            </ul>
+          </p>
+        </a>
+
+        <a name="eventchannel">
+          <h4 class="sub">Channel</h4>
+          <p class="subtext">Class labels from this channel are taken
+            in to account for event selection. The drop-down menu
+            offers only those channels that have an annotated (picked)
+            and sucessfully trained classifier.
+        </a>
+
+        <a name="backwardlabels">
+          <h4 class="sub">Class filter [pre]</h4>
+          <p class="subtext">A list of comma-separated class labels, which are allowed to appear before the event. (Useful to improve accuracy of selected sequences, but by adding a priori information unexpected phenotypes might be lost.)</p>
+        </a>
+
+        <a name="forwardlabels">
+          <h4 class="sub">Class filter [post]</h4>
+          <p class="subtext">A list of comma-separated class labels, which are allowed to appear after the event. (Useful to improve accuracy of selected sequences, but by adding a priori information unexpected phenotypes might be lost.)</p>
+        </a>
+
+        <a name="backwardcheck">
+          <h4 class="sub">Filter duration [pre]</h4>
+          <p class="subtext">The number of time-points before the event for which the filter should be applied.</p>
+        </a>
+
+        <a name="forwardcheck">
+          <h4 class="sub">Filter duration [post]</h4>
+          <p class="subtext">The number of time-points after the event for which the filter should be applied.</p>
+        </a>
+
+        <hr/>
+        <a name="unsupervised_event_selection">
+          <h2>Unsupervised Event selection</h2>
+          <p class="introtext">Events of interest can be detected by binary
+            clustering using transition motif (0,1) pattern and domain
+            knowledge.
+          </p>
+        </a>
+
+        <a name="min_event_duration">
+          <h4 >Minimum event duration</h4>
+          <p class="text">The minimum number of time-points of the
+            event. If the minimal event duration is 3, then all events
+            whose length are equal or longer than 3 are selected. For
+            a larger min event duration, fewer event trajectories will
+            be selected.<br/><br/>
+            This parameter has not effect for <i><b>Min event
+            duration &#60; Number of clusters</b></i>, since TC3 Clustering
+            needs tracks that have at least a length of
+            <b><i>Number of Clusters</i></b>
+            Tracks that are shorter are sorted out by the event filter.
+          </p>
+        </a>
+
+        <a name="tc3_analysis">
+          <h4>Temporal clustering</h4>
+          <p class="text">Temporally Constrained Combinatorial Clustering (TC3).</p>
+          <a name="num_clusters">
+            <h4 class="sub">Number of clusters</h4>
+            <p class="subtext">The minimum number of time-points of the event. If the minimum event duration is 3, then all events whose length are equal or longer than 3 are selected.</p>
+          </a>
+          <a name="min_cluster_size">
+            <h4 class="sub">Minimum cluster size</h4>
+            <p class="subtext">It is assumed that clusters are not singleton cluster. The minimum cluster size specifies the smallest number of observations required in a cluster. The larger the number, the faster the algorithm, but the classification result might be less accurate.</p>
+          </a>
+        </a>
+
+    <h1><a name="error_correction"></a>Error Correction</h1>
+
+    <h3>Introduction</h3>
+    <p>
+      Trajectories of class labels may contain a number of
+      misclassified observations. The misclassifications appear as
+      noise which can be smoothed with help of <img class="extlink"
+      src="images/extlink.png"/><a href="http://en.wikipedia.org/wiki/Hidden_Markov_model">hidden
+      Markov models</a> (HMM). The HMM learns its parameters from the
+      tracks of one experimental condition
+      i.e <i>position</i>, <i>Oligo-Id</i> or <i>Gene Symbol</i>
+      separately. Besides the smoothing model, one
+      can <a href="#constrain_graph">apply</a> additional biological
+      constraints to the HMM to model (e.g. mitotic progression) or
+      prohibit a transition from one state (e.g. apoptotic) to any other
+      state.<br/><br/>
+      It is important to note that the error correction depends <b>not</b> on
+      the method of the event selection (supervised and
+      unsupervised).
+      The difference lies in the HMM learning
+      algorithm. Supervised event selection (from support vector machine)
+      works with both <i>Smoothing Model</i> and
+      <i><img class="extlink"src="images/extlink.png"/>
+      <a href="http://en.wikipedia.org/wiki/Baum%E2%80%93Welch_algorithm">
+        Baum-Welch algorithm</a></i>. Unsupervised event
+      selection (TC3) works only with <i>Baum-Welch</i>, since it does
+      not provide accurate prediction probabilities.
+      <br><br>
+      The error correction saves the output in a sub-folder <tt>analysis/hmm</tt>.
+    </p>
+    The association between individual movies i.e. <i>positions</i>
+    and experimental information such as <i>Oligo-Id</i> or the name
+    of the targeted <i>Gene Symbol</i> can be defined in a
+    simple <a href="#position_labels">text file</a>.
+
+    <h3>Note</h3>
+    To apply the error correction on time-lapse movies one has to
+    enable hdf5 output in section <a href="#output">Output</a>. Events output has
+    to be enables. Also, if the generation of gallery images is required, the raw
+    data has to be included in the hdf5 output.
+
+    <h3>Parameters</h3>
+    <a name="channels">
+      <h4>Channels</h4>
+      <p class="text">Select the channels where the error correction has to be applied.</p>
+
+    </a>
+
+    <h3>HMM learning algorithm</h3>
+    <a name="hmm_learning">
+      <h4>HMM learning algorithm</h4>
+      <p class="text"><i>Smoothing model</i> learns the HMM parameters by
+        counting the conditional prediction probabilities.
+        No Baum-Welch estimation is performed afterwards.
+        This method is a 1:1 replacement of the R-implementation
+        (CecogAnalyzer &le; 1.4.x).<br/>
+        <i>Baum-Welch</i> is the standard method to estimate HMM model
+        parameters.
+        <br><br>
+        <i>Smoothing model</i> results in a robust smoothing by
+        suppressing off-diagonal emissions (ad hoc assumption).
+        Further it relies on confident prediction probabilities
+        provided by the support vector machine. <i>Baum-Welch</i> is
+        mandatory for unsupervised event selection, but works
+        well in both cases.
+      </p>
+    </a>
+
+    <a name="constrain_graph">
+      <h4>Constrain graph</h4>
+      <p class="text">To apply biological constraints to the HMM one
+      has to provide a XML-file that contains information about the
+      allowed transitions, emissions and start probabilities. Those
+      files are automatically validated to avoid typing errors. An
+      example file that works with the <img class="extlink"
+      src="images/extlink.png"/><a href="http://cellcognition.org/downloads/data">reference
+      data</a>
+        from the Cellcognition website can be
+        found <a href="hmm_constraints.html">here</a>.
+        <br><br>
+        The transition, emission and start probabilities of the HMM
+        are learned from the raw data obtained from the event
+        selection. A constraint file defines a mask that is
+        applied to the model parameters to allow or
+        disallow a specific transitions or emissions (0 or 1). If this option
+        is omitted, all transitions, emissions and start values are
+        allowed. This is equivalent to set all values in the
+        constraint files to one. Each channel needs a separate
+        constraint file, since the number of classes is not
+        necessarily the same.
+      </p>
+    </a>
+
+    <a name="position_labels">
+      <a name="mappingfile">
+        <h4>Position labels</h4>
+        <p class="text">Provide a table that associates the
+        experimental conditions to a position (<i>plate mapping</i>
+        or <i>plate layout</i>). For now only <i>Oligo Id</i>
+        and <i>Gene Symbol</i> are supported. To use this option one
+        needs to provide a simple tab-separated text file with three
+        columns: <tt>Position</tt> (must match the position
+        names), <tt>Oligo-Id</tt> (any string), and <tt>Gene
+        Symbol</tt> (any string).<br><br>
+        Be aware of the fact that different positions can have the
+        same <i>Oligo-Id</i> or <i>Gene Symbol</i>. That means
+        tracks from more than one position can be grouped into the same
+        plot. The table must list all positions and should
+        not contain empty fields. It will produce an error, if positions
+        exist that are not listed in the plate mapping table.
+        </p>
+      </a>
+    </a>
+
+    <a name="groupby">
+      <h4>Group by</h4>
+      <p class="text">Define on what groups <i>(Position, Oligo-Id,
+      Gene Symbol)</i> the HMM is applied.
+        <a name="groupby_position">
+          <h4 class="sub">Position</h4>
+          <p class="subtext">Group by position (no position labels
+          necessary).</p>
+        </a>
+        <a name="groupby_oligoid">
+          <h4 class="sub">Oligo-Id</h4>
+          <p class="subtext">Group by Oligo-Id (defined in the
+          position labels).</p>
+        </a>
+        <a name="groupby_genesymbol">
+          <h4 class="sub">Gene Symbol</h4>
+          <p class="subtext">Group by Gene Symbol (defined in the
+          position labels).</p>
+        </a>
+      </p>
+    </a>
+
+    <a name="plot_parameter">
+      <h4>Plot parameter</h4>
+      <p class="text">Parameters for plot generation.
+        <a name="overwrite_time_lapse">
+          <h4 class="sub">Overwrite time-lapse</h4>
+          <p class="subtext">In certain cases it is not possible to
+          determine the time-lapse automatically. Therefore it is
+          possible to enter the time-lapse manually.</p>
+        </a>
+        <a name="max_time">
+          <h4 class="sub">Max. time in plot [min]</h4>
+          <p class="subtext">The maximal time (y-axis) in a bar- and
+          box plots. All plots are synchronized to the same
+          y-limit. If <tt>-1</tt> is used as limit, this option is
+          ignored.</p>
+        </a>
+        <a name="ignore_tracking_branches">
+          <h4 class="sub">Ignore tracking branches</h4>
+          <p class="subtext">
+            If a cell splits the event selection finds two tracks. If
+            this option is on, only one track is used for analysis. Be
+            careful, because this option reduces the number of analyzed
+            events.
+          </p>
+        </a>
+        <a name="compose_galleries">
+          <h4 class="sub">Compose gallery images</h4>
+            <p class="subtext">
+              It is possible to generate track images with color-coded
+              bars at the bottom of each track according to the class
+              color after error correction.<br/>
+              <center>
+                <img class="figure" src="images/gallery.png"/>
+              </center>
+            </p>
+        </a>
+
+        <a name="compose_galleries_sample">
+          <h4 class="sub">Max. number of random samples</h4>
+            <p class="subtext">
+              Generation of the
+              galleries is time consuming and files will be
+              large. Therefore it is strongly advised to limit the
+              number of tracks. Using the value <tt>-1</tt> means that
+              the track gallery contains all tracks.
+            </p>
+        </a>
+
+        <a name="resampling_factor">
+          <h4 class="sub">Resampling Factor</h4>
+            <p class="subtext">
+              Shrink the size of the gallery image by the resampling
+              factor (value between 0 and 1).
+            </p>
+        </a>
+        <a name="resampling_factor">
+          <h4 class="sub">Size of gallery images</h4>
+          <p class="subtext">
+            Size of the gallery images in pixels.
+          </p>
+        </a>
+      </p>
+    </a>
+
+    <a name="controlpanel_eventselection">
+      <h3>Control Panel</h3>
+      <p>
+        <ul>
+          <li><b>Correct errors</b> - Starts error correction on event
+          trajectories (e.g. generated either
+          by <a href="#processing">Processing</a>
+          or <a href="#controlpanel_tracking">Apply event
+          selection</a> in Tracking).
+          </li>
+        </ul>
+      </p>
+    </a>
+
+    <h1><a name="output"></a>Output</h1>
+
+<p>
+Processing results like contour images for annotation by <img class="extlink" src="images/extlink.png"/><a href="http://rsbweb.nih.gov/ij/">ImageJ</a>'s CellCounter or label images for further (external) processing can be written to file. Measured values for follow-up statistics like object data including features over the entire movie or along trajectories, or counts of class labels can be exported to text files compatible with e.g. Excel or Prism.
+</p>
+<hr></hr>
+
+<h3>CellH5 output</h3>
+Generated CellH5 hdf5 files as described in <a href="http://www.ncbi.nlm.nih.gov/pubmed/23595665"><b>CellH5: a format for data exchange in high-content screening.</b></a>
+
+<a name="hdf5_create_file">
+<h4>Create Hdf5</h4>
+
+<a name="hdf5_include_raw_images">
+<h4 class="sub">Include 8-bit image data</h4>
+<p class="subtext">Store the normalized raw images</p>
+</a>
+
+<a name="hdf5_include_label_images">
+<h4 class="sub">Include segmentation images</h4>
+<p class="subtext">Store the segmentation as label images</p>
+</a>
+
+<a name="hdf5_include_crack">
+<h4 class="sub">Include crack contours</h4>
+<p class="subtext">Store the segmentation as contours (needed for segmentation overlays of outlines)</p>
+</a>
+
+<a name="hdf5_include_features">
+<h4 class="sub">Include features</h4>
+<p class="subtext">Include the features computed for every channel and region</p>
+</a>
+
+<a name="hdf5_include_classification">
+<h4 class="sub">Include classification</h4>
+<p class="subtext">Include the classification of each object with its color and class name</p>
+</a>
+
+<a name="hdf5_include_tracking">
+<h4 class="sub">Include tracking</h4>
+<p class="subtext">Include the full tracking of all objects</p>
+</a>
+
+<a name="hdf5_include_events">
+<h4 class="sub">Include events</h4>
+<p class="subtext">Include events as separate CellH5 objects as sub-trajectories of the full tracking (tracking is required)</p>
+</a>
+
+<a name="hdf5_compression">
+<h4 class="sub">Enable gzip compression</h4>
+<p class="subtext">Use compression (recommended)</p>
+</a>
+
+<a name="hdf5_merge_positions">
+<h4 class="sub">Merge CellH5 position files</h4>
+<p class="subtext">Merge CellH5 position files into one entry file (_all_positions.ch5)</p>
+</a>
+
+<h4>Reuse HDF5</h4>
+
+<a name="hdf5_reuse">
+<h4 class="sub">Enable this feature if you want use precomputed raw and segmentation images (as stored in the CellH5 files) Note that, changes in the object detection and gray value normalization will have no effect if enabled!</h4>
+</a>
+
+<a name="minimal_effort">
+  <h4>Only necessary steps</h4>
+  <p class="text">If this option is selected in addition to Reuse
+  HDF5, CellCognition analyzer will only execute the analysis steps
+  defined in the Processing tab and try to read the necessary
+  information from the HDF5 file. In particular, it is possible to
+  avoid segmentation, if the features are already calculated. This
+  option is not recommended for interactive use (as segmentation is
+  required for visualization). If Reuse HDF5 is not selected, this
+  option has no effect.
+  </p>
+</a>
+
+
+<h3>Text file output</h3>
+<b>Text output is deprecated and will be removed in future releases!</b>
+<a name="export_result_images">
+<h4>Export result images</h4>
+<p class="text">Result images like contour overlays or label images (containing segmentation for further processing) can be written to disc during processing.
+
+<a name="rendering_labels_discwrite">
+<h4 class="sub">Label images</h4>
+<p class="subtext">Export label images. Image format: 16bit TIFF encoding object IDs.</p>
+</a>
+
+<a name="rendering_contours_discwrite">
+<h4 class="sub">Contour images</h4>
+<p class="subtext">Contour overlay images for the primary channel, all enabled regions of the secondary channel, and tracking. Colors correspond to the different regions. Image format: 8bit JPEG.</p>
+</a>
+
+<a name="rendering_contours_showids">
+<h4 class="sub">Show object IDs</h4>
+<p class="subtext">Object IDs are shown in the contour images. The IDs correspond to the label images and the statistical output below. Note that object IDs change over time for the same object!</p>
+</a>
+
+<a name="rendering_class_discwrite">
+<h4 class="sub">Classification images</h4>
+<p class="subtext">Contour overlay images for the classification results for the primary channel and classified region of the secondary channel. Colors correspond to the predicted class label. Image format: 8bit JPEG.</p>
+</a>
+
+<a name="rendering_class_showids">
+<h4 class="sub">Show object IDs</h4>
+<p class="subtext">Object IDs are shown in the classification
+  images. The IDs correspond to the label images and the statistical
+  output below. Note that object IDs change over time for the same
+  object!</p>
+
+<a name="rendering_channel_gallery">
+<h4 class="sub">Merged channel gallery</h4>
+<p class="subtext">A merged channel gallery image shows the objects
+  (cells) of the selected channels beside each other. The subimages
+  are ordered from left to right, starting with the image extracted
+  from the primary channel, then from secondary and tertiary
+  channel, if selected. In the last subimage all previous channels are
+  merged together to an color image. <br>
+  Further the crack contours of the segemented
+  regions are drawn in the color of the corresponding class label. If
+  classification was turned off for a certain channel, the color of the
+  crack contour is white. Since there is no crack countour in the
+  merged channel, the image shows the contour of the primary channel,
+  but uses the class color of the merged channel.</p>
+</a>
+</p>
+</a>
+
+<a name="statistics">
+<h4>Statistics</h4>
+<p class="text">Measurements per object for the entire movie or along trajectories as well as summarized object and class counts can be exported as text files. All files in this section are located in the <tt>statistics</tt> sub-folder of a movie in the output folder (see structure of the output-folder in <a href="#pathout">General</a>).
+
+<a name="export_object_counts">
+<h4 class="sub">Export object counts</h4>
+<p class="subtext">Exports the number of objects per frame in one file per movie. If classification is enabled the number of objects per class for the primary and secondary channel are included.</p>
+</a>
+
+<a name="export_object_details">
+<h4 class="sub">Export detailed object data</h4>
+<p class="subtext">Detailed object information like ID, class label, class probabilities, features (only intensity average and standard deviation for now), and centroid x/y coordinated are written to one file per movie.</p>
+</a>
+
+<a name="export_track_data">
+<h4 class="sub">Export track data</h4>
+<p class="subtext">A simple way to export a layered graph structure, which is the result of cell tracking, is the export of all possible full trajectories. Every trajectory without a previous node (in-degree=0) is written to one file. In case of a trajectory split (out-degree>1) a new file is created with increasing <tt>Bxx</tt> in the filename, where <tt>xx</tt> encode the n<sup>th</sup> branch of that trajectory. Merge events are <b>not</b> considered by this kind of export.
+<br/>Full trajectories files are located in the sub-folder <tt>full</tt>. Their purpose is mainly a semi-automatic analysis, e.g. to obtain intensity kinetics.
+<br/>Filename tokens are separated by double underscores <tt>__</tt> and are encoded the way:
+<ul>
+<li><tt>Pxxxxx</tt> - the position/movie name; <tt>xxxxx</tt> is a string</li>
+<li><tt>Txxxxx</tt> - the frame/time-point; <tt>xxxxx</tt> is a positive number</li>
+<li><tt>Oxxxx</tt> - the object ID the file is referring to. <tt>xxxx</tt> is a positive number starting at 1.</li>
+<li><tt>Bxx</tt> - the trajectory branch. <tt>xx</tt> is a positive number starting at 1.</li>
+</ul>
+Example: The filename <tt>P0034__T00100__O0333__B03</tt> would therefore refer to a trajectory of movie <i>0034</i> starting at time-point <i>100</i> at the object with ID <i>333</i>. The file contains data about the 3<sup>rd</sup> branch, indicating that 2 splits have occured before.
+</p>
+</a>
+</p>
+</a>
+
+    <h1><a name="processing"></a>Processing</h1>
+
+    This section allows to start the pipeline and depending on the
+    channel, different tasks can be be turned on/off. <i>Event
+      selection</i> and <i>Tracking</i> are available only for the
+    Primary channel, while <i>Classification</i> and <i>Error
+      Correction</i> are the only choices for the merged channel, since
+    it concatenates features from different segmentation regions of
+    the other channels.
+    <br>
+    <br>
+    To constrain the pipeline to certain channels, wells (positions) or
+    time frames click <a href="#constraints">here</a>.
+    <br>
+    <br>
+    <b>Note:</b>
+    <br>
+    The <i>Error correction</i>-check boxes overwrite the
+    corresponding settings in section
+    <a href="#channels">Error Correction</a>.
+    <hr></hr>
+
+    <a name="controlpanel_processing">
+      <h3>Control Panel</h3>
+      <p>
+        <ul>
+          <li><b>Start processing</b> - Start the entire pipeline as
+            defined above.
+          <li><b>Start multi-processing</b> - Starts the processing
+            pipeline on multiple cores of your computer.</li>
+        </ul>
+      </p>
+    </a>
+
+    <a name="cluster"></a>
+    <h1>Cluster</h1>
+<p>
+  Cellcognition supports job submittion to a cluster directly from its user interface. Therefore it is required to run a <a href="https://github.com/CellCognition/clusterservice">WSGI-service</a> one one of the cluster nodes. In CecogAnalyzer  the <b>cluster support needs to be enabled</b>. URL and port number can be setup in the <b>Preferences</b> dialog. It is also necessary to map local directory paths to remote paths. The corresponding <b>Path Mapping Table</b> is also located in the preferences dialog (see screenshots below).
+</p>
+<p>
+  <center>
+    <figure align="center">
+      <a name="enable_cluster_support"></a>
+      <img title="preferences - cluster" src="images/preferences_cluster.png"><br>
+      <figcaption>Settings for cluster support: The Section "Cluster" is not visible in the main GUI if cluster support is turned of.</figcaption>
+    </figure>
+
+    <a name="path_mapping"></a>
+    <figure align="center">
+      <img title="preferences - cluster" src="images/preferences_pathmapping.png"><br>
+      <figcaption>Path mapping table: Select the target operating systm i.e. the OS that runs on the cluster.</figcaption>
+    </figure>
+  </center>
+</p>
+
+<p>
+  The "Cluster" section contains a table showing the status of the path mapping. Each path is checked for existence locally and remotely. Red background means that either the path does not exist, is not mounted or does not exist in the path mapping table.
+</p>
+
+<p>
+  <center>
+    <figure align="center">
+      <img title="section cluster" src="images/section_cluster.png"><br>
+      <figcaption></figcaption>
+    </figure>
+  </center>
+</p>
+
+<p>
+  <table border="1" cellpadding="2" cellspacing="0">
+    <tr>
+      <td>Submit job</td>
+      <td>Submit all jobs to the cluster</td>
+    </tr>
+    <tr>
+      <td>Update</td>
+      <td>Ask the cluster for the current status of the submitted jobs.</td>
+        </tr>
+    <tr>
+      <td>Suspend</td>
+      <td>Suspend the current jobs.</td>
+    </tr>
+    <tr>
+      <td>Termiate</td>
+      <td>Cancel the curent jobs.</td>
+    </tr>
+      </table>
+</p>
+  </body>
+</html>

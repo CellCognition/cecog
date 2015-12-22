@@ -14,12 +14,13 @@ __url__ = 'www.cellcognition.org'
 __all__ = ["ErrorCorrectionThread"]
 
 
-from PyQt4.QtCore import Qt
+from PyQt5.QtCore import Qt
 
 from cecog.threads.corethread import CoreThread
 from cecog.errorcorrection import PlateRunner
 from cecog.errorcorrection import ECParams
 from cecog.units.time import TimeConverter
+
 
 class ErrorCorrectionThread(CoreThread):
 

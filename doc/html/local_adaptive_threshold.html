@@ -1,0 +1,130 @@
+<html>
+
+  <head>
+    <link rel="stylesheet"  type="text/css" href="css/help.css">
+  </head>
+
+  <body>
+    <!-- <a name="local_adaptive_threshold"></a> -->
+    <h2>Segmentation: Local Adaptive Threshold </h2>
+    <p class="text">
+      Performs object detection based on local adaptive thresholding.
+      This is a standard method to detect isolated cell nuclei with good signal to noise ratio.
+      The background subtraction is important
+      if the nuclei have varying intensities (so it is not only used for correction of uneven illumination).
+      In order to make this also work in more difficult cases (touching nuclei, feable signal),
+      there are a number of techniques that can be applied in addition (see below).
+    </p>
+
+    <a name="lat"></a>
+    <h4>Local adaptive threshold </h4>
+    <p class="text">
+      Performs object detection based on local adaptive thresholding (not optional).
+      The settings of this non-optional step can be set by the user.
+      A background map of the input image is computed based on the <i>Window size</i> (moving average window).
+      Image pixels higher above the background map than <i>Min. contrast</i> are considered foreground, all other pixels background.
+    </p>
+
+    <a name="medianradius"></a>
+    <h4 class="sub">Median radius</h4>
+    <p class="subtext">
+      The median filter removes noise, while keeping the edges intact (no blurring of the image). The degree of filtering is controlled by the radius of the median filter (radius measured in pixels: the higher the value, the stronger the filter). Note: Filtered image is used for object detection only (no influence on feature extraction, but shape features might be affected). Note also that the parameter scales directly with lens magnification.
+    </p>
+
+    <a name="latwindowsize"></a>
+    <h4 class="sub">Window size</h4>
+    <p class="subtext">
+      Window size of squared window for the moving average in pixels. This parameter scales with lens magnification.
+    </p>
+
+    <a name="latlimit"></a>
+    <h4 class="sub">Min. contrast</h4>
+    <p class="subtext">Pixel intensity above the background. Note: Small values might increase artifacts (small objects from high noise levels) and slow down computation; high values might lead to incorrect contours.
+    </p>
+
+    <a name="lat2"></a>
+    <h4>Local adaptive threshold 2</h4>
+    <p class="text">
+      Optional second <a href="loc_adat">local adaptive threshold</a> to overcome the problem of incorrect object contours when very bright and very dark objects are in close spatial proximity. See <img class="extlink" src=":extlink"/><a href="http://linkinghub.elsevier.com/retrieve/pii/S1047-8477(09)00273-1">Walter et al. 2010.
+    </p>
+
+    <a name="latwindowsize2"></a>
+    <h4 class="sub">Window size</h4>
+    <p class="subtext">
+      Recommended are 4-10x higher values then above.
+    </p>
+
+    <a name="latlimit2"></a>
+    <h4 class="sub">Min. contrast</h4>
+    <p class="subtext">
+      Recommended are 3-4x higher values than above.
+    </p>
+
+    <a name="shapewatershed"></a>
+    <h4>Split & merge by shape</h4>
+    <p class="text">
+      Optional correction of under-segmentation by a split and merge approach. Objects in close spatial proximity might not be separated (under-segmentation). Based on the shape information (distance transform) objects are split by the <i>watershed</i> algorithm, which often yields over-segmentation. Object candidates are probed for merging by their size and circularity (rounder objects above a size threshold are preferred). See <img class="extlink" src=":extlink"/><a href="http://www3.interscience.wiley.com/journal/118757015/abstract">W&auml;hlby et al. 2004.
+    </p>
+
+    <a name="shapewatershed_gausssize"></a>
+    <h4 class="sub">Gauss radius</h4>
+    <p class="subtext">
+      Size of the Gauss filter for smoothing the distance transformed image. This parameter scales with lens magnification.
+    </p>
+
+    <a name="shapewatershed_maximasize"></a>
+    <h4 class="sub">Min. seed distance</h4>
+    <p class="subtext">
+      Minimal allowed distance in pixel between objects (seed distance for watershed). This parameter scales with lens magnification.
+    </p>
+
+    <a name="shapewatershed_minmergesize"></a>
+    <h4 class="sub">Object size threshold</h4>
+    <p class="subtext">
+      Minimal size (pixel) of a split object. This parameter scales with squared lens magnification.
+    </p>
+
+    <a name="holefilling"></a>
+    <h4>Fill holes</h4>
+    <p class="text">
+      Remove holes from foreground ojbects i.e. allow only topologically closed objects.
+    </p>
+
+    <a name="removeborderobjects"></a>
+    <h4>Remove border objects</h4>
+    <p class="text">
+      Filter out all foreground objects that touch the image border.
+    </p>
+
+    <a name="postprocessing"></a>
+    <h4>Object filter</h4>
+    <p class="text">
+      Optional object filtering based on size and intensity. To specify a lower of upper bound only enter the value <tt>-1</tt>.
+    </p>
+
+    <a name="postprocessing_roisize_min"></a>
+    <h4 class="sub">Min. object size</h4>
+    <p class="subtext">
+      All objects below that size (pixel) are removed. This parameter scales with squared lens magnificaiton.
+    </p>
+
+    <a name="postprocessing_roisize_max"></a>
+    <h4 class="sub">Max. object size</h4>
+    <p class="subtext">
+      All objects above that size (pixel) are removed. This parameter scales with squared lens magnification.
+    </p>
+
+    <a name="postprocessing_intensity_min"></a>
+    <h4 class="sub">Min. average intensity</h4>
+    <p class="subtext">
+      All objects below that average intensity (8bit gray values) are removed.
+    </p>
+
+    <a name="postprocessing_intensity_max"></a>
+    <h4 class="sub">Max. average intensity</h4>
+    <p class="subtext">
+      All objects above that average intensity (8bit gray values) are removed.
+    </p>
+
+  </body>
+</html>

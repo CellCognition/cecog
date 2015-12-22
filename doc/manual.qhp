@@ -1,0 +1,291 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<QtHelpProject version="1.0">
+  <namespace>cecog</namespace>
+  <virtualFolder>html</virtualFolder>
+  <filterSection>
+    <toc>
+      <section title="Getting Started" ref="html/getting_started.html"></section>
+      <section title="Sections" ref="html/manual.html#general">
+        <section title="General" ref="html/manual.html#general"></section>
+        <section title="Object detection" ref="html/manual.html#segmentation">
+          <section title="Local Adaptive Threshold" ref="html/local_adaptive_threshold.html"></section>
+          <section title="Toggle Mappings and Local Adaptive Threshold" ref="html/local_adaptive_threshold_tm.html"></section>
+          <section title="Local Adaptive Threshod, Split by morphological dynamics" ref="html/local_adaptive_threshold_dyn.html"></section>
+          <section title="Global and Local Adaptive Threshod, Split by morphological dynamics" ref="html/local_adaptive_threshold_globloc.html"></section>
+          <section title="Secondary Regions" ref="html/secondary_regions.html"></section>
+          <section title="Ilastik Classifier" ref="html/ilastik_regions.html"></section>
+          <section title="Load Segmentation from files" ref="html/from_files_regions.html"></section>
+        </section>
+        <section title="Feature Extraction" ref="html/manual.html#feature_extraction"></section>
+        <section title="Classification" ref="html/manual.html#classification"></section>
+        <section title="Tracking" ref="html/manual.html#tracking"></section>
+        <section title="Event selection" ref="html/manual.html#event_detection"></section>
+        <section title="Error correction" ref="html/manual.html#error_correction">
+          <section title="HMM Constraints" ref="html/hmm_constraints.html"></section>
+        </section>
+        <section title="Output" ref="html/manual.html#output"></section>
+        <section title="Processing" ref="html/manual.html#processing"></section>
+        <section title="Cluster" ref="html/manual.html#cluster"></section>
+      </section>
+    </toc>
+
+    <keywords>
+      <keyword name="Getting Started" ref="html/getting_started.html"/>
+      <keyword name="index" ref="html/index.html"/>
+      <keyword name="User Manual" ref="html/manual.html"/>
+      <keyword name="General" ref="html/manual.html#general"></keyword>
+      <keyword name="Version" ref="html/manual.html#version"/>
+      <keyword name="Image Directory" ref="html/manual.html#pathin"/>
+      <keyword name="Multiple Plates" ref="html/manual.html#has_multiple_plates"/>
+      <keyword name="Output Directory" ref="html/manual.html#pathout"/>
+      <keyword name="Naming scheme" ref="html/manual.html#namingscheme"/>
+      <keyword name="Structure file" ref="html/manual.html#structure_file"/>
+      <keyword name="Constraints" ref="html/manual.html#constraints"/>
+      <keyword name="Channels" ref="html/manual.html#channels"/>
+      <keyword name="Constrain positions" ref="html/manual.html#constrain_positions"/>
+      <keyword name="Skip finished positions" ref="html/manual.html#redofailedonly"/>
+      <keyword name="Timelapse" ref="html/manual.html#framerange"/>
+      <keyword name="Image Croping" ref="html/manual.html#crop_image"/>
+      <keyword name="Controlpanel (General)" ref="html/manual.html#controlpanel_general"/>
+
+      <keyword name="Feature Extraction" ref="html/manual.html#feature_extraction"></keyword>
+      <keyword name="Classification" ref="html/manual.html#classification"></keyword>
+      <keyword name="Tracking" ref="html/manual.html#tracking"></keyword>
+      <keyword name="Event selection" ref="html/manual.html#event_detection"></keyword>
+      <keyword name="Error correction" ref="html/manual.html#error_correction"></keyword>
+      <keyword name="Plots and Postprocessing" ref="html/manual.html#post_processing"></keyword>
+      <keyword name="Output" ref="html/manual.html#output"></keyword>
+      <keyword name="Processing" ref="html/manual.html#processing"></keyword>
+      <keyword name="Cluster" ref="html/manual.html#cluster"></keyword>
+      <keyword name="HMM Constraints" ref="html/hmm_constraints.html"></keyword>
+
+      <keyword name="Object detection" ref="html/manual.html#segmentation"></keyword>
+      <keyword name="ChannelId (primary)" ref="html/manual.html#primary_channelid"/>
+      <keyword name="Gray level normalization" ref="html/manual.html#primary_channel_conversion"/>
+      <keyword name="Gray value min." ref="html/manual.html#primary_normalizemin"/>
+      <keyword name="Gray value max." ref="html/manual.html#primary_normalizemax"/>
+      <keyword name="Z-slice selection" ref="html/manual.html#primary_zslice_selection"/>
+      <keyword name="Z-slice" ref="html/manual.html#primary_zslice_selection_slice"/>
+      <keyword name="Z-slice projection" ref="html/manual.html#primary_zslice_projection"/>
+      <keyword name="Z-slice projection method" ref="html/manual.html#primary_zslice_projection_method"/>
+      <keyword name="Z-slice projection start" ref="html/manual.html#primary_zslice_projection_begin"/>
+      <keyword name="Z-slice projection end" ref="html/manual.html#primary_zslice_projection_end"/>
+      <keyword name="Z-slice projection step" ref="html/manual.html#primary_zslice_projection_step"/>
+      <keyword name="Flat field correction" ref="html/manual.html#primary_flat_field_correction"/>
+
+      <keyword name="Primary segmentation - Local Adaptive Threshold" ref="html/local_adaptive_threshold.html#primary"/>
+      <keyword name="Median Radius" ref="html/local_adaptive_threshold.html#medianradius"/>
+      <keyword name="Local adpative threshold" ref="html/local_adaptive_threshold.html#loc_adat"/>
+      <keyword name="Window size" ref="html/local_adaptive_threshold.html#latwindowsize"/>
+      <keyword name="Toggle Mappings" ref="html/local_adaptive_threshold_tm.html#togglemappings"/>
+      <keyword name="Toggle Mappings Size" ref="html/local_adaptive_threshold_tm.html#tm_size"/>
+      <keyword name="Min. Contrast" ref="html/local_adaptive_threshold.html#latlimit"/>
+      <keyword name="Local adpative threshold 2" ref="html/local_adaptive_threshold.html#lat2"/>
+
+      <keyword name="Local threshold" ref="html/local_adaptive_threshold_globloc.html#local"/>
+      <keyword name="Global threshold" ref="html/local_adaptive_threshold_globloc.html#global"/>
+      <keyword name="Otsu Factor" ref="html/local_adaptive_threshold_globloc.html#otsu_factor"/>
+      <keyword name="Threshold Offset" ref="html/local_adaptive_threshold_globloc.html#offset"/>
+
+      <keyword name="Window size (Lat2)" ref="html/local_adaptive_threshold.html#latwindowsize2"/>
+      <keyword name="Min. Contrast (Lat2)" ref="html/local_adaptive_threshold.html#latlimit2"/>
+      <keyword name="Fill holes" ref="html/manual.html#holefilling"/>
+      <keyword name="Maximal Hole Size" ref="html/local_adaptive_threshold_globloc.html#holearea"/>
+
+      <keyword name="Remove border objects" ref="html/manual.html#removeborderobjects"/>
+      <keyword name="Split &amp; Merge by Shape " ref="html/local_adaptive_threshold.html#shapewatershed"/>
+      <keyword name="Gauss Radius" ref="html/local_adaptive_threshold.html#shapewatershed_gausssize"/>
+      <keyword name="Min. seed distance" ref="html/local_adaptive_threshold.html#shapewatershed_maximasize"/>
+      <keyword name="Object size threshold" ref="html/local_adaptive_threshold.html#shapewatershed_minmergesize"/>
+
+      <keyword name="Watershed (Distance)" ref="html/local_adaptive_threshold_dyn.html#watershed_distance"/>
+      <keyword name="Minimal depth" ref="html/local_adaptive_threshold_dyn.html#watershed_dynamic"/>
+      <keyword name="Distance Metric (0: chessboard, 1: L1, 2: L2)" ref="html/local_adaptive_threshold_dyn.html#watershed_used_distance"/>
+
+      <keyword name="ilastik plugin" ref="html/ilastik_regions.html#primary_ilastik"/>
+      <keyword name="Load from file plugin" ref="html/from_files_regions.html#primary_from_file"/>
+
+      <keyword name="Object Filter" ref="html/local_adaptive_threshold.html#postprocessing"/>
+      <keyword name="Min. object size" ref="html/local_adaptive_threshold.html#postprocessing_roisize_min"/>
+      <keyword name="Max. object size" ref="html/local_adaptive_threshold.html#postprocessing_roisize_max"/>
+      <keyword name="Min. average intesity" ref="html/local_adaptive_threshold.html#postprocessing_intensity_min"/>
+      <keyword name="Max. average intesity" ref="html/local_adaptive_threshold.html#postprocessing_intensity_max"/>
+      <keyword name="Min. average intensity above background" ref="html/local_adaptive_threshold_tm.html#postprocessing_intensity_min_above_bg"/>
+      <keyword name="Max. average intensity above background" ref="html/local_adaptive_threshold_tm.html#postprocessing_intensity_max_above_bg"/>
+
+      <keyword name="ChannelId (secondary)" ref="html/manual.html#secondary_channelid"/>
+      <keyword name="Gray level normalization (secondary)" ref="html/manual.html#secondary_channel_conversion"/>
+      <keyword name="Gray value min. (secondary)" ref="html/manual.html#secondary_normalizeMin"/>
+      <keyword name="Gray value max. (secondary)" ref="html/manual.html#secondary_normalizeMax"/>
+      <keyword name="Channel registration" ref="html/manual.html#secondary_channel_registration"/>
+      <keyword name="Channel registration (x)" ref="html/manual.html#secondary_channelregistration_x"/>
+      <keyword name="Channel registration (y)" ref="html/manual.html#secondary_channelregistration_y"/>
+      <keyword name="Z-slice selection (secondary)" ref="html/manual.html#secondary_zslice_selection"/>
+      <keyword name="Z-slice (secondary)" ref="html/manual.html#secondary_zslice_selection_slice"/>
+      <keyword name="Z-slice projection (secondary)" ref="html/manual.html#secondary_zslice_projection"/>
+      <keyword name="Z-slice projection method (secondary)" ref="html/manual.html#secondary_zslice_projection_method"/>
+      <keyword name="Z-slice projection start (secondary)" ref="html/manual.html#secondary_zslice_projection_begin"/>
+      <keyword name="Z-slice projection end (secondary)" ref="html/manual.html#secondary_zslice_projection_end"/>
+      <keyword name="Z-slice projection step (secondary)" ref="html/manual.html#secondary_zslice_projection_step"/>
+      <keyword name="Flat field correction (secondary)" ref="html/manual.html#secondary_flat_field_correction"/>
+
+      <keyword name="Secondary segmentation: expanded" ref="html/secondary_regions.html#expanded"/>
+      <keyword name="Secondary segmentation: inside" ref="html/secondary_regions.html#inside"/>
+      <keyword name="Secondary segmentation: outside" ref="html/secondary_regions.html#outside"/>
+      <keyword name="Secondary segmentation: rim" ref="html/secondary_regions.html#rim"/>
+      <keyword name="Secondary region definitions" ref="html/secondary_regions.html#region_definitions"/>
+      <keyword name="Expansion size" ref="html/secondary_regions.html#expansion_size"/>
+      <keyword name="Shrinking size" ref="html/secondary_regions.html#shrinking_size"/>
+      <keyword name="Outside expansion size" ref="html/secondary_regions.html#expansion_size"/>
+      <keyword name="Outside separation size" ref="html/secondary_regions.html#separation_size"/>
+      <keyword name="Rim expansion size" ref="html/secondary_regions.html#expansion_size"/>
+      <keyword name="Rim shrinking size" ref="html/secondary_regions.html#shrinking_size"/>
+
+      <keyword name="Secondary segmentation: propagate" ref="html/secondary_regions.html#propagate"/>
+      <keyword name="Secondary segmentation: constrained watershed" ref="html/secondary_regions.html#constrained_watershed"/>
+      <keyword name="Secondary segmentation: Global 3-level Threshold and Watershed from Primary Channel" ref="html/secondary_regions.html#ws_and_multi_threshold"/>
+      <keyword name="Secondary segmentation: Global and Local Threshold and Watershed" ref="html/secondary_regions.html#ws_and_global_and_local_threshold"/>
+
+      <keyword name="Gauss filter size" ref="html/secondary_regions.html#gauss_filter_size"/>
+      <keyword name="Otsu Factor" ref="html/secondary_regions.html#otsu_factor"/>
+      <keyword name="Threshold Offset" ref="html/secondary_regions.html#offset"/>
+      <keyword name="Use Gradient (instead of the original image)" ref="html/secondary_regions.html#gradient"/>
+      <keyword name="Intermediate Level to background" ref="html/secondary_regions.html#to_background"/>
+
+
+      <keyword name="Toggle Mappings and Local Adaptive Threshold" ref="html/local_adaptive_threshold_tm.html#lat_tm"></keyword>
+      <keyword name="Local Adaptive Threshod, Split by morphological dynamics" ref="html/local_adaptive_threshold_dyn.html#primary3"></keyword>
+      <keyword name="Global and Local Adaptive Threshod, Split by morphological dynamics" ref="html/local_adaptive_threshold_globloc.html#primary4"></keyword>
+
+      <keyword name="Controlpanel (Object detection)" ref="html/manual.html#controlpanel_segmentation"/>
+
+      <keyword name="Feature Extraction" ref="html/manual.html#feature_extraction"/>
+      <keyword name="Basic shape features" ref="html/manual.html#basicshape"/>
+      <keyword name="Basic intesity features" ref="html/manual.html#intensity"/>
+      <keyword name="Haralick features" ref="html/manual.html#haralick"/>
+      <keyword name="Statistical geometric features" ref="html/manual.html#stat_geom"/>
+      <keyword name="Convex hull features" ref="html/manual.html#convhull"/>
+      <keyword name="Distance map features" ref="html/manual.html#distance"/>
+      <keyword name="Granulometry features" ref="html/manual.html#granugrey"/>
+      <keyword name="Moments" ref="html/manual.html#moments"/>
+
+      <keyword name="Classification" ref="html/manual.html#classification"/>
+      <keyword name="Classifier folder (primary)" ref="html/manual.html#primary_classification_envpath"/>
+      <keyword name="Region name (primary)" ref="html/manual.html#primary_classification_regionname"/>
+      <keyword name="Classifier folder (secondary)" ref="html/manual.html#secondary_classification_envpath"/>
+      <keyword name="Classifier folder (tertiary)" ref="html/manual.html#tertiary_classification_envpath"/>
+      <keyword name="Region name (tertiary)" ref="html/manual.html#tertiary_classification_regionname"/>
+      <keyword name="Reguin name (secondary)" ref="html/manual.html#secondary_classification_regionname"/>
+
+      <keyword name="Merge Channels" ref="html/manual.html#merged_channel"/>
+      <keyword name="Classifier folder (merged)" ref="html/manual.html#merged_classification_envpath"/>
+      <keyword name="Merge region (primary)" ref="html/manual.html#merge_primary"/>
+      <keyword name="Merge region (secondary)" ref="html/manual.html#merge_secondary"/>
+      <keyword name="Merge region (tertiary)" ref="html/manual.html#merge_tertiary"/>
+      <keyword name="Controlpanel (Classification)" ref="html/manual.html#controlpanel_classification"/>
+
+      <keyword name="Tracking" ref="html/manual.html#tracking"/>
+      <keyword name="Tracking region" ref="html/manual.html#region"/>
+      <keyword name="Max. object distance" ref="html/manual.html#tracking_maxobjectdistance"/>
+      <keyword name="Max. timepoint gap" ref="html/manual.html#tracking_maxtrackinggap"/>
+      <keyword name="Max. split events" ref="html/manual.html#tracking_maxsplitobjects"/>
+      <keyword name="Visualization" ref="html/manual.html#tracking_visualization"/>
+      <keyword name="Max. time points" ref="html/manual.html#tracking_visualize_track_length"/>
+      <keyword name="Centroid radius" ref="html/manual.html#tracking_centroid_radius"/>
+      <keyword name="Controlpanel (tracking)" ref="html/manual.html#controlpanel_tracking"/>
+
+      <keyword name="Event selection" ref="html/manual.html#event_detection"/>
+      <keyword name="Duration [post]" ref="html/manual.html#backwardrange"/>
+      <keyword name="Duration [pre]" ref="html/manual.html#forwardrange"/>
+      <keyword name="Duration unit" ref="html/manual.html#duration_unit"/>
+      <keyword name="Supervised event selection" ref="html/manual.html#supervised_event_selection"/>
+      <keyword name="Class transitions motiv(s)" ref="html/manual.html#labeltransitions"/>
+      <keyword name="Event channel" ref="html/manual.html#eventchannel"/>
+      <keyword name="Class filter [post]" ref="html/manual.html#backwardlabels"/>
+      <keyword name="Class filter [pre]" ref="html/manual.html#forwardlabels"/>
+      <keyword name="Filter duration [post]" ref="html/manual.html#backwardcheck"/>
+      <keyword name="Filter duration [pre]" ref="html/manual.html#forwardcheck"/>
+      <keyword name="Unsupervised event selection" ref="html/manual.html#unsupervised_event_selection"/>
+      <keyword name="Min. event duration" ref="html/manual.html#min_event_duration"/>
+      <keyword name="TC3 Analysis" ref="html/manual.html#tc3_analysis"/>
+      <keyword name="Number of clusters" ref="html/manual.html#num_clusters"/>
+      <keyword name="Min. cluster size" ref="html/manual.html#min_cluster_size"/>
+      <keyword name="Controlpanel (event selection)" ref="html/manual.html#controlpanel_eventselection"/>
+
+      <keyword name="Error correction" ref="html/manual.html#error_correction"/>
+      <keyword name="Channels (error correction)" ref="html/manual.html#channels"/>
+      <keyword name="HMM learning algorithm" ref="html/manual.html#hmm_learning"/>
+      <keyword name="Constrain graph" ref="html/manual.html#constrain_graph"/>
+      <keyword name="Position labels" ref="html/manual.html#position_labels"/>
+      <keyword name="Plate layout (mapping file)" ref="html/manual.html#mappingfile"/>
+      <keyword name="Group by" ref="html/manual.html#groupby"/>
+      <keyword name="Group by position" ref="html/manual.html#groupby_position"/>
+      <keyword name="Group by OligoID" ref="html/manual.html#groupby_oligoid"/>
+      <keyword name="Group by GeneSymbol" ref="html/manual.html#groupby_genesymbol"/>
+      <keyword name="Plot parameter" ref="html/manual.html#plot_parameter"/>
+      <keyword name="Overwrite timelapse" ref="html/manual.html#overwrite_time_lapse"/>
+      <keyword name="Max. time in plot[min]" ref="html/manual.html#max_time"/>
+      <keyword name="Ignore tracking brachnes" ref="html/manual.html#ignore_tracking_branches"/>
+      <keyword name="Compose gallery images" ref="html/manual.html#compose_galleries"/>
+      <keyword name="Max. number of random samples" ref="html/manual.html#compose_galleries_sample"/>
+      <keyword name="Resampling factor" ref="html/manual.html#resampling_factor"/>
+
+      <keyword name="Output" ref="html/manual.html#output"/>
+      <keyword name="Create Hdf5" ref="html/manual.html#hdf5_create_file"/>
+      <keyword name="Include 8-bit image data" ref="html/manual.html#hdf5_include_raw_images"/>
+      <keyword name="Include segmentation images" ref="html/manual.html#hdf5_include_label_images"/>
+      <keyword name="Include crack contours" ref="html/manual.html#hdf5_include_crack"/>
+      <keyword name="Include features" ref="html/manual.html#hdf5_include_features"/>
+      <keyword name="Include classification" ref="html/manual.html#hdf5_include_classification"/>
+      <keyword name="Include tracking" ref="html/manual.html#hdf5_include_tracking"/>
+      <keyword name="Include events" ref="html/manual.html#hdf5_include_events"/>
+      <keyword name="Enable gzip compressiong" ref="html/manual.html#hdf5_compression"/>
+      <keyword name="Merge positions into one file" ref="html/manual.html#hdf5_merge_positions"/>
+      <keyword name="Reuse HDF5" ref="html/manual.html#hdf5_reuse"/>
+      <keyword name="Only necessary steps" ref="html/manual.html#minimal_effort"/>
+
+      <keyword name="Export result images" ref="html/manual.html#export_result_images"/>
+      <keyword name="Label images" ref="html/manual.html#rendering_labels_discwrite"/>
+      <keyword name="Contour images" ref="html/manual.html#rendering_contours_discwrite"/>
+      <keyword name="Show object IDs (contour images)" ref="html/manual.html#rendering_contours_showids"/>
+      <keyword name="Classification images" ref="html/manual.html#rendering_class_discwrite"/>
+      <keyword name="Show object IDs (classification images)" ref="html/manual.html#rendering_class_showids"/>
+      <keyword name="Merged channel gallery" ref="html/manual.html#rendering_channel_gallery"/>
+      <keyword name="Statistics  (obsolete)" ref="html/manual.html#statistics"/>
+      <keyword name="Export object counts (obsolete)" ref="html/manual.html#export_object_counts"/>
+      <keyword name="Export ojbect details (obsolete)" ref="html/manual.html#export_object_details"/>
+      <keyword name="Export tracking as Graphiz .dot (obsolete)" ref="html/manual.html#export_track_data"/>
+
+      <keyword name="Processing" ref="html/manual.html#processing"/>
+      <keyword name="Controlpanel (Processing)" ref="html/manual.html#controlpanel_processing"/>
+      <keyword name="Cluster" ref="html/manual.html#cluster"/>
+      <keyword name="Path Mapping" ref="html/manual.html#path_mapping"/>
+      <keyword name="Enable cluster support" ref="html/manual.html#enable_cluster_support"/>
+
+    </keywords>
+    <files>
+      <file>html/css/help.css</file>
+      <file>html/index.html</file>
+      <file>html/getting_started.html</file>
+      <file>html/manual.html</file>
+      <file>html/local_adaptive_threshold.html</file>
+      <file>html/local_adaptive_threshold_tm.html</file>
+      <file>html/local_adaptive_threshold_dyn.html</file>
+      <file>html/local_adaptive_threshold_globloc.html</file>
+      <file>html/ilastik_regions.html</file>
+      <file>html/from_files_regions.html</file>
+      <file>html/secondary_regions.html</file>
+      <file>html/hmm_constraints.html</file>
+      <file>html/images/gallery.png</file>
+      <file>html/images/unsupervised_eventselection.png</file>
+      <file>html/images/logo.png</file>
+      <file>html/images/extlink.png</file>
+      <file>html/images/workflow.png</file>
+      <file>html/images/workflow_kinetic.png</file>
+      <file>html/images/secondary_regions.png</file>
+      <file>html/images/preferences_cluster.png</file>
+      <file>html/images/preferences_pathmapping.png</file>
+      <file>html/images/section_cluster.png</file>
+    </files>
+  </filterSection>
+</QtHelpProject>

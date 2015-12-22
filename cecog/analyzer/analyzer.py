@@ -22,7 +22,7 @@ from cecog.analyzer.channel import TertiaryChannel
 from cecog.analyzer.channel import MergedChannel
 from cecog.analyzer.object import ObjectHolder
 
-from cecog.util.logger import LoggerObject
+from cecog.logging import LoggerObject
 from cecog.util.util import makedirs
 from cecog.colors import hex2rgb
 
@@ -31,6 +31,7 @@ class CellAnalyzer(LoggerObject):
 
     def __init__(self, timeholder, position, create_images, binning_factor,
                  detect_objects):
+        
         super(CellAnalyzer, self).__init__()
 
         self.timeholder = timeholder
@@ -82,6 +83,7 @@ class CellAnalyzer(LoggerObject):
         channels = sorted(self._channel_registry.values())
         primary_channel = None
 
+        cnames = [c.NAME for c in channels]
         for channel in channels:
             self.timeholder.prepare_raw_image(channel)
             if self.detect_objects:
@@ -92,7 +94,12 @@ class CellAnalyzer(LoggerObject):
                     self.timeholder.apply_segmentation(channel, primary_channel)
                     secondary_channel = channel
                 elif channel.NAME == TertiaryChannel.NAME:
-                    self.timeholder.apply_segmentation(channel, primary_channel, secondary_channel)
+                    if SecondaryChannel.NAME not in cnames:
+                        raise RuntimeError(("Tertiary channel requiers a "
+                                            "secondary channel"))
+                    self.timeholder.apply_segmentation(channel,
+                                                       primary_channel,
+                                                       secondary_channel)
                 elif channel.NAME == MergedChannel.NAME:
                     channel.meta_image = primary_channel.meta_image
                     self.timeholder.apply_segmentation(channel, self._channel_registry)

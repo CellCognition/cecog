@@ -20,9 +20,9 @@ import threading
 import SocketServer
 from multiprocessing import Pool
 
-from PyQt4 import QtCore
+from PyQt5 import QtCore
 
-from cecog import VERSION
+from cecog.version import version
 from cecog.util.stopwatch import StopWatch
 from cecog.threads.link_hdf import link_hdf5_files
 from cecog.analyzer.core import AnalyzerCore
@@ -31,7 +31,7 @@ from cecog.threads.corethread import ProgressMsg
 from cecog.multiprocess import mplogging as lg
 from cecog.environment import CecogEnvironment
 from cecog.traits.config import ConfigSettings
-
+from cecog.logging import QHandler
 
 class MultiProcessingError(Exception):
     pass
@@ -106,20 +106,13 @@ class MultiAnalyzerThread(AnalyzerThread):
         self.pool = Pool(self.ncpu, initializer=lg.initialyze_process,
                          initargs=(port,))
 
-        self.parent().log_window.init_process_list( \
+        self.parent().log_window.initProcessLogs( \
             [str(p.pid) for p in self.pool._pool])
 
         self.parent().log_window.show()
         self.parent().log_window.raise_()
 
         SocketServer.ThreadingTCPServer.allow_reuse_address = True
-
-        for p in self.pool._pool:
-            logger = logging.getLogger(str(p.pid))
-            handler = lg.NicePidHandler(self.parent().log_window)
-            handler.setFormatter(logging.Formatter( \
-                    '%(asctime)s %(name)-24s %(levelname)-6s %(message)s'))
-            logger.addHandler(handler)
 
         self.log_receiver.handler.log_window = self.parent().log_window
 
@@ -191,7 +184,7 @@ class MultiAnalyzerThread(AnalyzerThread):
 
             for pos in _positions:
                 jobs.append((plate, self._settings.to_dict() , self._imagecontainer, pos,
-                             VERSION))
+                             version))
 
         # submit the jobs
         callback = ProgressCallback(self, len(jobs), self.ncpu)

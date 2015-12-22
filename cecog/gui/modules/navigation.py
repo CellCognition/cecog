@@ -24,9 +24,9 @@ import time as time_lib
 #-------------------------------------------------------------------------------
 # extension module imports:
 #
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
-from PyQt4.Qt import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.Qt import *
 
 import numpy
 
@@ -63,7 +63,7 @@ class NavigationModule(Module):
 
         frame_info = QGroupBox('Plate Information', self)
         layout = QGridLayout(frame_info)
-        frame_info.setStyleSheet('QLabel { font-size: 10px }')
+#         frame_info.setStyleSheet('QLabel { font-size: 10px }')
         self._label_info = QLabel(frame_info)
         layout.addWidget(self._label_info, 0, 0, 0, 0,
                          Qt.AlignCenter | Qt.AlignHCenter)
@@ -88,7 +88,7 @@ class NavigationModule(Module):
         table.setSelectionMode(QTableWidget.SingleSelection)
         table.setSelectionBehavior(QTableWidget.SelectRows)
         table.setAlternatingRowColors(True)
-        table.setStyleSheet('font-size: 10px;')
+#         table.setStyleSheet('font-size: 10px;')
         table.currentItemChanged.connect(self._on_plate_changed)
         self._table_plate = table
         layout.addWidget(table, 0, 0)
@@ -103,7 +103,7 @@ class NavigationModule(Module):
         table.setSelectionMode(QTableWidget.SingleSelection)
         table.setSelectionBehavior(QTableWidget.SelectRows)
         table.setAlternatingRowColors(True)
-        table.setStyleSheet('font-size: 10px;')
+#         table.setStyleSheet('font-size: 10px;')
         table.currentItemChanged.connect(self._on_position_changed)
         self._table_position = table
         layout.addWidget(table, 0, 0)
@@ -120,7 +120,7 @@ class NavigationModule(Module):
             table.setSelectionMode(QTableWidget.SingleSelection)
             table.setSelectionBehavior(QTableWidget.SelectRows)
             table.setAlternatingRowColors(True)
-            table.setStyleSheet('font-size: 10px;')
+#             table.setStyleSheet('font-size: 10px;')
             table.currentItemChanged.connect(self._on_time_changed)
             self._table_time = table
             layout.addWidget(table, 0, 0)
@@ -222,8 +222,8 @@ class NavigationModule(Module):
         table.resizeRowsToContents()
         table.blockSignals(False)
 
-    def _update_info_frame(self, meta_data):
-        meta = meta_data
+    def _update_info_frame(self, meta):
+
         txt  = '<table>' \
                '<tr><td align="right">Positions: </td><td>%s</td></tr>' \
                '<tr><td align="right">Frames: </td><td>%d</td></tr>' % \
@@ -233,7 +233,7 @@ class NavigationModule(Module):
                '<tr><td align="right">Width / Height: </td><td>%d x %d</td></tr>' \
                '<tr><td colspan="2"></td></tr>' \
                '<tr><td align="right">Image Files: </td><td>%d</td></tr>' % \
-               (meta.dim_c, meta.pixel_info, meta.dim_z, meta.dim_x,
+               (meta.dim_c, meta.pixel_type, meta.dim_z, meta.dim_x,
                 meta.dim_y, meta.image_files)
         txt += '<tr><td></td></tr>'
         if meta.has_timestamp_info and meta.has_timelapse:

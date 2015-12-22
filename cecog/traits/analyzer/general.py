@@ -16,7 +16,7 @@ __source__ = '$URL$'
 
 __all__ = ["SectionGeneral"]
 
-from cecog import VERSION
+from cecog.version import version
 from cecog.traits.analyzer.section_core import SectionCore
 
 from cecog.gui.guitraits import (StringTrait,
@@ -45,28 +45,18 @@ class SectionGeneral(SectionCore):
         ('pathout',
             StringTrait('', 1000, label='Output directory',
                                    widget_info=StringTrait.STRING_PATH)),
-        ('image_import_namingschema',
-            BooleanTrait(True, label='Import via naming schema',
-                         widget_info=BooleanTrait.RADIOBUTTON)),
-        ('image_import_structurefile',
-            BooleanTrait(False, label='Import via coordinate file',
-                         widget_info=BooleanTrait.RADIOBUTTON)),
         ('namingscheme',
             SelectionTrait(CecogEnvironment.naming_schema.sections()[0],
                            CecogEnvironment.naming_schema.sections(),
                            label='Naming scheme')),
-        ('structure_filename',
-            StringTrait('', 1000, label='Coordinate filename',
-                                   widget_info=StringTrait.STRING_FILE)),
-
         ('structure_file_pathin',
-            BooleanTrait(True, label='Image folder',
+            BooleanTrait(True, label='Input directory ',
                          widget_info=BooleanTrait.RADIOBUTTON)),
         ('structure_file_pathout',
-            BooleanTrait(False, label='Analysis folder',
+            BooleanTrait(False, label='Output directory   ',
                          widget_info=BooleanTrait.RADIOBUTTON)),
         ('structure_file_extra_path',
-            BooleanTrait(False, label='Different location',
+            BooleanTrait(False, label='Custom directory     ',
                          widget_info=BooleanTrait.RADIOBUTTON)),
         ('structure_file_extra_path_name',
             StringTrait('', 1000, label='Path',
@@ -110,8 +100,8 @@ class SectionGeneral(SectionCore):
 
 
         ('rendering', DictTrait({}, label='Rendering')),
-        ('version', StringTrait('', 6, label='Cecog %s, file version:'
-                                %VERSION, widget_info=StringTrait.STRING_GRAYED)),
+        ('version', StringTrait('', 6, label='Cecog %s, file version:' %version,
+                                widget_info=StringTrait.STRING_GRAYED)),
         ('rendering_class', DictTrait({}, label='Rendering class')),
         ('primary_featureextraction_exportfeaturenames',
             ListTrait(['n2_avg', 'n2_stddev', 'roisize'], label='Primary channel')),

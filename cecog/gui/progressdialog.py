@@ -13,9 +13,10 @@ __url__ = 'www.cellcognition.org'
 
 
 import traceback
-from PyQt4 import QtGui
-from PyQt4 import QtCore
-from PyQt4.QtCore import Qt
+from PyQt5 import QtGui
+from PyQt5 import QtCore
+from PyQt5 import QtWidgets
+from PyQt5.QtCore import Qt
 
 
 
@@ -35,13 +36,18 @@ class ProgressThread(QtCore.QThread):
     def run(self):
         try:
             result = self._target()
+            self.result.emit(result)
         except Exception as e:
             stackstr = traceback.print_exc()
             self.error.emit(e)
+            raise
         finally:
+            # perhaps processEvents()???
+            self.msleep(150)
             if self._qobjects is not None:
                 for qobject in self._qobjects:
-                    qobject.moveToThread(QtGui.QApplication.instance().thread())
+                    qobject.moveToThread(
+                        QtWidgets.QApplication.instance().thread())
         self.result.emit(result)
 
 
@@ -54,7 +60,7 @@ class ProgressObject(QtCore.QObject):
     setLabelText = QtCore.pyqtSignal("PyQt_PyObject")
 
 
-class ProgressDialog(QtGui.QProgressDialog):
+class ProgressDialog(QtWidgets.QProgressDialog):
     """Subclass of QProgressDialog to:
          -) ignore the ESC key during dialog exec_()
          -) to provide mechanism to show the dialog only
@@ -63,6 +69,7 @@ class ProgressDialog(QtGui.QProgressDialog):
 
     def __init__(self, *args, **kw):
         super(ProgressDialog, self).__init__(*args, **kw)
+        self.setWindowTitle('Be patient...')
         self.setWindowModality(Qt.WindowModal)
         self.setCancelButton(None)
         self.setAutoClose(False)
@@ -115,7 +122,7 @@ class ProgressDialog(QtGui.QProgressDialog):
 
 
 if __name__ == '__main__':
-    app = QtGui.QApplication([''])
+    app = QtWidgets.QApplication([''])
 
     import time
     dlg = ProgressDialog('labeltext', "buttontext", 0, 0, None)

@@ -22,36 +22,46 @@ import traceback
 
 from os.path import join
 from multiprocessing import freeze_support
+import h5py
 
 # use agg as long no Figure canvas will draw any qwidget
 import matplotlib as mpl
 mpl.use('Agg')
 
-import sip
+# special case on windoze
+try:
+    import PyQt5.sip as sip
+except ImportError:
+    import sip
+
 # set PyQt API version to 2.0
 sip.setapi('QString', 2)
 sip.setapi('QVariant', 2)
 sip.setapi('QUrl', 2)
 
-from PyQt4 import QtGui
+from PyQt5 import QtGui
+from PyQt5 import QtWidgets
+
 
 try:
     # if some packages were not included in the bundle
     # especially sklearn
     try:
         import cecog
+
     except ImportError:
         sys.path.append(os.pardir)
         import cecog
 
+    from cecog import version
     from cecog.gui.main import CecogAnalyzer
     from cecog.io.imagecontainer import ImageContainer
     # compiled from qrc file
     import cecog.cecog_rc
 
 except Exception as e:
-    app = QtGui.QApplication(sys.argv)
-    QtGui.QMessageBox.critical(None, "Error", traceback.format_exc())
+    app = QtWidgets.QApplication(sys.argv)
+    QtWidgets.QMessageBox.critical(None, "Error", traceback.format_exc())
     raise
 
 
@@ -72,7 +82,8 @@ if __name__ == "__main__":
                         help='Load structure file if a config was provied.')
     parser.add_argument('-c''--configfile', dest='configfile',
                         default=None,
-                        help='Load a config file. (default from battery package)')
+                        help=('Load a config file. '
+                              '(default from battery package)'))
     parser.add_argument('-d', '--debug', action='store_true', default=False,
                         help='Run applicaton in debug mode')
     args, _ = parser.parse_known_args()
@@ -80,11 +91,11 @@ if __name__ == "__main__":
     freeze_support()
 
 
-    app = QtGui.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     app.setWindowIcon(QtGui.QIcon(':cecog_analyzer_icon'))
-    app.setApplicationName(cecog.APPNAME)
+    app.setApplicationName(version.appname)
 
-    splash = QtGui.QSplashScreen(QtGui.QPixmap(':cecog_splash'))
+    splash = QtWidgets.QSplashScreen(QtGui.QPixmap(':cecog_splash'))
     splash.show()
 
     is_bundled = hasattr(sys, 'frozen')
@@ -93,21 +104,20 @@ if __name__ == "__main__":
     else:
         redirect = False
 
-    main = CecogAnalyzer(cecog.APPNAME, cecog.VERSION, redirect,
-                         args.configfile, args.debug)
-
     try:
+        main = CecogAnalyzer(version.appname, version.version, redirect,
+                         args.configfile, args.debug)
+        main.show()
+        splash.finish(main)
+
         if args.configfile is None and args.load:
             raise RuntimeError("use -c option to define a configfile")
 
         if (args.load and os.path.isfile(args.configfile)) or is_bundled:
-            infos = list(ImageContainer.iter_check_plates(main._settings))
-            main._load_image_container(infos, show_dlg=False)
+            main._load_image_container(show_dialog=False)
     except Exception, e:
         msg = "Could not load images\n%s" %str(e)
         traceback.print_exc()
         QtGui.QMessageBox.critical(None, "Error", msg)
 
-    main.show()
-    splash.finish(main)
     sys.exit(app.exec_())

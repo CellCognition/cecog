@@ -22,7 +22,7 @@ from sklearn.cluster import KMeans
 from collections import defaultdict
 
 from cecog.colors import rgb2hex, BINARY_CMAP
-from cecog.util.logger import LoggerObject
+from cecog.logging import LoggerObject
 from cecog.analyzer.tracker import Tracker
 from cecog.tc3 import TC3EventFilter
 from cecog.tc3 import TemporalClustering
@@ -119,13 +119,6 @@ class EventSelectionCore(LoggerObject):
         return centers
 
     def find_events(self):
-        try:
-            import pydevd
-            pydevd.connected = True
-            pydevd.settrace(suspend=False)
-            print 'Thread enabled interactive eclipse debuging...'
-        except:
-            pass
 
         start_ids = self.start_nodes()
         self.logger.debug("tracking: start nodes %d %s" % (len(start_ids), start_ids))
@@ -143,6 +136,7 @@ class EventSelectionCore(LoggerObject):
                                         'recursion reached in _linearize()'))
                 else:
                     raise
+
         # find events in these full tracks
         for start_id in start_ids:
             self.logger.debug("root ID %s" % start_id)
@@ -155,9 +149,10 @@ class EventSelectionCore(LoggerObject):
                 else:
                     raise
 
+
     def _linearize(self, nodeid, results, visited_nodes, level=0):
-        """ Record the full trajectory in a liniearized fashion
-        """
+        """Record the full trajectory in a liniearized fashion."""
+
         # get current branch index
         base = results['_current_branch']
         # append current node to it
@@ -177,12 +172,15 @@ class EventSelectionCore(LoggerObject):
                 # recurse
                 self._linearize(tailid, results, visited_nodes, level=level+1)
 
+
     def _extract_events_from_linearized_tracks(self, tracks):
         for each_branch in tracks['_full_tracks']:
             t_idx = 0
             while t_idx < len(each_branch):
                 nodeid = each_branch[t_idx]
-                if (self.graph.out_degree(nodeid), self.graph.in_degree(nodeid)) == (1,1):
+                degrees = (self.graph.out_degree(nodeid), self.graph.in_degree(nodeid))
+                if degrees in ((1, 1), (1, 0)):
+
                     sample = self.graph.node_data(nodeid)
                     successor = self.graph.node_data(self.graph.tail(self.graph.out_arcs(nodeid)[0]))
 
@@ -237,8 +235,7 @@ class EventSelectionCore(LoggerObject):
                                                     'eventId': nodeid,
                                                     'maxLength': track_length,
                                                     'tracks': [track_nodes]}
-                                t_idx += track_length-1
-                            # print dctResults[strStartId]
+                                t_idx += track_length - 1
                             self.logger.debug("  %s - valid candidate" %startid)
                 t_idx += 1
 
@@ -247,17 +244,6 @@ class EventSelectionCore(LoggerObject):
 
     def _backward_check(self, *args, **kw):
         raise NotImplementedError
-
-class LinearizedEventTrack(object):
-    def __init__(self, start_id):
-        self.stard_id = start_id
-        self.branches = None
-        self.full_track = []
-
-    @property
-    def number_of_branches(self):
-        return
-
 
 
 class EventSelection(EventSelectionCore):
@@ -356,7 +342,7 @@ class UnsupervisedEventSelection(EventSelectionCore):
                  max_out_degree=2):
 
         # requierements for the binary classification
-        assert (transitions == np.array((0, 1))).all()
+        assert (transitions == np.array(((0, 1), ))).all()
         assert forward_labels == (1, )
         assert backward_labels == (0, )
 

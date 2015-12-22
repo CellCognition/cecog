@@ -49,6 +49,8 @@ class PickerThread(CoreThread):
 
         pchannel = self._settings.get("Classification", "collectsamples_prefix")
         chid = self._settings.get("ObjectDetection", "%s_channelid" %(pchannel))
+        if not chid:
+            chid = None
         cpath = self._settings.get("Classification",
                                     "%s_classification_envpath" %pchannel)
 
@@ -69,11 +71,10 @@ class PickerThread(CoreThread):
                             learner=learner)
             picker.processPositions(self)
             learner = picker.learner
-            frame_count =+ len(picker.positions)
+            frame_count += len(picker.positions)
 
         if frame_count == 0:
             raise RuntimeError("Didn't pick any samples from 0 frames. Check plate names")
-
 
         if not self.is_aborted():
             learner.export()

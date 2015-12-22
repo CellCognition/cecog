@@ -70,7 +70,7 @@ class LogRecordStreamHandler(SocketServer.BaseRequestHandler):
 
 
 class LoggingReceiver(SocketServer.ThreadingTCPServer):
-    'Simple TCP socket-based logging receiver'
+    """Simple TCP socket-based logging receiver"""
 
     logname = None
 
@@ -81,13 +81,3 @@ class LoggingReceiver(SocketServer.ThreadingTCPServer):
         if port is None:
             port = logging.handlers.DEFAULT_TCP_LOGGING_PORT
         SocketServer.ThreadingTCPServer.__init__(self, (host, port), handler)
-
-
-class NicePidHandler(logging.Handler):
-
-    def __init__(self, log_window, level=logging.NOTSET):
-        logging.Handler.__init__(self, level)
-        self.log_window = log_window
-
-    def emit(self, record):
-        self.log_window.on_msg_received_emit(record, self.format(record))

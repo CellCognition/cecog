@@ -1,9 +1,9 @@
 # The CellCognition Project
- Copyright (c) 2006 - 2012 Christoph Sommer, Michael Held & Daniel Gerlich  
- Gerlich Lab, IMBA Vienna, Austria. CellCognition is distributed under the term of LGPL License. 
+ Copyright (c) 2006 - 2015 Gerlich Lab, IMBA Vienna, Austria  
+ CellCognition is distributed under the terms of LGPL. 
 
- www.cellcognition.org  
- www.doc.cellcognition.org
+ [www.cellcognition.org](www.cellcognition.org)  
+ [doc.cellcognition.org](http://doc.cellcognition.org)
 
 ### Building the C++ Extension
 
@@ -13,85 +13,54 @@ paths in the setup.cfg accordingly.
 Dependcies are:
 - libvigraimpex
 - libtiff
-- liblzma (only if libtiff is statically linked)
 
 Remove the build- and dist directories and also the file
 cecog/ccore/_cecog.so(pyd)
 
 #### Development build
-  python setup.py build_ext --inplace
+  ```python setup.py build_ext --inplace```
 
 #### System installation:
-  python setup.py install --prefix=\<path-to-prefix\>
+  ```python setup.py install --prefix=<path-to-prefix>```
 
 #### MacOSX
-run the make file.
+Run the make file.
 
 #### Using VCXX Professional
-run build_win64_bin.bat
-
-#### Using Windows SDK's:
-
-Additionally run build_helper\windows_sdk_env.bat before running build_win64_bin.bat.
+Run build_win64_bin.bat
 
 
-The CecogAnalyzer package comes with batteries included.
+### Demo data (battery package)
 
-It contains
+The demo data contains:
 
-    - a small set of raw images (10 timepoints of H2b-aTubulin)
-    - the two classifiers for H2b and aTubulin to test classification
-    - a pre-configured settings file which is loaded on start-up.
+- A small set of raw images (10 timepoints of H2b-aTubulin).
+- The two classifiers for H2b and aTubulin to test classification.
+- A pre-configured settings file which is loaded on start-up.
 
-You can
+Using the demo data it is possible to:
 
-    - test Object Detection of the primary (H2b) and secondary (aTubulin)
-      channels
-    - retrain and test the classifier for H2b and aTubulin in Classification
-    - test the tracking and select events in Tracking (only six tracks are found
-      within the 10 frames)
-    - for Error correction you need to install the R-project (see below)
+- Run segmentation on H2b (primary) and aTubulin (secondary) channels.
+- Test the classifier for H2b and aTubulin channels.
 
+#####Files:
 
-#### Package data
+- Settings
+  - demo_settings.conf, the settings file which is loaded on startup
+  - graph_primary.xml, an example for a graph definition file (H2b)
+  - graph_secondary.xml, an example for a graph definition file (Tubulin)
+- Classifiers
+  - H2B  
+  - aTubulin
+- Images
+  - first 10 timeframes from the [H2B-Tubulin](http://cellcognition.org/downloads/data) image set.
 
+####  H2B-Tubulin data set
+The demo data included in the installer contains only a hand full of images i.e. 10 time frames. Please download the bigger [H2B-Tubulin](http://cellcognition.org/downloads/data) image set to perform:
 
-The package contains a sub-folder Data with
+- Classifier training and cross validation
+- Event selection
+- Error correction
 
-    - Settings
-        - demo_settings.conf, the settings file which is loaded on startup
-        - graph_primary.txt, an example for a graph definition file (H2b)
-        - graph_secondary.txt, an example for a graph definition file
-          (Tubulin)
-        - position_labels.txt, position labels such as OligoID or GeneSymbol
+It contains 206 frames with ~3.6 min. timelapse. Use the same settings except for the parameter *Duration [post]*. It is recommended to increase it to 35 frames.
 
-    - Classifier
-        - the class definition and sample annotations to pick samples with the
-          larger data set, feature and SVM models to test (or train) the H2b
-          and aTubulin classifiers
-
-    - Images
-        - the input folder of the raw images
-
-    - Analysis
-        - the output folder where results are written to
-
-##### Note
-With the included raw images picking of classifier samples is not possible since
-not all necessary positions/timepoints are included.
-Please download the larger H2b-Tubulin data.
-
-
-#### Motif selection
-
-
-With the included data and settings only six mitotic events with four frames
-duration are selected.
-
-To perform motif selection and error correction as presented in our paper more
-timepoints are needed than the package contains. Larger data sets can be found
-online at downloads.
-
-You also might want to increase the length of the selected tracks, especially
-after the pro-prometa onset. Increase therefore the values in
-Tracking -> Timepoints [post] and Timepoints [pre].

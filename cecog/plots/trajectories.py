@@ -61,7 +61,7 @@ def trajectories_dict(data, labels=None, reverse=False, window_title=None,
 
 def trajectories(tracks, labels=None, reverse=False, title=None,
                  window_title=None, cmap=DCMAP,
-                 norm=None, axes=None):
+                 norm=None, axes=None, stepwidth=None):
 
     if axes is None:
         fig = pl.figure()
@@ -77,9 +77,16 @@ def trajectories(tracks, labels=None, reverse=False, title=None,
     if title is not None:
         axes.set_title(title)
 
-    axes.set_xlabel("frames")
-    axes.set_ylabel("trajectories")
     axes.tick_params(labeltop=False, labelbottom=True)
+
+    if stepwidth is not None:
+        xticks = np.round(axes.get_xticks()*stepwidth, 0).astype(int)
+        axes.set_xticklabels(xticks)
+        axes.set_xlabel('time (min.)')
+    else:
+        axes.set_xlabel("frame")
+
+    axes.set_yticks([])
 
     if tracks.shape[0] > tracks.shape[1]:
             axes.set_aspect("auto")

@@ -23,9 +23,9 @@ from collections import OrderedDict
 
 import numpy
 
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
-from PyQt4.Qt import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.Qt import *
 
 from qimage2ndarray import array2qimage
 
@@ -219,13 +219,13 @@ class EnhancementFrame(QFrame):
             btn = QPushButton(name, frame_grp)
             btn.toggled.connect(fct(name))
             btn.setCheckable(True)
-            btn.setStyleSheet('QPushButton {'
-                              'border: 1px solid #888888;'
-                              'border-radius: 3px;'
-                              'padding: 2px; font-size: 12px;'
-                              'min-width: 40px;}'
-                              'QPushButton:checked { background-color: #999999;'
-                              'border: 1px solid #444444;}')
+#             btn.setStyleSheet('QPushButton {'
+#                               'border: 1px solid #888888;'
+#                               'border-radius: 3px;'
+#                               'padding: 2px; font-size: 12px;'
+#                               'min-width: 40px;}'
+#                               'QPushButton:checked { background-color: #999999;'
+#                               'border: 1px solid #444444;}')
             grp.addButton(btn)
             layout_grp.addWidget(btn)
             self._display_settings[name] = DisplaySettings(0, 2**bitdepth)
@@ -412,13 +412,14 @@ class ObjectsFrame(QFrame):
     def update_regionbox(self, regions):
         current = self._box_region.currentText()
         self._box_region.clear()
-        for k, v in regions.iteritems():
-            self._box_region.addItem(k, v)
-        try: # try to keep the current setting
-            self._box_region.setCurrentIndex( \
-                self._box_region.findText(current, flags=Qt.MatchExactly))
-        except Exception:
-            pass
+        for k in sorted(regions):
+            self._box_region.addItem(k, regions[k])
+            found_old_idx = self._box_region.findText(current, flags=Qt.MatchExactly)
+        if found_old_idx < 0:
+            self._box_region.setCurrentIndex(0)
+        else:
+            self._box_region.setCurrentIndex(found_old_idx)
+            self._object_region = regions.values()[found_old_idx]
 
     def _on_show_by_color(self, state):
         if state:

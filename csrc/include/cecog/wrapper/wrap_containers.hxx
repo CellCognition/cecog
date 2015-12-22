@@ -71,6 +71,7 @@ namespace cecog
   }
 }
 
+
 void wrap_containers()
 {
   using namespace cecog::python;
@@ -82,6 +83,8 @@ void wrap_containers()
   class_< _ObjectContainerBase >("ObjectContainerBase")
     .def("applyFeature", &_ObjectContainerBase::applyFeature,
          apply_feature_overloads())
+    .def("deleteFeature", &_ObjectContainerBase::deleteFeature)
+    .def("deleteFeatureCategory", &_ObjectContainerBase::deleteFeatureCategory)
     .def("markObjects", fx1, mark_objects_overloads1(args("color", "quad", "showIds", "fill", "force")))
     .def("markObjects", fx2, mark_objects_overloads2(args("color", "quad", "showIds", "fill", "force")))
     .def("makeRGB", &_ObjectContainerBase::makeRGB)
@@ -120,10 +123,24 @@ void wrap_containers()
     .def("getLabels", &_ObjectContainerBase::getLabels)
     .def("delObject", &_ObjectContainerBase::delObject)
     .def("getObjects", &object_wrapper<_ObjectContainerBase>)
+    .def("resetHaralick", &_ObjectContainerBase::resetHaralick)
+    .def("resetGranulometry", &_ObjectContainerBase::resetGranulometry)
+    .def("addHaralickValue", &_ObjectContainerBase::addHaralickValue)
+    .def("addGranulometryValue", &_ObjectContainerBase::addGranulometryValue)
+    .def("printHaralickDist", &_ObjectContainerBase::printHaralickDist)
+    .def("printGranulometrySizes", &_ObjectContainerBase::printGranulometrySizes)
+    .def_readwrite("debug_folder",
+                   &_ObjectContainerBase::debug_folder)
+    .def_readwrite("debug_prefix",
+                   &_ObjectContainerBase::debug_prefix)
+    .def_readwrite("debug",
+                   &_ObjectContainerBase::debug)
+    .def_readwrite("spot_diameter",
+                   &_ObjectContainerBase::spot_threshold)
+    .def_readwrite("spot_threshold",
+                   &_ObjectContainerBase::spot_diameter)
     .def_readwrite("haralick_levels",
                    &_ObjectContainerBase::haralick_levels)
-    .def_readwrite("haralick_distance",
-                   &_ObjectContainerBase::haralick_distance)
     .def_readwrite("levelset_levels",
                    &_ObjectContainerBase::levelset_levels)
     .def_readonly("width",
@@ -136,8 +153,6 @@ void wrap_containers()
                    &_ObjectContainerBase::img)
     .def_readwrite("img_rgb",
                    &_ObjectContainerBase::img_rgb)
-    //.def_readwrite("extra_img",
-    //               &_ObjectContainerBase::img)
   ;
   register_ptr_to_python< std::auto_ptr<_ObjectContainerBase> >();
 
@@ -147,12 +162,9 @@ void wrap_containers()
 
   class_< _ObjectContainer, bases<_ObjectContainerBase> >
     ("ObjectContainer", init< _ObjectContainer::image_type & >())
-    //.def("findOtsuThreshold",
-    //     &_ObjectContainer::findThreshold<cecog::OtsuThreshold>)
     .def("threshold", &_ObjectContainer::threshold,
          threshold_overloads())
     .def("localThresholdCaching", &_ObjectContainer::localThresholdCaching)
-    //.def("localThresholdIntegral", &_ObjectContainer::localThresholdIntegral)
     .def("label", &_ObjectContainer::label)
   ;
   register_ptr_to_python< std::auto_ptr<_ObjectContainer> >();

@@ -17,7 +17,9 @@ __source__ = '$URL$'
 import os
 import shutil
 import numpy as np
-from collections import OrderedDict
+import types
+
+from collections import OrderedDict, defaultdict
 from os.path import join, basename, isdir
 
 from cecog.io.imagecontainer import Coordinate
@@ -43,25 +45,14 @@ from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
 from cecog.gallery import TrackGallery
 from cecog.gallery import ChannelGallery
 from cecog.export import TrackExporter, EventExporter, TC3Exporter
-from cecog.util.logger import LoggerObject
+from cecog.logging import LoggerObject
 from cecog.util.stopwatch import StopWatch
 from cecog.util.util import makedirs
 from cecog.util.ctuple import COrderedDict
 from cecog.learning.learning import ClassDefinitionUnsup
 
+from cecog.features import FEATURE_MAP
 
-FEATURE_MAP = {'featurecategory_intensity': ['normbase', 'normbase2'],
-               'featurecategory_haralick': ['haralick', 'haralick2'],
-               'featurecategory_stat_geom': ['levelset'],
-               'featurecategory_granugrey': ['granulometry'],
-               'featurecategory_basicshape': ['roisize',
-                                              'circularity',
-                                              'irregularity',
-                                              'irregularity2',
-                                              'axes'],
-               'featurecategory_convhull': ['convexhull'],
-               'featurecategory_distance': ['distance'],
-               'featurecategory_moments': ['moments']}
 
 
 class PositionCore(LoggerObject):
@@ -178,38 +169,41 @@ class PositionCore(LoggerObject):
         return (max(xs), max(ys)), image_size
 
     def feature_params(self, ch_name):
+        fgroups = defaultdict(dict)
 
-        # XXX unify list and dict
-        f_categories = list()
-        f_cat_params = dict()
-
-        # unfortunateley some classes expect empty list and dict
-        if not self.settings.get(SECTION_NAME_PROCESSING,
-                             self._resolve_name(ch_name,
-                                                'featureextraction')):
-            return f_categories, f_cat_params
-
-        for category, feature in FEATURE_MAP.iteritems():
+        for group, features in FEATURE_MAP.iteritems():
             if self.settings.get(SECTION_NAME_FEATURE_EXTRACTION,
-                                 self._resolve_name(ch_name, category)):
-                if "haralick" in category:
-                    try:
-                        f_cat_params['haralick_categories'].extend(feature)
-                    except KeyError:
-                        assert isinstance(feature, list)
-                        f_cat_params['haralick_categories'] = feature
-                else:
-                    f_categories += feature
+                                 self._resolve_name(ch_name, group)):
 
-        if f_cat_params.has_key("haralick_categories"):
-            f_cat_params['haralick_distances'] = (1, 2, 4, 8)
+                for feature, params in features.iteritems():
 
-        return f_categories, f_cat_params
+                    if params is not None:
+                        for pname, value in params.iteritems():
+                            # special case, same parameters for haralick features
+                            if feature.startswith("haralick"):
+                                option = "%s_%s" %(self._resolve_name(ch_name, pname), "haralick")
+                            else:
+                                option = "%s_%s" %(self._resolve_name(ch_name, pname), feature)
 
-    def setup_channel(self, proc_channel, col_channel, zslice_images):
+                            option = self.settings("FeatureExtraction", option)
+
+                            if isinstance(value, (list, tuple)) and \
+                               isinstance(option, basestring):
+                                fgroups[feature][pname] = eval(option)
+                            else:
+                                fgroups[feature][pname] = option
+
+                    else:
+                        fgroups[feature] = params # = None
+
+        return fgroups
+
+
+    def setup_channel(self, proc_channel, col_channel, zslice_images,
+                      check_for_plugins=True):
 
         # determine the list of features to be calculated from each object
-        f_cats, f_params = self.feature_params(proc_channel)
+        f_params = self.feature_params(proc_channel)
         reg_shift, im_size = self.registration_shift()
         ch_cls = self.CHANNELS[proc_channel.lower()]
 
@@ -225,8 +219,8 @@ class PositionCore(LoggerObject):
                          fNormalizeMax = self.settings.get2('%s_normalizemax' %proc_channel),
                          bFlatfieldCorrection = self.settings.get2('%s_flat_field_correction' %proc_channel),
                          strBackgroundImagePath = self.settings.get2('%s_flat_field_correction_image_dir' %proc_channel),
-                         lstFeatureCategories = f_cats,
-                         dctFeatureParameters = f_params)
+                         feature_groups = f_params,
+                         check_for_plugins = check_for_plugins)
 
         if channel.is_virtual():
             channel.merge_regions = self._channel_regions(proc_channel)
@@ -304,6 +298,8 @@ class PositionCore(LoggerObject):
         for channel in self.processing_channels:
             chm[channel] = sttg.get('ObjectDetection',
                                     '%s_channelid' %channel.lower())
+            if not chm[channel]:
+                chm[channel] = None
 
         return chm
 
@@ -415,7 +411,7 @@ class PositionAnalyzer(PositionCore):
 
         self._makedirs()
         self.add_file_handler(join(self._log_dir, "%s.log" %self.position),
-                              self._lvl.DEBUG)
+                              self.Levels.DEBUG)
 
     def _makedirs(self):
         assert isinstance(self.position, basestring)
@@ -475,16 +471,17 @@ class PositionAnalyzer(PositionCore):
     @property
     def _transitions(self):
         if self.settings.get('EventSelection', 'unsupervised_event_selection'):
-            transitions = np.array((0, 1))
+            transitions = np.array(((0, 1), ))
         else:
             try:
-                transitions = eval(self.settings.get('EventSelection', 'labeltransitions'))
+                transitions = np.array(eval(self.settings.get('EventSelection', 'labeltransitions')))
+                transitions.reshape((-1, 2))
             except Exception as e:
                 raise RuntimeError(("Make sure that transitions are of the form "
                                     "'int, int' or '(int, int), (int, int)' i.e "
                                     "2-int-tuple  or a list of 2-int-tuples"))
-            transitions = np.array(transitions)
-        return transitions.reshape((-1, 2))
+
+        return transitions
 
     def setup_eventselection(self, graph):
         """Setup the method for event selection."""
@@ -543,6 +540,8 @@ class PositionAnalyzer(PositionCore):
             region_features = {}
 
             for region in MetaPluginManager().region_info.names[name.lower()]:
+                if name is self.MERGED_CHANNEL:
+                    continue
                 # export all features extracted per regions
                 if self.settings.get('Output', 'events_export_all_features') or \
                         self.settings.get('Output', 'export_track_data'):
@@ -570,7 +569,6 @@ class PositionAnalyzer(PositionCore):
                 features[name] = region_features
 
         return features
-
 
     def export_object_counts(self):
         fname = join(self._statistics_dir, 'P%s__object_counts.txt' % self.position)
@@ -772,7 +770,8 @@ class PositionAnalyzer(PositionCore):
                 if self.settings('Output', 'export_track_data'):
                     self.export_full_tracks()
                 if self.settings('Output', 'export_tracking_as_dot'):
-                    self.export_graphviz()
+                    self.export_graphviz(channel_name =PrimaryChannel.NAME,\
+                                          region_name =self._all_channel_regions[PrimaryChannel.NAME][PrimaryChannel.NAME])
 
             self.export_classlabels()
 
@@ -823,6 +822,8 @@ class PositionAnalyzer(PositionCore):
         crd = Coordinate(self.plate_id, self.position,
                          self._frames, list(set(self.ch_mapping.values())))
 
+        minimal_effort = self.settings.get('Output', 'minimal_effort') and self.settings.get('Output', 'hdf5_reuse')
+
         for frame, channels in self._imagecontainer( \
             crd, interrupt_channel=True, interrupt_zslice=True):
 
@@ -841,6 +842,10 @@ class PositionAnalyzer(PositionCore):
             self.register_channels(cellanalyzer, channels)
 
             cellanalyzer.process()
+
+            self.logger.info(" - Frame %d, cellanalyzer.process (ms): %3d" \
+                             %(frame, stopwatch.interval()*1000))
+
             n_images += 1
             images = []
 
@@ -858,34 +863,38 @@ class PositionAnalyzer(PositionCore):
                     images += [(img_conn, '#FFFF00', 1.0),
                                (img_split, '#00FFFF', 1.0)]
 
+            self.logger.info(" - Frame %d, Tracking (ms): %3d" \
+                             %(frame, stopwatch.interval()*1000))
+
             # can't cluster on a per frame basis
             if self.settings("EventSelection", "supervised_event_selection"):
                 for clf in self.classifiers.itervalues():
                     cellanalyzer.classify_objects(clf)
 
-            ##############################################################
-            # FIXME - part for browser
-            if 0:
-                self.render_browser(cellanalyzer)
-            ##############################################################
+            self.logger.info(" - Frame %d, Classification (ms): %3d" \
+                             % (frame, stopwatch.interval()*1000))
 
             self.settings.set_section('General')
             # want emit all images at once
-            imgs = {}
-            imgs.update(self.render_classification_images(cellanalyzer, images, frame))
-            imgs.update(self.render_contour_images(cellanalyzer, images, frame))
-            msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position, frame)
-            self.set_image(imgs, msg, 50)
+            if not minimal_effort:
+                imgs = {}
+                imgs.update(self.render_classification_images(cellanalyzer, images, frame))
+                imgs.update(self.render_contour_images(cellanalyzer, images, frame))
+                msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position, frame)
+                self.set_image(imgs, msg, 50)
 
-            if self.settings('Output', 'rendering_channel_gallery'):
-                self.render_channel_gallery(cellanalyzer, frame)
+                if self.settings('Output', 'rendering_channel_gallery'):
+                    self.render_channel_gallery(cellanalyzer, frame)
 
-            if self.settings('Output', 'rendering_labels_discwrite'):
-                cellanalyzer.exportLabelImages(self._labels_dir)
+                if self.settings('Output', 'rendering_labels_discwrite'):
+                    cellanalyzer.exportLabelImages(self._labels_dir)
 
+            cellanalyzer.purge(features=self.export_features)
+            self.logger.info(" - Frame %d, rest (ms): %3d" \
+                                 %(frame, stopwatch.interval()*1000))
             self.logger.info(" - Frame %d, duration (ms): %3d" \
                                  %(frame, stopwatch.interim()*1000))
-            cellanalyzer.purge(features=self.export_features)
+
 
         return n_images
 
@@ -923,21 +932,6 @@ class PositionAnalyzer(PositionCore):
             images_[region] = image
          return images_
 
-    def render_browser(self, cellanalyzer):
-        d = {}
-        for name in cellanalyzer.get_channel_names():
-            channel = cellanalyzer.get_channel(name)
-            d[channel.strChannelId] = channel.meta_image.image
-            self._myhack.show_image(d)
-
-        channel_name, region_name = self._myhack._object_region
-        channel = cellanalyzer.get_channel(channel_name)
-        if channel.has_region(region_name):
-            region = channel.get_region(region_name)
-            coords = {}
-            for obj_id, obj in region.iteritems():
-                coords[obj_id] = obj.crack_contour
-            self._myhack.set_coords(coords)
 
 
 class PositionAnalyzerForBrowser(PositionCore):
@@ -984,7 +978,6 @@ class PositionAnalyzerForBrowser(PositionCore):
                 clf.loadClassifier()
                 self.classifiers[p_channel] = clf
 
-
     def __call__(self):
         hdf5_fname = join(self._hdf5_dir, '%s.ch5' % self.position)
 
@@ -1008,7 +1001,10 @@ class PositionAnalyzerForBrowser(PositionCore):
         self._analyze(ca)
         return ca
 
-
+    def setup_channel(self, proc_channel, col_channel, zslice_images,
+                      check_for_plugins=False):
+        return super(PositionAnalyzerForBrowser, self).setup_channel(
+            proc_channel, col_channel, zslice_images, False)
 
     def _analyze(self, cellanalyzer):
         n_images = 0
@@ -1032,6 +1028,7 @@ class PositionAnalyzerForBrowser(PositionCore):
 
             stopwatch.reset(start=True)
             cellanalyzer.initTimepoint(frame)
+
             self.register_channels(cellanalyzer, channels)
 
             cellanalyzer.process()
@@ -1045,6 +1042,3 @@ class PositionAnalyzerForBrowser(PositionCore):
                     pass
 
         return n_images
-
-    # def clear(self):
-    #     print 'Clean up'

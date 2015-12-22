@@ -11,7 +11,7 @@
 
 *******************************************************************************/
 
-// Author(s): Michael Held
+// Author(s): Michael Held, Thomas Walter
 // $Date$
 // $Rev$
 // $URL$
@@ -56,12 +56,51 @@
 #include "cecog/math.hxx"
 #include "cecog/features.hxx"
 #include "cecog/seededregion.hxx"
-
+#include "cecog/morpho/watershed.hxx"
+#include "cecog/morpho/structuring_elements.hxx"
 
 namespace cecog
 {
   using namespace vigra::functor;
 
+  template <class IMAGE1, class IMAGE2, class NBTYPE>
+  void watershedDynamicSplit(IMAGE1 const & img_bin,
+                             IMAGE2 & res,
+                             typename IMAGE1::value_type dyn_thresh,
+                             NBTYPE & nb,
+                             int dist_mode)
+  {
+      vigra::UInt16Image dist(img_bin.size());
+      vigra::UInt16Image label_out(img_bin.size());
+
+      typedef typename IMAGE1::PixelType input_type;
+      typedef typename IMAGE2::PixelType output_type;
+      typedef typename vigra::UInt16Image::PixelType dist_type;
+
+      // first, we build an image that is 1 for the candidates and 0 on the background
+      // call: lower, higher, nores, yesres
+      // [lower, higher] -> yesres, otherwise nores
+      vigra::transformImage(srcImageRange(img_bin), destImage(res),
+                            vigra::Threshold<input_type, output_type>(0, 0, 1, 0));
+
+      // The distance transformation is calculated on the background only
+      // 1: the value for the background (but for us the candidates)
+      // dist_mode is the norm (0: chess, 1: manhattan, 2: euclidean)
+      vigra::distanceTransform(srcImageRange(res), destImage(label_out), 1, dist_mode);
+
+      // invert the distance transform
+      vigra::transformImage(srcImageRange(label_out), destImage(dist),
+                            vigra::linearIntensityTransform(-1, -65535));
+
+      // Watershed with dynamic as criteria
+      cecog::morpho::morphoSelectiveWatershed(srcImageRange(dist),
+                                              destImage(label_out),
+                                              dyn_thresh, nb);
+
+      vigra::transformImageIf(srcImageRange(label_out), maskImage(img_bin), destImage(res),
+                              vigra::Threshold<dist_type, output_type>(0, 0, 255, 0));
+
+  }
 
   /**
    * hole_filling
@@ -97,6 +136,7 @@ namespace cecog
 
 
   typedef ImageMaskContainer<8> ImageMaskContainer8;
+
 
   void segmentationCorrection(vigra::BImage const & img_in,
                               vigra::BImage const & bin_in,

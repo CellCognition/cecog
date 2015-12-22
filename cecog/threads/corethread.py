@@ -14,7 +14,7 @@ __all__ = ['CoreThread']
 
 import logging
 import traceback
-from PyQt4 import QtCore
+from PyQt5 import QtCore
 from cecog import ccore
 
 class StopProcessing(Exception):

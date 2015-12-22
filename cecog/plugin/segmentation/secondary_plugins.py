@@ -14,12 +14,11 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-__all__ = ("Expanded", "Rim", "Inside", "Outside", "Modification",
-           "Propagate", "ConstrainedWatershed", "Modification")
+__all__ = ("Expanded", "Rim", "Inside", "Outside", "Modification", "Propagate")
+
 
 from cecog import ccore
 from cecog.gui.guitraits import IntTrait, FloatTrait, BooleanTrait
-
 
 from cecog.plugin import stopwatch
 from cecog.plugin.segmentation.manager import _SegmentationPlugin
@@ -227,59 +226,6 @@ class Propagate(_SegmentationPlugin):
                                                   self.params['lambda'],
                                                   self.params['delta_width'])
         return ccore.ImageMaskContainer(image, img_labels, False, True, True)
-
-
-class ConstrainedWatershed(_SegmentationPlugin):
-
-    LABEL = 'Constrained watershed from primary'
-    NAME = 'constrained_watershed'
-    COLOR = '#FF99FF'
-    DOC = ":additional_segmentation_plugins"
-
-    REQUIRES = ['primary_segmentation']
-
-    PARAMS = [('gauss_filter_size', IntTrait(2, 1, 4, label='Gauss filter size')),
-              ]
-
-    @stopwatch()
-    def _run(self, meta_image, container):
-        image = meta_image.image
-        img_labels = self._constrained_watershed(image, container.img_labels,
-                                                 filter_size=self.params['gauss_filter_size'])
-        return ccore.ImageMaskContainer(image, img_labels, False, True, True)
-
-    def _constrained_watershed(self, img_in, img_labels, filter_size=2):
-
-        maxlabel = img_labels.getMinmax()[1]
-        img_bin = ccore.threshold(img_labels, 1, maxlabel, 0, 255)
-
-        # internal marker
-        img_ero = ccore.erode(img_bin, 3, 8)
-        img_internal_marker = ccore.anchoredSkeleton(img_bin, img_ero)
-
-        # external marker
-        img_inv = ccore.linearRangeMapping(img_bin, 255, 0, 0, 255)
-        img_voronoi = ccore.watershed(img_inv)
-        img_external_marker = ccore.threshold(img_voronoi, 0, 0, 0, 255)
-
-        # full marker image
-        img_marker = ccore.supremum(img_internal_marker, img_external_marker)
-
-        # gradient image
-        img_filtered = ccore.gaussianFilter(img_in, filter_size)
-        img_grad = ccore.morphoGradient(img_filtered, 1, 8)
-
-        # Watershed result: 0 is WSL, 1 is Background, all other values correspond to labels.
-        img_grad_watershed = ccore.constrainedWatershed(img_grad, img_marker)
-
-        # we first get the regions
-        maxreslab = img_grad_watershed.getMinmax()[1]
-        img_bin2 = ccore.threshold(img_grad_watershed, 2, maxreslab, 0, 255)
-
-        img_temp = ccore.copyImageIf(img_labels, img_bin2)
-        img_out = ccore.relabelImage(img_bin2, img_temp)
-
-        return img_out
 
 
 class Difference(_SegmentationPlugin):

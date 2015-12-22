@@ -19,8 +19,8 @@ import traceback
 import numpy as np
 
 from os.path import join, isfile, basename, dirname, splitext
-from PyQt4 import QtCore
-from PyQt4.QtCore import QThread
+from PyQt5 import QtCore
+from PyQt5.QtCore import QThread
 
 import cellh5
 
@@ -103,8 +103,10 @@ class PositionRunner(QtCore.QObject):
         assert isinstance(self._outdir, basestring)
         self._analyzed_dir = join(self._outdir, "analyzed")
 
-        odirs = (join(self._outdir, "hmm"),
-                 join(self._outdir, "hmm", "gallery"))
+        odirs = [join(self._outdir, "hmm")]
+        if self.ecopts.write_gallery:
+            odirs.append(join(self._outdir, "hmm", "gallery"))
+
         for odir in odirs:
             try:
                 makedirs(odir)
@@ -240,7 +242,8 @@ class PositionRunner(QtCore.QObject):
                         traceback.print_exc(file=fp)
                         fp.write("Check if gallery images exist!")
 
-            report.export_hmm(join(self._hmm_dir, "%s-hmm.csv" %channel.title()),
+            report.export_hmm(join(self._hmm_dir, "%s-%s_hmm.csv"
+                                   %(prefix, sby)),
                               self.ecopts.sortby)
 
 

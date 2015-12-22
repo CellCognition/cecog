@@ -13,10 +13,9 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = ['FileTokenImporter',
-           'MetaMorphTokenImporter',
-           'SimpleTokenImporter',
-           'ZeissLifeTokenImporter']
+__all__ = ("IniFileImporter", )
+
+
 
 import os
 import re
@@ -25,36 +24,31 @@ from cecog import ccore
 from cecog.util.util import read_table
 from cecog.util.stopwatch import StopWatch
 from cecog.util.token import Token, TokenHandler
+from cecog.io.xmlserializer import XmlSerializer
 
-from cecog.io.imagecontainer import (MetaData,
-                                     DIMENSION_NAME_POSITION,
-                                     DIMENSION_NAME_TIME,
-                                     DIMENSION_NAME_CHANNEL,
-                                     DIMENSION_NAME_ZSLICE,
-                                     META_INFO_TIMESTAMP,
-                                     META_INFO_WELL,
-                                     META_INFO_SUBWELL,
-                                     UINT8,
-                                     UINT16,
-                                     )
+
+from cecog.io.metadata import MetaData, MetaDataError
+from cecog.io.constants import PixelType
+from cecog.io.constants import MetaInfo
+from cecog.io.constants import Dimensions
+
+
 TOKEN_P = Token('P', type_code='i', length='+', prefix='',
-                name=DIMENSION_NAME_POSITION)
+                name=Dimensions.Position)
 TOKEN_T = Token('T', type_code='i', length='+', prefix='',
-                name=DIMENSION_NAME_TIME)
+                name=Dimensions.Time)
 TOKEN_C = Token('C', type_code='c', length='+', prefix='',
-                name=DIMENSION_NAME_CHANNEL, regex_type='\D')
+                name=Dimensions.Channel, regex_type='\D')
 TOKEN_Z = Token('Z', type_code='i', length='+', prefix='',
-                name=DIMENSION_NAME_ZSLICE)
+                name=Dimensions.ZSlice)
 
-class MetaDataError(ValueError):
-    pass
 
 class DefaultCoordinates(object):
     def __init__(self):
         self.default_values = {
-                               DIMENSION_NAME_TIME: 1,
-                               DIMENSION_NAME_CHANNEL: 'ch0',
-                               DIMENSION_NAME_ZSLICE: 1,
+                               Dimensions.Time: 1,
+                               Dimensions.Channel: 'ch0',
+                               Dimensions.ZSlice: 1,
                                'DEFAULT': ''
                                }
         return
@@ -74,7 +68,7 @@ class DefaultCoordinates(object):
         return image_info[key]
 
 
-class AbstractImporter(object):
+class AbstractImporter(XmlSerializer):
 
     EXTENSIONS = ['.tif', '.png', '.png']
     IGNORE_PREFIXES = ['.']
@@ -82,7 +76,10 @@ class AbstractImporter(object):
     MULTIIMAGE_IGNORE = 'ignore'
     MULTIIMAGE_USE_ZSLICE = 'zslice'
 
-    def __init__(self, path,
+    def __init__(self):
+        super(AbstractImporter, self).__init__()
+
+    def setup(self, path,
                  extensions=None, ignore_prefixes=None, multi_image=None):
         self.path = os.path.normpath(path)
         self.extensions = self.EXTENSIONS if extensions is None \
@@ -120,6 +117,7 @@ class AbstractImporter(object):
             self.multi_image == self.MULTIIMAGE_USE_ZSLICE):
             index = zslice - 1
             zslice = None
+
         filename_rel = self.dimension_lookup[coordinate.position] \
                                             [coordinate.time] \
                                             [coordinate.channel] \
@@ -127,9 +125,9 @@ class AbstractImporter(object):
         filename_abs = os.path.join(self.path, filename_rel)
         # make sure no back-slashes are left in the path
         filename_abs = filename_abs.replace('\\', '/')
-        if self.meta_data.pixel_type == UINT8:
+        if self.meta_data.pixel_type == PixelType.name(PixelType.Uint8):
             image = ccore.readImage(filename_abs, index)
-        elif self.meta_data.pixel_type == UINT16:
+        elif self.meta_data.pixel_type == PixelType.name(PixelType.Uint16):
             image = ccore.readImageUInt16(filename_abs, index)
         else:
             image = ccore.readImageUInt16(filename_abs, index)
@@ -154,17 +152,17 @@ class AbstractImporter(object):
         # Then, we can assign to each position a dictionary that assigns to each timepoint
         # its index (after ordering).
         if self.use_frame_indices:
-            #all_times = list(set([int(item[DIMENSION_NAME_TIME]) if DIMENSION_NAME_TIME in item else 0
+            #all_times = list(set([int(item[Dimensions.Time]) if Dimensions.Time in item else 0
             #                      for item in dimension_items]))
             #all_times.sort()
             first_pass = {}
             for item in dimension_items:
-                position = item[DIMENSION_NAME_POSITION]
+                position = item[Dimensions.Position]
                 if not position in first_pass:
                     first_pass[position] = []
 
-                if DIMENSION_NAME_TIME in item:
-                    time_val = int(item[DIMENSION_NAME_TIME])
+                if Dimensions.Time in item:
+                    time_val = int(item[Dimensions.Time])
                 else:
                     time_val = 0
                 first_pass[position].append(time_val)
@@ -181,20 +179,21 @@ class AbstractImporter(object):
                 has_xy = True
                 info = ccore.ImageImportInfo(os.path.join(self.path,
                                                           item['filename']))
+
                 self.meta_data.set_image_info(info)
                 self.has_multi_images = False #info.images > 1
 
             # position
-            position = item[DIMENSION_NAME_POSITION]
+            position = item[Dimensions.Position]
             if not position in lookup:
                 lookup[position] = {}
 
             # time
-            if DIMENSION_NAME_TIME in item:
-                time_from_filename = int(item[DIMENSION_NAME_TIME])
+            if Dimensions.Time in item:
+                time_from_filename = int(item[Dimensions.Time])
             else:
                 time_from_filename = 0
-                item[DIMENSION_NAME_TIME] = str(time_from_filename)
+                item[Dimensions.Time] = str(time_from_filename)
 
             if self.use_frame_indices:
                 time = time_index_correspondence[position][time_from_filename]
@@ -204,21 +203,21 @@ class AbstractImporter(object):
                 lookup[position][time] = {}
 
             # channels
-            if DIMENSION_NAME_CHANNEL in item:
-                channel = item[DIMENSION_NAME_CHANNEL]
+            if Dimensions.Channel in item:
+                channel = item[Dimensions.Channel]
             else:
                 channel = '1'
-                item[DIMENSION_NAME_CHANNEL] = channel
+                item[Dimensions.Channel] = channel
             if not channel in lookup[position][time]:
                 lookup[position][time][channel] = {}
 
             # leave zslice optional.
             # in case of multi-images it must not be defined
-            if DIMENSION_NAME_ZSLICE in item:
-                zslice = item[DIMENSION_NAME_ZSLICE]
+            if Dimensions.ZSlice in item:
+                zslice = item[Dimensions.ZSlice]
             else:
                 zslice = 0
-                item[DIMENSION_NAME_ZSLICE] = zslice
+                item[Dimensions.ZSlice] = zslice
             if zslice == '':
                 zslice = None
             if not zslice is None:
@@ -227,8 +226,8 @@ class AbstractImporter(object):
                 lookup[position][time][channel][zslice] = item['filename']
 
             # allow to read timestamps from file if not present
-            if META_INFO_TIMESTAMP in item:
-                timestamp = float(item[META_INFO_TIMESTAMP])
+            if MetaInfo.Timestamp in item:
+                timestamp = float(item[MetaInfo.Timestamp])
                 self.meta_data.append_absolute_time(position, time, timestamp)
             elif self.timestamps_from_file in ['mtime', 'ctime']:
                 filename_full = os.path.join(self.path, item['filename'])
@@ -236,12 +235,12 @@ class AbstractImporter(object):
                     timestamp = os.path.getmtime(filename_full)
                 else:
                     timestamp = os.path.getctime(filename_full)
-                item[META_INFO_TIMESTAMP] = timestamp
+                item[MetaInfo.Timestamp] = timestamp
                 self.meta_data.append_absolute_time(position, time, timestamp)
 
-            if META_INFO_WELL in item:
-                well = item[META_INFO_WELL]
-                subwell = item.get(META_INFO_SUBWELL, None)
+            if MetaInfo.Well in item:
+                well = item[MetaInfo.Well]
+                subwell = item.get(MetaInfo.Subwell, None)
                 self.meta_data.append_well_subwell_info(position, well, subwell)
 
             if (self.has_multi_images and
@@ -284,121 +283,8 @@ class AbstractImporter(object):
         raise NotImplementedError()
 
 
-class FileTokenImporter(AbstractImporter):
-
-    def __init__(self, path, token_handler,
-                 extensions=None, ignore_prefixes=None, multi_image=None):
-        super(FileTokenImporter, self).__init__(path, extensions=extensions,
-                                                ignore_prefixes=ignore_prefixes,
-                                                multi_image=multi_image)
-        self.token_handler = token_handler
-
-    def _get_dimension_items(self):
-        files_list = list()
-        for (path, directories, filenames) in os.walk(path):
-            for filename in filenames:
-                print path, filename
-                if os.path.splitext[1] in self.extensions:
-                    hit = os.path.join(path, filename)
-                    files_list.append(hit)
-
-        token_list = []
-        for filename in file_list:
-            filename_rel = filename[len(self.path)+1:]
-            filename_short = os.path.split(filename_rel)[1]
-            if filename_short[0] not in self.ignore_prefixes:
-                result = self.token_handler.search_all(filename_short)
-                result['filename'] = filename_rel
-                token_list.append(result)
-        return token_list
-
-
-class SimpleTokenImporter(FileTokenImporter):
-
-    TOKEN_P = None
-    TOKEN_T = None
-    TOKEN_C = None
-    TOKEN_Z = None
-
-    def __init__(self, path, separator='_',
-                 extensions=None, ignore_prefixes=None, multi_image=None):
-        simple_token = TokenHandler(separator=separator)
-        simple_token.register_token(self.TOKEN_P)
-        simple_token.register_token(self.TOKEN_T)
-        simple_token.register_token(self.TOKEN_C)
-        simple_token.register_token(self.TOKEN_Z)
-
-        super(SimpleTokenImporter,
-              self).__init__(path, simple_token,
-                             extensions=extensions,
-                             ignore_prefixes=ignore_prefixes,
-                             multi_image=multi_image)
-
-
-class MetaMorphTokenImporter(SimpleTokenImporter):
-
-    TOKEN_P = Token('P', type_code='c', length='+', prefix='',
-                    name=DIMENSION_NAME_POSITION)
-    TOKEN_T = Token('T', type_code='i', length='+', prefix='',
-                    name=DIMENSION_NAME_TIME)
-    TOKEN_C = Token('C', type_code='c', length='+', prefix='',
-                    name=DIMENSION_NAME_CHANNEL)
-    TOKEN_Z = Token('Z', type_code='i', length='+', prefix='',
-                    name=DIMENSION_NAME_ZSLICE)
-
-    def __init__(self, path, separator='_',
-                 extensions=None, ignore_prefixes=None, multi_image=None):
-        super(MetaMorphTokenImporter,
-              self).__init__(path, separator=separator,
-                             extensions=extensions,
-                             ignore_prefixes=ignore_prefixes,
-                             multi_image=multi_image)
-
-
-class ZeissLifeTokenImporter(SimpleTokenImporter):
-
-    TOKEN_P = Token('s', type_code='i', length='+', prefix='',
-                    name=DIMENSION_NAME_POSITION)
-    TOKEN_T = Token('t', type_code='i', length='+', prefix='',
-                    name=DIMENSION_NAME_TIME)
-    TOKEN_C = Token('w', type_code='c', length='+', prefix='',
-                    name=DIMENSION_NAME_CHANNEL)
-    TOKEN_Z = Token('Z', type_code='i', length='+', prefix='',
-                    name=DIMENSION_NAME_ZSLICE)
-
-    def __init__(self, path, separator='_',
-                 extensions=None, ignore_prefixes=None,
-                 multi_image=None):
-        super(ZeissLifeTokenImporter,
-              self).__init__(path, separator=separator,
-                             extensions=extensions,
-                             ignore_prefixes=ignore_prefixes,
-                             multi_image=multi_image)
-
-
-class FlatFileImporter(AbstractImporter):
-
-    def __init__(self, path, filename):
-        self.flat_filename = filename
-        super(FlatFileImporter, self).__init__(path)
-
-    def _get_dimension_items(self):
-        column_names, table = read_table(self.flat_filename, True,
-                                         guess_compression=True)
-
-        test = ['path', 'filename', DIMENSION_NAME_POSITION]
-        for name in test:
-            if not name in column_names:
-                raise ValueError("Missing column '%s' in coordinate file "\
-                                 "'%s'." % (name, self.flat_filename))
-        for i in range(len(table)):
-            table[i]['filename'] = os.path.join(table[i]['path'],
-                                                table[i]['filename'])
-        return table
-
-
 class IniFileImporter(AbstractImporter):
-    '''
+    """
     Scan file structure based on config file (see ConfigParser) definitions.
 
     Parameters for the config file are:
@@ -452,10 +338,23 @@ class IniFileImporter(AbstractImporter):
      - default: True
      - example: a1 -> A01
                 P5 -> P05
-    '''
+    """
 
-    def __init__(self, path, config_parser, section_name):
-        super(IniFileImporter, self).__init__(path)
+    def __init__(self):
+        super(IniFileImporter, self).__init__()
+
+    @classmethod
+    def load_xml(self, filename):
+        with open(filename, 'rb') as fp:
+            obj = XmlSerializer.deserialize(fp.read())
+        return obj
+
+    def save_xml(self, filename):
+        with open(filename, 'wb') as fp:
+            fp.write(self.serialize())
+
+    def setup(self, path, config_parser, section_name):
+        super(IniFileImporter, self).setup(path)
         config_parser = config_parser
         section_name = section_name
 
@@ -492,7 +391,6 @@ class IniFileImporter(AbstractImporter):
         else:
             self.use_frame_indices = False
 
-        #print 'use_frame_indices: ', self.use_frame_indices
 
     def __setstate__(self, state):
         super(IniFileImporter, self).__setstate__(state)
@@ -512,6 +410,9 @@ class IniFileImporter(AbstractImporter):
         re_well_str2 = r"\d{1,5}"
         re_well2 = re.compile(re_well_str2)
 
+        re_well_str3 = r"(?P<letter>[a-zA-Z])\D*(?P<number>\d{1,5})"
+        re_well3 = re.compile(re_well_str3)
+        
         for dirpath, dirnames, filenames in os.walk(path):
             # prune filenames by file extension
             if len(self.extensions) > 0:
@@ -547,41 +448,48 @@ class IniFileImporter(AbstractImporter):
                     if not search2 is None:
                         result = search2.groupdict()
                         # use path data if not defined for the filename
-                        for key in [DIMENSION_NAME_POSITION, META_INFO_WELL,
-                                    META_INFO_SUBWELL]:
+                        for key in [Dimensions.Position, MetaInfo.Well,
+                                    MetaInfo.Subwell]:
                             if not key in result and key in result_path:
                                 result[key] = result_path[key]
 
-                        if META_INFO_WELL in result:
+                        if MetaInfo.Well in result:
 
                             # reformat well information
                             if self.reformat_well:
-                                well = result[META_INFO_WELL]
+                                well = result[MetaInfo.Well]
                                 if re_well.match(well) is None:
                                     if re_well2.match(well) is None:
-                                        raise MetaDataError("Well data '%s' not "
-                                                            "valid.\nValid are '%s' or '%s'"
-                                                            % (well, re_well_str, re_well_str2))
+                                        res3 = re_well3.match(well)
+                                        if res3 is None:
+                                            raise MetaDataError("Well data '%s' not "
+                                                                "valid.\nValid are '%s' or '%s' or '%s'"
+                                                                % (well, re_well_str, re_well_str2, re_well_str3))
+                                        else:                                            
+                                            letter = res3.groupdict()['letter']
+                                            number = res3.groupdict()['number']
+                                            result[MetaInfo.Well] = "%s%02d" % (letter.upper(), int(number))                                            
+                                            #result[MetaInfo.Well] = "%s%02d" % (well[0].upper(), int(well[1:]))
                                     else:
-                                        result[META_INFO_WELL] = "%05d" % int(well)
+                                        result[MetaInfo.Well] = "%05d" % int(well)
                                 else:
-                                    result[META_INFO_WELL] = "%s%02d" % (well[0].upper(), int(well[1:]))
+                                    result[MetaInfo.Well] = "%s%02d" % (well[0].upper(), int(well[1:]))
 
                             # subwell is converted to int (default 1)
-                            if not result.has_key(META_INFO_SUBWELL):
-                                result[META_INFO_SUBWELL] = 1
-                            elif result[META_INFO_SUBWELL] is None:
-                                result[META_INFO_SUBWELL] = 1
+                            if not result.has_key(MetaInfo.Subwell):
+                                result[MetaInfo.Subwell] = 1
+                            elif result[MetaInfo.Subwell] is None:
+                                result[MetaInfo.Subwell] = 1
                             else:
-                                result[META_INFO_SUBWELL] = \
-                                    int(result[META_INFO_SUBWELL])
+                                result[MetaInfo.Subwell] = \
+                                    int(result[MetaInfo.Subwell])
 
                         # create position value if not found
-                        if not DIMENSION_NAME_POSITION in result:
-                            if META_INFO_WELL in result:
-                                result[DIMENSION_NAME_POSITION] = '%s_%02d' % \
-                                    (result[META_INFO_WELL],
-                                     result[META_INFO_SUBWELL])
+                        if not Dimensions.Position in result:
+                            if MetaInfo.Well in result:
+                                result[Dimensions.Position] = '%s_%02d' % \
+                                    (result[MetaInfo.Well],
+                                     result[MetaInfo.Subwell])
                             else:
                                 raise MetaDataError("Either 'position' or "
                                                     "'well' information "
@@ -602,9 +510,3 @@ class IniFileImporter(AbstractImporter):
             if os.path.isdir(path):
                 token_list = self.__get_token_list(path, self.allow_subfolder)
         return token_list
-
-
-class LsmImporter(object):
-
-    def __init__(self):
-        pass

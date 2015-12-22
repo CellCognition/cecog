@@ -23,7 +23,7 @@ from cecog.learning.annotation import Annotations
 from cecog.analyzer.position import PositionAnalyzer, PositionAnalyzerForBrowser
 from cecog.analyzer.position import PositionPicker
 from cecog.io.imagecontainer import MetaImage
-from cecog.util.logger import LoggerObject
+from cecog.logging import LoggerObject
 from cecog.util.util import makedirs
 
 
@@ -39,7 +39,7 @@ class AnalyzerBase(LoggerObject):
         self.sample_reader = list()
         self.sample_positions = dict()
 
-        self.add_stream_handler(self._lvl.WARNING)
+        self.add_stream_handler(self.Levels.WARNING)
         self._imagecontainer = imagecontainer
         self.settings = settings
         self.plate = plate
@@ -255,8 +255,8 @@ class Picker(AnalyzerBase):
         self.learner = learner
 
         pattern = join(self.learner.annotations_dir, "*%s" %learner.XML)
-        anno_re = re.compile(('((.*?_{1,3})?PL(?P<plate>.*?)_{1,3})?P(?P'
-                              '<position>.+?)_{1,3}T(?P<time>\d+).*?'))
+        anno_re = re.compile(('((.*?_{1,3})?PL(?P<plate>.*?)_{2,3})?P(?P'
+                              '<position>.+?)_{2,3}T(?P<time>\d+).*?'))
 
         frames_total = self.meta_data.times
         for annofile in glob.glob(pattern):

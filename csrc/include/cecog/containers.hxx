@@ -102,6 +102,9 @@ namespace cecog
     typedef std::vector<vigra::BImage> ImageVector;
     typedef std::vector<vigra::Diff2D> PositionList;
 
+    typedef typename std::vector<unsigned> har_dist_vec;
+    typedef typename std::vector<unsigned> se_size_vec;
+
     BOOST_STATIC_CONSTANT(typename image_type::value_type, BACKGROUND = 0);
     BOOST_STATIC_CONSTANT(typename image_type::value_type, FOREGROUND = 255);
     BOOST_STATIC_CONSTANT(unsigned, GREYLEVELS = image_type::PixelTypeTraits::greylevels);
@@ -129,7 +132,131 @@ namespace cecog
 
             required_ext = 0;
 
+            // settings for haralick
+            haralickDistVec.push_back(1);
+            haralickDistVec.push_back(2);
+            haralickDistVec.push_back(4);
+            haralickDistVec.push_back(8);
+
+           // settings for spot features
+            spot_threshold = 10;
+            spot_diameter = 5;
+
+            debug_folder = "";
+            debug_prefix = "";
+            debug = false;
+
     };
+
+    /**
+     * Erase a feature for all objects
+     * This has been added to allow different features for object filters
+     * than for classification.
+     */
+    void deleteFeature(std::string feature_name)
+    {
+      ObjectMap::iterator it = objects.begin();
+      for (; it != objects.end(); ++it) {
+        ROIObject& o = (*it).second;
+        o.features.erase(feature_name);
+      }
+      return;
+    }
+
+    void deleteFeatureCategory(std::string feature_name)
+    {
+      if (calculated_features[feature_name]) {
+
+        if ((feature_name=="roisize") || (feature_name=="perimeter") ||
+            (feature_name=="circularity") || (feature_name=="irregularity") ||
+            (feature_name=="irregularity2"))
+        {
+          deleteFeature(feature_name);
+        }
+        else if (feature_name == "minmax")
+        {
+          deleteFeature("min");
+          deleteFeature("max");
+        }
+        else if (feature_name == "axes")
+        {
+          deleteFeature("dist_max");
+          deleteFeature("dist_min");
+          deleteFeature("dist_ratio");
+        }
+        else if (feature_name == "moments")
+        {
+          deleteFeature("eccentricity");
+          deleteFeature("gyration_radius");
+          deleteFeature("gyration_ratio");
+          deleteFeature("moment_I1");
+          deleteFeature("moment_I2");
+          deleteFeature("moment_I3");
+          deleteFeature("moment_I4");
+          deleteFeature("moment_I5");
+          deleteFeature("moment_I6");
+          deleteFeature("moment_I7");
+          deleteFeature("ellip_major_axis");
+          deleteFeature("ellip_minor_axis");
+          deleteFeature("ellip_axis_ratio");
+          deleteFeature("princ_gyration_x");
+          deleteFeature("princ_gyration_y");
+          deleteFeature("princ_gyration_ratio");
+          deleteFeature("skewness_x");
+          deleteFeature("skewness_y");
+        }
+        else if (feature_name == "normbase")
+        {
+          deleteFeature("n_avg");
+          deleteFeature("n_stddev");
+          deleteFeature("n_wavg");
+          deleteFeature("n_wiavg");
+          deleteFeature("n_wdist");
+        }
+        else if (feature_name == "normbase2")
+        {
+          deleteFeature("n2_avg");
+          deleteFeature("n2_stddev");
+          deleteFeature("n2_wavg");
+          deleteFeature("n2_wiavg");
+          deleteFeature("n2_wdist");
+        }
+
+        calculated_features[feature_name] = false;
+      }
+      return;
+
+    }
+
+    void printHaralickDist() {
+      for(har_dist_vec::size_type i = 0; i != haralickDistVec.size(); ++i)
+      {
+        std::cout << "Haralick Size: " << (unsigned)haralickDistVec[i] << std::endl;
+      }
+    }
+
+    void printGranulometrySizes() {
+      for(se_size_vec::size_type i = 0; i != granuSizeVec.size(); ++i)
+      {
+        std::cout << "Granulometry Size: " << (unsigned)granuSizeVec[i] << std::endl;
+      }
+    }
+
+    void resetHaralick(){
+      haralickDistVec.clear();
+    }
+
+    void resetGranulometry(){
+      granuSizeVec.clear();
+    }
+
+    void addHaralickValue(unsigned value){
+      haralickDistVec.push_back(value);
+    }
+
+    void addGranulometryValue(unsigned value){
+      granuSizeVec.push_back(value);
+    }
 
     /**
      * Apply a feature by name to all objects of this container
@@ -142,7 +269,6 @@ namespace cecog
       if (!calculated_features[name] || force)
       {
         // simple features
-
         if (name == "minmax") {
           vigra::ArrayOfRegionStatistics<vigra::FindMinMax
                                          <value_type> > functor(total_labels);
@@ -157,6 +283,7 @@ namespace cecog
           }
         }
         else if (name == "roisize") {
+
           ObjectMap::iterator it = objects.begin();
           for (; it != objects.end(); ++it) {
             ROIObject& o = (*it).second;
@@ -206,7 +333,7 @@ namespace cecog
             o.features["dist_ratio"] = tuple.third / tuple.first;
           }
         }
-        if(name == "moments")
+        else if(name == "moments")
         {
           applyFeature("axes");
 
@@ -244,7 +371,6 @@ namespace cecog
               o.features["skewness_x"] = fabs(moments[id].PrincipalSkewnessX());
               o.features["skewness_y"] = fabs(moments[id].PrincipalSkewnessY());
               o.orientation = moments[id].Theta();
-              //std::cout << o.orientation << std::endl;
           }
         }
         else if (name == "circularity")
@@ -345,73 +471,97 @@ namespace cecog
 
                 }
             }
+          else if(name == "spotfeatures")
+          {
+            ObjectMap::iterator it = objects.begin();
+            for(; it != objects.end(); ++it)
+            {
+                ROIObject &o = (*it).second;
+
+                SpotFeatures<image_type, label_type> sf(img, img_labels, o, (*it).first,
+                                                        spot_diameter, spot_threshold,
+                                                        debug, debug_folder, debug_prefix, name);
+                sf.CalculateFeatures(o);
+            }
+          }
         // haralick
         else if (name == "haralick")
         {
-          char dStr[30];
-          sprintf(dStr, "h%d_", haralick_distance);
-
-          ObjectMap::iterator it = objects.begin();
-          for (; it != objects.end(); ++it)
+          for(har_dist_vec::size_type i = 0; i != haralickDistVec.size(); ++i)
           {
-            ROIObject& o = (*it).second;
-            Haralick<image_type, label_type>
-              haralick(img, img_labels,
-                       o, (*it).first,
-                       haralick_levels,
-                       GREYLEVELS-1,
-                       haralick_distance);
+            char dStr[30];
 
-            o.features[std::string(dStr)+"ASM"] = haralick.ASM();
-            o.features[std::string(dStr)+"IDM"] = haralick.IDM();
-            o.features[std::string(dStr)+"CON"] = haralick.CON();
-            o.features[std::string(dStr)+"VAR"] = haralick.VAR();
-            o.features[std::string(dStr)+"PRO"] = haralick.PRO();
-            o.features[std::string(dStr)+"SHA"] = haralick.SHA();
-            o.features[std::string(dStr)+"COR"] = haralick.COR();
-            o.features[std::string(dStr)+"SAV"] = haralick.SAV();
-            o.features[std::string(dStr)+"DAV"] = haralick.DAV();
-            o.features[std::string(dStr)+"SVA"] = haralick.SVA();
-            o.features[std::string(dStr)+"ENT"] = haralick.ENT();
-            o.features[std::string(dStr)+"SET"] = haralick.SET();
-            o.features[std::string(dStr)+"COV"] = haralick.COV();
-            o.features[std::string(dStr)+"average"] = haralick.avg();
-            o.features[std::string(dStr)+"variance"] = haralick.var();
-          }
+            haralick_distance = (unsigned)haralickDistVec[i];
+            sprintf(dStr, "h%d_", haralick_distance);
+
+            ObjectMap::iterator it = objects.begin();
+            for (; it != objects.end(); ++it)
+            {
+              ROIObject& o = (*it).second;
+              Haralick<image_type, label_type>
+                haralick(img, img_labels,
+                         o, (*it).first,
+                         haralick_levels,
+                         GREYLEVELS-1,
+                         haralick_distance);
+
+              o.features[std::string(dStr)+"ASM"] = haralick.ASM();
+              o.features[std::string(dStr)+"IDM"] = haralick.IDM();
+              o.features[std::string(dStr)+"CON"] = haralick.CON();
+              o.features[std::string(dStr)+"VAR"] = haralick.VAR();
+              o.features[std::string(dStr)+"PRO"] = haralick.PRO();
+              o.features[std::string(dStr)+"SHA"] = haralick.SHA();
+              o.features[std::string(dStr)+"COR"] = haralick.COR();
+              o.features[std::string(dStr)+"SAV"] = haralick.SAV();
+              o.features[std::string(dStr)+"DAV"] = haralick.DAV();
+              o.features[std::string(dStr)+"SVA"] = haralick.SVA();
+              o.features[std::string(dStr)+"ENT"] = haralick.ENT();
+              o.features[std::string(dStr)+"SET"] = haralick.SET();
+              o.features[std::string(dStr)+"COV"] = haralick.COV();
+              o.features[std::string(dStr)+"average"] = haralick.avg();
+              o.features[std::string(dStr)+"variance"] = haralick.var();
+            } // end for (objects)
+          } // end for (Haralick distances)
         }
+
         // haralick 2 (object gray levels normalized)
         else if (name == "haralick2")
         {
-          char dStr[30];
-          sprintf(dStr, "h%d_2", haralick_distance);
-
-          ObjectMap::iterator it = objects.begin();
-          for (; it != objects.end(); ++it)
+          for(har_dist_vec::size_type i = 0; i != haralickDistVec.size(); ++i)
           {
-            ROIObject& o = (*it).second;
-            Haralick<image_type, label_type>
-              haralick(img, img_labels,
-                       o, (*it).first,
-                       haralick_levels,
-                       0,
-                       haralick_distance);
+            char dStr[30];
 
-            o.features[std::string(dStr)+"ASM"] = haralick.ASM();
-            o.features[std::string(dStr)+"IDM"] = haralick.IDM();
-            o.features[std::string(dStr)+"CON"] = haralick.CON();
-            o.features[std::string(dStr)+"VAR"] = haralick.VAR();
-            o.features[std::string(dStr)+"PRO"] = haralick.PRO();
-            o.features[std::string(dStr)+"SHA"] = haralick.SHA();
-            o.features[std::string(dStr)+"COR"] = haralick.COR();
-            o.features[std::string(dStr)+"SAV"] = haralick.SAV();
-            o.features[std::string(dStr)+"DAV"] = haralick.DAV();
-            o.features[std::string(dStr)+"SVA"] = haralick.SVA();
-            o.features[std::string(dStr)+"ENT"] = haralick.ENT();
-            o.features[std::string(dStr)+"SET"] = haralick.SET();
-            o.features[std::string(dStr)+"COV"] = haralick.COV();
-            o.features[std::string(dStr)+"average"] = haralick.avg();
-            o.features[std::string(dStr)+"variance"] = haralick.var();
-          }
+            haralick_distance = (unsigned)haralickDistVec[i];
+            sprintf(dStr, "h%d_2", haralick_distance);
+
+            ObjectMap::iterator it = objects.begin();
+            for (; it != objects.end(); ++it)
+            {
+              ROIObject& o = (*it).second;
+              Haralick<image_type, label_type>
+                haralick(img, img_labels,
+                         o, (*it).first,
+                         haralick_levels,
+                         0,
+                         haralick_distance);
+
+              o.features[std::string(dStr)+"ASM"] = haralick.ASM();
+              o.features[std::string(dStr)+"IDM"] = haralick.IDM();
+              o.features[std::string(dStr)+"CON"] = haralick.CON();
+              o.features[std::string(dStr)+"VAR"] = haralick.VAR();
+              o.features[std::string(dStr)+"PRO"] = haralick.PRO();
+              o.features[std::string(dStr)+"SHA"] = haralick.SHA();
+              o.features[std::string(dStr)+"COR"] = haralick.COR();
+              o.features[std::string(dStr)+"SAV"] = haralick.SAV();
+              o.features[std::string(dStr)+"DAV"] = haralick.DAV();
+              o.features[std::string(dStr)+"SVA"] = haralick.SVA();
+              o.features[std::string(dStr)+"ENT"] = haralick.ENT();
+              o.features[std::string(dStr)+"SET"] = haralick.SET();
+              o.features[std::string(dStr)+"COV"] = haralick.COV();
+              o.features[std::string(dStr)+"average"] = haralick.avg();
+              o.features[std::string(dStr)+"variance"] = haralick.var();
+            } // end of loop over objects
+          } // end of loop over distances
         }
         // normbase (object gray levels normalized)
         else if (name == "normbase")
@@ -477,6 +627,8 @@ namespace cecog
       // remember already calculated features
       if (feature_exist)
       {
+        //std::cout << name << " exists ? " << calculated_features[name] << std::endl;
+
         if (name != "haralick" && name != "haralick2")
           //    name += unsigned_to_string(haralick_distance);
           calculated_features[name] = true;
@@ -512,6 +664,33 @@ namespace cecog
         rgb_made = true;
       }
     }
+
+    void setUnsignedParameterVector(std::vector<unsigned> const &params, std::string feature)
+    {
+      if(feature=="haralick"){
+
+        // erase the vectors
+        haralickDistVec.erase (haralickDistVec.begin(),haralickDistVec.end());
+
+        // set the vector entries
+        for(har_dist_vec::size_type i = 0; i != params.size(); ++i)
+        {
+          haralickDistVec.push_back(1);
+        }
+      }
+      else if (feature=="granu")
+      {
+        // erase the vectors
+        granuSizeVec.erase (granuSizeVec.begin(),granuSizeVec.end());
+
+        // set the vectors
+        for(se_size_vec::size_type i = 0; i != params.size(); ++i)
+        {
+          granuSizeVec.push_back(1);
+        }
+      }
+    }
+
 
     /**
      * RGB export image:
@@ -942,8 +1121,15 @@ namespace cecog
 
     // feature settings
     unsigned haralick_levels, haralick_distance, levelset_levels;
+    unsigned spot_threshold, spot_diameter;
 
     bool rgb_made;
+    bool debug;
+
+    // only for debugging
+    std::string debug_folder;
+    std::string debug_prefix;
+
     // region properties
     unsigned region_size, width, height, required_ext;
 
@@ -1087,7 +1273,12 @@ namespace cecog
     std::map<std::string, bool> calculated_features;
 
     // the sizes for granulometry
-    std::vector<unsigned> granuSizeVec;
+    // std::vector<unsigned> granuSizeVec;
+    se_size_vec granuSizeVec;
+
+    // distances for Haralick
+    //std::vector<unsigned> haralickDistVec;
+    har_dist_vec haralickDistVec;
 
   }; // end of ObjectContainerBase
 
@@ -1328,8 +1519,7 @@ namespace cecog
       vigra::ImageImportInfo msk_info(msk_name.c_str());
 
       if (img_info.size() != msk_info.size())
-        std::cerr << "size conflict of img and mask!"
-        << std::endl;
+        std::cerr << "size conflict of img and mask!" << std::endl;
 
       this->img = image_type(img_info.size());
       this->img_binary = binary_type(msk_info.size());
