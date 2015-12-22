@@ -32,45 +32,35 @@ Run build_win64_bin.bat
 
 ### Demo data (battery package)
 
-The demo data containes:
+The demo data contains:
 
-- a small set of raw images (10 timepoints of H2b-aTubulin)
-- the two classifiers for H2b and aTubulin to test classification
-- a pre-configured settings file which is loaded on start-up.
+- A small set of raw images (10 timepoints of H2b-aTubulin).
+- The two classifiers for H2b and aTubulin to test classification.
+- A pre-configured settings file which is loaded on start-up.
 
 Using the demo data it is possible to:
 
-- test Object Detection of the primary (H2b) and secondary (aTubulin) channels
-- test the classifier for H2b and aTubulin in Classification
-- test the Tracking and Event Selection.
-
+- Run segmentation on H2b (primary) and aTubulin (secondary) channels.
+- Test the classifier for H2b and aTubulin channels.
 
 #####Files:
 
 - Settings
-  -demo_settings.conf, the settings file which is loaded on startup
+  - demo_settings.conf, the settings file which is loaded on startup
   - graph_primary.xml, an example for a graph definition file (H2b)
   - graph_secondary.xml, an example for a graph definition file (Tubulin)
-- Classifier
-  - H2B -- for the primary channel  
-  - aTubulin -- for the secondary channel
+- Classifiers
+  - H2B  
+  - aTubulin
 - Images
-  - the input folder of the raw images
-- Analysis
-  - the output folder where results are written to
+  - first 10 timeframes from the [H2B-Tubulin data set](http://cellcognition.org/downloads/data).
 
-##### Note:
-The classifiers contain trained and cross validated data suitable for demonstration purpose. Retraining (annoation of new cells, picking and cross validation) is only possible if one downloads 
-  the [H2B-Tubulin data set](http://cellcognition.org/downloads/data).
-#### Motif selection
+####  H2B-Tubulin data set
+The demo data included in the installer contains only a hand full of images i.e. 10 time frames. Please download the bigger [H2B-Tubulin](http://cellcognition.org/downloads/data) data set to perform:
 
-With the included data and settings only six mitotic events with four frames
-duration are selected.
+- Classifier training and cross validation
+- Event selection
+- Error correction
 
-To perform motif selection and error correction as presented in our paper more
-timepoints are needed than the package contains. Larger data sets can be found
-online at downloads.
+It contains 206 frames with 4 min. timelapse. Use the same settings except for the parameter *Duration [post]*. It is recommended to increase it to 35 frames.
 
-You also might want to increase the length of the selected tracks, especially
-after the pro-prometa onset. Increase therefore the values in
-Tracking -> Timepoints [post] and Timepoints [pre].
