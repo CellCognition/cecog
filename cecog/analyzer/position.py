@@ -202,8 +202,15 @@ class PositionCore(LoggerObject):
     def setup_channel(self, proc_channel, col_channel, zslice_images,
                       check_for_plugins=True):
 
-        # determine the list of features to be calculated from each object
-        f_params = self.feature_params(proc_channel)
+        if not proc_channel == 'Merged':             
+            # determine the list of features to be calculated from each object
+            # and their parameters
+            f_params = self.feature_params(proc_channel)
+        else:
+            # there are no feature parameter settings for the merged channel
+            # as this is a simple concatennation of features from other channels            
+            f_params = None
+
         reg_shift, im_size = self.registration_shift()
         ch_cls = self.CHANNELS[proc_channel.lower()]
 
