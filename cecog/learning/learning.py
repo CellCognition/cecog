@@ -515,10 +515,9 @@ class CommonClassPredictor(BaseLearner):
         best_l2g = None
         best_conf = None
         n = None
-        for n,l2c,l2g,conf in self.iterGridSearchSVM(c_info=c_info, g_info=g_info,
-                                                     fold=fold,
-                                                     probability=probability,
-                                                     compensation=compensation):
+        for n, l2c, l2g, conf in self.iterGridSearchSVM(
+                c_info=c_info, g_info=g_info, fold=fold,
+                probability=probability, compensation=compensation):
             accuracy = conf.ac_sample
             if accuracy > best_accuracy:
                 best_accuracy = accuracy
@@ -587,7 +586,7 @@ class CommonObjectLearner(BaseLearner):
     def set_training_data(self, training_set):
 
         if not training_set:
-            raise RuntimeError("can not append emty training set")
+            raise RuntimeError("can not append empty training set")
         self.feature_names = training_set.feature_names
         nfeatures = training_set.n_features
 

@@ -1,26 +1,24 @@
 """
-                           The CellCognition Project
-        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
-                      Gerlich Lab, ETH Zurich, Switzerland
-                              www.cellcognition.org
-
-              CellCognition is distributed under the LGPL License.
-                        See trunk/LICENSE.txt for details.
-                 See trunk/AUTHORS.txt for author contributions.
+analysis.py
 """
 
-__author__ = 'Michael Held'
-__date__ = '$Date$'
-__revision__ = '$Rev$'
-__source__ = '$URL$'
+__author__ = 'rudolf.hoefler@gmail.com'
+__copyright__ = ('The CellCognition Project'
+                 'Copyright (c) 2006 - 2012'
+                 'Gerlich Lab, IMBA Vienna, Austria'
+                 'see AUTHORS.txt for contributions')
+__licence__ = 'LGPL'
+__url__ = 'www.cellcognition.org'
+
+
+__all__ = ("PositionCore", "PositionAnalyzer")
 
 import os
 import shutil
 import numpy as np
-import types
 
-from collections import OrderedDict, defaultdict
 from os.path import join, basename, isdir
+from collections import OrderedDict, defaultdict
 
 from cecog.io.imagecontainer import Coordinate
 from cecog.plugin.metamanager import MetaPluginManager
@@ -32,15 +30,13 @@ from cecog.analyzer.tracker import Tracker
 from cecog.analyzer.eventselection import EventSelection
 from cecog.analyzer.eventselection import UnsupervisedEventSelection
 
-from cecog.analyzer.channel import (PrimaryChannel,
-                                    SecondaryChannel,
-                                    TertiaryChannel,
-                                    MergedChannel)
+from cecog.analyzer.channel import PrimaryChannel
+from cecog.analyzer.channel import SecondaryChannel
+from cecog.analyzer.channel import TertiaryChannel
+from cecog.analyzer.channel import MergedChannel
 
 from cecog.learning.learning import CommonClassPredictor
-
 from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACTION
-from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
 
 from cecog.gallery import TrackGallery
 from cecog.gallery import ChannelGallery
@@ -202,13 +198,13 @@ class PositionCore(LoggerObject):
     def setup_channel(self, proc_channel, col_channel, zslice_images,
                       check_for_plugins=True):
 
-        if not proc_channel == 'Merged':             
+        if not proc_channel == 'Merged':
             # determine the list of features to be calculated from each object
             # and their parameters
             f_params = self.feature_params(proc_channel)
         else:
             # there are no feature parameter settings for the merged channel
-            # as this is a simple concatennation of features from other channels            
+            # as this is a simple concatennation of features from other channels
             f_params = None
 
         reg_shift, im_size = self.registration_shift()
@@ -352,59 +348,6 @@ class PositionCore(LoggerObject):
             region = self._channel_regions(chname)
             chreg[chname] = region
         return chreg
-
-
-class PositionPicker(PositionCore):
-
-    def __call__(self):
-        self.timeholder = TimeHolder(self.position, self._all_channel_regions,
-                                     None,
-                                     self.meta_data, self.settings,
-                                     self._frames,
-                                     self.plate_id,
-                                     **self._hdf_options)
-
-        ca = CellAnalyzer(timeholder=self.timeholder,
-                          position = self.position,
-                          create_images = True,
-                          binning_factor = 1,
-                          detect_objects = self.settings.get('Processing',
-                                                             'objectdetection'))
-        n_images = self._analyze(ca)
-
-    def _analyze(self, cellanalyzer):
-        super(PositionPicker, self)._analyze()
-        n_images = 0
-        stopwatch = StopWatch(start=True)
-        crd = Coordinate(self.plate_id, self.position,
-                         self._frames, list(set(self.ch_mapping.values())))
-
-        for frame, channels in self._imagecontainer( \
-            crd, interrupt_channel=True, interrupt_zslice=True):
-            if self.is_aborted():
-                return 0
-            else:
-                txt = 'T %d (%d/%d)' %(frame, self._frames.index(frame)+1,
-                                       len(self._frames))
-                self.update_status({'progress': self._frames.index(frame)+1,
-                                   'text': txt,
-                                   'interval': stopwatch.interim()})
-
-            stopwatch.reset(start=True)
-            # initTimepoint clears channel_registry
-            cellanalyzer.initTimepoint(frame)
-            self.register_channels(cellanalyzer, channels)
-            image = cellanalyzer.collectObjects(self.plate_id,
-                                                self.position,
-                                                self.sample_readers,
-                                                self.learner,
-                                                byTime=True)
-
-            if image is not None:
-                n_images += 1
-                msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position,
-                                                frame)
-                self.set_image(image, msg)
 
 
 
@@ -938,114 +881,3 @@ class PositionAnalyzer(PositionCore):
                                                  images=images)
             images_[region] = image
          return images_
-
-
-
-class PositionAnalyzerForBrowser(PositionCore):
-
-    @property
-    def _hdf_options(self):
-        self.settings.set_section('Output')
-        h5opts = {"hdf5_include_tracking": False,
-                  "hdf5_include_events": False,
-                  "hdf5_compression": False,
-                  "hdf5_create": False,
-                  "hdf5_reuse": self.settings.get2('hdf5_reuse'),
-                  "hdf5_include_raw_images": False,
-                  "hdf5_include_label_images": False,
-                  "hdf5_include_features": False,
-                  "hdf5_include_crack": False,
-                  "hdf5_include_classification": False}
-
-        return h5opts
-
-    def __init__(self, *args, **kw):
-        super(PositionAnalyzerForBrowser, self).__init__(*args, **kw)
-        # Also in the Browser we want to use cellh5
-        # The setting for the other PositionAnalyszer is
-        # implicitely set in _makedirs()
-        self._hdf5_dir = os.path.join(self._out_dir, 'hdf5')
-
-    def setup_classifiers(self):
-        sttg = self.settings
-        # processing channel, color channel
-        for p_channel, c_channel in self.ch_mapping.iteritems():
-            self.settings.set_section('Processing')
-            if sttg.get2(self._resolve_name(p_channel, 'classification')):
-                sttg.set_section('Classification')
-                clf_dir = sttg.get2(self._resolve_name(p_channel, 'classification_envpath'))
-                if not os.path.exists(clf_dir):
-                    continue
-                clf = CommonClassPredictor(
-                    clf_dir=clf_dir,
-                    name=p_channel,
-                    channels=self._channel_regions(p_channel),
-                    color_channel=c_channel)
-                clf.importFromArff()
-                clf.loadClassifier()
-                self.classifiers[p_channel] = clf
-
-    def __call__(self):
-        hdf5_fname = join(self._hdf5_dir, '%s.ch5' % self.position)
-
-        self.timeholder = TimeHolder(self.position, self._all_channel_regions,
-                                     hdf5_fname,
-                                     self.meta_data, self.settings,
-                                     self._frames,
-                                     self.plate_id,
-                                     **self._hdf_options)
-
-
-        stopwatch = StopWatch(start=True)
-        ca = CellAnalyzer(timeholder=self.timeholder,
-                          position = self.position,
-                          create_images = True,
-                          binning_factor = 1,
-                          detect_objects = self.settings.get('Processing', 'objectdetection'))
-
-        #self.setup_classifiers()
-        #self.export_features = self.define_exp_features()
-        self._analyze(ca)
-        return ca
-
-    def setup_channel(self, proc_channel, col_channel, zslice_images,
-                      check_for_plugins=False):
-        return super(PositionAnalyzerForBrowser, self).setup_channel(
-            proc_channel, col_channel, zslice_images, False)
-
-    def _analyze(self, cellanalyzer):
-        n_images = 0
-        stopwatch = StopWatch(start=True)
-        crd = Coordinate(self.plate_id, self.position,
-                         self._frames, list(set(self.ch_mapping.values())))
-
-
-        for frame, channels in self._imagecontainer( \
-            crd, interrupt_channel=True, interrupt_zslice=True):
-
-            if self.is_aborted():
-                self.clear()
-                return 0
-            else:
-                txt = 'T %d (%d/%d)' %(frame, self._frames.index(frame)+1,
-                                       len(self._frames))
-                self.update_status({'progress': self._frames.index(frame)+1,
-                                    'text': txt,
-                                    'interval': stopwatch.interim()})
-
-            stopwatch.reset(start=True)
-            cellanalyzer.initTimepoint(frame)
-
-            self.register_channels(cellanalyzer, channels)
-
-            cellanalyzer.process()
-
-            self.setup_classifiers()
-
-            for clf in self.classifiers.itervalues():
-                try:
-                    cellanalyzer.classify_objects(clf)
-                except KeyError:
-                    pass
-
-        return n_images

@@ -14,6 +14,7 @@ __url__ = 'www.cellcognition.org'
 
 import numpy as np
 
+
 class ConfusionMatrix(object):
     """Store a confusion matrix and to store and compute associated values."""
 

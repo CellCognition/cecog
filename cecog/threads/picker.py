@@ -11,7 +11,7 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-__all__ = ['PickerThread']
+__all__ = ('PickerThread', )
 
 
 import copy
@@ -21,6 +21,7 @@ from cecog.analyzer.core import Picker
 from cecog.learning.learning import CommonObjectLearner
 from cecog import CH_PRIMARY, CH_OTHER, CH_VIRTUAL
 from cecog.util.ctuple import COrderedDict
+
 
 class PickerThread(CoreThread):
 
@@ -66,8 +67,7 @@ class PickerThread(CoreThread):
         frame_count = 0
         learner = self._setup_learner()
         for plate in self._imagecontainer.plates:
-            picker = Picker(plate, self._settings,
-                            copy.deepcopy(self._imagecontainer),
+            picker = Picker(plate, self._settings, copy.deepcopy(self._imagecontainer),
                             learner=learner)
             picker.processPositions(self)
             learner = picker.learner

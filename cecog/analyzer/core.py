@@ -309,7 +309,7 @@ class Picker(AnalyzerBase):
                 qthread.update_status({'stage': 1, 'min': 1,
                                        "max": imax, 'progress': i+1,
                                        'text': 'P %s (%d/%d)' \
-                                           %(self.plate, i+1, imax)})
+                                       %(self.plate, i+1, imax)})
 
             picker = PositionPicker(self.plate, posid, self._out_dir,
                                     self.settings,

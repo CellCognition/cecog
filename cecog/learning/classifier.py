@@ -34,7 +34,7 @@ class GaussianMixtureModel(object):
 class LibSvmClassifier(LoggerObject):
 
     NAME = 'libSVM'
-    METHOD = 'Support Vector Machine'
+    METHOD = 'Support Vector Classifier'
 
     def __init__(self, data_dir, svm_prefix, has_zero_insert):
         super(LibSvmClassifier, self).__init__()

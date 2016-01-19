@@ -16,6 +16,8 @@ __source__ = '$URL$'
 
 import numpy
 
+
+
 class Normalizer(object):
 
     def __init__(self, strFilepath):
@@ -54,6 +56,7 @@ class Normalizer(object):
         return lstResults
 
     __call__ = scale
+
 
 
 class ArffReader(object):
