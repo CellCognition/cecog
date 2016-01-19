@@ -35,15 +35,9 @@ class ProcessControl(QtWidgets.QFrame):
         self._show_image = QtWidgets.QCheckBox('Show images', self)
         self._show_image.setChecked(True)
 
-        button = QtWidgets.QToolButton(self)
-        button.setIcon(QtGui.QIcon(':question_mark'))
-        button.clicked.connect(
-            lambda: self.parent()._on_show_help('controlpanel'))
-
         layout.addWidget(self._label)
         layout.addWidget(self._progressbar)
         layout.addWidget(self._show_image)
-        layout.addWidget(button)
 
     def __del__(self):
         for key in self._buttons.keys():

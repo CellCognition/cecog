@@ -50,7 +50,7 @@ class GeneralFrame(BaseFrame):
                        link="channels", label='Channels')
 
         self.add_group('constrain_positions', [('positions',)])
-        self.add_input('redofailedonly')        
+        self.add_input('redofailedonly')
         self.add_group('framerange', [('framerange_begin',),
                                       ('framerange_end',),
                                       ('frameincrement', )],
@@ -85,12 +85,6 @@ class GeneralFrame(BaseFrame):
         btn.clicked.connect(self.parent().main_window._on_file_save_as)
         layout.addStretch()
         self.parent().main_window.modified.connect(self._on_modified)
-
-        help_button = QToolButton(buttonbar)
-        help_button.setIcon(QIcon(':question_mark'))
-        handler = lambda x: lambda : self._on_show_help(x)
-        layout.addWidget(help_button)
-        help_button.clicked.connect(handler('controlpanel'))
 
     def _on_modified(self, changed):
         self._btn_save.setEnabled(changed)
