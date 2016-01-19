@@ -27,6 +27,13 @@ from .analysis import PositionCore
 
 class PositionAnalyzerForBrowser(PositionCore):
 
+    def __init__(self, *args, **kw):
+        super(PositionAnalyzerForBrowser, self).__init__(*args, **kw)
+        # Also in the Browser we want to use cellh5
+        # The setting for the other PositionAnalyszer is
+        # implicitely set in _makedirs()
+        self._hdf5_dir = os.path.join(self._out_dir, 'hdf5')
+
     @property
     def _hdf_options(self):
         self.settings.set_section('Output')
@@ -43,12 +50,6 @@ class PositionAnalyzerForBrowser(PositionCore):
 
         return h5opts
 
-
-        super(PositionAnalyzerForBrowser, self).__init__(*args, **kw)
-        # Also in the Browser we want to use cellh5
-        # The setting for the other PositionAnalyszer is
-        # implicitely set in _makedirs()
-        self._hdf5_dir = os.path.join(self._out_dir, 'hdf5')
 
     def setup_classifiers(self):
         sttg = self.settings
