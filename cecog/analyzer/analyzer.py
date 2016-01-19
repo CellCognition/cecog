@@ -31,7 +31,7 @@ class CellAnalyzer(LoggerObject):
 
     def __init__(self, timeholder, position, create_images, binning_factor,
                  detect_objects):
-        
+
         super(CellAnalyzer, self).__init__()
 
         self.timeholder = timeholder
@@ -264,12 +264,12 @@ class CellAnalyzer(LoggerObject):
 
             if coords is not None:
                 for data in coords:
-                    label = data['iClassLabel']
+                    label = data['label']
                     if (label in oLearner.class_names and
-                        0 <= data['iPosX'] < oContainer.width and
-                        0 <= data['iPosY'] < oContainer.height):
+                        0 <= data['x'] < oContainer.width and
+                        0 <= data['y'] < oContainer.height):
 
-                        center1 = ccore.Diff2D(data['iPosX'], data['iPosY'])
+                        center1 = ccore.Diff2D(data['x'], data['y'])
                         # test for obj_id "under" annotated pixel first
                         obj_id = oContainer.img_labels[center1]
 

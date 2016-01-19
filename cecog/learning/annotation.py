@@ -61,9 +61,9 @@ class Annotations(OrderedDict):
                 else:
                     if not i in self:
                         self[i] = []
-                    self[i].append(dict([('iClassLabel', imt),
-                                           ('iPosX', int(iX/self._scale)),
-                                           ('iPosY', int(iY/self._scale))]))
+                    self[i].append(dict([('label', imt),
+                                         ('x', int(iX/self._scale)),
+                                         ('y', int(iY/self._scale))]))
 
     def position(self):
         return self.regex.group('position')

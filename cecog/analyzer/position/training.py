@@ -14,7 +14,6 @@ __url__ = 'www.cellcognition.org'
 __all__ = ("PositionPicker", )
 
 
-
 from cecog.io.imagecontainer import Coordinate
 from cecog.analyzer.timeholder import TimeHolder
 from cecog.analyzer.analyzer import CellAnalyzer
@@ -62,6 +61,7 @@ class PositionPicker(PositionCore):
             # initTimepoint clears channel_registry
             cellanalyzer.initTimepoint(frame)
             self.register_channels(cellanalyzer, channels)
+
             image = cellanalyzer.collectObjects(self.plate_id,
                                                 self.position,
                                                 self.sample_readers,
