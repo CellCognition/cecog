@@ -32,9 +32,8 @@ class ObjectDetectionFrame(BaseProcessorFrame):
     def __init__(self, settings, parent, name):
         super(ObjectDetectionFrame, self).__init__(settings, parent, name)
 
-        self.register_control_button('detect',
-                                     AnalyzerThread,
-                                     ('Detect %s objects', 'Stop %s detection'))
+        self.register_control_button('detect', AnalyzerThread,
+                                     ('Test Object Detection', 'Abort Object Detection'))
 
         self.set_tab_name('Primary Channel')
 

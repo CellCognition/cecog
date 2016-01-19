@@ -30,7 +30,7 @@ class TrackingFrame(BaseProcessorFrame):
 
         self.register_control_button(self.PROCESS_TRACKING,
                                      AnalyzerThread,
-                                     ('Test tracking', 'Stop tracking'))
+                                     ('Test Tracking', 'Abort Tracking'))
 
         self.add_input('region')
         self.add_group(None,

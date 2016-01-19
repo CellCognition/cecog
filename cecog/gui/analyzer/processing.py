@@ -152,11 +152,11 @@ class ProcessingFrame(BaseProcessorFrame, ExportSettings):
 
         self.register_control_button('process',
                                      [AnalyzerThread, ErrorCorrectionThread],
-                                     ('Start processing', 'Stop processing'))
+                                     ('Start Processing', 'Stop Processing'))
 
         self.register_control_button('multi_process',
                                      [MultiAnalyzerThread, ErrorCorrectionThread],
-                                     ('Start multi processing', 'Stop multi processing'))
+                                     ('Start Prallel Processing', 'Stop Parallel Processing'))
 
         self.add_group(None,
                        [('primary_featureextraction', (0,0,1,1)),

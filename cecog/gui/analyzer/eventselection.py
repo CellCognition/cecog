@@ -26,7 +26,7 @@ class EventSelectionFrame(BaseProcessorFrame):
     def __init__(self, settings, parent, name):
         super(EventSelectionFrame, self).__init__(settings, parent, name)
         self.register_control_button(self.PROCESS_SYNCING, AnalyzerThread, \
-                              ('Test event selection', 'Stop event selection'))
+                              ('Test Event Selection', 'Abort Event Selection'))
 
 
         self.add_group(None,

@@ -30,7 +30,7 @@ class ErrorCorrectionFrame(BaseProcessorFrame):
         super(ErrorCorrectionFrame, self).__init__(settings, parent, name)
 
         self.register_control_button( 'errorcorrection', ErrorCorrectionThread,
-            ('start error correction', 'stop error correction'))
+            ('Start Error Correction', 'Stop Error Correction'))
 
         self.add_group(None, [('primary', (0, 0, 1, 1)),
                               ('secondary', (0, 1, 1, 1)),
