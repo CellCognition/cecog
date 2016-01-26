@@ -203,7 +203,6 @@ class CellAnalyzer(LoggerObject):
                                         imgCon = ccore.Image(imgRaw.width, imgRaw.height)
                                         # Flip this and use drawContours with fill option enables to get black background
                                         oContainer.drawContoursByIds(lstObjIds, 255, imgCon, bThickContours, False)
-#                                        oContainer.drawContoursByIds(lstObjIds, 255, imgCon, bThickContours, True)
                                         lstImages.append((imgCon, dctColors[iLabel], fAlpha))
 
                                         if isinstance(bShowLabels, bool) and bShowLabels:
@@ -240,7 +239,8 @@ class CellAnalyzer(LoggerObject):
                 strFilePath = ''
             return imgRgb, strFilePath
 
-    def collectObjects(self, plate_id, P, sample_readers, oLearner, byTime=True):
+    def collectObjects(self, plate_id, P, sample_readers, oLearner):
+
         self.logger.debug('* collecting samples...')
         self.process(apply = False, extract_features = False)
 
@@ -255,21 +255,19 @@ class CellAnalyzer(LoggerObject):
         object_ids = set()
 
         for reader in sample_readers:
-            if (byTime and P == reader.position() and self._iT in reader):
+            if (P == reader.position() and self._iT in reader):
                 coords = reader[self._iT]
-            elif (not byTime and P in reader):
-                coords = reader[P]
             else:
                 coords = None
 
             if coords is not None:
-                for data in coords:
-                    label = data['label']
+                for pos in coords:
+                    label = pos.label
                     if (label in oLearner.class_names and
-                        0 <= data['x'] < oContainer.width and
-                        0 <= data['y'] < oContainer.height):
+                        0 <= pos.x < oContainer.width and
+                        0 <= pos.y < oContainer.height):
 
-                        center1 = ccore.Diff2D(data['x'], data['y'])
+                        center1 = ccore.Diff2D(pos.x, pos.y)
                         # test for obj_id "under" annotated pixel first
                         obj_id = oContainer.img_labels[center1]
 
@@ -310,58 +308,13 @@ class CellAnalyzer(LoggerObject):
                 self.timeholder.apply_features(mchannel)
 
         self.timeholder.apply_features(oChannel)
-        training_set = self.annotate(object_lookup,
-                                     oLearner, oContainer,
-                                     oChannel.get_region(region))
+        training_samples = self.annotate(object_lookup,
+                                         oLearner, oContainer,
+                                         oChannel.get_region(region))
 
-        if oChannel.is_virtual():
-            images = {}
-            for s_ch, reg in oChannel.sub_channels():
-                rid = "%s_%s" %(s_ch.NAME, reg)
-                self.draw_annotation_images(plate_id, training_set,
-                                   s_ch.get_container(reg), oLearner, rid)
-                images.update(self.write_annotation_images(s_ch, reg, oLearner))
+        if training_samples:
+            oLearner.add_samples(training_samples)
 
-        else:
-            self.draw_annotation_images(plate_id, training_set, oContainer, oLearner)
-            images = self.write_annotation_images(oChannel, region, oLearner)
-
-        if training_set:
-            oLearner.set_training_data(training_set)
-
-        return images
-
-    def write_annotation_images(self, channel, region, learner):
-        cnt = channel.get_container(region)
-        images = {}
-        if isinstance(region, tuple):
-            region = "-".join(region)
-        name = join(learner.controls_dir, "P%s_T%05d_C%s_R%s.jpg"
-                    %(self.P, self._iT, learner.color_channel, region))
-        cnt.exportRGB(name, "90")
-        images["%s_%s" %(channel.NAME.lower(), region)] = cnt.img_rgb
-        return images
-
-    def draw_annotation_images(self, plate, training_set, container, learner, rid=""):
-        cldir = dict([(cname, join(learner.samples_dir, cname)) \
-                          for cname in learner.class_names.values()])
-        # create dir per class name
-        for dir_ in cldir.values():
-            makedirs(dir_)
-
-        for obj in training_set.itervalues():
-            rgb_value = ccore.RGBValue(*hex2rgb(obj.strHexColor))
-
-            file_ = 'PL%s___P%s___T%05d___X%04d___Y%04d' \
-                %(plate, self.P, self._iT,
-                  obj.oCenterAbs[0], obj.oCenterAbs[1])
-            obj.file = file_
-            file_ = join(cldir[obj.strClassName],
-                         '%s___%s.png' %(file_, rid+"_%s"))
-            container.exportObject(obj.iId, file_ %"img", file_ %"msk")
-            container.markObjects([obj.iId], rgb_value, False, True)
-            ccore.drawFilledCircle(ccore.Diff2D(*obj.oCenterAbs),
-                                   3, container.img_rgb, rgb_value)
 
     def annotate(self, sample_objects, learner, container, region):
         """Annotate predefined class labels to picked samples."""

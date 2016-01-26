@@ -254,11 +254,12 @@ class Picker(AnalyzerBase):
         self.sample_positions = {}
         self.learner = learner
 
-        pattern = join(self.learner.annotations_dir, "*%s" %learner.XML)
+        pattern = join(self.learner.annotations_dir, "*.xml")
         anno_re = re.compile(('((.*?_{1,3})?PL(?P<plate>.*?)_{2,3})?P(?P'
                               '<position>.+?)_{2,3}T(?P<time>\d+).*?'))
 
         frames_total = self.meta_data.times
+
         for annofile in glob.glob(pattern):
 
             result = anno_re.match(basename(annofile))

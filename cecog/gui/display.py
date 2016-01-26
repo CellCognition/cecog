@@ -362,7 +362,6 @@ class TraitDisplayMixin(QtWidgets.QFrame):
                     layout.addWidget(w_button, grid[0], grid[1]*3+2+grid[3])
                 # do not add a spacer if the element is last in a row
                 if not last:
-                    # layout.setColumnStretch(grid[1]*3+2, 0)
                     layout.addItem(QSpacerItem(0, 0,
                                                QSizePolicy.MinimumExpanding,
                                                QSizePolicy.Fixed),

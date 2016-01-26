@@ -37,31 +37,32 @@ from cecog.learning.classifier import GaussianMixtureModel
 
 class LearnerFiles(object):
     # collect the file names at one place
-    ARFF = 'features.arff'
-    SPARSE ='features.sparse'
-    DEFINITION = 'class_definition.txt'
+    Arff = 'features.arff'
+    Sparse ='features.sparse'
+    # Definition = 'class_definition.txt'
 
 
 class ClassDefinitionCore(object):
+
+    Definition = 'class_definition.txt'
 
     def __init__(self, channels=None, feature_names=None):
         super(ClassDefinitionCore, self).__init__()
         self.feature_names = feature_names
         self.channels = channels
-        self.hexcolors = dict()
-        self.class_labels = dict()
-        self.class_names = OrderedDict()
+        self.colors = dict()
+        self.labels = dict()
+        self.names = OrderedDict()
 
-    @property
-    def n_classes(self):
-        return len(self.class_names)
+    def __len__(self):
+        return len(self.names)
 
     @property
     def normalize(self):
         """Return a matplotlib normalization instance to the class lables
         corretly mapped to the colors"""
         return mpl.colors.Normalize(vmin=0,
-                                    vmax=max(self.class_names.keys()))
+                                    vmax=max(self.names.keys()))
 
     @property
     def regions(self):
@@ -69,6 +70,11 @@ class ClassDefinitionCore(object):
             return self.channels.values()[0]
         else:
             return self.channels.values()
+
+    def __iter__(self):
+        for label, name in self.names.iteritems():
+            yield (name, label, self.colors[name])
+
 
 
 class ClassDefinitionUnsup(ClassDefinitionCore):
@@ -88,9 +94,9 @@ class ClassDefinitionUnsup(ClassDefinitionCore):
 
         for i in xrange(self.nclusters):
             name = "cluster-%d" %i
-            self.class_labels[name] = i
-            self.class_names[i] = name
-            self.hexcolors[name] = rgb2hex(self.colormap(i))
+            self.labels[name] = i
+            self.names[i] = name
+            self.colors[name] = rgb2hex(self.colormap(i))
 
 
 class ClassDefinition(ClassDefinitionCore):
@@ -98,14 +104,21 @@ class ClassDefinition(ClassDefinitionCore):
 
     def __init__(self, classes, *args, **kw):
         super(ClassDefinition, self).__init__(*args, **kw)
-        for (label, name, color) in classes:
-            self.class_labels[name] = label
-            self.class_names[label] = name
-            self.hexcolors[name] = color
 
-        colors = ["#ffffff"]*(max(self.class_names)+1)
-        for k, v in self.class_names.iteritems():
-            colors[k] = self.hexcolors[v]
+        if classes.dtype.names[0].startswith("name"):
+            for (name, label, color) in classes:
+                self.labels[name] = label
+                self.names[label] = name
+                self.colors[name] = color
+        else:
+            for (label, name, color) in classes:
+                self.labels[name] = label
+                self.names[label] = name
+                self.colors[name] = color
+
+        colors = ["#ffffff"]*(max(self.names)+1)
+        for k, v in self.names.iteritems():
+            colors[k] = self.colors[v]
         self.colormap = ListedColormap(colors, 'cmap-from-table')
 
 
@@ -130,9 +143,9 @@ class BaseLearner(LoggerObject):
         self.channels = channels
 
         self.has_zero_insert = has_zero_insert
-        self.arff_file = LearnerFiles.ARFF
-        self.sparse_file = LearnerFiles.SPARSE
-        self.definitions_file = LearnerFiles.DEFINITION
+        self.arff_file = LearnerFiles.Arff
+        self.sparse_file = LearnerFiles.Sparse
+        self.definitions_file = LearnerFiles.Definition
         self.clear()
 
     @property
@@ -183,10 +196,6 @@ class BaseLearner(LoggerObject):
     # kind of a workaround for loading class definitons
     def unset_clf_dir(self):
         self._clf_dir = None
-
-    @property
-    def n_classes(self):
-        return len(self.class_names)
 
     def clear(self):
         self.feature_names = None
@@ -315,20 +324,6 @@ class BaseLearner(LoggerObject):
         writer.writeAllFeatureData(self.feature_data)
         writer.close()
 
-    def exportToSparse(self, directory=None, filename=None):
-        if filename is None:
-            filename = self.sparse_file
-        if directory is None:
-            directory = self.data_dir
-
-        try:
-            writer = SparseWriter(join(directory, filename),
-                                  self._feature_names,
-                                  self.class_labels)
-            writer.writeAllFeatureData(self.feature_data)
-        finally:
-            writer.close()
-
     def importSampleNames(self, path=None, filename=None):
         if strFileName is None:
             strFileName = os.path.splitext(self.arff_file)[0]
@@ -345,22 +340,8 @@ class BaseLearner(LoggerObject):
             self.sample_names[class_name].append(file_name)
         f.close()
 
-    def exportSampleNames(self, strFilePath=None, strFileName=None):
-        if strFileName is None:
-            strFileName = splitext(self.arff_file)[0]
-            strFileName = '%s.samples.txt' % strFileName
-        if strFilePath is None:
-            strFilePath = self.data_dir
-        f = file(os.path.join(strFilePath, strFileName), 'w')
-        for class_name, samples in self.sample_names.iteritems():
-            for sample_name in samples:
-                f.write('%s\t%s\n' % (class_name, sample_name))
-        f.close()
-
     def export(self):
         self.exportToArff()
-        self.exportToSparse()
-        self.exportSampleNames()
 
 
 class CommonClassPredictor(BaseLearner):
@@ -576,39 +557,6 @@ class CommonClassPredictor(BaseLearner):
 
                 l2g += g_step
             l2c += c_step
-
-
-class CommonObjectLearner(BaseLearner):
-
-    def __init__(self, *args, **kw):
-        super(CommonObjectLearner, self).__init__(*args, **kw)
-
-    def set_training_data(self, training_set):
-
-        if not training_set:
-            raise RuntimeError("can not append empty training set")
-        self.feature_names = training_set.feature_names
-        nfeatures = training_set.n_features
-
-        for obj_label, sample in training_set.iteritems():
-            class_name = self.class_names[sample.iLabel]
-
-            if sample.aFeatures.size != nfeatures:
-                msg = ('Incomplete feature set found (%d/%d): skipping sample '
-                       'class: %s, object label %s, files: %s'
-                       %(sample.aFeatures.size, nfeatures, class_name,
-                         obj_label, str(sample.file)))
-                self.logger.warning(msg)
-                continue
-
-            try:
-                self.feature_data[class_name].extend([sample.aFeatures])
-            except KeyError:
-                self.feature_data[class_name] = [sample.aFeatures]
-            try:
-                self.sample_names[class_name].extend([sample.file])
-            except KeyError:
-                self.sample_names[class_name] = [sample.file]
 
 
 if __name__ ==  "__main__":

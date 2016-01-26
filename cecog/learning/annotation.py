@@ -19,6 +19,10 @@ __all__ = ['Annotations']
 from os.path import isfile
 from xml.dom.minidom import parse
 from collections import OrderedDict
+from collections import namedtuple
+
+
+SamplePosition = namedtuple("SamplePosition", ['label', 'x', 'y'])
 
 
 class Annotations(OrderedDict):
@@ -60,10 +64,9 @@ class Annotations(OrderedDict):
                     pass
                 else:
                     if not i in self:
-                        self[i] = []
-                    self[i].append(dict([('label', imt),
-                                         ('x', int(iX/self._scale)),
-                                         ('y', int(iY/self._scale))]))
+                        self[i] = list()
+                    self[i].append(
+                        SamplePosition(imt, int(iX/self._scale), int(iY/self._scale)))
 
     def position(self):
         return self.regex.group('position')

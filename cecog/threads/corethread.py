@@ -14,11 +14,15 @@ __all__ = ['CoreThread']
 
 import logging
 import traceback
+
 from PyQt5 import QtCore
+
 from cecog import ccore
+
 
 class StopProcessing(Exception):
     pass
+
 
 class ProgressMsg(dict):
 

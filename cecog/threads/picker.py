@@ -14,13 +14,17 @@ __url__ = 'www.cellcognition.org'
 __all__ = ('PickerThread', )
 
 
+import os
 import copy
-from cecog.threads.corethread import CoreThread
-from cecog.analyzer.core import Picker
 
-from cecog.learning.learning import CommonObjectLearner
+from cecog.svc import SVCTrainer
+from cecog.analyzer.core import Picker
+from cecog.threads.corethread import CoreThread
+
+from cecog.learning.learning import LearnerFiles
 from cecog import CH_PRIMARY, CH_OTHER, CH_VIRTUAL
 from cecog.util.ctuple import COrderedDict
+
 
 
 class PickerThread(CoreThread):
@@ -44,37 +48,41 @@ class PickerThread(CoreThread):
                 'Classification', "%s_classification_regionname" %pchannel)
         return regions
 
-    def _setup_learner(self):
-        """Return the CommonObjectLearner instance, set up according to
-        processing channel and its settings."""
+    def _setup_trainer(self):
 
         pchannel = self._settings.get("Classification", "collectsamples_prefix")
         chid = self._settings.get("ObjectDetection", "%s_channelid" %(pchannel))
+
         if not chid:
             chid = None
-        cpath = self._settings.get("Classification",
-                                    "%s_classification_envpath" %pchannel)
 
-        learner = CommonObjectLearner(cpath,
-                                      pchannel.title(),
-                                      self._channel_regions(pchannel, chid),
-                                      chid,
-                                      has_zero_insert=False)
-        learner.loadDefinition()
-        return learner
+        return SVCTrainer(self.hdffile, pchannel.title(),
+                          self._channel_regions(pchannel, chid), chid)
+
+    @property
+    def hdffile(self):
+        pchannel = self._settings.get("Classification", "collectsamples_prefix")
+        cpath = self._settings.get(
+            "Classification", "%s_classification_envpath" %pchannel)
+        return os.path.join(cpath, os.path.basename(cpath)+".hdf")
 
     def _run(self):
         frame_count = 0
-        learner = self._setup_learner()
+        trainer = self._setup_trainer()
+
         for plate in self._imagecontainer.plates:
             picker = Picker(plate, self._settings, copy.deepcopy(self._imagecontainer),
-                            learner=learner)
+                            learner=trainer)
             picker.processPositions(self)
-            learner = picker.learner
+            trainer = picker.learner
             frame_count += len(picker.positions)
 
         if frame_count == 0:
             raise RuntimeError("Didn't pick any samples from 0 frames. Check plate names")
 
         if not self.is_aborted():
-            learner.export()
+            self.update_status({'stage': 1, 'min': -1, "max": -1, "progress": 0,
+                                'meta': '', 'text': "Performing grid search..."})
+            trainer.save()
+            self.update_status({'stage': 1, 'min': 0, "max": 100, "progress": 0,
+                                'meta': '', 'text': "Classifier training finished"})

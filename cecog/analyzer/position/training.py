@@ -21,6 +21,7 @@ from cecog.util.stopwatch import StopWatch
 from .analysis import PositionCore
 
 
+
 class PositionPicker(PositionCore):
 
     def __call__(self):
@@ -40,7 +41,14 @@ class PositionPicker(PositionCore):
         self._analyze(ca)
 
     def _analyze(self, cellanalyzer):
-        super(PositionPicker, self)._analyze()
+
+        self._info.update({'stage': 2,
+                           'min': 1,
+                           'max': len(self._frames),
+                           'meta' : 'Classifier training:',
+                           'item_name': 'image set'})
+
+
         stopwatch = StopWatch(start=True)
         crd = Coordinate(self.plate_id, self.position,
                          self._frames, list(set(self.ch_mapping.values())))
@@ -62,12 +70,5 @@ class PositionPicker(PositionCore):
             cellanalyzer.initTimepoint(frame)
             self.register_channels(cellanalyzer, channels)
 
-            image = cellanalyzer.collectObjects(self.plate_id,
-                                                self.position,
-                                                self.sample_readers,
-                                                self.learner,
-                                                byTime=True)
-
-            if image is not None:
-                msg = 'PL %s, P %s, T %05d' %(self.plate_id, self.position, frame)
-                self.set_image(image, msg)
+            cellanalyzer.collectObjects(self.plate_id, self.position, self.sample_readers,
+                                        self.learner)

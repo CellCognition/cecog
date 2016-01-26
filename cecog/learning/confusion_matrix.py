@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 confusion_matrix.py
 """
@@ -89,70 +88,5 @@ class ConfusionMatrix(object):
     def __len__(self):
         return self.conf.shape[0]
 
-    def export(self, filename, sep='\t', mapping=None):
-        f = file(filename, 'w')
-
-        #data = self.ac.copy()
-        overall = np.asarray([np.sum(self.samples),
-                                 self.av_ac, self.av_se, self.av_sp,
-                                 self.av_ppv, self.av_npv])
-        woverall = np.asarray([np.sum(self.samples),
-                                  self.wav_ac, self.wav_se, self.wav_sp,
-                                  self.wav_ppv, self.wav_npv])
-        data = np.vstack((self.samples,
-                             self.ac, self.se, self.sp,
-                             self.ppv, self.npv))
-        data2 = data.swapaxes(0,1)
-        f.write('%s\n' % sep.join(['Class', 'Samples',
-                                   'AC', 'SE', 'SP', 'PPV', 'NPV']))
-        for idx, items in enumerate(data2):
-            c = idx if mapping is None else mapping[idx]
-            f.write('%s\n' % sep.join(map(str, [c]+list(items))))
-        f.write('%s\n' % sep.join(map(str, ['overall']+list(overall))))
-        f.write('%s\n' % sep.join(map(str, ['woverall']+list(woverall))))
-        f.write('\nAccuracy per sample%s%.2f\n' % (sep, self.ac_sample*100.))
-        f.close()
-
-    @classmethod
-    def from_pairs(cls, pairs, class_labels):
-        """
-        Constructs a ConfusionMatrix object from a list of pairs of the form
-        (true label, predicted label).
-
-        Requires a list of class labels in the same order as labels should appear
-        in the confusion matrix.
-
-        @param pairs: list of pairs (tuples) in the form
-          (true label, predicted label)
-        @type pairs: sequence
-        @param mapping: mapping of original to new labels
-        @type mapping: dict
-
-        @return: ConfusionMatrix
-        """
-
-        k = len(class_labels)
-        conf = np.zeros((k, k))
-        for l, v in pairs:
-            l2 = class_labels.index(l)
-            v2 = class_labels.index(v)
-            conf[l2, v2] += 1
-        return cls(conf)
-
-    @classmethod
-    def from_lists(cls, labels, predictions, class_labels):
-        """
-        Constructs a ConfusionMatrix object from two lists of labels.
-        Requires a mapping from original labels to new labels in a way that new
-        labels are ordered from 0 to k-1, for k classes
-
-        @param labels: true labels (gold-standard)
-        @type labels: sequence
-        @param predictions: predicted labels
-        @type predictions: sequence
-        @param mapping: mapping of original to new labels
-        @type mapping: dict
-
-        @return: ConfusionMatrix
-        """
-        return cls.from_pairs(zip(labels, predictions), class_labels)
+    def  __getitem__(self, *args, **kw):
+        return self.conf.__getitem__(*args, **kw)

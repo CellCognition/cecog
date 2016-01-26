@@ -30,13 +30,7 @@ from multiprocessing import cpu_count
 
 from cecog import CHANNEL_PREFIX
 from cecog.gui.display import TraitDisplayMixin
-from cecog.learning.learning import CommonClassPredictor
-
 from cecog.units.time import seconds2datetime
-
-from cecog.gui.util import question
-from cecog.gui.util import critical
-from cecog.gui.util import information
 
 from cecog.analyzer import CONTROL_1, CONTROL_2
 from cecog.plugin.metamanager import MetaPluginManager
@@ -46,7 +40,6 @@ from cecog.gui.widgets.tabcontrol import TabControl
 
 from cecog.threads import PickerThread
 from cecog.threads import AnalyzerThread
-from cecog.threads import TrainingThread
 from cecog.threads import ErrorCorrectionThread
 from cecog.multiprocess.multianalyzer import MultiAnalyzerThread
 
@@ -57,6 +50,7 @@ from cecog.traits.analyzer.eventselection import SECTION_NAME_EVENT_SELECTION
 from cecog.traits.analyzer.processing import SECTION_NAME_PROCESSING
 from cecog.gui.progressdialog import ProgressDialog
 from cecog.gui.processcontrol import ProcessControl
+
 
 
 class BaseFrame(TraitDisplayMixin):
@@ -278,31 +272,18 @@ class BaseProcessorFrame(BaseFrame):
             if self.name == SECTION_NAME_CLASSIFICATION:
 
                 result_frame = self._get_result_frame(self._tab_name)
-                result_frame.load_classifier(check=False)
-                learner = result_frame._learner
+                result_frame.load_classifier()
+#                learner = result_frame._learner
 
-                if name == self.PICKING:
-                    if not result_frame.classifier.is_annotated:
-                        is_valid = False
-                        result_frame.msg_pick_samples(self)
-                    elif result_frame.classifier.is_trained:
-                        if not question(self, 'Samples already picked',
-                                    'Do you want to pick samples again and '
-                                    'overwrite previous '
-                                    'results?'):
+                if name == self.Training:
+                    is_valid = True
+                    if result_frame.classifier_exists():
+                        if not QMessageBox.question(self,'Trained Classifier found',
+                                                    'Do you want to owerwrite the already '
+                                                    'trained classifier?'):
                             is_valid = False
 
-                elif name == self.TRAINING:
-                    if not result_frame.classifier.is_trained:
-                        is_valid = False
-                        result_frame.msg_train_classifier(self)
-                    elif result_frame.classifier.is_valid:
-                        if not question(self, 'Classifier already trained',
-                                    'Do you want to train the classifier '
-                                    'again?'):
-                            is_valid = False
-
-                elif name == self.TESTING and not result_frame.classifier.is_valid:
+                elif name == self.Testing and not result_frame.classifier.is_valid:
                     is_valid = False
                     result_frame.msg_apply_classifier(self)
 
@@ -343,15 +324,6 @@ class BaseProcessorFrame(BaseFrame):
                     self._analyzer = cls(self, self._current_settings, imagecontainer)
                     self._clear_image()
 
-                elif cls is TrainingThread:
-                    self._current_settings = self._settings.copy()
-                    self._analyzer = cls(self, self._current_settings, result_frame._learner)
-                    self._analyzer.setTerminationEnabled(True)
-
-                    self._analyzer.conf_result.connect(result_frame.on_conf_result,
-                                                       Qt.QueuedConnection)
-                    result_frame.reset()
-
                 elif cls is MultiAnalyzerThread:
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
                     self._analyzer = cls(self, self._current_settings, imagecontainer, ncpu)
@@ -387,7 +359,7 @@ class BaseProcessorFrame(BaseFrame):
 
     def _on_error(self, msg, short='An error occurred during processing!'):
         self._has_error = True
-        critical(self, short, detail=msg)
+        QMessageBox.critical(self, short, msg)
 
     def _on_process_finished(self):
         self._analyzer.image_ready.disconnect(self._on_update_image)
@@ -409,21 +381,14 @@ class BaseProcessorFrame(BaseFrame):
                 if self.name == SECTION_NAME_OBJECTDETECTION:
                     msg = 'Object detection successfully finished.'
                 elif self.name == SECTION_NAME_CLASSIFICATION:
-                    if self._current_process == self.PICKING:
-                        msg = 'Samples successfully picked.\n\n'\
-                              'Please train the classifier now based on the '\
-                              'newly picked samples.'
+                    if self._current_process == self.Training:
+                        msg = 'Classifier training successfully finished.'
                         result_frame = self._get_result_frame(self._tab_name)
-                        result_frame.load_classifier(check=False)
-                        nr_removed = len(result_frame._learner.nan_features)
-                        if nr_removed > 0:
-                            msg += '\n\n%d features contained NA values and will be removed from training.' % nr_removed
-                    elif self._current_process == self.TRAINING:
-                        msg = 'Classifier successfully trained.\n\n'\
-                              'You can test the classifier performance here'\
-                              'visually or apply the classifier in the '\
-                              'processing workflow.'
-                    elif self._current_process == self.TESTING:
+                        result_frame.load_classifier()
+                        # nr_removed = len(result_frame._learner.nan_features)
+                        # if nr_removed > 0:
+                        #     msg += '\n\n%d features contained NA values and will be removed from training.' % nr_removed
+                    elif self._current_process == self.Testing:
                         msg = 'Classifier testing successfully finished.'
                 elif self.name == SECTION_NAME_TRACKING:
                     msg = 'Tracking successfully finished.'
@@ -434,6 +399,7 @@ class BaseProcessorFrame(BaseFrame):
                 elif self.name == SECTION_NAME_PROCESSING:
                     msg = 'Processing successfully finished.'
                 self.status_message.emit(msg)
+                QMessageBox.information(self, "Finished", msg)
             else:
                 if self._is_abort:
                     self.status_message.emit('Process aborted by user.')
