@@ -21,6 +21,7 @@ import h5py
 import sklearn
 import numpy as np
 
+
 class SVCDataModel(object):
     """Data model to save a Support Vector classifier to hdf5.
 
@@ -29,7 +30,6 @@ class SVCDataModel(object):
 
     # constants, strings strings should be the import path of
     # corresponding module
-    OneClassSvm = "sklearn.svm.OneClassSvm"
     SupportVectorClassifier = "sklearn.svm.SVC"
 
     # attribute keys
@@ -99,6 +99,7 @@ class SVCWriter(object):
 
     def saveTrainingSet(self, features, feature_names):
         dtype = [(str(fn), np.float32) for fn in feature_names]
+
         f2 = features.copy().astype(np.float32).view(dtype)
         dset = self.h5f.create_dataset(self.dmodel.training_set,
                                        data=f2,

@@ -11,6 +11,8 @@ __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
 
+__all__ = ('ZScore', 'ZScore2', 'PreProcessor')
+
 import numpy as np
 
 
@@ -28,6 +30,30 @@ class ZScore(object):
 
     def normalize(self, data):
         return (data - self.mean)/self.std
+
+
+class ZScore2(object):
+    """Z-score data using predefined offset, scale and binary mask."""
+
+
+    def __init__(self, offset, scale, mask):
+        # offset and scale are save unmasked
+        self._offset = offset[mask]
+        self._scale = scale[mask]
+        self._mask = mask
+
+    def __call__(self, features):
+        return self.normalize(self.filter(features))
+
+    def normalize(self, data):
+        return (data - self._offset)/self._scale
+
+    def filter(self, data):
+
+        if data.ndim == 1:
+            data = data.reshape((-1, data.size))
+
+        return data[:, self._mask]
 
 
 class PreProcessor(object):

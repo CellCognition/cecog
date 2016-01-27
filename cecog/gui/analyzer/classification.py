@@ -155,6 +155,7 @@ class ClassifierResultFrame(QGroupBox):
             self._init_conf_table(conf, clf.classdef.names)
             self._update_conf_table(conf)
         self._set_info_table(conf, clf.classdef, clf.class_counts)
+
         clf.close()
 
     def _set_info_table(self, conf, classdef, counts):

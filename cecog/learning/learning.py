@@ -28,11 +28,9 @@ import svm
 
 from cecog.colors import unsupervised_cmap
 from cecog.learning.confusion_matrix import ConfusionMatrix
-from cecog.learning.util import SparseWriter, ArffWriter, ArffReader
-from cecog.learning.classifier import LibSvmClassifier as Classifier
+
 from cecog.logging import LoggerObject
 from cecog.util.util import makedirs
-from cecog.learning.classifier import GaussianMixtureModel
 
 
 class LearnerFiles(object):
@@ -145,7 +143,7 @@ class BaseLearner(LoggerObject):
         self.has_zero_insert = has_zero_insert
         self.arff_file = LearnerFiles.Arff
         self.sparse_file = LearnerFiles.Sparse
-        self.definitions_file = LearnerFiles.Definition
+        self.definitions_file = ClassDefinition.Definition
         self.clear()
 
     @property
@@ -391,172 +389,65 @@ class CommonClassPredictor(BaseLearner):
         samples = samples.tolist()
         return labels, samples
 
-    def filter_nans(self, apply=False):
-        """Find features with NA values in the data set and remove features
-        from the data and corresponding feature names returns the list of
-        removed feature names.
-        """
+    # def filter_nans(self, apply=False):
+    #     """Find features with NA values in the data set and remove features
+    #     from the data and corresponding feature names returns the list of
+    #     removed feature names.
+    #     """
 
-        filter_idx = np.array([], int)
-        feature_idx = np.arange(len(self._feature_names), dtype=int)
+    #     filter_idx = np.array([], int)
+    #     feature_idx = np.arange(len(self._feature_names), dtype=int)
 
-        for data in self.feature_data.itervalues():
-            filter_idx = np.append(filter_idx, feature_idx[np.any(np.isnan(data), 0)])
-        filter_idx = np.unique(filter_idx)
+    #     for data in self.feature_data.itervalues():
+    #         filter_idx = np.append(filter_idx, feature_idx[np.any(np.isnan(data), 0)])
+    #     filter_idx = np.unique(filter_idx)
 
-        if apply:
-            for name in self.feature_data:
-                self.feature_data[name] = np.delete(self.feature_data[name],
-                                                      filter_idx, 1)
-            if filter_idx.size > 0:
-                self.nan_features = self.delete_feature_names(filter_idx)
-        return self.nan_features
+    #     if apply:
+    #         for name in self.feature_data:
+    #             self.feature_data[name] = np.delete(self.feature_data[name],
+    #                                                   filter_idx, 1)
+    #         if filter_idx.size > 0:
+    #             self.nan_features = self.delete_feature_names(filter_idx)
+    #     return self.nan_features
 
-    def train(self, c, g, probability=True, compensation=True,
-              path=None, filename=None, save=True):
-        if filename is None:
-            filename = splitext(self.arff_file)[0]
-            filename += '.model'
-        if path is None:
-            path = self.data_dir
-        param = svm.svm_parameter(kernel_type=svm.RBF,
-                                  C=c, gamma=g,
-                                  probability=1 if probability else 0)
+    # def train(self, c, g, probability=True, compensation=True,
+    #           path=None, filename=None, save=True):
+    #     if filename is None:
+    #         filename = splitext(self.arff_file)[0]
+    #         filename += '.model'
+    #     if path is None:
+    #         path = self.data_dir
+    #     param = svm.svm_parameter(kernel_type=svm.RBF,
+    #                               C=c, gamma=g,
+    #                               probability=1 if probability else 0)
 
-        labels, samples = self.getData(normalize=True)
+    #     labels, samples = self.getData(normalize=True)
 
-        # because we train the SVM with dict we need to redefine the zero-insert
-        self.has_zero_insert = False
-        if not self.classifier is None:
-            self.classifier.setOption('hasZeroInsert', True)
+    #     # because we train the SVM with dict we need to redefine the zero-insert
+    #     self.has_zero_insert = False
+    #     if not self.classifier is None:
+    #         self.classifier.setOption('hasZeroInsert', True)
 
-        if compensation:
-            weight, weight_label = self._calculateCompensation(labels)
-            param.weight = weight
-            param.weight_label = weight_label
-            param.nr_weight = len(weight)
+    #     if compensation:
+    #         weight, weight_label = self._calculateCompensation(labels)
+    #         param.weight = weight
+    #         param.weight_label = weight_label
+    #         param.nr_weight = len(weight)
 
-        problem = svm.svm_problem(labels, samples)
-        model = svm.svm_model(problem, param)
-        if save:
-            model.save(os.path.join(path, filename))
-        return problem, model
+    #     problem = svm.svm_problem(labels, samples)
+    #     model = svm.svm_model(problem, param)
+    #     if save:
+    #         model.save(os.path.join(path, filename))
+    #     return problem, model
 
-    def exportConfusion(self, log2c, log2g, conf):
-        fname = join(self.data_dir,
-                     self.arff_file.replace(".arff", ".confusion.txt"))
 
-        with open(fname, "w") as fp:
-            fp.write('log2(C) = %f\n' % log2c)
-            fp.write('log2(g) = %f\n' % log2g)
-            fp.write('accuracy = %f\n' % conf.ac_sample)
-            fp.write('\n')
-            fp.write('confusion matrix (absolute)\n')
-            fp.write('\t%s\n' %'\t'.join([str(k) for k in self.class_names.keys()]))
+    # def _calculateCompensation(self, labels):
+    #     ulabels = np.unique(labels)
+    #     count = np.bincount(labels)[ulabels]
+    #     weight = (float(len(labels)) - count) / count
+    #     weight_label = map(int, ulabels)
+    #     return weight, weight_label
 
-            for label, row in zip(self.class_names.keys(), conf.conf):
-                fp.write( ('%d\t' %label) + '\t'.join(['%d' %i for i in row]))
-                fp.write('\n')
-
-    def importConfusion(self):
-        fname = join(self.data_dir,
-                     self.arff_file.replace(".arff", ".confusion.txt"))
-
-        if not isfile(fname):
-            raise IOError("File (%s) does not exist")
-
-        with open(fname, "Ur") as fp:
-            log2c = float(fp.readline().split('=')[1].strip())
-            log2g = float(fp.readline().split('=')[1].strip())
-            fp.readline()
-            fp.readline()
-            fp.readline()
-            fp.readline()
-            conf_array = []
-            for line in fp:
-                line = line.strip()
-                if len(line) == 0:
-                     break
-                items = map(int, map(float, line.split('\t')[1:]))
-                conf_array.append(items)
-            conf = ConfusionMatrix(np.asarray(conf_array))
-        return log2c, log2g, conf
-
-    def _calculateCompensation(self, labels):
-        ulabels = np.unique(labels)
-        count = np.bincount(labels)[ulabels]
-        weight = (float(len(labels)) - count) / count
-        weight_label = map(int, ulabels)
-        return weight, weight_label
-
-    def gridSearch(self, fold=5, c_info=None, g_info=None,
-                   probability=False, compensation=True):
-        best_accuracy = 0
-        best_l2c = None
-        best_l2g = None
-        best_conf = None
-        n = None
-        for n, l2c, l2g, conf in self.iterGridSearchSVM(
-                c_info=c_info, g_info=g_info, fold=fold,
-                probability=probability, compensation=compensation):
-            accuracy = conf.ac_sample
-            if accuracy > best_accuracy:
-                best_accuracy = accuracy
-                best_l2c = l2c
-                best_l2g = l2g
-                best_conf = conf
-        return n, best_l2c, best_l2g, best_conf
-
-    def iterGridSearchSVM(self, c_info=None, g_info=None, fold=5,
-                          probability=False, compensation=True):
-        swap = lambda a,b: (b,a)
-        if not c_info is None and len(c_info) >= 3:
-            c_begin, c_end, c_step = c_info[:3]
-        else:
-            c_begin, c_end, c_step = -5,  15, 2
-        if c_end < c_begin:
-            c_begin, c_end = swap(c_begin, c_end)
-        c_step = abs(c_step)
-
-        if not g_info is None and len(g_info) >= 3:
-            g_begin, g_end, g_step = g_info[:3]
-        else:
-            g_begin, g_end, g_step = -15, 3, 2
-        if g_end < g_begin:
-            g_begin, g_end = swap(g_begin, g_end)
-        g_step = abs(g_step)
-
-        labels, samples = self.getData(normalize=True)
-        problem = svm.svm_problem(labels, samples)
-
-        if compensation:
-            weight, weight_label = self._calculateCompensation(labels)
-
-        n = (c_end - c_begin) / c_step + 1
-        n *= (g_end - g_begin) / g_step + 1
-
-        l2c = c_begin
-        while l2c <= c_end:
-            l2g = g_begin
-            while l2g <= g_end:
-
-                param = svm.svm_parameter(kernel_type=svm.RBF,
-                                          C=2.**l2c, gamma=2.**l2g,
-                                          probability=1 if probability else 0)
-                if compensation:
-                    param.weight = weight
-                    param.weight_label = weight_label
-                    param.nr_weight = len(weight)
-
-                predictions = svm.cross_validation(problem, param, fold)
-                predictions = map(int, predictions)
-
-                conf = ConfusionMatrix.from_lists(labels, predictions,
-                                                  self.class_names.keys())
-                yield n, l2c, l2g, conf
-
-                l2g += g_step
-            l2c += c_step
 
 
 if __name__ ==  "__main__":

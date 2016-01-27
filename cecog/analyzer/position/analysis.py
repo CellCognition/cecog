@@ -17,7 +17,7 @@ import os
 import shutil
 import numpy as np
 
-from os.path import join, basename, isdir
+from os.path import join, basename, isdir, dirname
 from collections import OrderedDict, defaultdict
 
 from cecog.io.imagecontainer import Coordinate
@@ -35,7 +35,7 @@ from cecog.analyzer.channel import SecondaryChannel
 from cecog.analyzer.channel import TertiaryChannel
 from cecog.analyzer.channel import MergedChannel
 
-from cecog.learning.learning import CommonClassPredictor
+from cecog.svc import SVCPredictor
 from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACTION
 
 from cecog.gallery import TrackGallery
@@ -408,15 +408,13 @@ class PositionAnalyzer(PositionCore):
                         nclusters, chreg)
                 else:
                     sttg.set_section('Classification')
-                    clf = CommonClassPredictor(
-                        clf_dir=sttg.get2(self._resolve_name(p_channel,
-                                                             'classification_envpath')),
-                        name=p_channel,
-                        channels=chreg,
-                        color_channel=c_channel)
-                    clf.importFromArff()
-                    clf.loadClassifier()
-                    self.classifiers[p_channel] = clf
+                    cpath = sttg.get2(self._resolve_name(p_channel, 'classification_envpath'))
+                    cpath = join(cpath, basename(cpath)+".hdf")
+                    svc = SVCPredictor(cpath, load=True,
+                                       channels=chreg,
+                                       color_channel=c_channel)
+                    svc.close()
+                    self.classifiers[p_channel] = svc
 
     @property
     def _transitions(self):
@@ -818,8 +816,8 @@ class PositionAnalyzer(PositionCore):
 
             # can't cluster on a per frame basis
             if self.settings("EventSelection", "supervised_event_selection"):
-                for clf in self.classifiers.itervalues():
-                    cellanalyzer.classify_objects(clf)
+                for channel, clf in self.classifiers.iteritems():
+                    cellanalyzer.classify_objects(clf, channel)
 
             self.logger.info(" - Frame %d, Classification (ms): %3d" \
                              % (frame, stopwatch.interval()*1000))

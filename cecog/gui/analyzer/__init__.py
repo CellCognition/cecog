@@ -273,19 +273,19 @@ class BaseProcessorFrame(BaseFrame):
 
                 result_frame = self._get_result_frame(self._tab_name)
                 result_frame.load_classifier()
-#                learner = result_frame._learner
 
                 if name == self.Training:
                     is_valid = True
                     if result_frame.classifier_exists():
-                        if not QMessageBox.question(self,'Trained Classifier found',
-                                                    'Do you want to owerwrite the already '
-                                                    'trained classifier?'):
+                        ret = QMessageBox.question(self,'Trained Classifier found',
+                                                   'Do you want to owerwrite the already '
+                                                   'trained classifier?')
+                        if ret == QMessageBox.No:
                             is_valid = False
 
-                elif name == self.Testing and not result_frame.classifier.is_valid:
+                elif name == self.Testing and not result_frame.classifier_exists():
                     is_valid = False
-                    result_frame.msg_apply_classifier(self)
+                    QMessageBox.critical(self, "Error", "Please train the classifier first")
 
             if cls is MultiAnalyzerThread:
                 ncpu = cpu_count()
@@ -357,7 +357,7 @@ class BaseProcessorFrame(BaseFrame):
         self.dlg.exec_(lambda: self._analyzer.abort(wait=True))
         self.setCursor(Qt.ArrowCursor)
 
-    def _on_error(self, msg, short='An error occurred during processing!'):
+    def _on_error(self, msg, short='Error'):
         self._has_error = True
         QMessageBox.critical(self, short, msg)
 

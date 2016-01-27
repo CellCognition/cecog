@@ -334,29 +334,21 @@ class CellAnalyzer(LoggerObject):
                 training_set[obj_id] = obj
         return training_set
 
-    def classify_objects(self, predictor):
-        channel = self._channel_registry[predictor.name]
+    def classify_objects(self, predictor, channel):
+
+        channel = self._channel_registry[channel]
         holder = channel.get_region(predictor.regions)
 
-        try:
-            signal_idx = holder.feature_names.index('n2_avg')
-            roisize_idx = holder.feature_names.index('roisize')
-            has_basic_features = True
-        except ValueError:
-            has_basic_features = False
-
-        for label, obj in holder.iteritems():
+        for l, obj in holder.iteritems():
             if obj.aFeatures.size != len(holder.feature_names):
                 msg = ('Incomplete feature set found (%d/%d): skipping sample '
                        'object label %s'
-                       %(obj.aFeatures.size, len(holder.feature_names), label))
+                       %(obj.aFeatures.size, len(holder.feature_names), l))
                 self.logger.warning(msg)
             else:
-                label, probs = predictor.predict(obj.aFeatures, holder.feature_names)
-                obj.iLabel = label
-                obj.dctProb = probs
-                obj.strClassName = predictor.class_names[label]
+
+                label, probs = predictor.predict(obj.aFeatures)#, holder.feature_names)
+                obj.iLabel = label[0]
+                obj.dctProb = probs[0]
+                obj.strClassName = predictor.class_names[label[0]]
                 obj.strHexColor = predictor.hexcolors[obj.strClassName]
-                if has_basic_features:
-                    obj.roisize = obj.aFeatures[roisize_idx]
-                    obj.signal = obj.aFeatures[signal_idx]

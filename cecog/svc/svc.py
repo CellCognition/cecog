@@ -23,7 +23,7 @@ from sklearn import svm
 from sklearn.metrics import confusion_matrix
 from sklearn.grid_search import GridSearchCV
 from sklearn.cross_validation import StratifiedKFold
-from .preprocessor import PreProcessor
+from .preprocessor import PreProcessor, ZScore2
 from .writer import SVCDataModel
 
 from cecog.learning.learning import ClassDefinition
@@ -125,10 +125,14 @@ class SVCTrainer(_SVC):
         if name is None:
             name = basename(splitext(self._file)[0])
 
+        # probability estimate needs to be enabled
+        params = est.get_params()
+        params["probability"] = True
+
         writer = SVCWriter(name, self._file)
-        writer.saveTrainingSet(pp(features), self.feature_names)
+        writer.saveTrainingSet(features, self.feature_names)
         writer.saveAnnotations(labels)
-        writer.saveClassDef(self.classdef, est.get_params())
+        writer.saveClassDef(self.classdef, params)
         writer.saveNormalization(pp)
         writer.saveConfusionMatrix(confmat)
 #        writer.saveSampleInfo(sample_info)
@@ -143,15 +147,28 @@ class SVCTrainer(_SVC):
 
 class SVCPredictor(_SVC):
 
-    def __init__(self, file_, name=None, *args, **kw):
+    def __init__(self, file_, name=None, load=False, mode="r", *args, **kw):
         super(SVCPredictor, self).__init__(file_, name, *args, **kw)
-        self._h5f = h5py.File(file_, "r")
+        self._h5f = h5py.File(file_, mode)
 
         if self.name is None:
             self.name = basename(splitext(file_)[0])
 
         self.dmodel = SVCDataModel(self.name)
         self.classdef = ClassDefinition(self._h5f[self.dmodel.classdef].value)
+
+        if load:
+            self.load()
+        else:
+            self._pp = None
+            self._clf = None
+
+    def load(self):
+        norm = self.normalization
+        self._pp = ZScore2(norm['offset'], norm['scale'], norm['colmask'])
+        self._clf = svm.SVC(**self.params)
+        tdata = self.training_data.view(np.float32)
+        self._clf.fit(self._pp(tdata), self.annotations)
 
     def close(self):
         self._h5f.close()
@@ -166,8 +183,16 @@ class SVCPredictor(_SVC):
         return self._h5f[self.dmodel.training_set].dtype.names
 
     @property
+    def training_data(self):
+        return self._h5f[self.dmodel.training_set].value
+
+    @property
+    def annotations(self):
+        return self._h5f[self.dmodel.annotations].value
+
+    @property
     def normalization(self):
-        return self._h5f[self.dmodel.normalization]
+        return self._h5f[self.dmodel.normalization].value
 
     @property
     def feature_mask(self):
@@ -175,8 +200,17 @@ class SVCPredictor(_SVC):
 
     @property
     def hyper_params(self):
-        attrs =  self._h5f[self.dmodel.classdef].attrs
+        attrs =  self.params
         return attrs["C"], attrs["gamma"]
+
+    @property
+    def params(self):
+
+        params = dict(self._h5f[self.dmodel.classdef].attrs)
+        for k, v in params.items():
+            if v == "None":
+                params[k] = None
+        return params
 
     @property
     def class_counts(self):
@@ -186,3 +220,15 @@ class SVCPredictor(_SVC):
             counts[l] = ant[ant==l].size
 
         return counts
+
+    def predict(self, features):
+
+        features = self._pp(features)
+        proba = self._clf.predict_proba(features)
+
+        labels = [self.classdef.names.keys()[i] for i in np.argmax(proba, axis=1)]
+        probs = list()
+        for prob in proba:
+            probs.append(dict((l, p) for l, p in zip(self.classdef.names.keys(), prob)))
+
+        return labels, probs

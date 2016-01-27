@@ -19,12 +19,10 @@ import copy
 
 from cecog.svc import SVCTrainer
 from cecog.analyzer.core import Picker
-from cecog.threads.corethread import CoreThread
+from cecog.threads.corethread import CoreThread, ProgressMsg
 
-from cecog.learning.learning import LearnerFiles
 from cecog import CH_PRIMARY, CH_OTHER, CH_VIRTUAL
 from cecog.util.ctuple import COrderedDict
-
 
 
 class PickerThread(CoreThread):
@@ -81,8 +79,6 @@ class PickerThread(CoreThread):
             raise RuntimeError("Didn't pick any samples from 0 frames. Check plate names")
 
         if not self.is_aborted():
-            self.update_status({'stage': 1, 'min': -1, "max": -1, "progress": 0,
-                                'meta': '', 'text': "Performing grid search..."})
+            self.update_status(ProgressMsg(max=-1, text="Performing Grid Search..."))
             trainer.save()
-            self.update_status({'stage': 1, 'min': 0, "max": 100, "progress": 0,
-                                'meta': '', 'text': "Classifier training finished"})
+            self.update_status(ProgressMsg(text="Classifier training finished"))
