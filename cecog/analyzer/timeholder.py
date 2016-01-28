@@ -1457,7 +1457,7 @@ class TimeHolder(OrderedDict):
 
         channel_region = ("%s__%s" %(channel.NAME, region.name)).lower()
 
-        nr_classes = predictor.n_classes
+        nr_classes = len(predictor.classdef)
         nr_objects = len(region)
 
         # 1) write /definition - classifier definition
@@ -1484,14 +1484,14 @@ class TimeHolder(OrderedDict):
                               ('description', '|S512')])
             var = classification_group.create_dataset('classifier', (1,), dt)
 
-            var[0] = (channel.NAME, predictor.classifier.METHOD,
-                      predictor.classifier.NAME, '', '')
+            var[0] = (channel.NAME, predictor.Method,
+                      predictor.Library, '', '')
 
             # feature names
             feature_names = predictor.feature_names
             var = classification_group.create_dataset('features', (len(feature_names),), \
                                                           [('object_feautres','|S512'),])
-            var[:] = feature_names
+            var[:] = numpy.array(feature_names)
 
         # 2) write to /sample  prediction and probablilities
         current_classification_grp =  \
@@ -1500,18 +1500,19 @@ class TimeHolder(OrderedDict):
 
         if 'prediction' not in current_classification_grp:
             dt = numpy.dtype([('label_idx', 'int32')])
-            dset_prediction = current_classification_grp.create_dataset('prediction',
-                                                                        (nr_objects, ), dt,
-                                                                        chunks=(nr_objects if nr_objects > 0 else 1,),
-                                                                        compression=self._hdf5_compression,
-                                                                        maxshape=(None,))
+            dset_prediction = current_classification_grp.create_dataset(
+                'prediction',
+                (nr_objects, ), dt,
+                chunks=(nr_objects if nr_objects > 0 else 1,),
+                compression=self._hdf5_compression,
+                maxshape=(None,))
             offset = 0
         else:
             dset_prediction = current_classification_grp['prediction']
             offset = len(dset_prediction)
             dset_prediction.resize((nr_objects + offset,))
 
-        if predictor.SAVE_PROBS:
+        if predictor.SaveProbs:
             var_name = 'probability'
             if not var_name in current_classification_grp:
                 dset_probability = current_classification_grp.create_dataset(var_name, (nr_objects, nr_classes),
@@ -1530,10 +1531,10 @@ class TimeHolder(OrderedDict):
             # replace default for unlabeld object with numerical values
             if obj.iLabel is None:
                 dset_prediction[i+offset] = (self.UNPREDICTED_LABEL, )
-                probs = [self.UNPREDICTED_PROB]*predictor.n_classes
+                probs = [self.UNPREDICTED_PROB]*len(predictor.classdef)
             else:
                 dset_prediction[i+offset] = (label2idx[obj.iLabel], )
                 probs = obj.dctProb.values()
 
-            if predictor.SAVE_PROBS:
+            if predictor.SaveProbs:
                 dset_probability[i+offset] = probs

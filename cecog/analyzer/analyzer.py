@@ -339,6 +339,14 @@ class CellAnalyzer(LoggerObject):
         channel = self._channel_registry[channel]
         holder = channel.get_region(predictor.regions)
 
+        try:
+            signal_idx = holder.feature_names.index('n2_avg')
+            roisize_idx = holder.feature_names.index('roisize')
+            has_basic_features = True
+        except ValueError:
+            has_basic_features = False
+
+
         for l, obj in holder.iteritems():
             if obj.aFeatures.size != len(holder.feature_names):
                 msg = ('Incomplete feature set found (%d/%d): skipping sample '
@@ -352,3 +360,7 @@ class CellAnalyzer(LoggerObject):
                 obj.dctProb = probs[0]
                 obj.strClassName = predictor.class_names[label[0]]
                 obj.strHexColor = predictor.hexcolors[obj.strClassName]
+
+                if has_basic_features:
+                    obj.roisize = obj.aFeatures[roisize_idx]
+                    obj.signal = obj.aFeatures[signal_idx]

@@ -13,6 +13,7 @@ __url__ = 'www.cellcognition.org'
 
 __all__ = ("PositionCore", "PositionAnalyzer")
 
+
 import os
 import shutil
 import numpy as np
@@ -718,8 +719,9 @@ class PositionAnalyzer(PositionCore):
                 if self.settings('Output', 'export_track_data'):
                     self.export_full_tracks()
                 if self.settings('Output', 'export_tracking_as_dot'):
-                    self.export_graphviz(channel_name =PrimaryChannel.NAME,\
-                                          region_name =self._all_channel_regions[PrimaryChannel.NAME][PrimaryChannel.NAME])
+                    self.export_graphviz(
+                        channel_name =PrimaryChannel.NAME,\
+                        region_name =self._all_channel_regions[PrimaryChannel.NAME][PrimaryChannel.NAME])
 
             self.export_classlabels()
 
@@ -770,7 +772,8 @@ class PositionAnalyzer(PositionCore):
         crd = Coordinate(self.plate_id, self.position,
                          self._frames, list(set(self.ch_mapping.values())))
 
-        minimal_effort = self.settings.get('Output', 'minimal_effort') and self.settings.get('Output', 'hdf5_reuse')
+        minimal_effort = self.settings.get('Output', 'minimal_effort') and \
+                         self.settings.get('Output', 'hdf5_reuse')
 
         for frame, channels in self._imagecontainer( \
             crd, interrupt_channel=True, interrupt_zslice=True):

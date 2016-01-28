@@ -42,6 +42,10 @@ def njobs():
 
 class _SVC(object):
 
+    SaveProbs = True
+    Method = "support vector classifier"
+    Library = "sklearn.svm.SVC"
+
     def __init__(self, file_, name=None, channels=None, color_channel=None):
 
         super(_SVC, self).__init__()
@@ -162,13 +166,16 @@ class SVCPredictor(_SVC):
         else:
             self._pp = None
             self._clf = None
+            self._fnames = None
 
     def load(self):
         norm = self.normalization
         self._pp = ZScore2(norm['offset'], norm['scale'], norm['colmask'])
         self._clf = svm.SVC(**self.params)
-        tdata = self.training_data.view(np.float32)
-        self._clf.fit(self._pp(tdata), self.annotations)
+        tdata = self.training_data
+        self._clf.fit(self._pp(tdata.view(np.float32)), self.annotations)
+        self._fnames = tdata.dtype.names
+
 
     def close(self):
         self._h5f.close()
@@ -180,7 +187,11 @@ class SVCPredictor(_SVC):
 
     @property
     def feature_names(self):
-        return self._h5f[self.dmodel.training_set].dtype.names
+
+        if self._fnames is None:
+            self._fnames = self._h5f[self.dmodel.training_set].dtype.names
+
+        return self._fnames
 
     @property
     def training_data(self):

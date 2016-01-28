@@ -447,11 +447,11 @@ class ClassificationFrame(BaseProcessorFrame):
         result_frame = self._result_frames[channel]
         result_frame.load_classifier()
 
-    @property
     def classifiers(self):
-        classifiers = OrderedDict()
+        classifiers = list()
         for k, v in self._result_frames.iteritems():
-            classifiers[k.title()] = v.classifier
+            if v.classifier_exists():
+                classifiers.append(k.title())
         return classifiers
 
     def settings_loaded(self):

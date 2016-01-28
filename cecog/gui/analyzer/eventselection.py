@@ -66,13 +66,10 @@ class EventSelectionFrame(BaseProcessorFrame):
 
         # list only classifiers that has been trained, do nothing in case of tc3
         try:
-            clfnames = [k for k, c in clfframe.classifiers.items() if (c is not None and c.is_valid)]
-            trait.set_list_data(clfnames)
-        except AttributeError:
+#           clfnames = [k for k, c in clfframe.classifiers.items() if (c is not None and c.is_valid)]
+            trait.set_list_data(clfframe.classifiers())
+        except AttributeError as e:
             pass
-
-
-
 
     def _get_modified_settings(self, name, has_timelapse=True):
         settings = BaseProcessorFrame._get_modified_settings( \

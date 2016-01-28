@@ -14,17 +14,11 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-import os
-import csv
 
-from os.path import join, isdir, splitext, isfile
+
 from collections import OrderedDict
-
 from matplotlib.colors import ListedColormap, rgb2hex
 import matplotlib as mpl
-
-import numpy as np
-import svm
 
 from cecog.colors import unsupervised_cmap
 from cecog.learning.confusion_matrix import ConfusionMatrix
@@ -107,12 +101,12 @@ class ClassDefinition(ClassDefinitionCore):
             for (name, label, color) in classes:
                 self.labels[name] = label
                 self.names[label] = name
-                self.colors[name] = color
+                self.colors[name] = str(color)
         else:
             for (label, name, color) in classes:
                 self.labels[name] = label
                 self.names[label] = name
-                self.colors[name] = color
+                self.colors[name] = str(color)
 
         colors = ["#ffffff"]*(max(self.names)+1)
         for k, v in self.names.iteritems():

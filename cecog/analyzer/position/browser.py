@@ -14,14 +14,13 @@ __url__ = 'www.cellcognition.org'
 __all__ = ("PositionAnalyzerForBrowser", )
 
 import os
-from os.path import join
+from os.path import join, basename
 
 from cecog.util.stopwatch import StopWatch
 from cecog.io.imagecontainer import Coordinate
 from cecog.analyzer.timeholder import TimeHolder
 from cecog.analyzer.analyzer import CellAnalyzer
-from cecog.learning.learning import CommonClassPredictor
-
+from cecog.svc import SVCPredictor
 from .analysis import PositionCore
 
 
@@ -55,20 +54,19 @@ class PositionAnalyzerForBrowser(PositionCore):
         sttg = self.settings
         # processing channel, color channel
         for p_channel, c_channel in self.ch_mapping.iteritems():
-            self.settings.set_section('Processing')
-            if sttg.get2(self._resolve_name(p_channel, 'classification')):
-                sttg.set_section('Classification')
-                clf_dir = sttg.get2(self._resolve_name(p_channel, 'classification_envpath'))
-                if not os.path.exists(clf_dir):
-                    continue
-                clf = CommonClassPredictor(
-                    clf_dir=clf_dir,
-                    name=p_channel,
-                    channels=self._channel_regions(p_channel),
-                    color_channel=c_channel)
-                clf.importFromArff()
-                clf.loadClassifier()
-                self.classifiers[p_channel] = clf
+            if sttg('Processing', self._resolve_name(p_channel, 'classification')):
+                cpath = sttg('Classification', self._resolve_name(p_channel, 'classification_envpath'))
+                cpath = join(cpath, basename(cpath)+".hdf")
+                try:
+                    svc = SVCPredictor(cpath, load=True,
+                                       channels=self._channel_regions(p_channel),
+                                       color_channel=c_channel)
+                except IOError as e:
+                    pass
+                else:
+                    svc.close()
+                    self.classifiers[p_channel] = svc
+
 
     def __call__(self):
         hdf5_fname = join(self._hdf5_dir, '%s.ch5' % self.position)
@@ -122,13 +120,12 @@ class PositionAnalyzerForBrowser(PositionCore):
             self.register_channels(cellanalyzer, channels)
 
             cellanalyzer.process()
-
             self.setup_classifiers()
 
-            for clf in self.classifiers.itervalues():
+            for chname, clf in self.classifiers.iteritems():
                 try:
-                    cellanalyzer.classify_objects(clf)
-                except KeyError:
+                    cellanalyzer.classify_objects(clf, chname)
+                except KeyError as e:
                     pass
 
         return n_images

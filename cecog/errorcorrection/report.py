@@ -151,8 +151,8 @@ class HmmReport(object):
 
                 title = '%s, (%d tracks)' %(name, data.ntracks)
                 # hmm network
-                clcol = dict([(k, self.classdef.hexcolors[v])
-                             for k, v in self.classdef.class_names.iteritems()
+                clcol = dict([(k, self.classdef.colors[v])
+                             for k, v in self.classdef.names.iteritems()
                               if k in data.states])
 
                 plots.hmm_network(data.transmat, clcol, title=title,
@@ -198,7 +198,7 @@ class HmmReport(object):
         bars = []
         boxes = []
 
-        for label in self.classdef.class_names.keys():
+        for label in self.classdef.names.keys():
             dwell_times = OrderedDict([(k, np.array([]))
                                        for k in sorted(self.data.keys())])
             for name, data in self.data.iteritems():
@@ -208,7 +208,7 @@ class HmmReport(object):
                 except (KeyError, AttributeError):
                     pass
 
-            title = "class %d (%s)" %(label, self.classdef.class_names[label])
+            title = "class %d (%s)" %(label, self.classdef.names[label])
             ylabel = "dwell time (%s)" %self.ecopts.timeunit
             xlabel = self.ecopts.sortby.lower()
 
@@ -312,8 +312,8 @@ class HmmReport(object):
 
                 title = '%s, (%d tracks)' %(name, data.ntracks)
                 title = os.linesep.join(textwrap.wrap(title, 35))
-                classnames = [self.classdef.class_names[k]
-                              for k in sorted(self.classdef.class_names.keys())]
+                classnames = [self.classdef.names[k]
+                              for k in sorted(self.classdef.names.keys())]
                 plots.hmm_matrix(data.startprob.reshape(-1, 1).T,
                                  xticks=classnames,
                                  xlabel='start prob.', text=title,
@@ -383,8 +383,8 @@ class HmmReport(object):
         image[size[1]-int(msize/4):size[1], :] = hex2rgb("#FFFFFF")
 
         for i, label in enumerate(track):
-            name = self.classdef.class_names[label]
-            color = np.array(hex2rgb(self.classdef.hexcolors[name], mpl=False),
+            name = self.classdef.names[label]
+            color = np.array(hex2rgb(self.classdef.colors[name], mpl=False),
                              dtype=int)
             image[size[1]-msize:size[1], i*size[0]:i*size[0]+msize] = color
         return image
