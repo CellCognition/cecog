@@ -34,7 +34,9 @@ from PyQt5.Qt import *
 from cecog.colors import hex2rgb
 from collections import OrderedDict
 from cecog.util.util import makedirs
+
 from cecog.learning.learning import BaseLearner
+from cecog.learning.learning import ClassDefinition
 from cecog.io.imagecontainer import Coordinate
 from cecog.gui.widgets.colorbutton import ColorButton
 from cecog.gui.modules.module import Module, CH5BasedModule

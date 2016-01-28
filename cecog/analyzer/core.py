@@ -106,6 +106,7 @@ class AnalyzerBase(LoggerObject):
 class AnalyzerCore(AnalyzerBase):
     def __init__(self, plate, settings, imagecontainer):
         super(AnalyzerCore, self).__init__(plate, settings, imagecontainer)
+
         self._makedirs()
         self._setup_cropping()
         self.logger.info("openening image container: end")

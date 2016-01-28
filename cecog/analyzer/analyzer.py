@@ -14,6 +14,7 @@ __url__ = 'www.cellcognition.org'
 
 from os.path import join
 from collections import OrderedDict
+import numpy as np
 
 from cecog import ccore
 from cecog.analyzer.channel import PrimaryChannel
@@ -348,13 +349,16 @@ class CellAnalyzer(LoggerObject):
 
 
         for l, obj in holder.iteritems():
+
             if obj.aFeatures.size != len(holder.feature_names):
                 msg = ('Incomplete feature set found (%d/%d): skipping sample '
                        'object label %s'
                        %(obj.aFeatures.size, len(holder.feature_names), l))
                 self.logger.warning(msg)
+            elif np.isnan(obj.aFeatures).any():
+                msg = ('Feature set containes NaN and is skipped therefore')
+                self.logger.warning(msg)
             else:
-
                 label, probs = predictor.predict(obj.aFeatures)#, holder.feature_names)
                 obj.iLabel = label[0]
                 obj.dctProb = probs[0]

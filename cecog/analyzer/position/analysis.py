@@ -374,17 +374,22 @@ class PositionAnalyzer(PositionCore):
         else:
             self._position_dir = self._analyzed_dir
 
-        odirs = (self._analyzed_dir,
-                 join(self._out_dir, "log"),
-                 join(self._out_dir, "log", "_finished"),
-                 join(self._out_dir, "hdf5"),
-                 join(self._out_dir, "plots"),
-                 join(self._position_dir, "statistics"),
-                 join(self._position_dir, "tc3"),
-                 join(self._position_dir, "gallery"),
-                 join(self._position_dir, "channel_gallery"),
-                 join(self._position_dir, "images"),
-                 join(self._position_dir, "images","_labels"))
+        if self.settings('Output', 'text_output'):
+            odirs = (self._analyzed_dir,
+                     join(self._out_dir, "log"),
+                     join(self._out_dir, "log", "_finished"),
+                     join(self._out_dir, "plots"),
+                     join(self._position_dir, "statistics"),
+                     join(self._position_dir, "tc3"),
+                     join(self._position_dir, "gallery"),
+                     join(self._position_dir, "channel_gallery"),
+                     join(self._position_dir, "images"),
+                     join(self._position_dir, "images","_labels"))
+        else:
+            odirs = (self._analyzed_dir,
+                     join(self._out_dir, "log"),
+                     join(self._out_dir, "log", "_finished"),
+                     join(self._out_dir, "hdf5"))
 
         for odir in odirs:
             try:
@@ -827,7 +832,7 @@ class PositionAnalyzer(PositionCore):
 
             self.settings.set_section('General')
             # want emit all images at once
-            if not minimal_effort:
+            if not minimal_effort and self.settings('Output', 'text_output'):
                 imgs = {}
                 imgs.update(self.render_classification_images(cellanalyzer, images, frame))
                 imgs.update(self.render_contour_images(cellanalyzer, images, frame))

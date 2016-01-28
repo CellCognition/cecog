@@ -15,6 +15,7 @@ __revision__ = '$Rev$'
 __source__ = '$URL$'
 
 
+from os.path import isfile
 
 from collections import OrderedDict
 from matplotlib.colors import ListedColormap, rgb2hex
@@ -382,65 +383,6 @@ class CommonClassPredictor(BaseLearner):
         labels = map(int, labels)
         samples = samples.tolist()
         return labels, samples
-
-    # def filter_nans(self, apply=False):
-    #     """Find features with NA values in the data set and remove features
-    #     from the data and corresponding feature names returns the list of
-    #     removed feature names.
-    #     """
-
-    #     filter_idx = np.array([], int)
-    #     feature_idx = np.arange(len(self._feature_names), dtype=int)
-
-    #     for data in self.feature_data.itervalues():
-    #         filter_idx = np.append(filter_idx, feature_idx[np.any(np.isnan(data), 0)])
-    #     filter_idx = np.unique(filter_idx)
-
-    #     if apply:
-    #         for name in self.feature_data:
-    #             self.feature_data[name] = np.delete(self.feature_data[name],
-    #                                                   filter_idx, 1)
-    #         if filter_idx.size > 0:
-    #             self.nan_features = self.delete_feature_names(filter_idx)
-    #     return self.nan_features
-
-    # def train(self, c, g, probability=True, compensation=True,
-    #           path=None, filename=None, save=True):
-    #     if filename is None:
-    #         filename = splitext(self.arff_file)[0]
-    #         filename += '.model'
-    #     if path is None:
-    #         path = self.data_dir
-    #     param = svm.svm_parameter(kernel_type=svm.RBF,
-    #                               C=c, gamma=g,
-    #                               probability=1 if probability else 0)
-
-    #     labels, samples = self.getData(normalize=True)
-
-    #     # because we train the SVM with dict we need to redefine the zero-insert
-    #     self.has_zero_insert = False
-    #     if not self.classifier is None:
-    #         self.classifier.setOption('hasZeroInsert', True)
-
-    #     if compensation:
-    #         weight, weight_label = self._calculateCompensation(labels)
-    #         param.weight = weight
-    #         param.weight_label = weight_label
-    #         param.nr_weight = len(weight)
-
-    #     problem = svm.svm_problem(labels, samples)
-    #     model = svm.svm_model(problem, param)
-    #     if save:
-    #         model.save(os.path.join(path, filename))
-    #     return problem, model
-
-
-    # def _calculateCompensation(self, labels):
-    #     ulabels = np.unique(labels)
-    #     count = np.bincount(labels)[ulabels]
-    #     weight = (float(len(labels)) - count) / count
-    #     weight_label = map(int, ulabels)
-    #     return weight, weight_label
 
 
 
