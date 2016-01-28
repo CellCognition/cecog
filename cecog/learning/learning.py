@@ -68,6 +68,25 @@ class ClassDefinitionCore(object):
         for label, name in self.names.iteritems():
             yield (name, label, self.colors[name])
 
+    def addClass(self, name, label, color):
+        self.names[label] = name
+        self.colors[name] = color
+        self.labels[name] = label
+
+    def removeClass(self, klass):
+
+        if klass in self.names.values():
+            del self.names[self.labels[klass]]
+            del self.colors[klass]
+            del self.labels[klass]
+
+        elif klass in self.labels.values():
+            name = self.name[klass]
+            del self.labels[name]
+            del self.colors[name]
+            del self.names[klass]
+        else:
+            raise KeyError("No class %s defined" %klass)
 
 
 class ClassDefinitionUnsup(ClassDefinitionCore):

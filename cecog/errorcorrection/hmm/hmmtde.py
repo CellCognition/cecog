@@ -104,7 +104,7 @@ class HmmTde(HmmCore):
                                     "Try different hmm learing algorithm"))
 
             labelmapper = LabelMapper(np.unique(tracks),
-                                      self.classdef.class_names.keys())
+                                      self.classdef.names.keys())
 
             # np.unique -> sorted ndarray
             idx = labelmapper.index_from_classdef(np.unique(tracks))

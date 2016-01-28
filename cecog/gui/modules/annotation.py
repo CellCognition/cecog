@@ -363,7 +363,9 @@ class AnnotationModule(Module):
         self._import_class_definitions_btn.clicked.connect(self._on_import_class_definitions)
 
         self._import_ontology_name_btn = QPushButton('Choose class name from ontology')
-        self._import_ontology_name_btn.setToolTip("Choose class name from ontology. E.g., CMPO\nNote: It might take some time starting the dialog the first time.")
+        self._import_ontology_name_btn.setToolTip(
+            ("Choose class name from ontology. E.g., CMPO\n"
+             "Note: It might take some time starting the dialog the first time."))
         layout2.addWidget(self._import_ontology_name_btn)
         self._import_ontology_name_btn.clicked.connect(self._on_import_ontology_name)
 
@@ -656,6 +658,7 @@ class AnnotationModule(Module):
 
     def _init_new_classifier(self):
         learner = BaseLearner(None, None, None)
+
         self._current_class = None
         self._class_sbox.setValue(1)
         self._class_text.setText('class1')
