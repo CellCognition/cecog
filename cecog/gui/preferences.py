@@ -29,7 +29,7 @@ from PyQt5 import QtWidgets
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QSettings
 
-from .util import loadUI
+from .loadui import loadUI
 from cecog.util.pattern import Singleton
 from cecog import version
 from cecog import css
