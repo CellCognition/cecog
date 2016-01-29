@@ -34,7 +34,7 @@ from collections import OrderedDict
 
 from cecog.gui.modules.module import Module
 from cecog.io.imagecontainer import Coordinate
-from cecog.learning.learning import ClassDefinition
+from cecog.classifier import ClassDefinition
 from cecog.gui.widgets.colorbutton import ColorButton
 from cecog.util.ontoloty_owl import CecogOntologyBrowserDialog
 

@@ -27,7 +27,7 @@ from PyQt5.QtCore import *
 from PyQt5.Qt import *
 
 from cecog.colors import hex2rgb
-from cecog.svc import SVCPredictor
+from cecog.classifier import SupportVectorClassifier
 
 from cecog import CHANNEL_PREFIX, CH_VIRTUAL, CH_PRIMARY, CH_OTHER
 from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
@@ -127,7 +127,7 @@ class ClassifierResultFrame(QGroupBox):
     def load_classifier(self):
 
         try:
-            clf = SVCPredictor(self.hdffile)
+            clf = SupportVectorClassifier(self.hdffile)
         except IOError:
             return
 

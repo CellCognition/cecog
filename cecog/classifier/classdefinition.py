@@ -12,6 +12,7 @@ __url__ = 'www.cellcognition.org'
 
 __all__ = ('ClassDefinition', 'ClassDefinitionUnsup')
 
+
 import csv
 from os.path import join
 from collections import OrderedDict
@@ -124,8 +125,6 @@ class ClassDefinitionUnsup(ClassDefinitionCore):
     a destinct colormap to make it easy distinguishable from user defined
     class definitions.
     """
-
-    SAVE_PROBS = False
 
     def __init__(self, nclusters, *args, **kw):
         super(ClassDefinitionUnsup, self).__init__(*args, **kw)

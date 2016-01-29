@@ -17,7 +17,7 @@ __all__ = ('PickerThread', )
 import os
 import copy
 
-from cecog.svc import SVCTrainer
+from cecog.classifier import SupportVectorClassifier
 from cecog.analyzer.core import Picker
 from cecog.threads.corethread import CoreThread, ProgressMsg
 
@@ -51,18 +51,14 @@ class PickerThread(CoreThread):
         pchannel = self._settings.get("Classification", "collectsamples_prefix")
         chid = self._settings.get("ObjectDetection", "%s_channelid" %(pchannel))
 
+        cpath = self._settings.get(
+            "Classification", "%s_classification_envpath" %pchannel)
+
         if not chid:
             chid = None
 
-        return SVCTrainer(self.hdffile, pchannel.title(),
-                          self._channel_regions(pchannel, chid), chid)
-
-    @property
-    def hdffile(self):
-        pchannel = self._settings.get("Classification", "collectsamples_prefix")
-        cpath = self._settings.get(
-            "Classification", "%s_classification_envpath" %pchannel)
-        return os.path.join(cpath, os.path.basename(cpath)+".hdf")
+        return SupportVectorClassifier(
+            cpath, pchannel.title(), self._channel_regions(pchannel, chid), chid)
 
     def _run(self):
         frame_count = 0

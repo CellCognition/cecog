@@ -11,4 +11,5 @@ __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
 
-from svc import *
+from .svc import *
+from .classdefinition import *

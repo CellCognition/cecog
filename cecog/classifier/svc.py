@@ -11,26 +11,32 @@ __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
 
-__all__ = ("SVCTrainer", "SVCPredictor")
+__all__ = ("SupportVectorClassifier", )
+
 
 import sys
-from os.path import basename, splitext, isfile, dirname, join
-import numpy as np
+from os.path import join
+from os.path import isfile
+from os.path import dirname
+from os.path import splitext
+from os.path import basename
+from multiprocessing import cpu_count
+import mimetypes
 
 import h5py
-from sklearn import svm
+import numpy as np
 
+from sklearn import svm
 from sklearn.metrics import confusion_matrix
 from sklearn.grid_search import GridSearchCV
 from sklearn.cross_validation import StratifiedKFold
-from .preprocessor import PreProcessor, ZScore2
-from .writer import SVCDataModel
 
-from cecog.learning.learning import ClassDefinition
-from cecog.learning.confusion_matrix import ConfusionMatrix
 from .writer import SVCWriter
-
-from multiprocessing import cpu_count
+from .writer import SVCDataModel
+from .preprocessor import ZScore2
+from .preprocessor import PreProcessor
+from .confusion_matrix import ConfusionMatrix
+from .classdefinition import ClassDefinition
 
 
 def njobs():
@@ -40,21 +46,48 @@ def njobs():
         return cpu_count() - 1
 
 
-class _SVC(object):
+class SupportVectorClassifier(object):
 
     SaveProbs = True
     Method = "support vector classifier"
     Library = "sklearn.svm.SVC"
 
-    def __init__(self, file_, name=None, channels=None, color_channel=None):
+    def __init__(self, file_, name=None, channels=None,
+                 color_channel=None, load=False, mode="r"):
+        super(SupportVectorClassifier, self).__init__()
 
-        super(_SVC, self).__init__()
-        self._file = file_
+        self._h5f = None
         self.name = name
         self.color_channel = color_channel
         self.channels = channels
-        self.annotations_dir = join(dirname(file_), "annotations")
         self.samples = list()
+        self.dmodel = None
+
+        # XXX leagacy - remove class_definition.txt from pipeline
+        if mimetypes.guess_type(file_)[0] == "application/x-hdf":
+            self.annotations_dir = join(dirname(file_), "annotations")
+            self._from_hdf(file_, mode, load)
+            self._file = file_
+        else:
+            self.annotations_dir = join(file_, "annotations")
+            self._file = join(file_, basename(file_)+'.hdf')
+            file_ = join(file_, ClassDefinition.Definition)
+            self.classdef = ClassDefinition(np.recfromtxt(file_, comments=None))
+
+    def _from_hdf(self, file_, mode, load):
+        self._h5f = h5py.File(file_, mode)
+        if self.name is None:
+            self.name = basename(splitext(file_)[0])
+
+        self.dmodel = SVCDataModel(self.name)
+        self.classdef = ClassDefinition(self._h5f[self.dmodel.classdef].value)
+
+        if load:
+            self.load()
+        else:
+            self._pp = None
+            self._clf = None
+            self._fnames = None
 
     def exists(self):
         return isfile(str(self._file))
@@ -63,25 +96,18 @@ class _SVC(object):
     def class_names(self):
         return self.classdef.names
 
+    # rename to class_colors or just colors
     @property
     def hexcolors(self):
         return self.classdef.colors
 
+    # XXX rename to masks
     @property
     def regions(self):
         if len(self.channels) == 1:
             return self.channels.values()[0]
         else:
             return self.channels.values()
-
-
-class SVCTrainer(_SVC):
-
-    def __init__(self, file_, *args, **kw):
-        super(SVCTrainer, self).__init__(file_, *args, **kw)
-
-        file_ = join(dirname(file_), ClassDefinition.Definition)
-        self.classdef = ClassDefinition(np.recfromtxt(file_, comments=None))
 
     def grid_search(self, features, labels, kfold=5):
 
@@ -106,7 +132,7 @@ class SVCTrainer(_SVC):
 
         return confmat, est
 
-    def training_data(self):
+    def sample_data(self):
 
         nsamples = len(self.samples)
         nfeatures = self.samples[0].aFeatures.size
@@ -122,7 +148,7 @@ class SVCTrainer(_SVC):
 
     def save(self, name=None):
 
-        features, labels = self.training_data()
+        features, labels = self.sample_data()
         pp = PreProcessor(features)
         confmat, est = self.grid_search(pp(features), labels)
 
@@ -143,30 +169,10 @@ class SVCTrainer(_SVC):
         writer.close()
 
     def add_samples(self, samples):
-        # overwrite each time, who cares!
-        self.feature_names = samples.feature_names
+        # overwrite feature_names  each time, who cares
+        self._fnames = samples.feature_names
         self.samples.extend(samples.values())
 
-
-
-class SVCPredictor(_SVC):
-
-    def __init__(self, file_, name=None, load=False, mode="r", *args, **kw):
-        super(SVCPredictor, self).__init__(file_, name, *args, **kw)
-        self._h5f = h5py.File(file_, mode)
-
-        if self.name is None:
-            self.name = basename(splitext(file_)[0])
-
-        self.dmodel = SVCDataModel(self.name)
-        self.classdef = ClassDefinition(self._h5f[self.dmodel.classdef].value)
-
-        if load:
-            self.load()
-        else:
-            self._pp = None
-            self._clf = None
-            self._fnames = None
 
     def load(self):
         norm = self.normalization
@@ -175,7 +181,6 @@ class SVCPredictor(_SVC):
         tdata = self.training_data
         self._clf.fit(self._pp(tdata.view(np.float32)), self.annotations)
         self._fnames = tdata.dtype.names
-
 
     def close(self):
         self._h5f.close()

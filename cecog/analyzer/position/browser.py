@@ -20,7 +20,8 @@ from cecog.util.stopwatch import StopWatch
 from cecog.io.imagecontainer import Coordinate
 from cecog.analyzer.timeholder import TimeHolder
 from cecog.analyzer.analyzer import CellAnalyzer
-from cecog.svc import SVCPredictor
+
+from cecog.classifier import SupportVectorClassifier
 from .analysis import PositionCore
 
 
@@ -58,9 +59,9 @@ class PositionAnalyzerForBrowser(PositionCore):
                 cpath = sttg('Classification', self._resolve_name(p_channel, 'classification_envpath'))
                 cpath = join(cpath, basename(cpath)+".hdf")
                 try:
-                    svc = SVCPredictor(cpath, load=True,
-                                       channels=self._channel_regions(p_channel),
-                                       color_channel=c_channel)
+                    svc = SupportVectorClassifier(
+                        cpath, load=True, channels=self._channel_regions(p_channel),
+                        color_channel=c_channel)
                 except IOError as e:
                     pass
                 else:

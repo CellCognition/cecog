@@ -36,7 +36,7 @@ from cecog.analyzer.channel import SecondaryChannel
 from cecog.analyzer.channel import TertiaryChannel
 from cecog.analyzer.channel import MergedChannel
 
-from cecog.svc import SVCPredictor
+from cecog.classifier import SupportVectorClassifier
 from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACTION
 
 from cecog.gallery import TrackGallery
@@ -46,7 +46,7 @@ from cecog.logging import LoggerObject
 from cecog.util.stopwatch import StopWatch
 from cecog.util.util import makedirs
 from cecog.util.ctuple import COrderedDict
-from cecog.learning.learning import ClassDefinitionUnsup
+from cecog.classifier import ClassDefinitionUnsup
 
 from cecog.features import FEATURE_MAP
 
@@ -390,6 +390,7 @@ class PositionAnalyzer(PositionCore):
                      join(self._out_dir, "log"),
                      join(self._out_dir, "log", "_finished"),
                      join(self._out_dir, "hdf5"))
+            self._images_dir = self._analyzed_dir
 
         for odir in odirs:
             try:
@@ -416,9 +417,8 @@ class PositionAnalyzer(PositionCore):
                     sttg.set_section('Classification')
                     cpath = sttg.get2(self._resolve_name(p_channel, 'classification_envpath'))
                     cpath = join(cpath, basename(cpath)+".hdf")
-                    svc = SVCPredictor(cpath, load=True,
-                                       channels=chreg,
-                                       color_channel=c_channel)
+                    svc = SupportVectorClassifier(
+                        cpath, load=True, channels=chreg, color_channel=c_channel)
                     svc.close()
                     self.classifiers[p_channel] = svc
 
@@ -832,7 +832,7 @@ class PositionAnalyzer(PositionCore):
 
             self.settings.set_section('General')
             # want emit all images at once
-            if not minimal_effort and self.settings('Output', 'text_output'):
+            if not minimal_effort:
                 imgs = {}
                 imgs.update(self.render_classification_images(cellanalyzer, images, frame))
                 imgs.update(self.render_contour_images(cellanalyzer, images, frame))
@@ -861,12 +861,12 @@ class PositionAnalyzer(PositionCore):
         images_ = dict()
         for region, render_par in self.settings.get2('rendering').iteritems():
             out_dir = join(self._images_dir, region)
-            write = self.settings('Output', 'rendering_contours_discwrite')
+            write = self.settings('Output', 'rendering_contours_discwrite') and \
+                    self.settings('Output', 'text_output')
 
             if region not in self.CHANNELS.keys():
                 img, _ = ca.render(out_dir, dctRenderInfo=render_par,
-                                       writeToDisc=write, images=images)
-
+                                   writeToDisc=write, images=images)
 
                 images_[region] = img
             # gallery images are treated differenty
@@ -877,11 +877,12 @@ class PositionAnalyzer(PositionCore):
     def render_classification_images(self, cellanalyzer, images, frame):
          images_ = dict()
          for region, render_par in self.settings.get2('rendering_class').iteritems():
-            out_images = join(self._images_dir, region)
-            write = self.settings('Output', 'rendering_class_discwrite')
-            image, _ = cellanalyzer.render(out_images,
-                                                 dctRenderInfo=render_par,
-                                                 writeToDisc=write,
-                                                 images=images)
-            images_[region] = image
+             write = self.settings('Output', 'rendering_class_discwrite') and \
+                     self.settings('Output', 'text_output')
+             out_images = join(self._images_dir, region)
+             image, _ = cellanalyzer.render(out_images,
+                                            dctRenderInfo=render_par,
+                                            writeToDisc=write,
+                                            images=images)
+             images_[region] = image
          return images_

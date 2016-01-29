@@ -32,7 +32,7 @@ from cecog.errorcorrection.hmm import HmmTde
 from cecog.errorcorrection import HmmReport
 from cecog.errorcorrection import PlateMapping
 from cecog.errorcorrection.datatable import HmmDataTable
-from cecog.learning.learning import ClassDefinition
+from cecog.classifier import ClassDefinition
 
 
 class PlateRunner(QtCore.QObject):
