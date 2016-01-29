@@ -35,7 +35,6 @@ from PyQt5.Qt import *
 from PyQt5 import QtWidgets
 
 from cecog import version
-from cecog.gui.util import information, warning
 from cecog.gui.analyzer import BaseProcessorFrame
 
 from cecog.gui.imageviewer import ImageViewer, GalleryViewer
@@ -273,7 +272,7 @@ class Browser(QMainWindow):
             CellH5EventModule(self._module_manager,
                               self, self._settings, self._imagecontainer)
         except Exception as e:
-            warning(self, str(e))
+            QMessageBox.warning(self, "Warning", str(e))
 
         # set the Navigation module activated
         self._module_manager.activate_tab(NavigationModule.NAME)
@@ -624,7 +623,11 @@ class Browser(QMainWindow):
     def detect_objects_toggled(self, state):
         if state:
             if self._settings.get('Output', 'hdf5_reuse'):
-                information(self, 'HDF5 reuse is enabled. Raw data and segmentation will be loaded from HDF5 files. Changes of normalization and segmentation parameters will have no effect in browser!')
+                QMessageBox.information(self, 'Information',
+                                        ('HDF5 reuse is enabled. Raw data and segmentation '
+                                         'will be loaded from HDF5 files. Changes of'
+                                         ' normalization and segmentation parameters will'
+                                         ' have no effect in browser!'))
             self.on_refresh()
 
     def on_toggle_show_contours(self, state):

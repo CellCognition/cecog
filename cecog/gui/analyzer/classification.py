@@ -31,7 +31,6 @@ from cecog.svc import SVCPredictor
 
 from cecog import CHANNEL_PREFIX, CH_VIRTUAL, CH_PRIMARY, CH_OTHER
 from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
-from cecog.gui.util import information
 from cecog.util.ctuple import CTuple
 from cecog.gui.analyzer import BaseProcessorFrame
 

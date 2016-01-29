@@ -43,11 +43,13 @@ class ZoomedQGraphicsView(QGraphicsView):
             newGrviewCenter = grviewCenter + offset
             self.centerOn(newGrviewCenter)
 
+
 class HoverPolygonItem(QGraphicsPolygonItem):
 
     def __init__(self, *args, **kw):
         super(HoverPolygonItem, self).__init__(*args, **kw)
         self._old_pen = self.pen()
+        self._old_pen.setWidth(0.0)
 
     def set_pen_color(self, color):
         self._old_pen.setColor(color)

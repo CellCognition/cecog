@@ -14,34 +14,29 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = ['Browser']
+__all__ = ('AnnotationModule', )
 
 import os
 import re
 
-import time
+import glob
 import shutil
-import datetime
-
-import numpy
+import numpy as np
 
 from xml.dom import minidom
 
+from PyQt5.Qt import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
-from PyQt5.Qt import *
 
 from cecog.colors import hex2rgb
 from collections import OrderedDict
-from cecog.util.util import makedirs
 
-from cecog.learning.learning import BaseLearner
-from cecog.learning.learning import ClassDefinition
+from cecog.gui.modules.module import Module
 from cecog.io.imagecontainer import Coordinate
+from cecog.learning.learning import ClassDefinition
 from cecog.gui.widgets.colorbutton import ColorButton
-from cecog.gui.modules.module import Module, CH5BasedModule
 from cecog.util.ontoloty_owl import CecogOntologyBrowserDialog
-from cecog.gui.util import exception, information, question, warning, get_qcolor_hicontrast, qcolor_to_hex
 
 
 class Annotations(object):
@@ -326,11 +321,12 @@ class AnnotationModule(Module):
                           "#999999"]
 
     def __init__(self, parent, browser, settings, imagecontainer):
-        Module.__init__(self, parent, browser)
+        super(AnnotationModule, self).__init__(parent, browser)
 
         self._current_class = None
         self._detect_objects = False
         self._current_scene_items = set()
+        self._lastdir = os.path.expanduser('~/')
 
         self._settings = settings
         self._imagecontainer = imagecontainer
@@ -443,7 +439,8 @@ class AnnotationModule(Module):
         layout.addWidget(splitter)
 
 
-        self._learner = self._init_new_classifier()
+        self._init_new_classifier()
+        self.classdef = ClassDefinition()
 
         self.browser._action_grp = QActionGroup(browser)
         class_fct = lambda id: lambda : self._on_shortcut_class_selected(id)
@@ -472,31 +469,25 @@ class AnnotationModule(Module):
 
     def _on_import_class_definitions(self):
         if self._on_new_classifier():
-            path = None
-            try:
-                path = self._learner.clf_dir
-            except:
-                pass
-            if path is None:
-                path = os.path.expanduser('~')
-            result = QFileDialog.getExistingDirectory(
-                self, 'Open classifier directory', os.path.abspath(path))
 
-            if result:
-                learner = self._load_classifier(result)
-                if learner is not None:
-                    self._learner = learner
-                    self._update_class_definition_table()
-                    self._learner.unset_clf_dir()
+            dir_ = QFileDialog.getExistingDirectory(
+                self, 'Open classifier directory', self._lastdir)
+
+            if dir_:
+                try:
+                    self._load_classifier(dir_)
+                except RuntimeError as e:
+                    pass
+                self._update_class_definition_table()
 
     def _update_class_definition_table(self):
         class_table = self._class_table
         class_table.clearContents()
-        class_table.setRowCount(len(self._learner.class_labels))
+        class_table.setRowCount(len(self.classdef))
         select_item = None
-        for idx, class_label in enumerate(self._learner.class_names):
+        for idx, class_label in enumerate(self.classdef.names):
             samples = 0
-            class_name = self._learner.class_names[class_label]
+            class_name = self.classdef.names[class_label]
             item = QTableWidgetItem(class_name)
             class_table.setItem(idx, self.COLUMN_CLASS_NAME, item)
             if select_item is None:
@@ -507,49 +498,42 @@ class AnnotationModule(Module):
                                 QTableWidgetItem(str(samples)))
             item = QTableWidgetItem(' ')
             item.setBackground(
-                QBrush(QColor(self._learner.hexcolors[class_name])))
+                QBrush(QColor(self.classdef.colors[class_name])))
             class_table.setItem(idx, self.COLUMN_CLASS_COLOR, item)
         class_table.resizeColumnsToContents()
         class_table.resizeRowsToContents()
 
         self._activate_objects_for_image(False, clear=True)
 
+
     def _on_class_apply(self):
-        '''
-        Apply class changes
-        '''
-        learner = self._learner
+        """Apply class changes"""
 
         class_name_new = str(self._class_text.text())
         class_label_new = self._class_sbox.value()
         class_name = self._current_class
 
         if not class_name is None:
-            class_label = learner.class_labels[class_name]
+            class_label = self.classdef.labels[class_name]
 
-            class_labels = learner.class_labels.values()
+            class_labels = self.classdef.labels.values()
             class_labels.remove(class_label)
-            class_names = learner.class_names.values()
+            class_names = self.classdef.names.values()
             class_names.remove(class_name)
 
             if len(class_name_new) == 0:
-                warning(self, "Invalid class name",
-                        info="The class name must not be empty!")
+                QMessageBox.warning(self, "Invalid class name",
+                                    "The class name must not be empty!")
             elif (not class_name_new in class_names and
                   not class_label_new in class_labels):
 
-                del learner.class_names[class_label]
-                del learner.class_labels[class_name]
-                del learner.hexcolors[class_name]
+                self.classdef.removeClass(class_name)
 
                 item = self._find_items_in_class_table(class_name,
                                                        self.COLUMN_CLASS_NAME)[0]
 
-                learner.class_names[class_label_new] = class_name_new
-                learner.class_labels[class_name_new] = class_label_new
-                class_color = self._class_color_btn.current_color
-                learner.hexcolors[class_name_new] = \
-                    qcolor_to_hex(class_color)
+                class_color = self._class_color_btn.current_color.name()
+                self.classdef.addClass(class_name_new, class_label_new, class_color)
 
                 item.setText(class_name_new)
                 item2 = self._class_table.item(item.row(),
@@ -557,9 +541,8 @@ class AnnotationModule(Module):
                 item2.setText(str(class_label_new))
                 item2 = self._class_table.item(item.row(),
                                                self.COLUMN_CLASS_COLOR)
-                item2.setBackground(QBrush(class_color))
+                item2.setBackground(QBrush(QColor(class_color)))
 
-                col = get_qcolor_hicontrast(class_color)
                 self._class_table.resizeRowsToContents()
                 self._class_table.resizeColumnsToContents()
                 self._class_table.scrollToItem(item)
@@ -569,32 +552,25 @@ class AnnotationModule(Module):
                 self._activate_objects_for_image(False)
                 self._activate_objects_for_image(True)
             else:
-                warning(self, "Class names and labels must be unique!",
-                        info="Class name '%s' or label '%s' already used." %\
-                             (class_name_new, class_label_new))
+                QMessageBox.warning(self, "Class names and labels must be unique!",
+                                    "Class name '%s' or label '%s' already used."
+                                    %(class_name_new, class_label_new))
 
     def _on_class_add(self):
         """Add a new class to definition"""
 
-        learner = self._learner
         class_name_new = str(self._class_text.text())
         class_label_new = self._class_sbox.value()
 
-        class_labels = learner.class_labels.values()
-        class_names = learner.class_names.values()
-
         if len(class_name_new) == 0:
-            warning(self, "Invalid class name",
-                    info="The class name must not be empty!")
-        elif (not class_name_new in class_names and
-              not class_label_new in class_labels):
+            QMessageBox.warning(self, "Invalid class name",
+                                "The class name must not be empty!")
+        elif (not class_name_new in self.classdef.names.values() and
+        not class_label_new in self.classdef.names.keys()):
             self._current_class = class_name_new
 
-            learner.class_names[class_label_new] = class_name_new
-            learner.class_labels[class_name_new] = class_label_new
             class_color = self._class_color_btn.current_color
-            learner.hexcolors[class_name_new] = \
-                qcolor_to_hex(class_color)
+            self.classdef.addClass(class_name_new, class_label_new, class_color.name())
 
             row = self._class_table.rowCount()
             self._class_table.insertRow(row)
@@ -611,7 +587,7 @@ class AnnotationModule(Module):
             self._class_table.resizeColumnsToContents()
             self._class_table.setCurrentItem(item)
 
-            ncl = len(learner.class_names)+1
+            ncl = len(self.classdef) + 1
             self._class_text.setText('class%d' % ncl)
             self._class_sbox.setValue(ncl)
 
@@ -619,27 +595,25 @@ class AnnotationModule(Module):
                 QColor(AnnotationModule.DEFAULT_CLASS_COLS[(ncl -1) \
                    % len(AnnotationModule.DEFAULT_CLASS_COLS)]))
         else:
-            warning(self, "Class names and labels must be unique!",
-                    info="Class name '%s' or label '%s' already used." %\
-                         (class_name_new, class_label_new))
+            QMessageBox.warning(self, "Class names and labels must be unique!",
+                                ("Class name '%s' or label '%s' already used."
+                                 %(class_name_new, class_label_new)))
 
     def _on_class_remove(self):
-        '''
-        Remove a class and all its annotations
-        '''
+        """Remove a class and all its annotations."""
+
         class_name = self._current_class
-        if (not class_name is None and
-            question(self, "Do you really want to remove class '%s'?" % \
-                     class_name,
-                     info="All %d annotations will be lost." % \
-                     self._annotations.get_count_for_class(class_name))):
+
+        if class_name is None:
+            return
+        ret = QMessageBox.question(self, "Question",
+                                   ("Do you really want to remove class '%s' "
+                                    "and all its annotations?" %class_name))
+
+        if class_name is not None and ret == QMessageBox.Yes:
 
             self._activate_objects_for_image(False)
-            learner = self._learner
-            class_label = learner.class_labels[class_name]
-            del learner.class_labels[class_name]
-            del learner.class_names[class_label]
-            del learner.hexcolors[class_name]
+            self.classdef.removeClass(class_name)
 
             item = self._find_items_in_class_table(class_name,
                                                    self.COLUMN_CLASS_NAME)[0]
@@ -657,7 +631,8 @@ class AnnotationModule(Module):
                 self._update_annotation_table()
 
     def _init_new_classifier(self):
-        learner = BaseLearner(None, None, None)
+
+        classdef = ClassDefinition()
 
         self._current_class = None
         self._class_sbox.setValue(1)
@@ -672,40 +647,45 @@ class AnnotationModule(Module):
         if self._detect_objects:
             self._activate_objects_for_image(False, clear=True)
         self._annotations.remove_all()
-        return learner
+        return classdef
 
     def _on_new_classifier(self):
         ok = False
-        if question(self, 'New classifier',
-                    'Are you sure to setup a new classifer?\nAll annotations '
-                    'will be lost.'):
-            self._learner = self._init_new_classifier()
+        if len(self.classdef) > 0:
+            ret = QMessageBox.question(self, 'New classifier',
+                                       ('Are you sure to setup a new classifer?'
+                                        '\nAll annotations will be lost.'))
+        else:
+            ret = QMessageBox.Yes
+
+        if ret == QMessageBox.Yes:
+            self._init_new_classifier()
+            self.classdef.clear()
             ok = True
 
         return ok
 
     def _on_open_classifier(self):
-        try:
-            path = os.path.abspath(self._learner.clf_dir)
-        except:
-            path = os.path.expanduser('~/')
 
-        result = QFileDialog.getExistingDirectory( \
-            self, 'Open classifier directory', path)
-        if result:
-            learner = self._load_classifier(result)
-            if not learner is None:
-                self._learner = learner
+        dir_ = QFileDialog.getExistingDirectory(
+            self, 'Open classifier directory', self._lastdir)
+
+        if dir_:
+            try:
+                self._load_classifier(dir_)
+            except RuntimeError as e:
+                return
+            else:
                 self._update_class_definition_table()
-
                 self._activate_objects_for_image(False, clear=True)
-                path2 = learner.annotations_dir
+                path2 = os.path.join(dir_, self.classdef.Annotations)
                 try:
                     has_invalid = self._annotations.import_from_xml(
-                        path2, learner.class_names, self._imagecontainer)
-                except:
-                    exception(self, "Problems loading annotation data...")
-                    self._learner = self._init_new_classifier()
+                        path2, self.classdef.names, self._imagecontainer)
+                except Exception as e:
+                    print type(e)
+                    QMessageBox.critical(self, "Error", str(e))
+                    self._init_new_classifier()
                 else:
                     self._activate_objects_for_image(True)
                     self._update_class_table()
@@ -715,58 +695,49 @@ class AnnotationModule(Module):
                     else:
                         self._current_class = None
 
-                    information(self, "Classifier successfully loaded",
-                                "Class definitions and annotations "
-                                "successfully loaded from '%s'." % result)
+                    QMessageBox.information(self, "Classifier successfully loaded",
+                                            "Class definitions and annotations "
+                                            "successfully loaded from '%s'." %dir_)
                 finally:
                     coord = self.browser.get_coordinate()
                     self._imagecontainer.set_plate(coord.plate)
 
     def _on_save_classifier(self):
-        learner = self._learner
-        path = learner.clf_dir
-        self._on_saveas_classifier(path)
+        self._on_saveas_classifier(self._lastdir)
 
     def _on_saveas_classifier(self, path=None):
-        learner = self._learner
-        if path is None:
-            path = os.path.expanduser("~")
-            result = QFileDialog.getExistingDirectory(
-                self, 'Save to classifier directory', os.path.abspath(path))
-        else:
-            result = path
 
-        if result:
-            if self._save_classifier(result):
+        if path is None:
+            path = QFileDialog.getExistingDirectory(
+                self, 'Save to classifier directory', self._lastdir)
+
+        if path:
+            path2 = os.path.join(path, ClassDefinition.Annotations)
+            if not os.path.isdir(path2):
+                os.mkdir(path2)
+
+            if self._save_classifier(path):
                 try:
-                    path2 = learner.annotations_dir
-                    filenames = os.listdir(path2)
-                    filenames = [os.path.join(path2, f) for f in filenames
-                                 if os.path.isfile(os.path.join(path2, f)) and
-                                 os.path.splitext(f)[1].lower() == '.xml']
-                    fmt = time.strftime('_backup__%Y%m%d_%H%M%S')
-                    path_backup = os.path.join(path2, fmt)
-                    makedirs(path_backup)
+                    # write/overwrite backup
+                    filenames = glob.glob(path2+"/*.xml")
                     for filename in filenames:
-                        shutil.copy2(filename, path_backup)
-                        os.remove(filename)
-                    self._annotations.export_to_xml(path2,
-                                                    learner.class_labels,
-                                                    self._imagecontainer)
-                except:
-                    exception(self, "Problems saving annotation data...")
+                        shutil.copy2(filename, filename.replace('xml', 'xml.backup'))
+
+                    self._annotations.export_to_xml(
+                        path2, self.classdef.labels, self._imagecontainer)
+                except Exception as e:
+                    QMessageBox.critical(self, "Error", str(e))
                 else:
-                    information(self, "Classifier successfully saved",
-                                "Class definitions and annotations "
-                                "successfully saved to '%s'." % result)
+                    self._lastdir = path
+                    QMessageBox.information(self, "Classifier successfully saved",
+                                            "Class definitions and annotations "
+                                            "successfully saved to '%s'." %path)
                 finally:
                     coord = self.browser.get_coordinate()
                     self._imagecontainer.set_plate(coord.plate)
 
     def _activate_objects_for_image(self, state, clear=False):
-        '''
-        activate or
-        '''
+
         if clear:
             self._object_items.clear()
         coordinate = self.browser.get_coordinate()
@@ -782,7 +753,7 @@ class AnnotationModule(Module):
         """Udate the class count for the class table"""
 
         counts = self._annotations.get_class_counts()
-        for class_name in self._learner.class_names.values():
+        for class_name in self.classdef.names.values():
             if class_name in counts:
                 items = self._find_items_in_class_table(class_name,
                                                         self.COLUMN_CLASS_NAME)
@@ -899,9 +870,8 @@ class AnnotationModule(Module):
 
     def _activate_object(self, item, point, class_name, state=True):
         if state:
-            color = \
-                QColor(*hex2rgb(self._learner.hexcolors[class_name]))
-            label = self._learner.class_labels[class_name]
+            color = QColor(*hex2rgb(self.classdef.colors[class_name]))
+            label = self.classdef.labels[class_name]
             item2 = QGraphicsSimpleTextItem(str(label), item)
             rect = item2.boundingRect()
             # center the text item at the annotated point
@@ -938,22 +908,21 @@ class AnnotationModule(Module):
             try:
                 self.browser.set_coordinate(coordinate)
             except:
-                exception(self, "Selected coordinate was not found. "
-                                "Make sure the data and annotation match and "
-                                "that the data was scanned/imported correctly.")
+                QMessageBox.critical(self, "Selected coordinate was not found. "
+                                     "Make sure the data and annotation match and "
+                                     "that the data was scanned/imported correctly.")
 
     def _on_class_changed(self, current, previous):
-        if not current is None:
+        if current is not None:
             item = self._class_table.item(current.row(),
                                           self.COLUMN_CLASS_NAME)
             class_name = str(item.text())
             self._current_class = class_name
-            hex_col = self._learner.hexcolors[class_name]
-            col = get_qcolor_hicontrast(QColor(hex_col))
+            hex_col = self.classdef.colors[class_name]
             class_table = self._class_table
             class_table.scrollToItem(item)
             self._class_text.setText(class_name)
-            class_label = self._learner.class_labels[class_name]
+            class_label = self.classdef.labels[class_name]
             self._class_sbox.setValue(class_label)
             self._class_color_btn.set_color(QColor(hex_col))
 
@@ -977,27 +946,25 @@ class AnnotationModule(Module):
             self.class_table.setCurrentItem(items[0])
 
     def _load_classifier(self, path):
-        learner = None
         try:
-            learner = BaseLearner(path, None, None)
-        except:
-            exception(self, 'Error on loading classifier')
+            file_ = os.path.join(path, ClassDefinition.Definition)
+            self.classdef = ClassDefinition(np.recfromtxt(file_, comments=None))
+
+        except Exception as e:
+            QMessageBox.critical(self, 'Error', str(e))
+            raise RuntimeError(str(e))
         else:
-            state = learner.state
-            if state['has_definition']:
-                learner.loadDefinition()
-        return learner
+            self._lastdir = path
 
     def _save_classifier(self, path):
-        learner = self._learner
-        success = True
+
         try:
-            learner.clf_dir = path
-            learner.saveDefinition()
-        except:
-            exception(self, 'Error on saving classifier')
-            success = False
-        return success
+            self.classdef.save2csv(path)
+        except Exception as e:
+            QMessageBox.critical(self, "Error on saving classifier", str(e))
+            return False
+        else:
+            return True
 
     def set_coords(self):
         if self.isVisible():

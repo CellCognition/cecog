@@ -799,7 +799,7 @@ class PositionAnalyzer(PositionCore):
 
             cellanalyzer.process()
 
-            self.logger.info(" - Frame %d, cellanalyzer.process (ms): %3d" \
+            self.logger.debug(" - Frame %d, cellanalyzer.process (ms): %3d" \
                              %(frame, stopwatch.interval()*1000))
 
             n_images += 1
@@ -819,7 +819,7 @@ class PositionAnalyzer(PositionCore):
                     images += [(img_conn, '#FFFF00', 1.0),
                                (img_split, '#00FFFF', 1.0)]
 
-            self.logger.info(" - Frame %d, Tracking (ms): %3d" \
+            self.logger.debug(" - Frame %d, Tracking (ms): %3d" \
                              %(frame, stopwatch.interval()*1000))
 
             # can't cluster on a per frame basis
@@ -827,7 +827,7 @@ class PositionAnalyzer(PositionCore):
                 for channel, clf in self.classifiers.iteritems():
                     cellanalyzer.classify_objects(clf, channel)
 
-            self.logger.info(" - Frame %d, Classification (ms): %3d" \
+            self.logger.debug(" - Frame %d, Classification (ms): %3d" \
                              % (frame, stopwatch.interval()*1000))
 
             self.settings.set_section('General')
@@ -846,9 +846,7 @@ class PositionAnalyzer(PositionCore):
                     cellanalyzer.exportLabelImages(self._labels_dir)
 
             cellanalyzer.purge(features=self.export_features)
-            self.logger.info(" - Frame %d, rest (ms): %3d" \
-                                 %(frame, stopwatch.interval()*1000))
-            self.logger.info(" - Frame %d, duration (ms): %3d" \
+            self.logger.debug(" - Frame %d, duration (ms): %3d" \
                                  %(frame, stopwatch.interim()*1000))
 
 
