@@ -238,7 +238,7 @@ class CellH5EventModule(CH5BasedModule):
         layout.setContentsMargins(*padding)
         self._cb_show_id = QCheckBox('Show Event ID', self)
         self._cb_show_id.setTristate(False)
-        self._cb_show_id.setCheckState(2)
+        self._cb_show_id.setCheckState(Qt.Unchecked)
         layout.addWidget(self._cb_show_id)
 
         self._cb_show_id.stateChanged.connect(self._cb_show_id_changed)
@@ -372,12 +372,16 @@ class CellH5EventModule(CH5BasedModule):
                 self.browser.image_viewer._scene.addItem(gallery_item)
 
                 if self._cb_segmentation.checkState():
-                    contour_item = QGraphicsPolygonItem(QPolygonF(map(lambda x: QPointF(x[0],x[1]), self.cur_pos.get_crack_contour(track[i],object_)[0])))
+                    contour_item = QGraphicsPolygonItem(
+                        QPolygonF(map(lambda x: QPointF(x[0],x[1]),
+                                      self.cur_pos.get_crack_contour(track[i],object_)[0])))
                     contour_item.setPos(x,y)
                     color = Qt.red
                     if self._cb_classification.checkState():
                         color = QColor(self.cur_pos.get_class_color(track[i]))
-                    contour_item.setPen(QPen(color))
+                    pen = QPen(color)
+                    pen.setWidth(0.0)
+                    contour_item.setPen(pen)
                     contour_item.setZValue(4)
 
                     self.browser.image_viewer._scene.addItem(contour_item)
