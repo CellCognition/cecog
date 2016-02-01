@@ -12,10 +12,10 @@ __url__ = 'www.cellcognition.org'
 
 
 MAJOR = 1
-MINOR = 6
+MINOR = 7
 RELEASE = 0
 
 organisation = "IMBA"
 appname = "CecogAnalyzer"
 version = "%s.%s.%s" %(MAJOR, MINOR, RELEASE)
-appstr = '%s-%s' %(appname, version)
+appstr = '%s-%s-sklearn' %(appname, version)
