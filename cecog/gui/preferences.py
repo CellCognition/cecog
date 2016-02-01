@@ -149,11 +149,13 @@ class AppPreferences(object):
         if target_platform is None:
             target_platform = self.target_platform
 
-
         if target_platform not in ("linux", "linux2", "darwin", "win32"):
             raise RuntimeError("Target platform not supported!")
 
         platform = sys.platform
+        if platform == target_platform:
+            return path
+
         mapping = AppPreferences().mapping
 
         path_mapped = None
