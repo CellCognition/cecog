@@ -76,5 +76,5 @@ class TrainerThread(CoreThread):
 
         if not self.is_aborted():
             self.update_status(ProgressMsg(max=-1, text="Performing Grid Search..."))
-            trainer.save()
+            classifier.save()
             self.update_status(ProgressMsg(text="Classifier training finished"))
