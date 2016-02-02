@@ -23,15 +23,15 @@ SECTION_NAME_FEATURE_EXTRACTION = 'FeatureExtraction'
 
 
 GUI_LABELS = {
-    'featurecategory_intensity': 'Basic intensity features',
-    'featurecategory_haralick': 'Haralick features',
-    'featurecategory_stat_geom': 'Statistical geometric features',
-    'featurecategory_granugrey': 'Granulometry features',
-    'featurecategory_basicshape': 'Basic shape features',
-    'featurecategory_convhull': 'Convex Hull features',
-    'featurecategory_distance': 'Distance Map features',
-    'featurecategory_moments': 'Moments',
-    'featurecategory_spotfeatures': 'Spot Features'
+    'featurecategory_intensity': ('Basic intensity features', True),
+    'featurecategory_haralick': ('Haralick features', True),
+    'featurecategory_stat_geom': ('Statistical geometric features', True),
+    'featurecategory_granugrey': ('Granulometry features', True),
+    'featurecategory_basicshape': ('Basic shape features', True),
+    'featurecategory_convhull': ('Convex Hull features', True),
+    'featurecategory_distance': ('Distance Map features', True),
+    'featurecategory_moments': ('Moments', True),
+    'featurecategory_spotfeatures': ('Spot Features', False)
 }
 
 
@@ -42,12 +42,14 @@ class SectionFeatureExtraction(SectionCore):
     OPTIONS = [
 
     ('primary_features',
-     [('primary_%s' %name, BooleanTrait(True, label=desc))
-       for name, desc in GUI_LABELS.iteritems()]
+     [('primary_%s' %name, BooleanTrait(val, label=desc))
+       for name, (desc, val) in GUI_LABELS.iteritems()]
    + [('primary_dist_haralick',
-       StringTrait('1,2,4,8', 200, label='Haralick: Distances for cooccurence')),
+       StringTrait('1,2,4,8', 200,
+                   label='Haralick: Distances for cooccurence')),
       ('primary_se_granulometry',
-       StringTrait('1,2,3,5,7', 200, label='Granulometry Sizes (Structuring Element)')),
+       StringTrait('1,2,3,5,7', 200,
+                   label='Granulometry Sizes (Structuring Element)')),
       ('primary_diameter_spotfeatures',
        IntTrait(5, 1, 30, label="Diameter")),
       ('primary_thresh_spotfeatures',
@@ -56,12 +58,14 @@ class SectionFeatureExtraction(SectionCore):
      ),
 
     ('secondary_features',
-     [('secondary_%s' %name, BooleanTrait(True, label=desc))
-       for name, desc in GUI_LABELS.iteritems()] +
+     [('secondary_%s' %name, BooleanTrait(val, label=desc))
+       for name, (desc, val) in GUI_LABELS.iteritems()] +
      [('secondary_dist_haralick',
-       StringTrait('1,2,4,8', 200, label='Haralick: Distances for cooccurence')),
+       StringTrait('1,2,4,8', 200,
+                   label='Haralick: Distances for cooccurence')),
        ('secondary_se_granulometry',
-        StringTrait('1,2,3,5,7', 200, label='Granulometry Sizes (Structuring Element)')),
+        StringTrait('1,2,3,5,7', 200,
+                    label='Granulometry Sizes (Structuring Element)')),
       ('secondary_diameter_spotfeatures',
        IntTrait(5, 1, 30, label="Diameter")),
       ('secondary_thresh_spotfeatures',
@@ -70,12 +74,14 @@ class SectionFeatureExtraction(SectionCore):
      ),
 
     ('tertiary_features',
-     [('tertiary_%s' % name, BooleanTrait(True, label=desc))
-       for name, desc in GUI_LABELS.iteritems()] +
+     [('tertiary_%s' % name, BooleanTrait(val, label=desc))
+       for name, (desc, val) in GUI_LABELS.iteritems()] +
      [('tertiary_dist_haralick',
-       StringTrait('1,2,4,8', 200, label='Haralick: Distances for cooccurence')),
+       StringTrait('1,2,4,8', 200,
+                   label='Haralick: Distances for cooccurence')),
       ('tertiary_se_granulometry',
-       StringTrait('1,2,3,5,7', 200, label='Granulometry Sizes (Structuring Element)')),
+       StringTrait('1,2,3,5,7', 200,
+                   label='Granulometry Sizes (Structuring Element)')),
       ('tertiary_diameter_spotfeatures',
        IntTrait(5, 1, 30, label="Diameter")),
       ('tertiary_thresh_spotfeatures',
