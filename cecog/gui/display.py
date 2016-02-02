@@ -14,11 +14,11 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = ['TraitDisplayMixin']
+
+__all__ = ('TraitDisplayMixin', )
 
 import os
 import types
-import functools
 
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
@@ -41,8 +41,7 @@ class TraitDisplayMixin(QtWidgets.QFrame):
 
     DISPLAY_NAME = None
 
-    def __init__(self, settings,
-                 parent=None, has_label_link=True, label_click_callback=None,
+    def __init__(self, settings, parent=None, has_label_link=True,
                  *args, **kw):
 
         super(TraitDisplayMixin, self).__init__(parent, *args, **kw)
@@ -53,7 +52,6 @@ class TraitDisplayMixin(QtWidgets.QFrame):
         self._tab_name = None
         self._input_cnt = 0
         self._has_label_link = has_label_link
-        self._label_click_callback = label_click_callback
 
     def get_name(self):
         return self.name if self.DISPLAY_NAME is None \
@@ -86,7 +84,7 @@ class TraitDisplayMixin(QtWidgets.QFrame):
         frame._input_cnt += 1
 
     def add_label(self, label, link, margin=3, isHeading=False):
-        label = self._create_label(self, label, link)
+        label = QLabel(label, self)
         label.setMargin(margin)
         if isHeading:
             frame = self._get_frame(name=self._tab_name)
@@ -111,7 +109,7 @@ class TraitDisplayMixin(QtWidgets.QFrame):
             w_input = self.add_input(trait_name)
             trait = self._get_trait(trait_name)
         else:
-            w_input = self._create_label(frame, label, link=link)
+            w_input = QLabel(label, frame)
             frame_layout.addWidget(w_input, frame._input_cnt, 0,
                                    Qt.AlignRight|Qt.AlignTop)
             trait = None
@@ -177,28 +175,6 @@ class TraitDisplayMixin(QtWidgets.QFrame):
 
         frame._input_cnt += 1
 
-    def _create_label(self, parent, label, link=None):
-        if link is None:
-            link = label
-        w_label = ClickableQLabel(parent)
-
-        if self._has_label_link and link is not False:
-            w_label.setTextFormat(Qt.AutoText)
-#             w_label.setStyleSheet(("*:hover { border:none; background: "
-#                                    "#e8ff66; text-decoration: underline;}"))
-            w_label.setText(label)
-            w_label.setLink(link)
-
-            w_label.setToolTip('Click on the label for help.')
-            if self._label_click_callback is None:
-                w_label.clicked.connect(self._on_show_help)
-#                 w_label.linkActivated.connect(self._on_show_help)
-            else:
-                w_label.clicked.connect(
-                    functools.partial(self._label_click_callback, link))
-        else:
-            w_label.setText(label)
-        return w_label
 
     def add_input(self, trait_name, parent=None, grid=None, alignment=None,
                   last=False, link=True):
@@ -211,10 +187,7 @@ class TraitDisplayMixin(QtWidgets.QFrame):
         trait = self._get_trait(trait_name)
 
         label = trait.label
-        if link:
-            w_label = self._create_label(parent, label, link=trait_name)
-        else:
-            w_label = self._create_label(parent, label, link=False)
+        w_label = QLabel(label, parent)
         w_button = None
 
         # read value from settings-instance
@@ -460,20 +433,3 @@ class TraitDisplayMixin(QtWidgets.QFrame):
                 # call final handler
                 if name in self._final_handlers:
                     self._final_handlers[name]()
-
-
-class ClickableQLabel(QLabel):
-
-    clicked = pyqtSignal(str)
-
-    def __init__(self, *args, **kw):
-        super(ClickableQLabel, self).__init__(*args, **kw)
-        self.link = None
-
-    def setLink(self, link):
-        self.link = link
-
-    def mouseReleaseEvent(self, event):
-        if self.link is not None:
-            self.clicked.emit(self.link)
-        return super(ClickableQLabel, self).mouseReleaseEvent(event)
