@@ -22,6 +22,7 @@ from cecog.gui.guitraits import IntTrait, BooleanTrait, SelectionTrait2
 
 SECTION_NAME_TRACKING = 'Tracking'
 
+
 class SectionTracking(SectionCore):
 
     SECTION_NAME = SECTION_NAME_TRACKING
