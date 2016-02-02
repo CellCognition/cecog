@@ -20,8 +20,10 @@ from cecog.traits.analyzer.section_core import SectionCore
 from cecog.gui.guitraits import IntTrait, StringTrait, BooleanTrait, \
     SelectionTrait, SelectionTrait2
 
-from cecog.analyzer import ZSLICE_PROJECTION_METHODS
+
 from cecog.util.util import unlist
+
+PROJECTION_METHODS = ('maximum', 'average')
 
 SECTION_NAME_OBJECTDETECTION = 'ObjectDetection'
 
@@ -52,8 +54,8 @@ class SectionObjectdetection(SectionCore):
             BooleanTrait(False, label='Z-slice projection',
                          widget_info=BooleanTrait.RADIOBUTTON)),
         ('primary_zslice_projection_method',
-            SelectionTrait(ZSLICE_PROJECTION_METHODS[0],
-                           ZSLICE_PROJECTION_METHODS, label='Method')),
+            SelectionTrait(PROJECTION_METHODS[0],
+                           PROJECTION_METHODS, label='Method')),
         ('primary_zslice_projection_begin',
             IntTrait(1, 0, 1000, label='Begin')),
         ('primary_zslice_projection_end',
@@ -92,8 +94,8 @@ class SectionObjectdetection(SectionCore):
             BooleanTrait(False, label='Z-slice projection',
                          widget_info=BooleanTrait.RADIOBUTTON)),
         ('%s_zslice_projection_method' % prefix,
-            SelectionTrait(ZSLICE_PROJECTION_METHODS[0],
-                           ZSLICE_PROJECTION_METHODS, label='Method')),
+            SelectionTrait(PROJECTION_METHODS[0],
+                           PROJECTION_METHODS, label='Method')),
         ('%s_zslice_projection_begin' % prefix,
             IntTrait(1, 0, 1000, label='Begin')),
         ('%s_zslice_projection_end' % prefix,

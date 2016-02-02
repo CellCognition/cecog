@@ -32,7 +32,6 @@ from cecog import CHANNEL_PREFIX
 from cecog.gui.display import TraitDisplayMixin
 from cecog.units.time import seconds2datetime
 
-from cecog.analyzer import CONTROL_1, CONTROL_2
 from cecog.plugin.metamanager import MetaPluginManager
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
 from cecog.plugin.display import PluginBay
@@ -57,7 +56,6 @@ class BaseFrame(TraitDisplayMixin):
 
     ICON = ":cecog_analyzer_icon"
     TABS = None
-    CONTROL = CONTROL_1
 
     toggle_tabs = pyqtSignal(str)
     status_message = pyqtSignal(str)
@@ -418,76 +416,54 @@ class BaseProcessorFrame(BaseFrame):
         sep = '   |   '
         info = dict([(str(k), v) for k,v in info.iteritems()])
         #print info
-        if self.CONTROL == CONTROL_1:
-            if info['stage'] == 0:
-                self.process_control.setRange(info['min'], info['max'])
-                if not info['progress'] is None:
-                    self.process_control.setProgress(info['progress'])
 
-                    msg = ''
-                    if 'meta' in info:
-                        msg += '%s' % info['meta']
-                    if 'text' in info:
-                        msg += '   %s' % info['text']
-                    if info['progress'] > info['min'] and 'interval' in info:
-                        interval = info['interval']
-                        self._intervals.append(interval)
-                        avg = numpy.average(self._intervals)
-                        estimate = seconds2datetime(avg*float(info['max']-info['progress']))
-                        msg += '%s~ %.1fs / %s%s%s remaining' % (sep,
-                                                                 avg,
-                                                                 info['item_name'],
-                                                                 sep,
-                                                                 estimate.strftime("%H:%M:%S"))
-                    else:
-                        self._intervals = []
-                    self.status_message.emit(msg)
+        if info['stage'] == 0:
+            self.process_control.setRange(info['min'], info['max'])
+            if not info['progress'] is None:
+                self.process_control.setProgress(info['progress'])
+
+                msg = ''
+                if 'meta' in info:
+                    msg += '%s' % info['meta']
+                if 'text' in info:
+                    msg += '   %s' % info['text']
+                if info['progress'] > info['min'] and 'interval' in info:
+                    interval = info['interval']
+                    self._intervals.append(interval)
+                    avg = numpy.average(self._intervals)
+                    estimate = seconds2datetime(avg*float(info['max']-info['progress']))
+                    msg += '%s~ %.1fs / %s%s%s remaining' % (sep,
+                                                             avg,
+                                                             info['item_name'],
+                                                             sep,
+                                                             estimate.strftime("%H:%M:%S"))
                 else:
-                    self.process_control.clearText()
+                    self._intervals = []
+                self.status_message.emit(msg)
             else:
-                self._stage_infos[info['stage']] = info
-                if len(self._stage_infos) > 1:
-                    total = self._stage_infos[1]['max']*self._stage_infos[2]['max']
-                    current = (self._stage_infos[1]['progress']-1)*self._stage_infos[2]['max']+self._stage_infos[2]['progress']
-                    self.process_control.setRange(0, total)
-                    self.process_control.setProgress(current)
-                    sep = '   |   '
-                    msg = '%s   %s%s%s' % (self._stage_infos[2]['meta'],
-                                           self._stage_infos[1]['text'],
-                                           sep,
-                                           self._stage_infos[2]['text'])
-                    if current > 1 and ('interval' in info.keys()):
-                        interval = info['interval']
-                        self._intervals.append(interval)
-                        estimate = seconds2datetime(
-                            numpy.average(self._intervals)*float(total-current))
-                        msg += '%s%.1fs / %s%s%s remaining' % (sep,
-                                                               interval,
-                                                               self._stage_infos[2]['item_name'],
-                                                               sep,
-                                                               estimate.strftime("%H:%M:%S"))
-                    else:
-                        self._intervals = []
-                    self.status_message.emit(msg)
-
-        elif self.CONTROL == CONTROL_2:
-
-            if info['stage'] == 1:
-                if 'progress' in info:
-                    self._analyzer_progress1.setRange(info['min'], info['max'])
-                    self._analyzer_progress1.setValue(info['progress'])
-                    self._analyzer_label1.setText('%s (%d / %d)' % (info['text'],
-                                                                    info['progress'],
-                                                                    info['max']))
+                self.process_control.clearText()
+        else:
+            self._stage_infos[info['stage']] = info
+            if len(self._stage_infos) > 1:
+                total = self._stage_infos[1]['max']*self._stage_infos[2]['max']
+                current = (self._stage_infos[1]['progress']-1)*self._stage_infos[2]['max']+self._stage_infos[2]['progress']
+                self.process_control.setRange(0, total)
+                self.process_control.setProgress(current)
+                sep = '   |   '
+                msg = '%s   %s%s%s' % (self._stage_infos[2]['meta'],
+                                       self._stage_infos[1]['text'],
+                                       sep,
+                                       self._stage_infos[2]['text'])
+                if current > 1 and ('interval' in info.keys()):
+                    interval = info['interval']
+                    self._intervals.append(interval)
+                    estimate = seconds2datetime(
+                        numpy.average(self._intervals)*float(total-current))
+                    msg += '%s%.1fs / %s%s%s remaining' % (sep,
+                                                           interval,
+                                                           self._stage_infos[2]['item_name'],
+                                                           sep,
+                                                           estimate.strftime("%H:%M:%S"))
                 else:
-                    self._analyzer_label1.setText(info['text'])
-            else:
-                if 'progress' in info:
-                    self._analyzer_progress2.setRange(info['min'], info['max'])
-                    self._analyzer_progress2.setValue(info['progress'])
-                    self._analyzer_label2.setText('%s: %s (%d / %d)' % (info['text'],
-                                                                        info['meta'],
-                                                                        info['progress'],
-                                                                        info['max']))
-                else:
-                    self._analyzer_label2.setText(info['text'])
+                    self._intervals = []
+                self.status_message.emit(msg)
