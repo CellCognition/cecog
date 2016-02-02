@@ -21,7 +21,7 @@ from os.path import join, basename, isdir
 
 from cecog.learning.annotation import Annotations
 from cecog.analyzer.position import PositionAnalyzer, PositionAnalyzerForBrowser
-from cecog.analyzer.position import PositionPicker
+from cecog.analyzer.position import PosTrainer
 from cecog.io.imagecontainer import MetaImage
 from cecog.logging import LoggerObject
 from cecog.util.util import makedirs
@@ -245,10 +245,10 @@ class AnalyzerBrowser(AnalyzerCore):
         return res
 
 
-class Picker(AnalyzerBase):
+class Trainer(AnalyzerBase):
 
     def __init__(self, plate, settings, imagecontainer, learner):
-        super(Picker, self).__init__(plate, settings, imagecontainer)
+        super(Trainer, self).__init__(plate, settings, imagecontainer)
 
         # belongs already to picker
         self.sample_reader = []
@@ -313,9 +313,9 @@ class Picker(AnalyzerBase):
                                        'text': 'P %s (%d/%d)' \
                                        %(self.plate, i+1, imax)})
 
-            picker = PositionPicker(self.plate, posid, self._out_dir,
+            postrainer = PosTrainer(self.plate, posid, self._out_dir,
                                     self.settings,
                                     frames, self.sample_reader,
                                     self.sample_positions, self.learner,
                                     self._imagecontainer, qthread)
-            result = picker()
+            result = postrainer()

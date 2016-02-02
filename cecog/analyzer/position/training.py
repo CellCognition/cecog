@@ -11,7 +11,7 @@ __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
 
-__all__ = ("PositionPicker", )
+__all__ = ("PosTrainer", )
 
 
 from cecog.io.imagecontainer import Coordinate
@@ -21,8 +21,7 @@ from cecog.util.stopwatch import StopWatch
 from .analysis import PositionCore
 
 
-
-class PositionPicker(PositionCore):
+class PosTrainer(PositionCore):
 
     def __call__(self):
         self.timeholder = TimeHolder(self.position, self._all_channel_regions,

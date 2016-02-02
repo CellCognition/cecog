@@ -34,7 +34,7 @@ from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
 from cecog.util.ctuple import CTuple
 from cecog.gui.analyzer import BaseProcessorFrame
 
-from cecog.threads.picker import PickerThread
+from cecog.threads.trainer import TrainerThread
 from cecog.threads.analyzer import AnalyzerThread
 
 
@@ -287,7 +287,7 @@ class ClassificationFrame(BaseProcessorFrame):
         super(ClassificationFrame, self).__init__(settings, parent, name)
         self._result_frames = OrderedDict()
 
-        self.register_control_button(self.Training, PickerThread,
+        self.register_control_button(self.Training, TrainerThread,
                                      ('Train classifier', 'Stop training'))
         self.register_control_button(self.Testing, AnalyzerThread,
                                      ('Test classifier', 'Stop testing'))

@@ -38,7 +38,7 @@ from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
 from cecog.plugin.display import PluginBay
 from cecog.gui.widgets.tabcontrol import TabControl
 
-from cecog.threads import PickerThread
+from cecog.threads import TrainerThread
 from cecog.threads import AnalyzerThread
 from cecog.threads import ErrorCorrectionThread
 from cecog.multiprocess.multianalyzer import MultiAnalyzerThread
@@ -314,7 +314,7 @@ class BaseProcessorFrame(BaseFrame):
 
                 imagecontainer = self.parent().main_window._imagecontainer
 
-                if cls is PickerThread:
+                if cls is TrainerThread:
                     self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
                     self._analyzer = cls(self, self._current_settings, imagecontainer)
                     self._clear_image()
