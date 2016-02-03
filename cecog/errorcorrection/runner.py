@@ -120,7 +120,6 @@ class PositionRunner(QtCore.QObject):
         with cellh5.ch5open(self.ch5file, "r", cached=True) as ch5:
             cld = ch5.class_definition(region)
             classdef = ClassDefinition(cld)
-
         return classdef
 
     def _load_data(self, mappings, channel):
@@ -136,7 +135,6 @@ class PositionRunner(QtCore.QObject):
             progress.meta = meta=("loading plate: %s, file: %s"
                                   %(self.plate, file_))
             progress.increment_progress()
-
 
             QThread.currentThread().interruption_point()
             self.parent().progressUpdate.emit(progress)

@@ -99,10 +99,12 @@ class HmmTde(HmmCore):
             if tracks is None:
                 hmmdata[name] = None
                 continue
+
             elif probs is None:
                 raise RuntimeError(("No prediction probabilities available. "
                                     "Try different hmm learing algorithm"))
 
+            tracks = self._filter_tracks(tracks)
             labelmapper = LabelMapper(np.unique(tracks),
                                       self.classdef.names.keys())
 
@@ -110,6 +112,7 @@ class HmmTde(HmmCore):
             idx = labelmapper.index_from_classdef(np.unique(tracks))
             idx.sort()
             probs = probs[:, :, idx]
+
             est = self._get_estimator(probs, labelmapper.label2index(tracks))
             est.constrain(self.hmmc(est, labelmapper))
 
