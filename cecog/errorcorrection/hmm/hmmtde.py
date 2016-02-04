@@ -104,7 +104,7 @@ class HmmTde(HmmCore):
                 raise RuntimeError(("No prediction probabilities available. "
                                     "Try different hmm learing algorithm"))
 
-            tracks = self._filter_tracks(tracks)
+            tracks, probs = self._filter_tracks(tracks, probs)
             labelmapper = LabelMapper(np.unique(tracks),
                                       self.classdef.names.keys())
 
