@@ -16,7 +16,7 @@ __all__ = ['TC3EventFilter']
 
 import warnings
 import numpy as np
-from cecog.learning import hmm
+from cecog.errorcorrection.hmm import MultinomialHMM
 
 class TC3EventFilter(object):
     """Additional Event filter for unsupervised event selection:

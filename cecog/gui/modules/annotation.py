@@ -942,13 +942,16 @@ class AnnotationModule(Module):
     def _on_shortcut_class_selected(self, class_label):
         items = self._find_items_in_class_table(str(class_label),
                                                 self.COLUMN_CLASS_LABEL)
+
         if len(items) == 1:
-            self.class_table.setCurrentItem(items[0])
+            self._class_table.setCurrentItem(items[0])
 
     def _load_classifier(self, path):
         try:
             file_ = os.path.join(path, ClassDefinition.Definition)
-            self.classdef = ClassDefinition(np.recfromtxt(file_, comments=None))
+            self.classdef = ClassDefinition(
+                np.recfromcsv(file_, delimiter="\t", comments="##"))
+
 
         except Exception as e:
             QMessageBox.critical(self, 'Error', str(e))

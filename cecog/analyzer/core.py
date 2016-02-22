@@ -19,7 +19,7 @@ import re
 import glob
 from os.path import join, basename, isdir
 
-from cecog.learning.annotation import Annotations
+from cecog.classifier import AnnotationsFile
 from cecog.analyzer.position import PositionAnalyzer, PositionAnalyzerForBrowser
 from cecog.analyzer.position import PosTrainer
 from cecog.io.imagecontainer import MetaImage
@@ -274,7 +274,7 @@ class Trainer(AnalyzerBase):
             if (result.group("plate") != self.plate):
                 continue
             elif self.is_valid_annofile(result):
-                reader = Annotations(result, annofile, frames_total)
+                reader = AnnotationsFile(result, annofile, frames_total)
                 self.sample_reader.append(reader)
 
                 position = result.group('position')

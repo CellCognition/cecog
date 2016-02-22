@@ -431,29 +431,13 @@ class Browser(QMainWindow):
         settings.set2('merged_classification', _classify_objects)
         settings.set2('primary_featureextraction', _classify_objects)
         settings.set2('secondary_featureextraction', _classify_objects)
-
         settings.set2('objectdetection', self._detect_objects)
         settings.set2('tracking', False)
-        settings.set_section('Output')
-        settings.set2('rendering_contours_discwrite', False)
-        settings.set2('rendering_class_discwrite', False)
-        settings.set2('export_object_counts', False)
-        settings.set2('export_object_details', False)
-        settings.set2('export_track_data', False)
-        settings.set2('hdf5_create_file', False)
-        settings.set_section('Classification')
-        settings.set2('collectsamples', False)
+
+        settings.set('Output', 'hdf5_create_file', False)
+#        settings.set('General', 'collectsamples', False)
         settings.set('General', 'rendering', {})
         settings.set('General', 'rendering_class', {})
-        settings.set('Output', 'events_export_gallery_images', False)
-
-        # turn of output:
-        settings.set('Output', 'export_object_counts', False)
-        settings.set('Output', 'export_object_details', False)
-        settings.set('Output', 'export_file_names', False)
-        settings.set('Output', 'events_export_gallery_images', False)
-        settings.set('Output', 'export_track_data', False)
-        settings.set('Output', 'export_tracking_as_dot', False)
 
         nchannels = len(self._imagecontainer.channels)
         # XXX channel mapping unclear
