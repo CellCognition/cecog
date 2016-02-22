@@ -552,9 +552,10 @@ class AnnotationModule(Module):
                 self._activate_objects_for_image(False)
                 self._activate_objects_for_image(True)
             else:
-                QMessageBox.warning(self, "Class names and labels must be unique!",
-                                    "Class name '%s' or label '%s' already used."
-                                    %(class_name_new, class_label_new))
+                QMessageBox.warning(
+                    self, "Class names and labels must be unique!",
+                    "Class name '%s' or label '%s' already used."
+                    %(class_name_new, class_label_new))
 
     def _on_class_add(self):
         """Add a new class to definition"""
@@ -570,7 +571,8 @@ class AnnotationModule(Module):
             self._current_class = class_name_new
 
             class_color = self._class_color_btn.current_color
-            self.classdef.addClass(class_name_new, class_label_new, class_color.name())
+            self.classdef.addClass(
+                class_name_new, class_label_new, class_color.name())
 
             row = self._class_table.rowCount()
             self._class_table.insertRow(row)
@@ -695,9 +697,10 @@ class AnnotationModule(Module):
                     else:
                         self._current_class = None
 
-                    QMessageBox.information(self, "Classifier successfully loaded",
-                                            "Class definitions and annotations "
-                                            "successfully loaded from '%s'." %dir_)
+                    QMessageBox.information(
+                        self, "Classifier successfully loaded",
+                        "Class definitions and annotations "
+                        "successfully loaded from '%s'." %dir_)
                 finally:
                     coord = self.browser.get_coordinate()
                     self._imagecontainer.set_plate(coord.plate)
@@ -908,9 +911,10 @@ class AnnotationModule(Module):
             try:
                 self.browser.set_coordinate(coordinate)
             except:
-                QMessageBox.critical(self, "Selected coordinate was not found. "
-                                     "Make sure the data and annotation match and "
-                                     "that the data was scanned/imported correctly.")
+                QMessageBox.critical(
+                    self, "Selected coordinate was not found. "
+                    "Make sure the data and annotation match and "
+                    "that the data was scanned/imported correctly.")
 
     def _on_class_changed(self, current, previous):
         if current is not None:
