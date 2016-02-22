@@ -21,6 +21,7 @@ from matplotlib.colors import rgb2hex
 from matplotlib.colors import ListedColormap
 
 from cecog.colors import unsupervised_cmap
+from .gmm import GaussianMixtureModel
 
 
 class ClassDefinitionCore(object):

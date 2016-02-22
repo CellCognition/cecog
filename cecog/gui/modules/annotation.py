@@ -462,8 +462,10 @@ class AnnotationModule(Module):
 
     def _on_import_ontology_name(self):
         if not hasattr(self, "ontology_browser_diag"):
-            self.ontology_browser_diag = CecogOntologyBrowserDialog(parent=self.browser)
-            self.ontology_browser_diag.tw.trigger_add.connect(self._class_text.setText)
+            self.ontology_browser_diag = CecogOntologyBrowserDialog(
+                parent=self.browser)
+            self.ontology_browser_diag.tw.trigger_add.connect(
+                self._class_text.setText)
 
         self.ontology_browser_diag.show()
 
