@@ -109,17 +109,7 @@ class ObjectDetectionFrame(BaseProcessorFrame):
 
         settings.set_section('General')
         settings.set2('rendering_class', {})
-
-        settings.set('Output', 'events_export_gallery_images', False)
         settings.set('Output', 'hdf5_create_file', False)
-        settings.set('Output', 'export_object_counts', False)
-        settings.set('Output', 'export_file_names', False)
-        settings.set('Output', 'export_object_details', False)
-        settings.set('Output', 'export_tracking_as_dot', False)
-        settings.set('Output', 'export_track_data', False)
-
-        show_ids = settings.get('Output', 'rendering_contours_showids')
-
 
         current_tab = self._tab.current_index
         # turn of merged channel
@@ -141,7 +131,7 @@ class ObjectDetectionFrame(BaseProcessorFrame):
         colors = region_info.colors
         rdn = dict([('%s_contours_%s' % (prefix, x),
                      {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
-                                            'contours': [(x, colors[x] , 1, show_ids)]
+                                            'contours': [(x, colors[x] , 1, False)]
                                             }
                       }
                      ) for x in region_info.names[prefix]])

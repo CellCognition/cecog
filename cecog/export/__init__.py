@@ -11,5 +11,4 @@ __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
 
-from exporter import *
 from tc3exporter import *

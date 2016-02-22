@@ -453,6 +453,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
                 self.statusBar().showMessage('Settings successfully loaded.')
 
     def _write_settings(self, filename):
+
         try:
             f = file(filename, 'w')
             # create a new version (copy) of the current
@@ -464,7 +465,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         except Exception as e:
             msg = "Could not save settings\n%s" %str(e)
             QMessageBox.critical(self, "Error", msg)
-            self.statusBar().showMessage('Settings not successfully saved.')
+            self.statusBar().showMessage(msg)
         else:
             self._settings_filename = filename
             self.setWindowTitle('%s - %s[*]' % (self.appname, filename))
@@ -753,7 +754,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
             dir_ = os.path.dirname(self._settings_filename)
         else:
             dir_ = os.path.dirname(self.environ.demo_settings)
-             
+
         if self._check_settings_saved() != QMessageBox.Cancel:
             if self._settings_filename is not None:
                 settings_filename = self.environ.demo_settings

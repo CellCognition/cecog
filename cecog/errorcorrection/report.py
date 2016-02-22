@@ -22,8 +22,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import vigra
 from cellh5 import CH5Const
 from cecog import plots
-from cecog.colors import hex2rgb
-from cecog.gallery.images import grey2rgb
+from cecog.colors import hex2rgb, grey2rgb
 
 
 class HmmBucket(object):

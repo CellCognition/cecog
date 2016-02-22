@@ -334,9 +334,8 @@ class ClassificationFrame(BaseProcessorFrame):
         settings.set('Classification', 'collectsamples', False)
         settings.set('General', 'rendering', {})
         settings.set('General', 'rendering_class', {})
-        settings.set('Output', 'events_export_gallery_images', False)
         settings.set('Output', 'hdf5_create_file', False)
-        settings.set('Output', 'rendering_channel_gallery', False)
+
 
         current_tab = self._tab.current_index
         if current_tab == 0:
@@ -409,7 +408,6 @@ class ClassificationFrame(BaseProcessorFrame):
 
     def _class_rendering_params(self, prefix, settings):
         """Setup rendering prameters for images to show classified objects"""
-        showids = settings.get('Output', 'rendering_class_showids')
 
         if prefix in CH_VIRTUAL:
             region = []
@@ -425,7 +423,7 @@ class ClassificationFrame(BaseProcessorFrame):
         rpar = {prefix.title():
                     {'raw': ('#FFFFFF', 1.0),
                      'contours': [(region, 'class_label', 1, False),
-                                  (region, '#000000', 1, showids)]}}
+                                  (region, '#000000', 1, False)]}}
         cl_rendering = {'%s_classification_%s' %(prefix, str(region)): rpar}
         return cl_rendering
 

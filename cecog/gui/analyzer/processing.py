@@ -41,9 +41,6 @@ class ExportSettings(object):
         settings.set('General', 'rendering', {})
         settings.set('General', 'rendering_class', {})
 
-        show_ids = settings.get('Output', 'rendering_contours_showids')
-        show_ids_class = settings.get('Output', 'rendering_class_showids')
-
         # set properties of merged channel to the same as for Primary
         for prefix in CH_PRIMARY+CH_OTHER:
             if prefix == CH_PRIMARY[0] \
@@ -53,7 +50,7 @@ class ExportSettings(object):
                 for x in self.plugin_mgr.region_info.names[prefix]:
                     d = {'%s_contours_%s' % (prefix, x):
                              {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
-                                                    'contours': [(x, self.plugin_mgr.region_info.colors[x], 1, show_ids)]
+                                                    'contours': [(x, self.plugin_mgr.region_info.colors[x], 1, False)]
                                                     }
                               }
                          }
@@ -69,7 +66,7 @@ class ExportSettings(object):
                         d = {'%s_classification_%s' % (prefix, x):
                                  {prefix.capitalize(): {'raw': ('#FFFFFF', 1.0),
                                                         'contours': [(x, 'class_label', 1, False),
-                                                                     (x, '#000000' , 1, show_ids_class)]
+                                                                     (x, '#000000' , 1, False)]
                                                         }
                                   }
                              }
@@ -93,22 +90,15 @@ class ExportSettings(object):
             regions = self._merged_regions(settings)
             d = {'merged_contours_%s' %str(regions):
                      {"Merged": {'raw': ('#FFFFFF', 1.0),
-                                 'contours': [(regions, default_color, 1, show_ids)]}}}
+                                 'contours': [(regions, default_color, 1, False)]}}}
             settings.get("General", "rendering").update(d)
             if settings.get('Processing', 'merged_classification'):
                 d = {'merged_classification_%s' %str(regions):
                          {"Merged": {'raw': ('#FFFFFF', 1.0),
                                      'contours': [(regions, 'class_label', 1, False),
-                                                  (regions, '#000000' , 1, show_ids_class)]}}}
+                                                  (regions, '#000000' , 1, False)]}}}
                 settings.get("General", "rendering_class").update(d)
 
-        if has_timelapse:
-            # generate raw images of selected channels (later used for gallery images)
-            if settings.get('Output', 'events_export_gallery_images'):
-                for prefix in CHANNEL_PREFIX:
-                    if prefix == 'primary' or settings.get('General', 'process_%s' % prefix):
-                        settings.get('General', 'rendering').update({prefix : {prefix.capitalize() :
-                                                                                   {'raw': ('#FFFFFF', 1.0)}}})
         return settings
 
     def _merged_regions(self, settings):
@@ -136,9 +126,6 @@ class ExportSettings(object):
             # disable some tracking related settings in case no time-lapse data is present
             settings.set('Processing', 'tracking', False)
             settings.set('Processing', 'eventselection', False)
-            settings.set('Output', 'events_export_gallery_images', False)
-            settings.set('Output', 'events_export_all_features', False)
-            settings.set('Output', 'export_track_data', False)
 
         return settings
 

@@ -83,7 +83,6 @@ class EventSelectionFrame(BaseProcessorFrame):
 
         settings.set('Classification', 'collectsamples', False)
         settings.set('Output', 'hdf5_create_file', False)
-        settings.set('Output', 'events_export_gallery_images', False)
 
         # only primary channel for event selection
         settings.set('Processing', 'secondary_featureextraction', False)
@@ -95,18 +94,15 @@ class EventSelectionFrame(BaseProcessorFrame):
         settings.set('Processing', 'merged_classification', False)
         settings.set('General', 'process_merged', False)
 
-        show_ids = settings.get('Output', 'rendering_contours_showids')
-        show_ids_class = settings.get('Output', 'rendering_class_showids')
-
         render_contours = {PrimaryChannel.NAME:
                            {'raw': ('#FFFFFF', 1.0),
-                            'contours': {'primary': ('#FF0000', 1, show_ids)}}}
+                            'contours': {'primary': ('#FF0000', 1, False)}}}
 
         render_class = {PrimaryChannel.NAME:
                             {'raw': ('#FFFFFF', 1.0),
                              'contours': [('primary', 'class_label', 1, False),
                                           ('primary', '#000000', 1,
-                                           show_ids_class)]}}
+                                           False)]}}
 
         # setting up primary channel and live rendering
         if settings.get('EventSelection', 'unsupervised_event_selection'):

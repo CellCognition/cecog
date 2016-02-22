@@ -68,13 +68,11 @@ class TrackingFrame(BaseProcessorFrame):
         settings.set('Processing', 'tertiary_classification', False)
         settings.set('General', 'process_merged', False)
         settings.set('Processing', 'merged_classification', False)
-        settings.set('Output', 'events_export_gallery_images', False)
 
         region_name = settings.get('Tracking', 'region')
-        show_ids = settings.get('Output', 'rendering_contours_showids')
         pct = {'primary_contours':
-                   {CH_PRIMARY[0].title(): {'raw': ('#FFFFFF', 1.0),
-                                         'contours': {region_name: ('#FF0000', 1, show_ids)}}}}
+               {CH_PRIMARY[0].title(): {'raw': ('#FFFFFF', 1.0),
+                                        'contours': {region_name: ('#FF0000', 1, False)}}}}
 
         settings.set('General', 'rendering', pct)
         return settings

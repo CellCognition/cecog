@@ -30,6 +30,13 @@ def unsupervised_cmap(n):
 DCMAP = unsupervised_cmap(10)
 BINARY_CMAP = ListedColormap(["#DEDEDE","#FA1D2F"], name='binary_cmap')
 
+def grey2rgb(image, color="#FFFFFF"):
+    if is_color_like(color):
+        color = hex2color(color)
+    # be aware that color contains floats ranging from 0 to 1
+    return np.dstack((image, image, image))*np.array(color)
+
+
 def rgb2hex(color, mpl=True):
     """Converts an rgb-tuple into the corresponding hexcolor. if mpl is True,
     the rgb-tuple has to follow the matplotlib convention i.e. values must
