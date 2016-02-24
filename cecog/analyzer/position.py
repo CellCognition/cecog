@@ -481,8 +481,7 @@ class PositionAnalyzer(PositionCore):
             transitions = np.array(((0, 1), ))
         else:
             try:
-                transitions = np.array(eval(self.settings.get('EventSelection', 'labeltransitions')))
-                transitions.reshape((-1, 2))
+                transitions = np.array(eval(self.settings.get('EventSelection', 'labeltransitions'))).reshape((-1, 2))
             except Exception as e:
                 raise RuntimeError(("Make sure that transitions are of the form "
                                     "'int, int' or '(int, int), (int, int)' i.e "
