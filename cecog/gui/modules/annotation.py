@@ -969,7 +969,7 @@ class AnnotationModule(Module):
         items = self._find_items_in_class_table(str(class_label),
                                                 self.COLUMN_CLASS_LABEL)
         if len(items) == 1:
-            self.class_table.setCurrentItem(items[0])
+            self._class_table.setCurrentItem(items[0])
 
     def _load_classifier(self, path):
         learner = None

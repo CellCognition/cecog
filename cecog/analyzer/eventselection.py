@@ -451,7 +451,7 @@ class UnsupervisedEventSelection(EventSelectionCore):
             msg = ("Not enough objects in data set to proceed",
                    "Number of object is smaller than the number of features",
                    "(%d <= %d)" %tuple(data.shape))
-            raise EventSelectionError(msg)
+            raise RuntimeError(msg)
 
         # delete columns with zeros
         ind = np.where(data==0)[1]
