@@ -128,8 +128,6 @@ Section "CecogAnalyzer" SecDummy
   SetShellVarContext all
   RMDir /r "$%APPDATA%\CellCognition${mver}"
 
-  File /r /x battery_package /x cmdtool.exe dist\*.*
-
   ;Store installation folder
   WriteRegStr HKCU "Software\CecogAnalyzer-${mver}" "" $INSTDIR
 
@@ -149,11 +147,6 @@ Section "CecogAnalyzer" SecDummy
 
   !insertmacro MUI_STARTMENU_WRITE_END
 
-SectionEnd
-
-Section /o "cmdtool" SecBatch
-  SetOutPath "$INSTDIR"
-  FILE dist\cmdtool.exe
 SectionEnd
 
 Section /o "Battery package" SecDemo
