@@ -72,11 +72,10 @@ class SupportVectorClassifier(object):
             self.annotations_dir = join(file_, "annotations")
             self._file = join(file_, basename(file_)+'.hdf')
             file_ = join(file_, ClassDefinition.Definition)
-
-            self.classdef = ClassDefinition(
-                np.recfromcsv(file_, delimiter="\t", comments="##"))
+            self.classdef = ClassDefinition(np.recfromtxt(file_, comments=None))
 
     def _from_hdf(self, file_, mode, load):
+
         self._h5f = h5py.File(file_, mode)
         if self.name is None:
             self.name = basename(splitext(file_)[0])

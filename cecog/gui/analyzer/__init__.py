@@ -286,10 +286,16 @@ class BaseProcessorFrame(BaseFrame):
                     QMessageBox.critical(self, "Error", "Please train the classifier first")
 
             if cls is MultiAnalyzerThread:
-                ncpu = cpu_count()
-                (ncpu, ok) = QInputDialog.getInt(None, "On your machine are %d processers available." % ncpu, \
-                                             "Select the number of processors", \
-                                              ncpu, 1, ncpu*2)
+
+                if self._settings("General", "constrain_positions"):
+                    count = self._settings("General", "positions").count(",") +1
+                    ncpu = min(cpu_count(), count)
+                else:
+                    ncpu = cpu_count()
+
+                (ncpu, ok) = QInputDialog.getInt(self,
+                    "On your machine are %d processers available." % ncpu, \
+                                                 "Selct the number of processors", ncpu, 1, ncpu*2)
                 if not ok:
                     self._process_items = None
                     is_valid = False
@@ -313,28 +319,38 @@ class BaseProcessorFrame(BaseFrame):
                 imagecontainer = self.parent().main_window._imagecontainer
 
                 if cls is TrainerThread:
-                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
-                    self._analyzer = cls(self, self._current_settings, imagecontainer)
+                    self._current_settings = self._get_modified_settings(
+                        name, imagecontainer.has_timelapse)
+                    self._analyzer = cls(
+                        self, self._current_settings, imagecontainer)
                     self._clear_image()
 
                 elif cls is AnalyzerThread:
-                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
-                    self._analyzer = cls(self, self._current_settings, imagecontainer)
+                    self._current_settings = self._get_modified_settings(
+                        name, imagecontainer.has_timelapse)
+                    self._analyzer = cls(
+                        self, self._current_settings, imagecontainer)
                     self._clear_image()
 
                 elif cls is MultiAnalyzerThread:
-                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
-                    self._analyzer = cls(self, self._current_settings, imagecontainer, ncpu)
+                    self._current_settings = self._get_modified_settings(
+                        name, imagecontainer.has_timelapse)
+                    self._analyzer = cls(
+                        self, self._current_settings, imagecontainer, ncpu)
 
 
                 elif cls is ErrorCorrectionThread:
-                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
-                    self._analyzer = cls(self, self._current_settings,
-                                         self.parent().main_window._imagecontainer)
+                    self._current_settings = self._get_modified_settings(
+                        name, imagecontainer.has_timelapse)
+                    self._analyzer = cls(
+                        self, self._current_settings,
+                        self.parent().main_window._imagecontainer)
 
                 self._analyzer.finished.connect(self._on_process_finished)
-                self._analyzer.stage_info.connect(self._on_update_stage_info, Qt.QueuedConnection)
-                self._analyzer.analyzer_error.connect(self._on_error, Qt.QueuedConnection)
+                self._analyzer.stage_info.connect(
+                    self._on_update_stage_info, Qt.QueuedConnection)
+                self._analyzer.analyzer_error.connect(
+                    self._on_error, Qt.QueuedConnection)
                 self._analyzer.image_ready.connect(self._on_update_image)
 
                 self._analyzer.start(QThread.LowestPriority)
@@ -413,9 +429,8 @@ class BaseProcessorFrame(BaseFrame):
             self._analyzer.image_ready.disconnect(self._on_update_image)
 
     def _on_update_stage_info(self, info):
-        sep = '   |   '
-        info = dict([(str(k), v) for k,v in info.iteritems()])
-        #print info
+        sep = ' | '
+        info = dict([(str(k), v) for k, v in info.iteritems()])
 
         if info['stage'] == 0:
             self.process_control.setRange(info['min'], info['max'])

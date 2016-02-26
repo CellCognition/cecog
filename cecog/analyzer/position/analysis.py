@@ -37,7 +37,6 @@ from cecog.analyzer.channel import TertiaryChannel
 from cecog.analyzer.channel import MergedChannel
 
 from cecog.classifier import SupportVectorClassifier
-from cecog.traits.analyzer.featureextraction import SECTION_NAME_FEATURE_EXTRACTION
 
 
 from cecog.export import TC3Exporter
@@ -168,7 +167,7 @@ class PositionCore(LoggerObject):
         fgroups = defaultdict(dict)
 
         for group, features in FEATURE_MAP.iteritems():
-            if self.settings.get(SECTION_NAME_FEATURE_EXTRACTION,
+            if self.settings.get('FeatureExtraction',
                                  self._resolve_name(ch_name, group)):
 
                 for feature, params in features.iteritems():
@@ -557,6 +556,9 @@ class PositionAnalyzer(PositionCore):
         self.settings.set_section('Tracking')
         self.setup_classifiers()
 
+        # print 100*"#"
+        # print self.classifiers
+
         # setup tracker
         if self.settings('Processing', 'tracking'):
             tropts = (self.settings('Tracking', 'tracking_maxobjectdistance'),
@@ -686,6 +688,7 @@ class PositionAnalyzer(PositionCore):
             images = []
 
             if self.settings('Processing', 'tracking'):
+                #print "tracking"
                 region = self.settings('Tracking', 'region')
                 samples = self.timeholder[frame][PrimaryChannel.NAME].get_region(region)
                 self._tracker.track_next_frame(frame, samples)
@@ -704,6 +707,7 @@ class PositionAnalyzer(PositionCore):
 
             # can't cluster on a per frame basis
             if self.settings("EventSelection", "supervised_event_selection"):
+                #print "classifier", self.classifiers
                 for channel, clf in self.classifiers.iteritems():
                     cellanalyzer.classify_objects(clf, channel)
 

@@ -116,22 +116,13 @@ class CellAnalyzer(LoggerObject):
                 self.timeholder.apply_channel(channel)
 
     def purge(self, features=None):
+
         for channel in self._channel_registry.values():
             if not features is None and channel.strChannelId in features:
                 channelFeatures = features[channel.strChannelId]
             else:
                 channelFeatures = None
             channel.purge(features=channelFeatures)
-
-    def exportLabelImages(self, pathOut, compression='LZW'):
-        # no segmentaion in virtual channels --> no label images
-        for channel in self.proc_channels.itervalues():
-            channel_id = channel.strChannelId
-            for region, container in channel.containers.iteritems():
-                outdir = join(pathOut, channel_id, region)
-                makedirs(outdir)
-                fname = join(outdir, 'P%s_T%05d.tif' %(self.P, self._iT))
-                container.exportLabelImage(fname, compression)
 
     def getImageSize(self, name):
         oChannel = self._channel_registry[name]
@@ -359,7 +350,8 @@ class CellAnalyzer(LoggerObject):
                 msg = ('Feature set containes NaN and is skipped therefore')
                 self.logger.warning(msg)
             else:
-                label, probs = predictor.predict(obj.aFeatures)#, holder.feature_names)
+                label, probs = predictor.predict(obj.aFeatures)
+                #, holder.feature_names)
                 obj.iLabel = label[0]
                 obj.dctProb = probs[0]
                 obj.strClassName = predictor.class_names[label[0]]
