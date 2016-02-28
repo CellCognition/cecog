@@ -198,7 +198,8 @@ class HmmSklearn(HmmCore):
                                       self.classdef.names.keys())
 
             # np.unique -> sorted ndarray
-            tracks = self._filter_tracks(tracks)
+            tracks, probs = self._filter_tracks(tracks, probs)
+
             idx = labelmapper.index_from_classdef(np.unique(tracks))
             idx.sort()
             # no prediction probabilities available
