@@ -68,12 +68,14 @@ from cecog.gui.progressdialog import ProgressObject
 from cecog.gui.helpbrowser import AtAssistant
 from cecog.css import loadStyle
 
+
 def fix_path(path):
     "Windows sucks!"
     if sys.platform.startswith("win"):
         return path.strip("/")
     else:
         return path
+
 
 class FrameStack(QtWidgets.QStackedWidget):
 
@@ -107,6 +109,7 @@ class FrameStack(QtWidgets.QStackedWidget):
 
     def close(self):
         self.assistant.close()
+
 
 class CecogAnalyzer(QtWidgets.QMainWindow):
 
@@ -158,20 +161,20 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
                                      None, action_quit))
 
         action_log = self.create_action('&Log window',
-                                        shortcut=QtGui.QKeySequence(Qt.CTRL+Qt.Key_L),
-                                        slot=self._on_show_log_window)
+            shortcut=QtGui.QKeySequence(Qt.CTRL+Qt.Key_L),
+            slot=self._on_show_log_window)
 
         action_open = self.create_action('&Browser',
-                                         shortcut=QtGui.QKeySequence('CTRL+B'),
-                                         slot=self._on_browser_open)
+            shortcut=QtGui.QKeySequence('CTRL+B'),
+            slot=self._on_browser_open)
 
         menu_view = self.menuBar().addMenu('&View')
         self.add_actions(menu_view, (action_log,))
         self.add_actions(menu_view, (action_open,))
 
         action_assistant = self.create_action('&Help',
-                                              shortcut=QtGui.QKeySequence.HelpContents,
-                                              slot=self.show_assistant)
+            shortcut=QtGui.QKeySequence.HelpContents,
+            slot=self.show_assistant)
         action_about = self.create_action('&About', slot=self.on_about)
         action_aboutQt = self.create_action('&About Qt', slot=self.about_qt)
 
