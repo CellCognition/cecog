@@ -16,7 +16,7 @@ __url__ = 'www.cellcognition.org'
 __all__ = ["EventSelection", "UnsupervisedEventSelection"]
 
 import numpy as np
-from scipy import stats
+from scipy.stats import zscore
 from matplotlib import mlab
 from sklearn.cluster import KMeans
 from collections import defaultdict
@@ -460,7 +460,7 @@ class UnsupervisedEventSelection(EventSelectionCore):
         # remove columns with nans
         data, nodes = self._filter_nans(data, nodes)
 
-        data_zs = stats.zscore(data)
+        data_zs = zscore(data)
         # sss.zscore(self.remove_constant_columns(data))
         pca = mlab.PCA(data_zs)
         # XXX take the minimum to make it more readable
