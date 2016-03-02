@@ -76,6 +76,7 @@ DLL_EXCLUDES = [ 'libgdk-win32-2.0-0.dll',
                  'API-MS-Win-Core-ProcessThreads-L1-1-0.dll',
                  'API-MS-Win-Core-ProcessEnvironment-L1-1-0.dll',
                  'API-MS-Win-Core-LocalRegistry-L1-1-0.dll',
+                 'MSVCP90.dll',
                  'w9xpopen.exe'] # is not excluded for some reasion
 
 py2exe_opts = {'includes': build_helpers.INCLUDES,
