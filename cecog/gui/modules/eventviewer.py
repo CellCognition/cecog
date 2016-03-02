@@ -18,7 +18,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from PyQt5.Qt import *
 
-from cecog.gui.util import exception
+from cecog.gui.util import exception, warning
 from cecog.gui.imageviewer import QGraphicsPixmapHoverItem
 from cecog.gui.modules.module import CH5BasedModule
 
@@ -72,7 +72,10 @@ class CellH5EventModule(CH5BasedModule):
         except Exception as e:
             exception(self, "An error has occured ('%s)'"% str(e))
             return
-
+        
+        if len(events) == 0:
+            warning(self, "No event data found...")
+            return
 
         self.event_table.setRowCount(0)
 
