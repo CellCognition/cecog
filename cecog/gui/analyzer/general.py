@@ -33,6 +33,8 @@ class GeneralFrame(BaseFrame):
         self.add_input('pathin')
         self.add_input('has_multiple_plates')
         self.add_input('pathout')
+        self.add_input('plate_layout')
+        self.add_line()
         self.add_input('namingscheme')
         self.add_group(None,
                        [('structure_file_pathin', (0,0,1,1)),
@@ -48,7 +50,7 @@ class GeneralFrame(BaseFrame):
                               ('process_secondary', (0, 1, 1, 1)),
                               ('process_tertiary', (0, 2, 1, 1)),
                               ('process_merged', (0, 3, 1, 1))],
-                       link="channels", label='Channels')
+                       link="channels", label='Color Channels')
 
         self.add_group('constrain_positions', [('positions',)])
         self.add_input('redofailedonly')

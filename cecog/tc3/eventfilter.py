@@ -19,6 +19,7 @@ import numpy as np
 
 from cecog.errorcorrection.hmm import MultinomialHMM
 
+
 class TC3EventFilter(object):
     """Additional Event filter for unsupervised event selection:
 

@@ -32,7 +32,6 @@ from cecog.gui.guitraits import (StringTrait,
                                  BooleanTrait,
                                  SelectionTrait,
                                  SelectionTrait2,
-                                 MultiSelectionTrait,
                                  DictTrait,
                                  ListTrait
                                  )
@@ -196,7 +195,8 @@ class TraitDisplayMixin(QtWidgets.QFrame):
 
         if isinstance(trait, StringTrait):
             w_input = QLineEdit(parent)
-            w_input.setMaxLength(trait.max_length)
+            if trait.max_length is not None:
+                w_input.setMaxLength(trait.max_length)
             w_input.setSizePolicy(policy_expanding)
             w_input.setToolTip(value)
             w_input.setAcceptDrops(True)
@@ -255,18 +255,6 @@ class TraitDisplayMixin(QtWidgets.QFrame):
             handler = lambda n: lambda v: self._set_value(n, trait.convert(v))
             w_input.setSizePolicy(policy_fixed)
             w_input.toggled.connect(handler(trait_name))
-
-        elif isinstance(trait, MultiSelectionTrait):
-            w_input = QListWidget(parent)
-            w_input.setMaximumHeight(100)
-            w_input.setSelectionMode(QListWidget.ExtendedSelection)
-            w_input.setSizePolicy(policy_fixed)
-
-            for item in trait.list_data:
-                w_input.addItem(str(item))
-            trait.set_value(w_input, value)
-            handler = lambda n: lambda: self._on_selection_changed(n)
-            w_input.itemSelectionChanged.connect(handler(trait_name))
 
         elif isinstance(trait, SelectionTrait):
             w_input = QComboBox(parent)

@@ -82,7 +82,7 @@ class FloatTrait(traits.FloatTrait, GuiNumberTrait):
 
 class StringTrait(traits.StringTrait, GuiTrait):
 
-    def __init__(self, default_value, max_length, mask=None,
+    def __init__(self, default_value, max_length=None, mask=None,
                  label=None, tooltip=None, doc=None, widget_info=None):
         traits.StringTrait.__init__(self, default_value, max_length, mask=mask)
         GuiTrait.__init__(self, label, tooltip=tooltip, doc=doc)
@@ -137,7 +137,8 @@ class SelectionTrait(traits.SelectionTrait, GuiTrait):
 
 class SelectionTrait2(traits.SelectionTrait2, GuiTrait):
 
-    def __init__(self, default_value, list_data, label=None, tooltip=None, doc=None, update_callback=None):
+    def __init__(self, default_value, list_data, label=None, tooltip=None,
+                 doc=None, update_callback=None):
         traits.SelectionTrait2.__init__(self, default_value, list_data)
         GuiTrait.__init__(self, label, tooltip=tooltip, doc=doc)
         self._update_callback = update_callback
@@ -190,16 +191,6 @@ class SelectionTrait2(traits.SelectionTrait2, GuiTrait):
         if not self._update_callback is None:
             self._update_callback(value, self._previous_value)
             self._previous_value = value
-
-
-class MultiSelectionTrait(traits.MultiSelectionTrait, GuiTrait):
-
-    def __init__(self, default_value, list_data, label=None, tooltip=None, doc=None):
-        traits.MultiSelectionTrait.__init__(self, default_value, list_data)
-        GuiTrait.__init__(self, label, tooltip=tooltip, doc=doc)
-
-    def set_value(self, widget, value):
-        widget.clearSelection()
 
 
 class DictTrait(traits.DictTrait, GuiTrait):

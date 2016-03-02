@@ -68,7 +68,7 @@ class StringTrait(Trait):
     STRING_GRAYED = 3
 
 
-    def __init__(self, default_value, max_length, mask=None):
+    def __init__(self, default_value, max_length=None, mask=None):
         super(StringTrait, self).__init__(default_value)
         self.max_length = max_length
         self.mask = mask
@@ -134,18 +134,6 @@ class SelectionTrait2(SelectionTrait):
 
     def set_list_data(self, list_data):
         self.list_data = list_data
-
-
-class MultiSelectionTrait(SelectionTrait):
-
-    def convert(self, value):
-        if type(value) == self.DATATYPE:
-            return value
-        else:
-            value = eval(value)
-            if not type(value) in [types.ListType, types.DictType]:
-                value = [value]
-            return value
 
 
 class DictTrait(ListTrait):
