@@ -1,7 +1,5 @@
 """
-gmm.py
-
-
+unsupervised.py
 """
 
 __author__ = 'rudolf.hoefler@gmail.com'
@@ -13,12 +11,29 @@ __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
 
-__all__ = ('GaussianMixtureModel')
+__all__ = ("GMM", )
 
 
-class GaussianMixtureModel(object):
-    """Dummy class for hdf5 export."""
+from .classdefinition import ClassDefinitionUnsup
 
-    # need only these two class attributes
-    NAME = "sklearn.mixture.GMM"
-    METHOD = "Gaussian Mixture Model"
+
+class GMM(object):
+
+    SaveProbs = False
+    Library = "sklearn.mixture.GMM"
+    Method = "Gaussian Mixture Model"
+
+    # just a wrapper class to fit the API
+
+    def __init__(self, nclusters, channels=None, feature_names=None):
+        self.feature_names = feature_names
+        self.channels = channels
+        self.classdef  = ClassDefinitionUnsup(nclusters)
+
+    # XXX rename to masks
+    @property
+    def regions(self):
+        if len(self.channels) == 1:
+            return self.channels.values()[0]
+        else:
+            return self.channels.values()

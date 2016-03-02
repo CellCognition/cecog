@@ -16,6 +16,7 @@ __all__ = ['TC3EventFilter']
 
 import warnings
 import numpy as np
+
 from cecog.errorcorrection.hmm import MultinomialHMM
 
 class TC3EventFilter(object):
@@ -78,7 +79,7 @@ class TC3EventFilter(object):
         on single tracks.
         """
 
-        hmm_ = hmm.MultinomialHMM(n_components=2, n_iter=maxiter)
+        hmm_ = MultinomialHMM(n_components=2, n_iter=maxiter)
         # in newer version of hmm n_symbols can be set in the init method.
         hmm_.n_symbols = 2
         logprob = hmm_.fit(tracks)

@@ -354,8 +354,8 @@ class CellAnalyzer(LoggerObject):
                 #, holder.feature_names)
                 obj.iLabel = label[0]
                 obj.dctProb = probs[0]
-                obj.strClassName = predictor.class_names[label[0]]
-                obj.strHexColor = predictor.hexcolors[obj.strClassName]
+                obj.strClassName = predictor.classdef.names[label[0]]
+                obj.strHexColor = predictor.classdef.colors[obj.strClassName]
 
                 if has_basic_features:
                     obj.roisize = obj.aFeatures[roisize_idx]

@@ -1233,9 +1233,10 @@ class TimeHolder(OrderedDict):
             var = classification_group.create_dataset('class_labels', (nr_classes,), dt)
             var.attrs["UNPREDICED_LABEL"] = numpy.int32(self.UNPREDICTED_LABEL)
             var.attrs['UNPREDICED_PROB'] = numpy.float32(self.UNPREDICTED_PROB)
-            var[:] = zip(predictor.class_names.keys(),
-                         predictor.class_names.values(),
-                         [predictor.hexcolors[n] for n in predictor.class_names.values()])
+            var[:] = zip(predictor.classdef.names.keys(),
+                         predictor.classdef.names.values(),
+                         [predictor.classdef.colors[n]
+                          for n in predictor.classdef.names.values()])
 
             # classifier
             dt = numpy.dtype([('name', '|S512'),
@@ -1286,7 +1287,7 @@ class TimeHolder(OrderedDict):
                 dset_probability = current_classification_grp[var_name]
                 dset_probability.resize((offset+nr_objects, nr_classes))
 
-        label2idx = dict([(l, i) for i, l in enumerate(predictor.class_names.keys())])
+        label2idx = dict([(l, i) for i, l in enumerate(predictor.classdef.names.keys())])
 
         for i, obj in enumerate(region.itervalues()):
             # replace default for unlabeld object with numerical values

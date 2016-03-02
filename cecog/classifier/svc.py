@@ -93,15 +93,6 @@ class SupportVectorClassifier(object):
     def exists(self):
         return isfile(str(self._file))
 
-    @property
-    def class_names(self):
-        return self.classdef.names
-
-    # rename to class_colors or just colors
-    @property
-    def hexcolors(self):
-        return self.classdef.colors
-
     # XXX rename to masks
     @property
     def regions(self):
@@ -246,6 +237,7 @@ class SupportVectorClassifier(object):
         labels = [self.classdef.names.keys()[i] for i in np.argmax(proba, axis=1)]
         probs = list()
         for prob in proba:
-            probs.append(dict((l, p) for l, p in zip(self.classdef.names.keys(), prob)))
+            probs.append(
+                dict((l, p) for l, p in zip(self.classdef.names.keys(), prob)))
 
         return labels, probs

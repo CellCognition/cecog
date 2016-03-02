@@ -174,7 +174,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
 
         action_assistant = self.create_action('&Help',
             shortcut=QtGui.QKeySequence.HelpContents,
-            slot=self.show_assistant)
+            slot=self.showHelpBrowser)
         action_about = self.create_action('&About', slot=self.on_about)
         action_aboutQt = self.create_action('&About Qt', slot=self.about_qt)
 
@@ -253,7 +253,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         self.setMinimumSize(QtCore.QSize(700, 600))
         self._is_initialized = True
 
-        self._restore_geometry()
+        self._restoreGeometry()
         self.show()
 
         # finally load (demo) - settings
@@ -282,7 +282,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
     def dragLeaveEvent(self, event):
         event.accept()
 
-    def _save_geometry(self):
+    def _saveGeometry(self):
         settings = QtCore.QSettings(version.organisation, version.appname)
         settings.beginGroup('Gui')
         settings.setValue('state', self.saveState())
@@ -297,7 +297,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
 
         settings.endGroup()
 
-    def _restore_geometry(self):
+    def _restoreGeometry(self):
         settings = QtCore.QSettings(version.organisation, version.appname)
         settings.beginGroup('Gui')
 
@@ -317,7 +317,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
     def closeEvent(self, event):
         self._pages.close()
         # Quit dialog only if not debuging flag is not set
-        self._save_geometry()
+        self._saveGeometry()
         if self.debug:
             QtWidgets.QApplication.exit()
         ret = QMessageBox.question(self, "Quit %s" %self.appname,
@@ -330,7 +330,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
             self._check_settings_saved(QMessageBox.Yes|QMessageBox.No)
             QtWidgets.QApplication.exit()
 
-    def settings_changed(self, changed):
+    def settingsChanged(self, changed):
         if self._is_initialized:
             self.setWindowModified(changed)
             self.action_save.setEnabled(changed)
@@ -449,7 +449,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
 
             else:
                 # set settings to not-changed (assume no changed since loaded from file)
-                self.settings_changed(False)
+                self.settingsChanged(False)
                 # notify tabs about new settings loaded
                 for tab in self._tabs:
                     tab.settings_loaded()
@@ -472,7 +472,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         else:
             self._settings_filename = filename
             self.setWindowTitle('%s - %s[*]' % (self.appname, filename))
-            self.settings_changed(False)
+            self.settingsChanged(False)
             self.statusBar().showMessage('Settings successfully saved.')
 
     def on_about(self):
@@ -673,7 +673,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
             # and specified by the user
             if len(problems) > 0:
                 # a mismatch between settings and data will cause changed settings
-                self.settings_changed(True)
+                self.settingsChanged(True)
 
             trait = self._settings.get_trait(SECTION_NAME_EVENT_SELECTION,
                                              'duration_unit')
@@ -690,7 +690,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
                                      ("The tracking duration units selected to match the "
                                       "load data. Please check your settings."))
                 # a mismatch between settings and data will cause changed settings
-                self.settings_changed(True)
+                self.settingsChanged(True)
 
             # activate change notification again
             self._settings.set_notify_change(True)
@@ -805,6 +805,6 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
             self, 'Save config file as', dir, ';;'.join(self.NAME_FILTERS))[0]
         return filename or None
 
-    def show_assistant(self):
+    def showHelpBrowser(self):
         self._pages.assistant.show()
         self._pages.assistant.openKeyword('index')

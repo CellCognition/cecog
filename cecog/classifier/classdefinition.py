@@ -21,7 +21,6 @@ from matplotlib.colors import rgb2hex
 from matplotlib.colors import ListedColormap
 
 from cecog.colors import unsupervised_cmap
-from .gmm import GaussianMixtureModel
 
 
 class ClassDefinitionCore(object):
@@ -29,10 +28,8 @@ class ClassDefinitionCore(object):
     Definition = 'class_definition.txt'
     Annotations = 'annotations'
 
-    def __init__(self, channels=None, feature_names=None):
+    def __init__(self):
         super(ClassDefinitionCore, self).__init__()
-        self.feature_names = feature_names
-        self.channels = channels
         self.colors = dict()
         self.labels = dict()
         self.names = OrderedDict()
@@ -47,12 +44,6 @@ class ClassDefinitionCore(object):
         return mpl.colors.Normalize(vmin=0,
                                     vmax=max(self.names.keys()))
 
-    @property
-    def regions(self):
-        if len(self.channels) == 1:
-            return self.channels.values()[0]
-        else:
-            return self.channels.values()
 
     def __iter__(self):
         for label, name in self.names.iteritems():
@@ -136,7 +127,6 @@ class ClassDefinitionUnsup(ClassDefinitionCore):
         self.nclusters = nclusters
         self.colormap = unsupervised_cmap(self.nclusters)
         # dummy attribute to recyle export function in timeholder
-        self.classifier = GaussianMixtureModel()
 
         for i in xrange(self.nclusters):
             name = "cluster-%d" %i

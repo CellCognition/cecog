@@ -37,17 +37,16 @@ from cecog.analyzer.channel import TertiaryChannel
 from cecog.analyzer.channel import MergedChannel
 
 from cecog.classifier import SupportVectorClassifier
-
+from cecog.classifier import GMM
 
 from cecog.export import TC3Exporter
 from cecog.logging import LoggerObject
 from cecog.util.stopwatch import StopWatch
 from cecog.util.util import makedirs
 from cecog.util.ctuple import COrderedDict
-from cecog.classifier import ClassDefinitionUnsup
+
 
 from cecog.features import FEATURE_MAP
-
 
 
 class PositionCore(LoggerObject):
@@ -398,8 +397,7 @@ class PositionAnalyzer(PositionCore):
                 chreg = self._channel_regions(p_channel)
                 if sttg("EventSelection", "unsupervised_event_selection"):
                     nclusters = sttg("EventSelection", "num_clusters")
-                    self.classifiers[p_channel] = ClassDefinitionUnsup( \
-                        nclusters, chreg)
+                    self.classifiers[p_channel] = GMM(nclusters, chreg)
                 else:
                     sttg.set_section('Classification')
                     cpath = sttg.get2(self._resolve_name(p_channel, 'classification_envpath'))
@@ -445,14 +443,14 @@ class PositionAnalyzer(PositionCore):
             es = EventSelection(graph, **opts)
 
         elif self.settings.get('EventSelection', 'unsupervised_event_selection'):
-            cld = self.classifiers.values()[0] # only one classdef in case of UES
+            classdef = self.classifiers.values()[0].classdef # only one classdef in case of UES
             opts.update({'forward_check': self._convert_tracking_duration('min_event_duration'),
                          'forward_labels': (1, ),
                          'backward_check': -1, # unsused for unsupervised usecase
                          'backward_labels': (0, ),
                          'num_clusters': self.settings.get('EventSelection', 'num_clusters'),
                          'min_cluster_size': self.settings.get('EventSelection', 'min_cluster_size'),
-                         'classdef': cld})
+                         'classdef': classdef})
             es = UnsupervisedEventSelection(graph, **opts)
 
         return es
