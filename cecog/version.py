@@ -13,7 +13,7 @@ __url__ = 'www.cellcognition.org'
 
 MAJOR = 1
 MINOR = 6
-RELEASE = 0
+RELEASE = 1
 
 organisation = "IMBA"
 appname = "CecogAnalyzer"
