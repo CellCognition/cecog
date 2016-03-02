@@ -348,7 +348,8 @@ class CellH5EventModule(CH5BasedModule):
         self.browser.image_viewer.clear()
         pos = self.cur_pos
         cellh5.GALLERY_SIZE = self._sb_gallery_size.value()
-        step = cellh5.GALLERY_SIZE
+        size = self._sb_gallery_size.value()
+        step = size
 
         init_y_offset = 30
         init_x_offset = 30
@@ -365,13 +366,13 @@ class CellH5EventModule(CH5BasedModule):
                 event_text_item.setPos(0, y-init_y_offset)
                 self.browser.image_viewer._scene.addItem(event_text_item)
 
-            for i, gallery_numpy in enumerate(pos.get_gallery_image_generator(track, object_)):
+            for i, gallery_numpy in enumerate(pos.get_gallery_image_generator(track, object_,size=size)):
                 gallery_item = QGraphicsPixmapHoverItem(QPixmap(array2qimage(self.transform_image(gallery_numpy), False )))
                 gallery_item.setPos(x, y)
                 self.browser.image_viewer._scene.addItem(gallery_item)
 
                 if self._cb_segmentation.checkState():
-                    contour_item = QGraphicsPolygonItem(QPolygonF(map(lambda x: QPointF(x[0],x[1]), self.cur_pos.get_crack_contour(track[i],object_)[0])))
+                    contour_item = QGraphicsPolygonItem(QPolygonF(map(lambda x: QPointF(x[0],x[1]), self.cur_pos.get_crack_contour(track[i],object_, size=size)[0])))
                     contour_item.setPos(x,y)
                     color = Qt.red
                     if self._cb_classification.checkState():
