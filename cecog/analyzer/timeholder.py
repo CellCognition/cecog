@@ -1158,7 +1158,7 @@ class TimeHolder(OrderedDict):
     def serialize_events(self, tracker):
         if self._hdf5_create and self._hdf5_include_events:
             event_lookup = {}
-            if tracker.visitor_data is None:
+            if tracker is None:
                 return
             for events in tracker.visitor_data.itervalues():
                 for start_id, event in events.iteritems():
