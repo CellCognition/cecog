@@ -47,7 +47,7 @@ class SectionGeneral(SectionCore):
                      widget_info=StringTrait.STRING_PATH)),
         ('plate_layout',
          StringTrait('', label='Plate Layout',
-                     widget_info=StringTrait.STRING_FILE)),
+                     widget_info=StringTrait.STRING_PATH)),
         ('namingscheme',
             SelectionTrait(CecogEnvironment.naming_schema.sections()[0],
                            CecogEnvironment.naming_schema.sections(),

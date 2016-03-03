@@ -46,12 +46,6 @@ class SectionErrorcorrection(SectionCore):
         ('merged_graph',
          StringTrait('', 1000, label='Merged ch. file',
                      widget_info=StringTrait.STRING_FILE)),
-
-        ('position_labels',
-         BooleanTrait(False, label='Position labels')),
-        ('mappingfile_path',
-         StringTrait('', 1000, label='Path',
-                     widget_info=StringTrait.STRING_PATH)),
         ('groupby_position',
          BooleanTrait(True, label='Position',
                       widget_info=BooleanTrait.RADIOBUTTON)),

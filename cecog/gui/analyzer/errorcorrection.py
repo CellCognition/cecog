@@ -50,9 +50,6 @@ class ErrorCorrectionFrame(BaseProcessorFrame):
                         ('secondary_graph',),
                         ('tertiary_graph',),
                         ('merged_graph',)])
-
-        self.add_group('position_labels',
-                       [('mappingfile_path',)])
         self.add_group(None,
                        [('groupby_position',),
                         ('groupby_oligoid',),

@@ -62,8 +62,8 @@ class ECParams(object):
                 self.classifier_dirs[channel] = \
                     settings('Classification', _setting)
 
-        self.position_labels = settings('ErrorCorrection', 'position_labels')
-        self.mapping_dir = settings('ErrorCorrection', 'mappingfile_path')
+        self.position_labels = settings('General', 'plate_layout') != ''
+        self.mapping_dir = settings('General', 'plate_layout')
 
         if settings('ErrorCorrection', 'groupby_oligoid'):
             self.sortby = PlateMapping.OLIGO

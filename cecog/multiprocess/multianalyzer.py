@@ -33,6 +33,7 @@ from cecog.environment import CecogEnvironment
 from cecog.traits.config import ConfigSettings
 from cecog.logging import QHandler
 
+
 class MultiProcessingError(Exception):
     pass
 
