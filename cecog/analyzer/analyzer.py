@@ -255,7 +255,7 @@ class CellAnalyzer(LoggerObject):
             if coords is not None:
                 for pos in coords:
                     label = pos.label
-                    if (label in oLearner.class_names and
+                    if (label in oLearner.classdef.names and
                         0 <= pos.x < oContainer.width and
                         0 <= pos.y < oContainer.height):
 
@@ -315,8 +315,8 @@ class CellAnalyzer(LoggerObject):
         training_set.feature_names = region.feature_names
 
         for class_label, object_ids in sample_objects.iteritems():
-            class_name = learner.class_names[class_label]
-            hex_color = learner.hexcolors[class_name]
+            class_name = learner.classdef.names[class_label]
+            hex_color = learner.classdef.colors[class_name]
 
             for obj_id in object_ids:
                 obj = region[obj_id]

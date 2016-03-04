@@ -60,23 +60,23 @@ class ConfusionMatrix(object):
         self.samples = self.tp + self.fn
 
         # average values weighted by sample number
-        nan = -np.isnan(self.se)
+        nan = ~np.isnan(self.se)
         self.wav_se = np.average(self.se[nan], weights=self.samples[nan])
-        nan = -np.isnan(self.sp)
+        nan = ~np.isnan(self.sp)
         self.wav_sp = np.average(self.sp[nan], weights=self.samples[nan])
-        nan = -np.isnan(self.ppv)
+        nan = ~np.isnan(self.ppv)
         self.wav_ppv = np.average(self.ppv[nan], weights=self.samples[nan])
-        nan = -np.isnan(self.npv)
+        nan = ~np.isnan(self.npv)
         self.wav_npv = np.average(self.npv[nan], weights=self.samples[nan])
-        nan = -np.isnan(self.ac)
+        nan = ~np.isnan(self.ac)
         self.wav_ac = np.average(self.ac[nan], weights=self.samples[nan])
 
         # average values (not weighted by sample number)
-        self.av_se = np.average(self.se[-np.isnan(self.se)])
-        self.av_sp = np.average(self.sp[-np.isnan(self.sp)])
-        self.av_ppv = np.average(self.ppv[-np.isnan(self.ppv)])
-        self.av_npv = np.average(self.npv[-np.isnan(self.npv)])
-        self.av_ac = np.average(self.ac[-np.isnan(self.ac)])
+        self.av_se = np.average(self.se[~np.isnan(self.se)])
+        self.av_sp = np.average(self.sp[~np.isnan(self.sp)])
+        self.av_ppv = np.average(self.ppv[~np.isnan(self.ppv)])
+        self.av_npv = np.average(self.npv[~np.isnan(self.npv)])
+        self.av_ac = np.average(self.ac[~np.isnan(self.ac)])
 
         # average accuracy per class
         self.ac_class = self.av_ac
