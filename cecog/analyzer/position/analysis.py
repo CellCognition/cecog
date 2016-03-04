@@ -21,6 +21,8 @@ import numpy as np
 from os.path import join, basename, isdir, dirname
 from collections import OrderedDict, defaultdict
 
+from PyQt5.QtCore import QThread
+
 from cecog.io.imagecontainer import Coordinate
 from cecog.plugin.metamanager import MetaPluginManager
 from cecog.units.time import TimeConverter
@@ -44,7 +46,6 @@ from cecog.logging import LoggerObject
 from cecog.util.stopwatch import StopWatch
 from cecog.util.util import makedirs
 from cecog.util.ctuple import COrderedDict
-
 
 from cecog.features import FEATURE_MAP
 
@@ -72,7 +73,7 @@ class PositionCore(LoggerObject):
 
     def __init__(self, plate_id, position, out_dir, settings, frames,
                  sample_readers, sample_positions, learner,
-                 image_container, qthread=None):
+                 image_container):
         super(PositionCore, self).__init__()
 
         self._out_dir = out_dir
@@ -90,7 +91,6 @@ class PositionCore(LoggerObject):
         self.timeholder = None
         self.classifiers = OrderedDict()
 
-        self._qthread = qthread
         self._tes = None
 
     def _analyze(self):
@@ -306,22 +306,22 @@ class PositionCore(LoggerObject):
         return chm
 
     def is_aborted(self):
-        if self._qthread is None:
-            return False
-        elif self._qthread.is_aborted():
-            return True
+        return QThread.currentThread().is_aborted()
 
     def update_status(self, info):
-        self._info.update(info)
-        if not self._qthread is None:
-            self._qthread.update_status(self._info, stime=50)
+        thread = QThread.currentThread()
+        thread.update_status(info, stime=50)
 
     def set_image(self, images, message, stime=0):
         """Propagate a rendered image to QThread."""
         assert isinstance(images, dict)
         assert isinstance(message, basestring)
-        if not (self._qthread is None or not images):
-            self._qthread.show_image(images, message, stime)
+
+        thread = QThread.currentThread()
+        thread.update_status(info, stime=50)
+
+        if images:
+            thread.show_image(images, message, stime)
 
     def _channel_regions(self, p_channel):
         """Return a dict of of channel region pairs according to the classifier"""

@@ -57,8 +57,18 @@ class ProcessControl(QtWidgets.QFrame):
         except ZeroDivisionError:
             pass
 
-    def setRange(self, min, max):
-        self._progressbar.setRange(min, max)
+    def progress(self):
+        return self._progressbar.value()
+
+    def increment(self):
+        self._progressbar.setValue(self._progressbar.value()+1)
+
+    def setRange(self, min, max=None):
+
+        if max is None:
+            self._progressbar.setMinimum(min)
+        else:
+            self._progressbar.setRange(min, max)
 
     def showImageCheckBox(self):
         self._show_image.show()

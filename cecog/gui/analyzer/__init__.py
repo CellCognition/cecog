@@ -424,61 +424,37 @@ class BaseProcessorFrame(BaseFrame):
             self._process_items = None
 
     def _on_esc_pressed(self):
+        print "escape"
         if self._is_running:
             self._abort_processing()
             self._analyzer.image_ready.disconnect(self._on_update_image)
+
 
     def _on_update_stage_info(self, info):
         sep = ' | '
         info = dict([(str(k), v) for k, v in info.iteritems()])
 
-        if info['stage'] == 0:
-            self.process_control.setRange(info['min'], info['max'])
-            if not info['progress'] is None:
-                self.process_control.setProgress(info['progress'])
+        self.process_control.setRange(info['min'], info['max'])
 
-                msg = ''
-                if 'meta' in info:
-                    msg += '%s' % info['meta']
-                if 'text' in info:
-                    msg += '   %s' % info['text']
-                if info['progress'] > info['min'] and 'interval' in info:
-                    interval = info['interval']
-                    self._intervals.append(interval)
-                    avg = numpy.average(self._intervals)
-                    estimate = seconds2datetime(avg*float(info['max']-info['progress']))
-                    msg += '%s~ %.1fs / %s%s%s remaining' % (sep,
-                                                             avg,
-                                                             info['item_name'],
-                                                             sep,
-                                                             estimate.strftime("%H:%M:%S"))
-                else:
-                    self._intervals = []
-                self.status_message.emit(msg)
-            else:
-                self.process_control.clearText()
+        if info['progress'] is None:
+            self.process_control.increment()
         else:
-            self._stage_infos[info['stage']] = info
-            if len(self._stage_infos) > 1:
-                total = self._stage_infos[1]['max']*self._stage_infos[2]['max']
-                current = (self._stage_infos[1]['progress']-1)*self._stage_infos[2]['max']+self._stage_infos[2]['progress']
-                self.process_control.setRange(0, total)
-                self.process_control.setProgress(current)
-                sep = '   |   '
-                msg = '%s   %s%s%s' % (self._stage_infos[2]['meta'],
-                                       self._stage_infos[1]['text'],
-                                       sep,
-                                       self._stage_infos[2]['text'])
-                if current > 1 and ('interval' in info.keys()):
-                    interval = info['interval']
-                    self._intervals.append(interval)
-                    estimate = seconds2datetime(
-                        numpy.average(self._intervals)*float(total-current))
-                    msg += '%s%.1fs / %s%s%s remaining' % (sep,
-                                                           interval,
-                                                           self._stage_infos[2]['item_name'],
-                                                           sep,
-                                                           estimate.strftime("%H:%M:%S"))
-                else:
-                    self._intervals = []
-                self.status_message.emit(msg)
+            self.process_control.setProgress(info['progress'])
+
+        msg = ''
+        if 'meta' in info:
+            msg += '%s' % info['meta']
+        if 'text' in info:
+            msg += '   %s' % info['text']
+
+        if info['interval'] is not None:
+            prg = self.process_control.progress()
+            self._intervals.append(info["interval"])
+            avg = numpy.average(self._intervals)
+            estimate = seconds2datetime(avg*float(info['max']-prg))
+            msg += '%s~ %.1fs %s%s remaining' \
+                   % (sep, avg, sep,
+                      estimate.strftime("%H:%M:%S"))
+        else:
+            self._intervals = []
+        self.status_message.emit(msg)

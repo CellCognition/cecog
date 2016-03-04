@@ -14,16 +14,21 @@ __url__ = 'www.cellcognition.org'
 __all__ = ("PosTrainer", )
 
 
+from PyQt5.QtCore import QThread
+
+from .analysis import PositionCore
+from cecog.util.stopwatch import StopWatch
 from cecog.io.imagecontainer import Coordinate
 from cecog.analyzer.timeholder import TimeHolder
 from cecog.analyzer.analyzer import CellAnalyzer
-from cecog.util.stopwatch import StopWatch
-from .analysis import PositionCore
+from cecog.threads.corethread import ProgressMsg
+
 
 
 class PosTrainer(PositionCore):
 
     def __call__(self):
+
         self.timeholder = TimeHolder(self.position, self._all_channel_regions,
                                      None,
                                      self.meta_data, self.settings,
@@ -41,12 +46,10 @@ class PosTrainer(PositionCore):
 
     def _analyze(self, cellanalyzer):
 
-        self._info.update({'stage': 2,
-                           'min': 1,
-                           'max': len(self._frames),
-                           'meta' : 'Classifier training:',
-                           'item_name': 'image set'})
+        thread = QThread.currentThread()
+        imax = sum([len(n) for n in self.sample_positions.values()])
 
+        prg = ProgressMsg(min=1, max=imax, meta="Classifier training: ")
 
         stopwatch = StopWatch(start=True)
         crd = Coordinate(self.plate_id, self.position,
@@ -55,14 +58,14 @@ class PosTrainer(PositionCore):
         for frame, channels in self._imagecontainer( \
             crd, interrupt_channel=True, interrupt_zslice=True):
 
-            if self.is_aborted():
-                return
-            else:
-                txt = 'T %d (%d/%d)' %(frame, self._frames.index(frame)+1,
-                                       len(self._frames))
-                self.update_status({'progress': self._frames.index(frame)+1,
-                                    'text': txt,
-                                    'interval': stopwatch.interim()})
+            thread.interruption_point()
+            prg.text = '%s, %s, T %d, (%d/%d)' \
+                       %(self.plate_id, self.position,
+                         frame, self._frames.index(frame)+1, len(self._frames))
+
+            prg.interval = stopwatch.interim()
+            thread.update_status(prg)
+
 
             stopwatch.reset(start=True)
             # initTimepoint clears channel_registry

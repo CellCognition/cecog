@@ -12,11 +12,14 @@ __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
 
+__all__ = ("Trainer", "PlateAnalyzer", "AnalyzerBrowser")
 
 import os
 import re
 import glob
 from os.path import join, basename, isdir
+
+from PyQt5.QtCore import QThread
 
 from cecog.io.hdf import Ch5File
 from cecog.classifier import AnnotationsFile
@@ -35,7 +38,6 @@ class Analyzer(LoggerObject):
         self._frames = None
         self._positions = None
 
-        # XXX
         self.sample_reader = list()
         self.sample_positions = dict()
 
@@ -288,23 +290,14 @@ class Trainer(Analyzer):
         return True
 
 
-    def __call__(self, qthread=None):
-        imax = len(self.sample_positions)
+    def __call__(self):
 
-        for i, (posid, frames) in enumerate(self.sample_positions.iteritems()):
-            self.logger.info('Process positions: %r' %posid)
+        for pos, frames in self.sample_positions.iteritems():
+            self.logger.info('Process positions: %r' %pos)
 
-            if not qthread is None:
-                if qthread.is_aborted():
-                    break
-                qthread.update_status({'stage': 1, 'min': 1,
-                                       "max": imax, 'progress': i+1,
-                                       'text': 'P %s (%d/%d)' \
-                                       %(self.plate, i+1, imax)})
-
-            postrainer = PosTrainer(self.plate, posid, self._out_dir,
+            postrainer = PosTrainer(self.plate, pos, self._out_dir,
                                     self.settings,
                                     frames, self.sample_reader,
                                     self.sample_positions, self.learner,
-                                    self._imagecontainer, qthread)
+                                    self._imagecontainer)
             result = postrainer()

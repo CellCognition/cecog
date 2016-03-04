@@ -26,15 +26,13 @@ class StopProcessing(Exception):
 
 class ProgressMsg(dict):
 
-    def __init__(self, min=0, max=1, stage=0, meta="", progress=0, text='',
-                 item_name=''):
+    def __init__(self, min=0, max=None, meta="", progress=None, text=''):
         self['min'] = min
         self['max'] = max
-        self['stage'] = stage
         self['meta'] = meta
         self['progress'] = progress
         self['text'] = text
-        self['item_name'] = item_name
+        self['interval'] = None
 
     def increment_progress(self):
         self.progress += 1
@@ -70,15 +68,6 @@ class CoreThread(QtCore.QThread):
         self._stage_info = {'text': '',
                             'progress': 0,
                             'max': 0}
-
-    def _enable_eclipse_mt_debugging(self):
-        try:
-            import pydevd
-            pydevd.connected = True
-            pydevd.settrace(suspend=False)
-            print 'Thread enabled interactive eclipse debuging...'
-        except:
-            pass
 
     def run(self):
         # turn off vigra tiff warnings

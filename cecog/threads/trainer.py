@@ -68,7 +68,7 @@ class TrainerThread(CoreThread):
             trainer = Trainer(
                 plate, self._settings, copy.deepcopy(self._imagecontainer),
                 learner=classifier)
-            trainer(self)
+            trainer()
             classifier = trainer.learner
             frame_count += len(trainer.positions)
 
@@ -76,6 +76,8 @@ class TrainerThread(CoreThread):
             raise RuntimeError("Didn't pick any samples from 0 frames. Check plate names")
 
         if not self.is_aborted():
-            self.update_status(ProgressMsg(max=-1, text="Performing Grid Search..."))
+            self.update_status(
+                ProgressMsg(progress=0, max=-1, text="Performing Grid Search..."))
             classifier.save()
-            self.update_status(ProgressMsg(text="Classifier training finished"))
+            self.update_status(
+                ProgressMsg(progress=0, max=1, text="Classifier training finished"))
