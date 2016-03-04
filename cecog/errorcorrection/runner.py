@@ -69,7 +69,7 @@ class PlateRunner(QtCore.QObject):
                              %(plate, i+1, len(self.plates)))
             self.progressUpdate.emit(progress)
 
-            ch5file = join(self._outdirs[plate], 'hdf5', "_all_positions.ch5")
+            ch5file = join(self._outdirs[plate], 'cellh5', "_all_positions.ch5")
             runner = PositionRunner(plate, self._outdirs[plate],
                                     self.params_ec, parent=self,
                                     ch5file=ch5file)

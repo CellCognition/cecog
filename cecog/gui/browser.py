@@ -39,8 +39,8 @@ from cecog.gui.analyzer import BaseProcessorFrame
 
 from cecog.gui.imageviewer import ImageViewer, GalleryViewer
 from cecog.gui.modules.module import ModuleManager
-from cecog.analyzer.core import AnalyzerBrowser
 
+#from cecog.analyzer.plate import AnnotationBrowser
 from cecog.io.imagecontainer import Coordinate
 from cecog.gui.modules.navigation import NavigationModule
 from cecog.gui.modules.display import DisplayModule
@@ -49,6 +49,7 @@ from cecog.gui.modules.eventviewer import CellH5EventModule
 from cecog.io.imagecontainer import ImageContainer
 from cecog.gui.config import GuiConfigSettings
 from cecog.plugin.metamanager import MetaPluginManager
+
 
 class TSlider(QSlider):
 
@@ -65,7 +66,6 @@ class Browser(QMainWindow):
 
     show_objects_toggled = pyqtSignal('bool')
     show_contours_toggled = pyqtSignal('bool')
-    #coordinates_changed = pyqtSignal(Coordinate)
     update_regions = pyqtSignal(dict)
 
     def __init__(self, settings, imagecontainer, parent=None):
@@ -435,7 +435,6 @@ class Browser(QMainWindow):
         settings.set2('tracking', False)
 
         settings.set('Output', 'hdf5_create_file', False)
-#        settings.set('General', 'collectsamples', False)
         settings.set('General', 'rendering', {})
         settings.set('General', 'rendering_class', {})
 
@@ -457,7 +456,7 @@ class Browser(QMainWindow):
         res = None
         try:
             QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
-            res = analyzer.processPositions()
+            res = analyzer()
             self.render_browser(res)
         except Exception, e:
             import traceback

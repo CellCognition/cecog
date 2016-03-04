@@ -18,7 +18,7 @@ import os
 import copy
 
 from cecog.classifier import SupportVectorClassifier
-from cecog.analyzer.core import Trainer
+from cecog.analyzer.plate import Trainer
 from cecog.threads.corethread import CoreThread, ProgressMsg
 
 from cecog import CH_PRIMARY, CH_OTHER, CH_VIRTUAL
@@ -65,9 +65,10 @@ class TrainerThread(CoreThread):
         classifier = self._setup_trainer()
 
         for plate in self._imagecontainer.plates:
-            trainer = Trainer(plate, self._settings, copy.deepcopy(self._imagecontainer),
-                              learner=classifier)
-            trainer.processPositions(self)
+            trainer = Trainer(
+                plate, self._settings, copy.deepcopy(self._imagecontainer),
+                learner=classifier)
+            trainer(self)
             classifier = trainer.learner
             frame_count += len(trainer.positions)
 

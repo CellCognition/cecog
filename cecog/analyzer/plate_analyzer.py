@@ -14,28 +14,36 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
+
+__all__ = ('PlateAnalyzer', 'Trainer', 'AnalyzerBrowser')
+
+
+from PyQt5.QtCore import QThread
+
 import os
 import re
 import glob
+import traceback
 from os.path import join, basename, isdir
 
+from cecog.io.hdf import Ch5File
 from cecog.classifier import AnnotationsFile
-from cecog.analyzer.position import PositionAnalyzer, PositionAnalyzerForBrowser
+from cecog.analyzer.position import PositionAnalyzer
+from cecog.analyzer.position import PositionAnalyzerForBrowser
 from cecog.analyzer.position import PosTrainer
 from cecog.io.imagecontainer import MetaImage
 from cecog.logging import LoggerObject
 from cecog.util.util import makedirs
+from cecog.threads.corethread import ProgressMsg
 
 
-# XXX - fix class names
-class AnalyzerBase(LoggerObject):
+class Analyzer(LoggerObject):
 
     def __init__(self, plate, settings, imagecontainer):
-        super(AnalyzerBase, self).__init__()
+        super(Analyzer, self).__init__()
         self._frames = None
         self._positions = None
 
-        # XXX
         self.sample_reader = list()
         self.sample_positions = dict()
 
@@ -54,8 +62,8 @@ class AnalyzerBase(LoggerObject):
         return self._imagecontainer.get_meta_data()
 
     def _makedirs(self):
-        """Make output directories (analyzed, dumps and log)"""
-        odirs = ("analyzed", "hdf5", "plots", "log")
+        """Make output directories"""
+        odirs = ("hdf5", "log")
         for odir in odirs:
             path = join(self._out_dir, odir)
             try:
@@ -103,9 +111,12 @@ class AnalyzerBase(LoggerObject):
         return self._frames
 
 
-class AnalyzerCore(AnalyzerBase):
+class PlateAnalyzer(Analyzer):
+
     def __init__(self, plate, settings, imagecontainer):
-        super(AnalyzerCore, self).__init__(plate, settings, imagecontainer)
+        super(PlateAnalyzer, self).__init__(plate, settings, imagecontainer)
+
+        self.h5f = Ch5File(join(settings("General", "pathout"), "%s.ch5" %plate))
 
         self._makedirs()
         self._setup_cropping()
@@ -178,7 +189,10 @@ class AnalyzerCore(AnalyzerBase):
             MetaImage.disable_cropping()
             self.logger.info("cropping disabled")
 
-    def processPositions(self, qthread=None):
+    def __call__(self, thread=None):
+
+        thread = QThread.currentThread()
+
         job_args = []
         for pos in self.positions:
             self.logger.info('Process positions: %r' % pos)
@@ -192,20 +206,20 @@ class AnalyzerCore(AnalyzerBase):
                          self.sample_positions,
                          None,
                          self._imagecontainer)
-                kw_ = dict(qthread = qthread)
+                kw_ = dict(thread = thread)
                 job_args.append((args_, kw_))
 
-        stage_info = {'stage': 1, 'min': 1, 'max': len(job_args)}
+        progress = ProgressMsg(stage=1, min=1, max=len(job_args))
 
         hdf5_links = []
         for idx, (args_, kw_) in enumerate(job_args):
-            if not qthread is None:
-                if qthread.is_aborted():
+            if not thread is None:
+                if thread.is_aborted():
                     break
-                stage_info.update({'progress': idx+1,
-                                   'text': 'P %s (%d/%d)' \
-                                       % (args_[0], idx+1, len(job_args))})
-                qthread.update_status(stage_info)
+                progress.progress = idx+1
+                progress.text = 'P %s (%d/%d)' %(args_[0], idx+1, len(job_args))
+                thread.update_status(progress)
+
             analyzer = PositionAnalyzer(*args_, **kw_)
             try:
                 nimages = analyzer()
@@ -213,7 +227,6 @@ class AnalyzerCore(AnalyzerBase):
                     self.settings.get('Output', 'hdf5_merge_positions'):
                     hdf5_links.append(analyzer.hdf5_filename)
             except Exception as e:
-                import traceback, sys
                 traceback.print_exc()
                 raise
             finally:
@@ -221,11 +234,11 @@ class AnalyzerCore(AnalyzerBase):
         return hdf5_links
 
 
-class AnalyzerBrowser(AnalyzerCore):
+class AnalyzerBrowser(PlateAnalyzer):
     def __init__(self, plate, settings, imagecontainer):
         super(AnalyzerBrowser, self).__init__(plate, settings, imagecontainer)
 
-    def processPositions(self):
+    def __call__(self):
         job_args = []
         pos = self.positions[0]
         self.logger.info('Browser(): Process positions: %r' % pos)
@@ -245,7 +258,7 @@ class AnalyzerBrowser(AnalyzerCore):
         return res
 
 
-class Trainer(AnalyzerBase):
+class Trainer(Analyzer):
 
     def __init__(self, plate, settings, imagecontainer, learner):
         super(Trainer, self).__init__(plate, settings, imagecontainer)
@@ -299,23 +312,27 @@ class Trainer(AnalyzerBase):
         return True
 
 
-    def processPositions(self, qthread=None):
+    def __call__(self, thread):
+
+
+        #thread = QThread.currentThread()
+
         imax = len(self.sample_positions)
+        progress = ProgressMsg(stage=1, min=1, max=imax)
 
         for i, (posid, frames) in enumerate(self.sample_positions.iteritems()):
             self.logger.info('Process positions: %r' %posid)
 
-            if not qthread is None:
-                if qthread.is_aborted():
-                    break
-                qthread.update_status({'stage': 1, 'min': 1,
-                                       "max": imax, 'progress': i+1,
-                                       'text': 'P %s (%d/%d)' \
-                                       %(self.plate, i+1, imax)})
+            if thread.is_aborted():
+                break
+
+            progress.progress = i+1
+            progress.text = 'P %s (%d/%d)' %(self.plate, i+1, imax)
+            thread.update_status(progress)
 
             postrainer = PosTrainer(self.plate, posid, self._out_dir,
                                     self.settings,
                                     frames, self.sample_reader,
                                     self.sample_positions, self.learner,
-                                    self._imagecontainer, qthread)
+                                    self._imagecontainer)
             result = postrainer()

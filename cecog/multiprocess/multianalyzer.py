@@ -25,7 +25,7 @@ from PyQt5 import QtCore
 from cecog.version import version
 from cecog.util.stopwatch import StopWatch
 from cecog.threads.link_hdf import link_hdf5_files
-from cecog.analyzer.core import AnalyzerCore
+from cecog.analyzer.plate import PlateAnalyzer
 from cecog.threads.analyzer import AnalyzerThread
 from cecog.threads.corethread import ProgressMsg
 from cecog.multiprocess import mplogging as lg
@@ -53,10 +53,9 @@ def core_helper(plate, settings_dict, imagecontainer, position, version,
         settings.set('General', 'positions', position)
 
         environ = CecogEnvironment(version, redirect=redirect, debug=debug)
-        if debug:
-            environ.pprint()
-        analyzer = AnalyzerCore(plate, settings, imagecontainer)
-        post_hdf5_link_list = analyzer.processPositions()
+
+        analyzer = PlateAnalyzer(plate, settings, imagecontainer)
+        post_hdf5_link_list = analyzer()
         return plate, position, copy.deepcopy(post_hdf5_link_list)
     except Exception as e:
         errortxt = "plate: %s, position: %s\n" %(plate, position)

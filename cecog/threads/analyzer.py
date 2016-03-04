@@ -16,7 +16,7 @@ __all__ = ['AnalyzerThread']
 import copy
 from cecog.threads.corethread import CoreThread
 from cecog.threads.link_hdf import link_hdf5_files
-from cecog.analyzer.core import AnalyzerCore
+from cecog.analyzer.plate import PlateAnalyzer
 
 
 class AnalyzerThread(CoreThread):
@@ -27,9 +27,9 @@ class AnalyzerThread(CoreThread):
 
     def _run(self):
 
-        for plate_id in self._imagecontainer.plates:
-            analyzer = AnalyzerCore(plate_id, self._settings,
-                                    copy.deepcopy(self._imagecontainer))
-            h5_links = analyzer.processPositions(self)
+        for plate in self._imagecontainer.plates:
+            analyzer = PlateAnalyzer(plate, self._settings,
+                                     copy.deepcopy(self._imagecontainer))
+            h5_links = analyzer(self)
             if h5_links:
                 link_hdf5_files(h5_links)

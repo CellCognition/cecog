@@ -366,17 +366,15 @@ class PositionAnalyzer(PositionCore):
         assert isinstance(self.position, basestring)
         assert isinstance(self._out_dir, basestring)
 
-        self._analyzed_dir = join(self._out_dir, "analyzed")
         if self.has_timelapse:
-            self._position_dir = join(self._analyzed_dir, self.position)
+            self._position_dir = join(self._out_dir, self.position)
         else:
-            self._position_dir = self._analyzed_dir
+            self._position_dir = self._out_dir
 
-        odirs = (self._analyzed_dir,
-                 join(self._out_dir, "log"),
+        odirs = (join(self._out_dir, "log"),
                  join(self._out_dir, "log", "_finished"),
-                 join(self._position_dir, "tc3"),
-                 join(self._out_dir, "hdf5"))
+                 join(self._out_dir, "tc3"),
+                 join(self._out_dir, "cellh5"))
 
         for odir in odirs:
             try:
@@ -542,7 +540,7 @@ class PositionAnalyzer(PositionCore):
         # include hdf5 file name in hdf5_options
         # perhaps timeholder might be a good place to read out the options
         # file does not have to exist to proceed
-        hdf5_fname = join(self._hdf5_dir, '%s.ch5' % self.position)
+        hdf5_fname = join(self._cellh5_dir, '%s.ch5' % self.position)
 
         self.timeholder = TimeHolder(self.position, self._all_channel_regions,
                                      hdf5_fname,

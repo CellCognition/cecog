@@ -50,16 +50,16 @@ class LoggerObject(object):
             name = "%s_pid.%d" %(self.__class__.__name__, os.getpid())
 
         self.logger = logging.getLogger(name)
-        self.logger.setLevel(logging.NOTSET)
+        self.logger.setLevel(logging.INFO)
 
-    def add_stream_handler(self, level=logging.DEBUG):
+    def add_stream_handler(self, level=logging.INFO):
         self._stream_handler = logging.StreamHandler(sys.stdout)
         self._stream_handler.setLevel(level)
         fmt = logging.Formatter(self._fmt)
         self._stream_handler.setFormatter(fmt)
         self.logger.addHandler(self._stream_handler)
 
-    def add_file_handler(self, logfile, level=logging.DEBUG):
+    def add_file_handler(self, logfile, level=logging.INFO):
         assert isinstance(logfile, basestring)
         self.logger.setLevel(level)
         fmt = logging.Formatter(self._fmt)
