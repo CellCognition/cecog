@@ -32,7 +32,7 @@ class LogWindow(QtWidgets.QDialog):
 
         self.setWindowTitle("Application Log")
         self.setWindowModality(Qt.NonModal)
-        self.resize(800, 600)
+        self.resize(600, 430)
 
         self.items = dict()
 
@@ -68,6 +68,9 @@ class LogWindow(QtWidgets.QDialog):
 
         for name in LoggerObject.Levels.names():
             combo.addItem(name)
+
+        combo.setCurrentIndex(combo.findText("INFO"))
+
         self.hide()
 
     def _setupTextEdit(self, max_count):

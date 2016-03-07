@@ -124,8 +124,13 @@ class PositionRunner(QtCore.QObject):
         # XXX read region names from hdf not from settings
         chreg = "%s__%s" %(channel, self.ecopts.regionnames[channel])
 
+        # setup the progressbar correctly
+        c = 4
+        if self.ecopts.write_gallery:
+            c = 5
+
         thread = QThread.currentThread()
-        thread.statusUpdate(min=0, max=len(self.files))
+        thread.statusUpdate(min=0, max=len(self.files) + c)
 
         for file_ in self.files:
             position = splitext(basename(file_))[0]
@@ -169,10 +174,10 @@ class PositionRunner(QtCore.QObject):
                 %(self.plate, channel))
         return dtable, self._load_classdef(chreg)
 
-    def interruption_point(self, message=None):
+    def interruption_point(self, message=None, increment=False):
         thread = QThread.currentThread()
         if message is not None:
-            thread.statusUpdate(meta=message)
+            thread.statusUpdate(meta=message, increment=increment)
         thread.interruption_point()
 
     def __call__(self):
@@ -202,22 +207,22 @@ class PositionRunner(QtCore.QObject):
             prefix = "%s_%s" %(channel.title(), self.ecopts.regionnames[channel])
             sby = self.ecopts.sortby.replace(" ", "_")
 
-            self.interruption_point("plotting overview")
+            self.interruption_point("plotting overview", True)
             report.overview(join(self._hmm_dir, '%s-%s.pdf' %(prefix, sby)))
             report.close_figures()
 
-            self.interruption_point("plotting bar- and boxplots")
+            self.interruption_point("plotting bar- and boxplots", True)
             report.bars_and_boxes(join(self._hmm_dir, '%s-%s_boxbars.pdf'
                                        %(prefix, sby)))
             report.close_figures()
 
-            self.interruption_point("plotting hmm model")
+            self.interruption_point("plotting hmm model", True)
             report.hmm_model(join(self._hmm_dir, "%s-%s_model.pdf")
                              %(prefix, sby))
 
 
             if self.ecopts.write_gallery:
-                self.interruption_point("plotting image gallery")
+                self.interruption_point("plotting image gallery", True)
                 try:
                     # replace image_gallery_png with image_gallery_pdf
                     fn = join(self._gallery_dir,
@@ -234,6 +239,7 @@ class PositionRunner(QtCore.QObject):
                         traceback.print_exc(file=fp)
                         fp.write("Check if gallery images exist!")
 
+            self.interruption_point("write data...", True)
             report.export_hmm(join(self._hmm_dir, "%s-%s_hmm.csv"
                                    %(prefix, sby)),
                               self.ecopts.sortby)
