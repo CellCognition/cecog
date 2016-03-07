@@ -346,8 +346,9 @@ class ClassificationFrame(BaseProcessorFrame):
             settings.set('General', 'process_secondary', False)
             settings.set('General', 'process_tertiary', False)
             settings.set('General', 'process_merged', False)
-            rdn = {"%s_%s" %(prefix, settings.get("Classification",
-                                                  "%s_classification_regionname" %prefix)): {}}
+            rdn = {"%s_%s" %(prefix, settings.get(
+                "Classification",
+                "%s_classification_regionname" %prefix)): {}}
         elif current_tab == 1:
             prefix = 'secondary'
             settings.set('Processing', 'primary_featureextraction', False)
@@ -358,8 +359,9 @@ class ClassificationFrame(BaseProcessorFrame):
             settings.set('General', 'process_merged', False)
 
             # to setup the rending of the image currently processed
-            rdn = {"%s_%s" %(prefix, settings.get("Classification",
-                                                  "%s_classification_regionname" %prefix)): {}}
+            rdn = {"%s_%s" %(prefix, settings.get(
+                "Classification",
+                "%s_classification_regionname" %prefix)): {}}
         elif current_tab == 2:
             prefix = 'tertiary'
             seg_region = settings.get('Classification',
@@ -371,8 +373,9 @@ class ClassificationFrame(BaseProcessorFrame):
             settings.set('General', 'process_tertiary', True)
             settings.set('General', 'process_merged', False)
 
-            rdn = {"%s_%s" %(prefix, settings.get("Classification",
-                                                  "%s_classification_regionname" %prefix)): {}}
+            rdn = {"%s_%s" %(prefix, settings.get(
+                "Classification",
+                "%s_classification_regionname" %prefix)): {}}
         else:
             # checkboxes in merged channel tab
             pch = settings.get('Classification', 'merge_primary')
@@ -390,8 +393,8 @@ class ClassificationFrame(BaseProcessorFrame):
             rdn = {}
             for pfx in (CH_PRIMARY+CH_OTHER):
                 if settings.get("Classification", "merge_%s" %pfx):
-                    rdn["%s_%s" %(pfx, settings.get("Classification","merged_%s_region" %pfx))] = {}
-
+                    rdn["%s_%s" %(pfx, settings.get(
+                        "Classification","merged_%s_region" %pfx))] = {}
 
         settings.set('Classification', 'collectsamples_prefix', prefix)
 

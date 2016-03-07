@@ -17,6 +17,7 @@ from cecog.gui.analyzer.classification import ClassificationFrame
 from cecog.threads.analyzer import AnalyzerThread
 from cecog.analyzer.channel import PrimaryChannel
 
+
 class EventSelectionFrame(BaseProcessorFrame):
 
     DISPLAY_NAME = 'Event Selection'
@@ -27,7 +28,6 @@ class EventSelectionFrame(BaseProcessorFrame):
         super(EventSelectionFrame, self).__init__(settings, parent, name)
         self.register_control_button(self.PROCESS_SYNCING, AnalyzerThread, \
                               ('Test Event Selection', 'Abort Event Selection'))
-
 
         self.add_group(None,
                        [('backwardrange', (0,0,1,1)),
@@ -66,7 +66,6 @@ class EventSelectionFrame(BaseProcessorFrame):
 
         # list only classifiers that has been trained, do nothing in case of tc3
         try:
-#           clfnames = [k for k, c in clfframe.classifiers.items() if (c is not None and c.is_valid)]
             trait.set_list_data(clfframe.classifiers())
         except AttributeError as e:
             pass

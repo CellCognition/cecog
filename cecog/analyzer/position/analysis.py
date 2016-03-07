@@ -27,9 +27,9 @@ from cecog.io.imagecontainer import Coordinate
 from cecog.plugin.metamanager import MetaPluginManager
 from cecog.units.time import TimeConverter
 
+from cecog.analyzer.tracker import Tracker
 from cecog.analyzer.timeholder import TimeHolder
 from cecog.analyzer.analyzer import CellAnalyzer
-from cecog.analyzer.tracker import Tracker
 from cecog.analyzer.eventselection import EventSelection
 from cecog.analyzer.eventselection import UnsupervisedEventSelection
 
@@ -64,12 +64,6 @@ class PositionCore(LoggerObject):
     CHANNELS['tertiary'] = TertiaryChannel
     CHANNELS['merged'] = MergedChannel
 
-    _info = {'stage': 0,
-             'meta': 'Motif selection:',
-             'text': '---',
-             'min': 0,
-             'max': 0,
-             'progress': 0}
 
     def __init__(self, plate_id, position, out_dir, settings, frames,
                  sample_readers, sample_positions, learner,
@@ -93,12 +87,8 @@ class PositionCore(LoggerObject):
 
         self._tes = None
 
-    def _analyze(self):
-        self._info.update({'stage': 2,
-                           'min': 1,
-                           'max': len(self._frames),
-                           'meta' : 'Image processing:',
-                           'item_name': 'image set'})
+    def _analyze(self, *args, **kw):
+        raise NotImplementedError
 
     def zslice_par(self, ch_name):
         """Returns either the number of the zslice to select or a tuple of
@@ -305,23 +295,40 @@ class PositionCore(LoggerObject):
 
         return chm
 
-    def is_aborted(self):
-        return QThread.currentThread().is_aborted()
+    def isAborted(self):
 
-    def update_status(self, info):
-        thread = QThread.currentThread()
-        thread.update_status(info, stime=50)
+        # in case of multiprocessing
+        try:
+            return QThread.currentThread().is_aborted()
+        except AttributeError:
+            pass
 
-    def set_image(self, images, message, stime=0):
+    def interruptionPoint(self):
+        # in case of multiprocessing
+        try:
+            QThread.currentThread().interruption_point()
+        except AttributeError:
+            pass
+
+    def statusUpdate(self, *args, **kw):
+        # in case of multiprocessing
+        try:
+            QThread.currentThread().statusUpdate(*args, **kw)
+        except AttributeError:
+            pass
+
+    def setImage(self, images, message, stime=0):
         """Propagate a rendered image to QThread."""
         assert isinstance(images, dict)
         assert isinstance(message, basestring)
 
         thread = QThread.currentThread()
-        thread.update_status(info, stime=50)
-
         if images:
-            thread.show_image(images, message, stime)
+            try:
+                thread.show_image(images, message, stime)
+            except AttributeError:
+                pass
+
 
     def _channel_regions(self, p_channel):
         """Return a dict of of channel region pairs according to the classifier"""
@@ -411,7 +418,8 @@ class PositionAnalyzer(PositionCore):
             transitions = np.array(((0, 1), ))
         else:
             try:
-                transitions = np.array(eval(self.settings.get('EventSelection', 'labeltransitions')))
+                transitions = np.array(
+                    eval(self.settings.get('EventSelection', 'labeltransitions')))
                 transitions.reshape((-1, 2))
             except Exception as e:
                 raise RuntimeError(("Make sure that transitions are of the form "
@@ -537,13 +545,11 @@ class PositionAnalyzer(PositionCore):
                                                  holder, classifier)
 
     def __call__(self):
-        # include hdf5 file name in hdf5_options
-        # perhaps timeholder might be a good place to read out the options
-        # file does not have to exist to proceed
-        hdf5_fname = join(self._cellh5_dir, '%s.ch5' % self.position)
+
+        thread = QThread.currentThread()
 
         self.timeholder = TimeHolder(self.position, self._all_channel_regions,
-                                     hdf5_fname,
+                                     join(self._cellh5_dir, '%s.ch5' % self.position),
                                      self.meta_data, self.settings,
                                      self._frames,
                                      self.plate_id,
@@ -551,9 +557,6 @@ class PositionAnalyzer(PositionCore):
 
         self.settings.set_section('Tracking')
         self.setup_classifiers()
-
-        # print 100*"#"
-        # print self.classifiers
 
         # setup tracker
         if self.settings('Processing', 'tracking'):
@@ -594,26 +597,24 @@ class PositionAnalyzer(PositionCore):
                 self.logger.debug("--- visitor start")
                 self._tes.find_events()
                 self.logger.debug("--- visitor ok")
-                if self.is_aborted():
+                if self.isAborted():
                     return 0 # number of processed images
 
             # save all the data of the position, no aborts from here on
             # want all processed data saved
             if self.settings('Processing', 'tracking'):
+                self.statusUpdate(text="Saving Tracking Data to cellh5...")
                 self.export_tracks_hdf5()
-                self.update_status({'text': 'export events...'})
 
                 if self.settings('Output', 'hdf5_include_events'):
+                    self.statusUpdate(text="Saving Event Data to cellh5...")
                     self.export_events_hdf5()
 
                 if self.settings('EventSelection', 'unsupervised_event_selection'):
+                    self.statusUpdate(text="Saving Event Data to cellh5...")
                     self.export_tc3()
 
             self.export_classlabels()
-
-            self.update_status({'text': 'export events...',
-                                'max': 1,
-                                'progress': 1})
 
             # remove all features from all channels to free memory
             # for the generation of gallery images
@@ -649,7 +650,9 @@ class PositionAnalyzer(PositionCore):
         self.close()
 
     def _analyze(self, cellanalyzer):
-        super(PositionAnalyzer, self)._analyze()
+
+        thread = QThread.currentThread()
+
         n_images = 0
         stopwatch = StopWatch(start=True)
         crd = Coordinate(self.plate_id, self.position,
@@ -661,15 +664,12 @@ class PositionAnalyzer(PositionCore):
         for frame, channels in self._imagecontainer( \
             crd, interrupt_channel=True, interrupt_zslice=True):
 
-            if self.is_aborted():
-                self.clear()
-                return 0
-            else:
-                txt = 'T %d (%d/%d)' %(frame, self._frames.index(frame)+1,
-                                       len(self._frames))
-                self.update_status({'progress': self._frames.index(frame)+1,
-                                    'text': txt,
-                                    'interval': stopwatch.interim()})
+            self.interruptionPoint()
+            txt = '%s, %s, T %d (%d/%d)' \
+                  %(self.plate_id, self.position, frame,
+                    self._frames.index(frame)+1, len(self._frames))
+
+            self.statusUpdate(text=txt, interval=stopwatch.interim(), increment=True)
 
             stopwatch.reset(start=True)
             cellanalyzer.initTimepoint(frame)
@@ -684,7 +684,6 @@ class PositionAnalyzer(PositionCore):
             images = []
 
             if self.settings('Processing', 'tracking'):
-                #print "tracking"
                 region = self.settings('Tracking', 'region')
                 samples = self.timeholder[frame][PrimaryChannel.NAME].get_region(region)
                 self._tracker.track_next_frame(frame, samples)
@@ -703,7 +702,6 @@ class PositionAnalyzer(PositionCore):
 
             # can't cluster on a per frame basis
             if self.settings("EventSelection", "supervised_event_selection"):
-                #print "classifier", self.classifiers
                 for channel, clf in self.classifiers.iteritems():
                     cellanalyzer.classify_objects(clf, channel)
 
@@ -717,7 +715,7 @@ class PositionAnalyzer(PositionCore):
                 imgs.update(self.render_classification_images(cellanalyzer, images, frame))
                 imgs.update(self.render_contour_images(cellanalyzer, images, frame))
                 msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position, frame)
-                self.set_image(imgs, msg, 50)
+                self.setImage(imgs, msg, 50)
 
             cellanalyzer.purge(features=self.export_features)
             self.logger.debug(" - Frame %d, duration (ms): %3d" \
@@ -729,23 +727,14 @@ class PositionAnalyzer(PositionCore):
     def render_contour_images(self, ca, images, frame):
         images_ = dict()
         for region, render_par in self.settings.get2('rendering').iteritems():
+            img = ca.render(dctRenderInfo=render_par, images=images)
+            images_[region] = img
 
-            if region not in self.CHANNELS.keys():
-                img, _ = ca.render(None, dctRenderInfo=render_par,
-                                   writeToDisc=False, images=images)
-
-                images_[region] = img
-            # gallery images are treated differenty
-            else:
-                ca.render(out_dir, dctRenderInfo=render_par, writeToDisc=True)
         return images_
 
     def render_classification_images(self, cellanalyzer, images, frame):
          images_ = dict()
          for region, render_par in self.settings.get2('rendering_class').iteritems():
-             image, _ = cellanalyzer.render(None,
-                                            dctRenderInfo=render_par,
-                                            writeToDisc=False,
-                                            images=images)
+             image = cellanalyzer.render(dctRenderInfo=render_par, images=images)
              images_[region] = image
          return images_

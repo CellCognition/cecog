@@ -130,9 +130,7 @@ class CellAnalyzer(LoggerObject):
         h = oChannel.meta_image.height
         return (w,h)
 
-    def render(self, strPathOut, dctRenderInfo=None,
-               strFileSuffix='.jpg', strCompression='98', writeToDisc=True,
-               images=None):
+    def render(self, dctRenderInfo=None, images=None):
 
         lstImages = []
         if not images is None:
@@ -221,15 +219,7 @@ class CellAnalyzer(LoggerObject):
                                         [ccore.RGBValue(*hex2rgb(x[1])) for x in lstImages],
                                         [x[2] for x in lstImages])
 
-            if writeToDisc:
-                strFilePath = join(strPathOut, "P%s_T%05d%s"
-                                   %(self.P, self._iT, strFileSuffix))
-                makedirs(strPathOut)
-                ccore.writeImage(imgRgb, strFilePath, strCompression)
-                self.logger.debug("* rendered image written '%s'" % strFilePath)
-            else:
-                strFilePath = ''
-            return imgRgb, strFilePath
+            return imgRgb
 
     def collectObjects(self, plate_id, P, sample_readers, oLearner):
 

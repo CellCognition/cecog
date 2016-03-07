@@ -30,20 +30,22 @@ class ErrorCorrectionThread(CoreThread):
 
     def _run(self):
         plates = self._imagecontainer.plates
+        self.statusUpdate(min=0, max=len(plates))
+
         outdirs = []
         for plate in plates:
             self._imagecontainer.set_plate(plate)
             outdirs.append(self._imagecontainer.get_path_out())
         # CAUTION params_ec is plate specific !!
         platerunner = PlateRunner(plates, outdirs, self.params_ec)
-        platerunner.progressUpdate.connect(self.update_status,
-                                           Qt.QueuedConnection)
+
         self.aborted.connect(platerunner.abort, Qt.QueuedConnection)
         try:
             platerunner()
         finally:
-            platerunner.progressUpdate.disconnect(self.update_status)
             self.aborted.disconnect(platerunner.abort)
+
+        self.statusUpdate(text='Error correction successfully finished')
 
     @property
     def params_ec(self):

@@ -27,7 +27,6 @@ from cecog.util.stopwatch import StopWatch
 from cecog.threads.link_hdf import link_hdf5_files
 from cecog.analyzer.plate import PlateAnalyzer
 from cecog.threads.analyzer import AnalyzerThread
-from cecog.threads.corethread import ProgressMsg
 from cecog.multiprocess import mplogging as lg
 from cecog.environment import CecogEnvironment
 from cecog.traits.config import ConfigSettings
@@ -68,23 +67,21 @@ def core_helper(plate, settings_dict, imagecontainer, position, version,
 class ProgressCallback(QtCore.QObject):
     """Helper class to send progress signals to the main window"""
 
-    def __init__(self, parent, job_count, ncpu):
-        self.parent = parent
-        self.ncpu = ncpu
+    def __init__(self, thread, njobs):
+        super(ProgressCallback, self).__init__()
+        self.thread = thread
+        self.count = 0
+        self.njobs = njobs
         self._timer = StopWatch(start=True)
 
-        self.progress = ProgressMsg(
-            max=job_count,
-            meta=('Parallel processing %d /  %d positions '
-                  '(%d cores)' % (0, job_count, self.ncpu)))
-        self.parent.stage_info.emit(self.progress)
-
     def __call__(self, (plate, pos, hdf_files)):
-        self.progress.increment_progress()
-        self.progress.meta = 'Parallel processing %d / %d positions %d cores)' \
-            % (self.progress.progress, self.progress.max, self.ncpu)
 
-        self.parent.stage_info.emit(self.progress)
+
+        self.count += 1
+        self.thread.increment.emit()
+        self.thread.statusUpdate(
+            text = '%d/%d - last finished site: %s' %(self.count, self.njobs, pos))
+
         self._timer.reset(start=True)
         return plate, pos, hdf_files
 
@@ -186,10 +183,14 @@ class MultiAnalyzerThread(AnalyzerThread):
                 jobs.append((plate, self._settings.to_dict() , self._imagecontainer, pos,
                              version))
 
+        self.statusUpdate(min=0, max=len(jobs),
+            text = 'Parallel processing %d /  %d positions '
+                          '(%d cores)' % (0, len(jobs), self.ncpu))
+
         # submit the jobs
-        callback = ProgressCallback(self, len(jobs), self.ncpu)
+        callback = ProgressCallback(self, len(jobs))
+
         for args in jobs:
             self.job_result.append( \
-                self.pool.apply_async(core_helper, args,
-                                      callback=callback))
+                self.pool.apply_async(core_helper, args, callback=callback))
         self.join()

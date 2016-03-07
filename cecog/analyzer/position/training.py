@@ -21,8 +21,6 @@ from cecog.util.stopwatch import StopWatch
 from cecog.io.imagecontainer import Coordinate
 from cecog.analyzer.timeholder import TimeHolder
 from cecog.analyzer.analyzer import CellAnalyzer
-from cecog.threads.corethread import ProgressMsg
-
 
 
 class PosTrainer(PositionCore):
@@ -44,12 +42,12 @@ class PosTrainer(PositionCore):
                                                              'objectdetection'))
         self._analyze(ca)
 
+
     def _analyze(self, cellanalyzer):
 
         thread = QThread.currentThread()
         imax = sum([len(n) for n in self.sample_positions.values()])
-
-        prg = ProgressMsg(min=1, max=imax, meta="Classifier training: ")
+        thread.statusUpdate(min=0, max=imax)
 
         stopwatch = StopWatch(start=True)
         crd = Coordinate(self.plate_id, self.position,
@@ -59,13 +57,12 @@ class PosTrainer(PositionCore):
             crd, interrupt_channel=True, interrupt_zslice=True):
 
             thread.interruption_point()
-            prg.text = '%s, %s, T %d, (%d/%d)' \
-                       %(self.plate_id, self.position,
-                         frame, self._frames.index(frame)+1, len(self._frames))
+            txt = '%s, %s, T %d, (%d/%d)' \
+                  %(self.plate_id, self.position,
+                    frame, self._frames.index(frame)+1, len(self._frames))
 
-            prg.interval = stopwatch.interim()
-            thread.update_status(prg)
-
+            thread.statusUpdate(meta="Classifier training: ",
+                                text=txt, interval=stopwatch.interim(), increment=True)
 
             stopwatch.reset(start=True)
             # initTimepoint clears channel_registry

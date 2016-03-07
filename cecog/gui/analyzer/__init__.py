@@ -347,10 +347,10 @@ class BaseProcessorFrame(BaseFrame):
                         self.parent().main_window._imagecontainer)
 
                 self._analyzer.finished.connect(self._on_process_finished)
-                self._analyzer.stage_info.connect(
+                self._analyzer.status.connect(
                     self._on_update_stage_info, Qt.QueuedConnection)
-                self._analyzer.analyzer_error.connect(
-                    self._on_error, Qt.QueuedConnection)
+                self._analyzer.error.connect(self._on_error, Qt.QueuedConnection)
+                self._analyzer.increment.connect(self.process_control.increment)
                 self._analyzer.image_ready.connect(self._on_update_image)
 
                 self._analyzer.start(QThread.LowestPriority)
@@ -377,6 +377,7 @@ class BaseProcessorFrame(BaseFrame):
 
     def _on_process_finished(self):
         self._analyzer.image_ready.disconnect(self._on_update_image)
+        self.process_control.reset()
 
         if (not self._process_items is None and
             self._current_process_item+1 < len(self._process_items) and
@@ -391,25 +392,15 @@ class BaseProcessorFrame(BaseFrame):
             self._toggle_tabs(True)
             # enable all section button of the main widget
             self.toggle_tabs.emit(self.get_name())
+            msg = 'Processing successfully finished'
+
             if not self._is_abort and not self._has_error:
                 if self.name == SECTION_NAME_OBJECTDETECTION:
                     msg = 'Object detection successfully finished.'
-                elif self.name == SECTION_NAME_CLASSIFICATION:
-                    if self._current_process == self.Training:
-                        msg = 'Classifier training successfully finished.'
-                        result_frame = self._get_result_frame(self._tab_name)
-                        result_frame.load_classifier()
-                        # nr_removed = len(result_frame._learner.nan_features)
-                        # if nr_removed > 0:
-                        #     msg += '\n\n%d features contained NA values and will be removed from training.' % nr_removed
-                    elif self._current_process == self.Testing:
-                        msg = 'Classifier testing successfully finished.'
                 elif self.name == SECTION_NAME_TRACKING:
                     msg = 'Tracking successfully finished.'
                 elif self.name == SECTION_NAME_EVENT_SELECTION:
                     msg = 'Event selection successfully finished.'
-                elif self.name == SECTION_NAME_ERRORCORRECTION:
-                    msg = 'Error correction successfully finished.'
                 elif self.name == SECTION_NAME_PROCESSING:
                     msg = 'Processing successfully finished.'
                 self.status_message.emit(msg)
@@ -424,21 +415,19 @@ class BaseProcessorFrame(BaseFrame):
             self._process_items = None
 
     def _on_esc_pressed(self):
-        print "escape"
+
         if self._is_running:
             self._abort_processing()
             self._analyzer.image_ready.disconnect(self._on_update_image)
 
-
     def _on_update_stage_info(self, info):
+
         sep = ' | '
         info = dict([(str(k), v) for k, v in info.iteritems()])
 
         self.process_control.setRange(info['min'], info['max'])
 
-        if info['progress'] is None:
-            self.process_control.increment()
-        else:
+        if info['progress'] is not None:
             self.process_control.setProgress(info['progress'])
 
         msg = ''
@@ -449,9 +438,10 @@ class BaseProcessorFrame(BaseFrame):
 
         if info['interval'] is not None:
             prg = self.process_control.progress()
+            max_ = self.process_control.maximum()
             self._intervals.append(info["interval"])
             avg = numpy.average(self._intervals)
-            estimate = seconds2datetime(avg*float(info['max']-prg))
+            estimate = seconds2datetime(avg*float(max_-prg))
             msg += '%s~ %.1fs %s%s remaining' \
                    % (sep, avg, sep,
                       estimate.strftime("%H:%M:%S"))

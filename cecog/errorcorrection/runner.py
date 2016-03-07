@@ -25,7 +25,6 @@ from PyQt5.QtCore import QThread
 import cellh5
 
 from cecog.util.util import makedirs
-from cecog.threads.corethread import ProgressMsg
 from cecog.errorcorrection.hmm import HmmSklearn
 from cecog.errorcorrection.hmm import HmmTde
 
@@ -36,8 +35,6 @@ from cecog.classifier import ClassDefinition
 
 
 class PlateRunner(QtCore.QObject):
-
-    progressUpdate = QtCore.pyqtSignal(dict)
 
     def __init__(self, plates, outdirs, params_ec, *args, **kw):
         super(PlateRunner, self).__init__(*args, **kw)
@@ -58,23 +55,22 @@ class PlateRunner(QtCore.QObject):
                 raise IOError('Mapping file not found\n(%s)' %mpfile)
 
     def __call__(self):
+
+        thread = QThread.currentThread()
+
         if self.params_ec.position_labels:
             self._check_mapping_files()
 
-        progress = ProgressMsg(max=len(self.plates), meta="Error correction...")
-
         for i, plate in enumerate(self.plates):
-            QThread.currentThread().interruption_point()
-            progress.text = ("Plate: '%s' (%d / %d)"
-                             %(plate, i+1, len(self.plates)))
-            self.progressUpdate.emit(progress)
-
+            thread.interruption_point()
             ch5file = join(self._outdirs[plate], 'cellh5', "_all_positions.ch5")
             runner = PositionRunner(plate, self._outdirs[plate],
                                     self.params_ec, parent=self,
                                     ch5file=ch5file)
             runner()
-            self.progressUpdate.emit(progress)
+
+            txt = ("Plate: '%s' (%d / %d)" %(plate, i+1, len(self.plates)))
+            thread.statusUpdate(text=txt)
 
 
 class PositionRunner(QtCore.QObject):
@@ -128,16 +124,14 @@ class PositionRunner(QtCore.QObject):
         # XXX read region names from hdf not from settings
         chreg = "%s__%s" %(channel, self.ecopts.regionnames[channel])
 
-        progress = ProgressMsg(max=len(self.files))
+        thread = QThread.currentThread()
+        thread.statusUpdate(min=0, max=len(self.files))
 
         for file_ in self.files:
             position = splitext(basename(file_))[0]
-            progress.meta = meta=("loading plate: %s, file: %s"
-                                  %(self.plate, file_))
-            progress.increment_progress()
-
-            QThread.currentThread().interruption_point()
-            self.parent().progressUpdate.emit(progress)
+            thread.statusUpdate(text="loading plate: %s, file: %s" %(self.plate, file_))
+            thread.increment.emit()
+            thread.interruption_point()
             QtCore.QCoreApplication.processEvents()
 
             try:
@@ -176,10 +170,10 @@ class PositionRunner(QtCore.QObject):
         return dtable, self._load_classdef(chreg)
 
     def interruption_point(self, message=None):
+        thread = QThread.currentThread()
         if message is not None:
-            prgs = ProgressMsg(meta=message)
-            self.parent().progressUpdate.emit(prgs)
-        QThread.currentThread().interruption_point()
+            thread.statusUpdate(meta=message)
+        thread.interruption_point()
 
     def __call__(self):
         self._makedirs()

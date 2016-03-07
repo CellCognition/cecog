@@ -24,39 +24,15 @@ class StopProcessing(Exception):
     pass
 
 
-class ProgressMsg(dict):
-
-    def __init__(self, min=0, max=None, meta="", progress=None, text=''):
-        self['min'] = min
-        self['max'] = max
-        self['meta'] = meta
-        self['progress'] = progress
-        self['text'] = text
-        self['interval'] = None
-
-    def increment_progress(self):
-        self.progress += 1
-
-    def __getattr__(self, attr):
-
-        if self.has_key(attr):
-            return self[attr]
-        else:
-            return super(ProgressMsg, self).__getattr__(attr)
-
-    def __setattr__(self, attr, value):
-        if self.has_key(attr):
-            self[attr] = value
-        else:
-            super(ProgressMsg, self).__setattr__(attr, value)
-
 
 class CoreThread(QtCore.QThread):
 
-    stage_info = QtCore.pyqtSignal('PyQt_PyObject')
-    analyzer_error = QtCore.pyqtSignal(str, str)
-    image_ready = QtCore.pyqtSignal(dict, str)
+    status = QtCore.pyqtSignal('PyQt_PyObject')
+    increment = QtCore.pyqtSignal()
+    error = QtCore.pyqtSignal(str, str)
     aborted = QtCore.pyqtSignal()
+    image_ready = QtCore.pyqtSignal(dict, str)
+
 
     def __init__(self, parent, settings):
         super(CoreThread, self).__init__(parent)
@@ -65,9 +41,6 @@ class CoreThread(QtCore.QThread):
         self._settings = settings
         self._abort = False
         self._mutex = QtCore.QMutex()
-        self._stage_info = {'text': '',
-                            'progress': 0,
-                            'max': 0}
 
     def run(self):
         # turn off vigra tiff warnings
@@ -83,7 +56,7 @@ class CoreThread(QtCore.QThread):
             traceback.print_exc(e)
             logger = logging.getLogger()
             logger.error(msg)
-            self.analyzer_error.emit(msg, str(e))
+            self.error.emit(msg, str(e))
             # can cause a sefault on macosx
             # raise
 
@@ -101,9 +74,21 @@ class CoreThread(QtCore.QThread):
     def is_aborted(self):
         return self._abort
 
-    def update_status(self, info, stime=0):
-        self.stage_info.emit(info)
-        self.msleep(stime)
+
+    def statusUpdate(self, min=0, max=None, meta="", progress=None,
+                     text='', interval=None, msleep=0, increment=False):
+        msg = dict(text=text, min=min, max=max, meta=meta, progress=progress,
+                   interval=interval)
+
+        self.status.emit(msg)
+
+        if interval and progress is not None:
+            raise RuntimeError("Can not set progress and emit increment signal")
+
+        if increment:
+            self.increment.emit()
+
+        self.msleep(msleep)
 
     @property
     def renderer(self):

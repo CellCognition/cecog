@@ -19,7 +19,7 @@ import copy
 
 from cecog.classifier import SupportVectorClassifier
 from cecog.analyzer.plate import Trainer
-from cecog.threads.corethread import CoreThread, ProgressMsg
+from cecog.threads.corethread import CoreThread
 
 from cecog import CH_PRIMARY, CH_OTHER, CH_VIRTUAL
 from cecog.util.ctuple import COrderedDict
@@ -75,9 +75,7 @@ class TrainerThread(CoreThread):
         if frame_count == 0:
             raise RuntimeError("Didn't pick any samples from 0 frames. Check plate names")
 
-        if not self.is_aborted():
-            self.update_status(
-                ProgressMsg(progress=0, max=-1, text="Performing Grid Search..."))
-            classifier.save()
-            self.update_status(
-                ProgressMsg(progress=0, max=1, text="Classifier training finished"))
+        self.interruption_point()
+        self.statusUpdate(progress=0, max=-1, text="Performing Grid Search...")
+        classifier.save()
+        self.statusUpdate(progress=0, max=1, text="Classifier training finished")

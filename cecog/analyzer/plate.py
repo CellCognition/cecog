@@ -17,6 +17,7 @@ __all__ = ("Trainer", "PlateAnalyzer", "AnalyzerBrowser")
 import os
 import re
 import glob
+import traceback
 from os.path import join, basename, isdir
 
 from PyQt5.QtCore import QThread
@@ -28,7 +29,6 @@ from cecog.analyzer.position import PositionAnalyzerForBrowser
 from cecog.analyzer.position import PosTrainer
 from cecog.io.imagecontainer import MetaImage
 from cecog.logging import LoggerObject
-from cecog.threads.corethread import ProgressMsg
 
 
 class Analyzer(LoggerObject):
@@ -168,42 +168,32 @@ class PlateAnalyzer(Analyzer):
             MetaImage.disable_cropping()
             self.logger.info("cropping disabled")
 
-    def __call__(self, qthread=None):
+    def __call__(self):
+
         job_args = []
         for pos in self.positions:
             self.logger.info('Process positions: %r' % pos)
             if len(self.frames) > 0:
-                args_ = (self.plate,
-                         pos,
-                         self._out_dir,
-                         self.settings,
-                         self.frames,
-                         self.sample_reader,
-                         self.sample_positions,
-                         None,
-                         self._imagecontainer)
-                kw_ = dict(qthread = qthread)
-                job_args.append((args_, kw_))
-
-        stage_info = {'stage': 1, 'min': 1, 'max': len(job_args)}
+                args = (self.plate,
+                        pos,
+                        self._out_dir,
+                        self.settings,
+                        self.frames,
+                        self.sample_reader,
+                        self.sample_positions,
+                        None,
+                        self._imagecontainer)
+                job_args.append(args)
 
         hdf5_links = []
-        for idx, (args_, kw_) in enumerate(job_args):
-            if not qthread is None:
-                if qthread.is_aborted():
-                    break
-                stage_info.update({'progress': idx+1,
-                                   'text': 'P %s (%d/%d)' \
-                                       % (args_[0], idx+1, len(job_args))})
-                qthread.update_status(stage_info)
-            analyzer = PositionAnalyzer(*args_, **kw_)
+        for i, args in enumerate(job_args):
+            analyzer = PositionAnalyzer(*args)
             try:
                 nimages = analyzer()
                 if self.settings.get('Output', 'hdf5_create_file') and \
                     self.settings.get('Output', 'hdf5_merge_positions'):
                     hdf5_links.append(analyzer.hdf5_filename)
             except Exception as e:
-                import traceback, sys
                 traceback.print_exc()
                 raise
             finally:
