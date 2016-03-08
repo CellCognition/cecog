@@ -35,14 +35,11 @@ class GeneralFrame(BaseFrame):
         self.add_input('pathout')
         self.add_input('plate_layout')
         self.add_line()
-        self.add_input('namingscheme')
-        self.add_group(None,
-                       [('structure_file_pathin', (0,0,1,1)),
-                        ('structure_file_pathout', (0,1,1,1)),
-                        ('structure_file_extra_path', (0,2,1,1)),
-                        ('structure_file_extra_path_name', (1,0,1,8)),
-                        ], label='Structure file location',
-                       link='structure_file')
+
+        btn = QPushButton('Scan Images', self)
+        btn.setToolTip("Scan image directory")
+        btn.clicked.connect(self.parent().main_window._on_load_input)
+        self.add_input('namingscheme', w_button=btn)
 
         self.add_line()
 
@@ -73,17 +70,15 @@ class GeneralFrame(BaseFrame):
 
         layout = QHBoxLayout(buttonbar)
         layout.addStretch()
-        btn = QPushButton('Scan input directory', buttonbar)
-        layout.addWidget(btn)
-        btn.clicked.connect(self.parent().main_window._on_load_input)
-        btn = QPushButton('Load settings...', buttonbar)
+
+        btn = QPushButton('Load Settings', buttonbar)
         layout.addWidget(btn)
         btn.clicked.connect(self.parent().main_window._on_file_open)
-        self._btn_save = QPushButton('Save settings', buttonbar)
+        self._btn_save = QPushButton('Save Settings', buttonbar)
         self._btn_save.setEnabled(False)
         layout.addWidget(self._btn_save)
         self._btn_save.clicked.connect(self.parent().main_window._on_file_save)
-        btn = QPushButton('Save settings as...', buttonbar)
+        btn = QPushButton('Save Settings as', buttonbar)
         layout.addWidget(btn)
         btn.clicked.connect(self.parent().main_window._on_file_save_as)
         layout.addStretch()

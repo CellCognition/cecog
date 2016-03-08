@@ -109,7 +109,8 @@ class Coordinate(object):
     def __str__(self):
         res = ''
         for key, info in zip(['plate', 'position','time', 'channel', 'zslice'],
-                             [self.plate, self.position, self.time, self.channel, self.zslice]):
+                             [self.plate, self.position, self.time, self.channel,
+                              self.zslice]):
             if info is None:
                 continue
             else:
@@ -118,7 +119,7 @@ class Coordinate(object):
 
 class ImageContainer(object):
 
-    _structfile_tmpl = 'FileStructure_PL%s.xml'
+    _structfile_tmpl = '%s.xml'
 
     def __init__(self):
         self._plates = OrderedDict()
@@ -196,14 +197,7 @@ class ImageContainer(object):
     @classmethod
     def _get_structure_filename(cls, settings, plate_id,
                                 path_plate_in, path_plate_out):
-        if settings('General', 'structure_file_pathin'):
-            path_structure = path_plate_in
-        elif settings('General', 'structure_file_pathout'):
-            path_structure = path_plate_out
-        else:
-            path_structure = \
-                settings('General', 'structure_file_extra_path_name')
-
+        path_structure = path_plate_out
         filename = cls._structfile_tmpl %plate_id
         return os.path.join(path_structure, filename)
 

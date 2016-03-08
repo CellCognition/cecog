@@ -84,8 +84,6 @@ if __name__ == "__main__":
                         default=None,
                         help=('Load a config file. '
                               '(default from battery package)'))
-    parser.add_argument('-d', '--debug', action='store_true', default=False,
-                        help='Run applicaton in debug mode')
     args, _ = parser.parse_known_args()
 
     freeze_support()
@@ -106,7 +104,7 @@ if __name__ == "__main__":
 
     try:
         main = CecogAnalyzer(version.appname, version.version, redirect,
-                         args.configfile, args.debug)
+                         args.configfile)
         main.show()
         splash.finish(main)
 

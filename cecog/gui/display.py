@@ -82,7 +82,7 @@ class TraitDisplayMixin(QtWidgets.QFrame):
         frame.layout().addWidget(line, frame._input_cnt, 0, 1, 2)
         frame._input_cnt += 1
 
-    def add_label(self, label, link, margin=3, isHeading=False):
+    def add_label(self, label, link=None, margin=3, isHeading=False):
         label = QLabel(label, self)
         label.setMargin(margin)
         if isHeading:
@@ -174,9 +174,8 @@ class TraitDisplayMixin(QtWidgets.QFrame):
 
         frame._input_cnt += 1
 
-
     def add_input(self, trait_name, parent=None, grid=None, alignment=None,
-                  last=False, link=True):
+                  last=False, link=True, w_button=None):
         if parent is None:
             parent = self._get_frame(self._tab_name)
 
@@ -187,7 +186,6 @@ class TraitDisplayMixin(QtWidgets.QFrame):
 
         label = trait.label
         w_label = QLabel(label, parent)
-        w_button = None
 
         # read value from settings-instance
         value = self._get_value(trait_name)
@@ -207,8 +205,8 @@ class TraitDisplayMixin(QtWidgets.QFrame):
                 regexp.setPatternSyntax(QRegExp.RegExp2)
                 w_input.setValidator(QRegExpValidator(regexp, w_input))
             trait.set_value(w_input, value)
-            handler = lambda name: lambda value: self._set_value(name, value,
-                                                                 tooltip=value)
+            handler = lambda name: lambda value: self._set_value(
+                name, value, tooltip=value)
 
             w_input.textEdited.connect(handler(trait_name))
 
@@ -275,7 +273,6 @@ class TraitDisplayMixin(QtWidgets.QFrame):
             w_input.setSizePolicy(policy_expanding)
             handler = lambda n: lambda v: self._on_current_index(n, v)
             w_input.currentIndexChanged[int].connect(handler(trait_name))
-
 
         elif isinstance(trait, DictTrait):
             w_input = QTextEdit(parent)

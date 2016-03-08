@@ -113,11 +113,11 @@ class FrameStack(QtWidgets.QStackedWidget):
 
 class CecogAnalyzer(QtWidgets.QMainWindow):
 
-    NAME_FILTERS = ['Settings files (*.conf)', 'All files (*.*)']
+    NAME_FILTERS = 'Settings files (*.conf);;All files (*.*)'
     modified = QtCore.pyqtSignal('bool')
 
     def __init__(self, appname, version, redirect, settings=None,
-                 debug=False, *args, **kw):
+                 *args, **kw):
         super(CecogAnalyzer, self).__init__(*args, **kw)
         self.setWindowTitle("%s-%s" %(appname, version) + '[*]')
         self.setAcceptDrops(True)
@@ -126,13 +126,9 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
 
         self.version = version
         self.appname = appname
-        self.debug = debug
 
         self.environ = CecogEnvironment(version=version, redirect=redirect,
-                                        debug=debug)
-
-        if debug:
-            self.environ.pprint()
+                                        debug=False)
 
         self._is_initialized = False
         self._imagecontainer = None
@@ -318,8 +314,6 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         self._pages.close()
         # Quit dialog only if not debuging flag is not set
         self._saveGeometry()
-        if self.debug:
-            QtWidgets.QApplication.exit()
         ret = QMessageBox.question(self, "Quit %s" %self.appname,
                                    "Do you really want to quit?",
                                    QMessageBox.Yes|QMessageBox.No)
@@ -764,7 +758,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
                 if os.path.isfile(settings_filename):
                     home = settings_filename
             filename = QtWidgets.QFileDialog.getOpenFileName( \
-               self, 'Open config file', dir_, ';;'.join(self.NAME_FILTERS))[0]
+               self, 'Open config file', dir_, self.NAME_FILTERS)[0]
             if not bool(filename):
                 return
 
@@ -802,7 +796,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
             if os.path.isfile(settings_filename):
                 dir = settings_filename
         filename = QtWidgets.QFileDialog.getSaveFileName(
-            self, 'Save config file as', dir, ';;'.join(self.NAME_FILTERS))[0]
+            self, 'Save config file as', dir, self.NAME_FILTERS)[0]
         return filename or None
 
     def showHelpBrowser(self):

@@ -45,7 +45,7 @@ def find_resource_dir():
     """
 
     rdirs = []
-            
+
     rdirs.extend([join(dirname(sys.executable), 'resources'),
                   join(dirname(abspath(sys.argv[0])).replace('bin', 'share'),
                        'cellcognition', 'resources'),
@@ -53,20 +53,6 @@ def find_resource_dir():
                   'resources',
                   join(dirname(__file__), os.pardir, 'resources')])
 
-    if 'PYTHONPATH' in os.environ:
-        environment_paths = filter(lambda x: os.path.basename(os.path.abspath(x)) == 'site-packages',
-                                   os.environ['PYTHONPATH'].split(os.pathsep))
-    else:
-        environment_paths = []
-    
-    if len(environment_paths) > 0:
-        env_path_candidates = [join(x, os.pardir, os.pardir, os.pardir, 'share', 'cellcognition', 'resources')
-                               for x in environment_paths]
-        rdirs.extend(filter(lambda x: isdir(normpath(abspath(x))), env_path_candidates))
-
-#    for rdir in rdirs:
-#        print '%s\t%s\t%s' % (rdir, normpath(abspath(rdir)), isdir(normpath(abspath(rdir))))
-            
     for rdir in rdirs:
         if isdir(rdir):
             break
@@ -75,6 +61,7 @@ def find_resource_dir():
     if not isdir(rdir):
         raise IOError("Resource path '%s' not found." % rdir)
     return rdir
+
 
 class ConfigParser(RawConfigParser):
     """Custom config parser with sanity check."""
