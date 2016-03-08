@@ -40,7 +40,7 @@ from cecog.gui.analyzer import BaseProcessorFrame
 from cecog.gui.imageviewer import ImageViewer, GalleryViewer
 from cecog.gui.modules.module import ModuleManager
 
-#from cecog.analyzer.plate import AnnotationBrowser
+from cecog.analyzer.plate import AnalyzerBrowser
 from cecog.io.imagecontainer import Coordinate
 from cecog.gui.modules.navigation import NavigationModule
 from cecog.gui.modules.display import DisplayModule
@@ -460,9 +460,8 @@ class Browser(QMainWindow):
             self.render_browser(res)
         except Exception, e:
             import traceback
-            from cecog.gui.util import exception
             traceback.print_exc()
-            exception(self, str(e))
+            QMessageBox.critical(self, "Error", str(e))
             raise
         finally:
             QApplication.restoreOverrideCursor()

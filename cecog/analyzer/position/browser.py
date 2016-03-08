@@ -105,15 +105,15 @@ class PositionAnalyzerForBrowser(PositionCore):
         for frame, channels in self._imagecontainer( \
             crd, interrupt_channel=True, interrupt_zslice=True):
 
-            if self.is_aborted():
+            if self.isAborted():
                 self.clear()
                 return 0
             else:
                 txt = 'T %d (%d/%d)' %(frame, self._frames.index(frame)+1,
                                        len(self._frames))
-                self.update_status({'progress': self._frames.index(frame)+1,
-                                    'text': txt,
-                                    'interval': stopwatch.interim()})
+                self.statusUpdate(progress=self._frames.index(frame)+1,
+                                  text=txt,
+                                  interval=stopwatch.interim())
 
             stopwatch.reset(start=True)
             cellanalyzer.initTimepoint(frame)
