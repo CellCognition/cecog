@@ -352,8 +352,6 @@ class ClusterDisplay(QGroupBox):
         results = []
         targets = [(('General', 'pathin'), []),
                    (('General', 'pathout'),[]),
-                   (('General', 'structure_file_extra_path_name'),
-                    [('General', 'structure_file_extra_path')]),
                    (('Classification', 'primary_classification_envpath'),
                     [('Processing', 'primary_classification')]),
                    (('Classification', 'secondary_classification_envpath'),
@@ -366,12 +364,11 @@ class ClusterDisplay(QGroupBox):
                     [('General', 'process_merged'),
                      ('Processing', 'merged_classification')]),
                    ]
-        targets.extend([(('ObjectDetection', '%s_flat_field_correction_image_dir' % prefix),
-                          [('ObjectDetection', '%s_flat_field_correction' % prefix)]) for prefix in ['primary',
-                                                                                        'secondary',
-                                                                                        'tertiary']]
+        targets.extend(
+            [(('ObjectDetection', '%s_flat_field_correction_image_dir' % prefix),
+              [('ObjectDetection', '%s_flat_field_correction' % prefix)])
+             for prefix in ['primary', 'secondary', 'tertiary']] )
 
-                       )
         for info, const in targets:
             passed = reduce(lambda x,y: x and y,
                             map(lambda z: self._settings.get(*z), const),

@@ -583,6 +583,7 @@ class PositionAnalyzer(PositionCore):
 
                 evchannel = self.settings('EventSelection', 'eventchannel')
                 region = self.classifiers[evchannel].regions
+
                 if self.settings('EventSelection', 'unsupervised_event_selection'):
                     graph = self._tracker.graph
                 elif  evchannel != PrimaryChannel.NAME or \
