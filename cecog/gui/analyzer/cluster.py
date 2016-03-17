@@ -348,7 +348,7 @@ class ClusterDisplay(QGroupBox):
         values/switches, e.g. if classification is not needed there is no need
         to map the paths.
         """
-        #FIXME: should be done in a better way.
+        # FIXME: should be done in a better way.
         results = []
         targets = [(('General', 'pathin'), []),
                    (('General', 'pathout'),[]),
@@ -367,7 +367,7 @@ class ClusterDisplay(QGroupBox):
         targets.extend(
             [(('ObjectDetection', '%s_flat_field_correction_image_dir' % prefix),
               [('ObjectDetection', '%s_flat_field_correction' % prefix)])
-             for prefix in ['primary', 'secondary', 'tertiary']] )
+             for prefix in ['primary', 'secondary', 'tertiary']])
 
         for info, const in targets:
             passed = reduce(lambda x,y: x and y,
@@ -375,6 +375,7 @@ class ClusterDisplay(QGroupBox):
                             True)
             if passed:
                 results.append(info)
+
         return results
 
     def check_directories(self):

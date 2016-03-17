@@ -23,6 +23,7 @@ from collections import OrderedDict, defaultdict
 
 from PyQt5.QtCore import QThread
 
+from cecog.gui.preferences import AppPreferences
 from cecog.io.imagecontainer import Coordinate
 from cecog.plugin.metamanager import MetaPluginManager
 from cecog.units.time import TimeConverter
@@ -685,16 +686,15 @@ class PositionAnalyzer(PositionCore):
             images = []
 
             if self.settings('Processing', 'tracking'):
+                apc = AppPreferences()
                 region = self.settings('Tracking', 'region')
                 samples = self.timeholder[frame][PrimaryChannel.NAME].get_region(region)
                 self._tracker.track_next_frame(frame, samples)
 
-                if self.settings('Tracking', 'tracking_visualization'):
+                if apc.display_tracks:
                     size = cellanalyzer.getImageSize(PrimaryChannel.NAME)
-                    nframes = self.settings('Tracking', 'tracking_visualize_track_length')
-                    radius = self.settings('Tracking', 'tracking_centroid_radius')
                     img_conn, img_split = self._tracker.render_tracks(
-                        frame, size, nframes, radius)
+                        frame, size, apc.track_length, apc.cradius)
                     images += [(img_conn, '#FFFF00', 1.0),
                                (img_split, '#00FFFF', 1.0)]
 

@@ -16,6 +16,8 @@ __source__ = '$URL$'
 
 __all__ = ['TrackingFrame']
 
+
+from cecog.gui.preferences import AppPreferences
 from cecog import CH_VIRTUAL, CH_PRIMARY, CH_OTHER
 from cecog.gui.analyzer import BaseProcessorFrame, AnalyzerThread
 
@@ -38,11 +40,6 @@ class TrackingFrame(BaseProcessorFrame):
                         ('tracking_maxtrackinggap', (0,1,1,1)),
                         ('tracking_maxsplitobjects', (1,0,1,1)),
                         ], link='tracking', label='Tracking')
-        self.add_line()
-        self.add_group('tracking_visualization',
-                       [('tracking_visualize_track_length',),
-                        ('tracking_centroid_radius',),
-                       ], layout='flow')
         self.add_expanding_spacer()
 
         self._init_control()

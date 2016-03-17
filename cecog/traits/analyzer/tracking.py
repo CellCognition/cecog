@@ -38,13 +38,4 @@ class SectionTracking(SectionCore):
           ('tracking_maxsplitobjects',
            IntTrait(0, 0, 4000, label='Max split events')),
           ]),
-
-        ('visualization',
-         [('tracking_visualization',
-           BooleanTrait(False, label='Visualization')),
-          ('tracking_visualize_track_length',
-           IntTrait(5, -1, 10000, label='Max. time-points')),
-          ('tracking_centroid_radius',
-           IntTrait(3, -1, 50, label='Centroid radius')),
-          ]),
         ]
