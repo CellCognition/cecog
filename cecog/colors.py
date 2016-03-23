@@ -20,6 +20,7 @@ import numpy as np
 from matplotlib.colors import ListedColormap
 from matplotlib.colors import hex2color
 from matplotlib.colors import rgb2hex as mpl_rgb2hex
+from matplotlib.colors import is_color_like
 from matplotlib import cm
 
 
@@ -31,6 +32,7 @@ DCMAP = unsupervised_cmap(10)
 BINARY_CMAP = ListedColormap(["#DEDEDE","#FA1D2F"], name='binary_cmap')
 
 def grey2rgb(image, color="#FFFFFF"):
+
     if is_color_like(color):
         color = hex2color(color)
     # be aware that color contains floats ranging from 0 to 1
